@@ -1,15 +1,37 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Link, useLocation } from "react-router-dom";
 import { Menu, X, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const navLinks = [
-  { label: "Features", href: "#features" },
-  { label: "Languages", href: "#languages" },
-  { label: "How It Works", href: "#how-it-works" },
-  { label: "Pricing", href: "#pricing" },
-  { label: "FAQ", href: "#faq" },
+  { label: "Features", href: "/#features" },
+  { label: "Languages", href: "/#languages" },
+  { label: "How It Works", href: "/#how-it-works" },
+  { label: "Pricing", href: "/pricing" },
+  { label: "FAQ", href: "/#faq" },
 ];
+
+const NavLink = ({ href, children, className, onClick }: { href: string; children: React.ReactNode; className?: string; onClick?: () => void }) => {
+  const location = useLocation();
+  const isHashLink = href.includes("#");
+  const isExternal = href.startsWith("http");
+
+  if (isHashLink) {
+    const [path, hash] = href.split("#");
+    const targetPath = path || "/";
+    if (location.pathname === targetPath) {
+      return <a href={`#${hash}`} className={className} onClick={onClick}>{children}</a>;
+    }
+    return <Link to={`${targetPath}#${hash}`} className={className} onClick={onClick}>{children}</Link>;
+  }
+
+  if (isExternal) {
+    return <a href={href} className={className} onClick={onClick}>{children}</a>;
+  }
+
+  return <Link to={href} className={className} onClick={onClick}>{children}</Link>;
+};
 
 const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -17,22 +39,22 @@ const Navbar = () => {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass-strong">
       <div className="container mx-auto flex items-center justify-between h-16 px-4">
-        <a href="#" className="flex items-center gap-2.5 font-heading text-xl font-bold tracking-tight text-foreground">
+        <Link to="/" className="flex items-center gap-2.5 font-heading text-xl font-bold tracking-tight text-foreground">
           <div className="h-8 w-8 rounded-lg gradient-primary flex items-center justify-center">
             <MessageSquare className="h-4 w-4 text-primary-foreground" />
           </div>
           PolyChat Tutor
-        </a>
+        </Link>
 
         <div className="hidden md:flex items-center gap-8">
           {navLinks.map((link) => (
-            <a
+            <NavLink
               key={link.label}
               href={link.href}
               className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors duration-200"
             >
               {link.label}
-            </a>
+            </NavLink>
           ))}
         </div>
 
@@ -63,14 +85,14 @@ const Navbar = () => {
           >
             <div className="flex flex-col px-4 py-4 gap-3">
               {navLinks.map((link) => (
-                <a
+                <NavLink
                   key={link.label}
                   href={link.href}
                   className="text-sm font-medium text-muted-foreground hover:text-primary py-2"
                   onClick={() => setMobileOpen(false)}
                 >
                   {link.label}
-                </a>
+                </NavLink>
               ))}
               <Button className="gradient-primary border-0 text-primary-foreground font-semibold mt-2">
                 Get Started
