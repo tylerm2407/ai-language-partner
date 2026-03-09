@@ -57,8 +57,8 @@ const FeatureDeepDive = () => {
                 <f.icon className="h-6 w-6 text-primary-foreground" />
               </div>
               <div>
-                <h3 className="font-heading text-lg font-semibold mb-2">{f.title}</h3>
-                <p className="text-muted-foreground text-sm leading-relaxed">{f.description}</p>
+                <h3 className="font-heading text-lg font-semibold mb-2 text-card-foreground">{f.title}</h3>
+                <p className="text-sm leading-relaxed text-muted-foreground">{f.description}</p>
               </div>
             </motion.div>
           ))}

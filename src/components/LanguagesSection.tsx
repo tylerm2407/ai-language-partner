@@ -48,7 +48,7 @@ const LanguagesSection = () => {
               className="flex flex-col items-center gap-2 rounded-xl bg-card p-4 shadow-card hover:shadow-card-hover transition-shadow cursor-default"
             >
               <span className="text-3xl">{lang.flag}</span>
-              <span className="text-xs font-medium text-foreground">{lang.name}</span>
+              <span className="text-xs font-semibold text-card-foreground">{lang.name}</span>
             </motion.div>
           ))}
         </div>

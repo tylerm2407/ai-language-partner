@@ -58,8 +58,8 @@ const HowItWorksSection = () => {
                   {s.step}
                 </span>
               </div>
-              <h3 className="font-heading text-xl font-semibold mb-2">{s.title}</h3>
-              <p className="text-muted-foreground text-sm leading-relaxed max-w-xs mx-auto">{s.description}</p>
+              <h3 className="font-heading text-xl font-semibold mb-2 text-foreground">{s.title}</h3>
+              <p className="text-sm leading-relaxed max-w-xs mx-auto text-muted-foreground">{s.description}</p>
             </motion.div>
           ))}
         </div>

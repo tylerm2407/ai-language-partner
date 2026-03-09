@@ -7,53 +7,53 @@
 @layer base {
   :root {
     --background: 0 0% 0%;
-    --foreground: 0 0% 100%;
+    --foreground: 0 0% 98%;
 
-    --card: 0 0% 8%;
-    --card-foreground: 0 0% 100%;
+    --card: 0 0% 9%;
+    --card-foreground: 0 0% 98%;
 
-    --popover: 0 0% 8%;
-    --popover-foreground: 0 0% 100%;
+    --popover: 0 0% 9%;
+    --popover-foreground: 0 0% 98%;
 
-    --primary: 174 72% 50%;
-    --primary-foreground: 0 0% 0%;
+    --primary: 174 72% 52%;
+    --primary-foreground: 0 0% 5%;
 
-    --secondary: 0 0% 12%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 0 0% 13%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 0 0% 12%;
-    --muted-foreground: 0 0% 70%;
+    --muted: 0 0% 13%;
+    --muted-foreground: 0 0% 72%;
 
-    --accent: 255 80% 65%;
+    --accent: 255 80% 68%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 18%;
-    --input: 0 0% 18%;
-    --ring: 174 72% 50%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 174 72% 52%;
 
     --radius: 0.75rem;
 
-    --gradient-primary: linear-gradient(135deg, hsl(174, 72%, 50%), hsl(200, 85%, 60%));
-    --gradient-accent: linear-gradient(135deg, hsl(200, 85%, 60%), hsl(255, 80%, 65%));
-    --gradient-hero: linear-gradient(160deg, hsl(0, 0%, 0%) 0%, hsl(0, 0%, 3%) 50%, hsl(0, 0%, 0%) 100%);
-    --shadow-card: 0 4px 24px -4px hsl(0 0% 0% / 0.5);
-    --shadow-card-hover: 0 8px 32px -4px hsl(0 0% 0% / 0.7);
-    --shadow-glow: 0 0 40px -8px hsl(174 72% 50% / 0.5);
+    --gradient-primary: linear-gradient(135deg, hsl(174, 72%, 52%), hsl(200, 85%, 62%));
+    --gradient-accent: linear-gradient(135deg, hsl(200, 85%, 62%), hsl(255, 80%, 68%));
+    --gradient-hero: linear-gradient(160deg, hsl(0, 0%, 0%) 0%, hsl(0, 0%, 2%) 50%, hsl(0, 0%, 0%) 100%);
+    --shadow-card: 0 4px 24px -4px hsl(0 0% 0% / 0.6);
+    --shadow-card-hover: 0 8px 32px -4px hsl(0 0% 0% / 0.8);
+    --shadow-glow: 0 0 40px -8px hsl(174 72% 52% / 0.5);
 
     --font-heading: 'Space Grotesk', sans-serif;
     --font-body: 'DM Sans', sans-serif;
 
     --sidebar-background: 0 0% 5%;
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 174 72% 50%;
-    --sidebar-primary-foreground: 0 0% 0%;
-    --sidebar-accent: 0 0% 12%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 0 0% 18%;
-    --sidebar-ring: 174 72% 50%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 174 72% 52%;
+    --sidebar-primary-foreground: 0 0% 5%;
+    --sidebar-accent: 0 0% 13%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 0 0% 20%;
+    --sidebar-ring: 174 72% 52%;
   }
 }
 

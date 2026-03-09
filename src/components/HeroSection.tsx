@@ -18,11 +18,11 @@ const HeroSection = () => {
               <Sparkles className="h-4 w-4" />
               AI-Powered Language Learning
             </div>
-            <h1 className="font-heading text-4xl md:text-5xl lg:text-6xl font-bold leading-tight tracking-tight mb-6">
+            <h1 className="font-heading text-4xl md:text-5xl lg:text-6xl font-bold leading-tight tracking-tight mb-6 text-foreground">
               Become Fluent with Your Own{" "}
               <span className="text-gradient">AI Language Tutor</span>
             </h1>
-            <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-8 max-w-lg">
+            <p className="text-lg md:text-xl leading-relaxed mb-8 max-w-lg text-foreground/80">
               Practice real conversations with advanced personal AIs in 50 of the world's most spoken languages.
             </p>
             <div className="flex flex-wrap gap-4">
@@ -30,7 +30,7 @@ const HeroSection = () => {
                 Start Free Trial
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
-              <Button size="lg" variant="outline" className="font-semibold text-base px-8">
+              <Button size="lg" variant="outline" className="font-semibold text-base px-8 border-foreground/40 text-foreground hover:bg-foreground/10 hover:text-foreground">
                 Explore Languages
               </Button>
             </div>
