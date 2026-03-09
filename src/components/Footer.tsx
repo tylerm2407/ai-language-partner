@@ -10,7 +10,7 @@ const footerLinks = {
 
 const Footer = () => {
   return (
-    <footer className="border-t border-border bg-card py-16">
+    <footer className="border-t border-border bg-card py-16 text-card-foreground">
       <div className="container mx-auto px-4">
         <div className="grid md:grid-cols-5 gap-10">
           {/* Brand + newsletter */}
@@ -37,7 +37,7 @@ const Footer = () => {
           {/* Link columns */}
           {Object.entries(footerLinks).map(([category, links]) => (
             <div key={category}>
-              <h4 className="font-heading font-semibold text-sm mb-4">{category}</h4>
+              <h4 className="font-heading font-semibold text-sm mb-4 text-card-foreground">{category}</h4>
               <ul className="space-y-2.5">
                 {links.map((link) => (
                   <li key={link}>

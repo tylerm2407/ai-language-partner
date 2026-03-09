@@ -61,20 +61,20 @@ const PricingSection = () => {
               transition={{ delay: i * 0.15 }}
               className={`rounded-2xl p-8 ${
                 plan.featured
-                  ? "gradient-primary text-primary-foreground shadow-glow"
+                  ? "gradient-primary shadow-glow"
                   : "bg-card shadow-card"
               }`}
             >
-              <h3 className="font-heading text-xl font-bold mb-1">{plan.name}</h3>
+              <h3 className={`font-heading text-xl font-bold mb-1 ${plan.featured ? "text-primary-foreground" : "text-card-foreground"}`}>{plan.name}</h3>
               <div className="flex items-baseline gap-1 mb-6">
-                <span className="font-heading text-4xl font-bold">{plan.price}</span>
+                <span className={`font-heading text-4xl font-bold ${plan.featured ? "text-primary-foreground" : "text-card-foreground"}`}>{plan.price}</span>
                 <span className={`text-sm ${plan.featured ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
                   {plan.period}
                 </span>
               </div>
               <ul className="space-y-3 mb-8">
                 {plan.features.map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-sm">
+                  <li key={f} className={`flex items-center gap-2 text-sm ${plan.featured ? "text-primary-foreground" : "text-card-foreground"}`}>
                     <Check className="h-4 w-4 shrink-0" />
                     {f}
                   </li>
@@ -83,7 +83,7 @@ const PricingSection = () => {
               <Button
                 className={`w-full font-semibold ${
                   plan.featured
-                    ? "bg-card text-foreground hover:bg-card/90"
+                    ? "bg-background text-foreground hover:bg-background/90 border-0"
                     : "gradient-primary text-primary-foreground border-0"
                 }`}
                 size="lg"

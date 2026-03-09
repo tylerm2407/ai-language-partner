@@ -30,7 +30,7 @@ const Navbar = () => {
         </div>
 
         <div className="hidden md:flex items-center gap-3">
-          <Button variant="ghost" size="sm">Log In</Button>
+          <Button variant="ghost" size="sm" className="text-foreground hover:text-foreground hover:bg-foreground/10">Log In</Button>
           <Button size="sm" className="gradient-primary border-0 text-primary-foreground font-semibold">
             Get Started
           </Button>

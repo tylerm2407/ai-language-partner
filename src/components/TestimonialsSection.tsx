@@ -64,9 +64,9 @@ const TestimonialsSection = () => {
                   />
                 ))}
               </div>
-              <p className="text-sm text-foreground leading-relaxed mb-4">"{t.text}"</p>
+              <p className="text-sm text-card-foreground leading-relaxed mb-4">"{t.text}"</p>
               <div>
-                <p className="text-sm font-semibold">{t.name}</p>
+                <p className="text-sm font-semibold text-card-foreground">{t.name}</p>
                 <p className="text-xs text-muted-foreground">{t.location}</p>
               </div>
             </motion.div>

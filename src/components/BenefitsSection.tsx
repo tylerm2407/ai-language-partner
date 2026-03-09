@@ -55,8 +55,8 @@ const BenefitsSection = () => {
               <div className="h-12 w-12 rounded-xl gradient-primary flex items-center justify-center mb-5">
                 <b.icon className="h-6 w-6 text-primary-foreground" />
               </div>
-              <h3 className="font-heading text-lg font-semibold mb-2">{b.title}</h3>
-              <p className="text-muted-foreground text-sm leading-relaxed">{b.description}</p>
+              <h3 className="font-heading text-lg font-semibold mb-2 text-card-foreground">{b.title}</h3>
+              <p className="text-sm leading-relaxed text-muted-foreground">{b.description}</p>
             </motion.div>
           ))}
         </div>
