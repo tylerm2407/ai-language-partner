@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles } from "lucide-react";
 
@@ -77,13 +78,13 @@ const HeroSection = () => {
             </p>
 
             <div className="flex flex-wrap gap-4">
-              <Button
+              <Link to="/login"><Button
                 size="lg"
                 className="gradient-primary border-0 text-primary-foreground font-semibold text-base px-8 shadow-glow hover:shadow-[0_0_80px_-12px_hsl(174_100%_50%/0.6)] transition-shadow duration-300"
               >
                 Start Free Trial
                 <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
+              </Button></Link>
               <Button
                 size="lg"
                 variant="outline"

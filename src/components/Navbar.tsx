@@ -43,7 +43,7 @@ const Navbar = () => {
           <div className="h-8 w-8 rounded-lg gradient-primary flex items-center justify-center">
             <MessageSquare className="h-4 w-4 text-primary-foreground" />
           </div>
-          PolyChat Tutor
+          Fluenci
         </Link>
 
         <div className="hidden md:flex items-center gap-8">
@@ -59,12 +59,8 @@ const Navbar = () => {
         </div>
 
         <div className="hidden md:flex items-center gap-3">
-          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-            Log In
-          </Button>
-          <Button size="sm" className="gradient-primary border-0 text-primary-foreground font-semibold shadow-glow">
-            Get Started
-          </Button>
+          <Link to="/login"><Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">Log In</Button></Link>
+          <Link to="/login"><Button size="sm" className="gradient-primary border-0 text-primary-foreground font-semibold shadow-glow">Get Started Free</Button></Link>
         </div>
 
         <button
@@ -94,9 +90,7 @@ const Navbar = () => {
                   {link.label}
                 </NavLink>
               ))}
-              <Button className="gradient-primary border-0 text-primary-foreground font-semibold mt-2">
-                Get Started
-              </Button>
+              <Link to="/login"><Button className="gradient-primary border-0 text-primary-foreground font-semibold mt-2">Get Started Free</Button></Link>
             </div>
           </motion.div>
         )}
