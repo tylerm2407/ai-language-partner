@@ -109,7 +109,7 @@ export default function DrivingModePage() {
       setTranscript(prev => [...prev, { role: 'assistant', text: reply }])
       setLastReply(reply)
       if (data.updated_state) setTutorState(data.updated_state)
-      speak(reply, language.code)
+      speak(reply, language.slug)
     } catch { toast.error('Network error'); setVoiceState('idle') }
   }
 
