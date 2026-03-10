@@ -12,6 +12,7 @@ import {
   BookOpen, Newspaper, Music, MessageSquare,
   ChevronRight, Lock
 } from 'lucide-react'
+import { getStaticCourse } from '@/lib/staticCourses'
 
 export default function LanguagePage() {
   const { slug } = useParams<{ slug: string }>()
@@ -93,35 +94,29 @@ export default function LanguagePage() {
 
           {/* COURSES TAB */}
           <TabsContent value="learn">
-            {courses.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <BookOpen className="w-12 h-12 mx-auto mb-4 opacity-30" />
-                <p className="font-medium mb-1">Courses coming soon</p>
-                <p className="text-sm">Run the SQL setup scripts to populate courses, or use the AI Tutor to start practicing now.</p>
-                <Button asChild className="mt-4" variant="outline">
-                  <Link to={`/learn/${slug}/tutor`}>Start with AI Tutor</Link>
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {courses.map((course, i) => (
-                  <motion.div key={course.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}>
-                    <Link to={`/learn/${slug}/course/${course.id}`}>
-                      <div className="flex items-center justify-between p-5 rounded-xl border border-white/10 hover:border-cyan-400/40 bg-white/5 hover:bg-white/[0.08] transition-all group cursor-pointer">
-                        <div>
-                          <h3 className="font-semibold text-lg group-hover:text-cyan-400 transition-colors">{course.title}</h3>
-                          {course.description && <p className="text-sm text-muted-foreground mt-0.5">{course.description}</p>}
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {course.lessons?.[0]?.count ?? 0} lessons
-                          </p>
+            {(() => {
+              const displayCourses = courses.length > 0 ? courses : [getStaticCourse(language.name, slug!)]
+              return (
+                <div className="space-y-4">
+                  {displayCourses.map((course: any, i: number) => (
+                    <motion.div key={course.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}>
+                      <Link to={`/learn/${slug}/course/${course.id}`}>
+                        <div className="flex items-center justify-between p-5 rounded-xl border border-white/10 hover:border-cyan-400/40 bg-white/5 hover:bg-white/[0.08] transition-all group cursor-pointer">
+                          <div>
+                            <h3 className="font-semibold text-lg group-hover:text-cyan-400 transition-colors">{course.title}</h3>
+                            {course.description && <p className="text-sm text-muted-foreground mt-0.5">{course.description}</p>}
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {course.lessons?.length ?? 5} lessons
+                            </p>
+                          </div>
+                          <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-cyan-400 transition-colors" />
                         </div>
-                        <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-cyan-400 transition-colors" />
-                      </div>
-                    </Link>
-                  </motion.div>
-                ))}
-              </div>
-            )}
+                      </Link>
+                    </motion.div>
+                  ))}
+                </div>
+              )
+            })()}
           </TabsContent>
 
           {/* NEWS TAB */}
