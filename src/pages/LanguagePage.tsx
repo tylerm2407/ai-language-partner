@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { motion } from 'framer-motion'
 import {
   BookOpen, Newspaper, Music, MessageSquare,
-  ChevronRight, Clock, BarChart, ExternalLink
+  ChevronRight, Lock
 } from 'lucide-react'
 
 export default function LanguagePage() {
@@ -22,14 +22,14 @@ export default function LanguagePage() {
   const [music, setMusic] = useState<any[]>([])
 
   useEffect(() => {
-    if (!language) return
+    if (!language?.id) return
 
+    // Courses — use correct column names from schema
     supabase
       .from('courses')
       .select('*, lessons(count)')
       .eq('language_id', language.id)
-      .eq('is_published', true)
-      .order('order_index')
+      .order('sort_order')
       .then(({ data }) => { if (data) setCourses(data) })
 
     supabase
@@ -46,12 +46,14 @@ export default function LanguagePage() {
       .eq('language_id', language.id)
       .limit(6)
       .then(({ data }) => { if (data) setMusic(data) })
-  }, [language])
+  }, [language?.id])
 
   if (langLoading) {
     return (
       <DashboardLayout>
-        <div className="p-8 animate-pulse text-muted-foreground">Loading...</div>
+        <div className="flex items-center justify-center h-64">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
       </DashboardLayout>
     )
   }
@@ -59,163 +61,131 @@ export default function LanguagePage() {
   if (!language) {
     return (
       <DashboardLayout>
-        <div className="p-8 text-muted-foreground">Language not found.</div>
+        <div className="text-center py-16">
+          <p className="text-muted-foreground">Language not found.</p>
+          <Button asChild className="mt-4"><Link to="/languages">Browse Languages</Link></Button>
+        </div>
       </DashboardLayout>
     )
   }
 
   return (
     <DashboardLayout>
-      <div className="max-w-4xl mx-auto p-6 space-y-6">
-        {/* Hero */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-8"
-        >
-          <div className="flex items-center gap-4 mb-4">
+      <div className="max-w-4xl mx-auto px-4 py-6">
+        {/* Header */}
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+          <div className="flex items-center gap-4 mb-2">
             <span className="text-6xl">{language.flag}</span>
             <div>
               <h1 className="text-3xl font-bold">{language.name}</h1>
-              <p className="text-muted-foreground">{language.description}</p>
+              <p className="text-muted-foreground">{language.native_name} · {language.family}</p>
             </div>
-          </div>
-          <div className="flex gap-3 flex-wrap">
-            {courses.length > 0 && (
-              <Link to={`/learn/${slug}/course/${courses[0].id}`}>
-                <Button className="bg-gradient-to-r from-cyan-500 to-pink-500 text-white">
-                  Start Learning <ChevronRight className="w-4 h-4 ml-1" />
-                </Button>
-              </Link>
-            )}
-            <Link to={`/learn/${slug}/tutor`}>
-              <Button variant="outline">Practice with AI Tutor</Button>
-            </Link>
           </div>
         </motion.div>
 
-        {/* Tabs */}
-        <Tabs defaultValue="overview">
-          <TabsList className="w-full">
-            <TabsTrigger value="overview" className="flex-1 gap-1">
-              <BookOpen className="w-4 h-4" /> Overview
-            </TabsTrigger>
-            <TabsTrigger value="news" className="flex-1 gap-1">
-              <Newspaper className="w-4 h-4" /> News
-            </TabsTrigger>
-            <TabsTrigger value="music" className="flex-1 gap-1">
-              <Music className="w-4 h-4" /> Music
-            </TabsTrigger>
-            <TabsTrigger value="tutor" className="flex-1 gap-1">
-              <MessageSquare className="w-4 h-4" /> AI Tutor
-            </TabsTrigger>
+        <Tabs defaultValue="learn">
+          <TabsList className="mb-6">
+            <TabsTrigger value="learn"><BookOpen className="w-4 h-4 mr-2" />Courses</TabsTrigger>
+            <TabsTrigger value="news"><Newspaper className="w-4 h-4 mr-2" />News</TabsTrigger>
+            <TabsTrigger value="music"><Music className="w-4 h-4 mr-2" />Music</TabsTrigger>
+            <TabsTrigger value="tutor"><MessageSquare className="w-4 h-4 mr-2" />AI Tutor</TabsTrigger>
           </TabsList>
 
-          {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-4 mt-4">
-            <h2 className="text-lg font-semibold">Courses</h2>
+          {/* COURSES TAB */}
+          <TabsContent value="learn">
             {courses.length === 0 ? (
-              <p className="text-muted-foreground text-sm">
-                Courses coming soon for {language.name}.
-              </p>
+              <div className="text-center py-12 text-muted-foreground">
+                <BookOpen className="w-12 h-12 mx-auto mb-4 opacity-30" />
+                <p className="font-medium mb-1">Courses coming soon</p>
+                <p className="text-sm">Run the SQL setup scripts to populate courses, or use the AI Tutor to start practicing now.</p>
+                <Button asChild className="mt-4" variant="outline">
+                  <Link to={`/learn/${slug}/tutor`}>Start with AI Tutor</Link>
+                </Button>
+              </div>
             ) : (
-              courses.map(course => (
-                <Link key={course.id} to={`/learn/${slug}/course/${course.id}`}>
-                  <div className="rounded-xl border border-white/10 hover:border-cyan-400/40 p-5 flex items-center justify-between transition-all hover:bg-white/5">
-                    <div>
-                      <div className="font-semibold">{course.title}</div>
-                      <div className="text-sm text-muted-foreground">{course.description}</div>
-                      <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <BarChart className="w-3 h-3" /> {course.level_min}–{course.level_max}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" />{' '}
-                          {course.lessons?.[0]?.count || 0} lessons
-                        </span>
+              <div className="space-y-4">
+                {courses.map((course, i) => (
+                  <motion.div key={course.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}>
+                    <Link to={`/learn/${slug}/course/${course.id}`}>
+                      <div className="flex items-center justify-between p-5 rounded-xl border border-white/10 hover:border-cyan-400/40 bg-white/5 hover:bg-white/[0.08] transition-all group cursor-pointer">
+                        <div>
+                          <h3 className="font-semibold text-lg group-hover:text-cyan-400 transition-colors">{course.title}</h3>
+                          {course.description && <p className="text-sm text-muted-foreground mt-0.5">{course.description}</p>}
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {course.lessons?.[0]?.count ?? 0} lessons
+                          </p>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-cyan-400 transition-colors" />
                       </div>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                  </div>
-                </Link>
-              ))
+                    </Link>
+                  </motion.div>
+                ))}
+              </div>
             )}
           </TabsContent>
 
-          {/* News Tab */}
-          <TabsContent value="news" className="space-y-3 mt-4">
-            <h2 className="text-lg font-semibold">Latest {language.name} News</h2>
+          {/* NEWS TAB */}
+          <TabsContent value="news">
             {news.length === 0 ? (
-              <p className="text-muted-foreground text-sm">News articles coming soon.</p>
+              <div className="text-center py-12 text-muted-foreground">
+                <Newspaper className="w-12 h-12 mx-auto mb-4 opacity-30" />
+                <p>No news articles yet for {language.name}.</p>
+              </div>
             ) : (
-              news.map(article => (
-                <div key={article.id} className="rounded-xl border border-white/10 p-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="font-medium text-sm">{article.title}</div>
-                      <div className="text-xs text-muted-foreground mt-1">{article.summary}</div>
-                      <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-                        <span className="bg-cyan-400/10 text-cyan-400 px-2 py-0.5 rounded-full">
-                          {article.difficulty}
-                        </span>
-                        <span>{article.source_name}</span>
+              <div className="grid gap-4">
+                {news.map(article => (
+                  <Link key={article.id} to={`/news/${article.id}`}>
+                    <div className="p-4 rounded-xl border border-white/10 hover:border-cyan-400/40 bg-white/5 hover:bg-white/[0.08] transition-all cursor-pointer">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <h3 className="font-medium mb-1">{article.title}</h3>
+                          {article.summary && <p className="text-sm text-muted-foreground line-clamp-2">{article.summary}</p>}
+                        </div>
+                        {article.difficulty && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 whitespace-nowrap capitalize">{article.difficulty}</span>
+                        )}
                       </div>
                     </div>
-                    {article.url && (
-                      <a href={article.url} target="_blank" rel="noopener noreferrer">
-                        <Button size="sm" variant="ghost">
-                          <ExternalLink className="w-4 h-4" />
-                        </Button>
-                      </a>
-                    )}
-                  </div>
-                </div>
-              ))
+                  </Link>
+                ))}
+              </div>
             )}
           </TabsContent>
 
-          {/* Music Tab */}
-          <TabsContent value="music" className="space-y-3 mt-4">
-            <h2 className="text-lg font-semibold">{language.name} Music for Learners</h2>
+          {/* MUSIC TAB */}
+          <TabsContent value="music">
             {music.length === 0 ? (
-              <p className="text-muted-foreground text-sm">Music tracks coming soon.</p>
+              <div className="text-center py-12 text-muted-foreground">
+                <Music className="w-12 h-12 mx-auto mb-4 opacity-30" />
+                <p>No music tracks yet for {language.name}.</p>
+              </div>
             ) : (
-              music.map(track => (
-                <div
-                  key={track.id}
-                  className="rounded-xl border border-white/10 p-4 flex items-center justify-between"
-                >
-                  <div>
-                    <div className="font-medium text-sm">🎵 {track.title}</div>
-                    <div className="text-xs text-muted-foreground">{track.artist}</div>
-                    <span className="text-xs bg-pink-400/10 text-pink-400 px-2 py-0.5 rounded-full mt-1 inline-block">
-                      {track.difficulty}
-                    </span>
+              <div className="grid gap-3">
+                {music.map(track => (
+                  <div key={track.id} className="p-4 rounded-xl border border-white/10 bg-white/5 flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">{track.title}</p>
+                      <p className="text-sm text-muted-foreground">{track.artist}</p>
+                    </div>
+                    {track.difficulty && <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 capitalize">{track.difficulty}</span>}
                   </div>
-                  {track.external_url && (
-                    <a href={track.external_url} target="_blank" rel="noopener noreferrer">
-                      <Button size="sm" variant="outline" className="gap-1">
-                        Listen <ExternalLink className="w-3 h-3" />
-                      </Button>
-                    </a>
-                  )}
-                </div>
-              ))
+                ))}
+              </div>
             )}
           </TabsContent>
 
-          {/* AI Tutor Tab */}
-          <TabsContent value="tutor" className="mt-4">
-            <PlanGate feature="the personalized AI tutor">
+          {/* AI TUTOR TAB */}
+          <TabsContent value="tutor">
+            <PlanGate>
               <div className="text-center py-8">
-                <Link to={`/learn/${slug}/tutor`}>
-                  <Button
-                    className="bg-gradient-to-r from-cyan-500 to-pink-500 text-white"
-                    size="lg"
-                  >
-                    Open AI Tutor Session <ChevronRight className="w-4 h-4 ml-1" />
-                  </Button>
-                </Link>
+                <MessageSquare className="w-16 h-16 mx-auto mb-4 text-cyan-400" />
+                <h3 className="text-2xl font-bold mb-2">Your Personal {language.name} Tutor</h3>
+                <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                  Chat with an AI tutor that remembers your mistakes, tracks your vocabulary, and adapts to your level.
+                </p>
+                <Button asChild size="lg">
+                  <Link to={`/learn/${slug}/tutor`}>Start Tutoring Session</Link>
+                </Button>
               </div>
             </PlanGate>
           </TabsContent>
