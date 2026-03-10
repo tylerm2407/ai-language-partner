@@ -117,7 +117,7 @@ export default function DrivingModePage() {
     return (
       <DashboardLayout>
         <div className="p-6 max-w-2xl mx-auto">
-          <PlanGate feature="hands-free Driving Mode" />
+          <PlanGate feature="hands-free Driving Mode"><div /></PlanGate>
         </div>
       </DashboardLayout>
     )
