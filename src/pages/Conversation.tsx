@@ -61,7 +61,7 @@ export default function Conversation() {
     // Award XP
     if (user) {
       const xp = calculateXPForMessage(input.length, parsed.corrections.length, profile?.streak_days || 0)
-      await supabase.rpc('add_xp', { p_user_id: user.id, p_xp: xp }).catch(() => {})
+      try { await supabase.rpc('add_xp', { p_user_id: user.id, p_xp: xp }) } catch {}
       refreshProfile()
     }
     setLoading(false)
