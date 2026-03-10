@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { useEffect, useState } from 'react'
 import DashboardLayout from '@/components/DashboardLayout'
-import PlanGate from '@/components/PlanGate'
+import { PlanGate } from '@/components/PlanGate'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { motion } from 'framer-motion'
@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { getStaticCourse } from '@/lib/staticCourses'
 import PopularSongsSection from '@/components/PopularSongsSection'
+import SRSStatsWidget from '@/components/SRSStatsWidget'
 
 export default function LanguagePage() {
   const { slug } = useParams<{ slug: string }>()
@@ -99,6 +100,7 @@ export default function LanguagePage() {
               const displayCourses = courses.length > 0 ? courses : [getStaticCourse(language.name, slug!)]
               return (
                 <div className="space-y-4">
+                  <SRSStatsWidget languageSlug={slug!} languageName={language.name} languageFlag={language.flag} />
                   {displayCourses.map((course: any, i: number) => (
                     <motion.div key={course.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}>
                       <Link to={`/learn/${slug}/course/${course.id}`}>

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUserPlan } from '@/hooks/useUserPlan'
+import { addCardsFromLesson, vocabToSRSCards } from '@/lib/srs'
 
 export default function LessonPage() {
   const { slug, lessonId } = useParams<{ slug: string; lessonId: string }>()
@@ -40,6 +41,7 @@ export default function LessonPage() {
   useEffect(() => {
     if (!lessonId || !language) return
 
+    // Check if it's a static lesson
     const staticLesson = getStaticLessonById(lessonId, language.name, slug!)
     if (staticLesson) {
       setLesson(staticLesson)
@@ -49,6 +51,7 @@ export default function LessonPage() {
       return
     }
 
+    // Try DB
     Promise.all([
       supabase.from('lessons').select('*, courses(*, languages(*))').eq('id', lessonId).single(),
       supabase.from('lesson_contents').select('*').eq('lesson_id', lessonId).order('sort_order'),
@@ -78,6 +81,18 @@ export default function LessonPage() {
     }
     await supabase.rpc('add_xp', { user_id: user?.id, xp_amount: lesson?.xp_reward || 20 })
     toast.success(`+${lesson?.xp_reward || 20} XP! Lesson complete!`)
+
+    // After marking complete, add vocab to SRS
+    const vocabContents = contents.filter((c: any) => c.content_type === 'vocab_list')
+    if (vocabContents.length > 0 && language?.id) {
+      const words = vocabContents.flatMap((c: any) => c.content?.words || [])
+      if (words.length > 0) {
+        const srsCards = vocabToSRSCards(words, language.name)
+        addCardsFromLesson(slug!, language.id, srsCards, isStatic ? undefined : lessonId)
+          .then(count => { if (count > 0) toast.success(`${count} words added to your review deck`) })
+          .catch(() => {}) // silent fail — SRS is enhancement, not core
+      }
+    }
   }
 
   const translate = async (contentId: string, text: string) => {
@@ -94,7 +109,7 @@ export default function LessonPage() {
       })
       const data = await res.json()
       if (data.result) setTranslations(p => ({ ...p, [contentId]: data.result }))
-      else toast.error('Translation unavailable')
+      else toast.error('Translation unavailable — deploy the reading-help edge function')
     } catch {
       toast.error('Translation failed')
     } finally {
@@ -132,7 +147,7 @@ export default function LessonPage() {
       setWritingFeedback(data)
       toast.success(`Score: ${data.score}/100`)
     } catch (e: any) {
-      toast.error(e.message || 'Feedback unavailable')
+      toast.error(e.message || 'Feedback unavailable — deploy the writing-feedback edge function')
     } finally {
       setSubmitting(false)
     }
@@ -143,11 +158,13 @@ export default function LessonPage() {
   }
   if (!lesson) return null
 
+  // Derive course ID from lesson for back link
   const courseId = lesson.course_id || (lessonId?.includes('foundations') ? `static-${slug}-foundations` : null)
 
   return (
     <DashboardLayout>
       <div className="max-w-3xl mx-auto px-4 py-6">
+        {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
           <Link to={`/learn/${slug}`} className="hover:text-foreground transition-colors">{language.name}</Link>
           <ChevronRight className="w-3 h-3" />
@@ -160,6 +177,7 @@ export default function LessonPage() {
           <span className="text-foreground">{lesson.title}</span>
         </div>
 
+        {/* Lesson Header */}
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
           <div className="flex items-center gap-3">
             <span className="text-4xl">{language.flag}</span>
@@ -170,6 +188,7 @@ export default function LessonPage() {
           </div>
         </motion.div>
 
+        {/* Contents */}
         <div className="space-y-6 mb-8">
           {contents.map((c: any, i: number) => (
             <motion.div
@@ -178,6 +197,7 @@ export default function LessonPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.1 }}
             >
+              {/* TEXT */}
               {c.content_type === 'text' && (
                 <div className="p-5 rounded-xl border border-white/10 bg-white/5">
                   <div className="flex items-start justify-between gap-3">
@@ -203,6 +223,7 @@ export default function LessonPage() {
                 </div>
               )}
 
+              {/* VOCAB LIST */}
               {c.content_type === 'vocab_list' && (
                 <div className="rounded-xl border border-white/10 overflow-hidden">
                   <div className="px-5 py-3 bg-white/5 border-b border-white/10">
@@ -222,6 +243,7 @@ export default function LessonPage() {
                 </div>
               )}
 
+              {/* WRITING PROMPT */}
               {c.content_type === 'writing_prompt' && (
                 <div className="rounded-xl border border-white/10 bg-white/5 p-5">
                   <h3 className="font-semibold flex items-center gap-2 mb-3">
@@ -253,9 +275,9 @@ export default function LessonPage() {
                               {writingFeedback.corrections.map((cor: any, ci: number) => (
                                 <div key={ci} className="text-sm text-muted-foreground mb-1">
                                   <span className="line-through text-red-400">{cor.original}</span>
-                                  {' > '}
+                                  {' → '}
                                   <span className="text-green-400">{cor.corrected}</span>
-                                  {cor.explanation && <span className="text-muted-foreground"> - {cor.explanation}</span>}
+                                  {cor.explanation && <span className="text-muted-foreground"> — {cor.explanation}</span>}
                                 </div>
                               ))}
                             </div>
@@ -270,7 +292,7 @@ export default function LessonPage() {
                       )}
                     </>
                   ) : (
-                    <PlanGate feature="AI writing feedback"><span /></PlanGate>
+                    <PlanGate />
                   )}
                 </div>
               )}
@@ -278,6 +300,7 @@ export default function LessonPage() {
           ))}
         </div>
 
+        {/* Complete Button */}
         {!completed ? (
           <Button size="lg" onClick={markComplete} className="w-full sm:w-auto">
             <CheckCircle className="w-4 h-4 mr-2" />
