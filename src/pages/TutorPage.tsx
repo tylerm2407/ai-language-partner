@@ -113,7 +113,7 @@ export default function TutorPage() {
     return (
       <DashboardLayout>
         <div className="p-6 max-w-2xl mx-auto">
-          <PlanGate feature="the personalized AI tutor" />
+          <PlanGate feature="the personalized AI tutor"><div /></PlanGate>
         </div>
       </DashboardLayout>
     )
