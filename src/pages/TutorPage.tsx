@@ -185,7 +185,7 @@ export default function TutorPage() {
           <div className="flex gap-3">
             <Textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKey}
               placeholder={`Type in ${language?.name || 'the target language'}...`}
-              className="resize-none min-h-[48px] max-h-32 bg-white/5 border-white/10" rows={1} />
+              className="resize-none min-h-[48px] max-h-32 bg-white/5 border-white/10 text-foreground placeholder:text-muted-foreground" rows={1} />
             <Button onClick={sendMessage} disabled={!input.trim() || loading}
               className="bg-gradient-to-r from-cyan-500 to-pink-500 text-white self-end">
               <Send className="w-4 h-4" />

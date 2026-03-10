@@ -43,7 +43,7 @@ export default function LanguagesPage() {
                 placeholder="Search languages..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="pl-10"
+                className="pl-10 text-foreground placeholder:text-muted-foreground"
               />
             </div>
           </div>
@@ -81,7 +81,7 @@ export default function LanguagesPage() {
                       </p>
                       <div className="flex items-center gap-1 text-xs text-muted-foreground">
                         <Users className="w-3 h-3" />
-                        <span>{lang.learner_count.toLocaleString()} learners</span>
+                        <span>{lang.learner_count > 0 ? `${lang.learner_count.toLocaleString()} learners` : 'New language'}</span>
                       </div>
                     </div>
                   </Link>

@@ -131,3 +131,20 @@ body {
     transform-style: preserve-3d;
   }
 }
+
+/* ── Input contrast fixes ── */
+input,
+textarea,
+select {
+  color: hsl(var(--foreground)) !important;
+  caret-color: hsl(var(--primary));
+}
+input::placeholder,
+textarea::placeholder {
+  color: hsl(var(--muted-foreground));
+  opacity: 1;
+}
+::selection {
+  background: hsl(174 100% 50% / 0.25);
+  color: hsl(var(--foreground));
+}

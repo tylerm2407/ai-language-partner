@@ -191,7 +191,7 @@ export default function LessonPage() {
             {writingPrompt && <p className="text-sm text-muted-foreground italic">"{writingPrompt}"</p>}
             <Textarea value={writing} onChange={e => setWriting(e.target.value)}
               placeholder={`Write in ${language?.name}...`}
-              className="min-h-[120px] bg-white/5 border-white/10" />
+              className="min-h-[120px] bg-white/5 border-white/10 text-foreground placeholder:text-muted-foreground" />
             {isPaid ? (
               <Button onClick={submitWriting} disabled={!writing.trim() || submitting} className="gap-1">
                 {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <ChevronRight className="w-4 h-4" />}
