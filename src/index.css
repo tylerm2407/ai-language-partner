@@ -5,6 +5,9 @@
 @tailwind utilities;
 
 @layer base {
+  * {
+    color: inherit;
+  }
   :root {
     --background: 235 45% 6%;
     --foreground: 220 20% 95%;
@@ -65,11 +68,19 @@
 
 html {
   scroll-behavior: smooth;
+  color: hsl(220, 20%, 95%);
 }
 
 body {
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
+  color: hsl(var(--foreground));
+  background-color: hsl(var(--background));
+}
+
+/* Force all text to inherit foreground color */
+h1, h2, h3, h4, h5, h6, p, span, a, li, td, th, label, div, section, article, aside, header, footer, nav, main {
+  color: inherit;
 }
 
 @layer utilities {

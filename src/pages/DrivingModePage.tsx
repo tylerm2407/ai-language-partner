@@ -70,7 +70,7 @@ export default function DrivingModePage() {
     if (!SpeechRecognition) { toast.error('Speech recognition not supported in this browser'); return }
 
     const recognition = new SpeechRecognition()
-    recognition.lang = language?.code || 'es-ES'
+    recognition.lang = language?.slug === 'spanish' ? 'es-ES' : language?.slug === 'french' ? 'fr-FR' : language?.slug === 'german' ? 'de-DE' : language?.slug === 'italian' ? 'it-IT' : language?.slug === 'portuguese' ? 'pt-BR' : language?.slug === 'japanese' ? 'ja-JP' : language?.slug === 'korean' ? 'ko-KR' : language?.slug === 'mandarin' ? 'zh-CN' : language?.slug || 'en-US'
     recognition.continuous = false
     recognition.interimResults = false
 
@@ -109,7 +109,7 @@ export default function DrivingModePage() {
       setTranscript(prev => [...prev, { role: 'assistant', text: reply }])
       setLastReply(reply)
       if (data.updated_state) setTutorState(data.updated_state)
-      speak(reply, language.code)
+      speak(reply, language.slug)
     } catch { toast.error('Network error'); setVoiceState('idle') }
   }
 

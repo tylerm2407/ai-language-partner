@@ -270,7 +270,7 @@ export default function LessonPage() {
                       )}
                     </>
                   ) : (
-                    <PlanGate />
+                    <PlanGate feature="AI writing feedback"><span /></PlanGate>
                   )}
                 </div>
               )}
