@@ -13,6 +13,7 @@ import {
   ChevronRight, Lock
 } from 'lucide-react'
 import { getStaticCourse } from '@/lib/staticCourses'
+import PopularSongsSection from '@/components/PopularSongsSection'
 
 export default function LanguagePage() {
   const { slug } = useParams<{ slug: string }>()
@@ -149,22 +150,23 @@ export default function LanguagePage() {
 
           {/* MUSIC TAB */}
           <TabsContent value="music">
-            {music.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <Music className="w-12 h-12 mx-auto mb-4 opacity-30" />
-                <p>No music tracks yet for {language.name}.</p>
-              </div>
-            ) : (
-              <div className="grid gap-3">
-                {music.map(track => (
-                  <div key={track.id} className="p-4 rounded-xl border border-white/10 bg-white/5 flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">{track.title}</p>
-                      <p className="text-sm text-muted-foreground">{track.artist}</p>
+            <PopularSongsSection languageSlug={slug!} languageName={language.name} />
+            {music.length > 0 && (
+              <div className="mt-6">
+                <h3 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">Admin-Added Tracks</h3>
+                <div className="grid gap-3">
+                  {music.map((track: any) => (
+                    <div key={track.id} className="p-4 rounded-xl border border-white/10 bg-white/5 flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">{track.title}</p>
+                        <p className="text-sm text-muted-foreground">{track.artist}</p>
+                      </div>
+                      {track.audio_url && (
+                        <a href={track.audio_url} target="_blank" rel="noopener noreferrer" className="text-xs text-cyan-400">Listen</a>
+                      )}
                     </div>
-                    {track.difficulty && <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 capitalize">{track.difficulty}</span>}
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             )}
           </TabsContent>
