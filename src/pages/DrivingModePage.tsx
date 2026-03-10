@@ -70,7 +70,7 @@ export default function DrivingModePage() {
     if (!SpeechRecognition) { toast.error('Speech recognition not supported in this browser'); return }
 
     const recognition = new SpeechRecognition()
-    recognition.lang = language?.code || 'es-ES'
+    recognition.lang = language?.slug === 'spanish' ? 'es-ES' : language?.slug === 'french' ? 'fr-FR' : language?.slug === 'german' ? 'de-DE' : language?.slug === 'italian' ? 'it-IT' : language?.slug === 'portuguese' ? 'pt-BR' : language?.slug === 'japanese' ? 'ja-JP' : language?.slug === 'korean' ? 'ko-KR' : language?.slug === 'mandarin' ? 'zh-CN' : language?.slug || 'en-US'
     recognition.continuous = false
     recognition.interimResults = false
 
