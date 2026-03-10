@@ -1,13 +1,18 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// CORS: use ALLOWED_ORIGIN env var in production; falls back to * for local dev
+const allowedOrigin = Deno.env.get("ALLOWED_ORIGIN") || "*";
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": allowedOrigin,
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// NOTE: Deno edge functions are stateless per-invocation — in-memory rate limiting does not
+// persist across requests. For production rate limiting, use Supabase's built-in rate limiting
+// feature (Dashboard → Edge Functions → Rate Limits) or a Redis layer (e.g. Upstash).
+
 interface TutorRequest {
-  user_id: string;
   language_id: string;
   language_name: string;
   native_language: string;
@@ -25,7 +30,7 @@ interface TutorRequest {
   mode: "text" | "voice";
 }
 
-function buildTutorSystemPrompt(req: TutorRequest): string {
+function buildTutorSystemPrompt(req: TutorRequest & { user_id: string }): string {
   const { language_name, native_language, user_level, tutor_state } = req;
   const errors = tutor_state.common_errors.slice(-5).join(", ") || "none yet";
   const mastered = tutor_state.mastered_vocab.slice(-10).join(", ") || "none yet";
@@ -75,16 +80,34 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const body: TutorRequest = await req.json();
-    const { user_id, language_id, message, history, tutor_state, session_id } = body;
+    // B: Verify JWT — reject requests without a valid Bearer token
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Missing authorization" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const token = authHeader.replace("Bearer ", "");
 
-    const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-    if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
-
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: "Invalid token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    // Use user.id from the verified JWT — do NOT trust body user_id
+    const user_id = user.id;
+
+    const body: TutorRequest = await req.json();
+    const { language_id, message: rawMessage, history, tutor_state, session_id } = body;
+
+    // C: Input sanitization — strip null bytes, cap length
+    const message = (rawMessage || "").replace(/\0/g, "").slice(0, 2000);
+
+    const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
 
     const { data: sub } = await supabase.from("subscriptions")
       .select("plan, status, current_period_end").eq("user_id", user_id).single();
@@ -98,7 +121,7 @@ serve(async (req) => {
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const systemPrompt = buildTutorSystemPrompt(body);
+    const systemPrompt = buildTutorSystemPrompt({ ...body, user_id });
     const messages = [
       ...history,
       { role: "user" as const, content: message }

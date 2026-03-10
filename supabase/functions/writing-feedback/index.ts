@@ -1,8 +1,10 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// CORS: use ALLOWED_ORIGIN env var in production; falls back to * for local dev
+const allowedOrigin = Deno.env.get("ALLOWED_ORIGIN") || "*";
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": allowedOrigin,
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
@@ -10,18 +12,37 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { user_id, lesson_id, language_id, language_name, user_level, prompt, submission } = await req.json();
+    // B: Verify JWT — reject requests without a valid Bearer token
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Missing authorization" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const token = authHeader.replace("Bearer ", "");
 
-    const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
-
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: "Invalid token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    // Use user.id from the verified JWT — do NOT trust body user_id
+    const user_id = user.id;
+
+    const { lesson_id, language_id, language_name, user_level, prompt, submission: rawSubmission } = await req.json();
+
+    // C: Input sanitization — strip null bytes, cap at 5000 chars
+    const submission = (rawSubmission || "").replace(/\0/g, "").slice(0, 5000);
+
+    const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
 
     const { data: sub } = await supabase.from("subscriptions")
       .select("plan, status, current_period_end").eq("user_id", user_id).single();
-    const isPaid = sub && sub.status === "active" && ["pro","family","lifetime"].includes(sub.plan) &&
+    const isPaid = sub && sub.status === "active" && ["pro", "family", "lifetime"].includes(sub.plan) &&
       (!sub.current_period_end || new Date(sub.current_period_end) > new Date());
     if (!isPaid) {
       return new Response(JSON.stringify({ error: "upgrade_required" }),

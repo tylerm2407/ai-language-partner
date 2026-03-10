@@ -241,3 +241,40 @@ BEGIN
     updated_at = now();
 END;
 $$;
+
+-- =====================
+-- SECURITY HARDENING (added by security audit)
+-- =====================
+
+-- A: DELETE policies — allow users to remove their own data
+CREATE POLICY "ulp_delete" ON public.user_language_progress FOR DELETE USING (auth.uid() = user_id);
+CREATE POLICY "ull_delete" ON public.user_lesson_progress FOR DELETE USING (auth.uid() = user_id);
+CREATE POLICY "uws_delete" ON public.user_writing_submissions FOR DELETE USING (auth.uid() = user_id);
+CREATE POLICY "cs_delete" ON public.conversation_sessions FOR DELETE USING (auth.uid() = user_id);
+CREATE POLICY "tp_delete" ON public.tutor_profiles FOR DELETE USING (auth.uid() = user_id);
+CREATE POLICY "sub_delete" ON public.subscriptions FOR DELETE USING (auth.uid() = user_id);
+
+-- G: Restrict profiles SELECT — full row only visible to the owner.
+-- The previous USING (true) policy exposed stripe_customer_id to all authenticated users.
+DROP POLICY IF EXISTS "profiles_select" ON public.profiles;
+CREATE POLICY "profiles_own_full" ON public.profiles FOR SELECT USING (auth.uid() = id);
+
+-- G: Public leaderboard view — excludes sensitive columns (stripe_customer_id, native_language, etc.)
+CREATE OR REPLACE VIEW public.public_profiles AS
+  SELECT id, username, full_name, avatar_url, target_language, total_xp, streak_days, subscription_tier
+  FROM public.profiles;
+
+-- H: Admin users table — bootstrapped manually (INSERT admin user_id directly)
+CREATE TABLE IF NOT EXISTS public.admin_users (
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE
+);
+ALTER TABLE public.admin_users ENABLE ROW LEVEL SECURITY;
+-- Only service role can read/write admin_users (RLS blocks all authenticated user access by default)
+
+-- H: is_admin() RPC — SECURITY DEFINER so it can read admin_users regardless of caller RLS
+CREATE OR REPLACE FUNCTION public.is_admin(uid UUID)
+RETURNS BOOLEAN LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  RETURN EXISTS (SELECT 1 FROM public.admin_users WHERE user_id = uid);
+END;
+$$;
