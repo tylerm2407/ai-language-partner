@@ -5,6 +5,9 @@
 @tailwind utilities;
 
 @layer base {
+  * {
+    color: inherit;
+  }
   :root {
     --background: 235 45% 6%;
     --foreground: 220 20% 95%;
