@@ -1,12 +1,12 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Home, BookOpen, Brain, Trophy, User } from 'lucide-react'
+import { Home, BookOpen, Globe, Trophy, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/AuthContext'
 
 const TABS = [
   { to: '/dashboard', icon: Home, label: 'Home' },
   { to: '/learn', icon: BookOpen, label: 'Learn' },
-  { to: '/practice', icon: Brain, label: 'Practice' },
+  { to: '/languages', icon: Globe, label: 'Languages' },
   { to: '/leaderboard', icon: Trophy, label: 'Ranks' },
   { to: '/profile', icon: User, label: 'Profile' },
 ]

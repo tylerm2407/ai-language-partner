@@ -28,6 +28,7 @@ import DrivingModePage from "./pages/DrivingModePage"
 import MusicAdminPage from "./pages/MusicAdminPage"
 import NewsReaderPage from "./pages/NewsReaderPage"
 import SRSReviewPage from "./pages/SRSReviewPage"
+import LanguagesPage from "./pages/LanguagesPage"
 
 const queryClient = new QueryClient()
 
@@ -61,6 +62,9 @@ const App = () => (
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
             <Route path="/achievements" element={<ProtectedRoute><Achievements /></ProtectedRoute>} />
+
+            {/* Languages browser */}
+            <Route path="/languages" element={<ProtectedRoute><LanguagesPage /></ProtectedRoute>} />
 
             {/* Language routes */}
             <Route path="/learn/:slug" element={<ProtectedRoute><LanguagePage /></ProtectedRoute>} />
