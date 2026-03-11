@@ -43,13 +43,13 @@ export default function Achievements() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-4xl mx-auto p-6 space-y-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-5 sm:space-y-8">
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Zap className="w-6 h-6 text-primary" /> Achievements
+          <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+            <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-primary" /> Achievements
           </h1>
-          <p className="text-muted-foreground text-sm mt-1">
+          <p className="text-muted-foreground text-xs sm:text-sm mt-1">
             {unlockedCount} of {totalCount} unlocked ({overallPercent}%)
           </p>
         </motion.div>
@@ -57,16 +57,16 @@ export default function Achievements() {
         {/* Level card */}
         <motion.div
           initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
-          className="rounded-2xl border border-border bg-card p-6"
+          className="rounded-2xl border border-border bg-card p-4 sm:p-6"
         >
           <div className="flex items-center justify-between mb-3">
             <div>
-              <span className={cn('text-lg font-bold bg-gradient-to-r bg-clip-text text-transparent', levelInfo.level.color)}>
+              <span className={cn('text-base sm:text-lg font-bold bg-gradient-to-r bg-clip-text text-transparent', levelInfo.level.color)}>
                 {levelInfo.level.name}
               </span>
-              <span className="text-muted-foreground text-sm ml-2">Level {levelInfo.levelIndex}</span>
+              <span className="text-muted-foreground text-xs sm:text-sm ml-2">Level {levelInfo.levelIndex}</span>
             </div>
-            <span className="text-sm font-medium">{totalXP.toLocaleString()} XP</span>
+            <span className="text-xs sm:text-sm font-medium">{totalXP.toLocaleString()} XP</span>
           </div>
           <Progress value={levelInfo.progressPercent} className="h-2 mb-2" />
           <div className="flex justify-between text-xs text-muted-foreground">
@@ -75,8 +75,8 @@ export default function Achievements() {
           </div>
         </motion.div>
 
-        {/* Category filter */}
-        <div className="flex gap-2 flex-wrap">
+        {/* Category filter — horizontally scrollable on mobile */}
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap">
           {categories.map(cat => {
             const meta = CATEGORY_META[cat]
             const Icon = meta?.icon
@@ -85,7 +85,7 @@ export default function Achievements() {
                 key={cat}
                 onClick={() => setFilter(cat)}
                 className={cn(
-                  'px-3 py-1.5 rounded-full text-xs font-medium transition-all flex items-center gap-1.5',
+                  'px-3 py-1.5 rounded-full text-xs font-medium transition-all flex items-center gap-1.5 whitespace-nowrap min-h-[36px] flex-shrink-0',
                   filter === cat
                     ? 'bg-primary/10 text-primary border border-primary/30'
                     : 'bg-secondary text-muted-foreground border border-border hover:border-primary/20'
@@ -99,7 +99,7 @@ export default function Achievements() {
         </div>
 
         {/* Achievement grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {filtered.map((ach, i) => {
             const unlocked = unlockedIds.has(ach.id)
             return (
@@ -109,9 +109,9 @@ export default function Achievements() {
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: i * 0.03 }}
                 className={cn(
-                  'rounded-2xl border p-5 transition-all relative overflow-hidden group',
+                  'rounded-2xl border p-4 sm:p-5 transition-all relative overflow-hidden',
                   unlocked
-                    ? 'border-primary/30 bg-primary/5 shadow-card'
+                    ? 'border-primary/30 bg-primary/5'
                     : 'border-border bg-card opacity-60'
                 )}
               >
@@ -125,10 +125,10 @@ export default function Achievements() {
                     <Lock className="w-4 h-4 text-muted-foreground" />
                   </div>
                 )}
-                <div className="text-3xl mb-3 card-3d inline-block">{ach.icon}</div>
+                <div className="text-2xl sm:text-3xl mb-2 sm:mb-3">{ach.icon}</div>
                 <h3 className="font-semibold text-sm">{ach.title}</h3>
                 <p className="text-xs text-muted-foreground mt-1">{ach.description}</p>
-                <div className="mt-3 flex items-center gap-1 text-xs">
+                <div className="mt-2 sm:mt-3 flex items-center gap-1 text-xs">
                   <Zap className="w-3 h-3 text-primary" />
                   <span className="text-primary font-medium">+{ach.xp_reward} XP</span>
                 </div>
