@@ -69,6 +69,8 @@
 html {
   scroll-behavior: smooth;
   color: hsl(220, 20%, 95%);
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
@@ -76,6 +78,7 @@ body {
   -webkit-font-smoothing: antialiased;
   color: hsl(var(--foreground));
   background-color: hsl(var(--background));
+  overscroll-behavior-y: none;
 }
 
 /* Force all text to inherit foreground color */
@@ -123,20 +126,34 @@ h1, h2, h3, h4, h5, h6, p, span, a, li, td, th, label, div, section, article, as
   .glass {
     background: var(--glass-bg);
     backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     border: 1px solid var(--glass-border);
   }
   .glass-strong {
     background: hsl(235 40% 12% / 0.8);
     backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
     border: 1px solid var(--glass-border);
   }
-  .card-3d {
-    transform: perspective(1000px) rotateX(0deg) rotateY(0deg);
-    transition: transform 0.4s ease, box-shadow 0.4s ease;
+  /* Reduce heavy effects on mobile for performance */
+  @media (max-width: 767px) {
+    .card-3d {
+      transform: none;
+      transition: box-shadow 0.3s ease;
+    }
+    .card-3d:hover {
+      transform: none;
+    }
   }
-  .card-3d:hover {
-    transform: perspective(1000px) rotateX(2deg) rotateY(-2deg) translateY(-8px);
-    box-shadow: var(--shadow-card-hover);
+  @media (min-width: 768px) {
+    .card-3d {
+      transform: perspective(1000px) rotateX(0deg) rotateY(0deg);
+      transition: transform 0.4s ease, box-shadow 0.4s ease;
+    }
+    .card-3d:hover {
+      transform: perspective(1000px) rotateX(2deg) rotateY(-2deg) translateY(-8px);
+      box-shadow: var(--shadow-card-hover);
+    }
   }
   .preserve-3d {
     transform-style: preserve-3d;
@@ -160,7 +177,7 @@ textarea::placeholder {
   color: hsl(var(--foreground));
 }
 
-/* Mobile app styles */
+/* ── iOS Safe Areas ── */
 .safe-area-top {
   padding-top: env(safe-area-inset-top, 0px);
 }
@@ -177,13 +194,29 @@ nav.fixed.bottom-0 {
 a, button { min-height: 44px; }
 .tab-trigger { min-height: 40px; }
 
-/* Prevent text size adjustment on rotation */
-html { -webkit-text-size-adjust: 100%; }
-
-/* Smooth scrolling */
-* { scroll-behavior: smooth; }
+/* Smooth scrolling — but not on iOS where it causes jank */
+@media (min-width: 768px) {
+  * { scroll-behavior: smooth; }
+}
 
 /* Remove input zoom on iOS */
 input, textarea, select {
   font-size: 16px !important;
+}
+
+/* Prevent overscroll bounce on iOS */
+html, body {
+  overflow-x: hidden;
+}
+
+/* iOS momentum scrolling */
+.overflow-y-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Fix for iOS keyboard pushing content */
+@supports (-webkit-touch-callout: none) {
+  .ios-keyboard-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
 }
