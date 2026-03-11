@@ -292,7 +292,7 @@ export default function LessonPage() {
                       )}
                     </>
                   ) : (
-                    <PlanGate />
+                    <PlanGate feature="writing feedback"><span /></PlanGate>
                   )}
                 </div>
               )}

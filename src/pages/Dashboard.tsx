@@ -88,7 +88,7 @@ export default function Dashboard() {
         >
           <div className="flex justify-between items-center mb-1.5">
             <span className="text-sm font-medium">{levelInfo.level.name}</span>
-            <span className="text-xs text-muted-foreground">{levelInfo.xpToNext.toLocaleString()} XP to next level</span>
+            <span className="text-xs text-muted-foreground">{(levelInfo.xpNeededForLevel - levelInfo.progressInLevel).toLocaleString()} XP to next level</span>
           </div>
           <Progress value={levelInfo.progressPercent} className="h-2" />
         </motion.div>
