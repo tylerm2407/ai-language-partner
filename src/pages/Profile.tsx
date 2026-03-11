@@ -1,14 +1,16 @@
 import { useAuth } from '@/contexts/AuthContext'
 import { getLevelInfo } from '@/lib/achievements'
 import { LANGUAGE_FLAGS } from '@/lib/claude'
-import DashboardLayout from '@/components/DashboardLayout'
+import AppShell from '@/components/AppShell'
 import { Progress } from '@/components/ui/progress'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
-import { Flame, Star, Zap, Heart, Crown, Target, Calendar } from 'lucide-react'
+import { Flame, Star, Zap, Heart, Crown, Target, Calendar, Settings, LogOut } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Button } from '@/components/ui/button'
 
 export default function Profile() {
-  const { profile } = useAuth()
+  const { profile, signOut } = useAuth()
 
   const totalXP = profile?.total_xp ?? 0
   const levelInfo = getLevelInfo(totalXP)
@@ -23,20 +25,20 @@ export default function Profile() {
   ]
 
   return (
-    <DashboardLayout>
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-5 sm:space-y-8">
+    <AppShell title="Profile">
+      <div className="py-4 space-y-4">
         {/* Profile header */}
         <motion.div
           initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-          className="rounded-2xl border border-border bg-card p-5 sm:p-6 text-center"
+          className="rounded-2xl border border-border bg-card p-5 text-center"
         >
-          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-xl sm:text-2xl font-bold text-primary-foreground mx-auto mb-3 sm:mb-4">
+          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-xl font-bold text-primary-foreground mx-auto mb-3">
             {(profile?.full_name || profile?.username || 'U')[0].toUpperCase()}
           </div>
-          <h1 className="text-lg sm:text-xl font-bold flex items-center justify-center gap-2">
+          <h2 className="text-lg font-bold flex items-center justify-center gap-2">
             {profile?.full_name || profile?.username || 'Learner'}
             {isPro && <Crown className="w-5 h-5 text-primary" />}
-          </h1>
+          </h2>
           {profile?.username && profile?.full_name && (
             <p className="text-muted-foreground text-sm">@{profile.username}</p>
           )}
@@ -55,7 +57,7 @@ export default function Profile() {
         {/* Level progress */}
         <motion.div
           initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
-          className="rounded-2xl border border-border bg-card p-4 sm:p-5"
+          className="rounded-2xl border border-border bg-card p-4"
         >
           <div className="flex items-center justify-between mb-2">
             <span className={cn('font-bold bg-gradient-to-r bg-clip-text text-transparent', levelInfo.level.color)}>
@@ -71,20 +73,20 @@ export default function Profile() {
         </motion.div>
 
         {/* Stats grid */}
-        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 gap-3">
           {stats.map((s, i) => (
             <motion.div
               key={s.label}
               initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.08 + i * 0.04 }}
-              className="rounded-2xl border border-border bg-card p-3 sm:p-4 flex items-center gap-3"
+              className="rounded-2xl border border-border bg-card p-3 flex items-center gap-3"
             >
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
-                <s.icon className={cn('w-4 h-4 sm:w-5 sm:h-5', s.color)} />
+              <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
+                <s.icon className={cn('w-4 h-4', s.color)} />
               </div>
               <div className="min-w-0">
-                <div className="text-lg sm:text-xl font-bold">{s.value}</div>
-                <div className="text-[10px] sm:text-xs text-muted-foreground">{s.label}</div>
+                <div className="text-lg font-bold">{s.value}</div>
+                <div className="text-[10px] text-muted-foreground">{s.label}</div>
               </div>
             </motion.div>
           ))}
@@ -93,7 +95,7 @@ export default function Profile() {
         {/* Subscription */}
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
-          className="rounded-2xl border border-border bg-card p-4 sm:p-5"
+          className="rounded-2xl border border-border bg-card p-4"
         >
           <h2 className="font-semibold text-sm mb-2">Subscription</h2>
           <div className="flex items-center gap-2">
@@ -106,7 +108,32 @@ export default function Profile() {
             <span className="text-sm text-muted-foreground capitalize">{profile?.subscription_tier || 'free'} plan</span>
           </div>
         </motion.div>
+
+        {/* Quick links */}
+        <div className="space-y-2">
+          <Link to="/settings">
+            <div className="rounded-2xl border border-border bg-card p-4 flex items-center gap-3 hover:bg-secondary/50 active:bg-secondary transition-colors min-h-[48px]">
+              <Settings className="w-5 h-5 text-muted-foreground" />
+              <span className="font-medium text-sm flex-1">Settings</span>
+              <span className="text-muted-foreground text-xs">›</span>
+            </div>
+          </Link>
+          <Link to="/achievements">
+            <div className="rounded-2xl border border-border bg-card p-4 flex items-center gap-3 hover:bg-secondary/50 active:bg-secondary transition-colors min-h-[48px]">
+              <Star className="w-5 h-5 text-yellow-400" />
+              <span className="font-medium text-sm flex-1">Achievements</span>
+              <span className="text-muted-foreground text-xs">›</span>
+            </div>
+          </Link>
+          <button
+            onClick={() => signOut()}
+            className="w-full rounded-2xl border border-destructive/20 bg-card p-4 flex items-center gap-3 hover:bg-destructive/10 active:bg-destructive/20 transition-colors min-h-[48px]"
+          >
+            <LogOut className="w-5 h-5 text-destructive" />
+            <span className="font-medium text-sm text-destructive">Sign Out</span>
+          </button>
+        </div>
       </div>
-    </DashboardLayout>
+    </AppShell>
   )
 }
