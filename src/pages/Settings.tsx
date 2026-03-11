@@ -40,34 +40,34 @@ export default function Settings() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-xl mx-auto p-6 space-y-8">
+      <div className="max-w-xl mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-5 sm:space-y-8">
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <SettingsIcon className="w-6 h-6 text-primary" /> Settings
+          <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+            <SettingsIcon className="w-5 h-5 sm:w-6 sm:h-6 text-primary" /> Settings
           </h1>
-          <p className="text-muted-foreground text-sm mt-1">Manage your account preferences.</p>
+          <p className="text-muted-foreground text-xs sm:text-sm mt-1">Manage your account preferences.</p>
         </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
-          className="rounded-2xl border border-border bg-card p-6 space-y-5"
+          className="rounded-2xl border border-border bg-card p-4 sm:p-6 space-y-4 sm:space-y-5"
         >
           <div className="space-y-2">
             <Label htmlFor="fullName">Full Name</Label>
             <Input id="fullName" value={fullName} onChange={e => setFullName(e.target.value)}
-              placeholder="Your name" className="bg-secondary border-border" />
+              placeholder="Your name" className="bg-secondary border-border w-full" />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="username">Username</Label>
             <Input id="username" value={username} onChange={e => setUsername(e.target.value)}
-              placeholder="username" className="bg-secondary border-border" />
+              placeholder="username" className="bg-secondary border-border w-full" />
           </div>
 
           <div className="space-y-2">
             <Label className="flex items-center gap-1.5"><Globe className="w-3.5 h-3.5" /> Native Language</Label>
             <Select value={nativeLang} onValueChange={setNativeLang}>
-              <SelectTrigger className="bg-secondary border-border">
+              <SelectTrigger className="bg-secondary border-border w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -82,22 +82,22 @@ export default function Settings() {
             <Label className="flex items-center gap-1.5"><Target className="w-3.5 h-3.5" /> Daily XP Goal</Label>
             <Input type="number" min={10} max={500} step={10} value={dailyGoal}
               onChange={e => setDailyGoal(e.target.value)}
-              className="bg-secondary border-border w-32" />
+              className="bg-secondary border-border w-full sm:w-32" />
             <p className="text-xs text-muted-foreground">Between 10 and 500 XP</p>
           </div>
 
           <Button onClick={handleSave} disabled={saving}
-            className="bg-gradient-to-r from-primary to-accent text-primary-foreground gap-2">
+            className="bg-gradient-to-r from-primary to-accent text-primary-foreground gap-2 w-full sm:w-auto min-h-[48px]">
             <Save className="w-4 h-4" /> {saving ? 'Saving...' : 'Save Changes'}
           </Button>
         </motion.div>
 
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}
-          className="rounded-2xl border border-border bg-card p-6 space-y-3"
+          className="rounded-2xl border border-border bg-card p-4 sm:p-6 space-y-3"
         >
           <h2 className="font-semibold text-sm">Account</h2>
-          <p className="text-xs text-muted-foreground">{user?.email}</p>
+          <p className="text-xs text-muted-foreground break-all">{user?.email}</p>
         </motion.div>
       </div>
     </DashboardLayout>

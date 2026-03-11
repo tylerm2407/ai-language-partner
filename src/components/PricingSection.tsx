@@ -4,36 +4,36 @@ import { Check, ArrowRight, Sparkles } from "lucide-react";
 
 const plans = [
   {
-    name: "Free Trial",
+    name: "Free",
     price: "$0",
-    period: "7 days",
+    period: "forever",
     features: [
-      "3 AI conversations per day",
-      "5 languages",
+      "All 50 language courses",
       "Basic reading exercises",
       "Daily streak tracking",
+      "Community leaderboard",
     ],
-    cta: "Start Free Trial",
+    cta: "Get Started Free",
     featured: false,
   },
   {
     name: "Pro",
-    price: "$12",
+    price: "$4.99",
     period: "/month",
     features: [
+      "Everything in Free",
       "Unlimited AI conversations",
-      "All 50 languages",
-      "Reading & writing modes",
-      "Achievement badges & streaks",
-      "Voice chat",
+      "Writing feedback",
+      "Voice driving mode",
+      "Personalized AI tutor",
       "Priority support",
     ],
-    cta: "Start Learning Today",
+    cta: "Start Pro",
     featured: true,
   },
   {
     name: "Family",
-    price: "$29",
+    price: "$14.99",
     period: "/month",
     features: [
       "Up to 5 family members",
@@ -48,7 +48,7 @@ const plans = [
 
 const PricingSection = () => {
   return (
-    <section id="pricing" className="py-24 md:py-32 relative overflow-hidden">
+    <section id="pricing" className="py-16 sm:py-24 md:py-32 relative overflow-hidden">
       <div className="absolute inset-0 gradient-section" />
       <div className="absolute top-0 left-1/3 w-[600px] h-[600px] rounded-full bg-accent/3 blur-[150px]" />
 
@@ -57,18 +57,19 @@ const PricingSection = () => {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-16"
+          className="text-center mb-10 sm:mb-16"
         >
           <p className="text-primary font-semibold text-sm uppercase tracking-wider mb-3">Pricing</p>
-          <h2 className="font-heading text-3xl md:text-5xl font-bold mb-4 text-foreground">
+          <h2 className="font-heading text-2xl sm:text-3xl md:text-5xl font-bold mb-4 text-foreground">
             Simple, transparent pricing
           </h2>
-          <p className="text-muted-foreground text-lg max-w-xl mx-auto">
+          <p className="text-muted-foreground text-base sm:text-lg max-w-xl mx-auto">
             Start free, upgrade when you're ready to go all-in on fluency.
           </p>
         </motion.div>
 
-        <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+        {/* Stacked on mobile, 3-col on desktop */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6 max-w-4xl mx-auto">
           {plans.map((plan, i) => (
             <motion.div
               key={plan.name}
@@ -76,7 +77,7 @@ const PricingSection = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.1 }}
-              className={`rounded-2xl p-8 card-3d relative ${
+              className={`rounded-2xl p-6 sm:p-8 relative ${
                 plan.featured
                   ? "glass border-primary/30 border shadow-glow"
                   : "glass"
@@ -92,7 +93,7 @@ const PricingSection = () => {
 
               <h3 className="font-heading text-xl font-bold mb-1 text-foreground">{plan.name}</h3>
               <div className="flex items-baseline gap-1 mb-6">
-                <span className="font-heading text-4xl font-bold text-foreground">{plan.price}</span>
+                <span className="font-heading text-3xl sm:text-4xl font-bold text-foreground">{plan.price}</span>
                 <span className="text-sm text-muted-foreground">{plan.period}</span>
               </div>
 
@@ -106,7 +107,7 @@ const PricingSection = () => {
               </ul>
 
               <Button
-                className={`w-full font-semibold ${
+                className={`w-full font-semibold min-h-[48px] ${
                   plan.featured
                     ? "gradient-primary text-primary-foreground border-0 shadow-glow"
                     : "bg-secondary text-foreground hover:bg-secondary/80 border border-border"

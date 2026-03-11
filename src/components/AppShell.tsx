@@ -29,15 +29,15 @@ export default function AppShell({
   const isPro = profile?.subscription_tier === 'pro' || profile?.subscription_tier === 'family'
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-[100dvh] bg-background flex flex-col overflow-x-hidden">
       {/* Top header */}
       {(title || showBack) && (
-        <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-white/10 safe-area-top">
+        <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border safe-area-top">
           <div className="flex items-center h-14 px-4 max-w-lg mx-auto gap-3">
             {showBack && (
               <button
                 onClick={() => backTo ? navigate(backTo) : navigate(-1)}
-                className="p-2 -ml-2 rounded-xl hover:bg-white/5 transition-colors"
+                className="p-2 -ml-2 rounded-xl hover:bg-secondary/50 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
@@ -53,7 +53,7 @@ export default function AppShell({
               !showBack && (
                 <div className="flex items-center gap-2">
                   {isPro && <Crown className="w-4 h-4 text-yellow-400" />}
-                  <Link to="/settings" className="p-2 rounded-xl hover:bg-white/5 transition-colors">
+                  <Link to="/settings" className="p-2 rounded-xl hover:bg-secondary/50 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center">
                     <Settings className="w-5 h-5 text-muted-foreground" />
                   </Link>
                 </div>
@@ -67,7 +67,7 @@ export default function AppShell({
       <main className={cn(
         'flex-1 max-w-lg mx-auto w-full',
         noPadding ? '' : 'px-4',
-        noBottomNav ? 'pb-4' : 'pb-24',
+        noBottomNav ? 'pb-4' : 'pb-[calc(5rem+env(safe-area-inset-bottom,0px))]',
       )}>
         {children}
       </main>

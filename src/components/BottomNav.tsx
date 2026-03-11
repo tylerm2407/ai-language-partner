@@ -15,12 +15,13 @@ export default function BottomNav() {
   const location = useLocation()
   const { profile } = useAuth()
 
-  // Don't render if not authenticated
   if (!profile) return null
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-t border-white/10 safe-area-bottom">
-      <div className="flex items-center justify-around max-w-lg mx-auto px-2 py-1">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-t border-border"
+      style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 4px)' }}
+    >
+      <div className="flex items-center justify-around max-w-lg mx-auto px-1 py-1">
         {TABS.map(({ to, icon: Icon, label }) => {
           const active = location.pathname === to || (to !== '/dashboard' && location.pathname.startsWith(to))
           return (
@@ -28,19 +29,19 @@ export default function BottomNav() {
               key={to}
               to={to}
               className={cn(
-                'flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl min-w-[56px] transition-all duration-200',
+                'flex flex-col items-center gap-0.5 px-2 py-2 rounded-xl min-w-[48px] min-h-[44px] transition-all duration-200',
                 active
-                  ? 'text-cyan-400'
+                  ? 'text-primary'
                   : 'text-muted-foreground hover:text-foreground'
               )}
             >
               <div className={cn(
                 'p-1.5 rounded-xl transition-all duration-200',
-                active ? 'bg-cyan-400/15' : ''
+                active ? 'bg-primary/15' : ''
               )}>
                 <Icon className={cn('w-5 h-5', active ? 'stroke-[2.5]' : 'stroke-2')} />
               </div>
-              <span className={cn('text-[10px] font-medium leading-none', active ? 'text-cyan-400' : '')}>{label}</span>
+              <span className={cn('text-[10px] font-medium leading-none', active ? 'text-primary' : '')}>{label}</span>
             </Link>
           )
         })}
