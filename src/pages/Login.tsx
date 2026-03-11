@@ -1,149 +1,180 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { motion } from 'framer-motion'
+import { Eye, EyeOff, ArrowRight, Globe, Loader2 } from 'lucide-react'
 
 export default function Login() {
-  const { signIn, signUp } = useAuth()
+  const { signIn, signUp, user, loading: authLoading } = useAuth()
   const navigate = useNavigate()
+  const [mode, setMode] = useState<'login' | 'signup'>('signup')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showPass, setShowPass] = useState(false)
 
-  const [loginForm, setLoginForm] = useState({ email: '', password: '' })
-  const [signupForm, setSignupForm] = useState({ email: '', password: '', fullName: '' })
+  const [form, setForm] = useState({ email: '', password: '', name: '' })
 
-  const handleLogin = async (e: React.FormEvent) => {
+  // Redirect if already logged in
+  useEffect(() => {
+    if (!authLoading && user) navigate('/dashboard', { replace: true })
+  }, [user, authLoading, navigate])
+
+  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setForm(f => ({ ...f, [k]: e.target.value }))
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!form.email || !form.password) return
     setLoading(true)
     setError('')
-    const { error } = await signIn(loginForm.email, loginForm.password)
-    if (error) {
-      setError(error.message)
-      setLoading(false)
+
+    if (mode === 'login') {
+      const { error } = await signIn(form.email, form.password)
+      if (error) { setError(error.message); setLoading(false) }
+      else navigate('/dashboard', { replace: true })
     } else {
-      navigate('/dashboard')
+      if (!form.name.trim()) { setError('Please enter your name'); setLoading(false); return }
+      const { error } = await signUp(form.email, form.password, form.name)
+      if (error) { setError(error.message); setLoading(false) }
+      else navigate('/onboarding', { replace: true })
     }
   }
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-    const { error } = await signUp(signupForm.email, signupForm.password, signupForm.fullName)
-    if (error) {
-      setError(error.message)
-      setLoading(false)
-    } else {
-      navigate('/onboarding')
-    }
-  }
+  if (authLoading) return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
+    </div>
+  )
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl" />
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Gradient background */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-cyan-500/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-0 w-72 h-72 bg-pink-500/10 rounded-full blur-3xl" />
       </div>
 
-      <div className="w-full max-w-md relative">
-        <div className="text-center mb-8">
-          <Link to="/" className="inline-block">
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-pink-500 bg-clip-text text-transparent">Fluenci</h1>
-          </Link>
-          <p className="text-muted-foreground mt-2">Your AI language learning partner</p>
+      <div className="flex-1 flex flex-col justify-center px-5 py-8 relative max-w-sm mx-auto w-full">
+        {/* Logo */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-8"
+        >
+          <div className="flex items-center justify-center gap-2 mb-3">
+            <Globe className="w-8 h-8 text-cyan-400" />
+            <span className="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-pink-500 bg-clip-text text-transparent">
+              Fluenci
+            </span>
+          </div>
+          <p className="text-muted-foreground text-sm">
+            {mode === 'signup' ? 'Start learning a new language today — free forever' : 'Welcome back! Ready to practice?'}
+          </p>
+        </motion.div>
+
+        {/* Tab switcher */}
+        <div className="flex bg-white/5 rounded-xl p-1 mb-6">
+          <button
+            onClick={() => { setMode('signup'); setError('') }}
+            className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              mode === 'signup' ? 'bg-white/10 text-foreground' : 'text-muted-foreground'
+            }`}
+          >
+            Sign Up — Free
+          </button>
+          <button
+            onClick={() => { setMode('login'); setError('') }}
+            className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              mode === 'login' ? 'bg-white/10 text-foreground' : 'text-muted-foreground'
+            }`}
+          >
+            Log In
+          </button>
         </div>
 
-        <div className="bg-card/50 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
-          <Tabs defaultValue="login">
-            <TabsList className="w-full mb-6">
-              <TabsTrigger value="login" className="flex-1">Log In</TabsTrigger>
-              <TabsTrigger value="signup" className="flex-1">Sign Up</TabsTrigger>
-            </TabsList>
+        {/* Form */}
+        <motion.form
+          key={mode}
+          initial={{ opacity: 0, x: mode === 'signup' ? -20 : 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.2 }}
+          onSubmit={handleSubmit}
+          className="space-y-3"
+        >
+          {mode === 'signup' && (
+            <Input
+              placeholder="Your name"
+              value={form.name}
+              onChange={set('name')}
+              className="h-12 text-base"
+              autoComplete="name"
+            />
+          )}
+          <Input
+            type="email"
+            placeholder="Email address"
+            value={form.email}
+            onChange={set('email')}
+            className="h-12 text-base"
+            autoComplete="email"
+            inputMode="email"
+          />
+          <div className="relative">
+            <Input
+              type={showPass ? 'text' : 'password'}
+              placeholder="Password"
+              value={form.password}
+              onChange={set('password')}
+              className="h-12 text-base pr-12"
+              autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPass(p => !p)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-muted-foreground"
+            >
+              {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
 
-            <TabsContent value="login">
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="login-email">Email</Label>
-                  <Input
-                    id="login-email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={loginForm.email}
-                    onChange={e => setLoginForm(f => ({ ...f, email: e.target.value }))}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="login-password">Password</Label>
-                  <Input
-                    id="login-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={loginForm.password}
-                    onChange={e => setLoginForm(f => ({ ...f, password: e.target.value }))}
-                    required
-                  />
-                </div>
-                {error && <p className="text-red-400 text-sm">{error}</p>}
-                <Button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-cyan-500 to-pink-500 hover:opacity-90 text-white">
-                  {loading ? 'Signing in...' : 'Log In'}
-                </Button>
-              </form>
-            </TabsContent>
+          {error && (
+            <motion.p
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              className="text-sm text-red-400 bg-red-400/10 px-3 py-2 rounded-lg"
+            >
+              {error}
+            </motion.p>
+          )}
 
-            <TabsContent value="signup">
-              <form onSubmit={handleSignup} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signup-name">Full Name</Label>
-                  <Input
-                    id="signup-name"
-                    type="text"
-                    placeholder="Your name"
-                    value={signupForm.fullName}
-                    onChange={e => setSignupForm(f => ({ ...f, fullName: e.target.value }))}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
-                  <Input
-                    id="signup-email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={signupForm.email}
-                    onChange={e => setSignupForm(f => ({ ...f, email: e.target.value }))}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    placeholder="Min 6 characters"
-                    value={signupForm.password}
-                    onChange={e => setSignupForm(f => ({ ...f, password: e.target.value }))}
-                    required
-                    minLength={6}
-                  />
-                </div>
-                {error && <p className="text-red-400 text-sm">{error}</p>}
-                <Button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-cyan-500 to-pink-500 hover:opacity-90 text-white">
-                  {loading ? 'Creating account...' : 'Create Account'}
-                </Button>
-                <p className="text-xs text-muted-foreground text-center">
-                  By signing up, you agree to our Terms of Service and Privacy Policy.
-                </p>
-              </form>
-            </TabsContent>
-          </Tabs>
-        </div>
+          <Button
+            type="submit"
+            disabled={loading}
+            className="w-full h-12 text-base font-semibold bg-gradient-to-r from-cyan-500 to-cyan-400 hover:from-cyan-400 hover:to-cyan-300 text-black"
+          >
+            {loading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <>
+                {mode === 'signup' ? 'Create Free Account' : 'Log In'}
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </>
+            )}
+          </Button>
+        </motion.form>
 
-        <p className="text-center text-sm text-muted-foreground mt-4">
-          <Link to="/" className="hover:text-foreground transition-colors">← Back to home</Link>
+        {mode === 'signup' && (
+          <p className="text-center text-xs text-muted-foreground mt-4">
+            Free forever. No credit card required.
+          </p>
+        )}
+
+        {/* Legal */}
+        <p className="text-center text-xs text-muted-foreground mt-6">
+          By continuing you agree to our{' '}
+          <Link to="/pricing" className="text-cyan-400">Terms</Link>.
         </p>
       </div>
     </div>

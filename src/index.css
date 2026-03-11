@@ -159,3 +159,31 @@ textarea::placeholder {
   background: hsl(174 100% 50% / 0.25);
   color: hsl(var(--foreground));
 }
+
+/* Mobile app styles */
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 16px);
+}
+
+/* Bottom nav safe area */
+nav.fixed.bottom-0 {
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 4px);
+}
+
+/* Touch-friendly tap targets */
+a, button { min-height: 44px; }
+.tab-trigger { min-height: 40px; }
+
+/* Prevent text size adjustment on rotation */
+html { -webkit-text-size-adjust: 100%; }
+
+/* Smooth scrolling */
+* { scroll-behavior: smooth; }
+
+/* Remove input zoom on iOS */
+input, textarea, select {
+  font-size: 16px !important;
+}
