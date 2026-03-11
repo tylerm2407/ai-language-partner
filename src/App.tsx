@@ -28,6 +28,7 @@ import DrivingModePage from "./pages/DrivingModePage"
 import MusicAdminPage from "./pages/MusicAdminPage"
 import NewsReaderPage from "./pages/NewsReaderPage"
 import SRSReviewPage from "./pages/SRSReviewPage"
+import LanguagesPage from "./pages/LanguagesPage"
 
 const queryClient = new QueryClient()
 
