@@ -62,6 +62,9 @@ const App = () => (
             <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
             <Route path="/achievements" element={<ProtectedRoute><Achievements /></ProtectedRoute>} />
 
+            {/* Languages browser */}
+            <Route path="/languages" element={<ProtectedRoute><LanguagesPage /></ProtectedRoute>} />
+
             {/* Language routes */}
             <Route path="/learn/:slug" element={<ProtectedRoute><LanguagePage /></ProtectedRoute>} />
             <Route path="/learn/:slug/course/:courseId" element={<ProtectedRoute><CoursePage /></ProtectedRoute>} />
