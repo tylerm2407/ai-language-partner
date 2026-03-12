@@ -148,6 +148,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider')
+  if (!ctx) {
+    // During HMR or error-boundary recovery the provider may not be mounted yet.
+    // Return a safe no-op shell so the tree can render without crashing.
+    return {
+      session: null,
+      user: null,
+      profile: null,
+      loading: true,
+      signIn: async () => ({ error: new Error('Auth not ready') }),
+      signUp: async () => ({ error: new Error('Auth not ready') }),
+      signOut: async () => {},
+      refreshProfile: async () => {},
+    } as AuthContextType
+  }
   return ctx
 }
