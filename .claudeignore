@@ -1,0 +1,16 @@
+node_modules/
+ios/
+android/
+.expo/
+dist/
+build/
+*.jsbundle
+*.hbc
+.tmp/
+*.tsbuildinfo
+coverage/
+__snapshots__/
+.env
+.env.local
+credentials.json
+token.json
