@@ -1,9 +1,7 @@
-import { createClient } from '@supabase/supabase-js'
+// Re-export the auto-generated Supabase client so all existing imports work
+import { supabase } from '@/integrations/supabase/client'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export { supabase }
 
 export type Profile = {
   id: string
