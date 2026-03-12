@@ -1,18 +1,8 @@
-// Re-export the Supabase client pointing to the correct Lovable Cloud project.
-// We create an untyped wrapper so existing code that references tables not yet
-// in the auto-generated types (languages, courses, etc.) keeps working.
-import { createClient } from '@supabase/supabase-js'
+// Re-export the auto-generated client so auth always uses the active Lovable Cloud project.
+// Cast to any to keep compatibility with existing queries for tables not in generated TS types.
+import { supabase as generatedSupabase } from '@/integrations/supabase/client'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    storage: localStorage,
-    persistSession: true,
-    autoRefreshToken: true,
-  }
-})
+export const supabase: any = generatedSupabase
 
 export type Profile = {
   id: string
