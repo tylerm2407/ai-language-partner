@@ -27,18 +27,43 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.email || !form.password) return
+
     setLoading(true)
     setError('')
 
-    if (mode === 'login') {
-      const { error } = await signIn(form.email, form.password)
-      if (error) { setError(error.message); setLoading(false) }
-      else navigate('/dashboard', { replace: true })
-    } else {
-      if (!form.name.trim()) { setError('Please enter your name'); setLoading(false); return }
-      const { error } = await signUp(form.email, form.password, form.name)
-      if (error) { setError(error.message); setLoading(false) }
-      else navigate('/onboarding', { replace: true })
+    try {
+      if (mode === 'login') {
+        const { error } = await signIn(form.email, form.password)
+        if (error) {
+          setError(error.message)
+          return
+        }
+
+        navigate('/dashboard', { replace: true })
+        return
+      }
+
+      if (!form.name.trim()) {
+        setError('Please enter your name')
+        return
+      }
+
+      const { error, needsEmailConfirmation } = await signUp(form.email, form.password, form.name)
+
+      if (error) {
+        setError(error.message)
+        return
+      }
+
+      if (needsEmailConfirmation) {
+        setError('Account created. Please check your email to confirm, then log in.')
+        setMode('login')
+        return
+      }
+
+      navigate('/onboarding', { replace: true })
+    } finally {
+      setLoading(false)
     }
   }
 
