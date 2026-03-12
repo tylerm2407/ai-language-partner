@@ -2,6 +2,9 @@
 // Cast to any to keep compatibility with existing queries for tables not in generated TS types.
 import { supabase as generatedSupabase } from '@/integrations/supabase/client'
 
+// Debug: verify correct project URL is being used
+console.log('[supabase] URL:', import.meta.env.VITE_SUPABASE_URL)
+
 export const supabase: any = generatedSupabase
 
 export type Profile = {
