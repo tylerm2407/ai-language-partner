@@ -14,7 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          daily_goal_xp: number
+          full_name: string | null
+          hearts: number
+          id: string
+          last_practice_date: string | null
+          level: string
+          native_language: string
+          streak_days: number
+          stripe_customer_id: string | null
+          subscription_tier: string
+          target_language: string
+          today_xp: number
+          total_xp: number
+          username: string | null
+          xp: number
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          daily_goal_xp?: number
+          full_name?: string | null
+          hearts?: number
+          id: string
+          last_practice_date?: string | null
+          level?: string
+          native_language?: string
+          streak_days?: number
+          stripe_customer_id?: string | null
+          subscription_tier?: string
+          target_language?: string
+          today_xp?: number
+          total_xp?: number
+          username?: string | null
+          xp?: number
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          daily_goal_xp?: number
+          full_name?: string | null
+          hearts?: number
+          id?: string
+          last_practice_date?: string | null
+          level?: string
+          native_language?: string
+          streak_days?: number
+          stripe_customer_id?: string | null
+          subscription_tier?: string
+          target_language?: string
+          today_xp?: number
+          total_xp?: number
+          username?: string | null
+          xp?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
