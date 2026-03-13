@@ -1,5 +1,6 @@
+import { useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import AppShell from '@/components/AppShell'
 import { getLevelInfo } from '@/lib/achievements'
 import { Progress } from '@/components/ui/progress'
@@ -7,9 +8,22 @@ import { Button } from '@/components/ui/button'
 import { motion } from 'framer-motion'
 import { Flame, Zap, MessageSquare, BookOpen, Trophy, Brain, ChevronRight } from 'lucide-react'
 import { STATIC_LANGUAGES } from '@/hooks/useLanguage'
+import { useToast } from '@/hooks/use-toast'
 
 export default function Dashboard() {
   const { profile } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const { toast } = useToast()
+
+  useEffect(() => {
+    if (searchParams.get('checkout') === 'success') {
+      toast({
+        title: '🎉 Subscription activated!',
+        description: 'Welcome to your upgraded plan. Enjoy all your new features!',
+      })
+      setSearchParams({}, { replace: true })
+    }
+  }, [searchParams, setSearchParams, toast])
 
   if (!profile) return null
 
