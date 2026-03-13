@@ -36,7 +36,7 @@ export const PLAN_FEATURES = {
     writingFeedback: false,
     newsAccess: true,
     musicAccess: true,
-    dailyAiMinutes: 0,
+    dailyAiMinutes: 10,
     dailyLessons: 3,
   },
   basic: {
