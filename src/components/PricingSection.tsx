@@ -174,7 +174,7 @@ const PricingSection = () => {
                   }`}
                   size="lg"
                   disabled={isCurrentPlan || isLoading}
-                  onClick={() => handleCheckout(plan.tier)}
+                  onClick={() => plan.tier === "free" ? navigate(user ? "/dashboard" : "/login") : handleCheckout(plan.tier)}
                 >
                   {isLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
