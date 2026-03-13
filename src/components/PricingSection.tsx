@@ -11,6 +11,20 @@ import { toast } from "sonner";
 
 const plans = [
   {
+    name: "Free",
+    price: "$0",
+    period: "forever",
+    tier: "free" as const,
+    features: [
+      "All 50 language courses",
+      "10 min daily AI chat",
+      "Daily streak tracking",
+      "Community leaderboard",
+    ],
+    cta: "Get Started Free",
+    featured: false,
+  },
+  {
     name: "Basic",
     price: "$9.99",
     period: "/month",
