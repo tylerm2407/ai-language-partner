@@ -55,7 +55,6 @@ export default function Settings() {
       setPortalLoading(false)
     }
   }
-  const [deleting, setDeleting] = useState(false)
 
   const handleSave = async () => {
     if (!user) return
