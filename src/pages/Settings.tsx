@@ -32,6 +32,31 @@ export default function Settings() {
   const [deletePhrase, setDeletePhrase] = useState('')
   const [deleting, setDeleting] = useState(false)
 
+  // Subscription
+  const { plan, isPaid, loading: planLoading, subscriptionEnd, refresh: refreshPlan } = useUserPlan()
+  const [portalLoading, setPortalLoading] = useState(false)
+
+  const planLabel = plan.charAt(0).toUpperCase() + plan.slice(1)
+  const features = PLAN_FEATURES[plan]
+
+  const handleManageSubscription = async () => {
+    setPortalLoading(true)
+    try {
+      const { data, error } = await supabase.functions.invoke('customer-portal')
+      if (error) throw error
+      if (data?.url) {
+        window.open(data.url, '_blank')
+      } else {
+        throw new Error('No portal URL returned')
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to open subscription portal')
+    } finally {
+      setPortalLoading(false)
+    }
+  }
+  const [deleting, setDeleting] = useState(false)
+
   const handleSave = async () => {
     if (!user) return
     setSaving(true)
