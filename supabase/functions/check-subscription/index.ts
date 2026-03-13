@@ -57,8 +57,21 @@ serve(async (req) => {
     }
 
     const sub = subscriptions.data[0];
-    const productId = sub.items.data[0].price.product;
-    const subscriptionEnd = new Date(sub.current_period_end * 1000).toISOString();
+    const productId = typeof sub.items.data[0].price.product === 'string'
+      ? sub.items.data[0].price.product
+      : sub.items.data[0].price.product?.id ?? null;
+
+    let subscriptionEnd: string | null = null;
+    try {
+      const endTimestamp = sub.current_period_end;
+      logStep("Period end raw value", { endTimestamp, type: typeof endTimestamp });
+      if (typeof endTimestamp === 'number' && endTimestamp > 0) {
+        subscriptionEnd = new Date(endTimestamp * 1000).toISOString();
+      }
+    } catch (e) {
+      logStep("Failed to parse subscription end date, continuing without it");
+    }
+
     logStep("Active subscription found", { productId, subscriptionEnd });
 
     return new Response(JSON.stringify({
