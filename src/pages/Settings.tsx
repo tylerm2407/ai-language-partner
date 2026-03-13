@@ -9,8 +9,10 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
-import { Settings as SettingsIcon, Save, Globe, Target, Trash2, AlertTriangle } from 'lucide-react'
+import { Settings as SettingsIcon, Save, Globe, Target, Trash2, AlertTriangle, Crown, CreditCard, ExternalLink, Loader2 } from 'lucide-react'
 import { SUPPORTED_LANGUAGES } from '@/lib/claude'
+import { useUserPlan } from '@/hooks/useUserPlan'
+import { PLAN_FEATURES } from '@/lib/plan'
 
 type DeleteStep = 'idle' | 'confirm' | 'type-confirm'
 
