@@ -176,6 +176,86 @@ export default function Settings() {
           <p className="text-xs text-muted-foreground">{user?.email}</p>
         </motion.div>
 
+        {/* Subscription Management */}
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.12 }}
+          className="rounded-2xl border border-border bg-card p-6 space-y-4"
+        >
+          <h2 className="font-semibold text-sm flex items-center gap-1.5">
+            <Crown className="w-4 h-4 text-primary" /> Subscription
+          </h2>
+
+          {planLoading ? (
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+              <Loader2 className="w-4 h-4 animate-spin" /> Checking subscription...
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Current plan badge */}
+              <div className="flex items-center gap-3">
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold ${
+                  isPaid
+                    ? 'bg-primary/15 text-primary'
+                    : 'bg-muted text-muted-foreground'
+                }`}>
+                  <Crown className="w-3.5 h-3.5" />
+                  {planLabel} Plan
+                </span>
+                {subscriptionEnd && (
+                  <span className="text-xs text-muted-foreground">
+                    Renews {new Date(subscriptionEnd).toLocaleDateString()}
+                  </span>
+                )}
+              </div>
+
+              {/* Plan details */}
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <CreditCard className="w-3.5 h-3.5" />
+                  Daily AI: {features.dailyAiMinutes} min
+                </div>
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  📚 Lessons: {features.dailyLessons === -1 ? 'Unlimited' : features.dailyLessons}
+                </div>
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  🎓 AI Tutor: {features.aiTutor ? '✓' : '✗'}
+                </div>
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  🎙️ Voice: {features.voiceMode ? '✓' : '✗'}
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex flex-wrap gap-3 pt-1">
+                {isPaid ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleManageSubscription}
+                    disabled={portalLoading}
+                    className="gap-2"
+                  >
+                    {portalLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <ExternalLink className="w-4 h-4" />
+                    )}
+                    Manage Subscription
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    onClick={() => navigate('/pricing')}
+                    className="bg-gradient-to-r from-primary to-accent text-primary-foreground gap-2"
+                  >
+                    <Crown className="w-4 h-4" /> Upgrade Plan
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </motion.div>
+
         {/* Danger zone */}
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}
