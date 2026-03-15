@@ -5,11 +5,9 @@ import { useLanguage } from '@/hooks/useLanguage'
 import { supabase } from '@/lib/supabase'
 import DashboardLayout from '@/components/DashboardLayout'
 import PlanGate from '@/components/PlanGate'
-import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Send, Bot, User, Lightbulb, Zap } from 'lucide-react'
+import { Send, Lightbulb, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUserPlan } from '@/hooks/useUserPlan'
 
@@ -44,7 +42,7 @@ export default function TutorPage() {
   useEffect(() => {
     if (!user || !language) return
     supabase.from('tutor_profiles').select('state').eq('user_id', user.id).eq('language_id', language.id).single()
-      .then(({ data }) => { if (data?.state) setTutorState(data.state) })
+      .then(({ data }) => { if (data?.state) setTutorState(data.state as any) })
     supabase.from('conversation_sessions').insert({ user_id: user.id, language_id: language.id, mode: 'text' })
       .select('id').single().then(({ data }) => { if (data) setSessionId(data.id) })
     startConversation()
@@ -69,12 +67,12 @@ export default function TutorPage() {
         }),
       })
       const data = await res.json()
-      if (data.error === 'upgrade_required') { return }
+      if (data.error === 'upgrade_required') return
       if (data.reply) {
         setMessages([{ role: 'assistant', content: data.reply, corrections: data.corrections, vocab: data.vocab_highlight, timestamp: new Date() }])
         if (data.updated_state) setTutorState(data.updated_state)
       }
-    } catch (e) { toast.error('Failed to start session') }
+    } catch { toast.error('Failed to start session') }
     finally { setLoading(false) }
   }
 
@@ -109,7 +107,7 @@ export default function TutorPage() {
         if (data.updated_state) setTutorState(data.updated_state)
         if (data.corrections?.length) toast.success(`+${data.corrections.length} correction${data.corrections.length > 1 ? 's' : ''} noted`, { duration: 1500 })
       }
-    } catch (e) { toast.error('Failed to send message') }
+    } catch { toast.error('Failed to send message') }
     finally { setLoading(false) }
   }
 
@@ -119,7 +117,7 @@ export default function TutorPage() {
     return (
       <DashboardLayout>
         <div className="p-4 sm:p-6 max-w-2xl mx-auto">
-          <PlanGate feature="the personalized AI tutor"><div /></PlanGate>
+          <PlanGate feature="the personalized AI Teacher"><div /></PlanGate>
         </div>
       </DashboardLayout>
     )
@@ -127,78 +125,171 @@ export default function TutorPage() {
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col h-[calc(100dvh-64px)] max-w-3xl mx-auto">
-        <div className="flex items-center justify-between p-3 sm:p-4 border-b border-border flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center flex-shrink-0">
-              <Bot className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <div className="min-w-0">
-              <div className="font-semibold text-sm truncate">{language?.flag} {language?.name} Tutor</div>
-              <div className="text-xs text-muted-foreground">Session {tutorState.session_count + 1} · Level {tutorState.cefr_estimate}</div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <div className="text-xs text-primary flex items-center gap-1">
-              <Zap className="w-3 h-3" /> {tutorState.mastered_vocab.length} vocab
-            </div>
-          </div>
-        </div>
+      <div className="flex items-center justify-center min-h-[calc(100dvh-64px)] p-2 sm:p-4">
+        {/* Outer wrapper with animated border */}
+        <div className="relative w-full max-w-3xl h-[calc(100dvh-80px)] rounded-3xl p-[2px] overflow-hidden">
+          {/* Animated outer border */}
+          <motion.div
+            className="absolute inset-0 rounded-3xl z-0"
+            style={{
+              background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)), hsl(var(--primary)))',
+              backgroundSize: '200% 200%',
+            }}
+            animate={{ backgroundPosition: ['0% 0%', '100% 100%', '0% 0%'] }}
+            transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+          />
 
-        <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-4">
-          <AnimatePresence initial={false}>
-            {messages.map((msg, i) => (
-              <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                className={cn('flex gap-2 sm:gap-3', msg.role === 'user' ? 'flex-row-reverse' : '')}>
-                <div className={cn('w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center',
-                  msg.role === 'assistant' ? 'bg-gradient-to-br from-primary to-accent' : 'bg-gradient-to-br from-purple-400 to-pink-500')}>
-                  {msg.role === 'assistant' ? <Bot className="w-4 h-4 text-primary-foreground" /> : <User className="w-4 h-4 text-primary-foreground" />}
-                </div>
-                <div className={cn('max-w-[85%] sm:max-w-[80%] space-y-2', msg.role === 'user' ? 'items-end flex flex-col' : '')}>
-                  <div className={cn('px-3 sm:px-4 py-2.5 sm:py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap',
-                    msg.role === 'assistant' ? 'bg-card border border-border rounded-tl-none' : 'bg-primary/20 border border-primary/30 rounded-tr-none')}>
-                    {msg.content}
-                  </div>
-                  {msg.role === 'assistant' && msg.corrections && msg.corrections.length > 0 && (
-                    <div className="space-y-1">
-                      {msg.corrections.map((c, j) => (
-                        <div key={j} className="flex items-start gap-2 text-xs bg-orange-400/10 border border-orange-400/20 rounded-lg px-3 py-2">
-                          <Lightbulb className="w-3 h-3 text-orange-400 flex-shrink-0 mt-0.5" />
-                          <span className="text-orange-300">{c}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </motion.div>
+          {/* Inner card */}
+          <div className="relative z-10 flex flex-col h-full rounded-[22px] bg-card/95 backdrop-blur-xl border border-border/50 overflow-hidden">
+            {/* Inner animated background */}
+            <div className="absolute inset-0 opacity-5 pointer-events-none">
+              <motion.div
+                className="absolute w-[500px] h-[500px] rounded-full bg-primary/40 blur-[120px]"
+                animate={{ x: ['-20%', '60%', '-20%'], y: ['-20%', '40%', '-20%'] }}
+                transition={{ duration: 15, repeat: Infinity, ease: 'easeInOut' }}
+              />
+            </div>
+
+            {/* Floating particles */}
+            {Array.from({ length: 12 }).map((_, i) => (
+              <motion.div
+                key={i}
+                className="absolute w-1 h-1 bg-primary/20 rounded-full pointer-events-none"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  top: `${Math.random() * 100}%`,
+                }}
+                animate={{
+                  y: [0, -30, 0],
+                  opacity: [0, 0.6, 0],
+                }}
+                transition={{
+                  duration: 3 + Math.random() * 4,
+                  repeat: Infinity,
+                  delay: Math.random() * 3,
+                }}
+              />
             ))}
-          </AnimatePresence>
-          {loading && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-3">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-                <Bot className="w-4 h-4 text-primary-foreground" />
-              </div>
-              <div className="bg-card border border-border rounded-2xl px-4 py-3 flex gap-1">
-                {[0,1,2].map(i => <motion.div key={i} className="w-2 h-2 bg-primary rounded-full"
-                  animate={{ y: [0,-6,0] }} transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.15 }} />)}
-              </div>
-            </motion.div>
-          )}
-          <div ref={bottomRef} />
-        </div>
 
-        {/* Input bar — iOS keyboard safe */}
-        <div className="p-3 sm:p-4 border-t border-border flex-shrink-0 ios-keyboard-safe">
-          <div className="flex gap-2 sm:gap-3">
-            <Textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKey}
-              placeholder={`Type in ${language?.name || 'the target language'}...`}
-              className="resize-none min-h-[48px] max-h-32 bg-secondary border-border text-foreground placeholder:text-muted-foreground" rows={1} />
-            <Button onClick={sendMessage} disabled={!input.trim() || loading}
-              className="bg-gradient-to-r from-primary to-accent text-primary-foreground self-end min-h-[48px] min-w-[48px]">
-              <Send className="w-4 h-4" />
-            </Button>
+            {/* Header */}
+            <div className="relative z-10 flex items-center justify-between p-4 sm:p-5 border-b border-border/50 flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <motion.div
+                  className="relative w-11 h-11 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center flex-shrink-0 shadow-lg"
+                  animate={{ scale: [1, 1.05, 1] }}
+                  transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                >
+                  <span className="text-xl">🤖</span>
+                  <motion.div
+                    className="absolute inset-0 rounded-2xl border-2 border-primary/30"
+                    animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0, 0.5] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  />
+                </motion.div>
+                <div className="min-w-0">
+                  <div className="font-bold text-sm text-foreground flex items-center gap-2">
+                    {language?.flag} AI Teacher
+                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                      {language?.name}
+                    </span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Session {tutorState.session_count + 1} · Level {tutorState.cefr_estimate}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="text-xs text-primary flex items-center gap-1 bg-primary/5 px-2 py-1 rounded-full border border-primary/10">
+                  <Zap className="w-3 h-3" /> {tutorState.mastered_vocab.length} vocab
+                </div>
+              </div>
+            </div>
+
+            {/* Messages */}
+            <div className="relative z-10 flex-1 overflow-y-auto p-3 sm:p-4 space-y-4">
+              <AnimatePresence initial={false}>
+                {messages.map((msg, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, y: 12, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ duration: 0.3, ease: 'easeOut' }}
+                    className={cn('flex gap-2 sm:gap-3', msg.role === 'user' ? 'flex-row-reverse' : '')}
+                  >
+                    <div className={cn(
+                      'max-w-[85%] sm:max-w-[80%] space-y-2',
+                      msg.role === 'user' ? 'items-end flex flex-col' : ''
+                    )}>
+                      <div className={cn(
+                        'px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap shadow-sm',
+                        msg.role === 'assistant'
+                          ? 'bg-secondary/80 border border-border/60 rounded-tl-sm text-foreground'
+                          : 'bg-gradient-to-br from-primary to-accent text-primary-foreground rounded-tr-sm'
+                      )}>
+                        {msg.content}
+                      </div>
+                      {msg.role === 'assistant' && msg.corrections && msg.corrections.length > 0 && (
+                        <div className="space-y-1">
+                          {msg.corrections.map((c, j) => (
+                            <div key={j} className="flex items-start gap-2 text-xs bg-orange-400/10 border border-orange-400/20 rounded-lg px-3 py-2">
+                              <Lightbulb className="w-3 h-3 text-orange-400 flex-shrink-0 mt-0.5" />
+                              <span className="text-orange-400">{c}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+
+              {/* AI Typing Indicator */}
+              {loading && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex gap-3 items-end"
+                >
+                  <div className="bg-secondary/80 border border-border/60 rounded-2xl rounded-tl-sm px-4 py-3 flex gap-1.5">
+                    <motion.div className="w-2 h-2 bg-primary/60 rounded-full" animate={{ y: [0, -6, 0] }} transition={{ duration: 0.8, repeat: Infinity, delay: 0 }} />
+                    <motion.div className="w-2 h-2 bg-primary/60 rounded-full" animate={{ y: [0, -6, 0] }} transition={{ duration: 0.8, repeat: Infinity, delay: 0.15 }} />
+                    <motion.div className="w-2 h-2 bg-primary/60 rounded-full" animate={{ y: [0, -6, 0] }} transition={{ duration: 0.8, repeat: Infinity, delay: 0.3 }} />
+                  </div>
+                </motion.div>
+              )}
+              <div ref={bottomRef} />
+            </div>
+
+            {/* Input */}
+            <div className="relative z-10 p-3 sm:p-4 border-t border-border/50 flex-shrink-0 ios-keyboard-safe">
+              <div className="flex gap-2 sm:gap-3 items-end">
+                <input
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKey}
+                  placeholder={`Type in ${language?.name || 'the target language'}...`}
+                  className="flex-1 bg-secondary/60 border border-border/60 rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 transition-all"
+                />
+                <motion.button
+                  onClick={sendMessage}
+                  disabled={!input.trim() || loading}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className={cn(
+                    'min-h-[46px] min-w-[46px] rounded-xl flex items-center justify-center transition-all shadow-md',
+                    input.trim() && !loading
+                      ? 'bg-gradient-to-r from-primary to-accent text-primary-foreground cursor-pointer'
+                      : 'bg-muted text-muted-foreground cursor-not-allowed'
+                  )}
+                >
+                  <Send className="w-4 h-4" />
+                </motion.button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1.5 text-center hidden sm:block opacity-60">
+                Enter to send · Shift+Enter for new line
+              </p>
+            </div>
           </div>
-          <p className="text-xs text-muted-foreground mt-1 text-center hidden sm:block">Enter to send · Shift+Enter for new line</p>
         </div>
       </div>
     </DashboardLayout>
