@@ -204,9 +204,16 @@ input, textarea, select {
   font-size: 16px !important;
 }
 
-/* Prevent overscroll bounce on iOS */
-html, body {
+/* Prevent horizontal overflow but allow vertical scrolling */
+html {
   overflow-x: hidden;
+  overflow-y: scroll;
+}
+body {
+  overflow-x: hidden;
+  overflow-y: auto;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* iOS momentum scrolling */
