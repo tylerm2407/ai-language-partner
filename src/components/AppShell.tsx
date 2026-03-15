@@ -33,8 +33,8 @@ export default function AppShell({
   const gems = profile?.gems ?? 0
   const heartsInfo = profile ? getHeartsInfo(
     profile.hearts ?? 5,
-    profile.max_hearts ?? 5,
-    profile.hearts_last_regen_at ?? new Date().toISOString()
+    (profile as any).max_hearts ?? 5,
+    (profile as any).hearts_last_regen_at ?? new Date().toISOString()
   ) : { current: 5, max: 5 }
 
   return (
