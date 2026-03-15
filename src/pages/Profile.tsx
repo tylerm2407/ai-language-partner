@@ -58,9 +58,9 @@ export default function Profile() {
                 {leagueInfo.icon} {leagueInfo.name} League
               </span>
             )}
-            {streakMultiplier.multiplier > 1 && (
+            {streakMultiplier > 1 && (
               <span className="text-xs font-medium px-2.5 py-1 rounded-full border border-orange-400/30 text-orange-400 bg-orange-400/10">
-                {streakMultiplier.label}
+                {streakMultiplier}x XP
               </span>
             )}
           </div>

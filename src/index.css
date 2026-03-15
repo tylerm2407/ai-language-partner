@@ -209,11 +209,6 @@ html, body {
   overflow-x: hidden;
 }
 
-/* Ensure decorative overlays don't block scrolling */
-section > .absolute {
-  pointer-events: none;
-}
-
 /* iOS momentum scrolling */
 .overflow-y-auto {
   -webkit-overflow-scrolling: touch;

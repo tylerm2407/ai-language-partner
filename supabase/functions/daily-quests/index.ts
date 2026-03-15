@@ -75,7 +75,6 @@ serve(async (req) => {
 
         if (quest.xp_reward > 0) {
           await db.rpc("add_xp", { p_user_id: user.id, p_xp_amount: quest.xp_reward });
-        }
 
         log(FN, "quest_completed", { questType: quest.quest_type, gems: quest.gem_reward });
       }
