@@ -108,7 +108,7 @@ export function useGamification() {
 
   const heartsInfo = getHeartsInfo(
     profile.hearts ?? 5,
-    profile.max_hearts ?? 5,
+    5,
     profile.hearts_last_regen_at ?? new Date().toISOString()
   )
 
@@ -117,7 +117,7 @@ export function useGamification() {
   return {
     gems: profile.gems ?? 0,
     hearts: heartsInfo.current,
-    maxHearts: profile.max_hearts ?? 5,
+    maxHearts: 5,
     heartsInfo,
     streakMultiplier,
     league: profile.league ?? 'bronze',
