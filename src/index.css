@@ -209,6 +209,12 @@ html, body {
   overflow-x: hidden;
 }
 
+/* Ensure decorative overlays don't block scrolling */
+.gradient-section,
+.gradient-hero {
+  pointer-events: none;
+}
+
 /* iOS momentum scrolling */
 .overflow-y-auto {
   -webkit-overflow-scrolling: touch;
