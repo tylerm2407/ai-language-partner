@@ -10,6 +10,8 @@ import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { Send, Bot, User, Lightbulb, MessageSquare } from 'lucide-react'
+import { useAiTimeLimit } from '@/hooks/useAiTimeLimit'
+import AiTimerBanner from '@/components/AiTimerBanner'
 
 type ChatMsg = {
   role: 'user' | 'assistant'
@@ -25,14 +27,23 @@ export default function Conversation() {
   const [topic, setTopic] = useState(CONVERSATION_TOPICS[0])
   const [started, setStarted] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const { minutesRemaining, dailyLimitMinutes, percentUsed, isLimitReached, startTimer, stopTimer, plan } = useAiTimeLimit()
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
+
+  // Start/stop timer based on conversation state
+  useEffect(() => {
+    if (started && !isLimitReached) startTimer()
+    else stopTimer()
+    return () => stopTimer()
+  }, [started, isLimitReached])
 
   const lang = profile?.target_language || 'Spanish'
   const level = profile?.level || 'beginner'
   const nativeLang = profile?.native_language || 'English'
 
   const startConversation = async () => {
+    if (isLimitReached) { toast.error('Daily AI time limit reached'); return }
     setStarted(true)
     setLoading(true)
     const systemPrompt = buildSystemPrompt(lang, level, topic, nativeLang)
@@ -45,6 +56,7 @@ export default function Conversation() {
 
   const handleSend = async () => {
     if (!input.trim() || loading) return
+    if (isLimitReached) { toast.error('Daily AI time limit reached. Upgrade your plan for more time.'); return }
     const userMsg: ChatMsg = { role: 'user', content: input }
     const newMsgs = [...messages, userMsg]
     setMessages(newMsgs)
@@ -81,6 +93,14 @@ export default function Conversation() {
             </p>
           </motion.div>
 
+          <AiTimerBanner
+            minutesRemaining={minutesRemaining}
+            dailyLimitMinutes={dailyLimitMinutes}
+            percentUsed={percentUsed}
+            isLimitReached={isLimitReached}
+            plan={plan}
+          />
+
           <div className="space-y-3">
             <label className="text-sm font-medium">Choose a topic</label>
             <Select value={topic} onValueChange={setTopic}>
@@ -95,9 +115,9 @@ export default function Conversation() {
             </Select>
           </div>
 
-          <Button onClick={startConversation} disabled={loading}
+          <Button onClick={startConversation} disabled={loading || isLimitReached}
             className="w-full bg-gradient-to-r from-primary to-accent text-primary-foreground gap-2 min-h-[48px]">
-            {loading ? 'Starting...' : 'Start Conversation'}
+            {isLimitReached ? 'Daily limit reached' : loading ? 'Starting...' : 'Start Conversation'}
           </Button>
         </div>
       </DashboardLayout>
@@ -111,11 +131,19 @@ export default function Conversation() {
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center flex-shrink-0">
             <Bot className="w-4 h-4 text-primary-foreground" />
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="text-sm font-semibold truncate">{LANGUAGE_FLAGS[lang]} {lang} · {topic}</div>
             <div className="text-xs text-muted-foreground capitalize">{level}</div>
           </div>
         </div>
+
+        <AiTimerBanner
+          minutesRemaining={minutesRemaining}
+          dailyLimitMinutes={dailyLimitMinutes}
+          percentUsed={percentUsed}
+          isLimitReached={isLimitReached}
+          plan={plan}
+        />
 
         <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-4">
           <AnimatePresence initial={false}>
@@ -162,9 +190,10 @@ export default function Conversation() {
         <div className="p-3 sm:p-4 border-t border-border flex-shrink-0 ios-keyboard-safe">
           <div className="flex gap-2 sm:gap-3">
             <Textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKey}
-              placeholder={`Type in ${lang}...`}
+              placeholder={isLimitReached ? 'Daily limit reached — upgrade for more time' : `Type in ${lang}...`}
+              disabled={isLimitReached}
               className="resize-none min-h-[48px] max-h-32 bg-secondary border-border w-full" rows={1} />
-            <Button onClick={handleSend} disabled={!input.trim() || loading}
+            <Button onClick={handleSend} disabled={!input.trim() || loading || isLimitReached}
               className="bg-gradient-to-r from-primary to-accent text-primary-foreground self-end min-h-[48px] min-w-[48px]">
               <Send className="w-4 h-4" />
             </Button>

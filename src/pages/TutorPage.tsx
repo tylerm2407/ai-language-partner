@@ -10,6 +10,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Send, Lightbulb, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUserPlan } from '@/hooks/useUserPlan'
+import { useAiTimeLimit } from '@/hooks/useAiTimeLimit'
+import AiTimerBanner from '@/components/AiTimerBanner'
 
 type TutorMsg = {
   role: 'user' | 'assistant'
@@ -29,6 +31,7 @@ export default function TutorPage() {
   const { user, profile } = useAuth()
   const { language } = useLanguage(slug!)
   const { isPaid } = useUserPlan()
+  const { minutesRemaining, dailyLimitMinutes, percentUsed, isLimitReached, startTimer, stopTimer, plan } = useAiTimeLimit()
 
   const [messages, setMessages] = useState<TutorMsg[]>([])
   const [input, setInput] = useState('')
@@ -38,6 +41,13 @@ export default function TutorPage() {
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
+
+  // Start/stop timer when conversation is active
+  useEffect(() => {
+    if (messages.length > 0 && !isLimitReached) startTimer()
+    else stopTimer()
+    return () => stopTimer()
+  }, [messages.length, isLimitReached])
 
   useEffect(() => {
     if (!user || !language) return
@@ -78,6 +88,7 @@ export default function TutorPage() {
 
   const sendMessage = async () => {
     if (!input.trim() || loading || !user || !language || !profile) return
+    if (isLimitReached) { toast.error('Daily AI time limit reached. Upgrade your plan for more time.'); return }
     const userMsg: TutorMsg = { role: 'user', content: input, timestamp: new Date() }
     const newMessages = [...messages, userMsg]
     setMessages(newMessages)
@@ -205,6 +216,15 @@ export default function TutorPage() {
               </div>
             </div>
 
+            {/* Timer Banner */}
+            <AiTimerBanner
+              minutesRemaining={minutesRemaining}
+              dailyLimitMinutes={dailyLimitMinutes}
+              percentUsed={percentUsed}
+              isLimitReached={isLimitReached}
+              plan={plan}
+            />
+
             {/* Messages */}
             <div className="relative z-10 flex-1 overflow-y-auto p-3 sm:p-4 space-y-4">
               <AnimatePresence initial={false}>
@@ -267,12 +287,13 @@ export default function TutorPage() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKey}
-                  placeholder={`Type in ${language?.name || 'the target language'}...`}
+                  placeholder={isLimitReached ? 'Daily limit reached — upgrade for more time' : `Type in ${language?.name || 'the target language'}...`}
+                  disabled={isLimitReached}
                   className="flex-1 bg-secondary/60 border border-border/60 rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 transition-all"
                 />
                 <motion.button
                   onClick={sendMessage}
-                  disabled={!input.trim() || loading}
+                  disabled={!input.trim() || loading || isLimitReached}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   className={cn(
