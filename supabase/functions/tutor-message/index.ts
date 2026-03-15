@@ -24,7 +24,7 @@ function buildTutorSystemPrompt(
   const errors = tutorState.common_errors.slice(-5).join(", ") || "none yet";
   const mastered = tutorState.mastered_vocab.slice(-10).join(", ") || "none yet";
 
-  return `You are ${languageName} AI \u2014 a warm, patient, expert ${languageName} tutor with years of experience teaching ${nativeLanguage} speakers.
+  return `You are ${languageName} AI — a warm, patient, expert ${languageName} tutor with years of experience teaching ${nativeLanguage} speakers.
 
 STUDENT PROFILE:
 - Current level: ${userLevel} (CEFR)
@@ -35,32 +35,111 @@ STUDENT PROFILE:
 - Sessions completed: ${tutorState.session_count}
 
 YOUR BEHAVIOR:
-1. ALWAYS reply primarily in ${languageName} \u2014 immersion is key
-2. Gently correct errors inline using: \u270F\uFE0F [correction]
+1. ALWAYS reply primarily in ${languageName} — immersion is key
+2. Gently correct errors inline using: ✏️ [correction]
 3. After your main reply, add a [Tutor Notes] section with:
    - English translation of your reply
-   - \uD83D\uDCA1 One grammar tip (1-2 sentences max)
-   - \uD83D\uDCDD New vocab from this turn: word \u2014 meaning
+   - 💡 One grammar tip (1-2 sentences max)
+   - 📝 New vocab from this turn: word — meaning
 4. Match complexity to ${userLevel}: ${userLevel.startsWith("A") ? "simple sentences, high-frequency words" : userLevel.startsWith("B") ? "natural conversation, introduce idioms" : "nuanced language, cultural references"}
 5. Ask follow-up questions to keep conversation flowing
-6. Sound like a human friend who speaks ${languageName} natively \u2014 not a textbook
+6. Sound like a human friend who speaks ${languageName} natively — not a textbook
 7. If user writes in ${nativeLanguage}, encourage them to try in ${languageName} and give a starter phrase
 
 RESPONSE FORMAT:
 [Your reply in ${languageName}]
 
 [Tutor Notes]
-\uD83C\uDDEC\uD83C\uDDE7 Translation: "..."
-\uD83D\uDCA1 Tip: ...
-\uD83D\uDCDD Vocab: word \u2014 meaning (repeat for each new word)`;
+🇬🇧 Translation: "..."
+💡 Tip: ...
+📝 Vocab: word — meaning (repeat for each new word)`;
 }
 
 function extractVocab(text: string): string[] {
-  return [...text.matchAll(/\uD83D\uDCDD Vocab: (.+)/g)].map(m => m[1].trim());
+  return [...text.matchAll(/📝 Vocab: (.+)/g)].map(m => m[1].trim());
 }
 
 function extractCorrections(text: string): string[] {
-  return [...text.matchAll(/\u270F\uFE0F ([^\n]+)/g)].map(m => m[1].trim());
+  return [...text.matchAll(/✏️ ([^\n]+)/g)].map(m => m[1].trim());
+}
+
+// Call Google Gemini API
+async function callGemini(
+  apiKey: string,
+  model: string,
+  systemPrompt: string,
+  messages: Array<{ role: string; content: string }>,
+  maxTokens: number,
+): Promise<{ text: string; inputTokens: number; outputTokens: number }> {
+  // Convert messages to Gemini format
+  const geminiContents = messages.map(m => ({
+    role: m.role === "assistant" ? "model" : "user",
+    parts: [{ text: m.content }],
+  }));
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: systemPrompt }] },
+        contents: geminiContents,
+        generationConfig: {
+          maxOutputTokens: maxTokens,
+          temperature: 0.8,
+        },
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const errText = await response.text();
+    log(FN, "gemini_error", { status: response.status, error: errText });
+    throw new Error(`Gemini API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  const inputTokens = data.usageMetadata?.promptTokenCount || 0;
+  const outputTokens = data.usageMetadata?.candidatesTokenCount || 0;
+
+  return { text, inputTokens, outputTokens };
+}
+
+// Call Anthropic API (for summarization fallback)
+async function callAnthropic(
+  apiKey: string,
+  model: string,
+  messages: Array<{ role: string; content: string }>,
+  maxTokens: number,
+  system?: string,
+): Promise<{ text: string; inputTokens: number; outputTokens: number }> {
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: maxTokens,
+      system: system || undefined,
+      messages,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Anthropic API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return {
+    text: data.content?.[0]?.text || "",
+    inputTokens: data.usage?.input_tokens || 0,
+    outputTokens: data.usage?.output_tokens || 0,
+  };
 }
 
 serve(async (req) => {
@@ -102,26 +181,30 @@ serve(async (req) => {
     };
     const history: Array<{ role: "user" | "assistant"; content: string }> = Array.isArray(body.history) ? body.history.slice(-20) : [];
 
-    const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
-    if (!apiKey) return jsonResponse({ error: "Service unavailable" }, 503);
+    // Get Gemini API key for live chat
+    const geminiKey = Deno.env.get("GEMINI_API_KEY");
+    if (!geminiKey) {
+      log(FN, "missing_gemini_key");
+      return jsonResponse({ error: "Service unavailable" }, 503);
+    }
 
     const systemPrompt = buildTutorSystemPrompt(languageName, nativeLanguage, userLevel, tutorState);
 
-    // Conversation summarization
+    // Conversation summarization (uses Claude Haiku for cost efficiency if available, otherwise skip)
     let finalMessages = [...history, { role: "user" as const, content: message }];
     let summaryContext = "";
 
     if (shouldSummarize(finalMessages.length)) {
-      log(FN, "summarizing", { count: finalMessages.length });
-      const summaryPrompt = buildSummarizationPrompt(finalMessages);
-      const summaryRes = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
-        body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 200, messages: [{ role: "user", content: summaryPrompt }] }),
-      });
-      if (summaryRes.ok) {
-        const sd = await summaryRes.json();
-        summaryContext = sd.content?.[0]?.text || "";
+      const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
+      if (anthropicKey) {
+        log(FN, "summarizing_with_claude", { count: finalMessages.length });
+        const summaryPrompt = buildSummarizationPrompt(finalMessages);
+        try {
+          const summary = await callAnthropic(anthropicKey, "claude-haiku-4-5-20251001", [{ role: "user", content: summaryPrompt }], 200);
+          summaryContext = summary.text;
+        } catch {
+          log(FN, "summarization_failed");
+        }
       }
       finalMessages = finalMessages.slice(-MESSAGES_TO_KEEP_FULL);
     }
@@ -129,19 +212,11 @@ serve(async (req) => {
     const fullSystem = [summaryContext ? `[Previous conversation summary: ${summaryContext}]` : "", systemPrompt]
       .filter(Boolean).join("\n\n");
 
-    const aiResponse = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({ model: config.model, max_tokens: config.maxTokens, system: fullSystem, messages: finalMessages }),
-    });
+    // Call Gemini for the main tutor response
+    log(FN, "calling_gemini", { model: config.model });
+    const aiResult = await callGemini(geminiKey, config.model, fullSystem, finalMessages, config.maxTokens);
 
-    if (!aiResponse.ok) {
-      log(FN, "ai_error", { status: aiResponse.status });
-      return jsonResponse({ error: "AI service error" }, 502);
-    }
-
-    const aiData = await aiResponse.json();
-    const reply = aiData.content?.[0]?.text || "";
+    const reply = aiResult.text;
     const vocab = extractVocab(reply);
     const corrections = extractCorrections(reply);
 
@@ -174,12 +249,12 @@ serve(async (req) => {
     // Log usage
     await db.from("ai_usage_log").insert({
       user_id: user.id, function_name: FN, model: config.model,
-      input_tokens: aiData.usage?.input_tokens || 0,
-      output_tokens: aiData.usage?.output_tokens || 0,
+      input_tokens: aiResult.inputTokens,
+      output_tokens: aiResult.outputTokens,
       cached: false,
     }).then(() => {}, () => {});
 
-    log(FN, "success", { vocab: vocab.length, corrections: corrections.length });
+    log(FN, "success", { vocab: vocab.length, corrections: corrections.length, model: "gemini" });
     return jsonResponse({ reply, corrections, vocab_highlight: vocab, updated_state: updatedState });
 
   } catch (err) {
