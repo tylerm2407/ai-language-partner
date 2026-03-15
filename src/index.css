@@ -210,8 +210,7 @@ html, body {
 }
 
 /* Ensure decorative overlays don't block scrolling */
-.gradient-section,
-.gradient-hero {
+section > .absolute {
   pointer-events: none;
 }
 
