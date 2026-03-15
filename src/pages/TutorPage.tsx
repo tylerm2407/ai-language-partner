@@ -215,6 +215,15 @@ export default function TutorPage() {
               </div>
             </div>
 
+            {/* Timer Banner */}
+            <AiTimerBanner
+              minutesRemaining={minutesRemaining}
+              dailyLimitMinutes={dailyLimitMinutes}
+              percentUsed={percentUsed}
+              isLimitReached={isLimitReached}
+              plan={plan}
+            />
+
             {/* Messages */}
             <div className="relative z-10 flex-1 overflow-y-auto p-3 sm:p-4 space-y-4">
               <AnimatePresence initial={false}>
