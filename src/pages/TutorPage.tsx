@@ -41,6 +41,13 @@ export default function TutorPage() {
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
 
+  // Start/stop timer when conversation is active
+  useEffect(() => {
+    if (messages.length > 0 && !isLimitReached) startTimer()
+    else stopTimer()
+    return () => stopTimer()
+  }, [messages.length, isLimitReached])
+
   useEffect(() => {
     if (!user || !language) return
     supabase.from('tutor_profiles').select('state').eq('user_id', user.id).eq('language_id', language.id).single()
