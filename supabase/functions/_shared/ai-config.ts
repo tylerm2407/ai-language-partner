@@ -1,45 +1,55 @@
-// Tiered AI model configuration for cost optimization
-// Haiku: ~$0.25/M input - translations, simple tasks
-// Sonnet: ~$3/M input - conversations, feedback
-// Opus: ~$15/M input - not used (Sonnet quality sufficient for our use cases)
+// Dual-model AI configuration:
+// - Google Gemini: Live AI Teacher chat (conversational, real-time)
+// - Claude Haiku/Sonnet: Text AI features (writing feedback, reading help, translations)
 
 export const AI_MODELS = {
+  // Claude models for text-based AI features
   fast: 'claude-haiku-4-5-20251001',
   standard: 'claude-sonnet-4-6',
+  // Gemini model for live AI Teacher chat
+  liveChat: 'gemini-2.5-flash',
 } as const
 
 export type ModelTier = keyof typeof AI_MODELS
 
 export const MODEL_CONFIG = {
+  // Live AI Teacher chat - uses Gemini
+  tutor: {
+    model: AI_MODELS.liveChat,
+    maxTokens: 768,
+    provider: 'gemini' as const,
+    description: 'Live AI Teacher chat with corrections and vocab (Gemini)',
+  },
+  // Text AI features - use Claude
   chat: {
     model: AI_MODELS.standard,
     maxTokens: 512,
-    description: 'Conversational chat responses (2-4 sentences)',
-  },
-  tutor: {
-    model: AI_MODELS.standard,
-    maxTokens: 768,
-    description: 'Personalized tutor with corrections and vocab',
+    provider: 'anthropic' as const,
+    description: 'Conversational chat responses (Claude)',
   },
   writingFeedback: {
     model: AI_MODELS.standard,
     maxTokens: 1024,
-    description: 'Detailed writing analysis and corrections',
+    provider: 'anthropic' as const,
+    description: 'Detailed writing analysis and corrections (Claude)',
   },
   translation: {
     model: AI_MODELS.fast,
     maxTokens: 200,
-    description: 'Quick translations and word lookups',
+    provider: 'anthropic' as const,
+    description: 'Quick translations and word lookups (Claude)',
   },
   readingHelp: {
     model: AI_MODELS.fast,
     maxTokens: 300,
-    description: 'Reading comprehension assistance',
+    provider: 'anthropic' as const,
+    description: 'Reading comprehension assistance (Claude)',
   },
   pronunciation: {
     model: AI_MODELS.fast,
     maxTokens: 200,
-    description: 'Pronunciation scoring feedback',
+    provider: 'anthropic' as const,
+    description: 'Pronunciation scoring feedback (Claude)',
   },
 } as const
 
