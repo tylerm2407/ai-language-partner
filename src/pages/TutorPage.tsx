@@ -286,12 +286,13 @@ export default function TutorPage() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKey}
-                  placeholder={`Type in ${language?.name || 'the target language'}...`}
+                  placeholder={isLimitReached ? 'Daily limit reached — upgrade for more time' : `Type in ${language?.name || 'the target language'}...`}
+                  disabled={isLimitReached}
                   className="flex-1 bg-secondary/60 border border-border/60 rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 transition-all"
                 />
                 <motion.button
                   onClick={sendMessage}
-                  disabled={!input.trim() || loading}
+                  disabled={!input.trim() || loading || isLimitReached}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   className={cn(
