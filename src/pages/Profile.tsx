@@ -1,11 +1,12 @@
 import { useAuth } from '@/contexts/AuthContext'
 import { getLevelInfo } from '@/lib/achievements'
 import { LANGUAGE_FLAGS } from '@/lib/claude'
+import { getLeagueInfo, getStreakMultiplier, type League } from '@/lib/gamification'
 import AppShell from '@/components/AppShell'
 import { Progress } from '@/components/ui/progress'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
-import { Flame, Star, Zap, Heart, Crown, Target, Calendar, Settings, LogOut } from 'lucide-react'
+import { Flame, Star, Zap, Heart, Crown, Target, Calendar, Settings, LogOut, Shield, Gem } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 
@@ -14,14 +15,18 @@ export default function Profile() {
 
   const totalXP = profile?.total_xp ?? 0
   const levelInfo = getLevelInfo(totalXP)
-  const isPro = profile?.subscription_tier === 'pro' || profile?.subscription_tier === 'family'
+  const isPro = profile?.subscription_tier !== 'free' && !!profile?.subscription_tier
+  const leagueInfo = profile?.league ? getLeagueInfo(profile.league as League) : null
+  const streakMultiplier = getStreakMultiplier(profile?.streak_days ?? 0)
   const joinDate = profile?.created_at ? new Date(profile.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }) : ''
 
   const stats = [
     { icon: Star, label: 'Total XP', value: totalXP.toLocaleString(), color: 'text-primary' },
-    { icon: Flame, label: 'Day Streak', value: profile?.streak_days ?? 0, color: 'text-orange-400' },
+    { icon: Flame, label: 'Day Streak', value: `${profile?.streak_days ?? 0}d`, color: 'text-orange-400' },
     { icon: Target, label: 'Daily Goal', value: `${profile?.today_xp ?? 0}/${profile?.daily_goal_xp ?? 50}`, color: 'text-primary' },
     { icon: Heart, label: 'Hearts', value: isPro ? '∞' : (profile?.hearts ?? 5), color: 'text-destructive' },
+    { icon: Gem, label: 'Gems', value: (profile?.gems ?? 0).toLocaleString(), color: 'text-amber-400' },
+    { icon: Shield, label: 'Streak Freezes', value: profile?.streak_freeze_count ?? 0, color: 'text-blue-400' },
   ]
 
   return (
@@ -46,6 +51,18 @@ export default function Profile() {
             <span>{LANGUAGE_FLAGS[profile?.target_language || ''] || '🌐'} Learning {profile?.target_language}</span>
             <span>·</span>
             <span className="capitalize">{profile?.level}</span>
+          </div>
+          <div className="flex items-center justify-center gap-3 mt-2">
+            {leagueInfo && (
+              <span className={cn('text-xs font-medium px-2.5 py-1 rounded-full border', leagueInfo.color.replace('text-', 'border-').replace('400', '400/30'), leagueInfo.color, `bg-${leagueInfo.color.replace('text-', '').replace('-400', '-400/10')}`)}>
+                {leagueInfo.icon} {leagueInfo.name} League
+              </span>
+            )}
+            {streakMultiplier > 1 && (
+              <span className="text-xs font-medium px-2.5 py-1 rounded-full border border-orange-400/30 text-orange-400 bg-orange-400/10">
+                {streakMultiplier}x XP
+              </span>
+            )}
           </div>
           {joinDate && (
             <div className="flex items-center justify-center gap-1 mt-1 text-xs text-muted-foreground">
@@ -103,7 +120,7 @@ export default function Profile() {
               'px-3 py-1 rounded-full text-xs font-medium',
               isPro ? 'bg-primary/10 text-primary' : 'bg-secondary text-muted-foreground'
             )}>
-              {isPro ? 'Pro' : 'Free'}
+              {profile?.subscription_tier ? profile.subscription_tier.charAt(0).toUpperCase() + profile.subscription_tier.slice(1) : 'Free'}
             </div>
             <span className="text-sm text-muted-foreground capitalize">{profile?.subscription_tier || 'free'} plan</span>
           </div>

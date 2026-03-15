@@ -1,13 +1,13 @@
-// Re-export the auto-generated client so auth always uses the active Lovable Cloud project.
-// Cast to any to keep compatibility with existing queries for tables not in generated TS types.
 import { createClient } from '@supabase/supabase-js'
 
-// Use env vars with hardcoded fallbacks to the correct Lovable Cloud project
-// This ensures the correct project is used even if Vite has stale env var cache
-const SUPABASE_URL = 'https://jktjclgfxdpkwhajwefj.supabase.co'
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImprdGpjbGdmeGRwa3doYWp3ZWZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNjUyNzUsImV4cCI6MjA4ODc0MTI3NX0.uoP5VymToea1_KCfxL2L5U6T2--sJchEh6SvsEQcXEs'
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-export const supabase: any = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  throw new Error('Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY environment variables')
+}
+
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     storage: localStorage,
     persistSession: true,
@@ -30,7 +30,14 @@ export type Profile = {
   daily_goal_xp: number
   today_xp: number
   hearts: number
-  subscription_tier: 'free' | 'pro' | 'family'
+  gems: number
+  streak_freeze_count: number
+  league: 'bronze' | 'silver' | 'gold' | 'diamond' | 'legendary'
+  league_xp: number
+  hearts_last_regen_at: string
+  subscription_tier: 'free' | 'basic' | 'pro' | 'vip'
+  subscription_plan: string | null
+  subscription_expires_at: string | null
   stripe_customer_id?: string
   created_at: string
 }

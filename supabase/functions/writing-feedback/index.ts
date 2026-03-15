@@ -1,59 +1,54 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  handleCORS, verifyAuth, checkRateLimit,
+  jsonResponse, errorResponse, log, requireString, getAdminClient, HttpError,
+} from "../_shared/middleware.ts";
+import { getModelConfig } from "../_shared/ai-config.ts";
 
-// CORS: use ALLOWED_ORIGIN env var in production; falls back to * for local dev
-const allowedOrigin = Deno.env.get("ALLOWED_ORIGIN") || "*";
-const corsHeaders = {
-  "Access-Control-Allow-Origin": allowedOrigin,
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const FN = "writing-feedback";
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const cors = handleCORS(req);
+  if (cors) return cors;
 
   try {
-    // B: Verify JWT — reject requests without a valid Bearer token
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Missing authorization" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const user = await verifyAuth(req);
+    checkRateLimit(user.id, 10, 60_000);
+    log(FN, "authenticated", { userId: user.id });
+
+    const db = getAdminClient();
+    const config = getModelConfig("writingFeedback");
+
+    // Verify paid subscription
+    const { data: sub } = await db.from("subscriptions")
+      .select("plan, status, current_period_end")
+      .eq("user_id", user.id)
+      .single();
+
+    const isPaid = sub && sub.status === "active" &&
+      ["pro", "family", "lifetime", "vip"].includes(sub.plan) &&
+      (!sub.current_period_end || new Date(sub.current_period_end) > new Date());
+
+    if (!isPaid) {
+      throw new HttpError(403, "Writing feedback requires a Pro or higher subscription.");
     }
-    const token = authHeader.replace("Bearer ", "");
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: "Invalid token" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-    // Use user.id from the verified JWT — do NOT trust body user_id
-    const user_id = user.id;
-
-    const { lesson_id, language_id, language_name, user_level, prompt, submission: rawSubmission } = await req.json();
-
-    // C: Input sanitization — strip null bytes, cap at 5000 chars
-    const submission = (rawSubmission || "").replace(/\0/g, "").slice(0, 5000);
+    const body = await req.json();
+    const submission = requireString(body.submission, "submission", 5000);
+    const prompt = requireString(body.prompt, "prompt", 1000);
+    const languageName = requireString(body.language_name, "language_name", 50);
+    const userLevel = typeof body.user_level === "string" ? body.user_level.slice(0, 5) : "A2";
+    const lessonId = typeof body.lesson_id === "string" ? body.lesson_id : null;
+    const languageId = typeof body.language_id === "string" ? body.language_id : null;
 
     const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
-    if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
+    if (!apiKey) return jsonResponse({ error: "Service unavailable" }, 503);
 
-    const { data: sub } = await supabase.from("subscriptions")
-      .select("plan, status, current_period_end").eq("user_id", user_id).single();
-    const isPaid = sub && sub.status === "active" && ["pro", "family", "lifetime"].includes(sub.plan) &&
-      (!sub.current_period_end || new Date(sub.current_period_end) > new Date());
-    if (!isPaid) {
-      return new Response(JSON.stringify({ error: "upgrade_required" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
-    const systemPrompt = `You are an expert ${language_name} writing teacher. The student is at CEFR level ${user_level}.
+    const systemPrompt = `You are an expert ${languageName} writing teacher. The student is at CEFR level ${userLevel}.
 
 Analyze their writing submission and provide:
 1. An overall score from 0-100
-2. Specific corrections with explanations (format: "❌ Original → ✅ Corrected: explanation")
+2. Specific corrections with explanations (format: "\u274C Original \u2192 \u2705 Corrected: explanation")
 3. Positive feedback on what they did well
 4. 2-3 concrete suggestions for improvement
 5. A short model rewrite of their text at their level
@@ -76,43 +71,62 @@ Respond in JSON format:
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
       body: JSON.stringify({
-        model: "claude-opus-4-6", max_tokens: 1500, system: systemPrompt,
-        messages: [{ role: "user", content: `Student submission:\n\n${submission}` }]
+        model: config.model,
+        max_tokens: config.maxTokens,
+        system: systemPrompt,
+        messages: [{ role: "user", content: `Student submission:\n\n${submission}` }],
       }),
     });
 
-    if (!aiResponse.ok) throw new Error(await aiResponse.text());
+    if (!aiResponse.ok) {
+      log(FN, "ai_error", { status: aiResponse.status });
+      return jsonResponse({ error: "AI service error" }, 502);
+    }
+
     const aiData = await aiResponse.json();
     const rawText = aiData.content?.[0]?.text || "{}";
 
-    let feedback: any = {};
-    try { feedback = JSON.parse(rawText.match(/\{[\s\S]*\}/)?.[0] || "{}"); } catch { feedback = { summary: rawText, score: 70 }; }
+    let feedback: Record<string, unknown> = {};
+    try {
+      feedback = JSON.parse(rawText.match(/\{[\s\S]*\}/)?.[0] || "{}");
+    } catch {
+      feedback = { summary: rawText, score: 70 };
+    }
 
-    await supabase.from("user_writing_submissions").insert({
-      user_id, lesson_id, language_id,
-      content: submission,
-      ai_feedback: feedback.summary,
-      ai_score: feedback.score,
-      feedback_metadata: feedback,
-    });
+    if (lessonId && languageId) {
+      await db.from("user_writing_submissions").insert({
+        user_id: user.id, lesson_id: lessonId, language_id: languageId,
+        content: submission,
+        ai_feedback: (feedback as any).summary || "",
+        ai_score: (feedback as any).score || 0,
+        feedback_metadata: feedback,
+      }).then(() => {}, () => {});
 
-    await supabase.from("user_lesson_progress").upsert({
-      user_id, lesson_id,
-      status: "completed",
-      last_score: feedback.score,
-      last_submitted_at: new Date().toISOString(),
-    }, { onConflict: "user_id,lesson_id" });
+      await db.from("user_lesson_progress").upsert({
+        user_id: user.id, lesson_id: lessonId,
+        status: "completed",
+        last_score: (feedback as any).score || 0,
+        last_submitted_at: new Date().toISOString(),
+      }, { onConflict: "user_id,lesson_id" }).then(() => {}, () => {});
 
-    await supabase.rpc("upsert_language_progress", {
-      p_user_id: user_id, p_language_id: language_id,
-      p_words_delta: submission.split(" ").length, p_sessions_delta: 1, p_convos_delta: 0,
-    });
+      await db.rpc("upsert_language_progress", {
+        p_user_id: user.id, p_language_id: languageId,
+        p_words_delta: submission.split(" ").length, p_sessions_delta: 1, p_convos_delta: 0,
+      }).then(() => {}, () => {});
+    }
 
-    return new Response(JSON.stringify({ feedback }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    // Log usage
+    await db.from("ai_usage_log").insert({
+      user_id: user.id, function_name: FN, model: config.model,
+      input_tokens: aiData.usage?.input_tokens || 0,
+      output_tokens: aiData.usage?.output_tokens || 0,
+      cached: false,
+    }).then(() => {}, () => {});
+
+    log(FN, "success", { score: (feedback as any).score });
+    return jsonResponse({ feedback });
 
   } catch (err) {
-    return new Response(JSON.stringify({ error: String(err) }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return errorResponse(err);
   }
 });

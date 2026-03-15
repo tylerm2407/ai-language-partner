@@ -1,67 +1,46 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
-import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import {
+  handleCORS, verifyAuth, checkRateLimit,
+  jsonResponse, errorResponse, log, HttpError, getSafeOrigin,
+} from "../_shared/middleware.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
-
-const logStep = (step: string, details?: any) => {
-  console.log(`[CUSTOMER-PORTAL] ${step}${details ? ` - ${JSON.stringify(details)}` : ''}`);
-};
+const FN = "customer-portal";
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const cors = handleCORS(req);
+  if (cors) return cors;
 
   try {
-    logStep("Function started");
+    const user = await verifyAuth(req);
+    checkRateLimit(user.id, 5, 60_000);
+    log(FN, "authenticated", { userId: user.id });
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
-
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      { auth: { persistSession: false } }
-    );
-
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("No authorization header provided");
-
-    const token = authHeader.replace("Bearer ", "");
-    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
-    if (userError) throw new Error(`Authentication error: ${userError.message}`);
-    const user = userData.user;
-    if (!user?.email) throw new Error("User not authenticated or email not available");
-    logStep("User authenticated", { email: user.email });
+    if (!stripeKey) {
+      log(FN, "missing_stripe_key");
+      return jsonResponse({ error: "Service unavailable" }, 503);
+    }
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
-    if (customers.data.length === 0) {
-      throw new Error("No Stripe customer found for this user. You may not have an active subscription.");
-    }
-    const customerId = customers.data[0].id;
-    logStep("Found Stripe customer", { customerId });
 
-    const origin = req.headers.get("origin") || "https://practice-fluent-ai.lovable.app";
+    if (customers.data.length === 0) {
+      throw new HttpError(404, "No subscription found. Please subscribe first.");
+    }
+
+    const customerId = customers.data[0].id;
+    const allowedOrigin = getSafeOrigin();
+
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: customerId,
-      return_url: `${origin}/settings`,
+      return_url: `${allowedOrigin}/settings`,
     });
-    logStep("Portal session created", { url: portalSession.url });
 
-    return new Response(JSON.stringify({ url: portalSession.url }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logStep("ERROR", { message: errorMessage });
-    return new Response(JSON.stringify({ error: errorMessage }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 500,
-    });
+    log(FN, "portal_created");
+    return jsonResponse({ url: portalSession.url });
+
+  } catch (err) {
+    return errorResponse(err);
   }
 });

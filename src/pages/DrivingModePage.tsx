@@ -99,9 +99,12 @@ export default function DrivingModePage() {
   const sendToTutor = async (userText: string) => {
     if (!user || !language || !profile) return
     try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+      if (!token) { toast.error('Not authenticated'); setVoiceState('idle'); return }
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tutor-message`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({
           user_id: user.id, language_id: language.id, language_name: language.name,
           native_language: profile.native_language || 'English',

@@ -9,16 +9,26 @@ import { motion } from 'framer-motion'
 import { Flame, Zap, MessageSquare, BookOpen, Trophy, Brain, ChevronRight } from 'lucide-react'
 import { STATIC_LANGUAGES } from '@/hooks/useLanguage'
 import { useToast } from '@/hooks/use-toast'
+import { useGamification } from '@/hooks/useGamification'
+
+// Gamification components
+import DailyQuests from '@/components/gamification/DailyQuests'
+import LeagueWidget from '@/components/gamification/LeagueWidget'
+import GemsDisplay from '@/components/gamification/GemsDisplay'
+import HeartsDisplay from '@/components/gamification/HeartsDisplay'
+import StreakCalendar from '@/components/gamification/StreakCalendar'
+import XPMultiplierBanner from '@/components/gamification/XPMultiplierBanner'
 
 export default function Dashboard() {
   const { profile } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const { toast } = useToast()
+  const gamification = useGamification()
 
   useEffect(() => {
     if (searchParams.get('checkout') === 'success') {
       toast({
-        title: '🎉 Subscription activated!',
+        title: 'Subscription activated!',
         description: 'Welcome to your upgraded plan. Enjoy all your new features!',
       })
       setSearchParams({}, { replace: true })
@@ -29,7 +39,7 @@ export default function Dashboard() {
 
   const levelInfo = getLevelInfo(profile.total_xp)
   const dailyPct = Math.min((profile.today_xp / profile.daily_goal_xp) * 100, 100)
-  const isPro = profile.subscription_tier === 'pro' || profile.subscription_tier === 'family'
+  const isPro = profile.subscription_tier !== 'free'
   const xpToNext = levelInfo.xpNeededForLevel - levelInfo.progressInLevel
 
   const targetLang = STATIC_LANGUAGES.find(l =>
@@ -47,13 +57,35 @@ export default function Dashboard() {
   return (
     <AppShell>
       <div className="py-5 space-y-5">
-        {/* Greeting */}
+        {/* Greeting + Gems/Hearts header */}
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-          <p className="text-muted-foreground text-sm">{greeting()},</p>
-          <h1 className="text-2xl font-bold">{profile.full_name?.split(' ')[0] || profile.username || 'Learner'} 👋</h1>
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-muted-foreground text-sm">{greeting()},</p>
+              <h1 className="text-2xl font-bold font-heading">
+                {profile.full_name?.split(' ')[0] || profile.username || 'Learner'}
+              </h1>
+            </div>
+            <div className="flex items-center gap-2">
+              <GemsDisplay gems={gamification.gems} compact />
+              <HeartsDisplay
+                current={gamification.heartsInfo.current}
+                max={gamification.heartsInfo.max}
+                nextRegenMinutes={gamification.heartsInfo.nextRegenMinutes}
+                compact
+              />
+            </div>
+          </div>
         </motion.div>
 
-        {/* Stats row — stack on very small screens */}
+        {/* XP Multiplier Banner */}
+        <XPMultiplierBanner
+          multiplier={gamification.streakMultiplier.multiplier}
+          label={gamification.streakMultiplier.label}
+          streakDays={profile.streak_days}
+        />
+
+        {/* Stats row */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -90,15 +122,33 @@ export default function Dashboard() {
           </div>
           <Progress value={dailyPct} className="h-3" />
           {dailyPct >= 100 && (
-            <p className="text-xs text-green-400 mt-1.5 font-medium">🎉 Goal complete! Keep going!</p>
+            <p className="text-xs text-green-400 mt-1.5 font-medium">Goal complete! Keep going!</p>
           )}
+        </motion.div>
+
+        {/* League widget */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.12 }}
+        >
+          <LeagueWidget league={gamification.league as any} leagueXp={gamification.leagueXp} />
+        </motion.div>
+
+        {/* Daily Quests */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.14 }}
+        >
+          <DailyQuests quests={gamification.quests} loading={gamification.questsLoading} />
         </motion.div>
 
         {/* Level progress */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.12 }}
+          transition={{ delay: 0.16 }}
           className="bg-card border border-border rounded-2xl p-4"
         >
           <div className="flex justify-between items-center mb-1.5">
@@ -113,7 +163,7 @@ export default function Dashboard() {
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
+            transition={{ delay: 0.18 }}
           >
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Continue Learning</h2>
             <Link to={`/learn/${targetLang.slug}`}>
@@ -168,18 +218,27 @@ export default function Dashboard() {
           </div>
         </motion.div>
 
+        {/* Streak Calendar */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+        >
+          <StreakCalendar calendar={gamification.practiceCalendar} />
+        </motion.div>
+
         {/* Upgrade banner for free users */}
         {!isPro && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.25 }}
+            transition={{ delay: 0.3 }}
             className="bg-gradient-to-r from-primary/10 to-accent/10 border border-primary/20 rounded-2xl p-4"
           >
-            <p className="font-semibold mb-1">✨ Upgrade to Pro</p>
+            <p className="font-semibold mb-1">Upgrade to Pro</p>
             <p className="text-sm text-muted-foreground mb-3">Unlock AI tutor, writing feedback, driving mode & more.</p>
             <Button asChild size="sm" className="bg-gradient-to-r from-primary to-accent text-primary-foreground border-0">
-              <Link to="/pricing">See Plans — from $4.99/mo</Link>
+              <Link to="/pricing">See Plans</Link>
             </Button>
           </motion.div>
         )}

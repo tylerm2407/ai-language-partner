@@ -1,17 +1,11 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  handleCORS, jsonResponse, errorResponse, log, HttpError, getAdminClient, verifyCronAuth,
+} from "../_shared/middleware.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const FN = "news-sync";
 
-// Stub news data — replace with real RSS feeds per language
-// PLUG IN: Use fetch() to pull from these RSS feeds in production:
-//   Spanish: https://feeds.bbci.co.uk/mundo/rss.xml or https://rss.nytimes.com/services/xml/rss/nyt/World.xml
-//   French: https://www.france24.com/fr/rss
-//   Japanese: https://www3.nhk.or.jp/rss/news/cat0.xml
-const STUB_NEWS: Record<string, any[]> = {
+const STUB_NEWS: Record<string, Array<{ title: string; source_name: string; url: string; summary: string; difficulty: string }>> = {
   es: [
     { title: "La tecnologia transforma la educacion moderna", source_name: "El Pais (stub)", url: "https://elpais.com", summary: "Las nuevas tecnologias estan cambiando la forma en que aprendemos, con inteligencia artificial y plataformas digitales liderando el cambio.", difficulty: "B1" },
     { title: "Record de turistas en Espana este verano", source_name: "El Mundo (stub)", url: "https://elmundo.es", summary: "Espana registro un numero historico de visitantes internacionales durante el verano, con un aumento del 15% respecto al ano anterior.", difficulty: "A2" },
@@ -22,27 +16,21 @@ const STUB_NEWS: Record<string, any[]> = {
     { title: "Le tourisme en France bat des records", source_name: "Le Figaro (stub)", url: "https://lefigaro.fr", summary: "Paris accueille plus de 50 millions de touristes par an, renforcant sa position comme capitale mondiale du tourisme.", difficulty: "A2" },
   ],
   ja: [
-    { title: "Japan technology innovation leads the world", source_name: "NHK (stub)", url: "https://nhk.or.jp", summary: "Japanese companies continue global innovation in robotics and artificial intelligence.", difficulty: "B1" },
-    { title: "Tokyo visitor count reaches all-time high", source_name: "Asahi Shimbun (stub)", url: "https://asahi.com", summary: "The number of foreign tourists visiting Japan in 2024 reached an all-time high, contributing to the inbound economy.", difficulty: "A2" },
+    { title: "\u65E5\u672C\u306E\u30C6\u30AF\u30CE\u30ED\u30B8\u30FC\u30A4\u30CE\u30D9\u30FC\u30B7\u30E7\u30F3\u304C\u4E16\u754C\u3092\u30EA\u30FC\u30C9", source_name: "NHK (stub)", url: "https://nhk.or.jp", summary: "\u65E5\u672C\u4F01\u696D\u306F\u30ED\u30DC\u30C6\u30A3\u30AF\u30B9\u3068AI\u306E\u5206\u91CE\u3067\u4E16\u754C\u7684\u306A\u30A4\u30CE\u30D9\u30FC\u30B7\u30E7\u30F3\u3092\u7D9A\u3051\u3066\u3044\u307E\u3059\u3002", difficulty: "B1" },
+    { title: "\u6771\u4EAC\u306E\u8A2A\u554F\u8005\u6570\u304C\u904E\u53BB\u6700\u9AD8\u3092\u8A18\u9332", source_name: "\u671D\u65E5\u65B0\u805E (stub)", url: "https://asahi.com", summary: "2024\u5E74\u306B\u65E5\u672C\u3092\u8A2A\u308C\u305F\u5916\u56FD\u4EBA\u65C5\u884C\u8005\u306E\u6570\u304C\u904E\u53BB\u6700\u9AD8\u3092\u66F4\u65B0\u3057\u3001\u30A4\u30F3\u30D0\u30A6\u30F3\u30C9\u7D4C\u6E08\u306B\u8CA2\u732E\u3057\u3066\u3044\u307E\u3059\u3002", difficulty: "A2" },
   ],
 };
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const cors = handleCORS(req);
+  if (cors) return cors;
 
   try {
-    const authHeader = req.headers.get("Authorization") || "";
-    const cronSecret = Deno.env.get("CRON_SECRET");
-    if (cronSecret && !authHeader.includes(cronSecret)) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
-    }
+    verifyCronAuth(req);
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    const { data: languages } = await supabase.from("languages").select("id, code").eq("is_active", true);
-    if (!languages) throw new Error("No languages found");
+    const db = getAdminClient();
+    const { data: languages } = await db.from("languages").select("id, code").eq("is_active", true);
+    if (!languages) throw new HttpError(500, "No languages found");
 
     let totalInserted = 0;
     for (const lang of languages) {
@@ -50,14 +38,15 @@ serve(async (req) => {
       if (!articles) continue;
 
       for (const article of articles) {
-        const { count } = await supabase.from("news_articles")
+        const { count } = await db.from("news_articles")
           .select("*", { count: "exact", head: true })
-          .eq("language_id", lang.id).eq("title", article.title)
+          .eq("language_id", lang.id)
+          .eq("title", article.title)
           .gte("created_at", new Date(Date.now() - 86400000).toISOString());
 
         if (count && count > 0) continue;
 
-        await supabase.from("news_articles").insert({
+        await db.from("news_articles").insert({
           language_id: lang.id,
           title: article.title,
           source_name: article.source_name,
@@ -71,11 +60,10 @@ serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ success: true, inserted: totalInserted }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    log(FN, "sync_complete", { inserted: totalInserted });
+    return jsonResponse({ success: true, inserted: totalInserted });
 
   } catch (err) {
-    return new Response(JSON.stringify({ error: String(err) }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return errorResponse(err);
   }
 });

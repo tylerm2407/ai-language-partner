@@ -54,9 +54,12 @@ export default function TutorPage() {
     if (!user || !language || !profile) return
     setLoading(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+      if (!token) return
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tutor-message`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({
           user_id: user.id, language_id: language.id, language_name: language.name,
           native_language: profile.native_language || 'English',
@@ -84,9 +87,12 @@ export default function TutorPage() {
     setLoading(true)
 
     try {
+      const { data: { session: authSession } } = await supabase.auth.getSession()
+      const token = authSession?.access_token
+      if (!token) { toast.error('Not authenticated'); return }
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tutor-message`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({
           user_id: user.id, language_id: language.id, language_name: language.name,
           native_language: profile.native_language || 'English',

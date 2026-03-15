@@ -89,15 +89,19 @@ export async function sendMessage(
   messages: { role: 'user' | 'assistant'; content: string }[],
   systemPrompt: string
 ): Promise<{ content: string; error?: string }> {
+  const { supabase } = await import('./supabase')
+  const { data: { session } } = await supabase.auth.getSession()
+  const token = session?.access_token
+  if (!token) return { content: '', error: 'Not authenticated' }
+
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
   try {
     const response = await fetch(`${supabaseUrl}/functions/v1/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${supabaseAnonKey}`,
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify({ messages, systemPrompt }),
     })

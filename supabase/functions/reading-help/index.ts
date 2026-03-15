@@ -1,51 +1,107 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
+import {
+  handleCORS, verifyAuth, checkRateLimit,
+  jsonResponse, errorResponse, log, requireString, getAdminClient,
+} from "../_shared/middleware.ts";
+import { getModelConfig } from "../_shared/ai-config.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const FN = "reading-help";
 
-// Available to FREE users (limited help) and PRO users (full help)
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const cors = handleCORS(req);
+  if (cors) return cors;
 
   try {
-    const { word_or_phrase, sentence_context, language_name, native_language, user_level, request_type } = await req.json();
-    // request_type: 'translate' | 'explain' | 'comprehension_questions' | 'summarize'
+    const user = await verifyAuth(req);
+    checkRateLimit(user.id, 30, 60_000);
+    log(FN, "authenticated", { userId: user.id });
+
+    const body = await req.json();
+    const config = getModelConfig("readingHelp");
+
+    const wordOrPhrase = requireString(body.word_or_phrase, "word_or_phrase", 2000);
+    const sentenceContext = typeof body.sentence_context === "string" ? body.sentence_context.slice(0, 2000) : "";
+    const languageName = requireString(body.language_name, "language_name", 50);
+    const nativeLanguage = typeof body.native_language === "string" ? body.native_language.slice(0, 50) : "English";
+    const userLevel = typeof body.user_level === "string" ? body.user_level.slice(0, 5) : "A2";
+    const requestType = typeof body.request_type === "string" ? body.request_type : "translate";
 
     const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
-    if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
+    if (!apiKey) return jsonResponse({ error: "Service unavailable" }, 503);
+
+    // Check cache for translations
+    const db = getAdminClient();
+    if (requestType === "translate") {
+      const cacheKey = `read:${languageName}:${wordOrPhrase.toLowerCase().trim()}`;
+      const { data: cached } = await db.from("ai_response_cache")
+        .select("response")
+        .eq("cache_key", cacheKey)
+        .gt("expires_at", new Date().toISOString())
+        .single();
+
+      if (cached) {
+        log(FN, "cache_hit");
+        await db.from("ai_usage_log").insert({
+          user_id: user.id, function_name: FN, model: config.model,
+          input_tokens: 0, output_tokens: 0, cached: true,
+        }).then(() => {}, () => {});
+        return jsonResponse({ result: cached.response });
+      }
+    }
 
     let prompt = "";
-    if (request_type === "translate") {
-      prompt = `Translate this ${language_name} word/phrase to ${native_language}: "${word_or_phrase}"\nContext: "${sentence_context}"\nGive a brief 1-2 sentence translation and note any nuance.`;
-    } else if (request_type === "explain") {
-      prompt = `Explain this ${language_name} grammar or usage at CEFR ${user_level} level: "${word_or_phrase}"\nContext: "${sentence_context}"\nBe concise (2-3 sentences).`;
-    } else if (request_type === "comprehension_questions") {
-      prompt = `Generate 3 comprehension questions in ${native_language} about this ${language_name} text at ${user_level} level:\n\n"${word_or_phrase}"\n\nFormat as numbered list.`;
+    if (requestType === "translate") {
+      prompt = `Translate this ${languageName} word/phrase to ${nativeLanguage}: "${wordOrPhrase}"\nContext: "${sentenceContext}"\nGive a brief 1-2 sentence translation and note any nuance.`;
+    } else if (requestType === "explain") {
+      prompt = `Explain this ${languageName} grammar or usage at CEFR ${userLevel} level: "${wordOrPhrase}"\nContext: "${sentenceContext}"\nBe concise (2-3 sentences).`;
+    } else if (requestType === "comprehension_questions") {
+      prompt = `Generate 3 comprehension questions in ${nativeLanguage} about this ${languageName} text at ${userLevel} level:\n\n"${wordOrPhrase}"\n\nFormat as numbered list.`;
     } else {
-      prompt = `Summarize this ${language_name} text in ${native_language} in 2-3 sentences, noting key vocabulary:\n\n"${word_or_phrase}"`;
+      prompt = `Summarize this ${languageName} text in ${nativeLanguage} in 2-3 sentences, noting key vocabulary:\n\n"${wordOrPhrase}"`;
     }
 
     const aiResponse = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
       body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 400,
-        messages: [{ role: "user", content: prompt }]
+        model: config.model,
+        max_tokens: config.maxTokens,
+        messages: [{ role: "user", content: prompt }],
       }),
     });
 
-    if (!aiResponse.ok) throw new Error(await aiResponse.text());
+    if (!aiResponse.ok) {
+      log(FN, "ai_error", { status: aiResponse.status });
+      return jsonResponse({ error: "AI service error" }, 502);
+    }
+
     const data = await aiResponse.json();
     const result = data.content?.[0]?.text || "";
 
-    return new Response(JSON.stringify({ result }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    // Cache translations
+    if (requestType === "translate" && result) {
+      const cacheKey = `read:${languageName}:${wordOrPhrase.toLowerCase().trim()}`;
+      await db.from("ai_response_cache").upsert({
+        cache_key: cacheKey, response: result, model: config.model,
+      }, { onConflict: "cache_key" }).then(() => {}, () => {});
+    }
+
+    // Log usage
+    await db.from("ai_usage_log").insert({
+      user_id: user.id, function_name: FN, model: config.model,
+      input_tokens: data.usage?.input_tokens || 0,
+      output_tokens: data.usage?.output_tokens || 0,
+      cached: false,
+    }).then(() => {}, () => {});
+
+    log(FN, "success");
+    return jsonResponse({ result });
 
   } catch (err) {
-    return new Response(JSON.stringify({ error: String(err) }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return errorResponse(err);
   }
 });
