@@ -87,6 +87,7 @@ export default function TutorPage() {
 
   const sendMessage = async () => {
     if (!input.trim() || loading || !user || !language || !profile) return
+    if (isLimitReached) { toast.error('Daily AI time limit reached. Upgrade your plan for more time.'); return }
     const userMsg: TutorMsg = { role: 'user', content: input, timestamp: new Date() }
     const newMessages = [...messages, userMsg]
     setMessages(newMessages)
