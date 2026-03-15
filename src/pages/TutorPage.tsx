@@ -31,6 +31,7 @@ export default function TutorPage() {
   const { user, profile } = useAuth()
   const { language } = useLanguage(slug!)
   const { isPaid } = useUserPlan()
+  const { minutesRemaining, dailyLimitMinutes, percentUsed, isLimitReached, startTimer, stopTimer, plan } = useAiTimeLimit()
 
   const [messages, setMessages] = useState<TutorMsg[]>([])
   const [input, setInput] = useState('')
