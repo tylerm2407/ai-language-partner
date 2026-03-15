@@ -10,6 +10,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Send, Lightbulb, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUserPlan } from '@/hooks/useUserPlan'
+import { useAiTimeLimit } from '@/hooks/useAiTimeLimit'
+import AiTimerBanner from '@/components/AiTimerBanner'
 
 type TutorMsg = {
   role: 'user' | 'assistant'
