@@ -13,6 +13,23 @@ import type {
   PracticeSession,
   Subscription,
   ReviewRating,
+  VoiceSession,
+  TranscriptEntry,
+  VoiceCorrection,
+  VocabItem,
+  Scenario,
+  TutorProfile,
+  CEFRLevel,
+  NewsArticle,
+  ConversationSession,
+  AIPersonalityId,
+  ReadingMaterial,
+  ReadingAudio,
+  WritingPrompt,
+  WritingSubmission,
+  SpeakingAttempt,
+  AIUsageLedgerEntry,
+  AIFeature,
 } from '../types';
 
 // ─── User Profile ───────────────────────────────────────────────
@@ -423,6 +440,7 @@ function mapProfile(row: Record<string, unknown>): UserProfile {
     streakFreezes: row.streak_freezes as number,
     totalXp: row.total_xp as number,
     timezone: row.timezone as string,
+    voicePreference: (row.voice_preference as UserProfile['voicePreference']) ?? undefined,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };
@@ -450,6 +468,7 @@ function mapUnit(row: Record<string, unknown>): Unit {
     description: row.description as string,
     orderIndex: row.order_index as number,
     totalLessons: row.total_lessons as number,
+    cefrLevel: (row.cefr_level as CEFRLevel) ?? null,
   };
 }
 
@@ -576,5 +595,560 @@ function mapDailyUsage(row: Record<string, unknown>): DailyUsage {
     date: row.date as string,
     textMessages: row.text_messages as number,
     voiceMinutes: parseFloat(row.voice_minutes as string) || 0,
+  };
+}
+
+// ─── Voice Sessions ─────────────────────────────────────────────
+
+export async function createVoiceSession(params: {
+  userId: string;
+  roomName: string;
+  topic: string;
+  targetLanguage: string;
+  level: string;
+}): Promise<VoiceSession> {
+  const { data, error } = await supabase
+    .from('voice_sessions')
+    .insert({
+      user_id: params.userId,
+      room_name: params.roomName,
+      topic: params.topic,
+      target_language: params.targetLanguage,
+      level: params.level,
+      transcript: [],
+      corrections: [],
+      vocabulary: [],
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return mapVoiceSession(data);
+}
+
+export async function updateVoiceSession(
+  sessionId: string,
+  updates: {
+    durationSeconds?: number;
+    transcript?: TranscriptEntry[];
+    corrections?: VoiceCorrection[];
+    vocabulary?: VocabItem[];
+    xpEarned?: number;
+    endedAt?: string;
+  }
+): Promise<void> {
+  const payload: Record<string, unknown> = {};
+  if (updates.durationSeconds !== undefined) payload.duration_seconds = updates.durationSeconds;
+  if (updates.transcript !== undefined) payload.transcript = updates.transcript;
+  if (updates.corrections !== undefined) payload.corrections = updates.corrections;
+  if (updates.vocabulary !== undefined) payload.vocabulary = updates.vocabulary;
+  if (updates.xpEarned !== undefined) payload.xp_earned = updates.xpEarned;
+  if (updates.endedAt !== undefined) payload.ended_at = updates.endedAt;
+
+  const { error } = await supabase
+    .from('voice_sessions')
+    .update(payload)
+    .eq('id', sessionId);
+
+  if (error) throw error;
+}
+
+export async function fetchRecentVoiceSessions(
+  userId: string,
+  limit = 20
+): Promise<VoiceSession[]> {
+  const { data, error } = await supabase
+    .from('voice_sessions')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return (data ?? []).map(mapVoiceSession);
+}
+
+function mapVoiceSession(row: Record<string, unknown>): VoiceSession {
+  return {
+    id: row.id as string,
+    userId: row.user_id as string,
+    roomName: row.room_name as string,
+    topic: row.topic as string,
+    targetLanguage: row.target_language as VoiceSession['targetLanguage'],
+    level: row.level as VoiceSession['level'],
+    durationSeconds: row.duration_seconds as number,
+    transcript: row.transcript as TranscriptEntry[],
+    corrections: row.corrections as VoiceCorrection[],
+    vocabulary: row.vocabulary as VocabItem[],
+    xpEarned: row.xp_earned as number,
+    startedAt: row.started_at as string,
+    endedAt: row.ended_at as string | null,
+  };
+}
+
+// ─── Scenarios ──────────────────────────────────────────────────
+
+export async function fetchScenarios(
+  languageId: string,
+  category?: string,
+  difficulty?: string
+): Promise<Scenario[]> {
+  let query = supabase
+    .from('scenarios')
+    .select('*')
+    .eq('language_id', languageId)
+    .eq('is_published', true)
+    .order('order_index', { ascending: true });
+
+  if (category) query = query.eq('category', category);
+  if (difficulty) query = query.eq('difficulty', difficulty);
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data ?? []).map(mapScenario);
+}
+
+export async function fetchScenarioById(id: string): Promise<Scenario | null> {
+  const { data, error } = await supabase
+    .from('scenarios')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw error;
+  return data ? mapScenario(data) : null;
+}
+
+function mapScenario(row: Record<string, unknown>): Scenario {
+  return {
+    id: row.id as string,
+    languageId: row.language_id as Scenario['languageId'],
+    title: row.title as string,
+    description: row.description as string,
+    aiPersona: row.ai_persona as string,
+    setting: row.setting as string,
+    targetVocab: row.target_vocab as string[],
+    targetGrammar: row.target_grammar as string[],
+    difficulty: row.difficulty as Scenario['difficulty'],
+    category: row.category as Scenario['category'],
+    orderIndex: row.order_index as number,
+    isPublished: row.is_published as boolean,
+    createdAt: row.created_at as string,
+  };
+}
+
+// ─── Tutor Profiles (Adaptive Difficulty) ───────────────────────
+
+export async function fetchOrCreateTutorProfile(
+  userId: string,
+  language: string
+): Promise<TutorProfile> {
+  const { data } = await supabase
+    .from('tutor_profiles')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('language', language)
+    .single();
+
+  if (data) return mapTutorProfile(data);
+
+  const { data: created, error: insertErr } = await supabase
+    .from('tutor_profiles')
+    .upsert(
+      { user_id: userId, language, cefr_estimate: 'A1', sessions_count: 0, avg_error_rate: 0 },
+      { onConflict: 'user_id,language' }
+    )
+    .select()
+    .single();
+
+  if (insertErr) throw insertErr;
+  return mapTutorProfile(created);
+}
+
+export async function updateTutorProfile(
+  userId: string,
+  language: string,
+  updates: Partial<TutorProfile>
+): Promise<TutorProfile> {
+  const payload: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (updates.cefrEstimate !== undefined) payload.cefr_estimate = updates.cefrEstimate;
+  if (updates.commonErrors !== undefined) payload.common_errors = updates.commonErrors;
+  if (updates.masteredVocab !== undefined) payload.mastered_vocab = updates.masteredVocab;
+  if (updates.sessionsCount !== undefined) payload.sessions_count = updates.sessionsCount;
+  if (updates.avgErrorRate !== undefined) payload.avg_error_rate = updates.avgErrorRate;
+  if (updates.lastRecalculatedAt !== undefined) payload.last_recalculated_at = updates.lastRecalculatedAt;
+
+  const { data, error } = await supabase
+    .from('tutor_profiles')
+    .update(payload)
+    .eq('user_id', userId)
+    .eq('language', language)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return mapTutorProfile(data);
+}
+
+function mapTutorProfile(row: Record<string, unknown>): TutorProfile {
+  return {
+    id: row.id as string,
+    userId: row.user_id as string,
+    language: row.language as TutorProfile['language'],
+    cefrEstimate: row.cefr_estimate as CEFRLevel,
+    commonErrors: (row.common_errors as Record<string, number>) ?? {},
+    masteredVocab: (row.mastered_vocab as string[]) ?? [],
+    sessionsCount: row.sessions_count as number,
+    avgErrorRate: row.avg_error_rate as number,
+    lastRecalculatedAt: row.last_recalculated_at as string | null,
+    createdAt: row.created_at as string,
+    updatedAt: row.updated_at as string,
+  };
+}
+
+// ─── News Articles ──────────────────────────────────────────────
+
+export async function fetchNewsArticles(
+  language: string,
+  limit = 20
+): Promise<NewsArticle[]> {
+  const { data, error } = await supabase
+    .from('news_articles')
+    .select('*')
+    .eq('language', language)
+    .order('synced_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return (data ?? []).map(mapNewsArticle);
+}
+
+function mapNewsArticle(row: Record<string, unknown>): NewsArticle {
+  return {
+    id: row.id as string,
+    source: row.source as string,
+    language: row.language as NewsArticle['language'],
+    title: row.title as string,
+    summary: row.summary as string,
+    url: row.url as string,
+    imageUrl: row.image_url as string | null,
+    publishedAt: row.published_at as string,
+    syncedAt: row.synced_at as string,
+  };
+}
+
+// ─── Conversation Sessions (Persistent Tutor) ───────────────────
+
+export async function createConversationSession(params: {
+  userId: string;
+  tutorPersonality: string;
+  scenarioId?: string | null;
+  language: string;
+  level: string;
+}): Promise<ConversationSession> {
+  const { data, error } = await supabase
+    .from('conversation_sessions')
+    .insert({
+      user_id: params.userId,
+      tutor_personality: params.tutorPersonality,
+      scenario_id: params.scenarioId ?? null,
+      language: params.language,
+      level: params.level,
+      messages: [],
+      session_state: {},
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return mapConversationSession(data);
+}
+
+export async function updateConversationSession(
+  sessionId: string,
+  updates: { messages?: unknown[]; sessionState?: Record<string, unknown>; lastActiveAt?: string }
+): Promise<void> {
+  const payload: Record<string, unknown> = {};
+  if (updates.messages !== undefined) payload.messages = updates.messages;
+  if (updates.sessionState !== undefined) payload.session_state = updates.sessionState;
+  payload.last_active_at = updates.lastActiveAt ?? new Date().toISOString();
+
+  const { error } = await supabase
+    .from('conversation_sessions')
+    .update(payload)
+    .eq('id', sessionId);
+
+  if (error) throw error;
+}
+
+export async function fetchRecentConversationSessions(
+  userId: string,
+  limit = 10
+): Promise<ConversationSession[]> {
+  const { data, error } = await supabase
+    .from('conversation_sessions')
+    .select('*')
+    .eq('user_id', userId)
+    .order('last_active_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return (data ?? []).map(mapConversationSession);
+}
+
+function mapConversationSession(row: Record<string, unknown>): ConversationSession {
+  return {
+    id: row.id as string,
+    userId: row.user_id as string,
+    tutorPersonality: row.tutor_personality as AIPersonalityId,
+    scenarioId: row.scenario_id as string | null,
+    language: row.language as ConversationSession['language'],
+    level: row.level as ConversationSession['level'],
+    messages: row.messages as ConversationSession['messages'],
+    sessionState: (row.session_state as Record<string, unknown>) ?? {},
+    startedAt: row.started_at as string,
+    lastActiveAt: row.last_active_at as string,
+  };
+}
+
+// ─── Voice Preference ───────────────────────────────────────────
+
+export async function updateVoicePreference(
+  userId: string,
+  personality: AIPersonalityId
+): Promise<void> {
+  const { error } = await supabase
+    .from('user_profiles')
+    .update({ voice_preference: personality, updated_at: new Date().toISOString() })
+    .eq('user_id', userId);
+
+  if (error) throw error;
+}
+
+// ─── Reading Materials ──────────────────────────────────────────
+
+export async function fetchReadingMaterials(params: {
+  courseId: string;
+  level?: CEFRLevel;
+  unitId?: string;
+  tags?: string[];
+  minDifficulty?: number;
+  maxDifficulty?: number;
+  limit?: number;
+}): Promise<ReadingMaterial[]> {
+  let query = supabase
+    .from('reading_materials')
+    .select('*')
+    .eq('course_id', params.courseId)
+    .order('difficulty_score', { ascending: true });
+
+  if (params.level) query = query.eq('level', params.level);
+  if (params.unitId) query = query.eq('unit_id', params.unitId);
+  if (params.minDifficulty != null) query = query.gte('difficulty_score', params.minDifficulty);
+  if (params.maxDifficulty != null) query = query.lte('difficulty_score', params.maxDifficulty);
+  if (params.tags?.length) query = query.overlaps('tags', params.tags);
+  if (params.limit) query = query.limit(params.limit);
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data ?? []).map(mapReadingMaterial);
+}
+
+export async function fetchReadingById(id: string): Promise<ReadingMaterial | null> {
+  const { data, error } = await supabase
+    .from('reading_materials')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw error;
+  return data ? mapReadingMaterial(data) : null;
+}
+
+export async function fetchReadingAudio(readingId: string): Promise<ReadingAudio[]> {
+  const { data, error } = await supabase
+    .from('reading_audio')
+    .select('*')
+    .eq('reading_id', readingId);
+
+  if (error) throw error;
+  return (data ?? []).map(mapReadingAudio);
+}
+
+function mapReadingMaterial(row: Record<string, unknown>): ReadingMaterial {
+  return {
+    id: row.id as string,
+    courseId: row.course_id as string,
+    unitId: row.unit_id as string | null,
+    level: row.level as CEFRLevel,
+    title: row.title as string,
+    author: row.author as string | null,
+    sourceUrl: row.source_url as string | null,
+    isPublicDomain: row.is_public_domain as boolean,
+    text: row.text as string,
+    summary: row.summary as string | null,
+    wordCount: row.word_count as number | null,
+    difficultyScore: row.difficulty_score ? parseFloat(row.difficulty_score as string) : null,
+    downloadUrlPdf: row.download_url_pdf as string | null,
+    downloadUrlEpub: row.download_url_epub as string | null,
+    tags: row.tags as string[],
+    createdAt: row.created_at as string,
+  };
+}
+
+function mapReadingAudio(row: Record<string, unknown>): ReadingAudio {
+  return {
+    id: row.id as string,
+    readingId: row.reading_id as string,
+    languageCode: row.language_code as string,
+    voiceType: row.voice_type as string | null,
+    audioUrl: row.audio_url as string,
+    createdAt: row.created_at as string,
+  };
+}
+
+// ─── Writing Prompts & Submissions ──────────────────────────────
+
+export async function fetchWritingPrompts(params: {
+  courseId: string;
+  level?: CEFRLevel;
+  type?: string;
+  limit?: number;
+}): Promise<WritingPrompt[]> {
+  let query = supabase
+    .from('writing_prompts')
+    .select('*')
+    .eq('course_id', params.courseId)
+    .order('level', { ascending: true });
+
+  if (params.level) query = query.eq('level', params.level);
+  if (params.type) query = query.eq('type', params.type);
+  if (params.limit) query = query.limit(params.limit);
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data ?? []).map(mapWritingPrompt);
+}
+
+export async function fetchWritingPromptById(id: string): Promise<WritingPrompt | null> {
+  const { data, error } = await supabase
+    .from('writing_prompts')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw error;
+  return data ? mapWritingPrompt(data) : null;
+}
+
+export async function fetchWritingSubmissions(
+  userId: string,
+  limit = 20
+): Promise<WritingSubmission[]> {
+  const { data, error } = await supabase
+    .from('writing_submissions')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return (data ?? []).map(mapWritingSubmission);
+}
+
+function mapWritingPrompt(row: Record<string, unknown>): WritingPrompt {
+  return {
+    id: row.id as string,
+    courseId: row.course_id as string,
+    unitId: row.unit_id as string | null,
+    level: row.level as CEFRLevel,
+    type: row.type as WritingPrompt['type'],
+    title: row.title as string,
+    promptText: row.prompt_text as string,
+    minWords: row.min_words as number | null,
+    maxWords: row.max_words as number | null,
+    sampleOutline: row.sample_outline as string | null,
+    createdAt: row.created_at as string,
+  };
+}
+
+function mapWritingSubmission(row: Record<string, unknown>): WritingSubmission {
+  return {
+    id: row.id as string,
+    userId: row.user_id as string,
+    promptId: row.prompt_id as string | null,
+    courseId: row.course_id as string | null,
+    level: row.level as CEFRLevel | null,
+    text: row.text as string,
+    aiFeedbackJson: row.ai_feedback_json as WritingSubmission['aiFeedbackJson'],
+    grammarScore: row.grammar_score ? parseFloat(row.grammar_score as string) : null,
+    vocabScore: row.vocab_score ? parseFloat(row.vocab_score as string) : null,
+    coherenceScore: row.coherence_score ? parseFloat(row.coherence_score as string) : null,
+    spellingScore: row.spelling_score ? parseFloat(row.spelling_score as string) : null,
+    overallScore: row.overall_score ? parseFloat(row.overall_score as string) : null,
+    createdAt: row.created_at as string,
+  };
+}
+
+// ─── Speaking Attempts ──────────────────────────────────────────
+
+export async function fetchSpeakingAttempts(
+  userId: string,
+  limit = 20
+): Promise<SpeakingAttempt[]> {
+  const { data, error } = await supabase
+    .from('speaking_attempts')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return (data ?? []).map(mapSpeakingAttempt);
+}
+
+function mapSpeakingAttempt(row: Record<string, unknown>): SpeakingAttempt {
+  return {
+    id: row.id as string,
+    userId: row.user_id as string,
+    readingId: row.reading_id as string | null,
+    lessonId: row.lesson_id as string | null,
+    audioUrl: row.audio_url as string,
+    transcript: row.transcript as string | null,
+    targetTextRef: row.target_text_ref as string | null,
+    pronunciationScore: row.pronunciation_score ? parseFloat(row.pronunciation_score as string) : null,
+    fluencyScore: row.fluency_score ? parseFloat(row.fluency_score as string) : null,
+    rhythmScore: row.rhythm_score ? parseFloat(row.rhythm_score as string) : null,
+    overallScore: row.overall_score ? parseFloat(row.overall_score as string) : null,
+    aiFeedbackJson: row.ai_feedback_json as SpeakingAttempt['aiFeedbackJson'],
+    createdAt: row.created_at as string,
+  };
+}
+
+// ─── AI Usage ───────────────────────────────────────────────────
+
+export async function fetchAIUsageSummary(userId: string): Promise<AIUsageLedgerEntry[]> {
+  const now = new Date();
+  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+
+  const { data, error } = await supabase
+    .from('ai_usage_ledger')
+    .select('*')
+    .eq('user_id', userId)
+    .gte('timestamp', monthStart)
+    .order('timestamp', { ascending: false });
+
+  if (error) throw error;
+  return (data ?? []).map(mapAIUsageLedgerEntry);
+}
+
+function mapAIUsageLedgerEntry(row: Record<string, unknown>): AIUsageLedgerEntry {
+  return {
+    id: row.id as string,
+    userId: row.user_id as string,
+    feature: row.feature as AIFeature,
+    tokensUsed: row.tokens_used as number,
+    timestamp: row.timestamp as string,
+    isFreeTier: row.is_free_tier as boolean,
   };
 }

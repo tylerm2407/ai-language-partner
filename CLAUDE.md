@@ -110,6 +110,29 @@ npx supabase functions serve      # Local Edge Functions
 4. `eas submit --platform ios`
 5. Monitor TestFlight for crashes via Sentry
 
+## MCP Servers (Connected Integrations)
+
+The following MCP servers are configured for this project. They give Claude Code direct access to external services.
+
+| Server | Transport | What It Does |
+|--------|-----------|-------------|
+| **Context7** | HTTP | Fetches up-to-date library documentation. Ask Claude to look up docs for any npm package or framework. |
+| **GitHub** | stdio | Manage repos, PRs, issues, and code reviews directly. Requires `GITHUB_TOKEN` env var. |
+| **Supabase** | claude.ai | Query the database, manage auth, run migrations, and deploy Edge Functions against the linked project. |
+| **Stripe** | HTTP | Manage products, prices, subscriptions, and payment links. Authenticates via OAuth on first use. |
+| **Playwright** | stdio | Run browser automation, take screenshots, and test web flows. |
+| **Firecrawl** | stdio | Scrape and crawl websites for competitor analysis and content extraction. Requires `FIRECRAWL_API_KEY` env var. |
+| **ElevenLabs** | stdio | Generate speech, clone voices, and manage voice agents for audio features. Requires `ELEVENLABS_API_KEY` env var. |
+| **Sentry** | stdio | Query error reports, stack traces, and performance data. Requires `SENTRY_AUTH_TOKEN` env var. |
+| **Vercel** | HTTP | Deploy and manage Vercel projects. Authenticates via OAuth on first use. |
+
+### Team Usage Notes
+
+- **API keys are stored in `.claude.json`** (local config, not committed to git). Each team member needs their own keys.
+- **Stripe & Vercel** will prompt for OAuth authentication in the browser on first use.
+- **To add a server to your local setup**, run: `claude mcp add <name> -- <command>` or copy the `mcpServers` block from a teammate's `.claude.json`.
+- **To check server health**, run: `claude mcp list`
+
 ## Self-Imposed Rules
 
 - For tasks touching >2 screens/modules: enter Plan Mode, propose plan, wait for confirmation.

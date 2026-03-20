@@ -170,10 +170,50 @@ export default function LearnScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
       <View style={{ padding: 20 }}>
-        <Text style={{ fontSize: 28, fontWeight: '700', marginBottom: 20 }} accessibilityRole="header">
+        <Text style={{ fontSize: 28, fontWeight: '700', marginBottom: 12 }} accessibilityRole="header">
           Learn
         </Text>
       </View>
+
+      {/* Reading Library Banner */}
+      <Pressable
+        onPress={() => router.push('/(app)/learn/reading')}
+        style={{
+          marginHorizontal: 20,
+          marginBottom: 20,
+          backgroundColor: '#FFFBEB',
+          padding: 18,
+          borderRadius: 16,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          borderWidth: 1,
+          borderColor: '#FDE68A',
+        }}
+        accessibilityRole="button"
+        accessibilityLabel="Open reading library"
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              backgroundColor: '#F59E0B',
+              justifyContent: 'center',
+              alignItems: 'center',
+              marginRight: 14,
+            }}
+          >
+            <Text style={{ fontSize: 20, color: '#fff' }}>📖</Text>
+          </View>
+          <View>
+            <Text style={{ fontSize: 17, fontWeight: '700', color: '#92400E' }}>Reading Library</Text>
+            <Text style={{ fontSize: 13, color: '#D97706' }}>Graded texts for every level</Text>
+          </View>
+        </View>
+        <Text style={{ fontSize: 20, color: '#FCD34D' }}>{'>'}</Text>
+      </Pressable>
 
       {courses.length === 0 ? (
         <View style={{ alignItems: 'center', paddingTop: 48 }}>

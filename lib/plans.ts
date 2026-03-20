@@ -14,6 +14,12 @@ export interface PlanDefinition {
   priceMonthlyUsd: number;
   dailyTextConversations: number | 'unlimited';
   dailyVoiceMinutes: number | 'unlimited';
+  monthlyAILimits: {
+    chat: number | 'unlimited';
+    tutor_conversation: number | 'unlimited';
+    writing_feedback: number | 'unlimited';
+    pronunciation_feedback: number | 'unlimited';
+  };
 }
 
 export const PLANS: Record<PlanId, PlanDefinition> = {
@@ -22,53 +28,79 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     priceMonthlyUsd: 0,
     dailyTextConversations: 5,
     dailyVoiceMinutes: 5,
+    monthlyAILimits: {
+      chat: 50,
+      tutor_conversation: 10,
+      writing_feedback: 10,
+      pronunciation_feedback: 10,
+    },
   },
   basic: {
     name: 'Basic',
     priceMonthlyUsd: 9.99,
     dailyTextConversations: 20,
     dailyVoiceMinutes: 20,
+    monthlyAILimits: {
+      chat: 300,
+      tutor_conversation: 100,
+      writing_feedback: 100,
+      pronunciation_feedback: 100,
+    },
   },
   premium: {
     name: 'Premium',
     priceMonthlyUsd: 19.99,
     dailyTextConversations: 'unlimited',
     dailyVoiceMinutes: 45,
+    monthlyAILimits: {
+      chat: 'unlimited',
+      tutor_conversation: 500,
+      writing_feedback: 500,
+      pronunciation_feedback: 500,
+    },
   },
   unlimited: {
     name: 'Unlimited',
     priceMonthlyUsd: 29.99,
     dailyTextConversations: 'unlimited',
     dailyVoiceMinutes: 60,
+    monthlyAILimits: {
+      chat: 'unlimited',
+      tutor_conversation: 'unlimited',
+      writing_feedback: 'unlimited',
+      pronunciation_feedback: 'unlimited',
+    },
   },
 };
 
 /** Feature bullet points for the subscription/pricing UI. */
 export const PLAN_FEATURES: Record<PlanId, string[]> = {
   free: [
-    '5 text conversations per day',
+    'Full reading library (all levels)',
+    'All non-AI exercises & SRS review',
+    '5 AI text conversations per day',
     '5 minutes of AI voice per day',
-    'Basic SRS review',
+    '10 writing feedback & pronunciation scores per month',
+    'Offline reading downloads',
   ],
   basic: [
-    '20 text conversations per day',
+    'Everything in Free, plus:',
+    '20 AI text conversations per day',
     '20 minutes of AI voice per day',
+    '100 writing feedback & pronunciation scores per month',
     'Full SRS with adaptive scheduling',
-    'Speaking & pronunciation scoring',
   ],
   premium: [
-    'Unlimited text conversations',
+    'Everything in Basic, plus:',
+    'Unlimited AI text conversations',
     '45 minutes of AI voice per day',
-    'Full SRS with adaptive scheduling',
-    'Speaking & pronunciation scoring',
-    'Offline mode',
+    '500 writing & pronunciation feedbacks per month',
+    'Offline mode for all content',
   ],
   unlimited: [
-    'Unlimited text conversations',
+    'Everything in Premium, plus:',
     '60 minutes of AI voice per day',
-    'Full SRS with adaptive scheduling',
-    'Speaking & pronunciation scoring',
-    'Offline mode',
+    'Unlimited AI across all features',
     'Priority support',
   ],
 };

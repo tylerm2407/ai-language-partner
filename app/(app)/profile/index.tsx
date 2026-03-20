@@ -1,19 +1,41 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, Pressable, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { useAuth } from '../../../hooks/useAuth';
 import { useProfile } from '../../../hooks/useProfile';
 import { useDailyStats } from '../../../hooks/useDailyStats';
 import { SUPPORTED_LANGUAGES, DIFFICULTY_LEVELS } from '../../../config/app';
-import type { LanguageCode, ProficiencyLevel } from '../../../types';
+import { PERSONALITIES } from '../../../config/personalities';
+import { fetchOrCreateTutorProfile } from '../../../lib/supabase-queries';
+import type { AIPersonalityId, CEFRLevel, LanguageCode, ProficiencyLevel } from '../../../types';
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const { user, signOut } = useAuth();
   const { profile, isLoading, updateProfile } = useProfile();
   const { today, weekStats } = useDailyStats();
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [showLevelPicker, setShowLevelPicker] = useState(false);
   const [showGoalPicker, setShowGoalPicker] = useState(false);
+  const [cefrLevel, setCefrLevel] = useState<CEFRLevel | null>(null);
+
+  // Fetch CEFR level
+  useEffect(() => {
+    if (!profile?.userId || !profile?.targetLanguage) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const tutorProfile = await fetchOrCreateTutorProfile(profile.userId, profile.targetLanguage);
+        if (!cancelled) setCefrLevel(tutorProfile.cefrEstimate as CEFRLevel);
+      } catch { /* silent */ }
+    })();
+    return () => { cancelled = true; };
+  }, [profile?.userId, profile?.targetLanguage]);
+
+  const currentPersonality = profile?.voicePreference
+    ? PERSONALITIES[profile.voicePreference as AIPersonalityId]
+    : PERSONALITIES.sofia;
 
   const handleLanguageChange = async (code: LanguageCode) => {
     try {
@@ -168,6 +190,33 @@ export default function ProfileScreen() {
                 <Text style={{ fontSize: 13, color: '#666' }}>{lvl.description}</Text>
               </Pressable>
             ))}
+          </View>
+        )}
+
+        {/* AI Voice */}
+        <Pressable
+          onPress={() => router.push('/(app)/practice/voices')}
+          style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 16, borderBottomWidth: 0.5, borderBottomColor: '#E5E7EB' }}
+          accessibilityRole="button"
+          accessibilityLabel="Change AI voice"
+        >
+          <Text style={{ fontSize: 16 }}>AI Voice</Text>
+          <Text style={{ fontSize: 16, color: '#6366F1', fontWeight: '500' }}>
+            {currentPersonality ? `${currentPersonality.avatar} ${currentPersonality.name}` : 'Sofia'}
+          </Text>
+        </Pressable>
+
+        {/* CEFR Level */}
+        {cefrLevel && (
+          <View
+            style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 16, borderBottomWidth: 0.5, borderBottomColor: '#E5E7EB' }}
+          >
+            <Text style={{ fontSize: 16 }}>CEFR Level</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={{ backgroundColor: '#EDE9FE', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
+                <Text style={{ fontSize: 16, color: '#7C3AED', fontWeight: '700' }}>{cefrLevel}</Text>
+              </View>
+            </View>
           </View>
         )}
 

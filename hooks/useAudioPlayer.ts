@@ -34,7 +34,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     Audio.setAudioModeAsync({
       allowsRecordingIOS: false,
       playsInSilentModeIOS: true, // Play audio even in silent mode
-      staysActiveInBackground: false,
+      staysActiveInBackground: true,
       shouldDuckAndroid: true,
     });
 

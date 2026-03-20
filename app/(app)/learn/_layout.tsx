@@ -7,6 +7,10 @@ export default function LearnLayout() {
         headerShown: false,
         animation: 'slide_from_right',
       }}
-    />
+    >
+      <Stack.Screen name="index" />
+      <Stack.Screen name="[lessonId]" />
+      <Stack.Screen name="reading" />
+    </Stack>
   );
 }

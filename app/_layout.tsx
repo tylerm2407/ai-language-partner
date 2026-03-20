@@ -2,10 +2,15 @@ import { useEffect } from 'react';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useAuth } from '../hooks/useAuth';
+import { registerGlobals } from '@livekit/react-native';
+import { PostHogProvider } from '../lib/posthog-provider';
 
 /**
  * Root layout: gates navigation between (public) and (app) based on auth state.
  */
+// Register LiveKit WebRTC globals for React Native
+registerGlobals();
+
 export default function RootLayout() {
   const { user, isLoading } = useAuth();
   const segments = useSegments();
@@ -26,9 +31,9 @@ export default function RootLayout() {
   }, [user, isLoading, segments]);
 
   return (
-    <>
+    <PostHogProvider>
       <StatusBar style="auto" />
       <Slot />
-    </>
+    </PostHogProvider>
   );
 }

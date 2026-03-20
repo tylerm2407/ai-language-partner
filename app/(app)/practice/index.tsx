@@ -82,6 +82,208 @@ export default function PracticeScreen() {
           </Text>
         </View>
 
+        {/* Voice Practice Banner */}
+        <Pressable
+          onPress={() => router.push('/(app)/practice/voice')}
+          style={{
+            marginHorizontal: 20,
+            marginBottom: 12,
+            backgroundColor: '#EEF2FF',
+            padding: 18,
+            borderRadius: 16,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderWidth: 1,
+            borderColor: '#C7D2FE',
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Start voice practice"
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                backgroundColor: '#6366F1',
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginRight: 14,
+              }}
+            >
+              <Text style={{ fontSize: 20, color: '#fff' }}>🎙</Text>
+            </View>
+            <View>
+              <Text style={{ fontSize: 17, fontWeight: '700', color: '#312E81' }}>Voice Practice</Text>
+              <Text style={{ fontSize: 13, color: '#6366F1' }}>Real-time AI conversation</Text>
+            </View>
+          </View>
+          <Text style={{ fontSize: 20, color: '#6366F1' }}>{'>'}</Text>
+        </Pressable>
+
+        {/* Driving Mode Banner */}
+        <Pressable
+          onPress={() => router.push('/(app)/practice/driving')}
+          style={{
+            marginHorizontal: 20,
+            marginBottom: 12,
+            backgroundColor: '#111827',
+            padding: 18,
+            borderRadius: 16,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Start driving mode practice"
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                backgroundColor: 'rgba(99,102,241,0.3)',
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginRight: 14,
+              }}
+            >
+              <Text style={{ fontSize: 20 }}>🚗</Text>
+            </View>
+            <View>
+              <Text style={{ fontSize: 17, fontWeight: '700', color: '#E5E7EB' }}>Driving Mode</Text>
+              <Text style={{ fontSize: 13, color: '#818CF8' }}>Hands-free voice practice</Text>
+            </View>
+          </View>
+          <Text style={{ fontSize: 20, color: '#4B5563' }}>{'>'}</Text>
+        </Pressable>
+
+        {/* Writing Practice Banner */}
+        <Pressable
+          onPress={() => router.push('/(app)/practice/writing')}
+          style={{
+            marginHorizontal: 20,
+            marginBottom: 12,
+            backgroundColor: '#F0FDF4',
+            padding: 18,
+            borderRadius: 16,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderWidth: 1,
+            borderColor: '#BBF7D0',
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Open writing practice"
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                backgroundColor: '#22C55E',
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginRight: 14,
+              }}
+            >
+              <Text style={{ fontSize: 20, color: '#fff' }}>✍️</Text>
+            </View>
+            <View>
+              <Text style={{ fontSize: 17, fontWeight: '700', color: '#166534' }}>Writing Practice</Text>
+              <Text style={{ fontSize: 13, color: '#16A34A' }}>AI-powered writing feedback</Text>
+            </View>
+          </View>
+          <Text style={{ fontSize: 20, color: '#86EFAC' }}>{'>'}</Text>
+        </Pressable>
+
+        {/* Pronunciation Practice Banner */}
+        <Pressable
+          onPress={() => router.push('/(app)/practice/pronunciation')}
+          style={{
+            marginHorizontal: 20,
+            marginBottom: 12,
+            backgroundColor: '#FDF4FF',
+            padding: 18,
+            borderRadius: 16,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderWidth: 1,
+            borderColor: '#F0ABFC',
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Open pronunciation practice"
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                backgroundColor: '#A855F7',
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginRight: 14,
+              }}
+            >
+              <Text style={{ fontSize: 20, color: '#fff' }}>🗣</Text>
+            </View>
+            <View>
+              <Text style={{ fontSize: 17, fontWeight: '700', color: '#6B21A8' }}>Pronunciation</Text>
+              <Text style={{ fontSize: 13, color: '#9333EA' }}>Score your speaking accuracy</Text>
+            </View>
+          </View>
+          <Text style={{ fontSize: 20, color: '#D8B4FE' }}>{'>'}</Text>
+        </Pressable>
+
+        {/* Scenarios Banner */}
+        <Pressable
+          onPress={() => router.push('/(app)/practice/scenarios')}
+          style={{
+            marginHorizontal: 20,
+            marginBottom: 20,
+            backgroundColor: '#FFF7ED',
+            padding: 18,
+            borderRadius: 16,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderWidth: 1,
+            borderColor: '#FED7AA',
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Browse conversation scenarios"
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                backgroundColor: '#F97316',
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginRight: 14,
+              }}
+            >
+              <Text style={{ fontSize: 20, color: '#fff' }}>🎭</Text>
+            </View>
+            <View>
+              <Text style={{ fontSize: 17, fontWeight: '700', color: '#9A3412' }}>Scenarios</Text>
+              <Text style={{ fontSize: 13, color: '#EA580C' }}>Real-world conversation practice</Text>
+            </View>
+          </View>
+          <Text style={{ fontSize: 20, color: '#FDBA74' }}>{'>'}</Text>
+        </Pressable>
+
+        <View style={{ paddingHorizontal: 20, marginBottom: 12 }}>
+          <Text style={{ fontSize: 15, fontWeight: '600', color: '#374151' }}>Text Practice</Text>
+        </View>
+
         <FlatList
           data={TOPICS}
           keyExtractor={(item) => item}

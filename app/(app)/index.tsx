@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { View, Text, Pressable, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -5,14 +6,39 @@ import { useProfile } from '../../hooks/useProfile';
 import { useDailyStats } from '../../hooks/useDailyStats';
 import { useReviewQueue } from '../../hooks/useReviewQueue';
 import { ProgressBar } from '../../components/ui/ProgressBar';
+import { LevelUpCelebration } from '../../components/ui/LevelUpCelebration';
+import { fetchOrCreateTutorProfile } from '../../lib/supabase-queries';
+import { shouldLevelUp } from '../../lib/adaptive';
+import type { CEFRLevel, TutorProfile } from '../../types';
 
 export default function HomeScreen() {
   const router = useRouter();
   const { profile, isLoading: profileLoading } = useProfile();
   const { today, isLoading: statsLoading } = useDailyStats();
   const { dueCount, isLoading: reviewLoading } = useReviewQueue();
+  const [cefrLevel, setCefrLevel] = useState<CEFRLevel | null>(null);
+  const [showLevelUp, setShowLevelUp] = useState(false);
 
   const isLoading = profileLoading || statsLoading || reviewLoading;
+
+  // Fetch CEFR level and check for level-up
+  useEffect(() => {
+    if (!profile?.userId || !profile?.targetLanguage) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const tutorProfile = await fetchOrCreateTutorProfile(profile.userId, profile.targetLanguage);
+        if (cancelled) return;
+        setCefrLevel(tutorProfile.cefrEstimate as CEFRLevel);
+        if (shouldLevelUp(tutorProfile as TutorProfile)) {
+          setShowLevelUp(true);
+        }
+      } catch {
+        // Silent fail — CEFR badge just won't show
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [profile?.userId, profile?.targetLanguage]);
 
   const streak = profile?.streak ?? 0;
   const totalXp = profile?.totalXp ?? 0;
@@ -100,6 +126,12 @@ export default function HomeScreen() {
             <Text style={{ fontSize: 28, fontWeight: '700', color: '#22C55E' }}>{totalXp}</Text>
             <Text style={{ fontSize: 13, color: '#666' }}>Total XP</Text>
           </View>
+          {cefrLevel && (
+            <View style={{ alignItems: 'center' }}>
+              <Text style={{ fontSize: 28, fontWeight: '700', color: '#8B5CF6' }}>{cefrLevel}</Text>
+              <Text style={{ fontSize: 13, color: '#666' }}>CEFR</Text>
+            </View>
+          )}
         </View>
 
         {/* Quick Actions */}
@@ -158,6 +190,23 @@ export default function HomeScreen() {
           </Text>
         </Pressable>
 
+        <Pressable
+          onPress={() => router.push('/(app)/practice/driving')}
+          style={{
+            backgroundColor: '#111827',
+            padding: 20,
+            borderRadius: 16,
+            marginBottom: 12,
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Start driving mode"
+        >
+          <Text style={{ fontSize: 18, fontWeight: '600', color: '#E5E7EB' }}>Driving Mode</Text>
+          <Text style={{ color: '#9CA3AF', fontSize: 14, marginTop: 4 }}>
+            Hands-free voice practice while driving or walking
+          </Text>
+        </Pressable>
+
         {/* Weekly Activity */}
         {today && (
           <View
@@ -188,6 +237,13 @@ export default function HomeScreen() {
           </View>
         )}
       </ScrollView>
+
+      {showLevelUp && cefrLevel && (
+        <LevelUpCelebration
+          newLevel={cefrLevel}
+          onDismiss={() => setShowLevelUp(false)}
+        />
+      )}
     </SafeAreaView>
   );
 }

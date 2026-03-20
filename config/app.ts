@@ -42,7 +42,20 @@ export const FEATURE_FLAGS = {
   enableDarkMode: true,
   enablePushNotifications: false, // enable after implementing
   enableInAppPurchases: false, // Stripe only for now
+  enableVoiceConversation: true,
+  enableDrivingMode: true,
+  enableScenarios: true,
+  enableAdaptiveDifficulty: true,
+  enableNewsSync: false, // enable after RSS integration is deployed
 };
+
+export const SCENARIO_CATEGORIES = [
+  'Travel',
+  'Social',
+  'Professional',
+  'Daily Life',
+  'Emergency',
+] as const;
 
 export const SESSION_DEFAULTS = {
   dailyGoalMinutes: 10,
