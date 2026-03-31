@@ -51,9 +51,9 @@ export default function ReviewScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#6366F1" />
-        <Text style={{ marginTop: 12, color: '#666' }}>Loading review queue...</Text>
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#0C0F14', justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#38BDF8" />
+        <Text style={{ marginTop: 12, color: '#94A3B8' }}>Loading review queue...</Text>
       </SafeAreaView>
     );
   }
@@ -70,15 +70,15 @@ export default function ReviewScreen() {
     });
 
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#0C0F14' }}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-          <Text style={{ fontSize: 32, fontWeight: '700', marginBottom: 8 }} accessibilityRole="header">
+          <Text style={{ fontSize: 32, fontWeight: '700', marginBottom: 8, color: '#F1F5F9' }} accessibilityRole="header">
             Review Complete!
           </Text>
 
           <View
             style={{
-              backgroundColor: '#F9FAFB',
+              backgroundColor: '#151921',
               borderRadius: 20,
               padding: 24,
               width: '100%',
@@ -88,22 +88,22 @@ export default function ReviewScreen() {
           >
             <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
               <View style={{ alignItems: 'center' }}>
-                <Text style={{ fontSize: 28, fontWeight: '700', color: '#6366F1' }}>
+                <Text style={{ fontSize: 28, fontWeight: '700', color: '#38BDF8' }}>
                   {reviewedCount}
                 </Text>
-                <Text style={{ fontSize: 13, color: '#666' }}>Reviewed</Text>
+                <Text style={{ fontSize: 13, color: '#94A3B8' }}>Reviewed</Text>
               </View>
               <View style={{ alignItems: 'center' }}>
                 <Text style={{ fontSize: 28, fontWeight: '700', color: '#22C55E' }}>
                   {correctCount}
                 </Text>
-                <Text style={{ fontSize: 13, color: '#666' }}>Correct</Text>
+                <Text style={{ fontSize: 13, color: '#94A3B8' }}>Correct</Text>
               </View>
               <View style={{ alignItems: 'center' }}>
                 <Text style={{ fontSize: 28, fontWeight: '700', color: accuracy >= 80 ? '#22C55E' : '#F59E0B' }}>
                   {accuracy}%
                 </Text>
-                <Text style={{ fontSize: 13, color: '#666' }}>Accuracy</Text>
+                <Text style={{ fontSize: 13, color: '#94A3B8' }}>Accuracy</Text>
               </View>
             </View>
           </View>
@@ -111,7 +111,7 @@ export default function ReviewScreen() {
           <Pressable
             onPress={() => router.back()}
             style={{
-              backgroundColor: '#6366F1',
+              backgroundColor: '#38BDF8',
               paddingHorizontal: 48,
               paddingVertical: 16,
               borderRadius: 14,
@@ -129,18 +129,18 @@ export default function ReviewScreen() {
 
   if (isComplete || !currentCard) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#0C0F14' }}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-          <Text style={{ fontSize: 28, fontWeight: '700', marginBottom: 8 }} accessibilityRole="header">
+          <Text style={{ fontSize: 28, fontWeight: '700', marginBottom: 8, color: '#F1F5F9' }} accessibilityRole="header">
             All caught up!
           </Text>
-          <Text style={{ fontSize: 16, color: '#666', textAlign: 'center', marginBottom: 24 }}>
+          <Text style={{ fontSize: 16, color: '#94A3B8', textAlign: 'center', marginBottom: 24 }}>
             No cards due for review. Learn new words or come back later.
           </Text>
           <Pressable
             onPress={() => router.push('/(app)/learn')}
             style={{
-              backgroundColor: '#6366F1',
+              backgroundColor: '#38BDF8',
               paddingHorizontal: 32,
               paddingVertical: 14,
               borderRadius: 12,
@@ -160,7 +160,7 @@ export default function ReviewScreen() {
   const progress = queue.length > 0 ? currentIndex / queue.length : 0;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#0C0F14' }}>
       {/* Header */}
       <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
@@ -170,12 +170,12 @@ export default function ReviewScreen() {
             accessibilityRole="button"
             accessibilityLabel="Exit review"
           >
-            <Text style={{ fontSize: 20, color: '#666' }}>x</Text>
+            <Text style={{ fontSize: 20, color: '#94A3B8' }}>x</Text>
           </Pressable>
           <View style={{ flex: 1 }}>
             <ProgressBar progress={progress} />
           </View>
-          <Text style={{ marginLeft: 12, fontSize: 14, color: '#666' }}>
+          <Text style={{ marginLeft: 12, fontSize: 14, color: '#94A3B8' }}>
             {currentIndex + 1}/{queue.length}
           </Text>
         </View>
@@ -188,7 +188,7 @@ export default function ReviewScreen() {
           style={{
             width: '100%',
             minHeight: 280,
-            backgroundColor: '#F9FAFB',
+            backgroundColor: '#151921',
             borderRadius: 24,
             justifyContent: 'center',
             alignItems: 'center',
@@ -198,12 +198,12 @@ export default function ReviewScreen() {
           accessibilityLabel={showAnswer ? 'Card answer shown' : 'Tap to reveal answer'}
         >
           {/* Front: target language text */}
-          <Text style={{ fontSize: 28, fontWeight: '700', textAlign: 'center', marginBottom: 8 }}>
+          <Text style={{ fontSize: 28, fontWeight: '700', textAlign: 'center', marginBottom: 8, color: '#F1F5F9' }}>
             {card.targetText}
           </Text>
 
           {card.partOfSpeech && (
-            <Text style={{ fontSize: 14, color: '#999', marginBottom: 12, fontStyle: 'italic' }}>
+            <Text style={{ fontSize: 14, color: '#64748B', marginBottom: 12, fontStyle: 'italic' }}>
               {card.partOfSpeech}
             </Text>
           )}
@@ -215,23 +215,23 @@ export default function ReviewScreen() {
           )}
 
           {showAnswer ? (
-            <View style={{ marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#E5E7EB', width: '100%', alignItems: 'center' }}>
-              <Text style={{ fontSize: 22, fontWeight: '600', color: '#6366F1', textAlign: 'center' }}>
+            <View style={{ marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#1E293B', width: '100%', alignItems: 'center' }}>
+              <Text style={{ fontSize: 22, fontWeight: '600', color: '#38BDF8', textAlign: 'center' }}>
                 {card.nativeText}
               </Text>
               {card.exampleSentence && (
-                <Text style={{ fontSize: 15, color: '#666', marginTop: 12, textAlign: 'center', fontStyle: 'italic' }}>
+                <Text style={{ fontSize: 15, color: '#94A3B8', marginTop: 12, textAlign: 'center', fontStyle: 'italic' }}>
                   {card.exampleSentence}
                 </Text>
               )}
               {card.exampleSentenceTranslation && (
-                <Text style={{ fontSize: 14, color: '#999', marginTop: 4, textAlign: 'center' }}>
+                <Text style={{ fontSize: 14, color: '#64748B', marginTop: 4, textAlign: 'center' }}>
                   {card.exampleSentenceTranslation}
                 </Text>
               )}
             </View>
           ) : (
-            <Text style={{ fontSize: 15, color: '#999', marginTop: 16 }}>
+            <Text style={{ fontSize: 15, color: '#64748B', marginTop: 16 }}>
               Tap to reveal
             </Text>
           )}
@@ -245,7 +245,7 @@ export default function ReviewScreen() {
             <RatingButton label="Again" sublabel="1m" color="#EF4444" onPress={() => handleRate(1)} />
             <RatingButton label="Hard" sublabel="6m" color="#F59E0B" onPress={() => handleRate(2)} />
             <RatingButton label="Good" sublabel="10m" color="#22C55E" onPress={() => handleRate(3)} />
-            <RatingButton label="Easy" sublabel="4d" color="#6366F1" onPress={() => handleRate(5)} />
+            <RatingButton label="Easy" sublabel="4d" color="#38BDF8" onPress={() => handleRate(5)} />
           </View>
         </View>
       )}
