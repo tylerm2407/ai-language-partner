@@ -1,142 +1,134 @@
-# languageAI
+# CLAUDE.md — Language Learning App
 
-**languageAI** is a mobile-first language learning app with structured courses, AI-powered conversation practice, and spaced repetition. It targets iOS as the primary platform, with Android support via Expo's cross-platform tooling.
-
-## Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Framework | Expo (React Native) + TypeScript |
-| Navigation | Expo Router (file-based) |
-| Auth | Supabase Auth (magic links, OAuth) |
-| Database | Supabase Postgres + Edge Functions |
-| Payments | Stripe (subscriptions), RevenueCat (IAP later) |
-| Styling | NativeWind / Tailwind CSS |
-| Audio | Expo AV (playback + recording), Expo Speech |
-| AI | LLM API via Edge Functions (no secrets on client) |
-| State | Zustand (local), Supabase Realtime (sync) |
-| Animations | React Native Reanimated |
-
-## Project Structure
-
-```
-app/(public)/          # Onboarding, auth, landing
-app/(app)/             # Authenticated experience (tabs)
-app/(app)/learn/       # Course & lesson screens
-app/(app)/review/      # Spaced repetition review
-app/(app)/practice/    # AI conversation & speaking
-app/(app)/profile/     # User settings & goals
-lib/                   # Supabase client, AI client, SRS engine, analytics
-hooks/                 # Reusable React hooks (audio, auth, etc.)
-components/ui/         # Shared UI primitives
-components/lesson/     # Lesson & SRS widgets
-components/audio/      # Recording & playback UI
-types/                 # Shared TypeScript types
-config/                # App config, languages, feature flags
-supabase/migrations/   # SQL migration files
-supabase/functions/    # Edge Functions
-docs/                  # Design docs & checklists
-```
-
-## Mobile Coding Standards
-
-- **Screens are thin.** Business logic lives in hooks (`hooks/`) and feature modules (`lib/`). Screen files handle layout and composition only.
-- **No heavy work on the UI thread.** Use `InteractionManager.runAfterInteractions`, async workers, or background tasks for data processing, SRS calculations, and network calls.
-- **Mobile-first and accessible.** Every screen must support Dynamic Type / font scaling, minimum 44pt touch targets, VoiceOver labels, and proper contrast ratios.
-- **Offline-resilient.** All network operations must handle offline/poor-network gracefully: loading states, retry with exponential backoff, and local caching via AsyncStorage or SQLite.
-- **Localizable.** All user-visible strings must go through a localization layer. Never hardcode display text directly in JSX.
-- **Safe areas everywhere.** Use `SafeAreaView` or `useSafeAreaInsets` — never assume screen dimensions.
-
-## Language-Learning Domain Rules
-
-- **Spaced repetition is a first-class concern.** Use SM-2 algorithm with adaptive scheduling. Never use fixed intervals.
-- **Active recall over passive recognition.** Users must produce language (typing, speaking), not just tap multiple choice.
-- **Audio is essential.** Every vocabulary item and sentence should have audio. Recording/playback must work seamlessly on iOS.
-- **Correctness checking matters.** Answers must be validated with tolerance for minor typos but not meaning errors. Use fuzzy matching for text, AI for open-ended responses.
-
-## Commands
-
+## 0. Quick Start
 ```bash
-# Development
-npx expo start --ios              # Run on iOS simulator
-npx expo start                    # Run with QR code (Expo Go)
+cd C:\Users\tcm24\OneDrive\Desktop\Languageapp
+```
+Run this first — all build/test/expo commands must run from the project root.
 
-# Quality
-npx tsc --noEmit                  # Type check
-npm run lint                      # ESLint
-npm test                          # Jest tests
+---
 
-# Build & Deploy (requires EAS setup)
-eas build --profile development --platform ios
-eas build --profile preview --platform ios
-eas submit --platform ios
+## 1. Project Overview
+This is an AI-powered language learning platform that delivers personalized lessons, adaptive practice, and conversational tutoring across multiple languages. It serves learners who want daily, bite-sized progress toward fluency without a human tutor. The most important constraint: every learning interaction must be level-appropriate, safe, and aligned with the learner’s target goals and proficiency.
 
-# Database
-npx supabase db push              # Run migrations
-npx supabase functions serve      # Local Edge Functions
+---
+
+## 2. Architecture Map
+/app
+├── agents/ # All AI agent logic (one agent per file, no agent logic in main.py)
+├── tools/ # External API wrappers (LLM, TTS, STT, dictionary, translation) — pure functions only
+├── models/ # Pydantic data models (UserProfile, LessonPlan, Exercise, SessionState) — no business logic
+├── curriculum/ # Lesson templates, CEFR mapping, progression rules
+├── exercises/ # Exercise generators (vocab, grammar, listening, speaking, conversation)
+├── sessions/ # Session orchestration (state machine for lessons and reviews)
+├── api/ # FastAPI / Next.js API routes — no agent instantiation in routes
+├── frontend/ # Mobile/web UI (React/React Native/Next.js) — UI components and screens
+└── analytics/ # Learning analytics, spaced repetition scheduling, progress reports
+
+text
+
+---
+
+## 3. Build & Test Commands
+```bash
+# Backend
+cd backend && uv run uvicorn main:app --reload --port 8000
+
+# Frontend
+cd frontend && pnpm dev
+
+# Tests
+cd backend && uv run pytest -v
+
+# Type check
+cd backend && uv run mypy .
+cd frontend && pnpm typecheck
+
+# Lint
+cd backend && uv run ruff check .
+cd frontend && pnpm lint
 ```
 
-## Workflows
+---
 
-### New Feature
-1. Create a branch: `feat/<feature-name>`
-2. Design types in `types/index.ts`
-3. Add migration if schema changes (`supabase/migrations/`)
-4. Build hook in `hooks/` or logic in `lib/`
-5. Build UI components in `components/`
-6. Wire into screen in `app/`
-7. Run `npx tsc --noEmit && npm test && npm run lint`
-8. PR with summary of changes
+## 4. Code Style Rules
+- Use `async/await` everywhere — never callbacks.
+- Type-annotate every function — no `Any` types.
+- Use Pydantic v2 models for all structured data (user profiles, lesson plans, exercises, attempts).
+- Do not hardcode lesson text in code — store templates in `/curriculum` and `/exercises/templates`.
+- All AI-generated content passes through a `ContentSafetyValidator` and `LevelChecker` before being shown to the learner.
+- One agent per file — no multi-agent orchestration logic inside a single module.
 
-### New Screen
-1. Create file in appropriate `app/` route group
-2. Add to `_layout.tsx` if it needs tab/stack config
-3. Keep screen thin — extract logic to hooks
-4. Verify safe areas, accessibility, and offline behavior
-5. Test on iOS simulator at minimum
+---
 
-### New Learning Mode
-1. Define the exercise type in `types/index.ts`
-2. Add SRS integration in `lib/srs.ts`
-3. Create exercise component in `components/lesson/`
-4. Wire into review flow in `app/(app)/review/`
-5. Add audio support if applicable
-6. Write unit tests for scoring/grading logic
+## 5. Architecture Rules (What Must Never Happen)
+- Agents never call each other directly — they communicate only through `SessionMemory` / `SessionState`.
+- No business logic in API routes — routes call services, services call agents.
+- Never generate exercises for a user without a loaded `UserProfile` and `ProficiencyLevel`.
+- Never update spaced repetition schedules outside the `SpacedRepetitionService`.
+- Never send unreviewed AI-generated content directly to minors if age < 18 — always run through the safety pipeline.
 
-### Ship to iOS via EAS
-1. Bump version in `app.json`
-2. Run full quality check suite
-3. `eas build --profile production --platform ios`
-4. `eas submit --platform ios`
-5. Monitor TestFlight for crashes via Sentry
+---
 
-## MCP Servers (Connected Integrations)
+## 6. Error Handling Standard
+- All agent errors use an `AgentError` class with `user_id`, `language`, and `session_id` context.
+- Always log with `run_id`, `user_id`, and `exercise_id` where applicable.
+- Never use bare `except` — catch specific exceptions (HTTPError, ValidationError, Timeout, etc.).
+- On LLM failure, retry 2x with exponential backoff, then fall back to a generic, pre-authored exercise.
+- On TTS/STT API failure, log and gracefully degrade to text-only mode for that interaction.
 
-The following MCP servers are configured for this project. They give Claude Code direct access to external services.
+---
 
-| Server | Transport | What It Does |
-|--------|-----------|-------------|
-| **Context7** | HTTP | Fetches up-to-date library documentation. Ask Claude to look up docs for any npm package or framework. |
-| **GitHub** | stdio | Manage repos, PRs, issues, and code reviews directly. Requires `GITHUB_TOKEN` env var. |
-| **Supabase** | claude.ai | Query the database, manage auth, run migrations, and deploy Edge Functions against the linked project. |
-| **Stripe** | HTTP | Manage products, prices, subscriptions, and payment links. Authenticates via OAuth on first use. |
-| **Playwright** | stdio | Run browser automation, take screenshots, and test web flows. |
-| **Firecrawl** | stdio | Scrape and crawl websites for competitor analysis and content extraction. Requires `FIRECRAWL_API_KEY` env var. |
-| **ElevenLabs** | stdio | Generate speech, clone voices, and manage voice agents for audio features. Requires `ELEVENLABS_API_KEY` env var. |
-| **Sentry** | stdio | Query error reports, stack traces, and performance data. Requires `SENTRY_AUTH_TOKEN` env var. |
-| **Vercel** | HTTP | Deploy and manage Vercel projects. Authenticates via OAuth on first use. |
+## 7. Testing Requirements
+- Every new agent method requires an integration test with a mock LLM client.
+- Every exercise generator requires unit tests for:
+  - Correct difficulty selection based on CEFR level.
+  - Proper handling of empty or malformed input.
+  - Stable output schema (no shape changes).
+- Add tests for the progression engine (promotions, demotions, review scheduling).
+- Run `pytest -x` after every change — do not mark a task complete if any tests fail.
+- Never consider a task done if `mypy`, `ruff`, or frontend `typecheck` returns errors.
 
-### Team Usage Notes
+---
 
-- **API keys are stored in `.claude.json`** (local config, not committed to git). Each team member needs their own keys.
-- **Stripe & Vercel** will prompt for OAuth authentication in the browser on first use.
-- **To add a server to your local setup**, run: `claude mcp add <name> -- <command>` or copy the `mcpServers` block from a teammate's `.claude.json`.
-- **To check server health**, run: `claude mcp list`
+## 8. Performance Rules
+- No synchronous network calls inside async functions.
+- Use `asyncio.gather` for parallel operations (e.g., generating multiple exercises or hints in one request).
+- No blocking IO in the request path — move heavy preprocessing to background tasks where possible.
+- Cache static curriculum data (lesson templates, CEFR mappings) in memory per process.
+- Batch analytics writes and event logging instead of writing one record per keystroke.
 
-## Self-Imposed Rules
+---
 
-- For tasks touching >2 screens/modules: enter Plan Mode, propose plan, wait for confirmation.
-- For every non-trivial change: run type checks and tests, propose unit/integration tests.
-- Never invent real API keys, Supabase project IDs, or Stripe secrets. Use `process.env.EXPO_PUBLIC_*` placeholders.
-- Never refactor navigation or global state without presenting a plan first.
-- Never change the core stack without proposing pros/cons and getting approval.
+## 9. What NOT To Do
+- Do not hallucinate factual content about grammar rules — base explanations on the curriculum definitions.
+- Do not generate exercises that mix multiple target languages in a single session unless explicitly requested.
+- Do not store raw audio files without appropriate user consent and retention policy.
+- Do not expose model/system prompts in any user-facing UI or logs.
+- Do not generate culturally insensitive or unsafe content — always pass outputs through content safety checks.
+- Do not change scoring logic or CEFR thresholds without updating tests and curriculum documentation.
+
+---
+
+## 10. Current Work In Progress
+- [ ] Adaptive lesson sequencing based on real-time performance.
+- [ ] Conversational practice agent with scenario-based dialogues.
+- [ ] STT integration for speaking exercises with pronunciation scoring.
+- [ ] Progress dashboard showing CEFR trajectory and weekly streaks.
+- [ ] Onboarding flow: placement test → initial level + custom learning goals.
+
+**Open decisions:**
+- Single global LLM vs per-language specialized models?
+- How aggressively should we adapt difficulty (stable vs highly responsive)?
+- Centralized vs per-user spaced repetition configuration?
+
+---
+
+## After Every Change — Always Run:
+```bash
+uv run pytest -x          # fail fast
+uv run mypy .             # type errors are real bugs
+uv run ruff check .       # linting
+pnpm typecheck            # frontend types
+```
+Fix all errors before considering any task complete. Never ask for review on code that does not pass these checks.

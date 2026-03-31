@@ -8,6 +8,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const TEXT_MODEL = 'claude-haiku-4-5-20251001';
 
 interface HintRequest {
   cardId: string;
@@ -44,8 +45,8 @@ serve(async (req: Request) => {
       );
     }
 
-    // Generate hint based on exercise type
-    const hint = generateHint(card, exerciseType, targetLanguage);
+    // Generate hint via Claude AI, fall back to static rules
+    const hint = await generateAIHint(card, exerciseType, targetLanguage);
 
     return new Response(
       JSON.stringify({ hint }),
@@ -59,7 +60,70 @@ serve(async (req: Request) => {
   }
 });
 
-function generateHint(
+async function generateAIHint(
+  card: Record<string, unknown>,
+  exerciseType: string,
+  targetLanguage: string
+): Promise<string> {
+  const targetText = card.target_text as string;
+  const nativeText = card.native_text as string;
+  const partOfSpeech = card.part_of_speech as string | null;
+  const exampleSentence = card.example_sentence as string | null;
+
+  if (!ANTHROPIC_API_KEY) {
+    return generateStaticHint(card, exerciseType, targetLanguage);
+  }
+
+  try {
+    const systemPrompt =
+      "You are a language learning assistant. Generate a helpful, pedagogical hint for a language learner working on an exercise. Don't give the answer directly. Keep it to 1-2 sentences maximum.";
+
+    const userMessage = [
+      `Exercise type: ${exerciseType}`,
+      `Target language: ${targetLanguage}`,
+      `Native text: ${nativeText}`,
+      `Target text: ${targetText}`,
+      partOfSpeech ? `Part of speech: ${partOfSpeech}` : null,
+      exampleSentence ? `Example sentence: ${exampleSentence}` : null,
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: TEXT_MODEL,
+        max_tokens: 80,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userMessage }],
+      }),
+    });
+
+    if (!response.ok) {
+      console.error(`Claude API error: ${response.status}`);
+      return generateStaticHint(card, exerciseType, targetLanguage);
+    }
+
+    const data = await response.json();
+    const hint = data.content?.[0]?.text ?? '';
+
+    if (!hint) {
+      return generateStaticHint(card, exerciseType, targetLanguage);
+    }
+
+    return hint;
+  } catch (error) {
+    console.error('Claude API call failed, falling back to static hint:', error);
+    return generateStaticHint(card, exerciseType, targetLanguage);
+  }
+}
+
+function generateStaticHint(
   card: Record<string, unknown>,
   exerciseType: string,
   targetLanguage: string

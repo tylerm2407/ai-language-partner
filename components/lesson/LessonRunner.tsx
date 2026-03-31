@@ -1,253 +1,265 @@
-import { useState, useRef, useCallback } from 'react';
-import { View, Text, Pressable, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useState, useCallback } from 'react';
+import { View, Text, ScrollView, Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { ProgressBar } from '../ui/ProgressBar';
+import { Button } from '../ui/Button';
 import { MultipleChoice } from './MultipleChoice';
-import { ListeningExercise } from './ListeningExercise';
 import { TranslationExercise } from './TranslationExercise';
 import { FillBlankExercise } from './FillBlankExercise';
+import { ListeningExercise } from './ListeningExercise';
 import { SpeakingExercise } from './SpeakingExercise';
-import { gradeToRating, gradeAnswer } from '../../lib/grading';
-import type { Lesson, Exercise, LanguageCode, ReviewRating } from '../../types';
+import { ClozeExercise } from './ClozeExercise';
+import { SentenceConstructionExercise } from './SentenceConstructionExercise';
+import { ErrorCorrectionExercise } from './ErrorCorrectionExercise';
+import { DictationExercise } from './DictationExercise';
+import { HeartsDisplay } from '../gamification/HeartsDisplay';
+import { OutOfHeartsModal } from '../gamification/OutOfHeartsModal';
+import { CorrectSparkle } from '../animations/CorrectSparkle';
+import { WrongShake } from '../animations/WrongShake';
+import { HeartBreak } from '../animations/HeartBreak';
+import { XpCounterTick } from '../animations/XpCounterTick';
+import type { Exercise, LanguageCode } from '../../types';
 
 interface LessonRunnerProps {
-  lesson: Lesson;
+  exercises: Exercise[];
+  lessonTitle: string;
+  xpReward: number;
+  userId: string;
   targetLanguage: LanguageCode;
   onComplete: (results: LessonResult) => void;
   onExit: () => void;
+  // Hearts integration
+  hearts?: number;
+  maxHearts?: number;
+  isUnlimitedHearts?: boolean;
+  nextRegenAt?: Date | null;
+  onLoseHeart?: () => void;
 }
 
 export interface LessonResult {
-  lessonId: string;
   totalExercises: number;
   correctCount: number;
-  incorrectCount: number;
   accuracy: number;
   xpEarned: number;
-  timeSpentMs: number;
-  exerciseResults: ExerciseResult[];
+  answers: { exerciseId: string; correct: boolean; answer: string }[];
 }
 
-interface ExerciseResult {
-  exerciseId: string;
-  cardId: string | null;
-  userAnswer: string;
-  isCorrect: boolean;
-  responseTimeMs: number;
-  rating: ReviewRating;
-}
-
-export function LessonRunner({ lesson, targetLanguage, onComplete, onExit }: LessonRunnerProps) {
+export function LessonRunner({
+  exercises,
+  lessonTitle,
+  xpReward,
+  userId,
+  targetLanguage,
+  onComplete,
+  onExit,
+  hearts = 5,
+  maxHearts = 5,
+  isUnlimitedHearts = false,
+  nextRegenAt = null,
+  onLoseHeart,
+}: LessonRunnerProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [results, setResults] = useState<ExerciseResult[]>([]);
-  const [phase, setPhase] = useState<'exercise' | 'summary'>('exercise');
-  const exerciseStartRef = useRef(Date.now());
-  const lessonStartRef = useRef(Date.now());
+  const [showResult, setShowResult] = useState(false);
+  const [answers, setAnswers] = useState<{ exerciseId: string; correct: boolean; answer: string }[]>([]);
+  const [completed, setCompleted] = useState(false);
+  const [showOutOfHearts, setShowOutOfHearts] = useState(false);
+  const [lastAnswerCorrect, setLastAnswerCorrect] = useState<boolean | null>(null);
+  const [heartBreakTrigger, setHeartBreakTrigger] = useState(false);
 
-  const exercises = lesson.exercises;
-  const progress = exercises.length > 0 ? currentIndex / exercises.length : 0;
-  const currentExercise = exercises[currentIndex] ?? null;
+  const currentExercise = exercises[currentIndex];
+  const progress = exercises.length > 0 ? (currentIndex + 1) / exercises.length : 0;
 
   const handleAnswer = useCallback(
-    (answer: string, isCorrect: boolean) => {
-      if (!currentExercise) return;
+    (correct: boolean, answer: string) => {
+      setAnswers((prev) => [...prev, { exerciseId: currentExercise.id, correct, answer }]);
+      setShowResult(true);
+      setLastAnswerCorrect(correct);
 
-      const responseTimeMs = Date.now() - exerciseStartRef.current;
-      const grade = gradeAnswer(answer, currentExercise.correctAnswer, currentExercise.acceptedAnswers);
-      const rating = gradeToRating(grade, responseTimeMs);
+      if (!correct && !isUnlimitedHearts) {
+        onLoseHeart?.();
+        setHeartBreakTrigger(true);
+        setTimeout(() => setHeartBreakTrigger(false), 1200);
 
-      const result: ExerciseResult = {
-        exerciseId: currentExercise.id,
-        cardId: currentExercise.cardId,
-        userAnswer: answer,
-        isCorrect,
-        responseTimeMs,
-        rating,
-      };
-
-      setResults((prev) => [...prev, result]);
-
-      // Move to next exercise or summary
-      if (currentIndex + 1 < exercises.length) {
-        setCurrentIndex((prev) => prev + 1);
-        exerciseStartRef.current = Date.now();
-      } else {
-        setPhase('summary');
+        // Check if out of hearts after losing one
+        if (hearts <= 1) {
+          setTimeout(() => setShowOutOfHearts(true), 800);
+        }
       }
     },
-    [currentExercise, currentIndex, exercises.length]
+    [currentExercise, isUnlimitedHearts, hearts, onLoseHeart]
   );
 
-  const handleComplete = useCallback(() => {
-    const correctCount = results.filter((r) => r.isCorrect).length;
-    const accuracy = results.length > 0 ? correctCount / results.length : 0;
+  const handleNext = () => {
+    if (currentIndex < exercises.length - 1) {
+      setCurrentIndex((prev) => prev + 1);
+      setShowResult(false);
+      setLastAnswerCorrect(null);
+    } else {
+      // Lesson complete
+      const allAnswers = [...answers];
+      const correctCount = allAnswers.filter((a) => a.correct).length;
+      const accuracy = exercises.length > 0 ? correctCount / exercises.length : 0;
+      const xpEarned = Math.round(xpReward * accuracy);
 
-    const lessonResult: LessonResult = {
-      lessonId: lesson.id,
-      totalExercises: exercises.length,
-      correctCount,
-      incorrectCount: results.length - correctCount,
-      accuracy,
-      xpEarned: lesson.xpReward + correctCount * 5,
-      timeSpentMs: Date.now() - lessonStartRef.current,
-      exerciseResults: results,
-    };
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
 
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    onComplete(lessonResult);
-  }, [results, lesson, exercises.length, onComplete]);
+      const result: LessonResult = {
+        totalExercises: exercises.length,
+        correctCount,
+        accuracy,
+        xpEarned,
+        answers: allAnswers,
+      };
 
-  // ─── Summary Phase ──────────────────────────────────────────
+      setCompleted(true);
+      onComplete(result);
+    }
+  };
 
-  if (phase === 'summary') {
-    const correctCount = results.filter((r) => r.isCorrect).length;
-    const accuracy = results.length > 0 ? Math.round((correctCount / results.length) * 100) : 0;
-    const xpEarned = lesson.xpReward + correctCount * 5;
-    const timeSpent = Math.round((Date.now() - lessonStartRef.current) / 1000);
+  if (exercises.length === 0) {
+    return (
+      <View className="flex-1 items-center justify-center p-6">
+        <Text className="text-text-secondary text-lg text-center mb-4">
+          No exercises available for this lesson.
+        </Text>
+        <Button label="Go Back" onPress={onExit} variant="secondary" />
+      </View>
+    );
+  }
+
+  if (completed) {
+    const correctCount = answers.filter((a) => a.correct).length;
+    const accuracy = Math.round((correctCount / exercises.length) * 100);
+    const xpEarned = Math.round(xpReward * (correctCount / exercises.length));
+
+    const scoreColor = accuracy >= 80 ? 'bg-success-bg' : accuracy >= 60 ? 'bg-warning-bg' : 'bg-error-bg';
+    const scoreTextColor = accuracy >= 80 ? 'text-success' : accuracy >= 60 ? 'text-warning' : 'text-error';
 
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-          <Text
-            style={{ fontSize: 32, fontWeight: '700', marginBottom: 8 }}
-            accessibilityRole="header"
-          >
-            Lesson Complete!
-          </Text>
-          <Text style={{ fontSize: 18, color: '#666', marginBottom: 32 }}>
-            {lesson.title}
-          </Text>
+      <ScrollView className="flex-1 bg-dark" contentContainerStyle={{ padding: 24, alignItems: 'center' }}>
+        <Text
+          className="text-text-primary text-[28px] font-bold mb-2"
+          accessibilityRole="header"
+        >
+          Lesson Complete!
+        </Text>
+        <Text className="text-text-secondary text-base mb-8">{lessonTitle}</Text>
 
-          {/* Stats */}
-          <View
-            style={{
-              backgroundColor: '#F9FAFB',
-              borderRadius: 20,
-              padding: 24,
-              width: '100%',
-              marginBottom: 32,
-            }}
-          >
-            <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginBottom: 16 }}>
-              <View style={{ alignItems: 'center' }}>
-                <Text style={{ fontSize: 28, fontWeight: '700', color: '#6366F1' }}>
-                  {accuracy}%
-                </Text>
-                <Text style={{ fontSize: 13, color: '#666' }}>Accuracy</Text>
-              </View>
-              <View style={{ alignItems: 'center' }}>
-                <Text style={{ fontSize: 28, fontWeight: '700', color: '#22C55E' }}>
-                  +{xpEarned}
-                </Text>
-                <Text style={{ fontSize: 13, color: '#666' }}>XP Earned</Text>
-              </View>
-              <View style={{ alignItems: 'center' }}>
-                <Text style={{ fontSize: 28, fontWeight: '700' }}>
-                  {timeSpent}s
-                </Text>
-                <Text style={{ fontSize: 13, color: '#666' }}>Time</Text>
-              </View>
-            </View>
-
-            <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 16 }}>
-              <Text style={{ fontSize: 15, color: '#22C55E', fontWeight: '600' }}>
-                {correctCount} correct
-              </Text>
-              <Text style={{ fontSize: 15, color: '#EF4444', fontWeight: '600' }}>
-                {results.length - correctCount} incorrect
-              </Text>
-            </View>
-          </View>
-
-          <Pressable
-            onPress={handleComplete}
-            style={{
-              backgroundColor: '#6366F1',
-              paddingHorizontal: 48,
-              paddingVertical: 16,
-              borderRadius: 14,
-            }}
-            accessibilityRole="button"
-            accessibilityLabel="Continue"
-          >
-            <Text style={{ color: '#fff', fontSize: 18, fontWeight: '600' }}>Continue</Text>
-          </Pressable>
+        <View className={`w-[100px] h-[100px] rounded-full items-center justify-center mb-6 ${scoreColor}`}>
+          <Text className={`text-[32px] font-bold ${scoreTextColor}`}>{accuracy}%</Text>
         </View>
-      </SafeAreaView>
+
+        <XpCounterTick targetXp={xpEarned} trigger={true} style={{ marginBottom: 16 }} />
+
+        <View className="flex-row justify-around w-full mb-8">
+          <View className="items-center">
+            <Text className="text-text-primary text-2xl font-bold">{correctCount}/{exercises.length}</Text>
+            <Text className="text-text-secondary text-sm">Correct</Text>
+          </View>
+          <View className="items-center">
+            <Text className="text-primary text-2xl font-bold">+{xpEarned}</Text>
+            <Text className="text-text-secondary text-sm">XP Earned</Text>
+          </View>
+        </View>
+
+        <Button label="Continue" onPress={onExit} />
+      </ScrollView>
     );
   }
 
-  // ─── Exercise Phase ─────────────────────────────────────────
-
-  if (!currentExercise) {
-    return (
-      <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <Text style={{ fontSize: 16, color: '#999' }}>No exercises in this lesson.</Text>
-      </SafeAreaView>
-    );
-  }
+  const ExerciseWrapper = lastAnswerCorrect === true ? CorrectSparkle : lastAnswerCorrect === false ? WrongShake : View;
+  const wrapperProps = lastAnswerCorrect !== null ? { trigger: showResult } : {};
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
-      {/* Header with progress */}
-      <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-          <Pressable
-            onPress={onExit}
-            style={{ padding: 8, marginRight: 8 }}
-            accessibilityRole="button"
-            accessibilityLabel="Exit lesson"
-          >
-            <Text style={{ fontSize: 24, color: '#666' }}>x</Text>
-          </Pressable>
-          <View style={{ flex: 1 }}>
-            <ProgressBar progress={progress} />
-          </View>
-          <Text style={{ marginLeft: 12, fontSize: 14, color: '#666' }}>
-            {currentIndex + 1}/{exercises.length}
+    <View className="flex-1 bg-dark">
+      {/* Header */}
+      <View className="px-4 pt-2 pb-4">
+        <View className="flex-row items-center justify-between mb-3">
+          <Button label="Exit" variant="danger" onPress={onExit} style={{ paddingHorizontal: 16, paddingVertical: 8 }} />
+          <HeartsDisplay hearts={hearts} maxHearts={maxHearts} isUnlimited={isUnlimitedHearts} />
+          <Text className="text-text-secondary text-sm">
+            {currentIndex + 1} / {exercises.length}
           </Text>
         </View>
+        <ProgressBar progress={progress} />
       </View>
 
-      {/* Exercise content */}
-      <ScrollView
-        contentContainerStyle={{ padding: 20, flexGrow: 1 }}
-        keyboardShouldPersistTaps="handled"
-      >
-        {renderExercise(currentExercise, targetLanguage, handleAnswer)}
+      {/* Heart Break Animation */}
+      <HeartBreak trigger={heartBreakTrigger} />
+
+      {/* Exercise */}
+      <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 40 }}>
+        <ExerciseWrapper {...wrapperProps}>
+          {renderExercise(currentExercise, handleAnswer, showResult, userId, targetLanguage)}
+        </ExerciseWrapper>
+
+        {showResult && (
+          <View className="mt-6">
+            <Button
+              label={currentIndex < exercises.length - 1 ? 'Next' : 'Finish'}
+              onPress={handleNext}
+            />
+          </View>
+        )}
       </ScrollView>
-    </SafeAreaView>
+
+      {/* Out of Hearts Modal */}
+      <OutOfHeartsModal
+        visible={showOutOfHearts}
+        nextRegenAt={nextRegenAt}
+        onDismiss={() => {
+          setShowOutOfHearts(false);
+          onExit();
+        }}
+      />
+    </View>
   );
 }
 
 function renderExercise(
   exercise: Exercise,
-  targetLanguage: LanguageCode,
-  onAnswer: (answer: string, isCorrect: boolean) => void
+  onAnswer: (correct: boolean, answer: string) => void,
+  showResult: boolean,
+  userId: string,
+  targetLanguage: LanguageCode
 ) {
   switch (exercise.type) {
     case 'multiple_choice':
-      return <MultipleChoice exercise={exercise} onAnswer={onAnswer} />;
-    case 'listening_choice':
-      return <ListeningExercise exercise={exercise} mode="choice" onAnswer={onAnswer} />;
-    case 'listening_type':
-      return <ListeningExercise exercise={exercise} mode="type" onAnswer={onAnswer} />;
+      return <MultipleChoice exercise={exercise} onAnswer={onAnswer} showResult={showResult} />;
     case 'translate_to_target':
-      return <TranslationExercise exercise={exercise} direction="to_target" onAnswer={onAnswer} />;
     case 'translate_to_native':
-      return <TranslationExercise exercise={exercise} direction="to_native" onAnswer={onAnswer} />;
+      return <TranslationExercise exercise={exercise} onAnswer={onAnswer} showResult={showResult} />;
     case 'fill_blank':
-      return <FillBlankExercise exercise={exercise} onAnswer={onAnswer} />;
+      return <FillBlankExercise exercise={exercise} onAnswer={onAnswer} showResult={showResult} />;
+    case 'listening_choice':
+    case 'listening_type':
+      return <ListeningExercise exercise={exercise} onAnswer={onAnswer} showResult={showResult} />;
     case 'speaking':
-      return <SpeakingExercise exercise={exercise} targetLanguage={targetLanguage} onAnswer={onAnswer} />;
+      return (
+        <SpeakingExercise
+          exercise={exercise}
+          onAnswer={onAnswer}
+          showResult={showResult}
+          userId={userId}
+          targetLanguage={targetLanguage}
+        />
+      );
     case 'free_production':
-      // Free production uses a simplified translation UI for now
-      return <TranslationExercise exercise={exercise} direction="to_target" onAnswer={onAnswer} />;
+      return <TranslationExercise exercise={exercise} onAnswer={onAnswer} showResult={showResult} />;
+    case 'cloze_deletion':
+      return <ClozeExercise exercise={exercise} onAnswer={onAnswer} />;
+    case 'sentence_construction':
+      return <SentenceConstructionExercise exercise={exercise} onAnswer={onAnswer} />;
+    case 'error_correction':
+      return <ErrorCorrectionExercise exercise={exercise} onAnswer={onAnswer} />;
+    case 'dictation':
+      return <DictationExercise exercise={exercise} onAnswer={onAnswer} />;
     default:
       return (
-        <View style={{ padding: 24 }}>
-          <Text style={{ fontSize: 16, color: '#999' }}>
+        <View className="p-6">
+          <Text className="text-text-secondary text-center">
             Unknown exercise type: {exercise.type}
           </Text>
         </View>

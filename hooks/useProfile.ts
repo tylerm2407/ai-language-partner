@@ -1,65 +1,33 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useAuth } from './useAuth';
-import { fetchProfile, upsertProfile } from '../lib/supabase-queries';
-import type { UserProfile, LanguageCode, ProficiencyLevel } from '../types';
+import { useAppStore } from '../stores/useAppStore';
+import { upsertProfile, addXp, updateStreak } from '../lib/supabase-queries';
+import type { UserProfile } from '../types';
 
-interface UseProfileReturn {
-  profile: UserProfile | null;
-  isLoading: boolean;
-  error: string | null;
-  updateProfile: (updates: {
-    displayName?: string;
-    nativeLanguage?: LanguageCode;
-    targetLanguage?: LanguageCode;
-    level?: ProficiencyLevel;
-    dailyGoalMinutes?: number;
-  }) => Promise<void>;
-  refresh: () => Promise<void>;
-}
-
-export function useProfile(): UseProfileReturn {
+export function useProfile() {
   const { user } = useAuth();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { profile, setProfile, loading } = useAppStore();
 
-  const loadProfile = useCallback(async () => {
-    if (!user) {
-      setProfile(null);
-      setIsLoading(false);
-      return;
-    }
+  const updateProfile = useCallback(async (
+    updates: Partial<Pick<UserProfile, 'displayName' | 'nativeLanguage' | 'targetLanguage' | 'level' | 'dailyGoalMinutes' | 'timezone'>>
+  ) => {
+    if (!user) return;
+    const updated = await upsertProfile(user.id, updates);
+    setProfile(updated);
+    return updated;
+  }, [user, setProfile]);
 
-    try {
-      setError(null);
-      const data = await fetchProfile(user.id);
-      setProfile(data);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load profile');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [user]);
+  const earnXp = useCallback(async (xp: number) => {
+    if (!user || !profile) return;
+    await addXp(user.id, xp);
+    setProfile({ ...profile, totalXp: profile.totalXp + xp });
+  }, [user, profile, setProfile]);
 
-  useEffect(() => {
-    loadProfile();
-  }, [loadProfile]);
+  const setStreak = useCallback(async (streak: number, longestStreak: number) => {
+    if (!user || !profile) return;
+    await updateStreak(user.id, streak, longestStreak);
+    setProfile({ ...profile, streak, longestStreak });
+  }, [user, profile, setProfile]);
 
-  const updateProfile = useCallback(
-    async (updates: Parameters<UseProfileReturn['updateProfile']>[0]) => {
-      if (!user) return;
-
-      try {
-        setError(null);
-        const updated = await upsertProfile(user.id, updates);
-        setProfile(updated);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Failed to update profile');
-        throw e;
-      }
-    },
-    [user]
-  );
-
-  return { profile, isLoading, error, updateProfile, refresh: loadProfile };
+  return { profile, loading, updateProfile, earnXp, setStreak };
 }

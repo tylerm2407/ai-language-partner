@@ -1,112 +1,119 @@
-import { View, Text, ActivityIndicator } from 'react-native';
+import { ActivityIndicator, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useLessonDetail } from '../../../hooks/useCoursesAndLessons';
-import { useProfile } from '../../../hooks/useProfile';
+import { useEffect, useState } from 'react';
+import { fetchLessonWithExercises } from '../../../lib/supabase-queries';
 import { useAuth } from '../../../hooks/useAuth';
-import { LessonRunner } from '../../../components/lesson/LessonRunner';
-import type { LessonResult } from '../../../components/lesson/LessonRunner';
-import { upsertDailyStats, addXp, upsertReviewItem, insertReviewLog } from '../../../lib/supabase-queries';
-import { calculateNextReview, createNewReviewItem } from '../../../lib/srs';
-import { trackEvent } from '../../../lib/analytics';
-import type { LanguageCode } from '../../../types';
+import { useAppStore } from '../../../stores/useAppStore';
+import { useProfile } from '../../../hooks/useProfile';
+import { useDailyStats } from '../../../hooks/useDailyStats';
+import { useHearts } from '../../../hooks/useHearts';
+import { useLevel } from '../../../hooks/useLevel';
+import { LessonRunner, type LessonResult } from '../../../components/lesson/LessonRunner';
+import { LevelUpModal } from '../../../components/gamification/LevelUpModal';
+import { OutOfHeartsModal } from '../../../components/gamification/OutOfHeartsModal';
+import { Button } from '../../../components/ui/Button';
+import { GradientBackground } from '../../../components/ui/GradientBackground';
+import type { Lesson } from '../../../types';
 
-export default function LessonDetailScreen() {
+export default function LessonScreen() {
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
   const router = useRouter();
   const { user } = useAuth();
-  const { profile } = useProfile();
-  const { lesson, isLoading, error } = useLessonDetail(lessonId ?? null);
+  const { profile } = useAppStore();
+  const { earnXp } = useProfile();
+  const { addStats } = useDailyStats();
+  const { hearts, maxHearts, isUnlimited, canPlay, loseHeart, nextRegenAt } = useHearts();
+  const { levelUpInfo, dismissLevelUp } = useLevel();
+  const [lesson, setLesson] = useState<Lesson | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [showOutOfHearts, setShowOutOfHearts] = useState(false);
 
-  const targetLanguage = (profile?.targetLanguage ?? 'es') as LanguageCode;
+  useEffect(() => {
+    if (!lessonId) return;
+    fetchLessonWithExercises(lessonId).then((data) => {
+      setLesson(data);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, [lessonId]);
 
-  const handleComplete = async (results: LessonResult) => {
-    if (!user) return;
-
-    trackEvent('lesson_completed', {
-      lessonId: results.lessonId,
-      accuracy: results.accuracy,
-      xpEarned: results.xpEarned,
-      timeSpentMs: results.timeSpentMs,
-    });
-
-    try {
-      // Update daily stats
-      await upsertDailyStats(user.id, {
-        lessonsCompleted: 1,
-        xpEarned: results.xpEarned,
-        minutesPracticed: results.timeSpentMs / 60000,
-        accuracy: results.accuracy,
-      });
-
-      // Award XP
-      await addXp(user.id, results.xpEarned);
-
-      // Update SRS for each exercise with a linked card
-      for (const result of results.exerciseResults) {
-        if (!result.cardId) continue;
-
-        try {
-          // Create or update review item for this card
-          const newItem = createNewReviewItem(user.id, result.cardId);
-          const updated = calculateNextReview(
-            { ...newItem, id: '' } as any,
-            result.rating
-          );
-
-          await upsertReviewItem({
-            userId: user.id,
-            cardId: result.cardId,
-            ...updated,
-            lastReviewedAt: new Date().toISOString(),
-          });
-        } catch {
-          // Non-critical: SRS update failed for one card, continue
-        }
-      }
-    } catch {
-      // Non-critical: stats update failed
+  // Check if user can play (has hearts) — show modal on mount
+  useEffect(() => {
+    if (!canPlay && !showOutOfHearts) {
+      setShowOutOfHearts(true);
     }
+  }, [canPlay]);
 
-    // Navigate back to learn screen
-    router.back();
-  };
-
-  const handleExit = () => {
-    router.back();
-  };
-
-  if (isLoading) {
+  if (loading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#6366F1" />
-        <Text style={{ marginTop: 12, color: '#666' }}>Loading lesson...</Text>
+      <GradientBackground>
+      <SafeAreaView className="flex-1 items-center justify-center">
+        <ActivityIndicator size="large" color="#38BDF8" />
       </SafeAreaView>
+      </GradientBackground>
     );
   }
 
-  if (error || !lesson) {
+  if (!lesson) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-        <Text style={{ fontSize: 18, fontWeight: '600', marginBottom: 8 }}>
-          {error ?? 'Lesson not found'}
-        </Text>
-        <Text
-          onPress={() => router.back()}
-          style={{ fontSize: 16, color: '#6366F1', marginTop: 12 }}
-        >
-          Go back
-        </Text>
+      <GradientBackground>
+      <SafeAreaView className="flex-1 items-center justify-center px-8">
+        <Text className="text-lg text-text-secondary mb-4">Lesson not found</Text>
+        <Button label="Go Back" variant="secondary" onPress={() => router.back()} />
       </SafeAreaView>
+      </GradientBackground>
     );
   }
+
+  const handleComplete = async (result: LessonResult) => {
+    if (result.xpEarned > 0) {
+      await earnXp(result.xpEarned);
+    }
+    await addStats({
+      lessonsCompleted: 1,
+      xpEarned: result.xpEarned,
+    });
+  };
 
   return (
-    <LessonRunner
-      lesson={lesson}
-      targetLanguage={targetLanguage}
-      onComplete={handleComplete}
-      onExit={handleExit}
-    />
+    <GradientBackground>
+    <SafeAreaView className="flex-1">
+      <LessonRunner
+        exercises={lesson.exercises}
+        lessonTitle={lesson.title}
+        xpReward={lesson.xpReward}
+        userId={user?.id ?? ''}
+        targetLanguage={profile?.targetLanguage ?? 'es'}
+        onComplete={handleComplete}
+        onExit={() => router.back()}
+        hearts={hearts}
+        maxHearts={maxHearts}
+        isUnlimitedHearts={isUnlimited}
+        nextRegenAt={nextRegenAt}
+        onLoseHeart={loseHeart}
+      />
+
+      {/* Level Up Modal */}
+      {levelUpInfo && (
+        <LevelUpModal
+          visible={!!levelUpInfo}
+          newLevel={levelUpInfo.newLevel}
+          newTier={levelUpInfo.newTier}
+          tierChanged={levelUpInfo.tierChanged}
+          onDismiss={dismissLevelUp}
+        />
+      )}
+
+      {/* Out of Hearts (pre-lesson check) */}
+      <OutOfHeartsModal
+        visible={showOutOfHearts && !canPlay}
+        nextRegenAt={nextRegenAt}
+        onDismiss={() => {
+          setShowOutOfHearts(false);
+          if (!canPlay) router.back();
+        }}
+      />
+    </SafeAreaView>
+    </GradientBackground>
   );
 }

@@ -1,103 +1,81 @@
 import { useState } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text, Pressable, Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { ExerciseCard } from './ExerciseCard';
 import type { Exercise } from '../../types';
 
 interface MultipleChoiceProps {
   exercise: Exercise;
-  onAnswer: (answer: string, isCorrect: boolean) => void;
+  onAnswer: (correct: boolean, answer: string) => void;
+  showResult: boolean;
 }
 
-export function MultipleChoice({ exercise, onAnswer }: MultipleChoiceProps) {
+export function MultipleChoice({ exercise, onAnswer, showResult }: MultipleChoiceProps) {
   const [selected, setSelected] = useState<string | null>(null);
-  const [revealed, setRevealed] = useState(false);
-
   const options = exercise.options ?? [];
-  const correctAnswer = exercise.correctAnswer;
 
-  const handleSelect = async (option: string) => {
-    if (revealed) return;
-
+  const handleSelect = (option: string) => {
+    if (showResult || selected !== null) return;
     setSelected(option);
-    setRevealed(true);
 
     const isCorrect =
-      option.toLowerCase().trim() === correctAnswer.toLowerCase().trim() ||
-      exercise.acceptedAnswers.some(
-        (a) => a.toLowerCase().trim() === option.toLowerCase().trim()
-      );
+      option.toLowerCase() === exercise.correctAnswer.toLowerCase() ||
+      exercise.acceptedAnswers.map((a) => a.toLowerCase()).includes(option.toLowerCase());
 
-    if (isCorrect) {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } else {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    if (Platform.OS !== 'web') {
+      if (isCorrect) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
     }
 
-    // Brief delay to show result before advancing
-    setTimeout(() => {
-      onAnswer(option, isCorrect);
-    }, 1200);
+    onAnswer(isCorrect, option);
   };
 
   const getOptionStyle = (option: string) => {
-    if (!revealed) {
-      return {
-        backgroundColor: selected === option ? '#E0E7FF' : '#F3F4F6',
-        borderColor: selected === option ? '#6366F1' : 'transparent',
-      };
+    if (!selected && !showResult) {
+      return 'bg-dark-card-alt border-2 border-transparent';
     }
+    const isThis = option === selected;
+    const isCorrectOption =
+      option.toLowerCase() === exercise.correctAnswer.toLowerCase() ||
+      exercise.acceptedAnswers.map((a) => a.toLowerCase()).includes(option.toLowerCase());
 
-    const isCorrectOption = option.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
-    const isSelectedOption = option === selected;
-
-    if (isCorrectOption) {
-      return { backgroundColor: '#DCFCE7', borderColor: '#22C55E' };
+    if (showResult && isCorrectOption) {
+      return 'bg-success-bg border-2 border-success';
     }
-    if (isSelectedOption && !isCorrectOption) {
-      return { backgroundColor: '#FEE2E2', borderColor: '#EF4444' };
+    if (isThis && !isCorrectOption) {
+      return 'bg-error-bg border-2 border-error';
     }
-    return { backgroundColor: '#F3F4F6', borderColor: 'transparent' };
+    if (isThis && isCorrectOption) {
+      return 'bg-success-bg border-2 border-success';
+    }
+    return 'bg-dark-card-alt border-2 border-transparent';
   };
 
   return (
-    <View>
-      <Text style={{ fontSize: 14, color: '#6366F1', fontWeight: '600', marginBottom: 8 }}>
-        Choose the correct answer
-      </Text>
-      <Text style={{ fontSize: 22, fontWeight: '600', marginBottom: 24 }}>
-        {exercise.prompt}
-      </Text>
-
-      {options.map((option, index) => {
-        const optionStyle = getOptionStyle(option);
-        return (
+    <ExerciseCard type={exercise.type} prompt={exercise.prompt}>
+      <View>
+        {options.map((option, index) => (
           <Pressable
-            key={`${option}-${index}`}
+            key={index}
+            className={`p-4 rounded-[14px] mb-2.5 ${getOptionStyle(option)}`}
             onPress={() => handleSelect(option)}
-            disabled={revealed}
-            style={{
-              padding: 16,
-              borderRadius: 14,
-              marginBottom: 10,
-              borderWidth: 2,
-              ...optionStyle,
-            }}
+            disabled={selected !== null || showResult}
             accessibilityRole="button"
-            accessibilityLabel={`Option: ${option}`}
-            accessibilityState={{ selected: selected === option }}
+            accessibilityLabel={`Option ${index + 1}: ${option}`}
+            accessibilityState={{
+              selected: option === selected,
+              disabled: selected !== null || showResult,
+            }}
           >
-            <Text style={{ fontSize: 17, fontWeight: selected === option ? '600' : '400' }}>
+            <Text className="text-text-primary text-[17px] font-semibold">
               {option}
             </Text>
           </Pressable>
-        );
-      })}
-
-      {revealed && selected !== correctAnswer && (
-        <Text style={{ fontSize: 15, color: '#22C55E', marginTop: 8, fontWeight: '500' }}>
-          Correct answer: {correctAnswer}
-        </Text>
-      )}
-    </View>
+        ))}
+      </View>
+    </ExerciseCard>
   );
 }

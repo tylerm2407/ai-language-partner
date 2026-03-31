@@ -1,206 +1,122 @@
-import React from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
-import type { WritingFeedbackResponse } from '../../lib/ai';
+import { View, Text, ScrollView, Pressable } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { ProgressBar } from '../ui/ProgressBar';
+import type { WritingFeedback } from '../../types';
 
-interface WritingFeedbackViewProps {
-  feedback: WritingFeedbackResponse;
+interface Props {
+  feedback: WritingFeedback;
+  onTryAgain: () => void;
+  onContinue: () => void;
 }
 
-function ScoreBar({ label, score }: { label: string; score: number }) {
-  const ratio = Math.min(score / 10, 1);
-  const color = score >= 7 ? '#22C55E' : score >= 5 ? '#F59E0B' : '#EF4444';
+export function WritingFeedbackView({ feedback, onTryAgain, onContinue }: Props) {
+  const overallScore = Math.round(
+    (feedback.grammarScore + feedback.vocabularyScore + feedback.coherenceScore) / 3
+  );
+  const scoreColor = overallScore >= 80 ? '#22C55E' : overallScore >= 60 ? '#CA8A04' : '#EF4444';
+  const scoreBg = overallScore >= 80 ? '#DCFCE7' : overallScore >= 60 ? '#FEF9C3' : '#FEE2E2';
 
   return (
-    <View style={styles.scoreRow}>
-      <Text style={styles.scoreLabel}>{label}</Text>
-      <View style={styles.scoreTrack}>
-        <View style={[styles.scoreFill, { width: `${ratio * 100}%`, backgroundColor: color }]} />
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+      <ScrollView contentContainerStyle={{ padding: 20 }}>
+        {/* Header */}
+        <Text style={{ fontSize: 28, fontWeight: '700', marginBottom: 8, textAlign: 'center' }} accessibilityRole="header">
+          Writing Feedback
+        </Text>
+
+        {/* Overall Score Circle */}
+        <View style={{ alignItems: 'center', marginBottom: 24 }}>
+          <View style={{
+            width: 100, height: 100, borderRadius: 50,
+            backgroundColor: scoreBg, justifyContent: 'center', alignItems: 'center',
+          }}>
+            <Text style={{ fontSize: 32, fontWeight: '700', color: scoreColor }}>{overallScore}</Text>
+          </View>
+          <Text style={{ fontSize: 14, color: '#666', marginTop: 8 }}>Overall Score</Text>
+        </View>
+
+        {/* Category Scores */}
+        <View style={{ backgroundColor: '#F9FAFB', borderRadius: 16, padding: 20, marginBottom: 16 }}>
+          <ScoreRow label="Grammar" score={feedback.grammarScore} />
+          <ScoreRow label="Vocabulary" score={feedback.vocabularyScore} />
+          <ScoreRow label="Coherence" score={feedback.coherenceScore} />
+        </View>
+
+        {/* Overall Feedback */}
+        <View style={{ backgroundColor: '#F9FAFB', borderRadius: 16, padding: 20, marginBottom: 16 }}>
+          <Text style={{ fontSize: 16, fontWeight: '600', marginBottom: 8 }}>Feedback</Text>
+          <Text style={{ fontSize: 15, color: '#666', lineHeight: 22 }}>{feedback.overallFeedback}</Text>
+        </View>
+
+        {/* Corrections */}
+        {feedback.corrections.length > 0 && (
+          <View style={{ backgroundColor: '#F9FAFB', borderRadius: 16, padding: 20, marginBottom: 16 }}>
+            <Text style={{ fontSize: 16, fontWeight: '600', marginBottom: 12 }}>
+              Corrections ({feedback.corrections.length})
+            </Text>
+            {feedback.corrections.map((correction, index) => (
+              <View key={index} style={{
+                marginBottom: index < feedback.corrections.length - 1 ? 12 : 0,
+                paddingBottom: index < feedback.corrections.length - 1 ? 12 : 0,
+                borderBottomWidth: index < feedback.corrections.length - 1 ? 1 : 0,
+                borderBottomColor: '#E5E7EB',
+              }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                  <View style={{ backgroundColor: '#E0E7FF', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2, marginRight: 8 }}>
+                    <Text style={{ fontSize: 12, color: '#6366F1', fontWeight: '600' }}>{correction.type}</Text>
+                  </View>
+                </View>
+                <Text style={{ fontSize: 15, color: '#EF4444', textDecorationLine: 'line-through', marginBottom: 2 }}>
+                  {correction.original}
+                </Text>
+                <Text style={{ fontSize: 15, color: '#22C55E', fontWeight: '600', marginBottom: 4 }}>
+                  {correction.corrected}
+                </Text>
+                <Text style={{ fontSize: 13, color: '#666', fontStyle: 'italic' }}>{correction.explanation}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+      </ScrollView>
+
+      {/* Action Buttons */}
+      <View style={{ padding: 20, flexDirection: 'row', gap: 12, borderTopWidth: 1, borderTopColor: '#E5E7EB' }}>
+        <Pressable
+          onPress={onTryAgain}
+          style={{
+            flex: 1, backgroundColor: '#F9FAFB', paddingVertical: 16, borderRadius: 14, alignItems: 'center',
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Try again"
+        >
+          <Text style={{ fontSize: 18, fontWeight: '600', color: '#111' }}>Try Again</Text>
+        </Pressable>
+        <Pressable
+          onPress={onContinue}
+          style={{
+            flex: 1, backgroundColor: '#6366F1', paddingVertical: 16, borderRadius: 14, alignItems: 'center',
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Continue"
+        >
+          <Text style={{ fontSize: 18, fontWeight: '600', color: '#fff' }}>Continue</Text>
+        </Pressable>
       </View>
-      <Text style={[styles.scoreValue, { color }]}>{score.toFixed(1)}</Text>
+    </SafeAreaView>
+  );
+}
+
+function ScoreRow({ label, score }: { label: string; score: number }) {
+  const normalizedScore = Math.min(1, score / 100);
+  const color = score >= 80 ? '#22C55E' : score >= 60 ? '#CA8A04' : '#EF4444';
+
+  return (
+    <View style={{ marginBottom: 12 }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+        <Text style={{ fontSize: 14, color: '#666' }}>{label}</Text>
+        <Text style={{ fontSize: 14, fontWeight: '600', color }}>{score}/100</Text>
+      </View>
+      <ProgressBar progress={normalizedScore} color={color} />
     </View>
   );
 }
-
-export function WritingFeedbackView({ feedback }: WritingFeedbackViewProps) {
-  return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Overall Score */}
-      <View style={styles.overallContainer}>
-        <Text style={styles.overallLabel}>Overall Score</Text>
-        <Text style={styles.overallScore}>{feedback.overallScore.toFixed(1)}</Text>
-        <Text style={styles.overallMax}>/10</Text>
-      </View>
-
-      {/* Individual Scores */}
-      <View style={styles.scoresSection}>
-        <ScoreBar label="Grammar" score={feedback.grammarScore} />
-        <ScoreBar label="Vocabulary" score={feedback.vocabScore} />
-        <ScoreBar label="Coherence" score={feedback.coherenceScore} />
-        <ScoreBar label="Spelling" score={feedback.spellingScore} />
-      </View>
-
-      {/* Corrections */}
-      {feedback.corrections.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Corrections</Text>
-          {feedback.corrections.map((c, i) => (
-            <View key={i} style={styles.correctionItem}>
-              <View style={styles.correctionRow}>
-                <Text style={styles.correctionOriginal}>{c.original}</Text>
-                <Text style={styles.arrow}> → </Text>
-                <Text style={styles.correctionFixed}>{c.corrected}</Text>
-              </View>
-              <Text style={styles.correctionExplanation}>{c.explanation}</Text>
-            </View>
-          ))}
-        </View>
-      )}
-
-      {/* Suggestions */}
-      {feedback.suggestions.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Suggestions</Text>
-          {feedback.suggestions.map((s, i) => (
-            <View key={i} style={styles.suggestionItem}>
-              <Text style={styles.suggestionText}>{s}</Text>
-            </View>
-          ))}
-        </View>
-      )}
-
-      {/* Rewritten Version */}
-      {feedback.rewritten && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Corrected Version</Text>
-          <View style={styles.rewrittenBox}>
-            <Text style={styles.rewrittenText} selectable>{feedback.rewritten}</Text>
-          </View>
-        </View>
-      )}
-    </ScrollView>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  content: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  overallContainer: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'center',
-    marginBottom: 24,
-  },
-  overallLabel: {
-    fontSize: 16,
-    color: '#6B7280',
-    marginRight: 8,
-  },
-  overallScore: {
-    fontSize: 48,
-    fontWeight: '800',
-    color: '#111827',
-  },
-  overallMax: {
-    fontSize: 20,
-    color: '#9CA3AF',
-    marginLeft: 2,
-  },
-  scoresSection: {
-    marginBottom: 24,
-  },
-  scoreRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  scoreLabel: {
-    width: 90,
-    fontSize: 14,
-    color: '#374151',
-    fontWeight: '500',
-  },
-  scoreTrack: {
-    flex: 1,
-    height: 8,
-    backgroundColor: '#E5E7EB',
-    borderRadius: 4,
-    overflow: 'hidden',
-    marginHorizontal: 12,
-  },
-  scoreFill: {
-    height: '100%',
-    borderRadius: 4,
-  },
-  scoreValue: {
-    width: 36,
-    textAlign: 'right',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 12,
-  },
-  correctionItem: {
-    marginBottom: 12,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  correctionRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  correctionOriginal: {
-    fontSize: 15,
-    color: '#EF4444',
-    textDecorationLine: 'line-through',
-  },
-  arrow: {
-    fontSize: 15,
-    color: '#9CA3AF',
-  },
-  correctionFixed: {
-    fontSize: 15,
-    color: '#22C55E',
-    fontWeight: '600',
-  },
-  correctionExplanation: {
-    fontSize: 13,
-    color: '#6B7280',
-    fontStyle: 'italic',
-  },
-  suggestionItem: {
-    marginBottom: 8,
-    paddingLeft: 12,
-    borderLeftWidth: 3,
-    borderLeftColor: '#6366F1',
-  },
-  suggestionText: {
-    fontSize: 14,
-    color: '#374151',
-    lineHeight: 22,
-  },
-  rewrittenBox: {
-    backgroundColor: '#F0FDF4',
-    borderRadius: 8,
-    padding: 16,
-  },
-  rewrittenText: {
-    fontSize: 15,
-    lineHeight: 24,
-    color: '#166534',
-  },
-});

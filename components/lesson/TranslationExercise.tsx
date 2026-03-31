@@ -1,129 +1,79 @@
 import { useState, useRef } from 'react';
-import { View, Text, TextInput, Pressable } from 'react-native';
+import { View, Text, TextInput, Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { ExerciseCard } from './ExerciseCard';
+import { Button } from '../ui/Button';
 import { gradeAnswer } from '../../lib/grading';
 import type { Exercise } from '../../types';
 
 interface TranslationExerciseProps {
   exercise: Exercise;
-  direction: 'to_target' | 'to_native';
-  onAnswer: (answer: string, isCorrect: boolean) => void;
+  onAnswer: (correct: boolean, answer: string) => void;
+  showResult: boolean;
 }
 
-/**
- * Translation exercise: show text in one language, user types in the other.
- */
-export function TranslationExercise({ exercise, direction, onAnswer }: TranslationExerciseProps) {
+export function TranslationExercise({ exercise, onAnswer, showResult }: TranslationExerciseProps) {
   const [answer, setAnswer] = useState('');
-  const [revealed, setRevealed] = useState(false);
-  const [gradeResult, setGradeResult] = useState<ReturnType<typeof gradeAnswer> | null>(null);
-  const startTimeRef = useRef(Date.now());
+  const [submitted, setSubmitted] = useState(false);
+  const [result, setResult] = useState<{ isCorrect: boolean; feedback: string } | null>(null);
+  const startTime = useRef(Date.now());
 
-  const directionLabel =
-    direction === 'to_target'
-      ? 'Translate to the target language'
-      : 'Translate to your native language';
+  const handleSubmit = () => {
+    if (!answer.trim() || submitted) return;
 
-  const handleSubmit = async () => {
-    if (revealed || !answer.trim()) return;
+    const grade = gradeAnswer(answer, exercise.correctAnswer, exercise.acceptedAnswers);
+    setResult({ isCorrect: grade.isCorrect, feedback: grade.feedback });
+    setSubmitted(true);
 
-    setRevealed(true);
-    const result = gradeAnswer(answer, exercise.correctAnswer, exercise.acceptedAnswers);
-    setGradeResult(result);
-
-    if (result.isCorrect) {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } else {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    if (Platform.OS !== 'web') {
+      if (grade.isCorrect) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
     }
 
-    setTimeout(() => onAnswer(answer, result.isCorrect), 1500);
+    onAnswer(grade.isCorrect, answer);
+  };
+
+  const getBorderClass = () => {
+    if (!submitted) return 'border-input-border';
+    if (result?.isCorrect) return 'border-success';
+    return 'border-error';
   };
 
   return (
-    <View>
-      <Text style={{ fontSize: 14, color: '#6366F1', fontWeight: '600', marginBottom: 8 }}>
-        {directionLabel}
-      </Text>
-
-      <Text style={{ fontSize: 22, fontWeight: '600', marginBottom: 24 }}>
-        {exercise.prompt}
-      </Text>
-
-      {exercise.hintText && !revealed && (
-        <Text style={{ fontSize: 14, color: '#999', marginBottom: 12, fontStyle: 'italic' }}>
-          Hint: {exercise.hintText}
-        </Text>
-      )}
-
+    <ExerciseCard type={exercise.type} prompt={exercise.prompt}>
       <TextInput
+        className={`border-2 ${getBorderClass()} rounded-[14px] px-4 py-2.5 text-base text-text-primary min-h-[80px]`}
+        placeholder="Type your translation..."
+        placeholderTextColor="#64748B"
         value={answer}
         onChangeText={setAnswer}
-        placeholder="Type your translation..."
-        autoCapitalize="none"
-        autoCorrect={false}
-        editable={!revealed}
-        onSubmitEditing={handleSubmit}
-        returnKeyType="done"
+        editable={!submitted && !showResult}
         multiline
-        style={{
-          borderWidth: 2,
-          borderColor: revealed
-            ? gradeResult?.isCorrect
-              ? '#22C55E'
-              : '#EF4444'
-            : '#D1D5DB',
-          borderRadius: 14,
-          padding: 16,
-          fontSize: 18,
-          minHeight: 80,
-          marginBottom: 12,
-          backgroundColor: revealed
-            ? gradeResult?.isCorrect
-              ? '#DCFCE7'
-              : '#FEE2E2'
-            : '#fff',
-          textAlignVertical: 'top',
-        }}
-        accessibilityLabel="Type your translation"
+        textAlignVertical="top"
+        accessibilityLabel="Translation input"
+        accessibilityHint="Type your translation of the prompt"
       />
 
-      {!revealed && (
-        <Pressable
-          onPress={handleSubmit}
-          disabled={!answer.trim()}
-          style={{
-            backgroundColor: answer.trim() ? '#6366F1' : '#C7D2FE',
-            paddingVertical: 14,
-            borderRadius: 12,
-            alignItems: 'center',
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Submit translation"
-        >
-          <Text style={{ color: '#fff', fontSize: 17, fontWeight: '600' }}>Check</Text>
-        </Pressable>
-      )}
-
-      {revealed && gradeResult && (
-        <View style={{ marginTop: 12 }}>
-          <Text
-            style={{
-              fontSize: 15,
-              color: gradeResult.isCorrect ? '#22C55E' : '#EF4444',
-              fontWeight: '500',
-              marginBottom: 4,
-            }}
-          >
-            {gradeResult.feedback}
+      {(submitted || showResult) && result && (
+        <View className={`mt-3 p-3 rounded-[14px] ${result.isCorrect ? 'bg-success-bg' : 'bg-error-bg'}`}>
+          <Text className={`text-sm font-medium ${result.isCorrect ? 'text-success' : 'text-error'}`}>
+            {result.feedback}
           </Text>
-          {!gradeResult.isCorrect && (
-            <Text style={{ fontSize: 15, color: '#666' }}>
-              Your answer: "{answer}"
-            </Text>
-          )}
         </View>
       )}
-    </View>
+
+      {!submitted && !showResult && (
+        <View className="mt-4">
+          <Button
+            label="Check"
+            onPress={handleSubmit}
+            disabled={!answer.trim()}
+          />
+        </View>
+      )}
+    </ExerciseCard>
   );
 }

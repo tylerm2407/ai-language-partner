@@ -7,9 +7,6 @@ export default function ReadingLayout() {
         headerShown: false,
         animation: 'slide_from_right',
       }}
-    >
-      <Stack.Screen name="index" />
-      <Stack.Screen name="[readingId]" />
-    </Stack>
+    />
   );
 }

@@ -1,0 +1,161 @@
+// Supabase Edge Function: Text-to-Speech via ElevenLabs
+// Proxies TTS requests to ElevenLabs API and returns audio/mpeg binary.
+// DEPRECATED: Still used by hold-to-talk voice mode and "Listen" button on chat bubbles.
+// Hands-free mode now uses Gemini Live for TTS natively.
+// Deploy: npx supabase functions deploy tts
+
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_KEY');
+
+// ElevenLabs voice IDs — natural-sounding voices per language.
+// These are ElevenLabs premade voices. Update IDs if you switch to cloned voices.
+const VOICE_MAP: Record<string, string> = {
+  es: 'EXAVITQu4vr4xnSDxMaL', // Sarah — clear, warm female
+  fr: 'EXAVITQu4vr4xnSDxMaL',
+  de: 'EXAVITQu4vr4xnSDxMaL',
+  it: 'EXAVITQu4vr4xnSDxMaL',
+  pt: 'EXAVITQu4vr4xnSDxMaL',
+  ja: 'EXAVITQu4vr4xnSDxMaL',
+  ko: 'EXAVITQu4vr4xnSDxMaL',
+  zh: 'EXAVITQu4vr4xnSDxMaL',
+  en: 'EXAVITQu4vr4xnSDxMaL',
+};
+
+const DEFAULT_VOICE_ID = 'EXAVITQu4vr4xnSDxMaL';
+
+// Daily voice minute limits per plan tier
+const PLAN_LIMITS: Record<string, { dailyVoiceMinutes: number | 'unlimited' }> = {
+  free:      { dailyVoiceMinutes: 5 },
+  basic:     { dailyVoiceMinutes: 20 },
+  premium:   { dailyVoiceMinutes: 45 },
+  unlimited: { dailyVoiceMinutes: 60 },
+};
+
+interface TTSRequest {
+  text: string;
+  language: string;
+  userId?: string;
+}
+
+function todayUTC(): string {
+  return new Date().toISOString().split('T')[0];
+}
+
+async function getUserTier(supabase: ReturnType<typeof createClient>, userId: string): Promise<string> {
+  const { data } = await supabase
+    .from('subscriptions')
+    .select('tier, is_active')
+    .eq('user_id', userId)
+    .single();
+
+  if (data?.is_active && data.tier) return data.tier;
+  return 'free';
+}
+
+async function getVoiceMinutesUsed(supabase: ReturnType<typeof createClient>, userId: string): Promise<number> {
+  const date = todayUTC();
+  const { data } = await supabase
+    .from('daily_usage')
+    .select('voice_minutes')
+    .eq('user_id', userId)
+    .eq('date', date)
+    .single();
+
+  return data?.voice_minutes ?? 0;
+}
+
+serve(async (req: Request) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST',
+        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+      },
+    });
+  }
+
+  try {
+    const { text, language, userId } = (await req.json()) as TTSRequest;
+
+    if (!ELEVENLABS_API_KEY) {
+      return new Response(
+        JSON.stringify({ error: 'ELEVENLABS_KEY not configured' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!text || text.length === 0) {
+      return new Response(
+        JSON.stringify({ error: 'text is required' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Enforce daily voice minute limits
+    if (userId) {
+      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      const tier = await getUserTier(supabase, userId);
+      const limits = PLAN_LIMITS[tier] ?? PLAN_LIMITS.free;
+
+      if (limits.dailyVoiceMinutes !== 'unlimited') {
+        const used = await getVoiceMinutesUsed(supabase, userId);
+        if (used >= limits.dailyVoiceMinutes) {
+          return new Response(
+            JSON.stringify({
+              error: "You've reached your daily voice limit. Upgrade your plan for more.",
+              code: 'DAILY_VOICE_LIMIT_REACHED',
+            }),
+            { status: 429, headers: { 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+    }
+
+    const voiceId = VOICE_MAP[language] ?? DEFAULT_VOICE_ID;
+
+    const response = await fetch(
+      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'xi-api-key': ELEVENLABS_API_KEY,
+        },
+        body: JSON.stringify({
+          text: text.replace(/\*\*/g, ''), // Strip markdown bold markers
+          model_id: 'eleven_flash_v2_5',
+          voice_settings: {
+            stability: 0.5,
+            similarity_boost: 0.75,
+            style: 0.3,
+          },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`ElevenLabs API error: ${response.status} - ${errorText}`);
+    }
+
+    // Return audio binary directly
+    const audioBuffer = await response.arrayBuffer();
+
+    return new Response(audioBuffer, {
+      headers: {
+        'Content-Type': 'audio/mpeg',
+        'Access-Control-Allow-Origin': '*',
+      },
+    });
+  } catch (error) {
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+});

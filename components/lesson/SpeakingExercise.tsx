@@ -1,164 +1,146 @@
-import { useState } from 'react';
-import { View, Text, ActivityIndicator } from 'react-native';
-import { AudioPlayButton } from '../audio/AudioPlayButton';
-import { RecordButton } from '../audio/RecordButton';
+import { useState, useEffect } from 'react';
+import { View, Text, Pressable, Platform, ActivityIndicator } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import { ExerciseCard } from './ExerciseCard';
+import { useAudioRecorder } from '../../hooks/useAudioRecorder';
+import { useAudioPlayer } from '../../hooks/useAudioPlayer';
 import { scorePronunciation } from '../../lib/ai';
-import { useAuth } from '../../hooks/useAuth';
 import type { Exercise, LanguageCode } from '../../types';
 
 interface SpeakingExerciseProps {
   exercise: Exercise;
+  onAnswer: (correct: boolean, answer: string) => void;
+  showResult: boolean;
+  userId: string;
   targetLanguage: LanguageCode;
-  onAnswer: (answer: string, isCorrect: boolean) => void;
 }
 
-/**
- * Speaking exercise: listen to prompt audio, then record yourself saying it.
- * Audio is sent to the backend for pronunciation scoring.
- */
-export function SpeakingExercise({ exercise, targetLanguage, onAnswer }: SpeakingExerciseProps) {
-  const { user } = useAuth();
-  const [phase, setPhase] = useState<'listen' | 'record' | 'scoring' | 'result'>('listen');
-  const [score, setScore] = useState<number | null>(null);
-  const [feedback, setFeedback] = useState<string>('');
-  const [error, setError] = useState<string | null>(null);
+export function SpeakingExercise({ exercise, onAnswer, showResult, userId, targetLanguage }: SpeakingExerciseProps) {
+  const { recording, audioUri, startRecording, stopRecording, getBase64 } = useAudioRecorder();
+  const { playing, play } = useAudioPlayer();
+  const [scoring, setScoring] = useState(false);
+  const [score, setScore] = useState<{ score: number; feedback: string } | null>(null);
 
-  const handleRecordingComplete = async (result: {
-    uri: string;
-    base64: string;
-    durationMs: number;
-  }) => {
-    setPhase('scoring');
-    setError(null);
+  const handleToggleRecord = async () => {
+    if (recording) {
+      await stopRecording();
+    } else {
+      await startRecording();
+      if (Platform.OS !== 'web') {
+        Haptics.selectionAsync();
+      }
+    }
+  };
+
+  const handleScore = async () => {
+    if (!audioUri) return;
+    setScoring(true);
 
     try {
-      const scoreResult = await scorePronunciation({
-        userId: user!.id,
-        audioBase64: result.base64,
+      const base64 = await getBase64();
+      if (!base64) {
+        setScore({ score: 0, feedback: 'Could not process audio.' });
+        return;
+      }
+
+      const result = await scorePronunciation({
+        userId,
+        audioBase64: base64,
         expectedText: exercise.correctAnswer,
         language: targetLanguage,
       });
 
-      setScore(scoreResult.score);
-      setFeedback(scoreResult.feedback);
-      setPhase('result');
+      setScore({ score: result.score, feedback: result.feedback });
 
-      const isCorrect = scoreResult.score >= 60; // 60% threshold for pass
+      const isCorrect = result.score >= 60;
+      if (Platform.OS !== 'web') {
+        if (isCorrect) {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        } else {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        }
+      }
 
-      setTimeout(() => {
-        onAnswer(`pronunciation_score:${scoreResult.score}`, isCorrect);
-      }, 2000);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Scoring failed');
-      setPhase('record');
+      onAnswer(isCorrect, `score:${result.score}`);
+    } catch {
+      setScore({ score: 0, feedback: 'Scoring failed. Please try again.' });
+    } finally {
+      setScoring(false);
     }
   };
 
+  const getScoreColor = () => {
+    if (!score) return {};
+    if (score.score >= 80) return { bg: 'bg-success-bg', text: 'text-success' };
+    if (score.score >= 60) return { bg: 'bg-warning-bg', text: 'text-warning' };
+    return { bg: 'bg-error-bg', text: 'text-error' };
+  };
+
   return (
-    <View>
-      <Text style={{ fontSize: 14, color: '#6366F1', fontWeight: '600', marginBottom: 8 }}>
-        Listen and repeat
+    <ExerciseCard type={exercise.type} prompt={exercise.prompt}>
+      {/* Prompt audio playback */}
+      {exercise.promptAudioUrl && (
+        <Pressable
+          className="bg-dark-card-alt rounded-[14px] p-4 flex-row items-center mb-4"
+          onPress={() => play(exercise.promptAudioUrl!)}
+          accessibilityRole="button"
+          accessibilityLabel="Play prompt audio"
+        >
+          <Ionicons name={playing ? 'volume-high' : 'play-circle'} size={28} color="#38BDF8" />
+          <Text className="text-text-primary text-base ml-3">Listen to the prompt</Text>
+        </Pressable>
+      )}
+
+      {/* Record button */}
+      <Pressable
+        className={`w-20 h-20 rounded-full items-center justify-center self-center mb-4 ${recording ? 'bg-error' : 'bg-primary'}`}
+        onPress={handleToggleRecord}
+        disabled={scoring || score !== null}
+        accessibilityRole="button"
+        accessibilityLabel={recording ? 'Stop recording' : 'Start recording'}
+      >
+        <Ionicons
+          name={recording ? 'stop' : 'mic'}
+          size={36}
+          color="white"
+        />
+      </Pressable>
+
+      <Text className="text-text-secondary text-sm text-center mb-4">
+        {recording ? 'Recording... Tap to stop' : score ? '' : 'Tap to record your answer'}
       </Text>
 
-      <Text style={{ fontSize: 22, fontWeight: '600', marginBottom: 8, textAlign: 'center' }}>
-        {exercise.prompt}
-      </Text>
+      {/* Score button */}
+      {audioUri && !score && !scoring && (
+        <Pressable
+          className="bg-primary py-4 px-12 rounded-[14px] items-center"
+          onPress={handleScore}
+          accessibilityRole="button"
+          accessibilityLabel="Score pronunciation"
+        >
+          <Text className="text-white text-lg font-semibold">Score My Answer</Text>
+        </Pressable>
+      )}
 
-      <Text style={{ fontSize: 16, color: '#666', marginBottom: 24, textAlign: 'center' }}>
-        {exercise.correctAnswer}
-      </Text>
-
-      {/* Step 1: Listen */}
-      <View style={{ alignItems: 'center', marginBottom: 24 }}>
-        {exercise.promptAudioUrl ? (
-          <AudioPlayButton audioUrl={exercise.promptAudioUrl} size={64} />
-        ) : (
-          <View
-            style={{
-              width: 64,
-              height: 64,
-              borderRadius: 32,
-              backgroundColor: '#E5E7EB',
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}
-          >
-            <Text style={{ fontSize: 11, color: '#999' }}>No audio</Text>
-          </View>
-        )}
-        <Text style={{ fontSize: 13, color: '#666', marginTop: 6 }}>
-          {phase === 'listen' ? 'Listen first, then record' : 'Tap to replay'}
-        </Text>
-      </View>
-
-      {/* Step 2: Record */}
-      {(phase === 'listen' || phase === 'record') && (
-        <View style={{ alignItems: 'center' }}>
-          <RecordButton onRecordingComplete={handleRecordingComplete} size={72} />
-          {phase === 'listen' && (
-            <Text style={{ fontSize: 13, color: '#999', marginTop: 12, textAlign: 'center' }}>
-              Listen to the audio above, then hold the button to record your pronunciation.
-            </Text>
-          )}
+      {scoring && (
+        <View className="items-center py-4">
+          <ActivityIndicator size="large" color="#38BDF8" />
+          <Text className="text-text-tertiary text-sm mt-2">Scoring pronunciation...</Text>
         </View>
       )}
 
-      {/* Step 3: Scoring */}
-      {phase === 'scoring' && (
-        <View style={{ alignItems: 'center', padding: 24 }}>
-          <ActivityIndicator size="large" color="#6366F1" />
-          <Text style={{ fontSize: 16, color: '#666', marginTop: 12 }}>
-            Analyzing your pronunciation...
-          </Text>
-        </View>
-      )}
-
-      {/* Step 4: Result */}
-      {phase === 'result' && score !== null && (
-        <View style={{ alignItems: 'center', padding: 24 }}>
-          <View
-            style={{
-              width: 100,
-              height: 100,
-              borderRadius: 50,
-              backgroundColor: score >= 80 ? '#DCFCE7' : score >= 60 ? '#FEF9C3' : '#FEE2E2',
-              justifyContent: 'center',
-              alignItems: 'center',
-              marginBottom: 12,
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 32,
-                fontWeight: '700',
-                color: score >= 80 ? '#22C55E' : score >= 60 ? '#CA8A04' : '#EF4444',
-              }}
-            >
-              {score}%
+      {/* Score display */}
+      {score && (
+        <View className="items-center">
+          <View className={`w-[100px] h-[100px] rounded-full items-center justify-center ${getScoreColor().bg}`}>
+            <Text className={`text-[32px] font-bold ${getScoreColor().text}`}>
+              {score.score}%
             </Text>
           </View>
-          <Text
-            style={{
-              fontSize: 18,
-              fontWeight: '600',
-              color: score >= 60 ? '#22C55E' : '#EF4444',
-              marginBottom: 4,
-            }}
-          >
-            {score >= 80 ? 'Excellent!' : score >= 60 ? 'Good enough!' : 'Try again'}
-          </Text>
-          <Text style={{ fontSize: 14, color: '#666', textAlign: 'center' }}>
-            {feedback}
-          </Text>
+          <Text className="text-text-primary text-base mt-3 text-center">{score.feedback}</Text>
         </View>
       )}
-
-      {/* Error */}
-      {error && (
-        <Text style={{ fontSize: 14, color: '#EF4444', textAlign: 'center', marginTop: 12 }}>
-          {error}
-        </Text>
-      )}
-    </View>
+    </ExerciseCard>
   );
 }

@@ -6,36 +6,32 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "fluenci",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#6366F1"
+      "backgroundColor": "#0C0F14"
     },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.fluenci.app",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Fluenci needs access to your microphone for voice conversation practice and pronunciation exercises.",
-        "UIBackgroundModes": [
-          "audio"
-        ]
+        "UIBackgroundModes": ["audio"]
       }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#6366F1"
+        "backgroundColor": "#0C0F14"
       },
       "package": "com.fluenci.app",
-      "permissions": [
-        "RECORD_AUDIO"
-      ]
+      "permissions": ["RECORD_AUDIO"]
     },
     "web": {
       "bundler": "metro",
-      "output": "static",
+      "output": "single",
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
@@ -44,6 +40,13 @@
         "expo-av",
         {
           "microphonePermission": "Fluenci needs access to your microphone for voice conversation practice and pronunciation exercises."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#38BDF8"
         }
       ],
       "expo-asset",

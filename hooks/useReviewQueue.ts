@@ -1,157 +1,74 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useAuth } from './useAuth';
+import { useAppStore } from '../stores/useAppStore';
 import {
   fetchDueReviewItems,
-  fetchReviewItemCount,
   fetchCardsByIds,
   upsertReviewItem,
   insertReviewLog,
-  upsertDailyStats,
-  addXp,
 } from '../lib/supabase-queries';
-import { calculateNextReview, isCorrect } from '../lib/srs';
+import { calculateNextReview } from '../lib/srs';
 import type { ReviewItem, Card, ReviewRating } from '../types';
 
-interface ReviewCard {
-  reviewItem: ReviewItem;
-  card: Card;
-}
-
-interface UseReviewQueueReturn {
-  queue: ReviewCard[];
-  currentIndex: number;
-  currentCard: ReviewCard | null;
-  isLoading: boolean;
-  error: string | null;
-  dueCount: number;
-  reviewedCount: number;
-  correctCount: number;
-  submitReview: (rating: ReviewRating, userAnswer: string, responseTimeMs: number) => Promise<void>;
-  refresh: () => Promise<void>;
-  isComplete: boolean;
-}
-
-export function useReviewQueue(): UseReviewQueueReturn {
+export function useReviewQueue() {
   const { user } = useAuth();
-  const [queue, setQueue] = useState<ReviewCard[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [dueCount, setDueCount] = useState(0);
-  const [reviewedCount, setReviewedCount] = useState(0);
-  const [correctCount, setCorrectCount] = useState(0);
-  const startTimeRef = useRef<number>(Date.now());
+  const { reviewCount, refreshReviewCount } = useAppStore();
+  const [items, setItems] = useState<ReviewItem[]>([]);
+  const [cards, setCards] = useState<Record<string, Card>>({});
+  const [loading, setLoading] = useState(false);
 
   const loadQueue = useCallback(async () => {
     if (!user) return;
-
+    setLoading(true);
     try {
-      setIsLoading(true);
-      setError(null);
-
-      const [items, count] = await Promise.all([
-        fetchDueReviewItems(user.id, 50),
-        fetchReviewItemCount(user.id),
-      ]);
-
-      setDueCount(count);
-
-      if (items.length === 0) {
-        setQueue([]);
-        setIsLoading(false);
-        return;
+      const reviewItems = await fetchDueReviewItems(user.id);
+      setItems(reviewItems);
+      if (reviewItems.length > 0) {
+        const cardIds = reviewItems.map((r) => r.cardId);
+        const fetched = await fetchCardsByIds(cardIds);
+        const map: Record<string, Card> = {};
+        fetched.forEach((c) => { map[c.id] = c; });
+        setCards(map);
       }
-
-      const cardIds = items.map((item) => item.cardId);
-      const cards = await fetchCardsByIds(cardIds);
-      const cardMap = new Map(cards.map((c) => [c.id, c]));
-
-      const reviewCards: ReviewCard[] = items
-        .filter((item) => cardMap.has(item.cardId))
-        .map((item) => ({
-          reviewItem: item,
-          card: cardMap.get(item.cardId)!,
-        }));
-
-      setQueue(reviewCards);
-      setCurrentIndex(0);
-      setReviewedCount(0);
-      setCorrectCount(0);
-      startTimeRef.current = Date.now();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load review queue');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   }, [user]);
 
-  useEffect(() => {
-    loadQueue();
-  }, [loadQueue]);
+  const submitReview = useCallback(async (
+    item: ReviewItem,
+    rating: ReviewRating,
+    answer: string,
+    responseTimeMs: number
+  ) => {
+    if (!user) return;
 
-  const submitReview = useCallback(
-    async (rating: ReviewRating, userAnswer: string, responseTimeMs: number) => {
-      if (!user || currentIndex >= queue.length) return;
+    const next = calculateNextReview(item, rating);
+    const wasCorrect = rating >= 3;
 
-      const { reviewItem, card } = queue[currentIndex];
-      const correct = isCorrect(rating);
-      const nextReview = calculateNextReview(reviewItem, rating);
+    await upsertReviewItem({
+      ...item,
+      easeFactor: next.easeFactor,
+      interval: next.interval,
+      repetitions: next.repetitions,
+      nextDue: next.nextDue,
+      lastReviewedAt: new Date().toISOString(),
+      status: next.repetitions === 0 ? 'learning' : 'review',
+    });
 
-      try {
-        // Update SRS state
-        await upsertReviewItem({
-          ...reviewItem,
-          ...nextReview,
-          lastReviewedAt: new Date().toISOString(),
-        });
+    await insertReviewLog({
+      userId: user.id,
+      cardId: item.cardId,
+      reviewItemId: item.id,
+      rating,
+      responseTimeMs,
+      userAnswer: answer,
+      wasCorrect,
+      reviewedAt: new Date().toISOString(),
+    });
 
-        // Log the review
-        await insertReviewLog({
-          userId: user.id,
-          cardId: card.id,
-          reviewItemId: reviewItem.id,
-          rating,
-          responseTimeMs,
-          userAnswer,
-          wasCorrect: correct,
-          reviewedAt: new Date().toISOString(),
-        });
+    await refreshReviewCount(user.id);
+  }, [user, refreshReviewCount]);
 
-        // Update daily stats
-        await upsertDailyStats(user.id, {
-          cardsReviewed: 1,
-          xpEarned: correct ? 10 : 2,
-        });
-
-        if (correct) {
-          await addXp(user.id, 10);
-        }
-
-        setReviewedCount((prev) => prev + 1);
-        if (correct) setCorrectCount((prev) => prev + 1);
-        setCurrentIndex((prev) => prev + 1);
-        setDueCount((prev) => Math.max(0, prev - 1));
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Failed to submit review');
-      }
-    },
-    [user, queue, currentIndex]
-  );
-
-  const currentCard = currentIndex < queue.length ? queue[currentIndex] : null;
-  const isComplete = !isLoading && (queue.length === 0 || currentIndex >= queue.length);
-
-  return {
-    queue,
-    currentIndex,
-    currentCard,
-    isLoading,
-    error,
-    dueCount,
-    reviewedCount,
-    correctCount,
-    submitReview,
-    refresh: loadQueue,
-    isComplete,
-  };
+  return { items, cards, reviewCount, loading, loadQueue, submitReview };
 }

@@ -1,99 +1,73 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../hooks/useAuth';
+import { Button } from '../../components/ui/Button';
+import { Ionicons } from '@expo/vector-icons';
 
-/**
- * Auth screen: magic link sign-in via Supabase.
- */
 export default function AuthScreen() {
-  const { signInWithMagicLink } = useAuth();
+  const { signInWithEmail } = useAuth();
   const [email, setEmail] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [sent, setSent] = useState(false);
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async () => {
-    if (!email.trim()) return;
-    setIsSubmitting(true);
-
-    const { error } = await signInWithMagicLink(email.trim());
-
-    setIsSubmitting(false);
-    if (error) {
-      Alert.alert('Error', error);
-    } else {
-      setSent(true);
+  const handleSignIn = async () => {
+    if (!email.trim() || !password) return;
+    if (password.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters');
+      return;
+    }
+    setLoading(true);
+    try {
+      await signInWithEmail(email.trim(), password);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Something went wrong';
+      Alert.alert('Error', message);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
-      <View style={{ flex: 1, justifyContent: 'center', padding: 24 }}>
-        <Text
-          style={{ fontSize: 28, fontWeight: '700', marginBottom: 8 }}
-          accessibilityRole="header"
-        >
-          Sign In
+    <SafeAreaView className="flex-1 bg-dark">
+      <View className="flex-1 justify-center px-8">
+        <Text className="text-3xl font-bold text-text-primary mb-2" accessibilityRole="header">
+          Welcome to Fluenci
         </Text>
-        <Text style={{ fontSize: 16, color: '#666', marginBottom: 32 }}>
-          We'll send you a magic link to sign in — no password needed.
+        <Text className="text-base text-text-secondary mb-8">
+          Sign in or create an account
         </Text>
 
-        {sent ? (
-          <View
-            style={{
-              backgroundColor: '#F0FDF4',
-              padding: 16,
-              borderRadius: 12,
-            }}
-          >
-            <Text style={{ fontSize: 16, color: '#166534' }}>
-              Check your email for a sign-in link.
-            </Text>
-          </View>
-        ) : (
-          <>
-            <TextInput
-              value={email}
-              onChangeText={setEmail}
-              placeholder="you@example.com"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoComplete="email"
-              autoCorrect={false}
-              accessibilityLabel="Email address"
-              style={{
-                borderWidth: 1,
-                borderColor: '#D1D5DB',
-                borderRadius: 12,
-                padding: 16,
-                fontSize: 16,
-                marginBottom: 16,
-              }}
-            />
+        <TextInput
+          className="border-2 border-input-border rounded-[14px] px-4 py-3 text-base text-text-primary mb-4"
+          placeholder="you@example.com"
+          placeholderTextColor="#64748B"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoComplete="email"
+          accessibilityLabel="Email address"
+        />
 
-            <Pressable
-              onPress={handleSubmit}
-              disabled={isSubmitting || !email.trim()}
-              style={{
-                backgroundColor: email.trim() ? '#6366F1' : '#C7D2FE',
-                paddingVertical: 16,
-                borderRadius: 12,
-                alignItems: 'center',
-              }}
-              accessibilityRole="button"
-              accessibilityLabel="Send magic link"
-            >
-              {isSubmitting ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={{ color: '#fff', fontSize: 18, fontWeight: '600' }}>
-                  Send Magic Link
-                </Text>
-              )}
-            </Pressable>
-          </>
-        )}
+        <TextInput
+          className="border-2 border-input-border rounded-[14px] px-4 py-3 text-base text-text-primary mb-4"
+          placeholder="Password (min 6 characters)"
+          placeholderTextColor="#64748B"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+          autoCapitalize="none"
+          autoComplete="password"
+          accessibilityLabel="Password"
+        />
+
+        <Button
+          label="Continue"
+          onPress={handleSignIn}
+          disabled={!email.trim() || !password}
+          loading={loading}
+        />
       </View>
     </SafeAreaView>
   );

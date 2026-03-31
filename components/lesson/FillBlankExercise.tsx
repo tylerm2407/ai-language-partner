@@ -1,129 +1,94 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable } from 'react-native';
+import { View, Text, TextInput, Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { ExerciseCard } from './ExerciseCard';
+import { Button } from '../ui/Button';
 import { gradeAnswer } from '../../lib/grading';
 import type { Exercise } from '../../types';
 
 interface FillBlankExerciseProps {
   exercise: Exercise;
-  onAnswer: (answer: string, isCorrect: boolean) => void;
+  onAnswer: (correct: boolean, answer: string) => void;
+  showResult: boolean;
 }
 
-/**
- * Fill-in-the-blank exercise.
- * The prompt contains "___" where the user should type the missing word.
- */
-export function FillBlankExercise({ exercise, onAnswer }: FillBlankExerciseProps) {
+export function FillBlankExercise({ exercise, onAnswer, showResult }: FillBlankExerciseProps) {
   const [answer, setAnswer] = useState('');
-  const [revealed, setRevealed] = useState(false);
-  const [gradeResult, setGradeResult] = useState<ReturnType<typeof gradeAnswer> | null>(null);
+  const [submitted, setSubmitted] = useState(false);
+  const [result, setResult] = useState<{ isCorrect: boolean; feedback: string } | null>(null);
 
-  // Split prompt around the blank
+  // Split prompt on "___" to show sentence with blank
   const parts = exercise.prompt.split('___');
-  const before = parts[0] ?? '';
-  const after = parts[1] ?? '';
 
-  const handleSubmit = async () => {
-    if (revealed || !answer.trim()) return;
+  const handleSubmit = () => {
+    if (!answer.trim() || submitted) return;
 
-    setRevealed(true);
-    const result = gradeAnswer(answer, exercise.correctAnswer, exercise.acceptedAnswers, {
-      strict: false,
-    });
-    setGradeResult(result);
+    const grade = gradeAnswer(answer, exercise.correctAnswer, exercise.acceptedAnswers);
+    setResult({ isCorrect: grade.isCorrect, feedback: grade.feedback });
+    setSubmitted(true);
 
-    if (result.isCorrect) {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } else {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    if (Platform.OS !== 'web') {
+      if (grade.isCorrect) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
     }
 
-    setTimeout(() => onAnswer(answer, result.isCorrect), 1500);
+    onAnswer(grade.isCorrect, answer);
+  };
+
+  const getBorderClass = () => {
+    if (!submitted) return 'border-input-border';
+    if (result?.isCorrect) return 'border-success';
+    return 'border-error';
   };
 
   return (
-    <View>
-      <Text style={{ fontSize: 14, color: '#6366F1', fontWeight: '600', marginBottom: 8 }}>
-        Fill in the blank
-      </Text>
-
-      {/* Sentence with inline blank */}
-      <View
-        style={{
-          flexDirection: 'row',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          marginBottom: 24,
-        }}
-      >
-        <Text style={{ fontSize: 20, fontWeight: '500' }}>{before}</Text>
-        <View
-          style={{
-            borderBottomWidth: 2,
-            borderBottomColor: revealed
-              ? gradeResult?.isCorrect
-                ? '#22C55E'
-                : '#EF4444'
-              : '#6366F1',
-            minWidth: 80,
-            marginHorizontal: 4,
-            paddingBottom: 2,
-          }}
-        >
-          {revealed ? (
-            <Text
-              style={{
-                fontSize: 20,
-                fontWeight: '600',
-                color: gradeResult?.isCorrect ? '#22C55E' : '#EF4444',
-              }}
-            >
-              {gradeResult?.isCorrect ? answer : exercise.correctAnswer}
-            </Text>
+    <ExerciseCard type={exercise.type} prompt="Fill in the blank">
+      <View className="mb-4">
+        <Text className="text-text-primary text-lg leading-7">
+          {parts.length > 1 ? (
+            <>
+              {parts[0]}
+              <Text className="text-primary font-bold"> _____ </Text>
+              {parts[1]}
+            </>
           ) : (
-            <TextInput
-              value={answer}
-              onChangeText={setAnswer}
-              placeholder="..."
-              autoCapitalize="none"
-              autoCorrect={false}
-              onSubmitEditing={handleSubmit}
-              returnKeyType="done"
-              style={{
-                fontSize: 20,
-                fontWeight: '600',
-                padding: 0,
-                color: '#6366F1',
-              }}
-              accessibilityLabel="Fill in the missing word"
-            />
+            exercise.prompt
           )}
-        </View>
-        <Text style={{ fontSize: 20, fontWeight: '500' }}>{after}</Text>
+        </Text>
       </View>
 
-      {!revealed && (
-        <Pressable
-          onPress={handleSubmit}
-          disabled={!answer.trim()}
-          style={{
-            backgroundColor: answer.trim() ? '#6366F1' : '#C7D2FE',
-            paddingVertical: 14,
-            borderRadius: 12,
-            alignItems: 'center',
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Check answer"
-        >
-          <Text style={{ color: '#fff', fontSize: 17, fontWeight: '600' }}>Check</Text>
-        </Pressable>
+      <TextInput
+        className={`border-2 ${getBorderClass()} rounded-[14px] px-4 py-2.5 text-base text-text-primary`}
+        placeholder="Type the missing word..."
+        placeholderTextColor="#64748B"
+        value={answer}
+        onChangeText={setAnswer}
+        editable={!submitted && !showResult}
+        autoCapitalize="none"
+        accessibilityLabel="Fill in the blank input"
+        accessibilityHint="Type the missing word"
+      />
+
+      {(submitted || showResult) && result && (
+        <View className={`mt-3 p-3 rounded-[14px] ${result.isCorrect ? 'bg-success-bg' : 'bg-error-bg'}`}>
+          <Text className={`text-sm font-medium ${result.isCorrect ? 'text-success' : 'text-error'}`}>
+            {result.feedback}
+          </Text>
+        </View>
       )}
 
-      {revealed && gradeResult && !gradeResult.isCorrect && (
-        <Text style={{ fontSize: 15, color: '#EF4444', marginTop: 8, fontWeight: '500' }}>
-          The correct word was: {exercise.correctAnswer}
-        </Text>
+      {!submitted && !showResult && (
+        <View className="mt-4">
+          <Button
+            label="Check"
+            onPress={handleSubmit}
+            disabled={!answer.trim()}
+          />
+        </View>
       )}
-    </View>
+    </ExerciseCard>
   );
 }

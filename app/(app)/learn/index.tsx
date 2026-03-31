@@ -1,257 +1,161 @@
-import { useState } from 'react';
-import { View, Text, FlatList, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useProfile } from '../../../hooks/useProfile';
-import { useCourses, useUnits, useLessons } from '../../../hooks/useCoursesAndLessons';
+import { useEffect, useState } from 'react';
+import { fetchCourses, fetchUnits, fetchLessons } from '../../../lib/supabase-queries';
+import { useAppStore } from '../../../stores/useAppStore';
+import { LoadingScreen } from '../../../components/ui/LoadingScreen';
+import { EmptyState } from '../../../components/ui/EmptyState';
+import { Badge } from '../../../components/ui/Badge';
+import { GradientBackground } from '../../../components/ui/GradientBackground';
+import { GradientBorderCard } from '../../../components/ui/GradientBorderCard';
 import type { Course, Unit, Lesson } from '../../../types';
+import { Ionicons } from '@expo/vector-icons';
+
+const CEFR_LABELS: Record<string, string> = {
+  A1: 'Beginner',
+  A2: 'Intermediate',
+  B1: 'Advanced',
+  B2: 'Professor',
+};
+
+const CEFR_COLORS: Record<string, { bg: string; text: string }> = {
+  A1: { bg: 'bg-success-bg', text: 'text-success' },
+  A2: { bg: 'bg-primary-tint', text: 'text-primary' },
+  B1: { bg: 'bg-warning-bg', text: 'text-warning' },
+  B2: { bg: 'bg-error-bg', text: 'text-error' },
+};
 
 export default function LearnScreen() {
   const router = useRouter();
-  const { profile } = useProfile();
-  const { courses, isLoading: coursesLoading } = useCourses(profile?.targetLanguage);
-  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
-  const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
+  const { reviewCount, profile } = useAppStore();
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [expandedCourse, setExpandedCourse] = useState<string | null>(null);
+  const [units, setUnits] = useState<Record<string, Unit[]>>({});
+  const [lessons, setLessons] = useState<Record<string, Lesson[]>>({});
+  const [loading, setLoading] = useState(true);
 
-  const { units, isLoading: unitsLoading } = useUnits(selectedCourse?.id ?? null);
-  const { lessons, isLoading: lessonsLoading } = useLessons(selectedUnit?.id ?? null);
+  useEffect(() => {
+    const targetLang = profile?.targetLanguage;
+    fetchCourses(targetLang).then((data) => {
+      setCourses(data);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, [profile?.targetLanguage]);
 
-  const isLoading = coursesLoading;
-
-  // Back navigation within the learn screen
-  const handleBack = () => {
-    if (selectedUnit) {
-      setSelectedUnit(null);
-    } else if (selectedCourse) {
-      setSelectedCourse(null);
+  const toggleCourse = async (courseId: string) => {
+    if (expandedCourse === courseId) {
+      setExpandedCourse(null);
+      return;
+    }
+    setExpandedCourse(courseId);
+    if (!units[courseId]) {
+      try {
+        const courseUnits = await fetchUnits(courseId);
+        setUnits((prev) => ({ ...prev, [courseId]: courseUnits }));
+        const lessonResults = await Promise.all(
+          courseUnits.map((unit) => fetchLessons(unit.id).then((ls) => ({ unitId: unit.id, lessons: ls })))
+        );
+        const lessonMap: Record<string, Lesson[]> = {};
+        for (const { unitId, lessons: ls } of lessonResults) {
+          lessonMap[unitId] = ls;
+        }
+        setLessons((prev) => ({ ...prev, ...lessonMap }));
+      } catch {
+        Alert.alert('Error', 'Failed to load course content. Please try again.');
+      }
     }
   };
 
-  if (isLoading) {
-    return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#6366F1" />
-      </SafeAreaView>
-    );
+  if (loading) {
+    return <LoadingScreen message="Loading courses..." />;
   }
-
-  // ─── Lesson List (within a unit) ──────────────────────────────
-
-  if (selectedUnit) {
-    return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
-        <View style={{ padding: 20 }}>
-          <Pressable onPress={handleBack} style={{ marginBottom: 12 }} accessibilityRole="button">
-            <Text style={{ fontSize: 16, color: '#6366F1' }}>Back</Text>
-          </Pressable>
-          <Text style={{ fontSize: 24, fontWeight: '700', marginBottom: 4 }} accessibilityRole="header">
-            {selectedUnit.title}
-          </Text>
-          <Text style={{ fontSize: 14, color: '#666', marginBottom: 20 }}>
-            {selectedUnit.description}
-          </Text>
-        </View>
-
-        {lessonsLoading ? (
-          <ActivityIndicator size="large" color="#6366F1" style={{ marginTop: 24 }} />
-        ) : lessons.length === 0 ? (
-          <View style={{ alignItems: 'center', paddingTop: 32 }}>
-            <Text style={{ fontSize: 16, color: '#999' }}>No lessons in this unit yet.</Text>
-          </View>
-        ) : (
-          <FlatList
-            data={lessons}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
-            renderItem={({ item, index }) => (
-              <Pressable
-                onPress={() => router.push(`/(app)/learn/${item.id}`)}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  backgroundColor: '#F9FAFB',
-                  padding: 16,
-                  borderRadius: 14,
-                  marginBottom: 10,
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={`Lesson ${index + 1}: ${item.title}`}
-              >
-                <View
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 20,
-                    backgroundColor: '#6366F1',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    marginRight: 14,
-                  }}
-                >
-                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>
-                    {index + 1}
-                  </Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 16, fontWeight: '600' }}>{item.title}</Text>
-                  <Text style={{ fontSize: 13, color: '#666', marginTop: 2 }}>
-                    {item.estimatedMinutes} min  |  +{item.xpReward} XP
-                  </Text>
-                </View>
-                <Text style={{ fontSize: 20, color: '#C7D2FE' }}>{'>'}</Text>
-              </Pressable>
-            )}
-          />
-        )}
-      </SafeAreaView>
-    );
-  }
-
-  // ─── Unit List (within a course) ──────────────────────────────
-
-  if (selectedCourse) {
-    return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
-        <View style={{ padding: 20 }}>
-          <Pressable onPress={handleBack} style={{ marginBottom: 12 }} accessibilityRole="button">
-            <Text style={{ fontSize: 16, color: '#6366F1' }}>Back</Text>
-          </Pressable>
-          <Text style={{ fontSize: 24, fontWeight: '700', marginBottom: 4 }} accessibilityRole="header">
-            {selectedCourse.title}
-          </Text>
-          <Text style={{ fontSize: 14, color: '#666', marginBottom: 20 }}>
-            {selectedCourse.description}
-          </Text>
-        </View>
-
-        {unitsLoading ? (
-          <ActivityIndicator size="large" color="#6366F1" style={{ marginTop: 24 }} />
-        ) : units.length === 0 ? (
-          <View style={{ alignItems: 'center', paddingTop: 32 }}>
-            <Text style={{ fontSize: 16, color: '#999' }}>No units in this course yet.</Text>
-          </View>
-        ) : (
-          <FlatList
-            data={units}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
-            renderItem={({ item, index }) => (
-              <Pressable
-                onPress={() => setSelectedUnit(item)}
-                style={{
-                  backgroundColor: '#F9FAFB',
-                  padding: 20,
-                  borderRadius: 16,
-                  marginBottom: 12,
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={`Unit ${index + 1}: ${item.title}`}
-              >
-                <Text style={{ fontSize: 13, color: '#6366F1', fontWeight: '600', marginBottom: 4 }}>
-                  UNIT {index + 1}
-                </Text>
-                <Text style={{ fontSize: 18, fontWeight: '600' }}>{item.title}</Text>
-                <Text style={{ color: '#666', fontSize: 14, marginTop: 4 }}>
-                  {item.description}
-                </Text>
-                <Text style={{ color: '#999', fontSize: 12, marginTop: 8 }}>
-                  {item.totalLessons} lesson{item.totalLessons !== 1 ? 's' : ''}
-                </Text>
-              </Pressable>
-            )}
-          />
-        )}
-      </SafeAreaView>
-    );
-  }
-
-  // ─── Course List ──────────────────────────────────────────────
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
-      <View style={{ padding: 20 }}>
-        <Text style={{ fontSize: 28, fontWeight: '700', marginBottom: 12 }} accessibilityRole="header">
-          Learn
-        </Text>
-      </View>
+    <GradientBackground>
+    <SafeAreaView className="flex-1">
+      <ScrollView className="flex-1 px-4 pt-4" contentContainerStyle={{ paddingBottom: 100 }}>
+        <Text className="text-[28px] font-bold text-text-primary mb-6" accessibilityRole="header">Learn</Text>
 
-      {/* Reading Library Banner */}
-      <Pressable
-        onPress={() => router.push('/(app)/learn/reading')}
-        style={{
-          marginHorizontal: 20,
-          marginBottom: 20,
-          backgroundColor: '#FFFBEB',
-          padding: 18,
-          borderRadius: 16,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          borderWidth: 1,
-          borderColor: '#FDE68A',
-        }}
-        accessibilityRole="button"
-        accessibilityLabel="Open reading library"
-      >
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <View
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 22,
-              backgroundColor: '#F59E0B',
-              justifyContent: 'center',
-              alignItems: 'center',
-              marginRight: 14,
-            }}
+        {/* Review cards shortcut */}
+        {reviewCount > 0 && (
+          <Pressable
+            className="bg-success-bg rounded-2xl p-5 mb-4 flex-row items-center"
+            onPress={() => router.push('/learn/review' as any)}
+            accessibilityRole="button"
+            accessibilityLabel={`Review ${reviewCount} cards due`}
           >
-            <Text style={{ fontSize: 20, color: '#fff' }}>📖</Text>
-          </View>
-          <View>
-            <Text style={{ fontSize: 17, fontWeight: '700', color: '#92400E' }}>Reading Library</Text>
-            <Text style={{ fontSize: 13, color: '#D97706' }}>Graded texts for every level</Text>
-          </View>
-        </View>
-        <Text style={{ fontSize: 20, color: '#FCD34D' }}>{'>'}</Text>
-      </Pressable>
+            <Ionicons name="refresh" size={24} color="#34D399" />
+            <View className="ml-4 flex-1">
+              <Text className="text-base font-semibold text-text-primary">Review Cards</Text>
+              <Text className="text-sm text-text-secondary">{reviewCount} cards due for review</Text>
+            </View>
+            <Badge variant="success" label={String(reviewCount)} />
+          </Pressable>
+        )}
 
-      {courses.length === 0 ? (
-        <View style={{ alignItems: 'center', paddingTop: 48 }}>
-          <Text style={{ fontSize: 18, color: '#666', textAlign: 'center' }}>
-            No courses available yet.
-          </Text>
-          <Text style={{ fontSize: 14, color: '#999', marginTop: 8, textAlign: 'center' }}>
-            Courses will appear here once content is loaded.
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          data={courses}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
-          renderItem={({ item }) => (
-            <Pressable
-              onPress={() => setSelectedCourse(item)}
-              style={{
-                backgroundColor: '#F9FAFB',
-                padding: 20,
-                borderRadius: 16,
-                marginBottom: 12,
-              }}
-              accessibilityRole="button"
-              accessibilityLabel={`Course: ${item.title}`}
-            >
-              <Text style={{ fontSize: 18, fontWeight: '600' }}>{item.title}</Text>
-              <Text style={{ color: '#666', fontSize: 14, marginTop: 4 }}>
-                {item.description}
-              </Text>
-              <Text style={{ color: '#999', fontSize: 12, marginTop: 8 }}>
-                {item.sourceLanguage.toUpperCase()} → {item.targetLanguage.toUpperCase()}  |  {item.totalUnits} unit{item.totalUnits !== 1 ? 's' : ''}
-              </Text>
-            </Pressable>
-          )}
-        />
-      )}
+        {courses.length === 0 ? (
+          <EmptyState
+            icon="book-outline"
+            title="No courses yet"
+            description="Courses will appear here once they are published to your Supabase database."
+          />
+        ) : (
+          courses.map((course) => (
+            <View key={course.id} className="mb-3">
+              <GradientBorderCard>
+                <Pressable
+                  className="p-5 flex-row items-center"
+                  onPress={() => toggleCourse(course.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel={course.title}
+                >
+                  <View className="flex-1">
+                    <View className="flex-row items-center gap-2 mb-1">
+                      <Text className="text-lg font-semibold text-text-primary">{course.title}</Text>
+                      {course.cefrLevel && (
+                        <View className={`${CEFR_COLORS[course.cefrLevel]?.bg ?? 'bg-surface'} rounded-lg px-2 py-0.5`}>
+                          <Text className={`${CEFR_COLORS[course.cefrLevel]?.text ?? 'text-text-secondary'} text-xs font-sans-bold`}>
+                            {CEFR_LABELS[course.cefrLevel] || course.cefrLevel}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text className="text-sm text-text-secondary">{course.description}</Text>
+                  </View>
+                  <Ionicons
+                    name={expandedCourse === course.id ? 'chevron-up' : 'chevron-down'}
+                    size={20}
+                    color="#7DD3FC"
+                  />
+                </Pressable>
+              </GradientBorderCard>
+
+              {expandedCourse === course.id && units[course.id]?.map((unit) => (
+                <View key={unit.id} className="ml-4 mt-2">
+                  <Text className="text-base font-semibold text-text-primary mb-2">{unit.title}</Text>
+                  {lessons[unit.id]?.map((lesson) => (
+                    <Pressable
+                      key={lesson.id}
+                      className="bg-dark-card border-2 border-dark-border rounded-[14px] p-4 mb-2 flex-row items-center"
+                      onPress={() => router.push(`/learn/${lesson.id}` as any)}
+                      accessibilityRole="button"
+                      accessibilityLabel={lesson.title}
+                    >
+                      <View className="flex-1">
+                        <Text className="text-base font-medium text-text-primary">{lesson.title}</Text>
+                        <Text className="text-sm text-text-secondary">{lesson.estimatedMinutes} min · {lesson.xpReward} XP</Text>
+                      </View>
+                      <Ionicons name="play-circle" size={24} color="#A855F7" />
+                    </Pressable>
+                  ))}
+                </View>
+              ))}
+            </View>
+          ))
+        )}
+      </ScrollView>
     </SafeAreaView>
+    </GradientBackground>
   );
 }

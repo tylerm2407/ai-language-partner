@@ -1,57 +1,57 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
-import { identifyUser, resetAnalytics } from '../lib/analytics';
+import type { Session } from '@supabase/supabase-js';
 
-interface UseAuthReturn {
-  user: User | null;
-  session: Session | null;
-  isLoading: boolean;
-  signInWithMagicLink: (email: string) => Promise<{ error: string | null }>;
-  signOut: () => Promise<void>;
-}
-
-/**
- * Hook for auth state management. Listens to Supabase auth state changes.
- * Use this in the root layout to gate authenticated vs public routes.
- */
-export function useAuth(): UseAuthReturn {
-  const [user, setUser] = useState<User | null>(null);
+export function useAuth() {
   const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        identifyUser(session.user.id, { email: session.user.email ?? '' });
-      }
-      setIsLoading(false);
+      setLoading(false);
     });
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        identifyUser(session.user.id, { email: session.user.email ?? '' });
-      }
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  const signInWithMagicLink = useCallback(async (email: string) => {
-    const { error } = await supabase.auth.signInWithOtp({ email });
-    return { error: error?.message ?? null };
+  const signInWithEmail = useCallback(async (email: string, password: string) => {
+    // Try sign in first
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    if (!signInError) return;
+
+    // If invalid credentials, try creating a new account
+    if (signInError.message.includes('Invalid login credentials')) {
+      const { error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { email_confirm: true } },
+      });
+      if (signUpError) throw signUpError;
+      return;
+    }
+
+    throw signInError;
   }, []);
 
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
-    resetAnalytics();
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
   }, []);
 
-  return { user, session, isLoading, signInWithMagicLink, signOut };
+  return {
+    session,
+    user: session?.user ?? null,
+    loading,
+    signInWithEmail,
+    signOut,
+  };
 }

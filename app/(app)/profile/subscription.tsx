@@ -1,182 +1,116 @@
-import { useState } from 'react';
-import { View, Text, Pressable, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, Pressable, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
-import { openCheckout, PRICING_PLANS } from '../../../lib/stripe';
-import { fetchSubscription } from '../../../lib/supabase-queries';
-import { useEffect } from 'react';
-import type { Subscription } from '../../../types';
-import { trackEvent } from '../../../lib/analytics';
+import { useAppStore } from '../../../stores/useAppStore';
+import { PRICING_PLANS, openCheckout } from '../../../lib/stripe';
+import { Button } from '../../../components/ui/Button';
+import { Badge } from '../../../components/ui/Badge';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function SubscriptionScreen() {
-  const router = useRouter();
   const { user } = useAuth();
-  const [subscription, setSubscription] = useState<Subscription | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isPurchasing, setIsPurchasing] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<string>('basic_monthly');
+  const { subscription } = useAppStore();
+  const router = useRouter();
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
-  useEffect(() => {
+  const currentTier = subscription?.tier ?? 'free';
+
+  const handleSubscribe = async (priceKey: string) => {
     if (!user) return;
-
-    fetchSubscription(user.id)
-      .then(setSubscription)
-      .catch(() => {})
-      .finally(() => setIsLoading(false));
-  }, [user]);
-
-  const handlePurchase = async (priceKey: string) => {
-    if (!user?.email) {
-      Alert.alert('Error', 'Please sign in to subscribe.');
-      return;
-    }
-
-    setIsPurchasing(true);
+    setLoadingPlan(priceKey);
     try {
-      trackEvent('subscription_started', { plan: priceKey });
-
       await openCheckout({
         userId: user.id,
-        email: user.email,
-        priceKey: priceKey as any,
+        email: user.email ?? '',
+        priceKey,
       });
-    } catch (e) {
-      Alert.alert('Error', e instanceof Error ? e.message : 'Failed to start checkout');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Something went wrong';
+      Alert.alert('Error', message);
     } finally {
-      setIsPurchasing(false);
+      setLoadingPlan(null);
     }
   };
 
-  if (isLoading) {
-    return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#6366F1" />
-      </SafeAreaView>
-    );
-  }
-
-  const isSubscribed = subscription?.isActive && subscription.tier !== 'free';
-
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
-        {/* Header */}
-        <Pressable onPress={() => router.back()} style={{ marginBottom: 12 }} accessibilityRole="button">
-          <Text style={{ fontSize: 16, color: '#6366F1' }}>Back</Text>
+    <SafeAreaView className="flex-1 bg-dark">
+      {/* Header */}
+      <View className="flex-row items-center px-4 py-3 border-b border-dark-border">
+        <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Go back">
+          <Ionicons name="arrow-back" size={24} color="#F1F5F9" />
         </Pressable>
+        <Text className="text-lg font-semibold text-text-primary ml-3">Subscription</Text>
+      </View>
 
-        <Text style={{ fontSize: 28, fontWeight: '700', marginBottom: 4 }} accessibilityRole="header">
-          {isSubscribed ? 'Your Subscription' : 'Upgrade Your Plan'}
+      <ScrollView className="flex-1 px-4 pt-6" contentContainerStyle={{ paddingBottom: 40 }}>
+        <Text className="text-2xl font-bold text-text-primary mb-2">Choose Your Plan</Text>
+        <Text className="text-base text-text-secondary mb-6">
+          Unlock unlimited hearts, streak protection, AI conversations, and more
         </Text>
-        <Text style={{ fontSize: 15, color: '#666', marginBottom: 24 }}>
-          {isSubscribed
-            ? `You're on the ${subscription.tier} plan.`
-            : 'Unlock more learning with a paid subscription.'}
-        </Text>
 
-        {/* Current plan status */}
-        {isSubscribed && subscription.currentPeriodEnd && (
-          <View style={{ backgroundColor: '#DCFCE7', padding: 16, borderRadius: 12, marginBottom: 24 }}>
-            <Text style={{ fontSize: 15, color: '#166534', fontWeight: '500' }}>
-              Active until {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
-            </Text>
-          </View>
-        )}
-
-        {/* Plans */}
         {PRICING_PLANS.map((plan) => {
-          const isCurrentPlan = subscription?.tier === plan.planId;
-          const isSelected = selectedPlan === plan.key;
-          const isPaid = plan.key !== 'free';
+          const isCurrentPlan = plan.planId === currentTier;
+          const isPopular = 'popular' in plan && plan.popular;
 
           return (
-            <Pressable
+            <View
               key={plan.key}
-              onPress={() => isPaid && setSelectedPlan(plan.key)}
-              style={{
-                borderWidth: 2,
-                borderColor: isSelected && isPaid ? '#6366F1' : isCurrentPlan ? '#22C55E' : '#E5E7EB',
-                borderRadius: 16,
-                padding: 20,
-                marginBottom: 12,
-                backgroundColor: isSelected && isPaid ? '#F5F3FF' : '#fff',
-                position: 'relative',
-              }}
-              accessibilityRole="button"
-              accessibilityLabel={`${plan.name} plan: ${plan.price}${plan.period}`}
+              className={`rounded-2xl p-5 mb-4 border-2 ${
+                isCurrentPlan
+                  ? 'border-success bg-success-bg'
+                  : isPopular
+                  ? 'border-primary bg-dark-card'
+                  : 'border-dark-border bg-dark-card'
+              }`}
             >
-              {'popular' in plan && plan.popular && (
-                <View style={{
-                  position: 'absolute',
-                  top: -10,
-                  right: 16,
-                  backgroundColor: '#6366F1',
-                  paddingHorizontal: 10,
-                  paddingVertical: 3,
-                  borderRadius: 8,
-                }}>
-                  <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>POPULAR</Text>
-                </View>
-              )}
-
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <Text style={{ fontSize: 20, fontWeight: '700' }}>{plan.name}</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-                  <Text style={{ fontSize: 24, fontWeight: '700', color: '#6366F1' }}>
-                    {plan.price}
-                  </Text>
-                  {plan.period ? (
-                    <Text style={{ fontSize: 14, color: '#666' }}>{plan.period}</Text>
-                  ) : null}
-                </View>
+              <View className="flex-row items-center gap-2 mb-2">
+                {isCurrentPlan && <Badge variant="success" label="Current Plan" />}
+                {isPopular && !isCurrentPlan && (
+                  <View className="bg-primary rounded-lg px-3 py-1">
+                    <Text className="text-white text-xs font-bold">MOST POPULAR</Text>
+                  </View>
+                )}
               </View>
 
-              {'savings' in plan && (
-                <Text style={{ fontSize: 13, color: '#22C55E', fontWeight: '600', marginBottom: 8 }}>
-                  {plan.savings}
-                </Text>
-              )}
+              <View className="flex-row items-baseline mb-1">
+                <Text className="text-2xl font-bold text-text-primary">{plan.price}</Text>
+                {plan.period ? (
+                  <Text className="text-sm text-text-secondary ml-1">{plan.period}</Text>
+                ) : null}
+              </View>
+              <Text className="text-lg font-semibold text-text-primary mb-3">{plan.name}</Text>
 
-              {plan.features.map((feature) => (
-                <Text key={feature} style={{ fontSize: 14, color: '#444', marginBottom: 4 }}>
-                  + {feature}
-                </Text>
+              {plan.features.map((feature, idx) => (
+                <View key={idx} className="flex-row items-center mb-2">
+                  <Ionicons name="checkmark-circle" size={18} color={isCurrentPlan ? '#34D399' : '#34D399'} />
+                  <Text className="text-sm text-text-secondary ml-2">{feature}</Text>
+                </View>
               ))}
 
-              {isCurrentPlan && (
-                <Text style={{ fontSize: 13, color: '#22C55E', fontWeight: '600', marginTop: 8 }}>
-                  Current plan
+              {plan.planId !== 'free' && !isCurrentPlan && (
+                <View className="mt-4">
+                  <Button
+                    label="Subscribe"
+                    variant={isPopular ? 'primary' : 'secondary'}
+                    onPress={() => handleSubscribe(plan.key)}
+                    loading={loadingPlan === plan.key}
+                    disabled={loadingPlan === plan.key}
+                  />
+                </View>
+              )}
+
+              {isCurrentPlan && plan.planId !== 'free' && (
+                <Text className="text-sm text-success font-medium text-center mt-3">
+                  Active until {subscription?.currentPeriodEnd
+                    ? new Date(subscription.currentPeriodEnd).toLocaleDateString()
+                    : 'N/A'}
                 </Text>
               )}
-            </Pressable>
+            </View>
           );
         })}
-
-        {/* Purchase button */}
-        {!isSubscribed && selectedPlan !== 'free' && (
-          <Pressable
-            onPress={() => handlePurchase(selectedPlan)}
-            disabled={isPurchasing}
-            style={{
-              backgroundColor: '#6366F1',
-              paddingVertical: 16,
-              borderRadius: 14,
-              alignItems: 'center',
-              marginTop: 12,
-            }}
-            accessibilityRole="button"
-            accessibilityLabel="Subscribe now"
-          >
-            {isPurchasing ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={{ color: '#fff', fontSize: 18, fontWeight: '600' }}>
-                Subscribe Now
-              </Text>
-            )}
-          </Pressable>
-        )}
       </ScrollView>
     </SafeAreaView>
   );

@@ -78,8 +78,8 @@ serve(async (req: Request) => {
       customer: customerId,
       mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: successUrl ?? 'fluenci://subscription-success',
-      cancel_url: cancelUrl ?? 'fluenci://subscription-cancel',
+      success_url: successUrl ?? 'languageai://subscription-success',
+      cancel_url: cancelUrl ?? 'languageai://subscription-cancel',
       metadata: { supabase_user_id: userId },
       subscription_data: {
         metadata: { supabase_user_id: userId },

@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { ConversationMessage, LanguageCode, ProficiencyLevel, CEFRLevel, WritingFeedback, SpeakingFeedback, AIFeature } from '../types';
+import type { ConversationMessage, LanguageCode, ProficiencyLevel } from '../types';
 
 // All AI calls go through Supabase Edge Functions.
 // The AI API key lives in Edge Function secrets, never on the client.
@@ -10,12 +10,14 @@ export interface AIChatRequest {
   targetLanguage: LanguageCode;
   level: ProficiencyLevel;
   topic?: string;
+  scenario?: string;
 }
 
 export interface AIChatResponse {
   reply: string;
   correction: string | null;
   audioUrl: string | null;
+  vocabularyHighlights?: string[];
 }
 
 export interface PronunciationScoreRequest {
@@ -27,14 +29,8 @@ export interface PronunciationScoreRequest {
 
 export interface PronunciationScoreResponse {
   score: number; // 0-100
-  pronunciationScore: number; // 0-10
-  fluencyScore: number; // 0-10
-  rhythmScore: number; // 0-10
-  overallScore: number; // 0-10
   feedback: string;
-  wordErrors: { word: string; issue: string; suggestion: string }[];
   phonemeErrors: string[];
-  transcription: string;
 }
 
 /**
@@ -81,162 +77,87 @@ export async function getHint(
   return data as { hint: string };
 }
 
-// ─── Voice ──────────────────────────────────────────────────────
+/**
+ * Get ElevenLabs TTS audio for a message.
+ * Calls the tts edge function and returns a local file URI.
+ */
+export async function getTextToSpeech(
+  text: string,
+  language: string,
+  userId?: string
+): Promise<ArrayBuffer> {
+  const { data, error } = await supabase.functions.invoke('tts', {
+    body: { text, language, userId },
+  });
 
-export interface VoiceTokenRequest {
-  language?: string;
-  level?: string;
-  nativeLanguage?: string;
-  topic?: string;
-  personalityId?: string;
-  scenarioId?: string;
-}
-
-export interface VoiceTokenResponse {
-  token: string;
-  roomName: string;
-  serverUrl: string;
+  if (error) throw new Error(`TTS error: ${error.message}`);
+  return data as ArrayBuffer;
 }
 
 /**
- * Request a LiveKit access token for a real-time voice session.
- * The Edge Function validates auth, checks daily voice minute quota,
- * and returns a signed token for joining a LiveKit room.
+ * Transcribe audio using Whisper STT.
+ * Accepts base64-encoded audio, returns transcribed text.
  */
-export async function requestVoiceToken(
-  userId: string,
-  options?: VoiceTokenRequest
-): Promise<VoiceTokenResponse> {
-  const { data, error } = await supabase.functions.invoke('voice-token', {
-    body: {
-      userId,
-      language: options?.language,
-      level: options?.level,
-      nativeLanguage: options?.nativeLanguage,
-      topic: options?.topic,
-      personalityId: options?.personalityId,
-      scenarioId: options?.scenarioId,
-    },
+export async function transcribeAudio(
+  audioBase64: string,
+  language: string
+): Promise<string> {
+  const { data, error } = await supabase.functions.invoke('transcribe', {
+    body: { audioBase64, language },
   });
 
-  if (error) throw new Error(`Voice token error: ${error.message}`);
-  return data as VoiceTokenResponse;
-}
-
-// ─── Writing Feedback ──────────────────────────────────────────
-
-export interface WritingFeedbackRequest {
-  userId: string;
-  text: string;
-  language: LanguageCode;
-  level: string;
-  promptId?: string;
-  courseId?: string;
-}
-
-export interface WritingFeedbackResponse {
-  corrections: { original: string; corrected: string; explanation: string }[];
-  suggestions: string[];
-  grammarScore: number;
-  vocabScore: number;
-  coherenceScore: number;
-  spellingScore: number;
-  overallScore: number;
-  rewritten: string;
+  if (error) throw new Error(`Transcription error: ${error.message}`);
+  return (data as { text: string }).text;
 }
 
 /**
- * Submit user-written text for AI feedback.
- * Returns structured scores and corrections. Persists submission server-side.
+ * Start a Gemini Live voice session.
+ * Returns session URI and config from the edge function.
  */
-export async function submitWritingForFeedback(
-  request: WritingFeedbackRequest
-): Promise<WritingFeedbackResponse> {
-  const { data, error } = await supabase.functions.invoke('writing-feedback', {
-    body: request,
+export async function getVoiceSessionToken(
+  targetLanguage: string,
+  level: string,
+  topic?: string
+): Promise<{ sessionUri: string; remainingMinutes: number; voiceConfig: Record<string, unknown> }> {
+  const { data, error } = await supabase.functions.invoke('voice-session-token', {
+    body: { targetLanguage, level, topic },
   });
 
-  if (error) throw new Error(`Writing feedback error: ${error.message}`);
-  return data as WritingFeedbackResponse;
-}
-
-// ─── Pronunciation Feedback ────────────────────────────────────
-
-export interface PronunciationFeedbackRequest {
-  userId: string;
-  audioBase64: string;
-  expectedText: string;
-  language: LanguageCode;
-  readingId?: string;
-  lessonId?: string;
-  targetTextRef?: string;
+  if (error) throw new Error(`Voice session token error: ${error.message}`);
+  return data as { sessionUri: string; remainingMinutes: number; voiceConfig: Record<string, unknown> };
 }
 
 /**
- * Submit audio recording for pronunciation scoring.
- * Uses Deepgram STT + LLM for detailed feedback. Persists attempt server-side.
+ * Report voice session usage after session ends.
  */
-export async function submitPronunciationForFeedback(
-  request: PronunciationFeedbackRequest
-): Promise<PronunciationScoreResponse> {
-  const { data, error } = await supabase.functions.invoke('score-pronunciation', {
-    body: request,
+export async function reportVoiceSessionEnd(
+  durationMinutes: number
+): Promise<{ remainingMinutes: number | 'unlimited'; totalUsedToday: number }> {
+  const { data, error } = await supabase.functions.invoke('voice-session-end', {
+    body: { durationMinutes },
   });
 
-  if (error) throw new Error(`Pronunciation feedback error: ${error.message}`);
-  return data as PronunciationScoreResponse;
-}
-
-// ─── Reading Help ──────────────────────────────────────────────
-
-export interface ReadingHelpRequest {
-  userId: string;
-  readingId?: string;
-  articleId?: string;
-  text?: string;
-  language: LanguageCode;
-  action: 'summarize' | 'define' | 'comprehension_questions';
+  if (error) throw new Error(`Voice session end error: ${error.message}`);
+  return data as { remainingMinutes: number | 'unlimited'; totalUsedToday: number };
 }
 
 /**
- * Get AI-powered help with a reading: summarize, define words, or generate comprehension questions.
+ * Analyze a voice conversation turn to extract corrections and vocabulary.
+ * Called asynchronously after each Gemini Live turn.
  */
-export async function getReadingHelp(
-  request: ReadingHelpRequest
-): Promise<Record<string, unknown>> {
-  const { data, error } = await supabase.functions.invoke('reading-help', {
-    body: request,
+export async function analyzeConversationTurn(
+  userMessage: string,
+  aiReply: string,
+  targetLanguage: string,
+  level: string
+): Promise<{ correction: string | null; vocabularyHighlights: string[] }> {
+  const { data, error } = await supabase.functions.invoke('analyze-turn', {
+    body: { userMessage, aiReply, targetLanguage, level },
   });
 
-  if (error) throw new Error(`Reading help error: ${error.message}`);
-  return data as Record<string, unknown>;
-}
-
-// ─── AI Usage Check ────────────────────────────────────────────
-
-export interface AIUsageCheckResponse {
-  tier: string;
-  usageSummary: {
-    feature: string;
-    requestCount: number;
-    totalTokens: number;
-    limit: number | 'unlimited';
-    allowed: boolean;
-  }[];
-}
-
-/**
- * Check the user's AI usage for the current billing period.
- * Optionally filter by a specific feature.
- */
-export async function checkAIUsage(
-  userId: string,
-  feature?: AIFeature
-): Promise<AIUsageCheckResponse> {
-  const { data, error } = await supabase.functions.invoke('ai-usage-check', {
-    body: { userId, feature },
-  });
-
-  if (error) throw new Error(`AI usage check error: ${error.message}`);
-  return data as AIUsageCheckResponse;
+  if (error) {
+    console.error('Analyze turn error:', error);
+    return { correction: null, vocabularyHighlights: [] };
+  }
+  return data as { correction: string | null; vocabularyHighlights: string[] };
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,23 +11,26 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useProfile } from '../../../hooks/useProfile';
 import { usePracticeSession } from '../../../hooks/usePracticeSession';
 import { AudioPlayButton } from '../../../components/audio/AudioPlayButton';
+import { GradientBackground } from '../../../components/ui/GradientBackground';
+import { GradientBorderCard } from '../../../components/ui/GradientBorderCard';
 import { trackEvent } from '../../../lib/analytics';
 import type { ConversationMessage, LanguageCode, ProficiencyLevel } from '../../../types';
 
-const TOPICS = [
-  'Daily Routine',
-  'Ordering Food',
-  'Asking for Directions',
-  'At the Store',
-  'Meeting Someone New',
-  'Travel Plans',
-  'Hobbies & Interests',
-  'Weather & Seasons',
-  'Family & Friends',
-  'Free Conversation',
+const TOPICS: { label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { label: 'Daily Routine', icon: 'sunny' },
+  { label: 'Ordering Food', icon: 'restaurant' },
+  { label: 'Asking for Directions', icon: 'navigate' },
+  { label: 'At the Store', icon: 'cart' },
+  { label: 'Meeting Someone New', icon: 'people' },
+  { label: 'Travel Plans', icon: 'airplane' },
+  { label: 'Hobbies & Interests', icon: 'football' },
+  { label: 'Weather & Seasons', icon: 'cloud' },
+  { label: 'Family & Friends', icon: 'heart' },
+  { label: 'Free Conversation', icon: 'chatbubble' },
 ];
 
 export default function PracticeScreen() {
@@ -45,6 +48,7 @@ export default function PracticeScreen() {
   } = usePracticeSession();
 
   const [input, setInput] = useState('');
+  const flatListRef = useRef<FlatList>(null);
 
   const targetLanguage = (profile?.targetLanguage ?? 'es') as LanguageCode;
   const level = (profile?.level ?? 'beginner') as ProficiencyLevel;
@@ -72,427 +76,191 @@ export default function PracticeScreen() {
 
   if (!sessionId) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
-        <View style={{ padding: 20 }}>
-          <Text style={{ fontSize: 28, fontWeight: '700', marginBottom: 4 }} accessibilityRole="header">
-            AI Practice
-          </Text>
-          <Text style={{ fontSize: 15, color: '#666', marginBottom: 24 }}>
-            Choose a topic to practice {targetLanguage.toUpperCase()} conversation.
-          </Text>
-        </View>
+      <GradientBackground>
+        <SafeAreaView className="flex-1">
+          <View className="flex-1 px-4 pt-4">
+            <Text className="text-[28px] font-bold text-text-primary mb-1" accessibilityRole="header">
+              AI Practice
+            </Text>
+            <Text className="text-base text-text-secondary mb-6">
+              Choose a topic to practice {targetLanguage.toUpperCase()} conversation.
+            </Text>
 
-        {/* Voice Practice Banner */}
-        <Pressable
-          onPress={() => router.push('/(app)/practice/voice')}
-          style={{
-            marginHorizontal: 20,
-            marginBottom: 12,
-            backgroundColor: '#EEF2FF',
-            padding: 18,
-            borderRadius: 16,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            borderWidth: 1,
-            borderColor: '#C7D2FE',
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Start voice practice"
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <View
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 22,
-                backgroundColor: '#6366F1',
-                justifyContent: 'center',
-                alignItems: 'center',
-                marginRight: 14,
-              }}
-            >
-              <Text style={{ fontSize: 20, color: '#fff' }}>🎙</Text>
-            </View>
-            <View>
-              <Text style={{ fontSize: 17, fontWeight: '700', color: '#312E81' }}>Voice Practice</Text>
-              <Text style={{ fontSize: 13, color: '#6366F1' }}>Real-time AI conversation</Text>
-            </View>
+            <FlatList
+              data={TOPICS}
+              keyExtractor={(item) => item.label}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: 100 }}
+              renderItem={({ item }) => (
+                <GradientBorderCard style={{ marginBottom: 12 }}>
+                  <Pressable
+                    onPress={() => handleStartSession(item.label)}
+                    disabled={isLoading}
+                    className="p-5 flex-row items-center"
+                    accessibilityRole="button"
+                    accessibilityLabel={`Practice topic: ${item.label}`}
+                  >
+                    <View className="w-10 h-10 rounded-full bg-primary/15 items-center justify-center">
+                      <Ionicons name={item.icon} size={22} color="#A855F7" />
+                    </View>
+                    <View className="ml-4 flex-1">
+                      <Text className="text-base font-semibold text-text-primary">{item.label}</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color="#7DD3FC" />
+                  </Pressable>
+                </GradientBorderCard>
+              )}
+            />
           </View>
-          <Text style={{ fontSize: 20, color: '#6366F1' }}>{'>'}</Text>
-        </Pressable>
 
-        {/* Driving Mode Banner */}
-        <Pressable
-          onPress={() => router.push('/(app)/practice/driving')}
-          style={{
-            marginHorizontal: 20,
-            marginBottom: 12,
-            backgroundColor: '#111827',
-            padding: 18,
-            borderRadius: 16,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Start driving mode practice"
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <View
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 22,
-                backgroundColor: 'rgba(99,102,241,0.3)',
-                justifyContent: 'center',
-                alignItems: 'center',
-                marginRight: 14,
-              }}
-            >
-              <Text style={{ fontSize: 20 }}>🚗</Text>
+          {isLoading && (
+            <View className="absolute inset-0 justify-center items-center" style={{ backgroundColor: 'rgba(12,15,20,0.8)' }}>
+              <ActivityIndicator size="large" color="#38BDF8" />
+              <Text className="text-text-secondary mt-3">Starting session...</Text>
             </View>
-            <View>
-              <Text style={{ fontSize: 17, fontWeight: '700', color: '#E5E7EB' }}>Driving Mode</Text>
-              <Text style={{ fontSize: 13, color: '#818CF8' }}>Hands-free voice practice</Text>
-            </View>
-          </View>
-          <Text style={{ fontSize: 20, color: '#4B5563' }}>{'>'}</Text>
-        </Pressable>
-
-        {/* Writing Practice Banner */}
-        <Pressable
-          onPress={() => router.push('/(app)/practice/writing')}
-          style={{
-            marginHorizontal: 20,
-            marginBottom: 12,
-            backgroundColor: '#F0FDF4',
-            padding: 18,
-            borderRadius: 16,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            borderWidth: 1,
-            borderColor: '#BBF7D0',
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Open writing practice"
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <View
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 22,
-                backgroundColor: '#22C55E',
-                justifyContent: 'center',
-                alignItems: 'center',
-                marginRight: 14,
-              }}
-            >
-              <Text style={{ fontSize: 20, color: '#fff' }}>✍️</Text>
-            </View>
-            <View>
-              <Text style={{ fontSize: 17, fontWeight: '700', color: '#166534' }}>Writing Practice</Text>
-              <Text style={{ fontSize: 13, color: '#16A34A' }}>AI-powered writing feedback</Text>
-            </View>
-          </View>
-          <Text style={{ fontSize: 20, color: '#86EFAC' }}>{'>'}</Text>
-        </Pressable>
-
-        {/* Pronunciation Practice Banner */}
-        <Pressable
-          onPress={() => router.push('/(app)/practice/pronunciation')}
-          style={{
-            marginHorizontal: 20,
-            marginBottom: 12,
-            backgroundColor: '#FDF4FF',
-            padding: 18,
-            borderRadius: 16,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            borderWidth: 1,
-            borderColor: '#F0ABFC',
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Open pronunciation practice"
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <View
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 22,
-                backgroundColor: '#A855F7',
-                justifyContent: 'center',
-                alignItems: 'center',
-                marginRight: 14,
-              }}
-            >
-              <Text style={{ fontSize: 20, color: '#fff' }}>🗣</Text>
-            </View>
-            <View>
-              <Text style={{ fontSize: 17, fontWeight: '700', color: '#6B21A8' }}>Pronunciation</Text>
-              <Text style={{ fontSize: 13, color: '#9333EA' }}>Score your speaking accuracy</Text>
-            </View>
-          </View>
-          <Text style={{ fontSize: 20, color: '#D8B4FE' }}>{'>'}</Text>
-        </Pressable>
-
-        {/* Scenarios Banner */}
-        <Pressable
-          onPress={() => router.push('/(app)/practice/scenarios')}
-          style={{
-            marginHorizontal: 20,
-            marginBottom: 20,
-            backgroundColor: '#FFF7ED',
-            padding: 18,
-            borderRadius: 16,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            borderWidth: 1,
-            borderColor: '#FED7AA',
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Browse conversation scenarios"
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <View
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 22,
-                backgroundColor: '#F97316',
-                justifyContent: 'center',
-                alignItems: 'center',
-                marginRight: 14,
-              }}
-            >
-              <Text style={{ fontSize: 20, color: '#fff' }}>🎭</Text>
-            </View>
-            <View>
-              <Text style={{ fontSize: 17, fontWeight: '700', color: '#9A3412' }}>Scenarios</Text>
-              <Text style={{ fontSize: 13, color: '#EA580C' }}>Real-world conversation practice</Text>
-            </View>
-          </View>
-          <Text style={{ fontSize: 20, color: '#FDBA74' }}>{'>'}</Text>
-        </Pressable>
-
-        <View style={{ paddingHorizontal: 20, marginBottom: 12 }}>
-          <Text style={{ fontSize: 15, fontWeight: '600', color: '#374151' }}>Text Practice</Text>
-        </View>
-
-        <FlatList
-          data={TOPICS}
-          keyExtractor={(item) => item}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
-          renderItem={({ item }) => (
-            <Pressable
-              onPress={() => handleStartSession(item)}
-              disabled={isLoading}
-              style={{
-                backgroundColor: '#F9FAFB',
-                padding: 18,
-                borderRadius: 14,
-                marginBottom: 10,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-              accessibilityRole="button"
-              accessibilityLabel={`Practice topic: ${item}`}
-            >
-              <Text style={{ fontSize: 16, fontWeight: '500' }}>{item}</Text>
-              <Text style={{ fontSize: 18, color: '#C7D2FE' }}>{'>'}</Text>
-            </Pressable>
           )}
-        />
-
-        {isLoading && (
-          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.8)' }}>
-            <ActivityIndicator size="large" color="#6366F1" />
-            <Text style={{ marginTop: 12, color: '#666' }}>Starting session...</Text>
-          </View>
-        )}
-      </SafeAreaView>
+        </SafeAreaView>
+      </GradientBackground>
     );
   }
 
   // ─── Active Conversation ──────────────────────────────────────
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={90}
-      >
-        {/* Header */}
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: 16,
-            borderBottomWidth: 0.5,
-            borderBottomColor: '#E5E7EB',
-          }}
+    <GradientBackground>
+      <SafeAreaView className="flex-1" edges={['top']}>
+        <KeyboardAvoidingView
+          className="flex-1"
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={90}
         >
-          <View>
-            <Text style={{ fontSize: 18, fontWeight: '700' }} accessibilityRole="header">
-              AI Conversation
-            </Text>
-            <Text style={{ fontSize: 13, color: '#666' }}>
-              {targetLanguage.toUpperCase()} | {level}
-            </Text>
-          </View>
-          <Pressable
-            onPress={handleEnd}
-            style={{
-              backgroundColor: '#FEE2E2',
-              paddingHorizontal: 16,
-              paddingVertical: 8,
-              borderRadius: 10,
-            }}
-            accessibilityRole="button"
-            accessibilityLabel="End conversation"
-          >
-            <Text style={{ color: '#DC2626', fontWeight: '600', fontSize: 14 }}>End</Text>
-          </Pressable>
-        </View>
-
-        {/* Messages */}
-        <FlatList
-          data={messages}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{ padding: 16, flexGrow: 1 }}
-          renderItem={({ item }) => (
-            <View
-              style={{
-                alignSelf: item.role === 'user' ? 'flex-end' : 'flex-start',
-                backgroundColor: item.role === 'user' ? '#6366F1' : '#F3F4F6',
-                padding: 14,
-                borderRadius: 18,
-                borderBottomRightRadius: item.role === 'user' ? 4 : 18,
-                borderBottomLeftRadius: item.role === 'user' ? 18 : 4,
-                marginBottom: 8,
-                maxWidth: '82%',
-              }}
-            >
-              <Text
-                style={{
-                  color: item.role === 'user' ? '#fff' : '#111',
-                  fontSize: 16,
-                  lineHeight: 22,
-                }}
-              >
-                {item.content}
+          {/* Header */}
+          <View className="flex-row items-center justify-between px-4 py-3 border-b border-dark-border">
+            <View>
+              <Text className="text-lg font-bold text-text-primary" accessibilityRole="header">
+                AI Conversation
               </Text>
+              <Text className="text-[13px] text-text-secondary">
+                {targetLanguage.toUpperCase()} | {level}
+              </Text>
+            </View>
+            <Pressable
+              onPress={handleEnd}
+              className="bg-error-bg px-4 py-2 rounded-[10px]"
+              accessibilityRole="button"
+              accessibilityLabel="End conversation"
+            >
+              <Text className="text-error font-semibold text-sm">End</Text>
+            </Pressable>
+          </View>
 
-              {item.correction && (
+          {/* Messages */}
+          <FlatList
+            ref={flatListRef}
+            data={messages}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={{ padding: 16, flexGrow: 1 }}
+            onContentSizeChange={() => flatListRef.current?.scrollToEnd()}
+            renderItem={({ item }) => (
+              <View
+                className={`mb-2 max-w-[82%] ${item.role === 'user' ? 'self-end' : 'self-start'}`}
+              >
                 <View
-                  style={{
-                    marginTop: 8,
-                    paddingTop: 8,
-                    borderTopWidth: 0.5,
-                    borderTopColor: item.role === 'user' ? 'rgba(255,255,255,0.3)' : '#D1D5DB',
-                  }}
+                  className={`p-[14px] ${
+                    item.role === 'user'
+                      ? 'bg-primary rounded-[18px] rounded-br-[4px]'
+                      : 'bg-dark-card rounded-[18px] rounded-bl-[4px]'
+                  }`}
                 >
                   <Text
-                    style={{
-                      fontSize: 14,
-                      color: item.role === 'user' ? '#FCA5A5' : '#DC2626',
-                      fontStyle: 'italic',
-                    }}
+                    className={`text-base ${
+                      item.role === 'user' ? 'text-white' : 'text-text-primary'
+                    }`}
+                    style={{ lineHeight: 22 }}
                   >
-                    Correction: {item.correction}
+                    {item.content}
                   </Text>
-                </View>
-              )}
 
-              {item.audioUrl && item.role === 'assistant' && (
-                <View style={{ marginTop: 8 }}>
-                  <AudioPlayButton audioUrl={item.audioUrl} size={32} />
+                  {item.correction && (
+                    <View
+                      className="mt-2 pt-2"
+                      style={{
+                        borderTopWidth: 0.5,
+                        borderTopColor:
+                          item.role === 'user' ? 'rgba(255,255,255,0.3)' : '#252A35',
+                      }}
+                    >
+                      <Text
+                        className={`text-sm italic ${
+                          item.role === 'user' ? 'text-error-light' : 'text-error'
+                        }`}
+                      >
+                        Correction: {item.correction}
+                      </Text>
+                    </View>
+                  )}
+
+                  {item.audioUrl && item.role === 'assistant' && (
+                    <View className="mt-2">
+                      <AudioPlayButton audioUrl={item.audioUrl} size={32} />
+                    </View>
+                  )}
                 </View>
-              )}
+              </View>
+            )}
+            ListEmptyComponent={
+              <View className="flex-1 justify-center items-center">
+                <Text className="text-base text-text-tertiary">Start the conversation!</Text>
+              </View>
+            }
+          />
+
+          {/* Typing indicator */}
+          {isSending && (
+            <View className="px-5 pb-1">
+              <Text className="text-[13px] text-text-tertiary italic">AI is typing...</Text>
             </View>
           )}
-          ListEmptyComponent={
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-              <Text style={{ fontSize: 16, color: '#999' }}>Start the conversation!</Text>
-            </View>
-          }
-        />
 
-        {/* Typing indicator */}
-        {isSending && (
-          <View style={{ paddingHorizontal: 20, paddingBottom: 4 }}>
-            <Text style={{ fontSize: 13, color: '#999', fontStyle: 'italic' }}>AI is typing...</Text>
+          {/* Input */}
+          <View className="flex-row items-end px-4 py-3 border-t border-dark-border">
+            <TextInput
+              value={input}
+              onChangeText={setInput}
+              placeholder="Type a message..."
+              placeholderTextColor="#64748B"
+              multiline
+              maxLength={500}
+              className="flex-1 border-2 border-dark-border bg-dark-card-alt rounded-[14px] px-4 py-3 text-base text-text-primary mr-3 max-h-24"
+              accessibilityLabel="Message input"
+              returnKeyType="send"
+              blurOnSubmit
+              onSubmitEditing={handleSend}
+            />
+            <Pressable
+              onPress={handleSend}
+              disabled={!input.trim() || isSending}
+              className={`w-11 h-11 rounded-[22px] justify-center items-center ${
+                input.trim() && !isSending ? 'bg-primary' : 'bg-primary-light'
+              }`}
+              accessibilityRole="button"
+              accessibilityLabel="Send message"
+            >
+              {isSending ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Ionicons name="send" size={18} color="#fff" />
+              )}
+            </Pressable>
           </View>
-        )}
 
-        {/* Input */}
-        <View
-          style={{
-            flexDirection: 'row',
-            padding: 12,
-            borderTopWidth: 0.5,
-            borderTopColor: '#E5E7EB',
-            alignItems: 'flex-end',
-          }}
-        >
-          <TextInput
-            value={input}
-            onChangeText={setInput}
-            placeholder="Type a message..."
-            multiline
-            maxLength={500}
-            style={{
-              flex: 1,
-              borderWidth: 1,
-              borderColor: '#D1D5DB',
-              borderRadius: 20,
-              paddingHorizontal: 16,
-              paddingVertical: 10,
-              fontSize: 16,
-              marginRight: 8,
-              maxHeight: 100,
-            }}
-            accessibilityLabel="Message input"
-            returnKeyType="send"
-            blurOnSubmit
-            onSubmitEditing={handleSend}
-          />
-          <Pressable
-            onPress={handleSend}
-            disabled={!input.trim() || isSending}
-            style={{
-              backgroundColor: input.trim() && !isSending ? '#6366F1' : '#C7D2FE',
-              width: 44,
-              height: 44,
-              borderRadius: 22,
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}
-            accessibilityRole="button"
-            accessibilityLabel="Send message"
-          >
-            {isSending ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 18 }}>{'>'}</Text>
-            )}
-          </Pressable>
-        </View>
-
-        {error && (
-          <Text style={{ fontSize: 13, color: '#EF4444', textAlign: 'center', paddingBottom: 8 }}>
-            {error}
-          </Text>
-        )}
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+          {error && (
+            <Text className="text-[13px] text-error text-center pb-2">
+              {error}
+            </Text>
+          )}
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </GradientBackground>
   );
 }

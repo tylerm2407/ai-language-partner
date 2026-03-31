@@ -1,43 +1,44 @@
 import { View, Text } from 'react-native';
-import type { Exercise } from '../../types';
+import type { ReactNode } from 'react';
+import type { ExerciseType } from '../../types';
 
 interface ExerciseCardProps {
-  exercise: Exercise;
-  onAnswer: (answer: string) => void;
+  children: ReactNode;
+  type: ExerciseType;
+  prompt: string;
 }
 
-/**
- * Stub component for rendering a single exercise within a lesson.
- * TODO: Implement different renderers per exercise type:
- *   - multiple_choice → tap one of 4 options
- *   - listening_choice → play audio, then tap option
- *   - listening_type → play audio, then type what you heard
- *   - translate_to_target → show native text, type in target language
- *   - translate_to_native → show target text, type in native language
- *   - speaking → play prompt, record user speech
- *   - fill_blank → sentence with blank, type missing word
- *   - free_production → open-ended AI-graded response
- */
-export function ExerciseCard({ exercise, onAnswer }: ExerciseCardProps) {
+const TYPE_LABELS: Record<ExerciseType, string> = {
+  multiple_choice: 'Choose the correct answer',
+  listening_choice: 'What did you hear?',
+  listening_type: 'Type what you hear',
+  translate_to_target: 'Translate to target language',
+  translate_to_native: 'Translate to your language',
+  speaking: 'Speak the answer',
+  fill_blank: 'Fill in the blank',
+  free_production: 'Write freely',
+  cloze_deletion: 'Fill in the missing word',
+  sentence_construction: 'Arrange the words',
+  dictation: 'Type what you hear',
+  error_correction: 'Find and fix the error',
+};
+
+export function ExerciseCard({ children, type, prompt }: ExerciseCardProps) {
   return (
-    <View
-      style={{
-        padding: 24,
-        backgroundColor: '#F9FAFB',
-        borderRadius: 20,
-        minHeight: 200,
-        justifyContent: 'center',
-      }}
-    >
-      <Text style={{ fontSize: 14, color: '#6366F1', fontWeight: '600', marginBottom: 8 }}>
-        {exercise.type.replace(/_/g, ' ').toUpperCase()}
+    <View className="bg-dark-card rounded-[20px] p-6 min-h-[200px] shadow-card border border-dark-border">
+      <Text
+        className="text-text-secondary text-sm font-sans-medium mb-2"
+        accessibilityRole="header"
+      >
+        {TYPE_LABELS[type]}
       </Text>
-      <Text style={{ fontSize: 22, fontWeight: '600', marginBottom: 16 }}>
-        {exercise.prompt}
+      <Text
+        className="text-text-primary text-[22px] font-sans-semibold mb-6"
+        accessibilityRole="header"
+      >
+        {prompt}
       </Text>
-      <Text style={{ fontSize: 14, color: '#999' }}>
-        Exercise renderer not yet implemented for this type.
-      </Text>
+      {children}
     </View>
   );
 }
