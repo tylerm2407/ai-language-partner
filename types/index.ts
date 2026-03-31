@@ -243,3 +243,117 @@ export interface DailyChallengesRecord {
 // ─── Streak Events ─────────────────────────────────────────────
 
 export type StreakEventType = 'streak_broken' | 'streak_repaired' | 'shield_activated' | 'shield_used' | 'freeze_used';
+
+// ─── Reading ──────────────────────────────────────────────────
+
+export interface ReadingPassage {
+  id: string;
+  courseId: string;
+  unitId: string | null;
+  cefrLevel: string;
+  title: string;
+  content: string;
+  contentTranslation: string | null;
+  wordCount: number;
+  audioUrl: string | null;
+  imageUrl: string | null;
+  sourceAttribution: string | null;
+  tags: string[];
+  isPublished: boolean;
+  createdAt: string;
+}
+
+export interface ReadingAnnotation {
+  id: string;
+  passageId: string;
+  wordOrPhrase: string;
+  translation: string;
+  startIndex: number;
+  endIndex: number;
+  cardId: string | null;
+  audioUrl: string | null;
+  partOfSpeech: string | null;
+}
+
+export interface ReadingQuestion {
+  id: string;
+  passageId: string;
+  orderIndex: number;
+  questionText: string;
+  questionType: 'multiple_choice' | 'short_answer' | 'true_false';
+  correctAnswer: string;
+  acceptedAnswers: string[];
+  options: string[] | null;
+}
+
+// ─── Writing ──────────────────────────────────────────────────
+
+export interface WritingPrompt {
+  id: string;
+  courseId: string;
+  unitId: string | null;
+  cefrLevel: string;
+  promptText: string;
+  promptType: 'guided' | 'free' | 'error_correction' | 'dictation' | 'sentence_construction';
+  exampleResponse: string | null;
+  targetVocabulary: string[];
+  targetGrammar: string[];
+  minWords: number | null;
+  maxWords: number | null;
+  rubricCriteria: unknown[];
+  createdAt: string;
+}
+
+export interface WritingFeedback {
+  grammarScore: number;
+  spellingScore: number;
+  sentenceStructureScore: number;
+  vocabularyScore: number;
+  coherenceScore: number;
+  corrections: WritingCorrection[];
+  overallFeedback: string;
+}
+
+export interface WritingCorrection {
+  original: string;
+  corrected: string;
+  explanation: string;
+  type: 'grammar' | 'vocabulary' | 'spelling' | 'style';
+  ruleViolated?: string;
+}
+
+export interface WritingSubmission {
+  id: string;
+  userId: string;
+  promptId: string;
+  submissionText: string;
+  aiFeedback: WritingFeedback | null;
+  overallScore: number | null;
+  wordCount: number;
+  timeSpentMs: number;
+  submittedAt: string;
+}
+
+// ─── Daily News ───────────────────────────────────────────────
+
+export interface DailyNewsArticle {
+  id: string;
+  date: string;
+  language: string;
+  cefrLevel: string;
+  title: string;
+  titleTranslation: string | null;
+  summary: string;
+  content: string;
+  contentTranslation: string | null;
+  vocabularyHighlights: VocabularyHighlight[];
+  sourceTopic: string | null;
+  imageUrl: string | null;
+  createdAt: string;
+}
+
+export interface VocabularyHighlight {
+  word: string;
+  translation: string;
+  partOfSpeech?: string;
+}

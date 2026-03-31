@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Audio } from 'expo-av';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAppStore } from '../../../stores/useAppStore';
-import { sendChatMessage, getTextToSpeech, analyzeConversationTurn } from '../../../lib/ai';
+import { sendChatMessage, getTextToSpeech, analyzeConversationTurn, VoiceError } from '../../../lib/ai';
 import { useGeminiLive } from '../../../hooks/useGeminiLive';
 import { ChatBubble } from '../../../components/chat/ChatBubble';
 import { ChatInput } from '../../../components/chat/ChatInput';
@@ -187,14 +187,7 @@ export default function ChatScreen() {
         setHandsFreeState('TTS_PLAYING');
       }
 
-      const audioData = await getTextToSpeech(text, targetLanguage, user?.id);
-
-      const bytes = new Uint8Array(audioData);
-      let binary = '';
-      for (let i = 0; i < bytes.length; i++) {
-        binary += String.fromCharCode(bytes[i]);
-      }
-      const base64 = btoa(binary);
+      const base64 = await getTextToSpeech(text, targetLanguage, user?.id);
       const dataUri = `data:audio/mpeg;base64,${base64}`;
 
       await Audio.setAudioModeAsync({
@@ -219,11 +212,14 @@ export default function ChatScreen() {
         // Don't break the loop on TTS error -- restart listening
         setShouldStartListening(true);
       } else {
-        Alert.alert(
-          'Voice Unavailable',
-          'Voice features are temporarily unavailable. You can continue chatting with text.',
-          [{ text: 'OK' }]
-        );
+        const message = err instanceof VoiceError
+          ? err.code === 'DAILY_LIMIT'
+            ? "You've reached your daily voice limit. Upgrade your plan for more."
+            : err.code === 'NOT_CONFIGURED'
+              ? 'Voice features are not yet configured. Please try again later.'
+              : 'Voice features are temporarily unavailable. You can continue chatting with text.'
+          : 'Voice features are temporarily unavailable. You can continue chatting with text.';
+        Alert.alert('Voice Unavailable', message, [{ text: 'OK' }]);
       }
     }
   }, [targetLanguage, user?.id]);

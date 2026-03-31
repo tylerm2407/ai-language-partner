@@ -143,12 +143,20 @@ serve(async (req: Request) => {
       throw new Error(`ElevenLabs API error: ${response.status} - ${errorText}`);
     }
 
-    // Return audio binary directly
+    // Return base64-encoded JSON instead of raw binary
+    // (supabase.functions.invoke can't reliably handle binary in React Native)
     const audioBuffer = await response.arrayBuffer();
+    const uint8 = new Uint8Array(audioBuffer);
+    const CHUNK = 8192;
+    let binary = '';
+    for (let i = 0; i < uint8.length; i += CHUNK) {
+      binary += String.fromCharCode(...uint8.subarray(i, i + CHUNK));
+    }
+    const base64 = btoa(binary);
 
-    return new Response(audioBuffer, {
+    return new Response(JSON.stringify({ audioBase64: base64 }), {
       headers: {
-        'Content-Type': 'audio/mpeg',
+        'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
       },
     });

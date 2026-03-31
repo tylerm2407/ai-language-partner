@@ -86,6 +86,12 @@ export default function AppLayout() {
               ),
             }}
           />
+          <Tabs.Screen
+            name="news"
+            options={{
+              href: null,
+            }}
+          />
         </Tabs>
       </View>
     </ErrorBoundary>

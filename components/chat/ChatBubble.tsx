@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { View, Text, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { Audio } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
-import { getTextToSpeech } from '../../lib/ai';
+import { getTextToSpeech, VoiceError } from '../../lib/ai';
 import type { ConversationMessage } from '../../types';
 
 interface ChatBubbleProps {
@@ -75,19 +75,11 @@ export function ChatBubble({ message, targetLanguage, userId }: ChatBubbleProps)
 
     setIsLoadingAudio(true);
     try {
-      const audioData = await getTextToSpeech(
+      const base64 = await getTextToSpeech(
         message.content,
         targetLanguage ?? 'en',
         userId
       );
-
-      // Convert ArrayBuffer to base64 data URI for expo-av
-      const bytes = new Uint8Array(audioData);
-      let binary = '';
-      for (let i = 0; i < bytes.length; i++) {
-        binary += String.fromCharCode(bytes[i]);
-      }
-      const base64 = btoa(binary);
       const dataUri = `data:audio/mpeg;base64,${base64}`;
 
       const { sound } = await Audio.Sound.createAsync({ uri: dataUri });
@@ -104,11 +96,14 @@ export function ChatBubble({ message, targetLanguage, userId }: ChatBubbleProps)
       await sound.playAsync();
     } catch (err) {
       console.error('TTS playback failed:', err);
-      Alert.alert(
-        'Voice Unavailable',
-        'Voice features are temporarily unavailable. You can continue using text.',
-        [{ text: 'OK' }]
-      );
+      const message = err instanceof VoiceError
+        ? err.code === 'DAILY_LIMIT'
+          ? "You've reached your daily voice limit. Upgrade your plan for more."
+          : err.code === 'NOT_CONFIGURED'
+            ? 'Voice features are not yet configured. Please try again later.'
+            : 'Voice features are temporarily unavailable. You can continue using text.'
+        : 'Voice features are temporarily unavailable. You can continue using text.';
+      Alert.alert('Voice Unavailable', message, [{ text: 'OK' }]);
     } finally {
       setIsLoadingAudio(false);
     }

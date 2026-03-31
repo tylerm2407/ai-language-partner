@@ -10,8 +10,10 @@ interface Props {
 }
 
 export function WritingFeedbackView({ feedback, onTryAgain, onContinue }: Props) {
+  const spellingScore = feedback.spellingScore ?? 0;
+  const sentenceStructureScore = feedback.sentenceStructureScore ?? 0;
   const overallScore = Math.round(
-    (feedback.grammarScore + feedback.vocabularyScore + feedback.coherenceScore) / 3
+    (feedback.grammarScore + feedback.vocabularyScore + feedback.coherenceScore + spellingScore + sentenceStructureScore) / 5
   );
   const scoreColor = overallScore >= 80 ? '#22C55E' : overallScore >= 60 ? '#CA8A04' : '#EF4444';
   const scoreBg = overallScore >= 80 ? '#DCFCE7' : overallScore >= 60 ? '#FEF9C3' : '#FEE2E2';
@@ -40,6 +42,8 @@ export function WritingFeedbackView({ feedback, onTryAgain, onContinue }: Props)
           <ScoreRow label="Grammar" score={feedback.grammarScore} />
           <ScoreRow label="Vocabulary" score={feedback.vocabularyScore} />
           <ScoreRow label="Coherence" score={feedback.coherenceScore} />
+          <ScoreRow label="Spelling" score={spellingScore} />
+          <ScoreRow label="Sentence Structure" score={sentenceStructureScore} />
         </View>
 
         {/* Overall Feedback */}
@@ -116,7 +120,7 @@ function ScoreRow({ label, score }: { label: string; score: number }) {
         <Text style={{ fontSize: 14, color: '#666' }}>{label}</Text>
         <Text style={{ fontSize: 14, fontWeight: '600', color }}>{score}/100</Text>
       </View>
-      <ProgressBar progress={normalizedScore} color={color} />
+      <ProgressBar progress={normalizedScore} />
     </View>
   );
 }

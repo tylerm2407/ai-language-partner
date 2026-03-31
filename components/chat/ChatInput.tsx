@@ -220,11 +220,15 @@ export function ChatInput({
           }
         } catch (err) {
           console.error('Transcription failed:', err);
-          Alert.alert(
-            'Voice Unavailable',
-            'Voice features are temporarily unavailable. You can switch to typing using the keyboard button.',
-            [{ text: 'OK' }]
-          );
+          const { VoiceError } = await import('../../lib/ai');
+          const message = err instanceof VoiceError
+            ? err.code === 'DAILY_LIMIT'
+              ? "You've reached your daily voice limit. Upgrade your plan for more."
+              : err.code === 'NOT_CONFIGURED'
+                ? 'Voice features are not yet configured. Please try again later.'
+                : 'Voice features are temporarily unavailable. You can switch to typing using the keyboard button.'
+            : 'Voice features are temporarily unavailable. You can switch to typing using the keyboard button.';
+          Alert.alert('Voice Unavailable', message, [{ text: 'OK' }]);
         } finally {
           setIsTranscribing(false);
         }

@@ -65,7 +65,7 @@ export function OutOfHeartsModal({ visible, nextRegenAt, onDismiss }: OutOfHeart
                   end={GRADIENT_END}
                   style={{ paddingVertical: 16, alignItems: 'center', borderRadius: 14 }}
                 >
-                  <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '700' }}>
+                  <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '700', textAlign: 'center' }}>
                     Upgrade for Unlimited Hearts
                   </Text>
                 </LinearGradient>

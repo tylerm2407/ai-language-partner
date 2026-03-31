@@ -16,6 +16,13 @@ import type {
   DailyChallengesRecord,
   LeagueTier,
   StreakEventType,
+  ReadingPassage,
+  ReadingAnnotation,
+  ReadingQuestion,
+  WritingPrompt,
+  WritingSubmission,
+  WritingFeedback,
+  DailyNewsArticle,
 } from '../types';
 
 // ─── User Profile ───────────────────────────────────────────────
@@ -786,4 +793,295 @@ export async function updateStreakShield(
     .eq('user_id', userId);
 
   if (error) throw error;
+}
+
+// ─── Reading ──────────────────────────────────────────────────
+
+export async function fetchReadingPassagesByCourse(courseId: string): Promise<ReadingPassage[]> {
+  const { data, error } = await supabase
+    .from('reading_passages')
+    .select('*')
+    .eq('course_id', courseId)
+    .eq('is_published', true)
+    .order('cefr_level', { ascending: true })
+    .order('created_at', { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []).map(mapReadingPassage);
+}
+
+export async function fetchPassageWithAnnotations(
+  passageId: string
+): Promise<{ passage: ReadingPassage; annotations: ReadingAnnotation[] } | null> {
+  const { data: passageData, error: passageError } = await supabase
+    .from('reading_passages')
+    .select('*')
+    .eq('id', passageId)
+    .single();
+
+  if (passageError) throw passageError;
+  if (!passageData) return null;
+
+  const { data: annotationData, error: annotationError } = await supabase
+    .from('reading_annotations')
+    .select('*')
+    .eq('passage_id', passageId)
+    .order('start_index', { ascending: true });
+
+  if (annotationError) throw annotationError;
+
+  return {
+    passage: mapReadingPassage(passageData),
+    annotations: (annotationData ?? []).map(mapReadingAnnotation),
+  };
+}
+
+export async function fetchReadingQuestions(passageId: string): Promise<ReadingQuestion[]> {
+  const { data, error } = await supabase
+    .from('reading_questions')
+    .select('*')
+    .eq('passage_id', passageId)
+    .order('order_index', { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []).map(mapReadingQuestion);
+}
+
+export async function upsertReadingProgress(
+  userId: string,
+  passageId: string,
+  data: { comprehensionScore: number; wordsLookedUp: number; timeSpentMs: number; completedAt: string }
+): Promise<void> {
+  const { error } = await supabase
+    .from('user_reading_progress')
+    .upsert({
+      user_id: userId,
+      passage_id: passageId,
+      comprehension_score: data.comprehensionScore,
+      words_looked_up: data.wordsLookedUp,
+      time_spent_ms: data.timeSpentMs,
+      completed_at: data.completedAt,
+    }, { onConflict: 'user_id,passage_id' });
+
+  if (error) throw error;
+}
+
+export async function addCardFromAnnotation(
+  userId: string,
+  annotation: ReadingAnnotation,
+  courseId: string
+): Promise<ReviewItem> {
+  // If annotation already links to a card, use it; otherwise create one
+  let cardId = annotation.cardId;
+
+  if (!cardId) {
+    const { data: card, error: cardError } = await supabase
+      .from('cards')
+      .insert({
+        course_id: courseId,
+        native_text: annotation.translation,
+        target_text: annotation.wordOrPhrase,
+        audio_url: annotation.audioUrl,
+        part_of_speech: annotation.partOfSpeech,
+        tags: ['reading'],
+      })
+      .select()
+      .single();
+
+    if (cardError) throw cardError;
+    cardId = card.id;
+  }
+
+  return upsertReviewItem({
+    userId,
+    cardId: cardId!,
+    easeFactor: 2.5,
+    interval: 0,
+    repetitions: 0,
+    nextDue: new Date().toISOString(),
+    lastReviewedAt: null,
+    status: 'new',
+  });
+}
+
+// ─── Writing ──────────────────────────────────────────────────
+
+export async function fetchWritingPromptsByCourse(courseId: string): Promise<WritingPrompt[]> {
+  const { data, error } = await supabase
+    .from('writing_prompts')
+    .select('*')
+    .eq('course_id', courseId)
+    .order('cefr_level', { ascending: true })
+    .order('created_at', { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []).map(mapWritingPrompt);
+}
+
+export async function fetchWritingPromptById(promptId: string): Promise<WritingPrompt | null> {
+  const { data, error } = await supabase
+    .from('writing_prompts')
+    .select('*')
+    .eq('id', promptId)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw error;
+  return data ? mapWritingPrompt(data) : null;
+}
+
+export async function submitWriting(
+  userId: string,
+  promptId: string,
+  text: string,
+  wordCount: number,
+  timeSpentMs: number
+): Promise<WritingSubmission> {
+  const { data, error } = await supabase
+    .from('user_writing_submissions')
+    .insert({
+      user_id: userId,
+      prompt_id: promptId,
+      submission_text: text,
+      word_count: wordCount,
+      time_spent_ms: timeSpentMs,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return mapWritingSubmission(data);
+}
+
+export async function updateWritingFeedback(
+  submissionId: string,
+  feedback: WritingFeedback,
+  overallScore: number
+): Promise<void> {
+  const { error } = await supabase
+    .from('user_writing_submissions')
+    .update({
+      ai_feedback: feedback,
+      overall_score: overallScore,
+    })
+    .eq('id', submissionId);
+
+  if (error) throw error;
+}
+
+// ─── Daily News ───────────────────────────────────────────────
+
+export async function fetchDailyNews(language: string, date?: string): Promise<DailyNewsArticle | null> {
+  const targetDate = date ?? new Date().toISOString().split('T')[0];
+
+  const { data, error } = await supabase
+    .from('daily_news')
+    .select('*')
+    .eq('language', language)
+    .eq('date', targetDate)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw error;
+  return data ? mapDailyNewsArticle(data) : null;
+}
+
+// ─── Reading Mappers ────────────────────────────────────────────
+
+function mapReadingPassage(row: Record<string, unknown>): ReadingPassage {
+  return {
+    id: row.id as string,
+    courseId: row.course_id as string,
+    unitId: (row.unit_id as string) ?? null,
+    cefrLevel: row.cefr_level as string,
+    title: row.title as string,
+    content: row.content as string,
+    contentTranslation: (row.content_translation as string) ?? null,
+    wordCount: (row.word_count as number) ?? 0,
+    audioUrl: (row.audio_url as string) ?? null,
+    imageUrl: (row.image_url as string) ?? null,
+    sourceAttribution: (row.source_attribution as string) ?? null,
+    tags: (row.tags as string[]) ?? [],
+    isPublished: (row.is_published as boolean) ?? false,
+    createdAt: row.created_at as string,
+  };
+}
+
+function mapReadingAnnotation(row: Record<string, unknown>): ReadingAnnotation {
+  return {
+    id: row.id as string,
+    passageId: row.passage_id as string,
+    wordOrPhrase: row.word_or_phrase as string,
+    translation: row.translation as string,
+    startIndex: row.start_index as number,
+    endIndex: row.end_index as number,
+    cardId: (row.card_id as string) ?? null,
+    audioUrl: (row.audio_url as string) ?? null,
+    partOfSpeech: (row.part_of_speech as string) ?? null,
+  };
+}
+
+function mapReadingQuestion(row: Record<string, unknown>): ReadingQuestion {
+  return {
+    id: row.id as string,
+    passageId: row.passage_id as string,
+    orderIndex: row.order_index as number,
+    questionText: row.question_text as string,
+    questionType: row.question_type as ReadingQuestion['questionType'],
+    correctAnswer: row.correct_answer as string,
+    acceptedAnswers: (row.accepted_answers as string[]) ?? [],
+    options: (row.options as string[]) ?? null,
+  };
+}
+
+// ─── Writing Mappers ────────────────────────────────────────────
+
+function mapWritingPrompt(row: Record<string, unknown>): WritingPrompt {
+  return {
+    id: row.id as string,
+    courseId: row.course_id as string,
+    unitId: (row.unit_id as string) ?? null,
+    cefrLevel: row.cefr_level as string,
+    promptText: row.prompt_text as string,
+    promptType: row.prompt_type as WritingPrompt['promptType'],
+    exampleResponse: (row.example_response as string) ?? null,
+    targetVocabulary: (row.target_vocabulary as string[]) ?? [],
+    targetGrammar: (row.target_grammar as string[]) ?? [],
+    minWords: (row.min_words as number) ?? null,
+    maxWords: (row.max_words as number) ?? null,
+    rubricCriteria: (row.rubric_criteria as unknown[]) ?? [],
+    createdAt: row.created_at as string,
+  };
+}
+
+function mapWritingSubmission(row: Record<string, unknown>): WritingSubmission {
+  return {
+    id: row.id as string,
+    userId: row.user_id as string,
+    promptId: row.prompt_id as string,
+    submissionText: row.submission_text as string,
+    aiFeedback: (row.ai_feedback as WritingFeedback) ?? null,
+    overallScore: (row.overall_score as number) ?? null,
+    wordCount: (row.word_count as number) ?? 0,
+    timeSpentMs: (row.time_spent_ms as number) ?? 0,
+    submittedAt: row.submitted_at as string,
+  };
+}
+
+// ─── News Mapper ────────────────────────────────────────────────
+
+function mapDailyNewsArticle(row: Record<string, unknown>): DailyNewsArticle {
+  return {
+    id: row.id as string,
+    date: row.date as string,
+    language: row.language as string,
+    cefrLevel: (row.cefr_level as string) ?? 'B1',
+    title: row.title as string,
+    titleTranslation: (row.title_translation as string) ?? null,
+    summary: row.summary as string,
+    content: row.content as string,
+    contentTranslation: (row.content_translation as string) ?? null,
+    vocabularyHighlights: (row.vocabulary_highlights as DailyNewsArticle['vocabularyHighlights']) ?? [],
+    sourceTopic: (row.source_topic as string) ?? null,
+    imageUrl: (row.image_url as string) ?? null,
+    createdAt: row.created_at as string,
+  };
 }

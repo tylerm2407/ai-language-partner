@@ -4,6 +4,15 @@ import type { ConversationMessage, LanguageCode, ProficiencyLevel } from '../typ
 // All AI calls go through Supabase Edge Functions.
 // The AI API key lives in Edge Function secrets, never on the client.
 
+export class VoiceError extends Error {
+  code: 'DAILY_LIMIT' | 'NOT_CONFIGURED' | 'NETWORK' | 'UNKNOWN';
+  constructor(message: string, code: VoiceError['code'] = 'UNKNOWN') {
+    super(message);
+    this.name = 'VoiceError';
+    this.code = code;
+  }
+}
+
 export interface AIChatRequest {
   userId: string;
   messages: Pick<ConversationMessage, 'role' | 'content'>[];
@@ -79,19 +88,54 @@ export async function getHint(
 
 /**
  * Get ElevenLabs TTS audio for a message.
- * Calls the tts edge function and returns a local file URI.
+ * Returns base64-encoded audio string from the edge function.
  */
 export async function getTextToSpeech(
   text: string,
   language: string,
   userId?: string
-): Promise<ArrayBuffer> {
+): Promise<string> {
   const { data, error } = await supabase.functions.invoke('tts', {
     body: { text, language, userId },
   });
 
-  if (error) throw new Error(`TTS error: ${error.message}`);
-  return data as ArrayBuffer;
+  // When edge function returns non-2xx, supabase puts a generic message in error
+  // and the actual response body is in error.context (a Response object).
+  // We need to extract the real error from there.
+  if (error) {
+    let errorMessage = error.message;
+    let errorCode: VoiceError['code'] = 'NETWORK';
+
+    try {
+      // FunctionsHttpError has a .context property with the raw Response
+      const ctx = (error as Record<string, unknown>).context;
+      if (ctx && typeof (ctx as Response).json === 'function') {
+        const body = await (ctx as Response).json();
+        if (body?.error) {
+          errorMessage = body.error;
+          if (body.code === 'DAILY_VOICE_LIMIT_REACHED') errorCode = 'DAILY_LIMIT';
+          else if (body.error.includes('not configured')) errorCode = 'NOT_CONFIGURED';
+        }
+      }
+    } catch {
+      // Couldn't parse error body — fall through with generic message
+    }
+
+    throw new VoiceError(errorMessage, errorCode);
+  }
+
+  // Success (200) but edge function returned an application-level error in the body
+  if (data?.error) {
+    if (data.code === 'DAILY_VOICE_LIMIT_REACHED') {
+      throw new VoiceError(data.error, 'DAILY_LIMIT');
+    }
+    if (data.error.includes('not configured')) {
+      throw new VoiceError(data.error, 'NOT_CONFIGURED');
+    }
+    throw new VoiceError(data.error);
+  }
+
+  return data.audioBase64 as string;
 }
 
 /**
@@ -106,7 +150,37 @@ export async function transcribeAudio(
     body: { audioBase64, language },
   });
 
-  if (error) throw new Error(`Transcription error: ${error.message}`);
+  if (error) {
+    let errorMessage = error.message;
+    let errorCode: VoiceError['code'] = 'NETWORK';
+
+    try {
+      const ctx = (error as Record<string, unknown>).context;
+      if (ctx && typeof (ctx as Response).json === 'function') {
+        const body = await (ctx as Response).json();
+        if (body?.error) {
+          errorMessage = body.error;
+          if (body.code === 'DAILY_VOICE_LIMIT_REACHED') errorCode = 'DAILY_LIMIT';
+          else if (body.error.includes('not configured')) errorCode = 'NOT_CONFIGURED';
+        }
+      }
+    } catch {
+      // fall through
+    }
+
+    throw new VoiceError(errorMessage, errorCode);
+  }
+
+  if (data?.error) {
+    if (data.code === 'DAILY_VOICE_LIMIT_REACHED') {
+      throw new VoiceError(data.error, 'DAILY_LIMIT');
+    }
+    if (data.error.includes('not configured')) {
+      throw new VoiceError(data.error, 'NOT_CONFIGURED');
+    }
+    throw new VoiceError(data.error);
+  }
+
   return (data as { text: string }).text;
 }
 

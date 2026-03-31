@@ -29,6 +29,7 @@ export function GradientBorderCard({
       <View
         style={[
           {
+            flex: 1,
             backgroundColor: innerBg,
             borderRadius: borderRadius - borderWidth,
           },

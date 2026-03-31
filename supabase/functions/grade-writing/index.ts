@@ -162,6 +162,8 @@ serve(async (req: Request) => {
         grammarScore: 50,
         vocabularyScore: 50,
         coherenceScore: 50,
+        spellingScore: 50,
+        sentenceStructureScore: 50,
         corrections: [],
         overallFeedback: aiReply,
       };
@@ -179,6 +181,78 @@ serve(async (req: Request) => {
   }
 });
 
+function getLanguageSpecificRules(targetLanguage: string): string {
+  const rules: Record<string, string> = {
+    Spanish: `LANGUAGE-SPECIFIC RULES (Spanish):
+- Gender/number agreement: articles, adjectives, and nouns must agree (el libro rojo, la casa roja)
+- Ser vs estar: permanent traits (ser) vs temporary states/locations (estar)
+- Subjunctive mood: required after doubt, emotion, desire, impersonal expressions
+- Accent marks: missing or incorrect accents count as spelling errors (él vs el, está vs esta)
+- Preterite vs imperfect: completed actions vs habitual/ongoing past actions`,
+    French: `LANGUAGE-SPECIFIC RULES (French):
+- Gender/number agreement: articles, adjectives must agree with nouns
+- Accent marks: é, è, ê, ë, à, ù, ç — missing accents are spelling errors
+- Passé composé vs imparfait: completed vs habitual/descriptive past
+- Subjunctive: required after expressions of doubt, emotion, necessity
+- Negation: ne...pas must wrap the conjugated verb`,
+    German: `LANGUAGE-SPECIFIC RULES (German):
+- Noun capitalization: all nouns must be capitalized
+- Case system: nominative, accusative, dative, genitive — articles must match
+- Word order: verb-second in main clauses, verb-final in subordinate clauses
+- Separable prefixes: must move to end of clause in present/past tense
+- Adjective endings: depend on article type and case`,
+    Japanese: `LANGUAGE-SPECIFIC RULES (Japanese):
+- Particle usage: は vs が, に vs で, を correctly applied
+- Verb conjugation: te-form, masu-form, plain form used appropriately for context
+- Politeness level: consistent use of formal or informal register
+- Counter words: correct counters for different object types
+- Kanji usage: appropriate to CEFR level`,
+    Portuguese: `LANGUAGE-SPECIFIC RULES (Portuguese):
+- Gender/number agreement: articles, adjectives, nouns must agree
+- Accent marks: missing accents are spelling errors (é, ê, ã, õ, ç)
+- Ser vs estar: similar to Spanish usage
+- Subjunctive mood: required after doubt, emotion, desire
+- Personal infinitive: unique to Portuguese, must be used correctly`,
+    Italian: `LANGUAGE-SPECIFIC RULES (Italian):
+- Gender/number agreement: articles, adjectives, nouns must agree
+- Accent marks: required on final stressed syllables (città, perché)
+- Passato prossimo vs imperfetto: completed vs habitual/descriptive past
+- Subjunctive: required after doubt, emotion, opinion
+- Double consonants: spelling must reflect pronunciation (anno vs ano)`,
+  };
+  return rules[targetLanguage] ?? '';
+}
+
+function getCefrExpectations(cefrLevel: string): string {
+  const expectations: Record<string, string> = {
+    A1: `CEFR A1 EXPECTATIONS:
+- Expected length: sentences (20-50 words)
+- Can write simple isolated phrases and sentences
+- Basic vocabulary for familiar topics only
+- Simple present tense, basic connectors (and, but)
+- Frequent errors expected but core meaning should be clear`,
+    A2: `CEFR A2 EXPECTATIONS:
+- Expected length: short paragraphs (50-150 words)
+- Can write short, simple notes and messages
+- Everyday vocabulary, simple past and future tenses
+- Basic sentence linking (because, then, after)
+- Errors acceptable but should not obscure meaning`,
+    B1: `CEFR B1 EXPECTATIONS:
+- Expected length: short essays (150-300 words)
+- Can write connected text on familiar topics
+- Good range of vocabulary with some precision
+- Multiple tenses used correctly, complex sentences attempted
+- Occasional errors but generally well-controlled grammar`,
+    B2: `CEFR B2 EXPECTATIONS:
+- Expected length: full essays (300-500+ words)
+- Can write clear, detailed text on a wide range of subjects
+- Varied vocabulary with good control of idiomatic expressions
+- Complex grammar structures used accurately
+- Few errors; self-correction expected`,
+  };
+  return expectations[cefrLevel] ?? expectations['B1'];
+}
+
 function buildGradingPrompt(
   targetLanguage: string,
   cefrLevel: string,
@@ -187,25 +261,41 @@ function buildGradingPrompt(
   targetVocabulary: string[],
   targetGrammar: string[]
 ): string {
-  return `You are grading a ${cefrLevel} language learner's writing in ${targetLanguage}.
+  const languageRules = getLanguageSpecificRules(targetLanguage);
+  const cefrExpectations = getCefrExpectations(cefrLevel);
+
+  return `You are a strict but fair language teacher grading a ${cefrLevel} learner's writing in ${targetLanguage}.
 
 WRITING PROMPT: ${promptText}
 ${exampleResponse ? `MODEL ANSWER: ${exampleResponse}` : ''}
 ${targetVocabulary.length > 0 ? `TARGET VOCABULARY: ${targetVocabulary.join(', ')}` : ''}
 ${targetGrammar.length > 0 ? `TARGET GRAMMAR: ${targetGrammar.join(', ')}` : ''}
 
-Grade the submission on a 0-100 scale for each category. List specific corrections.
+${cefrExpectations}
+
+${languageRules}
+
+Grade the submission on a 0-100 scale for each of the 5 categories. Grade strictly. Do not inflate scores. List every specific correction with the grammar or spelling rule that was violated.
 
 RESPOND ONLY IN VALID JSON:
 {
   "grammarScore": <0-100>,
   "vocabularyScore": <0-100>,
   "coherenceScore": <0-100>,
+  "spellingScore": <0-100>,
+  "sentenceStructureScore": <0-100>,
   "corrections": [
-    {"original": "...", "corrected": "...", "explanation": "...", "type": "grammar|vocabulary|spelling|style"}
+    {"original": "...", "corrected": "...", "explanation": "...", "type": "grammar|vocabulary|spelling|style|structure", "ruleViolated": "name of the specific rule violated"}
   ],
-  "overallFeedback": "2-3 sentences of encouraging, specific feedback"
+  "overallFeedback": "2-3 sentences of encouraging but honest feedback"
 }
 
-Be encouraging but honest. Grade appropriately for the ${cefrLevel} level — don't expect B2 grammar from an A1 learner.`;
+SCORING GUIDELINES:
+- grammarScore: correctness of verb conjugations, tenses, agreement, and grammatical forms
+- vocabularyScore: range, precision, and appropriateness of word choices for the ${cefrLevel} level
+- coherenceScore: logical flow, paragraph organization, use of connectors and transitions
+- spellingScore: correct spelling including accent marks, diacritics, and capitalization rules
+- sentenceStructureScore: variety and correctness of sentence patterns, clause construction, word order
+
+Grade appropriately for ${cefrLevel} — scale expectations to the level, but do not give free points. A score of 80+ means genuinely strong performance for that level.`;
 }

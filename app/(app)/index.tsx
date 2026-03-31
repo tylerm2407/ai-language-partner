@@ -21,6 +21,8 @@ import { HeartsDisplay } from '../../components/gamification/HeartsDisplay';
 import { useHearts } from '../../hooks/useHearts';
 import { useLevel } from '../../hooks/useLevel';
 import { useStreakProtection } from '../../hooks/useStreakProtection';
+import { useDailyNews } from '../../hooks/useDailyNews';
+import { DailyNewsCard } from '../../components/news/DailyNewsCard';
 import type { DailyStats } from '../../types';
 
 export default function HomeScreen() {
@@ -31,6 +33,7 @@ export default function HomeScreen() {
   const { hearts, maxHearts, isUnlimited } = useHearts();
   const { level, tier, xpInLevel, xpToNextLevel, progress: levelProgress } = useLevel();
   const { showRepairModal, brokenStreak, freezesAvailable, repairWithFreeze, dismissRepair, hasShield } = useStreakProtection();
+  const { article, isLoading: newsLoading } = useDailyNews(profile?.targetLanguage ?? 'es');
 
   const loadWeeklyStats = useCallback(async (userId: string) => {
     const today = new Date();
@@ -63,10 +66,10 @@ export default function HomeScreen() {
     <GradientBackground>
     <SafeAreaView className="flex-1">
       <ScrollView className="flex-1 px-4 pt-4" contentContainerStyle={{ paddingBottom: 100 }}>
-        <Text className="text-[28px] font-bold text-text-primary mb-1">
+        <Text className="text-[28px] font-bold text-text-primary mb-1 text-center">
           Welcome back{profile?.displayName ? `, ${profile.displayName}` : ''}!
         </Text>
-        <Text className="text-base text-text-secondary mb-6">
+        <Text className="text-base text-text-secondary mb-6 text-center">
           {profile?.targetLanguage ? `Learning ${profile.targetLanguage.toUpperCase()}` : user?.email}
         </Text>
 
@@ -117,6 +120,20 @@ export default function HomeScreen() {
           </View>
           <ProgressBar progress={dailyProgress} />
         </GradientBorderCard>
+
+        {/* Daily News */}
+        <DailyNewsCard
+          article={article}
+          isLoading={newsLoading}
+          onPress={() => {
+            if (article) {
+              router.push({
+                pathname: '/news/[date]',
+                params: { date: article.date, language: profile?.targetLanguage ?? 'es' },
+              } as any);
+            }
+          }}
+        />
 
         {/* Daily Challenges */}
         <DailyChallenges dailyStats={dailyStats ?? null} />

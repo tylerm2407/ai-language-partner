@@ -56,8 +56,18 @@ export default function WritingPromptScreen() {
       const gradeFeedback = data as WritingFeedback;
       setFeedback(gradeFeedback);
 
-      // Save feedback
-      const overallScore = (gradeFeedback.grammarScore + gradeFeedback.vocabularyScore + gradeFeedback.coherenceScore) / 3 / 100;
+      // Save feedback — average all 5 dimensions (backward-compatible: default missing to 0)
+      const scores = [
+        gradeFeedback.grammarScore,
+        gradeFeedback.spellingScore ?? 0,
+        gradeFeedback.sentenceStructureScore ?? 0,
+        gradeFeedback.vocabularyScore,
+        gradeFeedback.coherenceScore,
+      ];
+      const validScores = scores.filter((s) => s > 0);
+      const overallScore = validScores.length > 0
+        ? validScores.reduce((a, b) => a + b, 0) / validScores.length / 100
+        : 0;
       await updateWritingFeedback(submission.id, gradeFeedback, overallScore);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to grade writing');
