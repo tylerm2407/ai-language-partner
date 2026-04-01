@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ProgressBar } from '../ui/ProgressBar';
 import { GradientBorderCard } from '../ui/GradientBorderCard';
 import { ChallengeCompletePop } from '../animations/ChallengeCompletePop';
+import { QuestCountdown } from './QuestCountdown';
 import type { DailyStats } from '../../types';
 
 interface DailyChallengesProps {
@@ -18,6 +19,12 @@ interface Challenge {
   target: number;
   unit: string;
 }
+
+const chestIcons: Record<string, { outline: string; filled: string; color: string }> = {
+  lessons: { outline: 'cube-outline', filled: 'cube', color: '#CD7F32' },
+  cards: { outline: 'gift-outline', filled: 'gift', color: '#A855F7' },
+  practice: { outline: 'diamond-outline', filled: 'diamond', color: '#34D399' },
+};
 
 export function DailyChallenges({ dailyStats }: DailyChallengesProps) {
   // Use hardcoded challenges based on daily stats (no DB dependency)
@@ -57,7 +64,7 @@ export function DailyChallenges({ dailyStats }: DailyChallengesProps) {
   return (
     <GradientBorderCard innerStyle={{ padding: 20 }} style={{ marginBottom: 24 }}>
       {/* Header */}
-      <View className="flex-row items-center justify-between mb-4">
+      <View className="flex-row items-center justify-between mb-1">
         <View className="flex-row items-center gap-2">
           <Ionicons name="flag" size={18} color="#FBBF24" />
           <Text className="text-base font-semibold text-text-primary">Daily Challenges</Text>
@@ -65,6 +72,10 @@ export function DailyChallenges({ dailyStats }: DailyChallengesProps) {
         <Text className="text-sm text-text-secondary">
           {completedCount}/{challenges.length}
         </Text>
+      </View>
+      <View className="flex-row items-center justify-between mb-4">
+        <Text className="text-xs text-text-secondary">Complete all for +50 XP bonus</Text>
+        <QuestCountdown />
       </View>
 
       {/* Challenge Items */}
@@ -108,9 +119,24 @@ export function DailyChallenges({ dailyStats }: DailyChallengesProps) {
               <Text className="text-xs text-text-secondary">
                 {Math.min(challenge.current, challenge.target)}/{challenge.target} {challenge.unit}
               </Text>
+              {chestIcons[challenge.type] && (
+                <Ionicons
+                  name={(isComplete
+                    ? chestIcons[challenge.type].filled
+                    : chestIcons[challenge.type].outline) as any}
+                  size={16}
+                  color={chestIcons[challenge.type].color}
+                  style={{ marginLeft: 8 }}
+                />
+              )}
             </View>
-            <View className="ml-[38px]">
-              <ProgressBar progress={progress} height={6} />
+            <View className="ml-[38px] flex-row items-center gap-2">
+              <View className="flex-1">
+                <ProgressBar progress={progress} height={6} />
+              </View>
+              <Text className="text-xs text-text-secondary" style={{ width: 32, textAlign: 'right' }}>
+                {Math.round(progress * 100)}%
+              </Text>
             </View>
           </View>
         );

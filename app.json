@@ -18,7 +18,9 @@
       "bundleIdentifier": "com.fluenci.app",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Fluenci needs access to your microphone for voice conversation practice and pronunciation exercises.",
-        "UIBackgroundModes": ["audio"]
+        "UIBackgroundModes": [
+          "audio"
+        ]
       }
     },
     "android": {
@@ -27,7 +29,9 @@
         "backgroundColor": "#0C0F14"
       },
       "package": "com.fluenci.app",
-      "permissions": ["RECORD_AUDIO"]
+      "permissions": [
+        "RECORD_AUDIO"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -50,7 +54,8 @@
         }
       ],
       "expo-asset",
-      "expo-font"
+      "expo-font",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true

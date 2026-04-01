@@ -338,20 +338,12 @@ export default function ChatScreen() {
       setHandsFreeState('IDLE');
       setShouldStartListening(false);
     } else {
-      // Activate hands-free with Gemini Live
-      setVoiceMode(true);
-      setHandsFreeActive(true);
-      setHandsFreeState('CONNECTING');
-
-      // Configure audio for background playback
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: true,
-      });
-
-      // Start Gemini Live session
-      await geminiLive.startSession();
+      // Gemini Live hands-free is deferred — not supported in Expo Go
+      Alert.alert(
+        'Coming Soon',
+        'Hands-free voice mode is coming soon! Use hold-to-talk for now.',
+        [{ text: 'OK' }]
+      );
     }
   };
 
@@ -367,8 +359,8 @@ export default function ChatScreen() {
   if (!selectedScenario) {
     return (
       <GradientBackground>
-      <SafeAreaView className="flex-1">
-        <View className="flex-1 px-4 pt-4">
+      <View className="flex-1">
+        <View className="flex-1 px-4 pt-2">
           <Text className="text-[28px] font-bold text-text-primary mb-2">AI Chat</Text>
           <Text className="text-base text-text-secondary mb-6">
             Choose a scenario to practice {targetLanguage.toUpperCase()} conversation
@@ -401,7 +393,7 @@ export default function ChatScreen() {
             )}
           />
         </View>
-      </SafeAreaView>
+      </View>
       </GradientBackground>
     );
   }
@@ -409,7 +401,7 @@ export default function ChatScreen() {
   // Chat interface
   return (
     <GradientBackground>
-    <SafeAreaView className="flex-1" edges={['top']}>
+    <View className="flex-1">
       {/* Header */}
       <View className="flex-row items-center px-4 py-3 border-b border-dark-border">
         <Pressable
@@ -435,22 +427,22 @@ export default function ChatScreen() {
         <Pressable
           onPress={toggleHandsFree}
           accessibilityRole="button"
-          accessibilityLabel={handsFreeActive ? 'Disable hands-free mode' : 'Enable hands-free mode'}
+          accessibilityLabel={handsFreeActive ? 'Disable hands-free mode' : 'Hands-free mode coming soon'}
           className={`h-9 px-3 rounded-full items-center justify-center flex-row mr-2 ${
-            handsFreeActive ? 'bg-success' : 'bg-dark-card'
+            handsFreeActive ? 'bg-success' : 'bg-dark-card opacity-50'
           }`}
         >
           <Ionicons
             name="car-outline"
             size={16}
-            color={handsFreeActive ? '#FFFFFF' : '#94A3B8'}
+            color={handsFreeActive ? '#FFFFFF' : '#64748B'}
           />
           <Text
             className={`text-xs font-sans-semibold ml-1.5 ${
-              handsFreeActive ? 'text-white' : 'text-text-secondary'
+              handsFreeActive ? 'text-white' : 'text-text-tertiary'
             }`}
           >
-            Hands-Free
+            {handsFreeActive ? 'Hands-Free' : 'Coming Soon'}
           </Text>
         </Pressable>
 
@@ -500,7 +492,7 @@ export default function ChatScreen() {
           geminiLiveActive={isGeminiLiveActive}
         />
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
     </GradientBackground>
   );
 }

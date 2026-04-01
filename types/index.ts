@@ -288,6 +288,8 @@ export interface ReadingQuestion {
 
 // ─── Writing ──────────────────────────────────────────────────
 
+export type ScaffoldType = 'fill_blank' | 'sentence_frame' | 'guided_paragraph' | 'essay' | 'academic' | 'free';
+
 export interface WritingPrompt {
   id: string;
   courseId: string;
@@ -301,6 +303,9 @@ export interface WritingPrompt {
   minWords: number | null;
   maxWords: number | null;
   rubricCriteria: unknown[];
+  scaffoldType: ScaffoldType;
+  scaffoldData: Record<string, unknown>;
+  maxAttempts: number;
   createdAt: string;
 }
 
@@ -312,6 +317,9 @@ export interface WritingFeedback {
   coherenceScore: number;
   corrections: WritingCorrection[];
   overallFeedback: string;
+  correctedVersion: string | null;
+  strengths: string[];
+  improvements: string[];
 }
 
 export interface WritingCorrection {
@@ -331,7 +339,21 @@ export interface WritingSubmission {
   overallScore: number | null;
   wordCount: number;
   timeSpentMs: number;
+  attemptNumber: number;
   submittedAt: string;
+}
+
+// ─── Lesson Completions ──────────────────────────────────────
+
+export interface LessonCompletion {
+  id: string;
+  userId: string;
+  lessonId: string;
+  courseId: string;
+  score: number; // 0-1
+  xpEarned: number;
+  timeSpentMs: number;
+  completedAt: string;
 }
 
 // ─── Daily News ───────────────────────────────────────────────
@@ -356,4 +378,48 @@ export interface VocabularyHighlight {
   word: string;
   translation: string;
   partOfSpeech?: string;
+}
+
+// ─── Reading Books (Library) ─────────────────────────────────
+
+export type BookSource = 'gutenberg' | 'wikisource' | 'ai_generated';
+
+export interface ReadingBook {
+  id: string;
+  source: BookSource;
+  sourceId: string | null;
+  language: string;
+  cefrLevel: string;
+  title: string;
+  author: string | null;
+  description: string | null;
+  content: string;
+  wordCount: number;
+  chapterBreaks: number[];
+  imageUrl: string | null;
+  tags: string[];
+  isPublished: boolean;
+  createdAt: string;
+}
+
+export interface UserBookProgress {
+  id: string;
+  userId: string;
+  bookId: string;
+  currentPosition: number;
+  currentChapter: number;
+  percentComplete: number;
+  timeSpentMs: number;
+  wordsLookedUp: number;
+  completedAt: string | null;
+  lastReadAt: string;
+}
+
+export interface BookAnnotation {
+  id: string;
+  bookId: string;
+  wordOrPhrase: string;
+  translation: string;
+  partOfSpeech: string | null;
+  audioUrl: string | null;
 }

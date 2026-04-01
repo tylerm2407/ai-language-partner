@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { Audio } from 'expo-av';
-import * as FileSystem from 'expo-file-system';
+import { File } from 'expo-file-system/next';
 
 export function useAudioRecorder() {
   const [recording, setRecording] = useState(false);
@@ -9,6 +9,16 @@ export function useAudioRecorder() {
 
   const startRecording = useCallback(async () => {
     try {
+      // Clean up any stale recording before creating a new one
+      if (recordingRef.current) {
+        try {
+          await recordingRef.current.stopAndUnloadAsync();
+        } catch {
+          // Already stopped/unloaded — safe to ignore
+        }
+        recordingRef.current = null;
+      }
+
       const permission = await Audio.requestPermissionsAsync();
       if (!permission.granted) return;
 
@@ -32,9 +42,10 @@ export function useAudioRecorder() {
     if (!recordingRef.current) return null;
 
     try {
-      await recordingRef.current.stopAndUnloadAsync();
-      const uri = recordingRef.current.getURI();
-      recordingRef.current = null;
+      const rec = recordingRef.current;
+      recordingRef.current = null; // Null ref BEFORE async work to prevent races
+      await rec.stopAndUnloadAsync();
+      const uri = rec.getURI();
       setRecording(false);
       setAudioUri(uri);
       return uri;
@@ -47,9 +58,8 @@ export function useAudioRecorder() {
   const getBase64 = useCallback(async (): Promise<string | null> => {
     if (!audioUri) return null;
     try {
-      const base64 = await FileSystem.readAsStringAsync(audioUri, {
-        encoding: 'base64' as const,
-      });
+      const file = new File(audioUri);
+      const base64 = file.base64();
       return base64;
     } catch {
       return null;

@@ -5,7 +5,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { corsResponse, getCorsHeaders } from '../_shared/cors.ts';
+import { corsResponse, corsHeaders } from '../_shared/cors.ts';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { getPlanLimits } from '../_shared/plan-limits.ts';
 import { isValidUUID, isValidCefrLevel, isValidLanguage, sanitizeText } from '../_shared/validation.ts';
@@ -29,10 +29,10 @@ function todayUTC(): string {
 
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
-    return corsResponse(req);
+    return corsResponse();
   }
 
-  const headers = { ...getCorsHeaders(req), 'Content-Type': 'application/json' };
+  const headers = { ...corsHeaders, 'Content-Type': 'application/json' };
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
   try {
@@ -139,7 +139,7 @@ serve(async (req: Request) => {
       },
       body: JSON.stringify({
         model: TEXT_MODEL,
-        max_tokens: 500,
+        max_tokens: 1500,
         system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
         messages: [{ role: 'user', content: sanitizeText(submissionText, 5000) }],
       }),
@@ -159,11 +159,19 @@ serve(async (req: Request) => {
       feedback = JSON.parse(aiReply);
     } catch {
       feedback = {
+        grammar: 12,
+        vocabulary: 12,
+        coherence: 12,
+        task_completion: 12,
+        total: 48,
         grammarScore: 50,
         vocabularyScore: 50,
         coherenceScore: 50,
         spellingScore: 50,
         sentenceStructureScore: 50,
+        strengths: [],
+        improvements: [],
+        correctedVersion: null,
         corrections: [],
         overallFeedback: aiReply,
       };
@@ -249,6 +257,18 @@ function getCefrExpectations(cefrLevel: string): string {
 - Varied vocabulary with good control of idiomatic expressions
 - Complex grammar structures used accurately
 - Few errors; self-correction expected`,
+    C1: `CEFR C1 EXPECTATIONS:
+- Expected length: formal essays (500+ words)
+- Can write clear, well-structured, detailed text on complex subjects
+- Precise vocabulary with idiomatic and colloquial expressions
+- Full command of complex grammar, subtle nuances
+- Near-native accuracy; rare errors only in obscure constructions`,
+    C2: `CEFR C2 EXPECTATIONS:
+- Expected length: academic/professional text (500+ words)
+- Can write at native level with natural flow and precision
+- Sophisticated vocabulary, register-appropriate style
+- Flawless grammar; can use language for humor, emphasis, ambiguity
+- Grade as you would a native speaker's formal writing`,
   };
   return expectations[cefrLevel] ?? expectations['B1'];
 }
@@ -275,15 +295,25 @@ ${cefrExpectations}
 
 ${languageRules}
 
-Grade the submission on a 0-100 scale for each of the 5 categories. Grade strictly. Do not inflate scores. List every specific correction with the grammar or spelling rule that was violated.
+Grade the submission on a 0-25 scale for each of the 4 categories (grammar, vocabulary, coherence, task_completion). Total is out of 100. Grade strictly. Do not inflate scores. List every specific correction with the grammar or spelling rule that was violated.
+
+Also provide a corrected version of the entire submission showing how it should have been written.
 
 RESPOND ONLY IN VALID JSON:
 {
+  "grammar": <0-25>,
+  "vocabulary": <0-25>,
+  "coherence": <0-25>,
+  "task_completion": <0-25>,
+  "total": <0-100>,
   "grammarScore": <0-100>,
   "vocabularyScore": <0-100>,
   "coherenceScore": <0-100>,
   "spellingScore": <0-100>,
   "sentenceStructureScore": <0-100>,
+  "strengths": ["strength 1", "strength 2", "strength 3"],
+  "improvements": ["improvement 1", "improvement 2", "improvement 3"],
+  "correctedVersion": "the entire submission rewritten correctly in ${targetLanguage}",
   "corrections": [
     {"original": "...", "corrected": "...", "explanation": "...", "type": "grammar|vocabulary|spelling|style|structure", "ruleViolated": "name of the specific rule violated"}
   ],
@@ -291,11 +321,14 @@ RESPOND ONLY IN VALID JSON:
 }
 
 SCORING GUIDELINES:
-- grammarScore: correctness of verb conjugations, tenses, agreement, and grammatical forms
-- vocabularyScore: range, precision, and appropriateness of word choices for the ${cefrLevel} level
-- coherenceScore: logical flow, paragraph organization, use of connectors and transitions
-- spellingScore: correct spelling including accent marks, diacritics, and capitalization rules
-- sentenceStructureScore: variety and correctness of sentence patterns, clause construction, word order
+- grammar (0-25): correctness of verb conjugations, tenses, agreement, and grammatical forms
+- vocabulary (0-25): range, precision, and appropriateness of word choices for the ${cefrLevel} level
+- coherence (0-25): logical flow, paragraph organization, use of connectors and transitions
+- task_completion (0-25): how well the writing addresses the prompt requirements
+- grammarScore/vocabularyScore/coherenceScore/spellingScore/sentenceStructureScore: detailed 0-100 sub-scores
+- strengths: 3 specific things the learner did well
+- improvements: 3 specific areas to focus on
+- correctedVersion: rewrite the entire text correctly, preserving the learner's intent
 
 Grade appropriately for ${cefrLevel} — scale expectations to the level, but do not give free points. A score of 80+ means genuinely strong performance for that level.`;
 }

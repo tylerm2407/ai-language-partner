@@ -1,20 +1,18 @@
 // Supabase Edge Function: Text-to-Speech via ElevenLabs
-// Proxies TTS requests to ElevenLabs API and returns audio/mpeg binary.
-// DEPRECATED: Still used by hold-to-talk voice mode and "Listen" button on chat bubbles.
-// Hands-free mode now uses Gemini Live for TTS natively.
+// Proxies TTS requests to ElevenLabs API and returns base64 JSON.
 // Deploy: npx supabase functions deploy tts
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { corsHeaders, corsResponse } from '../_shared/cors.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_KEY');
 
 // ElevenLabs voice IDs — natural-sounding voices per language.
-// These are ElevenLabs premade voices. Update IDs if you switch to cloned voices.
 const VOICE_MAP: Record<string, string> = {
-  es: 'EXAVITQu4vr4xnSDxMaL', // Sarah — clear, warm female
+  es: 'EXAVITQu4vr4xnSDxMaL',
   fr: 'EXAVITQu4vr4xnSDxMaL',
   de: 'EXAVITQu4vr4xnSDxMaL',
   it: 'EXAVITQu4vr4xnSDxMaL',
@@ -27,7 +25,6 @@ const VOICE_MAP: Record<string, string> = {
 
 const DEFAULT_VOICE_ID = 'EXAVITQu4vr4xnSDxMaL';
 
-// Daily voice minute limits per plan tier
 const PLAN_LIMITS: Record<string, { dailyVoiceMinutes: number | 'unlimited' }> = {
   free:      { dailyVoiceMinutes: 5 },
   basic:     { dailyVoiceMinutes: 20 },
@@ -70,13 +67,7 @@ async function getVoiceMinutesUsed(supabase: ReturnType<typeof createClient>, us
 
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', {
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST',
-        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-      },
-    });
+    return corsResponse();
   }
 
   try {
@@ -85,14 +76,14 @@ serve(async (req: Request) => {
     if (!ELEVENLABS_API_KEY) {
       return new Response(
         JSON.stringify({ error: 'ELEVENLABS_KEY not configured' }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     if (!text || text.length === 0) {
       return new Response(
         JSON.stringify({ error: 'text is required' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -110,7 +101,7 @@ serve(async (req: Request) => {
               error: "You've reached your daily voice limit. Upgrade your plan for more.",
               code: 'DAILY_VOICE_LIMIT_REACHED',
             }),
-            { status: 429, headers: { 'Content-Type': 'application/json' } }
+            { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
       }
@@ -127,7 +118,7 @@ serve(async (req: Request) => {
           'xi-api-key': ELEVENLABS_API_KEY,
         },
         body: JSON.stringify({
-          text: text.replace(/\*\*/g, ''), // Strip markdown bold markers
+          text: text.replace(/\*\*/g, ''),
           model_id: 'eleven_flash_v2_5',
           voice_settings: {
             stability: 0.5,
@@ -144,7 +135,6 @@ serve(async (req: Request) => {
     }
 
     // Return base64-encoded JSON instead of raw binary
-    // (supabase.functions.invoke can't reliably handle binary in React Native)
     const audioBuffer = await response.arrayBuffer();
     const uint8 = new Uint8Array(audioBuffer);
     const CHUNK = 8192;
@@ -155,15 +145,12 @@ serve(async (req: Request) => {
     const base64 = btoa(binary);
 
     return new Response(JSON.stringify({ audioBase64: base64 }), {
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
     return new Response(
       JSON.stringify({ error: error.message }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });

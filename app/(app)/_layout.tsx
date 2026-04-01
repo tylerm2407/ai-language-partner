@@ -5,6 +5,7 @@ import { OfflineBanner } from '../../components/ui/OfflineBanner';
 import { View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GRADIENT_COLORS } from '../../config/gradients';
+import { StatsBar } from '../../components/ui/StatsBar';
 
 function TabBarBackground() {
   return (
@@ -27,6 +28,7 @@ export default function AppLayout() {
     <ErrorBoundary>
       <View className="flex-1 bg-dark">
         <OfflineBanner />
+        <StatsBar />
         <Tabs
           screenOptions={{
             headerShown: false,
@@ -92,6 +94,8 @@ export default function AppLayout() {
               href: null,
             }}
           />
+          <Tabs.Screen name="review" options={{ href: null }} />
+          <Tabs.Screen name="practice" options={{ href: null }} />
         </Tabs>
       </View>
     </ErrorBoundary>

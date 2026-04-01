@@ -64,8 +64,8 @@ export default function HomeScreen() {
 
   return (
     <GradientBackground>
-    <SafeAreaView className="flex-1">
-      <ScrollView className="flex-1 px-4 pt-4" contentContainerStyle={{ paddingBottom: 100 }}>
+    <View className="flex-1">
+      <ScrollView className="flex-1 px-4 pt-2" contentContainerStyle={{ paddingBottom: 100 }}>
         <Text className="text-[28px] font-bold text-text-primary mb-1 text-center">
           Welcome back{profile?.displayName ? `, ${profile.displayName}` : ''}!
         </Text>
@@ -227,7 +227,7 @@ export default function HomeScreen() {
         onRepair={repairWithFreeze}
         onDismiss={dismissRepair}
       />
-    </SafeAreaView>
+    </View>
     </GradientBackground>
   );
 }

@@ -64,6 +64,18 @@ const CONFUSABLE_PAIRS: Partial<Record<LanguageCode, [string, string][]>> = {
     ['pode', 'pôde'],       // can vs. could
     ['por', 'pôr'],         // by/for vs. to put
   ],
+  ru: [
+    ['мыло', 'мило'],       // soap vs. nicely
+    ['кот', 'код'],         // cat vs. code
+    ['лук', 'люк'],         // onion/bow vs. hatch
+    ['тушь', 'туш'],        // mascara vs. fanfare
+    ['плач', 'плащ'],       // crying vs. raincoat
+    ['гриб', 'грипп'],      // mushroom vs. flu
+    ['компания', 'кампания'], // company vs. campaign
+    ['шить', 'жить'],       // to sew vs. to live
+    ['балл', 'бал'],        // score/point vs. ball/dance
+    ['мука', 'мука'],       // flour (мукá) vs. torment (мýка) — stress difference
+  ],
 };
 
 /**

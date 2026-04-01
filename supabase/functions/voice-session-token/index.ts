@@ -5,7 +5,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { corsResponse, getCorsHeaders } from '../_shared/cors.ts';
+import { corsResponse, corsHeaders } from '../_shared/cors.ts';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { getPlanLimits } from '../_shared/plan-limits.ts';
 
@@ -13,7 +13,7 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const GOOGLE_AI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
 
-const GEMINI_LIVE_MODEL = 'gemini-2.0-flash-live-001';
+const GEMINI_LIVE_MODEL = 'gemini-2.0-flash-live';
 
 function todayUTC(): string {
   return new Date().toISOString().split('T')[0];
@@ -21,10 +21,10 @@ function todayUTC(): string {
 
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
-    return corsResponse(req);
+    return corsResponse();
   }
 
-  const headers = { ...getCorsHeaders(req), 'Content-Type': 'application/json' };
+  const headers = { ...corsHeaders, 'Content-Type': 'application/json' };
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
   try {

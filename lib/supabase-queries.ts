@@ -23,6 +23,10 @@ import type {
   WritingSubmission,
   WritingFeedback,
   DailyNewsArticle,
+  LessonCompletion,
+  ReadingBook,
+  UserBookProgress,
+  BookAnnotation,
 } from '../types';
 
 // ─── User Profile ───────────────────────────────────────────────
@@ -625,6 +629,65 @@ function mapDailyUsage(row: Record<string, unknown>): DailyUsage {
   };
 }
 
+// ─── Lesson Completions ──────────────────────────────────────────
+
+export async function upsertLessonCompletion(
+  userId: string,
+  lessonId: string,
+  courseId: string,
+  score: number,
+  xpEarned: number,
+  timeSpentMs: number
+): Promise<LessonCompletion> {
+  const { data, error } = await supabase
+    .from('lesson_completions')
+    .upsert({
+      user_id: userId,
+      lesson_id: lessonId,
+      course_id: courseId,
+      score,
+      xp_earned: xpEarned,
+      time_spent_ms: timeSpentMs,
+      completed_at: new Date().toISOString(),
+    }, { onConflict: 'user_id,lesson_id' })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return mapLessonCompletion(data);
+}
+
+export async function fetchLessonCompletions(
+  userId: string,
+  courseId?: string
+): Promise<LessonCompletion[]> {
+  let query = supabase
+    .from('lesson_completions')
+    .select('*')
+    .eq('user_id', userId);
+
+  if (courseId) {
+    query = query.eq('course_id', courseId);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data ?? []).map(mapLessonCompletion);
+}
+
+function mapLessonCompletion(row: Record<string, unknown>): LessonCompletion {
+  return {
+    id: row.id as string,
+    userId: row.user_id as string,
+    lessonId: row.lesson_id as string,
+    courseId: row.course_id as string,
+    score: row.score as number,
+    xpEarned: row.xp_earned as number,
+    timeSpentMs: row.time_spent_ms as number,
+    completedAt: row.completed_at as string,
+  };
+}
+
 // ─── Hearts ──────────────────────────────────────────────────────
 
 export async function updateHearts(
@@ -934,7 +997,8 @@ export async function submitWriting(
   promptId: string,
   text: string,
   wordCount: number,
-  timeSpentMs: number
+  timeSpentMs: number,
+  attemptNumber = 1
 ): Promise<WritingSubmission> {
   const { data, error } = await supabase
     .from('user_writing_submissions')
@@ -944,6 +1008,7 @@ export async function submitWriting(
       submission_text: text,
       word_count: wordCount,
       time_spent_ms: timeSpentMs,
+      attempt_number: attemptNumber,
     })
     .select()
     .single();
@@ -1048,6 +1113,9 @@ function mapWritingPrompt(row: Record<string, unknown>): WritingPrompt {
     minWords: (row.min_words as number) ?? null,
     maxWords: (row.max_words as number) ?? null,
     rubricCriteria: (row.rubric_criteria as unknown[]) ?? [],
+    scaffoldType: (row.scaffold_type as WritingPrompt['scaffoldType']) ?? 'free',
+    scaffoldData: (row.scaffold_data as Record<string, unknown>) ?? {},
+    maxAttempts: (row.max_attempts as number) ?? 3,
     createdAt: row.created_at as string,
   };
 }
@@ -1062,7 +1130,179 @@ function mapWritingSubmission(row: Record<string, unknown>): WritingSubmission {
     overallScore: (row.overall_score as number) ?? null,
     wordCount: (row.word_count as number) ?? 0,
     timeSpentMs: (row.time_spent_ms as number) ?? 0,
+    attemptNumber: (row.attempt_number as number) ?? 1,
     submittedAt: row.submitted_at as string,
+  };
+}
+
+// ─── Reading Books (Library) ────────────────────────────────────
+
+export async function fetchBooksByLanguageAndLevel(
+  language: string,
+  cefrLevel?: string,
+  limit = 20,
+  offset = 0
+): Promise<ReadingBook[]> {
+  let query = supabase
+    .from('reading_books')
+    .select('*')
+    .eq('language', language)
+    .eq('is_published', true)
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (cefrLevel) {
+    query = query.eq('cefr_level', cefrLevel);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data ?? []).map(mapReadingBook);
+}
+
+export async function fetchBookById(bookId: string): Promise<ReadingBook | null> {
+  const { data, error } = await supabase
+    .from('reading_books')
+    .select('*')
+    .eq('id', bookId)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw error;
+  return data ? mapReadingBook(data) : null;
+}
+
+export async function fetchBookAnnotations(bookId: string): Promise<BookAnnotation[]> {
+  const { data, error } = await supabase
+    .from('book_annotations')
+    .select('*')
+    .eq('book_id', bookId);
+
+  if (error) throw error;
+  return (data ?? []).map(mapBookAnnotation);
+}
+
+export async function upsertBookProgress(
+  userId: string,
+  bookId: string,
+  updates: Partial<Omit<UserBookProgress, 'id' | 'userId' | 'bookId'>>
+): Promise<UserBookProgress> {
+  const row: Record<string, unknown> = {
+    user_id: userId,
+    book_id: bookId,
+    last_read_at: new Date().toISOString(),
+  };
+  if (updates.currentPosition !== undefined) row.current_position = updates.currentPosition;
+  if (updates.currentChapter !== undefined) row.current_chapter = updates.currentChapter;
+  if (updates.percentComplete !== undefined) row.percent_complete = updates.percentComplete;
+  if (updates.timeSpentMs !== undefined) row.time_spent_ms = updates.timeSpentMs;
+  if (updates.wordsLookedUp !== undefined) row.words_looked_up = updates.wordsLookedUp;
+  if (updates.completedAt !== undefined) row.completed_at = updates.completedAt;
+
+  const { data, error } = await supabase
+    .from('user_book_progress')
+    .upsert(row, { onConflict: 'user_id,book_id' })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return mapUserBookProgress(data);
+}
+
+export async function fetchUserBookProgress(
+  userId: string,
+  bookId?: string
+): Promise<UserBookProgress[]> {
+  let query = supabase
+    .from('user_book_progress')
+    .select('*')
+    .eq('user_id', userId)
+    .order('last_read_at', { ascending: false });
+
+  if (bookId) {
+    query = query.eq('book_id', bookId);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data ?? []).map(mapUserBookProgress);
+}
+
+export async function fetchWritingSubmissionsByPrompt(
+  userId: string,
+  promptId: string
+): Promise<WritingSubmission[]> {
+  const { data, error } = await supabase
+    .from('user_writing_submissions')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('prompt_id', promptId)
+    .order('attempt_number', { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []).map(mapWritingSubmission);
+}
+
+export async function fetchAllUserWritingSubmissions(
+  userId: string,
+  cefrLevel?: string
+): Promise<WritingSubmission[]> {
+  let query = supabase
+    .from('user_writing_submissions')
+    .select('*')
+    .eq('user_id', userId)
+    .order('submitted_at', { ascending: false });
+
+  // Note: cefrLevel filtering requires a join; we'll filter client-side for simplicity
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data ?? []).map(mapWritingSubmission);
+}
+
+// ─── Reading Book Mappers ───────────────────────────────────────
+
+function mapReadingBook(row: Record<string, unknown>): ReadingBook {
+  return {
+    id: row.id as string,
+    source: row.source as ReadingBook['source'],
+    sourceId: (row.source_id as string) ?? null,
+    language: row.language as string,
+    cefrLevel: row.cefr_level as string,
+    title: row.title as string,
+    author: (row.author as string) ?? null,
+    description: (row.description as string) ?? null,
+    content: row.content as string,
+    wordCount: row.word_count as number,
+    chapterBreaks: (row.chapter_breaks as number[]) ?? [],
+    imageUrl: (row.image_url as string) ?? null,
+    tags: (row.tags as string[]) ?? [],
+    isPublished: (row.is_published as boolean) ?? true,
+    createdAt: row.created_at as string,
+  };
+}
+
+function mapUserBookProgress(row: Record<string, unknown>): UserBookProgress {
+  return {
+    id: row.id as string,
+    userId: row.user_id as string,
+    bookId: row.book_id as string,
+    currentPosition: (row.current_position as number) ?? 0,
+    currentChapter: (row.current_chapter as number) ?? 0,
+    percentComplete: parseFloat(String(row.percent_complete)) || 0,
+    timeSpentMs: (row.time_spent_ms as number) ?? 0,
+    wordsLookedUp: (row.words_looked_up as number) ?? 0,
+    completedAt: (row.completed_at as string) ?? null,
+    lastReadAt: row.last_read_at as string,
+  };
+}
+
+function mapBookAnnotation(row: Record<string, unknown>): BookAnnotation {
+  return {
+    id: row.id as string,
+    bookId: row.book_id as string,
+    wordOrPhrase: row.word_or_phrase as string,
+    translation: row.translation as string,
+    partOfSpeech: (row.part_of_speech as string) ?? null,
+    audioUrl: (row.audio_url as string) ?? null,
   };
 }
 

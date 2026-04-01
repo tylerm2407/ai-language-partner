@@ -15,8 +15,8 @@ export function isValidCefrLevel(level: string): boolean {
 }
 
 export const VALID_LANGUAGES = [
-  'en', 'es', 'fr', 'de', 'it', 'pt', 'ja', 'ko', 'zh',
-  'English', 'Spanish', 'French', 'German', 'Italian', 'Portuguese', 'Japanese', 'Korean', 'Chinese',
+  'en', 'es', 'fr', 'de', 'it', 'pt', 'ja', 'ko', 'zh', 'ru',
+  'English', 'Spanish', 'French', 'German', 'Italian', 'Portuguese', 'Japanese', 'Korean', 'Chinese', 'Russian',
 ] as const;
 
 export function isValidLanguage(lang: string): boolean {

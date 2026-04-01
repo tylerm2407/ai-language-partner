@@ -4,13 +4,9 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import Stripe from 'https://esm.sh/stripe@13.0.0?target=deno';
+import { corsHeaders, corsResponse } from '../_shared/cors.ts';
 
 const STRIPE_SECRET_KEY = Deno.env.get('STRIPE_SECRET_KEY');
-
-const stripe = new Stripe(STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16',
-  httpClient: Stripe.createFetchHttpClient(),
-});
 
 // Price IDs — set these after creating products in Stripe Dashboard
 const PRICE_IDS: Record<string, string> = {
@@ -25,37 +21,36 @@ const PRICE_IDS: Record<string, string> = {
 interface CheckoutRequest {
   userId: string;
   email: string;
-  priceKey: string; // e.g., 'basic_monthly', 'premium_monthly', 'unlimited_monthly'
+  priceKey: string;
   successUrl?: string;
   cancelUrl?: string;
 }
 
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', {
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST',
-        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-      },
-    });
+    return corsResponse();
   }
 
   try {
     if (!STRIPE_SECRET_KEY) {
       return new Response(
         JSON.stringify({ error: 'STRIPE_SECRET_KEY not configured' }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    const stripe = new Stripe(STRIPE_SECRET_KEY, {
+      apiVersion: '2023-10-16',
+      httpClient: Stripe.createFetchHttpClient(),
+    });
 
     const { userId, email, priceKey, successUrl, cancelUrl } = (await req.json()) as CheckoutRequest;
 
     const priceId = PRICE_IDS[priceKey];
-    if (!priceId) {
+    if (!priceId || priceId.startsWith('price_placeholder')) {
       return new Response(
-        JSON.stringify({ error: `Invalid price key: ${priceKey}` }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: `Invalid or unconfigured price key: ${priceKey}` }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -88,12 +83,12 @@ serve(async (req: Request) => {
 
     return new Response(
       JSON.stringify({ sessionId: session.id, url: session.url }),
-      { headers: { 'Content-Type': 'application/json' } }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     return new Response(
       JSON.stringify({ error: error.message }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });

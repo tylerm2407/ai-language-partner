@@ -1,15 +1,19 @@
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ProgressBar } from '../ui/ProgressBar';
+import { Ionicons } from '@expo/vector-icons';
 import type { WritingFeedback } from '../../types';
 
 interface Props {
   feedback: WritingFeedback;
+  previousScore?: number | null;
+  attemptNumber?: number;
+  maxAttempts?: number;
   onTryAgain: () => void;
   onContinue: () => void;
 }
 
-export function WritingFeedbackView({ feedback, onTryAgain, onContinue }: Props) {
+export function WritingFeedbackView({ feedback, previousScore, attemptNumber = 1, maxAttempts = 3, onTryAgain, onContinue }: Props) {
   const spellingScore = feedback.spellingScore ?? 0;
   const sentenceStructureScore = feedback.sentenceStructureScore ?? 0;
   const overallScore = Math.round(
@@ -18,6 +22,9 @@ export function WritingFeedbackView({ feedback, onTryAgain, onContinue }: Props)
   const scoreColor = overallScore >= 80 ? '#22C55E' : overallScore >= 60 ? '#CA8A04' : '#EF4444';
   const scoreBg = overallScore >= 80 ? '#DCFCE7' : overallScore >= 60 ? '#FEF9C3' : '#FEE2E2';
 
+  const canRetry = attemptNumber < maxAttempts;
+  const improvementDelta = previousScore != null ? overallScore - Math.round(previousScore * 100) : null;
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
       <ScrollView contentContainerStyle={{ padding: 20 }}>
@@ -25,6 +32,13 @@ export function WritingFeedbackView({ feedback, onTryAgain, onContinue }: Props)
         <Text style={{ fontSize: 28, fontWeight: '700', marginBottom: 8, textAlign: 'center' }} accessibilityRole="header">
           Writing Feedback
         </Text>
+
+        {/* Attempt indicator */}
+        {maxAttempts > 1 && (
+          <Text style={{ fontSize: 13, color: '#999', textAlign: 'center', marginBottom: 8 }}>
+            Attempt {attemptNumber} of {maxAttempts}
+          </Text>
+        )}
 
         {/* Overall Score Circle */}
         <View style={{ alignItems: 'center', marginBottom: 24 }}>
@@ -35,6 +49,27 @@ export function WritingFeedbackView({ feedback, onTryAgain, onContinue }: Props)
             <Text style={{ fontSize: 32, fontWeight: '700', color: scoreColor }}>{overallScore}</Text>
           </View>
           <Text style={{ fontSize: 14, color: '#666', marginTop: 8 }}>Overall Score</Text>
+
+          {/* Improvement Delta */}
+          {improvementDelta !== null && improvementDelta !== 0 && (
+            <View style={{
+              flexDirection: 'row', alignItems: 'center', marginTop: 4,
+              backgroundColor: improvementDelta > 0 ? '#DCFCE7' : '#FEE2E2',
+              borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4,
+            }}>
+              <Ionicons
+                name={improvementDelta > 0 ? 'trending-up' : 'trending-down'}
+                size={16}
+                color={improvementDelta > 0 ? '#22C55E' : '#EF4444'}
+              />
+              <Text style={{
+                fontSize: 14, fontWeight: '600', marginLeft: 4,
+                color: improvementDelta > 0 ? '#22C55E' : '#EF4444',
+              }}>
+                {improvementDelta > 0 ? '+' : ''}{improvementDelta} points from last attempt
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Category Scores */}
@@ -46,11 +81,54 @@ export function WritingFeedbackView({ feedback, onTryAgain, onContinue }: Props)
           <ScoreRow label="Sentence Structure" score={sentenceStructureScore} />
         </View>
 
+        {/* Strengths */}
+        {feedback.strengths && feedback.strengths.length > 0 && (
+          <View style={{ backgroundColor: '#DCFCE7', borderRadius: 16, padding: 20, marginBottom: 16 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+              <Ionicons name="checkmark-circle" size={18} color="#22C55E" />
+              <Text style={{ fontSize: 16, fontWeight: '600', color: '#22C55E', marginLeft: 6 }}>Strengths</Text>
+            </View>
+            {feedback.strengths.map((s, i) => (
+              <Text key={i} style={{ fontSize: 14, color: '#111', lineHeight: 20, marginBottom: 4 }}>
+                {'\u2022'} {s}
+              </Text>
+            ))}
+          </View>
+        )}
+
+        {/* Areas for Improvement */}
+        {feedback.improvements && feedback.improvements.length > 0 && (
+          <View style={{ backgroundColor: '#FEF9C3', borderRadius: 16, padding: 20, marginBottom: 16 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+              <Ionicons name="bulb" size={18} color="#CA8A04" />
+              <Text style={{ fontSize: 16, fontWeight: '600', color: '#CA8A04', marginLeft: 6 }}>Areas to Improve</Text>
+            </View>
+            {feedback.improvements.map((s, i) => (
+              <Text key={i} style={{ fontSize: 14, color: '#111', lineHeight: 20, marginBottom: 4 }}>
+                {'\u2022'} {s}
+              </Text>
+            ))}
+          </View>
+        )}
+
         {/* Overall Feedback */}
         <View style={{ backgroundColor: '#F9FAFB', borderRadius: 16, padding: 20, marginBottom: 16 }}>
           <Text style={{ fontSize: 16, fontWeight: '600', marginBottom: 8 }}>Feedback</Text>
           <Text style={{ fontSize: 15, color: '#666', lineHeight: 22 }}>{feedback.overallFeedback}</Text>
         </View>
+
+        {/* Corrected Version */}
+        {feedback.correctedVersion && (
+          <View style={{ backgroundColor: '#F9FAFB', borderRadius: 16, padding: 20, marginBottom: 16 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+              <Ionicons name="create" size={18} color="#6366F1" />
+              <Text style={{ fontSize: 16, fontWeight: '600', marginLeft: 6 }}>Corrected Version</Text>
+            </View>
+            <Text style={{ fontSize: 15, color: '#111', lineHeight: 22, fontStyle: 'italic' }}>
+              {feedback.correctedVersion}
+            </Text>
+          </View>
+        )}
 
         {/* Corrections */}
         {feedback.corrections.length > 0 && (
@@ -85,16 +163,18 @@ export function WritingFeedbackView({ feedback, onTryAgain, onContinue }: Props)
 
       {/* Action Buttons */}
       <View style={{ padding: 20, flexDirection: 'row', gap: 12, borderTopWidth: 1, borderTopColor: '#E5E7EB' }}>
-        <Pressable
-          onPress={onTryAgain}
-          style={{
-            flex: 1, backgroundColor: '#F9FAFB', paddingVertical: 16, borderRadius: 14, alignItems: 'center',
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Try again"
-        >
-          <Text style={{ fontSize: 18, fontWeight: '600', color: '#111' }}>Try Again</Text>
-        </Pressable>
+        {canRetry && (
+          <Pressable
+            onPress={onTryAgain}
+            style={{
+              flex: 1, backgroundColor: '#F9FAFB', paddingVertical: 16, borderRadius: 14, alignItems: 'center',
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Try again"
+          >
+            <Text style={{ fontSize: 18, fontWeight: '600', color: '#111' }}>Try Again</Text>
+          </Pressable>
+        )}
         <Pressable
           onPress={onContinue}
           style={{

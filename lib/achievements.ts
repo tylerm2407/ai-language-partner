@@ -17,7 +17,13 @@ export type AchievementType =
   | 'perfect_lesson'
   | 'cards_50'
   | 'cards_100'
-  | 'first_review';
+  | 'first_review'
+  | 'first_story'
+  | 'bookworm_5'
+  | 'bookworm_25'
+  | 'first_essay'
+  | 'writer_10'
+  | 'perfect_essay';
 
 export interface AchievementDefinition {
   type: AchievementType;
@@ -135,6 +141,48 @@ export const ACHIEVEMENTS: Record<AchievementType, AchievementDefinition> = {
     icon: 'refresh',
     color: '#34D399',
   },
+  first_story: {
+    type: 'first_story',
+    title: 'Page Turner',
+    description: 'Read your first story or book',
+    icon: 'book',
+    color: '#38BDF8',
+  },
+  bookworm_5: {
+    type: 'bookworm_5',
+    title: 'Bookworm',
+    description: 'Complete 5 books or stories',
+    icon: 'library',
+    color: '#A78BFA',
+  },
+  bookworm_25: {
+    type: 'bookworm_25',
+    title: 'Library Legend',
+    description: 'Complete 25 books or stories',
+    icon: 'library',
+    color: '#FBBF24',
+  },
+  first_essay: {
+    type: 'first_essay',
+    title: 'Pen to Paper',
+    description: 'Submit your first writing exercise',
+    icon: 'create',
+    color: '#60A5FA',
+  },
+  writer_10: {
+    type: 'writer_10',
+    title: 'Prolific Writer',
+    description: 'Complete 10 writing exercises',
+    icon: 'create',
+    color: '#A78BFA',
+  },
+  perfect_essay: {
+    type: 'perfect_essay',
+    title: 'Wordsmith',
+    description: 'Score 90+ on a writing submission',
+    icon: 'ribbon',
+    color: '#FBBF24',
+  },
 };
 
 // ─── Achievement Checking ───────────────────────────────────────
@@ -197,6 +245,7 @@ const ACHIEVEMENT_CONDITIONS: AchievementCondition[] = [
     type: 'first_review',
     check: (_profile, stats) => (stats?.cardsReviewed ?? 0) >= 1,
   },
+  // Reading/writing achievements are checked via separate queries below
 ];
 
 /**
@@ -222,6 +271,7 @@ export async function checkAndAwardAchievements(
   const earnedTypes = new Set((existing ?? []).map((a: { type: string }) => a.type));
   const newlyEarned: AchievementDefinition[] = [];
 
+  // Check basic conditions (profile + stats based)
   for (const condition of ACHIEVEMENT_CONDITIONS) {
     if (earnedTypes.has(condition.type)) continue;
     if (!condition.check(profile, dailyStats)) continue;
@@ -234,6 +284,95 @@ export async function checkAndAwardAchievements(
 
     if (!insertError) {
       newlyEarned.push(ACHIEVEMENTS[condition.type]);
+    }
+  }
+
+  // Check reading/writing achievements (DB query based)
+  const rwChecks: { type: AchievementType; query: () => Promise<boolean> }[] = [
+    {
+      type: 'first_story',
+      query: async () => {
+        const { count } = await supabase
+          .from('user_book_progress')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId)
+          .not('completed_at', 'is', null);
+        return (count ?? 0) >= 1;
+      },
+    },
+    {
+      type: 'bookworm_5',
+      query: async () => {
+        const { count } = await supabase
+          .from('user_book_progress')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId)
+          .not('completed_at', 'is', null);
+        return (count ?? 0) >= 5;
+      },
+    },
+    {
+      type: 'bookworm_25',
+      query: async () => {
+        const { count } = await supabase
+          .from('user_book_progress')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId)
+          .not('completed_at', 'is', null);
+        return (count ?? 0) >= 25;
+      },
+    },
+    {
+      type: 'first_essay',
+      query: async () => {
+        const { count } = await supabase
+          .from('user_writing_submissions')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId);
+        return (count ?? 0) >= 1;
+      },
+    },
+    {
+      type: 'writer_10',
+      query: async () => {
+        const { count } = await supabase
+          .from('user_writing_submissions')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId);
+        return (count ?? 0) >= 10;
+      },
+    },
+    {
+      type: 'perfect_essay',
+      query: async () => {
+        const { count } = await supabase
+          .from('user_writing_submissions')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId)
+          .gte('overall_score', 0.9);
+        return (count ?? 0) >= 1;
+      },
+    },
+  ];
+
+  for (const check of rwChecks) {
+    if (earnedTypes.has(check.type)) continue;
+
+    try {
+      const earned = await check.query();
+      if (!earned) continue;
+
+      const { error: insertError } = await supabase.from('achievements').insert({
+        user_id: userId,
+        type: check.type,
+        earned_at: new Date().toISOString(),
+      });
+
+      if (!insertError) {
+        newlyEarned.push(ACHIEVEMENTS[check.type]);
+      }
+    } catch {
+      // Skip failed checks silently
     }
   }
 

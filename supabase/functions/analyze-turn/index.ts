@@ -4,7 +4,7 @@
 // Deploy: npx supabase functions deploy analyze-turn
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { corsResponse, getCorsHeaders } from '../_shared/cors.ts';
+import { corsResponse, corsHeaders } from '../_shared/cors.ts';
 
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
 const TEXT_MODEL = 'claude-haiku-4-5-20251001';
@@ -18,10 +18,10 @@ interface AnalyzeTurnRequest {
 
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
-    return corsResponse(req);
+    return corsResponse();
   }
 
-  const headers = { ...getCorsHeaders(req), 'Content-Type': 'application/json' };
+  const headers = { ...corsHeaders, 'Content-Type': 'application/json' };
 
   try {
     const { userMessage, aiReply, targetLanguage, level } = (await req.json()) as AnalyzeTurnRequest;

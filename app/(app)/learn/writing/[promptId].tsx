@@ -3,32 +3,64 @@ import { View, ActivityIndicator, Text, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../../../../hooks/useAuth';
-import { fetchWritingPromptById, submitWriting, updateWritingFeedback } from '../../../../lib/supabase-queries';
+import { useAppStore } from '../../../../stores/useAppStore';
+import {
+  fetchWritingPromptById,
+  submitWriting,
+  updateWritingFeedback,
+  fetchWritingSubmissionsByPrompt,
+  addXp,
+} from '../../../../lib/supabase-queries';
 import { WritingExercise } from '../../../../components/writing/WritingExercise';
 import { WritingFeedbackView } from '../../../../components/writing/WritingFeedbackView';
 import { supabase } from '../../../../lib/supabase';
-import type { WritingPrompt, WritingFeedback } from '../../../../types';
+import type { WritingPrompt, WritingFeedback, WritingSubmission } from '../../../../types';
 
 export default function WritingPromptScreen() {
   const { promptId } = useLocalSearchParams<{ promptId: string }>();
   const router = useRouter();
   const { user } = useAuth();
+  const { profile } = useAppStore();
   const [prompt, setPrompt] = useState<WritingPrompt | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isGrading, setIsGrading] = useState(false);
   const [feedback, setFeedback] = useState<WritingFeedback | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [attemptNumber, setAttemptNumber] = useState(1);
+  const [previousScore, setPreviousScore] = useState<number | null>(null);
+  const [pastSubmissions, setPastSubmissions] = useState<WritingSubmission[]>([]);
 
   useEffect(() => {
-    if (!promptId) return;
-    fetchWritingPromptById(promptId).then((data) => {
-      setPrompt(data);
-      setIsLoading(false);
-    }).catch((e) => {
-      setError(e.message);
-      setIsLoading(false);
-    });
-  }, [promptId]);
+    if (!promptId || !user) return;
+
+    const load = async () => {
+      try {
+        const [promptData, submissions] = await Promise.all([
+          fetchWritingPromptById(promptId),
+          fetchWritingSubmissionsByPrompt(user.id, promptId),
+        ]);
+        setPrompt(promptData);
+        setPastSubmissions(submissions);
+
+        // Set attempt number based on past submissions
+        if (submissions.length > 0) {
+          const maxAttempt = Math.max(...submissions.map((s) => s.attemptNumber));
+          setAttemptNumber(maxAttempt + 1);
+          // Get the most recent score for delta calculation
+          const latestWithScore = [...submissions].reverse().find((s) => s.overallScore != null);
+          if (latestWithScore) {
+            setPreviousScore(latestWithScore.overallScore);
+          }
+        }
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Failed to load');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    load();
+  }, [promptId, user]);
 
   const handleSubmit = async (text: string, wordCount: number, timeSpentMs: number) => {
     if (!user || !prompt) return;
@@ -36,8 +68,8 @@ export default function WritingPromptScreen() {
     try {
       setIsGrading(true);
 
-      // Save submission
-      const submission = await submitWriting(user.id, prompt.id, text, wordCount, timeSpentMs);
+      // Save submission with attempt number
+      const submission = await submitWriting(user.id, prompt.id, text, wordCount, timeSpentMs, attemptNumber);
 
       // Call grade-writing edge function
       const { data, error: fnError } = await supabase.functions.invoke('grade-writing', {
@@ -45,7 +77,7 @@ export default function WritingPromptScreen() {
           submissionId: submission.id,
           submissionText: text,
           promptId: prompt.id,
-          targetLanguage: 'es', // TODO: get from course
+          targetLanguage: profile?.targetLanguage ?? 'es',
           cefrLevel: prompt.cefrLevel,
           userId: user.id,
         },
@@ -56,7 +88,7 @@ export default function WritingPromptScreen() {
       const gradeFeedback = data as WritingFeedback;
       setFeedback(gradeFeedback);
 
-      // Save feedback — average all 5 dimensions (backward-compatible: default missing to 0)
+      // Save feedback — average all 5 dimensions
       const scores = [
         gradeFeedback.grammarScore,
         gradeFeedback.spellingScore ?? 0,
@@ -69,11 +101,38 @@ export default function WritingPromptScreen() {
         ? validScores.reduce((a, b) => a + b, 0) / validScores.length / 100
         : 0;
       await updateWritingFeedback(submission.id, gradeFeedback, overallScore);
+
+      // Award XP based on CEFR level
+      const xpMap: Record<string, number> = { A1: 5, A2: 10, B1: 15, B2: 20, C1: 25, C2: 30 };
+      const baseXp = xpMap[prompt.cefrLevel] ?? 10;
+      const bonusXp = Math.round(overallScore * 15);
+      await addXp(user.id, baseXp + bonusXp);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to grade writing');
     } finally {
       setIsGrading(false);
     }
+  };
+
+  const handleTryAgain = () => {
+    // Store previous score for delta display
+    if (feedback) {
+      const scores = [
+        feedback.grammarScore,
+        feedback.spellingScore ?? 0,
+        feedback.sentenceStructureScore ?? 0,
+        feedback.vocabularyScore,
+        feedback.coherenceScore,
+      ];
+      const validScores = scores.filter((s) => s > 0);
+      const prevScore = validScores.length > 0
+        ? validScores.reduce((a, b) => a + b, 0) / validScores.length / 100
+        : 0;
+      setPreviousScore(prevScore);
+    }
+    setAttemptNumber((prev) => prev + 1);
+    setFeedback(null);
+    setError(null);
   };
 
   if (isLoading) {
@@ -95,11 +154,14 @@ export default function WritingPromptScreen() {
     );
   }
 
-  if (feedback) {
+  if (feedback && prompt) {
     return (
       <WritingFeedbackView
         feedback={feedback}
-        onTryAgain={() => { setFeedback(null); setError(null); }}
+        previousScore={previousScore}
+        attemptNumber={attemptNumber}
+        maxAttempts={prompt.maxAttempts}
+        onTryAgain={handleTryAgain}
         onContinue={() => router.back()}
       />
     );
@@ -117,6 +179,7 @@ export default function WritingPromptScreen() {
     <WritingExercise
       prompt={prompt}
       isGrading={isGrading}
+      attemptNumber={attemptNumber}
       onSubmit={handleSubmit}
       onExit={() => router.back()}
     />

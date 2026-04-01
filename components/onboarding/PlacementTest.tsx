@@ -108,6 +108,18 @@ const PLACEMENT_QUESTIONS: Record<string, PlacementQuestion[]> = {
     { question: '"塞翁失马" (the old man lost his horse) conveys:', options: ['A blessing in disguise', 'Bad luck never ends', 'Horses are valuable', 'Old people are wise'], correctIndex: 0, level: 'advanced' },
     { question: 'What does the 把 (bǎ) construction emphasize?', options: ['Passive voice', 'The action\'s effect on the object', 'Past tense', 'Comparison'], correctIndex: 1, level: 'advanced' },
   ],
+  ru: [
+    { question: 'What does "Привет" mean?', options: ['Goodbye', 'Hello', 'Please', 'Thank you'], correctIndex: 1, level: 'beginner' },
+    { question: 'How do you say "water" in Russian?', options: ['Молоко', 'Вода', 'Чай', 'Хлеб'], correctIndex: 1, level: 'beginner' },
+    { question: 'Choose the correct sentence:', options: ['Я есть студент', 'Я студент', 'Я быть студент', 'Я студенты'], correctIndex: 1, level: 'elementary' },
+    { question: '"Вчера я ходил в магазин" means:', options: ['I will go to the store', 'Yesterday I went to the store', 'I like the store', 'I am at the store'], correctIndex: 1, level: 'elementary' },
+    { question: 'Complete: "Если бы я ___ богатым, я бы путешествовал"', options: ['есть', 'был', 'буду', 'быть'], correctIndex: 1, level: 'intermediate' },
+    { question: 'What does "вешать лапшу на уши" mean?', options: ['To hang noodles', 'To deceive someone', 'To cook pasta', 'To listen carefully'], correctIndex: 1, level: 'intermediate' },
+    { question: 'Choose the correct verb of motion: "Я ___ в школу каждый день"', options: ['иду', 'хожу', 'еду', 'пойду'], correctIndex: 1, level: 'upper_intermediate' },
+    { question: '"Не в своей тарелке" means:', options: ['Not on my plate', 'Feeling out of place / uncomfortable', 'Not hungry', 'Wrong dish'], correctIndex: 1, level: 'upper_intermediate' },
+    { question: 'Choose the correct participle: "Книга, ___ на столе, очень интересная"', options: ['лежащая', 'лежала', 'лежит', 'лежать'], correctIndex: 0, level: 'advanced' },
+    { question: '"Семь пятниц на неделе" describes someone who:', options: ['Loves Fridays', 'Changes their mind constantly', 'Works seven days a week', 'Is always late'], correctIndex: 1, level: 'advanced' },
+  ],
 };
 
 interface PlacementTestProps {

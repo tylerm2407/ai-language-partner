@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SUPPORTED_LANGUAGES } from '../../../config/app';
 import { GradientBackground } from '../../../components/ui/GradientBackground';
 import { LeagueBadge } from '../../../components/gamification/LeagueBadge';
+import { AchievementGrid } from '../../../components/gamification/AchievementGrid';
 
 const LEVEL_LABELS: Record<string, string> = {
   beginner: 'Beginner',
@@ -35,8 +36,8 @@ export default function ProfileScreen() {
 
   return (
     <GradientBackground>
-    <SafeAreaView className="flex-1">
-      <ScrollView className="flex-1 px-4 pt-4" contentContainerStyle={{ paddingBottom: 100 }}>
+    <View className="flex-1">
+      <ScrollView className="flex-1 px-4 pt-2" contentContainerStyle={{ paddingBottom: 100 }}>
         <Text className="text-[28px] font-bold text-text-primary mb-6" accessibilityRole="header">Profile</Text>
 
         {/* User Info */}
@@ -74,6 +75,9 @@ export default function ProfileScreen() {
             <LeagueBadge tier={tier} />
           </View>
         </View>
+
+        {/* Achievements */}
+        <AchievementGrid />
 
         {/* Settings */}
         <Text className="text-xl font-bold text-text-primary mb-3">Settings</Text>
@@ -140,7 +144,7 @@ export default function ProfileScreen() {
           <Text className="text-error-dark text-lg font-semibold">Sign Out</Text>
         </Pressable>
       </ScrollView>
-    </SafeAreaView>
+    </View>
     </GradientBackground>
   );
 }

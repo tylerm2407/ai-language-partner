@@ -9,9 +9,12 @@ import { useProfile } from '../../../hooks/useProfile';
 import { useDailyStats } from '../../../hooks/useDailyStats';
 import { useHearts } from '../../../hooks/useHearts';
 import { useLevel } from '../../../hooks/useLevel';
+import { useLessonProgress } from '../../../hooks/useLessonProgress';
 import { LessonRunner, type LessonResult } from '../../../components/lesson/LessonRunner';
 import { LevelUpModal } from '../../../components/gamification/LevelUpModal';
 import { OutOfHeartsModal } from '../../../components/gamification/OutOfHeartsModal';
+import { AchievementModal } from '../../../components/gamification/AchievementModal';
+import { checkAndAwardAchievements, type AchievementDefinition } from '../../../lib/achievements';
 import { Button } from '../../../components/ui/Button';
 import { GradientBackground } from '../../../components/ui/GradientBackground';
 import type { Lesson } from '../../../types';
@@ -25,9 +28,12 @@ export default function LessonScreen() {
   const { addStats } = useDailyStats();
   const { hearts, maxHearts, isUnlimited, canPlay, loseHeart, nextRegenAt } = useHearts();
   const { levelUpInfo, dismissLevelUp } = useLevel();
+  const { markLessonComplete } = useLessonProgress();
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [loading, setLoading] = useState(true);
   const [showOutOfHearts, setShowOutOfHearts] = useState(false);
+  const [achievementQueue, setAchievementQueue] = useState<AchievementDefinition[]>([]);
+  const [showingAchievement, setShowingAchievement] = useState<AchievementDefinition | null>(null);
 
   useEffect(() => {
     if (!lessonId) return;
@@ -73,6 +79,30 @@ export default function LessonScreen() {
       lessonsCompleted: 1,
       xpEarned: result.xpEarned,
     });
+
+    // Record lesson completion
+    if (lesson && user?.id) {
+      const score = result.totalExercises > 0 ? result.correctCount / result.totalExercises : 0;
+      await markLessonComplete(lesson.id, lesson.unitId, score, result.xpEarned, 0).catch(console.error);
+
+      // Check for new achievements
+      if (profile) {
+        const { dailyStats } = useAppStore.getState();
+        const newAchievements = await checkAndAwardAchievements(user.id, profile, dailyStats).catch(() => []);
+        if (newAchievements.length > 0) {
+          setAchievementQueue(newAchievements);
+          setShowingAchievement(newAchievements[0]);
+        }
+      }
+    }
+  };
+
+  const dismissAchievement = () => {
+    setAchievementQueue((prev) => {
+      const remaining = prev.slice(1);
+      setShowingAchievement(remaining[0] ?? null);
+      return remaining;
+    });
   };
 
   return (
@@ -112,6 +142,13 @@ export default function LessonScreen() {
           setShowOutOfHearts(false);
           if (!canPlay) router.back();
         }}
+      />
+
+      {/* Achievement Celebration */}
+      <AchievementModal
+        achievement={showingAchievement}
+        visible={!!showingAchievement}
+        onDismiss={dismissAchievement}
       />
     </SafeAreaView>
     </GradientBackground>

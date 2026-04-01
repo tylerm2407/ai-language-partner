@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { View, TextInput, Pressable, ActivityIndicator, Text, Alert, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
-import * as FileSystem from 'expo-file-system';
+import { File } from 'expo-file-system/next';
 
 export type HandsFreeState = 'IDLE' | 'CONNECTING' | 'LISTENING' | 'PROCESSING' | 'AI_RESPONDING' | 'TTS_PLAYING';
 
@@ -34,9 +34,8 @@ const METERING_INTERVAL_MS = 200;
 
 /** Read an audio file as base64 string. */
 async function readAudioAsBase64(uri: string): Promise<string> {
-  const base64 = await FileSystem.readAsStringAsync(uri, {
-    encoding: 'base64',
-  });
+  const file = new File(uri);
+  const base64 = file.base64();
   return base64;
 }
 
@@ -58,7 +57,9 @@ export function ChatInput({
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [showTextFallback, setShowTextFallback] = useState(false);
+  const [tooShortMessage, setTooShortMessage] = useState<string | null>(null);
   const recordingRef = useRef<Audio.Recording | null>(null);
+  const recordingStartTimeRef = useRef<number>(0);
 
   // Hands-free silence detection state
   const hasDetectedSpeechRef = useRef(false);
@@ -94,6 +95,17 @@ export function ChatInput({
   const startRecording = async (withSilenceDetection = false) => {
     if (isStoppingRef.current) return;
     try {
+      // Clean up any stale recording before creating a new one
+      // expo-av only allows one Recording prepared at a time
+      if (recordingRef.current) {
+        try {
+          await recordingRef.current.stopAndUnloadAsync();
+        } catch {
+          // Already stopped/unloaded — safe to ignore
+        }
+        recordingRef.current = null;
+      }
+
       const permission = await Audio.requestPermissionsAsync();
       if (!permission.granted) return;
 
@@ -110,6 +122,7 @@ export function ChatInput({
 
       const { recording } = await Audio.Recording.createAsync(recordingOptions);
       recordingRef.current = recording;
+      recordingStartTimeRef.current = Date.now();
       setIsRecording(true);
       hasDetectedSpeechRef.current = false;
       clearSilenceTimer();
@@ -201,13 +214,22 @@ export function ChatInput({
 
     try {
       setIsRecording(false);
-      await recordingRef.current.stopAndUnloadAsync();
-      const uri = recordingRef.current.getURI();
-      recordingRef.current = null;
+      const rec = recordingRef.current;
+      recordingRef.current = null; // Null ref BEFORE async work to prevent races
+      await rec.stopAndUnloadAsync();
+      const uri = rec.getURI();
 
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: false,
       });
+
+      // Check minimum recording duration to avoid Whisper errors on quick taps
+      const recordingDuration = Date.now() - recordingStartTimeRef.current;
+      if (recordingDuration < 500) {
+        setTooShortMessage('Hold the mic a bit longer');
+        setTimeout(() => setTooShortMessage(null), 2000);
+        return;
+      }
 
       if (uri && onVoiceMessage) {
         setIsTranscribing(true);
@@ -226,9 +248,9 @@ export function ChatInput({
               ? "You've reached your daily voice limit. Upgrade your plan for more."
               : err.code === 'NOT_CONFIGURED'
                 ? 'Voice features are not yet configured. Please try again later.'
-                : 'Voice features are temporarily unavailable. You can switch to typing using the keyboard button.'
-            : 'Voice features are temporarily unavailable. You can switch to typing using the keyboard button.';
-          Alert.alert('Voice Unavailable', message, [{ text: 'OK' }]);
+                : "I couldn't catch that. Try holding the mic button longer while speaking."
+            : "I couldn't catch that. Try holding the mic button longer while speaking.";
+          Alert.alert('Voice', message, [{ text: 'OK' }]);
         } finally {
           setIsTranscribing(false);
         }
@@ -352,8 +374,8 @@ export function ChatInput({
           )}
         </Pressable>
 
-        <Text className="text-xs text-text-secondary mt-2">
-          {isTranscribing ? 'Transcribing...' : isRecording ? 'Listening...' : 'Hold to talk'}
+        <Text className={`text-xs mt-2 ${tooShortMessage ? 'text-warning' : 'text-text-secondary'}`}>
+          {tooShortMessage ?? (isTranscribing ? 'Transcribing...' : isRecording ? 'Listening...' : 'Hold to talk')}
         </Text>
       </View>
     );

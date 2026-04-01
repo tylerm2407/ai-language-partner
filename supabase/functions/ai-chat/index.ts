@@ -6,6 +6,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { corsHeaders, corsResponse } from '../_shared/cors.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -87,13 +88,7 @@ async function getUserTier(supabase: ReturnType<typeof createClient>, userId: st
 
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', {
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST',
-        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-      },
-    });
+    return corsResponse();
   }
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -104,7 +99,7 @@ serve(async (req: Request) => {
     if (!ANTHROPIC_API_KEY) {
       return new Response(
         JSON.stringify({ error: 'ANTHROPIC_API_KEY not configured' }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -121,7 +116,7 @@ serve(async (req: Request) => {
               error: "You've reached your daily text conversation limit. Upgrade your plan to keep practicing today.",
               code: 'DAILY_TEXT_LIMIT_REACHED',
             }),
-            { status: 429, headers: { 'Content-Type': 'application/json' } }
+            { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
       }
@@ -170,12 +165,12 @@ serve(async (req: Request) => {
         vocabularyHighlights,
         audioUrl: null,
       }),
-      { headers: { 'Content-Type': 'application/json' } }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     return new Response(
       JSON.stringify({ error: error.message }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
@@ -239,15 +234,34 @@ function parseAIResponse(text: string): {
   correction: string | null;
   vocabularyHighlights: string[];
 } {
+  // Step 1: Strip markdown code fences that Claude sometimes wraps around JSON
+  let cleaned = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+
   try {
-    const parsed = JSON.parse(text);
+    const parsed = JSON.parse(cleaned);
     return {
       reply: parsed.reply ?? text,
       correction: parsed.correction ?? null,
       vocabularyHighlights: parsed.vocabularyHighlights ?? [],
     };
   } catch {
-    // Fallback: if Claude didn't return valid JSON, use legacy text parsing
+    // Step 2: Try extracting JSON object from first { to last }
+    const firstBrace = cleaned.indexOf('{');
+    const lastBrace = cleaned.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace > firstBrace) {
+      try {
+        const parsed = JSON.parse(cleaned.substring(firstBrace, lastBrace + 1));
+        return {
+          reply: parsed.reply ?? text,
+          correction: parsed.correction ?? null,
+          vocabularyHighlights: parsed.vocabularyHighlights ?? [],
+        };
+      } catch {
+        // Fall through to legacy parsing
+      }
+    }
+
+    // Step 3: Legacy text parsing fallback
     const correctionMarker = '[CORRECTION]:';
     const index = text.indexOf(correctionMarker);
 

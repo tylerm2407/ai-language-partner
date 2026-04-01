@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { Linking } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 import { PLAN_FEATURES } from './plans';
 import type { PlanId } from './plans';
 
@@ -10,9 +10,8 @@ interface CheckoutOptions {
 }
 
 /**
- * Create a Stripe Checkout session and open it in the browser.
- * The user completes payment in Stripe's hosted checkout page,
- * then is redirected back to the app via deep link.
+ * Create a Stripe Checkout session and open it in an in-app browser.
+ * Works in Expo Go — no custom URL scheme required.
  */
 export async function openCheckout(options: CheckoutOptions): Promise<void> {
   const { data, error } = await supabase.functions.invoke('create-checkout', {
@@ -23,12 +22,24 @@ export async function openCheckout(options: CheckoutOptions): Promise<void> {
     },
   });
 
-  if (error) throw new Error(`Checkout error: ${error.message}`);
+  if (error) {
+    let errorMessage = error.message;
+    try {
+      const ctx = (error as Record<string, unknown>).context;
+      if (ctx && typeof (ctx as Response).json === 'function') {
+        const body = await (ctx as Response).json();
+        if (body?.error) errorMessage = body.error;
+      }
+    } catch {
+      // Couldn't parse error body — fall through with generic message
+    }
+    throw new Error(`Checkout error: ${errorMessage}`);
+  }
 
   const { url } = data as { sessionId: string; url: string };
 
   if (url) {
-    await Linking.openURL(url);
+    await WebBrowser.openBrowserAsync(url);
   } else {
     throw new Error('No checkout URL returned');
   }

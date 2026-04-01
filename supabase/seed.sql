@@ -20788,4 +20788,2236 @@ VALUES ('aabbccdd-8888-4005-d001-000000000000', 'aabbccdd-8888-0000-0000-b200000
 INSERT INTO writing_prompts (id, course_id, unit_id, cefr_level, prompt_text, prompt_type, min_words, max_words)
 VALUES ('aabbccdd-8888-4006-d001-000000000000', 'aabbccdd-8888-0000-0000-b20000000000', 'aabbccdd-8888-4006-0000-b20000000000', 'B2', 'Analyze the role of social media in shaping public opinion. Discuss its influence on politics, culture, and personal relationships. Write at least 150 words.', 'free', 150, 400);
 
+-- ============================================================
+-- RUSSIAN (ru)
+-- ============================================================
+
+-- Russian A1
+INSERT INTO courses (id, source_language, target_language, title, description, total_units, is_published, cefr_level)
+VALUES ('aabbccdd-9999-0000-0000-000000000000', 'en', 'ru', 'Russian A1', 'Russian course - CEFR A1', 8, true, 'A1');
+
+INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
+VALUES ('aabbccdd-9999-1001-0000-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'Greetings & Basics', 'Learn greetings, introductions, and polite expressions', 0, 6);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+  ('aabbccdd-9999-1001-0001-000000000000', 'aabbccdd-9999-1001-0000-000000000000', 'Core Vocabulary', 'Core Vocabulary', 0, 5, 20),
+  ('aabbccdd-9999-1001-0002-000000000000', 'aabbccdd-9999-1001-0000-000000000000', 'Phrases & Sentences', 'Phrases & Sentences', 1, 5, 20),
+  ('aabbccdd-9999-1001-0003-000000000000', 'aabbccdd-9999-1001-0000-000000000000', 'Listening & Recognition', 'Listening & Recognition', 2, 5, 20),
+  ('aabbccdd-9999-1001-0004-000000000000', 'aabbccdd-9999-1001-0000-000000000000', 'Speaking Practice', 'Speaking Practice', 3, 5, 20),
+  ('aabbccdd-9999-1001-0005-000000000000', 'aabbccdd-9999-1001-0000-000000000000', 'Reading Simple Texts', 'Reading Simple Texts', 4, 5, 20),
+  ('aabbccdd-9999-1001-0006-000000000000', 'aabbccdd-9999-1001-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1001-0001-e00000000001', 'aabbccdd-9999-1001-0001-000000000000', 'multiple_choice', 'What does "Привет" mean in English?', 'Hello', '{"Привет","До свидания","Доброе утро","Добрый вечер"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1001-0001-e00000000002', 'aabbccdd-9999-1001-0001-000000000000', 'translate_to_target', 'Translate to Russian: Goodbye', 'До свидания', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1001-0001-e00000000003', 'aabbccdd-9999-1001-0001-000000000000', 'translate_to_native', 'Translate to English: Доброе утро', 'Good morning', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1001-0001-e00000000004', 'aabbccdd-9999-1001-0001-000000000000', 'fill_blank', '_____ (Good evening)', 'Добрый вечер', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1001-0001-e00000000005', 'aabbccdd-9999-1001-0001-000000000000', 'multiple_choice', 'What does "Спокойной ночи" mean in English?', 'Good night', '{"Спокойной ночи","Пожалуйста","Спасибо","Извините"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1001-0001-e00000000006', 'aabbccdd-9999-1001-0001-000000000000', 'translate_to_target', 'Translate to Russian: Please', 'Пожалуйста', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1001-0001-e00000000007', 'aabbccdd-9999-1001-0001-000000000000', 'translate_to_native', 'Translate to English: Спасибо', 'Thank you', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1001-0001-e00000000008', 'aabbccdd-9999-1001-0001-000000000000', 'fill_blank', '_____ (Sorry)', 'Извините', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1001-0002-e00000000001', 'aabbccdd-9999-1001-0002-000000000000', 'multiple_choice', 'What does "Доброе утро" mean in English?', 'Good morning', '{"Доброе утро","Добрый вечер","Спокойной ночи","Пожалуйста"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1001-0002-e00000000002', 'aabbccdd-9999-1001-0002-000000000000', 'translate_to_target', 'Translate to Russian: Good evening', 'Добрый вечер', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1001-0002-e00000000003', 'aabbccdd-9999-1001-0002-000000000000', 'translate_to_native', 'Translate to English: Спокойной ночи', 'Good night', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1001-0002-e00000000004', 'aabbccdd-9999-1001-0002-000000000000', 'fill_blank', '_____ (Please)', 'Пожалуйста', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1001-0002-e00000000005', 'aabbccdd-9999-1001-0002-000000000000', 'multiple_choice', 'What does "Спасибо" mean in English?', 'Thank you', '{"Спасибо","Извините","Да","Нет"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1001-0002-e00000000006', 'aabbccdd-9999-1001-0002-000000000000', 'translate_to_target', 'Translate to Russian: Sorry', 'Извините', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1001-0002-e00000000007', 'aabbccdd-9999-1001-0002-000000000000', 'translate_to_native', 'Translate to English: Да', 'Yes', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1001-0002-e00000000008', 'aabbccdd-9999-1001-0002-000000000000', 'fill_blank', '_____ (No)', 'Нет', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1001-0003-e00000000001', 'aabbccdd-9999-1001-0003-000000000000', 'multiple_choice', 'What does "Спокойной ночи" mean in English?', 'Good night', '{"Спокойной ночи","Пожалуйста","Спасибо","Извините"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1001-0003-e00000000002', 'aabbccdd-9999-1001-0003-000000000000', 'translate_to_target', 'Translate to Russian: Please', 'Пожалуйста', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1001-0003-e00000000003', 'aabbccdd-9999-1001-0003-000000000000', 'translate_to_native', 'Translate to English: Спасибо', 'Thank you', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1001-0003-e00000000004', 'aabbccdd-9999-1001-0003-000000000000', 'fill_blank', '_____ (Sorry)', 'Извините', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1001-0003-e00000000005', 'aabbccdd-9999-1001-0003-000000000000', 'multiple_choice', 'What does "Да" mean in English?', 'Yes', '{"Да","Нет","Привет","До свидания"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1001-0003-e00000000006', 'aabbccdd-9999-1001-0003-000000000000', 'translate_to_target', 'Translate to Russian: No', 'Нет', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1001-0003-e00000000007', 'aabbccdd-9999-1001-0003-000000000000', 'translate_to_native', 'Translate to English: Привет', 'Hello', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1001-0003-e00000000008', 'aabbccdd-9999-1001-0003-000000000000', 'fill_blank', '_____ (Goodbye)', 'До свидания', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1001-0004-e00000000001', 'aabbccdd-9999-1001-0004-000000000000', 'multiple_choice', 'What does "Спасибо" mean in English?', 'Thank you', '{"Спасибо","Извините","Да","Нет"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1001-0004-e00000000002', 'aabbccdd-9999-1001-0004-000000000000', 'translate_to_target', 'Translate to Russian: Sorry', 'Извините', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1001-0004-e00000000003', 'aabbccdd-9999-1001-0004-000000000000', 'translate_to_native', 'Translate to English: Да', 'Yes', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1001-0004-e00000000004', 'aabbccdd-9999-1001-0004-000000000000', 'fill_blank', '_____ (No)', 'Нет', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1001-0004-e00000000005', 'aabbccdd-9999-1001-0004-000000000000', 'multiple_choice', 'What does "Привет" mean in English?', 'Hello', '{"Привет","До свидания","Доброе утро","Добрый вечер"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1001-0004-e00000000006', 'aabbccdd-9999-1001-0004-000000000000', 'translate_to_target', 'Translate to Russian: Goodbye', 'До свидания', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1001-0004-e00000000007', 'aabbccdd-9999-1001-0004-000000000000', 'translate_to_native', 'Translate to English: Доброе утро', 'Good morning', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1001-0004-e00000000008', 'aabbccdd-9999-1001-0004-000000000000', 'fill_blank', '_____ (Good evening)', 'Добрый вечер', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1001-0005-e00000000001', 'aabbccdd-9999-1001-0005-000000000000', 'multiple_choice', 'What does "Да" mean in English?', 'Yes', '{"Да","Нет","Привет","До свидания"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1001-0005-e00000000002', 'aabbccdd-9999-1001-0005-000000000000', 'translate_to_target', 'Translate to Russian: No', 'Нет', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1001-0005-e00000000003', 'aabbccdd-9999-1001-0005-000000000000', 'translate_to_native', 'Translate to English: Привет', 'Hello', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1001-0005-e00000000004', 'aabbccdd-9999-1001-0005-000000000000', 'fill_blank', '_____ (Goodbye)', 'До свидания', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1001-0005-e00000000005', 'aabbccdd-9999-1001-0005-000000000000', 'multiple_choice', 'What does "Доброе утро" mean in English?', 'Good morning', '{"Доброе утро","Добрый вечер","Спокойной ночи","Пожалуйста"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1001-0005-e00000000006', 'aabbccdd-9999-1001-0005-000000000000', 'translate_to_target', 'Translate to Russian: Good evening', 'Добрый вечер', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1001-0005-e00000000007', 'aabbccdd-9999-1001-0005-000000000000', 'translate_to_native', 'Translate to English: Спокойной ночи', 'Good night', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1001-0005-e00000000008', 'aabbccdd-9999-1001-0005-000000000000', 'fill_blank', '_____ (Please)', 'Пожалуйста', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1001-0006-e00000000001', 'aabbccdd-9999-1001-0006-000000000000', 'multiple_choice', 'What does "Привет" mean in English?', 'Hello', '{"Привет","До свидания","Доброе утро","Добрый вечер"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1001-0006-e00000000002', 'aabbccdd-9999-1001-0006-000000000000', 'translate_to_target', 'Translate to Russian: Goodbye', 'До свидания', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1001-0006-e00000000003', 'aabbccdd-9999-1001-0006-000000000000', 'translate_to_native', 'Translate to English: Доброе утро', 'Good morning', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1001-0006-e00000000004', 'aabbccdd-9999-1001-0006-000000000000', 'fill_blank', '_____ (Good evening)', 'Добрый вечер', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1001-0006-e00000000005', 'aabbccdd-9999-1001-0006-000000000000', 'multiple_choice', 'What does "Спокойной ночи" mean in English?', 'Good night', '{"Спокойной ночи","Пожалуйста","Спасибо","Извините"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1001-0006-e00000000006', 'aabbccdd-9999-1001-0006-000000000000', 'translate_to_target', 'Translate to Russian: Please', 'Пожалуйста', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1001-0006-e00000000007', 'aabbccdd-9999-1001-0006-000000000000', 'translate_to_native', 'Translate to English: Спасибо', 'Thank you', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1001-0006-e00000000008', 'aabbccdd-9999-1001-0006-000000000000', 'fill_blank', '_____ (Sorry)', 'Извините', NULL, '{}', 7, '{}');
+INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_speech, tags) VALUES
+  ('aabbccdd-9999-1001-c001-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1001-0000-000000000000', 'Hello', 'Привет', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1001-c002-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1001-0000-000000000000', 'Goodbye', 'До свидания', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1001-c003-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1001-0000-000000000000', 'Good morning', 'Доброе утро', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1001-c004-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1001-0000-000000000000', 'Good evening', 'Добрый вечер', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1001-c005-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1001-0000-000000000000', 'Good night', 'Спокойной ночи', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1001-c006-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1001-0000-000000000000', 'Please', 'Пожалуйста', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1001-c007-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1001-0000-000000000000', 'Thank you', 'Спасибо', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1001-c008-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1001-0000-000000000000', 'Sorry', 'Извините', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1001-c009-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1001-0000-000000000000', 'Yes', 'Да', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1001-c010-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1001-0000-000000000000', 'No', 'Нет', 'word', '{"A1"}');
+
+INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
+VALUES ('aabbccdd-9999-1002-0000-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'Food & Dining', 'Order food and drinks at a restaurant', 1, 6);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+  ('aabbccdd-9999-1002-0001-000000000000', 'aabbccdd-9999-1002-0000-000000000000', 'Core Vocabulary', 'Core Vocabulary', 0, 5, 20),
+  ('aabbccdd-9999-1002-0002-000000000000', 'aabbccdd-9999-1002-0000-000000000000', 'Phrases & Sentences', 'Phrases & Sentences', 1, 5, 20),
+  ('aabbccdd-9999-1002-0003-000000000000', 'aabbccdd-9999-1002-0000-000000000000', 'Listening & Recognition', 'Listening & Recognition', 2, 5, 20),
+  ('aabbccdd-9999-1002-0004-000000000000', 'aabbccdd-9999-1002-0000-000000000000', 'Speaking Practice', 'Speaking Practice', 3, 5, 20),
+  ('aabbccdd-9999-1002-0005-000000000000', 'aabbccdd-9999-1002-0000-000000000000', 'Reading Simple Texts', 'Reading Simple Texts', 4, 5, 20),
+  ('aabbccdd-9999-1002-0006-000000000000', 'aabbccdd-9999-1002-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1002-0001-e00000000001', 'aabbccdd-9999-1002-0001-000000000000', 'multiple_choice', 'What does "Вода" mean in English?', 'Water', '{"Вода","Хлеб","Молоко","Мясо"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1002-0001-e00000000002', 'aabbccdd-9999-1002-0001-000000000000', 'translate_to_target', 'Translate to Russian: Bread', 'Хлеб', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1002-0001-e00000000003', 'aabbccdd-9999-1002-0001-000000000000', 'translate_to_native', 'Translate to English: Молоко', 'Milk', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1002-0001-e00000000004', 'aabbccdd-9999-1002-0001-000000000000', 'fill_blank', '_____ (Meat)', 'Мясо', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1002-0001-e00000000005', 'aabbccdd-9999-1002-0001-000000000000', 'multiple_choice', 'What does "Рыба" mean in English?', 'Fish', '{"Рыба","Суп","Каша","Чай"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1002-0001-e00000000006', 'aabbccdd-9999-1002-0001-000000000000', 'translate_to_target', 'Translate to Russian: Soup', 'Суп', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1002-0001-e00000000007', 'aabbccdd-9999-1002-0001-000000000000', 'translate_to_native', 'Translate to English: Каша', 'Porridge', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1002-0001-e00000000008', 'aabbccdd-9999-1002-0001-000000000000', 'fill_blank', '_____ (Tea)', 'Чай', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1002-0002-e00000000001', 'aabbccdd-9999-1002-0002-000000000000', 'multiple_choice', 'What does "Молоко" mean in English?', 'Milk', '{"Молоко","Мясо","Рыба","Суп"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1002-0002-e00000000002', 'aabbccdd-9999-1002-0002-000000000000', 'translate_to_target', 'Translate to Russian: Meat', 'Мясо', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1002-0002-e00000000003', 'aabbccdd-9999-1002-0002-000000000000', 'translate_to_native', 'Translate to English: Рыба', 'Fish', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1002-0002-e00000000004', 'aabbccdd-9999-1002-0002-000000000000', 'fill_blank', '_____ (Soup)', 'Суп', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1002-0002-e00000000005', 'aabbccdd-9999-1002-0002-000000000000', 'multiple_choice', 'What does "Каша" mean in English?', 'Porridge', '{"Каша","Чай","Кофе","Сыр"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1002-0002-e00000000006', 'aabbccdd-9999-1002-0002-000000000000', 'translate_to_target', 'Translate to Russian: Tea', 'Чай', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1002-0002-e00000000007', 'aabbccdd-9999-1002-0002-000000000000', 'translate_to_native', 'Translate to English: Кофе', 'Coffee', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1002-0002-e00000000008', 'aabbccdd-9999-1002-0002-000000000000', 'fill_blank', '_____ (Cheese)', 'Сыр', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1002-0003-e00000000001', 'aabbccdd-9999-1002-0003-000000000000', 'multiple_choice', 'What does "Рыба" mean in English?', 'Fish', '{"Рыба","Суп","Каша","Чай"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1002-0003-e00000000002', 'aabbccdd-9999-1002-0003-000000000000', 'translate_to_target', 'Translate to Russian: Soup', 'Суп', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1002-0003-e00000000003', 'aabbccdd-9999-1002-0003-000000000000', 'translate_to_native', 'Translate to English: Каша', 'Porridge', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1002-0003-e00000000004', 'aabbccdd-9999-1002-0003-000000000000', 'fill_blank', '_____ (Tea)', 'Чай', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1002-0003-e00000000005', 'aabbccdd-9999-1002-0003-000000000000', 'multiple_choice', 'What does "Кофе" mean in English?', 'Coffee', '{"Кофе","Сыр","Рис","Вода"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1002-0003-e00000000006', 'aabbccdd-9999-1002-0003-000000000000', 'translate_to_target', 'Translate to Russian: Cheese', 'Сыр', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1002-0003-e00000000007', 'aabbccdd-9999-1002-0003-000000000000', 'translate_to_native', 'Translate to English: Рис', 'Rice', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1002-0003-e00000000008', 'aabbccdd-9999-1002-0003-000000000000', 'fill_blank', '_____ (Water)', 'Вода', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1002-0004-e00000000001', 'aabbccdd-9999-1002-0004-000000000000', 'multiple_choice', 'What does "Каша" mean in English?', 'Porridge', '{"Каша","Чай","Кофе","Сыр"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1002-0004-e00000000002', 'aabbccdd-9999-1002-0004-000000000000', 'translate_to_target', 'Translate to Russian: Tea', 'Чай', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1002-0004-e00000000003', 'aabbccdd-9999-1002-0004-000000000000', 'translate_to_native', 'Translate to English: Кофе', 'Coffee', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1002-0004-e00000000004', 'aabbccdd-9999-1002-0004-000000000000', 'fill_blank', '_____ (Cheese)', 'Сыр', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1002-0004-e00000000005', 'aabbccdd-9999-1002-0004-000000000000', 'multiple_choice', 'What does "Рис" mean in English?', 'Rice', '{"Рис","Вода","Хлеб","Молоко"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1002-0004-e00000000006', 'aabbccdd-9999-1002-0004-000000000000', 'translate_to_target', 'Translate to Russian: Water', 'Вода', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1002-0004-e00000000007', 'aabbccdd-9999-1002-0004-000000000000', 'translate_to_native', 'Translate to English: Хлеб', 'Bread', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1002-0004-e00000000008', 'aabbccdd-9999-1002-0004-000000000000', 'fill_blank', '_____ (Milk)', 'Молоко', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1002-0005-e00000000001', 'aabbccdd-9999-1002-0005-000000000000', 'multiple_choice', 'What does "Кофе" mean in English?', 'Coffee', '{"Кофе","Сыр","Рис","Вода"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1002-0005-e00000000002', 'aabbccdd-9999-1002-0005-000000000000', 'translate_to_target', 'Translate to Russian: Cheese', 'Сыр', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1002-0005-e00000000003', 'aabbccdd-9999-1002-0005-000000000000', 'translate_to_native', 'Translate to English: Рис', 'Rice', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1002-0005-e00000000004', 'aabbccdd-9999-1002-0005-000000000000', 'fill_blank', '_____ (Water)', 'Вода', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1002-0005-e00000000005', 'aabbccdd-9999-1002-0005-000000000000', 'multiple_choice', 'What does "Хлеб" mean in English?', 'Bread', '{"Хлеб","Молоко","Мясо","Рыба"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1002-0005-e00000000006', 'aabbccdd-9999-1002-0005-000000000000', 'translate_to_target', 'Translate to Russian: Milk', 'Молоко', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1002-0005-e00000000007', 'aabbccdd-9999-1002-0005-000000000000', 'translate_to_native', 'Translate to English: Мясо', 'Meat', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1002-0005-e00000000008', 'aabbccdd-9999-1002-0005-000000000000', 'fill_blank', '_____ (Fish)', 'Рыба', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1002-0006-e00000000001', 'aabbccdd-9999-1002-0006-000000000000', 'multiple_choice', 'What does "Рис" mean in English?', 'Rice', '{"Рис","Вода","Хлеб","Молоко"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1002-0006-e00000000002', 'aabbccdd-9999-1002-0006-000000000000', 'translate_to_target', 'Translate to Russian: Water', 'Вода', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1002-0006-e00000000003', 'aabbccdd-9999-1002-0006-000000000000', 'translate_to_native', 'Translate to English: Хлеб', 'Bread', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1002-0006-e00000000004', 'aabbccdd-9999-1002-0006-000000000000', 'fill_blank', '_____ (Milk)', 'Молоко', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1002-0006-e00000000005', 'aabbccdd-9999-1002-0006-000000000000', 'multiple_choice', 'What does "Мясо" mean in English?', 'Meat', '{"Мясо","Рыба","Суп","Каша"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1002-0006-e00000000006', 'aabbccdd-9999-1002-0006-000000000000', 'translate_to_target', 'Translate to Russian: Fish', 'Рыба', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1002-0006-e00000000007', 'aabbccdd-9999-1002-0006-000000000000', 'translate_to_native', 'Translate to English: Суп', 'Soup', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1002-0006-e00000000008', 'aabbccdd-9999-1002-0006-000000000000', 'fill_blank', '_____ (Porridge)', 'Каша', NULL, '{}', 7, '{}');
+INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_speech, tags) VALUES
+  ('aabbccdd-9999-1002-c001-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1002-0000-000000000000', 'Water', 'Вода', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1002-c002-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1002-0000-000000000000', 'Bread', 'Хлеб', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1002-c003-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1002-0000-000000000000', 'Milk', 'Молоко', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1002-c004-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1002-0000-000000000000', 'Meat', 'Мясо', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1002-c005-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1002-0000-000000000000', 'Fish', 'Рыба', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1002-c006-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1002-0000-000000000000', 'Soup', 'Суп', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1002-c007-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1002-0000-000000000000', 'Porridge', 'Каша', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1002-c008-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1002-0000-000000000000', 'Tea', 'Чай', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1002-c009-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1002-0000-000000000000', 'Coffee', 'Кофе', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1002-c010-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1002-0000-000000000000', 'Cheese', 'Сыр', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1002-c011-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1002-0000-000000000000', 'Rice', 'Рис', 'word', '{"A1"}');
+
+INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
+VALUES ('aabbccdd-9999-1003-0000-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'Numbers & Counting', 'Learn numbers and basic counting', 2, 6);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+  ('aabbccdd-9999-1003-0001-000000000000', 'aabbccdd-9999-1003-0000-000000000000', 'Core Vocabulary', 'Core Vocabulary', 0, 5, 20),
+  ('aabbccdd-9999-1003-0002-000000000000', 'aabbccdd-9999-1003-0000-000000000000', 'Phrases & Sentences', 'Phrases & Sentences', 1, 5, 20),
+  ('aabbccdd-9999-1003-0003-000000000000', 'aabbccdd-9999-1003-0000-000000000000', 'Listening & Recognition', 'Listening & Recognition', 2, 5, 20),
+  ('aabbccdd-9999-1003-0004-000000000000', 'aabbccdd-9999-1003-0000-000000000000', 'Speaking Practice', 'Speaking Practice', 3, 5, 20),
+  ('aabbccdd-9999-1003-0005-000000000000', 'aabbccdd-9999-1003-0000-000000000000', 'Reading Simple Texts', 'Reading Simple Texts', 4, 5, 20),
+  ('aabbccdd-9999-1003-0006-000000000000', 'aabbccdd-9999-1003-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1003-0001-e00000000001', 'aabbccdd-9999-1003-0001-000000000000', 'multiple_choice', 'What does "Один" mean in English?', 'One', '{"Один","Два","Три","Четыре"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1003-0001-e00000000002', 'aabbccdd-9999-1003-0001-000000000000', 'translate_to_target', 'Translate to Russian: Two', 'Два', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1003-0001-e00000000003', 'aabbccdd-9999-1003-0001-000000000000', 'translate_to_native', 'Translate to English: Три', 'Three', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1003-0001-e00000000004', 'aabbccdd-9999-1003-0001-000000000000', 'fill_blank', '_____ (Four)', 'Четыре', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1003-0001-e00000000005', 'aabbccdd-9999-1003-0001-000000000000', 'multiple_choice', 'What does "Пять" mean in English?', 'Five', '{"Пять","Шесть","Семь","Восемь"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1003-0001-e00000000006', 'aabbccdd-9999-1003-0001-000000000000', 'translate_to_target', 'Translate to Russian: Six', 'Шесть', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1003-0001-e00000000007', 'aabbccdd-9999-1003-0001-000000000000', 'translate_to_native', 'Translate to English: Семь', 'Seven', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1003-0001-e00000000008', 'aabbccdd-9999-1003-0001-000000000000', 'fill_blank', '_____ (Eight)', 'Восемь', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1003-0002-e00000000001', 'aabbccdd-9999-1003-0002-000000000000', 'multiple_choice', 'What does "Три" mean in English?', 'Three', '{"Три","Четыре","Пять","Шесть"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1003-0002-e00000000002', 'aabbccdd-9999-1003-0002-000000000000', 'translate_to_target', 'Translate to Russian: Four', 'Четыре', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1003-0002-e00000000003', 'aabbccdd-9999-1003-0002-000000000000', 'translate_to_native', 'Translate to English: Пять', 'Five', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1003-0002-e00000000004', 'aabbccdd-9999-1003-0002-000000000000', 'fill_blank', '_____ (Six)', 'Шесть', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1003-0002-e00000000005', 'aabbccdd-9999-1003-0002-000000000000', 'multiple_choice', 'What does "Семь" mean in English?', 'Seven', '{"Семь","Восемь","Девять","Десять"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1003-0002-e00000000006', 'aabbccdd-9999-1003-0002-000000000000', 'translate_to_target', 'Translate to Russian: Eight', 'Восемь', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1003-0002-e00000000007', 'aabbccdd-9999-1003-0002-000000000000', 'translate_to_native', 'Translate to English: Девять', 'Nine', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1003-0002-e00000000008', 'aabbccdd-9999-1003-0002-000000000000', 'fill_blank', '_____ (Ten)', 'Десять', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1003-0003-e00000000001', 'aabbccdd-9999-1003-0003-000000000000', 'multiple_choice', 'What does "Пять" mean in English?', 'Five', '{"Пять","Шесть","Семь","Восемь"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1003-0003-e00000000002', 'aabbccdd-9999-1003-0003-000000000000', 'translate_to_target', 'Translate to Russian: Six', 'Шесть', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1003-0003-e00000000003', 'aabbccdd-9999-1003-0003-000000000000', 'translate_to_native', 'Translate to English: Семь', 'Seven', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1003-0003-e00000000004', 'aabbccdd-9999-1003-0003-000000000000', 'fill_blank', '_____ (Eight)', 'Восемь', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1003-0003-e00000000005', 'aabbccdd-9999-1003-0003-000000000000', 'multiple_choice', 'What does "Девять" mean in English?', 'Nine', '{"Девять","Десять","Один","Два"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1003-0003-e00000000006', 'aabbccdd-9999-1003-0003-000000000000', 'translate_to_target', 'Translate to Russian: Ten', 'Десять', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1003-0003-e00000000007', 'aabbccdd-9999-1003-0003-000000000000', 'translate_to_native', 'Translate to English: Один', 'One', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1003-0003-e00000000008', 'aabbccdd-9999-1003-0003-000000000000', 'fill_blank', '_____ (Two)', 'Два', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1003-0004-e00000000001', 'aabbccdd-9999-1003-0004-000000000000', 'multiple_choice', 'What does "Семь" mean in English?', 'Seven', '{"Семь","Восемь","Девять","Десять"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1003-0004-e00000000002', 'aabbccdd-9999-1003-0004-000000000000', 'translate_to_target', 'Translate to Russian: Eight', 'Восемь', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1003-0004-e00000000003', 'aabbccdd-9999-1003-0004-000000000000', 'translate_to_native', 'Translate to English: Девять', 'Nine', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1003-0004-e00000000004', 'aabbccdd-9999-1003-0004-000000000000', 'fill_blank', '_____ (Ten)', 'Десять', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1003-0004-e00000000005', 'aabbccdd-9999-1003-0004-000000000000', 'multiple_choice', 'What does "Один" mean in English?', 'One', '{"Один","Два","Три","Четыре"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1003-0004-e00000000006', 'aabbccdd-9999-1003-0004-000000000000', 'translate_to_target', 'Translate to Russian: Two', 'Два', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1003-0004-e00000000007', 'aabbccdd-9999-1003-0004-000000000000', 'translate_to_native', 'Translate to English: Три', 'Three', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1003-0004-e00000000008', 'aabbccdd-9999-1003-0004-000000000000', 'fill_blank', '_____ (Four)', 'Четыре', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1003-0005-e00000000001', 'aabbccdd-9999-1003-0005-000000000000', 'multiple_choice', 'What does "Девять" mean in English?', 'Nine', '{"Девять","Десять","Один","Два"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1003-0005-e00000000002', 'aabbccdd-9999-1003-0005-000000000000', 'translate_to_target', 'Translate to Russian: Ten', 'Десять', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1003-0005-e00000000003', 'aabbccdd-9999-1003-0005-000000000000', 'translate_to_native', 'Translate to English: Один', 'One', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1003-0005-e00000000004', 'aabbccdd-9999-1003-0005-000000000000', 'fill_blank', '_____ (Two)', 'Два', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1003-0005-e00000000005', 'aabbccdd-9999-1003-0005-000000000000', 'multiple_choice', 'What does "Три" mean in English?', 'Three', '{"Три","Четыре","Пять","Шесть"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1003-0005-e00000000006', 'aabbccdd-9999-1003-0005-000000000000', 'translate_to_target', 'Translate to Russian: Four', 'Четыре', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1003-0005-e00000000007', 'aabbccdd-9999-1003-0005-000000000000', 'translate_to_native', 'Translate to English: Пять', 'Five', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1003-0005-e00000000008', 'aabbccdd-9999-1003-0005-000000000000', 'fill_blank', '_____ (Six)', 'Шесть', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1003-0006-e00000000001', 'aabbccdd-9999-1003-0006-000000000000', 'multiple_choice', 'What does "Один" mean in English?', 'One', '{"Один","Два","Три","Четыре"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1003-0006-e00000000002', 'aabbccdd-9999-1003-0006-000000000000', 'translate_to_target', 'Translate to Russian: Two', 'Два', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1003-0006-e00000000003', 'aabbccdd-9999-1003-0006-000000000000', 'translate_to_native', 'Translate to English: Три', 'Three', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1003-0006-e00000000004', 'aabbccdd-9999-1003-0006-000000000000', 'fill_blank', '_____ (Four)', 'Четыре', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1003-0006-e00000000005', 'aabbccdd-9999-1003-0006-000000000000', 'multiple_choice', 'What does "Пять" mean in English?', 'Five', '{"Пять","Шесть","Семь","Восемь"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1003-0006-e00000000006', 'aabbccdd-9999-1003-0006-000000000000', 'translate_to_target', 'Translate to Russian: Six', 'Шесть', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1003-0006-e00000000007', 'aabbccdd-9999-1003-0006-000000000000', 'translate_to_native', 'Translate to English: Семь', 'Seven', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1003-0006-e00000000008', 'aabbccdd-9999-1003-0006-000000000000', 'fill_blank', '_____ (Eight)', 'Восемь', NULL, '{}', 7, '{}');
+INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_speech, tags) VALUES
+  ('aabbccdd-9999-1003-c001-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1003-0000-000000000000', 'One', 'Один', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1003-c002-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1003-0000-000000000000', 'Two', 'Два', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1003-c003-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1003-0000-000000000000', 'Three', 'Три', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1003-c004-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1003-0000-000000000000', 'Four', 'Четыре', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1003-c005-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1003-0000-000000000000', 'Five', 'Пять', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1003-c006-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1003-0000-000000000000', 'Six', 'Шесть', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1003-c007-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1003-0000-000000000000', 'Seven', 'Семь', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1003-c008-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1003-0000-000000000000', 'Eight', 'Восемь', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1003-c009-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1003-0000-000000000000', 'Nine', 'Девять', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1003-c010-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1003-0000-000000000000', 'Ten', 'Десять', 'word', '{"A1"}');
+
+INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
+VALUES ('aabbccdd-9999-1004-0000-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'Family & Relationships', 'Describe family members and relationships', 3, 6);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+  ('aabbccdd-9999-1004-0001-000000000000', 'aabbccdd-9999-1004-0000-000000000000', 'Core Vocabulary', 'Core Vocabulary', 0, 5, 20),
+  ('aabbccdd-9999-1004-0002-000000000000', 'aabbccdd-9999-1004-0000-000000000000', 'Phrases & Sentences', 'Phrases & Sentences', 1, 5, 20),
+  ('aabbccdd-9999-1004-0003-000000000000', 'aabbccdd-9999-1004-0000-000000000000', 'Listening & Recognition', 'Listening & Recognition', 2, 5, 20),
+  ('aabbccdd-9999-1004-0004-000000000000', 'aabbccdd-9999-1004-0000-000000000000', 'Speaking Practice', 'Speaking Practice', 3, 5, 20),
+  ('aabbccdd-9999-1004-0005-000000000000', 'aabbccdd-9999-1004-0000-000000000000', 'Reading Simple Texts', 'Reading Simple Texts', 4, 5, 20),
+  ('aabbccdd-9999-1004-0006-000000000000', 'aabbccdd-9999-1004-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1004-0001-e00000000001', 'aabbccdd-9999-1004-0001-000000000000', 'multiple_choice', 'What does "Мама" mean in English?', 'Mom', '{"Мама","Папа","Брат","Сестра"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1004-0001-e00000000002', 'aabbccdd-9999-1004-0001-000000000000', 'translate_to_target', 'Translate to Russian: Dad', 'Папа', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1004-0001-e00000000003', 'aabbccdd-9999-1004-0001-000000000000', 'translate_to_native', 'Translate to English: Брат', 'Brother', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1004-0001-e00000000004', 'aabbccdd-9999-1004-0001-000000000000', 'fill_blank', '_____ (Sister)', 'Сестра', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1004-0001-e00000000005', 'aabbccdd-9999-1004-0001-000000000000', 'multiple_choice', 'What does "Бабушка" mean in English?', 'Grandmother', '{"Бабушка","Дедушка","Сын","Дочь"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1004-0001-e00000000006', 'aabbccdd-9999-1004-0001-000000000000', 'translate_to_target', 'Translate to Russian: Grandfather', 'Дедушка', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1004-0001-e00000000007', 'aabbccdd-9999-1004-0001-000000000000', 'translate_to_native', 'Translate to English: Сын', 'Son', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1004-0001-e00000000008', 'aabbccdd-9999-1004-0001-000000000000', 'fill_blank', '_____ (Daughter)', 'Дочь', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1004-0002-e00000000001', 'aabbccdd-9999-1004-0002-000000000000', 'multiple_choice', 'What does "Брат" mean in English?', 'Brother', '{"Брат","Сестра","Бабушка","Дедушка"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1004-0002-e00000000002', 'aabbccdd-9999-1004-0002-000000000000', 'translate_to_target', 'Translate to Russian: Sister', 'Сестра', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1004-0002-e00000000003', 'aabbccdd-9999-1004-0002-000000000000', 'translate_to_native', 'Translate to English: Бабушка', 'Grandmother', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1004-0002-e00000000004', 'aabbccdd-9999-1004-0002-000000000000', 'fill_blank', '_____ (Grandfather)', 'Дедушка', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1004-0002-e00000000005', 'aabbccdd-9999-1004-0002-000000000000', 'multiple_choice', 'What does "Сын" mean in English?', 'Son', '{"Сын","Дочь","Муж","Жена"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1004-0002-e00000000006', 'aabbccdd-9999-1004-0002-000000000000', 'translate_to_target', 'Translate to Russian: Daughter', 'Дочь', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1004-0002-e00000000007', 'aabbccdd-9999-1004-0002-000000000000', 'translate_to_native', 'Translate to English: Муж', 'Husband', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1004-0002-e00000000008', 'aabbccdd-9999-1004-0002-000000000000', 'fill_blank', '_____ (Wife)', 'Жена', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1004-0003-e00000000001', 'aabbccdd-9999-1004-0003-000000000000', 'multiple_choice', 'What does "Бабушка" mean in English?', 'Grandmother', '{"Бабушка","Дедушка","Сын","Дочь"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1004-0003-e00000000002', 'aabbccdd-9999-1004-0003-000000000000', 'translate_to_target', 'Translate to Russian: Grandfather', 'Дедушка', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1004-0003-e00000000003', 'aabbccdd-9999-1004-0003-000000000000', 'translate_to_native', 'Translate to English: Сын', 'Son', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1004-0003-e00000000004', 'aabbccdd-9999-1004-0003-000000000000', 'fill_blank', '_____ (Daughter)', 'Дочь', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1004-0003-e00000000005', 'aabbccdd-9999-1004-0003-000000000000', 'multiple_choice', 'What does "Муж" mean in English?', 'Husband', '{"Муж","Жена","Мама","Папа"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1004-0003-e00000000006', 'aabbccdd-9999-1004-0003-000000000000', 'translate_to_target', 'Translate to Russian: Wife', 'Жена', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1004-0003-e00000000007', 'aabbccdd-9999-1004-0003-000000000000', 'translate_to_native', 'Translate to English: Мама', 'Mom', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1004-0003-e00000000008', 'aabbccdd-9999-1004-0003-000000000000', 'fill_blank', '_____ (Dad)', 'Папа', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1004-0004-e00000000001', 'aabbccdd-9999-1004-0004-000000000000', 'multiple_choice', 'What does "Сын" mean in English?', 'Son', '{"Сын","Дочь","Муж","Жена"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1004-0004-e00000000002', 'aabbccdd-9999-1004-0004-000000000000', 'translate_to_target', 'Translate to Russian: Daughter', 'Дочь', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1004-0004-e00000000003', 'aabbccdd-9999-1004-0004-000000000000', 'translate_to_native', 'Translate to English: Муж', 'Husband', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1004-0004-e00000000004', 'aabbccdd-9999-1004-0004-000000000000', 'fill_blank', '_____ (Wife)', 'Жена', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1004-0004-e00000000005', 'aabbccdd-9999-1004-0004-000000000000', 'multiple_choice', 'What does "Мама" mean in English?', 'Mom', '{"Мама","Папа","Брат","Сестра"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1004-0004-e00000000006', 'aabbccdd-9999-1004-0004-000000000000', 'translate_to_target', 'Translate to Russian: Dad', 'Папа', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1004-0004-e00000000007', 'aabbccdd-9999-1004-0004-000000000000', 'translate_to_native', 'Translate to English: Брат', 'Brother', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1004-0004-e00000000008', 'aabbccdd-9999-1004-0004-000000000000', 'fill_blank', '_____ (Sister)', 'Сестра', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1004-0005-e00000000001', 'aabbccdd-9999-1004-0005-000000000000', 'multiple_choice', 'What does "Муж" mean in English?', 'Husband', '{"Муж","Жена","Мама","Папа"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1004-0005-e00000000002', 'aabbccdd-9999-1004-0005-000000000000', 'translate_to_target', 'Translate to Russian: Wife', 'Жена', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1004-0005-e00000000003', 'aabbccdd-9999-1004-0005-000000000000', 'translate_to_native', 'Translate to English: Мама', 'Mom', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1004-0005-e00000000004', 'aabbccdd-9999-1004-0005-000000000000', 'fill_blank', '_____ (Dad)', 'Папа', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1004-0005-e00000000005', 'aabbccdd-9999-1004-0005-000000000000', 'multiple_choice', 'What does "Брат" mean in English?', 'Brother', '{"Брат","Сестра","Бабушка","Дедушка"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1004-0005-e00000000006', 'aabbccdd-9999-1004-0005-000000000000', 'translate_to_target', 'Translate to Russian: Sister', 'Сестра', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1004-0005-e00000000007', 'aabbccdd-9999-1004-0005-000000000000', 'translate_to_native', 'Translate to English: Бабушка', 'Grandmother', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1004-0005-e00000000008', 'aabbccdd-9999-1004-0005-000000000000', 'fill_blank', '_____ (Grandfather)', 'Дедушка', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1004-0006-e00000000001', 'aabbccdd-9999-1004-0006-000000000000', 'multiple_choice', 'What does "Мама" mean in English?', 'Mom', '{"Мама","Папа","Брат","Сестра"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1004-0006-e00000000002', 'aabbccdd-9999-1004-0006-000000000000', 'translate_to_target', 'Translate to Russian: Dad', 'Папа', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1004-0006-e00000000003', 'aabbccdd-9999-1004-0006-000000000000', 'translate_to_native', 'Translate to English: Брат', 'Brother', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1004-0006-e00000000004', 'aabbccdd-9999-1004-0006-000000000000', 'fill_blank', '_____ (Sister)', 'Сестра', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1004-0006-e00000000005', 'aabbccdd-9999-1004-0006-000000000000', 'multiple_choice', 'What does "Бабушка" mean in English?', 'Grandmother', '{"Бабушка","Дедушка","Сын","Дочь"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1004-0006-e00000000006', 'aabbccdd-9999-1004-0006-000000000000', 'translate_to_target', 'Translate to Russian: Grandfather', 'Дедушка', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1004-0006-e00000000007', 'aabbccdd-9999-1004-0006-000000000000', 'translate_to_native', 'Translate to English: Сын', 'Son', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1004-0006-e00000000008', 'aabbccdd-9999-1004-0006-000000000000', 'fill_blank', '_____ (Daughter)', 'Дочь', NULL, '{}', 7, '{}');
+INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_speech, tags) VALUES
+  ('aabbccdd-9999-1004-c001-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1004-0000-000000000000', 'Mom', 'Мама', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1004-c002-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1004-0000-000000000000', 'Dad', 'Папа', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1004-c003-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1004-0000-000000000000', 'Brother', 'Брат', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1004-c004-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1004-0000-000000000000', 'Sister', 'Сестра', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1004-c005-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1004-0000-000000000000', 'Grandmother', 'Бабушка', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1004-c006-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1004-0000-000000000000', 'Grandfather', 'Дедушка', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1004-c007-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1004-0000-000000000000', 'Son', 'Сын', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1004-c008-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1004-0000-000000000000', 'Daughter', 'Дочь', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1004-c009-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1004-0000-000000000000', 'Husband', 'Муж', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1004-c010-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1004-0000-000000000000', 'Wife', 'Жена', 'word', '{"A1"}');
+
+INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
+VALUES ('aabbccdd-9999-1005-0000-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'Work & Business', 'Talk about work and the office', 4, 6);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+  ('aabbccdd-9999-1005-0001-000000000000', 'aabbccdd-9999-1005-0000-000000000000', 'Core Vocabulary', 'Core Vocabulary', 0, 5, 20),
+  ('aabbccdd-9999-1005-0002-000000000000', 'aabbccdd-9999-1005-0000-000000000000', 'Phrases & Sentences', 'Phrases & Sentences', 1, 5, 20),
+  ('aabbccdd-9999-1005-0003-000000000000', 'aabbccdd-9999-1005-0000-000000000000', 'Listening & Recognition', 'Listening & Recognition', 2, 5, 20),
+  ('aabbccdd-9999-1005-0004-000000000000', 'aabbccdd-9999-1005-0000-000000000000', 'Speaking Practice', 'Speaking Practice', 3, 5, 20),
+  ('aabbccdd-9999-1005-0005-000000000000', 'aabbccdd-9999-1005-0000-000000000000', 'Reading Simple Texts', 'Reading Simple Texts', 4, 5, 20),
+  ('aabbccdd-9999-1005-0006-000000000000', 'aabbccdd-9999-1005-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1005-0001-e00000000001', 'aabbccdd-9999-1005-0001-000000000000', 'multiple_choice', 'What does "Работа" mean in English?', 'Work', '{"Работа","Офис","Начальник","Коллега"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1005-0001-e00000000002', 'aabbccdd-9999-1005-0001-000000000000', 'translate_to_target', 'Translate to Russian: Office', 'Офис', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1005-0001-e00000000003', 'aabbccdd-9999-1005-0001-000000000000', 'translate_to_native', 'Translate to English: Начальник', 'Boss', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1005-0001-e00000000004', 'aabbccdd-9999-1005-0001-000000000000', 'fill_blank', '_____ (Colleague)', 'Коллега', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1005-0001-e00000000005', 'aabbccdd-9999-1005-0001-000000000000', 'multiple_choice', 'What does "Зарплата" mean in English?', 'Salary', '{"Зарплата","Встреча","Компьютер","Работа"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1005-0001-e00000000006', 'aabbccdd-9999-1005-0001-000000000000', 'translate_to_target', 'Translate to Russian: Meeting', 'Встреча', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1005-0001-e00000000007', 'aabbccdd-9999-1005-0001-000000000000', 'translate_to_native', 'Translate to English: Компьютер', 'Computer', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1005-0001-e00000000008', 'aabbccdd-9999-1005-0001-000000000000', 'fill_blank', '_____ (Work)', 'Работа', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1005-0002-e00000000001', 'aabbccdd-9999-1005-0002-000000000000', 'multiple_choice', 'What does "Начальник" mean in English?', 'Boss', '{"Начальник","Коллега","Зарплата","Встреча"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1005-0002-e00000000002', 'aabbccdd-9999-1005-0002-000000000000', 'translate_to_target', 'Translate to Russian: Colleague', 'Коллега', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1005-0002-e00000000003', 'aabbccdd-9999-1005-0002-000000000000', 'translate_to_native', 'Translate to English: Зарплата', 'Salary', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1005-0002-e00000000004', 'aabbccdd-9999-1005-0002-000000000000', 'fill_blank', '_____ (Meeting)', 'Встреча', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1005-0002-e00000000005', 'aabbccdd-9999-1005-0002-000000000000', 'multiple_choice', 'What does "Компьютер" mean in English?', 'Computer', '{"Компьютер","Работа","Офис","Начальник"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1005-0002-e00000000006', 'aabbccdd-9999-1005-0002-000000000000', 'translate_to_target', 'Translate to Russian: Work', 'Работа', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1005-0002-e00000000007', 'aabbccdd-9999-1005-0002-000000000000', 'translate_to_native', 'Translate to English: Офис', 'Office', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1005-0002-e00000000008', 'aabbccdd-9999-1005-0002-000000000000', 'fill_blank', '_____ (Boss)', 'Начальник', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1005-0003-e00000000001', 'aabbccdd-9999-1005-0003-000000000000', 'multiple_choice', 'What does "Зарплата" mean in English?', 'Salary', '{"Зарплата","Встреча","Компьютер","Работа"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1005-0003-e00000000002', 'aabbccdd-9999-1005-0003-000000000000', 'translate_to_target', 'Translate to Russian: Meeting', 'Встреча', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1005-0003-e00000000003', 'aabbccdd-9999-1005-0003-000000000000', 'translate_to_native', 'Translate to English: Компьютер', 'Computer', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1005-0003-e00000000004', 'aabbccdd-9999-1005-0003-000000000000', 'fill_blank', '_____ (Work)', 'Работа', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1005-0003-e00000000005', 'aabbccdd-9999-1005-0003-000000000000', 'multiple_choice', 'What does "Офис" mean in English?', 'Office', '{"Офис","Начальник","Коллега","Зарплата"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1005-0003-e00000000006', 'aabbccdd-9999-1005-0003-000000000000', 'translate_to_target', 'Translate to Russian: Boss', 'Начальник', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1005-0003-e00000000007', 'aabbccdd-9999-1005-0003-000000000000', 'translate_to_native', 'Translate to English: Коллега', 'Colleague', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1005-0003-e00000000008', 'aabbccdd-9999-1005-0003-000000000000', 'fill_blank', '_____ (Salary)', 'Зарплата', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1005-0004-e00000000001', 'aabbccdd-9999-1005-0004-000000000000', 'multiple_choice', 'What does "Компьютер" mean in English?', 'Computer', '{"Компьютер","Работа","Офис","Начальник"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1005-0004-e00000000002', 'aabbccdd-9999-1005-0004-000000000000', 'translate_to_target', 'Translate to Russian: Work', 'Работа', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1005-0004-e00000000003', 'aabbccdd-9999-1005-0004-000000000000', 'translate_to_native', 'Translate to English: Офис', 'Office', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1005-0004-e00000000004', 'aabbccdd-9999-1005-0004-000000000000', 'fill_blank', '_____ (Boss)', 'Начальник', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1005-0004-e00000000005', 'aabbccdd-9999-1005-0004-000000000000', 'multiple_choice', 'What does "Коллега" mean in English?', 'Colleague', '{"Коллега","Зарплата","Встреча","Компьютер"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1005-0004-e00000000006', 'aabbccdd-9999-1005-0004-000000000000', 'translate_to_target', 'Translate to Russian: Salary', 'Зарплата', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1005-0004-e00000000007', 'aabbccdd-9999-1005-0004-000000000000', 'translate_to_native', 'Translate to English: Встреча', 'Meeting', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1005-0004-e00000000008', 'aabbccdd-9999-1005-0004-000000000000', 'fill_blank', '_____ (Computer)', 'Компьютер', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1005-0005-e00000000001', 'aabbccdd-9999-1005-0005-000000000000', 'multiple_choice', 'What does "Офис" mean in English?', 'Office', '{"Офис","Начальник","Коллега","Зарплата"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1005-0005-e00000000002', 'aabbccdd-9999-1005-0005-000000000000', 'translate_to_target', 'Translate to Russian: Boss', 'Начальник', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1005-0005-e00000000003', 'aabbccdd-9999-1005-0005-000000000000', 'translate_to_native', 'Translate to English: Коллега', 'Colleague', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1005-0005-e00000000004', 'aabbccdd-9999-1005-0005-000000000000', 'fill_blank', '_____ (Salary)', 'Зарплата', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1005-0005-e00000000005', 'aabbccdd-9999-1005-0005-000000000000', 'multiple_choice', 'What does "Встреча" mean in English?', 'Meeting', '{"Встреча","Компьютер","Работа","Офис"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1005-0005-e00000000006', 'aabbccdd-9999-1005-0005-000000000000', 'translate_to_target', 'Translate to Russian: Computer', 'Компьютер', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1005-0005-e00000000007', 'aabbccdd-9999-1005-0005-000000000000', 'translate_to_native', 'Translate to English: Работа', 'Work', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1005-0005-e00000000008', 'aabbccdd-9999-1005-0005-000000000000', 'fill_blank', '_____ (Office)', 'Офис', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1005-0006-e00000000001', 'aabbccdd-9999-1005-0006-000000000000', 'multiple_choice', 'What does "Коллега" mean in English?', 'Colleague', '{"Коллега","Зарплата","Встреча","Компьютер"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1005-0006-e00000000002', 'aabbccdd-9999-1005-0006-000000000000', 'translate_to_target', 'Translate to Russian: Salary', 'Зарплата', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1005-0006-e00000000003', 'aabbccdd-9999-1005-0006-000000000000', 'translate_to_native', 'Translate to English: Встреча', 'Meeting', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1005-0006-e00000000004', 'aabbccdd-9999-1005-0006-000000000000', 'fill_blank', '_____ (Computer)', 'Компьютер', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1005-0006-e00000000005', 'aabbccdd-9999-1005-0006-000000000000', 'multiple_choice', 'What does "Работа" mean in English?', 'Work', '{"Работа","Офис","Начальник","Коллега"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1005-0006-e00000000006', 'aabbccdd-9999-1005-0006-000000000000', 'translate_to_target', 'Translate to Russian: Office', 'Офис', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1005-0006-e00000000007', 'aabbccdd-9999-1005-0006-000000000000', 'translate_to_native', 'Translate to English: Начальник', 'Boss', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1005-0006-e00000000008', 'aabbccdd-9999-1005-0006-000000000000', 'fill_blank', '_____ (Colleague)', 'Коллега', NULL, '{}', 7, '{}');
+INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_speech, tags) VALUES
+  ('aabbccdd-9999-1005-c001-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1005-0000-000000000000', 'Work', 'Работа', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1005-c002-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1005-0000-000000000000', 'Office', 'Офис', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1005-c003-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1005-0000-000000000000', 'Boss', 'Начальник', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1005-c004-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1005-0000-000000000000', 'Colleague', 'Коллега', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1005-c005-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1005-0000-000000000000', 'Salary', 'Зарплата', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1005-c006-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1005-0000-000000000000', 'Meeting', 'Встреча', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1005-c007-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1005-0000-000000000000', 'Computer', 'Компьютер', 'word', '{"A1"}');
+
+INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
+VALUES ('aabbccdd-9999-1006-0000-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'Travel & Directions', 'Navigate airports, stations, and hotels', 5, 6);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+  ('aabbccdd-9999-1006-0001-000000000000', 'aabbccdd-9999-1006-0000-000000000000', 'Core Vocabulary', 'Core Vocabulary', 0, 5, 20),
+  ('aabbccdd-9999-1006-0002-000000000000', 'aabbccdd-9999-1006-0000-000000000000', 'Phrases & Sentences', 'Phrases & Sentences', 1, 5, 20),
+  ('aabbccdd-9999-1006-0003-000000000000', 'aabbccdd-9999-1006-0000-000000000000', 'Listening & Recognition', 'Listening & Recognition', 2, 5, 20),
+  ('aabbccdd-9999-1006-0004-000000000000', 'aabbccdd-9999-1006-0000-000000000000', 'Speaking Practice', 'Speaking Practice', 3, 5, 20),
+  ('aabbccdd-9999-1006-0005-000000000000', 'aabbccdd-9999-1006-0000-000000000000', 'Reading Simple Texts', 'Reading Simple Texts', 4, 5, 20),
+  ('aabbccdd-9999-1006-0006-000000000000', 'aabbccdd-9999-1006-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1006-0001-e00000000001', 'aabbccdd-9999-1006-0001-000000000000', 'multiple_choice', 'What does "Аэропорт" mean in English?', 'Airport', '{"Аэропорт","Вокзал","Билет","Поезд"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1006-0001-e00000000002', 'aabbccdd-9999-1006-0001-000000000000', 'translate_to_target', 'Translate to Russian: Train station', 'Вокзал', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1006-0001-e00000000003', 'aabbccdd-9999-1006-0001-000000000000', 'translate_to_native', 'Translate to English: Билет', 'Ticket', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1006-0001-e00000000004', 'aabbccdd-9999-1006-0001-000000000000', 'fill_blank', '_____ (Train)', 'Поезд', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1006-0001-e00000000005', 'aabbccdd-9999-1006-0001-000000000000', 'multiple_choice', 'What does "Автобус" mean in English?', 'Bus', '{"Автобус","Гостиница","Карта","Аэропорт"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1006-0001-e00000000006', 'aabbccdd-9999-1006-0001-000000000000', 'translate_to_target', 'Translate to Russian: Hotel', 'Гостиница', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1006-0001-e00000000007', 'aabbccdd-9999-1006-0001-000000000000', 'translate_to_native', 'Translate to English: Карта', 'Map', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1006-0001-e00000000008', 'aabbccdd-9999-1006-0001-000000000000', 'fill_blank', '_____ (Airport)', 'Аэропорт', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1006-0002-e00000000001', 'aabbccdd-9999-1006-0002-000000000000', 'multiple_choice', 'What does "Билет" mean in English?', 'Ticket', '{"Билет","Поезд","Автобус","Гостиница"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1006-0002-e00000000002', 'aabbccdd-9999-1006-0002-000000000000', 'translate_to_target', 'Translate to Russian: Train', 'Поезд', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1006-0002-e00000000003', 'aabbccdd-9999-1006-0002-000000000000', 'translate_to_native', 'Translate to English: Автобус', 'Bus', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1006-0002-e00000000004', 'aabbccdd-9999-1006-0002-000000000000', 'fill_blank', '_____ (Hotel)', 'Гостиница', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1006-0002-e00000000005', 'aabbccdd-9999-1006-0002-000000000000', 'multiple_choice', 'What does "Карта" mean in English?', 'Map', '{"Карта","Аэропорт","Вокзал","Билет"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1006-0002-e00000000006', 'aabbccdd-9999-1006-0002-000000000000', 'translate_to_target', 'Translate to Russian: Airport', 'Аэропорт', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1006-0002-e00000000007', 'aabbccdd-9999-1006-0002-000000000000', 'translate_to_native', 'Translate to English: Вокзал', 'Train station', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1006-0002-e00000000008', 'aabbccdd-9999-1006-0002-000000000000', 'fill_blank', '_____ (Ticket)', 'Билет', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1006-0003-e00000000001', 'aabbccdd-9999-1006-0003-000000000000', 'multiple_choice', 'What does "Автобус" mean in English?', 'Bus', '{"Автобус","Гостиница","Карта","Аэропорт"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1006-0003-e00000000002', 'aabbccdd-9999-1006-0003-000000000000', 'translate_to_target', 'Translate to Russian: Hotel', 'Гостиница', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1006-0003-e00000000003', 'aabbccdd-9999-1006-0003-000000000000', 'translate_to_native', 'Translate to English: Карта', 'Map', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1006-0003-e00000000004', 'aabbccdd-9999-1006-0003-000000000000', 'fill_blank', '_____ (Airport)', 'Аэропорт', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1006-0003-e00000000005', 'aabbccdd-9999-1006-0003-000000000000', 'multiple_choice', 'What does "Вокзал" mean in English?', 'Train station', '{"Вокзал","Билет","Поезд","Автобус"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1006-0003-e00000000006', 'aabbccdd-9999-1006-0003-000000000000', 'translate_to_target', 'Translate to Russian: Ticket', 'Билет', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1006-0003-e00000000007', 'aabbccdd-9999-1006-0003-000000000000', 'translate_to_native', 'Translate to English: Поезд', 'Train', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1006-0003-e00000000008', 'aabbccdd-9999-1006-0003-000000000000', 'fill_blank', '_____ (Bus)', 'Автобус', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1006-0004-e00000000001', 'aabbccdd-9999-1006-0004-000000000000', 'multiple_choice', 'What does "Карта" mean in English?', 'Map', '{"Карта","Аэропорт","Вокзал","Билет"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1006-0004-e00000000002', 'aabbccdd-9999-1006-0004-000000000000', 'translate_to_target', 'Translate to Russian: Airport', 'Аэропорт', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1006-0004-e00000000003', 'aabbccdd-9999-1006-0004-000000000000', 'translate_to_native', 'Translate to English: Вокзал', 'Train station', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1006-0004-e00000000004', 'aabbccdd-9999-1006-0004-000000000000', 'fill_blank', '_____ (Ticket)', 'Билет', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1006-0004-e00000000005', 'aabbccdd-9999-1006-0004-000000000000', 'multiple_choice', 'What does "Поезд" mean in English?', 'Train', '{"Поезд","Автобус","Гостиница","Карта"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1006-0004-e00000000006', 'aabbccdd-9999-1006-0004-000000000000', 'translate_to_target', 'Translate to Russian: Bus', 'Автобус', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1006-0004-e00000000007', 'aabbccdd-9999-1006-0004-000000000000', 'translate_to_native', 'Translate to English: Гостиница', 'Hotel', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1006-0004-e00000000008', 'aabbccdd-9999-1006-0004-000000000000', 'fill_blank', '_____ (Map)', 'Карта', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1006-0005-e00000000001', 'aabbccdd-9999-1006-0005-000000000000', 'multiple_choice', 'What does "Вокзал" mean in English?', 'Train station', '{"Вокзал","Билет","Поезд","Автобус"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1006-0005-e00000000002', 'aabbccdd-9999-1006-0005-000000000000', 'translate_to_target', 'Translate to Russian: Ticket', 'Билет', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1006-0005-e00000000003', 'aabbccdd-9999-1006-0005-000000000000', 'translate_to_native', 'Translate to English: Поезд', 'Train', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1006-0005-e00000000004', 'aabbccdd-9999-1006-0005-000000000000', 'fill_blank', '_____ (Bus)', 'Автобус', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1006-0005-e00000000005', 'aabbccdd-9999-1006-0005-000000000000', 'multiple_choice', 'What does "Гостиница" mean in English?', 'Hotel', '{"Гостиница","Карта","Аэропорт","Вокзал"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1006-0005-e00000000006', 'aabbccdd-9999-1006-0005-000000000000', 'translate_to_target', 'Translate to Russian: Map', 'Карта', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1006-0005-e00000000007', 'aabbccdd-9999-1006-0005-000000000000', 'translate_to_native', 'Translate to English: Аэропорт', 'Airport', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1006-0005-e00000000008', 'aabbccdd-9999-1006-0005-000000000000', 'fill_blank', '_____ (Train station)', 'Вокзал', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1006-0006-e00000000001', 'aabbccdd-9999-1006-0006-000000000000', 'multiple_choice', 'What does "Поезд" mean in English?', 'Train', '{"Поезд","Автобус","Гостиница","Карта"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1006-0006-e00000000002', 'aabbccdd-9999-1006-0006-000000000000', 'translate_to_target', 'Translate to Russian: Bus', 'Автобус', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1006-0006-e00000000003', 'aabbccdd-9999-1006-0006-000000000000', 'translate_to_native', 'Translate to English: Гостиница', 'Hotel', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1006-0006-e00000000004', 'aabbccdd-9999-1006-0006-000000000000', 'fill_blank', '_____ (Map)', 'Карта', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1006-0006-e00000000005', 'aabbccdd-9999-1006-0006-000000000000', 'multiple_choice', 'What does "Аэропорт" mean in English?', 'Airport', '{"Аэропорт","Вокзал","Билет","Поезд"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1006-0006-e00000000006', 'aabbccdd-9999-1006-0006-000000000000', 'translate_to_target', 'Translate to Russian: Train station', 'Вокзал', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1006-0006-e00000000007', 'aabbccdd-9999-1006-0006-000000000000', 'translate_to_native', 'Translate to English: Билет', 'Ticket', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1006-0006-e00000000008', 'aabbccdd-9999-1006-0006-000000000000', 'fill_blank', '_____ (Train)', 'Поезд', NULL, '{}', 7, '{}');
+INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_speech, tags) VALUES
+  ('aabbccdd-9999-1006-c001-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1006-0000-000000000000', 'Airport', 'Аэропорт', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1006-c002-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1006-0000-000000000000', 'Train station', 'Вокзал', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1006-c003-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1006-0000-000000000000', 'Ticket', 'Билет', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1006-c004-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1006-0000-000000000000', 'Train', 'Поезд', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1006-c005-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1006-0000-000000000000', 'Bus', 'Автобус', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1006-c006-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1006-0000-000000000000', 'Hotel', 'Гостиница', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1006-c007-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1006-0000-000000000000', 'Map', 'Карта', 'word', '{"A1"}');
+
+INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
+VALUES ('aabbccdd-9999-1007-0000-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'Health & Wellness', 'Talk about health and visit the doctor', 6, 6);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+  ('aabbccdd-9999-1007-0001-000000000000', 'aabbccdd-9999-1007-0000-000000000000', 'Core Vocabulary', 'Core Vocabulary', 0, 5, 20),
+  ('aabbccdd-9999-1007-0002-000000000000', 'aabbccdd-9999-1007-0000-000000000000', 'Phrases & Sentences', 'Phrases & Sentences', 1, 5, 20),
+  ('aabbccdd-9999-1007-0003-000000000000', 'aabbccdd-9999-1007-0000-000000000000', 'Listening & Recognition', 'Listening & Recognition', 2, 5, 20),
+  ('aabbccdd-9999-1007-0004-000000000000', 'aabbccdd-9999-1007-0000-000000000000', 'Speaking Practice', 'Speaking Practice', 3, 5, 20),
+  ('aabbccdd-9999-1007-0005-000000000000', 'aabbccdd-9999-1007-0000-000000000000', 'Reading Simple Texts', 'Reading Simple Texts', 4, 5, 20),
+  ('aabbccdd-9999-1007-0006-000000000000', 'aabbccdd-9999-1007-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1007-0001-e00000000001', 'aabbccdd-9999-1007-0001-000000000000', 'multiple_choice', 'What does "Врач" mean in English?', 'Doctor', '{"Врач","Больница","Лекарство","Голова"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1007-0001-e00000000002', 'aabbccdd-9999-1007-0001-000000000000', 'translate_to_target', 'Translate to Russian: Hospital', 'Больница', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1007-0001-e00000000003', 'aabbccdd-9999-1007-0001-000000000000', 'translate_to_native', 'Translate to English: Лекарство', 'Medicine', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1007-0001-e00000000004', 'aabbccdd-9999-1007-0001-000000000000', 'fill_blank', '_____ (Head)', 'Голова', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1007-0001-e00000000005', 'aabbccdd-9999-1007-0001-000000000000', 'multiple_choice', 'What does "Температура" mean in English?', 'Temperature', '{"Температура","Аптека","Врач","Больница"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1007-0001-e00000000006', 'aabbccdd-9999-1007-0001-000000000000', 'translate_to_target', 'Translate to Russian: Pharmacy', 'Аптека', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1007-0001-e00000000007', 'aabbccdd-9999-1007-0001-000000000000', 'translate_to_native', 'Translate to English: Врач', 'Doctor', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1007-0001-e00000000008', 'aabbccdd-9999-1007-0001-000000000000', 'fill_blank', '_____ (Hospital)', 'Больница', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1007-0002-e00000000001', 'aabbccdd-9999-1007-0002-000000000000', 'multiple_choice', 'What does "Лекарство" mean in English?', 'Medicine', '{"Лекарство","Голова","Температура","Аптека"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1007-0002-e00000000002', 'aabbccdd-9999-1007-0002-000000000000', 'translate_to_target', 'Translate to Russian: Head', 'Голова', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1007-0002-e00000000003', 'aabbccdd-9999-1007-0002-000000000000', 'translate_to_native', 'Translate to English: Температура', 'Temperature', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1007-0002-e00000000004', 'aabbccdd-9999-1007-0002-000000000000', 'fill_blank', '_____ (Pharmacy)', 'Аптека', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1007-0002-e00000000005', 'aabbccdd-9999-1007-0002-000000000000', 'multiple_choice', 'What does "Врач" mean in English?', 'Doctor', '{"Врач","Больница","Лекарство","Голова"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1007-0002-e00000000006', 'aabbccdd-9999-1007-0002-000000000000', 'translate_to_target', 'Translate to Russian: Hospital', 'Больница', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1007-0002-e00000000007', 'aabbccdd-9999-1007-0002-000000000000', 'translate_to_native', 'Translate to English: Лекарство', 'Medicine', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1007-0002-e00000000008', 'aabbccdd-9999-1007-0002-000000000000', 'fill_blank', '_____ (Head)', 'Голова', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1007-0003-e00000000001', 'aabbccdd-9999-1007-0003-000000000000', 'multiple_choice', 'What does "Температура" mean in English?', 'Temperature', '{"Температура","Аптека","Врач","Больница"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1007-0003-e00000000002', 'aabbccdd-9999-1007-0003-000000000000', 'translate_to_target', 'Translate to Russian: Pharmacy', 'Аптека', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1007-0003-e00000000003', 'aabbccdd-9999-1007-0003-000000000000', 'translate_to_native', 'Translate to English: Врач', 'Doctor', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1007-0003-e00000000004', 'aabbccdd-9999-1007-0003-000000000000', 'fill_blank', '_____ (Hospital)', 'Больница', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1007-0003-e00000000005', 'aabbccdd-9999-1007-0003-000000000000', 'multiple_choice', 'What does "Лекарство" mean in English?', 'Medicine', '{"Лекарство","Голова","Температура","Аптека"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1007-0003-e00000000006', 'aabbccdd-9999-1007-0003-000000000000', 'translate_to_target', 'Translate to Russian: Head', 'Голова', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1007-0003-e00000000007', 'aabbccdd-9999-1007-0003-000000000000', 'translate_to_native', 'Translate to English: Температура', 'Temperature', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1007-0003-e00000000008', 'aabbccdd-9999-1007-0003-000000000000', 'fill_blank', '_____ (Pharmacy)', 'Аптека', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1007-0004-e00000000001', 'aabbccdd-9999-1007-0004-000000000000', 'multiple_choice', 'What does "Врач" mean in English?', 'Doctor', '{"Врач","Больница","Лекарство","Голова"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1007-0004-e00000000002', 'aabbccdd-9999-1007-0004-000000000000', 'translate_to_target', 'Translate to Russian: Hospital', 'Больница', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1007-0004-e00000000003', 'aabbccdd-9999-1007-0004-000000000000', 'translate_to_native', 'Translate to English: Лекарство', 'Medicine', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1007-0004-e00000000004', 'aabbccdd-9999-1007-0004-000000000000', 'fill_blank', '_____ (Head)', 'Голова', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1007-0004-e00000000005', 'aabbccdd-9999-1007-0004-000000000000', 'multiple_choice', 'What does "Температура" mean in English?', 'Temperature', '{"Температура","Аптека","Врач","Больница"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1007-0004-e00000000006', 'aabbccdd-9999-1007-0004-000000000000', 'translate_to_target', 'Translate to Russian: Pharmacy', 'Аптека', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1007-0004-e00000000007', 'aabbccdd-9999-1007-0004-000000000000', 'translate_to_native', 'Translate to English: Врач', 'Doctor', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1007-0004-e00000000008', 'aabbccdd-9999-1007-0004-000000000000', 'fill_blank', '_____ (Hospital)', 'Больница', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1007-0005-e00000000001', 'aabbccdd-9999-1007-0005-000000000000', 'multiple_choice', 'What does "Лекарство" mean in English?', 'Medicine', '{"Лекарство","Голова","Температура","Аптека"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1007-0005-e00000000002', 'aabbccdd-9999-1007-0005-000000000000', 'translate_to_target', 'Translate to Russian: Head', 'Голова', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1007-0005-e00000000003', 'aabbccdd-9999-1007-0005-000000000000', 'translate_to_native', 'Translate to English: Температура', 'Temperature', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1007-0005-e00000000004', 'aabbccdd-9999-1007-0005-000000000000', 'fill_blank', '_____ (Pharmacy)', 'Аптека', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1007-0005-e00000000005', 'aabbccdd-9999-1007-0005-000000000000', 'multiple_choice', 'What does "Врач" mean in English?', 'Doctor', '{"Врач","Больница","Лекарство","Голова"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1007-0005-e00000000006', 'aabbccdd-9999-1007-0005-000000000000', 'translate_to_target', 'Translate to Russian: Hospital', 'Больница', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1007-0005-e00000000007', 'aabbccdd-9999-1007-0005-000000000000', 'translate_to_native', 'Translate to English: Лекарство', 'Medicine', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1007-0005-e00000000008', 'aabbccdd-9999-1007-0005-000000000000', 'fill_blank', '_____ (Head)', 'Голова', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1007-0006-e00000000001', 'aabbccdd-9999-1007-0006-000000000000', 'multiple_choice', 'What does "Температура" mean in English?', 'Temperature', '{"Температура","Аптека","Врач","Больница"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1007-0006-e00000000002', 'aabbccdd-9999-1007-0006-000000000000', 'translate_to_target', 'Translate to Russian: Pharmacy', 'Аптека', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1007-0006-e00000000003', 'aabbccdd-9999-1007-0006-000000000000', 'translate_to_native', 'Translate to English: Врач', 'Doctor', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1007-0006-e00000000004', 'aabbccdd-9999-1007-0006-000000000000', 'fill_blank', '_____ (Hospital)', 'Больница', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1007-0006-e00000000005', 'aabbccdd-9999-1007-0006-000000000000', 'multiple_choice', 'What does "Лекарство" mean in English?', 'Medicine', '{"Лекарство","Голова","Температура","Аптека"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1007-0006-e00000000006', 'aabbccdd-9999-1007-0006-000000000000', 'translate_to_target', 'Translate to Russian: Head', 'Голова', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1007-0006-e00000000007', 'aabbccdd-9999-1007-0006-000000000000', 'translate_to_native', 'Translate to English: Температура', 'Temperature', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1007-0006-e00000000008', 'aabbccdd-9999-1007-0006-000000000000', 'fill_blank', '_____ (Pharmacy)', 'Аптека', NULL, '{}', 7, '{}');
+INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_speech, tags) VALUES
+  ('aabbccdd-9999-1007-c001-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1007-0000-000000000000', 'Doctor', 'Врач', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1007-c002-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1007-0000-000000000000', 'Hospital', 'Больница', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1007-c003-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1007-0000-000000000000', 'Medicine', 'Лекарство', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1007-c004-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1007-0000-000000000000', 'Head', 'Голова', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1007-c005-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1007-0000-000000000000', 'Temperature', 'Температура', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1007-c006-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1007-0000-000000000000', 'Pharmacy', 'Аптека', 'word', '{"A1"}');
+
+INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
+VALUES ('aabbccdd-9999-1008-0000-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'Entertainment & Hobbies', 'Discuss entertainment and free time', 7, 6);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+  ('aabbccdd-9999-1008-0001-000000000000', 'aabbccdd-9999-1008-0000-000000000000', 'Core Vocabulary', 'Core Vocabulary', 0, 5, 20),
+  ('aabbccdd-9999-1008-0002-000000000000', 'aabbccdd-9999-1008-0000-000000000000', 'Phrases & Sentences', 'Phrases & Sentences', 1, 5, 20),
+  ('aabbccdd-9999-1008-0003-000000000000', 'aabbccdd-9999-1008-0000-000000000000', 'Listening & Recognition', 'Listening & Recognition', 2, 5, 20),
+  ('aabbccdd-9999-1008-0004-000000000000', 'aabbccdd-9999-1008-0000-000000000000', 'Speaking Practice', 'Speaking Practice', 3, 5, 20),
+  ('aabbccdd-9999-1008-0005-000000000000', 'aabbccdd-9999-1008-0000-000000000000', 'Reading Simple Texts', 'Reading Simple Texts', 4, 5, 20),
+  ('aabbccdd-9999-1008-0006-000000000000', 'aabbccdd-9999-1008-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1008-0001-e00000000001', 'aabbccdd-9999-1008-0001-000000000000', 'multiple_choice', 'What does "Кино" mean in English?', 'Cinema', '{"Кино","Музыка","Книга","Театр"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1008-0001-e00000000002', 'aabbccdd-9999-1008-0001-000000000000', 'translate_to_target', 'Translate to Russian: Music', 'Музыка', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1008-0001-e00000000003', 'aabbccdd-9999-1008-0001-000000000000', 'translate_to_native', 'Translate to English: Книга', 'Book', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1008-0001-e00000000004', 'aabbccdd-9999-1008-0001-000000000000', 'fill_blank', '_____ (Theater)', 'Театр', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1008-0001-e00000000005', 'aabbccdd-9999-1008-0001-000000000000', 'multiple_choice', 'What does "Парк" mean in English?', 'Park', '{"Парк","Спорт","Игра","Кино"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1008-0001-e00000000006', 'aabbccdd-9999-1008-0001-000000000000', 'translate_to_target', 'Translate to Russian: Sport', 'Спорт', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1008-0001-e00000000007', 'aabbccdd-9999-1008-0001-000000000000', 'translate_to_native', 'Translate to English: Игра', 'Game', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1008-0001-e00000000008', 'aabbccdd-9999-1008-0001-000000000000', 'fill_blank', '_____ (Cinema)', 'Кино', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1008-0002-e00000000001', 'aabbccdd-9999-1008-0002-000000000000', 'multiple_choice', 'What does "Книга" mean in English?', 'Book', '{"Книга","Театр","Парк","Спорт"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1008-0002-e00000000002', 'aabbccdd-9999-1008-0002-000000000000', 'translate_to_target', 'Translate to Russian: Theater', 'Театр', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1008-0002-e00000000003', 'aabbccdd-9999-1008-0002-000000000000', 'translate_to_native', 'Translate to English: Парк', 'Park', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1008-0002-e00000000004', 'aabbccdd-9999-1008-0002-000000000000', 'fill_blank', '_____ (Sport)', 'Спорт', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1008-0002-e00000000005', 'aabbccdd-9999-1008-0002-000000000000', 'multiple_choice', 'What does "Игра" mean in English?', 'Game', '{"Игра","Кино","Музыка","Книга"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1008-0002-e00000000006', 'aabbccdd-9999-1008-0002-000000000000', 'translate_to_target', 'Translate to Russian: Cinema', 'Кино', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1008-0002-e00000000007', 'aabbccdd-9999-1008-0002-000000000000', 'translate_to_native', 'Translate to English: Музыка', 'Music', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1008-0002-e00000000008', 'aabbccdd-9999-1008-0002-000000000000', 'fill_blank', '_____ (Book)', 'Книга', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1008-0003-e00000000001', 'aabbccdd-9999-1008-0003-000000000000', 'multiple_choice', 'What does "Парк" mean in English?', 'Park', '{"Парк","Спорт","Игра","Кино"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1008-0003-e00000000002', 'aabbccdd-9999-1008-0003-000000000000', 'translate_to_target', 'Translate to Russian: Sport', 'Спорт', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1008-0003-e00000000003', 'aabbccdd-9999-1008-0003-000000000000', 'translate_to_native', 'Translate to English: Игра', 'Game', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1008-0003-e00000000004', 'aabbccdd-9999-1008-0003-000000000000', 'fill_blank', '_____ (Cinema)', 'Кино', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1008-0003-e00000000005', 'aabbccdd-9999-1008-0003-000000000000', 'multiple_choice', 'What does "Музыка" mean in English?', 'Music', '{"Музыка","Книга","Театр","Парк"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1008-0003-e00000000006', 'aabbccdd-9999-1008-0003-000000000000', 'translate_to_target', 'Translate to Russian: Book', 'Книга', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1008-0003-e00000000007', 'aabbccdd-9999-1008-0003-000000000000', 'translate_to_native', 'Translate to English: Театр', 'Theater', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1008-0003-e00000000008', 'aabbccdd-9999-1008-0003-000000000000', 'fill_blank', '_____ (Park)', 'Парк', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1008-0004-e00000000001', 'aabbccdd-9999-1008-0004-000000000000', 'multiple_choice', 'What does "Игра" mean in English?', 'Game', '{"Игра","Кино","Музыка","Книга"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1008-0004-e00000000002', 'aabbccdd-9999-1008-0004-000000000000', 'translate_to_target', 'Translate to Russian: Cinema', 'Кино', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1008-0004-e00000000003', 'aabbccdd-9999-1008-0004-000000000000', 'translate_to_native', 'Translate to English: Музыка', 'Music', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1008-0004-e00000000004', 'aabbccdd-9999-1008-0004-000000000000', 'fill_blank', '_____ (Book)', 'Книга', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1008-0004-e00000000005', 'aabbccdd-9999-1008-0004-000000000000', 'multiple_choice', 'What does "Театр" mean in English?', 'Theater', '{"Театр","Парк","Спорт","Игра"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1008-0004-e00000000006', 'aabbccdd-9999-1008-0004-000000000000', 'translate_to_target', 'Translate to Russian: Park', 'Парк', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1008-0004-e00000000007', 'aabbccdd-9999-1008-0004-000000000000', 'translate_to_native', 'Translate to English: Спорт', 'Sport', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1008-0004-e00000000008', 'aabbccdd-9999-1008-0004-000000000000', 'fill_blank', '_____ (Game)', 'Игра', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1008-0005-e00000000001', 'aabbccdd-9999-1008-0005-000000000000', 'multiple_choice', 'What does "Музыка" mean in English?', 'Music', '{"Музыка","Книга","Театр","Парк"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1008-0005-e00000000002', 'aabbccdd-9999-1008-0005-000000000000', 'translate_to_target', 'Translate to Russian: Book', 'Книга', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1008-0005-e00000000003', 'aabbccdd-9999-1008-0005-000000000000', 'translate_to_native', 'Translate to English: Театр', 'Theater', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1008-0005-e00000000004', 'aabbccdd-9999-1008-0005-000000000000', 'fill_blank', '_____ (Park)', 'Парк', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1008-0005-e00000000005', 'aabbccdd-9999-1008-0005-000000000000', 'multiple_choice', 'What does "Спорт" mean in English?', 'Sport', '{"Спорт","Игра","Кино","Музыка"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1008-0005-e00000000006', 'aabbccdd-9999-1008-0005-000000000000', 'translate_to_target', 'Translate to Russian: Game', 'Игра', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1008-0005-e00000000007', 'aabbccdd-9999-1008-0005-000000000000', 'translate_to_native', 'Translate to English: Кино', 'Cinema', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1008-0005-e00000000008', 'aabbccdd-9999-1008-0005-000000000000', 'fill_blank', '_____ (Music)', 'Музыка', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-1008-0006-e00000000001', 'aabbccdd-9999-1008-0006-000000000000', 'multiple_choice', 'What does "Театр" mean in English?', 'Theater', '{"Театр","Парк","Спорт","Игра"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-1008-0006-e00000000002', 'aabbccdd-9999-1008-0006-000000000000', 'translate_to_target', 'Translate to Russian: Park', 'Парк', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-1008-0006-e00000000003', 'aabbccdd-9999-1008-0006-000000000000', 'translate_to_native', 'Translate to English: Спорт', 'Sport', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-1008-0006-e00000000004', 'aabbccdd-9999-1008-0006-000000000000', 'fill_blank', '_____ (Game)', 'Игра', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-1008-0006-e00000000005', 'aabbccdd-9999-1008-0006-000000000000', 'multiple_choice', 'What does "Кино" mean in English?', 'Cinema', '{"Кино","Музыка","Книга","Театр"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-1008-0006-e00000000006', 'aabbccdd-9999-1008-0006-000000000000', 'translate_to_target', 'Translate to Russian: Music', 'Музыка', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-1008-0006-e00000000007', 'aabbccdd-9999-1008-0006-000000000000', 'translate_to_native', 'Translate to English: Книга', 'Book', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-1008-0006-e00000000008', 'aabbccdd-9999-1008-0006-000000000000', 'fill_blank', '_____ (Theater)', 'Театр', NULL, '{}', 7, '{}');
+INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_speech, tags) VALUES
+  ('aabbccdd-9999-1008-c001-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1008-0000-000000000000', 'Cinema', 'Кино', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1008-c002-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1008-0000-000000000000', 'Music', 'Музыка', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1008-c003-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1008-0000-000000000000', 'Book', 'Книга', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1008-c004-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1008-0000-000000000000', 'Theater', 'Театр', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1008-c005-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1008-0000-000000000000', 'Park', 'Парк', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1008-c006-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1008-0000-000000000000', 'Sport', 'Спорт', 'word', '{"A1"}'),
+  ('aabbccdd-9999-1008-c007-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'aabbccdd-9999-1008-0000-000000000000', 'Game', 'Игра', 'word', '{"A1"}');
+
+-- Russian A2
+INSERT INTO courses (id, source_language, target_language, title, description, total_units, is_published, cefr_level)
+VALUES ('aabbccdd-9999-0000-0000-a20000000000', 'en', 'ru', 'Russian A2', 'Russian course - CEFR A2', 8, true, 'A2');
+
+INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
+VALUES ('aabbccdd-9999-2001-0000-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'Family & Relationships', 'Describe extended family and relationships', 0, 6);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+  ('aabbccdd-9999-2001-0001-a20000000000', 'aabbccdd-9999-2001-0000-a20000000000', 'Extended Vocabulary', 'Extended Vocabulary', 0, 7, 25),
+  ('aabbccdd-9999-2001-0002-a20000000000', 'aabbccdd-9999-2001-0000-a20000000000', 'Describing & Comparing', 'Describing & Comparing', 1, 7, 25),
+  ('aabbccdd-9999-2001-0003-a20000000000', 'aabbccdd-9999-2001-0000-a20000000000', 'Talking About Experiences', 'Talking About Experiences', 2, 7, 25),
+  ('aabbccdd-9999-2001-0004-a20000000000', 'aabbccdd-9999-2001-0000-a20000000000', 'Daily Conversations', 'Daily Conversations', 3, 7, 25),
+  ('aabbccdd-9999-2001-0005-a20000000000', 'aabbccdd-9999-2001-0000-a20000000000', 'Practical Situations', 'Practical Situations', 4, 7, 25),
+  ('aabbccdd-9999-2001-0006-a20000000000', 'aabbccdd-9999-2001-0000-a20000000000', 'Review & Test', 'Review & Test', 5, 7, 25);
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2001-0001-e00000000001', 'aabbccdd-9999-2001-0001-a20000000000', 'multiple_choice', 'What does "Дядя" mean in English?', 'Uncle', '{"Дядя","Тётя","Племянник","Племянница"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2001-0001-e00000000002', 'aabbccdd-9999-2001-0001-a20000000000', 'translate_to_target', 'Translate to Russian: Aunt', 'Тётя', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2001-0001-e00000000003', 'aabbccdd-9999-2001-0001-a20000000000', 'translate_to_native', 'Translate to English: Племянник', 'Nephew', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2001-0001-e00000000004', 'aabbccdd-9999-2001-0001-a20000000000', 'fill_blank', '_____ (Niece)', 'Племянница', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2001-0001-e00000000005', 'aabbccdd-9999-2001-0001-a20000000000', 'multiple_choice', 'What does "Двоюродный брат" mean in English?', 'Cousin', '{"Двоюродный брат","Свекровь","Тесть","Невестка"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2001-0001-e00000000006', 'aabbccdd-9999-2001-0001-a20000000000', 'translate_to_target', 'Translate to Russian: Mother-in-law', 'Свекровь', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2001-0001-e00000000007', 'aabbccdd-9999-2001-0001-a20000000000', 'translate_to_native', 'Translate to English: Тесть', 'Father-in-law', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2001-0001-e00000000008', 'aabbccdd-9999-2001-0001-a20000000000', 'fill_blank', '_____ (Daughter-in-law)', 'Невестка', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2001-0002-e00000000001', 'aabbccdd-9999-2001-0002-a20000000000', 'multiple_choice', 'What does "Племянник" mean in English?', 'Nephew', '{"Племянник","Племянница","Двоюродный брат","Свекровь"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2001-0002-e00000000002', 'aabbccdd-9999-2001-0002-a20000000000', 'translate_to_target', 'Translate to Russian: Niece', 'Племянница', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2001-0002-e00000000003', 'aabbccdd-9999-2001-0002-a20000000000', 'translate_to_native', 'Translate to English: Двоюродный брат', 'Cousin', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2001-0002-e00000000004', 'aabbccdd-9999-2001-0002-a20000000000', 'fill_blank', '_____ (Mother-in-law)', 'Свекровь', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2001-0002-e00000000005', 'aabbccdd-9999-2001-0002-a20000000000', 'multiple_choice', 'What does "Тесть" mean in English?', 'Father-in-law', '{"Тесть","Невестка","Дядя","Тётя"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2001-0002-e00000000006', 'aabbccdd-9999-2001-0002-a20000000000', 'translate_to_target', 'Translate to Russian: Daughter-in-law', 'Невестка', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2001-0002-e00000000007', 'aabbccdd-9999-2001-0002-a20000000000', 'translate_to_native', 'Translate to English: Дядя', 'Uncle', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2001-0002-e00000000008', 'aabbccdd-9999-2001-0002-a20000000000', 'fill_blank', '_____ (Aunt)', 'Тётя', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2001-0003-e00000000001', 'aabbccdd-9999-2001-0003-a20000000000', 'multiple_choice', 'What does "Двоюродный брат" mean in English?', 'Cousin', '{"Двоюродный брат","Свекровь","Тесть","Невестка"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2001-0003-e00000000002', 'aabbccdd-9999-2001-0003-a20000000000', 'translate_to_target', 'Translate to Russian: Mother-in-law', 'Свекровь', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2001-0003-e00000000003', 'aabbccdd-9999-2001-0003-a20000000000', 'translate_to_native', 'Translate to English: Тесть', 'Father-in-law', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2001-0003-e00000000004', 'aabbccdd-9999-2001-0003-a20000000000', 'fill_blank', '_____ (Daughter-in-law)', 'Невестка', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2001-0003-e00000000005', 'aabbccdd-9999-2001-0003-a20000000000', 'multiple_choice', 'What does "Дядя" mean in English?', 'Uncle', '{"Дядя","Тётя","Племянник","Племянница"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2001-0003-e00000000006', 'aabbccdd-9999-2001-0003-a20000000000', 'translate_to_target', 'Translate to Russian: Aunt', 'Тётя', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2001-0003-e00000000007', 'aabbccdd-9999-2001-0003-a20000000000', 'translate_to_native', 'Translate to English: Племянник', 'Nephew', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2001-0003-e00000000008', 'aabbccdd-9999-2001-0003-a20000000000', 'fill_blank', '_____ (Niece)', 'Племянница', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2001-0004-e00000000001', 'aabbccdd-9999-2001-0004-a20000000000', 'multiple_choice', 'What does "Тесть" mean in English?', 'Father-in-law', '{"Тесть","Невестка","Дядя","Тётя"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2001-0004-e00000000002', 'aabbccdd-9999-2001-0004-a20000000000', 'translate_to_target', 'Translate to Russian: Daughter-in-law', 'Невестка', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2001-0004-e00000000003', 'aabbccdd-9999-2001-0004-a20000000000', 'translate_to_native', 'Translate to English: Дядя', 'Uncle', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2001-0004-e00000000004', 'aabbccdd-9999-2001-0004-a20000000000', 'fill_blank', '_____ (Aunt)', 'Тётя', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2001-0004-e00000000005', 'aabbccdd-9999-2001-0004-a20000000000', 'multiple_choice', 'What does "Племянник" mean in English?', 'Nephew', '{"Племянник","Племянница","Двоюродный брат","Свекровь"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2001-0004-e00000000006', 'aabbccdd-9999-2001-0004-a20000000000', 'translate_to_target', 'Translate to Russian: Niece', 'Племянница', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2001-0004-e00000000007', 'aabbccdd-9999-2001-0004-a20000000000', 'translate_to_native', 'Translate to English: Двоюродный брат', 'Cousin', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2001-0004-e00000000008', 'aabbccdd-9999-2001-0004-a20000000000', 'fill_blank', '_____ (Mother-in-law)', 'Свекровь', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2001-0005-e00000000001', 'aabbccdd-9999-2001-0005-a20000000000', 'multiple_choice', 'What does "Дядя" mean in English?', 'Uncle', '{"Дядя","Тётя","Племянник","Племянница"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2001-0005-e00000000002', 'aabbccdd-9999-2001-0005-a20000000000', 'translate_to_target', 'Translate to Russian: Aunt', 'Тётя', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2001-0005-e00000000003', 'aabbccdd-9999-2001-0005-a20000000000', 'translate_to_native', 'Translate to English: Племянник', 'Nephew', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2001-0005-e00000000004', 'aabbccdd-9999-2001-0005-a20000000000', 'fill_blank', '_____ (Niece)', 'Племянница', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2001-0005-e00000000005', 'aabbccdd-9999-2001-0005-a20000000000', 'multiple_choice', 'What does "Двоюродный брат" mean in English?', 'Cousin', '{"Двоюродный брат","Свекровь","Тесть","Невестка"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2001-0005-e00000000006', 'aabbccdd-9999-2001-0005-a20000000000', 'translate_to_target', 'Translate to Russian: Mother-in-law', 'Свекровь', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2001-0005-e00000000007', 'aabbccdd-9999-2001-0005-a20000000000', 'translate_to_native', 'Translate to English: Тесть', 'Father-in-law', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2001-0005-e00000000008', 'aabbccdd-9999-2001-0005-a20000000000', 'fill_blank', '_____ (Daughter-in-law)', 'Невестка', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2001-0006-e00000000001', 'aabbccdd-9999-2001-0006-a20000000000', 'multiple_choice', 'What does "Племянник" mean in English?', 'Nephew', '{"Племянник","Племянница","Двоюродный брат","Свекровь"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2001-0006-e00000000002', 'aabbccdd-9999-2001-0006-a20000000000', 'translate_to_target', 'Translate to Russian: Niece', 'Племянница', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2001-0006-e00000000003', 'aabbccdd-9999-2001-0006-a20000000000', 'translate_to_native', 'Translate to English: Двоюродный брат', 'Cousin', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2001-0006-e00000000004', 'aabbccdd-9999-2001-0006-a20000000000', 'fill_blank', '_____ (Mother-in-law)', 'Свекровь', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2001-0006-e00000000005', 'aabbccdd-9999-2001-0006-a20000000000', 'multiple_choice', 'What does "Тесть" mean in English?', 'Father-in-law', '{"Тесть","Невестка","Дядя","Тётя"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2001-0006-e00000000006', 'aabbccdd-9999-2001-0006-a20000000000', 'translate_to_target', 'Translate to Russian: Daughter-in-law', 'Невестка', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2001-0006-e00000000007', 'aabbccdd-9999-2001-0006-a20000000000', 'translate_to_native', 'Translate to English: Дядя', 'Uncle', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2001-0006-e00000000008', 'aabbccdd-9999-2001-0006-a20000000000', 'fill_blank', '_____ (Aunt)', 'Тётя', NULL, '{}', 7, '{}');
+INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_speech, tags) VALUES
+  ('aabbccdd-9999-2001-c001-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2001-0000-a20000000000', 'Uncle', 'Дядя', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2001-c002-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2001-0000-a20000000000', 'Aunt', 'Тётя', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2001-c003-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2001-0000-a20000000000', 'Nephew', 'Племянник', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2001-c004-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2001-0000-a20000000000', 'Niece', 'Племянница', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2001-c005-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2001-0000-a20000000000', 'Cousin', 'Двоюродный брат', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2001-c006-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2001-0000-a20000000000', 'Mother-in-law', 'Свекровь', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2001-c007-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2001-0000-a20000000000', 'Father-in-law', 'Тесть', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2001-c008-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2001-0000-a20000000000', 'Daughter-in-law', 'Невестка', 'word', '{"A2"}');
+
+INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
+VALUES ('aabbccdd-9999-2002-0000-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'Shopping & Clothes', 'Shop for clothes and discuss sizes', 1, 6);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+  ('aabbccdd-9999-2002-0001-a20000000000', 'aabbccdd-9999-2002-0000-a20000000000', 'Extended Vocabulary', 'Extended Vocabulary', 0, 7, 25),
+  ('aabbccdd-9999-2002-0002-a20000000000', 'aabbccdd-9999-2002-0000-a20000000000', 'Describing & Comparing', 'Describing & Comparing', 1, 7, 25),
+  ('aabbccdd-9999-2002-0003-a20000000000', 'aabbccdd-9999-2002-0000-a20000000000', 'Talking About Experiences', 'Talking About Experiences', 2, 7, 25),
+  ('aabbccdd-9999-2002-0004-a20000000000', 'aabbccdd-9999-2002-0000-a20000000000', 'Daily Conversations', 'Daily Conversations', 3, 7, 25),
+  ('aabbccdd-9999-2002-0005-a20000000000', 'aabbccdd-9999-2002-0000-a20000000000', 'Practical Situations', 'Practical Situations', 4, 7, 25),
+  ('aabbccdd-9999-2002-0006-a20000000000', 'aabbccdd-9999-2002-0000-a20000000000', 'Review & Test', 'Review & Test', 5, 7, 25);
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2002-0001-e00000000001', 'aabbccdd-9999-2002-0001-a20000000000', 'multiple_choice', 'What does "Магазин" mean in English?', 'Shop', '{"Магазин","Одежда","Размер","Скидка"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2002-0001-e00000000002', 'aabbccdd-9999-2002-0001-a20000000000', 'translate_to_target', 'Translate to Russian: Clothes', 'Одежда', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2002-0001-e00000000003', 'aabbccdd-9999-2002-0001-a20000000000', 'translate_to_native', 'Translate to English: Размер', 'Size', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2002-0001-e00000000004', 'aabbccdd-9999-2002-0001-a20000000000', 'fill_blank', '_____ (Discount)', 'Скидка', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2002-0001-e00000000005', 'aabbccdd-9999-2002-0001-a20000000000', 'multiple_choice', 'What does "Касса" mean in English?', 'Cashier', '{"Касса","Платье","Рубашка","Брюки"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2002-0001-e00000000006', 'aabbccdd-9999-2002-0001-a20000000000', 'translate_to_target', 'Translate to Russian: Dress', 'Платье', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2002-0001-e00000000007', 'aabbccdd-9999-2002-0001-a20000000000', 'translate_to_native', 'Translate to English: Рубашка', 'Shirt', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2002-0001-e00000000008', 'aabbccdd-9999-2002-0001-a20000000000', 'fill_blank', '_____ (Trousers)', 'Брюки', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2002-0002-e00000000001', 'aabbccdd-9999-2002-0002-a20000000000', 'multiple_choice', 'What does "Размер" mean in English?', 'Size', '{"Размер","Скидка","Касса","Платье"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2002-0002-e00000000002', 'aabbccdd-9999-2002-0002-a20000000000', 'translate_to_target', 'Translate to Russian: Discount', 'Скидка', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2002-0002-e00000000003', 'aabbccdd-9999-2002-0002-a20000000000', 'translate_to_native', 'Translate to English: Касса', 'Cashier', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2002-0002-e00000000004', 'aabbccdd-9999-2002-0002-a20000000000', 'fill_blank', '_____ (Dress)', 'Платье', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2002-0002-e00000000005', 'aabbccdd-9999-2002-0002-a20000000000', 'multiple_choice', 'What does "Рубашка" mean in English?', 'Shirt', '{"Рубашка","Брюки","Магазин","Одежда"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2002-0002-e00000000006', 'aabbccdd-9999-2002-0002-a20000000000', 'translate_to_target', 'Translate to Russian: Trousers', 'Брюки', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2002-0002-e00000000007', 'aabbccdd-9999-2002-0002-a20000000000', 'translate_to_native', 'Translate to English: Магазин', 'Shop', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2002-0002-e00000000008', 'aabbccdd-9999-2002-0002-a20000000000', 'fill_blank', '_____ (Clothes)', 'Одежда', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2002-0003-e00000000001', 'aabbccdd-9999-2002-0003-a20000000000', 'multiple_choice', 'What does "Касса" mean in English?', 'Cashier', '{"Касса","Платье","Рубашка","Брюки"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2002-0003-e00000000002', 'aabbccdd-9999-2002-0003-a20000000000', 'translate_to_target', 'Translate to Russian: Dress', 'Платье', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2002-0003-e00000000003', 'aabbccdd-9999-2002-0003-a20000000000', 'translate_to_native', 'Translate to English: Рубашка', 'Shirt', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2002-0003-e00000000004', 'aabbccdd-9999-2002-0003-a20000000000', 'fill_blank', '_____ (Trousers)', 'Брюки', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2002-0003-e00000000005', 'aabbccdd-9999-2002-0003-a20000000000', 'multiple_choice', 'What does "Магазин" mean in English?', 'Shop', '{"Магазин","Одежда","Размер","Скидка"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2002-0003-e00000000006', 'aabbccdd-9999-2002-0003-a20000000000', 'translate_to_target', 'Translate to Russian: Clothes', 'Одежда', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2002-0003-e00000000007', 'aabbccdd-9999-2002-0003-a20000000000', 'translate_to_native', 'Translate to English: Размер', 'Size', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2002-0003-e00000000008', 'aabbccdd-9999-2002-0003-a20000000000', 'fill_blank', '_____ (Discount)', 'Скидка', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2002-0004-e00000000001', 'aabbccdd-9999-2002-0004-a20000000000', 'multiple_choice', 'What does "Рубашка" mean in English?', 'Shirt', '{"Рубашка","Брюки","Магазин","Одежда"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2002-0004-e00000000002', 'aabbccdd-9999-2002-0004-a20000000000', 'translate_to_target', 'Translate to Russian: Trousers', 'Брюки', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2002-0004-e00000000003', 'aabbccdd-9999-2002-0004-a20000000000', 'translate_to_native', 'Translate to English: Магазин', 'Shop', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2002-0004-e00000000004', 'aabbccdd-9999-2002-0004-a20000000000', 'fill_blank', '_____ (Clothes)', 'Одежда', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2002-0004-e00000000005', 'aabbccdd-9999-2002-0004-a20000000000', 'multiple_choice', 'What does "Размер" mean in English?', 'Size', '{"Размер","Скидка","Касса","Платье"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2002-0004-e00000000006', 'aabbccdd-9999-2002-0004-a20000000000', 'translate_to_target', 'Translate to Russian: Discount', 'Скидка', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2002-0004-e00000000007', 'aabbccdd-9999-2002-0004-a20000000000', 'translate_to_native', 'Translate to English: Касса', 'Cashier', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2002-0004-e00000000008', 'aabbccdd-9999-2002-0004-a20000000000', 'fill_blank', '_____ (Dress)', 'Платье', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2002-0005-e00000000001', 'aabbccdd-9999-2002-0005-a20000000000', 'multiple_choice', 'What does "Магазин" mean in English?', 'Shop', '{"Магазин","Одежда","Размер","Скидка"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2002-0005-e00000000002', 'aabbccdd-9999-2002-0005-a20000000000', 'translate_to_target', 'Translate to Russian: Clothes', 'Одежда', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2002-0005-e00000000003', 'aabbccdd-9999-2002-0005-a20000000000', 'translate_to_native', 'Translate to English: Размер', 'Size', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2002-0005-e00000000004', 'aabbccdd-9999-2002-0005-a20000000000', 'fill_blank', '_____ (Discount)', 'Скидка', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2002-0005-e00000000005', 'aabbccdd-9999-2002-0005-a20000000000', 'multiple_choice', 'What does "Касса" mean in English?', 'Cashier', '{"Касса","Платье","Рубашка","Брюки"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2002-0005-e00000000006', 'aabbccdd-9999-2002-0005-a20000000000', 'translate_to_target', 'Translate to Russian: Dress', 'Платье', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2002-0005-e00000000007', 'aabbccdd-9999-2002-0005-a20000000000', 'translate_to_native', 'Translate to English: Рубашка', 'Shirt', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2002-0005-e00000000008', 'aabbccdd-9999-2002-0005-a20000000000', 'fill_blank', '_____ (Trousers)', 'Брюки', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2002-0006-e00000000001', 'aabbccdd-9999-2002-0006-a20000000000', 'multiple_choice', 'What does "Размер" mean in English?', 'Size', '{"Размер","Скидка","Касса","Платье"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2002-0006-e00000000002', 'aabbccdd-9999-2002-0006-a20000000000', 'translate_to_target', 'Translate to Russian: Discount', 'Скидка', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2002-0006-e00000000003', 'aabbccdd-9999-2002-0006-a20000000000', 'translate_to_native', 'Translate to English: Касса', 'Cashier', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2002-0006-e00000000004', 'aabbccdd-9999-2002-0006-a20000000000', 'fill_blank', '_____ (Dress)', 'Платье', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2002-0006-e00000000005', 'aabbccdd-9999-2002-0006-a20000000000', 'multiple_choice', 'What does "Рубашка" mean in English?', 'Shirt', '{"Рубашка","Брюки","Магазин","Одежда"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2002-0006-e00000000006', 'aabbccdd-9999-2002-0006-a20000000000', 'translate_to_target', 'Translate to Russian: Trousers', 'Брюки', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2002-0006-e00000000007', 'aabbccdd-9999-2002-0006-a20000000000', 'translate_to_native', 'Translate to English: Магазин', 'Shop', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2002-0006-e00000000008', 'aabbccdd-9999-2002-0006-a20000000000', 'fill_blank', '_____ (Clothes)', 'Одежда', NULL, '{}', 7, '{}');
+INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_speech, tags) VALUES
+  ('aabbccdd-9999-2002-c001-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2002-0000-a20000000000', 'Shop', 'Магазин', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2002-c002-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2002-0000-a20000000000', 'Clothes', 'Одежда', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2002-c003-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2002-0000-a20000000000', 'Size', 'Размер', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2002-c004-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2002-0000-a20000000000', 'Discount', 'Скидка', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2002-c005-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2002-0000-a20000000000', 'Cashier', 'Касса', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2002-c006-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2002-0000-a20000000000', 'Dress', 'Платье', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2002-c007-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2002-0000-a20000000000', 'Shirt', 'Рубашка', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2002-c008-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2002-0000-a20000000000', 'Trousers', 'Брюки', 'word', '{"A2"}');
+
+INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
+VALUES ('aabbccdd-9999-2003-0000-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'Weather & Seasons', 'Discuss weather and seasons', 2, 6);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+  ('aabbccdd-9999-2003-0001-a20000000000', 'aabbccdd-9999-2003-0000-a20000000000', 'Extended Vocabulary', 'Extended Vocabulary', 0, 7, 25),
+  ('aabbccdd-9999-2003-0002-a20000000000', 'aabbccdd-9999-2003-0000-a20000000000', 'Describing & Comparing', 'Describing & Comparing', 1, 7, 25),
+  ('aabbccdd-9999-2003-0003-a20000000000', 'aabbccdd-9999-2003-0000-a20000000000', 'Talking About Experiences', 'Talking About Experiences', 2, 7, 25),
+  ('aabbccdd-9999-2003-0004-a20000000000', 'aabbccdd-9999-2003-0000-a20000000000', 'Daily Conversations', 'Daily Conversations', 3, 7, 25),
+  ('aabbccdd-9999-2003-0005-a20000000000', 'aabbccdd-9999-2003-0000-a20000000000', 'Practical Situations', 'Practical Situations', 4, 7, 25),
+  ('aabbccdd-9999-2003-0006-a20000000000', 'aabbccdd-9999-2003-0000-a20000000000', 'Review & Test', 'Review & Test', 5, 7, 25);
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2003-0001-e00000000001', 'aabbccdd-9999-2003-0001-a20000000000', 'multiple_choice', 'What does "Погода" mean in English?', 'Weather', '{"Погода","Дождь","Снег","Ветер"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2003-0001-e00000000002', 'aabbccdd-9999-2003-0001-a20000000000', 'translate_to_target', 'Translate to Russian: Rain', 'Дождь', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2003-0001-e00000000003', 'aabbccdd-9999-2003-0001-a20000000000', 'translate_to_native', 'Translate to English: Снег', 'Snow', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2003-0001-e00000000004', 'aabbccdd-9999-2003-0001-a20000000000', 'fill_blank', '_____ (Wind)', 'Ветер', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2003-0001-e00000000005', 'aabbccdd-9999-2003-0001-a20000000000', 'multiple_choice', 'What does "Солнце" mean in English?', 'Sun', '{"Солнце","Весна","Лето","Осень"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2003-0001-e00000000006', 'aabbccdd-9999-2003-0001-a20000000000', 'translate_to_target', 'Translate to Russian: Spring', 'Весна', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2003-0001-e00000000007', 'aabbccdd-9999-2003-0001-a20000000000', 'translate_to_native', 'Translate to English: Лето', 'Summer', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2003-0001-e00000000008', 'aabbccdd-9999-2003-0001-a20000000000', 'fill_blank', '_____ (Autumn)', 'Осень', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2003-0002-e00000000001', 'aabbccdd-9999-2003-0002-a20000000000', 'multiple_choice', 'What does "Снег" mean in English?', 'Snow', '{"Снег","Ветер","Солнце","Весна"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2003-0002-e00000000002', 'aabbccdd-9999-2003-0002-a20000000000', 'translate_to_target', 'Translate to Russian: Wind', 'Ветер', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2003-0002-e00000000003', 'aabbccdd-9999-2003-0002-a20000000000', 'translate_to_native', 'Translate to English: Солнце', 'Sun', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2003-0002-e00000000004', 'aabbccdd-9999-2003-0002-a20000000000', 'fill_blank', '_____ (Spring)', 'Весна', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2003-0002-e00000000005', 'aabbccdd-9999-2003-0002-a20000000000', 'multiple_choice', 'What does "Лето" mean in English?', 'Summer', '{"Лето","Осень","Зима","Погода"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2003-0002-e00000000006', 'aabbccdd-9999-2003-0002-a20000000000', 'translate_to_target', 'Translate to Russian: Autumn', 'Осень', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2003-0002-e00000000007', 'aabbccdd-9999-2003-0002-a20000000000', 'translate_to_native', 'Translate to English: Зима', 'Winter', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2003-0002-e00000000008', 'aabbccdd-9999-2003-0002-a20000000000', 'fill_blank', '_____ (Weather)', 'Погода', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2003-0003-e00000000001', 'aabbccdd-9999-2003-0003-a20000000000', 'multiple_choice', 'What does "Солнце" mean in English?', 'Sun', '{"Солнце","Весна","Лето","Осень"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2003-0003-e00000000002', 'aabbccdd-9999-2003-0003-a20000000000', 'translate_to_target', 'Translate to Russian: Spring', 'Весна', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2003-0003-e00000000003', 'aabbccdd-9999-2003-0003-a20000000000', 'translate_to_native', 'Translate to English: Лето', 'Summer', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2003-0003-e00000000004', 'aabbccdd-9999-2003-0003-a20000000000', 'fill_blank', '_____ (Autumn)', 'Осень', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2003-0003-e00000000005', 'aabbccdd-9999-2003-0003-a20000000000', 'multiple_choice', 'What does "Зима" mean in English?', 'Winter', '{"Зима","Погода","Дождь","Снег"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2003-0003-e00000000006', 'aabbccdd-9999-2003-0003-a20000000000', 'translate_to_target', 'Translate to Russian: Weather', 'Погода', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2003-0003-e00000000007', 'aabbccdd-9999-2003-0003-a20000000000', 'translate_to_native', 'Translate to English: Дождь', 'Rain', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2003-0003-e00000000008', 'aabbccdd-9999-2003-0003-a20000000000', 'fill_blank', '_____ (Snow)', 'Снег', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2003-0004-e00000000001', 'aabbccdd-9999-2003-0004-a20000000000', 'multiple_choice', 'What does "Лето" mean in English?', 'Summer', '{"Лето","Осень","Зима","Погода"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2003-0004-e00000000002', 'aabbccdd-9999-2003-0004-a20000000000', 'translate_to_target', 'Translate to Russian: Autumn', 'Осень', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2003-0004-e00000000003', 'aabbccdd-9999-2003-0004-a20000000000', 'translate_to_native', 'Translate to English: Зима', 'Winter', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2003-0004-e00000000004', 'aabbccdd-9999-2003-0004-a20000000000', 'fill_blank', '_____ (Weather)', 'Погода', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2003-0004-e00000000005', 'aabbccdd-9999-2003-0004-a20000000000', 'multiple_choice', 'What does "Дождь" mean in English?', 'Rain', '{"Дождь","Снег","Ветер","Солнце"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2003-0004-e00000000006', 'aabbccdd-9999-2003-0004-a20000000000', 'translate_to_target', 'Translate to Russian: Snow', 'Снег', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2003-0004-e00000000007', 'aabbccdd-9999-2003-0004-a20000000000', 'translate_to_native', 'Translate to English: Ветер', 'Wind', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2003-0004-e00000000008', 'aabbccdd-9999-2003-0004-a20000000000', 'fill_blank', '_____ (Sun)', 'Солнце', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2003-0005-e00000000001', 'aabbccdd-9999-2003-0005-a20000000000', 'multiple_choice', 'What does "Зима" mean in English?', 'Winter', '{"Зима","Погода","Дождь","Снег"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2003-0005-e00000000002', 'aabbccdd-9999-2003-0005-a20000000000', 'translate_to_target', 'Translate to Russian: Weather', 'Погода', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2003-0005-e00000000003', 'aabbccdd-9999-2003-0005-a20000000000', 'translate_to_native', 'Translate to English: Дождь', 'Rain', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2003-0005-e00000000004', 'aabbccdd-9999-2003-0005-a20000000000', 'fill_blank', '_____ (Snow)', 'Снег', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2003-0005-e00000000005', 'aabbccdd-9999-2003-0005-a20000000000', 'multiple_choice', 'What does "Ветер" mean in English?', 'Wind', '{"Ветер","Солнце","Весна","Лето"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2003-0005-e00000000006', 'aabbccdd-9999-2003-0005-a20000000000', 'translate_to_target', 'Translate to Russian: Sun', 'Солнце', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2003-0005-e00000000007', 'aabbccdd-9999-2003-0005-a20000000000', 'translate_to_native', 'Translate to English: Весна', 'Spring', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2003-0005-e00000000008', 'aabbccdd-9999-2003-0005-a20000000000', 'fill_blank', '_____ (Summer)', 'Лето', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2003-0006-e00000000001', 'aabbccdd-9999-2003-0006-a20000000000', 'multiple_choice', 'What does "Дождь" mean in English?', 'Rain', '{"Дождь","Снег","Ветер","Солнце"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2003-0006-e00000000002', 'aabbccdd-9999-2003-0006-a20000000000', 'translate_to_target', 'Translate to Russian: Snow', 'Снег', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2003-0006-e00000000003', 'aabbccdd-9999-2003-0006-a20000000000', 'translate_to_native', 'Translate to English: Ветер', 'Wind', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2003-0006-e00000000004', 'aabbccdd-9999-2003-0006-a20000000000', 'fill_blank', '_____ (Sun)', 'Солнце', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2003-0006-e00000000005', 'aabbccdd-9999-2003-0006-a20000000000', 'multiple_choice', 'What does "Весна" mean in English?', 'Spring', '{"Весна","Лето","Осень","Зима"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2003-0006-e00000000006', 'aabbccdd-9999-2003-0006-a20000000000', 'translate_to_target', 'Translate to Russian: Summer', 'Лето', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2003-0006-e00000000007', 'aabbccdd-9999-2003-0006-a20000000000', 'translate_to_native', 'Translate to English: Осень', 'Autumn', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2003-0006-e00000000008', 'aabbccdd-9999-2003-0006-a20000000000', 'fill_blank', '_____ (Winter)', 'Зима', NULL, '{}', 7, '{}');
+INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_speech, tags) VALUES
+  ('aabbccdd-9999-2003-c001-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2003-0000-a20000000000', 'Weather', 'Погода', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2003-c002-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2003-0000-a20000000000', 'Rain', 'Дождь', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2003-c003-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2003-0000-a20000000000', 'Snow', 'Снег', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2003-c004-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2003-0000-a20000000000', 'Wind', 'Ветер', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2003-c005-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2003-0000-a20000000000', 'Sun', 'Солнце', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2003-c006-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2003-0000-a20000000000', 'Spring', 'Весна', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2003-c007-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2003-0000-a20000000000', 'Summer', 'Лето', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2003-c008-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2003-0000-a20000000000', 'Autumn', 'Осень', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2003-c009-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2003-0000-a20000000000', 'Winter', 'Зима', 'word', '{"A2"}');
+
+INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
+VALUES ('aabbccdd-9999-2004-0000-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'Home & Furniture', 'Describe your home and furniture', 3, 6);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+  ('aabbccdd-9999-2004-0001-a20000000000', 'aabbccdd-9999-2004-0000-a20000000000', 'Extended Vocabulary', 'Extended Vocabulary', 0, 7, 25),
+  ('aabbccdd-9999-2004-0002-a20000000000', 'aabbccdd-9999-2004-0000-a20000000000', 'Describing & Comparing', 'Describing & Comparing', 1, 7, 25),
+  ('aabbccdd-9999-2004-0003-a20000000000', 'aabbccdd-9999-2004-0000-a20000000000', 'Talking About Experiences', 'Talking About Experiences', 2, 7, 25),
+  ('aabbccdd-9999-2004-0004-a20000000000', 'aabbccdd-9999-2004-0000-a20000000000', 'Daily Conversations', 'Daily Conversations', 3, 7, 25),
+  ('aabbccdd-9999-2004-0005-a20000000000', 'aabbccdd-9999-2004-0000-a20000000000', 'Practical Situations', 'Practical Situations', 4, 7, 25),
+  ('aabbccdd-9999-2004-0006-a20000000000', 'aabbccdd-9999-2004-0000-a20000000000', 'Review & Test', 'Review & Test', 5, 7, 25);
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2004-0001-e00000000001', 'aabbccdd-9999-2004-0001-a20000000000', 'multiple_choice', 'What does "Квартира" mean in English?', 'Apartment', '{"Квартира","Комната","Кухня","Ванная"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2004-0001-e00000000002', 'aabbccdd-9999-2004-0001-a20000000000', 'translate_to_target', 'Translate to Russian: Room', 'Комната', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2004-0001-e00000000003', 'aabbccdd-9999-2004-0001-a20000000000', 'translate_to_native', 'Translate to English: Кухня', 'Kitchen', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2004-0001-e00000000004', 'aabbccdd-9999-2004-0001-a20000000000', 'fill_blank', '_____ (Bathroom)', 'Ванная', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2004-0001-e00000000005', 'aabbccdd-9999-2004-0001-a20000000000', 'multiple_choice', 'What does "Стол" mean in English?', 'Table', '{"Стол","Стул","Кровать","Шкаф"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2004-0001-e00000000006', 'aabbccdd-9999-2004-0001-a20000000000', 'translate_to_target', 'Translate to Russian: Chair', 'Стул', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2004-0001-e00000000007', 'aabbccdd-9999-2004-0001-a20000000000', 'translate_to_native', 'Translate to English: Кровать', 'Bed', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2004-0001-e00000000008', 'aabbccdd-9999-2004-0001-a20000000000', 'fill_blank', '_____ (Wardrobe)', 'Шкаф', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2004-0002-e00000000001', 'aabbccdd-9999-2004-0002-a20000000000', 'multiple_choice', 'What does "Кухня" mean in English?', 'Kitchen', '{"Кухня","Ванная","Стол","Стул"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2004-0002-e00000000002', 'aabbccdd-9999-2004-0002-a20000000000', 'translate_to_target', 'Translate to Russian: Bathroom', 'Ванная', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2004-0002-e00000000003', 'aabbccdd-9999-2004-0002-a20000000000', 'translate_to_native', 'Translate to English: Стол', 'Table', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2004-0002-e00000000004', 'aabbccdd-9999-2004-0002-a20000000000', 'fill_blank', '_____ (Chair)', 'Стул', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2004-0002-e00000000005', 'aabbccdd-9999-2004-0002-a20000000000', 'multiple_choice', 'What does "Кровать" mean in English?', 'Bed', '{"Кровать","Шкаф","Квартира","Комната"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2004-0002-e00000000006', 'aabbccdd-9999-2004-0002-a20000000000', 'translate_to_target', 'Translate to Russian: Wardrobe', 'Шкаф', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2004-0002-e00000000007', 'aabbccdd-9999-2004-0002-a20000000000', 'translate_to_native', 'Translate to English: Квартира', 'Apartment', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2004-0002-e00000000008', 'aabbccdd-9999-2004-0002-a20000000000', 'fill_blank', '_____ (Room)', 'Комната', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2004-0003-e00000000001', 'aabbccdd-9999-2004-0003-a20000000000', 'multiple_choice', 'What does "Стол" mean in English?', 'Table', '{"Стол","Стул","Кровать","Шкаф"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2004-0003-e00000000002', 'aabbccdd-9999-2004-0003-a20000000000', 'translate_to_target', 'Translate to Russian: Chair', 'Стул', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2004-0003-e00000000003', 'aabbccdd-9999-2004-0003-a20000000000', 'translate_to_native', 'Translate to English: Кровать', 'Bed', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2004-0003-e00000000004', 'aabbccdd-9999-2004-0003-a20000000000', 'fill_blank', '_____ (Wardrobe)', 'Шкаф', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2004-0003-e00000000005', 'aabbccdd-9999-2004-0003-a20000000000', 'multiple_choice', 'What does "Квартира" mean in English?', 'Apartment', '{"Квартира","Комната","Кухня","Ванная"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2004-0003-e00000000006', 'aabbccdd-9999-2004-0003-a20000000000', 'translate_to_target', 'Translate to Russian: Room', 'Комната', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2004-0003-e00000000007', 'aabbccdd-9999-2004-0003-a20000000000', 'translate_to_native', 'Translate to English: Кухня', 'Kitchen', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2004-0003-e00000000008', 'aabbccdd-9999-2004-0003-a20000000000', 'fill_blank', '_____ (Bathroom)', 'Ванная', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2004-0004-e00000000001', 'aabbccdd-9999-2004-0004-a20000000000', 'multiple_choice', 'What does "Кровать" mean in English?', 'Bed', '{"Кровать","Шкаф","Квартира","Комната"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2004-0004-e00000000002', 'aabbccdd-9999-2004-0004-a20000000000', 'translate_to_target', 'Translate to Russian: Wardrobe', 'Шкаф', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2004-0004-e00000000003', 'aabbccdd-9999-2004-0004-a20000000000', 'translate_to_native', 'Translate to English: Квартира', 'Apartment', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2004-0004-e00000000004', 'aabbccdd-9999-2004-0004-a20000000000', 'fill_blank', '_____ (Room)', 'Комната', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2004-0004-e00000000005', 'aabbccdd-9999-2004-0004-a20000000000', 'multiple_choice', 'What does "Кухня" mean in English?', 'Kitchen', '{"Кухня","Ванная","Стол","Стул"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2004-0004-e00000000006', 'aabbccdd-9999-2004-0004-a20000000000', 'translate_to_target', 'Translate to Russian: Bathroom', 'Ванная', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2004-0004-e00000000007', 'aabbccdd-9999-2004-0004-a20000000000', 'translate_to_native', 'Translate to English: Стол', 'Table', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2004-0004-e00000000008', 'aabbccdd-9999-2004-0004-a20000000000', 'fill_blank', '_____ (Chair)', 'Стул', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2004-0005-e00000000001', 'aabbccdd-9999-2004-0005-a20000000000', 'multiple_choice', 'What does "Квартира" mean in English?', 'Apartment', '{"Квартира","Комната","Кухня","Ванная"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2004-0005-e00000000002', 'aabbccdd-9999-2004-0005-a20000000000', 'translate_to_target', 'Translate to Russian: Room', 'Комната', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2004-0005-e00000000003', 'aabbccdd-9999-2004-0005-a20000000000', 'translate_to_native', 'Translate to English: Кухня', 'Kitchen', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2004-0005-e00000000004', 'aabbccdd-9999-2004-0005-a20000000000', 'fill_blank', '_____ (Bathroom)', 'Ванная', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2004-0005-e00000000005', 'aabbccdd-9999-2004-0005-a20000000000', 'multiple_choice', 'What does "Стол" mean in English?', 'Table', '{"Стол","Стул","Кровать","Шкаф"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2004-0005-e00000000006', 'aabbccdd-9999-2004-0005-a20000000000', 'translate_to_target', 'Translate to Russian: Chair', 'Стул', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2004-0005-e00000000007', 'aabbccdd-9999-2004-0005-a20000000000', 'translate_to_native', 'Translate to English: Кровать', 'Bed', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2004-0005-e00000000008', 'aabbccdd-9999-2004-0005-a20000000000', 'fill_blank', '_____ (Wardrobe)', 'Шкаф', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2004-0006-e00000000001', 'aabbccdd-9999-2004-0006-a20000000000', 'multiple_choice', 'What does "Кухня" mean in English?', 'Kitchen', '{"Кухня","Ванная","Стол","Стул"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2004-0006-e00000000002', 'aabbccdd-9999-2004-0006-a20000000000', 'translate_to_target', 'Translate to Russian: Bathroom', 'Ванная', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2004-0006-e00000000003', 'aabbccdd-9999-2004-0006-a20000000000', 'translate_to_native', 'Translate to English: Стол', 'Table', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2004-0006-e00000000004', 'aabbccdd-9999-2004-0006-a20000000000', 'fill_blank', '_____ (Chair)', 'Стул', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2004-0006-e00000000005', 'aabbccdd-9999-2004-0006-a20000000000', 'multiple_choice', 'What does "Кровать" mean in English?', 'Bed', '{"Кровать","Шкаф","Квартира","Комната"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2004-0006-e00000000006', 'aabbccdd-9999-2004-0006-a20000000000', 'translate_to_target', 'Translate to Russian: Wardrobe', 'Шкаф', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2004-0006-e00000000007', 'aabbccdd-9999-2004-0006-a20000000000', 'translate_to_native', 'Translate to English: Квартира', 'Apartment', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2004-0006-e00000000008', 'aabbccdd-9999-2004-0006-a20000000000', 'fill_blank', '_____ (Room)', 'Комната', NULL, '{}', 7, '{}');
+INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_speech, tags) VALUES
+  ('aabbccdd-9999-2004-c001-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2004-0000-a20000000000', 'Apartment', 'Квартира', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2004-c002-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2004-0000-a20000000000', 'Room', 'Комната', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2004-c003-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2004-0000-a20000000000', 'Kitchen', 'Кухня', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2004-c004-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2004-0000-a20000000000', 'Bathroom', 'Ванная', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2004-c005-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2004-0000-a20000000000', 'Table', 'Стол', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2004-c006-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2004-0000-a20000000000', 'Chair', 'Стул', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2004-c007-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2004-0000-a20000000000', 'Bed', 'Кровать', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2004-c008-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2004-0000-a20000000000', 'Wardrobe', 'Шкаф', 'word', '{"A2"}');
+
+INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
+VALUES ('aabbccdd-9999-2005-0000-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'Daily Routines', 'Talk about daily activities', 4, 6);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+  ('aabbccdd-9999-2005-0001-a20000000000', 'aabbccdd-9999-2005-0000-a20000000000', 'Extended Vocabulary', 'Extended Vocabulary', 0, 7, 25),
+  ('aabbccdd-9999-2005-0002-a20000000000', 'aabbccdd-9999-2005-0000-a20000000000', 'Describing & Comparing', 'Describing & Comparing', 1, 7, 25),
+  ('aabbccdd-9999-2005-0003-a20000000000', 'aabbccdd-9999-2005-0000-a20000000000', 'Talking About Experiences', 'Talking About Experiences', 2, 7, 25),
+  ('aabbccdd-9999-2005-0004-a20000000000', 'aabbccdd-9999-2005-0000-a20000000000', 'Daily Conversations', 'Daily Conversations', 3, 7, 25),
+  ('aabbccdd-9999-2005-0005-a20000000000', 'aabbccdd-9999-2005-0000-a20000000000', 'Practical Situations', 'Practical Situations', 4, 7, 25),
+  ('aabbccdd-9999-2005-0006-a20000000000', 'aabbccdd-9999-2005-0000-a20000000000', 'Review & Test', 'Review & Test', 5, 7, 25);
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2005-0001-e00000000001', 'aabbccdd-9999-2005-0001-a20000000000', 'multiple_choice', 'What does "Просыпаться" mean in English?', 'Wake up', '{"Просыпаться","Завтракать","Обедать","Ужинать"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2005-0001-e00000000002', 'aabbccdd-9999-2005-0001-a20000000000', 'translate_to_target', 'Translate to Russian: Have breakfast', 'Завтракать', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2005-0001-e00000000003', 'aabbccdd-9999-2005-0001-a20000000000', 'translate_to_native', 'Translate to English: Обедать', 'Have lunch', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2005-0001-e00000000004', 'aabbccdd-9999-2005-0001-a20000000000', 'fill_blank', '_____ (Have dinner)', 'Ужинать', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2005-0001-e00000000005', 'aabbccdd-9999-2005-0001-a20000000000', 'multiple_choice', 'What does "Убирать" mean in English?', 'Clean', '{"Убирать","Гулять","Ложиться","Просыпаться"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2005-0001-e00000000006', 'aabbccdd-9999-2005-0001-a20000000000', 'translate_to_target', 'Translate to Russian: Walk', 'Гулять', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2005-0001-e00000000007', 'aabbccdd-9999-2005-0001-a20000000000', 'translate_to_native', 'Translate to English: Ложиться', 'Go to bed', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2005-0001-e00000000008', 'aabbccdd-9999-2005-0001-a20000000000', 'fill_blank', '_____ (Wake up)', 'Просыпаться', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2005-0002-e00000000001', 'aabbccdd-9999-2005-0002-a20000000000', 'multiple_choice', 'What does "Обедать" mean in English?', 'Have lunch', '{"Обедать","Ужинать","Убирать","Гулять"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2005-0002-e00000000002', 'aabbccdd-9999-2005-0002-a20000000000', 'translate_to_target', 'Translate to Russian: Have dinner', 'Ужинать', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2005-0002-e00000000003', 'aabbccdd-9999-2005-0002-a20000000000', 'translate_to_native', 'Translate to English: Убирать', 'Clean', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2005-0002-e00000000004', 'aabbccdd-9999-2005-0002-a20000000000', 'fill_blank', '_____ (Walk)', 'Гулять', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2005-0002-e00000000005', 'aabbccdd-9999-2005-0002-a20000000000', 'multiple_choice', 'What does "Ложиться" mean in English?', 'Go to bed', '{"Ложиться","Просыпаться","Завтракать","Обедать"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2005-0002-e00000000006', 'aabbccdd-9999-2005-0002-a20000000000', 'translate_to_target', 'Translate to Russian: Wake up', 'Просыпаться', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2005-0002-e00000000007', 'aabbccdd-9999-2005-0002-a20000000000', 'translate_to_native', 'Translate to English: Завтракать', 'Have breakfast', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2005-0002-e00000000008', 'aabbccdd-9999-2005-0002-a20000000000', 'fill_blank', '_____ (Have lunch)', 'Обедать', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2005-0003-e00000000001', 'aabbccdd-9999-2005-0003-a20000000000', 'multiple_choice', 'What does "Убирать" mean in English?', 'Clean', '{"Убирать","Гулять","Ложиться","Просыпаться"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2005-0003-e00000000002', 'aabbccdd-9999-2005-0003-a20000000000', 'translate_to_target', 'Translate to Russian: Walk', 'Гулять', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2005-0003-e00000000003', 'aabbccdd-9999-2005-0003-a20000000000', 'translate_to_native', 'Translate to English: Ложиться', 'Go to bed', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2005-0003-e00000000004', 'aabbccdd-9999-2005-0003-a20000000000', 'fill_blank', '_____ (Wake up)', 'Просыпаться', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2005-0003-e00000000005', 'aabbccdd-9999-2005-0003-a20000000000', 'multiple_choice', 'What does "Завтракать" mean in English?', 'Have breakfast', '{"Завтракать","Обедать","Ужинать","Убирать"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2005-0003-e00000000006', 'aabbccdd-9999-2005-0003-a20000000000', 'translate_to_target', 'Translate to Russian: Have lunch', 'Обедать', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2005-0003-e00000000007', 'aabbccdd-9999-2005-0003-a20000000000', 'translate_to_native', 'Translate to English: Ужинать', 'Have dinner', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2005-0003-e00000000008', 'aabbccdd-9999-2005-0003-a20000000000', 'fill_blank', '_____ (Clean)', 'Убирать', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2005-0004-e00000000001', 'aabbccdd-9999-2005-0004-a20000000000', 'multiple_choice', 'What does "Ложиться" mean in English?', 'Go to bed', '{"Ложиться","Просыпаться","Завтракать","Обедать"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2005-0004-e00000000002', 'aabbccdd-9999-2005-0004-a20000000000', 'translate_to_target', 'Translate to Russian: Wake up', 'Просыпаться', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2005-0004-e00000000003', 'aabbccdd-9999-2005-0004-a20000000000', 'translate_to_native', 'Translate to English: Завтракать', 'Have breakfast', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2005-0004-e00000000004', 'aabbccdd-9999-2005-0004-a20000000000', 'fill_blank', '_____ (Have lunch)', 'Обедать', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2005-0004-e00000000005', 'aabbccdd-9999-2005-0004-a20000000000', 'multiple_choice', 'What does "Ужинать" mean in English?', 'Have dinner', '{"Ужинать","Убирать","Гулять","Ложиться"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2005-0004-e00000000006', 'aabbccdd-9999-2005-0004-a20000000000', 'translate_to_target', 'Translate to Russian: Clean', 'Убирать', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2005-0004-e00000000007', 'aabbccdd-9999-2005-0004-a20000000000', 'translate_to_native', 'Translate to English: Гулять', 'Walk', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2005-0004-e00000000008', 'aabbccdd-9999-2005-0004-a20000000000', 'fill_blank', '_____ (Go to bed)', 'Ложиться', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2005-0005-e00000000001', 'aabbccdd-9999-2005-0005-a20000000000', 'multiple_choice', 'What does "Завтракать" mean in English?', 'Have breakfast', '{"Завтракать","Обедать","Ужинать","Убирать"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2005-0005-e00000000002', 'aabbccdd-9999-2005-0005-a20000000000', 'translate_to_target', 'Translate to Russian: Have lunch', 'Обедать', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2005-0005-e00000000003', 'aabbccdd-9999-2005-0005-a20000000000', 'translate_to_native', 'Translate to English: Ужинать', 'Have dinner', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2005-0005-e00000000004', 'aabbccdd-9999-2005-0005-a20000000000', 'fill_blank', '_____ (Clean)', 'Убирать', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2005-0005-e00000000005', 'aabbccdd-9999-2005-0005-a20000000000', 'multiple_choice', 'What does "Гулять" mean in English?', 'Walk', '{"Гулять","Ложиться","Просыпаться","Завтракать"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2005-0005-e00000000006', 'aabbccdd-9999-2005-0005-a20000000000', 'translate_to_target', 'Translate to Russian: Go to bed', 'Ложиться', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2005-0005-e00000000007', 'aabbccdd-9999-2005-0005-a20000000000', 'translate_to_native', 'Translate to English: Просыпаться', 'Wake up', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2005-0005-e00000000008', 'aabbccdd-9999-2005-0005-a20000000000', 'fill_blank', '_____ (Have breakfast)', 'Завтракать', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2005-0006-e00000000001', 'aabbccdd-9999-2005-0006-a20000000000', 'multiple_choice', 'What does "Ужинать" mean in English?', 'Have dinner', '{"Ужинать","Убирать","Гулять","Ложиться"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2005-0006-e00000000002', 'aabbccdd-9999-2005-0006-a20000000000', 'translate_to_target', 'Translate to Russian: Clean', 'Убирать', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2005-0006-e00000000003', 'aabbccdd-9999-2005-0006-a20000000000', 'translate_to_native', 'Translate to English: Гулять', 'Walk', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2005-0006-e00000000004', 'aabbccdd-9999-2005-0006-a20000000000', 'fill_blank', '_____ (Go to bed)', 'Ложиться', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2005-0006-e00000000005', 'aabbccdd-9999-2005-0006-a20000000000', 'multiple_choice', 'What does "Просыпаться" mean in English?', 'Wake up', '{"Просыпаться","Завтракать","Обедать","Ужинать"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2005-0006-e00000000006', 'aabbccdd-9999-2005-0006-a20000000000', 'translate_to_target', 'Translate to Russian: Have breakfast', 'Завтракать', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2005-0006-e00000000007', 'aabbccdd-9999-2005-0006-a20000000000', 'translate_to_native', 'Translate to English: Обедать', 'Have lunch', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2005-0006-e00000000008', 'aabbccdd-9999-2005-0006-a20000000000', 'fill_blank', '_____ (Have dinner)', 'Ужинать', NULL, '{}', 7, '{}');
+INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_speech, tags) VALUES
+  ('aabbccdd-9999-2005-c001-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2005-0000-a20000000000', 'Wake up', 'Просыпаться', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2005-c002-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2005-0000-a20000000000', 'Have breakfast', 'Завтракать', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2005-c003-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2005-0000-a20000000000', 'Have lunch', 'Обедать', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2005-c004-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2005-0000-a20000000000', 'Have dinner', 'Ужинать', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2005-c005-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2005-0000-a20000000000', 'Clean', 'Убирать', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2005-c006-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2005-0000-a20000000000', 'Walk', 'Гулять', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2005-c007-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2005-0000-a20000000000', 'Go to bed', 'Ложиться', 'word', '{"A2"}');
+
+INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
+VALUES ('aabbccdd-9999-2006-0000-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'Hobbies & Activities', 'Discuss hobbies and activities', 5, 6);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+  ('aabbccdd-9999-2006-0001-a20000000000', 'aabbccdd-9999-2006-0000-a20000000000', 'Extended Vocabulary', 'Extended Vocabulary', 0, 7, 25),
+  ('aabbccdd-9999-2006-0002-a20000000000', 'aabbccdd-9999-2006-0000-a20000000000', 'Describing & Comparing', 'Describing & Comparing', 1, 7, 25),
+  ('aabbccdd-9999-2006-0003-a20000000000', 'aabbccdd-9999-2006-0000-a20000000000', 'Talking About Experiences', 'Talking About Experiences', 2, 7, 25),
+  ('aabbccdd-9999-2006-0004-a20000000000', 'aabbccdd-9999-2006-0000-a20000000000', 'Daily Conversations', 'Daily Conversations', 3, 7, 25),
+  ('aabbccdd-9999-2006-0005-a20000000000', 'aabbccdd-9999-2006-0000-a20000000000', 'Practical Situations', 'Practical Situations', 4, 7, 25),
+  ('aabbccdd-9999-2006-0006-a20000000000', 'aabbccdd-9999-2006-0000-a20000000000', 'Review & Test', 'Review & Test', 5, 7, 25);
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2006-0001-e00000000001', 'aabbccdd-9999-2006-0001-a20000000000', 'multiple_choice', 'What does "Рисовать" mean in English?', 'Draw', '{"Рисовать","Петь","Танцевать","Готовить"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2006-0001-e00000000002', 'aabbccdd-9999-2006-0001-a20000000000', 'translate_to_target', 'Translate to Russian: Sing', 'Петь', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2006-0001-e00000000003', 'aabbccdd-9999-2006-0001-a20000000000', 'translate_to_native', 'Translate to English: Танцевать', 'Dance', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2006-0001-e00000000004', 'aabbccdd-9999-2006-0001-a20000000000', 'fill_blank', '_____ (Cook)', 'Готовить', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2006-0001-e00000000005', 'aabbccdd-9999-2006-0001-a20000000000', 'multiple_choice', 'What does "Плавать" mean in English?', 'Swim', '{"Плавать","Бегать","Читать","Рисовать"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2006-0001-e00000000006', 'aabbccdd-9999-2006-0001-a20000000000', 'translate_to_target', 'Translate to Russian: Run', 'Бегать', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2006-0001-e00000000007', 'aabbccdd-9999-2006-0001-a20000000000', 'translate_to_native', 'Translate to English: Читать', 'Read', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2006-0001-e00000000008', 'aabbccdd-9999-2006-0001-a20000000000', 'fill_blank', '_____ (Draw)', 'Рисовать', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2006-0002-e00000000001', 'aabbccdd-9999-2006-0002-a20000000000', 'multiple_choice', 'What does "Танцевать" mean in English?', 'Dance', '{"Танцевать","Готовить","Плавать","Бегать"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2006-0002-e00000000002', 'aabbccdd-9999-2006-0002-a20000000000', 'translate_to_target', 'Translate to Russian: Cook', 'Готовить', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2006-0002-e00000000003', 'aabbccdd-9999-2006-0002-a20000000000', 'translate_to_native', 'Translate to English: Плавать', 'Swim', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2006-0002-e00000000004', 'aabbccdd-9999-2006-0002-a20000000000', 'fill_blank', '_____ (Run)', 'Бегать', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2006-0002-e00000000005', 'aabbccdd-9999-2006-0002-a20000000000', 'multiple_choice', 'What does "Читать" mean in English?', 'Read', '{"Читать","Рисовать","Петь","Танцевать"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2006-0002-e00000000006', 'aabbccdd-9999-2006-0002-a20000000000', 'translate_to_target', 'Translate to Russian: Draw', 'Рисовать', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2006-0002-e00000000007', 'aabbccdd-9999-2006-0002-a20000000000', 'translate_to_native', 'Translate to English: Петь', 'Sing', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2006-0002-e00000000008', 'aabbccdd-9999-2006-0002-a20000000000', 'fill_blank', '_____ (Dance)', 'Танцевать', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2006-0003-e00000000001', 'aabbccdd-9999-2006-0003-a20000000000', 'multiple_choice', 'What does "Плавать" mean in English?', 'Swim', '{"Плавать","Бегать","Читать","Рисовать"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2006-0003-e00000000002', 'aabbccdd-9999-2006-0003-a20000000000', 'translate_to_target', 'Translate to Russian: Run', 'Бегать', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2006-0003-e00000000003', 'aabbccdd-9999-2006-0003-a20000000000', 'translate_to_native', 'Translate to English: Читать', 'Read', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2006-0003-e00000000004', 'aabbccdd-9999-2006-0003-a20000000000', 'fill_blank', '_____ (Draw)', 'Рисовать', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2006-0003-e00000000005', 'aabbccdd-9999-2006-0003-a20000000000', 'multiple_choice', 'What does "Петь" mean in English?', 'Sing', '{"Петь","Танцевать","Готовить","Плавать"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2006-0003-e00000000006', 'aabbccdd-9999-2006-0003-a20000000000', 'translate_to_target', 'Translate to Russian: Dance', 'Танцевать', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2006-0003-e00000000007', 'aabbccdd-9999-2006-0003-a20000000000', 'translate_to_native', 'Translate to English: Готовить', 'Cook', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2006-0003-e00000000008', 'aabbccdd-9999-2006-0003-a20000000000', 'fill_blank', '_____ (Swim)', 'Плавать', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2006-0004-e00000000001', 'aabbccdd-9999-2006-0004-a20000000000', 'multiple_choice', 'What does "Читать" mean in English?', 'Read', '{"Читать","Рисовать","Петь","Танцевать"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2006-0004-e00000000002', 'aabbccdd-9999-2006-0004-a20000000000', 'translate_to_target', 'Translate to Russian: Draw', 'Рисовать', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2006-0004-e00000000003', 'aabbccdd-9999-2006-0004-a20000000000', 'translate_to_native', 'Translate to English: Петь', 'Sing', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2006-0004-e00000000004', 'aabbccdd-9999-2006-0004-a20000000000', 'fill_blank', '_____ (Dance)', 'Танцевать', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2006-0004-e00000000005', 'aabbccdd-9999-2006-0004-a20000000000', 'multiple_choice', 'What does "Готовить" mean in English?', 'Cook', '{"Готовить","Плавать","Бегать","Читать"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2006-0004-e00000000006', 'aabbccdd-9999-2006-0004-a20000000000', 'translate_to_target', 'Translate to Russian: Swim', 'Плавать', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2006-0004-e00000000007', 'aabbccdd-9999-2006-0004-a20000000000', 'translate_to_native', 'Translate to English: Бегать', 'Run', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2006-0004-e00000000008', 'aabbccdd-9999-2006-0004-a20000000000', 'fill_blank', '_____ (Read)', 'Читать', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2006-0005-e00000000001', 'aabbccdd-9999-2006-0005-a20000000000', 'multiple_choice', 'What does "Петь" mean in English?', 'Sing', '{"Петь","Танцевать","Готовить","Плавать"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2006-0005-e00000000002', 'aabbccdd-9999-2006-0005-a20000000000', 'translate_to_target', 'Translate to Russian: Dance', 'Танцевать', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2006-0005-e00000000003', 'aabbccdd-9999-2006-0005-a20000000000', 'translate_to_native', 'Translate to English: Готовить', 'Cook', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2006-0005-e00000000004', 'aabbccdd-9999-2006-0005-a20000000000', 'fill_blank', '_____ (Swim)', 'Плавать', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2006-0005-e00000000005', 'aabbccdd-9999-2006-0005-a20000000000', 'multiple_choice', 'What does "Бегать" mean in English?', 'Run', '{"Бегать","Читать","Рисовать","Петь"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2006-0005-e00000000006', 'aabbccdd-9999-2006-0005-a20000000000', 'translate_to_target', 'Translate to Russian: Read', 'Читать', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2006-0005-e00000000007', 'aabbccdd-9999-2006-0005-a20000000000', 'translate_to_native', 'Translate to English: Рисовать', 'Draw', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2006-0005-e00000000008', 'aabbccdd-9999-2006-0005-a20000000000', 'fill_blank', '_____ (Sing)', 'Петь', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2006-0006-e00000000001', 'aabbccdd-9999-2006-0006-a20000000000', 'multiple_choice', 'What does "Готовить" mean in English?', 'Cook', '{"Готовить","Плавать","Бегать","Читать"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2006-0006-e00000000002', 'aabbccdd-9999-2006-0006-a20000000000', 'translate_to_target', 'Translate to Russian: Swim', 'Плавать', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2006-0006-e00000000003', 'aabbccdd-9999-2006-0006-a20000000000', 'translate_to_native', 'Translate to English: Бегать', 'Run', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2006-0006-e00000000004', 'aabbccdd-9999-2006-0006-a20000000000', 'fill_blank', '_____ (Read)', 'Читать', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2006-0006-e00000000005', 'aabbccdd-9999-2006-0006-a20000000000', 'multiple_choice', 'What does "Рисовать" mean in English?', 'Draw', '{"Рисовать","Петь","Танцевать","Готовить"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2006-0006-e00000000006', 'aabbccdd-9999-2006-0006-a20000000000', 'translate_to_target', 'Translate to Russian: Sing', 'Петь', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2006-0006-e00000000007', 'aabbccdd-9999-2006-0006-a20000000000', 'translate_to_native', 'Translate to English: Танцевать', 'Dance', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2006-0006-e00000000008', 'aabbccdd-9999-2006-0006-a20000000000', 'fill_blank', '_____ (Cook)', 'Готовить', NULL, '{}', 7, '{}');
+INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_speech, tags) VALUES
+  ('aabbccdd-9999-2006-c001-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2006-0000-a20000000000', 'Draw', 'Рисовать', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2006-c002-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2006-0000-a20000000000', 'Sing', 'Петь', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2006-c003-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2006-0000-a20000000000', 'Dance', 'Танцевать', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2006-c004-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2006-0000-a20000000000', 'Cook', 'Готовить', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2006-c005-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2006-0000-a20000000000', 'Swim', 'Плавать', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2006-c006-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2006-0000-a20000000000', 'Run', 'Бегать', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2006-c007-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2006-0000-a20000000000', 'Read', 'Читать', 'word', '{"A2"}');
+
+INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
+VALUES ('aabbccdd-9999-2007-0000-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'City & Transport', 'Navigate the city and public transport', 6, 6);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+  ('aabbccdd-9999-2007-0001-a20000000000', 'aabbccdd-9999-2007-0000-a20000000000', 'Extended Vocabulary', 'Extended Vocabulary', 0, 7, 25),
+  ('aabbccdd-9999-2007-0002-a20000000000', 'aabbccdd-9999-2007-0000-a20000000000', 'Describing & Comparing', 'Describing & Comparing', 1, 7, 25),
+  ('aabbccdd-9999-2007-0003-a20000000000', 'aabbccdd-9999-2007-0000-a20000000000', 'Talking About Experiences', 'Talking About Experiences', 2, 7, 25),
+  ('aabbccdd-9999-2007-0004-a20000000000', 'aabbccdd-9999-2007-0000-a20000000000', 'Daily Conversations', 'Daily Conversations', 3, 7, 25),
+  ('aabbccdd-9999-2007-0005-a20000000000', 'aabbccdd-9999-2007-0000-a20000000000', 'Practical Situations', 'Practical Situations', 4, 7, 25),
+  ('aabbccdd-9999-2007-0006-a20000000000', 'aabbccdd-9999-2007-0000-a20000000000', 'Review & Test', 'Review & Test', 5, 7, 25);
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2007-0001-e00000000001', 'aabbccdd-9999-2007-0001-a20000000000', 'multiple_choice', 'What does "Метро" mean in English?', 'Metro', '{"Метро","Такси","Остановка","Перекрёсток"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2007-0001-e00000000002', 'aabbccdd-9999-2007-0001-a20000000000', 'translate_to_target', 'Translate to Russian: Taxi', 'Такси', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2007-0001-e00000000003', 'aabbccdd-9999-2007-0001-a20000000000', 'translate_to_native', 'Translate to English: Остановка', 'Stop', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2007-0001-e00000000004', 'aabbccdd-9999-2007-0001-a20000000000', 'fill_blank', '_____ (Intersection)', 'Перекрёсток', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2007-0001-e00000000005', 'aabbccdd-9999-2007-0001-a20000000000', 'multiple_choice', 'What does "Улица" mean in English?', 'Street', '{"Улица","Площадь","Мост","Метро"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2007-0001-e00000000006', 'aabbccdd-9999-2007-0001-a20000000000', 'translate_to_target', 'Translate to Russian: Square', 'Площадь', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2007-0001-e00000000007', 'aabbccdd-9999-2007-0001-a20000000000', 'translate_to_native', 'Translate to English: Мост', 'Bridge', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2007-0001-e00000000008', 'aabbccdd-9999-2007-0001-a20000000000', 'fill_blank', '_____ (Metro)', 'Метро', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2007-0002-e00000000001', 'aabbccdd-9999-2007-0002-a20000000000', 'multiple_choice', 'What does "Остановка" mean in English?', 'Stop', '{"Остановка","Перекрёсток","Улица","Площадь"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2007-0002-e00000000002', 'aabbccdd-9999-2007-0002-a20000000000', 'translate_to_target', 'Translate to Russian: Intersection', 'Перекрёсток', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2007-0002-e00000000003', 'aabbccdd-9999-2007-0002-a20000000000', 'translate_to_native', 'Translate to English: Улица', 'Street', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2007-0002-e00000000004', 'aabbccdd-9999-2007-0002-a20000000000', 'fill_blank', '_____ (Square)', 'Площадь', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2007-0002-e00000000005', 'aabbccdd-9999-2007-0002-a20000000000', 'multiple_choice', 'What does "Мост" mean in English?', 'Bridge', '{"Мост","Метро","Такси","Остановка"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2007-0002-e00000000006', 'aabbccdd-9999-2007-0002-a20000000000', 'translate_to_target', 'Translate to Russian: Metro', 'Метро', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2007-0002-e00000000007', 'aabbccdd-9999-2007-0002-a20000000000', 'translate_to_native', 'Translate to English: Такси', 'Taxi', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2007-0002-e00000000008', 'aabbccdd-9999-2007-0002-a20000000000', 'fill_blank', '_____ (Stop)', 'Остановка', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2007-0003-e00000000001', 'aabbccdd-9999-2007-0003-a20000000000', 'multiple_choice', 'What does "Улица" mean in English?', 'Street', '{"Улица","Площадь","Мост","Метро"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2007-0003-e00000000002', 'aabbccdd-9999-2007-0003-a20000000000', 'translate_to_target', 'Translate to Russian: Square', 'Площадь', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2007-0003-e00000000003', 'aabbccdd-9999-2007-0003-a20000000000', 'translate_to_native', 'Translate to English: Мост', 'Bridge', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2007-0003-e00000000004', 'aabbccdd-9999-2007-0003-a20000000000', 'fill_blank', '_____ (Metro)', 'Метро', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2007-0003-e00000000005', 'aabbccdd-9999-2007-0003-a20000000000', 'multiple_choice', 'What does "Такси" mean in English?', 'Taxi', '{"Такси","Остановка","Перекрёсток","Улица"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2007-0003-e00000000006', 'aabbccdd-9999-2007-0003-a20000000000', 'translate_to_target', 'Translate to Russian: Stop', 'Остановка', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2007-0003-e00000000007', 'aabbccdd-9999-2007-0003-a20000000000', 'translate_to_native', 'Translate to English: Перекрёсток', 'Intersection', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2007-0003-e00000000008', 'aabbccdd-9999-2007-0003-a20000000000', 'fill_blank', '_____ (Street)', 'Улица', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2007-0004-e00000000001', 'aabbccdd-9999-2007-0004-a20000000000', 'multiple_choice', 'What does "Мост" mean in English?', 'Bridge', '{"Мост","Метро","Такси","Остановка"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2007-0004-e00000000002', 'aabbccdd-9999-2007-0004-a20000000000', 'translate_to_target', 'Translate to Russian: Metro', 'Метро', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2007-0004-e00000000003', 'aabbccdd-9999-2007-0004-a20000000000', 'translate_to_native', 'Translate to English: Такси', 'Taxi', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2007-0004-e00000000004', 'aabbccdd-9999-2007-0004-a20000000000', 'fill_blank', '_____ (Stop)', 'Остановка', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2007-0004-e00000000005', 'aabbccdd-9999-2007-0004-a20000000000', 'multiple_choice', 'What does "Перекрёсток" mean in English?', 'Intersection', '{"Перекрёсток","Улица","Площадь","Мост"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2007-0004-e00000000006', 'aabbccdd-9999-2007-0004-a20000000000', 'translate_to_target', 'Translate to Russian: Street', 'Улица', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2007-0004-e00000000007', 'aabbccdd-9999-2007-0004-a20000000000', 'translate_to_native', 'Translate to English: Площадь', 'Square', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2007-0004-e00000000008', 'aabbccdd-9999-2007-0004-a20000000000', 'fill_blank', '_____ (Bridge)', 'Мост', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2007-0005-e00000000001', 'aabbccdd-9999-2007-0005-a20000000000', 'multiple_choice', 'What does "Такси" mean in English?', 'Taxi', '{"Такси","Остановка","Перекрёсток","Улица"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2007-0005-e00000000002', 'aabbccdd-9999-2007-0005-a20000000000', 'translate_to_target', 'Translate to Russian: Stop', 'Остановка', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2007-0005-e00000000003', 'aabbccdd-9999-2007-0005-a20000000000', 'translate_to_native', 'Translate to English: Перекрёсток', 'Intersection', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2007-0005-e00000000004', 'aabbccdd-9999-2007-0005-a20000000000', 'fill_blank', '_____ (Street)', 'Улица', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2007-0005-e00000000005', 'aabbccdd-9999-2007-0005-a20000000000', 'multiple_choice', 'What does "Площадь" mean in English?', 'Square', '{"Площадь","Мост","Метро","Такси"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2007-0005-e00000000006', 'aabbccdd-9999-2007-0005-a20000000000', 'translate_to_target', 'Translate to Russian: Bridge', 'Мост', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2007-0005-e00000000007', 'aabbccdd-9999-2007-0005-a20000000000', 'translate_to_native', 'Translate to English: Метро', 'Metro', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2007-0005-e00000000008', 'aabbccdd-9999-2007-0005-a20000000000', 'fill_blank', '_____ (Taxi)', 'Такси', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2007-0006-e00000000001', 'aabbccdd-9999-2007-0006-a20000000000', 'multiple_choice', 'What does "Перекрёсток" mean in English?', 'Intersection', '{"Перекрёсток","Улица","Площадь","Мост"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2007-0006-e00000000002', 'aabbccdd-9999-2007-0006-a20000000000', 'translate_to_target', 'Translate to Russian: Street', 'Улица', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2007-0006-e00000000003', 'aabbccdd-9999-2007-0006-a20000000000', 'translate_to_native', 'Translate to English: Площадь', 'Square', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2007-0006-e00000000004', 'aabbccdd-9999-2007-0006-a20000000000', 'fill_blank', '_____ (Bridge)', 'Мост', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2007-0006-e00000000005', 'aabbccdd-9999-2007-0006-a20000000000', 'multiple_choice', 'What does "Метро" mean in English?', 'Metro', '{"Метро","Такси","Остановка","Перекрёсток"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2007-0006-e00000000006', 'aabbccdd-9999-2007-0006-a20000000000', 'translate_to_target', 'Translate to Russian: Taxi', 'Такси', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2007-0006-e00000000007', 'aabbccdd-9999-2007-0006-a20000000000', 'translate_to_native', 'Translate to English: Остановка', 'Stop', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2007-0006-e00000000008', 'aabbccdd-9999-2007-0006-a20000000000', 'fill_blank', '_____ (Intersection)', 'Перекрёсток', NULL, '{}', 7, '{}');
+INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_speech, tags) VALUES
+  ('aabbccdd-9999-2007-c001-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2007-0000-a20000000000', 'Metro', 'Метро', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2007-c002-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2007-0000-a20000000000', 'Taxi', 'Такси', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2007-c003-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2007-0000-a20000000000', 'Stop', 'Остановка', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2007-c004-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2007-0000-a20000000000', 'Intersection', 'Перекрёсток', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2007-c005-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2007-0000-a20000000000', 'Street', 'Улица', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2007-c006-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2007-0000-a20000000000', 'Square', 'Площадь', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2007-c007-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2007-0000-a20000000000', 'Bridge', 'Мост', 'word', '{"A2"}');
+
+INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
+VALUES ('aabbccdd-9999-2008-0000-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'Emotions & Descriptions', 'Express emotions and describe people', 7, 6);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+  ('aabbccdd-9999-2008-0001-a20000000000', 'aabbccdd-9999-2008-0000-a20000000000', 'Extended Vocabulary', 'Extended Vocabulary', 0, 7, 25),
+  ('aabbccdd-9999-2008-0002-a20000000000', 'aabbccdd-9999-2008-0000-a20000000000', 'Describing & Comparing', 'Describing & Comparing', 1, 7, 25),
+  ('aabbccdd-9999-2008-0003-a20000000000', 'aabbccdd-9999-2008-0000-a20000000000', 'Talking About Experiences', 'Talking About Experiences', 2, 7, 25),
+  ('aabbccdd-9999-2008-0004-a20000000000', 'aabbccdd-9999-2008-0000-a20000000000', 'Daily Conversations', 'Daily Conversations', 3, 7, 25),
+  ('aabbccdd-9999-2008-0005-a20000000000', 'aabbccdd-9999-2008-0000-a20000000000', 'Practical Situations', 'Practical Situations', 4, 7, 25),
+  ('aabbccdd-9999-2008-0006-a20000000000', 'aabbccdd-9999-2008-0000-a20000000000', 'Review & Test', 'Review & Test', 5, 7, 25);
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2008-0001-e00000000001', 'aabbccdd-9999-2008-0001-a20000000000', 'multiple_choice', 'What does "Счастливый" mean in English?', 'Happy', '{"Счастливый","Грустный","Усталый","Злой"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2008-0001-e00000000002', 'aabbccdd-9999-2008-0001-a20000000000', 'translate_to_target', 'Translate to Russian: Sad', 'Грустный', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2008-0001-e00000000003', 'aabbccdd-9999-2008-0001-a20000000000', 'translate_to_native', 'Translate to English: Усталый', 'Tired', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2008-0001-e00000000004', 'aabbccdd-9999-2008-0001-a20000000000', 'fill_blank', '_____ (Angry)', 'Злой', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2008-0001-e00000000005', 'aabbccdd-9999-2008-0001-a20000000000', 'multiple_choice', 'What does "Испуганный" mean in English?', 'Scared', '{"Испуганный","Удивлённый","Счастливый","Грустный"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2008-0001-e00000000006', 'aabbccdd-9999-2008-0001-a20000000000', 'translate_to_target', 'Translate to Russian: Surprised', 'Удивлённый', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2008-0001-e00000000007', 'aabbccdd-9999-2008-0001-a20000000000', 'translate_to_native', 'Translate to English: Счастливый', 'Happy', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2008-0001-e00000000008', 'aabbccdd-9999-2008-0001-a20000000000', 'fill_blank', '_____ (Sad)', 'Грустный', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2008-0002-e00000000001', 'aabbccdd-9999-2008-0002-a20000000000', 'multiple_choice', 'What does "Усталый" mean in English?', 'Tired', '{"Усталый","Злой","Испуганный","Удивлённый"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2008-0002-e00000000002', 'aabbccdd-9999-2008-0002-a20000000000', 'translate_to_target', 'Translate to Russian: Angry', 'Злой', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2008-0002-e00000000003', 'aabbccdd-9999-2008-0002-a20000000000', 'translate_to_native', 'Translate to English: Испуганный', 'Scared', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2008-0002-e00000000004', 'aabbccdd-9999-2008-0002-a20000000000', 'fill_blank', '_____ (Surprised)', 'Удивлённый', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2008-0002-e00000000005', 'aabbccdd-9999-2008-0002-a20000000000', 'multiple_choice', 'What does "Счастливый" mean in English?', 'Happy', '{"Счастливый","Грустный","Усталый","Злой"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2008-0002-e00000000006', 'aabbccdd-9999-2008-0002-a20000000000', 'translate_to_target', 'Translate to Russian: Sad', 'Грустный', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2008-0002-e00000000007', 'aabbccdd-9999-2008-0002-a20000000000', 'translate_to_native', 'Translate to English: Усталый', 'Tired', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2008-0002-e00000000008', 'aabbccdd-9999-2008-0002-a20000000000', 'fill_blank', '_____ (Angry)', 'Злой', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2008-0003-e00000000001', 'aabbccdd-9999-2008-0003-a20000000000', 'multiple_choice', 'What does "Испуганный" mean in English?', 'Scared', '{"Испуганный","Удивлённый","Счастливый","Грустный"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2008-0003-e00000000002', 'aabbccdd-9999-2008-0003-a20000000000', 'translate_to_target', 'Translate to Russian: Surprised', 'Удивлённый', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2008-0003-e00000000003', 'aabbccdd-9999-2008-0003-a20000000000', 'translate_to_native', 'Translate to English: Счастливый', 'Happy', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2008-0003-e00000000004', 'aabbccdd-9999-2008-0003-a20000000000', 'fill_blank', '_____ (Sad)', 'Грустный', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2008-0003-e00000000005', 'aabbccdd-9999-2008-0003-a20000000000', 'multiple_choice', 'What does "Усталый" mean in English?', 'Tired', '{"Усталый","Злой","Испуганный","Удивлённый"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2008-0003-e00000000006', 'aabbccdd-9999-2008-0003-a20000000000', 'translate_to_target', 'Translate to Russian: Angry', 'Злой', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2008-0003-e00000000007', 'aabbccdd-9999-2008-0003-a20000000000', 'translate_to_native', 'Translate to English: Испуганный', 'Scared', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2008-0003-e00000000008', 'aabbccdd-9999-2008-0003-a20000000000', 'fill_blank', '_____ (Surprised)', 'Удивлённый', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2008-0004-e00000000001', 'aabbccdd-9999-2008-0004-a20000000000', 'multiple_choice', 'What does "Счастливый" mean in English?', 'Happy', '{"Счастливый","Грустный","Усталый","Злой"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2008-0004-e00000000002', 'aabbccdd-9999-2008-0004-a20000000000', 'translate_to_target', 'Translate to Russian: Sad', 'Грустный', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2008-0004-e00000000003', 'aabbccdd-9999-2008-0004-a20000000000', 'translate_to_native', 'Translate to English: Усталый', 'Tired', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2008-0004-e00000000004', 'aabbccdd-9999-2008-0004-a20000000000', 'fill_blank', '_____ (Angry)', 'Злой', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2008-0004-e00000000005', 'aabbccdd-9999-2008-0004-a20000000000', 'multiple_choice', 'What does "Испуганный" mean in English?', 'Scared', '{"Испуганный","Удивлённый","Счастливый","Грустный"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2008-0004-e00000000006', 'aabbccdd-9999-2008-0004-a20000000000', 'translate_to_target', 'Translate to Russian: Surprised', 'Удивлённый', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2008-0004-e00000000007', 'aabbccdd-9999-2008-0004-a20000000000', 'translate_to_native', 'Translate to English: Счастливый', 'Happy', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2008-0004-e00000000008', 'aabbccdd-9999-2008-0004-a20000000000', 'fill_blank', '_____ (Sad)', 'Грустный', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2008-0005-e00000000001', 'aabbccdd-9999-2008-0005-a20000000000', 'multiple_choice', 'What does "Усталый" mean in English?', 'Tired', '{"Усталый","Злой","Испуганный","Удивлённый"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2008-0005-e00000000002', 'aabbccdd-9999-2008-0005-a20000000000', 'translate_to_target', 'Translate to Russian: Angry', 'Злой', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2008-0005-e00000000003', 'aabbccdd-9999-2008-0005-a20000000000', 'translate_to_native', 'Translate to English: Испуганный', 'Scared', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2008-0005-e00000000004', 'aabbccdd-9999-2008-0005-a20000000000', 'fill_blank', '_____ (Surprised)', 'Удивлённый', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2008-0005-e00000000005', 'aabbccdd-9999-2008-0005-a20000000000', 'multiple_choice', 'What does "Счастливый" mean in English?', 'Happy', '{"Счастливый","Грустный","Усталый","Злой"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2008-0005-e00000000006', 'aabbccdd-9999-2008-0005-a20000000000', 'translate_to_target', 'Translate to Russian: Sad', 'Грустный', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2008-0005-e00000000007', 'aabbccdd-9999-2008-0005-a20000000000', 'translate_to_native', 'Translate to English: Усталый', 'Tired', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2008-0005-e00000000008', 'aabbccdd-9999-2008-0005-a20000000000', 'fill_blank', '_____ (Angry)', 'Злой', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-2008-0006-e00000000001', 'aabbccdd-9999-2008-0006-a20000000000', 'multiple_choice', 'What does "Испуганный" mean in English?', 'Scared', '{"Испуганный","Удивлённый","Счастливый","Грустный"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-2008-0006-e00000000002', 'aabbccdd-9999-2008-0006-a20000000000', 'translate_to_target', 'Translate to Russian: Surprised', 'Удивлённый', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-2008-0006-e00000000003', 'aabbccdd-9999-2008-0006-a20000000000', 'translate_to_native', 'Translate to English: Счастливый', 'Happy', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-2008-0006-e00000000004', 'aabbccdd-9999-2008-0006-a20000000000', 'fill_blank', '_____ (Sad)', 'Грустный', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-2008-0006-e00000000005', 'aabbccdd-9999-2008-0006-a20000000000', 'multiple_choice', 'What does "Усталый" mean in English?', 'Tired', '{"Усталый","Злой","Испуганный","Удивлённый"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-2008-0006-e00000000006', 'aabbccdd-9999-2008-0006-a20000000000', 'translate_to_target', 'Translate to Russian: Angry', 'Злой', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-2008-0006-e00000000007', 'aabbccdd-9999-2008-0006-a20000000000', 'translate_to_native', 'Translate to English: Испуганный', 'Scared', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-2008-0006-e00000000008', 'aabbccdd-9999-2008-0006-a20000000000', 'fill_blank', '_____ (Surprised)', 'Удивлённый', NULL, '{}', 7, '{}');
+INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_speech, tags) VALUES
+  ('aabbccdd-9999-2008-c001-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2008-0000-a20000000000', 'Happy', 'Счастливый', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2008-c002-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2008-0000-a20000000000', 'Sad', 'Грустный', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2008-c003-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2008-0000-a20000000000', 'Tired', 'Усталый', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2008-c004-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2008-0000-a20000000000', 'Angry', 'Злой', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2008-c005-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2008-0000-a20000000000', 'Scared', 'Испуганный', 'word', '{"A2"}'),
+  ('aabbccdd-9999-2008-c006-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'aabbccdd-9999-2008-0000-a20000000000', 'Surprised', 'Удивлённый', 'word', '{"A2"}');
+
+-- Russian B1
+INSERT INTO courses (id, source_language, target_language, title, description, total_units, is_published, cefr_level)
+VALUES ('aabbccdd-9999-0000-0000-b10000000000', 'en', 'ru', 'Russian B1', 'Russian course - CEFR B1', 8, true, 'B1');
+
+INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
+VALUES ('aabbccdd-9999-3001-0000-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'Opinions & Current Events', 'Express opinions and discuss news', 0, 6);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+  ('aabbccdd-9999-3001-0001-b10000000000', 'aabbccdd-9999-3001-0000-b10000000000', 'Key Concepts', 'Key Concepts', 0, 10, 30),
+  ('aabbccdd-9999-3001-0002-b10000000000', 'aabbccdd-9999-3001-0000-b10000000000', 'In Context', 'In Context', 1, 10, 30),
+  ('aabbccdd-9999-3001-0003-b10000000000', 'aabbccdd-9999-3001-0000-b10000000000', 'Discussion & Debate', 'Discussion & Debate', 2, 10, 30),
+  ('aabbccdd-9999-3001-0004-b10000000000', 'aabbccdd-9999-3001-0000-b10000000000', 'Practical Application', 'Practical Application', 3, 10, 30),
+  ('aabbccdd-9999-3001-0005-b10000000000', 'aabbccdd-9999-3001-0000-b10000000000', 'Advanced Usage', 'Advanced Usage', 4, 10, 30),
+  ('aabbccdd-9999-3001-0006-b10000000000', 'aabbccdd-9999-3001-0000-b10000000000', 'Review & Test', 'Review & Test', 5, 10, 30);
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3001-0001-e00000000001', 'aabbccdd-9999-3001-0001-b10000000000', 'multiple_choice', 'What does "Мнение" mean in English?', 'Opinion', '{"Мнение","Согласен","Не согласен","Считаю"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3001-0001-e00000000002', 'aabbccdd-9999-3001-0001-b10000000000', 'translate_to_target', 'Translate to Russian: I agree', 'Согласен', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3001-0001-e00000000003', 'aabbccdd-9999-3001-0001-b10000000000', 'translate_to_native', 'Translate to English: Не согласен', 'I disagree', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3001-0001-e00000000004', 'aabbccdd-9999-3001-0001-b10000000000', 'fill_blank', '_____ (I think)', 'Считаю', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3001-0001-e00000000005', 'aabbccdd-9999-3001-0001-b10000000000', 'multiple_choice', 'What does "Новости" mean in English?', 'News', '{"Новости","Общество","Проблема","Решение"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3001-0001-e00000000006', 'aabbccdd-9999-3001-0001-b10000000000', 'translate_to_target', 'Translate to Russian: Society', 'Общество', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3001-0001-e00000000007', 'aabbccdd-9999-3001-0001-b10000000000', 'translate_to_native', 'Translate to English: Проблема', 'Problem', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3001-0001-e00000000008', 'aabbccdd-9999-3001-0001-b10000000000', 'fill_blank', '_____ (Solution)', 'Решение', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3001-0002-e00000000001', 'aabbccdd-9999-3001-0002-b10000000000', 'multiple_choice', 'What does "Не согласен" mean in English?', 'I disagree', '{"Не согласен","Считаю","Новости","Общество"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3001-0002-e00000000002', 'aabbccdd-9999-3001-0002-b10000000000', 'translate_to_target', 'Translate to Russian: I think', 'Считаю', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3001-0002-e00000000003', 'aabbccdd-9999-3001-0002-b10000000000', 'translate_to_native', 'Translate to English: Новости', 'News', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3001-0002-e00000000004', 'aabbccdd-9999-3001-0002-b10000000000', 'fill_blank', '_____ (Society)', 'Общество', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3001-0002-e00000000005', 'aabbccdd-9999-3001-0002-b10000000000', 'multiple_choice', 'What does "Проблема" mean in English?', 'Problem', '{"Проблема","Решение","Мнение","Согласен"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3001-0002-e00000000006', 'aabbccdd-9999-3001-0002-b10000000000', 'translate_to_target', 'Translate to Russian: Solution', 'Решение', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3001-0002-e00000000007', 'aabbccdd-9999-3001-0002-b10000000000', 'translate_to_native', 'Translate to English: Мнение', 'Opinion', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3001-0002-e00000000008', 'aabbccdd-9999-3001-0002-b10000000000', 'fill_blank', '_____ (I agree)', 'Согласен', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3001-0003-e00000000001', 'aabbccdd-9999-3001-0003-b10000000000', 'multiple_choice', 'What does "Новости" mean in English?', 'News', '{"Новости","Общество","Проблема","Решение"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3001-0003-e00000000002', 'aabbccdd-9999-3001-0003-b10000000000', 'translate_to_target', 'Translate to Russian: Society', 'Общество', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3001-0003-e00000000003', 'aabbccdd-9999-3001-0003-b10000000000', 'translate_to_native', 'Translate to English: Проблема', 'Problem', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3001-0003-e00000000004', 'aabbccdd-9999-3001-0003-b10000000000', 'fill_blank', '_____ (Solution)', 'Решение', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3001-0003-e00000000005', 'aabbccdd-9999-3001-0003-b10000000000', 'multiple_choice', 'What does "Мнение" mean in English?', 'Opinion', '{"Мнение","Согласен","Не согласен","Считаю"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3001-0003-e00000000006', 'aabbccdd-9999-3001-0003-b10000000000', 'translate_to_target', 'Translate to Russian: I agree', 'Согласен', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3001-0003-e00000000007', 'aabbccdd-9999-3001-0003-b10000000000', 'translate_to_native', 'Translate to English: Не согласен', 'I disagree', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3001-0003-e00000000008', 'aabbccdd-9999-3001-0003-b10000000000', 'fill_blank', '_____ (I think)', 'Считаю', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3001-0004-e00000000001', 'aabbccdd-9999-3001-0004-b10000000000', 'multiple_choice', 'What does "Проблема" mean in English?', 'Problem', '{"Проблема","Решение","Мнение","Согласен"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3001-0004-e00000000002', 'aabbccdd-9999-3001-0004-b10000000000', 'translate_to_target', 'Translate to Russian: Solution', 'Решение', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3001-0004-e00000000003', 'aabbccdd-9999-3001-0004-b10000000000', 'translate_to_native', 'Translate to English: Мнение', 'Opinion', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3001-0004-e00000000004', 'aabbccdd-9999-3001-0004-b10000000000', 'fill_blank', '_____ (I agree)', 'Согласен', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3001-0004-e00000000005', 'aabbccdd-9999-3001-0004-b10000000000', 'multiple_choice', 'What does "Не согласен" mean in English?', 'I disagree', '{"Не согласен","Считаю","Новости","Общество"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3001-0004-e00000000006', 'aabbccdd-9999-3001-0004-b10000000000', 'translate_to_target', 'Translate to Russian: I think', 'Считаю', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3001-0004-e00000000007', 'aabbccdd-9999-3001-0004-b10000000000', 'translate_to_native', 'Translate to English: Новости', 'News', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3001-0004-e00000000008', 'aabbccdd-9999-3001-0004-b10000000000', 'fill_blank', '_____ (Society)', 'Общество', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3001-0005-e00000000001', 'aabbccdd-9999-3001-0005-b10000000000', 'multiple_choice', 'What does "Мнение" mean in English?', 'Opinion', '{"Мнение","Согласен","Не согласен","Считаю"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3001-0005-e00000000002', 'aabbccdd-9999-3001-0005-b10000000000', 'translate_to_target', 'Translate to Russian: I agree', 'Согласен', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3001-0005-e00000000003', 'aabbccdd-9999-3001-0005-b10000000000', 'translate_to_native', 'Translate to English: Не согласен', 'I disagree', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3001-0005-e00000000004', 'aabbccdd-9999-3001-0005-b10000000000', 'fill_blank', '_____ (I think)', 'Считаю', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3001-0005-e00000000005', 'aabbccdd-9999-3001-0005-b10000000000', 'multiple_choice', 'What does "Новости" mean in English?', 'News', '{"Новости","Общество","Проблема","Решение"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3001-0005-e00000000006', 'aabbccdd-9999-3001-0005-b10000000000', 'translate_to_target', 'Translate to Russian: Society', 'Общество', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3001-0005-e00000000007', 'aabbccdd-9999-3001-0005-b10000000000', 'translate_to_native', 'Translate to English: Проблема', 'Problem', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3001-0005-e00000000008', 'aabbccdd-9999-3001-0005-b10000000000', 'fill_blank', '_____ (Solution)', 'Решение', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3001-0006-e00000000001', 'aabbccdd-9999-3001-0006-b10000000000', 'multiple_choice', 'What does "Не согласен" mean in English?', 'I disagree', '{"Не согласен","Считаю","Новости","Общество"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3001-0006-e00000000002', 'aabbccdd-9999-3001-0006-b10000000000', 'translate_to_target', 'Translate to Russian: I think', 'Считаю', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3001-0006-e00000000003', 'aabbccdd-9999-3001-0006-b10000000000', 'translate_to_native', 'Translate to English: Новости', 'News', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3001-0006-e00000000004', 'aabbccdd-9999-3001-0006-b10000000000', 'fill_blank', '_____ (Society)', 'Общество', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3001-0006-e00000000005', 'aabbccdd-9999-3001-0006-b10000000000', 'multiple_choice', 'What does "Проблема" mean in English?', 'Problem', '{"Проблема","Решение","Мнение","Согласен"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3001-0006-e00000000006', 'aabbccdd-9999-3001-0006-b10000000000', 'translate_to_target', 'Translate to Russian: Solution', 'Решение', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3001-0006-e00000000007', 'aabbccdd-9999-3001-0006-b10000000000', 'translate_to_native', 'Translate to English: Мнение', 'Opinion', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3001-0006-e00000000008', 'aabbccdd-9999-3001-0006-b10000000000', 'fill_blank', '_____ (I agree)', 'Согласен', NULL, '{}', 7, '{}');
+INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_speech, tags) VALUES
+  ('aabbccdd-9999-3001-c001-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3001-0000-b10000000000', 'Opinion', 'Мнение', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3001-c002-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3001-0000-b10000000000', 'I agree', 'Согласен', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3001-c003-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3001-0000-b10000000000', 'I disagree', 'Не согласен', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3001-c004-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3001-0000-b10000000000', 'I think', 'Считаю', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3001-c005-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3001-0000-b10000000000', 'News', 'Новости', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3001-c006-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3001-0000-b10000000000', 'Society', 'Общество', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3001-c007-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3001-0000-b10000000000', 'Problem', 'Проблема', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3001-c008-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3001-0000-b10000000000', 'Solution', 'Решение', 'word', '{"B1"}');
+
+INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
+VALUES ('aabbccdd-9999-3002-0000-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'Education & Career', 'Discuss education and career paths', 1, 6);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+  ('aabbccdd-9999-3002-0001-b10000000000', 'aabbccdd-9999-3002-0000-b10000000000', 'Key Concepts', 'Key Concepts', 0, 10, 30),
+  ('aabbccdd-9999-3002-0002-b10000000000', 'aabbccdd-9999-3002-0000-b10000000000', 'In Context', 'In Context', 1, 10, 30),
+  ('aabbccdd-9999-3002-0003-b10000000000', 'aabbccdd-9999-3002-0000-b10000000000', 'Discussion & Debate', 'Discussion & Debate', 2, 10, 30),
+  ('aabbccdd-9999-3002-0004-b10000000000', 'aabbccdd-9999-3002-0000-b10000000000', 'Practical Application', 'Practical Application', 3, 10, 30),
+  ('aabbccdd-9999-3002-0005-b10000000000', 'aabbccdd-9999-3002-0000-b10000000000', 'Advanced Usage', 'Advanced Usage', 4, 10, 30),
+  ('aabbccdd-9999-3002-0006-b10000000000', 'aabbccdd-9999-3002-0000-b10000000000', 'Review & Test', 'Review & Test', 5, 10, 30);
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3002-0001-e00000000001', 'aabbccdd-9999-3002-0001-b10000000000', 'multiple_choice', 'What does "Университет" mean in English?', 'University', '{"Университет","Диплом","Карьера","Опыт"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3002-0001-e00000000002', 'aabbccdd-9999-3002-0001-b10000000000', 'translate_to_target', 'Translate to Russian: Diploma', 'Диплом', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3002-0001-e00000000003', 'aabbccdd-9999-3002-0001-b10000000000', 'translate_to_native', 'Translate to English: Карьера', 'Career', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3002-0001-e00000000004', 'aabbccdd-9999-3002-0001-b10000000000', 'fill_blank', '_____ (Experience)', 'Опыт', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3002-0001-e00000000005', 'aabbccdd-9999-3002-0001-b10000000000', 'multiple_choice', 'What does "Собеседование" mean in English?', 'Interview', '{"Собеседование","Резюме","Профессия","Университет"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3002-0001-e00000000006', 'aabbccdd-9999-3002-0001-b10000000000', 'translate_to_target', 'Translate to Russian: Resume', 'Резюме', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3002-0001-e00000000007', 'aabbccdd-9999-3002-0001-b10000000000', 'translate_to_native', 'Translate to English: Профессия', 'Profession', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3002-0001-e00000000008', 'aabbccdd-9999-3002-0001-b10000000000', 'fill_blank', '_____ (University)', 'Университет', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3002-0002-e00000000001', 'aabbccdd-9999-3002-0002-b10000000000', 'multiple_choice', 'What does "Карьера" mean in English?', 'Career', '{"Карьера","Опыт","Собеседование","Резюме"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3002-0002-e00000000002', 'aabbccdd-9999-3002-0002-b10000000000', 'translate_to_target', 'Translate to Russian: Experience', 'Опыт', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3002-0002-e00000000003', 'aabbccdd-9999-3002-0002-b10000000000', 'translate_to_native', 'Translate to English: Собеседование', 'Interview', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3002-0002-e00000000004', 'aabbccdd-9999-3002-0002-b10000000000', 'fill_blank', '_____ (Resume)', 'Резюме', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3002-0002-e00000000005', 'aabbccdd-9999-3002-0002-b10000000000', 'multiple_choice', 'What does "Профессия" mean in English?', 'Profession', '{"Профессия","Университет","Диплом","Карьера"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3002-0002-e00000000006', 'aabbccdd-9999-3002-0002-b10000000000', 'translate_to_target', 'Translate to Russian: University', 'Университет', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3002-0002-e00000000007', 'aabbccdd-9999-3002-0002-b10000000000', 'translate_to_native', 'Translate to English: Диплом', 'Diploma', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3002-0002-e00000000008', 'aabbccdd-9999-3002-0002-b10000000000', 'fill_blank', '_____ (Career)', 'Карьера', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3002-0003-e00000000001', 'aabbccdd-9999-3002-0003-b10000000000', 'multiple_choice', 'What does "Собеседование" mean in English?', 'Interview', '{"Собеседование","Резюме","Профессия","Университет"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3002-0003-e00000000002', 'aabbccdd-9999-3002-0003-b10000000000', 'translate_to_target', 'Translate to Russian: Resume', 'Резюме', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3002-0003-e00000000003', 'aabbccdd-9999-3002-0003-b10000000000', 'translate_to_native', 'Translate to English: Профессия', 'Profession', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3002-0003-e00000000004', 'aabbccdd-9999-3002-0003-b10000000000', 'fill_blank', '_____ (University)', 'Университет', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3002-0003-e00000000005', 'aabbccdd-9999-3002-0003-b10000000000', 'multiple_choice', 'What does "Диплом" mean in English?', 'Diploma', '{"Диплом","Карьера","Опыт","Собеседование"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3002-0003-e00000000006', 'aabbccdd-9999-3002-0003-b10000000000', 'translate_to_target', 'Translate to Russian: Career', 'Карьера', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3002-0003-e00000000007', 'aabbccdd-9999-3002-0003-b10000000000', 'translate_to_native', 'Translate to English: Опыт', 'Experience', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3002-0003-e00000000008', 'aabbccdd-9999-3002-0003-b10000000000', 'fill_blank', '_____ (Interview)', 'Собеседование', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3002-0004-e00000000001', 'aabbccdd-9999-3002-0004-b10000000000', 'multiple_choice', 'What does "Профессия" mean in English?', 'Profession', '{"Профессия","Университет","Диплом","Карьера"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3002-0004-e00000000002', 'aabbccdd-9999-3002-0004-b10000000000', 'translate_to_target', 'Translate to Russian: University', 'Университет', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3002-0004-e00000000003', 'aabbccdd-9999-3002-0004-b10000000000', 'translate_to_native', 'Translate to English: Диплом', 'Diploma', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3002-0004-e00000000004', 'aabbccdd-9999-3002-0004-b10000000000', 'fill_blank', '_____ (Career)', 'Карьера', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3002-0004-e00000000005', 'aabbccdd-9999-3002-0004-b10000000000', 'multiple_choice', 'What does "Опыт" mean in English?', 'Experience', '{"Опыт","Собеседование","Резюме","Профессия"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3002-0004-e00000000006', 'aabbccdd-9999-3002-0004-b10000000000', 'translate_to_target', 'Translate to Russian: Interview', 'Собеседование', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3002-0004-e00000000007', 'aabbccdd-9999-3002-0004-b10000000000', 'translate_to_native', 'Translate to English: Резюме', 'Resume', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3002-0004-e00000000008', 'aabbccdd-9999-3002-0004-b10000000000', 'fill_blank', '_____ (Profession)', 'Профессия', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3002-0005-e00000000001', 'aabbccdd-9999-3002-0005-b10000000000', 'multiple_choice', 'What does "Диплом" mean in English?', 'Diploma', '{"Диплом","Карьера","Опыт","Собеседование"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3002-0005-e00000000002', 'aabbccdd-9999-3002-0005-b10000000000', 'translate_to_target', 'Translate to Russian: Career', 'Карьера', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3002-0005-e00000000003', 'aabbccdd-9999-3002-0005-b10000000000', 'translate_to_native', 'Translate to English: Опыт', 'Experience', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3002-0005-e00000000004', 'aabbccdd-9999-3002-0005-b10000000000', 'fill_blank', '_____ (Interview)', 'Собеседование', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3002-0005-e00000000005', 'aabbccdd-9999-3002-0005-b10000000000', 'multiple_choice', 'What does "Резюме" mean in English?', 'Resume', '{"Резюме","Профессия","Университет","Диплом"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3002-0005-e00000000006', 'aabbccdd-9999-3002-0005-b10000000000', 'translate_to_target', 'Translate to Russian: Profession', 'Профессия', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3002-0005-e00000000007', 'aabbccdd-9999-3002-0005-b10000000000', 'translate_to_native', 'Translate to English: Университет', 'University', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3002-0005-e00000000008', 'aabbccdd-9999-3002-0005-b10000000000', 'fill_blank', '_____ (Diploma)', 'Диплом', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3002-0006-e00000000001', 'aabbccdd-9999-3002-0006-b10000000000', 'multiple_choice', 'What does "Опыт" mean in English?', 'Experience', '{"Опыт","Собеседование","Резюме","Профессия"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3002-0006-e00000000002', 'aabbccdd-9999-3002-0006-b10000000000', 'translate_to_target', 'Translate to Russian: Interview', 'Собеседование', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3002-0006-e00000000003', 'aabbccdd-9999-3002-0006-b10000000000', 'translate_to_native', 'Translate to English: Резюме', 'Resume', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3002-0006-e00000000004', 'aabbccdd-9999-3002-0006-b10000000000', 'fill_blank', '_____ (Profession)', 'Профессия', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3002-0006-e00000000005', 'aabbccdd-9999-3002-0006-b10000000000', 'multiple_choice', 'What does "Университет" mean in English?', 'University', '{"Университет","Диплом","Карьера","Опыт"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3002-0006-e00000000006', 'aabbccdd-9999-3002-0006-b10000000000', 'translate_to_target', 'Translate to Russian: Diploma', 'Диплом', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3002-0006-e00000000007', 'aabbccdd-9999-3002-0006-b10000000000', 'translate_to_native', 'Translate to English: Карьера', 'Career', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3002-0006-e00000000008', 'aabbccdd-9999-3002-0006-b10000000000', 'fill_blank', '_____ (Experience)', 'Опыт', NULL, '{}', 7, '{}');
+INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_speech, tags) VALUES
+  ('aabbccdd-9999-3002-c001-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3002-0000-b10000000000', 'University', 'Университет', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3002-c002-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3002-0000-b10000000000', 'Diploma', 'Диплом', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3002-c003-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3002-0000-b10000000000', 'Career', 'Карьера', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3002-c004-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3002-0000-b10000000000', 'Experience', 'Опыт', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3002-c005-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3002-0000-b10000000000', 'Interview', 'Собеседование', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3002-c006-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3002-0000-b10000000000', 'Resume', 'Резюме', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3002-c007-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3002-0000-b10000000000', 'Profession', 'Профессия', 'word', '{"B1"}');
+
+INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
+VALUES ('aabbccdd-9999-3003-0000-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'Technology & Internet', 'Talk about technology and the internet', 2, 6);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+  ('aabbccdd-9999-3003-0001-b10000000000', 'aabbccdd-9999-3003-0000-b10000000000', 'Key Concepts', 'Key Concepts', 0, 10, 30),
+  ('aabbccdd-9999-3003-0002-b10000000000', 'aabbccdd-9999-3003-0000-b10000000000', 'In Context', 'In Context', 1, 10, 30),
+  ('aabbccdd-9999-3003-0003-b10000000000', 'aabbccdd-9999-3003-0000-b10000000000', 'Discussion & Debate', 'Discussion & Debate', 2, 10, 30),
+  ('aabbccdd-9999-3003-0004-b10000000000', 'aabbccdd-9999-3003-0000-b10000000000', 'Practical Application', 'Practical Application', 3, 10, 30),
+  ('aabbccdd-9999-3003-0005-b10000000000', 'aabbccdd-9999-3003-0000-b10000000000', 'Advanced Usage', 'Advanced Usage', 4, 10, 30),
+  ('aabbccdd-9999-3003-0006-b10000000000', 'aabbccdd-9999-3003-0000-b10000000000', 'Review & Test', 'Review & Test', 5, 10, 30);
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3003-0001-e00000000001', 'aabbccdd-9999-3003-0001-b10000000000', 'multiple_choice', 'What does "Технология" mean in English?', 'Technology', '{"Технология","Интернет","Программа","Приложение"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3003-0001-e00000000002', 'aabbccdd-9999-3003-0001-b10000000000', 'translate_to_target', 'Translate to Russian: Internet', 'Интернет', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3003-0001-e00000000003', 'aabbccdd-9999-3003-0001-b10000000000', 'translate_to_native', 'Translate to English: Программа', 'Program', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3003-0001-e00000000004', 'aabbccdd-9999-3003-0001-b10000000000', 'fill_blank', '_____ (Application)', 'Приложение', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3003-0001-e00000000005', 'aabbccdd-9999-3003-0001-b10000000000', 'multiple_choice', 'What does "Обновление" mean in English?', 'Update', '{"Обновление","Данные","Технология","Интернет"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3003-0001-e00000000006', 'aabbccdd-9999-3003-0001-b10000000000', 'translate_to_target', 'Translate to Russian: Data', 'Данные', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3003-0001-e00000000007', 'aabbccdd-9999-3003-0001-b10000000000', 'translate_to_native', 'Translate to English: Технология', 'Technology', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3003-0001-e00000000008', 'aabbccdd-9999-3003-0001-b10000000000', 'fill_blank', '_____ (Internet)', 'Интернет', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3003-0002-e00000000001', 'aabbccdd-9999-3003-0002-b10000000000', 'multiple_choice', 'What does "Программа" mean in English?', 'Program', '{"Программа","Приложение","Обновление","Данные"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3003-0002-e00000000002', 'aabbccdd-9999-3003-0002-b10000000000', 'translate_to_target', 'Translate to Russian: Application', 'Приложение', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3003-0002-e00000000003', 'aabbccdd-9999-3003-0002-b10000000000', 'translate_to_native', 'Translate to English: Обновление', 'Update', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3003-0002-e00000000004', 'aabbccdd-9999-3003-0002-b10000000000', 'fill_blank', '_____ (Data)', 'Данные', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3003-0002-e00000000005', 'aabbccdd-9999-3003-0002-b10000000000', 'multiple_choice', 'What does "Технология" mean in English?', 'Technology', '{"Технология","Интернет","Программа","Приложение"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3003-0002-e00000000006', 'aabbccdd-9999-3003-0002-b10000000000', 'translate_to_target', 'Translate to Russian: Internet', 'Интернет', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3003-0002-e00000000007', 'aabbccdd-9999-3003-0002-b10000000000', 'translate_to_native', 'Translate to English: Программа', 'Program', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3003-0002-e00000000008', 'aabbccdd-9999-3003-0002-b10000000000', 'fill_blank', '_____ (Application)', 'Приложение', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3003-0003-e00000000001', 'aabbccdd-9999-3003-0003-b10000000000', 'multiple_choice', 'What does "Обновление" mean in English?', 'Update', '{"Обновление","Данные","Технология","Интернет"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3003-0003-e00000000002', 'aabbccdd-9999-3003-0003-b10000000000', 'translate_to_target', 'Translate to Russian: Data', 'Данные', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3003-0003-e00000000003', 'aabbccdd-9999-3003-0003-b10000000000', 'translate_to_native', 'Translate to English: Технология', 'Technology', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3003-0003-e00000000004', 'aabbccdd-9999-3003-0003-b10000000000', 'fill_blank', '_____ (Internet)', 'Интернет', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3003-0003-e00000000005', 'aabbccdd-9999-3003-0003-b10000000000', 'multiple_choice', 'What does "Программа" mean in English?', 'Program', '{"Программа","Приложение","Обновление","Данные"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3003-0003-e00000000006', 'aabbccdd-9999-3003-0003-b10000000000', 'translate_to_target', 'Translate to Russian: Application', 'Приложение', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3003-0003-e00000000007', 'aabbccdd-9999-3003-0003-b10000000000', 'translate_to_native', 'Translate to English: Обновление', 'Update', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3003-0003-e00000000008', 'aabbccdd-9999-3003-0003-b10000000000', 'fill_blank', '_____ (Data)', 'Данные', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3003-0004-e00000000001', 'aabbccdd-9999-3003-0004-b10000000000', 'multiple_choice', 'What does "Технология" mean in English?', 'Technology', '{"Технология","Интернет","Программа","Приложение"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3003-0004-e00000000002', 'aabbccdd-9999-3003-0004-b10000000000', 'translate_to_target', 'Translate to Russian: Internet', 'Интернет', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3003-0004-e00000000003', 'aabbccdd-9999-3003-0004-b10000000000', 'translate_to_native', 'Translate to English: Программа', 'Program', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3003-0004-e00000000004', 'aabbccdd-9999-3003-0004-b10000000000', 'fill_blank', '_____ (Application)', 'Приложение', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3003-0004-e00000000005', 'aabbccdd-9999-3003-0004-b10000000000', 'multiple_choice', 'What does "Обновление" mean in English?', 'Update', '{"Обновление","Данные","Технология","Интернет"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3003-0004-e00000000006', 'aabbccdd-9999-3003-0004-b10000000000', 'translate_to_target', 'Translate to Russian: Data', 'Данные', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3003-0004-e00000000007', 'aabbccdd-9999-3003-0004-b10000000000', 'translate_to_native', 'Translate to English: Технология', 'Technology', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3003-0004-e00000000008', 'aabbccdd-9999-3003-0004-b10000000000', 'fill_blank', '_____ (Internet)', 'Интернет', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3003-0005-e00000000001', 'aabbccdd-9999-3003-0005-b10000000000', 'multiple_choice', 'What does "Программа" mean in English?', 'Program', '{"Программа","Приложение","Обновление","Данные"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3003-0005-e00000000002', 'aabbccdd-9999-3003-0005-b10000000000', 'translate_to_target', 'Translate to Russian: Application', 'Приложение', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3003-0005-e00000000003', 'aabbccdd-9999-3003-0005-b10000000000', 'translate_to_native', 'Translate to English: Обновление', 'Update', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3003-0005-e00000000004', 'aabbccdd-9999-3003-0005-b10000000000', 'fill_blank', '_____ (Data)', 'Данные', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3003-0005-e00000000005', 'aabbccdd-9999-3003-0005-b10000000000', 'multiple_choice', 'What does "Технология" mean in English?', 'Technology', '{"Технология","Интернет","Программа","Приложение"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3003-0005-e00000000006', 'aabbccdd-9999-3003-0005-b10000000000', 'translate_to_target', 'Translate to Russian: Internet', 'Интернет', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3003-0005-e00000000007', 'aabbccdd-9999-3003-0005-b10000000000', 'translate_to_native', 'Translate to English: Программа', 'Program', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3003-0005-e00000000008', 'aabbccdd-9999-3003-0005-b10000000000', 'fill_blank', '_____ (Application)', 'Приложение', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3003-0006-e00000000001', 'aabbccdd-9999-3003-0006-b10000000000', 'multiple_choice', 'What does "Обновление" mean in English?', 'Update', '{"Обновление","Данные","Технология","Интернет"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3003-0006-e00000000002', 'aabbccdd-9999-3003-0006-b10000000000', 'translate_to_target', 'Translate to Russian: Data', 'Данные', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3003-0006-e00000000003', 'aabbccdd-9999-3003-0006-b10000000000', 'translate_to_native', 'Translate to English: Технология', 'Technology', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3003-0006-e00000000004', 'aabbccdd-9999-3003-0006-b10000000000', 'fill_blank', '_____ (Internet)', 'Интернет', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3003-0006-e00000000005', 'aabbccdd-9999-3003-0006-b10000000000', 'multiple_choice', 'What does "Программа" mean in English?', 'Program', '{"Программа","Приложение","Обновление","Данные"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3003-0006-e00000000006', 'aabbccdd-9999-3003-0006-b10000000000', 'translate_to_target', 'Translate to Russian: Application', 'Приложение', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3003-0006-e00000000007', 'aabbccdd-9999-3003-0006-b10000000000', 'translate_to_native', 'Translate to English: Обновление', 'Update', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3003-0006-e00000000008', 'aabbccdd-9999-3003-0006-b10000000000', 'fill_blank', '_____ (Data)', 'Данные', NULL, '{}', 7, '{}');
+INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_speech, tags) VALUES
+  ('aabbccdd-9999-3003-c001-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3003-0000-b10000000000', 'Technology', 'Технология', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3003-c002-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3003-0000-b10000000000', 'Internet', 'Интернет', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3003-c003-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3003-0000-b10000000000', 'Program', 'Программа', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3003-c004-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3003-0000-b10000000000', 'Application', 'Приложение', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3003-c005-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3003-0000-b10000000000', 'Update', 'Обновление', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3003-c006-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3003-0000-b10000000000', 'Data', 'Данные', 'word', '{"B1"}');
+
+INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
+VALUES ('aabbccdd-9999-3004-0000-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'Environment & Nature', 'Discuss the environment and ecology', 3, 6);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+  ('aabbccdd-9999-3004-0001-b10000000000', 'aabbccdd-9999-3004-0000-b10000000000', 'Key Concepts', 'Key Concepts', 0, 10, 30),
+  ('aabbccdd-9999-3004-0002-b10000000000', 'aabbccdd-9999-3004-0000-b10000000000', 'In Context', 'In Context', 1, 10, 30),
+  ('aabbccdd-9999-3004-0003-b10000000000', 'aabbccdd-9999-3004-0000-b10000000000', 'Discussion & Debate', 'Discussion & Debate', 2, 10, 30),
+  ('aabbccdd-9999-3004-0004-b10000000000', 'aabbccdd-9999-3004-0000-b10000000000', 'Practical Application', 'Practical Application', 3, 10, 30),
+  ('aabbccdd-9999-3004-0005-b10000000000', 'aabbccdd-9999-3004-0000-b10000000000', 'Advanced Usage', 'Advanced Usage', 4, 10, 30),
+  ('aabbccdd-9999-3004-0006-b10000000000', 'aabbccdd-9999-3004-0000-b10000000000', 'Review & Test', 'Review & Test', 5, 10, 30);
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3004-0001-e00000000001', 'aabbccdd-9999-3004-0001-b10000000000', 'multiple_choice', 'What does "Природа" mean in English?', 'Nature', '{"Природа","Экология","Загрязнение","Переработка"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3004-0001-e00000000002', 'aabbccdd-9999-3004-0001-b10000000000', 'translate_to_target', 'Translate to Russian: Ecology', 'Экология', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3004-0001-e00000000003', 'aabbccdd-9999-3004-0001-b10000000000', 'translate_to_native', 'Translate to English: Загрязнение', 'Pollution', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3004-0001-e00000000004', 'aabbccdd-9999-3004-0001-b10000000000', 'fill_blank', '_____ (Recycling)', 'Переработка', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3004-0001-e00000000005', 'aabbccdd-9999-3004-0001-b10000000000', 'multiple_choice', 'What does "Климат" mean in English?', 'Climate', '{"Климат","Лес","Природа","Экология"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3004-0001-e00000000006', 'aabbccdd-9999-3004-0001-b10000000000', 'translate_to_target', 'Translate to Russian: Forest', 'Лес', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3004-0001-e00000000007', 'aabbccdd-9999-3004-0001-b10000000000', 'translate_to_native', 'Translate to English: Природа', 'Nature', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3004-0001-e00000000008', 'aabbccdd-9999-3004-0001-b10000000000', 'fill_blank', '_____ (Ecology)', 'Экология', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3004-0002-e00000000001', 'aabbccdd-9999-3004-0002-b10000000000', 'multiple_choice', 'What does "Загрязнение" mean in English?', 'Pollution', '{"Загрязнение","Переработка","Климат","Лес"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3004-0002-e00000000002', 'aabbccdd-9999-3004-0002-b10000000000', 'translate_to_target', 'Translate to Russian: Recycling', 'Переработка', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3004-0002-e00000000003', 'aabbccdd-9999-3004-0002-b10000000000', 'translate_to_native', 'Translate to English: Климат', 'Climate', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3004-0002-e00000000004', 'aabbccdd-9999-3004-0002-b10000000000', 'fill_blank', '_____ (Forest)', 'Лес', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3004-0002-e00000000005', 'aabbccdd-9999-3004-0002-b10000000000', 'multiple_choice', 'What does "Природа" mean in English?', 'Nature', '{"Природа","Экология","Загрязнение","Переработка"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3004-0002-e00000000006', 'aabbccdd-9999-3004-0002-b10000000000', 'translate_to_target', 'Translate to Russian: Ecology', 'Экология', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3004-0002-e00000000007', 'aabbccdd-9999-3004-0002-b10000000000', 'translate_to_native', 'Translate to English: Загрязнение', 'Pollution', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3004-0002-e00000000008', 'aabbccdd-9999-3004-0002-b10000000000', 'fill_blank', '_____ (Recycling)', 'Переработка', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3004-0003-e00000000001', 'aabbccdd-9999-3004-0003-b10000000000', 'multiple_choice', 'What does "Климат" mean in English?', 'Climate', '{"Климат","Лес","Природа","Экология"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3004-0003-e00000000002', 'aabbccdd-9999-3004-0003-b10000000000', 'translate_to_target', 'Translate to Russian: Forest', 'Лес', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3004-0003-e00000000003', 'aabbccdd-9999-3004-0003-b10000000000', 'translate_to_native', 'Translate to English: Природа', 'Nature', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3004-0003-e00000000004', 'aabbccdd-9999-3004-0003-b10000000000', 'fill_blank', '_____ (Ecology)', 'Экология', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3004-0003-e00000000005', 'aabbccdd-9999-3004-0003-b10000000000', 'multiple_choice', 'What does "Загрязнение" mean in English?', 'Pollution', '{"Загрязнение","Переработка","Климат","Лес"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3004-0003-e00000000006', 'aabbccdd-9999-3004-0003-b10000000000', 'translate_to_target', 'Translate to Russian: Recycling', 'Переработка', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3004-0003-e00000000007', 'aabbccdd-9999-3004-0003-b10000000000', 'translate_to_native', 'Translate to English: Климат', 'Climate', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3004-0003-e00000000008', 'aabbccdd-9999-3004-0003-b10000000000', 'fill_blank', '_____ (Forest)', 'Лес', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3004-0004-e00000000001', 'aabbccdd-9999-3004-0004-b10000000000', 'multiple_choice', 'What does "Природа" mean in English?', 'Nature', '{"Природа","Экология","Загрязнение","Переработка"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3004-0004-e00000000002', 'aabbccdd-9999-3004-0004-b10000000000', 'translate_to_target', 'Translate to Russian: Ecology', 'Экология', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3004-0004-e00000000003', 'aabbccdd-9999-3004-0004-b10000000000', 'translate_to_native', 'Translate to English: Загрязнение', 'Pollution', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3004-0004-e00000000004', 'aabbccdd-9999-3004-0004-b10000000000', 'fill_blank', '_____ (Recycling)', 'Переработка', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3004-0004-e00000000005', 'aabbccdd-9999-3004-0004-b10000000000', 'multiple_choice', 'What does "Климат" mean in English?', 'Climate', '{"Климат","Лес","Природа","Экология"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3004-0004-e00000000006', 'aabbccdd-9999-3004-0004-b10000000000', 'translate_to_target', 'Translate to Russian: Forest', 'Лес', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3004-0004-e00000000007', 'aabbccdd-9999-3004-0004-b10000000000', 'translate_to_native', 'Translate to English: Природа', 'Nature', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3004-0004-e00000000008', 'aabbccdd-9999-3004-0004-b10000000000', 'fill_blank', '_____ (Ecology)', 'Экология', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3004-0005-e00000000001', 'aabbccdd-9999-3004-0005-b10000000000', 'multiple_choice', 'What does "Загрязнение" mean in English?', 'Pollution', '{"Загрязнение","Переработка","Климат","Лес"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3004-0005-e00000000002', 'aabbccdd-9999-3004-0005-b10000000000', 'translate_to_target', 'Translate to Russian: Recycling', 'Переработка', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3004-0005-e00000000003', 'aabbccdd-9999-3004-0005-b10000000000', 'translate_to_native', 'Translate to English: Климат', 'Climate', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3004-0005-e00000000004', 'aabbccdd-9999-3004-0005-b10000000000', 'fill_blank', '_____ (Forest)', 'Лес', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3004-0005-e00000000005', 'aabbccdd-9999-3004-0005-b10000000000', 'multiple_choice', 'What does "Природа" mean in English?', 'Nature', '{"Природа","Экология","Загрязнение","Переработка"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3004-0005-e00000000006', 'aabbccdd-9999-3004-0005-b10000000000', 'translate_to_target', 'Translate to Russian: Ecology', 'Экология', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3004-0005-e00000000007', 'aabbccdd-9999-3004-0005-b10000000000', 'translate_to_native', 'Translate to English: Загрязнение', 'Pollution', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3004-0005-e00000000008', 'aabbccdd-9999-3004-0005-b10000000000', 'fill_blank', '_____ (Recycling)', 'Переработка', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3004-0006-e00000000001', 'aabbccdd-9999-3004-0006-b10000000000', 'multiple_choice', 'What does "Климат" mean in English?', 'Climate', '{"Климат","Лес","Природа","Экология"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3004-0006-e00000000002', 'aabbccdd-9999-3004-0006-b10000000000', 'translate_to_target', 'Translate to Russian: Forest', 'Лес', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3004-0006-e00000000003', 'aabbccdd-9999-3004-0006-b10000000000', 'translate_to_native', 'Translate to English: Природа', 'Nature', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3004-0006-e00000000004', 'aabbccdd-9999-3004-0006-b10000000000', 'fill_blank', '_____ (Ecology)', 'Экология', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3004-0006-e00000000005', 'aabbccdd-9999-3004-0006-b10000000000', 'multiple_choice', 'What does "Загрязнение" mean in English?', 'Pollution', '{"Загрязнение","Переработка","Климат","Лес"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3004-0006-e00000000006', 'aabbccdd-9999-3004-0006-b10000000000', 'translate_to_target', 'Translate to Russian: Recycling', 'Переработка', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3004-0006-e00000000007', 'aabbccdd-9999-3004-0006-b10000000000', 'translate_to_native', 'Translate to English: Климат', 'Climate', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3004-0006-e00000000008', 'aabbccdd-9999-3004-0006-b10000000000', 'fill_blank', '_____ (Forest)', 'Лес', NULL, '{}', 7, '{}');
+INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_speech, tags) VALUES
+  ('aabbccdd-9999-3004-c001-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3004-0000-b10000000000', 'Nature', 'Природа', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3004-c002-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3004-0000-b10000000000', 'Ecology', 'Экология', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3004-c003-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3004-0000-b10000000000', 'Pollution', 'Загрязнение', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3004-c004-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3004-0000-b10000000000', 'Recycling', 'Переработка', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3004-c005-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3004-0000-b10000000000', 'Climate', 'Климат', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3004-c006-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3004-0000-b10000000000', 'Forest', 'Лес', 'word', '{"B1"}');
+
+INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
+VALUES ('aabbccdd-9999-3005-0000-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'Culture & Traditions', 'Explore culture and traditions', 4, 6);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+  ('aabbccdd-9999-3005-0001-b10000000000', 'aabbccdd-9999-3005-0000-b10000000000', 'Key Concepts', 'Key Concepts', 0, 10, 30),
+  ('aabbccdd-9999-3005-0002-b10000000000', 'aabbccdd-9999-3005-0000-b10000000000', 'In Context', 'In Context', 1, 10, 30),
+  ('aabbccdd-9999-3005-0003-b10000000000', 'aabbccdd-9999-3005-0000-b10000000000', 'Discussion & Debate', 'Discussion & Debate', 2, 10, 30),
+  ('aabbccdd-9999-3005-0004-b10000000000', 'aabbccdd-9999-3005-0000-b10000000000', 'Practical Application', 'Practical Application', 3, 10, 30),
+  ('aabbccdd-9999-3005-0005-b10000000000', 'aabbccdd-9999-3005-0000-b10000000000', 'Advanced Usage', 'Advanced Usage', 4, 10, 30),
+  ('aabbccdd-9999-3005-0006-b10000000000', 'aabbccdd-9999-3005-0000-b10000000000', 'Review & Test', 'Review & Test', 5, 10, 30);
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3005-0001-e00000000001', 'aabbccdd-9999-3005-0001-b10000000000', 'multiple_choice', 'What does "Культура" mean in English?', 'Culture', '{"Культура","Традиция","Обычай","Праздник"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3005-0001-e00000000002', 'aabbccdd-9999-3005-0001-b10000000000', 'translate_to_target', 'Translate to Russian: Tradition', 'Традиция', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3005-0001-e00000000003', 'aabbccdd-9999-3005-0001-b10000000000', 'translate_to_native', 'Translate to English: Обычай', 'Custom', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3005-0001-e00000000004', 'aabbccdd-9999-3005-0001-b10000000000', 'fill_blank', '_____ (Holiday)', 'Праздник', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3005-0001-e00000000005', 'aabbccdd-9999-3005-0001-b10000000000', 'multiple_choice', 'What does "Обряд" mean in English?', 'Ritual', '{"Обряд","Наследие","Культура","Традиция"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3005-0001-e00000000006', 'aabbccdd-9999-3005-0001-b10000000000', 'translate_to_target', 'Translate to Russian: Heritage', 'Наследие', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3005-0001-e00000000007', 'aabbccdd-9999-3005-0001-b10000000000', 'translate_to_native', 'Translate to English: Культура', 'Culture', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3005-0001-e00000000008', 'aabbccdd-9999-3005-0001-b10000000000', 'fill_blank', '_____ (Tradition)', 'Традиция', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3005-0002-e00000000001', 'aabbccdd-9999-3005-0002-b10000000000', 'multiple_choice', 'What does "Обычай" mean in English?', 'Custom', '{"Обычай","Праздник","Обряд","Наследие"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3005-0002-e00000000002', 'aabbccdd-9999-3005-0002-b10000000000', 'translate_to_target', 'Translate to Russian: Holiday', 'Праздник', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3005-0002-e00000000003', 'aabbccdd-9999-3005-0002-b10000000000', 'translate_to_native', 'Translate to English: Обряд', 'Ritual', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3005-0002-e00000000004', 'aabbccdd-9999-3005-0002-b10000000000', 'fill_blank', '_____ (Heritage)', 'Наследие', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3005-0002-e00000000005', 'aabbccdd-9999-3005-0002-b10000000000', 'multiple_choice', 'What does "Культура" mean in English?', 'Culture', '{"Культура","Традиция","Обычай","Праздник"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3005-0002-e00000000006', 'aabbccdd-9999-3005-0002-b10000000000', 'translate_to_target', 'Translate to Russian: Tradition', 'Традиция', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3005-0002-e00000000007', 'aabbccdd-9999-3005-0002-b10000000000', 'translate_to_native', 'Translate to English: Обычай', 'Custom', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3005-0002-e00000000008', 'aabbccdd-9999-3005-0002-b10000000000', 'fill_blank', '_____ (Holiday)', 'Праздник', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3005-0003-e00000000001', 'aabbccdd-9999-3005-0003-b10000000000', 'multiple_choice', 'What does "Обряд" mean in English?', 'Ritual', '{"Обряд","Наследие","Культура","Традиция"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3005-0003-e00000000002', 'aabbccdd-9999-3005-0003-b10000000000', 'translate_to_target', 'Translate to Russian: Heritage', 'Наследие', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3005-0003-e00000000003', 'aabbccdd-9999-3005-0003-b10000000000', 'translate_to_native', 'Translate to English: Культура', 'Culture', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3005-0003-e00000000004', 'aabbccdd-9999-3005-0003-b10000000000', 'fill_blank', '_____ (Tradition)', 'Традиция', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3005-0003-e00000000005', 'aabbccdd-9999-3005-0003-b10000000000', 'multiple_choice', 'What does "Обычай" mean in English?', 'Custom', '{"Обычай","Праздник","Обряд","Наследие"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3005-0003-e00000000006', 'aabbccdd-9999-3005-0003-b10000000000', 'translate_to_target', 'Translate to Russian: Holiday', 'Праздник', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3005-0003-e00000000007', 'aabbccdd-9999-3005-0003-b10000000000', 'translate_to_native', 'Translate to English: Обряд', 'Ritual', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3005-0003-e00000000008', 'aabbccdd-9999-3005-0003-b10000000000', 'fill_blank', '_____ (Heritage)', 'Наследие', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3005-0004-e00000000001', 'aabbccdd-9999-3005-0004-b10000000000', 'multiple_choice', 'What does "Культура" mean in English?', 'Culture', '{"Культура","Традиция","Обычай","Праздник"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3005-0004-e00000000002', 'aabbccdd-9999-3005-0004-b10000000000', 'translate_to_target', 'Translate to Russian: Tradition', 'Традиция', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3005-0004-e00000000003', 'aabbccdd-9999-3005-0004-b10000000000', 'translate_to_native', 'Translate to English: Обычай', 'Custom', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3005-0004-e00000000004', 'aabbccdd-9999-3005-0004-b10000000000', 'fill_blank', '_____ (Holiday)', 'Праздник', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3005-0004-e00000000005', 'aabbccdd-9999-3005-0004-b10000000000', 'multiple_choice', 'What does "Обряд" mean in English?', 'Ritual', '{"Обряд","Наследие","Культура","Традиция"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3005-0004-e00000000006', 'aabbccdd-9999-3005-0004-b10000000000', 'translate_to_target', 'Translate to Russian: Heritage', 'Наследие', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3005-0004-e00000000007', 'aabbccdd-9999-3005-0004-b10000000000', 'translate_to_native', 'Translate to English: Культура', 'Culture', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3005-0004-e00000000008', 'aabbccdd-9999-3005-0004-b10000000000', 'fill_blank', '_____ (Tradition)', 'Традиция', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3005-0005-e00000000001', 'aabbccdd-9999-3005-0005-b10000000000', 'multiple_choice', 'What does "Обычай" mean in English?', 'Custom', '{"Обычай","Праздник","Обряд","Наследие"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3005-0005-e00000000002', 'aabbccdd-9999-3005-0005-b10000000000', 'translate_to_target', 'Translate to Russian: Holiday', 'Праздник', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3005-0005-e00000000003', 'aabbccdd-9999-3005-0005-b10000000000', 'translate_to_native', 'Translate to English: Обряд', 'Ritual', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3005-0005-e00000000004', 'aabbccdd-9999-3005-0005-b10000000000', 'fill_blank', '_____ (Heritage)', 'Наследие', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3005-0005-e00000000005', 'aabbccdd-9999-3005-0005-b10000000000', 'multiple_choice', 'What does "Культура" mean in English?', 'Culture', '{"Культура","Традиция","Обычай","Праздник"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3005-0005-e00000000006', 'aabbccdd-9999-3005-0005-b10000000000', 'translate_to_target', 'Translate to Russian: Tradition', 'Традиция', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3005-0005-e00000000007', 'aabbccdd-9999-3005-0005-b10000000000', 'translate_to_native', 'Translate to English: Обычай', 'Custom', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3005-0005-e00000000008', 'aabbccdd-9999-3005-0005-b10000000000', 'fill_blank', '_____ (Holiday)', 'Праздник', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3005-0006-e00000000001', 'aabbccdd-9999-3005-0006-b10000000000', 'multiple_choice', 'What does "Обряд" mean in English?', 'Ritual', '{"Обряд","Наследие","Культура","Традиция"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3005-0006-e00000000002', 'aabbccdd-9999-3005-0006-b10000000000', 'translate_to_target', 'Translate to Russian: Heritage', 'Наследие', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3005-0006-e00000000003', 'aabbccdd-9999-3005-0006-b10000000000', 'translate_to_native', 'Translate to English: Культура', 'Culture', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3005-0006-e00000000004', 'aabbccdd-9999-3005-0006-b10000000000', 'fill_blank', '_____ (Tradition)', 'Традиция', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3005-0006-e00000000005', 'aabbccdd-9999-3005-0006-b10000000000', 'multiple_choice', 'What does "Обычай" mean in English?', 'Custom', '{"Обычай","Праздник","Обряд","Наследие"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3005-0006-e00000000006', 'aabbccdd-9999-3005-0006-b10000000000', 'translate_to_target', 'Translate to Russian: Holiday', 'Праздник', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3005-0006-e00000000007', 'aabbccdd-9999-3005-0006-b10000000000', 'translate_to_native', 'Translate to English: Обряд', 'Ritual', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3005-0006-e00000000008', 'aabbccdd-9999-3005-0006-b10000000000', 'fill_blank', '_____ (Heritage)', 'Наследие', NULL, '{}', 7, '{}');
+INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_speech, tags) VALUES
+  ('aabbccdd-9999-3005-c001-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3005-0000-b10000000000', 'Culture', 'Культура', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3005-c002-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3005-0000-b10000000000', 'Tradition', 'Традиция', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3005-c003-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3005-0000-b10000000000', 'Custom', 'Обычай', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3005-c004-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3005-0000-b10000000000', 'Holiday', 'Праздник', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3005-c005-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3005-0000-b10000000000', 'Ritual', 'Обряд', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3005-c006-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3005-0000-b10000000000', 'Heritage', 'Наследие', 'word', '{"B1"}');
+
+INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
+VALUES ('aabbccdd-9999-3006-0000-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'Health & Medicine', 'Discuss health conditions and treatments', 5, 6);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+  ('aabbccdd-9999-3006-0001-b10000000000', 'aabbccdd-9999-3006-0000-b10000000000', 'Key Concepts', 'Key Concepts', 0, 10, 30),
+  ('aabbccdd-9999-3006-0002-b10000000000', 'aabbccdd-9999-3006-0000-b10000000000', 'In Context', 'In Context', 1, 10, 30),
+  ('aabbccdd-9999-3006-0003-b10000000000', 'aabbccdd-9999-3006-0000-b10000000000', 'Discussion & Debate', 'Discussion & Debate', 2, 10, 30),
+  ('aabbccdd-9999-3006-0004-b10000000000', 'aabbccdd-9999-3006-0000-b10000000000', 'Practical Application', 'Practical Application', 3, 10, 30),
+  ('aabbccdd-9999-3006-0005-b10000000000', 'aabbccdd-9999-3006-0000-b10000000000', 'Advanced Usage', 'Advanced Usage', 4, 10, 30),
+  ('aabbccdd-9999-3006-0006-b10000000000', 'aabbccdd-9999-3006-0000-b10000000000', 'Review & Test', 'Review & Test', 5, 10, 30);
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3006-0001-e00000000001', 'aabbccdd-9999-3006-0001-b10000000000', 'multiple_choice', 'What does "Диагноз" mean in English?', 'Diagnosis', '{"Диагноз","Лечение","Операция","Рецепт"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3006-0001-e00000000002', 'aabbccdd-9999-3006-0001-b10000000000', 'translate_to_target', 'Translate to Russian: Treatment', 'Лечение', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3006-0001-e00000000003', 'aabbccdd-9999-3006-0001-b10000000000', 'translate_to_native', 'Translate to English: Операция', 'Surgery', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3006-0001-e00000000004', 'aabbccdd-9999-3006-0001-b10000000000', 'fill_blank', '_____ (Prescription)', 'Рецепт', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3006-0001-e00000000005', 'aabbccdd-9999-3006-0001-b10000000000', 'multiple_choice', 'What does "Симптом" mean in English?', 'Symptom', '{"Симптом","Аллергия","Диагноз","Лечение"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3006-0001-e00000000006', 'aabbccdd-9999-3006-0001-b10000000000', 'translate_to_target', 'Translate to Russian: Allergy', 'Аллергия', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3006-0001-e00000000007', 'aabbccdd-9999-3006-0001-b10000000000', 'translate_to_native', 'Translate to English: Диагноз', 'Diagnosis', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3006-0001-e00000000008', 'aabbccdd-9999-3006-0001-b10000000000', 'fill_blank', '_____ (Treatment)', 'Лечение', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3006-0002-e00000000001', 'aabbccdd-9999-3006-0002-b10000000000', 'multiple_choice', 'What does "Операция" mean in English?', 'Surgery', '{"Операция","Рецепт","Симптом","Аллергия"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3006-0002-e00000000002', 'aabbccdd-9999-3006-0002-b10000000000', 'translate_to_target', 'Translate to Russian: Prescription', 'Рецепт', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3006-0002-e00000000003', 'aabbccdd-9999-3006-0002-b10000000000', 'translate_to_native', 'Translate to English: Симптом', 'Symptom', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3006-0002-e00000000004', 'aabbccdd-9999-3006-0002-b10000000000', 'fill_blank', '_____ (Allergy)', 'Аллергия', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3006-0002-e00000000005', 'aabbccdd-9999-3006-0002-b10000000000', 'multiple_choice', 'What does "Диагноз" mean in English?', 'Diagnosis', '{"Диагноз","Лечение","Операция","Рецепт"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3006-0002-e00000000006', 'aabbccdd-9999-3006-0002-b10000000000', 'translate_to_target', 'Translate to Russian: Treatment', 'Лечение', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3006-0002-e00000000007', 'aabbccdd-9999-3006-0002-b10000000000', 'translate_to_native', 'Translate to English: Операция', 'Surgery', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3006-0002-e00000000008', 'aabbccdd-9999-3006-0002-b10000000000', 'fill_blank', '_____ (Prescription)', 'Рецепт', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3006-0003-e00000000001', 'aabbccdd-9999-3006-0003-b10000000000', 'multiple_choice', 'What does "Симптом" mean in English?', 'Symptom', '{"Симптом","Аллергия","Диагноз","Лечение"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3006-0003-e00000000002', 'aabbccdd-9999-3006-0003-b10000000000', 'translate_to_target', 'Translate to Russian: Allergy', 'Аллергия', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3006-0003-e00000000003', 'aabbccdd-9999-3006-0003-b10000000000', 'translate_to_native', 'Translate to English: Диагноз', 'Diagnosis', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3006-0003-e00000000004', 'aabbccdd-9999-3006-0003-b10000000000', 'fill_blank', '_____ (Treatment)', 'Лечение', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3006-0003-e00000000005', 'aabbccdd-9999-3006-0003-b10000000000', 'multiple_choice', 'What does "Операция" mean in English?', 'Surgery', '{"Операция","Рецепт","Симптом","Аллергия"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3006-0003-e00000000006', 'aabbccdd-9999-3006-0003-b10000000000', 'translate_to_target', 'Translate to Russian: Prescription', 'Рецепт', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3006-0003-e00000000007', 'aabbccdd-9999-3006-0003-b10000000000', 'translate_to_native', 'Translate to English: Симптом', 'Symptom', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3006-0003-e00000000008', 'aabbccdd-9999-3006-0003-b10000000000', 'fill_blank', '_____ (Allergy)', 'Аллергия', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3006-0004-e00000000001', 'aabbccdd-9999-3006-0004-b10000000000', 'multiple_choice', 'What does "Диагноз" mean in English?', 'Diagnosis', '{"Диагноз","Лечение","Операция","Рецепт"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3006-0004-e00000000002', 'aabbccdd-9999-3006-0004-b10000000000', 'translate_to_target', 'Translate to Russian: Treatment', 'Лечение', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3006-0004-e00000000003', 'aabbccdd-9999-3006-0004-b10000000000', 'translate_to_native', 'Translate to English: Операция', 'Surgery', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3006-0004-e00000000004', 'aabbccdd-9999-3006-0004-b10000000000', 'fill_blank', '_____ (Prescription)', 'Рецепт', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3006-0004-e00000000005', 'aabbccdd-9999-3006-0004-b10000000000', 'multiple_choice', 'What does "Симптом" mean in English?', 'Symptom', '{"Симптом","Аллергия","Диагноз","Лечение"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3006-0004-e00000000006', 'aabbccdd-9999-3006-0004-b10000000000', 'translate_to_target', 'Translate to Russian: Allergy', 'Аллергия', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3006-0004-e00000000007', 'aabbccdd-9999-3006-0004-b10000000000', 'translate_to_native', 'Translate to English: Диагноз', 'Diagnosis', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3006-0004-e00000000008', 'aabbccdd-9999-3006-0004-b10000000000', 'fill_blank', '_____ (Treatment)', 'Лечение', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3006-0005-e00000000001', 'aabbccdd-9999-3006-0005-b10000000000', 'multiple_choice', 'What does "Операция" mean in English?', 'Surgery', '{"Операция","Рецепт","Симптом","Аллергия"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3006-0005-e00000000002', 'aabbccdd-9999-3006-0005-b10000000000', 'translate_to_target', 'Translate to Russian: Prescription', 'Рецепт', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3006-0005-e00000000003', 'aabbccdd-9999-3006-0005-b10000000000', 'translate_to_native', 'Translate to English: Симптом', 'Symptom', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3006-0005-e00000000004', 'aabbccdd-9999-3006-0005-b10000000000', 'fill_blank', '_____ (Allergy)', 'Аллергия', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3006-0005-e00000000005', 'aabbccdd-9999-3006-0005-b10000000000', 'multiple_choice', 'What does "Диагноз" mean in English?', 'Diagnosis', '{"Диагноз","Лечение","Операция","Рецепт"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3006-0005-e00000000006', 'aabbccdd-9999-3006-0005-b10000000000', 'translate_to_target', 'Translate to Russian: Treatment', 'Лечение', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3006-0005-e00000000007', 'aabbccdd-9999-3006-0005-b10000000000', 'translate_to_native', 'Translate to English: Операция', 'Surgery', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3006-0005-e00000000008', 'aabbccdd-9999-3006-0005-b10000000000', 'fill_blank', '_____ (Prescription)', 'Рецепт', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3006-0006-e00000000001', 'aabbccdd-9999-3006-0006-b10000000000', 'multiple_choice', 'What does "Симптом" mean in English?', 'Symptom', '{"Симптом","Аллергия","Диагноз","Лечение"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3006-0006-e00000000002', 'aabbccdd-9999-3006-0006-b10000000000', 'translate_to_target', 'Translate to Russian: Allergy', 'Аллергия', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3006-0006-e00000000003', 'aabbccdd-9999-3006-0006-b10000000000', 'translate_to_native', 'Translate to English: Диагноз', 'Diagnosis', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3006-0006-e00000000004', 'aabbccdd-9999-3006-0006-b10000000000', 'fill_blank', '_____ (Treatment)', 'Лечение', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3006-0006-e00000000005', 'aabbccdd-9999-3006-0006-b10000000000', 'multiple_choice', 'What does "Операция" mean in English?', 'Surgery', '{"Операция","Рецепт","Симптом","Аллергия"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3006-0006-e00000000006', 'aabbccdd-9999-3006-0006-b10000000000', 'translate_to_target', 'Translate to Russian: Prescription', 'Рецепт', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3006-0006-e00000000007', 'aabbccdd-9999-3006-0006-b10000000000', 'translate_to_native', 'Translate to English: Симптом', 'Symptom', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3006-0006-e00000000008', 'aabbccdd-9999-3006-0006-b10000000000', 'fill_blank', '_____ (Allergy)', 'Аллергия', NULL, '{}', 7, '{}');
+INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_speech, tags) VALUES
+  ('aabbccdd-9999-3006-c001-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3006-0000-b10000000000', 'Diagnosis', 'Диагноз', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3006-c002-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3006-0000-b10000000000', 'Treatment', 'Лечение', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3006-c003-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3006-0000-b10000000000', 'Surgery', 'Операция', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3006-c004-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3006-0000-b10000000000', 'Prescription', 'Рецепт', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3006-c005-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3006-0000-b10000000000', 'Symptom', 'Симптом', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3006-c006-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3006-0000-b10000000000', 'Allergy', 'Аллергия', 'word', '{"B1"}');
+
+INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
+VALUES ('aabbccdd-9999-3007-0000-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'Law & Society', 'Discuss law and civic life', 6, 6);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+  ('aabbccdd-9999-3007-0001-b10000000000', 'aabbccdd-9999-3007-0000-b10000000000', 'Key Concepts', 'Key Concepts', 0, 10, 30),
+  ('aabbccdd-9999-3007-0002-b10000000000', 'aabbccdd-9999-3007-0000-b10000000000', 'In Context', 'In Context', 1, 10, 30),
+  ('aabbccdd-9999-3007-0003-b10000000000', 'aabbccdd-9999-3007-0000-b10000000000', 'Discussion & Debate', 'Discussion & Debate', 2, 10, 30),
+  ('aabbccdd-9999-3007-0004-b10000000000', 'aabbccdd-9999-3007-0000-b10000000000', 'Practical Application', 'Practical Application', 3, 10, 30),
+  ('aabbccdd-9999-3007-0005-b10000000000', 'aabbccdd-9999-3007-0000-b10000000000', 'Advanced Usage', 'Advanced Usage', 4, 10, 30),
+  ('aabbccdd-9999-3007-0006-b10000000000', 'aabbccdd-9999-3007-0000-b10000000000', 'Review & Test', 'Review & Test', 5, 10, 30);
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3007-0001-e00000000001', 'aabbccdd-9999-3007-0001-b10000000000', 'multiple_choice', 'What does "Закон" mean in English?', 'Law', '{"Закон","Право","Гражданин","Обязанность"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3007-0001-e00000000002', 'aabbccdd-9999-3007-0001-b10000000000', 'translate_to_target', 'Translate to Russian: Right', 'Право', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3007-0001-e00000000003', 'aabbccdd-9999-3007-0001-b10000000000', 'translate_to_native', 'Translate to English: Гражданин', 'Citizen', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3007-0001-e00000000004', 'aabbccdd-9999-3007-0001-b10000000000', 'fill_blank', '_____ (Duty)', 'Обязанность', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3007-0001-e00000000005', 'aabbccdd-9999-3007-0001-b10000000000', 'multiple_choice', 'What does "Суд" mean in English?', 'Court', '{"Суд","Полиция","Закон","Право"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3007-0001-e00000000006', 'aabbccdd-9999-3007-0001-b10000000000', 'translate_to_target', 'Translate to Russian: Police', 'Полиция', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3007-0001-e00000000007', 'aabbccdd-9999-3007-0001-b10000000000', 'translate_to_native', 'Translate to English: Закон', 'Law', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3007-0001-e00000000008', 'aabbccdd-9999-3007-0001-b10000000000', 'fill_blank', '_____ (Right)', 'Право', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3007-0002-e00000000001', 'aabbccdd-9999-3007-0002-b10000000000', 'multiple_choice', 'What does "Гражданин" mean in English?', 'Citizen', '{"Гражданин","Обязанность","Суд","Полиция"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3007-0002-e00000000002', 'aabbccdd-9999-3007-0002-b10000000000', 'translate_to_target', 'Translate to Russian: Duty', 'Обязанность', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3007-0002-e00000000003', 'aabbccdd-9999-3007-0002-b10000000000', 'translate_to_native', 'Translate to English: Суд', 'Court', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3007-0002-e00000000004', 'aabbccdd-9999-3007-0002-b10000000000', 'fill_blank', '_____ (Police)', 'Полиция', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3007-0002-e00000000005', 'aabbccdd-9999-3007-0002-b10000000000', 'multiple_choice', 'What does "Закон" mean in English?', 'Law', '{"Закон","Право","Гражданин","Обязанность"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3007-0002-e00000000006', 'aabbccdd-9999-3007-0002-b10000000000', 'translate_to_target', 'Translate to Russian: Right', 'Право', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3007-0002-e00000000007', 'aabbccdd-9999-3007-0002-b10000000000', 'translate_to_native', 'Translate to English: Гражданин', 'Citizen', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3007-0002-e00000000008', 'aabbccdd-9999-3007-0002-b10000000000', 'fill_blank', '_____ (Duty)', 'Обязанность', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3007-0003-e00000000001', 'aabbccdd-9999-3007-0003-b10000000000', 'multiple_choice', 'What does "Суд" mean in English?', 'Court', '{"Суд","Полиция","Закон","Право"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3007-0003-e00000000002', 'aabbccdd-9999-3007-0003-b10000000000', 'translate_to_target', 'Translate to Russian: Police', 'Полиция', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3007-0003-e00000000003', 'aabbccdd-9999-3007-0003-b10000000000', 'translate_to_native', 'Translate to English: Закон', 'Law', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3007-0003-e00000000004', 'aabbccdd-9999-3007-0003-b10000000000', 'fill_blank', '_____ (Right)', 'Право', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3007-0003-e00000000005', 'aabbccdd-9999-3007-0003-b10000000000', 'multiple_choice', 'What does "Гражданин" mean in English?', 'Citizen', '{"Гражданин","Обязанность","Суд","Полиция"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3007-0003-e00000000006', 'aabbccdd-9999-3007-0003-b10000000000', 'translate_to_target', 'Translate to Russian: Duty', 'Обязанность', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3007-0003-e00000000007', 'aabbccdd-9999-3007-0003-b10000000000', 'translate_to_native', 'Translate to English: Суд', 'Court', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3007-0003-e00000000008', 'aabbccdd-9999-3007-0003-b10000000000', 'fill_blank', '_____ (Police)', 'Полиция', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3007-0004-e00000000001', 'aabbccdd-9999-3007-0004-b10000000000', 'multiple_choice', 'What does "Закон" mean in English?', 'Law', '{"Закон","Право","Гражданин","Обязанность"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3007-0004-e00000000002', 'aabbccdd-9999-3007-0004-b10000000000', 'translate_to_target', 'Translate to Russian: Right', 'Право', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3007-0004-e00000000003', 'aabbccdd-9999-3007-0004-b10000000000', 'translate_to_native', 'Translate to English: Гражданин', 'Citizen', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3007-0004-e00000000004', 'aabbccdd-9999-3007-0004-b10000000000', 'fill_blank', '_____ (Duty)', 'Обязанность', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3007-0004-e00000000005', 'aabbccdd-9999-3007-0004-b10000000000', 'multiple_choice', 'What does "Суд" mean in English?', 'Court', '{"Суд","Полиция","Закон","Право"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3007-0004-e00000000006', 'aabbccdd-9999-3007-0004-b10000000000', 'translate_to_target', 'Translate to Russian: Police', 'Полиция', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3007-0004-e00000000007', 'aabbccdd-9999-3007-0004-b10000000000', 'translate_to_native', 'Translate to English: Закон', 'Law', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3007-0004-e00000000008', 'aabbccdd-9999-3007-0004-b10000000000', 'fill_blank', '_____ (Right)', 'Право', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3007-0005-e00000000001', 'aabbccdd-9999-3007-0005-b10000000000', 'multiple_choice', 'What does "Гражданин" mean in English?', 'Citizen', '{"Гражданин","Обязанность","Суд","Полиция"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3007-0005-e00000000002', 'aabbccdd-9999-3007-0005-b10000000000', 'translate_to_target', 'Translate to Russian: Duty', 'Обязанность', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3007-0005-e00000000003', 'aabbccdd-9999-3007-0005-b10000000000', 'translate_to_native', 'Translate to English: Суд', 'Court', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3007-0005-e00000000004', 'aabbccdd-9999-3007-0005-b10000000000', 'fill_blank', '_____ (Police)', 'Полиция', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3007-0005-e00000000005', 'aabbccdd-9999-3007-0005-b10000000000', 'multiple_choice', 'What does "Закон" mean in English?', 'Law', '{"Закон","Право","Гражданин","Обязанность"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3007-0005-e00000000006', 'aabbccdd-9999-3007-0005-b10000000000', 'translate_to_target', 'Translate to Russian: Right', 'Право', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3007-0005-e00000000007', 'aabbccdd-9999-3007-0005-b10000000000', 'translate_to_native', 'Translate to English: Гражданин', 'Citizen', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3007-0005-e00000000008', 'aabbccdd-9999-3007-0005-b10000000000', 'fill_blank', '_____ (Duty)', 'Обязанность', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3007-0006-e00000000001', 'aabbccdd-9999-3007-0006-b10000000000', 'multiple_choice', 'What does "Суд" mean in English?', 'Court', '{"Суд","Полиция","Закон","Право"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3007-0006-e00000000002', 'aabbccdd-9999-3007-0006-b10000000000', 'translate_to_target', 'Translate to Russian: Police', 'Полиция', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3007-0006-e00000000003', 'aabbccdd-9999-3007-0006-b10000000000', 'translate_to_native', 'Translate to English: Закон', 'Law', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3007-0006-e00000000004', 'aabbccdd-9999-3007-0006-b10000000000', 'fill_blank', '_____ (Right)', 'Право', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3007-0006-e00000000005', 'aabbccdd-9999-3007-0006-b10000000000', 'multiple_choice', 'What does "Гражданин" mean in English?', 'Citizen', '{"Гражданин","Обязанность","Суд","Полиция"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3007-0006-e00000000006', 'aabbccdd-9999-3007-0006-b10000000000', 'translate_to_target', 'Translate to Russian: Duty', 'Обязанность', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3007-0006-e00000000007', 'aabbccdd-9999-3007-0006-b10000000000', 'translate_to_native', 'Translate to English: Суд', 'Court', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3007-0006-e00000000008', 'aabbccdd-9999-3007-0006-b10000000000', 'fill_blank', '_____ (Police)', 'Полиция', NULL, '{}', 7, '{}');
+INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_speech, tags) VALUES
+  ('aabbccdd-9999-3007-c001-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3007-0000-b10000000000', 'Law', 'Закон', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3007-c002-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3007-0000-b10000000000', 'Right', 'Право', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3007-c003-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3007-0000-b10000000000', 'Citizen', 'Гражданин', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3007-c004-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3007-0000-b10000000000', 'Duty', 'Обязанность', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3007-c005-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3007-0000-b10000000000', 'Court', 'Суд', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3007-c006-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3007-0000-b10000000000', 'Police', 'Полиция', 'word', '{"B1"}');
+
+INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
+VALUES ('aabbccdd-9999-3008-0000-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'Media & Communication', 'Talk about media and journalism', 7, 6);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+  ('aabbccdd-9999-3008-0001-b10000000000', 'aabbccdd-9999-3008-0000-b10000000000', 'Key Concepts', 'Key Concepts', 0, 10, 30),
+  ('aabbccdd-9999-3008-0002-b10000000000', 'aabbccdd-9999-3008-0000-b10000000000', 'In Context', 'In Context', 1, 10, 30),
+  ('aabbccdd-9999-3008-0003-b10000000000', 'aabbccdd-9999-3008-0000-b10000000000', 'Discussion & Debate', 'Discussion & Debate', 2, 10, 30),
+  ('aabbccdd-9999-3008-0004-b10000000000', 'aabbccdd-9999-3008-0000-b10000000000', 'Practical Application', 'Practical Application', 3, 10, 30),
+  ('aabbccdd-9999-3008-0005-b10000000000', 'aabbccdd-9999-3008-0000-b10000000000', 'Advanced Usage', 'Advanced Usage', 4, 10, 30),
+  ('aabbccdd-9999-3008-0006-b10000000000', 'aabbccdd-9999-3008-0000-b10000000000', 'Review & Test', 'Review & Test', 5, 10, 30);
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3008-0001-e00000000001', 'aabbccdd-9999-3008-0001-b10000000000', 'multiple_choice', 'What does "Журналист" mean in English?', 'Journalist', '{"Журналист","Статья","Реклама","Интервью"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3008-0001-e00000000002', 'aabbccdd-9999-3008-0001-b10000000000', 'translate_to_target', 'Translate to Russian: Article', 'Статья', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3008-0001-e00000000003', 'aabbccdd-9999-3008-0001-b10000000000', 'translate_to_native', 'Translate to English: Реклама', 'Advertisement', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3008-0001-e00000000004', 'aabbccdd-9999-3008-0001-b10000000000', 'fill_blank', '_____ (Interview)', 'Интервью', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3008-0001-e00000000005', 'aabbccdd-9999-3008-0001-b10000000000', 'multiple_choice', 'What does "Телевидение" mean in English?', 'Television', '{"Телевидение","Радио","Журналист","Статья"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3008-0001-e00000000006', 'aabbccdd-9999-3008-0001-b10000000000', 'translate_to_target', 'Translate to Russian: Radio', 'Радио', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3008-0001-e00000000007', 'aabbccdd-9999-3008-0001-b10000000000', 'translate_to_native', 'Translate to English: Журналист', 'Journalist', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3008-0001-e00000000008', 'aabbccdd-9999-3008-0001-b10000000000', 'fill_blank', '_____ (Article)', 'Статья', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3008-0002-e00000000001', 'aabbccdd-9999-3008-0002-b10000000000', 'multiple_choice', 'What does "Реклама" mean in English?', 'Advertisement', '{"Реклама","Интервью","Телевидение","Радио"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3008-0002-e00000000002', 'aabbccdd-9999-3008-0002-b10000000000', 'translate_to_target', 'Translate to Russian: Interview', 'Интервью', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3008-0002-e00000000003', 'aabbccdd-9999-3008-0002-b10000000000', 'translate_to_native', 'Translate to English: Телевидение', 'Television', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3008-0002-e00000000004', 'aabbccdd-9999-3008-0002-b10000000000', 'fill_blank', '_____ (Radio)', 'Радио', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3008-0002-e00000000005', 'aabbccdd-9999-3008-0002-b10000000000', 'multiple_choice', 'What does "Журналист" mean in English?', 'Journalist', '{"Журналист","Статья","Реклама","Интервью"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3008-0002-e00000000006', 'aabbccdd-9999-3008-0002-b10000000000', 'translate_to_target', 'Translate to Russian: Article', 'Статья', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3008-0002-e00000000007', 'aabbccdd-9999-3008-0002-b10000000000', 'translate_to_native', 'Translate to English: Реклама', 'Advertisement', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3008-0002-e00000000008', 'aabbccdd-9999-3008-0002-b10000000000', 'fill_blank', '_____ (Interview)', 'Интервью', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3008-0003-e00000000001', 'aabbccdd-9999-3008-0003-b10000000000', 'multiple_choice', 'What does "Телевидение" mean in English?', 'Television', '{"Телевидение","Радио","Журналист","Статья"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3008-0003-e00000000002', 'aabbccdd-9999-3008-0003-b10000000000', 'translate_to_target', 'Translate to Russian: Radio', 'Радио', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3008-0003-e00000000003', 'aabbccdd-9999-3008-0003-b10000000000', 'translate_to_native', 'Translate to English: Журналист', 'Journalist', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3008-0003-e00000000004', 'aabbccdd-9999-3008-0003-b10000000000', 'fill_blank', '_____ (Article)', 'Статья', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3008-0003-e00000000005', 'aabbccdd-9999-3008-0003-b10000000000', 'multiple_choice', 'What does "Реклама" mean in English?', 'Advertisement', '{"Реклама","Интервью","Телевидение","Радио"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3008-0003-e00000000006', 'aabbccdd-9999-3008-0003-b10000000000', 'translate_to_target', 'Translate to Russian: Interview', 'Интервью', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3008-0003-e00000000007', 'aabbccdd-9999-3008-0003-b10000000000', 'translate_to_native', 'Translate to English: Телевидение', 'Television', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3008-0003-e00000000008', 'aabbccdd-9999-3008-0003-b10000000000', 'fill_blank', '_____ (Radio)', 'Радио', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3008-0004-e00000000001', 'aabbccdd-9999-3008-0004-b10000000000', 'multiple_choice', 'What does "Журналист" mean in English?', 'Journalist', '{"Журналист","Статья","Реклама","Интервью"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3008-0004-e00000000002', 'aabbccdd-9999-3008-0004-b10000000000', 'translate_to_target', 'Translate to Russian: Article', 'Статья', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3008-0004-e00000000003', 'aabbccdd-9999-3008-0004-b10000000000', 'translate_to_native', 'Translate to English: Реклама', 'Advertisement', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3008-0004-e00000000004', 'aabbccdd-9999-3008-0004-b10000000000', 'fill_blank', '_____ (Interview)', 'Интервью', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3008-0004-e00000000005', 'aabbccdd-9999-3008-0004-b10000000000', 'multiple_choice', 'What does "Телевидение" mean in English?', 'Television', '{"Телевидение","Радио","Журналист","Статья"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3008-0004-e00000000006', 'aabbccdd-9999-3008-0004-b10000000000', 'translate_to_target', 'Translate to Russian: Radio', 'Радио', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3008-0004-e00000000007', 'aabbccdd-9999-3008-0004-b10000000000', 'translate_to_native', 'Translate to English: Журналист', 'Journalist', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3008-0004-e00000000008', 'aabbccdd-9999-3008-0004-b10000000000', 'fill_blank', '_____ (Article)', 'Статья', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3008-0005-e00000000001', 'aabbccdd-9999-3008-0005-b10000000000', 'multiple_choice', 'What does "Реклама" mean in English?', 'Advertisement', '{"Реклама","Интервью","Телевидение","Радио"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3008-0005-e00000000002', 'aabbccdd-9999-3008-0005-b10000000000', 'translate_to_target', 'Translate to Russian: Interview', 'Интервью', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3008-0005-e00000000003', 'aabbccdd-9999-3008-0005-b10000000000', 'translate_to_native', 'Translate to English: Телевидение', 'Television', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3008-0005-e00000000004', 'aabbccdd-9999-3008-0005-b10000000000', 'fill_blank', '_____ (Radio)', 'Радио', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3008-0005-e00000000005', 'aabbccdd-9999-3008-0005-b10000000000', 'multiple_choice', 'What does "Журналист" mean in English?', 'Journalist', '{"Журналист","Статья","Реклама","Интервью"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3008-0005-e00000000006', 'aabbccdd-9999-3008-0005-b10000000000', 'translate_to_target', 'Translate to Russian: Article', 'Статья', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3008-0005-e00000000007', 'aabbccdd-9999-3008-0005-b10000000000', 'translate_to_native', 'Translate to English: Реклама', 'Advertisement', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3008-0005-e00000000008', 'aabbccdd-9999-3008-0005-b10000000000', 'fill_blank', '_____ (Interview)', 'Интервью', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-3008-0006-e00000000001', 'aabbccdd-9999-3008-0006-b10000000000', 'multiple_choice', 'What does "Телевидение" mean in English?', 'Television', '{"Телевидение","Радио","Журналист","Статья"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-3008-0006-e00000000002', 'aabbccdd-9999-3008-0006-b10000000000', 'translate_to_target', 'Translate to Russian: Radio', 'Радио', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-3008-0006-e00000000003', 'aabbccdd-9999-3008-0006-b10000000000', 'translate_to_native', 'Translate to English: Журналист', 'Journalist', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-3008-0006-e00000000004', 'aabbccdd-9999-3008-0006-b10000000000', 'fill_blank', '_____ (Article)', 'Статья', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-3008-0006-e00000000005', 'aabbccdd-9999-3008-0006-b10000000000', 'multiple_choice', 'What does "Реклама" mean in English?', 'Advertisement', '{"Реклама","Интервью","Телевидение","Радио"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-3008-0006-e00000000006', 'aabbccdd-9999-3008-0006-b10000000000', 'translate_to_target', 'Translate to Russian: Interview', 'Интервью', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-3008-0006-e00000000007', 'aabbccdd-9999-3008-0006-b10000000000', 'translate_to_native', 'Translate to English: Телевидение', 'Television', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-3008-0006-e00000000008', 'aabbccdd-9999-3008-0006-b10000000000', 'fill_blank', '_____ (Radio)', 'Радио', NULL, '{}', 7, '{}');
+INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_speech, tags) VALUES
+  ('aabbccdd-9999-3008-c001-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3008-0000-b10000000000', 'Journalist', 'Журналист', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3008-c002-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3008-0000-b10000000000', 'Article', 'Статья', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3008-c003-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3008-0000-b10000000000', 'Advertisement', 'Реклама', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3008-c004-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3008-0000-b10000000000', 'Interview', 'Интервью', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3008-c005-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3008-0000-b10000000000', 'Television', 'Телевидение', 'word', '{"B1"}'),
+  ('aabbccdd-9999-3008-c006-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'aabbccdd-9999-3008-0000-b10000000000', 'Radio', 'Радио', 'word', '{"B1"}');
+
+-- Russian B2
+INSERT INTO courses (id, source_language, target_language, title, description, total_units, is_published, cefr_level)
+VALUES ('aabbccdd-9999-0000-0000-b20000000000', 'en', 'ru', 'Russian B2', 'Russian course - CEFR B2', 6, true, 'B2');
+
+INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
+VALUES ('aabbccdd-9999-4001-0000-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'Abstract Ideas', 'Philosophy, concepts, beliefs', 0, 6);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+  ('aabbccdd-9999-4001-0001-b20000000000', 'aabbccdd-9999-4001-0000-b20000000000', 'Key Concepts', 'Key Concepts', 0, 12, 40),
+  ('aabbccdd-9999-4001-0002-b20000000000', 'aabbccdd-9999-4001-0000-b20000000000', 'In Context', 'In Context', 1, 12, 40),
+  ('aabbccdd-9999-4001-0003-b20000000000', 'aabbccdd-9999-4001-0000-b20000000000', 'Discussion & Debate', 'Discussion & Debate', 2, 12, 40),
+  ('aabbccdd-9999-4001-0004-b20000000000', 'aabbccdd-9999-4001-0000-b20000000000', 'Practical Application', 'Practical Application', 3, 12, 40),
+  ('aabbccdd-9999-4001-0005-b20000000000', 'aabbccdd-9999-4001-0000-b20000000000', 'Advanced Usage', 'Advanced Usage', 4, 12, 40),
+  ('aabbccdd-9999-4001-0006-b20000000000', 'aabbccdd-9999-4001-0000-b20000000000', 'Review & Test', 'Review & Test', 5, 12, 40);
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-4001-0001-e00000000001', 'aabbccdd-9999-4001-0001-b20000000000', 'multiple_choice', 'What does "Свобода" mean in English?', 'Freedom', '{"Свобода","Справедливость","Сознание","Цель"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-4001-0001-e00000000002', 'aabbccdd-9999-4001-0001-b20000000000', 'translate_to_target', 'Translate to Russian: Justice', 'Справедливость', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-4001-0001-e00000000003', 'aabbccdd-9999-4001-0001-b20000000000', 'translate_to_native', 'Translate to English: Сознание', 'Consciousness', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-4001-0001-e00000000004', 'aabbccdd-9999-4001-0001-b20000000000', 'fill_blank', '_____ (Purpose)', 'Цель', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-4001-0001-e00000000005', 'aabbccdd-9999-4001-0001-b20000000000', 'multiple_choice', 'What does "Истина" mean in English?', 'Truth', '{"Истина","Бытие","Свобода","Справедливость"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-4001-0001-e00000000006', 'aabbccdd-9999-4001-0001-b20000000000', 'translate_to_target', 'Translate to Russian: Being', 'Бытие', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-4001-0001-e00000000007', 'aabbccdd-9999-4001-0001-b20000000000', 'translate_to_native', 'Translate to English: Свобода', 'Freedom', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-4001-0001-e00000000008', 'aabbccdd-9999-4001-0001-b20000000000', 'fill_blank', '_____ (Justice)', 'Справедливость', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-4001-0002-e00000000001', 'aabbccdd-9999-4001-0002-b20000000000', 'multiple_choice', 'What does "Сознание" mean in English?', 'Consciousness', '{"Сознание","Цель","Истина","Бытие"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-4001-0002-e00000000002', 'aabbccdd-9999-4001-0002-b20000000000', 'translate_to_target', 'Translate to Russian: Purpose', 'Цель', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-4001-0002-e00000000003', 'aabbccdd-9999-4001-0002-b20000000000', 'translate_to_native', 'Translate to English: Истина', 'Truth', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-4001-0002-e00000000004', 'aabbccdd-9999-4001-0002-b20000000000', 'fill_blank', '_____ (Being)', 'Бытие', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-4001-0002-e00000000005', 'aabbccdd-9999-4001-0002-b20000000000', 'multiple_choice', 'What does "Свобода" mean in English?', 'Freedom', '{"Свобода","Справедливость","Сознание","Цель"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-4001-0002-e00000000006', 'aabbccdd-9999-4001-0002-b20000000000', 'translate_to_target', 'Translate to Russian: Justice', 'Справедливость', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-4001-0002-e00000000007', 'aabbccdd-9999-4001-0002-b20000000000', 'translate_to_native', 'Translate to English: Сознание', 'Consciousness', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-4001-0002-e00000000008', 'aabbccdd-9999-4001-0002-b20000000000', 'fill_blank', '_____ (Purpose)', 'Цель', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-4001-0003-e00000000001', 'aabbccdd-9999-4001-0003-b20000000000', 'multiple_choice', 'What does "Истина" mean in English?', 'Truth', '{"Истина","Бытие","Свобода","Справедливость"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-4001-0003-e00000000002', 'aabbccdd-9999-4001-0003-b20000000000', 'translate_to_target', 'Translate to Russian: Being', 'Бытие', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-4001-0003-e00000000003', 'aabbccdd-9999-4001-0003-b20000000000', 'translate_to_native', 'Translate to English: Свобода', 'Freedom', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-4001-0003-e00000000004', 'aabbccdd-9999-4001-0003-b20000000000', 'fill_blank', '_____ (Justice)', 'Справедливость', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-4001-0003-e00000000005', 'aabbccdd-9999-4001-0003-b20000000000', 'multiple_choice', 'What does "Сознание" mean in English?', 'Consciousness', '{"Сознание","Цель","Истина","Бытие"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-4001-0003-e00000000006', 'aabbccdd-9999-4001-0003-b20000000000', 'translate_to_target', 'Translate to Russian: Purpose', 'Цель', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-4001-0003-e00000000007', 'aabbccdd-9999-4001-0003-b20000000000', 'translate_to_native', 'Translate to English: Истина', 'Truth', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-4001-0003-e00000000008', 'aabbccdd-9999-4001-0003-b20000000000', 'fill_blank', '_____ (Being)', 'Бытие', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-4001-0004-e00000000001', 'aabbccdd-9999-4001-0004-b20000000000', 'multiple_choice', 'What does "Свобода" mean in English?', 'Freedom', '{"Свобода","Справедливость","Сознание","Цель"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-4001-0004-e00000000002', 'aabbccdd-9999-4001-0004-b20000000000', 'translate_to_target', 'Translate to Russian: Justice', 'Справедливость', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-4001-0004-e00000000003', 'aabbccdd-9999-4001-0004-b20000000000', 'translate_to_native', 'Translate to English: Сознание', 'Consciousness', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-4001-0004-e00000000004', 'aabbccdd-9999-4001-0004-b20000000000', 'fill_blank', '_____ (Purpose)', 'Цель', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-4001-0004-e00000000005', 'aabbccdd-9999-4001-0004-b20000000000', 'multiple_choice', 'What does "Истина" mean in English?', 'Truth', '{"Истина","Бытие","Свобода","Справедливость"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-4001-0004-e00000000006', 'aabbccdd-9999-4001-0004-b20000000000', 'translate_to_target', 'Translate to Russian: Being', 'Бытие', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-4001-0004-e00000000007', 'aabbccdd-9999-4001-0004-b20000000000', 'translate_to_native', 'Translate to English: Свобода', 'Freedom', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-4001-0004-e00000000008', 'aabbccdd-9999-4001-0004-b20000000000', 'fill_blank', '_____ (Justice)', 'Справедливость', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-4001-0005-e00000000001', 'aabbccdd-9999-4001-0005-b20000000000', 'multiple_choice', 'What does "Сознание" mean in English?', 'Consciousness', '{"Сознание","Цель","Истина","Бытие"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-4001-0005-e00000000002', 'aabbccdd-9999-4001-0005-b20000000000', 'translate_to_target', 'Translate to Russian: Purpose', 'Цель', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-4001-0005-e00000000003', 'aabbccdd-9999-4001-0005-b20000000000', 'translate_to_native', 'Translate to English: Истина', 'Truth', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-4001-0005-e00000000004', 'aabbccdd-9999-4001-0005-b20000000000', 'fill_blank', '_____ (Being)', 'Бытие', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-4001-0005-e00000000005', 'aabbccdd-9999-4001-0005-b20000000000', 'multiple_choice', 'What does "Свобода" mean in English?', 'Freedom', '{"Свобода","Справедливость","Сознание","Цель"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-4001-0005-e00000000006', 'aabbccdd-9999-4001-0005-b20000000000', 'translate_to_target', 'Translate to Russian: Justice', 'Справедливость', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-4001-0005-e00000000007', 'aabbccdd-9999-4001-0005-b20000000000', 'translate_to_native', 'Translate to English: Сознание', 'Consciousness', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-4001-0005-e00000000008', 'aabbccdd-9999-4001-0005-b20000000000', 'fill_blank', '_____ (Purpose)', 'Цель', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-4001-0006-e00000000001', 'aabbccdd-9999-4001-0006-b20000000000', 'multiple_choice', 'What does "Истина" mean in English?', 'Truth', '{"Истина","Бытие","Свобода","Справедливость"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-4001-0006-e00000000002', 'aabbccdd-9999-4001-0006-b20000000000', 'translate_to_target', 'Translate to Russian: Being', 'Бытие', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-4001-0006-e00000000003', 'aabbccdd-9999-4001-0006-b20000000000', 'translate_to_native', 'Translate to English: Свобода', 'Freedom', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-4001-0006-e00000000004', 'aabbccdd-9999-4001-0006-b20000000000', 'fill_blank', '_____ (Justice)', 'Справедливость', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-4001-0006-e00000000005', 'aabbccdd-9999-4001-0006-b20000000000', 'multiple_choice', 'What does "Сознание" mean in English?', 'Consciousness', '{"Сознание","Цель","Истина","Бытие"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-4001-0006-e00000000006', 'aabbccdd-9999-4001-0006-b20000000000', 'translate_to_target', 'Translate to Russian: Purpose', 'Цель', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-4001-0006-e00000000007', 'aabbccdd-9999-4001-0006-b20000000000', 'translate_to_native', 'Translate to English: Истина', 'Truth', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-4001-0006-e00000000008', 'aabbccdd-9999-4001-0006-b20000000000', 'fill_blank', '_____ (Being)', 'Бытие', NULL, '{}', 7, '{}');
+INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_speech, tags) VALUES
+  ('aabbccdd-9999-4001-c001-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4001-0000-b20000000000', 'Freedom', 'Свобода', 'word', '{"B2"}'),
+  ('aabbccdd-9999-4001-c002-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4001-0000-b20000000000', 'Justice', 'Справедливость', 'word', '{"B2"}'),
+  ('aabbccdd-9999-4001-c003-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4001-0000-b20000000000', 'Consciousness', 'Сознание', 'word', '{"B2"}'),
+  ('aabbccdd-9999-4001-c004-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4001-0000-b20000000000', 'Purpose', 'Цель', 'word', '{"B2"}'),
+  ('aabbccdd-9999-4001-c005-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4001-0000-b20000000000', 'Truth', 'Истина', 'word', '{"B2"}'),
+  ('aabbccdd-9999-4001-c006-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4001-0000-b20000000000', 'Being', 'Бытие', 'word', '{"B2"}');
+
+INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
+VALUES ('aabbccdd-9999-4002-0000-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'Global Issues', 'Discuss global challenges', 1, 6);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+  ('aabbccdd-9999-4002-0001-b20000000000', 'aabbccdd-9999-4002-0000-b20000000000', 'Key Concepts', 'Key Concepts', 0, 12, 40),
+  ('aabbccdd-9999-4002-0002-b20000000000', 'aabbccdd-9999-4002-0000-b20000000000', 'In Context', 'In Context', 1, 12, 40),
+  ('aabbccdd-9999-4002-0003-b20000000000', 'aabbccdd-9999-4002-0000-b20000000000', 'Discussion & Debate', 'Discussion & Debate', 2, 12, 40),
+  ('aabbccdd-9999-4002-0004-b20000000000', 'aabbccdd-9999-4002-0000-b20000000000', 'Practical Application', 'Practical Application', 3, 12, 40),
+  ('aabbccdd-9999-4002-0005-b20000000000', 'aabbccdd-9999-4002-0000-b20000000000', 'Advanced Usage', 'Advanced Usage', 4, 12, 40),
+  ('aabbccdd-9999-4002-0006-b20000000000', 'aabbccdd-9999-4002-0000-b20000000000', 'Review & Test', 'Review & Test', 5, 12, 40);
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-4002-0001-e00000000001', 'aabbccdd-9999-4002-0001-b20000000000', 'multiple_choice', 'What does "Глобализация" mean in English?', 'Globalization', '{"Глобализация","Миграция","Неравенство","Дипломатия"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-4002-0001-e00000000002', 'aabbccdd-9999-4002-0001-b20000000000', 'translate_to_target', 'Translate to Russian: Migration', 'Миграция', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-4002-0001-e00000000003', 'aabbccdd-9999-4002-0001-b20000000000', 'translate_to_native', 'Translate to English: Неравенство', 'Inequality', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-4002-0001-e00000000004', 'aabbccdd-9999-4002-0001-b20000000000', 'fill_blank', '_____ (Diplomacy)', 'Дипломатия', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-4002-0001-e00000000005', 'aabbccdd-9999-4002-0001-b20000000000', 'multiple_choice', 'What does "Конфликт" mean in English?', 'Conflict', '{"Конфликт","Глобализация","Миграция","Неравенство"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-4002-0001-e00000000006', 'aabbccdd-9999-4002-0001-b20000000000', 'translate_to_target', 'Translate to Russian: Globalization', 'Глобализация', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-4002-0001-e00000000007', 'aabbccdd-9999-4002-0001-b20000000000', 'translate_to_native', 'Translate to English: Миграция', 'Migration', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-4002-0001-e00000000008', 'aabbccdd-9999-4002-0001-b20000000000', 'fill_blank', '_____ (Inequality)', 'Неравенство', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-4002-0002-e00000000001', 'aabbccdd-9999-4002-0002-b20000000000', 'multiple_choice', 'What does "Неравенство" mean in English?', 'Inequality', '{"Неравенство","Дипломатия","Конфликт","Глобализация"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-4002-0002-e00000000002', 'aabbccdd-9999-4002-0002-b20000000000', 'translate_to_target', 'Translate to Russian: Diplomacy', 'Дипломатия', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-4002-0002-e00000000003', 'aabbccdd-9999-4002-0002-b20000000000', 'translate_to_native', 'Translate to English: Конфликт', 'Conflict', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-4002-0002-e00000000004', 'aabbccdd-9999-4002-0002-b20000000000', 'fill_blank', '_____ (Globalization)', 'Глобализация', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-4002-0002-e00000000005', 'aabbccdd-9999-4002-0002-b20000000000', 'multiple_choice', 'What does "Миграция" mean in English?', 'Migration', '{"Миграция","Неравенство","Дипломатия","Конфликт"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-4002-0002-e00000000006', 'aabbccdd-9999-4002-0002-b20000000000', 'translate_to_target', 'Translate to Russian: Inequality', 'Неравенство', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-4002-0002-e00000000007', 'aabbccdd-9999-4002-0002-b20000000000', 'translate_to_native', 'Translate to English: Дипломатия', 'Diplomacy', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-4002-0002-e00000000008', 'aabbccdd-9999-4002-0002-b20000000000', 'fill_blank', '_____ (Conflict)', 'Конфликт', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-4002-0003-e00000000001', 'aabbccdd-9999-4002-0003-b20000000000', 'multiple_choice', 'What does "Конфликт" mean in English?', 'Conflict', '{"Конфликт","Глобализация","Миграция","Неравенство"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-4002-0003-e00000000002', 'aabbccdd-9999-4002-0003-b20000000000', 'translate_to_target', 'Translate to Russian: Globalization', 'Глобализация', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-4002-0003-e00000000003', 'aabbccdd-9999-4002-0003-b20000000000', 'translate_to_native', 'Translate to English: Миграция', 'Migration', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-4002-0003-e00000000004', 'aabbccdd-9999-4002-0003-b20000000000', 'fill_blank', '_____ (Inequality)', 'Неравенство', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-4002-0003-e00000000005', 'aabbccdd-9999-4002-0003-b20000000000', 'multiple_choice', 'What does "Дипломатия" mean in English?', 'Diplomacy', '{"Дипломатия","Конфликт","Глобализация","Миграция"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-4002-0003-e00000000006', 'aabbccdd-9999-4002-0003-b20000000000', 'translate_to_target', 'Translate to Russian: Conflict', 'Конфликт', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-4002-0003-e00000000007', 'aabbccdd-9999-4002-0003-b20000000000', 'translate_to_native', 'Translate to English: Глобализация', 'Globalization', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-4002-0003-e00000000008', 'aabbccdd-9999-4002-0003-b20000000000', 'fill_blank', '_____ (Migration)', 'Миграция', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-4002-0004-e00000000001', 'aabbccdd-9999-4002-0004-b20000000000', 'multiple_choice', 'What does "Миграция" mean in English?', 'Migration', '{"Миграция","Неравенство","Дипломатия","Конфликт"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-4002-0004-e00000000002', 'aabbccdd-9999-4002-0004-b20000000000', 'translate_to_target', 'Translate to Russian: Inequality', 'Неравенство', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-4002-0004-e00000000003', 'aabbccdd-9999-4002-0004-b20000000000', 'translate_to_native', 'Translate to English: Дипломатия', 'Diplomacy', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-4002-0004-e00000000004', 'aabbccdd-9999-4002-0004-b20000000000', 'fill_blank', '_____ (Conflict)', 'Конфликт', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-4002-0004-e00000000005', 'aabbccdd-9999-4002-0004-b20000000000', 'multiple_choice', 'What does "Глобализация" mean in English?', 'Globalization', '{"Глобализация","Миграция","Неравенство","Дипломатия"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-4002-0004-e00000000006', 'aabbccdd-9999-4002-0004-b20000000000', 'translate_to_target', 'Translate to Russian: Migration', 'Миграция', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-4002-0004-e00000000007', 'aabbccdd-9999-4002-0004-b20000000000', 'translate_to_native', 'Translate to English: Неравенство', 'Inequality', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-4002-0004-e00000000008', 'aabbccdd-9999-4002-0004-b20000000000', 'fill_blank', '_____ (Diplomacy)', 'Дипломатия', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-4002-0005-e00000000001', 'aabbccdd-9999-4002-0005-b20000000000', 'multiple_choice', 'What does "Дипломатия" mean in English?', 'Diplomacy', '{"Дипломатия","Конфликт","Глобализация","Миграция"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-4002-0005-e00000000002', 'aabbccdd-9999-4002-0005-b20000000000', 'translate_to_target', 'Translate to Russian: Conflict', 'Конфликт', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-4002-0005-e00000000003', 'aabbccdd-9999-4002-0005-b20000000000', 'translate_to_native', 'Translate to English: Глобализация', 'Globalization', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-4002-0005-e00000000004', 'aabbccdd-9999-4002-0005-b20000000000', 'fill_blank', '_____ (Migration)', 'Миграция', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-4002-0005-e00000000005', 'aabbccdd-9999-4002-0005-b20000000000', 'multiple_choice', 'What does "Неравенство" mean in English?', 'Inequality', '{"Неравенство","Дипломатия","Конфликт","Глобализация"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-4002-0005-e00000000006', 'aabbccdd-9999-4002-0005-b20000000000', 'translate_to_target', 'Translate to Russian: Diplomacy', 'Дипломатия', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-4002-0005-e00000000007', 'aabbccdd-9999-4002-0005-b20000000000', 'translate_to_native', 'Translate to English: Конфликт', 'Conflict', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-4002-0005-e00000000008', 'aabbccdd-9999-4002-0005-b20000000000', 'fill_blank', '_____ (Globalization)', 'Глобализация', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-4002-0006-e00000000001', 'aabbccdd-9999-4002-0006-b20000000000', 'multiple_choice', 'What does "Глобализация" mean in English?', 'Globalization', '{"Глобализация","Миграция","Неравенство","Дипломатия"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-4002-0006-e00000000002', 'aabbccdd-9999-4002-0006-b20000000000', 'translate_to_target', 'Translate to Russian: Migration', 'Миграция', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-4002-0006-e00000000003', 'aabbccdd-9999-4002-0006-b20000000000', 'translate_to_native', 'Translate to English: Неравенство', 'Inequality', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-4002-0006-e00000000004', 'aabbccdd-9999-4002-0006-b20000000000', 'fill_blank', '_____ (Diplomacy)', 'Дипломатия', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-4002-0006-e00000000005', 'aabbccdd-9999-4002-0006-b20000000000', 'multiple_choice', 'What does "Конфликт" mean in English?', 'Conflict', '{"Конфликт","Глобализация","Миграция","Неравенство"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-4002-0006-e00000000006', 'aabbccdd-9999-4002-0006-b20000000000', 'translate_to_target', 'Translate to Russian: Globalization', 'Глобализация', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-4002-0006-e00000000007', 'aabbccdd-9999-4002-0006-b20000000000', 'translate_to_native', 'Translate to English: Миграция', 'Migration', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-4002-0006-e00000000008', 'aabbccdd-9999-4002-0006-b20000000000', 'fill_blank', '_____ (Inequality)', 'Неравенство', NULL, '{}', 7, '{}');
+INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_speech, tags) VALUES
+  ('aabbccdd-9999-4002-c001-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4002-0000-b20000000000', 'Globalization', 'Глобализация', 'word', '{"B2"}'),
+  ('aabbccdd-9999-4002-c002-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4002-0000-b20000000000', 'Migration', 'Миграция', 'word', '{"B2"}'),
+  ('aabbccdd-9999-4002-c003-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4002-0000-b20000000000', 'Inequality', 'Неравенство', 'word', '{"B2"}'),
+  ('aabbccdd-9999-4002-c004-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4002-0000-b20000000000', 'Diplomacy', 'Дипломатия', 'word', '{"B2"}'),
+  ('aabbccdd-9999-4002-c005-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4002-0000-b20000000000', 'Conflict', 'Конфликт', 'word', '{"B2"}');
+
+INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
+VALUES ('aabbccdd-9999-4003-0000-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'Art & Literature', 'Explore art and literary concepts', 2, 6);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+  ('aabbccdd-9999-4003-0001-b20000000000', 'aabbccdd-9999-4003-0000-b20000000000', 'Key Concepts', 'Key Concepts', 0, 12, 40),
+  ('aabbccdd-9999-4003-0002-b20000000000', 'aabbccdd-9999-4003-0000-b20000000000', 'In Context', 'In Context', 1, 12, 40),
+  ('aabbccdd-9999-4003-0003-b20000000000', 'aabbccdd-9999-4003-0000-b20000000000', 'Discussion & Debate', 'Discussion & Debate', 2, 12, 40),
+  ('aabbccdd-9999-4003-0004-b20000000000', 'aabbccdd-9999-4003-0000-b20000000000', 'Practical Application', 'Practical Application', 3, 12, 40),
+  ('aabbccdd-9999-4003-0005-b20000000000', 'aabbccdd-9999-4003-0000-b20000000000', 'Advanced Usage', 'Advanced Usage', 4, 12, 40),
+  ('aabbccdd-9999-4003-0006-b20000000000', 'aabbccdd-9999-4003-0000-b20000000000', 'Review & Test', 'Review & Test', 5, 12, 40);
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-4003-0001-e00000000001', 'aabbccdd-9999-4003-0001-b20000000000', 'multiple_choice', 'What does "Искусство" mean in English?', 'Art', '{"Искусство","Литература","Поэзия","Проза"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-4003-0001-e00000000002', 'aabbccdd-9999-4003-0001-b20000000000', 'translate_to_target', 'Translate to Russian: Literature', 'Литература', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-4003-0001-e00000000003', 'aabbccdd-9999-4003-0001-b20000000000', 'translate_to_native', 'Translate to English: Поэзия', 'Poetry', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-4003-0001-e00000000004', 'aabbccdd-9999-4003-0001-b20000000000', 'fill_blank', '_____ (Prose)', 'Проза', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-4003-0001-e00000000005', 'aabbccdd-9999-4003-0001-b20000000000', 'multiple_choice', 'What does "Жанр" mean in English?', 'Genre', '{"Жанр","Метафора","Искусство","Литература"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-4003-0001-e00000000006', 'aabbccdd-9999-4003-0001-b20000000000', 'translate_to_target', 'Translate to Russian: Metaphor', 'Метафора', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-4003-0001-e00000000007', 'aabbccdd-9999-4003-0001-b20000000000', 'translate_to_native', 'Translate to English: Искусство', 'Art', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-4003-0001-e00000000008', 'aabbccdd-9999-4003-0001-b20000000000', 'fill_blank', '_____ (Literature)', 'Литература', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-4003-0002-e00000000001', 'aabbccdd-9999-4003-0002-b20000000000', 'multiple_choice', 'What does "Поэзия" mean in English?', 'Poetry', '{"Поэзия","Проза","Жанр","Метафора"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-4003-0002-e00000000002', 'aabbccdd-9999-4003-0002-b20000000000', 'translate_to_target', 'Translate to Russian: Prose', 'Проза', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-4003-0002-e00000000003', 'aabbccdd-9999-4003-0002-b20000000000', 'translate_to_native', 'Translate to English: Жанр', 'Genre', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-4003-0002-e00000000004', 'aabbccdd-9999-4003-0002-b20000000000', 'fill_blank', '_____ (Metaphor)', 'Метафора', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-4003-0002-e00000000005', 'aabbccdd-9999-4003-0002-b20000000000', 'multiple_choice', 'What does "Искусство" mean in English?', 'Art', '{"Искусство","Литература","Поэзия","Проза"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-4003-0002-e00000000006', 'aabbccdd-9999-4003-0002-b20000000000', 'translate_to_target', 'Translate to Russian: Literature', 'Литература', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-4003-0002-e00000000007', 'aabbccdd-9999-4003-0002-b20000000000', 'translate_to_native', 'Translate to English: Поэзия', 'Poetry', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-4003-0002-e00000000008', 'aabbccdd-9999-4003-0002-b20000000000', 'fill_blank', '_____ (Prose)', 'Проза', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-4003-0003-e00000000001', 'aabbccdd-9999-4003-0003-b20000000000', 'multiple_choice', 'What does "Жанр" mean in English?', 'Genre', '{"Жанр","Метафора","Искусство","Литература"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-4003-0003-e00000000002', 'aabbccdd-9999-4003-0003-b20000000000', 'translate_to_target', 'Translate to Russian: Metaphor', 'Метафора', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-4003-0003-e00000000003', 'aabbccdd-9999-4003-0003-b20000000000', 'translate_to_native', 'Translate to English: Искусство', 'Art', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-4003-0003-e00000000004', 'aabbccdd-9999-4003-0003-b20000000000', 'fill_blank', '_____ (Literature)', 'Литература', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-4003-0003-e00000000005', 'aabbccdd-9999-4003-0003-b20000000000', 'multiple_choice', 'What does "Поэзия" mean in English?', 'Poetry', '{"Поэзия","Проза","Жанр","Метафора"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-4003-0003-e00000000006', 'aabbccdd-9999-4003-0003-b20000000000', 'translate_to_target', 'Translate to Russian: Prose', 'Проза', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-4003-0003-e00000000007', 'aabbccdd-9999-4003-0003-b20000000000', 'translate_to_native', 'Translate to English: Жанр', 'Genre', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-4003-0003-e00000000008', 'aabbccdd-9999-4003-0003-b20000000000', 'fill_blank', '_____ (Metaphor)', 'Метафора', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-4003-0004-e00000000001', 'aabbccdd-9999-4003-0004-b20000000000', 'multiple_choice', 'What does "Искусство" mean in English?', 'Art', '{"Искусство","Литература","Поэзия","Проза"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-4003-0004-e00000000002', 'aabbccdd-9999-4003-0004-b20000000000', 'translate_to_target', 'Translate to Russian: Literature', 'Литература', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-4003-0004-e00000000003', 'aabbccdd-9999-4003-0004-b20000000000', 'translate_to_native', 'Translate to English: Поэзия', 'Poetry', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-4003-0004-e00000000004', 'aabbccdd-9999-4003-0004-b20000000000', 'fill_blank', '_____ (Prose)', 'Проза', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-4003-0004-e00000000005', 'aabbccdd-9999-4003-0004-b20000000000', 'multiple_choice', 'What does "Жанр" mean in English?', 'Genre', '{"Жанр","Метафора","Искусство","Литература"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-4003-0004-e00000000006', 'aabbccdd-9999-4003-0004-b20000000000', 'translate_to_target', 'Translate to Russian: Metaphor', 'Метафора', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-4003-0004-e00000000007', 'aabbccdd-9999-4003-0004-b20000000000', 'translate_to_native', 'Translate to English: Искусство', 'Art', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-4003-0004-e00000000008', 'aabbccdd-9999-4003-0004-b20000000000', 'fill_blank', '_____ (Literature)', 'Литература', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-4003-0005-e00000000001', 'aabbccdd-9999-4003-0005-b20000000000', 'multiple_choice', 'What does "Поэзия" mean in English?', 'Poetry', '{"Поэзия","Проза","Жанр","Метафора"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-4003-0005-e00000000002', 'aabbccdd-9999-4003-0005-b20000000000', 'translate_to_target', 'Translate to Russian: Prose', 'Проза', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-4003-0005-e00000000003', 'aabbccdd-9999-4003-0005-b20000000000', 'translate_to_native', 'Translate to English: Жанр', 'Genre', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-4003-0005-e00000000004', 'aabbccdd-9999-4003-0005-b20000000000', 'fill_blank', '_____ (Metaphor)', 'Метафора', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-4003-0005-e00000000005', 'aabbccdd-9999-4003-0005-b20000000000', 'multiple_choice', 'What does "Искусство" mean in English?', 'Art', '{"Искусство","Литература","Поэзия","Проза"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-4003-0005-e00000000006', 'aabbccdd-9999-4003-0005-b20000000000', 'translate_to_target', 'Translate to Russian: Literature', 'Литература', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-4003-0005-e00000000007', 'aabbccdd-9999-4003-0005-b20000000000', 'translate_to_native', 'Translate to English: Поэзия', 'Poetry', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-4003-0005-e00000000008', 'aabbccdd-9999-4003-0005-b20000000000', 'fill_blank', '_____ (Prose)', 'Проза', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-4003-0006-e00000000001', 'aabbccdd-9999-4003-0006-b20000000000', 'multiple_choice', 'What does "Жанр" mean in English?', 'Genre', '{"Жанр","Метафора","Искусство","Литература"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-4003-0006-e00000000002', 'aabbccdd-9999-4003-0006-b20000000000', 'translate_to_target', 'Translate to Russian: Metaphor', 'Метафора', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-4003-0006-e00000000003', 'aabbccdd-9999-4003-0006-b20000000000', 'translate_to_native', 'Translate to English: Искусство', 'Art', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-4003-0006-e00000000004', 'aabbccdd-9999-4003-0006-b20000000000', 'fill_blank', '_____ (Literature)', 'Литература', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-4003-0006-e00000000005', 'aabbccdd-9999-4003-0006-b20000000000', 'multiple_choice', 'What does "Поэзия" mean in English?', 'Poetry', '{"Поэзия","Проза","Жанр","Метафора"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-4003-0006-e00000000006', 'aabbccdd-9999-4003-0006-b20000000000', 'translate_to_target', 'Translate to Russian: Prose', 'Проза', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-4003-0006-e00000000007', 'aabbccdd-9999-4003-0006-b20000000000', 'translate_to_native', 'Translate to English: Жанр', 'Genre', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-4003-0006-e00000000008', 'aabbccdd-9999-4003-0006-b20000000000', 'fill_blank', '_____ (Metaphor)', 'Метафора', NULL, '{}', 7, '{}');
+INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_speech, tags) VALUES
+  ('aabbccdd-9999-4003-c001-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4003-0000-b20000000000', 'Art', 'Искусство', 'word', '{"B2"}'),
+  ('aabbccdd-9999-4003-c002-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4003-0000-b20000000000', 'Literature', 'Литература', 'word', '{"B2"}'),
+  ('aabbccdd-9999-4003-c003-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4003-0000-b20000000000', 'Poetry', 'Поэзия', 'word', '{"B2"}'),
+  ('aabbccdd-9999-4003-c004-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4003-0000-b20000000000', 'Prose', 'Проза', 'word', '{"B2"}'),
+  ('aabbccdd-9999-4003-c005-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4003-0000-b20000000000', 'Genre', 'Жанр', 'word', '{"B2"}'),
+  ('aabbccdd-9999-4003-c006-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4003-0000-b20000000000', 'Metaphor', 'Метафора', 'word', '{"B2"}');
+
+INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
+VALUES ('aabbccdd-9999-4004-0000-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'Science & Innovation', 'Discuss scientific research', 3, 6);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+  ('aabbccdd-9999-4004-0001-b20000000000', 'aabbccdd-9999-4004-0000-b20000000000', 'Key Concepts', 'Key Concepts', 0, 12, 40),
+  ('aabbccdd-9999-4004-0002-b20000000000', 'aabbccdd-9999-4004-0000-b20000000000', 'In Context', 'In Context', 1, 12, 40),
+  ('aabbccdd-9999-4004-0003-b20000000000', 'aabbccdd-9999-4004-0000-b20000000000', 'Discussion & Debate', 'Discussion & Debate', 2, 12, 40),
+  ('aabbccdd-9999-4004-0004-b20000000000', 'aabbccdd-9999-4004-0000-b20000000000', 'Practical Application', 'Practical Application', 3, 12, 40),
+  ('aabbccdd-9999-4004-0005-b20000000000', 'aabbccdd-9999-4004-0000-b20000000000', 'Advanced Usage', 'Advanced Usage', 4, 12, 40),
+  ('aabbccdd-9999-4004-0006-b20000000000', 'aabbccdd-9999-4004-0000-b20000000000', 'Review & Test', 'Review & Test', 5, 12, 40);
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-4004-0001-e00000000001', 'aabbccdd-9999-4004-0001-b20000000000', 'multiple_choice', 'What does "Исследование" mean in English?', 'Research', '{"Исследование","Открытие","Гипотеза","Эксперимент"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-4004-0001-e00000000002', 'aabbccdd-9999-4004-0001-b20000000000', 'translate_to_target', 'Translate to Russian: Discovery', 'Открытие', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-4004-0001-e00000000003', 'aabbccdd-9999-4004-0001-b20000000000', 'translate_to_native', 'Translate to English: Гипотеза', 'Hypothesis', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-4004-0001-e00000000004', 'aabbccdd-9999-4004-0001-b20000000000', 'fill_blank', '_____ (Experiment)', 'Эксперимент', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-4004-0001-e00000000005', 'aabbccdd-9999-4004-0001-b20000000000', 'multiple_choice', 'What does "Данные" mean in English?', 'Data', '{"Данные","Исследование","Открытие","Гипотеза"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-4004-0001-e00000000006', 'aabbccdd-9999-4004-0001-b20000000000', 'translate_to_target', 'Translate to Russian: Research', 'Исследование', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-4004-0001-e00000000007', 'aabbccdd-9999-4004-0001-b20000000000', 'translate_to_native', 'Translate to English: Открытие', 'Discovery', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-4004-0001-e00000000008', 'aabbccdd-9999-4004-0001-b20000000000', 'fill_blank', '_____ (Hypothesis)', 'Гипотеза', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-4004-0002-e00000000001', 'aabbccdd-9999-4004-0002-b20000000000', 'multiple_choice', 'What does "Гипотеза" mean in English?', 'Hypothesis', '{"Гипотеза","Эксперимент","Данные","Исследование"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-4004-0002-e00000000002', 'aabbccdd-9999-4004-0002-b20000000000', 'translate_to_target', 'Translate to Russian: Experiment', 'Эксперимент', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-4004-0002-e00000000003', 'aabbccdd-9999-4004-0002-b20000000000', 'translate_to_native', 'Translate to English: Данные', 'Data', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-4004-0002-e00000000004', 'aabbccdd-9999-4004-0002-b20000000000', 'fill_blank', '_____ (Research)', 'Исследование', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-4004-0002-e00000000005', 'aabbccdd-9999-4004-0002-b20000000000', 'multiple_choice', 'What does "Открытие" mean in English?', 'Discovery', '{"Открытие","Гипотеза","Эксперимент","Данные"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-4004-0002-e00000000006', 'aabbccdd-9999-4004-0002-b20000000000', 'translate_to_target', 'Translate to Russian: Hypothesis', 'Гипотеза', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-4004-0002-e00000000007', 'aabbccdd-9999-4004-0002-b20000000000', 'translate_to_native', 'Translate to English: Эксперимент', 'Experiment', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-4004-0002-e00000000008', 'aabbccdd-9999-4004-0002-b20000000000', 'fill_blank', '_____ (Data)', 'Данные', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-4004-0003-e00000000001', 'aabbccdd-9999-4004-0003-b20000000000', 'multiple_choice', 'What does "Данные" mean in English?', 'Data', '{"Данные","Исследование","Открытие","Гипотеза"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-4004-0003-e00000000002', 'aabbccdd-9999-4004-0003-b20000000000', 'translate_to_target', 'Translate to Russian: Research', 'Исследование', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-4004-0003-e00000000003', 'aabbccdd-9999-4004-0003-b20000000000', 'translate_to_native', 'Translate to English: Открытие', 'Discovery', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-4004-0003-e00000000004', 'aabbccdd-9999-4004-0003-b20000000000', 'fill_blank', '_____ (Hypothesis)', 'Гипотеза', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-4004-0003-e00000000005', 'aabbccdd-9999-4004-0003-b20000000000', 'multiple_choice', 'What does "Эксперимент" mean in English?', 'Experiment', '{"Эксперимент","Данные","Исследование","Открытие"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-4004-0003-e00000000006', 'aabbccdd-9999-4004-0003-b20000000000', 'translate_to_target', 'Translate to Russian: Data', 'Данные', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-4004-0003-e00000000007', 'aabbccdd-9999-4004-0003-b20000000000', 'translate_to_native', 'Translate to English: Исследование', 'Research', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-4004-0003-e00000000008', 'aabbccdd-9999-4004-0003-b20000000000', 'fill_blank', '_____ (Discovery)', 'Открытие', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-4004-0004-e00000000001', 'aabbccdd-9999-4004-0004-b20000000000', 'multiple_choice', 'What does "Открытие" mean in English?', 'Discovery', '{"Открытие","Гипотеза","Эксперимент","Данные"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-4004-0004-e00000000002', 'aabbccdd-9999-4004-0004-b20000000000', 'translate_to_target', 'Translate to Russian: Hypothesis', 'Гипотеза', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-4004-0004-e00000000003', 'aabbccdd-9999-4004-0004-b20000000000', 'translate_to_native', 'Translate to English: Эксперимент', 'Experiment', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-4004-0004-e00000000004', 'aabbccdd-9999-4004-0004-b20000000000', 'fill_blank', '_____ (Data)', 'Данные', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-4004-0004-e00000000005', 'aabbccdd-9999-4004-0004-b20000000000', 'multiple_choice', 'What does "Исследование" mean in English?', 'Research', '{"Исследование","Открытие","Гипотеза","Эксперимент"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-4004-0004-e00000000006', 'aabbccdd-9999-4004-0004-b20000000000', 'translate_to_target', 'Translate to Russian: Discovery', 'Открытие', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-4004-0004-e00000000007', 'aabbccdd-9999-4004-0004-b20000000000', 'translate_to_native', 'Translate to English: Гипотеза', 'Hypothesis', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-4004-0004-e00000000008', 'aabbccdd-9999-4004-0004-b20000000000', 'fill_blank', '_____ (Experiment)', 'Эксперимент', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-4004-0005-e00000000001', 'aabbccdd-9999-4004-0005-b20000000000', 'multiple_choice', 'What does "Эксперимент" mean in English?', 'Experiment', '{"Эксперимент","Данные","Исследование","Открытие"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-4004-0005-e00000000002', 'aabbccdd-9999-4004-0005-b20000000000', 'translate_to_target', 'Translate to Russian: Data', 'Данные', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-4004-0005-e00000000003', 'aabbccdd-9999-4004-0005-b20000000000', 'translate_to_native', 'Translate to English: Исследование', 'Research', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-4004-0005-e00000000004', 'aabbccdd-9999-4004-0005-b20000000000', 'fill_blank', '_____ (Discovery)', 'Открытие', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-4004-0005-e00000000005', 'aabbccdd-9999-4004-0005-b20000000000', 'multiple_choice', 'What does "Гипотеза" mean in English?', 'Hypothesis', '{"Гипотеза","Эксперимент","Данные","Исследование"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-4004-0005-e00000000006', 'aabbccdd-9999-4004-0005-b20000000000', 'translate_to_target', 'Translate to Russian: Experiment', 'Эксперимент', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-4004-0005-e00000000007', 'aabbccdd-9999-4004-0005-b20000000000', 'translate_to_native', 'Translate to English: Данные', 'Data', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-4004-0005-e00000000008', 'aabbccdd-9999-4004-0005-b20000000000', 'fill_blank', '_____ (Research)', 'Исследование', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-4004-0006-e00000000001', 'aabbccdd-9999-4004-0006-b20000000000', 'multiple_choice', 'What does "Исследование" mean in English?', 'Research', '{"Исследование","Открытие","Гипотеза","Эксперимент"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-4004-0006-e00000000002', 'aabbccdd-9999-4004-0006-b20000000000', 'translate_to_target', 'Translate to Russian: Discovery', 'Открытие', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-4004-0006-e00000000003', 'aabbccdd-9999-4004-0006-b20000000000', 'translate_to_native', 'Translate to English: Гипотеза', 'Hypothesis', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-4004-0006-e00000000004', 'aabbccdd-9999-4004-0006-b20000000000', 'fill_blank', '_____ (Experiment)', 'Эксперимент', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-4004-0006-e00000000005', 'aabbccdd-9999-4004-0006-b20000000000', 'multiple_choice', 'What does "Данные" mean in English?', 'Data', '{"Данные","Исследование","Открытие","Гипотеза"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-4004-0006-e00000000006', 'aabbccdd-9999-4004-0006-b20000000000', 'translate_to_target', 'Translate to Russian: Research', 'Исследование', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-4004-0006-e00000000007', 'aabbccdd-9999-4004-0006-b20000000000', 'translate_to_native', 'Translate to English: Открытие', 'Discovery', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-4004-0006-e00000000008', 'aabbccdd-9999-4004-0006-b20000000000', 'fill_blank', '_____ (Hypothesis)', 'Гипотеза', NULL, '{}', 7, '{}');
+INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_speech, tags) VALUES
+  ('aabbccdd-9999-4004-c001-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4004-0000-b20000000000', 'Research', 'Исследование', 'word', '{"B2"}'),
+  ('aabbccdd-9999-4004-c002-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4004-0000-b20000000000', 'Discovery', 'Открытие', 'word', '{"B2"}'),
+  ('aabbccdd-9999-4004-c003-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4004-0000-b20000000000', 'Hypothesis', 'Гипотеза', 'word', '{"B2"}'),
+  ('aabbccdd-9999-4004-c004-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4004-0000-b20000000000', 'Experiment', 'Эксперимент', 'word', '{"B2"}'),
+  ('aabbccdd-9999-4004-c005-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4004-0000-b20000000000', 'Data', 'Данные', 'word', '{"B2"}');
+
+INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
+VALUES ('aabbccdd-9999-4005-0000-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'Ethics & Philosophy', 'Explore ethical concepts', 4, 6);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+  ('aabbccdd-9999-4005-0001-b20000000000', 'aabbccdd-9999-4005-0000-b20000000000', 'Key Concepts', 'Key Concepts', 0, 12, 40),
+  ('aabbccdd-9999-4005-0002-b20000000000', 'aabbccdd-9999-4005-0000-b20000000000', 'In Context', 'In Context', 1, 12, 40),
+  ('aabbccdd-9999-4005-0003-b20000000000', 'aabbccdd-9999-4005-0000-b20000000000', 'Discussion & Debate', 'Discussion & Debate', 2, 12, 40),
+  ('aabbccdd-9999-4005-0004-b20000000000', 'aabbccdd-9999-4005-0000-b20000000000', 'Practical Application', 'Practical Application', 3, 12, 40),
+  ('aabbccdd-9999-4005-0005-b20000000000', 'aabbccdd-9999-4005-0000-b20000000000', 'Advanced Usage', 'Advanced Usage', 4, 12, 40),
+  ('aabbccdd-9999-4005-0006-b20000000000', 'aabbccdd-9999-4005-0000-b20000000000', 'Review & Test', 'Review & Test', 5, 12, 40);
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-4005-0001-e00000000001', 'aabbccdd-9999-4005-0001-b20000000000', 'multiple_choice', 'What does "Этика" mean in English?', 'Ethics', '{"Этика","Мораль","Долг","Совесть"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-4005-0001-e00000000002', 'aabbccdd-9999-4005-0001-b20000000000', 'translate_to_target', 'Translate to Russian: Morality', 'Мораль', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-4005-0001-e00000000003', 'aabbccdd-9999-4005-0001-b20000000000', 'translate_to_native', 'Translate to English: Долг', 'Duty', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-4005-0001-e00000000004', 'aabbccdd-9999-4005-0001-b20000000000', 'fill_blank', '_____ (Conscience)', 'Совесть', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-4005-0001-e00000000005', 'aabbccdd-9999-4005-0001-b20000000000', 'multiple_choice', 'What does "Ответственность" mean in English?', 'Responsibility', '{"Ответственность","Этика","Мораль","Долг"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-4005-0001-e00000000006', 'aabbccdd-9999-4005-0001-b20000000000', 'translate_to_target', 'Translate to Russian: Ethics', 'Этика', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-4005-0001-e00000000007', 'aabbccdd-9999-4005-0001-b20000000000', 'translate_to_native', 'Translate to English: Мораль', 'Morality', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-4005-0001-e00000000008', 'aabbccdd-9999-4005-0001-b20000000000', 'fill_blank', '_____ (Duty)', 'Долг', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-4005-0002-e00000000001', 'aabbccdd-9999-4005-0002-b20000000000', 'multiple_choice', 'What does "Долг" mean in English?', 'Duty', '{"Долг","Совесть","Ответственность","Этика"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-4005-0002-e00000000002', 'aabbccdd-9999-4005-0002-b20000000000', 'translate_to_target', 'Translate to Russian: Conscience', 'Совесть', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-4005-0002-e00000000003', 'aabbccdd-9999-4005-0002-b20000000000', 'translate_to_native', 'Translate to English: Ответственность', 'Responsibility', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-4005-0002-e00000000004', 'aabbccdd-9999-4005-0002-b20000000000', 'fill_blank', '_____ (Ethics)', 'Этика', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-4005-0002-e00000000005', 'aabbccdd-9999-4005-0002-b20000000000', 'multiple_choice', 'What does "Мораль" mean in English?', 'Morality', '{"Мораль","Долг","Совесть","Ответственность"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-4005-0002-e00000000006', 'aabbccdd-9999-4005-0002-b20000000000', 'translate_to_target', 'Translate to Russian: Duty', 'Долг', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-4005-0002-e00000000007', 'aabbccdd-9999-4005-0002-b20000000000', 'translate_to_native', 'Translate to English: Совесть', 'Conscience', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-4005-0002-e00000000008', 'aabbccdd-9999-4005-0002-b20000000000', 'fill_blank', '_____ (Responsibility)', 'Ответственность', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-4005-0003-e00000000001', 'aabbccdd-9999-4005-0003-b20000000000', 'multiple_choice', 'What does "Ответственность" mean in English?', 'Responsibility', '{"Ответственность","Этика","Мораль","Долг"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-4005-0003-e00000000002', 'aabbccdd-9999-4005-0003-b20000000000', 'translate_to_target', 'Translate to Russian: Ethics', 'Этика', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-4005-0003-e00000000003', 'aabbccdd-9999-4005-0003-b20000000000', 'translate_to_native', 'Translate to English: Мораль', 'Morality', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-4005-0003-e00000000004', 'aabbccdd-9999-4005-0003-b20000000000', 'fill_blank', '_____ (Duty)', 'Долг', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-4005-0003-e00000000005', 'aabbccdd-9999-4005-0003-b20000000000', 'multiple_choice', 'What does "Совесть" mean in English?', 'Conscience', '{"Совесть","Ответственность","Этика","Мораль"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-4005-0003-e00000000006', 'aabbccdd-9999-4005-0003-b20000000000', 'translate_to_target', 'Translate to Russian: Responsibility', 'Ответственность', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-4005-0003-e00000000007', 'aabbccdd-9999-4005-0003-b20000000000', 'translate_to_native', 'Translate to English: Этика', 'Ethics', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-4005-0003-e00000000008', 'aabbccdd-9999-4005-0003-b20000000000', 'fill_blank', '_____ (Morality)', 'Мораль', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-4005-0004-e00000000001', 'aabbccdd-9999-4005-0004-b20000000000', 'multiple_choice', 'What does "Мораль" mean in English?', 'Morality', '{"Мораль","Долг","Совесть","Ответственность"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-4005-0004-e00000000002', 'aabbccdd-9999-4005-0004-b20000000000', 'translate_to_target', 'Translate to Russian: Duty', 'Долг', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-4005-0004-e00000000003', 'aabbccdd-9999-4005-0004-b20000000000', 'translate_to_native', 'Translate to English: Совесть', 'Conscience', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-4005-0004-e00000000004', 'aabbccdd-9999-4005-0004-b20000000000', 'fill_blank', '_____ (Responsibility)', 'Ответственность', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-4005-0004-e00000000005', 'aabbccdd-9999-4005-0004-b20000000000', 'multiple_choice', 'What does "Этика" mean in English?', 'Ethics', '{"Этика","Мораль","Долг","Совесть"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-4005-0004-e00000000006', 'aabbccdd-9999-4005-0004-b20000000000', 'translate_to_target', 'Translate to Russian: Morality', 'Мораль', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-4005-0004-e00000000007', 'aabbccdd-9999-4005-0004-b20000000000', 'translate_to_native', 'Translate to English: Долг', 'Duty', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-4005-0004-e00000000008', 'aabbccdd-9999-4005-0004-b20000000000', 'fill_blank', '_____ (Conscience)', 'Совесть', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-4005-0005-e00000000001', 'aabbccdd-9999-4005-0005-b20000000000', 'multiple_choice', 'What does "Совесть" mean in English?', 'Conscience', '{"Совесть","Ответственность","Этика","Мораль"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-4005-0005-e00000000002', 'aabbccdd-9999-4005-0005-b20000000000', 'translate_to_target', 'Translate to Russian: Responsibility', 'Ответственность', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-4005-0005-e00000000003', 'aabbccdd-9999-4005-0005-b20000000000', 'translate_to_native', 'Translate to English: Этика', 'Ethics', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-4005-0005-e00000000004', 'aabbccdd-9999-4005-0005-b20000000000', 'fill_blank', '_____ (Morality)', 'Мораль', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-4005-0005-e00000000005', 'aabbccdd-9999-4005-0005-b20000000000', 'multiple_choice', 'What does "Долг" mean in English?', 'Duty', '{"Долг","Совесть","Ответственность","Этика"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-4005-0005-e00000000006', 'aabbccdd-9999-4005-0005-b20000000000', 'translate_to_target', 'Translate to Russian: Conscience', 'Совесть', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-4005-0005-e00000000007', 'aabbccdd-9999-4005-0005-b20000000000', 'translate_to_native', 'Translate to English: Ответственность', 'Responsibility', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-4005-0005-e00000000008', 'aabbccdd-9999-4005-0005-b20000000000', 'fill_blank', '_____ (Ethics)', 'Этика', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-4005-0006-e00000000001', 'aabbccdd-9999-4005-0006-b20000000000', 'multiple_choice', 'What does "Этика" mean in English?', 'Ethics', '{"Этика","Мораль","Долг","Совесть"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-4005-0006-e00000000002', 'aabbccdd-9999-4005-0006-b20000000000', 'translate_to_target', 'Translate to Russian: Morality', 'Мораль', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-4005-0006-e00000000003', 'aabbccdd-9999-4005-0006-b20000000000', 'translate_to_native', 'Translate to English: Долг', 'Duty', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-4005-0006-e00000000004', 'aabbccdd-9999-4005-0006-b20000000000', 'fill_blank', '_____ (Conscience)', 'Совесть', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-4005-0006-e00000000005', 'aabbccdd-9999-4005-0006-b20000000000', 'multiple_choice', 'What does "Ответственность" mean in English?', 'Responsibility', '{"Ответственность","Этика","Мораль","Долг"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-4005-0006-e00000000006', 'aabbccdd-9999-4005-0006-b20000000000', 'translate_to_target', 'Translate to Russian: Ethics', 'Этика', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-4005-0006-e00000000007', 'aabbccdd-9999-4005-0006-b20000000000', 'translate_to_native', 'Translate to English: Мораль', 'Morality', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-4005-0006-e00000000008', 'aabbccdd-9999-4005-0006-b20000000000', 'fill_blank', '_____ (Duty)', 'Долг', NULL, '{}', 7, '{}');
+INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_speech, tags) VALUES
+  ('aabbccdd-9999-4005-c001-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4005-0000-b20000000000', 'Ethics', 'Этика', 'word', '{"B2"}'),
+  ('aabbccdd-9999-4005-c002-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4005-0000-b20000000000', 'Morality', 'Мораль', 'word', '{"B2"}'),
+  ('aabbccdd-9999-4005-c003-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4005-0000-b20000000000', 'Duty', 'Долг', 'word', '{"B2"}'),
+  ('aabbccdd-9999-4005-c004-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4005-0000-b20000000000', 'Conscience', 'Совесть', 'word', '{"B2"}'),
+  ('aabbccdd-9999-4005-c005-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4005-0000-b20000000000', 'Responsibility', 'Ответственность', 'word', '{"B2"}');
+
+INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
+VALUES ('aabbccdd-9999-4006-0000-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'Psychology & Society', 'Understand human behavior', 5, 6);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+  ('aabbccdd-9999-4006-0001-b20000000000', 'aabbccdd-9999-4006-0000-b20000000000', 'Key Concepts', 'Key Concepts', 0, 12, 40),
+  ('aabbccdd-9999-4006-0002-b20000000000', 'aabbccdd-9999-4006-0000-b20000000000', 'In Context', 'In Context', 1, 12, 40),
+  ('aabbccdd-9999-4006-0003-b20000000000', 'aabbccdd-9999-4006-0000-b20000000000', 'Discussion & Debate', 'Discussion & Debate', 2, 12, 40),
+  ('aabbccdd-9999-4006-0004-b20000000000', 'aabbccdd-9999-4006-0000-b20000000000', 'Practical Application', 'Practical Application', 3, 12, 40),
+  ('aabbccdd-9999-4006-0005-b20000000000', 'aabbccdd-9999-4006-0000-b20000000000', 'Advanced Usage', 'Advanced Usage', 4, 12, 40),
+  ('aabbccdd-9999-4006-0006-b20000000000', 'aabbccdd-9999-4006-0000-b20000000000', 'Review & Test', 'Review & Test', 5, 12, 40);
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-4006-0001-e00000000001', 'aabbccdd-9999-4006-0001-b20000000000', 'multiple_choice', 'What does "Психология" mean in English?', 'Psychology', '{"Психология","Поведение","Мотивация","Восприятие"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-4006-0001-e00000000002', 'aabbccdd-9999-4006-0001-b20000000000', 'translate_to_target', 'Translate to Russian: Behavior', 'Поведение', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-4006-0001-e00000000003', 'aabbccdd-9999-4006-0001-b20000000000', 'translate_to_native', 'Translate to English: Мотивация', 'Motivation', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-4006-0001-e00000000004', 'aabbccdd-9999-4006-0001-b20000000000', 'fill_blank', '_____ (Perception)', 'Восприятие', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-4006-0001-e00000000005', 'aabbccdd-9999-4006-0001-b20000000000', 'multiple_choice', 'What does "Стресс" mean in English?', 'Stress', '{"Стресс","Психология","Поведение","Мотивация"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-4006-0001-e00000000006', 'aabbccdd-9999-4006-0001-b20000000000', 'translate_to_target', 'Translate to Russian: Psychology', 'Психология', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-4006-0001-e00000000007', 'aabbccdd-9999-4006-0001-b20000000000', 'translate_to_native', 'Translate to English: Поведение', 'Behavior', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-4006-0001-e00000000008', 'aabbccdd-9999-4006-0001-b20000000000', 'fill_blank', '_____ (Motivation)', 'Мотивация', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-4006-0002-e00000000001', 'aabbccdd-9999-4006-0002-b20000000000', 'multiple_choice', 'What does "Мотивация" mean in English?', 'Motivation', '{"Мотивация","Восприятие","Стресс","Психология"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-4006-0002-e00000000002', 'aabbccdd-9999-4006-0002-b20000000000', 'translate_to_target', 'Translate to Russian: Perception', 'Восприятие', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-4006-0002-e00000000003', 'aabbccdd-9999-4006-0002-b20000000000', 'translate_to_native', 'Translate to English: Стресс', 'Stress', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-4006-0002-e00000000004', 'aabbccdd-9999-4006-0002-b20000000000', 'fill_blank', '_____ (Psychology)', 'Психология', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-4006-0002-e00000000005', 'aabbccdd-9999-4006-0002-b20000000000', 'multiple_choice', 'What does "Поведение" mean in English?', 'Behavior', '{"Поведение","Мотивация","Восприятие","Стресс"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-4006-0002-e00000000006', 'aabbccdd-9999-4006-0002-b20000000000', 'translate_to_target', 'Translate to Russian: Motivation', 'Мотивация', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-4006-0002-e00000000007', 'aabbccdd-9999-4006-0002-b20000000000', 'translate_to_native', 'Translate to English: Восприятие', 'Perception', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-4006-0002-e00000000008', 'aabbccdd-9999-4006-0002-b20000000000', 'fill_blank', '_____ (Stress)', 'Стресс', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-4006-0003-e00000000001', 'aabbccdd-9999-4006-0003-b20000000000', 'multiple_choice', 'What does "Стресс" mean in English?', 'Stress', '{"Стресс","Психология","Поведение","Мотивация"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-4006-0003-e00000000002', 'aabbccdd-9999-4006-0003-b20000000000', 'translate_to_target', 'Translate to Russian: Psychology', 'Психология', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-4006-0003-e00000000003', 'aabbccdd-9999-4006-0003-b20000000000', 'translate_to_native', 'Translate to English: Поведение', 'Behavior', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-4006-0003-e00000000004', 'aabbccdd-9999-4006-0003-b20000000000', 'fill_blank', '_____ (Motivation)', 'Мотивация', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-4006-0003-e00000000005', 'aabbccdd-9999-4006-0003-b20000000000', 'multiple_choice', 'What does "Восприятие" mean in English?', 'Perception', '{"Восприятие","Стресс","Психология","Поведение"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-4006-0003-e00000000006', 'aabbccdd-9999-4006-0003-b20000000000', 'translate_to_target', 'Translate to Russian: Stress', 'Стресс', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-4006-0003-e00000000007', 'aabbccdd-9999-4006-0003-b20000000000', 'translate_to_native', 'Translate to English: Психология', 'Psychology', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-4006-0003-e00000000008', 'aabbccdd-9999-4006-0003-b20000000000', 'fill_blank', '_____ (Behavior)', 'Поведение', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-4006-0004-e00000000001', 'aabbccdd-9999-4006-0004-b20000000000', 'multiple_choice', 'What does "Поведение" mean in English?', 'Behavior', '{"Поведение","Мотивация","Восприятие","Стресс"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-4006-0004-e00000000002', 'aabbccdd-9999-4006-0004-b20000000000', 'translate_to_target', 'Translate to Russian: Motivation', 'Мотивация', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-4006-0004-e00000000003', 'aabbccdd-9999-4006-0004-b20000000000', 'translate_to_native', 'Translate to English: Восприятие', 'Perception', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-4006-0004-e00000000004', 'aabbccdd-9999-4006-0004-b20000000000', 'fill_blank', '_____ (Stress)', 'Стресс', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-4006-0004-e00000000005', 'aabbccdd-9999-4006-0004-b20000000000', 'multiple_choice', 'What does "Психология" mean in English?', 'Psychology', '{"Психология","Поведение","Мотивация","Восприятие"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-4006-0004-e00000000006', 'aabbccdd-9999-4006-0004-b20000000000', 'translate_to_target', 'Translate to Russian: Behavior', 'Поведение', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-4006-0004-e00000000007', 'aabbccdd-9999-4006-0004-b20000000000', 'translate_to_native', 'Translate to English: Мотивация', 'Motivation', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-4006-0004-e00000000008', 'aabbccdd-9999-4006-0004-b20000000000', 'fill_blank', '_____ (Perception)', 'Восприятие', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-4006-0005-e00000000001', 'aabbccdd-9999-4006-0005-b20000000000', 'multiple_choice', 'What does "Восприятие" mean in English?', 'Perception', '{"Восприятие","Стресс","Психология","Поведение"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-4006-0005-e00000000002', 'aabbccdd-9999-4006-0005-b20000000000', 'translate_to_target', 'Translate to Russian: Stress', 'Стресс', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-4006-0005-e00000000003', 'aabbccdd-9999-4006-0005-b20000000000', 'translate_to_native', 'Translate to English: Психология', 'Psychology', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-4006-0005-e00000000004', 'aabbccdd-9999-4006-0005-b20000000000', 'fill_blank', '_____ (Behavior)', 'Поведение', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-4006-0005-e00000000005', 'aabbccdd-9999-4006-0005-b20000000000', 'multiple_choice', 'What does "Мотивация" mean in English?', 'Motivation', '{"Мотивация","Восприятие","Стресс","Психология"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-4006-0005-e00000000006', 'aabbccdd-9999-4006-0005-b20000000000', 'translate_to_target', 'Translate to Russian: Perception', 'Восприятие', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-4006-0005-e00000000007', 'aabbccdd-9999-4006-0005-b20000000000', 'translate_to_native', 'Translate to English: Стресс', 'Stress', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-4006-0005-e00000000008', 'aabbccdd-9999-4006-0005-b20000000000', 'fill_blank', '_____ (Psychology)', 'Психология', NULL, '{}', 7, '{}');
+INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES
+  ('aabbccdd-9999-4006-0006-e00000000001', 'aabbccdd-9999-4006-0006-b20000000000', 'multiple_choice', 'What does "Психология" mean in English?', 'Psychology', '{"Психология","Поведение","Мотивация","Восприятие"}', '{}', 0, '{}'),
+  ('aabbccdd-9999-4006-0006-e00000000002', 'aabbccdd-9999-4006-0006-b20000000000', 'translate_to_target', 'Translate to Russian: Behavior', 'Поведение', NULL, '{}', 1, '{}'),
+  ('aabbccdd-9999-4006-0006-e00000000003', 'aabbccdd-9999-4006-0006-b20000000000', 'translate_to_native', 'Translate to English: Мотивация', 'Motivation', NULL, '{}', 2, '{}'),
+  ('aabbccdd-9999-4006-0006-e00000000004', 'aabbccdd-9999-4006-0006-b20000000000', 'fill_blank', '_____ (Perception)', 'Восприятие', NULL, '{}', 3, '{}'),
+  ('aabbccdd-9999-4006-0006-e00000000005', 'aabbccdd-9999-4006-0006-b20000000000', 'multiple_choice', 'What does "Стресс" mean in English?', 'Stress', '{"Стресс","Психология","Поведение","Мотивация"}', '{}', 4, '{}'),
+  ('aabbccdd-9999-4006-0006-e00000000006', 'aabbccdd-9999-4006-0006-b20000000000', 'translate_to_target', 'Translate to Russian: Psychology', 'Психология', NULL, '{}', 5, '{}'),
+  ('aabbccdd-9999-4006-0006-e00000000007', 'aabbccdd-9999-4006-0006-b20000000000', 'translate_to_native', 'Translate to English: Поведение', 'Behavior', NULL, '{}', 6, '{}'),
+  ('aabbccdd-9999-4006-0006-e00000000008', 'aabbccdd-9999-4006-0006-b20000000000', 'fill_blank', '_____ (Motivation)', 'Мотивация', NULL, '{}', 7, '{}');
+INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_speech, tags) VALUES
+  ('aabbccdd-9999-4006-c001-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4006-0000-b20000000000', 'Psychology', 'Психология', 'word', '{"B2"}'),
+  ('aabbccdd-9999-4006-c002-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4006-0000-b20000000000', 'Behavior', 'Поведение', 'word', '{"B2"}'),
+  ('aabbccdd-9999-4006-c003-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4006-0000-b20000000000', 'Motivation', 'Мотивация', 'word', '{"B2"}'),
+  ('aabbccdd-9999-4006-c004-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4006-0000-b20000000000', 'Perception', 'Восприятие', 'word', '{"B2"}'),
+  ('aabbccdd-9999-4006-c005-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4006-0000-b20000000000', 'Stress', 'Стресс', 'word', '{"B2"}');
+
+INSERT INTO reading_passages (id, course_id, unit_id, cefr_level, title, content, word_count, is_published)
+VALUES ('aabbccdd-9999-4001-a001-000000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4001-0000-b20000000000', 'B2', 'Свобода в современном мире', 'Свобода является одной из самых важных ценностей современного общества. Однако понимание свободы менялось на протяжении всей истории человечества. В древнем мире свобода означала отсутствие рабства. В эпоху Просвещения философы начали говорить о свободе мысли и слова. Сегодня мы обсуждаем свободу в контексте цифрового мира: право на конфиденциальность, свободу информации и защиту личных данных. Важно помнить, что свобода одного человека заканчивается там, где начинается свобода другого. Баланс между личной свободой и общественным порядком остаётся главной задачей демократического общества. Каждое поколение заново определяет границы свободы в соответствии с вызовами своего времени.', 190, true);
+INSERT INTO reading_questions (id, passage_id, order_index, question_text, question_type, correct_answer, accepted_answers, options) VALUES
+  ('aabbccdd-9999-4001-a001-0b0000000001', 'aabbccdd-9999-4001-a001-000000000000', 0, 'What did freedom mean in the ancient world?', 'short_answer', 'Absence of slavery', '{}', NULL),
+  ('aabbccdd-9999-4001-a001-0b0000000002', 'aabbccdd-9999-4001-a001-000000000000', 1, 'What did Enlightenment philosophers discuss?', 'short_answer', 'Freedom of thought and speech', '{}', NULL),
+  ('aabbccdd-9999-4001-a001-0b0000000003', 'aabbccdd-9999-4001-a001-000000000000', 2, 'What modern freedoms are mentioned?', 'multiple_choice', 'Privacy and data protection', '{}', '{"Privacy and data protection","Military freedom","Economic independence","Religious freedom"}'),
+  ('aabbccdd-9999-4001-a001-0b0000000004', 'aabbccdd-9999-4001-a001-000000000000', 3, 'True or false: The author believes freedom has no limits.', 'true_false', 'False', '{}', NULL);
+INSERT INTO reading_passages (id, course_id, unit_id, cefr_level, title, content, word_count, is_published)
+VALUES ('aabbccdd-9999-4002-a001-000000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4002-0000-b20000000000', 'B2', 'Влияние глобализации', 'Глобализация изменила мир до неузнаваемости за последние несколько десятилетий. Благодаря развитию технологий и транспорта люди могут общаться и путешествовать по всему миру с невиданной лёгкостью. Международная торговля привела к экономическому росту во многих странах. Однако глобализация имеет и обратную сторону. Местные культуры подвергаются давлению со стороны глобальной массовой культуры. Неравенство между богатыми и бедными странами продолжает расти. Экологические проблемы усугубляются ростом производства и потребления. Ключевой вопрос нашего времени — как сохранить преимущества глобализации, минимизируя её негативные последствия.', 180, true);
+INSERT INTO reading_questions (id, passage_id, order_index, question_text, question_type, correct_answer, accepted_answers, options) VALUES
+  ('aabbccdd-9999-4002-a001-0b0000000001', 'aabbccdd-9999-4002-a001-000000000000', 0, 'What has globalization changed?', 'short_answer', 'The world beyond recognition in recent decades', '{}', NULL),
+  ('aabbccdd-9999-4002-a001-0b0000000002', 'aabbccdd-9999-4002-a001-000000000000', 1, 'What negative effects are mentioned?', 'short_answer', 'Cultural pressure, growing inequality, environmental problems', '{}', NULL),
+  ('aabbccdd-9999-4002-a001-0b0000000003', 'aabbccdd-9999-4002-a001-000000000000', 2, 'What is the key question according to the text?', 'multiple_choice', 'How to keep benefits while minimizing negatives', '{}', '{"How to stop globalization","How to keep benefits while minimizing negatives","How to increase trade","How to reduce technology"}');
+INSERT INTO reading_passages (id, course_id, unit_id, cefr_level, title, content, word_count, is_published)
+VALUES ('aabbccdd-9999-4003-a001-000000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4003-0000-b20000000000', 'B2', 'Роль искусства в обществе', 'Искусство всегда играло особую роль в жизни общества. От наскальных рисунков первобытных людей до современных инсталляций — искусство отражает мысли, чувства и ценности эпохи. Литература помогает нам понять внутренний мир других людей и развивает эмпатию. Музыка объединяет людей разных культур и языков. Театр и кино позволяют исследовать сложные моральные вопросы через истории персонажей. В современном мире искусство также служит инструментом социальной критики и политического высказывания. Художники поднимают важные вопросы о неравенстве, экологии и правах человека. Искусство не просто украшает нашу жизнь — оно формирует наше мировоззрение.', 180, true);
+INSERT INTO reading_questions (id, passage_id, order_index, question_text, question_type, correct_answer, accepted_answers, options) VALUES
+  ('aabbccdd-9999-4003-a001-0b0000000001', 'aabbccdd-9999-4003-a001-000000000000', 0, 'What has art always reflected?', 'short_answer', 'Thoughts, feelings, and values of an era', '{}', NULL),
+  ('aabbccdd-9999-4003-a001-0b0000000002', 'aabbccdd-9999-4003-a001-000000000000', 1, 'How does literature help us?', 'short_answer', 'Understand others and develop empathy', '{}', NULL),
+  ('aabbccdd-9999-4003-a001-0b0000000003', 'aabbccdd-9999-4003-a001-000000000000', 2, 'What modern role does art serve?', 'multiple_choice', 'Social criticism and political expression', '{}', '{"Entertainment only","Social criticism and political expression","Economic development","Scientific research"}');
+INSERT INTO reading_passages (id, course_id, unit_id, cefr_level, title, content, word_count, is_published)
+VALUES ('aabbccdd-9999-4004-a001-000000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4004-0000-b20000000000', 'B2', 'Этика технологий', 'Развитие технологий ставит перед обществом серьёзные этические вопросы. Искусственный интеллект принимает решения, которые влияют на жизнь миллионов людей — от кредитных рейтингов до медицинских диагнозов. Кто несёт ответственность, когда алгоритм ошибается? Социальные сети изменили способ общения людей, но также создали проблемы зависимости и распространения дезинформации. Генная инженерия открывает невероятные возможности для медицины, но поднимает вопросы о границах допустимого вмешательства в природу человека. Общество нуждается в чётких этических рамках, которые позволят использовать технологии во благо, не нарушая основные права и свободы человека.', 180, true);
+INSERT INTO reading_questions (id, passage_id, order_index, question_text, question_type, correct_answer, accepted_answers, options) VALUES
+  ('aabbccdd-9999-4004-a001-0b0000000001', 'aabbccdd-9999-4004-a001-000000000000', 0, 'What ethical question does AI raise?', 'short_answer', 'Who is responsible when an algorithm makes a mistake', '{}', NULL),
+  ('aabbccdd-9999-4004-a001-0b0000000002', 'aabbccdd-9999-4004-a001-000000000000', 1, 'What problems have social media created?', 'short_answer', 'Addiction and spread of disinformation', '{}', NULL),
+  ('aabbccdd-9999-4004-a001-0b0000000003', 'aabbccdd-9999-4004-a001-000000000000', 2, 'What does the author say society needs?', 'multiple_choice', 'Clear ethical frameworks', '{}', '{"More technology","Clear ethical frameworks","Less regulation","More social media"}'),
+  ('aabbccdd-9999-4004-a001-0b0000000004', 'aabbccdd-9999-4004-a001-000000000000', 3, 'True or false: The author is against all technology.', 'true_false', 'False', '{}', NULL);
+INSERT INTO reading_passages (id, course_id, unit_id, cefr_level, title, content, word_count, is_published)
+VALUES ('aabbccdd-9999-4005-a001-000000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4005-0000-b20000000000', 'B2', 'Наука и общество', 'Наука является движущей силой прогресса человечества. От открытия пенициллина до освоения космоса — научные достижения коренным образом изменили нашу жизнь. Однако отношения между наукой и обществом не всегда простые. Научные открытия могут использоваться как во благо, так и во вред. Ядерная энергия может обеспечить чистую электроэнергию или создать разрушительное оружие. Генетические исследования могут излечить болезни или привести к дискриминации. Важно, чтобы научные исследования проводились с учётом этических норм и под контролем общества. Научная грамотность населения — ключевой фактор для принятия обоснованных решений о будущем.', 170, true);
+INSERT INTO reading_questions (id, passage_id, order_index, question_text, question_type, correct_answer, accepted_answers, options) VALUES
+  ('aabbccdd-9999-4005-a001-0b0000000001', 'aabbccdd-9999-4005-a001-000000000000', 0, 'What examples of scientific achievements are mentioned?', 'short_answer', 'Discovery of penicillin and space exploration', '{}', NULL),
+  ('aabbccdd-9999-4005-a001-0b0000000002', 'aabbccdd-9999-4005-a001-000000000000', 1, 'What dual use of nuclear energy is described?', 'multiple_choice', 'Clean electricity or destructive weapons', '{}', '{"Clean electricity or destructive weapons","Heating or cooling","Transportation or communication","Agriculture or industry"}'),
+  ('aabbccdd-9999-4005-a001-0b0000000003', 'aabbccdd-9999-4005-a001-000000000000', 2, 'What is the key factor according to the text?', 'short_answer', 'Scientific literacy of the population', '{}', NULL);
+INSERT INTO reading_passages (id, course_id, unit_id, cefr_level, title, content, word_count, is_published)
+VALUES ('aabbccdd-9999-4006-a001-000000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4006-0000-b20000000000', 'B2', 'Язык и мышление', 'Связь между языком и мышлением давно привлекает внимание учёных. Гипотеза Сепира-Уорфа предполагает, что язык, на котором мы говорим, влияет на то, как мы воспринимаем мир. Например, в некоторых языках существует больше слов для обозначения цветов, и носители этих языков лучше различают оттенки. Изучение иностранных языков открывает доступ к новым способам мышления и культурным перспективам. Билингвы часто демонстрируют более гибкое мышление и лучшие когнитивные способности. Потеря языка означает потерю уникального способа понимания мира. Сохранение языкового разнообразия — важная задача для всего человечества.', 170, true);
+INSERT INTO reading_questions (id, passage_id, order_index, question_text, question_type, correct_answer, accepted_answers, options) VALUES
+  ('aabbccdd-9999-4006-a001-0b0000000001', 'aabbccdd-9999-4006-a001-000000000000', 0, 'What does the Sapir-Whorf hypothesis suggest?', 'short_answer', 'Language influences how we perceive the world', '{}', NULL),
+  ('aabbccdd-9999-4006-a001-0b0000000002', 'aabbccdd-9999-4006-a001-000000000000', 1, 'What advantage do bilinguals demonstrate?', 'multiple_choice', 'More flexible thinking and better cognitive abilities', '{}', '{"Better physical health","More flexible thinking and better cognitive abilities","Higher income","Better memory only"}'),
+  ('aabbccdd-9999-4006-a001-0b0000000003', 'aabbccdd-9999-4006-a001-000000000000', 2, 'Why is preserving language diversity important?', 'short_answer', 'Loss of a language means loss of a unique way of understanding the world', '{}', NULL);
+INSERT INTO writing_prompts (id, course_id, unit_id, cefr_level, prompt_text, prompt_type, min_words, max_words)
+VALUES ('aabbccdd-9999-4001-d001-000000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4001-0000-b20000000000', 'B2', 'Discuss the concept of freedom in the modern world. How has our understanding of freedom changed over time? What new challenges to personal freedom exist in the digital age? Write at least 150 words.', 'free', 150, 400);
+INSERT INTO writing_prompts (id, course_id, unit_id, cefr_level, prompt_text, prompt_type, min_words, max_words)
+VALUES ('aabbccdd-9999-4002-d001-000000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4002-0000-b20000000000', 'B2', 'Analyze the positive and negative effects of globalization on local cultures and economies. Use specific examples to support your argument. Write at least 150 words.', 'free', 150, 400);
+INSERT INTO writing_prompts (id, course_id, unit_id, cefr_level, prompt_text, prompt_type, min_words, max_words)
+VALUES ('aabbccdd-9999-4003-d001-000000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4003-0000-b20000000000', 'B2', 'What role does art play in modern society? Can art change the world? Discuss with examples from literature, music, or visual arts. Write at least 150 words.', 'free', 150, 400);
+INSERT INTO writing_prompts (id, course_id, unit_id, cefr_level, prompt_text, prompt_type, min_words, max_words)
+VALUES ('aabbccdd-9999-4004-d001-000000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4004-0000-b20000000000', 'B2', 'Discuss the ethical challenges posed by modern technology, including AI, social media, and genetic engineering. What ethical frameworks should guide technological development? Write at least 150 words.', 'free', 150, 400);
+INSERT INTO writing_prompts (id, course_id, unit_id, cefr_level, prompt_text, prompt_type, min_words, max_words)
+VALUES ('aabbccdd-9999-4005-d001-000000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4005-0000-b20000000000', 'B2', 'Write an essay about the relationship between science and society. How should scientific research be governed? What responsibilities do scientists have? Write at least 150 words.', 'free', 150, 400);
+INSERT INTO writing_prompts (id, course_id, unit_id, cefr_level, prompt_text, prompt_type, min_words, max_words)
+VALUES ('aabbccdd-9999-4006-d001-000000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'aabbccdd-9999-4006-0000-b20000000000', 'B2', 'Explore the relationship between language and thought. How does learning a foreign language change the way we think? Why is linguistic diversity important? Write at least 150 words.', 'free', 150, 400);
+
 -- End of seed data

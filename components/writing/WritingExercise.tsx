@@ -6,22 +6,58 @@ import type { WritingPrompt } from '../../types';
 interface Props {
   prompt: WritingPrompt;
   isGrading: boolean;
+  attemptNumber?: number;
   onSubmit: (text: string, wordCount: number, timeSpentMs: number) => void;
   onExit: () => void;
 }
 
-export function WritingExercise({ prompt, isGrading, onSubmit, onExit }: Props) {
+export function WritingExercise({ prompt, isGrading, attemptNumber = 1, onSubmit, onExit }: Props) {
   const [text, setText] = useState('');
+  const [scaffoldInputs, setScaffoldInputs] = useState<Record<number, string>>({});
   const startTimeRef = useRef(Date.now());
 
-  const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
+  const scaffoldType = prompt.scaffoldType ?? 'free';
+  const scaffoldData = prompt.scaffoldData ?? {};
+
+  // Compute combined text for scaffold types
+  const getCombinedText = (): string => {
+    if (scaffoldType === 'fill_blank') {
+      const sentence = (scaffoldData.sentence as string) ?? '';
+      const blankIndex = (scaffoldData.blank_index as number) ?? 0;
+      const words = sentence.split(' ');
+      words[blankIndex] = scaffoldInputs[0] ?? '___';
+      return words.join(' ');
+    }
+    if (scaffoldType === 'sentence_frame') {
+      const starters = (scaffoldData.starters as string[]) ?? [];
+      return starters.map((s, i) => `${s} ${scaffoldInputs[i] ?? ''}`).join(' ').trim();
+    }
+    if (scaffoldType === 'guided_paragraph') {
+      const starters = (scaffoldData.starters as string[]) ?? [];
+      return starters.map((s, i) => `${s} ${scaffoldInputs[i] ?? ''}`).join('\n').trim();
+    }
+    return text;
+  };
+
+  const combinedText = getCombinedText();
+  const wordCount = combinedText.trim().split(/\s+/).filter(Boolean).length;
   const meetsMinWords = !prompt.minWords || wordCount >= prompt.minWords;
   const exceedsMaxWords = prompt.maxWords ? wordCount > prompt.maxWords : false;
-  const canSubmit = text.trim().length > 0 && meetsMinWords && !exceedsMaxWords && !isGrading;
+
+  const isScaffoldComplete = (): boolean => {
+    if (scaffoldType === 'fill_blank') return (scaffoldInputs[0]?.trim().length ?? 0) > 0;
+    if (scaffoldType === 'sentence_frame' || scaffoldType === 'guided_paragraph') {
+      const starters = (scaffoldData.starters as string[]) ?? [];
+      return starters.every((_, i) => (scaffoldInputs[i]?.trim().length ?? 0) > 0);
+    }
+    return text.trim().length > 0;
+  };
+
+  const canSubmit = isScaffoldComplete() && meetsMinWords && !exceedsMaxWords && !isGrading;
 
   const handleSubmit = () => {
     const timeSpentMs = Date.now() - startTimeRef.current;
-    onSubmit(text.trim(), wordCount, timeSpentMs);
+    onSubmit(combinedText.trim(), wordCount, timeSpentMs);
   };
 
   if (isGrading) {
@@ -48,7 +84,10 @@ export function WritingExercise({ prompt, isGrading, onSubmit, onExit }: Props) 
             </Pressable>
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 14, fontWeight: '600', color: '#6366F1' }}>Writing Practice</Text>
-              <Text style={{ fontSize: 13, color: '#999' }}>{prompt.cefrLevel} | {prompt.promptType}</Text>
+              <Text style={{ fontSize: 13, color: '#999' }}>
+                {prompt.cefrLevel} | {scaffoldType !== 'free' ? scaffoldType.replace('_', ' ') : prompt.promptType}
+                {attemptNumber > 1 ? ` | Attempt ${attemptNumber}` : ''}
+              </Text>
             </View>
           </View>
         </View>
@@ -93,27 +132,56 @@ export function WritingExercise({ prompt, isGrading, onSubmit, onExit }: Props) 
             </View>
           )}
 
-          {/* Text Input */}
-          <TextInput
-            value={text}
-            onChangeText={setText}
-            placeholder="Start writing..."
-            placeholderTextColor="#999"
-            multiline
-            style={{
-              borderWidth: 2,
-              borderColor: exceedsMaxWords ? '#EF4444' : '#D1D5DB',
-              borderRadius: 14,
-              paddingHorizontal: 16,
-              paddingVertical: 12,
-              fontSize: 16,
-              minHeight: 200,
-              textAlignVertical: 'top',
-              color: '#111',
-              lineHeight: 24,
-            }}
-            accessibilityLabel="Your writing"
-          />
+          {/* Scaffold-specific Input UIs */}
+          {scaffoldType === 'fill_blank' && (
+            <FillBlankInput
+              scaffoldData={scaffoldData}
+              value={scaffoldInputs[0] ?? ''}
+              onChange={(val) => setScaffoldInputs({ ...scaffoldInputs, 0: val })}
+            />
+          )}
+
+          {scaffoldType === 'sentence_frame' && (
+            <SentenceFrameInput
+              scaffoldData={scaffoldData}
+              values={scaffoldInputs}
+              onChange={(idx, val) => setScaffoldInputs({ ...scaffoldInputs, [idx]: val })}
+            />
+          )}
+
+          {scaffoldType === 'guided_paragraph' && (
+            <GuidedParagraphInput
+              scaffoldData={scaffoldData}
+              values={scaffoldInputs}
+              onChange={(idx, val) => setScaffoldInputs({ ...scaffoldInputs, [idx]: val })}
+            />
+          )}
+
+          {/* Free-form text input (for essay, academic, free types) */}
+          {(scaffoldType === 'free' || scaffoldType === 'essay' || scaffoldType === 'academic') && (
+            <>
+              <TextInput
+                value={text}
+                onChangeText={setText}
+                placeholder="Start writing..."
+                placeholderTextColor="#999"
+                multiline
+                style={{
+                  borderWidth: 2,
+                  borderColor: exceedsMaxWords ? '#EF4444' : '#D1D5DB',
+                  borderRadius: 14,
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
+                  fontSize: 16,
+                  minHeight: 200,
+                  textAlignVertical: 'top',
+                  color: '#111',
+                  lineHeight: 24,
+                }}
+                accessibilityLabel="Your writing"
+              />
+            </>
+          )}
 
           {/* Word Count */}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}>
@@ -147,5 +215,139 @@ export function WritingExercise({ prompt, isGrading, onSubmit, onExit }: Props) 
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
+  );
+}
+
+// ─── Scaffold Sub-Components ─────────────────────────────────────
+
+function FillBlankInput({
+  scaffoldData,
+  value,
+  onChange,
+}: {
+  scaffoldData: Record<string, unknown>;
+  value: string;
+  onChange: (val: string) => void;
+}) {
+  const sentence = (scaffoldData.sentence as string) ?? 'The ___ is here.';
+  const blankIndex = (scaffoldData.blank_index as number) ?? 0;
+  const hint = (scaffoldData.hint as string) ?? '';
+  const words = sentence.split(' ');
+
+  return (
+    <View style={{ marginBottom: 16 }}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 4 }}>
+        {words.map((word, i) => {
+          if (i === blankIndex) {
+            return (
+              <TextInput
+                key={i}
+                value={value}
+                onChangeText={onChange}
+                placeholder="___"
+                placeholderTextColor="#999"
+                style={{
+                  borderBottomWidth: 2,
+                  borderBottomColor: '#6366F1',
+                  fontSize: 16,
+                  color: '#111',
+                  minWidth: 80,
+                  paddingVertical: 4,
+                  textAlign: 'center',
+                }}
+                accessibilityLabel="Fill in the blank"
+              />
+            );
+          }
+          return (
+            <Text key={i} style={{ fontSize: 16, color: '#111' }}>{word}</Text>
+          );
+        })}
+      </View>
+      {hint ? (
+        <Text style={{ fontSize: 13, color: '#999', marginTop: 8, fontStyle: 'italic' }}>
+          Hint: {hint}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
+function SentenceFrameInput({
+  scaffoldData,
+  values,
+  onChange,
+}: {
+  scaffoldData: Record<string, unknown>;
+  values: Record<number, string>;
+  onChange: (idx: number, val: string) => void;
+}) {
+  const starters = (scaffoldData.starters as string[]) ?? [];
+
+  return (
+    <View style={{ marginBottom: 16 }}>
+      {starters.map((starter, i) => (
+        <View key={i} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, flexWrap: 'wrap' }}>
+          <Text style={{ fontSize: 16, color: '#111', marginRight: 4 }}>{starter}</Text>
+          <TextInput
+            value={values[i] ?? ''}
+            onChangeText={(val) => onChange(i, val)}
+            placeholder="..."
+            placeholderTextColor="#999"
+            style={{
+              borderBottomWidth: 2,
+              borderBottomColor: '#6366F1',
+              fontSize: 16,
+              color: '#111',
+              flex: 1,
+              minWidth: 100,
+              paddingVertical: 4,
+            }}
+            accessibilityLabel={`Complete: ${starter}`}
+          />
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function GuidedParagraphInput({
+  scaffoldData,
+  values,
+  onChange,
+}: {
+  scaffoldData: Record<string, unknown>;
+  values: Record<number, string>;
+  onChange: (idx: number, val: string) => void;
+}) {
+  const starters = (scaffoldData.starters as string[]) ?? [];
+
+  return (
+    <View style={{ marginBottom: 16 }}>
+      {starters.map((starter, i) => (
+        <View key={i} style={{ marginBottom: 12 }}>
+          <Text style={{ fontSize: 14, fontWeight: '600', color: '#666', marginBottom: 4 }}>{starter}</Text>
+          <TextInput
+            value={values[i] ?? ''}
+            onChangeText={(val) => onChange(i, val)}
+            placeholder="Continue writing..."
+            placeholderTextColor="#999"
+            multiline
+            style={{
+              borderWidth: 2,
+              borderColor: '#D1D5DB',
+              borderRadius: 14,
+              paddingHorizontal: 16,
+              paddingVertical: 10,
+              fontSize: 16,
+              minHeight: 60,
+              textAlignVertical: 'top',
+              color: '#111',
+            }}
+            accessibilityLabel={`Continue from: ${starter}`}
+          />
+        </View>
+      ))}
+    </View>
   );
 }
