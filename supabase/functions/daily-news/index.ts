@@ -12,6 +12,7 @@ import { getAuthenticatedUser } from '../_shared/auth.ts';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
+const CRON_SECRET = Deno.env.get('CRON_SECRET');
 const TEXT_MODEL = 'claude-haiku-4-5-20251001';
 
 const SUPPORTED_LANGUAGES = ['es', 'fr', 'de', 'it', 'pt', 'ja', 'ko', 'zh', 'ar', 'hi', 'ru'];
@@ -69,6 +70,31 @@ serve(async (req: Request) => {
 
     // ── POST: Generate articles (cron trigger) ──────────────────
     if (req.method === 'POST') {
+      // Require cron secret to prevent unauthorized API credit consumption
+      const authHeader = req.headers.get('authorization') ?? '';
+      const providedSecret = authHeader.replace('Bearer ', '');
+
+      if (!CRON_SECRET) {
+        return new Response(
+          JSON.stringify({ error: 'CRON_SECRET not configured. Set it in Supabase secrets.' }),
+          { status: 500, headers }
+        );
+      }
+
+      // Timing-safe comparison to prevent secret enumeration
+      const encoder = new TextEncoder();
+      const a = encoder.encode(providedSecret);
+      const b = encoder.encode(CRON_SECRET);
+      const isValid = a.byteLength === b.byteLength &&
+        crypto.subtle.timingSafeEqual(a, b);
+
+      if (!isValid) {
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized — invalid cron secret' }),
+          { status: 401, headers }
+        );
+      }
+
       if (!ANTHROPIC_API_KEY) {
         return new Response(
           JSON.stringify({ error: 'ANTHROPIC_API_KEY not configured' }),

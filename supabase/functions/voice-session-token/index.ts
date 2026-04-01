@@ -1,6 +1,6 @@
 // Supabase Edge Function: Voice Session Token
-// Authenticates user, checks voice limits, returns Gemini Live session config.
-// The Google AI API key never leaves the server — client gets a session URI.
+// Authenticates user, checks voice limits, returns voice config.
+// The Google AI API key NEVER leaves the server — client connects via voice-proxy.
 // Deploy: npx supabase functions deploy voice-session-token
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
@@ -94,11 +94,8 @@ serve(async (req: Request) => {
       // No body is fine — defaults are used
     }
 
-    // Build the Gemini Live WebSocket URI with API key
-    // Client connects directly to this URI for real-time bidirectional audio
-    const sessionUri = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${GOOGLE_AI_API_KEY}`;
-
-    // Voice configuration for the client
+    // Voice configuration for the client (NO API key exposed)
+    // Client connects via the voice-proxy edge function, which proxies to Gemini server-side
     const voiceConfig = {
       model: `models/${GEMINI_LIVE_MODEL}`,
       targetLanguage,
@@ -118,7 +115,6 @@ serve(async (req: Request) => {
 
     return new Response(
       JSON.stringify({
-        sessionUri,
         remainingMinutes,
         voiceConfig,
       }),

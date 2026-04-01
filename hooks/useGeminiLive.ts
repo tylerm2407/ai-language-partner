@@ -69,13 +69,20 @@ SAFETY:
 
       if (error) throw new Error(`Voice session error: ${error.message}`);
 
-      const { sessionUri, remainingMinutes: remaining, voiceConfig } = data as {
-        sessionUri: string;
+      const { remainingMinutes: remaining, voiceConfig } = data as {
         remainingMinutes: number;
         voiceConfig: GeminiLiveConfig;
       };
 
       setRemainingMinutes(remaining);
+
+      // Build the proxy WebSocket URL (API key stays on server)
+      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
+      if (!accessToken) throw new Error('No auth session');
+
+      const proxyUrl = `${supabaseUrl.replace('https://', 'wss://')}/functions/v1/voice-proxy?token=${encodeURIComponent(accessToken)}`;
 
       // Configure audio for recording
       await Audio.setAudioModeAsync({
@@ -84,12 +91,12 @@ SAFETY:
         staysActiveInBackground: true,
       });
 
-      // Create and connect session
+      // Create and connect session via server-side proxy
       const session = new GeminiLiveSession();
       sessionRef.current = session;
 
       session.connect(
-        sessionUri,
+        proxyUrl,
         voiceConfig,
         buildSystemPrompt(),
         remaining,

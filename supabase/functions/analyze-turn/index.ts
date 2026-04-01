@@ -5,6 +5,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { corsResponse, corsHeaders } from '../_shared/cors.ts';
+import { getAuthenticatedUser } from '../_shared/auth.ts';
 
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
 const TEXT_MODEL = 'claude-haiku-4-5-20251001';
@@ -24,6 +25,15 @@ serve(async (req: Request) => {
   const headers = { ...corsHeaders, 'Content-Type': 'application/json' };
 
   try {
+    // Require authenticated user to prevent unauthorized API credit consumption
+    const authUser = await getAuthenticatedUser(req);
+    if (!authUser) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers }
+      );
+    }
+
     const { userMessage, aiReply, targetLanguage, level } = (await req.json()) as AnalyzeTurnRequest;
 
     if (!ANTHROPIC_API_KEY) {

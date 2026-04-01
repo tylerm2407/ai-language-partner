@@ -186,19 +186,20 @@ export async function transcribeAudio(
 
 /**
  * Start a Gemini Live voice session.
- * Returns session URI and config from the edge function.
+ * Returns config from the edge function. No API keys are exposed to the client.
+ * Client connects via the voice-proxy edge function for the actual WebSocket.
  */
 export async function getVoiceSessionToken(
   targetLanguage: string,
   level: string,
   topic?: string
-): Promise<{ sessionUri: string; remainingMinutes: number; voiceConfig: Record<string, unknown> }> {
+): Promise<{ remainingMinutes: number; voiceConfig: Record<string, unknown> }> {
   const { data, error } = await supabase.functions.invoke('voice-session-token', {
     body: { targetLanguage, level, topic },
   });
 
   if (error) throw new Error(`Voice session token error: ${error.message}`);
-  return data as { sessionUri: string; remainingMinutes: number; voiceConfig: Record<string, unknown> };
+  return data as { remainingMinutes: number; voiceConfig: Record<string, unknown> };
 }
 
 /**
