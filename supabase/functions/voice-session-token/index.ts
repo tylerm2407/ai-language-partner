@@ -1,6 +1,6 @@
 // Supabase Edge Function: Voice Session Token
-// Authenticates user, checks voice limits, returns voice config.
-// The Google AI API key NEVER leaves the server — client connects via voice-proxy.
+// Authenticates user, checks voice limits, returns remaining minutes.
+// Voice config and system prompt are built server-side in voice-proxy.
 // Deploy: npx supabase functions deploy voice-session-token
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
@@ -12,8 +12,6 @@ import { getPlanLimits } from '../_shared/plan-limits.ts';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const GOOGLE_AI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
-
-const GEMINI_LIVE_MODEL = 'gemini-2.0-flash-live';
 
 function todayUTC(): string {
   return new Date().toISOString().split('T')[0];
@@ -81,43 +79,10 @@ serve(async (req: Request) => {
       }
     }
 
-    // Parse optional body for system prompt context
-    let targetLanguage = 'es';
-    let level = 'beginner';
-    let topic = '';
-    try {
-      const body = await req.json();
-      targetLanguage = body.targetLanguage ?? targetLanguage;
-      level = body.level ?? level;
-      topic = body.topic ?? topic;
-    } catch {
-      // No body is fine — defaults are used
-    }
-
-    // Voice configuration for the client (NO API key exposed)
-    // Client connects via the voice-proxy edge function, which proxies to Gemini server-side
-    const voiceConfig = {
-      model: `models/${GEMINI_LIVE_MODEL}`,
-      targetLanguage,
-      level,
-      topic,
-      generationConfig: {
-        responseModalities: ['AUDIO'],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: {
-              voiceName: 'Aoede',
-            },
-          },
-        },
-      },
-    };
-
+    // Voice config and system prompt are now built server-side in voice-proxy.
+    // This endpoint only handles auth and limit checking.
     return new Response(
-      JSON.stringify({
-        remainingMinutes,
-        voiceConfig,
-      }),
+      JSON.stringify({ remainingMinutes }),
       { headers }
     );
   } catch (error) {

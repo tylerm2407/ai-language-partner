@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { Audio } from 'expo-av';
-import { GeminiLiveSession, GeminiLiveState, GeminiLiveConfig } from '../lib/gemini-live';
+import { GeminiLiveSession, GeminiLiveState } from '../lib/gemini-live';
 import { supabase } from '../lib/supabase';
 import type { LanguageCode, ProficiencyLevel } from '../types';
 
@@ -21,68 +21,40 @@ export function useGeminiLive(options: UseGeminiLiveOptions) {
   const sessionRef = useRef<GeminiLiveSession | null>(null);
   const soundQueueRef = useRef<Audio.Sound[]>([]);
 
-  const buildSystemPrompt = useCallback((): string => {
-    const levelDescriptions: Record<string, string> = {
-      beginner: 'Use very simple vocabulary and short sentences. Speak slowly and clearly.',
-      elementary: 'Use basic vocabulary and simple grammar. Keep sentences short.',
-      intermediate: 'Use natural conversational language. Introduce some complex grammar.',
-      upper_intermediate: 'Use rich vocabulary and complex sentences. Be natural.',
-      advanced: 'Speak as a native would. Use idioms and complex structures.',
-    };
-
-    const levelGuide = levelDescriptions[level] ?? levelDescriptions.beginner;
-    const topicGuide = topic ? `\nSCENARIO CONTEXT: ${topic}` : '';
-
-    return `You are a warm, fun language practice partner helping a student practice ${targetLanguage}. You're like a friend who happens to speak the language natively.
-
-PROFICIENCY LEVEL: ${level}
-${levelGuide}
-${topicGuide}
-
-CONVERSATION STYLE:
-- Respond primarily in ${targetLanguage}
-- Keep responses concise (1-3 sentences)
-- Ask ONE follow-up question per turn
-- If the student makes an error, naturally recast (rephrase correctly) in your reply
-- If the student speaks in English, gently encourage them to try in ${targetLanguage}
-- Speak at an appropriate speed for a ${level} learner
-- Be encouraging without being over-the-top
-
-SAFETY:
-- Stay on topic. Do not discuss anything inappropriate.
-- Never generate harmful or offensive content.`;
-  }, [targetLanguage, level, topic]);
-
   /**
    * Start a Gemini Live voice session.
-   * Fetches a session token from the edge function, then connects.
+   * 1. Checks limits via voice-session-token (HTTP)
+   * 2. Connects to voice-proxy (WebSocket) which handles Gemini setup server-side
    */
   const startSession = useCallback(async () => {
     if (isConnecting || state !== 'DISCONNECTED') return;
     setIsConnecting(true);
 
     try {
-      // Get session token from edge function
+      // Check limits via voice-session-token
       const { data, error } = await supabase.functions.invoke('voice-session-token', {
         body: { targetLanguage, level, topic },
       });
 
       if (error) throw new Error(`Voice session error: ${error.message}`);
 
-      const { remainingMinutes: remaining, voiceConfig } = data as {
-        remainingMinutes: number;
-        voiceConfig: GeminiLiveConfig;
-      };
-
+      const { remainingMinutes: remaining } = data as { remainingMinutes: number };
       setRemainingMinutes(remaining);
 
-      // Build the proxy WebSocket URL (API key stays on server)
+      // Build the proxy WebSocket URL with session params
+      // The proxy builds the system prompt and Gemini setup message server-side
       const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData?.session?.access_token;
       if (!accessToken) throw new Error('No auth session');
 
-      const proxyUrl = `${supabaseUrl.replace('https://', 'wss://')}/functions/v1/voice-proxy?token=${encodeURIComponent(accessToken)}`;
+      const params = new URLSearchParams({
+        token: accessToken,
+        lang: targetLanguage,
+        level,
+        ...(topic ? { topic } : {}),
+      });
+      const proxyUrl = `${supabaseUrl.replace('https://', 'wss://')}/functions/v1/voice-proxy?${params.toString()}`;
 
       // Configure audio for recording
       await Audio.setAudioModeAsync({
@@ -97,8 +69,6 @@ SAFETY:
 
       session.connect(
         proxyUrl,
-        voiceConfig,
-        buildSystemPrompt(),
         remaining,
         {
           onStateChange: (newState) => {
@@ -145,7 +115,7 @@ SAFETY:
     } finally {
       setIsConnecting(false);
     }
-  }, [isConnecting, state, targetLanguage, level, topic, buildSystemPrompt, onTranscript, onError]);
+  }, [isConnecting, state, targetLanguage, level, topic, onTranscript, onError]);
 
   /**
    * End the voice session and report usage.

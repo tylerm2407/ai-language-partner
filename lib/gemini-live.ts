@@ -1,27 +1,12 @@
 /**
  * Gemini Live WebSocket manager.
- * Handles real-time bidirectional audio streaming with Gemini Live API.
+ * Handles real-time bidirectional audio streaming via the voice-proxy edge function.
+ * The proxy handles Gemini connection, API key, system prompt, and model config.
+ * This client only sends audio/text input and receives audio/text output.
  * Audio format: PCM 16-bit 16kHz mono.
  */
 
 export type GeminiLiveState = 'DISCONNECTED' | 'CONNECTING' | 'CONNECTED' | 'LISTENING' | 'AI_SPEAKING';
-
-export interface GeminiLiveConfig {
-  model: string;
-  targetLanguage: string;
-  level: string;
-  topic: string;
-  generationConfig: {
-    responseModalities: string[];
-    speechConfig: {
-      voiceConfig: {
-        prebuiltVoiceConfig: {
-          voiceName: string;
-        };
-      };
-    };
-  };
-}
 
 export interface GeminiLiveCallbacks {
   onStateChange?: (state: GeminiLiveState) => void;
@@ -57,17 +42,14 @@ export class GeminiLiveSession {
   }
 
   /**
-   * Connect to Gemini Live WebSocket.
-   * @param sessionUri - WebSocket URI from voice-session-token edge function
-   * @param config - Voice configuration from edge function
-   * @param systemPrompt - System instruction for the conversation
+   * Connect to the voice-proxy edge function.
+   * The proxy handles Gemini setup (model, system prompt, voice config) server-side.
+   * @param proxyUri - WebSocket URI for the voice-proxy edge function
    * @param remainingMinutes - Remaining daily voice minutes
    * @param callbacks - Event callbacks
    */
   connect(
-    sessionUri: string,
-    config: GeminiLiveConfig,
-    systemPrompt: string,
+    proxyUri: string,
     remainingMinutes: number,
     callbacks: GeminiLiveCallbacks
   ): void {
@@ -80,21 +62,10 @@ export class GeminiLiveSession {
     this.setState('CONNECTING');
 
     try {
-      this.ws = new WebSocket(sessionUri);
+      this.ws = new WebSocket(proxyUri);
 
       this.ws.onopen = () => {
-        // Send BidiGenerateContentSetup message
-        const setupMessage = {
-          setup: {
-            model: config.model,
-            generationConfig: config.generationConfig,
-            systemInstruction: {
-              parts: [{ text: systemPrompt }],
-            },
-          },
-        };
-
-        this.ws?.send(JSON.stringify(setupMessage));
+        // No setup message needed — the proxy sends it server-side
         this.startTime = Date.now();
         this.setState('CONNECTED');
 
@@ -135,7 +106,7 @@ export class GeminiLiveSession {
   }
 
   /**
-   * Send audio data to Gemini Live.
+   * Send audio data to the voice proxy (forwarded to Gemini Live).
    * @param pcmBase64 - Base64 encoded PCM 16-bit 16kHz mono audio chunk
    */
   sendAudio(pcmBase64: string): void {
