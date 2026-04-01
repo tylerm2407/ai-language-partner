@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../hooks/useAuth';
-import { upsertProfile, markOnboardingComplete } from '../../lib/supabase-queries';
+import { upsertProfile, markOnboardingComplete, updateOnboardingChecklist } from '../../lib/supabase-queries';
 import { useAppStore } from '../../stores/useAppStore';
 import { Button } from '../../components/ui/Button';
 import { PlacementTest } from '../../components/onboarding/PlacementTest';
@@ -43,6 +43,7 @@ export default function OnboardingScreen() {
   const [dailyGoal, setDailyGoal] = useState<number>(10);
   const [saving, setSaving] = useState(false);
   const [subscribing, setSubscribing] = useState<string | null>(null);
+  const [placementCompleted, setPlacementCompleted] = useState(false);
 
   const handleSaveProfile = async () => {
     if (!user || !targetLanguage || !level) return;
@@ -53,6 +54,17 @@ export default function OnboardingScreen() {
         targetLanguage,
         level,
         dailyGoalMinutes: dailyGoal,
+      });
+      // Seed onboarding checklist with pre-checked items
+      await updateOnboardingChecklist(user.id, {
+        chooseLanguage: true,
+        placementTest: placementCompleted,
+        firstLesson: false,
+        aiConversation: false,
+        dailyReminder: false,
+        collapsed: false,
+        dismissed: false,
+        completedAt: null,
       });
       await loadUserData(user.id);
       setStep('subscription');
@@ -216,6 +228,7 @@ export default function OnboardingScreen() {
               targetLanguage={targetLanguage ?? 'es'}
               onComplete={(suggestedLevel) => {
                 setLevel(suggestedLevel);
+                setPlacementCompleted(true);
                 setStep('goal');
               }}
               onSkip={() => setStep('goal')}

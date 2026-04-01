@@ -23,6 +23,7 @@ import { useLevel } from '../../hooks/useLevel';
 import { useStreakProtection } from '../../hooks/useStreakProtection';
 import { useDailyNews } from '../../hooks/useDailyNews';
 import { DailyNewsCard } from '../../components/news/DailyNewsCard';
+import { OnboardingChecklist } from '../../components/onboarding/OnboardingChecklist';
 import type { DailyStats } from '../../types';
 
 export default function HomeScreen() {
@@ -66,6 +67,9 @@ export default function HomeScreen() {
     <GradientBackground>
     <View className="flex-1">
       <ScrollView className="flex-1 px-4 pt-2" contentContainerStyle={{ paddingBottom: 100 }}>
+        {/* Onboarding Checklist */}
+        <OnboardingChecklist />
+
         <Text className="text-[28px] font-bold text-text-primary mb-1 text-center">
           Welcome back{profile?.displayName ? `, ${profile.displayName}` : ''}!
         </Text>

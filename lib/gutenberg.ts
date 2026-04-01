@@ -1,5 +1,7 @@
 import { supabase } from './supabase';
 
+type CefrLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
+
 // Language code mapping (app uses 2-letter codes, Gutenberg uses them too)
 const GUTENBERG_LANG_MAP: Record<string, string> = {
   es: 'es', fr: 'fr', de: 'de', it: 'it', pt: 'pt', ja: 'ja', ko: 'ko', zh: 'zh',
@@ -72,6 +74,61 @@ function stripGutenbergBoilerplate(text: string): string {
   }
 
   return text.trim();
+}
+
+export function estimateCefrLevel(text: string): CefrLevel {
+  // Split into sentences (period, exclamation, question mark followed by space or end)
+  const sentences = text.split(/[.!?]+\s+/).filter((s) => s.trim().length > 0);
+  const sentenceCount = Math.max(sentences.length, 1);
+
+  // Split into words
+  const words = text.split(/\s+/).filter((w) => w.length > 0);
+  const wordCount = Math.max(words.length, 1);
+
+  // Average sentence length (words per sentence)
+  const avgSentenceLength = wordCount / sentenceCount;
+
+  // Average word length (characters per word)
+  const totalChars = words.reduce((sum, w) => sum + w.replace(/[^a-zA-ZÀ-ÿ\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]/g, '').length, 0);
+  const avgWordLength = totalChars / wordCount;
+
+  // Type-token ratio (vocabulary diversity) on first 1000 words
+  const sampleWords = words.slice(0, 1000).map((w) => w.toLowerCase().replace(/[^a-zA-ZÀ-ÿ\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]/g, ''));
+  const uniqueWords = new Set(sampleWords.filter((w) => w.length > 0));
+  const sampleSize = Math.max(sampleWords.filter((w) => w.length > 0).length, 1);
+  const typeTokenRatio = uniqueWords.size / sampleSize;
+
+  // Score each metric (0-4 mapping to A1/A2 through C2)
+  let sentenceScore: number;
+  if (avgSentenceLength < 10) sentenceScore = 0;
+  else if (avgSentenceLength < 15) sentenceScore = 1;
+  else if (avgSentenceLength < 20) sentenceScore = 2;
+  else if (avgSentenceLength < 25) sentenceScore = 3;
+  else sentenceScore = 4;
+
+  let wordLengthScore: number;
+  if (avgWordLength < 4) wordLengthScore = 0;
+  else if (avgWordLength < 5) wordLengthScore = 1;
+  else if (avgWordLength < 6) wordLengthScore = 2;
+  else if (avgWordLength < 7) wordLengthScore = 3;
+  else wordLengthScore = 4;
+
+  let ttrScore: number;
+  if (typeTokenRatio < 0.4) ttrScore = 0;
+  else if (typeTokenRatio < 0.5) ttrScore = 1;
+  else if (typeTokenRatio < 0.6) ttrScore = 2;
+  else if (typeTokenRatio < 0.7) ttrScore = 3;
+  else ttrScore = 4;
+
+  // Weighted average (sentence length matters most for readability)
+  const avgScore = (sentenceScore * 2 + wordLengthScore + ttrScore) / 4;
+
+  if (avgScore < 0.5) return 'A1';
+  if (avgScore < 1.5) return 'A2';
+  if (avgScore < 2.0) return 'B1';
+  if (avgScore < 2.75) return 'B2';
+  if (avgScore < 3.5) return 'C1';
+  return 'C2';
 }
 
 export async function ingestGutenbergBook(

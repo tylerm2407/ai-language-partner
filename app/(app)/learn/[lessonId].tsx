@@ -10,6 +10,7 @@ import { useDailyStats } from '../../../hooks/useDailyStats';
 import { useHearts } from '../../../hooks/useHearts';
 import { useLevel } from '../../../hooks/useLevel';
 import { useLessonProgress } from '../../../hooks/useLessonProgress';
+import { useOnboardingChecklist } from '../../../hooks/useOnboardingChecklist';
 import { LessonRunner, type LessonResult } from '../../../components/lesson/LessonRunner';
 import { LevelUpModal } from '../../../components/gamification/LevelUpModal';
 import { OutOfHeartsModal } from '../../../components/gamification/OutOfHeartsModal';
@@ -29,6 +30,7 @@ export default function LessonScreen() {
   const { hearts, maxHearts, isUnlimited, canPlay, loseHeart, nextRegenAt } = useHearts();
   const { levelUpInfo, dismissLevelUp } = useLevel();
   const { markLessonComplete } = useLessonProgress();
+  const { markItem: markOnboardingItem } = useOnboardingChecklist();
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [loading, setLoading] = useState(true);
   const [showOutOfHearts, setShowOutOfHearts] = useState(false);
@@ -84,6 +86,9 @@ export default function LessonScreen() {
     if (lesson && user?.id) {
       const score = result.totalExercises > 0 ? result.correctCount / result.totalExercises : 0;
       await markLessonComplete(lesson.id, lesson.unitId, score, result.xpEarned, 0).catch(console.error);
+
+      // Mark onboarding checklist item
+      markOnboardingItem('firstLesson').catch(console.error);
 
       // Check for new achievements
       if (profile) {

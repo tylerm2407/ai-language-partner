@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Audio } from 'expo-av';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAppStore } from '../../../stores/useAppStore';
+import { useOnboardingChecklist } from '../../../hooks/useOnboardingChecklist';
 import { sendChatMessage, getTextToSpeech, analyzeConversationTurn, VoiceError } from '../../../lib/ai';
 import { useGeminiLive } from '../../../hooks/useGeminiLive';
 import { ChatBubble } from '../../../components/chat/ChatBubble';
@@ -90,6 +91,7 @@ const SCENARIOS: Scenario[] = [
 export default function ChatScreen() {
   const { user } = useAuth();
   const { profile } = useAppStore();
+  const { markItem: markOnboardingItem } = useOnboardingChecklist();
   const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(null);
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
   const [input, setInput] = useState('');
@@ -293,6 +295,9 @@ export default function ChatScreen() {
         timestamp: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, assistantMsg]);
+
+      // Mark onboarding checklist item on first successful chat
+      markOnboardingItem('aiConversation').catch(console.error);
 
       // Auto-speak in hold-to-talk voice mode (ElevenLabs TTS)
       // In hands-free mode, Gemini Live handles TTS natively

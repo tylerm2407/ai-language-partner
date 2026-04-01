@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, Pressable, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -196,6 +196,18 @@ export default function BookDetailScreen() {
 
       {/* Book Info */}
       <View style={{ padding: 20, flex: 1 }}>
+        {/* Cover Image */}
+        {book.imageUrl && (
+          <View style={{ alignItems: 'center', marginBottom: 16 }}>
+            <Image
+              source={{ uri: book.imageUrl }}
+              style={{ width: 140, height: 200, borderRadius: 8 }}
+              resizeMode="cover"
+              accessibilityLabel={`Cover of ${book.title}`}
+            />
+          </View>
+        )}
+
         {/* CEFR Badge */}
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
           <View style={{ backgroundColor: '#E0E7FF', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>

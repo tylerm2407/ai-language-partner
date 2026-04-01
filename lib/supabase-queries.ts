@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import type {
   UserProfile,
+  OnboardingChecklist,
   Course,
   Unit,
   Lesson,
@@ -108,6 +109,23 @@ export async function markOnboardingComplete(userId: string): Promise<void> {
   const { error } = await supabase
     .from('user_profiles')
     .update({ onboarding_completed: true, updated_at: new Date().toISOString() })
+    .eq('user_id', userId);
+
+  if (error) throw error;
+}
+
+// ─── Onboarding Checklist ────────────────────────────────────────
+
+export async function updateOnboardingChecklist(
+  userId: string,
+  checklist: OnboardingChecklist
+): Promise<void> {
+  const { error } = await supabase
+    .from('user_profiles')
+    .update({
+      onboarding_checklist: checklist,
+      updated_at: new Date().toISOString(),
+    })
     .eq('user_id', userId);
 
   if (error) throw error;
@@ -471,8 +489,35 @@ function mapProfile(row: Record<string, unknown>): UserProfile {
     // Streak shield
     streakShieldActive: (row.streak_shield_active as boolean) ?? false,
     streakShieldUsedAt: (row.streak_shield_used_at as string) ?? null,
+    onboardingChecklist: parseOnboardingChecklist(row.onboarding_checklist),
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
+  };
+}
+
+const DEFAULT_ONBOARDING_CHECKLIST: OnboardingChecklist = {
+  chooseLanguage: false,
+  placementTest: false,
+  firstLesson: false,
+  aiConversation: false,
+  dailyReminder: false,
+  collapsed: false,
+  dismissed: false,
+  completedAt: null,
+};
+
+function parseOnboardingChecklist(raw: unknown): OnboardingChecklist {
+  if (!raw || typeof raw !== 'object') return { ...DEFAULT_ONBOARDING_CHECKLIST };
+  const obj = raw as Record<string, unknown>;
+  return {
+    chooseLanguage: (obj.chooseLanguage as boolean) ?? false,
+    placementTest: (obj.placementTest as boolean) ?? false,
+    firstLesson: (obj.firstLesson as boolean) ?? false,
+    aiConversation: (obj.aiConversation as boolean) ?? false,
+    dailyReminder: (obj.dailyReminder as boolean) ?? false,
+    collapsed: (obj.collapsed as boolean) ?? false,
+    dismissed: (obj.dismissed as boolean) ?? false,
+    completedAt: (obj.completedAt as string) ?? null,
   };
 }
 
@@ -1145,7 +1190,7 @@ export async function fetchBooksByLanguageAndLevel(
 ): Promise<ReadingBook[]> {
   let query = supabase
     .from('reading_books')
-    .select('*')
+    .select('id, title, author, description, language, cefr_level, word_count, image_url, tags, source, source_id, chapter_breaks, is_published, created_at')
     .eq('language', language)
     .eq('is_published', true)
     .order('created_at', { ascending: false })
@@ -1270,7 +1315,7 @@ function mapReadingBook(row: Record<string, unknown>): ReadingBook {
     title: row.title as string,
     author: (row.author as string) ?? null,
     description: (row.description as string) ?? null,
-    content: row.content as string,
+    content: (row.content as string) ?? '',
     wordCount: row.word_count as number,
     chapterBreaks: (row.chapter_breaks as number[]) ?? [],
     imageUrl: (row.image_url as string) ?? null,

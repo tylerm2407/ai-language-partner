@@ -1,3 +1,16 @@
+// ─── Onboarding Checklist ────────────────────────────────────────
+
+export interface OnboardingChecklist {
+  chooseLanguage: boolean;
+  placementTest: boolean;
+  firstLesson: boolean;
+  aiConversation: boolean;
+  dailyReminder: boolean;
+  collapsed: boolean;
+  dismissed: boolean;
+  completedAt: string | null;
+}
+
 // ─── User & Profile ─────────────────────────────────────────────
 
 export interface User {
@@ -33,6 +46,7 @@ export interface UserProfile {
   // Streak shield
   streakShieldActive: boolean;
   streakShieldUsedAt: string | null;
+  onboardingChecklist: OnboardingChecklist;
   createdAt: string;
   updatedAt: string;
 }
