@@ -139,11 +139,11 @@ function determineTier(priceId: string | undefined): string {
   const BASIC_YEARLY = Deno.env.get('STRIPE_BASIC_YEARLY_PRICE_ID');
   const PREMIUM_MONTHLY = Deno.env.get('STRIPE_PREMIUM_MONTHLY_PRICE_ID');
   const PREMIUM_YEARLY = Deno.env.get('STRIPE_PREMIUM_YEARLY_PRICE_ID');
-  const UNLIMITED_MONTHLY = Deno.env.get('STRIPE_UNLIMITED_MONTHLY_PRICE_ID');
-  const UNLIMITED_YEARLY = Deno.env.get('STRIPE_UNLIMITED_YEARLY_PRICE_ID');
+  const VIP_MONTHLY = Deno.env.get('STRIPE_VIP_MONTHLY_PRICE_ID') ?? Deno.env.get('STRIPE_UNLIMITED_MONTHLY_PRICE_ID');
+  const VIP_YEARLY = Deno.env.get('STRIPE_VIP_YEARLY_PRICE_ID') ?? Deno.env.get('STRIPE_UNLIMITED_YEARLY_PRICE_ID');
 
   if (priceId === BASIC_MONTHLY || priceId === BASIC_YEARLY) return 'basic';
   if (priceId === PREMIUM_MONTHLY || priceId === PREMIUM_YEARLY) return 'premium';
-  if (priceId === UNLIMITED_MONTHLY || priceId === UNLIMITED_YEARLY) return 'unlimited';
+  if (priceId === VIP_MONTHLY || priceId === VIP_YEARLY) return 'vip';
   return 'basic'; // default to basic for unknown price IDs
 }

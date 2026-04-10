@@ -34,12 +34,19 @@ export interface PronunciationScoreRequest {
   audioBase64: string;
   expectedText: string;
   language: LanguageCode;
+  acceptedVariants?: string[];
+  targetWord?: string;
+  targetGrammar?: string;
 }
 
 export interface PronunciationScoreResponse {
   score: number; // 0-100
   feedback: string;
   phonemeErrors: string[];
+  transcription?: string;
+  isCorrect?: boolean;
+  matchedVariant?: string | null;
+  targetPresent?: boolean;
 }
 
 /**
@@ -214,6 +221,31 @@ export async function reportVoiceSessionEnd(
 
   if (error) throw new Error(`Voice session end error: ${error.message}`);
   return data as { remainingMinutes: number | 'unlimited'; totalUsedToday: number };
+}
+
+// ─── Content Generation ─────────────────────────────────────────
+
+export interface GenerateContentRequest {
+  task: 'distractors' | 'accepted_answers' | 'speech_variants' | 'exercises' | 'dialogue' | 'explanation';
+  language: string;
+  cefrLevel: string;
+  targetWord?: string;
+  targetGrammar?: string;
+  exerciseType?: string;
+  context?: string;
+  count?: number;
+}
+
+/**
+ * Generate dynamic content (distractors, accepted answers, speech variants, etc.)
+ * via the generate-content edge function.
+ */
+export async function generateContent(request: GenerateContentRequest): Promise<unknown> {
+  const { data, error } = await supabase.functions.invoke('generate-content', {
+    body: request,
+  });
+  if (error) throw new Error(`Content generation error: ${error.message}`);
+  return data;
 }
 
 /**

@@ -15,6 +15,9 @@ package-lock.json
 # Claude Code local settings
 .claude/settings.local.json
 
+# Playwright MCP testing cache
+.playwright-mcp/
+
 # Supabase temp/cache and secrets
 supabase/.temp/
 supabase/__pycache__/

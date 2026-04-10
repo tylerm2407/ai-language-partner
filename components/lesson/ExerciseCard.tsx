@@ -25,7 +25,7 @@ const TYPE_LABELS: Record<ExerciseType, string> = {
 
 export function ExerciseCard({ children, type, prompt }: ExerciseCardProps) {
   return (
-    <View className="bg-dark-card rounded-[20px] p-6 min-h-[200px] shadow-card border border-dark-border">
+    <View className="bg-dark-card rounded-[20px] p-6 min-h-[200px] shadow-card border border-white/10">
       <Text
         className="text-text-secondary text-sm font-sans-medium mb-2"
         accessibilityRole="header"

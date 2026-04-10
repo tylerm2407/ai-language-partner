@@ -5,10 +5,14 @@
 // Deploy: npx supabase functions deploy voice-proxy
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsResponse, corsHeaders } from '../_shared/cors.ts';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
+import { getPlanLimits } from '../_shared/plan-limits.ts';
 import { isValidLanguage, isValidProficiencyLevel, sanitizeText } from '../_shared/validation.ts';
 
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const GOOGLE_AI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
 const GEMINI_LIVE_MODEL = 'gemini-2.0-flash-live';
 
@@ -144,12 +148,46 @@ serve(async (req: Request) => {
     );
   }
 
+  // ── Pre-connection rate limit gate ──────────────────────────
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  const userId = authUser.userId;
+
+  const { data: sub } = await supabase
+    .from('subscriptions')
+    .select('tier, is_active')
+    .eq('user_id', userId)
+    .single();
+
+  const tier = sub?.is_active && sub.tier ? sub.tier : 'free';
+  const limits = getPlanLimits(tier);
+
+  const todayUTC = new Date().toISOString().split('T')[0];
+  const { data: usageRow } = await supabase
+    .from('daily_usage')
+    .select('voice_minutes')
+    .eq('user_id', userId)
+    .eq('date', todayUTC)
+    .single();
+
+  const currentVoiceMinutes = parseFloat(usageRow?.voice_minutes as string) || 0;
+  if (currentVoiceMinutes >= limits.dailyVoiceMinutes) {
+    return new Response(
+      JSON.stringify({
+        error: "You've reached your daily voice practice limit. Upgrade your plan for more.",
+        code: 'DAILY_VOICE_LIMIT_REACHED',
+      }),
+      { status: 429, headers: jsonHeaders }
+    );
+  }
+
   // Upgrade the client connection to WebSocket
   const { socket: clientWs, response } = Deno.upgradeWebSocket(req);
 
   // Connect to Gemini Live server-side (API key stays on the server)
   const geminiUri = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${GOOGLE_AI_API_KEY}`;
   let geminiWs: WebSocket | null = null;
+  let voiceTickInterval: ReturnType<typeof setInterval> | null = null;
+  const sessionStartTime = Date.now();
 
   clientWs.onopen = () => {
     geminiWs = new WebSocket(geminiUri);
@@ -157,6 +195,30 @@ serve(async (req: Request) => {
     geminiWs.onopen = () => {
       // Send the server-built setup message to Gemini (client cannot override this)
       geminiWs!.send(buildSetupMessage(targetLanguage, level, topic));
+
+      // ── Periodic tick: increment voice_minutes every 60s ──────
+      voiceTickInterval = setInterval(async () => {
+        try {
+          const date = new Date().toISOString().split('T')[0];
+          const { data: usage } = await supabase.rpc('increment_daily_usage', {
+            p_user_id: userId,
+            p_date: date,
+            p_voice_minutes: 1,
+          });
+
+          const newTotal = parseFloat(usage?.[0]?.voice_minutes) || 0;
+          if (newTotal >= limits.dailyVoiceMinutes) {
+            // Notify client and close gracefully
+            if (clientWs.readyState === WebSocket.OPEN) {
+              clientWs.send(JSON.stringify({ type: 'voice_limit_reached' }));
+              clientWs.close(4029, 'Voice minute limit reached');
+            }
+            if (voiceTickInterval) clearInterval(voiceTickInterval);
+          }
+        } catch (err) {
+          console.error('[voice-proxy] Tick increment error:', err);
+        }
+      }, 60_000);
     };
 
     geminiWs.onmessage = (event) => {
@@ -201,7 +263,27 @@ serve(async (req: Request) => {
     }
   };
 
-  clientWs.onclose = () => {
+  clientWs.onclose = async () => {
+    if (voiceTickInterval) clearInterval(voiceTickInterval);
+
+    // ── Session-end cleanup: reconcile fractional minute ──────
+    const elapsedMs = Date.now() - sessionStartTime;
+    const elapsedMinutes = elapsedMs / 60_000;
+    // The tick already incremented whole minutes; add the remaining fraction
+    const fractionalMinute = elapsedMinutes % 1;
+    if (fractionalMinute > 0.05) { // ignore sub-3-second sessions
+      try {
+        const date = new Date().toISOString().split('T')[0];
+        await supabase.rpc('increment_daily_usage', {
+          p_user_id: userId,
+          p_date: date,
+          p_voice_minutes: parseFloat(fractionalMinute.toFixed(2)),
+        });
+      } catch (err) {
+        console.error('[voice-proxy] Session-end reconciliation error:', err);
+      }
+    }
+
     if (geminiWs && geminiWs.readyState === WebSocket.OPEN) {
       geminiWs.close(1000, 'Client disconnected');
     }

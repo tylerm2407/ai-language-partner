@@ -15,9 +15,10 @@
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
+    "@expo-google-fonts/playfair-display": "^0.4.2",
     "@expo/vector-icons": "^15.0.3",
     "@react-native-async-storage/async-storage": "2.2.0",
-    "@react-native-community/netinfo": "^11.4.1",
+    "@react-native-community/netinfo": "11.4.1",
     "@supabase/supabase-js": "^2.45.0",
     "event-target-shim": "^6.0.2",
     "expo": "~54.0.0",
@@ -46,11 +47,16 @@
     "react-native-svg": "15.12.1",
     "react-native-url-polyfill": "^2.0.0",
     "react-native-web": "^0.21.0",
+    "react-native-worklets": "^0.5.2",
     "zustand": "^5.0.0"
   },
   "devDependencies": {
     "@types/react": "~19.1.0",
+    "sharp": "^0.34.5",
     "tailwindcss": "^3.4.0",
     "typescript": "~5.9.0"
+  },
+  "overrides": {
+    "react-native-worklets": "^0.5.2"
   }
 }

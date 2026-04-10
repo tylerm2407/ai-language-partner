@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, Pressable, ActivityIndicator, Alert, Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../../../hooks/useAuth';
@@ -11,10 +11,11 @@ import {
   upsertBookProgress,
   upsertReviewItem,
   addXp,
+  fetchSubscription,
 } from '../../../../../lib/supabase-queries';
 import { BookReader } from '../../../../../components/reading/BookReader';
 import { supabase } from '../../../../../lib/supabase';
-import type { ReadingBook, BookAnnotation, UserBookProgress } from '../../../../../types';
+import type { ReadingBook, BookAnnotation, UserBookProgress, Subscription } from '../../../../../types';
 
 export default function BookDetailScreen() {
   const { bookId } = useLocalSearchParams<{ bookId: string }>();
@@ -23,24 +24,29 @@ export default function BookDetailScreen() {
   const [book, setBook] = useState<ReadingBook | null>(null);
   const [annotations, setAnnotations] = useState<BookAnnotation[]>([]);
   const [progress, setProgress] = useState<UserBookProgress | null>(null);
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isReading, setIsReading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const isUnlimitedPlan = subscription?.tier === 'vip' && subscription?.isActive;
 
   useEffect(() => {
     if (!bookId || !user) return;
 
     const load = async () => {
       try {
-        const [bookData, annData, progressData] = await Promise.all([
+        const [bookData, annData, progressData, sub] = await Promise.all([
           fetchBookById(bookId),
           fetchBookAnnotations(bookId),
           fetchUserBookProgress(user.id, bookId),
+          fetchSubscription(user.id),
         ]);
 
         setBook(bookData);
         setAnnotations(annData);
         setProgress(progressData[0] ?? null);
+        setSubscription(sub);
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Failed to load book');
       } finally {
@@ -147,20 +153,20 @@ export default function BookDetailScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' }}>
+      <View style={{ flex: 1, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color="#6366F1" />
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (error || !book) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+      <View style={{ flex: 1, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
         <Text style={{ fontSize: 16, color: '#EF4444', textAlign: 'center' }}>{error ?? 'Book not found'}</Text>
         <Pressable onPress={() => router.back()} style={{ marginTop: 16 }} accessibilityRole="button">
           <Text style={{ fontSize: 16, color: '#6366F1' }}>Go Back</Text>
         </Pressable>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -171,6 +177,7 @@ export default function BookDetailScreen() {
         book={book}
         annotations={annotations}
         initialPosition={progress?.currentPosition ?? 0}
+        isUnlimitedPlan={isUnlimitedPlan}
         onPositionChange={handlePositionChange}
         onWordLookup={handleWordLookup}
         onAddToReview={handleAddToReview}
@@ -186,7 +193,7 @@ export default function BookDetailScreen() {
   const estimatedMinutes = Math.round(book.wordCount / 200); // ~200 wpm reading speed
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+    <View style={{ flex: 1, backgroundColor: '#fff' }}>
       {/* Header */}
       <View style={{ paddingHorizontal: 16, paddingTop: 8, flexDirection: 'row', alignItems: 'center' }}>
         <Pressable onPress={() => router.back()} style={{ padding: 8 }} accessibilityRole="button" accessibilityLabel="Go back">
@@ -278,10 +285,27 @@ export default function BookDetailScreen() {
             <Text style={{ fontSize: 16, fontWeight: '600', color: '#22C55E', marginLeft: 8 }}>Completed!</Text>
           </View>
         )}
+
+        {/* Audiobook upsell for non-unlimited users */}
+        {!isUnlimitedPlan && (
+          <Pressable
+            onPress={() => router.push('/(app)/profile/subscription')}
+            style={{ backgroundColor: '#EEF2FF', borderRadius: 16, padding: 16, marginBottom: 16, flexDirection: 'row', alignItems: 'center' }}
+            accessibilityRole="button"
+            accessibilityLabel="Upgrade to listen to this book"
+          >
+            <Ionicons name="headset-outline" size={24} color="#6366F1" />
+            <View style={{ flex: 1, marginLeft: 12 }}>
+              <Text style={{ fontSize: 15, fontWeight: '600', color: '#111' }}>Listen to this book</Text>
+              <Text style={{ fontSize: 13, color: '#666', marginTop: 2 }}>Upgrade to VIP for audiobook narration</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#6366F1" />
+          </Pressable>
+        )}
       </View>
 
       {/* CTA Button */}
-      <View style={{ padding: 20, borderTopWidth: 1, borderTopColor: '#E5E7EB' }}>
+      <View style={{ padding: 20, paddingBottom: 100, borderTopWidth: 1, borderTopColor: '#E5E7EB' }}>
         <Pressable
           onPress={() => setIsReading(true)}
           style={{ backgroundColor: '#6366F1', paddingVertical: 16, borderRadius: 14, alignItems: 'center' }}
@@ -293,6 +317,6 @@ export default function BookDetailScreen() {
           </Text>
         </Pressable>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }

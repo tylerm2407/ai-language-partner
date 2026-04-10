@@ -5,6 +5,7 @@
 // Deploy: npx supabase functions deploy transcribe
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { getAuthenticatedUser } from '../_shared/auth.ts';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_KEY');
 
@@ -25,6 +26,15 @@ serve(async (req: Request) => {
   }
 
   try {
+    // Require authenticated user
+    const authUser = await getAuthenticatedUser(req);
+    if (!authUser) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { audioBase64, language } = (await req.json()) as TranscribeRequest;
 
     if (!OPENAI_API_KEY) {

@@ -76,7 +76,7 @@ serve(async (req: Request) => {
       );
     }
 
-    // ── Rate limit: atomic increment + check ──────────────────
+    // ── Rate limit: check BEFORE calling AI ──────────────────
     const { data: sub } = await supabase
       .from('subscriptions')
       .select('tier, is_active')
@@ -86,32 +86,24 @@ serve(async (req: Request) => {
     const tier = sub?.is_active && sub.tier ? sub.tier : 'free';
     const limits = getPlanLimits(tier);
 
-    if (limits.dailyTextConversations !== 'unlimited') {
-      const date = todayUTC();
-      const { data: usage } = await supabase.rpc('increment_daily_usage', {
-        p_user_id: userId,
-        p_date: date,
-        p_text_messages: 1,
-        p_voice_minutes: 0,
-      });
+    const date = todayUTC();
+    // Fetch current usage without incrementing
+    const { data: currentUsage } = await supabase
+      .from('daily_usage')
+      .select('writing_grades')
+      .eq('user_id', userId)
+      .eq('date', date)
+      .single();
 
-      const currentCount = usage?.[0]?.text_messages ?? 0;
-      if (currentCount > (limits.dailyTextConversations as number)) {
-        // Rollback
-        await supabase.rpc('increment_daily_usage', {
-          p_user_id: userId,
-          p_date: date,
-          p_text_messages: -1,
-          p_voice_minutes: 0,
-        });
-        return new Response(
-          JSON.stringify({
-            error: "You've reached your daily AI usage limit. Upgrade your plan for more.",
-            code: 'DAILY_LIMIT_REACHED',
-          }),
-          { status: 429, headers }
-        );
-      }
+    const currentGrades = (currentUsage?.writing_grades as number) ?? 0;
+    if (currentGrades >= limits.dailyWritingGrades) {
+      return new Response(
+        JSON.stringify({
+          error: "You've reached your daily writing grade limit. Upgrade your plan for more.",
+          code: 'DAILY_WRITING_LIMIT_REACHED',
+        }),
+        { status: 429, headers }
+      );
     }
 
     // Fetch prompt details for context
@@ -176,6 +168,13 @@ serve(async (req: Request) => {
         overallFeedback: aiReply,
       };
     }
+
+    // Increment writing_grades after successful AI grading
+    await supabase.rpc('increment_daily_usage', {
+      p_user_id: userId,
+      p_date: date,
+      p_writing_grades: 1,
+    });
 
     return new Response(
       JSON.stringify(feedback),

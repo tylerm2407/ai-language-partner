@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { View, Text, Pressable, Dimensions, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { WordTooltip } from './WordTooltip';
+import { usePageNarrator } from '../../hooks/usePageNarrator';
 import type { ReadingBook, BookAnnotation, ReviewItem } from '../../types';
 
 interface Props {
   book: ReadingBook;
   annotations: BookAnnotation[];
   initialPosition: number;
+  isUnlimitedPlan?: boolean;
   onPositionChange: (position: number, percent: number) => void;
   onWordLookup: () => void;
   onAddToReview: (annotation: BookAnnotation) => Promise<ReviewItem | null>;
@@ -23,6 +25,7 @@ export function BookReader({
   book,
   annotations,
   initialPosition,
+  isUnlimitedPlan = false,
   onPositionChange,
   onWordLookup,
   onAddToReview,
@@ -33,7 +36,10 @@ export function BookReader({
   const [currentPage, setCurrentPage] = useState(0);
   const [selectedAnnotation, setSelectedAnnotation] = useState<BookAnnotation | null>(null);
   const [showFontControls, setShowFontControls] = useState(false);
+  const [autoAdvance, setAutoAdvance] = useState(true);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const narrator = usePageNarrator();
+  const insets = useSafeAreaInsets();
 
   const fontSize = FONT_SIZES[fontSizeIndex];
 
@@ -87,6 +93,7 @@ export function BookReader({
   }, [charsPerPage, totalPages, onPositionChange]);
 
   const goToPage = useCallback((page: number) => {
+    narrator.stop();
     const newPage = Math.max(0, Math.min(page, totalPages - 1));
     setCurrentPage(newPage);
     setSelectedAnnotation(null);
@@ -96,7 +103,7 @@ export function BookReader({
     if (newPage === totalPages - 1) {
       onComplete();
     }
-  }, [totalPages, savePosition, onComplete]);
+  }, [totalPages, savePosition, onComplete, narrator]);
 
   // Build annotation lookup for current page text
   const annotationMap = useMemo(() => {
@@ -124,11 +131,60 @@ export function BookReader({
   const currentPageText = pages[currentPage] ?? '';
   const progressPercent = totalPages > 0 ? ((currentPage + 1) / totalPages) * 100 : 0;
 
+  // Track whether we should auto-play the next page after navigation
+  const shouldAutoPlayRef = useRef(false);
+
+  const handlePlayPause = useCallback(() => {
+    if (narrator.isPlaying && !narrator.isPaused) {
+      narrator.pause();
+    } else if (narrator.isPaused) {
+      narrator.resume();
+    } else {
+      narrator.speak(currentPageText, book.language, () => {
+        // When narration finishes, auto-advance and continue playing
+        if (autoAdvance && currentPage < totalPages - 1) {
+          shouldAutoPlayRef.current = true;
+          const nextPage = currentPage + 1;
+          setCurrentPage(nextPage);
+          setSelectedAnnotation(null);
+          savePosition(nextPage);
+          if (nextPage === totalPages - 1) {
+            onComplete();
+          }
+        }
+      });
+    }
+  }, [narrator, currentPageText, book.language, autoAdvance, currentPage, totalPages, savePosition, onComplete]);
+
+  // Auto-play after page change from narration auto-advance
+  useEffect(() => {
+    if (shouldAutoPlayRef.current && pages[currentPage]) {
+      shouldAutoPlayRef.current = false;
+      narrator.speak(pages[currentPage], book.language, () => {
+        if (autoAdvance && currentPage < totalPages - 1) {
+          shouldAutoPlayRef.current = true;
+          const nextPage = currentPage + 1;
+          setCurrentPage(nextPage);
+          setSelectedAnnotation(null);
+          savePosition(nextPage);
+          if (nextPage === totalPages - 1) {
+            onComplete();
+          }
+        }
+      });
+    }
+  }, [currentPage]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleExit = useCallback(() => {
+    narrator.stop();
+    onExit();
+  }, [narrator, onExit]);
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
       {/* Header */}
       <View style={{ paddingHorizontal: 16, paddingVertical: 8, flexDirection: 'row', alignItems: 'center' }}>
-        <Pressable onPress={onExit} style={{ padding: 8 }} accessibilityRole="button" accessibilityLabel="Exit reading">
+        <Pressable onPress={handleExit} style={{ padding: 8 }} accessibilityRole="button" accessibilityLabel="Exit reading">
           <Ionicons name="close" size={24} color="#666" />
         </Pressable>
         <View style={{ flex: 1, marginLeft: 8 }}>
@@ -139,6 +195,30 @@ export function BookReader({
             Page {currentPage + 1} of {totalPages}
           </Text>
         </View>
+        {isUnlimitedPlan && (
+          <>
+            <Pressable
+              onPress={narrator.cycleSpeed}
+              style={{ paddingHorizontal: 6, paddingVertical: 4, marginRight: 4 }}
+              accessibilityRole="button"
+              accessibilityLabel={`Playback speed ${narrator.speed}x`}
+            >
+              <Text style={{ fontSize: 13, fontWeight: '600', color: '#6366F1' }}>{narrator.speed}x</Text>
+            </Pressable>
+            <Pressable
+              onPress={handlePlayPause}
+              style={{ padding: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel={narrator.isPlaying && !narrator.isPaused ? 'Pause narration' : 'Play narration'}
+            >
+              <Ionicons
+                name={narrator.isPlaying && !narrator.isPaused ? 'pause-circle' : 'play-circle'}
+                size={28}
+                color="#6366F1"
+              />
+            </Pressable>
+          </>
+        )}
         <Pressable
           onPress={() => setShowFontControls(!showFontControls)}
           style={{ padding: 8 }}
@@ -181,7 +261,8 @@ export function BookReader({
 
       {/* Page Content */}
       <ScrollView
-        contentContainerStyle={{ padding: 20, paddingBottom: 100 }}
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: 20, paddingBottom: 20 }}
         keyboardShouldPersistTaps="handled"
       >
         <Pressable onPress={() => setSelectedAnnotation(null)}>
@@ -202,11 +283,10 @@ export function BookReader({
         )}
       </ScrollView>
 
-      {/* Navigation */}
+      {/* Page Navigation — always visible at bottom */}
       <View style={{
-        position: 'absolute', bottom: 0, left: 0, right: 0,
-        flexDirection: 'row', padding: 16, backgroundColor: '#fff',
-        borderTopWidth: 1, borderTopColor: '#E5E7EB', gap: 12,
+        flexDirection: 'row', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12 + insets.bottom + 60, gap: 12,
+        borderTopWidth: 1, borderTopColor: '#E5E7EB', backgroundColor: '#fff',
       }}>
         <Pressable
           onPress={() => goToPage(currentPage - 1)}

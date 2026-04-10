@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { View, TextInput, Pressable, ActivityIndicator, Text, Alert, Animated, Easing } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import { File } from 'expo-file-system/next';
@@ -54,6 +55,7 @@ export function ChatInput({
   onListeningStarted,
   geminiLiveActive = false,
 }: ChatInputProps) {
+  const insets = useSafeAreaInsets();
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [showTextFallback, setShowTextFallback] = useState(false);
@@ -314,7 +316,7 @@ export function ChatInput({
     })();
 
     return (
-      <View className="items-center px-4 py-6 border-t border-dark-border bg-dark">
+      <View className="items-center px-4 py-6 border-t border-dark-border bg-dark" style={{ paddingBottom: 24 + insets.bottom + 60 }}>
         {/* Pulsing mic indicator */}
         <Animated.View
           style={{ transform: [{ scale: pulseAnim }] }}
@@ -343,7 +345,7 @@ export function ChatInput({
   // Voice mode UI (hold-to-talk, unchanged)
   if (voiceMode && !showTextFallback) {
     return (
-      <View className="items-center px-4 py-4 border-t border-dark-border bg-dark">
+      <View className="items-center px-4 py-4 border-t border-dark-border bg-dark" style={{ paddingBottom: 16 + insets.bottom + 60 }}>
         {/* Switch to keyboard */}
         <View className="flex-row w-full justify-end mb-3">
           <Pressable
@@ -383,7 +385,7 @@ export function ChatInput({
 
   // Text mode UI (also used as fallback in voice mode)
   return (
-    <View className="flex-row items-end px-4 py-3 border-t border-dark-border bg-dark">
+    <View className="flex-row items-end px-4 py-3 border-t border-dark-border bg-dark" style={{ paddingBottom: 12 + insets.bottom + 60 }}>
       {/* Show mic icon to switch back to voice mode if in voice fallback */}
       {voiceMode && showTextFallback && (
         <Pressable

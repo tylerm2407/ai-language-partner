@@ -14,8 +14,8 @@ const PRICE_IDS: Record<string, string> = {
   basic_yearly: Deno.env.get('STRIPE_BASIC_YEARLY_PRICE_ID') ?? 'price_placeholder_basic_yearly',
   premium_monthly: Deno.env.get('STRIPE_PREMIUM_MONTHLY_PRICE_ID') ?? 'price_placeholder_premium_monthly',
   premium_yearly: Deno.env.get('STRIPE_PREMIUM_YEARLY_PRICE_ID') ?? 'price_placeholder_premium_yearly',
-  unlimited_monthly: Deno.env.get('STRIPE_UNLIMITED_MONTHLY_PRICE_ID') ?? 'price_placeholder_unlimited_monthly',
-  unlimited_yearly: Deno.env.get('STRIPE_UNLIMITED_YEARLY_PRICE_ID') ?? 'price_placeholder_unlimited_yearly',
+  vip_monthly: Deno.env.get('STRIPE_VIP_MONTHLY_PRICE_ID') ?? Deno.env.get('STRIPE_UNLIMITED_MONTHLY_PRICE_ID') ?? 'price_placeholder_vip_monthly',
+  vip_yearly: Deno.env.get('STRIPE_VIP_YEARLY_PRICE_ID') ?? Deno.env.get('STRIPE_UNLIMITED_YEARLY_PRICE_ID') ?? 'price_placeholder_vip_yearly',
 };
 
 interface CheckoutRequest {

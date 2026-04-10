@@ -4,6 +4,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { getAuthenticatedUser } from '../_shared/auth.ts';
 
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -28,6 +29,15 @@ serve(async (req: Request) => {
   }
 
   try {
+    // Require authenticated user
+    const authUser = await getAuthenticatedUser(req);
+    if (!authUser) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { cardId, exerciseType, targetLanguage } = (await req.json()) as HintRequest;
 
     // Fetch the card data

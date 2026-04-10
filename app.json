@@ -20,7 +20,8 @@
         "NSMicrophoneUsageDescription": "Fluenci needs access to your microphone for voice conversation practice and pronunciation exercises.",
         "UIBackgroundModes": [
           "audio"
-        ]
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -30,7 +31,9 @@
       },
       "package": "com.fluenci.app",
       "permissions": [
-        "RECORD_AUDIO"
+        "RECORD_AUDIO",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
       ]
     },
     "web": {
@@ -59,6 +62,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "f136626e-1f49-42b3-a3c3-531d6fdf81c8"
+      }
     }
   }
 }

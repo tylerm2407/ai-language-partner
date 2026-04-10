@@ -5,3 +5,8 @@ export const GRADIENT_END = { x: 1, y: 0.5 };
 export const BG_GRADIENT_COLORS = ['#0F1A2E', '#150F24'] as const;
 export const DARK_BG = '#0C0F14';
 export const DARK_CARD = '#151921';
+
+// Glass morphism tokens
+export const GLASS_BG = 'rgba(21, 25, 33, 0.35)';
+export const GLASS_HIGHLIGHT = ['rgba(255,255,255,0.08)', 'rgba(255,255,255,0)'] as const;
+export const GLASS_BORDER = 'rgba(255, 255, 255, 0.12)';

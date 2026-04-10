@@ -3,30 +3,32 @@ import { View, Text, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { fetchDailyNews } from '../../../lib/supabase-queries';
+import { useAuth } from '../../../hooks/useAuth';
+import { fetchUserDailyNews } from '../../../lib/supabase-queries';
 import { GradientBackground } from '../../../components/ui/GradientBackground';
 import { GradientBorderCard } from '../../../components/ui/GradientBorderCard';
 import type { DailyNewsArticle, VocabularyHighlight } from '../../../types';
 
 export default function NewsReaderScreen() {
-  const { date, language } = useLocalSearchParams<{ date: string; language: string }>();
+  const { date } = useLocalSearchParams<{ date: string }>();
   const router = useRouter();
+  const { user } = useAuth();
   const [article, setArticle] = useState<DailyNewsArticle | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [showTranslation, setShowTranslation] = useState<boolean>(false);
 
   const loadArticle = useCallback(async () => {
-    if (!language || !date) return;
+    if (!user?.id || !date) return;
     setIsLoading(true);
     try {
-      const data = await fetchDailyNews(language, date);
+      const data = await fetchUserDailyNews(user.id, date);
       setArticle(data);
     } catch {
       // Silently fail — show empty state
     } finally {
       setIsLoading(false);
     }
-  }, [language, date]);
+  }, [user?.id, date]);
 
   useEffect(() => {
     loadArticle();

@@ -1,7 +1,7 @@
 import { View, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { GradientBorderCard } from '../ui/GradientBorderCard';
+import { GlassSurface } from '../ui/GlassSurface';
 import { GRADIENT_COLORS, GRADIENT_START, GRADIENT_END } from '../../config/gradients';
 import { getLeagueConfig } from '../../lib/levels';
 import type { LeagueTier } from '../../lib/levels';
@@ -19,7 +19,7 @@ export function LevelProgressCard({ level, tier, xpInLevel, xpToNextLevel, progr
   const leagueConfig = getLeagueConfig(tier);
 
   return (
-    <GradientBorderCard innerStyle={{ padding: 20 }}>
+    <GlassSurface innerStyle={{ padding: 20 }}>
       <View className="flex-row items-center mb-3">
         {/* Level circle */}
         <View style={{ width: 48, height: 48, borderRadius: 24, overflow: 'hidden', marginRight: 12 }}>
@@ -61,6 +61,6 @@ export function LevelProgressCard({ level, tier, xpInLevel, xpToNextLevel, progr
       <Text className="text-xs text-text-tertiary mt-1">
         {level >= 100 ? 'Max level reached!' : `${xpInLevel} / ${xpToNextLevel} XP to level ${level + 1}`}
       </Text>
-    </GradientBorderCard>
+    </GlassSurface>
   );
 }

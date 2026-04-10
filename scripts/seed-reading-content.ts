@@ -4,7 +4,7 @@
  * Or: npx tsx scripts/seed-reading-content.ts
  *
  * This populates the reading_books table with AI-generated stories
- * and seeds scaffolded writing prompts for all 8 languages.
+ * and seeds scaffolded writing prompts for all 9 languages.
  *
  * Note: Gutenberg/Wikisource ingestion requires the app's supabase client
  * and is designed to be run from the app context. For those, use the

@@ -76,11 +76,11 @@ export const PRICING_PLANS = [
     popular: true,
   },
   {
-    key: 'unlimited_monthly' as const,
-    planId: 'unlimited' as PlanId,
-    name: 'Unlimited',
+    key: 'vip_monthly' as const,
+    planId: 'vip' as PlanId,
+    name: 'VIP',
     price: '$29.99',
     period: '/month',
-    features: PLAN_FEATURES.unlimited,
+    features: PLAN_FEATURES.vip,
   },
 ] as const;

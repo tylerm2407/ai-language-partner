@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { View, Text, Pressable, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -9,6 +10,11 @@ import { SUPPORTED_LANGUAGES } from '../../../config/app';
 import { GradientBackground } from '../../../components/ui/GradientBackground';
 import { LeagueBadge } from '../../../components/gamification/LeagueBadge';
 import { AchievementGrid } from '../../../components/gamification/AchievementGrid';
+import { Avatar } from '../../../components/avatar/Avatar';
+import { AvatarCustomizer } from '../../../components/avatar/AvatarCustomizer';
+import { DEFAULT_AVATAR_CONFIG } from '../../../components/avatar/constants';
+import { updateAvatarConfig } from '../../../lib/supabase-queries';
+import type { AvatarConfig } from '../../../types';
 
 const LEVEL_LABELS: Record<string, string> = {
   beginner: 'Beginner',
@@ -20,9 +26,21 @@ const LEVEL_LABELS: Record<string, string> = {
 
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
-  const { profile, subscription } = useAppStore();
+  const { profile, subscription, setProfile } = useAppStore();
   const { level, tier } = useLevel();
   const router = useRouter();
+  const [customizerVisible, setCustomizerVisible] = useState(false);
+
+  const handleSaveAvatar = async (config: AvatarConfig) => {
+    if (!user || !profile) return;
+    try {
+      await updateAvatarConfig(user.id, config);
+      setProfile({ ...profile, avatarConfig: config });
+      setCustomizerVisible(false);
+    } catch (err) {
+      console.error('Failed to save avatar:', err);
+    }
+  };
 
   const languageLabel = SUPPORTED_LANGUAGES.find((l) => l.code === profile?.targetLanguage)?.name ?? profile?.targetLanguage ?? 'Not set';
   const levelLabel = profile?.level ? LEVEL_LABELS[profile.level] ?? profile.level : 'Not set';
@@ -42,11 +60,19 @@ export default function ProfileScreen() {
 
         {/* User Info */}
         <View className="bg-dark-card rounded-2xl p-5 mb-4">
-          <View className="w-16 h-16 bg-primary-tint rounded-full items-center justify-center mb-3">
-            <Text className="text-2xl font-bold text-primary">
-              {(profile?.displayName?.[0] ?? user?.email?.[0] ?? '?').toUpperCase()}
-            </Text>
-          </View>
+          <Pressable
+            onPress={() => setCustomizerVisible(true)}
+            accessibilityLabel="Customize avatar"
+            accessibilityRole="button"
+            style={{ marginBottom: 12 }}
+          >
+            <Avatar
+              config={profile?.avatarConfig ?? undefined}
+              size="large"
+              expression="neutral"
+              animated
+            />
+          </Pressable>
           <Text className="text-lg font-semibold text-text-primary">{profile?.displayName ?? user?.email}</Text>
           {profile?.displayName && (
             <Text className="text-sm text-text-secondary">{user?.email}</Text>
@@ -145,6 +171,12 @@ export default function ProfileScreen() {
         </Pressable>
       </ScrollView>
     </View>
+    <AvatarCustomizer
+      visible={customizerVisible}
+      onClose={() => setCustomizerVisible(false)}
+      initialConfig={profile?.avatarConfig ?? DEFAULT_AVATAR_CONFIG}
+      onSave={handleSaveAvatar}
+    />
     </GradientBackground>
   );
 }

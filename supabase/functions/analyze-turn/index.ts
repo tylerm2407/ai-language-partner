@@ -4,9 +4,13 @@
 // Deploy: npx supabase functions deploy analyze-turn
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsResponse, corsHeaders } from '../_shared/cors.ts';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
+import { getPlanLimits } from '../_shared/plan-limits.ts';
 
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
 const TEXT_MODEL = 'claude-haiku-4-5-20251001';
 
@@ -31,6 +35,33 @@ serve(async (req: Request) => {
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers }
+      );
+    }
+
+    // Rate limit: analyze-turn piggybacks on voice minutes (called per voice turn)
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const { data: sub } = await supabase
+      .from('subscriptions')
+      .select('tier, is_active')
+      .eq('user_id', authUser.userId)
+      .single();
+
+    const tier = sub?.is_active && sub.tier ? sub.tier : 'free';
+    const limits = getPlanLimits(tier);
+
+    const todayUTC = new Date().toISOString().split('T')[0];
+    const { data: usageRow } = await supabase
+      .from('daily_usage')
+      .select('voice_minutes')
+      .eq('user_id', authUser.userId)
+      .eq('date', todayUTC)
+      .single();
+
+    const currentVoiceMinutes = parseFloat(usageRow?.voice_minutes as string) || 0;
+    if (currentVoiceMinutes >= limits.dailyVoiceMinutes) {
+      return new Response(
+        JSON.stringify({ correction: null, vocabularyHighlights: [] }),
+        { headers }
       );
     }
 

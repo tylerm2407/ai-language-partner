@@ -97,7 +97,7 @@ export function gradeAnswer(
  * Normalize text for comparison: lowercase, trim, remove extra spaces,
  * normalize accents for Latin scripts.
  */
-function normalize(text: string): string {
+export function normalize(text: string): string {
   return text
     .trim()
     .toLowerCase()
@@ -112,7 +112,7 @@ function normalize(text: string): string {
 /**
  * Levenshtein distance between two strings.
  */
-function levenshtein(a: string, b: string): number {
+export function levenshtein(a: string, b: string): number {
   const m = a.length;
   const n = b.length;
 
@@ -143,6 +143,63 @@ function levenshtein(a: string, b: string): number {
  * Convert a GradeResult to an SRS rating (0-5 scale).
  * Used to feed into the SM-2 algorithm.
  */
+export interface SpeechGradeResult {
+  isCorrect: boolean;
+  score: number;
+  feedback: string;
+  targetPresent: boolean;
+}
+
+/**
+ * Grade a speech transcription against expected text and accepted variants.
+ * Used by speaking exercises to compare STT output with expected answers.
+ */
+export function gradeSpeechTranscription(
+  transcription: string,
+  expectedText: string,
+  acceptedVariants: string[],
+  targetWord?: string
+): SpeechGradeResult {
+  const normalizedTranscription = normalize(transcription);
+  const normalizedExpected = normalize(expectedText);
+  const allVariants = [normalizedExpected, ...acceptedVariants.map(normalize)];
+
+  // Find the best similarity across expected text and all accepted variants
+  let bestSimilarity = 0;
+  for (const variant of allVariants) {
+    const distance = levenshtein(normalizedTranscription, variant);
+    const maxLen = Math.max(normalizedTranscription.length, variant.length);
+    const similarity = maxLen === 0 ? 1 : 1 - distance / maxLen;
+    if (similarity > bestSimilarity) {
+      bestSimilarity = similarity;
+    }
+  }
+
+  const score = Math.round(bestSimilarity * 100);
+  const isCorrect = score >= 60;
+
+  // Check if the target word appears in the transcription
+  const targetPresent = targetWord
+    ? normalizedTranscription.includes(normalize(targetWord))
+    : false;
+
+  // Generate feedback based on score ranges
+  let feedback: string;
+  if (score >= 90) {
+    feedback = 'Excellent pronunciation!';
+  } else if (score >= 75) {
+    feedback = 'Good job! A few sounds need work.';
+  } else if (score >= 60) {
+    feedback = 'Decent attempt. Keep practicing!';
+  } else if (score >= 40) {
+    feedback = 'Needs improvement. Try listening to the audio again and repeat slowly.';
+  } else {
+    feedback = `Not quite right. The expected answer was: "${expectedText}"`;
+  }
+
+  return { isCorrect, score, feedback, targetPresent };
+}
+
 export function gradeToRating(grade: GradeResult, responseTimeMs: number): 0 | 1 | 2 | 3 | 4 | 5 {
   if (!grade.isCorrect) {
     return grade.accuracy > 0.5 ? 2 : 1; // 1 = total miss, 2 = close

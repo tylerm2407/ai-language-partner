@@ -5,7 +5,7 @@ import { OfflineBanner } from '../../components/ui/OfflineBanner';
 import { View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GRADIENT_COLORS } from '../../config/gradients';
-import { StatsBar } from '../../components/ui/StatsBar';
+import { StatsBar } from '../../components/stats-bar/StatsBar';
 
 function TabBarBackground() {
   return (

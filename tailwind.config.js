@@ -9,8 +9,8 @@ module.exports = {
     extend: {
       colors: {
         dark: "#0C0F14",
-        "dark-card": "#151921",
-        "dark-card-alt": "#1C2029",
+        "dark-card": "rgba(21, 25, 33, 0.35)",
+        "dark-card-alt": "rgba(28, 32, 41, 0.35)",
         "dark-border": "#252A35",
         "accent-blue": "#A855F7",
         "accent-purple": "#A855F7",
@@ -40,8 +40,8 @@ module.exports = {
         },
         streak: "#FBBF24",
         surface: {
-          DEFAULT: "#151921",
-          alt: "#1C2029",
+          DEFAULT: "rgba(21, 25, 33, 0.35)",
+          alt: "rgba(28, 32, 41, 0.35)",
         },
         border: "#252A35",
         "input-border": "#333A48",

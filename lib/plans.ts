@@ -7,84 +7,105 @@
  *   - supabase/functions/score-pronunciation/index.ts
  */
 
-export type PlanId = 'free' | 'basic' | 'premium' | 'unlimited';
+export type PlanId = 'free' | 'basic' | 'premium' | 'vip';
 
 export interface PlanDefinition {
   name: string;
   priceMonthlyUsd: number;
-  dailyTextConversations: number | 'unlimited';
-  dailyVoiceMinutes: number | 'unlimited';
+  dailyTextMessages: number;
+  dailyVoiceMinutes: number;
+  dailyWritingGrades: number;
+  dailyPronunciationScores: number;
   unlimitedHearts: boolean;
   streakShield: boolean;
+  audiobookNarration: boolean;
 }
 
 export const PLANS: Record<PlanId, PlanDefinition> = {
   free: {
     name: 'Free',
     priceMonthlyUsd: 0,
-    dailyTextConversations: 5,
+    dailyTextMessages: 5,
     dailyVoiceMinutes: 5,
+    dailyWritingGrades: 1,
+    dailyPronunciationScores: 2,
     unlimitedHearts: false,
     streakShield: false,
+    audiobookNarration: false,
   },
   basic: {
     name: 'Basic',
     priceMonthlyUsd: 9.99,
-    dailyTextConversations: 20,
-    dailyVoiceMinutes: 20,
+    dailyTextMessages: 25,
+    dailyVoiceMinutes: 10,
+    dailyWritingGrades: 3,
+    dailyPronunciationScores: 3,
     unlimitedHearts: true,
     streakShield: true,
+    audiobookNarration: false,
   },
   premium: {
     name: 'Premium',
     priceMonthlyUsd: 19.99,
-    dailyTextConversations: 'unlimited',
-    dailyVoiceMinutes: 45,
+    dailyTextMessages: 50,
+    dailyVoiceMinutes: 20,
+    dailyWritingGrades: 7,
+    dailyPronunciationScores: 5,
     unlimitedHearts: true,
     streakShield: true,
+    audiobookNarration: false,
   },
-  unlimited: {
-    name: 'Unlimited',
+  vip: {
+    name: 'VIP',
     priceMonthlyUsd: 29.99,
-    dailyTextConversations: 'unlimited',
-    dailyVoiceMinutes: 60,
+    dailyTextMessages: 75,
+    dailyVoiceMinutes: 30,
+    dailyWritingGrades: 12,
+    dailyPronunciationScores: 7,
     unlimitedHearts: true,
     streakShield: true,
+    audiobookNarration: true,
   },
 };
 
 /** Feature bullet points for the subscription/pricing UI. */
 export const PLAN_FEATURES: Record<PlanId, string[]> = {
   free: [
-    '5 text conversations per day',
+    '5 text messages per day',
     '5 minutes of AI voice per day',
+    '1 writing grade per day',
+    '2 pronunciation scores per day',
     'Basic SRS review',
     '5 hearts per day',
   ],
   basic: [
-    '20 text conversations per day',
-    '20 minutes of AI voice per day',
+    '25 text messages per day',
+    '10 minutes of AI voice per day',
+    '3 writing grades per day',
+    '3 pronunciation scores per day',
     'Full SRS with adaptive scheduling',
-    'Speaking & pronunciation scoring',
     'Unlimited hearts',
     'Streak shield protection',
   ],
   premium: [
-    'Unlimited text conversations',
-    '45 minutes of AI voice per day',
+    '50 text messages per day',
+    '20 minutes of AI voice per day',
+    '7 writing grades per day',
+    '5 pronunciation scores per day',
     'Full SRS with adaptive scheduling',
-    'Speaking & pronunciation scoring',
     'Unlimited hearts',
     'Streak shield protection',
     'Offline mode',
   ],
-  unlimited: [
-    'Unlimited text conversations',
-    '60 minutes of AI voice per day',
+  vip: [
+    '75 text messages per day',
+    '30 minutes of AI voice per day',
+    '12 writing grades per day',
+    '7 pronunciation scores per day',
     'Full SRS with adaptive scheduling',
-    'Speaking & pronunciation scoring',
     'Unlimited hearts',
     'Streak shield protection',
+    'Audiobook narration',
     'Offline mode',
     'Priority support',
   ],
@@ -92,16 +113,19 @@ export const PLAN_FEATURES: Record<PlanId, string[]> = {
 
 /**
  * Return numeric limits for a given plan, suitable for backend enforcement.
- * Converts "unlimited" to Infinity for easy comparison.
  */
 export function getPlanLimits(planId: PlanId | string): {
-  dailyTextConversations: number;
+  dailyTextMessages: number;
   dailyVoiceMinutes: number;
+  dailyWritingGrades: number;
+  dailyPronunciationScores: number;
 } {
   const plan = PLANS[planId as PlanId] ?? PLANS.free;
   return {
-    dailyTextConversations: plan.dailyTextConversations === 'unlimited' ? Infinity : plan.dailyTextConversations,
-    dailyVoiceMinutes: plan.dailyVoiceMinutes === 'unlimited' ? Infinity : plan.dailyVoiceMinutes,
+    dailyTextMessages: plan.dailyTextMessages,
+    dailyVoiceMinutes: plan.dailyVoiceMinutes,
+    dailyWritingGrades: plan.dailyWritingGrades,
+    dailyPronunciationScores: plan.dailyPronunciationScores,
   };
 }
 
@@ -111,6 +135,6 @@ export const STRIPE_PRICE_KEYS = {
   basic_yearly: 'basic_yearly',
   premium_monthly: 'premium_monthly',
   premium_yearly: 'premium_yearly',
-  unlimited_monthly: 'unlimited_monthly',
-  unlimited_yearly: 'unlimited_yearly',
+  vip_monthly: 'vip_monthly',
+  vip_yearly: 'vip_yearly',
 } as const;

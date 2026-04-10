@@ -1,7 +1,8 @@
 import { View, Text, Pressable, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAppStore } from '../../../stores/useAppStore';
 import { PRICING_PLANS, openCheckout } from '../../../lib/stripe';
@@ -11,11 +12,18 @@ import { Ionicons } from '@expo/vector-icons';
 
 export default function SubscriptionScreen() {
   const { user } = useAuth();
-  const { subscription } = useAppStore();
+  const { subscription, refreshSubscription } = useAppStore();
   const router = useRouter();
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
   const currentTier = subscription?.tier ?? 'free';
+
+  // Refresh subscription every time this screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      if (user) refreshSubscription(user.id);
+    }, [user, refreshSubscription])
+  );
 
   const handleSubscribe = async (priceKey: string) => {
     if (!user) return;
@@ -26,6 +34,8 @@ export default function SubscriptionScreen() {
         email: user.email ?? '',
         priceKey,
       });
+      // User returned from Stripe checkout — refresh subscription immediately
+      await refreshSubscription(user.id);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Something went wrong';
       Alert.alert('Error', message);

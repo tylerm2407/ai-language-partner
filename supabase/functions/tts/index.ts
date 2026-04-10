@@ -29,7 +29,7 @@ const PLAN_LIMITS: Record<string, { dailyVoiceMinutes: number | 'unlimited' }> =
   free:      { dailyVoiceMinutes: 5 },
   basic:     { dailyVoiceMinutes: 20 },
   premium:   { dailyVoiceMinutes: 45 },
-  unlimited: { dailyVoiceMinutes: 60 },
+  vip:       { dailyVoiceMinutes: 60 },
 };
 
 interface TTSRequest {

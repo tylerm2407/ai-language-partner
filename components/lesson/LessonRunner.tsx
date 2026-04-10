@@ -12,6 +12,10 @@ import { ClozeExercise } from './ClozeExercise';
 import { SentenceConstructionExercise } from './SentenceConstructionExercise';
 import { ErrorCorrectionExercise } from './ErrorCorrectionExercise';
 import { DictationExercise } from './DictationExercise';
+import { CollocationMatch } from './CollocationMatch';
+import { WordFormExercise } from './WordFormExercise';
+import { SentenceTransformExercise } from './SentenceTransformExercise';
+import { MiniDialogueExercise } from './MiniDialogueExercise';
 import { HeartsDisplay } from '../gamification/HeartsDisplay';
 import { OutOfHeartsModal } from '../gamification/OutOfHeartsModal';
 import { CorrectSparkle } from '../animations/CorrectSparkle';
@@ -256,6 +260,14 @@ function renderExercise(
       return <ErrorCorrectionExercise exercise={exercise} onAnswer={onAnswer} />;
     case 'dictation':
       return <DictationExercise exercise={exercise} onAnswer={onAnswer} />;
+    case 'collocation_match':
+      return <CollocationMatch exercise={exercise} onAnswer={onAnswer} showResult={showResult} />;
+    case 'word_form':
+      return <WordFormExercise exercise={exercise} onAnswer={onAnswer} showResult={showResult} />;
+    case 'sentence_transformation':
+      return <SentenceTransformExercise exercise={exercise} onAnswer={onAnswer} showResult={showResult} />;
+    case 'mini_dialogue':
+      return <MiniDialogueExercise exercise={exercise} onAnswer={onAnswer} showResult={showResult} />;
     default:
       return (
         <View className="p-6">

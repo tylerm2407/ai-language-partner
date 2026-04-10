@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../../../../hooks/useAuth';
 import { useAppStore } from '../../../../stores/useAppStore';
+import { GradientBackground } from '../../../../components/ui/GradientBackground';
 import {
   fetchWritingPromptById,
   submitWriting,
@@ -137,20 +138,24 @@ export default function WritingPromptScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#6366F1" />
-      </SafeAreaView>
+      <GradientBackground>
+        <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color="#6366F1" />
+        </SafeAreaView>
+      </GradientBackground>
     );
   }
 
   if (error && !feedback) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-        <Text style={{ fontSize: 16, color: '#EF4444', textAlign: 'center' }}>{error}</Text>
-        <Pressable onPress={() => router.back()} style={{ marginTop: 16 }} accessibilityRole="button">
-          <Text style={{ fontSize: 16, color: '#6366F1' }}>Go Back</Text>
-        </Pressable>
-      </SafeAreaView>
+      <GradientBackground>
+        <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+          <Text style={{ fontSize: 16, color: '#EF4444', textAlign: 'center' }}>{error}</Text>
+          <Pressable onPress={() => router.back()} style={{ marginTop: 16 }} accessibilityRole="button">
+            <Text style={{ fontSize: 16, color: '#6366F1' }}>Go Back</Text>
+          </Pressable>
+        </SafeAreaView>
+      </GradientBackground>
     );
   }
 
@@ -169,9 +174,11 @@ export default function WritingPromptScreen() {
 
   if (!prompt) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' }}>
-        <Text style={{ fontSize: 16, color: '#999' }}>Writing prompt not found.</Text>
-      </SafeAreaView>
+      <GradientBackground>
+        <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Text style={{ fontSize: 16, color: '#9CA3AF' }}>Writing prompt not found.</Text>
+        </SafeAreaView>
+      </GradientBackground>
     );
   }
 

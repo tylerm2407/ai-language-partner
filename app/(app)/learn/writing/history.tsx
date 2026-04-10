@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../../hooks/useAuth';
 import { fetchAllUserWritingSubmissions } from '../../../../lib/supabase-queries';
 import type { WritingSubmission } from '../../../../types';
+import { GradientBackground } from '../../../../components/ui/GradientBackground';
 
 const CEFR_COLORS: Record<string, { bg: string; text: string }> = {
   A1: { bg: '#DCFCE7', text: '#22C55E' },
@@ -47,20 +48,23 @@ export default function WritingHistoryScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#6366F1" />
-      </SafeAreaView>
+      <GradientBackground>
+        <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color="#6366F1" />
+        </SafeAreaView>
+      </GradientBackground>
     );
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+    <GradientBackground>
+    <SafeAreaView style={{ flex: 1 }}>
       {/* Header */}
       <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12, flexDirection: 'row', alignItems: 'center' }}>
         <Pressable onPress={() => router.back()} style={{ padding: 8 }} accessibilityRole="button" accessibilityLabel="Go back">
-          <Ionicons name="arrow-back" size={24} color="#666" />
+          <Ionicons name="arrow-back" size={24} color="#9CA3AF" />
         </Pressable>
-        <Text style={{ fontSize: 24, fontWeight: '700', color: '#111', marginLeft: 8 }} accessibilityRole="header">
+        <Text style={{ fontSize: 24, fontWeight: '700', color: '#FFFFFF', marginLeft: 8 }} accessibilityRole="header">
           Writing History
         </Text>
       </View>
@@ -68,7 +72,7 @@ export default function WritingHistoryScreen() {
       {promptEntries.length === 0 ? (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
           <Ionicons name="create-outline" size={48} color="#D1D5DB" />
-          <Text style={{ fontSize: 16, color: '#999', marginTop: 12, textAlign: 'center' }}>
+          <Text style={{ fontSize: 16, color: '#9CA3AF', marginTop: 12, textAlign: 'center' }}>
             No writing submissions yet. Complete a writing exercise to see your history here.
           </Text>
         </View>
@@ -83,14 +87,14 @@ export default function WritingHistoryScreen() {
               <Pressable
                 key={entry.promptId}
                 style={{
-                  backgroundColor: '#F9FAFB', borderRadius: 14, padding: 16, marginBottom: 10,
+                  backgroundColor: '#151921', borderRadius: 14, padding: 16, marginBottom: 10,
                 }}
                 onPress={() => router.push(`/learn/writing/${entry.promptId}` as any)}
                 accessibilityRole="button"
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 15, color: '#111', fontWeight: '500' }} numberOfLines={2}>
+                    <Text style={{ fontSize: 15, color: '#FFFFFF', fontWeight: '500' }} numberOfLines={2}>
                       {entry.submissions[0].submissionText.slice(0, 80)}...
                     </Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 8 }}>
@@ -116,5 +120,6 @@ export default function WritingHistoryScreen() {
         </ScrollView>
       )}
     </SafeAreaView>
+    </GradientBackground>
   );
 }

@@ -7,21 +7,13 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, corsResponse } from '../_shared/cors.ts';
+import { getPlanLimits } from '../_shared/plan-limits.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
 const TEXT_MODEL = 'claude-haiku-4-5-20251001';
-
-// Plan daily limits — single source of truth shared with lib/plans.ts on the client.
-// "unlimited" means no cap is enforced.
-const PLAN_LIMITS: Record<string, { dailyTextConversations: number | 'unlimited'; dailyVoiceMinutes: number | 'unlimited' }> = {
-  free:      { dailyTextConversations: 5,           dailyVoiceMinutes: 5 },
-  basic:     { dailyTextConversations: 20,          dailyVoiceMinutes: 20 },
-  premium:   { dailyTextConversations: 'unlimited', dailyVoiceMinutes: 45 },
-  unlimited: { dailyTextConversations: 'unlimited', dailyVoiceMinutes: 60 },
-};
 
 interface ChatRequest {
   messages: { role: string; content: string }[];
@@ -103,22 +95,20 @@ serve(async (req: Request) => {
       );
     }
 
-    // ── Enforce daily text conversation limit ──────────────────
+    // ── Enforce daily text message limit ──────────────────
     if (userId) {
       const tier = await getUserTier(supabase, userId);
-      const limits = PLAN_LIMITS[tier] ?? PLAN_LIMITS.free;
+      const limits = getPlanLimits(tier);
 
-      if (limits.dailyTextConversations !== 'unlimited') {
-        const usage = await getOrCreateDailyUsage(supabase, userId);
-        if ((usage.text_messages ?? 0) >= limits.dailyTextConversations) {
-          return new Response(
-            JSON.stringify({
-              error: "You've reached your daily text conversation limit. Upgrade your plan to keep practicing today.",
-              code: 'DAILY_TEXT_LIMIT_REACHED',
-            }),
-            { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
+      const usage = await getOrCreateDailyUsage(supabase, userId);
+      if ((usage.text_messages ?? 0) >= limits.dailyTextMessages) {
+        return new Response(
+          JSON.stringify({
+            error: "You've reached your daily text message limit. Upgrade your plan to keep practicing today.",
+            code: 'DAILY_TEXT_LIMIT_REACHED',
+          }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
     }
 

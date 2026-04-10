@@ -46,6 +46,7 @@ export interface UserProfile {
   // Streak shield
   streakShieldActive: boolean;
   streakShieldUsedAt: string | null;
+  avatarConfig?: AvatarConfig;
   onboardingChecklist: OnboardingChecklist;
   createdAt: string;
   updatedAt: string;
@@ -104,7 +105,15 @@ export type ExerciseType =
   | 'cloze_deletion'
   | 'sentence_construction'
   | 'dictation'
-  | 'error_correction';
+  | 'error_correction'
+  | 'collocation_match'
+  | 'word_form'
+  | 'sentence_transformation'
+  | 'mini_dialogue';
+
+export type SkillType = 'vocabulary' | 'grammar' | 'mixed';
+export type ResponseMode = 'tap' | 'type' | 'speak';
+export type ContentSourceType = 'imported' | 'ai_generated' | 'seed' | 'manual';
 
 export interface Exercise {
   id: string;
@@ -119,6 +128,18 @@ export interface Exercise {
   hintText: string | null;
   cardId: string | null; // links to SRS card if applicable
   metadata?: Record<string, unknown>;
+  // Skill targeting
+  skillType?: SkillType;
+  subskill?: string;
+  responseMode?: ResponseMode;
+  targetWord?: string;
+  targetGrammar?: string;
+  // Speech & distractors
+  acceptedSpeechVariants?: string[];
+  distractors?: string[];
+  explanation?: string;
+  // Provenance
+  sourceType?: ContentSourceType;
 }
 
 // ─── Cards & SRS ────────────────────────────────────────────────
@@ -136,6 +157,44 @@ export interface Card {
   partOfSpeech: string | null;
   tags: string[];
   createdAt: string;
+  // Enhanced vocab metadata
+  language?: string;
+  cefrLevel?: string;
+  skillType?: SkillType;
+  subskill?: string;
+  wordFamily?: string[];
+  collocations?: unknown[];
+  frequencyRank?: number;
+  // Provenance
+  sourceType?: ContentSourceType;
+}
+
+// ─── Content Source ─────────────────────────────────────────
+
+export interface ContentSource {
+  id: string;
+  name: string;
+  url: string | null;
+  license: string;
+  attribution: string | null;
+  description: string | null;
+  lastImportedAt: string | null;
+  createdAt: string;
+}
+
+// ─── Grammar Rules ──────────────────────────────────────────
+
+export interface GrammarRule {
+  id: string;
+  language: string;
+  cefrLevel: string;
+  ruleName: string;
+  title: string;
+  explanation: string;
+  examples: unknown[];
+  commonErrors: unknown[];
+  tags: string[];
+  sourceId: string | null;
 }
 
 export interface ReviewItem {
@@ -207,7 +266,7 @@ export interface PracticeSession {
 
 // ─── Subscription ───────────────────────────────────────────────
 
-export type SubscriptionTier = 'free' | 'basic' | 'premium' | 'unlimited';
+export type SubscriptionTier = 'free' | 'basic' | 'premium' | 'vip';
 
 export interface Subscription {
   id: string;
@@ -227,6 +286,8 @@ export interface DailyUsage {
   date: string; // YYYY-MM-DD
   textMessages: number;
   voiceMinutes: number;
+  writingGrades: number;
+  pronunciationScores: number;
 }
 
 // ─── Daily Challenges ──────────────────────────────────────────
@@ -436,4 +497,31 @@ export interface BookAnnotation {
   translation: string;
   partOfSpeech: string | null;
   audioUrl: string | null;
+}
+
+// ─── Avatar System ──────────────────────────────────────────────
+
+export interface AvatarConfig {
+  headShape: 'round' | 'oval' | 'square';
+  skinTone: string;
+  hairStyle: 'short' | 'medium' | 'long' | 'buzz' | 'curly' | 'ponytail' | 'none';
+  hairColor: string;
+  eyeStyle: 'round' | 'almond' | 'wide' | 'narrow';
+  eyeColor: string;
+  mouthStyle: 'smile' | 'neutral' | 'grin' | 'small';
+  accessory: string | null;
+  outfit: string | null;
+  background: string | null;
+}
+
+export type AvatarExpression = 'neutral' | 'happy' | 'sad' | 'celebrating';
+export type AvatarSize = 'small' | 'medium' | 'large';
+
+export interface AvatarAccessory {
+  id: string;
+  name: string;
+  category: string;
+  svgData: string;
+  unlockType: 'free' | 'level' | 'achievement' | 'streak' | 'purchase';
+  unlockRequirement: Record<string, unknown>;
 }

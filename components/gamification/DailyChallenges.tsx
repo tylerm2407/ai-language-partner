@@ -1,7 +1,7 @@
 import { View, Text, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ProgressBar } from '../ui/ProgressBar';
-import { GradientBorderCard } from '../ui/GradientBorderCard';
+import { GlassSurface } from '../ui/GlassSurface';
 import { ChallengeCompletePop } from '../animations/ChallengeCompletePop';
 import { QuestCountdown } from './QuestCountdown';
 import type { DailyStats } from '../../types';
@@ -62,7 +62,7 @@ export function DailyChallenges({ dailyStats }: DailyChallengesProps) {
   const allComplete = completedCount === challenges.length;
 
   return (
-    <GradientBorderCard innerStyle={{ padding: 20 }} style={{ marginBottom: 24 }}>
+    <GlassSurface innerStyle={{ padding: 20 }} style={{ marginBottom: 24 }}>
       {/* Header */}
       <View className="flex-row items-center justify-between mb-1">
         <View className="flex-row items-center gap-2">
@@ -154,6 +154,6 @@ export function DailyChallenges({ dailyStats }: DailyChallengesProps) {
           </View>
         </View>
       )}
-    </GradientBorderCard>
+    </GlassSurface>
   );
 }

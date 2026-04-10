@@ -1,4 +1,5 @@
 import { View, Text } from 'react-native';
+import { GlassSurface } from '../ui/GlassSurface';
 import type { DailyStats } from '../../types';
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -30,7 +31,7 @@ export function WeeklyChart({ stats, metric = 'xpEarned' }: WeeklyChartProps) {
   const totalWeek = days.reduce((sum, d) => sum + d.value, 0);
 
   return (
-    <View className="bg-dark-card rounded-2xl p-5">
+    <GlassSurface innerStyle={{ padding: 20 }}>
       <View className="flex-row justify-between items-center mb-4">
         <Text className="text-base font-semibold text-text-primary">This Week</Text>
         <Text className="text-sm text-text-secondary">
@@ -69,6 +70,6 @@ export function WeeklyChart({ stats, metric = 'xpEarned' }: WeeklyChartProps) {
           );
         })}
       </View>
-    </View>
+    </GlassSurface>
   );
 }

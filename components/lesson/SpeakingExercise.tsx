@@ -20,7 +20,7 @@ export function SpeakingExercise({ exercise, onAnswer, showResult, userId, targe
   const { recording, audioUri, startRecording, stopRecording, getBase64 } = useAudioRecorder();
   const { playing, play } = useAudioPlayer();
   const [scoring, setScoring] = useState(false);
-  const [score, setScore] = useState<{ score: number; feedback: string } | null>(null);
+  const [score, setScore] = useState<{ score: number; feedback: string; transcription?: string } | null>(null);
 
   const handleToggleRecord = async () => {
     if (recording) {
@@ -49,9 +49,11 @@ export function SpeakingExercise({ exercise, onAnswer, showResult, userId, targe
         audioBase64: base64,
         expectedText: exercise.correctAnswer,
         language: targetLanguage,
+        acceptedVariants: exercise.acceptedSpeechVariants,
+        targetWord: exercise.targetWord,
       });
 
-      setScore({ score: result.score, feedback: result.feedback });
+      setScore({ score: result.score, feedback: result.feedback, transcription: result.transcription });
 
       const isCorrect = result.score >= 60;
       if (Platform.OS !== 'web') {
@@ -139,6 +141,11 @@ export function SpeakingExercise({ exercise, onAnswer, showResult, userId, targe
             </Text>
           </View>
           <Text className="text-text-primary text-base mt-3 text-center">{score.feedback}</Text>
+          {score.transcription && (
+            <Text className="text-text-tertiary text-xs mt-2 text-center italic">
+              Heard: "{score.transcription}"
+            </Text>
+          )}
         </View>
       )}
     </ExerciseCard>

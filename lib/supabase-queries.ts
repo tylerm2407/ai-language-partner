@@ -28,6 +28,11 @@ import type {
   ReadingBook,
   UserBookProgress,
   BookAnnotation,
+  AvatarConfig,
+  AvatarAccessory,
+  ContentSource,
+  GrammarRule,
+  SkillType,
 } from '../types';
 
 // ─── User Profile ───────────────────────────────────────────────
@@ -429,7 +434,12 @@ export async function getOrCreateDailyUsage(userId: string): Promise<DailyUsage>
  */
 export async function incrementDailyUsage(
   userId: string,
-  deltas: { textMessagesDelta?: number; voiceMinutesDelta?: number }
+  deltas: {
+    textMessagesDelta?: number;
+    voiceMinutesDelta?: number;
+    writingGradesDelta?: number;
+    pronunciationScoresDelta?: number;
+  }
 ): Promise<DailyUsage> {
   const current = await getOrCreateDailyUsage(userId);
   const today = new Date().toISOString().split('T')[0];
@@ -439,6 +449,8 @@ export async function incrementDailyUsage(
     .update({
       text_messages: current.textMessages + (deltas.textMessagesDelta ?? 0),
       voice_minutes: current.voiceMinutes + (deltas.voiceMinutesDelta ?? 0),
+      writing_grades: current.writingGrades + (deltas.writingGradesDelta ?? 0),
+      pronunciation_scores: current.pronunciationScores + (deltas.pronunciationScoresDelta ?? 0),
     })
     .eq('user_id', userId)
     .eq('date', today)
@@ -489,6 +501,7 @@ function mapProfile(row: Record<string, unknown>): UserProfile {
     // Streak shield
     streakShieldActive: (row.streak_shield_active as boolean) ?? false,
     streakShieldUsedAt: (row.streak_shield_used_at as string) ?? null,
+    avatarConfig: row.avatar_config ? (row.avatar_config as AvatarConfig) : undefined,
     onboardingChecklist: parseOnboardingChecklist(row.onboarding_checklist),
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
@@ -574,6 +587,15 @@ function mapExercise(row: Record<string, unknown>): Exercise {
     hintText: row.hint_text as string | null,
     cardId: row.card_id as string | null,
     metadata: (row.metadata as Record<string, unknown>) ?? undefined,
+    skillType: (row.skill_type as Exercise['skillType']) ?? undefined,
+    subskill: (row.subskill as string) ?? undefined,
+    responseMode: (row.response_mode as Exercise['responseMode']) ?? undefined,
+    targetWord: (row.target_word as string) ?? undefined,
+    targetGrammar: (row.target_grammar as string) ?? undefined,
+    acceptedSpeechVariants: (row.accepted_speech_variants as string[]) ?? undefined,
+    distractors: (row.distractors as string[]) ?? undefined,
+    explanation: (row.explanation as string) ?? undefined,
+    sourceType: (row.source_type as Exercise['sourceType']) ?? undefined,
   };
 }
 
@@ -591,6 +613,14 @@ function mapCard(row: Record<string, unknown>): Card {
     partOfSpeech: row.part_of_speech as string | null,
     tags: row.tags as string[],
     createdAt: row.created_at as string,
+    language: (row.language as string) ?? undefined,
+    cefrLevel: (row.cefr_level as string) ?? undefined,
+    skillType: (row.skill_type as Card['skillType']) ?? undefined,
+    subskill: (row.subskill as string) ?? undefined,
+    wordFamily: (row.word_family as string[]) ?? undefined,
+    collocations: (row.collocations as unknown[]) ?? undefined,
+    frequencyRank: (row.frequency_rank as number) ?? undefined,
+    sourceType: (row.source_type as Card['sourceType']) ?? undefined,
   };
 }
 
@@ -671,6 +701,8 @@ function mapDailyUsage(row: Record<string, unknown>): DailyUsage {
     date: row.date as string,
     textMessages: row.text_messages as number,
     voiceMinutes: parseFloat(row.voice_minutes as string) || 0,
+    writingGrades: (row.writing_grades as number) ?? 0,
+    pronunciationScores: (row.pronunciation_scores as number) ?? 0,
   };
 }
 
@@ -1094,6 +1126,42 @@ export async function fetchDailyNews(language: string, date?: string): Promise<D
   return data ? mapDailyNewsArticle(data) : null;
 }
 
+export async function fetchUserDailyNews(userId: string, date?: string): Promise<DailyNewsArticle | null> {
+  const targetDate = date ?? new Date().toISOString().split('T')[0];
+
+  const { data, error } = await supabase
+    .from('user_daily_news')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('date', targetDate)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw error;
+  return data ? mapDailyNewsArticle(data) : null;
+}
+
+export async function generateDailyNews(language: string, level: string): Promise<DailyNewsArticle> {
+  const { data, error } = await supabase.functions.invoke('daily-news', {
+    body: { language, level },
+  });
+
+  if (error) {
+    // When edge function returns non-2xx, the actual error body is in error.context
+    let message = error.message;
+    if (error.context instanceof Response) {
+      try {
+        const body = await error.context.json();
+        message = body?.error ?? message;
+      } catch {
+        // ignore parse failure
+      }
+    }
+    throw new Error(message);
+  }
+  if (!data?.article) throw new Error('No article returned');
+  return mapDailyNewsArticle(data.article);
+}
+
 // ─── Reading Mappers ────────────────────────────────────────────
 
 function mapReadingPassage(row: Record<string, unknown>): ReadingPassage {
@@ -1272,6 +1340,26 @@ export async function fetchUserBookProgress(
   return (data ?? []).map(mapUserBookProgress);
 }
 
+export async function fetchInProgressBooks(
+  userId: string,
+  language: string
+): Promise<{ book: ReadingBook; progress: UserBookProgress }[]> {
+  const { data, error } = await supabase
+    .from('user_book_progress')
+    .select('*, reading_books!inner(*)')
+    .eq('user_id', userId)
+    .gt('percent_complete', 0)
+    .is('completed_at', null)
+    .eq('reading_books.language', language)
+    .order('last_read_at', { ascending: false });
+
+  if (error) throw error;
+  return (data ?? []).map((row: Record<string, unknown>) => ({
+    book: mapReadingBook(row.reading_books as Record<string, unknown>),
+    progress: mapUserBookProgress(row),
+  }));
+}
+
 export async function fetchWritingSubmissionsByPrompt(
   userId: string,
   promptId: string
@@ -1369,4 +1457,140 @@ function mapDailyNewsArticle(row: Record<string, unknown>): DailyNewsArticle {
     imageUrl: (row.image_url as string) ?? null,
     createdAt: row.created_at as string,
   };
+}
+
+// ─── Avatar ─────────────────────────────────────────────────────
+
+export async function updateAvatarConfig(userId: string, config: AvatarConfig): Promise<void> {
+  const { error } = await supabase
+    .from('user_profiles')
+    .update({ avatar_config: config, updated_at: new Date().toISOString() })
+    .eq('user_id', userId);
+  if (error) throw error;
+}
+
+export async function fetchAvatarAccessories(): Promise<AvatarAccessory[]> {
+  const { data, error } = await supabase
+    .from('avatar_accessories')
+    .select('*')
+    .order('category', { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map(row => ({
+    id: row.id,
+    name: row.name,
+    category: row.category,
+    svgData: row.svg_data,
+    unlockType: row.unlock_type,
+    unlockRequirement: row.unlock_requirement,
+  }));
+}
+
+export async function fetchUserUnlocks(userId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('user_avatar_unlocks')
+    .select('accessory_id')
+    .eq('user_id', userId);
+  if (error) throw error;
+  return (data ?? []).map(row => row.accessory_id);
+}
+
+export async function unlockAccessory(userId: string, accessoryId: string): Promise<void> {
+  const { error } = await supabase
+    .from('user_avatar_unlocks')
+    .insert({ user_id: userId, accessory_id: accessoryId });
+  if (error) throw error;
+}
+
+// ─── Grammar Rules ──────────────────────────────────────────────
+
+export async function fetchGrammarRules(language: string, cefrLevel: string): Promise<GrammarRule[]> {
+  const { data, error } = await supabase
+    .from('grammar_rules')
+    .select('*')
+    .eq('language', language)
+    .eq('cefr_level', cefrLevel)
+    .order('rule_name');
+
+  if (error) throw error;
+  return (data ?? []).map(mapGrammarRule);
+}
+
+function mapGrammarRule(row: Record<string, unknown>): GrammarRule {
+  return {
+    id: row.id as string,
+    language: row.language as string,
+    cefrLevel: row.cefr_level as string,
+    ruleName: row.rule_name as string,
+    title: row.title as string,
+    explanation: row.explanation as string,
+    examples: row.examples as unknown[],
+    commonErrors: row.common_errors as unknown[],
+    tags: row.tags as string[],
+    sourceId: (row.source_id as string) ?? null,
+  };
+}
+
+// ─── Content Sources ────────────────────────────────────────────
+
+export async function fetchContentSources(): Promise<ContentSource[]> {
+  const { data, error } = await supabase
+    .from('content_sources')
+    .select('*')
+    .order('name');
+
+  if (error) throw error;
+  return (data ?? []).map(mapContentSource);
+}
+
+export async function upsertContentSource(source: Omit<ContentSource, 'id' | 'createdAt'>): Promise<ContentSource> {
+  const { data, error } = await supabase
+    .from('content_sources')
+    .upsert({
+      name: source.name,
+      url: source.url,
+      license: source.license,
+      attribution: source.attribution,
+      description: source.description,
+      last_imported_at: source.lastImportedAt,
+    }, { onConflict: 'name' })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return mapContentSource(data);
+}
+
+function mapContentSource(row: Record<string, unknown>): ContentSource {
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    url: (row.url as string) ?? null,
+    license: row.license as string,
+    attribution: (row.attribution as string) ?? null,
+    description: (row.description as string) ?? null,
+    lastImportedAt: (row.last_imported_at as string) ?? null,
+    createdAt: row.created_at as string,
+  };
+}
+
+// ─── Cards by Language & Level ──────────────────────────────────
+
+export async function fetchCardsByLanguageAndLevel(
+  language: string,
+  cefrLevel: string,
+  skillType?: SkillType
+): Promise<Card[]> {
+  let query = supabase
+    .from('cards')
+    .select('*')
+    .eq('language', language)
+    .eq('cefr_level', cefrLevel);
+
+  if (skillType) {
+    query = query.eq('skill_type', skillType);
+  }
+
+  const { data, error } = await query.order('frequency_rank', { ascending: true, nullsFirst: false });
+  if (error) throw error;
+  return (data ?? []).map(mapCard);
 }

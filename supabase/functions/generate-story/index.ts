@@ -2,6 +2,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsResponse, corsHeaders } from '../_shared/cors.ts';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
+import { getPlanLimits } from '../_shared/plan-limits.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -43,6 +44,31 @@ serve(async (req: Request) => {
 
     if (!ANTHROPIC_API_KEY) {
       return new Response(JSON.stringify({ error: 'ANTHROPIC_API_KEY not configured' }), { status: 500, headers });
+    }
+
+    // ── Rate limit: count against text messages ──────────────
+    const { data: sub } = await supabase
+      .from('subscriptions')
+      .select('tier, is_active')
+      .eq('user_id', authUser.userId)
+      .single();
+
+    const tierValue = sub?.is_active && sub.tier ? sub.tier : 'free';
+    const limits = getPlanLimits(tierValue);
+
+    const todayUTC = new Date().toISOString().split('T')[0];
+    const { data: usageRow } = await supabase
+      .from('daily_usage')
+      .select('text_messages')
+      .eq('user_id', authUser.userId)
+      .eq('date', todayUTC)
+      .single();
+
+    if (((usageRow?.text_messages as number) ?? 0) >= limits.dailyTextMessages) {
+      return new Response(
+        JSON.stringify({ error: "You've reached your daily AI usage limit. Upgrade your plan for more.", code: 'DAILY_TEXT_LIMIT_REACHED' }),
+        { status: 429, headers }
+      );
     }
 
     const body = (await req.json()) as GenerateRequest;
@@ -140,6 +166,13 @@ RESPOND ONLY IN VALID JSON:
 
       bookIds.push(book.id);
     }
+
+    // Increment text_messages by number of stories generated
+    await supabase.rpc('increment_daily_usage', {
+      p_user_id: authUser.userId,
+      p_date: todayUTC,
+      p_text_messages: bookIds.length,
+    });
 
     return new Response(JSON.stringify({ bookIds }), { headers });
   } catch (error) {

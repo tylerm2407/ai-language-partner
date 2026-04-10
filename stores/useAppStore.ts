@@ -13,6 +13,7 @@ interface AppState {
   loadUserData: (userId: string) => Promise<void>;
   setProfile: (profile: UserProfile | null) => void;
   setDailyStats: (stats: DailyStats | null) => void;
+  refreshSubscription: (userId: string) => Promise<void>;
   refreshReviewCount: (userId: string) => Promise<void>;
   reset: () => void;
 }
@@ -48,6 +49,15 @@ export const useAppStore = create<AppState>((set) => ({
 
   setProfile: (profile) => set({ profile }),
   setDailyStats: (dailyStats) => set({ dailyStats }),
+
+  refreshSubscription: async (userId: string) => {
+    try {
+      const subscription = await fetchSubscription(userId);
+      set({ subscription });
+    } catch (err) {
+      console.error('refreshSubscription error:', err);
+    }
+  },
 
   refreshReviewCount: async (userId: string) => {
     try {

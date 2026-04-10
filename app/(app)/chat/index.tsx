@@ -12,7 +12,7 @@ import { ChatInput } from '../../../components/chat/ChatInput';
 import type { HandsFreeState } from '../../../components/chat/ChatInput';
 import { TypingIndicator } from '../../../components/chat/TypingIndicator';
 import { GradientBackground } from '../../../components/ui/GradientBackground';
-import { GradientBorderCard } from '../../../components/ui/GradientBorderCard';
+import { GlassSurface } from '../../../components/ui/GlassSurface';
 import type { ConversationMessage } from '../../../types';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -376,7 +376,7 @@ export default function ChatScreen() {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 100 }}
             renderItem={({ item: scenario }) => (
-              <GradientBorderCard style={{ marginBottom: 12 }}>
+              <GlassSurface style={{ marginBottom: 12 }}>
                 <Pressable
                   className="p-5 flex-row items-center"
                   onPress={() => startChat(scenario)}
@@ -394,7 +394,7 @@ export default function ChatScreen() {
                   </View>
                   <Ionicons name="chevron-forward" size={20} color="#7DD3FC" />
                 </Pressable>
-              </GradientBorderCard>
+              </GlassSurface>
             )}
           />
         </View>

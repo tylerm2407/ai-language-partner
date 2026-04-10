@@ -6,6 +6,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useAppStore } from '../stores/useAppStore';
 import { useNotifications } from '../hooks/useNotifications';
 import { View, ActivityIndicator } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
   useFonts,
   Inter_400Regular,
@@ -13,6 +14,7 @@ import {
   Inter_600SemiBold,
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
+import { PlayfairDisplay_700Bold } from '@expo-google-fonts/playfair-display';
 
 export default function RootLayout() {
   const { session, loading: authLoading } = useAuth();
@@ -26,6 +28,7 @@ export default function RootLayout() {
     Inter_500Medium,
     Inter_600SemiBold,
     Inter_700Bold,
+    PlayfairDisplay_700Bold,
   });
 
   // Register for push notifications
@@ -70,17 +73,19 @@ export default function RootLayout() {
 
   if (authLoading || !fontsLoaded || (session && !dataLoaded)) {
     return (
-      <View className="flex-1 items-center justify-center bg-dark">
-        <ActivityIndicator size="large" color="#38BDF8" />
-        <StatusBar style="light" />
-      </View>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <View className="flex-1 items-center justify-center bg-dark">
+          <ActivityIndicator size="large" color="#38BDF8" />
+          <StatusBar style="light" />
+        </View>
+      </GestureHandlerRootView>
     );
   }
 
   return (
-    <>
+    <GestureHandlerRootView style={{ flex: 1 }}>
       <Slot />
       <StatusBar style="light" />
-    </>
+    </GestureHandlerRootView>
   );
 }

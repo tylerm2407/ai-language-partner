@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate comprehensive seed SQL for Fluenci — 4 CEFR levels x 8 languages.
+"""Generate comprehensive seed SQL for Fluenci — 4 CEFR levels x 9 languages.
 
 Produces ~12,800 exercises and ~2,800 cards across A1/A2/B1/B2.
 """
@@ -21,10 +21,28 @@ LEVELS = {
 }
 
 EX_TYPES = {
-    "A1": ["multiple_choice","translate_to_target","translate_to_native","fill_blank"],
-    "A2": ["multiple_choice","translate_to_target","translate_to_native","fill_blank","cloze_deletion","sentence_construction"],
-    "B1": ["multiple_choice","translate_to_target","translate_to_native","fill_blank","cloze_deletion","sentence_construction","error_correction","dictation","free_production"],
-    "B2": ["multiple_choice","translate_to_target","translate_to_native","fill_blank","error_correction","dictation","free_production","cloze_deletion","sentence_construction"],
+    "A1": ["multiple_choice","translate_to_target","translate_to_native","fill_blank","word_form"],
+    "A2": ["multiple_choice","translate_to_target","translate_to_native","fill_blank","cloze_deletion","sentence_construction","word_form","collocation_match"],
+    "B1": ["multiple_choice","translate_to_target","translate_to_native","fill_blank","cloze_deletion","sentence_construction","error_correction","dictation","free_production","sentence_transformation","mini_dialogue","collocation_match"],
+    "B2": ["multiple_choice","translate_to_target","translate_to_native","fill_blank","error_correction","dictation","free_production","cloze_deletion","sentence_construction","sentence_transformation","mini_dialogue","word_form","collocation_match"],
+}
+
+# Skill type + subskill mappings for each exercise type
+EX_SKILL_META = {
+    "multiple_choice": ("vocabulary", "meaning_in_context", "tap"),
+    "translate_to_target": ("vocabulary", "translation", "type"),
+    "translate_to_native": ("vocabulary", "translation", "type"),
+    "fill_blank": ("vocabulary", "type_word", "type"),
+    "cloze_deletion": ("vocabulary", "cloze", "type"),
+    "sentence_construction": ("grammar", "construction", "tap"),
+    "error_correction": ("grammar", "grammar_error", "type"),
+    "dictation": ("vocabulary", "dictation", "type"),
+    "free_production": ("mixed", "micro_writing", "type"),
+    "speaking": ("vocabulary", "speak_word", "speak"),
+    "collocation_match": ("vocabulary", "collocation", "tap"),
+    "word_form": ("vocabulary", "word_family", "type"),
+    "sentence_transformation": ("grammar", "transform", "type"),
+    "mini_dialogue": ("grammar", "dialogue_complete", "type"),
 }
 
 def mk_course(lc, sfx):
@@ -58,6 +76,7 @@ LANG_META = {
     "ja": ("6666", "Japanese"),
     "ko": ("7777", "Korean"),
     "zh": ("8888", "Chinese"),
+    "ru": ("9999", "Russian"),
 }
 
 UNIT_DEFS = {
@@ -469,6 +488,46 @@ VOCAB = {
   [("Subjunctive","\u865a\u62df\u8bed\u6c14"),("Reported speech","\u95f4\u63a5\u5f15\u8bed"),("Passive voice","\u88ab\u52a8\u8bed\u6001"),("Conditional","\u6761\u4ef6\u53e5"),("Gerund","\u52a8\u540d\u8bcd"),("Infinitive","\u4e0d\u5b9a\u5f0f"),("Clause","\u4ece\u53e5"),("Conjunction","\u8fde\u8bcd"),("Pronoun","\u4ee3\u8bcd"),("Preposition","\u4ecb\u8bcd"),("Tense","\u65f6\u6001"),("Agreement","\u4e00\u81f4")],
 ],
 },
+"ru": {
+"A1": [
+  [("Hello","Привет"),("Goodbye","До свидания"),("Good morning","Доброе утро"),("Good evening","Добрый вечер"),("Good night","Спокойной ночи"),("Please","Пожалуйста"),("Thank you","Спасибо"),("Sorry","Извините"),("Excuse me","Простите"),("Yes","Да"),("No","Нет")],
+  [("Water","Вода"),("Chicken","Курица"),("Bread","Хлеб"),("Apple","Яблоко"),("Milk","Молоко"),("Coffee","Кофе"),("Cheese","Сыр"),("Rice","Рис"),("Fish","Рыба"),("Delicious","Вкусный"),("Menu","Меню")],
+  [("Left","Налево"),("Right","Направо"),("Straight","Прямо"),("Bus","Автобус"),("Train","Поезд"),("Ticket","Билет"),("Station","Станция"),("Hospital","Больница"),("Bank","Банк"),("Pharmacy","Аптека"),("Airport","Аэропорт")],
+  [("Breakfast","Завтрак"),("Expensive","Дорогой"),("Cheap","Дешёвый"),("Red","Красный"),("Blue","Синий"),("Shirt","Рубашка"),("Shoes","Обувь"),("To pay","Платить"),("Time","Время"),("Tomorrow","Завтра"),("Money","Деньги")],
+  [("Teacher","Учитель"),("Doctor","Врач"),("Office","Офис"),("To read","Читать"),("To cook","Готовить"),("Soccer","Футбол"),("Hot","Горячий"),("Cold","Холодный"),("Summer","Лето"),("Winter","Зима"),("Friend","Друг")],
+  [("Mother","Мать"),("Father","Отец"),("Sister","Сестра"),("Brother","Брат"),("Daughter","Дочь"),("Son","Сын"),("Grandmother","Бабушка"),("Grandfather","Дедушка"),("Family","Семья"),("Dog","Собака"),("Cat","Кошка")],
+  [("House","Дом"),("Room","Комната"),("Kitchen","Кухня"),("Bathroom","Ванная"),("Bedroom","Спальня"),("Door","Дверь"),("Window","Окно"),("Table","Стол"),("Chair","Стул"),("Bed","Кровать"),("Garden","Сад")],
+  [("Head","Голова"),("Hand","Рука"),("Eye","Глаз"),("Stomach","Живот"),("Sick","Больной"),("Healthy","Здоровый"),("Medicine","Лекарство"),("Pain","Боль"),("Fever","Жар"),("Arm","Рука"),("Leg","Нога")],
+],
+"A2": [
+  [("Uncle","Дядя"),("Aunt","Тётя"),("Cousin","Двоюродный брат"),("Nephew","Племянник"),("Niece","Племянница"),("Husband","Муж"),("Wife","Жена"),("Boyfriend","Парень"),("Girlfriend","Девушка"),("Neighbor","Сосед"),("Wedding","Свадьба"),("Married","Женатый")],
+  [("Cough","Кашель"),("Headache","Головная боль"),("Allergy","Аллергия"),("Prescription","Рецепт"),("Appointment","Приём"),("Nurse","Медсестра"),("Dentist","Стоматолог"),("Stress","Стресс"),("Tired","Усталый"),("To rest","Отдыхать"),("Diet","Диета"),("Exercise","Упражнение")],
+  [("Sofa","Диван"),("Shelf","Полка"),("Lamp","Лампа"),("Carpet","Ковёр"),("To clean","Убирать"),("To wash","Мыть"),("To sweep","Подметать"),("To cook","Готовить"),("Rent","Аренда"),("To move","Переезжать"),("Apartment","Квартира"),("Balcony","Балкон")],
+  [("Happy","Счастливый"),("Sad","Грустный"),("Angry","Злой"),("Worried","Обеспокоенный"),("Excited","Взволнованный"),("Shy","Застенчивый"),("Brave","Храбрый"),("Kind","Добрый"),("Generous","Щедрый"),("Lazy","Ленивый"),("Patient","Терпеливый"),("Proud","Гордый")],
+  [("Yesterday","Вчера"),("Last week","На прошлой неделе"),("I went","Я пошёл"),("I ate","Я поел"),("I saw","Я увидел"),("I bought","Я купил"),("I traveled","Я путешествовал"),("I studied","Я учился"),("I played","Я играл"),("I worked","Я работал"),("I spoke","Я говорил"),("I wrote","Я писал")],
+  [("Tomorrow","Завтра"),("Next week","На следующей неделе"),("I will go","Я пойду"),("I will eat","Я поем"),("I will study","Я буду учиться"),("I will travel","Я буду путешествовать"),("I will work","Я буду работать"),("Vacation","Отпуск"),("Goal","Цель"),("Dream","Мечта"),("To plan","Планировать"),("Appointment","Приём")],
+  [("Bigger","Больше"),("Smaller","Меньше"),("Better","Лучше"),("Worse","Хуже"),("Cheaper","Дешевле"),("More expensive","Дороже"),("Taller","Выше"),("Shorter","Ниже"),("Faster","Быстрее"),("Slower","Медленнее"),("The best","Лучший"),("The worst","Худший")],
+  [("Holiday","Праздник"),("Christmas","Рождество"),("New Year","Новый год"),("Birthday","День рождения"),("Tradition","Традиция"),("Gift","Подарок"),("Party","Вечеринка"),("To celebrate","Праздновать"),("Music","Музыка"),("Dance","Танец"),("Festival","Фестиваль"),("Costume","Костюм")],
+],
+"B1": [
+  [("Opinion","Мнение"),("I agree","Я согласен"),("I disagree","Я не согласен"),("I think that","Я думаю, что"),("News","Новости"),("Society","Общество"),("Politics","Политика"),("Economy","Экономика"),("To argue","Спорить"),("Debate","Дебаты"),("Reason","Причина"),("Therefore","Поэтому")],
+  [("Interview","Собеседование"),("Resume","Резюме"),("Meeting","Встреча"),("Presentation","Презентация"),("Salary","Зарплата"),("To hire","Нанимать"),("To fire","Увольнять"),("Colleague","Коллега"),("Manager","Менеджер"),("Deadline","Крайний срок"),("Project","Проект"),("Email","Электронная почта")],
+  [("To book","Бронировать"),("Flight","Рейс"),("Hotel","Гостиница"),("Reservation","Бронирование"),("Passport","Паспорт"),("Luggage","Багаж"),("Boarding pass","Посадочный талон"),("Delay","Задержка"),("To cancel","Отменить"),("Adventure","Приключение"),("Tourist","Турист"),("Guide","Гид")],
+  [("Climate","Климат"),("Pollution","Загрязнение"),("To recycle","Перерабатывать"),("Forest","Лес"),("Ocean","Океан"),("Endangered","Под угрозой"),("Conservation","Охрана"),("Energy","Энергия"),("Solar","Солнечный"),("Carbon","Углерод"),("Wildlife","Дикая природа"),("Sustainable","Устойчивый")],
+  [("Internet","Интернет"),("Website","Сайт"),("App","Приложение"),("Password","Пароль"),("To download","Скачать"),("To upload","Загрузить"),("Screen","Экран"),("Keyboard","Клавиатура"),("Social media","Социальные сети"),("Artificial intelligence","Искусственный интеллект"),("Robot","Робот"),("Data","Данные")],
+  [("Once upon a time","Жили-были"),("Then","Потом"),("Suddenly","Вдруг"),("While","Пока"),("First","Сначала"),("Next","Затем"),("Finally","Наконец"),("Meanwhile","Тем временем"),("Character","Персонаж"),("Plot","Сюжет"),("Beginning","Начало"),("Ending","Конец")],
+  [("If","Если"),("Would","Бы"),("Could","Мог бы"),("Should","Должен"),("I wish","Я хотел бы"),("Perhaps","Возможно"),("Imagine","Представь"),("Suppose","Предположим"),("Instead","Вместо"),("Otherwise","Иначе"),("Regret","Сожаление"),("Consequence","Последствие")],
+  [("Would you mind","Не возражаете"),("Dear Sir","Уважаемый"),("Sincerely","Искренне"),("Regards","С уважением"),("Kind of","Вроде"),("Cool","Круто"),("Awesome","Потрясающе"),("Whatever","Неважно"),("No worries","Не переживай"),("Dude","Чувак"),("Formal","Формальный"),("Informal","Неформальный")],
+],
+"B2": [
+  [("Freedom","Свобода"),("Justice","Справедливость"),("Purpose","Цель"),("Consciousness","Сознание"),("Ethics","Этика"),("Morality","Нравственность"),("Existence","Существование"),("Equality","Равенство"),("Truth","Истина"),("Wisdom","Мудрость"),("Belief","Убеждение"),("Doubt","Сомнение")],
+  [("Argument","Аргумент"),("To persuade","Убеждать"),("Evidence","Доказательство"),("Counterargument","Контраргумент"),("However","Однако"),("Nevertheless","Тем не менее"),("Furthermore","Более того"),("To refute","Опровергать"),("Claim","Утверждение"),("Fallacy","Заблуждение"),("Rhetoric","Риторика"),("Bias","Предвзятость")],
+  [("Negotiation","Переговоры"),("Proposal","Предложение"),("Contract","Контракт"),("To implement","Внедрять"),("Strategy","Стратегия"),("Budget","Бюджет"),("Stakeholder","Заинтересованная сторона"),("Agenda","Повестка"),("Minutes","Протокол"),("To delegate","Делегировать"),("Efficiency","Эффективность"),("Deadline","Крайний срок")],
+  [("Novel","Роман"),("Poem","Стихотворение"),("Painting","Картина"),("Sculpture","Скульптура"),("Metaphor","Метафора"),("Symbolism","Символизм"),("Genre","Жанр"),("Protagonist","Главный герой"),("Plot twist","Поворот сюжета"),("Review","Рецензия"),("Masterpiece","Шедевр"),("Inspiration","Вдохновение")],
+  [("To break the ice","Растопить лёд"),("To hit the nail on the head","Попасть в точку"),("A piece of cake","Проще простого"),("To cost an arm and a leg","Стоить целое состояние"),("Better late than never","Лучше поздно, чем никогда"),("To be on cloud nine","Быть на седьмом небе"),("To pull someones leg","Разыгрывать кого-то"),("Once in a blue moon","Раз в сто лет"),("To let the cat out of the bag","Проболтаться"),("To kill two birds with one stone","Убить двух зайцев одним ударом"),("The ball is in your court","Мяч на вашей стороне"),("Bite off more than you can chew","Взять на себя слишком много")],
+  [("Subjunctive","Сослагательное наклонение"),("Reported speech","Косвенная речь"),("Passive voice","Страдательный залог"),("Conditional","Условное наклонение"),("Gerund","Деепричастие"),("Infinitive","Инфинитив"),("Clause","Придаточное предложение"),("Conjunction","Союз"),("Pronoun","Местоимение"),("Preposition","Предлог"),("Tense","Время"),("Agreement","Согласование")],
+],
+},
 }
 
 
@@ -538,7 +597,7 @@ READING_PASSAGES = {
 
 # Copy reading passages structure for other languages (using English-language passages with translated titles)
 # In production, these would be in the target language. For seed data, we provide the same structure.
-for lang in ["fr", "de", "it", "pt", "ja", "ko", "zh"]:
+for lang in ["fr", "de", "it", "pt", "ja", "ko", "zh", "ru"]:
     READING_PASSAGES[lang] = READING_PASSAGES["es"]
 
 # ═══════════════════════════════════════════════════════════════
@@ -649,6 +708,38 @@ def generate_exercises_for_lesson(vocab_pairs, level, lesson_idx, num_exercises,
             prompt = f"Write a sentence using the word: {tgt} ({eng})"
             exercises.append((ex_type, prompt, tgt, None, None))
 
+        elif ex_type == "collocation_match":
+            # Pick 2 words that commonly appear together as "collocations", rest are distractors
+            collocations = [p[1] for i, p in enumerate(vocab_pairs) if i != pair_idx][:2]
+            meta = {"collocations": collocations, "targetWord": tgt}
+            prompt = f"Which words go with: {tgt}?"
+            exercises.append((ex_type, prompt, ",".join(collocations), None, meta))
+
+        elif ex_type == "word_form":
+            # Show base word, ask for a derived form
+            base = tgt.split()[0] if " " in tgt else tgt
+            meta = {"baseWord": base, "wordFamily": [tgt], "hint": f"{base} → ?"}
+            prompt = f"Complete the correct form of '{base}' ({eng})"
+            exercises.append((ex_type, prompt, tgt, None, meta))
+
+        elif ex_type == "sentence_transformation":
+            instructions = ["Make it negative", "Change to past tense", "Change to a question", "Make it formal"]
+            instruction = instructions[ei % len(instructions)]
+            meta = {"originalSentence": tgt, "instruction": instruction}
+            prompt = f"{instruction}: {tgt}"
+            exercises.append((ex_type, prompt, tgt, None, meta))
+
+        elif ex_type == "mini_dialogue":
+            # Simple 3-line dialogue with one blank
+            dialogue = [
+                {"speaker": "A", "text": f"Do you know the word '{tgt}'?"},
+                {"speaker": "B", "text": "___"},
+                {"speaker": "A", "text": "That's right!"},
+            ]
+            meta = {"dialogue": dialogue, "blankIndices": [1]}
+            prompt = f"Complete the dialogue about: {eng}"
+            exercises.append((ex_type, prompt, tgt, None, meta))
+
         else:
             # Fallback to multiple choice
             prompt = f'What is "{esc(eng)}" in {lang_name}?'
@@ -712,23 +803,25 @@ def generate_course(lang_key, level, lines):
             exs = generate_exercises_for_lesson(rotated, level, lsi, epl, lang_name)
 
             if exs:
-                lines.append(f"INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata) VALUES")
+                lines.append(f"INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES")
                 erows = []
                 for ei, (etype, prompt, answer, opts, meta) in enumerate(exs):
                     ex_id = mk_exercise(code, li, ui + 1, lsi + 1, ei + 1)
                     opts_sql = f"'{opts}'" if opts else "NULL"
                     meta_sql = f"'{jesc(meta)}'" if meta else "'{}'"
-                    erows.append(f"  ('{ex_id}', '{lesson_id}', '{etype}', '{esc(prompt)}', '{esc(answer)}', {opts_sql}, '{{}}', {ei}, {meta_sql})")
+                    skill_type, subskill, resp_mode = EX_SKILL_META.get(etype, ("vocabulary", None, "tap"))
+                    subskill_sql = f"'{esc(subskill)}'" if subskill else "NULL"
+                    erows.append(f"  ('{ex_id}', '{lesson_id}', '{etype}', '{esc(prompt)}', '{esc(answer)}', {opts_sql}, '{{}}', {ei}, {meta_sql}, '{skill_type}', {subskill_sql}, '{resp_mode}', 'seed')")
                 lines.append(",\n".join(erows) + ";")
 
         # Cards for this unit
         if unit_vocab:
-            lines.append(f"INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_speech, tags) VALUES")
+            lines.append(f"INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_speech, tags, language, cefr_level, skill_type, source_type) VALUES")
             crows = []
             for ci, (eng, tgt) in enumerate(unit_vocab):
                 card_id = mk_card(code, li, ui + 1, ci + 1, sfx)
                 tag_str = '{' + f'"{level}"' + '}'
-                crows.append(f"  ('{card_id}', '{course_id}', '{unit_id}', '{esc(eng)}', '{esc(tgt)}', 'word', '{tag_str}')")
+                crows.append(f"  ('{card_id}', '{course_id}', '{unit_id}', '{esc(eng)}', '{esc(tgt)}', 'word', '{tag_str}', '{lang_key}', '{level}', 'vocabulary', 'seed')")
             lines.append(",\n".join(crows) + ";")
 
     # Reading passages (B1/B2 only)
@@ -765,7 +858,7 @@ def generate_course(lang_key, level, lines):
 
 def main():
     output = []
-    output.append("-- Fluenci Seed Data: 8 Languages x 4 CEFR Levels")
+    output.append("-- Fluenci Seed Data: 9 Languages x 4 CEFR Levels")
     output.append("-- Auto-generated. Do not edit manually.")
     output.append("")
 
@@ -781,7 +874,7 @@ def main():
     output.append("DELETE FROM courses WHERE source_language = 'en';")
     output.append("")
 
-    for lang_key in ["es", "fr", "de", "it", "pt", "ja", "ko", "zh"]:
+    for lang_key in ["es", "fr", "de", "it", "pt", "ja", "ko", "zh", "ru"]:
         code, name = LANG_META[lang_key]
         output.append(f"\n-- {'=' * 60}")
         output.append(f"-- {name.upper()} ({lang_key})")
