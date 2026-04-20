@@ -33,6 +33,17 @@ import type {
   ContentSource,
   GrammarRule,
   SkillType,
+  ConversationMessage,
+  Organization,
+  Classroom,
+  ClassEnrollment,
+  Assignment,
+  AssignmentSubmission,
+  ConversationGrade,
+  SchoolContractConfig,
+  LanguageCode,
+  ProficiencyLevel,
+  SubmissionStatus,
 } from '../types';
 
 // ─── User Profile ───────────────────────────────────────────────
@@ -1593,4 +1604,476 @@ export async function fetchCardsByLanguageAndLevel(
   const { data, error } = await query.order('frequency_rank', { ascending: true, nullsFirst: false });
   if (error) throw error;
   return (data ?? []).map(mapCard);
+}
+
+// ─── Chat History Persistence ────────────────────────────────────
+
+export interface ChatSession {
+  id: string;
+  userId: string;
+  scenarioKey: string;
+  targetLanguage: string;
+  level: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Find or create a chat session for a given scenario. */
+export async function getOrCreateChatSession(
+  userId: string,
+  scenarioKey: string,
+  targetLanguage: string,
+  level: string
+): Promise<ChatSession> {
+  // Try to find an existing session for this scenario
+  const { data: existing } = await supabase
+    .from('chat_sessions')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('scenario_key', scenarioKey)
+    .eq('target_language', targetLanguage)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (existing) {
+    return mapChatSession(existing);
+  }
+
+  // Create a new session
+  const { data, error } = await supabase
+    .from('chat_sessions')
+    .insert({
+      user_id: userId,
+      scenario_key: scenarioKey,
+      target_language: targetLanguage,
+      level,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return mapChatSession(data);
+}
+
+/** Save a chat message to a session. */
+export async function saveChatMessage(
+  sessionId: string,
+  message: Pick<ConversationMessage, 'role' | 'content' | 'correction' | 'audioUrl'>
+): Promise<void> {
+  const { error } = await supabase.from('chat_messages').insert({
+    session_id: sessionId,
+    role: message.role,
+    content: message.content,
+    correction: message.correction ?? null,
+    audio_url: message.audioUrl ?? null,
+  });
+
+  if (error) throw error;
+
+  // Touch session updated_at
+  await supabase
+    .from('chat_sessions')
+    .update({ updated_at: new Date().toISOString() })
+    .eq('id', sessionId);
+}
+
+/** Load chat messages for a session. */
+export async function loadChatMessages(sessionId: string): Promise<ConversationMessage[]> {
+  const { data, error } = await supabase
+    .from('chat_messages')
+    .select('*')
+    .eq('session_id', sessionId)
+    .order('created_at', { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []).map((row: Record<string, unknown>) => ({
+    id: row.id as string,
+    role: row.role as 'user' | 'assistant' | 'system',
+    content: row.content as string,
+    correction: (row.correction as string) ?? null,
+    audioUrl: (row.audio_url as string) ?? null,
+    timestamp: row.created_at as string,
+  }));
+}
+
+/** List recent chat sessions for a user. */
+export async function listChatSessions(
+  userId: string,
+  limit = 20
+): Promise<ChatSession[]> {
+  const { data, error } = await supabase
+    .from('chat_sessions')
+    .select('*')
+    .eq('user_id', userId)
+    .order('updated_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return (data ?? []).map(mapChatSession);
+}
+
+function mapChatSession(row: Record<string, unknown>): ChatSession {
+  return {
+    id: row.id as string,
+    userId: row.user_id as string,
+    scenarioKey: row.scenario_key as string,
+    targetLanguage: row.target_language as string,
+    level: row.level as string,
+    createdAt: row.created_at as string,
+    updatedAt: row.updated_at as string,
+  };
+}
+
+// ─── School System ──────────────────────────────────────────────
+
+function mapOrganization(row: Record<string, unknown>): Organization {
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    slug: row.slug as string,
+    logoUrl: (row.logo_url as string) ?? null,
+    isActive: (row.is_active as boolean) ?? true,
+    maxSeats: (row.max_seats as number) ?? 0,
+    contractConfig: (row.contract_config as SchoolContractConfig) ?? {
+      dailyVoiceMinutes: 0,
+      dailyTextMessages: 0,
+      dailyWritingGrades: 0,
+      dailyPronunciationScores: 0,
+      unlimitedHearts: false,
+      streakShield: false,
+      audiobookNarration: false,
+    },
+    contractStart: (row.contract_start as string) ?? null,
+    contractEnd: (row.contract_end as string) ?? null,
+  };
+}
+
+function mapClassroom(row: Record<string, unknown>): Classroom {
+  return {
+    id: row.id as string,
+    organizationId: row.organization_id as string,
+    teacherId: row.teacher_id as string,
+    name: row.name as string,
+    targetLanguage: row.target_language as LanguageCode,
+    level: row.level as ProficiencyLevel,
+    inviteCode: row.invite_code as string,
+    inviteCodeActive: (row.invite_code_active as boolean) ?? true,
+    maxStudents: (row.max_students as number) ?? 30,
+    archived: (row.archived as boolean) ?? false,
+    studentCount: (row.student_count as number) ?? undefined,
+    activeAssignmentCount: (row.active_assignment_count as number) ?? undefined,
+  };
+}
+
+function mapEnrollment(row: Record<string, unknown>): ClassEnrollment {
+  return {
+    id: row.id as string,
+    classroomId: row.classroom_id as string,
+    studentId: row.student_id as string,
+    enrolledAt: row.enrolled_at as string,
+    droppedAt: (row.dropped_at as string) ?? null,
+    classroom: row.classrooms ? mapClassroom(row.classrooms as Record<string, unknown>) : undefined,
+  };
+}
+
+function mapAssignment(row: Record<string, unknown>): Assignment {
+  return {
+    id: row.id as string,
+    classroomId: row.classroom_id as string,
+    teacherId: row.teacher_id as string,
+    title: row.title as string,
+    description: (row.description as string) ?? '',
+    status: row.status as Assignment['status'],
+    scenarioKey: (row.scenario_key as string) ?? null,
+    customScenario: (row.custom_scenario as Assignment['customScenario']) ?? null,
+    targetLanguage: row.target_language as LanguageCode,
+    level: row.level as ProficiencyLevel,
+    minDurationMinutes: (row.min_duration_minutes as number) ?? 5,
+    mode: (row.mode as Assignment['mode']) ?? 'either',
+    vocabularyFocus: (row.vocabulary_focus as string[]) ?? [],
+    grammarFocus: (row.grammar_focus as string[]) ?? [],
+    instructions: (row.instructions as string) ?? '',
+    publishedAt: (row.published_at as string) ?? null,
+    dueAt: (row.due_at as string) ?? null,
+    lateSubmissionAllowed: (row.late_submission_allowed as boolean) ?? false,
+    maxPoints: (row.max_points as number) ?? 100,
+    submissionCount: (row.submission_count as number) ?? undefined,
+    completionRate: (row.completion_rate as number) ?? undefined,
+    classroomName: (row.classroom_name as string) ?? undefined,
+  };
+}
+
+function mapSubmission(row: Record<string, unknown>): AssignmentSubmission {
+  return {
+    id: row.id as string,
+    assignmentId: row.assignment_id as string,
+    studentId: row.student_id as string,
+    status: row.status as SubmissionStatus,
+    startedAt: (row.started_at as string) ?? null,
+    submittedAt: (row.submitted_at as string) ?? null,
+    chatSessionId: (row.chat_session_id as string) ?? null,
+    conversationDurationMinutes: (row.conversation_duration_minutes as number) ?? null,
+    autoScore: (row.auto_score as number) ?? null,
+    teacherScore: (row.teacher_score as number) ?? null,
+    finalScore: (row.final_score as number) ?? null,
+    teacherFeedback: (row.teacher_feedback as string) ?? null,
+    aiFeedback: (row.ai_feedback as ConversationGrade) ?? null,
+    isLate: (row.is_late as boolean) ?? false,
+    gradedAt: (row.graded_at as string) ?? null,
+    studentName: (row.student_name as string) ?? ((row.user_profiles as Record<string, unknown>)?.display_name as string) ?? undefined,
+  };
+}
+
+// ─── School: User Roles ─────────────────────────────────────────
+
+export async function fetchUserRoles(userId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', userId);
+
+  if (error) throw error;
+  return (data ?? []).map((row) => row.role as string);
+}
+
+// ─── School: Teacher Queries ────────────────────────────────────
+
+export async function fetchTeacherClassrooms(userId: string): Promise<Classroom[]> {
+  const { data, error } = await supabase
+    .from('classrooms')
+    .select('*')
+    .eq('teacher_id', userId)
+    .eq('archived', false)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return (data ?? []).map(mapClassroom);
+}
+
+export async function fetchClassroomStudents(
+  classroomId: string
+): Promise<{ id: string; studentId: string; displayName: string; enrolledAt: string }[]> {
+  const { data, error } = await supabase
+    .from('classroom_enrollments')
+    .select('id, student_id, enrolled_at, user_profiles!inner(display_name)')
+    .eq('classroom_id', classroomId)
+    .is('dropped_at', null);
+
+  if (error) throw error;
+  return (data ?? []).map((row: Record<string, unknown>) => ({
+    id: row.id as string,
+    studentId: row.student_id as string,
+    displayName: ((row.user_profiles as Record<string, unknown>)?.display_name as string) ?? 'Unknown',
+    enrolledAt: row.enrolled_at as string,
+  }));
+}
+
+export async function fetchTeacherOrganization(userId: string): Promise<Organization | null> {
+  const { data, error } = await supabase
+    .from('organization_members')
+    .select('organizations(*)')
+    .eq('user_id', userId)
+    .in('org_role', ['teacher', 'admin'])
+    .limit(1)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw error;
+  if (!data?.organizations) return null;
+  return mapOrganization(data.organizations as unknown as Record<string, unknown>);
+}
+
+export async function fetchClassroomAssignments(classroomId: string): Promise<Assignment[]> {
+  const { data, error } = await supabase
+    .from('assignments')
+    .select('*')
+    .eq('classroom_id', classroomId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return (data ?? []).map(mapAssignment);
+}
+
+export async function fetchAssignmentSubmissions(assignmentId: string): Promise<AssignmentSubmission[]> {
+  const { data, error } = await supabase
+    .from('assignment_submissions')
+    .select('*, user_profiles!inner(display_name)')
+    .eq('assignment_id', assignmentId);
+
+  if (error) throw error;
+  return (data ?? []).map(mapSubmission);
+}
+
+export async function fetchSubmissionDetail(submissionId: string): Promise<AssignmentSubmission | null> {
+  const { data, error } = await supabase
+    .from('assignment_submissions')
+    .select('*')
+    .eq('id', submissionId)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw error;
+  return data ? mapSubmission(data) : null;
+}
+
+export async function fetchSubmissionTranscript(chatSessionId: string): Promise<ConversationMessage[]> {
+  return loadChatMessages(chatSessionId);
+}
+
+// ─── School: Student Queries ────────────────────────────────────
+
+export async function fetchStudentEnrollments(userId: string): Promise<ClassEnrollment[]> {
+  const { data, error } = await supabase
+    .from('classroom_enrollments')
+    .select('*, classrooms(*)')
+    .eq('student_id', userId)
+    .is('dropped_at', null);
+
+  if (error) throw error;
+  return (data ?? []).map(mapEnrollment);
+}
+
+export async function fetchStudentAssignments(
+  userId: string
+): Promise<(Assignment & { submission?: AssignmentSubmission })[]> {
+  // Get classrooms the student is enrolled in
+  const { data: enrollments, error: enrollErr } = await supabase
+    .from('classroom_enrollments')
+    .select('classroom_id')
+    .eq('student_id', userId)
+    .is('dropped_at', null);
+
+  if (enrollErr) throw enrollErr;
+  const classroomIds = (enrollments ?? []).map((e) => e.classroom_id as string);
+  if (classroomIds.length === 0) return [];
+
+  // Fetch published assignments for those classrooms
+  const { data: assignments, error: assignErr } = await supabase
+    .from('assignments')
+    .select('*')
+    .in('classroom_id', classroomIds)
+    .eq('status', 'published')
+    .order('created_at', { ascending: false });
+
+  if (assignErr) throw assignErr;
+  if (!assignments || assignments.length === 0) return [];
+
+  // Fetch submissions for this student
+  const assignmentIds = assignments.map((a) => a.id as string);
+  const { data: submissions, error: subErr } = await supabase
+    .from('assignment_submissions')
+    .select('*')
+    .eq('student_id', userId)
+    .in('assignment_id', assignmentIds);
+
+  if (subErr) throw subErr;
+
+  const submissionMap = new Map<string, AssignmentSubmission>();
+  (submissions ?? []).forEach((row) => {
+    submissionMap.set(row.assignment_id as string, mapSubmission(row));
+  });
+
+  return assignments.map((row) => ({
+    ...mapAssignment(row),
+    submission: submissionMap.get(row.id as string),
+  }));
+}
+
+// ─── School: Edge Function Callers ──────────────────────────────
+
+export async function callSchoolAction(action: string, body: Record<string, unknown>): Promise<any> {
+  const { data, error } = await supabase.functions.invoke('school', {
+    body: { action, ...body },
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function createClassroom(data: {
+  name: string;
+  targetLanguage: string;
+  level: string;
+  organizationId: string;
+}): Promise<Classroom> {
+  const result = await callSchoolAction('create_classroom', data);
+  return mapClassroom(result.classroom);
+}
+
+export async function joinClassroom(inviteCode: string): Promise<ClassEnrollment> {
+  const result = await callSchoolAction('join_classroom', { inviteCode });
+  return mapEnrollment(result.enrollment);
+}
+
+export async function leaveClassroom(classroomId: string): Promise<void> {
+  await callSchoolAction('leave_classroom', { classroomId });
+}
+
+export async function createAssignment(data: Record<string, unknown>): Promise<Assignment> {
+  const result = await callSchoolAction('create_assignment', data);
+  return mapAssignment(result.assignment);
+}
+
+export async function startAssignment(
+  assignmentId: string
+): Promise<{ submission: AssignmentSubmission; chatSessionId: string }> {
+  const result = await callSchoolAction('start_assignment', { assignmentId });
+  return {
+    submission: mapSubmission(result.submission),
+    chatSessionId: result.chatSessionId as string,
+  };
+}
+
+export async function submitAssignment(assignmentId: string): Promise<AssignmentSubmission> {
+  const result = await callSchoolAction('submit_assignment', { assignmentId });
+  return mapSubmission(result.submission);
+}
+
+export async function gradeSubmission(
+  submissionId: string,
+  teacherScore: number,
+  teacherFeedback: string
+): Promise<AssignmentSubmission> {
+  const result = await callSchoolAction('grade_submission', {
+    submissionId,
+    teacherScore,
+    teacherFeedback,
+  });
+  return mapSubmission(result.submission);
+}
+
+// ─── School: Admin Queries ──────────────────────────────────────
+
+export async function fetchAuditLogs(
+  organizationId: string,
+  opts?: { action?: string; limit?: number }
+): Promise<any[]> {
+  let query = supabase
+    .from('audit_log')
+    .select('*')
+    .eq('organization_id', organizationId)
+    .order('created_at', { ascending: false })
+    .limit(opts?.limit ?? 100);
+
+  if (opts?.action) {
+    query = query.eq('action', opts.action);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data ?? []).map((row: any) => ({
+    id: row.id,
+    createdAt: row.created_at,
+    actorRole: row.actor_role,
+    action: row.action,
+    resourceType: row.resource_type,
+    resourceId: row.resource_id,
+    ipAddress: row.ip_address,
+  }));
+}
+
+export async function callSchoolAdminAction(action: string, body: Record<string, unknown>): Promise<any> {
+  const { data, error } = await supabase.functions.invoke('school-admin', {
+    body: { action, ...body },
+  });
+  if (error) throw error;
+  return data;
 }
