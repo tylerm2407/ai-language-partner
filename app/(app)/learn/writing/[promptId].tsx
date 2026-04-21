@@ -138,7 +138,7 @@ export default function WritingPromptScreen() {
 
   if (isLoading) {
     return (
-      <GradientBackground>
+      <GradientBackground variant="raised">
         <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <ActivityIndicator size="large" color="#6366F1" />
         </SafeAreaView>
@@ -148,7 +148,7 @@ export default function WritingPromptScreen() {
 
   if (error && !feedback) {
     return (
-      <GradientBackground>
+      <GradientBackground variant="raised">
         <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
           <Text style={{ fontSize: 16, color: '#EF4444', textAlign: 'center' }}>{error}</Text>
           <Pressable onPress={() => router.back()} style={{ marginTop: 16 }} accessibilityRole="button">
@@ -174,7 +174,7 @@ export default function WritingPromptScreen() {
 
   if (!prompt) {
     return (
-      <GradientBackground>
+      <GradientBackground variant="raised">
         <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <Text style={{ fontSize: 16, color: '#9CA3AF' }}>Writing prompt not found.</Text>
         </SafeAreaView>

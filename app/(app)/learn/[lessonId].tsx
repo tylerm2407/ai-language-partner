@@ -54,7 +54,7 @@ export default function LessonScreen() {
 
   if (loading) {
     return (
-      <GradientBackground>
+      <GradientBackground variant="raised">
       <SafeAreaView className="flex-1 items-center justify-center">
         <ActivityIndicator size="large" color="#38BDF8" />
       </SafeAreaView>
@@ -64,7 +64,7 @@ export default function LessonScreen() {
 
   if (!lesson) {
     return (
-      <GradientBackground>
+      <GradientBackground variant="raised">
       <SafeAreaView className="flex-1 items-center justify-center px-8">
         <Text className="text-lg text-text-secondary mb-4">Lesson not found</Text>
         <Button label="Go Back" variant="secondary" onPress={() => router.back()} />
@@ -111,7 +111,7 @@ export default function LessonScreen() {
   };
 
   return (
-    <GradientBackground>
+    <GradientBackground variant="raised">
     <SafeAreaView className="flex-1">
       <LessonRunner
         exercises={lesson.exercises}
