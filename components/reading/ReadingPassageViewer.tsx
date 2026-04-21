@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, type ReactElement } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AudioPlayButton } from '../audio/AudioPlayButton';
@@ -32,7 +32,7 @@ export function ReadingPassageViewer({
       return <Text style={{ fontSize: 16, lineHeight: 26, color: '#111' }}>{content}</Text>;
     }
 
-    const segments: JSX.Element[] = [];
+    const segments: ReactElement[] = [];
     let lastIndex = 0;
 
     // Sort annotations by start_index

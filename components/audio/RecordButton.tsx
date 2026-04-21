@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useAudioRecorder } from '../../hooks/useAudioRecorder';
 
@@ -6,21 +7,34 @@ interface RecordButtonProps {
   size?: number;
 }
 
-/**
- * Hold-to-record button for speaking exercises.
- * Shows recording duration while active.
- */
 export function RecordButton({ onRecordingComplete, size = 64 }: RecordButtonProps) {
-  const { isRecording, durationMs, startRecording, stopRecording, error } = useAudioRecorder();
+  const { recording, startRecording, stopRecording, getBase64 } = useAudioRecorder();
+  const [durationMs, setDurationMs] = useState(0);
+  const startTimeRef = useRef(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+  }, []);
 
   const handlePressIn = async () => {
+    startTimeRef.current = Date.now();
+    setDurationMs(0);
     await startRecording();
+    timerRef.current = setInterval(() => {
+      setDurationMs(Date.now() - startTimeRef.current);
+    }, 100);
   };
 
   const handlePressOut = async () => {
-    const result = await stopRecording();
-    if (result) {
-      onRecordingComplete(result);
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    const uri = await stopRecording();
+    if (uri) {
+      const base64 = (await getBase64()) ?? '';
+      onRecordingComplete({ uri, base64, durationMs: Date.now() - startTimeRef.current });
     }
   };
 
@@ -35,29 +49,23 @@ export function RecordButton({ onRecordingComplete, size = 64 }: RecordButtonPro
           width: size,
           height: size,
           borderRadius: size / 2,
-          backgroundColor: isRecording ? '#EF4444' : '#6366F1',
+          backgroundColor: recording ? '#EF4444' : '#6366F1',
           justifyContent: 'center',
           alignItems: 'center',
-          borderWidth: isRecording ? 4 : 0,
+          borderWidth: recording ? 4 : 0,
           borderColor: '#FCA5A5',
         }}
         accessibilityRole="button"
-        accessibilityLabel={isRecording ? 'Release to stop recording' : 'Hold to record'}
+        accessibilityLabel={recording ? 'Release to stop recording' : 'Hold to record'}
       >
         <Text style={{ color: '#fff', fontSize: size * 0.3, fontWeight: '700' }}>
-          {isRecording ? `${durationSec}s` : 'REC'}
+          {recording ? `${durationSec}s` : 'REC'}
         </Text>
       </Pressable>
 
       <Text style={{ marginTop: 8, fontSize: 12, color: '#666' }}>
-        {isRecording ? 'Release to stop' : 'Hold to speak'}
+        {recording ? 'Release to stop' : 'Hold to speak'}
       </Text>
-
-      {error && (
-        <Text style={{ marginTop: 4, fontSize: 12, color: '#EF4444' }}>
-          {error}
-        </Text>
-      )}
     </View>
   );
 }

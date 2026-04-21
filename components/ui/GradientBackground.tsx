@@ -1,4 +1,4 @@
-import React, { useRef, useCallback } from 'react';
+import React, { useRef, useCallback, useEffect } from 'react';
 import { StyleSheet, View, Animated, type ViewStyle } from 'react-native';
 import { Video, ResizeMode, type AVPlaybackStatus } from 'expo-av';
 
@@ -18,8 +18,19 @@ export function GradientBackground({ children, style }: GradientBackgroundProps)
   const opacityB = useRef(new Animated.Value(0)).current;
   const activeRef = useRef<'A' | 'B'>('A');
   const transitioningRef = useRef(false);
+  // Guard async video method calls that fire after unmount (common during
+  // auth/nav transitions mid-crossfade). expo-av throws "Video component has
+  // not yet loaded" when the native backing is already disposed.
+  const mountedRef = useRef(true);
+  useEffect(
+    () => () => {
+      mountedRef.current = false;
+    },
+    []
+  );
 
   const handleStatusUpdate = useCallback((status: AVPlaybackStatus) => {
+    if (!mountedRef.current) return;
     if (!status.isLoaded || transitioningRef.current) return;
     const { durationMillis, positionMillis } = status;
     if (!durationMillis || positionMillis < durationMillis - CROSSFADE_MS) return;
@@ -32,9 +43,13 @@ export function GradientBackground({ children, style }: GradientBackgroundProps)
     const fadeIn = isA ? opacityB : opacityA;
     const fadeOut = isA ? opacityA : opacityB;
 
-    incomingVideo?.setPositionAsync(0).then(() => {
-      incomingVideo?.playAsync();
-    });
+    incomingVideo
+      ?.setPositionAsync(0)
+      .then(() => {
+        if (!mountedRef.current) return;
+        return incomingVideo?.playAsync();
+      })
+      .catch(() => { /* video unmounted mid-transition — harmless */ });
 
     Animated.parallel([
       Animated.timing(fadeOut, {
@@ -48,7 +63,8 @@ export function GradientBackground({ children, style }: GradientBackgroundProps)
         useNativeDriver: true,
       }),
     ]).start(() => {
-      outgoingVideo?.pauseAsync();
+      if (!mountedRef.current) return;
+      outgoingVideo?.pauseAsync().catch(() => { /* unmounted — harmless */ });
       activeRef.current = isA ? 'B' : 'A';
       transitioningRef.current = false;
     });

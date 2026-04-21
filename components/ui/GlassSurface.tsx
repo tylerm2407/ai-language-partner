@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, type ViewStyle, type StyleProp } from 'react-native';
+import { View, StyleSheet, type ViewStyle, type StyleProp, type AccessibilityRole } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 export interface GlassSurfaceProps {
@@ -9,6 +9,8 @@ export interface GlassSurfaceProps {
   opacity?: number;
   style?: StyleProp<ViewStyle>;
   innerStyle?: StyleProp<ViewStyle>;
+  accessibilityLabel?: string;
+  accessibilityRole?: AccessibilityRole;
 }
 
 /**
@@ -23,6 +25,8 @@ export function GlassSurface({
   opacity = 0.93,
   style,
   innerStyle,
+  accessibilityLabel,
+  accessibilityRole,
 }: GlassSurfaceProps) {
   // Map brightness (0-100) to a fill alpha — higher brightness = lighter fill
   const fillAlpha = Math.min(1, Math.max(0, brightness / 100)) * 0.15;
@@ -30,7 +34,11 @@ export function GlassSurface({
   const bgColor = `rgba(21, 25, 33, ${(0.35 * opacity).toFixed(2)})`;
 
   return (
-    <View style={[{ borderRadius, overflow: 'hidden' }, style]}>
+    <View
+      style={[{ borderRadius, overflow: 'hidden' }, style]}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityRole={accessibilityRole}
+    >
       {/* Layer 0 — Translucent dark fill (lets galaxy bleed through) */}
       <View
         style={[

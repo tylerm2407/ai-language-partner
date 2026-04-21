@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Audio } from 'expo-av';
 import { File } from 'expo-file-system/next';
 
@@ -6,6 +6,20 @@ export function useAudioRecorder() {
   const [recording, setRecording] = useState(false);
   const [audioUri, setAudioUri] = useState<string | null>(null);
   const recordingRef = useRef<Audio.Recording | null>(null);
+
+  // If the consumer unmounts mid-recording (e.g. user navigates away while
+  // holding the mic button), tear down the native recording — expo-av only
+  // allows one Recording prepared at a time, so a leak here would break any
+  // subsequent recording elsewhere in the app.
+  useEffect(() => {
+    return () => {
+      const rec = recordingRef.current;
+      if (rec) {
+        recordingRef.current = null;
+        rec.stopAndUnloadAsync().catch(() => { /* already dead */ });
+      }
+    };
+  }, []);
 
   const startRecording = useCallback(async () => {
     try {

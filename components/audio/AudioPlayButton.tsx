@@ -11,11 +11,11 @@ interface AudioPlayButtonProps {
  * Used in exercises, card reviews, and AI practice.
  */
 export function AudioPlayButton({ audioUrl, size = 48 }: AudioPlayButtonProps) {
-  const { play, pause, isPlaying, isLoading } = useAudioPlayer();
+  const { play, stop, playing, loading } = useAudioPlayer();
 
   const handlePress = async () => {
-    if (isPlaying) {
-      await pause();
+    if (playing) {
+      await stop();
     } else {
       await play(audioUrl);
     }
@@ -33,13 +33,13 @@ export function AudioPlayButton({ audioUrl, size = 48 }: AudioPlayButtonProps) {
         alignItems: 'center',
       }}
       accessibilityRole="button"
-      accessibilityLabel={isPlaying ? 'Pause audio' : 'Play audio'}
+      accessibilityLabel={playing ? 'Pause audio' : 'Play audio'}
     >
-      {isLoading ? (
+      {loading ? (
         <ActivityIndicator color="#fff" size="small" />
       ) : (
         <Text style={{ color: '#fff', fontSize: size * 0.4, fontWeight: '700' }}>
-          {isPlaying ? '||' : '\u25B6'}
+          {playing ? '||' : '\u25B6'}
         </Text>
       )}
     </Pressable>

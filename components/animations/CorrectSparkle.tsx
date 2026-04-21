@@ -53,11 +53,11 @@ function Particle({ index, trigger }: { index: number; trigger: boolean }) {
 }
 
 interface CorrectSparkleProps {
-  trigger: boolean;
+  trigger?: boolean;
   children: React.ReactNode;
 }
 
-export function CorrectSparkle({ trigger, children }: CorrectSparkleProps) {
+export function CorrectSparkle({ trigger = false, children }: CorrectSparkleProps) {
   const pulseScale = useRef(new Animated.Value(1)).current;
   const pulseOpacity = useRef(new Animated.Value(0)).current;
 

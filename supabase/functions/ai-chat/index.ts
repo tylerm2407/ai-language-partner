@@ -8,6 +8,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, corsResponse } from '../_shared/cors.ts';
 import { getEffectiveLimits } from '../_shared/plan-limits.ts';
+import { getScenario } from '../_shared/scenarios.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -19,6 +20,10 @@ interface ChatRequest {
   messages: { role: string; content: string }[];
   targetLanguage: string;
   level: string;
+  /** Key of a server-side scenario definition. Resolved to the full hidden
+   *  prompt via `_shared/scenarios.ts`. Takes precedence over `topic`. */
+  scenarioKey?: string;
+  /** Free-form topic string. Used by Practice screen and assignment flow. */
   topic?: string;
   userId?: string; // passed from client for usage tracking
   assignmentId?: string; // links chat to a school assignment
@@ -87,7 +92,7 @@ serve(async (req: Request) => {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
   try {
-    const { messages, targetLanguage, level, topic: rawTopic, userId, assignmentId } = (await req.json()) as ChatRequest;
+    const { messages, targetLanguage, level, topic: rawTopic, scenarioKey, userId, assignmentId } = (await req.json()) as ChatRequest;
 
     // If assignmentId is present, look up assignment and enrich topic
     let topic = rawTopic;
@@ -132,7 +137,7 @@ serve(async (req: Request) => {
       }
     }
 
-    const systemPrompt = buildSystemPrompt(targetLanguage, level, topic);
+    const systemPrompt = buildSystemPrompt(targetLanguage, level, topic, scenarioKey);
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -202,7 +207,12 @@ function windowMessages(messages: { role: string; content: string }[]): { role: 
   return [summaryNote, ...recent];
 }
 
-function buildSystemPrompt(targetLanguage: string, level: string, topic?: string): string {
+function buildSystemPrompt(
+  targetLanguage: string,
+  level: string,
+  topic?: string,
+  scenarioKey?: string
+): string {
   const levelDescriptions: Record<string, string> = {
     beginner: 'Use very simple vocabulary and short sentences. Speak slowly and clearly. Avoid complex grammar entirely. Translate key words inline for the learner.',
     elementary: 'Use basic vocabulary and simple grammar. Keep sentences short. Occasionally introduce one new word per response.',
@@ -213,16 +223,27 @@ function buildSystemPrompt(targetLanguage: string, level: string, topic?: string
 
   const levelGuide = levelDescriptions[level] ?? levelDescriptions.beginner;
 
-  const topicGuide = topic
-    ? `SCENARIO CONTEXT: ${topic}`
-    : '';
+  // Prefer server-side rich scenario prompt when a valid key is supplied.
+  // Fall back to the free-form `topic` string (used by Practice + assignments).
+  let scenarioBlock = '';
+  if (scenarioKey) {
+    const scenario = getScenario(scenarioKey);
+    if (scenario) {
+      scenarioBlock = `SCENARIO INSTRUCTIONS:\n${scenario.buildPrompt({ targetLanguage, level })}`;
+    } else {
+      console.warn(`[ai-chat] Unknown scenarioKey: ${scenarioKey}. Falling back to topic.`);
+    }
+  }
+  if (!scenarioBlock && topic) {
+    scenarioBlock = `SCENARIO CONTEXT: ${topic}`;
+  }
 
   return `You are a warm, fun language practice partner helping a student practice ${targetLanguage}. You're like a friend who happens to speak the language natively — not a formal teacher.
 
 PROFICIENCY LEVEL: ${level}
 ${levelGuide}
 
-${topicGuide}
+${scenarioBlock}
 
 PERSONALITY:
 - Use contractions and casual language (e.g., "That's great!" not "That is great!")

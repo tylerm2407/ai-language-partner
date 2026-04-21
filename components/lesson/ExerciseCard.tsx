@@ -21,6 +21,10 @@ const TYPE_LABELS: Record<ExerciseType, string> = {
   sentence_construction: 'Arrange the words',
   dictation: 'Type what you hear',
   error_correction: 'Find and fix the error',
+  collocation_match: 'Match the words that go together',
+  word_form: 'Choose the correct word form',
+  sentence_transformation: 'Rewrite the sentence',
+  mini_dialogue: 'Complete the dialogue',
 };
 
 export function ExerciseCard({ children, type, prompt }: ExerciseCardProps) {

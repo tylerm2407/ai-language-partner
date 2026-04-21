@@ -21,7 +21,7 @@ export default function RootLayout() {
   const { session, loading: authLoading } = useAuth();
   const { profile, loading: dataLoading, loadUserData } = useAppStore();
   const { roles, activeRole, loadRoles } = useSchoolStore();
-  const segments = useSegments();
+  const segments = useSegments() as string[];
   const router = useRouter();
   const [dataLoaded, setDataLoaded] = useState(false);
   const [rolesLoaded, setRolesLoaded] = useState(false);

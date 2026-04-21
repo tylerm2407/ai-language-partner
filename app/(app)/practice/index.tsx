@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useProfile } from '../../../hooks/useProfile';
 import { usePracticeSession } from '../../../hooks/usePracticeSession';
+import { useAudioPlayer } from '../../../hooks/useAudioPlayer';
 import { AudioPlayButton } from '../../../components/audio/AudioPlayButton';
 import { GradientBackground } from '../../../components/ui/GradientBackground';
 import { GradientBorderCard } from '../../../components/ui/GradientBorderCard';
@@ -38,9 +39,7 @@ export default function PracticeScreen() {
   const { profile } = useProfile();
   const {
     messages,
-    isSending,
-    isLoading,
-    error,
+    sending,
     sessionId,
     startSession,
     sendMessage,
@@ -48,21 +47,58 @@ export default function PracticeScreen() {
   } = usePracticeSession();
 
   const [input, setInput] = useState('');
+  const [starting, setStarting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const flatListRef = useRef<FlatList>(null);
+
+  // ElevenLabs auto-play: play each new assistant message at most once. The
+  // hook is asynchronously patched with `audioUrl` by usePracticeSession once
+  // TTS completes, which triggers the effect below.
+  const { play, cleanup: cleanupAudio } = useAudioPlayer();
+  const playedIdsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    const next = [...messages]
+      .reverse()
+      .find((m) => m.role === 'assistant' && m.audioUrl && !playedIdsRef.current.has(m.id));
+    if (next?.audioUrl) {
+      playedIdsRef.current.add(next.id);
+      play(next.audioUrl).catch((err) => {
+        console.warn('[practice] autoplay failed:', err);
+      });
+    }
+  }, [messages, play]);
+
+  useEffect(() => {
+    return () => {
+      cleanupAudio().catch(() => { /* ignore */ });
+    };
+  }, [cleanupAudio]);
 
   const targetLanguage = (profile?.targetLanguage ?? 'es') as LanguageCode;
   const level = (profile?.level ?? 'beginner') as ProficiencyLevel;
 
+  const isSending = sending;
+  const isLoading = starting;
+
   const handleStartSession = async (topic: string) => {
-    trackEvent('practice_started', { topic, targetLanguage, level });
-    await startSession(topic, targetLanguage, level);
+    setStarting(true);
+    try {
+      trackEvent('practice_started', { topic, targetLanguage, level });
+      await startSession(topic, targetLanguage, level);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to start session');
+    } finally {
+      setStarting(false);
+    }
   };
 
   const handleSend = async () => {
     if (!input.trim() || isSending) return;
     const text = input.trim();
     setInput('');
-    await sendMessage(text);
+    await sendMessage(text, targetLanguage, level);
   };
 
   const handleEnd = async () => {

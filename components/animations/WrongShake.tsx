@@ -2,11 +2,11 @@ import { useEffect, useRef } from 'react';
 import { Animated, StyleSheet } from 'react-native';
 
 interface WrongShakeProps {
-  trigger: boolean;
+  trigger?: boolean;
   children: React.ReactNode;
 }
 
-export function WrongShake({ trigger, children }: WrongShakeProps) {
+export function WrongShake({ trigger = false, children }: WrongShakeProps) {
   const translateX = useRef(new Animated.Value(0)).current;
   const tintOpacity = useRef(new Animated.Value(0)).current;
 

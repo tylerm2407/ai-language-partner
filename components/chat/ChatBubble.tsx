@@ -121,29 +121,31 @@ export function ChatBubble({ message, targetLanguage, userId }: ChatBubbleProps)
       >
         <HighlightedContent text={message.content} isUser={isUser} />
 
-        {/* Speaker button for assistant messages */}
-        {!isUser && (
-          <Pressable
-            onPress={handleSpeak}
-            accessibilityRole="button"
-            accessibilityLabel={isPlaying ? 'Stop audio' : 'Listen to this message'}
-            className={`flex-row items-center mt-2 ${isPlaying ? 'bg-error-bg rounded-lg px-2 py-1' : ''}`}
-            hitSlop={8}
+        {/* Speaker button — available on every message so learners can hear
+            their own sentences pronounced by a native voice too. */}
+        <Pressable
+          onPress={handleSpeak}
+          accessibilityRole="button"
+          accessibilityLabel={isPlaying ? 'Stop audio' : 'Listen to this message'}
+          className={`flex-row items-center mt-2 ${isPlaying ? 'bg-error-bg rounded-lg px-2 py-1' : ''}`}
+          hitSlop={8}
+        >
+          {isLoadingAudio ? (
+            <ActivityIndicator size="small" color={isUser ? '#FFFFFF' : '#7DD3FC'} />
+          ) : (
+            <Ionicons
+              name={isPlaying ? 'stop-circle' : 'volume-medium-outline'}
+              size={isPlaying ? 20 : 16}
+              color={isPlaying ? '#EF4444' : isUser ? '#FFFFFF' : '#7DD3FC'}
+            />
+          )}
+          <Text
+            className="text-xs ml-1"
+            style={{ color: isUser ? 'rgba(255,255,255,0.9)' : '#C4B5FD' }}
           >
-            {isLoadingAudio ? (
-              <ActivityIndicator size="small" color="#7DD3FC" />
-            ) : (
-              <Ionicons
-                name={isPlaying ? 'stop-circle' : 'volume-medium-outline'}
-                size={isPlaying ? 20 : 16}
-                color={isPlaying ? '#EF4444' : '#7DD3FC'}
-              />
-            )}
-            <Text className="text-xs ml-1" style={{ color: '#C4B5FD' }}>
-              {isLoadingAudio ? 'Loading...' : isPlaying ? 'Stop' : 'Listen'}
-            </Text>
-          </Pressable>
-        )}
+            {isLoadingAudio ? 'Loading...' : isPlaying ? 'Stop' : 'Listen'}
+          </Text>
+        </Pressable>
       </View>
 
       {/* Timestamp */}

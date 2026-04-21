@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -11,22 +11,25 @@ import type { ReviewRating } from '../../../types';
 
 export default function ReviewScreen() {
   const router = useRouter();
-  const {
-    currentCard,
-    isLoading,
-    error,
-    dueCount,
-    reviewedCount,
-    correctCount,
-    submitReview,
-    refresh,
-    isComplete,
-    queue,
-    currentIndex,
-  } = useReviewQueue();
+  const { items, cards, loading, loadQueue, submitReview } = useReviewQueue();
 
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [reviewedCount, setReviewedCount] = useState(0);
+  const [correctCount, setCorrectCount] = useState(0);
+  const [error, setError] = useState<string | null>(null);
   const [showAnswer, setShowAnswer] = useState(false);
   const cardStartRef = useRef(Date.now());
+
+  useEffect(() => {
+    loadQueue();
+  }, [loadQueue]);
+
+  const queue = items;
+  const isLoading = loading;
+  const currentItem = items[currentIndex] ?? null;
+  const currentCardData = currentItem ? cards[currentItem.cardId] : null;
+  const currentCard = currentItem && currentCardData ? { item: currentItem, card: currentCardData } : null;
+  const isComplete = !loading && items.length > 0 && currentIndex >= items.length;
 
   const handleReveal = () => {
     setShowAnswer(true);
@@ -44,7 +47,15 @@ export default function ReviewScreen() {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
 
-    await submitReview(rating, userAnswer, responseTimeMs);
+    try {
+      await submitReview(currentCard.item, rating, userAnswer, responseTimeMs);
+      setReviewedCount((r) => r + 1);
+      if (rating >= 3) setCorrectCount((c) => c + 1);
+      setCurrentIndex((i) => i + 1);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to submit review');
+    }
     setShowAnswer(false);
     cardStartRef.current = Date.now();
   };

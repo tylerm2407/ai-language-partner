@@ -18,78 +18,37 @@ import { useAssignmentTimer } from '../../../hooks/useAssignmentTimer';
 import type { ConversationMessage, Assignment, AssignmentSubmission } from '../../../types';
 import { Ionicons } from '@expo/vector-icons';
 import { getOrCreateChatSession, saveChatMessage, loadChatMessages, fetchStudentAssignments, submitAssignment } from '../../../lib/supabase-queries';
+import { SCENARIO_META, SCENARIO_ORDER, type ScenarioKey } from '../../../types/scenarios';
 
+/**
+ * Scenario metadata (label/icon/description) is imported from
+ * `types/scenarios.ts`. The actual Claude system prompt per built-in scenario
+ * lives server-side only in `supabase/functions/_shared/scenarios.ts` — the
+ * mobile app just sends the `scenarioKey` to the Edge Function.
+ *
+ * Teacher-authored custom scenarios don't have a server-side prompt, so they
+ * carry `customContext` (a free-form system context string from the teacher)
+ * which is sent as the `topic` field instead.
+ */
 interface Scenario {
+  /** Set for built-in scenarios; null for teacher custom scenarios. */
+  key: ScenarioKey | null;
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
   description: string;
-  systemContext: string;
+  /** Free-form context for teacher custom scenarios; empty for built-ins. */
+  customContext?: string;
 }
 
-const SCENARIOS: Scenario[] = [
-  {
-    label: 'Ordering at a Restaurant',
-    icon: 'restaurant',
-    description: 'Practice ordering food, asking about menu items, expressing preferences and allergies.',
-    systemContext:
-      'The student is practicing ordering at a restaurant. Simulate being a waiter. Present menu items, ask about preferences, handle allergy questions, suggest specials, and confirm the order. Use realistic restaurant dialogue.',
-  },
-  {
-    label: 'Job Interview Practice',
-    icon: 'briefcase',
-    description: 'Introduce yourself, answer common interview questions, discuss experience.',
-    systemContext:
-      'The student is practicing for a job interview. Simulate being an interviewer. Ask them to introduce themselves, discuss their experience, strengths, weaknesses, and why they want the job. Give realistic follow-up questions.',
-  },
-  {
-    label: 'Asking for Directions',
-    icon: 'navigate',
-    description: 'Navigate to a destination, understand landmarks, give and receive directions.',
-    systemContext:
-      'The student is practicing asking for and understanding directions. Simulate being a helpful local. Use landmarks, street names, left/right/straight instructions, and distance estimates. Confirm they understood.',
-  },
-  {
-    label: 'Shopping',
-    icon: 'cart',
-    description: 'Ask about sizes, colors, prices, and make purchases.',
-    systemContext:
-      'The student is practicing shopping in a store. Simulate being a shop assistant. Discuss sizes, colors, prices, availability, payment methods, and returns. Use realistic retail dialogue.',
-  },
-  {
-    label: 'Making Friends',
-    icon: 'people',
-    description: 'Talk about hobbies, interests, and make plans together.',
-    systemContext:
-      'The student is practicing casual socializing. Simulate being a friendly new acquaintance. Discuss hobbies, interests, weekend plans, favorite music/movies, and suggest meeting up. Keep it natural and warm.',
-  },
-  {
-    label: "Doctor / Pharmacy Visit",
-    icon: 'medkit',
-    description: 'Describe symptoms, understand medical advice, buy medication.',
-    systemContext:
-      'The student is practicing a visit to a doctor or pharmacy. Simulate being a doctor or pharmacist. Ask about symptoms, duration, severity, medical history, and explain treatment or medication instructions clearly.',
-  },
-  {
-    label: 'Phone Call',
-    icon: 'call',
-    description: 'Book appointments, make reservations, handle phone etiquette.',
-    systemContext:
-      'The student is practicing making a phone call. Simulate being a receptionist or booking agent. Practice greetings, stating the reason for calling, scheduling appointments, confirming details, and polite phone etiquette.',
-  },
-  {
-    label: 'Airport / Hotel',
-    icon: 'bed',
-    description: 'Check in, ask about amenities, handle travel situations.',
-    systemContext:
-      'The student is practicing at an airport or hotel. Simulate being check-in staff. Practice checking in, asking about amenities, room service, flight information, baggage, and resolving common travel issues.',
-  },
-  {
-    label: 'Free Chat',
-    icon: 'chatbubble',
-    description: 'Open conversation on any topic you choose.',
-    systemContext: '',
-  },
-];
+const SCENARIOS: Scenario[] = SCENARIO_ORDER.map((key) => {
+  const meta = SCENARIO_META[key];
+  return {
+    key: meta.key,
+    label: meta.label,
+    icon: meta.icon,
+    description: meta.description,
+  };
+});
 
 export default function ChatScreen() {
   const { user } = useAuth();
@@ -142,21 +101,25 @@ export default function ChatScreen() {
       let scenario: Scenario;
       if (found.customScenario) {
         scenario = {
+          key: null,
           label: found.customScenario.label,
           icon: 'chatbubbles',
           description: found.customScenario.description,
-          systemContext: found.customScenario.systemContext,
+          customContext: found.customScenario.systemContext,
         };
       } else if (found.scenarioKey) {
-        const existing = SCENARIOS.find((s) => s.label === found.scenarioKey);
-        scenario = existing ?? {
+        // Try to match by built-in key, then by label (legacy data).
+        const byKey = SCENARIOS.find((s) => s.key === found.scenarioKey);
+        const byLabel = byKey ?? SCENARIOS.find((s) => s.label === found.scenarioKey);
+        scenario = byLabel ?? {
+          key: null,
           label: found.scenarioKey,
           icon: 'chatbubbles',
           description: '',
-          systemContext: '',
+          customContext: '',
         };
       } else {
-        scenario = SCENARIOS.find((s) => s.label === 'Free Chat') ?? SCENARIOS[SCENARIOS.length - 1];
+        scenario = SCENARIOS.find((s) => s.key === 'free_chat') ?? SCENARIOS[SCENARIOS.length - 1];
       }
 
       // If continuing with existing chat session, load it
@@ -272,7 +235,7 @@ export default function ChatScreen() {
   const geminiLive = useGeminiLive({
     targetLanguage,
     level,
-    topic: selectedScenario?.systemContext || selectedScenario?.label,
+    topic: selectedScenario?.customContext || selectedScenario?.label,
     onTranscript: useCallback((userText: string, aiText: string) => {
       // Add user message to chat UI
       if (userText) {
@@ -397,9 +360,11 @@ export default function ChatScreen() {
   const startChat = (scenario: Scenario, liveVoice = false) => {
     setSelectedScenario(scenario);
 
-    const greeting = scenario.systemContext
-      ? `Great! Let's practice "${scenario.label}". ${scenario.description} Start by saying something in ${targetLanguage.toUpperCase()}, and I'll help you along the way!`
-      : `Great! Let's have a free conversation. Start by saying something in ${targetLanguage.toUpperCase()}, and I'll help you along the way!`;
+    // Greeting string is UI only — the real Claude system prompt comes from
+    // the server-side scenario module keyed by scenario.key.
+    const greeting = scenario.key === 'free_chat' || !scenario.key
+      ? `Great! Let's have a free conversation. Start by saying something in ${targetLanguage.toUpperCase()}, and I'll help you along the way!`
+      : `Great! Let's practice "${scenario.label}". ${scenario.description} Start by saying something in ${targetLanguage.toUpperCase()}, and I'll help you along the way!`;
 
     const firstMessage: ConversationMessage = {
       id: '0',
@@ -432,7 +397,9 @@ export default function ChatScreen() {
   };
 
   const handleSend = async (messageText?: string) => {
-    const text = (messageText ?? input).trim();
+    // Guard against non-string callers (e.g. Pressable's GestureResponderEvent).
+    const candidate = typeof messageText === 'string' ? messageText : input;
+    const text = candidate.trim();
     if (!text || sending) return;
 
     // Update hands-free state to AI_RESPONDING
@@ -458,9 +425,13 @@ export default function ChatScreen() {
     setTimeout(() => flatListRef.current?.scrollToEnd(), 100);
 
     try {
-      const topicPayload = selectedScenario?.systemContext
-        ? selectedScenario.systemContext
-        : selectedScenario?.label ?? undefined;
+      // Built-in scenarios resolve to a rich server-side prompt via scenarioKey.
+      // Teacher custom scenarios (and any scenario without a key) fall back to
+      // the free-form `topic` field.
+      const scenarioKey = selectedScenario?.key ?? undefined;
+      const topicPayload = scenarioKey
+        ? undefined
+        : selectedScenario?.customContext || selectedScenario?.label || undefined;
 
       // Context windowing: send only the last ~12 turns to avoid unbounded token usage
       const MAX_CONTEXT_MESSAGES = 24;
@@ -473,6 +444,7 @@ export default function ChatScreen() {
         messages: contextMessages.map((m) => ({ role: m.role, content: m.content })),
         targetLanguage,
         level,
+        scenarioKey: scenarioKey ?? undefined,
         topic: topicPayload,
       });
 
@@ -495,11 +467,13 @@ export default function ChatScreen() {
       if (voiceMode && !isGeminiLiveActive) {
         speakWithElevenLabs(response.reply, handsFreeActive);
       }
-    } catch {
+    } catch (err) {
+      console.error('[chat] sendChatMessage failed:', err);
+      const detail = err instanceof Error ? err.message : String(err);
       setMessages((prev) => [...prev, {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: 'Sorry, I had trouble responding. Please try again.',
+        content: `Sorry, I had trouble responding. (${detail})`,
         audioUrl: null,
         correction: null,
         timestamp: new Date().toISOString(),

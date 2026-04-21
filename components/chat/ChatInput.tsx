@@ -70,6 +70,13 @@ export function ChatInput({
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isStoppingRef = useRef(false);
 
+  // Serialize recording lifecycle: prevents concurrent starts (the two
+  // hands-free useEffects can both fire on mount) and makes sure any in-flight
+  // unload completes before the next createAsync — expo-av only allows one
+  // Recording object prepared at a time and will throw otherwise.
+  const isStartingRef = useRef(false);
+  const unloadPromiseRef = useRef<Promise<void> | null>(null);
+
   // Pulsing animation for hands-free listening indicator
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
@@ -97,17 +104,26 @@ export function ChatInput({
 
   /** Start recording with optional metering for silence detection. */
   const startRecording = async (withSilenceDetection = false) => {
-    if (isStoppingRef.current) return;
+    if (isStoppingRef.current || isStartingRef.current) return;
+    // If a prior recording is already alive, don't stack another one on top.
+    if (recordingRef.current) return;
+    isStartingRef.current = true;
     try {
-      // Clean up any stale recording before creating a new one
-      // expo-av only allows one Recording prepared at a time
+      // Wait for any fire-and-forget unload from a previous cycle/unmount.
+      if (unloadPromiseRef.current) {
+        try { await unloadPromiseRef.current; } catch { /* ignore */ }
+        unloadPromiseRef.current = null;
+      }
+
+      // Belt-and-suspenders: stop+unload any stale recording we still hold.
       if (recordingRef.current) {
+        const stale: Audio.Recording = recordingRef.current;
+        recordingRef.current = null;
         try {
-          await recordingRef.current.stopAndUnloadAsync();
+          await stale.stopAndUnloadAsync();
         } catch {
           // Already stopped/unloaded — safe to ignore
         }
-        recordingRef.current = null;
       }
 
       const permission = await Audio.requestPermissionsAsync();
@@ -168,6 +184,14 @@ export function ChatInput({
     } catch (err) {
       console.error('Failed to start recording:', err);
       setIsRecording(false);
+      // Tear down any half-created native recording so the next start works.
+      if (recordingRef.current) {
+        const failed: Audio.Recording = recordingRef.current;
+        recordingRef.current = null;
+        try { await failed.stopAndUnloadAsync(); } catch { /* ignore */ }
+      }
+    } finally {
+      isStartingRef.current = false;
     }
   };
 
@@ -301,15 +325,21 @@ export function ChatInput({
     if (handsFreeMode && handsFreeState === 'IDLE' && !isRecording && !sending) {
       startRecording(true);
     }
-    // Cleanup on unmount or mode deactivation
+    // Always tear down on unmount / deps change — a leaked native Recording
+    // will block the next createAsync with "Only one Recording...".
     return () => {
       clearSilenceTimer();
-      if (!handsFreeMode && recordingRef.current) {
-        recordingRef.current.stopAndUnloadAsync().catch(() => {});
+      if (recordingRef.current) {
+        const toUnload: Audio.Recording = recordingRef.current;
         recordingRef.current = null;
-        setIsRecording(false);
-        isStoppingRef.current = false;
+        // Record the unload promise so the next startRecording awaits it.
+        unloadPromiseRef.current = toUnload
+          .stopAndUnloadAsync()
+          .catch(() => { /* ignore */ })
+          .then(() => { /* normalize to Promise<void> */ });
       }
+      setIsRecording(false);
+      isStoppingRef.current = false;
     };
   }, [handsFreeMode, geminiLiveActive]);
 
@@ -465,7 +495,7 @@ export function ChatInput({
       />
       <Pressable
         className={`w-11 h-11 rounded-[22px] items-center justify-center ${value.trim() ? 'bg-primary' : 'bg-primary-light'}`}
-        onPress={onSend}
+        onPress={() => onSend()}
         disabled={!value.trim() || sending}
         accessibilityRole="button"
         accessibilityLabel="Send message"

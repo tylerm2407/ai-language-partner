@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import type { ConversationMessage, LanguageCode, ProficiencyLevel } from '../types';
+import type { ScenarioKey } from '../types/scenarios';
 
 // All AI calls go through Supabase Edge Functions.
 // The AI API key lives in Edge Function secrets, never on the client.
@@ -18,8 +19,12 @@ export interface AIChatRequest {
   messages: Pick<ConversationMessage, 'role' | 'content'>[];
   targetLanguage: LanguageCode;
   level: ProficiencyLevel;
+  /** Resolves to a hidden server-side system prompt. Preferred for scenario-
+   *  based chat. Takes precedence over `topic` when both are sent. */
+  scenarioKey?: ScenarioKey;
+  /** Free-form topic string. Used by Practice screen / assignments where we
+   *  don't have a pre-authored scenario. */
   topic?: string;
-  scenario?: string;
 }
 
 export interface AIChatResponse {
@@ -52,13 +57,45 @@ export interface PronunciationScoreResponse {
 /**
  * Send a conversation message to the AI backend.
  * Returns the AI's reply with optional correction.
+ *
+ * On non-2xx, supabase-js only exposes a generic "Edge Function returned a
+ * non-2xx status code" on error.message; the real server error is in
+ * error.context (the raw Response). We parse that body so callers see the
+ * actual cause (e.g. "ANTHROPIC_API_KEY not configured", DAILY_TEXT_LIMIT_REACHED,
+ * or a 401 when the user's JWT isn't forwarded).
  */
 export async function sendChatMessage(request: AIChatRequest): Promise<AIChatResponse> {
   const { data, error } = await supabase.functions.invoke('ai-chat', {
     body: request,
   });
 
-  if (error) throw new Error(`AI chat error: ${error.message}`);
+  if (error) {
+    let detail = error.message;
+    let code: string | undefined;
+    let status: number | undefined;
+
+    try {
+      const ctx = (error as Record<string, unknown>).context;
+      if (ctx && typeof (ctx as Response).json === 'function') {
+        status = (ctx as Response).status;
+        const body = await (ctx as Response).json();
+        if (body?.error) detail = body.error;
+        if (body?.code) code = body.code;
+      }
+    } catch {
+      // Body wasn't JSON — fall through with the generic message.
+    }
+
+    const prefix = status ? `${status}` : 'AI chat';
+    const suffix = code ? ` [${code}]` : '';
+    throw new Error(`${prefix}: ${detail}${suffix}`);
+  }
+
+  // Success envelope may still carry an application-level error from the function
+  if (data?.error) {
+    throw new Error(data.code ? `${data.error} [${data.code}]` : data.error);
+  }
+
   return data as AIChatResponse;
 }
 
