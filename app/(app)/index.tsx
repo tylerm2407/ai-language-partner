@@ -12,6 +12,9 @@ import { GradientButton } from '../../components/ui/GradientButton';
 import { GradientBackground } from '../../components/ui/GradientBackground';
 import { GradientBorderCard } from '../../components/ui/GradientBorderCard';
 import { GlassSurface } from '../../components/ui/GlassSurface';
+import { TactileButton } from '../../components/ui/TactileButton';
+import { Mascot } from '../../components/mascot/Mascot';
+import { Heading, Body } from '../../components/ui/Text';
 import { WeeklyChart } from '../../components/stats/WeeklyChart';
 import { DailyChallenges } from '../../components/gamification/DailyChallenges';
 import { LevelProgressCard } from '../../components/gamification/LevelProgressCard';
@@ -75,12 +78,20 @@ export default function HomeScreen() {
         {/* Onboarding Checklist */}
         <OnboardingChecklist />
 
-        <Text className="text-[28px] font-bold text-text-primary mb-1 text-center">
-          Welcome back{profile?.displayName ? `, ${profile.displayName}` : ''}!
-        </Text>
-        <Text className="text-base text-text-secondary mb-6 text-center">
-          {profile?.targetLanguage ? `Learning ${profile.targetLanguage.toUpperCase()}` : user?.email}
-        </Text>
+        {/* Greeting with mascot — mascot state tracks streak health */}
+        <View style={{ alignItems: 'center', marginBottom: 24 }}>
+          <Mascot
+            state={(profile?.streak ?? 0) >= 1 ? 'happy' : 'idle'}
+            size="md"
+            style={{ marginBottom: 12 }}
+          />
+          <Heading level={1} style={{ textAlign: 'center' }}>
+            Welcome back{profile?.displayName ? `, ${profile.displayName}` : ''}!
+          </Heading>
+          <Body tone="secondary" style={{ textAlign: 'center', marginTop: 4 }}>
+            {profile?.targetLanguage ? `Learning ${profile.targetLanguage.toUpperCase()}` : user?.email}
+          </Body>
+        </View>
 
         {/* Stats Row */}
         <View className="flex-row gap-3 mb-6">
@@ -179,12 +190,13 @@ export default function HomeScreen() {
         {/* Quick Actions */}
         <Text className="text-xl font-bold text-text-primary mb-3 mt-6">Quick Actions</Text>
 
-        <GradientButton
-          label="Start a Lesson"
-          onPress={() => router.push('/learn' as any)}
-          accessibilityHint="Continue where you left off"
-          style={{ marginBottom: 12 }}
-        />
+        <View style={{ marginBottom: 12 }}>
+          <TactileButton
+            label="Start a Lesson"
+            onPress={() => router.push('/learn' as any)}
+            accessibilityLabel="Continue where you left off"
+          />
+        </View>
 
         <GlassSurface style={{ marginBottom: 12 }}>
           <Pressable
