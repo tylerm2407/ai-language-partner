@@ -131,6 +131,39 @@ export async function getHint(
 }
 
 /**
+ * Translate a short conversational message from one language into another
+ * via the `translate` Edge Function (Claude Haiku server-side). Used by the
+ * Translate button in ChatBubble. Failures throw with the real server
+ * message (extracted from error.context) so the UI can surface useful text.
+ */
+export async function translateText(
+  text: string,
+  sourceLanguage: string,
+  targetLanguage: string
+): Promise<string> {
+  const { data, error } = await supabase.functions.invoke('translate', {
+    body: { text, sourceLanguage, targetLanguage },
+  });
+
+  if (error) {
+    let detail = error.message;
+    try {
+      const ctx = (error as Record<string, unknown>).context;
+      if (ctx && typeof (ctx as Response).json === 'function') {
+        const body = await (ctx as Response).json();
+        if (body?.error) detail = body.error;
+      }
+    } catch {
+      // Body wasn't JSON — fall through with the generic message.
+    }
+    throw new Error(`Translation failed: ${detail}`);
+  }
+
+  if (data?.error) throw new Error(`Translation failed: ${data.error}`);
+  return (data as { translation: string }).translation;
+}
+
+/**
  * Get ElevenLabs TTS audio for a message.
  * Returns base64-encoded audio string from the edge function.
  */

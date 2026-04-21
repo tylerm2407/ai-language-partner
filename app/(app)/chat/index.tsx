@@ -725,7 +725,12 @@ export default function ChatScreen() {
           contentContainerStyle={{ padding: 16, paddingBottom: 8 }}
           onContentSizeChange={() => flatListRef.current?.scrollToEnd()}
           renderItem={({ item }) => (
-            <ChatBubble message={item} targetLanguage={targetLanguage} userId={user?.id} />
+            <ChatBubble
+              message={item}
+              targetLanguage={targetLanguage}
+              userId={user?.id}
+              nativeLanguage={profile?.nativeLanguage}
+            />
           )}
           ListFooterComponent={sending ? <TypingIndicator /> : null}
         />
