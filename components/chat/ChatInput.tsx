@@ -60,6 +60,8 @@ export function ChatInput({
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [showTextFallback, setShowTextFallback] = useState(false);
   const [tooShortMessage, setTooShortMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [meterLevel, setMeterLevel] = useState(0);
   const recordingRef = useRef<Audio.Recording | null>(null);
   const recordingStartTimeRef = useRef<number>(0);
 
@@ -119,7 +121,7 @@ export function ChatInput({
 
       const recordingOptions = {
         ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
-        isMeteringEnabled: withSilenceDetection,
+        isMeteringEnabled: true,
       };
 
       const { recording } = await Audio.Recording.createAsync(recordingOptions);
@@ -129,12 +131,25 @@ export function ChatInput({
       hasDetectedSpeechRef.current = false;
       clearSilenceTimer();
 
+      // Always set up metering display
+      recording.setProgressUpdateInterval(METERING_INTERVAL_MS);
+      if (!withSilenceDetection) {
+        recording.setOnRecordingStatusUpdate((status) => {
+          if (!status.isRecording) return;
+          const metering = status.metering ?? -160;
+          // Normalize from dB (-160 to 0) to 0-1 range
+          const normalized = Math.max(0, Math.min(1, (metering + 60) / 60));
+          setMeterLevel(normalized);
+        });
+      }
+
       if (withSilenceDetection) {
         onHandsFreeStateChange?.('LISTENING');
-        recording.setProgressUpdateInterval(METERING_INTERVAL_MS);
         recording.setOnRecordingStatusUpdate((status) => {
           if (!status.isRecording || isStoppingRef.current) return;
           const metering = status.metering ?? -160;
+          const normalized = Math.max(0, Math.min(1, (metering + 60) / 60));
+          setMeterLevel(normalized);
 
           if (metering > SILENCE_THRESHOLD_DB) {
             // Speech detected
@@ -194,7 +209,14 @@ export function ChatInput({
           }
         } catch (err) {
           console.error('Hands-free transcription failed:', err);
-          // On error, restart listening instead of breaking the loop
+          const { VoiceError } = await import('../../lib/ai');
+          const msg = err instanceof VoiceError
+            ? err.code === 'DAILY_LIMIT'
+              ? "Daily voice limit reached"
+              : 'Voice temporarily unavailable'
+            : "Couldn't catch that — listening again...";
+          setErrorMessage(msg);
+          setTimeout(() => setErrorMessage(null), 3000);
           onHandsFreeStateChange?.('LISTENING');
           isStoppingRef.current = false;
           startRecording(true);
@@ -338,6 +360,25 @@ export function ChatInput({
         <Text className="text-xs text-text-tertiary mt-1">
           {geminiLiveActive ? 'Gemini Live voice active' : 'Hands-free mode active'}
         </Text>
+        {errorMessage && (
+          <View className="bg-error-bg rounded-xl px-4 py-2 mt-2">
+            <Text className="text-xs text-error-dark text-center">{errorMessage}</Text>
+          </View>
+        )}
+        {/* Amplitude meter for hands-free */}
+        {handsFreeState === 'LISTENING' && !geminiLiveActive && (
+          <View className="flex-row items-center justify-center mt-2 h-4" style={{ gap: 3 }}>
+            {[0, 1, 2, 3, 4, 5, 6].map((i) => {
+              const barHeight = Math.max(4, meterLevel * 16 * (1 - Math.abs(i - 3) * 0.15));
+              return (
+                <View
+                  key={i}
+                  style={{ width: 3, height: barHeight, borderRadius: 1.5, backgroundColor: '#34D399' }}
+                />
+              );
+            })}
+          </View>
+        )}
       </View>
     );
   }
@@ -376,6 +417,20 @@ export function ChatInput({
           )}
         </Pressable>
 
+        {/* Amplitude meter */}
+        {isRecording && (
+          <View className="flex-row items-center justify-center mt-2 h-4" style={{ gap: 3 }}>
+            {[0, 1, 2, 3, 4, 5, 6].map((i) => {
+              const barHeight = Math.max(4, meterLevel * 16 * (1 - Math.abs(i - 3) * 0.15));
+              return (
+                <View
+                  key={i}
+                  style={{ width: 3, height: barHeight, borderRadius: 1.5, backgroundColor: '#34D399' }}
+                />
+              );
+            })}
+          </View>
+        )}
         <Text className={`text-xs mt-2 ${tooShortMessage ? 'text-warning' : 'text-text-secondary'}`}>
           {tooShortMessage ?? (isTranscribing ? 'Transcribing...' : isRecording ? 'Listening...' : 'Hold to talk')}
         </Text>

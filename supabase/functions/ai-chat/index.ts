@@ -7,7 +7,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, corsResponse } from '../_shared/cors.ts';
-import { getPlanLimits } from '../_shared/plan-limits.ts';
+import { getEffectiveLimits } from '../_shared/plan-limits.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -21,6 +21,7 @@ interface ChatRequest {
   level: string;
   topic?: string;
   userId?: string; // passed from client for usage tracking
+  assignmentId?: string; // links chat to a school assignment
 }
 
 // ─── Usage helpers ──────────────────────────────────────────────
@@ -86,7 +87,27 @@ serve(async (req: Request) => {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
   try {
-    const { messages, targetLanguage, level, topic, userId } = (await req.json()) as ChatRequest;
+    const { messages, targetLanguage, level, topic: rawTopic, userId, assignmentId } = (await req.json()) as ChatRequest;
+
+    // If assignmentId is present, look up assignment and enrich topic
+    let topic = rawTopic;
+    if (assignmentId) {
+      const { data: assignment } = await supabase
+        .from('assignments')
+        .select('title, custom_scenario, scenario_key, instructions, vocabulary_focus, grammar_focus')
+        .eq('id', assignmentId)
+        .single();
+
+      if (assignment) {
+        const scenarioDesc = assignment.custom_scenario ?? assignment.scenario_key ?? assignment.title ?? '';
+        const extras: string[] = [];
+        if (assignment.instructions) extras.push(`Instructions: ${assignment.instructions}`);
+        if (assignment.vocabulary_focus) extras.push(`Vocabulary focus: ${JSON.stringify(assignment.vocabulary_focus)}`);
+        if (assignment.grammar_focus) extras.push(`Grammar focus: ${JSON.stringify(assignment.grammar_focus)}`);
+        const assignmentContext = [scenarioDesc, ...extras].filter(Boolean).join('. ');
+        topic = topic ? `${topic}. Assignment: ${assignmentContext}` : assignmentContext;
+      }
+    }
 
     if (!ANTHROPIC_API_KEY) {
       return new Response(
@@ -97,8 +118,7 @@ serve(async (req: Request) => {
 
     // ── Enforce daily text message limit ──────────────────
     if (userId) {
-      const tier = await getUserTier(supabase, userId);
-      const limits = getPlanLimits(tier);
+      const limits = await getEffectiveLimits(userId, supabase);
 
       const usage = await getOrCreateDailyUsage(supabase, userId);
       if ((usage.text_messages ?? 0) >= limits.dailyTextMessages) {
@@ -125,7 +145,7 @@ serve(async (req: Request) => {
         model: TEXT_MODEL,
         max_tokens: 400,
         system: systemPrompt,
-        messages: messages.map((m) => ({
+        messages: windowMessages(messages).map((m) => ({
           role: m.role === 'assistant' ? 'assistant' : 'user',
           content: m.content,
         })),
@@ -165,6 +185,23 @@ serve(async (req: Request) => {
   }
 });
 
+/** Cap conversation history to the last ~12 turns to prevent unbounded token usage. */
+function windowMessages(messages: { role: string; content: string }[]): { role: string; content: string }[] {
+  const MAX_TURNS = 24; // 12 user + 12 assistant turns
+  if (messages.length <= MAX_TURNS) return messages;
+
+  // Summarize older messages into a context note
+  const older = messages.slice(0, messages.length - MAX_TURNS);
+  const recent = messages.slice(messages.length - MAX_TURNS);
+
+  const summaryNote = {
+    role: 'user',
+    content: `[Context: This is an ongoing conversation. There were ${older.length} earlier messages covering the same topic. Continue naturally from here.]`,
+  };
+
+  return [summaryNote, ...recent];
+}
+
 function buildSystemPrompt(targetLanguage: string, level: string, topic?: string): string {
   const levelDescriptions: Record<string, string> = {
     beginner: 'Use very simple vocabulary and short sentences. Speak slowly and clearly. Avoid complex grammar entirely. Translate key words inline for the learner.',
@@ -195,12 +232,12 @@ PERSONALITY:
 - Show genuine curiosity — react to what the student says before moving on
 
 CONVERSATION STYLE:
-- Respond primarily in ${targetLanguage}
+- You MUST respond ONLY in ${targetLanguage}. Never use English unless the student explicitly asks for a translation.
+- If the student writes in English, reply in ${targetLanguage} and give them a starter phrase to try.
 - Keep responses concise (1-3 sentences for your reply)
 - Ask exactly ONE follow-up question per turn to keep the conversation flowing
 - If the student makes an error, naturally recast (rephrase correctly) in your reply instead of lecturing. Only flag it in the correction field if it's significant.
 - When you introduce new or important vocabulary, include those words in the vocabularyHighlights array
-- If the student writes in English, gently encourage them to try in ${targetLanguage} and give them a starter phrase
 
 SAFETY:
 - Stay on topic. Do not discuss anything inappropriate or unrelated to language learning.

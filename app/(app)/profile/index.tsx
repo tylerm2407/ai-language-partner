@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, Pressable, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAppStore } from '../../../stores/useAppStore';
+import { useSchoolStore } from '../../../stores/useSchoolStore';
 import { useLevel } from '../../../hooks/useLevel';
 import { Ionicons } from '@expo/vector-icons';
 import { SUPPORTED_LANGUAGES } from '../../../config/app';
@@ -13,7 +14,9 @@ import { AchievementGrid } from '../../../components/gamification/AchievementGri
 import { Avatar } from '../../../components/avatar/Avatar';
 import { AvatarCustomizer } from '../../../components/avatar/AvatarCustomizer';
 import { DEFAULT_AVATAR_CONFIG } from '../../../components/avatar/constants';
-import { updateAvatarConfig } from '../../../lib/supabase-queries';
+import { updateAvatarConfig, joinClassroom } from '../../../lib/supabase-queries';
+import JoinClassModal from '../../../components/school/JoinClassModal';
+import RoleSwitcher from '../../../components/school/RoleSwitcher';
 import type { AvatarConfig } from '../../../types';
 
 const LEVEL_LABELS: Record<string, string> = {
@@ -27,9 +30,21 @@ const LEVEL_LABELS: Record<string, string> = {
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const { profile, subscription, setProfile } = useAppStore();
+  const { enrolledClasses, loadStudentSchoolData, roles, activeRole, setActiveRole } = useSchoolStore();
   const { level, tier } = useLevel();
   const router = useRouter();
   const [customizerVisible, setCustomizerVisible] = useState(false);
+  const [joinModalVisible, setJoinModalVisible] = useState(false);
+
+  // Load student school data on mount
+  useEffect(() => {
+    if (user?.id) loadStudentSchoolData(user.id);
+  }, [user?.id, loadStudentSchoolData]);
+
+  const handleJoinClass = async (code: string) => {
+    await joinClassroom(code);
+    if (user?.id) loadStudentSchoolData(user.id);
+  };
 
   const handleSaveAvatar = async (config: AvatarConfig) => {
     if (!user || !profile) return;
@@ -105,6 +120,52 @@ export default function ProfileScreen() {
         {/* Achievements */}
         <AchievementGrid />
 
+        {/* My Classes */}
+        <Text className="text-xl font-bold text-text-primary mb-3">My Classes</Text>
+
+        {enrolledClasses.length > 0 ? (
+          enrolledClasses.map((enrollment) => (
+            <View key={enrollment.id} className="bg-dark-card rounded-2xl p-5 mb-3 flex-row items-center">
+              <Ionicons name="school-outline" size={24} color="#A855F7" />
+              <View className="ml-4 flex-1">
+                <Text className="text-base font-semibold text-text-primary">{enrollment.classroom?.name ?? 'Class'}</Text>
+                <Text className="text-sm text-text-secondary">
+                  {enrollment.classroom?.targetLanguage?.toUpperCase() ?? ''} · {enrollment.classroom?.level ?? ''}
+                </Text>
+              </View>
+            </View>
+          ))
+        ) : (
+          <View className="bg-dark-card rounded-2xl p-5 mb-3 items-center">
+            <Text className="text-text-secondary text-sm">Not enrolled in any classes</Text>
+          </View>
+        )}
+
+        <Pressable
+          className="bg-dark-card rounded-2xl p-5 mb-6 flex-row items-center justify-center"
+          onPress={() => setJoinModalVisible(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Join a class"
+        >
+          <Ionicons name="add-circle-outline" size={24} color="#A855F7" />
+          <Text className="text-base font-semibold text-primary ml-3">Join a Class</Text>
+        </Pressable>
+
+        {/* Role Switcher — only show if user has teacher role */}
+        {roles.includes('teacher') && (
+          <View className="mb-6">
+            <RoleSwitcher
+              activeRole={activeRole}
+              onSwitch={(role) => {
+                setActiveRole(role);
+                if (role === 'teacher') {
+                  router.replace('/(teacher)' as any);
+                }
+              }}
+            />
+          </View>
+        )}
+
         {/* Settings */}
         <Text className="text-xl font-bold text-text-primary mb-3">Settings</Text>
 
@@ -176,6 +237,11 @@ export default function ProfileScreen() {
       onClose={() => setCustomizerVisible(false)}
       initialConfig={profile?.avatarConfig ?? DEFAULT_AVATAR_CONFIG}
       onSave={handleSaveAvatar}
+    />
+    <JoinClassModal
+      visible={joinModalVisible}
+      onClose={() => setJoinModalVisible(false)}
+      onJoin={handleJoinClass}
     />
     </GradientBackground>
   );

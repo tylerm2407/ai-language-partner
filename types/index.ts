@@ -525,3 +525,110 @@ export interface AvatarAccessory {
   unlockType: 'free' | 'level' | 'achievement' | 'streak' | 'purchase';
   unlockRequirement: Record<string, unknown>;
 }
+
+// ─── School System ──────────────────────────────────────────────
+
+export interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  logoUrl: string | null;
+  isActive: boolean;
+  maxSeats: number;
+  contractConfig: SchoolContractConfig;
+  contractStart: string | null;
+  contractEnd: string | null;
+}
+
+export interface SchoolContractConfig {
+  dailyVoiceMinutes: number;
+  dailyTextMessages: number;
+  dailyWritingGrades: number;
+  dailyPronunciationScores: number;
+  unlimitedHearts: boolean;
+  streakShield: boolean;
+  audiobookNarration: boolean;
+  offlineMode?: boolean;
+  allowed_email_domains?: string[];
+}
+
+export interface Classroom {
+  id: string;
+  organizationId: string;
+  teacherId: string;
+  name: string;
+  targetLanguage: LanguageCode;
+  level: ProficiencyLevel;
+  inviteCode: string;
+  inviteCodeActive: boolean;
+  maxStudents: number;
+  archived: boolean;
+  studentCount?: number;
+  activeAssignmentCount?: number;
+}
+
+export interface ClassEnrollment {
+  id: string;
+  classroomId: string;
+  studentId: string;
+  enrolledAt: string;
+  droppedAt: string | null;
+  classroom?: Classroom;
+}
+
+export interface Assignment {
+  id: string;
+  classroomId: string;
+  teacherId: string;
+  title: string;
+  description: string;
+  status: 'draft' | 'published' | 'closed';
+  scenarioKey: string | null;
+  customScenario: { label: string; description: string; systemContext: string } | null;
+  targetLanguage: LanguageCode;
+  level: ProficiencyLevel;
+  minDurationMinutes: number;
+  mode: 'text' | 'voice' | 'either';
+  vocabularyFocus: string[];
+  grammarFocus: string[];
+  instructions: string;
+  publishedAt: string | null;
+  dueAt: string | null;
+  lateSubmissionAllowed: boolean;
+  maxPoints: number;
+  submissionCount?: number;
+  completionRate?: number;
+  classroomName?: string;
+}
+
+export type SubmissionStatus = 'not_started' | 'in_progress' | 'submitted' | 'graded' | 'returned';
+
+export interface AssignmentSubmission {
+  id: string;
+  assignmentId: string;
+  studentId: string;
+  status: SubmissionStatus;
+  startedAt: string | null;
+  submittedAt: string | null;
+  chatSessionId: string | null;
+  conversationDurationMinutes: number | null;
+  autoScore: number | null;
+  teacherScore: number | null;
+  finalScore: number | null;
+  teacherFeedback: string | null;
+  aiFeedback: ConversationGrade | null;
+  isLate: boolean;
+  gradedAt: string | null;
+  studentName?: string;
+}
+
+export interface ConversationGrade {
+  participation: number;
+  languageUsage: number;
+  grammarVocabulary: number;
+  durationCompliance: number;
+  totalScore: number;
+  summary: string;
+  strengths: string[];
+  improvements: string[];
+}

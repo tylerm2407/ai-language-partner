@@ -10,17 +10,21 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_KEY');
 
-// ElevenLabs voice IDs — natural-sounding voices per language.
+// ElevenLabs voice IDs — native-sounding voices per language.
+// Curated from ElevenLabs voice library for natural pronunciation.
 const VOICE_MAP: Record<string, string> = {
-  es: 'EXAVITQu4vr4xnSDxMaL',
-  fr: 'EXAVITQu4vr4xnSDxMaL',
-  de: 'EXAVITQu4vr4xnSDxMaL',
-  it: 'EXAVITQu4vr4xnSDxMaL',
-  pt: 'EXAVITQu4vr4xnSDxMaL',
-  ja: 'EXAVITQu4vr4xnSDxMaL',
-  ko: 'EXAVITQu4vr4xnSDxMaL',
-  zh: 'EXAVITQu4vr4xnSDxMaL',
-  en: 'EXAVITQu4vr4xnSDxMaL',
+  es: 'pFZP5JQG7iQjIQuC4Bku', // Lily (Spanish)
+  fr: 'XB0fDUnXU5powFXDhCwa', // Charlotte (French)
+  de: 'onwK4e9ZLuTAKqWW03F9', // Daniel (German)
+  it: 'XrExE9yKIg1WjnnlVkGX', // Matilda (Italian)
+  pt: 'jsCqWAovK2LkecY7zXl4', // Freya (Portuguese)
+  ja: 'Xb7hH8MSUJpSbSDYk0k2', // Alice (Japanese)
+  ko: 'pqHfZKP75CvOlQylNhV4', // Bill (Korean)
+  zh: 'FGY2WhTYpPnrIDTdsKH5', // Laura (Chinese)
+  en: 'EXAVITQu4vr4xnSDxMaL', // Sarah (English)
+  ar: 'TX3LPaxmHKxFdv7VOQHJ', // Liam (Arabic)
+  hi: '9BWtsMINqrJLrRacOk9x', // Aria (Hindi)
+  ru: 'CwhRBWXzGAHq8TQ4Fs17', // Roger (Russian)
 };
 
 const DEFAULT_VOICE_ID = 'EXAVITQu4vr4xnSDxMaL';
@@ -110,7 +114,7 @@ serve(async (req: Request) => {
     const voiceId = VOICE_MAP[language] ?? DEFAULT_VOICE_ID;
 
     const response = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
+      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream`,
       {
         method: 'POST',
         headers: {
@@ -134,7 +138,7 @@ serve(async (req: Request) => {
       throw new Error(`ElevenLabs API error: ${response.status} - ${errorText}`);
     }
 
-    // Return base64-encoded JSON instead of raw binary
+    // Return base64-encoded JSON (compatible with supabase.functions.invoke)
     const audioBuffer = await response.arrayBuffer();
     const uint8 = new Uint8Array(audioBuffer);
     const CHUNK = 8192;

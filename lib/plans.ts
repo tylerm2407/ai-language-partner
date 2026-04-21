@@ -9,6 +9,18 @@
 
 export type PlanId = 'free' | 'basic' | 'premium' | 'vip';
 
+export interface SchoolContractConfig {
+  dailyVoiceMinutes: number;
+  dailyTextMessages: number;
+  dailyWritingGrades: number;
+  dailyPronunciationScores: number;
+  unlimitedHearts: boolean;
+  streakShield: boolean;
+  audiobookNarration: boolean;
+  offlineMode?: boolean;
+  allowed_email_domains?: string[];
+}
+
 export interface PlanDefinition {
   name: string;
   priceMonthlyUsd: number;
@@ -19,6 +31,7 @@ export interface PlanDefinition {
   unlimitedHearts: boolean;
   streakShield: boolean;
   audiobookNarration: boolean;
+  offlineMode: boolean;
 }
 
 export const PLANS: Record<PlanId, PlanDefinition> = {
@@ -32,6 +45,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     unlimitedHearts: false,
     streakShield: false,
     audiobookNarration: false,
+    offlineMode: false,
   },
   basic: {
     name: 'Basic',
@@ -43,6 +57,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     unlimitedHearts: true,
     streakShield: true,
     audiobookNarration: false,
+    offlineMode: false,
   },
   premium: {
     name: 'Premium',
@@ -54,6 +69,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     unlimitedHearts: true,
     streakShield: true,
     audiobookNarration: false,
+    offlineMode: true,
   },
   vip: {
     name: 'VIP',
@@ -65,6 +81,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     unlimitedHearts: true,
     streakShield: true,
     audiobookNarration: true,
+    offlineMode: true,
   },
 };
 

@@ -1,12 +1,13 @@
 import { create } from 'zustand';
 import type { UserProfile, DailyStats, Subscription } from '../types';
-import { fetchProfile, fetchTodayStats, fetchSubscription, fetchReviewItemCount } from '../lib/supabase-queries';
+import { fetchProfile, fetchTodayStats, fetchSubscription, fetchReviewItemCount, fetchUserRoles } from '../lib/supabase-queries';
 
 interface AppState {
   profile: UserProfile | null;
   dailyStats: DailyStats | null;
   subscription: Subscription | null;
   reviewCount: number;
+  roles: string[];
   loading: boolean;
   error: string | null;
 
@@ -23,6 +24,7 @@ export const useAppStore = create<AppState>((set) => ({
   dailyStats: null,
   subscription: null,
   reviewCount: 0,
+  roles: [],
   loading: true,
   error: null,
 
@@ -32,13 +34,14 @@ export const useAppStore = create<AppState>((set) => ({
       const profile = await fetchProfile(userId);
 
       // Non-critical fetches — don't let them block profile loading
-      const [dailyStats, subscription, reviewCount] = await Promise.all([
+      const [dailyStats, subscription, reviewCount, roles] = await Promise.all([
         fetchTodayStats(userId).catch(() => null),
         fetchSubscription(userId).catch(() => null),
         fetchReviewItemCount(userId).catch(() => 0),
+        fetchUserRoles(userId).catch(() => [] as string[]),
       ]);
 
-      set({ profile, dailyStats, subscription, reviewCount, loading: false });
+      set({ profile, dailyStats, subscription, reviewCount, roles, loading: false });
     } catch (err) {
       // Only reaches here if fetchProfile itself fails
       const message = err instanceof Error ? err.message : 'Failed to load user data';
@@ -73,6 +76,7 @@ export const useAppStore = create<AppState>((set) => ({
     dailyStats: null,
     subscription: null,
     reviewCount: 0,
+    roles: [],
     loading: true,
     error: null,
   }),

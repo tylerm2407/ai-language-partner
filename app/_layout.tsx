@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useAppStore } from '../stores/useAppStore';
+import { useSchoolStore } from '../stores/useSchoolStore';
 import { useNotifications } from '../hooks/useNotifications';
 import { View, ActivityIndicator } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -19,9 +20,11 @@ import { PlayfairDisplay_700Bold } from '@expo-google-fonts/playfair-display';
 export default function RootLayout() {
   const { session, loading: authLoading } = useAuth();
   const { profile, loading: dataLoading, loadUserData } = useAppStore();
+  const { roles, activeRole, loadRoles } = useSchoolStore();
   const segments = useSegments();
   const router = useRouter();
   const [dataLoaded, setDataLoaded] = useState(false);
+  const [rolesLoaded, setRolesLoaded] = useState(false);
 
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
@@ -51,27 +54,43 @@ export default function RootLayout() {
     }
   }, [session?.user?.id, dataLoaded, loadUserData, session]);
 
+  // Load user roles after data is loaded
+  useEffect(() => {
+    if (session?.user?.id && dataLoaded && !rolesLoaded) {
+      loadRoles(session.user.id).then(() => setRolesLoaded(true));
+    }
+    if (!session) {
+      setRolesLoaded(false);
+    }
+  }, [session?.user?.id, dataLoaded, rolesLoaded, loadRoles, session]);
+
   // Route guard
   useEffect(() => {
     if (authLoading || !fontsLoaded) return;
     if (session && !dataLoaded) return; // Wait for data to load
+    if (session && dataLoaded && !rolesLoaded) return; // Wait for roles
 
     const inAuthGroup = segments[0] === '(app)';
+    const inTeacherGroup = segments[0] === '(teacher)';
     const inOnboarding = segments[1] === 'onboarding';
 
     if (session && dataLoaded && (!profile || !profile.onboardingCompleted) && !inOnboarding) {
       // Signed in but onboarding not finished — go to onboarding
       router.replace('/(public)/onboarding');
-    } else if (session && dataLoaded && profile?.onboardingCompleted && !inAuthGroup) {
-      // Signed in with completed onboarding — go to app
-      router.replace('/(app)');
-    } else if (!session && inAuthGroup) {
+    } else if (session && dataLoaded && profile?.onboardingCompleted) {
+      // Role-based routing
+      if (roles.includes('teacher') && activeRole === 'teacher' && !inTeacherGroup) {
+        router.replace('/(teacher)' as any);
+      } else if (activeRole === 'learner' && !inAuthGroup) {
+        router.replace('/(app)');
+      }
+    } else if (!session && (inAuthGroup || inTeacherGroup)) {
       // Not signed in — go to public
       router.replace('/(public)');
     }
-  }, [session, authLoading, fontsLoaded, dataLoaded, profile, segments, router]);
+  }, [session, authLoading, fontsLoaded, dataLoaded, rolesLoaded, profile, segments, router, roles, activeRole]);
 
-  if (authLoading || !fontsLoaded || (session && !dataLoaded)) {
+  if (authLoading || !fontsLoaded || (session && (!dataLoaded || !rolesLoaded))) {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
         <View className="flex-1 items-center justify-center bg-dark">

@@ -127,16 +127,16 @@ export function ChatBubble({ message, targetLanguage, userId }: ChatBubbleProps)
             onPress={handleSpeak}
             accessibilityRole="button"
             accessibilityLabel={isPlaying ? 'Stop audio' : 'Listen to this message'}
-            className="flex-row items-center mt-2"
+            className={`flex-row items-center mt-2 ${isPlaying ? 'bg-error-bg rounded-lg px-2 py-1' : ''}`}
             hitSlop={8}
           >
             {isLoadingAudio ? (
               <ActivityIndicator size="small" color="#7DD3FC" />
             ) : (
               <Ionicons
-                name={isPlaying ? 'stop-circle-outline' : 'volume-medium-outline'}
-                size={16}
-                color="#7DD3FC"
+                name={isPlaying ? 'stop-circle' : 'volume-medium-outline'}
+                size={isPlaying ? 20 : 16}
+                color={isPlaying ? '#EF4444' : '#7DD3FC'}
               />
             )}
             <Text className="text-xs ml-1" style={{ color: '#C4B5FD' }}>

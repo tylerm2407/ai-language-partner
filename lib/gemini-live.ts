@@ -74,6 +74,13 @@ export class GeminiLiveSession {
           if (this.getRemainingMinutes() <= 0) {
             this.callbacks.onError?.(new Error('Voice minutes exhausted'));
             this.disconnect();
+            return;
+          }
+          // Gemini Live has a ~15 min session cap — notify before cutoff
+          const elapsedMs = Date.now() - this.startTime;
+          if (elapsedMs >= 14 * 60 * 1000) {
+            this.callbacks.onError?.(new Error('SESSION_LIMIT'));
+            this.disconnect();
           }
         }, 10000); // Check every 10 seconds
       };

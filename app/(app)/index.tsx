@@ -4,7 +4,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
 import { useAppStore } from '../../stores/useAppStore';
+import { useSchoolStore } from '../../stores/useSchoolStore';
 import { fetchStatsRange } from '../../lib/supabase-queries';
+import AssignmentCard from '../../components/school/AssignmentCard';
 import { Ionicons } from '@expo/vector-icons';
 import { GradientButton } from '../../components/ui/GradientButton';
 import { GradientBackground } from '../../components/ui/GradientBackground';
@@ -34,6 +36,7 @@ export default function HomeScreen() {
   const { hearts, maxHearts, isUnlimited } = useHearts();
   const { level, tier, xpInLevel, xpToNextLevel, progress: levelProgress } = useLevel();
   const { showRepairModal, brokenStreak, freezesAvailable, repairWithFreeze, dismissRepair, hasShield } = useStreakProtection();
+  const { enrolledClasses, pendingAssignments, loadStudentSchoolData } = useSchoolStore();
   const { article, isLoading: newsLoading, isGenerating: newsGenerating, error: newsError, generate: generateNews } = useDailyNews(
     user?.id ?? '',
     profile?.targetLanguage ?? 'es',
@@ -60,8 +63,9 @@ export default function HomeScreen() {
     if (user?.id) {
       loadUserData(user.id);
       loadWeeklyStats(user.id);
+      loadStudentSchoolData(user.id);
     }
-  }, [user?.id, loadUserData, loadWeeklyStats]);
+  }, [user?.id, loadUserData, loadWeeklyStats, loadStudentSchoolData]);
 
 
   return (
@@ -133,6 +137,26 @@ export default function HomeScreen() {
           }}
           onGenerate={generateNews}
         />
+
+        {/* My Assignments */}
+        {enrolledClasses.length > 0 && pendingAssignments.length > 0 && (
+          <>
+            <View className="flex-row items-center justify-between mb-3 mt-4">
+              <Text className="text-xl font-bold text-text-primary">Assignments</Text>
+              <Pressable onPress={() => router.push('/assignments' as any)}>
+                <Text className="text-sm text-primary font-semibold">See All</Text>
+              </Pressable>
+            </View>
+            {pendingAssignments.slice(0, 3).map((assignment) => (
+              <AssignmentCard
+                key={assignment.id}
+                assignment={assignment}
+                submission={assignment.submission}
+                onPress={() => router.push(`/assignments/${assignment.id}` as any)}
+              />
+            ))}
+          </>
+        )}
 
         {/* Daily Challenges */}
         <DailyChallenges dailyStats={dailyStats ?? null} />

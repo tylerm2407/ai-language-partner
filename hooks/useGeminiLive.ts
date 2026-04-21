@@ -1,4 +1,5 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { AppState, AppStateStatus } from 'react-native';
 import { Audio } from 'expo-av';
 import { GeminiLiveSession, GeminiLiveState } from '../lib/gemini-live';
 import { supabase } from '../lib/supabase';
@@ -103,6 +104,16 @@ export function useGeminiLive(options: UseGeminiLiveOptions) {
           },
           onError: (err) => {
             console.error('[useGeminiLive] Session error:', err);
+            if (err.message === 'SESSION_LIMIT') {
+              // Auto-reconnect on Gemini's 15-min session cap
+              console.log('[useGeminiLive] Session limit reached, reconnecting...');
+              sessionRef.current?.disconnect();
+              sessionRef.current = null;
+              setState('DISCONNECTED');
+              // Small delay then reconnect
+              setTimeout(() => startSession(), 1000);
+              return;
+            }
             onError?.(err);
           },
         }
@@ -165,6 +176,17 @@ export function useGeminiLive(options: UseGeminiLiveOptions) {
   const sendText = useCallback((text: string) => {
     sessionRef.current?.sendText(text);
   }, []);
+
+  // Auto-end session when app goes to background
+  useEffect(() => {
+    const handleAppState = (nextState: AppStateStatus) => {
+      if (nextState === 'background' && sessionRef.current) {
+        endSession();
+      }
+    };
+    const subscription = AppState.addEventListener('change', handleAppState);
+    return () => subscription.remove();
+  }, [endSession]);
 
   return {
     state,

@@ -96,6 +96,7 @@ export default function AppLayout() {
           />
           <Tabs.Screen name="review" options={{ href: null }} />
           <Tabs.Screen name="practice" options={{ href: null }} />
+          <Tabs.Screen name="assignments" options={{ href: null }} />
         </Tabs>
       </View>
     </ErrorBoundary>
