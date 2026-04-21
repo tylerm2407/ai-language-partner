@@ -1,0 +1,28 @@
+# Supabase project config — controls `supabase functions deploy` behavior.
+#
+# Per-function settings below override the CLI's defaults. This file matters
+# most for `verify_jwt` flags: without an entry here, the CLI assumes
+# verify_jwt: true and would silently re-enable the platform JWT gate on any
+# deploy, reintroducing the UNAUTHORIZED_LEGACY_JWT / UNAUTHORIZED_UNSUPPORTED
+# _TOKEN_ALGORITHM errors we worked around.
+
+project_id = "ngqpsuixmumdnqbqxjxv"
+
+# ─── ai-chat ──────────────────────────────────────────────────────────────
+# DO NOT change verify_jwt back to true until Supabase's Edge Runtime can
+# verify this project's user access tokens natively. The function body
+# authenticates every request itself via supabase.auth.getUser(token), which
+# handles any signing algorithm. The platform gate is bypassed on purpose.
+[functions.ai-chat]
+verify_jwt = false
+
+# ─── tts ──────────────────────────────────────────────────────────────────
+# Already deploys with verify_jwt: false. Quota tracking + service-role DB
+# writes keep per-user limits enforced.
+[functions.tts]
+verify_jwt = false
+
+# ─── transcribe ───────────────────────────────────────────────────────────
+# Already deploys with verify_jwt: false.
+[functions.transcribe]
+verify_jwt = false

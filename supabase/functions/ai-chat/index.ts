@@ -2,7 +2,16 @@
 // Handles conversation practice with language corrections.
 // Uses Claude Haiku for natural, conversational responses.
 // Enforces per-plan daily text conversation limits before calling AI.
-// Deploy: npx supabase functions deploy ai-chat
+//
+// Auth: this function deploys with verify_jwt: false because the Edge
+// Runtime's built-in verifier doesn't handle every Supabase JWT variant
+// (UNAUTHORIZED_LEGACY_JWT when the project is on new signing keys + HS256,
+// UNAUTHORIZED_UNSUPPORTED_TOKEN_ALGORITHM when it's on ES256). Instead we
+// validate the Authorization header by delegating to Supabase's own
+// `auth.getUser(token)` endpoint, which handles every signing algorithm the
+// project has configured. If the token is missing or invalid we return 401.
+// The authenticated user id comes from the verified user record — we do NOT
+// trust any userId passed in the request body for DB writes or quotas.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -12,7 +21,6 @@ import { getScenario } from '../_shared/scenarios.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
 const TEXT_MODEL = 'claude-haiku-4-5-20251001';
 
@@ -20,26 +28,43 @@ interface ChatRequest {
   messages: { role: string; content: string }[];
   targetLanguage: string;
   level: string;
-  /** Key of a server-side scenario definition. Resolved to the full hidden
-   *  prompt via `_shared/scenarios.ts`. Takes precedence over `topic`. */
   scenarioKey?: string;
-  /** Free-form topic string. Used by Practice screen and assignment flow. */
   topic?: string;
-  userId?: string; // passed from client for usage tracking
-  assignmentId?: string; // links chat to a school assignment
+  assignmentId?: string;
 }
 
-// ─── Usage helpers ──────────────────────────────────────────────
+// ─── Auth helper ──────────────────────────────────────────────────────────
 
-/** Get today's date string in UTC (YYYY-MM-DD). All daily limits use UTC. */
+/**
+ * Verify the caller's bearer token via Supabase's auth service. Works
+ * regardless of signing algorithm (HS256, ES256, RS256). Returns the
+ * authenticated user's id, or null if the token is missing / invalid.
+ */
+async function verifyBearer(req: Request): Promise<string | null> {
+  const authHeader = req.headers.get('authorization') ?? req.headers.get('Authorization');
+  if (!authHeader || !/^bearer\s+/i.test(authHeader)) return null;
+  const token = authHeader.replace(/^bearer\s+/i, '').trim();
+  if (!token) return null;
+
+  // Service-role client so we can call auth.getUser on any user's token.
+  const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  const { data, error } = await adminClient.auth.getUser(token);
+  if (error || !data?.user) return null;
+  return data.user.id;
+}
+
+// ─── Usage helpers ────────────────────────────────────────────────────────
+
 function todayUTC(): string {
   return new Date().toISOString().split('T')[0];
 }
 
-/** Fetch or create today's daily_usage row. Returns current counts. */
-async function getOrCreateDailyUsage(supabase: ReturnType<typeof createClient>, userId: string) {
+async function getOrCreateDailyUsage(
+  supabase: ReturnType<typeof createClient>,
+  userId: string
+) {
   const date = todayUTC();
-  const { data, error } = await supabase
+  const { data } = await supabase
     .from('daily_usage')
     .select('*')
     .eq('user_id', userId)
@@ -48,10 +73,12 @@ async function getOrCreateDailyUsage(supabase: ReturnType<typeof createClient>, 
 
   if (data) return data;
 
-  // Row doesn't exist yet — create it
   const { data: created, error: insertErr } = await supabase
     .from('daily_usage')
-    .upsert({ user_id: userId, date, text_messages: 0, voice_minutes: 0 }, { onConflict: 'user_id,date' })
+    .upsert(
+      { user_id: userId, date, text_messages: 0, voice_minutes: 0 },
+      { onConflict: 'user_id,date' }
+    )
     .select()
     .single();
 
@@ -59,8 +86,10 @@ async function getOrCreateDailyUsage(supabase: ReturnType<typeof createClient>, 
   return created;
 }
 
-/** Atomically increment text_messages by 1 for today. */
-async function incrementTextMessages(supabase: ReturnType<typeof createClient>, userId: string) {
+async function incrementTextMessages(
+  supabase: ReturnType<typeof createClient>,
+  userId: string
+) {
   const date = todayUTC();
   const usage = await getOrCreateDailyUsage(supabase, userId);
   await supabase
@@ -70,31 +99,26 @@ async function incrementTextMessages(supabase: ReturnType<typeof createClient>, 
     .eq('date', date);
 }
 
-/** Look up the user's active subscription tier, defaulting to 'free'. */
-async function getUserTier(supabase: ReturnType<typeof createClient>, userId: string): Promise<string> {
-  const { data } = await supabase
-    .from('subscriptions')
-    .select('tier, is_active')
-    .eq('user_id', userId)
-    .single();
-
-  if (data?.is_active && data.tier) return data.tier;
-  return 'free';
-}
-
-// ─── Main handler ───────────────────────────────────────────────
+// ─── Main handler ─────────────────────────────────────────────────────────
 
 serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') {
-    return corsResponse();
+  if (req.method === 'OPTIONS') return corsResponse();
+
+  // Custom auth check. Returns 401 if no valid bearer token.
+  const authenticatedUserId = await verifyBearer(req).catch(() => null);
+  if (!authenticatedUserId) {
+    return new Response(
+      JSON.stringify({ error: 'Invalid or missing authorization token' }),
+      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
   try {
-    const { messages, targetLanguage, level, topic: rawTopic, scenarioKey, userId, assignmentId } = (await req.json()) as ChatRequest;
+    const { messages, targetLanguage, level, topic: rawTopic, scenarioKey, assignmentId } =
+      (await req.json()) as ChatRequest;
 
-    // If assignmentId is present, look up assignment and enrich topic
     let topic = rawTopic;
     if (assignmentId) {
       const { data: assignment } = await supabase
@@ -104,11 +128,14 @@ serve(async (req: Request) => {
         .single();
 
       if (assignment) {
-        const scenarioDesc = assignment.custom_scenario ?? assignment.scenario_key ?? assignment.title ?? '';
+        const scenarioDesc =
+          assignment.custom_scenario ?? assignment.scenario_key ?? assignment.title ?? '';
         const extras: string[] = [];
         if (assignment.instructions) extras.push(`Instructions: ${assignment.instructions}`);
-        if (assignment.vocabulary_focus) extras.push(`Vocabulary focus: ${JSON.stringify(assignment.vocabulary_focus)}`);
-        if (assignment.grammar_focus) extras.push(`Grammar focus: ${JSON.stringify(assignment.grammar_focus)}`);
+        if (assignment.vocabulary_focus)
+          extras.push(`Vocabulary focus: ${JSON.stringify(assignment.vocabulary_focus)}`);
+        if (assignment.grammar_focus)
+          extras.push(`Grammar focus: ${JSON.stringify(assignment.grammar_focus)}`);
         const assignmentContext = [scenarioDesc, ...extras].filter(Boolean).join('. ');
         topic = topic ? `${topic}. Assignment: ${assignmentContext}` : assignmentContext;
       }
@@ -121,20 +148,17 @@ serve(async (req: Request) => {
       );
     }
 
-    // ── Enforce daily text message limit ──────────────────
-    if (userId) {
-      const limits = await getEffectiveLimits(userId, supabase);
-
-      const usage = await getOrCreateDailyUsage(supabase, userId);
-      if ((usage.text_messages ?? 0) >= limits.dailyTextMessages) {
-        return new Response(
-          JSON.stringify({
-            error: "You've reached your daily text message limit. Upgrade your plan to keep practicing today.",
-            code: 'DAILY_TEXT_LIMIT_REACHED',
-          }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+    const limits = await getEffectiveLimits(authenticatedUserId, supabase);
+    const usage = await getOrCreateDailyUsage(supabase, authenticatedUserId);
+    if ((usage.text_messages ?? 0) >= limits.dailyTextMessages) {
+      return new Response(
+        JSON.stringify({
+          error:
+            "You've reached your daily text message limit. Upgrade your plan to keep practicing today.",
+          code: 'DAILY_TEXT_LIMIT_REACHED',
+        }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const systemPrompt = buildSystemPrompt(targetLanguage, level, topic, scenarioKey);
@@ -164,46 +188,33 @@ serve(async (req: Request) => {
 
     const data = await response.json();
     const rawText = data.content?.[0]?.text ?? '';
-
-    // Parse structured JSON response from Claude
     const { reply, correction, vocabularyHighlights } = parseAIResponse(rawText);
 
-    // Increment usage only after a successful AI call
-    if (userId) {
-      await incrementTextMessages(supabase, userId);
-    }
+    await incrementTextMessages(supabase, authenticatedUserId);
 
     return new Response(
-      JSON.stringify({
-        reply,
-        correction,
-        vocabularyHighlights,
-        audioUrl: null,
-      }),
+      JSON.stringify({ reply, correction, vocabularyHighlights, audioUrl: null }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: (error as Error).message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
 
-/** Cap conversation history to the last ~12 turns to prevent unbounded token usage. */
-function windowMessages(messages: { role: string; content: string }[]): { role: string; content: string }[] {
-  const MAX_TURNS = 24; // 12 user + 12 assistant turns
+function windowMessages(
+  messages: { role: string; content: string }[]
+): { role: string; content: string }[] {
+  const MAX_TURNS = 24;
   if (messages.length <= MAX_TURNS) return messages;
-
-  // Summarize older messages into a context note
   const older = messages.slice(0, messages.length - MAX_TURNS);
   const recent = messages.slice(messages.length - MAX_TURNS);
-
   const summaryNote = {
     role: 'user',
     content: `[Context: This is an ongoing conversation. There were ${older.length} earlier messages covering the same topic. Continue naturally from here.]`,
   };
-
   return [summaryNote, ...recent];
 }
 
@@ -214,17 +225,19 @@ function buildSystemPrompt(
   scenarioKey?: string
 ): string {
   const levelDescriptions: Record<string, string> = {
-    beginner: 'Use very simple vocabulary and short sentences. Speak slowly and clearly. Avoid complex grammar entirely. Translate key words inline for the learner.',
-    elementary: 'Use basic vocabulary and simple grammar. Keep sentences short. Occasionally introduce one new word per response.',
-    intermediate: 'Use natural conversational language. Introduce some complex grammar. Use 1-2 new vocabulary words per response.',
-    upper_intermediate: 'Use rich vocabulary and complex sentences. Be natural. Introduce idiomatic expressions occasionally.',
-    advanced: 'Speak as a native would. Use idioms, colloquialisms, and complex structures. Challenge the student with nuanced vocabulary.',
+    beginner:
+      'Use very simple vocabulary and short sentences. Speak slowly and clearly. Avoid complex grammar entirely. Translate key words inline for the learner.',
+    elementary:
+      'Use basic vocabulary and simple grammar. Keep sentences short. Occasionally introduce one new word per response.',
+    intermediate:
+      'Use natural conversational language. Introduce some complex grammar. Use 1-2 new vocabulary words per response.',
+    upper_intermediate:
+      'Use rich vocabulary and complex sentences. Be natural. Introduce idiomatic expressions occasionally.',
+    advanced:
+      'Speak as a native would. Use idioms, colloquialisms, and complex structures. Challenge the student with nuanced vocabulary.',
   };
-
   const levelGuide = levelDescriptions[level] ?? levelDescriptions.beginner;
 
-  // Prefer server-side rich scenario prompt when a valid key is supplied.
-  // Fall back to the free-form `topic` string (used by Practice + assignments).
   let scenarioBlock = '';
   if (scenarioKey) {
     const scenario = getScenario(scenarioKey);
@@ -273,18 +286,15 @@ You MUST respond with valid JSON in this exact structure:
   "vocabularyHighlights": ["word1", "word2"]
 }
 
-Always respond with this JSON structure. The reply field contains your message. The correction field is either a string explaining the error and correct form, or null. The vocabularyHighlights array contains new/important words you used (can be empty array).`;
+Always respond with this JSON structure.`;
 }
 
-/** Parse Claude's structured JSON response, with fallback for plain text. */
 function parseAIResponse(text: string): {
   reply: string;
   correction: string | null;
   vocabularyHighlights: string[];
 } {
-  // Step 1: Strip markdown code fences that Claude sometimes wraps around JSON
-  let cleaned = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
-
+  const cleaned = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
   try {
     const parsed = JSON.parse(cleaned);
     return {
@@ -293,7 +303,6 @@ function parseAIResponse(text: string): {
       vocabularyHighlights: parsed.vocabularyHighlights ?? [],
     };
   } catch {
-    // Step 2: Try extracting JSON object from first { to last }
     const firstBrace = cleaned.indexOf('{');
     const lastBrace = cleaned.lastIndexOf('}');
     if (firstBrace !== -1 && lastBrace > firstBrace) {
@@ -305,18 +314,14 @@ function parseAIResponse(text: string): {
           vocabularyHighlights: parsed.vocabularyHighlights ?? [],
         };
       } catch {
-        // Fall through to legacy parsing
+        // fall through
       }
     }
-
-    // Step 3: Legacy text parsing fallback
     const correctionMarker = '[CORRECTION]:';
     const index = text.indexOf(correctionMarker);
-
     if (index === -1) {
       return { reply: text.trim(), correction: null, vocabularyHighlights: [] };
     }
-
     const reply = text.substring(0, index).trim();
     const correction = text.substring(index + correctionMarker.length).trim();
     return { reply, correction: correction || null, vocabularyHighlights: [] };

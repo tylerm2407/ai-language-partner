@@ -7,10 +7,22 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    });
+    // Fetch the current session. If the stored refresh token is invalid
+    // (stale AsyncStorage, revoked on server, or single-use-already-consumed),
+    // supabase-js rejects instead of resolving with null. Catch it, clear the
+    // bad session, and drop to sign-in rather than hanging on the loader.
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        setSession(session);
+        setLoading(false);
+      })
+      .catch(async (err) => {
+        console.warn('[auth] getSession failed — clearing stale session:', err);
+        await supabase.auth.signOut().catch(() => { /* already signed out */ });
+        setSession(null);
+        setLoading(false);
+      });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
