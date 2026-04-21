@@ -1,5 +1,10 @@
 import { supabase } from './supabase';
-import type { ConversationMessage, LanguageCode, ProficiencyLevel } from '../types';
+import type {
+  ConversationMessage,
+  CorrectionDetail,
+  LanguageCode,
+  ProficiencyLevel,
+} from '../types';
 import type { ScenarioKey } from '../types/scenarios';
 
 // All AI calls go through Supabase Edge Functions.
@@ -18,6 +23,9 @@ export interface AIChatRequest {
   userId: string;
   messages: Pick<ConversationMessage, 'role' | 'content'>[];
   targetLanguage: LanguageCode;
+  /** User's native language. Used by the Edge Function to write the
+   *  correction explanation in a language the learner can read comfortably. */
+  nativeLanguage?: LanguageCode;
   level: ProficiencyLevel;
   /** Resolves to a hidden server-side system prompt. Preferred for scenario-
    *  based chat. Takes precedence over `topic` when both are sent. */
@@ -29,7 +37,10 @@ export interface AIChatRequest {
 
 export interface AIChatResponse {
   reply: string;
-  correction: string | null;
+  /** Rich correction object (preferred) or legacy string or null. The
+   *  ConversationMessage.correction field and the CorrectionBanner render
+   *  both shapes via `normalizeCorrection()`. */
+  correction: CorrectionDetail | string | null;
   audioUrl: string | null;
   vocabularyHighlights?: string[];
 }

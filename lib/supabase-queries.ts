@@ -1656,16 +1656,25 @@ export async function getOrCreateChatSession(
   return mapChatSession(data);
 }
 
-/** Save a chat message to a session. */
+/** Save a chat message to a session. The `correction` column is TEXT; rich
+ *  CorrectionDetail objects are JSON-stringified on write and re-parsed via
+ *  normalizeCorrection() on read. */
 export async function saveChatMessage(
   sessionId: string,
   message: Pick<ConversationMessage, 'role' | 'content' | 'correction' | 'audioUrl'>
 ): Promise<void> {
+  let correctionValue: string | null = null;
+  if (message.correction != null) {
+    correctionValue =
+      typeof message.correction === 'string'
+        ? message.correction
+        : JSON.stringify(message.correction);
+  }
   const { error } = await supabase.from('chat_messages').insert({
     session_id: sessionId,
     role: message.role,
     content: message.content,
-    correction: message.correction ?? null,
+    correction: correctionValue,
     audio_url: message.audioUrl ?? null,
   });
 
@@ -1678,7 +1687,9 @@ export async function saveChatMessage(
     .eq('id', sessionId);
 }
 
-/** Load chat messages for a session. */
+/** Load chat messages for a session. Legacy string corrections and new
+ *  JSON-stringified CorrectionDetail objects are both handled — the client's
+ *  normalizeCorrection() is called at the render layer. */
 export async function loadChatMessages(sessionId: string): Promise<ConversationMessage[]> {
   const { data, error } = await supabase
     .from('chat_messages')
@@ -1695,6 +1706,64 @@ export async function loadChatMessages(sessionId: string): Promise<ConversationM
     audioUrl: (row.audio_url as string) ?? null,
     timestamp: row.created_at as string,
   }));
+}
+
+/** Save a correction as an SRS card so the user can review it later.
+ *  Uses the corrected phrase as target_text and the explanation/shortLabel
+ *  as native_text. Creates both the card and a fresh review_item. Safe to
+ *  call with a NULL courseId (card column is nullable). */
+export async function saveCorrectionAsCard(params: {
+  userId: string;
+  targetLanguage: string;
+  original: string;
+  corrected: string;
+  shortLabel: string;
+  explanation: string;
+}): Promise<{ cardId: string } | null> {
+  const { userId, targetLanguage, original, corrected, shortLabel, explanation } = params;
+  if (!corrected.trim()) return null;
+
+  // Native text prefers shortLabel (concise) but falls back to explanation.
+  const nativeText = shortLabel.trim() || explanation.trim().slice(0, 200) || 'Correction';
+
+  const { data: card, error: cardErr } = await supabase
+    .from('cards')
+    .insert({
+      course_id: null,
+      unit_id: null,
+      native_text: nativeText,
+      target_text: corrected,
+      example_sentence: original || null,
+      audio_url: null,
+      image_url: null,
+      part_of_speech: null,
+      tags: ['correction', 'chat'],
+      language: targetLanguage,
+      source_type: 'manual',
+    })
+    .select('id')
+    .single();
+
+  if (cardErr) throw cardErr;
+
+  const { error: riErr } = await supabase
+    .from('review_items')
+    .upsert(
+      {
+        user_id: userId,
+        card_id: card.id,
+        ease_factor: 2.5,
+        interval: 1,
+        repetitions: 0,
+        next_due: new Date().toISOString(),
+        last_reviewed_at: null,
+        status: 'new',
+      },
+      { onConflict: 'user_id,card_id' }
+    );
+
+  if (riErr) throw riErr;
+  return { cardId: card.id };
 }
 
 /** List recent chat sessions for a user. */

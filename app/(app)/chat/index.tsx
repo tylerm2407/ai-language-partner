@@ -443,6 +443,7 @@ export default function ChatScreen() {
         userId: user?.id ?? '',
         messages: contextMessages.map((m) => ({ role: m.role, content: m.content })),
         targetLanguage,
+        nativeLanguage: profile?.nativeLanguage,
         level,
         scenarioKey: scenarioKey ?? undefined,
         topic: topicPayload,

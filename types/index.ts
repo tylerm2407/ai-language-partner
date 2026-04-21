@@ -243,13 +243,116 @@ export interface DailyStats {
 
 // ─── AI Practice ────────────────────────────────────────────────
 
+export type CorrectionErrorType =
+  | 'grammar'
+  | 'vocabulary'
+  | 'spelling'
+  | 'word_order'
+  | 'tense'
+  | 'gender'
+  | 'other';
+
+export type CorrectionSeverity = 'minor' | 'moderate' | 'critical';
+
+export interface CorrectionDetail {
+  /** Concise summary — shown always. Native-language. */
+  shortLabel: string;
+  /** Full rule explanation — collapsed by default, expanded via "Why?" tap. */
+  explanation: string;
+  /** The exact wrong phrase from the student's message, target-language. */
+  original: string;
+  /** The corrected phrase, target-language. */
+  corrected: string;
+  errorType: CorrectionErrorType;
+  severity: CorrectionSeverity;
+  /** Optional extra example sentence showing correct pattern. */
+  example?: string | null;
+  /** How many times this error pattern has repeated in the past 7 days. */
+  repetitionCount?: number;
+}
+
 export interface ConversationMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
   audioUrl: string | null;
-  correction: string | null;
+  /**
+   * Correction can be:
+   *  - null (no correction)
+   *  - CorrectionDetail object (rich, modern)
+   *  - string (legacy — old chat_messages rows have plain text). The
+   *    normalizeCorrection helper converts legacy strings into the object
+   *    shape at read-time.
+   */
+  correction: CorrectionDetail | string | null;
   timestamp: string;
+}
+
+/**
+ * Normalize any correction value (legacy string, JSON-stringified object from
+ * DB, or a fresh object) into a CorrectionDetail or null. Defensive: always
+ * returns a valid CorrectionDetail when there's meaningful content.
+ */
+export function normalizeCorrection(
+  input: CorrectionDetail | string | Record<string, unknown> | null | undefined
+): CorrectionDetail | null {
+  if (input == null) return null;
+
+  // Legacy plain-string or JSON-stringified object from DB
+  if (typeof input === 'string') {
+    const trimmed = input.trim();
+    if (!trimmed) return null;
+    if (trimmed.startsWith('{')) {
+      try {
+        const parsed = JSON.parse(trimmed) as Record<string, unknown>;
+        return normalizeCorrection(parsed);
+      } catch {
+        // fall through to plain-text treatment
+      }
+    }
+    return {
+      shortLabel: 'Correction',
+      explanation: trimmed,
+      original: '',
+      corrected: '',
+      errorType: 'other',
+      severity: 'moderate',
+      example: null,
+    };
+  }
+
+  // Object form — may be partial; fill in sensible defaults.
+  const obj = input as Record<string, unknown>;
+  const explanation = typeof obj.explanation === 'string' ? obj.explanation : '';
+  const shortLabel =
+    typeof obj.shortLabel === 'string' && obj.shortLabel.trim()
+      ? obj.shortLabel.slice(0, 80)
+      : explanation
+        ? explanation.slice(0, 80)
+        : 'Correction';
+  const original = typeof obj.original === 'string' ? obj.original : '';
+  const corrected = typeof obj.corrected === 'string' ? obj.corrected : '';
+  const errorType = ([
+    'grammar', 'vocabulary', 'spelling', 'word_order', 'tense', 'gender', 'other',
+  ].includes(obj.errorType as string)
+    ? (obj.errorType as CorrectionErrorType)
+    : 'other');
+  const severity = (['minor', 'moderate', 'critical'].includes(obj.severity as string)
+    ? (obj.severity as CorrectionSeverity)
+    : 'moderate');
+  const example =
+    obj.example == null || obj.example === ''
+      ? null
+      : String(obj.example);
+  const repetitionCount =
+    typeof obj.repetitionCount === 'number' && obj.repetitionCount >= 0
+      ? obj.repetitionCount
+      : undefined;
+
+  // If the normalized payload has no useful content, treat as null
+  if (!explanation && !original && !corrected) return null;
+
+  return { shortLabel, explanation, original, corrected, errorType, severity, example, repetitionCount };
 }
 
 export interface PracticeSession {

@@ -27,10 +27,30 @@ const TEXT_MODEL = 'claude-haiku-4-5-20251001';
 interface ChatRequest {
   messages: { role: string; content: string }[];
   targetLanguage: string;
+  /** Language the correction's explanation should be written in.
+   *  Defaults to 'en' if not supplied. */
+  nativeLanguage?: string;
   level: string;
   scenarioKey?: string;
   topic?: string;
   assignmentId?: string;
+  /** Tagged from the calling client for error-log attribution. */
+  chatSessionId?: string;
+}
+
+type CorrectionErrorType =
+  | 'grammar' | 'vocabulary' | 'spelling' | 'word_order' | 'tense' | 'gender' | 'other';
+type CorrectionSeverity = 'minor' | 'moderate' | 'critical';
+
+interface CorrectionDetail {
+  shortLabel: string;
+  explanation: string;
+  original: string;
+  corrected: string;
+  errorType: CorrectionErrorType;
+  severity: CorrectionSeverity;
+  example?: string | null;
+  repetitionCount?: number;
 }
 
 // ─── Auth helper ──────────────────────────────────────────────────────────
@@ -116,8 +136,17 @@ serve(async (req: Request) => {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
   try {
-    const { messages, targetLanguage, level, topic: rawTopic, scenarioKey, assignmentId } =
-      (await req.json()) as ChatRequest;
+    const {
+      messages,
+      targetLanguage,
+      nativeLanguage: rawNativeLanguage,
+      level,
+      topic: rawTopic,
+      scenarioKey,
+      assignmentId,
+      chatSessionId,
+    } = (await req.json()) as ChatRequest;
+    const nativeLanguage = rawNativeLanguage || 'en';
 
     let topic = rawTopic;
     if (assignmentId) {
@@ -161,7 +190,7 @@ serve(async (req: Request) => {
       );
     }
 
-    const systemPrompt = buildSystemPrompt(targetLanguage, level, topic, scenarioKey);
+    const systemPrompt = buildSystemPrompt(targetLanguage, level, topic, scenarioKey, nativeLanguage);
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -172,7 +201,7 @@ serve(async (req: Request) => {
       },
       body: JSON.stringify({
         model: TEXT_MODEL,
-        max_tokens: 400,
+        max_tokens: 600,
         system: systemPrompt,
         messages: windowMessages(messages).map((m) => ({
           role: m.role === 'assistant' ? 'assistant' : 'user',
@@ -192,8 +221,47 @@ serve(async (req: Request) => {
 
     await incrementTextMessages(supabase, authenticatedUserId);
 
+    // Log correction + compute repetition count. Non-fatal: chat reply
+    // returns even if logging/counting fails.
+    let enrichedCorrection: CorrectionDetail | null = correction;
+    if (correction && correction.shortLabel) {
+      try {
+        await supabase.from('correction_log').insert({
+          user_id: authenticatedUserId,
+          chat_session_id: chatSessionId ?? null,
+          target_language: targetLanguage,
+          error_type: correction.errorType,
+          severity: correction.severity,
+          short_label: correction.shortLabel,
+          original: correction.original || null,
+          corrected: correction.corrected || null,
+          explanation: correction.explanation || null,
+        });
+
+        // Count recent occurrences of this short_label (past 7 days, including today)
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        const { count, error: countErr } = await supabase
+          .from('correction_log')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', authenticatedUserId)
+          .eq('short_label', correction.shortLabel)
+          .gte('created_at', sevenDaysAgo);
+
+        if (!countErr && typeof count === 'number') {
+          enrichedCorrection = { ...correction, repetitionCount: count };
+        }
+      } catch (logErr) {
+        console.warn('[ai-chat] correction_log write failed (non-fatal):', logErr);
+      }
+    }
+
     return new Response(
-      JSON.stringify({ reply, correction, vocabularyHighlights, audioUrl: null }),
+      JSON.stringify({
+        reply,
+        correction: enrichedCorrection,
+        vocabularyHighlights,
+        audioUrl: null,
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
@@ -222,7 +290,8 @@ function buildSystemPrompt(
   targetLanguage: string,
   level: string,
   topic?: string,
-  scenarioKey?: string
+  scenarioKey?: string,
+  nativeLanguage: string = 'en'
 ): string {
   const levelDescriptions: Record<string, string> = {
     beginner:
@@ -281,17 +350,74 @@ SAFETY:
 RESPONSE FORMAT:
 You MUST respond with valid JSON in this exact structure:
 {
-  "reply": "Your conversational response here",
-  "correction": "Brief correction if the student made a notable error, or null if no correction needed",
+  "reply": "Your conversational response in ${targetLanguage}.",
+  "correction": {
+    "shortLabel": "Concise error label in ${nativeLanguage}, max 60 chars (e.g. 'Missing gender agreement', 'Wrong verb tense').",
+    "explanation": "1-2 sentence rule explanation, written IN ${nativeLanguage} so the learner can read it easily.",
+    "original": "The exact wrong phrase from the student's message, in ${targetLanguage}. Empty string if no clear single phrase.",
+    "corrected": "The corrected version of that phrase, in ${targetLanguage}.",
+    "errorType": "one of: grammar | vocabulary | spelling | word_order | tense | gender | other",
+    "severity": "one of: minor | moderate | critical",
+    "example": "Optional extra example sentence in ${targetLanguage} illustrating the correct pattern. Use null if not useful."
+  },
   "vocabularyHighlights": ["word1", "word2"]
 }
+
+CORRECTION RULES:
+- Only produce a correction object when there is a meaningful error worth flagging. For perfect or near-perfect input, set correction to null.
+- shortLabel and explanation: ALWAYS in ${nativeLanguage} (not the target language). The learner reads these for understanding, so clarity beats immersion here.
+- original and corrected: ALWAYS in ${targetLanguage}, verbatim quotes of the wrong/right phrase.
+- severity: minor = small typo/slip, moderate = noticeable error, critical = meaning-breaking.
+- errorType: pick the single best category.
+- example: a different short sentence showing the correct pattern, in ${targetLanguage}. Or null.
 
 Always respond with this JSON structure.`;
 }
 
+function normalizeCorrection(raw: unknown): CorrectionDetail | null {
+  if (raw == null) return null;
+  // Legacy / fallback: AI sometimes emits a plain string in the correction
+  // field despite the schema instructions.
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim();
+    if (!trimmed) return null;
+    return {
+      shortLabel: trimmed.slice(0, 60),
+      explanation: trimmed,
+      original: '',
+      corrected: '',
+      errorType: 'other',
+      severity: 'moderate',
+      example: null,
+    };
+  }
+  const obj = raw as Record<string, unknown>;
+  const explanation = typeof obj.explanation === 'string' ? obj.explanation : '';
+  const shortLabel =
+    typeof obj.shortLabel === 'string' && obj.shortLabel.trim()
+      ? obj.shortLabel.slice(0, 80)
+      : explanation.slice(0, 80) || 'Correction';
+  const original = typeof obj.original === 'string' ? obj.original : '';
+  const corrected = typeof obj.corrected === 'string' ? obj.corrected : '';
+  const errorTypeRaw = obj.errorType;
+  const errorType: CorrectionErrorType =
+    typeof errorTypeRaw === 'string' &&
+    ['grammar','vocabulary','spelling','word_order','tense','gender','other'].includes(errorTypeRaw)
+      ? (errorTypeRaw as CorrectionErrorType)
+      : 'other';
+  const severityRaw = obj.severity;
+  const severity: CorrectionSeverity =
+    typeof severityRaw === 'string' && ['minor','moderate','critical'].includes(severityRaw)
+      ? (severityRaw as CorrectionSeverity)
+      : 'moderate';
+  const example = obj.example == null || obj.example === '' ? null : String(obj.example);
+  if (!explanation && !original && !corrected) return null;
+  return { shortLabel, explanation, original, corrected, errorType, severity, example };
+}
+
 function parseAIResponse(text: string): {
   reply: string;
-  correction: string | null;
+  correction: CorrectionDetail | null;
   vocabularyHighlights: string[];
 } {
   const cleaned = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
@@ -299,7 +425,7 @@ function parseAIResponse(text: string): {
     const parsed = JSON.parse(cleaned);
     return {
       reply: parsed.reply ?? text,
-      correction: parsed.correction ?? null,
+      correction: normalizeCorrection(parsed.correction),
       vocabularyHighlights: parsed.vocabularyHighlights ?? [],
     };
   } catch {
@@ -310,7 +436,7 @@ function parseAIResponse(text: string): {
         const parsed = JSON.parse(cleaned.substring(firstBrace, lastBrace + 1));
         return {
           reply: parsed.reply ?? text,
-          correction: parsed.correction ?? null,
+          correction: normalizeCorrection(parsed.correction),
           vocabularyHighlights: parsed.vocabularyHighlights ?? [],
         };
       } catch {
@@ -324,6 +450,6 @@ function parseAIResponse(text: string): {
     }
     const reply = text.substring(0, index).trim();
     const correction = text.substring(index + correctionMarker.length).trim();
-    return { reply, correction: correction || null, vocabularyHighlights: [] };
+    return { reply, correction: normalizeCorrection(correction), vocabularyHighlights: [] };
   }
 }
