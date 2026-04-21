@@ -1,230 +1,316 @@
-# languageAI Design System
+# languageAI / Fluenci Design System
 
-This is the single source of truth for the app's visual design. All UI changes must conform to these values. Do not introduce new colors, spacing values, or component patterns without explicit approval.
+**Canonical source of truth.** All UI changes must conform. Do not introduce new colors, spacing values, or component patterns outside of the approved token set in `config/theme.ts`.
+
+> **Phase 0 status:** foundation primitives + theme tokens are live; per-screen rollout in progress. See [`redesign-plan.md`](./redesign-plan.md) for phasing and [`design-research.md`](./design-research.md) for the empirical/industry research anchoring every decision.
+
+---
+
+## Core Principles
+
+1. **Canonical theme is DARK.** Surface.base `#0C0F14` is the default screen background. Reading/lesson/review surfaces step up to `surface.raised` (`#12161D`) for focus.
+2. **Indigo is the primary brand.** `#6366F1` anchors CTAs and focused states. `#818CF8` is the brighter variant reserved for accents that must stay legible on dark.
+3. **Motion is earned.** No global animation in chrome. Animation appears in (a) state transitions, (b) micro-feedback (≤200ms), (c) celebration moments. Everything else is static.
+4. **Every animation gates `useMotion().shouldReduce`.** Honor `AccessibilityInfo.isReduceMotionEnabled` without exception. App Store accessibility criterion.
+5. **Body text is WCAG AAA.** `text.primary` (`#F1F5F9`) is 14.6:1 against `surface.base`. Never pure white on pure black (halation).
+6. **Color is never the only signal.** Correct/incorrect always paired with icon + text label. WCAG SC 1.4.1.
+7. **60-30-10 color distribution.** Neutral surfaces dominate; accent color reserved for CTAs and progress.
+8. **8pt grid.** Spacing values are 4, 8, 12, 16, 24, 32, 48, 64.
+9. **Three typographic roles.** Display (PlayfairDisplay, celebration only), UI (Inter Bold 700), body (Inter 400/500).
+10. **One mascot.** Consistent across celebration states; static SVG today, Rive state-machine in a future phase.
+
+---
+
+## Source of Truth
+
+All tokens are defined in **`config/theme.ts`** and imported by every component. **Never hard-code hex values in screens or components.** If you need a new token, add it to `config/theme.ts` first.
+
+```ts
+import { colors, spacing, radii, typography, motion, elevation } from '../../config/theme';
+```
 
 ---
 
 ## Color Palette
 
-### Primary & Branding
+### Surfaces (dark-canonical)
 
 | Token | Hex | Usage |
-|-------|-----|-------|
-| Primary | `#6366F1` | Buttons, active tabs, focused input borders, accent text, spinners |
-| Primary Light | `#C7D2FE` | Disabled buttons, secondary indicators, decorative arrows |
-| Primary Tint | `#E0E7FF` | Selected state backgrounds (language picker, level picker) |
+|---|---|---|
+| `surface.base` | `#0C0F14` | Primary app background (home, chat, practice, profile) |
+| `surface.raised` | `#12161D` | Reading / lesson / review screens — focus surface |
+| `surface.card` | `#151921` | Card fills |
+| `surface.cardAlt` | `#1C212B` | Nested cards, input fills |
+| `surface.overlay` | `rgba(12,15,20,0.85)` | Modal/sheet backdrop |
+| `surface.sheet` | `#1A1F29` | Bottom-sheet fill |
 
-### Feedback
+### Borders
+
+| Token | Value | Usage |
+|---|---|---|
+| `border.subtle` | `rgba(255,255,255,0.06)` | Card outlines |
+| `border.default` | `rgba(255,255,255,0.12)` | Dividers, button outlines |
+| `border.strong` | `rgba(255,255,255,0.24)` | Focus borders |
+| `border.focus` | `#6366F1` | Input focus |
+
+### Text (AAA on `surface.base`)
+
+| Token | Hex | Ratio | Usage |
+|---|---|---|---|
+| `text.primary` | `#F1F5F9` | 14.6:1 (AAA) | Headings, body |
+| `text.secondary` | `#CBD5E1` | 10.2:1 (AAA) | Descriptions, metadata |
+| `text.tertiary` | `#94A3B8` | 5.8:1 (AA large) | Placeholders, helper text |
+| `text.quaternary` | `#64748B` | 3.7:1 (UI large only) | Muted timestamps |
+| `text.onPrimary` | `#FFFFFF` | — | Text on `indigo.500` buttons |
+| `text.disabled` | `rgba(241,245,249,0.38)` | — | Disabled button labels |
+
+### Primary (Indigo)
 
 | Token | Hex | Usage |
-|-------|-----|-------|
-| Success | `#22C55E` | Correct answers, completed items, positive borders |
-| Success Background | `#DCFCE7` | Correct answer card fill, positive feedback containers |
-| Error | `#EF4444` | Incorrect answers, destructive text |
-| Error Dark | `#DC2626` | Danger button text, correction text on light backgrounds |
-| Error Light | `#FCA5A5` | Correction text on dark (user bubble) backgrounds |
-| Error Background | `#FEE2E2` | Incorrect answer fill, danger button fill, end-session button fill |
-| Warning | `#CA8A04` | Medium performance score text (60-79%) |
-| Warning Background | `#FEF9C3` | Medium performance fill |
-| Streak Accent | `#F59E0B` | Streak counter icon/text |
-| Heart | `#EF4444` | Heart icons (filled state) |
-| Heart Empty | `#64748B` | Heart icons (empty state) |
+|---|---|---|
+| `indigo.500` | `#6366F1` | **CANONICAL PRIMARY.** Buttons, active tabs, focused inputs |
+| `indigo.400` | `#818CF8` | Accents on dark (small icons, text links, progress glow) |
+| `indigo.700` | `#4338CA` | Tactile button bottom slab |
+| `indigo.300` | `#A5B4FC` | Chips, subtle accents |
+| `indigo.100` / `200` / `300` | — | Reserve for rare tint moments |
+
+### Semantic
+
+| Token | Base | Tint | Border | Usage |
+|---|---|---|---|---|
+| `success` | `#22C55E` | `rgba(34,197,94,0.15)` | `rgba(34,197,94,0.35)` | Correct, completed |
+| `error` | `#EF4444` | `rgba(239,68,68,0.15)` | `rgba(239,68,68,0.40)` | Incorrect, destructive |
+| `warning` | `#F59E0B` | `rgba(245,158,11,0.15)` | `rgba(245,158,11,0.35)` | Review needed, warnings |
+| `streak` | `#F59E0B` (base) / `#F97316` (fire) | `rgba(245,158,11,0.18)` | — | Streak counters + fire animation |
+| `premium` | `#A855F7` | `rgba(168,85,247,0.18)` | — | Super tier, pro moments |
 
 ### League Tiers
 
-| Token | Hex | Usage |
-|-------|-----|-------|
-| Bronze | `#CD7F32` | Bronze league badge, level 1-10 |
-| Silver | `#C0C0C0` | Silver league badge, level 11-25 |
-| Gold | `#FFD700` | Gold league badge, level 26-50 |
-| Platinum | `#A78BFA` | Platinum league badge, level 51-75 |
-| Diamond | `#38BDF8` | Diamond league badge, level 76-100 |
+Bronze `#CD7F32` · Silver `#C0C0C0` · Gold `#FFD700` · Platinum `#A78BFA` · Diamond `#38BDF8`
 
-### Neutrals & Surfaces
+### Hearts
 
-| Token | Hex | Usage |
-|-------|-----|-------|
-| White | `#FFFFFF` | Primary background, card surfaces |
-| Surface | `#F9FAFB` | Card backgrounds, picker items, secondary sections |
-| Surface Alt | `#F3F4F6` | Unselected options, assistant message bubbles, progress bar unfilled |
-| Border | `#E5E7EB` | Dividers, subtle separators |
-| Input Border | `#D1D5DB` | TextInput default border, correction dividers (assistant side) |
+Filled: `#EF4444` · Empty: `#64748B`
 
-### Text
+### Correction-banner error-type chips
 
-| Token | Hex | Usage |
-|-------|-----|-------|
-| Text Primary | `#111111` | Headings, body text, primary labels |
-| Text Secondary | `#666666` | Descriptions, stat labels, metadata |
-| Text Tertiary | `#999999` | Placeholders, helper text, loading messages |
-| Text On Primary | `#FFFFFF` | Text on `#6366F1` backgrounds and user bubbles |
+grammar · vocabulary · spelling · word_order · tense · gender · other — see `colors.correctionChip.*` in `config/theme.ts`.
 
 ---
 
 ## Typography
 
-System fonts only (San Francisco on iOS, Roboto on Android).
+Font families (loaded via `@expo-google-fonts`):
+- `Inter_400Regular`, `Inter_500Medium`, `Inter_600SemiBold`, `Inter_700Bold`
+- `PlayfairDisplay_700Bold` — **display only**, used by `<Hero>` on celebration screens
 
-| Use Case | Size | Weight | Example |
-|----------|------|--------|---------|
-| Page Header | 28px | 700 | "Learn", "Profile", "AI Practice" |
-| Section Header | 24px | 700 | Course/Unit titles |
-| Card Header | 22px | 600 | Speaking exercise prompt |
-| Subheading | 18px | 600–700 | "AI Conversation", lesson titles |
-| Body Large | 17px | 600 | Multiple choice option text |
-| Body / Button | 16px | 400–600 | Message content, button labels, form labels |
-| Secondary | 15px | 400–600 | Time displays, counters |
-| Caption | 14px | 400–600 | Stat labels, helper text, exercise type labels |
-| Small | 13px | 400 | Timestamps, small metadata |
-| Tiny | 12px | 400 | Badge text, extra-small labels |
+Use the typography primitives from `components/ui/Text.tsx`:
 
-Default line height: **22px** for body text.
+```tsx
+<Heading level={1}>Learn</Heading>        // 28/34 Bold
+<Heading level={2}>Spanish A2</Heading>   // 24/30 Bold
+<Heading level={3}>Unit 4</Heading>       // 22/28 Semibold
+<Body size="lg">Option text</Body>         // 17/25 Semibold
+<Body>Message content</Body>               // 16/24 Regular
+<Body size="sm">Helper text</Body>         // 14/20 Regular
+<Caption>Stat label</Caption>              // 13/18 Medium
+<Caption size="sm">Badge text</Caption>    // 12/16 Medium
+<Hero>Nailed it!</Hero>                    // 32/38 PlayfairDisplay 700 (celebration only)
+```
 
----
+Tones: `primary` (default) / `secondary` / `tertiary` / `onPrimary` / `accent` / `success` / `error` / `warning`.
 
-## Spacing Scale
-
-| Value | Usage |
-|-------|-------|
-| 2px | Minimal text offsets (fill-blank underlines) |
-| 4px | Extra-small gaps, inline element spacing |
-| 6px | Small row gaps |
-| 8px | Small internal padding (buttons, badges, icon spacing, message gaps) |
-| 10px | Input vertical padding, list item margins |
-| 12px | Medium card/list padding, section spacing |
-| 14px | Message bubble padding, icon-text spacing |
-| 16px | Standard content padding, block spacing |
-| 18px | Topic item padding |
-| 20px | Profile sections, course cards internal padding |
-| 24px | Exercise card padding, page section spacing |
-| 32px | Page-level padding (sign out area) |
-| 40px | ScrollView bottom content padding |
-| 48px | Primary button horizontal padding |
+**Never** use raw `<Text>` with inline `fontSize` / `color`. Dynamic Type must be supported end-to-end.
 
 ---
 
-## Border Radius Scale
+## Spacing (4-8pt grid)
 
-| Value | Usage |
-|-------|-------|
-| 8px | Small elements (picker items, badges) |
-| 10px | End/close buttons |
-| 12px | Picker containers |
-| 14px | Standard cards, inputs, multiple choice options, primary buttons |
-| 16px | Large cards (course, unit, profile sections) |
-| 18px | Message bubbles (with asymmetric 4px on sender corner) |
-| 20px | Extra-large containers (exercise cards, summary screens) |
-| 22px | Circular buttons (44x44 send button) |
-
----
-
-## Component Reference
-
-### Buttons
-
-**Primary** — `bg: #6366F1` | `text: white, 18px, w600` | `px: 48, py: 16` | `radius: 14` | disabled: `bg: #C7D2FE`
-
-**Secondary** — `bg: #F9FAFB` | `text: #111, 18px, w600` | `px: 48, py: 16` | `radius: 14`
-
-**Danger** — `bg: #FEE2E2` | `text: #DC2626, 18px, w600` | `px: 48, py: 16` | `radius: 14`
-
-**Text/Tertiary** — `bg: transparent` | `text: #6366F1, 16px` | no padding
-
-**End/Close** — `bg: #FEE2E2` | `text: #DC2626, 14px, w600` | `px: 16, py: 8` | `radius: 10`
-
-**Send (circular)** — `bg: #6366F1` | `text: white, 18px, w700` | `44x44` | `radius: 22` | disabled: `bg: #C7D2FE`
-
-### Cards
-
-**Standard** — `bg: #F9FAFB` | `p: 16–20` | `radius: 14–16` | `mb: 10–12` | flat (no shadow)
-
-**User Info** — `bg: #F9FAFB` | `p: 20` | `radius: 16` | name 18px w600, email 14px #666
-
-**Topic/Course** — `bg: #F9FAFB` | `p: 20` | `radius: 16` | row layout, arrow `>` in `#C7D2FE`
-
-**Exercise** — `bg: #F9FAFB` | `p: 24` | `radius: 20` | `minHeight: 200`
-
-### Message Bubbles
-
-**User** — `bg: #6366F1` | `text: white` | `p: 14` | `radius: 18` (bottom-right: 4px) | maxWidth: 82%
-
-**Assistant** — `bg: #F3F4F6` | `text: #111` | `p: 14` | `radius: 18` (bottom-left: 4px) | maxWidth: 82%
-
-Margin bottom: 8px between messages.
-
-### Multiple Choice Options
-
-| State | Background | Border (2px) | Text Weight |
-|-------|-----------|--------------|-------------|
-| Default | `#F3F4F6` | transparent | 600 |
-| Selected | `#E0E7FF` | `#6366F1` | 600 |
-| Correct | `#DCFCE7` | `#22C55E` | 600 |
-| Incorrect | `#FEE2E2` | `#EF4444` | 600 |
-
-Padding: 16px | Radius: 14px | Margin bottom: 10px | Font: 17px
-
-### Text Inputs
-
-Border: 2px `#D1D5DB` (default) / `#6366F1` (focused) / `#22C55E` (correct) / `#EF4444` (error)
-Radius: 14px | px: 16, py: 10 | Font: 16–18px | Placeholder: `#999`
-Multiline: minHeight 80px, textAlignVertical top
-
-### Progress Bar
-
-Height: 8–12px | Filled: `#6366F1` | Unfilled: `#F3F4F6` | Radius: 4–8px
-
-### Score Feedback Circle
-
-Size: 100x100 | Radius: 50 (circle) | Score text: 32px w700
-
-| Score Range | Background | Text Color |
-|-------------|-----------|------------|
-| >= 80% | `#DCFCE7` | `#22C55E` |
-| 60–79% | `#FEF9C3` | `#CA8A04` |
-| < 60% | `#FEE2E2` | `#EF4444` |
+```ts
+spacing.xxs   =  4
+spacing.xs    =  8
+spacing.sm    = 12
+spacing.md    = 16
+spacing.lg    = 24
+spacing.xl    = 32
+spacing.xxl   = 48
+spacing.xxxl  = 64
+```
 
 ---
 
-## Interaction Patterns
+## Border Radius
 
-### Haptic Feedback
-
-| Event | Type |
-|-------|------|
-| Option tap | Selection (light) |
-| Correct answer | Success (3 rapid pulses) |
-| Incorrect answer | Error (strong impact) |
-| Record start/stop | Selection |
-
-### Loading States
-
-Full-screen overlay: semi-transparent white background, centered `ActivityIndicator` (color `#6366F1`, size large), optional status text below.
+```ts
+radii.sm    =  8   // badges, chips
+radii.md    = 12   // inputs
+radii.lg    = 14   // buttons, standard cards
+radii.xl    = 16   // large cards
+radii.xxl   = 20   // exercise cards, hero cards
+radii.pill  = 999  // fully rounded
+```
 
 ---
 
-## Accessibility
+## Motion
 
-- Minimum touch target: **44x44pt**
-- All `Pressable` elements: `accessibilityRole="button"` + `accessibilityLabel`
-- Headers: `accessibilityRole="header"`
-- Color is never the sole indicator — always paired with text labels
-- Contrast ratios: `#111` on `#FFF` = 16:1 (AAA), `#666` on `#FFF` = 6:1 (AA), `#FFF` on `#6366F1` = 7:1 (AAA)
+```ts
+motion.duration.instant     = 100  // tap feedback
+motion.duration.micro       = 150
+motion.duration.short       = 200  // default
+motion.duration.medium      = 300  // sheets, cards
+motion.duration.long        = 450
+motion.duration.celebration = 600
+```
+
+Easing curves: `standard` / `decelerate` / `accelerate` / `emphasized` / `backOut` — see `config/theme.ts`.
+
+**Rules:**
+1. Use `useMotion()` — never raw `AccessibilityInfo.isReduceMotionEnabled` in components.
+2. Never animate infinitely except: loading spinners, streak fire (streak ≥7).
+3. Button press = 100ms + haptic light. No exceptions.
+4. Screen transitions follow navigator defaults (no custom unless celebration).
+
+---
+
+## Haptics
+
+Use `expo-haptics`:
+- `Haptics.selectionAsync()` — selection/tap
+- `Haptics.impactAsync(Light)` — button press
+- `Haptics.impactAsync(Heavy)` — milestone (level up, streak milestone)
+- `Haptics.notificationAsync(Success)` — correct answer, lesson complete
+- `Haptics.notificationAsync(Error)` — incorrect answer
+
+All haptics fire regardless of Reduce Motion (they are not motion) but respect the app's mute toggle (see `hooks/useSound.ts` once built).
+
+---
+
+## Components
+
+### Surface (replaces GradientBackground)
+
+```tsx
+<Surface variant="base">      // dark #0C0F14
+<Surface variant="raised">    // dark #12161D — reading/focus
+<Surface variant="card">      // #151921
+<Surface variant="cardAlt">   // #1C212B
+```
+
+> `<GradientBackground>` is a backward-compatible alias — new code should use `<Surface>` directly.
+
+### TactileButton (canonical CTA)
+
+Duolingo-style slab button with a darker bottom edge that collapses on press, paired with a light haptic.
+
+```tsx
+<TactileButton label="Continue" />                    // primary, full width
+<TactileButton label="Skip" variant="secondary" />
+<TactileButton label="End" variant="danger" />
+<TactileButton label="Learn more" variant="ghost" />
+```
+
+Size: `md` (44px) / `lg` (56px, default). Always use for primary/secondary CTAs — never raw `<Pressable>` for main actions.
+
+### Chip
+
+Small pill with optional left icon.
+
+```tsx
+<Chip label="GRAMMAR" variant="primary" />
+<Chip label="DIAMOND" variant="premium" />
+<Chip label={`${streak}d`} variant="streak" leftIcon={<Ionicons name="flame" />} />
+```
+
+### Sheet
+
+Bottom-anchored modal for feedback / pickers / mini-forms.
+
+```tsx
+<Sheet visible={open} onDismiss={() => setOpen(false)}>
+  {/* content */}
+</Sheet>
+```
+
+### CelebrationOverlay
+
+Full-screen reward moment — mascot + confetti + headline + optional CTA.
+
+```tsx
+<CelebrationOverlay
+  visible={showWin}
+  mood="lessonComplete"
+  title="Nailed it!"
+  subtitle="+35 XP"
+  ctaLabel="Continue"
+  onDismiss={next}
+/>
+```
+
+Moods: `correct` / `lessonComplete` / `streakMilestone` / `levelUp`. Motion auto-gates Reduce Motion.
+
+### Mascot
+
+```tsx
+<Mascot state="happy" size="md" />
+```
+
+States: `idle` / `happy` / `thinking` / `cheering` / `sad` / `disappointed`. Sizes: `xs` (32) / `sm` (48) / `md` (80) / `lg` (128). Static SVG today; Rive upgrade deferred.
+
+### ScreenHeader
+
+```tsx
+<ScreenHeader title="Learn" subtitle="Spanish · Beginner" onBack={router.back} />
+```
 
 ---
 
 ## Layout
 
-- All screens wrapped in `SafeAreaView`
-- Forms use `KeyboardAvoidingView` with `behavior="padding"` and `keyboardVerticalOffset={90}` on iOS
-- Default layout: flexbox column
-- Message/stat rows: flexbox row
-- Status bar: `<StatusBar style="auto" />` at root layout
+- Every screen wrapped in `<Surface>` (or compatible `<GradientBackground>` alias).
+- `SafeAreaView` inside `<Surface>` where the status bar / home indicator matter.
+- Forms use `KeyboardAvoidingView` (iOS: `behavior="padding"`, `keyboardVerticalOffset={90}`).
+- Tabs stay visible; never push content behind the tab bar.
 
 ---
 
-## Important Notes
+## Accessibility Mandatory
 
-- **No dark mode** — light mode only (for now)
-- **No shadows** — flat design throughout
-- **No gradients** — solid colors only
-- **Inline styles** — all styling is via React Native style objects with hardcoded values (no NativeWind classes used currently)
+Every PR must pass:
+
+- [ ] VoiceOver/TalkBack — every interactive element has `accessibilityRole` + `accessibilityLabel`
+- [ ] Reduce Motion honored via `useMotion()`
+- [ ] Touch targets ≥ 44×44 pt (iOS) / 48×48 dp (Android)
+- [ ] Body text contrast ≥ 7:1 (AAA) against `surface.base`
+- [ ] Color-blindness safety: correct/incorrect = icon + text + color, never color alone
+- [ ] Dynamic Type tested at 200% (iOS XXL)
+
+---
+
+## What We Retired
+
+| Old primitive | Replacement | Notes |
+|---|---|---|
+| Looping video background | Solid `surface.base` / `surface.raised` | Mayer coherence; Apple HIG compliance |
+| `GradientBackground` (video) | `<Surface>` (identical API alias remains) | Backward compat — zero screen changes needed |
+| `GlassSurface` 6-layer chromatic | 2-layer dark fill + hairline border | Same API; visually flat |
+| `GradientButton` | `<TactileButton variant="primary">` | Slab + haptic instead of gradient |
+| `AnimatedGalaxy` | Static starfield SVG (welcome/celebration only) | Decorative motion retired from chrome |
+| Ad-hoc `<Text fontSize={…}>` | `<Heading>`, `<Body>`, `<Caption>`, `<Hero>` | Scale enforced centrally |
+
+---
+
+## Migration Path
+
+When editing any existing screen:
+
+1. Swap raw colors → `colors.*` tokens
+2. Swap raw `<Text>` → typography primitives
+3. Swap primary/secondary CTAs → `<TactileButton>`
+4. Swap error-banner style strings → `<Chip variant="...">`
+5. Gate animations behind `useMotion()`
+6. Wrap with `<Surface variant="base">` or `<Surface variant="raised">` as appropriate
+
+---
+
+**Last updated:** 2026-04-21 (Phase 0 foundation landed).
