@@ -1,11 +1,16 @@
 /**
  * GradientBackground — cosmic ambient (default) + focus variants.
  *
- * Default (`variant="base"` or `variant="cosmic"`): a discreet cosmic
+ * Default (`variant="base"` or `variant="cosmic"`): a galaxy-flavored cosmic
  * ambience — dark surface with two slow-drifting aurora blobs (indigo +
  * violet), a subtle static cyan accent for color depth, and an 18-star
- * field with tailwind-colored halo glows + slow drift + independent
- * twinkle. Motion is deliberately barely perceptible.
+ * field where each star:
+ *   - has a tailwind-colored halo glow (outer soft disc + bright core)
+ *   - follows its own slow elliptical orbit (translateX + translateY
+ *     interpolated from a 0→1 progress loop)
+ *   - twinkles on opacity + subtly scales (bright at peak, slightly bigger)
+ *   - uses PARALLAX DEPTH: bright stars drift faster + farther
+ *     (foreground), small stars drift slower + less (background)
  *
  * Focus (`variant="raised"`): calm, motion-free surface.raised — used on
  *   learning surfaces (lesson runner, writing prompt) where Mayer's
@@ -14,7 +19,7 @@
  * Plain (`variant="plain"`): pure solid surface.base — used by sheets/modals.
  *
  * All motion honors `useMotion().shouldReduce` → stars hold at reduced
- * opacity + zero drift; aurora blobs freeze at midpoint. Haptics unaffected.
+ * opacity + zero drift; aurora blobs freeze at midpoint.
  *
  * Research: design-research.md §7 "Subtle breathing animation only on
  * dedicated idle states... always gated on Reduce Motion."
@@ -36,13 +41,10 @@ interface GradientBackgroundProps {
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
-// ─── Star palette (tailwind-colored) ──────────────────────────────────────
-// Each star cycles through this palette by id; real night skies have color
-// variety (red giants, blue-white, yellow, etc.) so using varied tailwind
-// hues feels astronomically justified.
+// ─── Star palette (tailwind) ─────────────────────────────────────────────
 const STAR_COLORS = [
-  '#F8FAFC', // slate-50 — classic white
-  '#E2E8F0', // slate-200 — dimmer white
+  '#F8FAFC', // slate-50 — pure white
+  '#E2E8F0', // slate-200 — dim white
   '#818CF8', // indigo-400
   '#A78BFA', // violet-400
   '#38BDF8', // sky-400
@@ -51,12 +53,54 @@ const STAR_COLORS = [
   '#FDE68A', // amber-200
 ];
 
-// Star tiers — bigger / brighter stars are rarer.
-const STAR_TIERS = {
-  bright: { count: 4, core: 3, halo: 14, peakOpacity: 0.95 },
-  medium: { count: 8, core: 2, halo: 8, peakOpacity: 0.75 },
-  small: { count: 6, core: 1.5, halo: 5, peakOpacity: 0.55 },
-} as const;
+// ─── Star tiers — parallax depth (bigger = faster + farther drift) ──────
+interface TierConfig {
+  count: number;
+  core: number;
+  halo: number;
+  peakOpacity: number;
+  /** Horizontal drift radius range (px) — foreground larger than background */
+  rxRange: [number, number];
+  /** Vertical drift radius range (px) */
+  ryRange: [number, number];
+  /** Full-orbit duration range (ms) — foreground faster than background */
+  driftMsRange: [number, number];
+  /** Twinkle period range (ms) */
+  twinkleMsRange: [number, number];
+}
+
+const STAR_TIERS: Record<'bright' | 'medium' | 'small', TierConfig> = {
+  bright: {
+    count: 4,
+    core: 3,
+    halo: 14,
+    peakOpacity: 0.95,
+    rxRange: [35, 70], // foreground — wide drift
+    ryRange: [25, 50],
+    driftMsRange: [12000, 20000], // faster
+    twinkleMsRange: [3000, 5000],
+  },
+  medium: {
+    count: 8,
+    core: 2,
+    halo: 8,
+    peakOpacity: 0.75,
+    rxRange: [18, 40], // middle
+    ryRange: [12, 28],
+    driftMsRange: [18000, 30000],
+    twinkleMsRange: [4000, 6500],
+  },
+  small: {
+    count: 6,
+    core: 1.5,
+    halo: 5,
+    peakOpacity: 0.55,
+    rxRange: [8, 22], // background — minimal drift
+    ryRange: [6, 16],
+    driftMsRange: [28000, 42000], // slower (background)
+    twinkleMsRange: [5000, 8000],
+  },
+};
 
 type StarTier = keyof typeof STAR_TIERS;
 
@@ -74,10 +118,18 @@ interface StarSpec {
   twinkleCycleMs: number;
   driftPhaseMs: number;
   driftCycleMs: number;
-  driftRange: number;
+  driftRadiusX: number;
+  driftRadiusY: number;
+  /** 1 or -1 — reverses orbit direction so stars orbit both clockwise and ccw */
+  orbitDirection: 1 | -1;
 }
 
-// Generated once per module load — stable across renders within a session.
+/** Deterministic pseudorandom in [0,1) from an integer seed. */
+function det(seed: number): number {
+  const x = Math.sin(seed * 12.9898 + 78.233) * 43758.5453;
+  return x - Math.floor(x);
+}
+
 const STARS: StarSpec[] = (() => {
   const out: StarSpec[] = [];
   let id = 0;
@@ -85,27 +137,41 @@ const STARS: StarSpec[] = (() => {
     const cfg = STAR_TIERS[tier];
     for (let i = 0; i < cfg.count; i++) {
       const seed = id * 127 + 1;
+      const r1 = det(seed);
+      const r2 = det(seed + 1);
+      const r3 = det(seed + 2);
+      const r4 = det(seed + 3);
+      const r5 = det(seed + 4);
+      const r6 = det(seed + 5);
+      const r7 = det(seed + 6);
+
       out.push({
         id,
-        x: (((seed * 79) % 95) + 2.5) / 100 * SCREEN_W,
-        y: (((seed * 43 + 11) % 92) + 4) / 100 * SCREEN_H,
+        x: (0.04 + r1 * 0.92) * SCREEN_W,
+        y: (0.05 + r2 * 0.9) * SCREEN_H,
         tier,
         coreSize: cfg.core,
         haloSize: cfg.halo,
         color: STAR_COLORS[id % STAR_COLORS.length],
         peakOpacity: cfg.peakOpacity,
         minOpacity: cfg.peakOpacity * 0.25,
-        twinklePhaseMs: (id * 743) % 4500,
-        twinkleCycleMs: 3500 + ((id * 317) % 2500), // 3.5–6s
-        driftPhaseMs: (id * 1319) % 8000,
-        driftCycleMs: 18000 + ((id * 541) % 12000), // 18–30s
-        driftRange: 15 + ((id * 29) % 20), // 15–35px
+        twinklePhaseMs: Math.floor(r3 * cfg.twinkleMsRange[1]),
+        twinkleCycleMs:
+          cfg.twinkleMsRange[0] + Math.floor(r4 * (cfg.twinkleMsRange[1] - cfg.twinkleMsRange[0])),
+        driftPhaseMs: Math.floor(r5 * 10000),
+        driftCycleMs:
+          cfg.driftMsRange[0] + Math.floor(r6 * (cfg.driftMsRange[1] - cfg.driftMsRange[0])),
+        driftRadiusX: cfg.rxRange[0] + r7 * (cfg.rxRange[1] - cfg.rxRange[0]),
+        driftRadiusY: cfg.ryRange[0] + det(seed + 7) * (cfg.ryRange[1] - cfg.ryRange[0]),
+        orbitDirection: det(seed + 8) > 0.5 ? 1 : -1,
       });
       id++;
     }
   });
   return out;
 })();
+
+// ─── Component ───────────────────────────────────────────────────────────
 
 export function GradientBackground({
   children,
@@ -134,8 +200,6 @@ export function GradientBackground({
     </CosmicBackground>
   );
 }
-
-// ─── Cosmic subcomponent ─────────────────────────────────────────────────
 
 function CosmicBackground({
   children,
@@ -202,7 +266,7 @@ function CosmicBackground({
 
   return (
     <View style={[styles.flex, { backgroundColor: colors.surface.base }, style]}>
-      {/* Base indigo top-down tint */}
+      {/* Base top-down indigo tint */}
       <LinearGradient
         colors={['rgba(99, 102, 241, 0.07)', 'transparent', 'rgba(12, 15, 20, 0.0)']}
         locations={[0, 0.5, 1]}
@@ -212,7 +276,7 @@ function CosmicBackground({
         pointerEvents="none"
       />
 
-      {/* Aurora blob 1 — indigo, top-left drift */}
+      {/* Aurora blob 1 — indigo */}
       <Animated.View
         pointerEvents="none"
         style={[
@@ -235,7 +299,7 @@ function CosmicBackground({
         />
       </Animated.View>
 
-      {/* Aurora blob 2 — violet, bottom-right drift */}
+      {/* Aurora blob 2 — violet */}
       <Animated.View
         pointerEvents="none"
         style={[
@@ -258,8 +322,7 @@ function CosmicBackground({
         />
       </Animated.View>
 
-      {/* Aurora accent 3 — cyan, static, low alpha (color depth without
-          adding to motion budget) */}
+      {/* Aurora accent 3 — cyan, static */}
       <View
         pointerEvents="none"
         style={[
@@ -281,15 +344,12 @@ function CosmicBackground({
         />
       </View>
 
-      {/* Star field with halo glows + drift + twinkle */}
       <StarField shouldReduce={shouldReduce} />
 
       <View style={styles.flex}>{children}</View>
     </View>
   );
 }
-
-// ─── Star field ──────────────────────────────────────────────────────────
 
 function StarField({ shouldReduce }: { shouldReduce: boolean }) {
   return (
@@ -303,12 +363,12 @@ function StarField({ shouldReduce }: { shouldReduce: boolean }) {
 
 function Star({ star, shouldReduce }: { star: StarSpec; shouldReduce: boolean }) {
   const opacity = useRef(new Animated.Value(star.minOpacity)).current;
-  const translateY = useRef(new Animated.Value(0)).current;
+  const progress = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (shouldReduce) {
       opacity.setValue(star.peakOpacity * 0.6);
-      translateY.setValue(0);
+      progress.setValue(0);
       return;
     }
 
@@ -330,37 +390,51 @@ function Star({ star, shouldReduce }: { star: StarSpec; shouldReduce: boolean })
       ])
     );
 
-    const drift = Animated.loop(
+    // Orbit: progress 0 → 1 linearly over driftCycleMs; interpolated into
+    // an elliptical path via cosine / sine-shaped outputs.
+    const orbit = Animated.loop(
       Animated.sequence([
         Animated.delay(star.driftPhaseMs),
-        Animated.timing(translateY, {
-          toValue: star.driftRange,
-          duration: star.driftCycleMs / 2,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-        Animated.timing(translateY, {
-          toValue: -star.driftRange,
+        Animated.timing(progress, {
+          toValue: 1,
           duration: star.driftCycleMs,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-        Animated.timing(translateY, {
-          toValue: 0,
-          duration: star.driftCycleMs / 2,
-          easing: Easing.inOut(Easing.sin),
+          easing: Easing.linear,
           useNativeDriver: true,
         }),
       ])
     );
 
     twinkle.start();
-    drift.start();
+    orbit.start();
     return () => {
       twinkle.stop();
-      drift.stop();
+      orbit.stop();
     };
-  }, [shouldReduce, star, opacity, translateY]);
+  }, [shouldReduce, star, opacity, progress]);
+
+  // Elliptical orbit via 5-point cosine/sine approximation. At progress 0.25
+  // and 0.75 the values pass through the axes; 0/1 returns to the starting
+  // point. orbitDirection flips the rotation direction.
+  const translateX = progress.interpolate({
+    inputRange: [0, 0.25, 0.5, 0.75, 1],
+    outputRange: [
+      star.driftRadiusX,
+      0,
+      -star.driftRadiusX,
+      0,
+      star.driftRadiusX,
+    ].map((v) => v * star.orbitDirection) as [number, number, number, number, number],
+  });
+  const translateY = progress.interpolate({
+    inputRange: [0, 0.25, 0.5, 0.75, 1],
+    outputRange: [0, -star.driftRadiusY, 0, star.driftRadiusY, 0],
+  });
+
+  // Core scale — subtly grows as the star brightens (0.9 → 1.15)
+  const scale = opacity.interpolate({
+    inputRange: [star.minOpacity, star.peakOpacity],
+    outputRange: [0.9, 1.15],
+  });
 
   return (
     <Animated.View
@@ -370,10 +444,10 @@ function Star({ star, shouldReduce }: { star: StarSpec; shouldReduce: boolean })
         top: star.y - star.haloSize / 2,
         width: star.haloSize,
         height: star.haloSize,
-        transform: [{ translateY }],
+        transform: [{ translateX }, { translateY }],
       }}
     >
-      {/* Halo — soft outer glow using the star's tailwind color */}
+      {/* Halo — soft outer glow */}
       <View
         style={{
           position: 'absolute',
@@ -385,7 +459,7 @@ function Star({ star, shouldReduce }: { star: StarSpec; shouldReduce: boolean })
         }}
       />
 
-      {/* Core — bright center point; twinkles */}
+      {/* Core — bright center; opacity twinkles + scale pulses with it */}
       <Animated.View
         style={{
           position: 'absolute',
@@ -396,6 +470,7 @@ function Star({ star, shouldReduce }: { star: StarSpec; shouldReduce: boolean })
           borderRadius: star.coreSize / 2,
           backgroundColor: star.color,
           opacity,
+          transform: [{ scale }],
         }}
       />
     </Animated.View>
