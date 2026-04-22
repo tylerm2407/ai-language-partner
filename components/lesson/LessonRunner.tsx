@@ -21,7 +21,7 @@ import { OutOfHeartsModal } from '../gamification/OutOfHeartsModal';
 import { CorrectSparkle } from '../animations/CorrectSparkle';
 import { WrongShake } from '../animations/WrongShake';
 import { HeartBreak } from '../animations/HeartBreak';
-import { XpCounterTick } from '../animations/XpCounterTick';
+import { CelebrationOverlay } from '../ui/CelebrationOverlay';
 import type { Exercise, LanguageCode } from '../../types';
 
 interface LessonRunnerProps {
@@ -105,8 +105,12 @@ export function LessonRunner({
       const accuracy = exercises.length > 0 ? correctCount / exercises.length : 0;
       const xpEarned = Math.round(xpReward * accuracy);
 
-      if (Platform.OS !== 'web') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      // Perfect run gets a Heavy "thump" that lands just before the overlay's
+      // Success haptic on mount — creates a signature double-thump only when
+      // every exercise was correct. Imperfect runs rely on the overlay's own
+      // Success haptic (no double-fire).
+      if (Platform.OS !== 'web' && correctCount === exercises.length) {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
       }
 
       const result: LessonResult = {
@@ -135,41 +139,24 @@ export function LessonRunner({
 
   if (completed) {
     const correctCount = answers.filter((a) => a.correct).length;
-    const accuracy = Math.round((correctCount / exercises.length) * 100);
-    const xpEarned = Math.round(xpReward * (correctCount / exercises.length));
-
-    const scoreColor = accuracy >= 80 ? 'bg-success-bg' : accuracy >= 60 ? 'bg-warning-bg' : 'bg-error-bg';
-    const scoreTextColor = accuracy >= 80 ? 'text-success' : accuracy >= 60 ? 'text-warning' : 'text-error';
+    const accuracy = exercises.length > 0 ? correctCount / exercises.length : 0;
+    const xpEarned = Math.round(xpReward * accuracy);
+    const perfect = correctCount === exercises.length && exercises.length > 0;
+    const strong = accuracy >= 0.8;
+    const title = perfect ? 'Flawless!' : strong ? 'Nailed it!' : 'Lesson complete';
+    const mood = strong ? 'lessonComplete' : 'correct';
 
     return (
-      <ScrollView className="flex-1 bg-dark" contentContainerStyle={{ padding: 24, alignItems: 'center' }}>
-        <Text
-          className="text-text-primary text-[28px] font-bold mb-2"
-          accessibilityRole="header"
-        >
-          Lesson Complete!
-        </Text>
-        <Text className="text-text-secondary text-base mb-8">{lessonTitle}</Text>
-
-        <View className={`w-[100px] h-[100px] rounded-full items-center justify-center mb-6 ${scoreColor}`}>
-          <Text className={`text-[32px] font-bold ${scoreTextColor}`}>{accuracy}%</Text>
-        </View>
-
-        <XpCounterTick targetXp={xpEarned} trigger={true} style={{ marginBottom: 16 }} />
-
-        <View className="flex-row justify-around w-full mb-8">
-          <View className="items-center">
-            <Text className="text-text-primary text-2xl font-bold">{correctCount}/{exercises.length}</Text>
-            <Text className="text-text-secondary text-sm">Correct</Text>
-          </View>
-          <View className="items-center">
-            <Text className="text-primary text-2xl font-bold">+{xpEarned}</Text>
-            <Text className="text-text-secondary text-sm">XP Earned</Text>
-          </View>
-        </View>
-
-        <Button label="Continue" onPress={onExit} />
-      </ScrollView>
+      <View style={{ flex: 1 }}>
+        <CelebrationOverlay
+          visible
+          mood={mood}
+          title={title}
+          subtitle={`+${xpEarned} XP · ${correctCount}/${exercises.length} correct`}
+          ctaLabel="Continue"
+          onDismiss={onExit}
+        />
+      </View>
     );
   }
 

@@ -56,6 +56,13 @@ export type LanguageCode = 'en' | 'es' | 'fr' | 'de' | 'it' | 'pt' | 'ja' | 'ko'
 
 export type ProficiencyLevel = 'beginner' | 'elementary' | 'intermediate' | 'upper_intermediate' | 'advanced';
 
+/**
+ * Motivation — why the learner is here. Collected in onboarding, used by the
+ * Home hook copy to tie daily effort to an outcome. Stored transiently in
+ * useAppStore (no DB column); lost on full process restart by design.
+ */
+export type MotivationReason = 'travel' | 'family' | 'work' | 'brain' | 'curious';
+
 // ─── Course / Unit / Lesson ─────────────────────────────────────
 
 export interface Course {

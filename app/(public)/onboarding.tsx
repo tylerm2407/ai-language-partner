@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { View, Text, Pressable, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../hooks/useAuth';
 import { upsertProfile, markOnboardingComplete, updateOnboardingChecklist } from '../../lib/supabase-queries';
 import { useAppStore } from '../../stores/useAppStore';
@@ -10,8 +9,7 @@ import { Button } from '../../components/ui/Button';
 import { PlacementTest } from '../../components/onboarding/PlacementTest';
 import { GradientBackground } from '../../components/ui/GradientBackground';
 import { SUPPORTED_LANGUAGES, DAILY_GOALS } from '../../config/app';
-import { openCheckout, PRICING_PLANS } from '../../lib/stripe';
-import type { LanguageCode, ProficiencyLevel } from '../../types';
+import type { LanguageCode, ProficiencyLevel, MotivationReason } from '../../types';
 
 const LEVELS: { value: ProficiencyLevel; label: string; description: string }[] = [
   { value: 'beginner', label: 'Beginner', description: 'I know a few words' },
@@ -21,28 +19,29 @@ const LEVELS: { value: ProficiencyLevel; label: string; description: string }[] 
   { value: 'advanced', label: 'Advanced', description: 'I\'m nearly fluent' },
 ];
 
-type Step = 'language' | 'level' | 'placement' | 'goal' | 'subscription';
+const MOTIVATIONS: { value: MotivationReason; label: string; description: string }[] = [
+  { value: 'travel', label: 'Travel', description: 'Order, ask directions, connect on trips' },
+  { value: 'family', label: 'Family & friends', description: 'Talk with the people who matter' },
+  { value: 'work', label: 'Work & study', description: 'Unlock career or school opportunities' },
+  { value: 'brain', label: 'Brain fitness', description: 'Keep your mind sharp' },
+  { value: 'curious', label: 'Just curious', description: 'See where the journey takes me' },
+];
 
-const ALL_STEPS: Step[] = ['language', 'level', 'placement', 'goal', 'subscription'];
+type Step = 'language' | 'motivation' | 'level' | 'placement' | 'goal';
+
+const ALL_STEPS: Step[] = ['language', 'motivation', 'level', 'placement', 'goal'];
 
 export default function OnboardingScreen() {
   const { user } = useAuth();
   const router = useRouter();
-  const { profile, loadUserData } = useAppStore();
+  const { loadUserData, setMotivation: storeSetMotivation } = useAppStore();
 
   const [step, setStep] = useState<Step>('language');
-
-  // Resume at subscription step if profile exists but onboarding not completed
-  useEffect(() => {
-    if (profile && !profile.onboardingCompleted) {
-      setStep('subscription');
-    }
-  }, [profile]);
   const [targetLanguage, setTargetLanguage] = useState<LanguageCode | null>(null);
+  const [motivation, setMotivation] = useState<MotivationReason | null>(null);
   const [level, setLevel] = useState<ProficiencyLevel | null>(null);
   const [dailyGoal, setDailyGoal] = useState<number>(10);
   const [saving, setSaving] = useState(false);
-  const [subscribing, setSubscribing] = useState<string | null>(null);
   const [placementCompleted, setPlacementCompleted] = useState(false);
 
   const handleSaveProfile = async () => {
@@ -55,7 +54,6 @@ export default function OnboardingScreen() {
         level,
         dailyGoalMinutes: dailyGoal,
       });
-      // Seed onboarding checklist with pre-checked items
       await updateOnboardingChecklist(user.id, {
         chooseLanguage: true,
         placementTest: placementCompleted,
@@ -66,8 +64,11 @@ export default function OnboardingScreen() {
         dismissed: false,
         completedAt: null,
       });
+      await markOnboardingComplete(user.id);
+      // Persist transient motivation in the store so Home's HeroHook can use it.
+      storeSetMotivation(motivation);
       await loadUserData(user.id);
-      setStep('subscription');
+      router.replace('/(app)');
     } catch (err: unknown) {
       console.error('handleSaveProfile error:', err);
       const message =
@@ -79,43 +80,6 @@ export default function OnboardingScreen() {
       Alert.alert('Error', message);
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleContinueFree = async () => {
-    try {
-      if (user) {
-        await markOnboardingComplete(user.id);
-        await loadUserData(user.id);
-      }
-      router.replace('/(app)');
-    } catch (err: unknown) {
-      console.error('handleContinueFree error:', err);
-      // Navigate anyway — worst case the route guard will redirect back
-      router.replace('/(app)');
-    }
-  };
-
-  const handleSubscribe = async (priceKey: string) => {
-    if (!user) return;
-    setSubscribing(priceKey);
-    try {
-      // Mark onboarding complete before opening checkout (browser redirect)
-      await markOnboardingComplete(user.id);
-      await openCheckout({
-        userId: user.id,
-        email: user.email ?? '',
-        priceKey,
-      });
-      await loadUserData(user.id);
-    } catch (err: unknown) {
-      console.error('handleSubscribe error:', err);
-      Alert.alert(
-        'Subscriptions Coming Soon',
-        'Paid plans are not yet available. Continue with the free plan for now \u2014 you can upgrade anytime from your profile.',
-      );
-    } finally {
-      setSubscribing(null);
     }
   };
 
@@ -167,9 +131,51 @@ export default function OnboardingScreen() {
             <View className="mt-6">
               <Button
                 label="Continue"
-                onPress={() => setStep('level')}
+                onPress={() => setStep('motivation')}
                 disabled={!targetLanguage}
               />
+            </View>
+          </>
+        )}
+
+        {step === 'motivation' && (
+          <>
+            <Text className="text-[28px] font-bold text-text-primary mb-2" accessibilityRole="header">
+              Why are you learning?
+            </Text>
+            <Text className="text-base text-text-secondary mb-6">
+              We&apos;ll tailor your experience to what matters most.
+            </Text>
+
+            {MOTIVATIONS.map((m) => (
+              <Pressable
+                key={m.value}
+                className={`p-[18px] rounded-2xl mb-3 ${
+                  motivation === m.value
+                    ? 'bg-primary-tint border-2 border-primary'
+                    : 'bg-dark-card border-2 border-transparent'
+                }`}
+                onPress={() => setMotivation(m.value)}
+                accessibilityRole="button"
+                accessibilityLabel={`${m.label}: ${m.description}`}
+                accessibilityState={{ selected: motivation === m.value }}
+              >
+                <Text className="text-lg font-semibold text-text-primary">{m.label}</Text>
+                <Text className="text-sm text-text-secondary mt-1">{m.description}</Text>
+              </Pressable>
+            ))}
+
+            <View className="flex-row gap-3 mt-6">
+              <View className="flex-1">
+                <Button label="Back" variant="secondary" onPress={() => setStep('language')} />
+              </View>
+              <View className="flex-1">
+                <Button
+                  label="Continue"
+                  onPress={() => setStep('level')}
+                  disabled={!motivation}
+                />
+              </View>
             </View>
           </>
         )}
@@ -177,10 +183,10 @@ export default function OnboardingScreen() {
         {step === 'level' && (
           <>
             <Text className="text-[28px] font-bold text-text-primary mb-2" accessibilityRole="header">
-              What's your level?
+              What&apos;s your level?
             </Text>
             <Text className="text-base text-text-secondary mb-6">
-              We'll personalize your experience.
+              We&apos;ll personalize your experience.
             </Text>
 
             {LEVELS.map((l) => (
@@ -203,7 +209,7 @@ export default function OnboardingScreen() {
 
             <View className="flex-row gap-3 mt-6">
               <View className="flex-1">
-                <Button label="Back" variant="secondary" onPress={() => setStep('language')} />
+                <Button label="Back" variant="secondary" onPress={() => setStep('motivation')} />
               </View>
               <View className="flex-1">
                 <Button
@@ -273,95 +279,13 @@ export default function OnboardingScreen() {
               </View>
               <View className="flex-1">
                 <Button
-                  label="Continue"
+                  label="Start learning"
                   onPress={handleSaveProfile}
                   loading={saving}
                   disabled={saving}
                 />
               </View>
             </View>
-          </>
-        )}
-
-        {step === 'subscription' && (
-          <>
-            {/* Hero section */}
-            <View className="items-center mb-6">
-              <View className="w-16 h-16 rounded-full bg-primary items-center justify-center mb-4">
-                <Ionicons name="rocket" size={32} color="#FFFFFF" />
-              </View>
-              <Text className="text-[28px] font-bold text-text-primary mb-2 text-center" accessibilityRole="header">
-                Unlock Your Full Potential
-              </Text>
-              <Text className="text-base text-text-secondary text-center">
-                Choose a plan to supercharge your learning with unlimited AI conversations, voice practice, and more.
-              </Text>
-            </View>
-
-            {/* Plan cards */}
-            {PRICING_PLANS.filter((p) => p.planId !== 'free').map((plan) => (
-              <Pressable
-                key={plan.key}
-                className={`rounded-2xl mb-4 p-5 border-2 ${
-                  'popular' in plan && plan.popular
-                    ? 'bg-dark-card border-primary'
-                    : 'bg-dark-card border-dark-border'
-                }`}
-                onPress={() => handleSubscribe(plan.key)}
-                accessibilityRole="button"
-                accessibilityLabel={`${plan.name} plan at ${plan.price}${plan.period}`}
-              >
-                {/* Popular badge */}
-                {'popular' in plan && plan.popular && (
-                  <View className="bg-primary rounded-full px-3 py-1 self-start mb-3">
-                    <Text className="text-xs font-bold text-white">MOST POPULAR</Text>
-                  </View>
-                )}
-
-                <View className="flex-row items-baseline mb-3">
-                  <Text className="text-2xl font-bold text-text-primary">{plan.price}</Text>
-                  <Text className="text-sm text-text-secondary ml-1">{plan.period}</Text>
-                </View>
-
-                <Text className="text-lg font-semibold text-text-primary mb-3">{plan.name}</Text>
-
-                {plan.features.map((feature, i) => (
-                  <View key={i} className="flex-row items-center mb-2">
-                    <Ionicons name="checkmark-circle" size={18} color="#38BDF8" />
-                    <Text className="text-sm text-text-secondary ml-2 flex-1">{feature}</Text>
-                  </View>
-                ))}
-
-                <View className="mt-3">
-                  <Button
-                    label={subscribing === plan.key ? 'Opening checkout...' : `Get ${plan.name}`}
-                    onPress={() => handleSubscribe(plan.key)}
-                    loading={subscribing === plan.key}
-                    disabled={subscribing !== null}
-                  />
-                </View>
-              </Pressable>
-            ))}
-
-            {/* Free tier section */}
-            <View className="rounded-2xl p-5 bg-dark-card-alt border-2 border-dark-border mb-4">
-              <Text className="text-lg font-semibold text-text-primary mb-2">Free Plan</Text>
-              <Text className="text-sm text-text-secondary mb-3">
-                Get started with basic features — upgrade anytime.
-              </Text>
-              {PRICING_PLANS.find((p) => p.planId === 'free')?.features.map((feature, i) => (
-                <View key={i} className="flex-row items-center mb-2">
-                  <Ionicons name="checkmark-circle-outline" size={18} color="#64748B" />
-                  <Text className="text-sm text-text-tertiary ml-2 flex-1">{feature}</Text>
-                </View>
-              ))}
-            </View>
-
-            <Button
-              label="Continue with Free"
-              variant="secondary"
-              onPress={handleContinueFree}
-            />
           </>
         )}
       </ScrollView>

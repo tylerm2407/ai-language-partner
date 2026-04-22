@@ -3,36 +3,64 @@ import { View, Text, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { useAuth } from '../../../hooks/useAuth';
-import { fetchUserDailyNews } from '../../../lib/supabase-queries';
+import { useAppStore } from '../../../stores/useAppStore';
+import { fetchDailyNews, fetchNewsReadStatus, markNewsAsRead } from '../../../lib/supabase-queries';
 import { GradientBackground } from '../../../components/ui/GradientBackground';
 import { GradientBorderCard } from '../../../components/ui/GradientBorderCard';
+import { TactileButton } from '../../../components/ui/TactileButton';
+import { levelToNewsTier } from '../../../config/app';
 import type { DailyNewsArticle, VocabularyHighlight } from '../../../types';
 
 export default function NewsReaderScreen() {
   const { date } = useLocalSearchParams<{ date: string }>();
   const router = useRouter();
   const { user } = useAuth();
+  const { profile } = useAppStore();
   const [article, setArticle] = useState<DailyNewsArticle | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [showTranslation, setShowTranslation] = useState<boolean>(false);
+  const [readAt, setReadAt] = useState<string | null>(null);
+  const [isMarking, setIsMarking] = useState<boolean>(false);
+
+  const targetLanguage = profile?.targetLanguage ?? 'es';
+  const tier = levelToNewsTier(profile?.level ?? 'intermediate');
 
   const loadArticle = useCallback(async () => {
     if (!user?.id || !date) return;
     setIsLoading(true);
     try {
-      const data = await fetchUserDailyNews(user.id, date);
+      const data = await fetchDailyNews(targetLanguage, tier, date);
       setArticle(data);
+      if (data) {
+        const existing = await fetchNewsReadStatus(user.id, data.id).catch(() => null);
+        setReadAt(existing);
+      }
     } catch {
       // Silently fail — show empty state
     } finally {
       setIsLoading(false);
     }
-  }, [user?.id, date]);
+  }, [user?.id, date, targetLanguage, tier]);
 
   useEffect(() => {
     loadArticle();
   }, [loadArticle]);
+
+  const handleMarkAsRead = useCallback(async () => {
+    if (!article || isMarking || readAt) return;
+    setIsMarking(true);
+    try {
+      const stamp = await markNewsAsRead(article.id);
+      setReadAt(stamp);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    } catch {
+      // Non-fatal — button returns to enabled state
+    } finally {
+      setIsMarking(false);
+    }
+  }, [article, isMarking, readAt]);
 
   return (
     <GradientBackground>
@@ -50,9 +78,15 @@ export default function NewsReaderScreen() {
           <Text className="text-lg font-semibold text-text-primary ml-3 flex-1">
             Daily News
           </Text>
+          {readAt && (
+            <View className="flex-row items-center bg-success-bg/40 rounded-full px-3 py-1">
+              <Ionicons name="checkmark-circle" size={14} color="#22C55E" />
+              <Text className="text-xs font-semibold text-success ml-1">Read</Text>
+            </View>
+          )}
         </View>
 
-        <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 100 }}>
+        <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 120 }}>
           {isLoading ? (
             <View className="mt-8">
               <View className="h-8 bg-dark-card rounded w-3/4 mb-4" />
@@ -63,8 +97,11 @@ export default function NewsReaderScreen() {
           ) : !article ? (
             <View className="mt-8 items-center">
               <Ionicons name="newspaper-outline" size={48} color="#64748B" />
-              <Text className="text-text-secondary text-base mt-4">
-                No article available for this date.
+              <Text className="text-text-secondary text-base mt-4 text-center">
+                No article available for this date yet.
+              </Text>
+              <Text className="text-text-tertiary text-sm mt-2 text-center">
+                Today&apos;s article publishes around 5 AM Eastern.
               </Text>
             </View>
           ) : (
@@ -148,6 +185,18 @@ export default function NewsReaderScreen() {
                       </View>
                     </GradientBorderCard>
                   ))}
+                </View>
+              )}
+
+              {/* Mark as read CTA — hidden after it's been read once. */}
+              {!readAt && (
+                <View className="mt-2">
+                  <TactileButton
+                    label={isMarking ? 'Saving…' : 'Mark as read'}
+                    onPress={handleMarkAsRead}
+                    disabled={isMarking}
+                    accessibilityLabel="Mark today's article as read"
+                  />
                 </View>
               )}
             </View>

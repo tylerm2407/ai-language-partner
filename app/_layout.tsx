@@ -5,8 +5,8 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useAppStore } from '../stores/useAppStore';
 import { useSchoolStore } from '../stores/useSchoolStore';
-import { useNotifications } from '../hooks/useNotifications';
-import { View, ActivityIndicator } from 'react-native';
+import { useNotifications, scheduleStreakSaveReminder } from '../hooks/useNotifications';
+import { View, ActivityIndicator, AppState } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
   useFonts,
@@ -19,7 +19,7 @@ import { PlayfairDisplay_700Bold } from '@expo-google-fonts/playfair-display';
 
 export default function RootLayout() {
   const { session, loading: authLoading } = useAuth();
-  const { profile, loading: dataLoading, loadUserData } = useAppStore();
+  const { profile, dailyStats, loading: dataLoading, loadUserData } = useAppStore();
   const { roles, activeRole, loadRoles } = useSchoolStore();
   const segments = useSegments() as string[];
   const router = useRouter();
@@ -34,15 +34,37 @@ export default function RootLayout() {
     PlayfairDisplay_700Bold,
   });
 
-  // Register for push notifications
-  const { scheduleDailyReminder } = useNotifications({ userId: session?.user?.id });
+  // Mount notification listeners + read current permission status.
+  // No system prompt is fired here — that's deferred to the
+  // PrePermissionSheet post-first-lesson.
+  const { permissionGranted } = useNotifications({ userId: session?.user?.id });
 
-  // Schedule daily reminder once profile is loaded
+  // Re-arm the streak-save reminder whenever the inputs change
+  // (streak/xp/permission). Silent no-op if permission isn't granted yet
+  // or if XP was already earned today.
   useEffect(() => {
-    if (profile) {
-      scheduleDailyReminder();
-    }
-  }, [profile, scheduleDailyReminder]);
+    if (!profile || !permissionGranted) return;
+    scheduleStreakSaveReminder({
+      streak: profile.streak ?? 0,
+      xpEarnedToday: dailyStats?.xpEarned ?? 0,
+      preferredHour: 21,
+    }).catch(() => {});
+  }, [profile, dailyStats?.xpEarned, permissionGranted]);
+
+  // Also re-arm on background — covers edge cases where the user
+  // backgrounds before the schedule-on-change useEffect has resolved.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'background' && profile && permissionGranted) {
+        scheduleStreakSaveReminder({
+          streak: profile.streak ?? 0,
+          xpEarnedToday: dailyStats?.xpEarned ?? 0,
+          preferredHour: 21,
+        }).catch(() => {});
+      }
+    });
+    return () => sub.remove();
+  }, [profile, dailyStats?.xpEarned, permissionGranted]);
 
   // Load user data when session becomes available
   useEffect(() => {

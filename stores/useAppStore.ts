@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { UserProfile, DailyStats, Subscription } from '../types';
+import type { UserProfile, DailyStats, Subscription, MotivationReason } from '../types';
 import { fetchProfile, fetchTodayStats, fetchSubscription, fetchReviewItemCount, fetchUserRoles } from '../lib/supabase-queries';
 
 interface AppState {
@@ -10,10 +10,13 @@ interface AppState {
   roles: string[];
   loading: boolean;
   error: string | null;
+  /** Transient, not persisted. Captured during onboarding, consumed by HeroHook copy. */
+  motivation: MotivationReason | null;
 
   loadUserData: (userId: string) => Promise<void>;
   setProfile: (profile: UserProfile | null) => void;
   setDailyStats: (stats: DailyStats | null) => void;
+  setMotivation: (motivation: MotivationReason | null) => void;
   refreshSubscription: (userId: string) => Promise<void>;
   refreshReviewCount: (userId: string) => Promise<void>;
   reset: () => void;
@@ -27,6 +30,7 @@ export const useAppStore = create<AppState>((set) => ({
   roles: [],
   loading: true,
   error: null,
+  motivation: null,
 
   loadUserData: async (userId: string) => {
     set({ loading: true, error: null });
@@ -52,6 +56,7 @@ export const useAppStore = create<AppState>((set) => ({
 
   setProfile: (profile) => set({ profile }),
   setDailyStats: (dailyStats) => set({ dailyStats }),
+  setMotivation: (motivation) => set({ motivation }),
 
   refreshSubscription: async (userId: string) => {
     try {
@@ -79,5 +84,6 @@ export const useAppStore = create<AppState>((set) => ({
     roles: [],
     loading: true,
     error: null,
+    motivation: null,
   }),
 }));

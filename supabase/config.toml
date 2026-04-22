@@ -32,3 +32,21 @@ verify_jwt = false
 # function body via getAuthenticatedUser (_shared/auth.ts).
 [functions.translate]
 verify_jwt = false
+
+# ─── daily-news ───────────────────────────────────────────────────────────
+# Reads shared per-day articles from the daily_news table and records
+# user read-state in user_news_reads. Auth enforced by the function body
+# via getAuthenticatedUser (_shared/auth.ts). Keep verify_jwt off until
+# the project-wide asymmetric-signing / platform-gateway fix lands,
+# otherwise redeploys will resurrect UNAUTHORIZED_LEGACY_JWT errors.
+[functions.daily-news]
+verify_jwt = false
+
+# ─── daily-news-cron ──────────────────────────────────────────────────────
+# Service-role, pg_cron-triggered generator. Authenticates the caller by
+# comparing the Authorization Bearer header against SUPABASE_SERVICE_ROLE_KEY
+# inside the function body — NOT via the platform JWT gate. Must stay
+# verify_jwt = false or the cron's Vault-sourced service-role bearer will
+# be rejected by the gate before reaching the function.
+[functions.daily-news-cron]
+verify_jwt = false

@@ -8,13 +8,10 @@ import { useSchoolStore } from '../../stores/useSchoolStore';
 import { fetchStatsRange } from '../../lib/supabase-queries';
 import AssignmentCard from '../../components/school/AssignmentCard';
 import { Ionicons } from '@expo/vector-icons';
-import { GradientButton } from '../../components/ui/GradientButton';
 import { GradientBackground } from '../../components/ui/GradientBackground';
-import { GradientBorderCard } from '../../components/ui/GradientBorderCard';
 import { GlassSurface } from '../../components/ui/GlassSurface';
 import { TactileButton } from '../../components/ui/TactileButton';
-import { Mascot } from '../../components/mascot/Mascot';
-import { Heading, Body } from '../../components/ui/Text';
+import { HeroHook } from '../../components/home/HeroHook';
 import { WeeklyChart } from '../../components/stats/WeeklyChart';
 import { DailyChallenges } from '../../components/gamification/DailyChallenges';
 import { LevelProgressCard } from '../../components/gamification/LevelProgressCard';
@@ -27,24 +24,72 @@ import { useHearts } from '../../hooks/useHearts';
 import { useLevel } from '../../hooks/useLevel';
 import { useStreakProtection } from '../../hooks/useStreakProtection';
 import { useDailyNews } from '../../hooks/useDailyNews';
+import { useNotifications, scheduleStreakSaveReminder } from '../../hooks/useNotifications';
+import { useOnboardingChecklist } from '../../hooks/useOnboardingChecklist';
 import { DailyNewsCard } from '../../components/news/DailyNewsCard';
-import { OnboardingChecklist } from '../../components/onboarding/OnboardingChecklist';
+import { OnboardingChecklistFab } from '../../components/onboarding/OnboardingChecklistFab';
+import { PrePermissionSheet } from '../../components/gamification/PrePermissionSheet';
+import { levelToNewsTier } from '../../config/app';
 import type { DailyStats } from '../../types';
 
 export default function HomeScreen() {
   const { user } = useAuth();
   const router = useRouter();
-  const { profile, dailyStats, reviewCount, loading, loadUserData } = useAppStore();
+  const { profile, dailyStats, reviewCount, loading, loadUserData, motivation } = useAppStore();
   const [weeklyStats, setWeeklyStats] = useState<DailyStats[]>([]);
   const { hearts, maxHearts, isUnlimited } = useHearts();
   const { level, tier, xpInLevel, xpToNextLevel, progress: levelProgress } = useLevel();
   const { showRepairModal, brokenStreak, freezesAvailable, repairWithFreeze, dismissRepair, hasShield } = useStreakProtection();
   const { enrolledClasses, pendingAssignments, loadStudentSchoolData } = useSchoolStore();
-  const { article, isLoading: newsLoading, isGenerating: newsGenerating, error: newsError, generate: generateNews } = useDailyNews(
+  const newsTier = levelToNewsTier(profile?.level ?? 'intermediate');
+  const { article, isLoading: newsLoading, error: newsError, hasRead: newsHasRead } = useDailyNews(
     user?.id ?? '',
     profile?.targetLanguage ?? 'es',
-    profile?.level ?? 'intermediate'
+    newsTier,
   );
+  const { permissionStatus, requestPermissionsExplicit } = useNotifications({ userId: user?.id });
+  const { markItem: markChecklistItem } = useOnboardingChecklist();
+  const [showPrePermission, setShowPrePermission] = useState(false);
+
+  // Show the pre-permission sheet once, after the learner has completed
+  // their first lesson. Only asks if the OS permission is still undetermined;
+  // if the user has already granted or denied at the OS level, just mark
+  // the checklist item so we don't re-nag.
+  useEffect(() => {
+    if (showPrePermission) return;
+    if (!profile?.onboardingChecklist) return;
+    if (permissionStatus === null) return;
+    const { firstLesson, dailyReminder } = profile.onboardingChecklist;
+    if (!firstLesson || dailyReminder) return;
+    if (permissionStatus === 'undetermined') {
+      setShowPrePermission(true);
+    } else {
+      markChecklistItem('dailyReminder').catch(() => {});
+    }
+  }, [profile?.onboardingChecklist, permissionStatus, showPrePermission, markChecklistItem]);
+
+  const handleEnableReminders = async () => {
+    try {
+      const status = await requestPermissionsExplicit();
+      if (status === 'granted' && profile) {
+        await scheduleStreakSaveReminder({
+          streak: profile.streak ?? 0,
+          xpEarnedToday: dailyStats?.xpEarned ?? 0,
+          preferredHour: 21,
+        });
+      }
+    } finally {
+      await markChecklistItem('dailyReminder').catch(() => {});
+      setShowPrePermission(false);
+    }
+  };
+
+  const handleDismissPrePermission = async () => {
+    // Mark the checklist so we don't keep nagging. User can still opt in
+    // later via Settings → Notifications.
+    await markChecklistItem('dailyReminder').catch(() => {});
+    setShowPrePermission(false);
+  };
 
   const loadWeeklyStats = useCallback(async (userId: string) => {
     const today = new Date();
@@ -75,23 +120,15 @@ export default function HomeScreen() {
     <GradientBackground>
     <View className="flex-1">
       <ScrollView className="flex-1 px-4 pt-2" contentContainerStyle={{ paddingBottom: 100 }}>
-        {/* Onboarding Checklist */}
-        <OnboardingChecklist />
-
-        {/* Greeting with mascot — mascot state tracks streak health */}
-        <View style={{ alignItems: 'center', marginBottom: 24 }}>
-          <Mascot
-            state={(profile?.streak ?? 0) >= 1 ? 'happy' : 'idle'}
-            size="md"
-            style={{ marginBottom: 12 }}
-          />
-          <Heading level={1} style={{ textAlign: 'center' }}>
-            Welcome back{profile?.displayName ? `, ${profile.displayName}` : ''}!
-          </Heading>
-          <Body tone="secondary" style={{ textAlign: 'center', marginTop: 4 }}>
-            {profile?.targetLanguage ? `Learning ${profile.targetLanguage.toUpperCase()}` : user?.email}
-          </Body>
-        </View>
+        {/* Personalized greeting with mascot — time-of-day + motivation-tied outcome line */}
+        <HeroHook
+          displayName={profile?.displayName}
+          targetLanguage={profile?.targetLanguage}
+          dailyGoalMinutes={profile?.dailyGoalMinutes ?? 10}
+          streak={profile?.streak ?? 0}
+          motivation={motivation}
+          fallbackSubtitle={profile?.targetLanguage ? null : (user?.email ?? null)}
+        />
 
         {/* Stats Row */}
         <View className="flex-row gap-3 mb-6">
@@ -132,12 +169,12 @@ export default function HomeScreen() {
           </GlassSurface>
         </View>
 
-        {/* Daily News */}
+        {/* Daily News — article pre-generated at 5 AM ET by the cron */}
         <DailyNewsCard
           article={article}
           isLoading={newsLoading}
-          isGenerating={newsGenerating}
           error={newsError}
+          hasRead={newsHasRead}
           onPress={() => {
             if (article) {
               router.push({
@@ -146,7 +183,6 @@ export default function HomeScreen() {
               } as any);
             }
           }}
-          onGenerate={generateNews}
         />
 
         {/* My Assignments */}
@@ -242,6 +278,19 @@ export default function HomeScreen() {
         onRepair={repairWithFreeze}
         onDismiss={dismissRepair}
       />
+
+      {/* Pre-permission sheet — shown once, post-first-lesson, before the
+          iOS system notification prompt. Lifts opt-in ~2-3× vs cold-firing. */}
+      <PrePermissionSheet
+        visible={showPrePermission}
+        onEnable={handleEnableReminders}
+        onDismiss={handleDismissPrePermission}
+      />
+
+      {/* Floating onboarding checklist — Appcues / Userpilot-style progress
+          ring FAB. Lifted above the tab bar; tap to open a bottom sheet
+          with the full list. Auto-hides when complete or dismissed. */}
+      <OnboardingChecklistFab />
     </View>
     </GradientBackground>
   );

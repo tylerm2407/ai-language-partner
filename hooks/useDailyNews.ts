@@ -1,12 +1,21 @@
 import { useEffect, useState, useCallback } from 'react';
-import { fetchUserDailyNews, generateDailyNews } from '../lib/supabase-queries';
-import type { DailyNewsArticle, ProficiencyLevel } from '../types';
+import { fetchDailyNews, fetchNewsReadStatus, markNewsAsRead } from '../lib/supabase-queries';
+import type { DailyNewsArticle } from '../types';
+import type { NewsTier } from '../config/app';
 
-export function useDailyNews(userId: string, targetLanguage: string, level: ProficiencyLevel) {
+/**
+ * Reads today's shared article for (targetLanguage, tier). Articles are
+ * pre-generated on a 5 AM ET cron; if the cron hasn't fired yet (or
+ * failed), `article` will be null and the UI should show a calm
+ * "on its way" state — no error. No user-triggered generation path
+ * exists any more; that moved to `daily-news-cron`.
+ */
+export function useDailyNews(userId: string, targetLanguage: string, tier: NewsTier) {
   const [article, setArticle] = useState<DailyNewsArticle | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [readAt, setReadAt] = useState<string | null>(null);
+  const [isMarking, setIsMarking] = useState<boolean>(false);
 
   const loadNews = useCallback(async () => {
     if (!userId || !targetLanguage) {
@@ -16,42 +25,53 @@ export function useDailyNews(userId: string, targetLanguage: string, level: Prof
 
     setIsLoading(true);
     setError(null);
+    setReadAt(null);
 
     try {
-      const data = await fetchUserDailyNews(userId);
+      const data = await fetchDailyNews(targetLanguage, tier);
       setArticle(data);
+      if (data) {
+        const existingRead = await fetchNewsReadStatus(userId, data.id).catch(() => null);
+        setReadAt(existingRead);
+      }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to load daily news';
       setError(message);
     } finally {
       setIsLoading(false);
     }
-  }, [userId, targetLanguage]);
+  }, [userId, targetLanguage, tier]);
 
   useEffect(() => {
     loadNews();
   }, [loadNews]);
 
-  const generate = useCallback(async () => {
-    if (!targetLanguage || !level) return;
-
-    setIsGenerating(true);
-    setError(null);
-
+  const markAsRead = useCallback(async () => {
+    if (!article || isMarking || readAt) return;
+    setIsMarking(true);
     try {
-      const data = await generateDailyNews(targetLanguage, level);
-      setArticle(data);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to generate article';
+      const stamp = await markNewsAsRead(article.id);
+      setReadAt(stamp);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to mark as read';
       setError(message);
     } finally {
-      setIsGenerating(false);
+      setIsMarking(false);
     }
-  }, [targetLanguage, level]);
+  }, [article, isMarking, readAt]);
 
   const refresh = useCallback(() => {
     loadNews();
   }, [loadNews]);
 
-  return { article, isLoading, isGenerating, error, generate, refresh };
+  return {
+    article,
+    isLoading,
+    error,
+    hasRead: readAt != null,
+    readAt,
+    markAsRead,
+    isMarking,
+    refresh,
+  };
 }

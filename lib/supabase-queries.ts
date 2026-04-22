@@ -1122,55 +1122,85 @@ export async function updateWritingFeedback(
 }
 
 // ─── Daily News ───────────────────────────────────────────────
+// Shared daily articles — one per (language × tier × date). Written by
+// the `daily-news-cron` service-role function on a 5 AM ET schedule. All
+// users at the same language+tier see the same article that day.
 
-export async function fetchDailyNews(language: string, date?: string): Promise<DailyNewsArticle | null> {
+import type { NewsTier } from '../config/app';
+
+export async function fetchDailyNews(
+  language: string,
+  tier: NewsTier,
+  date?: string,
+): Promise<DailyNewsArticle | null> {
   const targetDate = date ?? new Date().toISOString().split('T')[0];
 
   const { data, error } = await supabase
     .from('daily_news')
     .select('*')
     .eq('language', language)
+    .eq('tier', tier)
     .eq('date', targetDate)
-    .single();
+    .maybeSingle();
 
   if (error && error.code !== 'PGRST116') throw error;
   return data ? mapDailyNewsArticle(data) : null;
 }
 
-export async function fetchUserDailyNews(userId: string, date?: string): Promise<DailyNewsArticle | null> {
-  const targetDate = date ?? new Date().toISOString().split('T')[0];
+/**
+ * Mark an article as read for the current user. Idempotent — re-marking
+ * preserves the original read_at timestamp server-side.
+ */
+export async function markNewsAsRead(articleId: string): Promise<string> {
+  // Ensure the access token is fresh before invoking — eliminates the
+  // `FunctionsFetchError: Failed to send a request to the Edge Function`
+  // class of failure caused by stale cached sessions.
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (!sessionData.session) {
+    const { data: refreshed, error: refreshErr } = await supabase.auth.refreshSession();
+    if (refreshErr || !refreshed.session) {
+      throw new Error('You need to be signed in to mark articles as read.');
+    }
+  }
 
-  const { data, error } = await supabase
-    .from('user_daily_news')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('date', targetDate)
-    .single();
-
-  if (error && error.code !== 'PGRST116') throw error;
-  return data ? mapDailyNewsArticle(data) : null;
-}
-
-export async function generateDailyNews(language: string, level: string): Promise<DailyNewsArticle> {
   const { data, error } = await supabase.functions.invoke('daily-news', {
-    body: { language, level },
+    body: { action: 'mark-read', articleId },
   });
 
   if (error) {
-    // When edge function returns non-2xx, the actual error body is in error.context
-    let message = error.message;
+    let message = error.message ?? 'Failed to mark article as read';
     if (error.context instanceof Response) {
       try {
         const body = await error.context.json();
-        message = body?.error ?? message;
+        if (body?.error) message = body.error;
       } catch {
-        // ignore parse failure
+        // non-JSON body — keep SDK default
       }
+    } else if (error.name === 'FunctionsFetchError') {
+      message = 'Could not reach the article service. Check your connection and try again.';
     }
     throw new Error(message);
   }
-  if (!data?.article) throw new Error('No article returned');
-  return mapDailyNewsArticle(data.article);
+  return (data?.readAt as string) ?? new Date().toISOString();
+}
+
+/**
+ * Check whether the current user has already read a given article.
+ * Returns the read_at ISO string or null.
+ */
+export async function fetchNewsReadStatus(
+  userId: string,
+  articleId: string,
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('user_news_reads')
+    .select('read_at')
+    .eq('user_id', userId)
+    .eq('article_id', articleId)
+    .maybeSingle();
+
+  if (error && error.code !== 'PGRST116') throw error;
+  return data?.read_at ?? null;
 }
 
 // ─── Reading Mappers ────────────────────────────────────────────
