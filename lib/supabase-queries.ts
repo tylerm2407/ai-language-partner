@@ -33,6 +33,9 @@ import type {
   ContentSource,
   GrammarRule,
   SkillType,
+  FeedbackErrorType,
+  CorrectionErrorType,
+  CorrectionSeverity,
   ConversationMessage,
   Organization,
   Classroom,
@@ -1569,6 +1572,163 @@ function mapGrammarRule(row: Record<string, unknown>): GrammarRule {
     tags: row.tags as string[],
     sourceId: (row.source_id as string) ?? null,
   };
+}
+
+// ─── Correction Log (exercise failures) ──────────────────────────
+// The correction_log table (migration 026) is also written to by the
+// ai-chat Edge Function (service-role). For exercise failures, we write
+// client-side under the user's own RLS scope (migration 027 added the
+// INSERT policy). See research.md §10 — Lyster & Ranta: every error the
+// learner makes should be loggable so we can surface recurring mistakes
+// in a weekly drill.
+
+/**
+ * Map FeedbackErrorType -> the correction_log.error_type enum. Note:
+ *  - 'lexical' maps to 'vocabulary' (legacy column enum uses that term).
+ *  - 'phonological' maps to 'other' because the CHECK constraint in
+ *    migration 026 does NOT include 'phonological' and we must not alter
+ *    that migration. See the swarm brief.
+ */
+function mapFeedbackErrorTypeToDbEnum(
+  errorType: FeedbackErrorType
+): CorrectionErrorType {
+  switch (errorType) {
+    case 'grammar':
+      return 'grammar';
+    case 'lexical':
+      return 'vocabulary';
+    case 'spelling':
+      return 'spelling';
+    case 'phonological':
+      return 'other';
+    default:
+      return 'other';
+  }
+}
+
+export async function logExerciseCorrection(params: {
+  userId: string;
+  exerciseId?: string | null;
+  errorType: FeedbackErrorType;
+  original: string;
+  corrected: string;
+  shortLabel: string;
+  explanation?: string | null;
+  severity?: CorrectionSeverity;
+  targetLanguage?: string | null;
+}): Promise<void> {
+  const row = {
+    user_id: params.userId,
+    chat_session_id: null, // exercise writes are not tied to a chat session
+    target_language: params.targetLanguage ?? null,
+    error_type: mapFeedbackErrorTypeToDbEnum(params.errorType),
+    severity: params.severity ?? 'minor',
+    short_label: params.shortLabel.slice(0, 200),
+    original: params.original.slice(0, 500),
+    corrected: params.corrected.slice(0, 500),
+    explanation: params.explanation ?? null,
+    // We intentionally do NOT store exerciseId — the migration-026 table has
+    // no such column. Callers pass it for potential future use (e.g. a
+    // follow-up migration that adds an exercise_id column). Swallow here.
+  };
+
+  const { error } = await supabase.from('correction_log').insert(row);
+  if (error) {
+    // Fire-and-forget: log but do not surface to UI so a logging failure
+    // never blocks the lesson.
+    console.warn('[supabase-queries] logExerciseCorrection failed:', error.message);
+  }
+}
+
+export interface WeeklyMistakeRow {
+  shortLabel: string;
+  count: number;
+  errorType: string;
+  latest: string;
+}
+
+/**
+ * Aggregate this user's most-repeated short_labels from the last 7 days.
+ * Used by the Review tab's "Top mistakes this week" drill (research.md §10).
+ */
+export async function fetchWeeklyTopMistakes(
+  userId: string,
+  limit = 5
+): Promise<WeeklyMistakeRow[]> {
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+  // Supabase-js doesn't natively expose GROUP BY; pull recent rows and
+  // aggregate in-memory. The (user_id, short_label, created_at) index means
+  // this is a narrow scan — volume is bounded by lesson failures per week.
+  const { data, error } = await supabase
+    .from('correction_log')
+    .select('short_label, error_type, created_at')
+    .eq('user_id', userId)
+    .gte('created_at', sevenDaysAgo.toISOString())
+    .not('short_label', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(500); // safety cap
+
+  if (error) throw error;
+
+  const grouped = new Map<string, WeeklyMistakeRow>();
+  for (const row of data ?? []) {
+    const shortLabel = (row as Record<string, unknown>).short_label as string | null;
+    const errorType = ((row as Record<string, unknown>).error_type as string) ?? 'other';
+    const createdAt = (row as Record<string, unknown>).created_at as string;
+    if (!shortLabel) continue;
+
+    const key = `${shortLabel}::${errorType}`;
+    const existing = grouped.get(key);
+    if (existing) {
+      existing.count += 1;
+      if (createdAt > existing.latest) existing.latest = createdAt;
+    } else {
+      grouped.set(key, { shortLabel, count: 1, errorType, latest: createdAt });
+    }
+  }
+
+  return Array.from(grouped.values())
+    .sort((a, b) => (b.count - a.count) || (b.latest.localeCompare(a.latest)))
+    .slice(0, limit);
+}
+
+/**
+ * Fetch up to `limit` exercises that match a weekly-mistake row so the
+ * user can drill the specific skill. Match heuristic:
+ *  1. `subskill = errorType` (exact, e.g. subskill = 'grammar'); OR
+ *  2. `target_grammar ILIKE '%shortLabel%'`; OR
+ *  3. `target_word ILIKE '%shortLabel%'`.
+ *
+ * Returns an empty array if no matches exist so the UI can degrade.
+ */
+export async function fetchDrillExercises(params: {
+  shortLabel: string;
+  errorType: string;
+  limit?: number;
+}): Promise<Exercise[]> {
+  const { shortLabel, errorType } = params;
+  const limit = params.limit ?? 3;
+
+  const cleanLabel = shortLabel.replace(/[%_]/g, ' ').trim();
+  const patterns = [
+    `target_grammar.ilike.%${cleanLabel}%`,
+    `target_word.ilike.%${cleanLabel}%`,
+    `subskill.eq.${errorType}`,
+  ];
+
+  const { data, error } = await supabase
+    .from('exercises')
+    .select('*')
+    .or(patterns.join(','))
+    .limit(limit);
+
+  if (error) {
+    console.warn('[fetchDrillExercises] query failed:', error.message);
+    return [];
+  }
+  return (data ?? []).map(mapExercise);
 }
 
 // ─── Content Sources ────────────────────────────────────────────

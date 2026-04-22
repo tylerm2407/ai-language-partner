@@ -1,12 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { View, Text, Pressable, Platform, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { ExerciseCard } from './ExerciseCard';
+import { FeedbackCard } from './FeedbackCard';
+import { HighlightedText } from '../shared/HighlightedText';
 import { useAudioRecorder } from '../../hooks/useAudioRecorder';
 import { useAudioPlayer } from '../../hooks/useAudioPlayer';
 import { usePhonemeDrill } from '../../hooks/usePhonemeDrill';
 import { scorePronunciation } from '../../lib/ai';
+import type { GradeResult } from '../../lib/grading';
 import type { Exercise, LanguageCode } from '../../types';
 
 interface SpeakingExerciseProps {
@@ -15,17 +18,27 @@ interface SpeakingExerciseProps {
   showResult: boolean;
   userId: string;
   targetLanguage: LanguageCode;
-  // Stream 1 (feedback system) plumbs these through LessonRunner to
-  // every exercise. Accepted as optional pass-throughs; not consumed here.
   cefrLevel?: string;
   onContinue?: () => void;
 }
 
-export function SpeakingExercise({ exercise, onAnswer, showResult, userId, targetLanguage }: SpeakingExerciseProps) {
+export function SpeakingExercise({
+  exercise,
+  onAnswer,
+  showResult,
+  userId,
+  targetLanguage,
+  cefrLevel,
+  onContinue,
+}: SpeakingExerciseProps) {
   const { recording, audioUri, startRecording, stopRecording, getBase64 } = useAudioRecorder();
   const { playing, play } = useAudioPlayer();
   const [scoring, setScoring] = useState(false);
-  const [score, setScore] = useState<{ score: number; feedback: string; transcription?: string } | null>(null);
+  const [scoreState, setScoreState] = useState<
+    | { score: number; feedback: string; transcription?: string }
+    | null
+  >(null);
+  const [result, setResult] = useState<GradeResult | null>(null);
 
   // HVPT replay: when the learner asks to hear the prompt again, cycle
   // through ≥4 distinct ElevenLabs voices for this language so they get
@@ -52,11 +65,11 @@ export function SpeakingExercise({ exercise, onAnswer, showResult, userId, targe
     try {
       const base64 = await getBase64();
       if (!base64) {
-        setScore({ score: 0, feedback: 'Could not process audio.' });
+        setScoreState({ score: 0, feedback: 'Could not process audio.' });
         return;
       }
 
-      const result = await scorePronunciation({
+      const pronounciation = await scorePronunciation({
         userId,
         audioBase64: base64,
         expectedText: exercise.correctAnswer,
@@ -65,9 +78,26 @@ export function SpeakingExercise({ exercise, onAnswer, showResult, userId, targe
         targetWord: exercise.targetWord,
       });
 
-      setScore({ score: result.score, feedback: result.feedback, transcription: result.transcription });
+      setScoreState({
+        score: pronounciation.score,
+        feedback: pronounciation.feedback,
+        transcription: pronounciation.transcription,
+      });
 
-      const isCorrect = result.score >= 60;
+      const isCorrect = pronounciation.score >= 60;
+      // Synthesize a GradeResult so FeedbackCard can show the phonological
+      // recast branch on failure. Speaking is the only exercise type that
+      // maps to 'phonological' (see classifyError in lib/grading.ts).
+      const grade: GradeResult = {
+        isCorrect,
+        accuracy: pronounciation.score / 100,
+        feedback: pronounciation.feedback,
+        normalizedUserAnswer: pronounciation.transcription ?? '',
+        normalizedCorrectAnswer: exercise.correctAnswer,
+        errorType: isCorrect ? null : 'phonological',
+      };
+      setResult(grade);
+
       if (Platform.OS !== 'web') {
         if (isCorrect) {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -76,23 +106,37 @@ export function SpeakingExercise({ exercise, onAnswer, showResult, userId, targe
         }
       }
 
-      onAnswer(isCorrect, `score:${result.score}`);
+      onAnswer(isCorrect, `score:${pronounciation.score}`);
     } catch {
-      setScore({ score: 0, feedback: 'Scoring failed. Please try again.' });
+      setScoreState({ score: 0, feedback: 'Scoring failed. Please try again.' });
     } finally {
       setScoring(false);
     }
   };
 
+  const handleRetry = () => {
+    setScoreState(null);
+    setResult(null);
+  };
+
   const getScoreColor = () => {
-    if (!score) return {};
-    if (score.score >= 80) return { bg: 'bg-success-bg', text: 'text-success' };
-    if (score.score >= 60) return { bg: 'bg-warning-bg', text: 'text-warning' };
+    if (!scoreState) return {};
+    if (scoreState.score >= 80) return { bg: 'bg-success-bg', text: 'text-success' };
+    if (scoreState.score >= 60) return { bg: 'bg-warning-bg', text: 'text-warning' };
     return { bg: 'bg-error-bg', text: 'text-error' };
   };
 
+  const highlight = exercise.targetWord ?? exercise.targetGrammar;
+  const promptNode = (
+    <HighlightedText
+      text={exercise.prompt}
+      highlight={highlight}
+      className="text-text-primary text-[22px] font-sans-semibold"
+    />
+  );
+
   return (
-    <ExerciseCard type={exercise.type} prompt={exercise.prompt}>
+    <ExerciseCard type={exercise.type} promptNode={promptNode}>
       {/* Prompt audio playback */}
       {exercise.promptAudioUrl && (
         <View className="mb-4">
@@ -127,7 +171,7 @@ export function SpeakingExercise({ exercise, onAnswer, showResult, userId, targe
       <Pressable
         className={`w-20 h-20 rounded-full items-center justify-center self-center mb-4 ${recording ? 'bg-error' : 'bg-primary'}`}
         onPress={handleToggleRecord}
-        disabled={scoring || score !== null}
+        disabled={scoring || scoreState !== null}
         accessibilityRole="button"
         accessibilityLabel={recording ? 'Stop recording' : 'Start recording'}
       >
@@ -139,11 +183,11 @@ export function SpeakingExercise({ exercise, onAnswer, showResult, userId, targe
       </Pressable>
 
       <Text className="text-text-secondary text-sm text-center mb-4">
-        {recording ? 'Recording... Tap to stop' : score ? '' : 'Tap to record your answer'}
+        {recording ? 'Recording... Tap to stop' : scoreState ? '' : 'Tap to record your answer'}
       </Text>
 
       {/* Score button */}
-      {audioUri && !score && !scoring && (
+      {audioUri && !scoreState && !scoring && (
         <Pressable
           className="bg-primary py-4 px-12 rounded-[14px] items-center"
           onPress={handleScore}
@@ -162,21 +206,34 @@ export function SpeakingExercise({ exercise, onAnswer, showResult, userId, targe
       )}
 
       {/* Score display */}
-      {score && (
+      {scoreState && (
         <View className="items-center">
           <View className={`w-[100px] h-[100px] rounded-full items-center justify-center ${getScoreColor().bg}`}>
             <Text className={`text-[32px] font-bold ${getScoreColor().text}`}>
-              {score.score}%
+              {scoreState.score}%
             </Text>
           </View>
-          <Text className="text-text-primary text-base mt-3 text-center">{score.feedback}</Text>
-          {score.transcription && (
+          <Text className="text-text-primary text-base mt-3 text-center">{scoreState.feedback}</Text>
+          {scoreState.transcription && (
             <Text className="text-text-tertiary text-xs mt-2 text-center italic">
-              Heard: "{score.transcription}"
+              Heard: "{scoreState.transcription}"
             </Text>
           )}
         </View>
       )}
+
+      {/* Differentiated feedback — phonological recast on failure */}
+      {result && onContinue ? (
+        <FeedbackCard
+          result={result}
+          exercise={exercise}
+          language={targetLanguage}
+          cefrLevel={cefrLevel}
+          userId={userId}
+          onRetry={handleRetry}
+          onContinue={onContinue}
+        />
+      ) : null}
     </ExerciseCard>
   );
 }

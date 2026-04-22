@@ -63,6 +63,15 @@ export type ProficiencyLevel = 'beginner' | 'elementary' | 'intermediate' | 'upp
  */
 export type MotivationReason = 'travel' | 'family' | 'work' | 'brain' | 'curious';
 
+/**
+ * Typed error classification from `gradeAnswer` used to drive differentiated
+ * feedback UX (Lyster & Ranta): grammar errors get metalinguistic cues + a
+ * rule card; phonological errors get a recast; spelling errors get inline
+ * corrections; lexical errors get elicitation + (optional) rule card.
+ * `null` means the classifier could not confidently assign a type.
+ */
+export type FeedbackErrorType = 'grammar' | 'lexical' | 'phonological' | 'spelling';
+
 // ─── Course / Unit / Lesson ─────────────────────────────────────
 
 export interface Course {

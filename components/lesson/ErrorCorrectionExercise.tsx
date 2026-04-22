@@ -1,24 +1,46 @@
 import { useState } from 'react';
 import { View, Text, TextInput, Pressable } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { FeedbackCard } from './FeedbackCard';
+import { HighlightedText } from '../shared/HighlightedText';
 import { gradeAnswer } from '../../lib/grading';
+import type { GradeResult } from '../../lib/grading';
 import type { Exercise } from '../../types';
 
 interface Props {
   exercise: Exercise;
   onAnswer: (isCorrect: boolean, answer: string) => void;
+  userId?: string;
+  language?: string;
+  cefrLevel?: string;
+  onContinue?: () => void;
 }
 
-export function ErrorCorrectionExercise({ exercise, onAnswer }: Props) {
+export function ErrorCorrectionExercise({
+  exercise,
+  onAnswer,
+  userId,
+  language,
+  cefrLevel,
+  onContinue,
+}: Props) {
   const [userInput, setUserInput] = useState('');
   const [isRevealed, setIsRevealed] = useState(false);
-  const [isCorrect, setIsCorrect] = useState(false);
+  const [result, setResult] = useState<GradeResult | null>(null);
 
   const errorSentence = (exercise.metadata?.error_sentence as string) ?? exercise.prompt;
+  const highlight = exercise.targetWord ?? exercise.targetGrammar;
 
   const handleCheck = () => {
-    const grade = gradeAnswer(userInput, exercise.correctAnswer, exercise.acceptedAnswers);
-    setIsCorrect(grade.isCorrect);
+    const grade = gradeAnswer(userInput, exercise.correctAnswer, exercise.acceptedAnswers, {
+      exerciseHints: {
+        exerciseType: exercise.type,
+        skillType: exercise.skillType,
+        targetGrammar: exercise.targetGrammar,
+        targetWord: exercise.targetWord,
+      },
+    });
+    setResult(grade);
     setIsRevealed(true);
 
     if (grade.isCorrect) {
@@ -26,11 +48,16 @@ export function ErrorCorrectionExercise({ exercise, onAnswer }: Props) {
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
+    onAnswer(grade.isCorrect, userInput);
   };
 
-  const handleContinue = () => {
-    onAnswer(isCorrect, userInput);
+  const handleRetry = () => {
+    setUserInput('');
+    setIsRevealed(false);
+    setResult(null);
   };
+
+  const isCorrect = result?.isCorrect ?? false;
 
   return (
     <View style={{ flex: 1 }}>
@@ -43,9 +70,11 @@ export function ErrorCorrectionExercise({ exercise, onAnswer }: Props) {
         backgroundColor: '#FEE2E2', borderRadius: 20, padding: 24, marginBottom: 20, minHeight: 100,
         justifyContent: 'center',
       }}>
-        <Text style={{ fontSize: 18, lineHeight: 28, color: '#111' }}>
-          {errorSentence}
-        </Text>
+        <HighlightedText
+          text={errorSentence}
+          highlight={highlight}
+          className="text-[#111] text-[18px] leading-7"
+        />
         <Text style={{ fontSize: 13, color: '#EF4444', marginTop: 8, fontStyle: 'italic' }}>
           This sentence contains an error. Type the corrected version below.
         </Text>
@@ -74,35 +103,21 @@ export function ErrorCorrectionExercise({ exercise, onAnswer }: Props) {
         accessibilityLabel="Corrected sentence"
       />
 
-      {/* Feedback */}
-      {isRevealed && (
-        <View style={{
-          backgroundColor: isCorrect ? '#DCFCE7' : '#FEE2E2',
-          borderRadius: 14, padding: 16, marginBottom: 16,
-        }}>
-          {isCorrect ? (
-            <Text style={{ fontSize: 14, color: '#22C55E', fontWeight: '600' }}>Correct!</Text>
-          ) : (
-            <View>
-              <Text style={{ fontSize: 14, color: '#EF4444', marginBottom: 4 }}>
-                Original (with error):
-              </Text>
-              <Text style={{ fontSize: 15, color: '#EF4444', textDecorationLine: 'line-through', marginBottom: 8 }}>
-                {errorSentence}
-              </Text>
-              <Text style={{ fontSize: 14, color: '#22C55E', marginBottom: 4 }}>
-                Correct version:
-              </Text>
-              <Text style={{ fontSize: 15, color: '#22C55E', fontWeight: '600' }}>
-                {exercise.correctAnswer}
-              </Text>
-            </View>
-          )}
-        </View>
-      )}
+      {/* Differentiated feedback */}
+      {result && isRevealed && language && onContinue ? (
+        <FeedbackCard
+          result={result}
+          exercise={exercise}
+          language={language}
+          cefrLevel={cefrLevel}
+          userId={userId}
+          onRetry={handleRetry}
+          onContinue={onContinue}
+        />
+      ) : null}
 
       {/* Button */}
-      {!isRevealed ? (
+      {!isRevealed && (
         <Pressable
           onPress={handleCheck}
           disabled={userInput.trim().length === 0}
@@ -114,15 +129,6 @@ export function ErrorCorrectionExercise({ exercise, onAnswer }: Props) {
           accessibilityLabel="Check answer"
         >
           <Text style={{ color: '#fff', fontSize: 18, fontWeight: '600' }}>Check</Text>
-        </Pressable>
-      ) : (
-        <Pressable
-          onPress={handleContinue}
-          style={{ backgroundColor: '#6366F1', paddingVertical: 16, borderRadius: 14, alignItems: 'center' }}
-          accessibilityRole="button"
-          accessibilityLabel="Continue"
-        >
-          <Text style={{ color: '#fff', fontSize: 18, fontWeight: '600' }}>Continue</Text>
         </Pressable>
       )}
     </View>

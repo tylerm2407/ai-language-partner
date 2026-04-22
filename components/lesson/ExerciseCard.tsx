@@ -5,7 +5,16 @@ import type { ExerciseType } from '../../types';
 interface ExerciseCardProps {
   children: ReactNode;
   type: ExerciseType;
-  prompt: string;
+  /**
+   * Plain-text prompt. If `promptNode` is provided, it is rendered instead
+   * (e.g. to allow target-form highlighting via `<HighlightedText>`).
+   */
+  prompt?: string;
+  /**
+   * Renders a custom ReactNode in place of the default prompt Text. Takes
+   * precedence over `prompt`.
+   */
+  promptNode?: ReactNode;
 }
 
 const TYPE_LABELS: Record<ExerciseType, string> = {
@@ -27,7 +36,7 @@ const TYPE_LABELS: Record<ExerciseType, string> = {
   mini_dialogue: 'Complete the dialogue',
 };
 
-export function ExerciseCard({ children, type, prompt }: ExerciseCardProps) {
+export function ExerciseCard({ children, type, prompt, promptNode }: ExerciseCardProps) {
   return (
     <View className="bg-dark-card rounded-[20px] p-6 min-h-[200px] shadow-card border border-white/10">
       <Text
@@ -36,12 +45,16 @@ export function ExerciseCard({ children, type, prompt }: ExerciseCardProps) {
       >
         {TYPE_LABELS[type]}
       </Text>
-      <Text
-        className="text-text-primary text-[22px] font-sans-semibold mb-6"
-        accessibilityRole="header"
-      >
-        {prompt}
-      </Text>
+      {promptNode ? (
+        <View className="mb-6">{promptNode}</View>
+      ) : prompt ? (
+        <Text
+          className="text-text-primary text-[22px] font-sans-semibold mb-6"
+          accessibilityRole="header"
+        >
+          {prompt}
+        </Text>
+      ) : null}
       {children}
     </View>
   );

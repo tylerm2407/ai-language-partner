@@ -30,6 +30,8 @@ interface LessonRunnerProps {
   xpReward: number;
   userId: string;
   targetLanguage: LanguageCode;
+  /** CEFR level for grammar-rule lookups in per-exercise FeedbackCard. */
+  cefrLevel?: string;
   onComplete: (results: LessonResult) => void;
   onExit: () => void;
   // Hearts integration
@@ -54,6 +56,7 @@ export function LessonRunner({
   xpReward,
   userId,
   targetLanguage,
+  cefrLevel,
   onComplete,
   onExit,
   hearts = 5,
@@ -183,17 +186,16 @@ export function LessonRunner({
       {/* Exercise */}
       <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 40 }}>
         <ExerciseWrapper {...wrapperProps}>
-          {renderExercise(currentExercise, handleAnswer, showResult, userId, targetLanguage)}
+          {renderExercise(
+            currentExercise,
+            handleAnswer,
+            showResult,
+            userId,
+            targetLanguage,
+            cefrLevel,
+            handleNext,
+          )}
         </ExerciseWrapper>
-
-        {showResult && (
-          <View className="mt-6">
-            <Button
-              label={currentIndex < exercises.length - 1 ? 'Next' : 'Finish'}
-              onPress={handleNext}
-            />
-          </View>
-        )}
       </ScrollView>
 
       {/* Out of Hearts Modal */}
@@ -214,19 +216,26 @@ function renderExercise(
   onAnswer: (correct: boolean, answer: string) => void,
   showResult: boolean,
   userId: string,
-  targetLanguage: LanguageCode
+  targetLanguage: LanguageCode,
+  cefrLevel: string | undefined,
+  onContinue: () => void,
 ) {
+  // Shared props threaded into every exercise so the inner FeedbackCard
+  // can: (1) look up grammar rules, (2) log to correction_log, (3) fire
+  // onContinue to advance the lesson without the old global Next button.
+  const shared = { userId, language: targetLanguage, cefrLevel, onContinue };
+
   switch (exercise.type) {
     case 'multiple_choice':
-      return <MultipleChoice exercise={exercise} onAnswer={onAnswer} showResult={showResult} />;
+      return <MultipleChoice exercise={exercise} onAnswer={onAnswer} showResult={showResult} {...shared} />;
     case 'translate_to_target':
     case 'translate_to_native':
-      return <TranslationExercise exercise={exercise} onAnswer={onAnswer} showResult={showResult} />;
+      return <TranslationExercise exercise={exercise} onAnswer={onAnswer} showResult={showResult} {...shared} />;
     case 'fill_blank':
-      return <FillBlankExercise exercise={exercise} onAnswer={onAnswer} showResult={showResult} />;
+      return <FillBlankExercise exercise={exercise} onAnswer={onAnswer} showResult={showResult} {...shared} />;
     case 'listening_choice':
     case 'listening_type':
-      return <ListeningExercise exercise={exercise} onAnswer={onAnswer} showResult={showResult} />;
+      return <ListeningExercise exercise={exercise} onAnswer={onAnswer} showResult={showResult} {...shared} />;
     case 'speaking':
       return (
         <SpeakingExercise
@@ -235,26 +244,37 @@ function renderExercise(
           showResult={showResult}
           userId={userId}
           targetLanguage={targetLanguage}
+          cefrLevel={cefrLevel}
+          onContinue={onContinue}
         />
       );
     case 'free_production':
-      return <TranslationExercise exercise={exercise} onAnswer={onAnswer} showResult={showResult} />;
+      return <TranslationExercise exercise={exercise} onAnswer={onAnswer} showResult={showResult} {...shared} />;
     case 'cloze_deletion':
-      return <ClozeExercise exercise={exercise} onAnswer={onAnswer} />;
+      return <ClozeExercise exercise={exercise} onAnswer={onAnswer} {...shared} />;
     case 'sentence_construction':
-      return <SentenceConstructionExercise exercise={exercise} onAnswer={onAnswer} />;
+      return <SentenceConstructionExercise exercise={exercise} onAnswer={onAnswer} {...shared} />;
     case 'error_correction':
-      return <ErrorCorrectionExercise exercise={exercise} onAnswer={onAnswer} />;
+      return <ErrorCorrectionExercise exercise={exercise} onAnswer={onAnswer} {...shared} />;
     case 'dictation':
-      return <DictationExercise exercise={exercise} onAnswer={onAnswer} />;
+      return (
+        <DictationExercise
+          exercise={exercise}
+          onAnswer={onAnswer}
+          userId={userId}
+          targetLanguage={targetLanguage}
+          cefrLevel={cefrLevel}
+          onContinue={onContinue}
+        />
+      );
     case 'collocation_match':
-      return <CollocationMatch exercise={exercise} onAnswer={onAnswer} showResult={showResult} />;
+      return <CollocationMatch exercise={exercise} onAnswer={onAnswer} showResult={showResult} {...shared} />;
     case 'word_form':
-      return <WordFormExercise exercise={exercise} onAnswer={onAnswer} showResult={showResult} />;
+      return <WordFormExercise exercise={exercise} onAnswer={onAnswer} showResult={showResult} {...shared} />;
     case 'sentence_transformation':
-      return <SentenceTransformExercise exercise={exercise} onAnswer={onAnswer} showResult={showResult} />;
+      return <SentenceTransformExercise exercise={exercise} onAnswer={onAnswer} showResult={showResult} {...shared} />;
     case 'mini_dialogue':
-      return <MiniDialogueExercise exercise={exercise} onAnswer={onAnswer} showResult={showResult} />;
+      return <MiniDialogueExercise exercise={exercise} onAnswer={onAnswer} showResult={showResult} {...shared} />;
     default:
       return (
         <View className="p-6">

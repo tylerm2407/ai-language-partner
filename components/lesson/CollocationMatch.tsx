@@ -2,19 +2,33 @@ import { useState } from 'react';
 import { View, Text, Pressable, Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { ExerciseCard } from './ExerciseCard';
+import { FeedbackCard } from './FeedbackCard';
 import { Button } from '../ui/Button';
+import type { GradeResult } from '../../lib/grading';
 import type { Exercise } from '../../types';
 
 interface CollocationMatchProps {
   exercise: Exercise;
   onAnswer: (correct: boolean, answer: string) => void;
   showResult: boolean;
+  userId?: string;
+  language?: string;
+  cefrLevel?: string;
+  onContinue?: () => void;
 }
 
-export function CollocationMatch({ exercise, onAnswer, showResult }: CollocationMatchProps) {
+export function CollocationMatch({
+  exercise,
+  onAnswer,
+  showResult,
+  userId,
+  language,
+  cefrLevel,
+  onContinue,
+}: CollocationMatchProps) {
   const [selectedWords, setSelectedWords] = useState<Set<string>>(new Set());
   const [submitted, setSubmitted] = useState(false);
-  const [isCorrect, setIsCorrect] = useState(false);
+  const [result, setResult] = useState<GradeResult | null>(null);
 
   const collocations: string[] = (exercise.metadata?.collocations as string[]) ?? [];
   const distractors: string[] = exercise.distractors ?? [];
@@ -48,19 +62,39 @@ export function CollocationMatch({ exercise, onAnswer, showResult }: Collocation
       correctSet.has(s.toLowerCase())
     );
 
-    const correct = allCorrectSelected && noWrongSelected;
-    setIsCorrect(correct);
+    const isCorrect = allCorrectSelected && noWrongSelected;
+    const joined = selectedArr.join(', ');
+
+    // Synthesize a GradeResult so FeedbackCard can branch. Lexical error
+    // type: wrong collocation is a vocabulary miss (target word is known).
+    const grade: GradeResult = {
+      isCorrect,
+      accuracy: isCorrect ? 1 : 0,
+      feedback: isCorrect
+        ? 'Correct!'
+        : `Incorrect. The correct collocations are: ${collocations.join(', ')}`,
+      normalizedUserAnswer: joined,
+      normalizedCorrectAnswer: collocations.join(', '),
+      errorType: isCorrect ? null : 'lexical',
+    };
+    setResult(grade);
     setSubmitted(true);
 
     if (Platform.OS !== 'web') {
-      if (correct) {
+      if (isCorrect) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } else {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
     }
 
-    onAnswer(correct, selectedArr.join(', '));
+    onAnswer(isCorrect, joined);
+  };
+
+  const handleRetry = () => {
+    setSelectedWords(new Set());
+    setSubmitted(false);
+    setResult(null);
   };
 
   const getOptionStyle = (word: string) => {
@@ -113,15 +147,17 @@ export function CollocationMatch({ exercise, onAnswer, showResult }: Collocation
         ))}
       </View>
 
-      {(submitted || showResult) && (
-        <View className={`mt-3 p-3 rounded-[14px] ${isCorrect ? 'bg-success-bg' : 'bg-error-bg'}`}>
-          <Text className={`text-sm font-medium ${isCorrect ? 'text-success' : 'text-error'}`}>
-            {isCorrect
-              ? 'Correct!'
-              : `Incorrect. The correct collocations are: ${collocations.join(', ')}`}
-          </Text>
-        </View>
-      )}
+      {result && onContinue && language ? (
+        <FeedbackCard
+          result={result}
+          exercise={exercise}
+          language={language}
+          cefrLevel={cefrLevel}
+          userId={userId}
+          onRetry={handleRetry}
+          onContinue={onContinue}
+        />
+      ) : null}
 
       {!submitted && !showResult && (
         <View className="mt-4">

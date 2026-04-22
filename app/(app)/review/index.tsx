@@ -155,10 +155,25 @@ export default function ReviewScreen() {
               paddingHorizontal: 32,
               paddingVertical: 14,
               borderRadius: 12,
+              marginBottom: 12,
             }}
             accessibilityRole="button"
           >
             <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>Learn New Words</Text>
+          </Pressable>
+          {/* Top-mistakes drill entry (research.md §10 — Lyster & Ranta). */}
+          <Pressable
+            onPress={() => router.push('/(app)/review/top-mistakes')}
+            style={{
+              paddingHorizontal: 20,
+              paddingVertical: 10,
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: 'rgba(255,255,255,0.12)',
+            }}
+            accessibilityRole="button"
+          >
+            <Text style={{ color: '#94A3B8', fontSize: 14 }}>See top mistakes this week</Text>
           </Pressable>
         </View>
       </SafeAreaView>

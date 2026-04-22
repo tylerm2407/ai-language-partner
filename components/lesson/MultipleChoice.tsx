@@ -2,35 +2,69 @@ import { useState } from 'react';
 import { View, Text, Pressable, Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { ExerciseCard } from './ExerciseCard';
+import { FeedbackCard } from './FeedbackCard';
+import { HighlightedText } from '../shared/HighlightedText';
+import { gradeAnswer } from '../../lib/grading';
+import type { GradeResult } from '../../lib/grading';
 import type { Exercise } from '../../types';
 
 interface MultipleChoiceProps {
   exercise: Exercise;
   onAnswer: (correct: boolean, answer: string) => void;
   showResult: boolean;
+  userId?: string;
+  language?: string;
+  cefrLevel?: string;
+  onContinue?: () => void;
 }
 
-export function MultipleChoice({ exercise, onAnswer, showResult }: MultipleChoiceProps) {
+export function MultipleChoice({
+  exercise,
+  onAnswer,
+  showResult,
+  userId,
+  language,
+  cefrLevel,
+  onContinue,
+}: MultipleChoiceProps) {
   const [selected, setSelected] = useState<string | null>(null);
+  const [result, setResult] = useState<GradeResult | null>(null);
   const options = exercise.options ?? [];
 
   const handleSelect = (option: string) => {
     if (showResult || selected !== null) return;
     setSelected(option);
 
-    const isCorrect =
-      option.toLowerCase() === exercise.correctAnswer.toLowerCase() ||
-      exercise.acceptedAnswers.map((a) => a.toLowerCase()).includes(option.toLowerCase());
+    // Use gradeAnswer so we get the classified errorType for FeedbackCard.
+    const grade = gradeAnswer(
+      option,
+      exercise.correctAnswer,
+      exercise.acceptedAnswers,
+      {
+        exerciseHints: {
+          exerciseType: exercise.type,
+          skillType: exercise.skillType,
+          targetGrammar: exercise.targetGrammar,
+          targetWord: exercise.targetWord,
+        },
+      },
+    );
+    setResult(grade);
 
     if (Platform.OS !== 'web') {
-      if (isCorrect) {
+      if (grade.isCorrect) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } else {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
     }
 
-    onAnswer(isCorrect, option);
+    onAnswer(grade.isCorrect, option);
+  };
+
+  const handleRetry = () => {
+    setSelected(null);
+    setResult(null);
   };
 
   const getOptionStyle = (option: string) => {
@@ -54,8 +88,17 @@ export function MultipleChoice({ exercise, onAnswer, showResult }: MultipleChoic
     return 'bg-dark-card-alt border-2 border-transparent';
   };
 
+  const highlight = exercise.targetWord ?? exercise.targetGrammar;
+  const promptNode = (
+    <HighlightedText
+      text={exercise.prompt}
+      highlight={highlight}
+      className="text-text-primary text-[22px] font-sans-semibold"
+    />
+  );
+
   return (
-    <ExerciseCard type={exercise.type} prompt={exercise.prompt}>
+    <ExerciseCard type={exercise.type} promptNode={promptNode}>
       <View>
         {options.map((option, index) => (
           <Pressable
@@ -76,6 +119,18 @@ export function MultipleChoice({ exercise, onAnswer, showResult }: MultipleChoic
           </Pressable>
         ))}
       </View>
+
+      {result && onContinue && language ? (
+        <FeedbackCard
+          result={result}
+          exercise={exercise}
+          language={language}
+          cefrLevel={cefrLevel}
+          userId={userId}
+          onRetry={handleRetry}
+          onContinue={onContinue}
+        />
+      ) : null}
     </ExerciseCard>
   );
 }

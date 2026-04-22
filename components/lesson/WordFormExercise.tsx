@@ -2,32 +2,55 @@ import { useState } from 'react';
 import { View, Text, TextInput, Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { ExerciseCard } from './ExerciseCard';
+import { FeedbackCard } from './FeedbackCard';
+import { HighlightedText } from '../shared/HighlightedText';
 import { Button } from '../ui/Button';
 import { gradeAnswer } from '../../lib/grading';
+import type { GradeResult } from '../../lib/grading';
 import type { Exercise } from '../../types';
 
 interface WordFormExerciseProps {
   exercise: Exercise;
   onAnswer: (correct: boolean, answer: string) => void;
   showResult: boolean;
+  userId?: string;
+  language?: string;
+  cefrLevel?: string;
+  onContinue?: () => void;
 }
 
-export function WordFormExercise({ exercise, onAnswer, showResult }: WordFormExerciseProps) {
+export function WordFormExercise({
+  exercise,
+  onAnswer,
+  showResult,
+  userId,
+  language,
+  cefrLevel,
+  onContinue,
+}: WordFormExerciseProps) {
   const [answer, setAnswer] = useState('');
   const [submitted, setSubmitted] = useState(false);
-  const [result, setResult] = useState<{ isCorrect: boolean; feedback: string } | null>(null);
+  const [result, setResult] = useState<GradeResult | null>(null);
 
   const baseWord = (exercise.metadata?.baseWord as string) ?? '';
   const wordFamily = (exercise.metadata?.wordFamily as string[]) ?? [];
 
   // Split prompt on "___" to show sentence with blank
   const parts = exercise.prompt.split('___');
+  const highlight = exercise.targetWord ?? exercise.targetGrammar ?? baseWord;
 
   const handleSubmit = () => {
     if (!answer.trim() || submitted) return;
 
-    const grade = gradeAnswer(answer, exercise.correctAnswer, exercise.acceptedAnswers);
-    setResult({ isCorrect: grade.isCorrect, feedback: grade.feedback });
+    const grade = gradeAnswer(answer, exercise.correctAnswer, exercise.acceptedAnswers, {
+      exerciseHints: {
+        exerciseType: exercise.type,
+        skillType: exercise.skillType,
+        targetGrammar: exercise.targetGrammar,
+        targetWord: exercise.targetWord,
+      },
+    });
+    setResult(grade);
     setSubmitted(true);
 
     if (Platform.OS !== 'web') {
@@ -39,6 +62,12 @@ export function WordFormExercise({ exercise, onAnswer, showResult }: WordFormExe
     }
 
     onAnswer(grade.isCorrect, answer);
+  };
+
+  const handleRetry = () => {
+    setAnswer('');
+    setSubmitted(false);
+    setResult(null);
   };
 
   const getBorderClass = () => {
@@ -66,17 +95,19 @@ export function WordFormExercise({ exercise, onAnswer, showResult }: WordFormExe
       )}
 
       <View className="mb-4">
-        <Text className="text-text-primary text-lg leading-7">
-          {parts.length > 1 ? (
-            <>
-              {parts[0]}
-              <Text className="text-primary font-bold"> _____ </Text>
-              {parts[1]}
-            </>
-          ) : (
-            exercise.prompt
-          )}
-        </Text>
+        {parts.length > 1 ? (
+          <Text className="text-text-primary text-lg leading-7">
+            <HighlightedText text={parts[0] ?? ''} highlight={highlight} />
+            <Text className="text-primary font-bold"> _____ </Text>
+            <HighlightedText text={parts[1] ?? ''} highlight={highlight} />
+          </Text>
+        ) : (
+          <HighlightedText
+            text={exercise.prompt}
+            highlight={highlight}
+            className="text-text-primary text-lg leading-7"
+          />
+        )}
       </View>
 
       <TextInput
@@ -91,13 +122,17 @@ export function WordFormExercise({ exercise, onAnswer, showResult }: WordFormExe
         accessibilityHint="Type the correct form of the word"
       />
 
-      {(submitted || showResult) && result && (
-        <View className={`mt-3 p-3 rounded-[14px] ${result.isCorrect ? 'bg-success-bg' : 'bg-error-bg'}`}>
-          <Text className={`text-sm font-medium ${result.isCorrect ? 'text-success' : 'text-error'}`}>
-            {result.feedback}
-          </Text>
-        </View>
-      )}
+      {result && onContinue && language ? (
+        <FeedbackCard
+          result={result}
+          exercise={exercise}
+          language={language}
+          cefrLevel={cefrLevel}
+          userId={userId}
+          onRetry={handleRetry}
+          onContinue={onContinue}
+        />
+      ) : null}
 
       {!submitted && !showResult && (
         <View className="mt-4">

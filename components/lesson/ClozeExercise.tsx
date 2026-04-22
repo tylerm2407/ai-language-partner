@@ -1,27 +1,50 @@
 import { useState } from 'react';
 import { View, Text, TextInput, Pressable } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { FeedbackCard } from './FeedbackCard';
+import { HighlightedText } from '../shared/HighlightedText';
 import { gradeAnswer } from '../../lib/grading';
+import type { GradeResult } from '../../lib/grading';
 import type { Exercise } from '../../types';
 
 interface Props {
   exercise: Exercise;
   onAnswer: (isCorrect: boolean, answer: string) => void;
+  userId?: string;
+  language?: string;
+  cefrLevel?: string;
+  onContinue?: () => void;
 }
 
-export function ClozeExercise({ exercise, onAnswer }: Props) {
+export function ClozeExercise({
+  exercise,
+  onAnswer,
+  userId,
+  language,
+  cefrLevel,
+  onContinue,
+}: Props) {
   const [userInput, setUserInput] = useState('');
   const [isRevealed, setIsRevealed] = useState(false);
-  const [isCorrect, setIsCorrect] = useState(false);
+  const [result, setResult] = useState<GradeResult | null>(null);
 
   // The prompt contains the sentence with "___" as the blank
   const parts = exercise.prompt.split('___');
   const beforeBlank = parts[0] ?? '';
   const afterBlank = parts[1] ?? '';
 
+  const highlight = exercise.targetWord ?? exercise.targetGrammar;
+
   const handleCheck = () => {
-    const grade = gradeAnswer(userInput, exercise.correctAnswer, exercise.acceptedAnswers);
-    setIsCorrect(grade.isCorrect);
+    const grade = gradeAnswer(userInput, exercise.correctAnswer, exercise.acceptedAnswers, {
+      exerciseHints: {
+        exerciseType: exercise.type,
+        skillType: exercise.skillType,
+        targetGrammar: exercise.targetGrammar,
+        targetWord: exercise.targetWord,
+      },
+    });
+    setResult(grade);
     setIsRevealed(true);
 
     if (grade.isCorrect) {
@@ -29,11 +52,19 @@ export function ClozeExercise({ exercise, onAnswer }: Props) {
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
+    // Notify parent — this exercise historically deferred onAnswer to the
+    // Continue button; updating now so LessonRunner can trigger its own
+    // visual effects (sparkle / shake) without a two-step tap.
+    onAnswer(grade.isCorrect, userInput);
   };
 
-  const handleContinue = () => {
-    onAnswer(isCorrect, userInput);
+  const handleRetry = () => {
+    setUserInput('');
+    setIsRevealed(false);
+    setResult(null);
   };
+
+  const isCorrect = result?.isCorrect ?? false;
 
   return (
     <View style={{ flex: 1 }}>
@@ -47,7 +78,7 @@ export function ClozeExercise({ exercise, onAnswer }: Props) {
         justifyContent: 'center',
       }}>
         <Text style={{ fontSize: 18, lineHeight: 28, color: '#111' }}>
-          {beforeBlank}
+          <HighlightedText text={beforeBlank} highlight={highlight} />
           <View style={{
             borderBottomWidth: 2,
             borderBottomColor: isRevealed ? (isCorrect ? '#22C55E' : '#EF4444') : '#6366F1',
@@ -63,7 +94,7 @@ export function ClozeExercise({ exercise, onAnswer }: Props) {
               {isRevealed ? (isCorrect ? userInput : exercise.correctAnswer) : userInput || '___'}
             </Text>
           </View>
-          {afterBlank}
+          <HighlightedText text={afterBlank} highlight={highlight} />
         </Text>
       </View>
 
@@ -91,17 +122,6 @@ export function ClozeExercise({ exercise, onAnswer }: Props) {
         />
       )}
 
-      {/* Feedback */}
-      {isRevealed && !isCorrect && (
-        <View style={{
-          backgroundColor: '#FEE2E2', borderRadius: 14, padding: 16, marginBottom: 16,
-        }}>
-          <Text style={{ fontSize: 14, color: '#EF4444' }}>
-            The correct answer is: <Text style={{ fontWeight: '600' }}>{exercise.correctAnswer}</Text>
-          </Text>
-        </View>
-      )}
-
       {/* Hint */}
       {exercise.hintText && !isRevealed && (
         <Text style={{ fontSize: 14, color: '#999', fontStyle: 'italic', marginBottom: 16 }}>
@@ -109,8 +129,21 @@ export function ClozeExercise({ exercise, onAnswer }: Props) {
         </Text>
       )}
 
-      {/* Button */}
-      {!isRevealed ? (
+      {/* Differentiated feedback */}
+      {result && isRevealed && language && onContinue ? (
+        <FeedbackCard
+          result={result}
+          exercise={exercise}
+          language={language}
+          cefrLevel={cefrLevel}
+          userId={userId}
+          onRetry={handleRetry}
+          onContinue={onContinue}
+        />
+      ) : null}
+
+      {/* Check button — only before revealing */}
+      {!isRevealed && (
         <Pressable
           onPress={handleCheck}
           disabled={userInput.trim().length === 0}
@@ -124,20 +157,6 @@ export function ClozeExercise({ exercise, onAnswer }: Props) {
           accessibilityLabel="Check answer"
         >
           <Text style={{ color: '#fff', fontSize: 18, fontWeight: '600' }}>Check</Text>
-        </Pressable>
-      ) : (
-        <Pressable
-          onPress={handleContinue}
-          style={{
-            backgroundColor: '#6366F1',
-            paddingVertical: 16,
-            borderRadius: 14,
-            alignItems: 'center',
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Continue"
-        >
-          <Text style={{ color: '#fff', fontSize: 18, fontWeight: '600' }}>Continue</Text>
         </Pressable>
       )}
     </View>

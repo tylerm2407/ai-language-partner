@@ -1,26 +1,57 @@
-import { useState, useEffect } from 'react';
-import { View, Text, TextInput, Pressable } from 'react-native';
+import { useState } from 'react';
+import { View, Text, TextInput, Pressable, ActivityIndicator } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { AudioPlayButton } from '../audio/AudioPlayButton';
+import { FeedbackCard } from './FeedbackCard';
 import { gradeAnswer } from '../../lib/grading';
-import type { Exercise } from '../../types';
+import type { GradeResult } from '../../lib/grading';
+import { usePhonemeDrill } from '../../hooks/usePhonemeDrill';
+import type { Exercise, LanguageCode } from '../../types';
 
 interface Props {
   exercise: Exercise;
   onAnswer: (isCorrect: boolean, answer: string) => void;
+  /** Needed so the HVPT replay path can rotate through per-language voices. */
+  targetLanguage?: LanguageCode;
+  /** For per-tier voice-minute metering on the TTS edge function. */
+  userId?: string;
+  /** Used by FeedbackCard to look up grammar rules. Defaults to targetLanguage. */
+  language?: string;
+  cefrLevel?: string;
+  onContinue?: () => void;
 }
 
-export function DictationExercise({ exercise, onAnswer }: Props) {
+export function DictationExercise({
+  exercise,
+  onAnswer,
+  targetLanguage,
+  userId,
+  language,
+  cefrLevel,
+  onContinue,
+}: Props) {
   const [userInput, setUserInput] = useState('');
   const [isRevealed, setIsRevealed] = useState(false);
-  const [isCorrect, setIsCorrect] = useState(false);
+  const [result, setResult] = useState<GradeResult | null>(null);
   const [playCount, setPlayCount] = useState(0);
 
-  // Auto-play not implemented via component — user taps play button
+  // HVPT replay: after the first play, subsequent "replay" taps rotate
+  // through ≥4 distinct ElevenLabs voices for the target language so the
+  // learner hears the same utterance in multiple voices (Thomson meta-
+  // analyses; see research.md §9). First play still uses the pre-recorded
+  // promptAudioUrl to preserve existing auto-play semantics.
+  const phonemeDrill = usePhonemeDrill(targetLanguage ?? 'en', 4, { userId });
 
   const handleCheck = () => {
-    const grade = gradeAnswer(userInput, exercise.correctAnswer, exercise.acceptedAnswers);
-    setIsCorrect(grade.isCorrect);
+    const grade = gradeAnswer(userInput, exercise.correctAnswer, exercise.acceptedAnswers, {
+      exerciseHints: {
+        exerciseType: exercise.type,
+        skillType: exercise.skillType,
+        targetGrammar: exercise.targetGrammar,
+        targetWord: exercise.targetWord,
+      },
+    });
+    setResult(grade);
     setIsRevealed(true);
 
     if (grade.isCorrect) {
@@ -28,11 +59,17 @@ export function DictationExercise({ exercise, onAnswer }: Props) {
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
+    onAnswer(grade.isCorrect, userInput);
   };
 
-  const handleContinue = () => {
-    onAnswer(isCorrect, userInput);
+  const handleRetry = () => {
+    setUserInput('');
+    setIsRevealed(false);
+    setResult(null);
   };
+
+  const effectiveLanguage = language ?? targetLanguage;
+  const isCorrect = result?.isCorrect ?? false;
 
   return (
     <View style={{ flex: 1 }}>
@@ -50,7 +87,74 @@ export function DictationExercise({ exercise, onAnswer }: Props) {
       }}>
         {exercise.promptAudioUrl ? (
           <View style={{ alignItems: 'center' }}>
-            <AudioPlayButton audioUrl={exercise.promptAudioUrl} size={64} />
+            <Pressable
+              onPress={() => setPlayCount((n) => n + 1)}
+              accessibilityRole="button"
+              accessibilityLabel="Play audio"
+            >
+              <AudioPlayButton audioUrl={exercise.promptAudioUrl} size={64} />
+            </Pressable>
+            <Text style={{ fontSize: 14, color: '#999', marginTop: 8 }}>
+              Tap to play {playCount > 0 ? '(replay)' : ''}
+            </Text>
+            {/* HVPT replay: rotate voices on subsequent listens. Only
+                offered when we know the target language. */}
+            {targetLanguage ? (
+              <Pressable
+                onPress={() => {
+                  setPlayCount((n) => n + 1);
+                  phonemeDrill.playNext(exercise.correctAnswer);
+                }}
+                disabled={phonemeDrill.isPlaying}
+                accessibilityRole="button"
+                accessibilityLabel="Replay in a different voice"
+                style={{
+                  marginTop: 12,
+                  paddingHorizontal: 14,
+                  paddingVertical: 8,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: '#C7D2FE',
+                  backgroundColor: '#EEF2FF',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                }}
+              >
+                {phonemeDrill.isPlaying ? (
+                  <ActivityIndicator size="small" color="#6366F1" />
+                ) : (
+                  <Text style={{ color: '#4338CA', fontSize: 13, fontWeight: '600' }}>
+                    Replay in a different voice
+                  </Text>
+                )}
+              </Pressable>
+            ) : null}
+          </View>
+        ) : targetLanguage ? (
+          // No pre-recorded URL — fall back entirely to HVPT TTS drill.
+          <View style={{ alignItems: 'center' }}>
+            <Pressable
+              onPress={() => {
+                setPlayCount((n) => n + 1);
+                phonemeDrill.playNext(exercise.correctAnswer);
+              }}
+              disabled={phonemeDrill.isPlaying}
+              accessibilityRole="button"
+              accessibilityLabel="Play audio"
+              style={{
+                width: 64, height: 64, borderRadius: 32,
+                backgroundColor: '#6366F1',
+                alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              {phonemeDrill.isPlaying ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={{ color: '#fff', fontSize: 24, fontWeight: '700' }}>
+                  {'▶'}
+                </Text>
+              )}
+            </Pressable>
             <Text style={{ fontSize: 14, color: '#999', marginTop: 8 }}>
               Tap to play {playCount > 0 ? '(replay)' : ''}
             </Text>
@@ -83,23 +187,21 @@ export function DictationExercise({ exercise, onAnswer }: Props) {
         accessibilityLabel="Type what you heard"
       />
 
-      {/* Feedback */}
-      {isRevealed && !isCorrect && (
-        <View style={{ backgroundColor: '#FEE2E2', borderRadius: 14, padding: 16, marginBottom: 16 }}>
-          <Text style={{ fontSize: 14, color: '#EF4444' }}>
-            Correct answer: <Text style={{ fontWeight: '600' }}>{exercise.correctAnswer}</Text>
-          </Text>
-        </View>
-      )}
+      {/* Differentiated feedback */}
+      {result && isRevealed && effectiveLanguage && onContinue ? (
+        <FeedbackCard
+          result={result}
+          exercise={exercise}
+          language={effectiveLanguage}
+          cefrLevel={cefrLevel}
+          userId={userId}
+          onRetry={handleRetry}
+          onContinue={onContinue}
+        />
+      ) : null}
 
-      {isRevealed && isCorrect && (
-        <View style={{ backgroundColor: '#DCFCE7', borderRadius: 14, padding: 16, marginBottom: 16 }}>
-          <Text style={{ fontSize: 14, color: '#22C55E', fontWeight: '600' }}>Correct!</Text>
-        </View>
-      )}
-
-      {/* Button */}
-      {!isRevealed ? (
+      {/* Check button */}
+      {!isRevealed && (
         <Pressable
           onPress={handleCheck}
           disabled={userInput.trim().length === 0}
@@ -111,15 +213,6 @@ export function DictationExercise({ exercise, onAnswer }: Props) {
           accessibilityLabel="Check answer"
         >
           <Text style={{ color: '#fff', fontSize: 18, fontWeight: '600' }}>Check</Text>
-        </Pressable>
-      ) : (
-        <Pressable
-          onPress={handleContinue}
-          style={{ backgroundColor: '#6366F1', paddingVertical: 16, borderRadius: 14, alignItems: 'center' }}
-          accessibilityRole="button"
-          accessibilityLabel="Continue"
-        >
-          <Text style={{ color: '#fff', fontSize: 18, fontWeight: '600' }}>Continue</Text>
         </Pressable>
       )}
     </View>

@@ -3,8 +3,10 @@ import { View, Text, TextInput, Pressable, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { ExerciseCard } from './ExerciseCard';
+import { FeedbackCard } from './FeedbackCard';
 import { Button } from '../ui/Button';
 import { gradeAnswer } from '../../lib/grading';
+import type { GradeResult } from '../../lib/grading';
 import { useAudioPlayer } from '../../hooks/useAudioPlayer';
 import type { Exercise } from '../../types';
 
@@ -12,12 +14,24 @@ interface ListeningExerciseProps {
   exercise: Exercise;
   onAnswer: (correct: boolean, answer: string) => void;
   showResult: boolean;
+  userId?: string;
+  language?: string;
+  cefrLevel?: string;
+  onContinue?: () => void;
 }
 
-export function ListeningExercise({ exercise, onAnswer, showResult }: ListeningExerciseProps) {
+export function ListeningExercise({
+  exercise,
+  onAnswer,
+  showResult,
+  userId,
+  language,
+  cefrLevel,
+  onContinue,
+}: ListeningExerciseProps) {
   const [answer, setAnswer] = useState('');
   const [submitted, setSubmitted] = useState(false);
-  const [result, setResult] = useState<{ isCorrect: boolean; feedback: string } | null>(null);
+  const [result, setResult] = useState<GradeResult | null>(null);
   const { playing, loading, play } = useAudioPlayer();
 
   const isChoiceType = exercise.type === 'listening_choice' && exercise.options;
@@ -30,34 +44,41 @@ export function ListeningExercise({ exercise, onAnswer, showResult }: ListeningE
 
   const handleSelectOption = (option: string) => {
     if (submitted || showResult) return;
-
-    const isCorrect =
-      option.toLowerCase() === exercise.correctAnswer.toLowerCase() ||
-      exercise.acceptedAnswers.map((a) => a.toLowerCase()).includes(option.toLowerCase());
-
+    const grade = gradeAnswer(option, exercise.correctAnswer, exercise.acceptedAnswers, {
+      exerciseHints: {
+        exerciseType: exercise.type,
+        skillType: exercise.skillType,
+        targetGrammar: exercise.targetGrammar,
+        targetWord: exercise.targetWord,
+      },
+    });
     setAnswer(option);
     setSubmitted(true);
-    setResult({
-      isCorrect,
-      feedback: isCorrect ? 'Correct!' : `Incorrect. The answer is: ${exercise.correctAnswer}`,
-    });
+    setResult(grade);
 
     if (Platform.OS !== 'web') {
-      if (isCorrect) {
+      if (grade.isCorrect) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } else {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
     }
 
-    onAnswer(isCorrect, option);
+    onAnswer(grade.isCorrect, option);
   };
 
   const handleSubmitTyped = () => {
     if (!answer.trim() || submitted) return;
 
-    const grade = gradeAnswer(answer, exercise.correctAnswer, exercise.acceptedAnswers);
-    setResult({ isCorrect: grade.isCorrect, feedback: grade.feedback });
+    const grade = gradeAnswer(answer, exercise.correctAnswer, exercise.acceptedAnswers, {
+      exerciseHints: {
+        exerciseType: exercise.type,
+        skillType: exercise.skillType,
+        targetGrammar: exercise.targetGrammar,
+        targetWord: exercise.targetWord,
+      },
+    });
+    setResult(grade);
     setSubmitted(true);
 
     if (Platform.OS !== 'web') {
@@ -69,6 +90,12 @@ export function ListeningExercise({ exercise, onAnswer, showResult }: ListeningE
     }
 
     onAnswer(grade.isCorrect, answer);
+  };
+
+  const handleRetry = () => {
+    setAnswer('');
+    setSubmitted(false);
+    setResult(null);
   };
 
   const getOptionStyle = (option: string) => {
@@ -153,13 +180,17 @@ export function ListeningExercise({ exercise, onAnswer, showResult }: ListeningE
         </>
       )}
 
-      {(submitted || showResult) && result && (
-        <View className={`mt-3 p-3 rounded-[14px] ${result.isCorrect ? 'bg-success-bg' : 'bg-error-bg'}`}>
-          <Text className={`text-sm font-medium ${result.isCorrect ? 'text-success' : 'text-error'}`}>
-            {result.feedback}
-          </Text>
-        </View>
-      )}
+      {result && onContinue && language ? (
+        <FeedbackCard
+          result={result}
+          exercise={exercise}
+          language={language}
+          cefrLevel={cefrLevel}
+          userId={userId}
+          onRetry={handleRetry}
+          onContinue={onContinue}
+        />
+      ) : null}
     </ExerciseCard>
   );
 }

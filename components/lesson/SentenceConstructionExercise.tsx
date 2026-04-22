@@ -1,14 +1,29 @@
 import { useState, useMemo } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { FeedbackCard } from './FeedbackCard';
+import { HighlightedText } from '../shared/HighlightedText';
+import { gradeAnswer } from '../../lib/grading';
+import type { GradeResult } from '../../lib/grading';
 import type { Exercise } from '../../types';
 
 interface Props {
   exercise: Exercise;
   onAnswer: (isCorrect: boolean, answer: string) => void;
+  userId?: string;
+  language?: string;
+  cefrLevel?: string;
+  onContinue?: () => void;
 }
 
-export function SentenceConstructionExercise({ exercise, onAnswer }: Props) {
+export function SentenceConstructionExercise({
+  exercise,
+  onAnswer,
+  userId,
+  language,
+  cefrLevel,
+  onContinue,
+}: Props) {
   const tiles = useMemo(() => {
     const correctTiles = (exercise.metadata?.tiles as string[]) ?? exercise.correctAnswer.split(' ');
     const distractors = (exercise.metadata?.distractors as string[]) ?? [];
@@ -19,10 +34,11 @@ export function SentenceConstructionExercise({ exercise, onAnswer }: Props) {
 
   const [placed, setPlaced] = useState<number[]>([]); // indices into tiles
   const [isRevealed, setIsRevealed] = useState(false);
-  const [isCorrect, setIsCorrect] = useState(false);
+  const [result, setResult] = useState<GradeResult | null>(null);
 
   const assembledSentence = placed.map((i) => tiles[i]).join(' ');
   const availableIndices = tiles.map((_, i) => i).filter((i) => !placed.includes(i));
+  const highlight = exercise.targetWord ?? exercise.targetGrammar;
 
   const handleTapAvailable = (index: number) => {
     Haptics.selectionAsync();
@@ -35,29 +51,48 @@ export function SentenceConstructionExercise({ exercise, onAnswer }: Props) {
   };
 
   const handleCheck = () => {
-    const correct = assembledSentence.toLowerCase().trim() === exercise.correctAnswer.toLowerCase().trim();
-    setIsCorrect(correct);
+    const grade = gradeAnswer(
+      assembledSentence,
+      exercise.correctAnswer,
+      exercise.acceptedAnswers,
+      {
+        exerciseHints: {
+          exerciseType: exercise.type,
+          skillType: exercise.skillType,
+          targetGrammar: exercise.targetGrammar,
+          targetWord: exercise.targetWord,
+        },
+      },
+    );
+    setResult(grade);
     setIsRevealed(true);
 
-    if (correct) {
+    if (grade.isCorrect) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
+    onAnswer(grade.isCorrect, assembledSentence);
   };
 
-  const handleContinue = () => {
-    onAnswer(isCorrect, assembledSentence);
+  const handleRetry = () => {
+    setPlaced([]);
+    setIsRevealed(false);
+    setResult(null);
   };
+
+  const isCorrect = result?.isCorrect ?? false;
 
   return (
     <View style={{ flex: 1 }}>
       <Text style={{ fontSize: 14, fontWeight: '600', color: '#6366F1', marginBottom: 8 }}>
         Arrange the words
       </Text>
-      <Text style={{ fontSize: 18, fontWeight: '600', color: '#111', marginBottom: 20, lineHeight: 26 }}>
-        {exercise.prompt}
-      </Text>
+      <HighlightedText
+        text={exercise.prompt}
+        highlight={highlight}
+        className="text-text-primary text-[18px] font-sans-semibold mb-5 leading-7"
+      />
 
       {/* Answer area */}
       <View style={{
@@ -114,17 +149,21 @@ export function SentenceConstructionExercise({ exercise, onAnswer }: Props) {
         </View>
       )}
 
-      {/* Feedback */}
-      {isRevealed && !isCorrect && (
-        <View style={{ backgroundColor: '#FEE2E2', borderRadius: 14, padding: 16, marginBottom: 16 }}>
-          <Text style={{ fontSize: 14, color: '#EF4444' }}>
-            Correct answer: <Text style={{ fontWeight: '600' }}>{exercise.correctAnswer}</Text>
-          </Text>
-        </View>
-      )}
+      {/* Differentiated feedback */}
+      {result && isRevealed && language && onContinue ? (
+        <FeedbackCard
+          result={result}
+          exercise={exercise}
+          language={language}
+          cefrLevel={cefrLevel}
+          userId={userId}
+          onRetry={handleRetry}
+          onContinue={onContinue}
+        />
+      ) : null}
 
-      {/* Button */}
-      {!isRevealed ? (
+      {/* Check button */}
+      {!isRevealed && (
         <Pressable
           onPress={handleCheck}
           disabled={placed.length === 0}
@@ -136,15 +175,6 @@ export function SentenceConstructionExercise({ exercise, onAnswer }: Props) {
           accessibilityLabel="Check answer"
         >
           <Text style={{ color: '#fff', fontSize: 18, fontWeight: '600' }}>Check</Text>
-        </Pressable>
-      ) : (
-        <Pressable
-          onPress={handleContinue}
-          style={{ backgroundColor: '#6366F1', paddingVertical: 16, borderRadius: 14, alignItems: 'center' }}
-          accessibilityRole="button"
-          accessibilityLabel="Continue"
-        >
-          <Text style={{ color: '#fff', fontSize: 18, fontWeight: '600' }}>Continue</Text>
         </Pressable>
       )}
     </View>
