@@ -64,7 +64,7 @@ export async function fetchProfile(userId: string): Promise<UserProfile | null> 
 
 export async function upsertProfile(
   userId: string,
-  updates: Partial<Pick<UserProfile, 'displayName' | 'nativeLanguage' | 'targetLanguage' | 'level' | 'dailyGoalMinutes' | 'timezone'>>
+  updates: Partial<Pick<UserProfile, 'displayName' | 'nativeLanguage' | 'targetLanguage' | 'level' | 'dailyGoalMinutes' | 'timezone' | 'motivationReason' | 'idealL2Self'>>
 ): Promise<UserProfile> {
   const row: Record<string, unknown> = {
     user_id: userId,
@@ -76,6 +76,8 @@ export async function upsertProfile(
   if (updates.level !== undefined) row.level = updates.level;
   if (updates.dailyGoalMinutes !== undefined) row.daily_goal_minutes = updates.dailyGoalMinutes;
   if (updates.timezone !== undefined) row.timezone = updates.timezone;
+  if (updates.motivationReason !== undefined) row.motivation_reason = updates.motivationReason;
+  if (updates.idealL2Self !== undefined) row.ideal_l2_self = updates.idealL2Self;
 
   const { data, error } = await supabase
     .from('user_profiles')
@@ -517,6 +519,9 @@ function mapProfile(row: Record<string, unknown>): UserProfile {
     streakShieldUsedAt: (row.streak_shield_used_at as string) ?? null,
     avatarConfig: row.avatar_config ? (row.avatar_config as AvatarConfig) : undefined,
     onboardingChecklist: parseOnboardingChecklist(row.onboarding_checklist),
+    // L2 Motivational Self System (migration 028). Null-safe for legacy rows.
+    motivationReason: (row.motivation_reason as UserProfile['motivationReason']) ?? null,
+    idealL2Self: (row.ideal_l2_self as string | null) ?? null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };

@@ -48,6 +48,13 @@ export interface UserProfile {
   streakShieldUsedAt: string | null;
   avatarConfig?: AvatarConfig;
   onboardingChecklist: OnboardingChecklist;
+  // Dörnyei L2 Motivational Self System (research.md §11.1).
+  // motivationReason persists the MotivationReason enum collected in
+  // onboarding; idealL2Self is free-text (<=300 chars) describing the
+  // learner's vision of themselves using the language. Both are null
+  // for accounts created before migration 028.
+  motivationReason: MotivationReason | null;
+  idealL2Self: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -57,9 +64,10 @@ export type LanguageCode = 'en' | 'es' | 'fr' | 'de' | 'it' | 'pt' | 'ja' | 'ko'
 export type ProficiencyLevel = 'beginner' | 'elementary' | 'intermediate' | 'upper_intermediate' | 'advanced';
 
 /**
- * Motivation — why the learner is here. Collected in onboarding, used by the
- * Home hook copy to tie daily effort to an outcome. Stored transiently in
- * useAppStore (no DB column); lost on full process restart by design.
+ * Motivation — why the learner is here. Collected in onboarding.
+ * Now durably persisted to `user_profiles.motivation_reason` (migration 028).
+ * The Zustand `useAppStore.motivation` slot remains as a transient hint for
+ * the onboarding flow; source of truth is the profile.
  */
 export type MotivationReason = 'travel' | 'family' | 'work' | 'brain' | 'curious';
 
