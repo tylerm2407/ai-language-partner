@@ -174,6 +174,22 @@ export async function translateText(
   return (data as { translation: string }).translation;
 }
 
+/** Voice selection mode for the TTS edge function. See
+ *  supabase/functions/tts/index.ts `VOICE_MAP` for the per-language voice
+ *  arrays this indexes into. HVPT phoneme drills should rotate voices across
+ *  repetitions (Thomson meta-analyses, research.md §9). */
+export type TTSVoiceMode = 'default' | 'rotate' | 'random';
+
+export interface TTSVoiceOptions {
+  /** 0-based index into the language's voice array. Clamped server-side
+   *  if out-of-range. Ignored when `voiceMode` is provided. */
+  voiceIndex?: number;
+  /** Selection mode. 'rotate' requires `voiceRotationKey` for a stable pick. */
+  voiceMode?: TTSVoiceMode;
+  /** Stable key used when `voiceMode === 'rotate'`. */
+  voiceRotationKey?: string;
+}
+
 /**
  * Get ElevenLabs TTS audio for a message.
  * Returns base64-encoded audio string from the edge function.
@@ -181,10 +197,11 @@ export async function translateText(
 export async function getTextToSpeech(
   text: string,
   language: string,
-  userId?: string
+  userId?: string,
+  voiceOptions?: TTSVoiceOptions
 ): Promise<string> {
   const { data, error } = await supabase.functions.invoke('tts', {
-    body: { text, language, userId },
+    body: { text, language, userId, ...(voiceOptions ?? {}) },
   });
 
   // When edge function returns non-2xx, supabase puts a generic message in error

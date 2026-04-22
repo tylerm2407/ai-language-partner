@@ -1,6 +1,19 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import * as Speech from 'expo-speech';
 
+/** Voice selector for the (future) server-TTS path. Accepted here so callers
+ *  can adopt HVPT-style voice rotation without a second refactor when
+ *  usePageNarrator gains a server-TTS branch. Currently the hook renders via
+ *  expo-speech only (single-voice), so these options are forwarded on when a
+ *  server path is added and are a safe no-op today. See
+ *  supabase/functions/tts/index.ts for the VOICE_MAP. */
+export type NarratorVoiceMode = 'default' | 'rotate' | 'random';
+export interface NarratorVoiceOptions {
+  voiceIndex?: number;
+  voiceMode?: NarratorVoiceMode;
+  voiceRotationKey?: string;
+}
+
 const LANGUAGE_MAP: Record<string, string> = {
   es: 'es-ES',
   fr: 'fr-FR',
@@ -32,31 +45,43 @@ export function usePageNarrator() {
     };
   }, []);
 
-  const speak = useCallback((text: string, language: string, onDone?: () => void) => {
-    Speech.stop();
-    onDoneRef.current = onDone ?? null;
+  const speak = useCallback(
+    (
+      text: string,
+      language: string,
+      onDone?: () => void,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      _voiceOptions?: NarratorVoiceOptions,
+    ) => {
+      Speech.stop();
+      onDoneRef.current = onDone ?? null;
 
-    const bcp47 = LANGUAGE_MAP[language] ?? language;
+      const bcp47 = LANGUAGE_MAP[language] ?? language;
 
-    setIsPlaying(true);
-    setIsPaused(false);
+      setIsPlaying(true);
+      setIsPaused(false);
 
-    Speech.speak(text, {
-      language: bcp47,
-      rate: speed,
-      onDone: () => {
-        if (!isMountedRef.current) return;
-        setIsPlaying(false);
-        setIsPaused(false);
-        onDoneRef.current?.();
-      },
-      onStopped: () => {
-        if (!isMountedRef.current) return;
-        setIsPlaying(false);
-        setIsPaused(false);
-      },
-    });
-  }, [speed]);
+      // NOTE: _voiceOptions is accepted but not consumed by this expo-speech
+      // implementation (single-voice fallback). Wire through if/when this
+      // hook gains a server-TTS branch that hits supabase/functions/tts.
+      Speech.speak(text, {
+        language: bcp47,
+        rate: speed,
+        onDone: () => {
+          if (!isMountedRef.current) return;
+          setIsPlaying(false);
+          setIsPaused(false);
+          onDoneRef.current?.();
+        },
+        onStopped: () => {
+          if (!isMountedRef.current) return;
+          setIsPlaying(false);
+          setIsPaused(false);
+        },
+      });
+    },
+    [speed],
+  );
 
   const pause = useCallback(() => {
     Speech.pause();

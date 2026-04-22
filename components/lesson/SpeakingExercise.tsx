@@ -5,6 +5,7 @@ import * as Haptics from 'expo-haptics';
 import { ExerciseCard } from './ExerciseCard';
 import { useAudioRecorder } from '../../hooks/useAudioRecorder';
 import { useAudioPlayer } from '../../hooks/useAudioPlayer';
+import { usePhonemeDrill } from '../../hooks/usePhonemeDrill';
 import { scorePronunciation } from '../../lib/ai';
 import type { Exercise, LanguageCode } from '../../types';
 
@@ -14,6 +15,10 @@ interface SpeakingExerciseProps {
   showResult: boolean;
   userId: string;
   targetLanguage: LanguageCode;
+  // Stream 1 (feedback system) plumbs these through LessonRunner to
+  // every exercise. Accepted as optional pass-throughs; not consumed here.
+  cefrLevel?: string;
+  onContinue?: () => void;
 }
 
 export function SpeakingExercise({ exercise, onAnswer, showResult, userId, targetLanguage }: SpeakingExerciseProps) {
@@ -21,6 +26,13 @@ export function SpeakingExercise({ exercise, onAnswer, showResult, userId, targe
   const { playing, play } = useAudioPlayer();
   const [scoring, setScoring] = useState(false);
   const [score, setScore] = useState<{ score: number; feedback: string; transcription?: string } | null>(null);
+
+  // HVPT replay: when the learner asks to hear the prompt again, cycle
+  // through ≥4 distinct ElevenLabs voices for this language so they get
+  // phoneme variability across repetitions (Thomson meta-analyses;
+  // research.md §9). First play still uses the pre-recorded
+  // promptAudioUrl when present, so this only affects the replay path.
+  const phonemeDrill = usePhonemeDrill(targetLanguage, 4, { userId });
 
   const handleToggleRecord = async () => {
     if (recording) {
@@ -83,15 +95,32 @@ export function SpeakingExercise({ exercise, onAnswer, showResult, userId, targe
     <ExerciseCard type={exercise.type} prompt={exercise.prompt}>
       {/* Prompt audio playback */}
       {exercise.promptAudioUrl && (
-        <Pressable
-          className="bg-dark-card-alt rounded-[14px] p-4 flex-row items-center mb-4"
-          onPress={() => play(exercise.promptAudioUrl!)}
-          accessibilityRole="button"
-          accessibilityLabel="Play prompt audio"
-        >
-          <Ionicons name={playing ? 'volume-high' : 'play-circle'} size={28} color="#38BDF8" />
-          <Text className="text-text-primary text-base ml-3">Listen to the prompt</Text>
-        </Pressable>
+        <View className="mb-4">
+          <Pressable
+            className="bg-dark-card-alt rounded-[14px] p-4 flex-row items-center"
+            onPress={() => play(exercise.promptAudioUrl!)}
+            accessibilityRole="button"
+            accessibilityLabel="Play prompt audio"
+          >
+            <Ionicons name={playing ? 'volume-high' : 'play-circle'} size={28} color="#38BDF8" />
+            <Text className="text-text-primary text-base ml-3">Listen to the prompt</Text>
+          </Pressable>
+          {/* HVPT replay: rotate through per-language voices on each tap. */}
+          <Pressable
+            className="bg-dark-card-alt/60 rounded-[12px] p-3 flex-row items-center mt-2 self-start"
+            onPress={() => phonemeDrill.playNext(exercise.correctAnswer)}
+            disabled={phonemeDrill.isPlaying}
+            accessibilityRole="button"
+            accessibilityLabel="Replay in a different voice"
+          >
+            {phonemeDrill.isPlaying ? (
+              <ActivityIndicator size="small" color="#38BDF8" />
+            ) : (
+              <Ionicons name="refresh" size={20} color="#38BDF8" />
+            )}
+            <Text className="text-text-secondary text-sm ml-2">Replay in a different voice</Text>
+          </Pressable>
+        </View>
       )}
 
       {/* Record button */}
