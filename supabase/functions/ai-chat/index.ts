@@ -18,11 +18,27 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, corsResponse } from '../_shared/cors.ts';
 import { getEffectiveLimits } from '../_shared/plan-limits.ts';
 import { getScenario } from '../_shared/scenarios.ts';
+import { generateValidated } from '../_shared/validated-generate.ts';
+import { proficiencyToCefr } from '../_shared/cefr.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
 const TEXT_MODEL = 'claude-haiku-4-5-20251001';
+
+// Per-language fallback copy for when regenerate retries exhaust safety
+// checks. Keeps the conversation alive without exposing bad output.
+const FALLBACK_REPLIES: Record<string, string> = {
+  en: "Let's try a different topic — what else would you like to chat about?",
+  es: 'Probemos con un tema diferente — ¿de qué más te gustaría hablar?',
+  fr: "Essayons un autre sujet — de quoi d'autre aimerais-tu parler?",
+  de: 'Versuchen wir ein anderes Thema — worüber möchtest du sonst sprechen?',
+  it: 'Proviamo un argomento diverso — di cos\'altro ti piacerebbe parlare?',
+  pt: 'Vamos tentar um tópico diferente — sobre o que mais gostaria de conversar?',
+  ja: '違う話題にしましょう — 他に何について話したいですか？',
+  ko: '다른 주제로 바꿔볼까요 — 또 무엇에 대해 이야기하고 싶으세요?',
+  zh: '我们换个话题吧 — 你还想聊点什么？',
+};
 
 interface ChatRequest {
   messages: { role: string; content: string }[];
@@ -192,32 +208,49 @@ serve(async (req: Request) => {
 
     const systemPrompt = buildSystemPrompt(targetLanguage, level, topic, scenarioKey, nativeLanguage);
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
+    const cefrLevel = proficiencyToCefr(level);
+    const fallbackReply = FALLBACK_REPLIES[targetLanguage] ?? FALLBACK_REPLIES.en;
+
+    const { text: rawText, usedFallback } = await generateValidated({
+      fn: 'ai-chat',
+      targetLevel: cefrLevel,
+      language: targetLanguage,
+      safetyRetries: 2,
+      generate: async () => {
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': ANTHROPIC_API_KEY,
+            'anthropic-version': '2023-06-01',
+          },
+          body: JSON.stringify({
+            model: TEXT_MODEL,
+            max_tokens: 600,
+            system: systemPrompt,
+            messages: windowMessages(messages).map((m) => ({
+              role: m.role === 'assistant' ? 'assistant' : 'user',
+              content: m.content,
+            })),
+          }),
+        });
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Anthropic API error: ${response.status} - ${errorText}`);
+        }
+        const data = await response.json();
+        const text = data.content?.[0]?.text ?? '';
+        if (!text) throw new Error('Empty response from Claude');
+        return text;
       },
-      body: JSON.stringify({
-        model: TEXT_MODEL,
-        max_tokens: 600,
-        system: systemPrompt,
-        messages: windowMessages(messages).map((m) => ({
-          role: m.role === 'assistant' ? 'assistant' : 'user',
-          content: m.content,
-        })),
-      }),
+      fallback: async () => fallbackReply,
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Anthropic API error: ${response.status} - ${errorText}`);
-    }
-
-    const data = await response.json();
-    const rawText = data.content?.[0]?.text ?? '';
-    const { reply, correction, vocabularyHighlights } = parseAIResponse(rawText);
+    // When the safety fallback fires, we skip parsing (no [CORRECTION] block)
+    // and deliver a clean reply with no correction metadata.
+    const { reply, correction, vocabularyHighlights } = usedFallback
+      ? { reply: rawText, correction: null, vocabularyHighlights: [] }
+      : parseAIResponse(rawText);
 
     await incrementTextMessages(supabase, authenticatedUserId);
 

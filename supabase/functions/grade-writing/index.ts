@@ -9,6 +9,7 @@ import { corsResponse, corsHeaders } from '../_shared/cors.ts';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { getPlanLimits } from '../_shared/plan-limits.ts';
 import { isValidUUID, isValidCefrLevel, isValidLanguage, sanitizeText } from '../_shared/validation.ts';
+import { validateContentSafety } from '../_shared/content-safety.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -144,6 +145,23 @@ serve(async (req: Request) => {
 
     const data = await response.json();
     const aiReply = data.content?.[0]?.text ?? '';
+
+    // Safety-check the raw feedback text before we parse/persist it. Level
+    // check is N/A here because grading feedback is written in English, not
+    // the target language. Fail-open on validator outage.
+    const safetyResult = await validateContentSafety(aiReply, { language: 'en' });
+    if (!safetyResult.safe) {
+      console.warn(JSON.stringify({
+        evt: 'safety_reject',
+        fn: 'grade-writing',
+        reasons: safetyResult.reasons,
+        ts: new Date().toISOString(),
+      }));
+      return new Response(
+        JSON.stringify({ error: 'grading-failed', retryable: true }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
 
     // Parse AI response as JSON
     let feedback;

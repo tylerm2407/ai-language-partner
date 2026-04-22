@@ -15,11 +15,16 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, corsResponse } from '../_shared/cors.ts';
+import { generateValidated } from '../_shared/validated-generate.ts';
+import type { CEFR } from '../_shared/level-checker.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
 const TEXT_MODEL = 'claude-haiku-4-5-20251001';
+
+// Sentinel used by the generateValidated fallback — see generateOne.
+const SAFETY_FALLBACK_SENTINEL = '__DAILY_NEWS_SAFETY_FALLBACK__';
 
 // Mirrors client-side SUPPORTED_LANGUAGES in config/app.ts. Kept in sync
 // manually; changes are rare enough that duplication is cheaper than the
@@ -81,40 +86,49 @@ interface GeneratedArticle {
   sourceTopic?: string | null;
 }
 
-async function generateOne(language: { code: string; name: string }, tier: Tier): Promise<GeneratedArticle> {
+async function generateOne(language: { code: string; name: string }, tier: Tier): Promise<GeneratedArticle | null> {
   const systemPrompt = `You are a language-learning content generator. Write news articles appropriate for ${tier === 'easy' ? 'A1–B1 (beginner to intermediate)' : 'B2–C1 (upper-intermediate to advanced)'} level language learners. Adjust vocabulary complexity and sentence structure to match the CEFR range. Always respond with valid JSON only, no markdown or extra text.`;
 
   const userPrompt = `${tierPromptDescriptor(tier, language.name)} Include 3–5 vocabulary words with English translations and part-of-speech. Return JSON with fields: title, titleTranslation (English), summary (2 sentences in ${language.name}), content, contentTranslation (English), vocabularyHighlights (array of {word, translation, partOfSpeech}), sourceTopic (short English phrase naming the topic).`;
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': ANTHROPIC_API_KEY!,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: TEXT_MODEL,
-      max_tokens: tier === 'easy' ? 1400 : 1800,
-      system: [
-        {
-          type: 'text',
-          text: systemPrompt,
-          cache_control: { type: 'ephemeral' },
+  const { text: cleaned, usedFallback } = await generateValidated({
+    fn: 'daily-news-cron',
+    targetLevel: TIER_CEFR[tier] as CEFR,
+    language: language.code,
+    safetyRetries: 2,
+    generate: async () => {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': ANTHROPIC_API_KEY!,
+          'anthropic-version': '2023-06-01',
         },
-      ],
-      messages: [{ role: 'user', content: userPrompt }],
-    }),
+        body: JSON.stringify({
+          model: TEXT_MODEL,
+          max_tokens: tier === 'easy' ? 1400 : 1800,
+          system: [
+            { type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } },
+          ],
+          messages: [{ role: 'user', content: userPrompt }],
+        }),
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Anthropic ${response.status}: ${errorText.slice(0, 200)}`);
+      }
+      const data = await response.json();
+      const raw: string = data.content?.[0]?.text ?? '';
+      return stripCodeFences(raw);
+    },
+    fallback: async () => SAFETY_FALLBACK_SENTINEL,
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Anthropic ${response.status}: ${errorText.slice(0, 200)}`);
+  if (usedFallback || cleaned === SAFETY_FALLBACK_SENTINEL) {
+    // Safety rejection exhausted retries. Caller skips this row;
+    // tomorrow's cron will try again. Avoids shipping a leaked prompt.
+    return null;
   }
-
-  const data = await response.json();
-  const raw: string = data.content?.[0]?.text ?? '';
-  const cleaned = stripCodeFences(raw);
 
   let article: GeneratedArticle;
   try {
@@ -182,6 +196,11 @@ serve(async (req: Request) => {
 
       try {
         const article = await generateOne(language, tier);
+        if (!article) {
+          // Safety fallback returned null — record as skipped, cron will retry.
+          skipped += 1;
+          continue;
+        }
 
         const row = {
           date: today,

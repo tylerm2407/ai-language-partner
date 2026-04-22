@@ -3,6 +3,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsResponse, corsHeaders } from '../_shared/cors.ts';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { getPlanLimits } from '../_shared/plan-limits.ts';
+import { generateValidated } from '../_shared/validated-generate.ts';
+import type { CEFR } from '../_shared/level-checker.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -102,28 +104,43 @@ RESPOND ONLY IN VALID JSON:
   ]
 }`;
 
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01',
+      const { text: aiReply, usedFallback } = await generateValidated({
+        fn: 'generate-story',
+        targetLevel: cefrLevel as CEFR,
+        language,
+        safetyRetries: 2,
+        generate: async () => {
+          const response = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': ANTHROPIC_API_KEY,
+              'anthropic-version': '2023-06-01',
+            },
+            body: JSON.stringify({
+              model: TEXT_MODEL,
+              max_tokens: 2000,
+              system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
+              messages: [{ role: 'user', content: `Generate story ${i + 1}` }],
+            }),
+          });
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Anthropic API error: ${response.status} - ${errorText}`);
+          }
+          const data = await response.json();
+          const text = data.content?.[0]?.text ?? '';
+          if (!text) throw new Error('Empty story response');
+          return text;
         },
-        body: JSON.stringify({
-          model: TEXT_MODEL,
-          max_tokens: 2000,
-          system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
-          messages: [{ role: 'user', content: `Generate story ${i + 1}` }],
-        }),
+        // No safe fallback for story generation — signal the caller to skip.
+        fallback: async () => '__STORY_SAFETY_FALLBACK__',
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Anthropic API error: ${response.status} - ${errorText}`);
+      if (usedFallback || aiReply === '__STORY_SAFETY_FALLBACK__') {
+        // Safety exhausted retries. Skip this story; client can request again.
+        continue;
       }
-
-      const data = await response.json();
-      const aiReply = data.content?.[0]?.text ?? '';
 
       let story;
       try {

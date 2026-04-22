@@ -7,12 +7,16 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, corsResponse } from '../_shared/cors.ts';
 import { getPlanLimits } from '../_shared/plan-limits.ts';
+import { generateValidated } from '../_shared/validated-generate.ts';
+import type { CEFR } from '../_shared/level-checker.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
 const TEXT_MODEL = 'claude-haiku-4-5-20251001';
+
+const CONTENT_SAFETY_FALLBACK = '__CONTENT_SAFETY_FALLBACK__';
 
 interface GenerateContentRequest {
   task: 'distractors' | 'accepted_answers' | 'speech_variants' | 'exercises' | 'dialogue' | 'explanation';
@@ -173,28 +177,44 @@ serve(async (req: Request) => {
     const systemPrompt = buildSystemPrompt(body);
     const userMessage = buildUserMessage(body);
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
+    const { text: rawText, usedFallback } = await generateValidated({
+      fn: 'generate-content',
+      targetLevel: body.cefrLevel as CEFR,
+      language: body.language,
+      safetyRetries: 2,
+      generate: async () => {
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': ANTHROPIC_API_KEY,
+            'anthropic-version': '2023-06-01',
+          },
+          body: JSON.stringify({
+            model: TEXT_MODEL,
+            max_tokens: 1024,
+            system: systemPrompt,
+            messages: [{ role: 'user', content: userMessage }],
+          }),
+        });
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Anthropic API error: ${response.status} - ${errorText}`);
+        }
+        const data = await response.json();
+        const text = data.content?.[0]?.text ?? '';
+        if (!text) throw new Error('Empty content-generation response');
+        return text;
       },
-      body: JSON.stringify({
-        model: TEXT_MODEL,
-        max_tokens: 1024,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: userMessage }],
-      }),
+      fallback: async () => CONTENT_SAFETY_FALLBACK,
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Anthropic API error: ${response.status} - ${errorText}`);
+    if (usedFallback || rawText === CONTENT_SAFETY_FALLBACK) {
+      return new Response(
+        JSON.stringify({ error: 'content-generation-failed', retryable: true }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
     }
-
-    const data = await response.json();
-    const rawText = data.content?.[0]?.text ?? '';
 
     // Parse the JSON response from Claude
     const result = parseAIJSON(rawText);
