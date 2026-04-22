@@ -6,6 +6,12 @@ export const BG_GRADIENT_COLORS = ['#0F1A2E', '#150F24'] as const;
 export const DARK_BG = '#0C0F14';
 export const DARK_CARD = '#151921';
 
+// Aurora background palette (from Claude Design)
+export const AURORA_BASE = ['#05060f', '#0a0f1e', '#0f0a2e'] as const;
+export const AURORA_BLUE = '#4F8EF7';
+export const AURORA_VIOLET = '#7C3AED';
+export const AURORA_LILAC = '#A855F7';
+
 // Glass morphism tokens
 export const GLASS_BG = 'rgba(21, 25, 33, 0.35)';
 export const GLASS_HIGHLIGHT = ['rgba(255,255,255,0.08)', 'rgba(255,255,255,0)'] as const;
