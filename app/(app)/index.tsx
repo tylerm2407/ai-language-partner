@@ -22,7 +22,8 @@ import { DateLabel } from '../../components/magazine/DateLabel';
 import { StatsStrip } from '../../components/magazine/StatsStrip';
 import { NewsHeroCard } from '../../components/magazine/NewsHeroCard';
 import { SessionBand } from '../../components/magazine/SessionBand';
-import { LessonTileGrid } from '../../components/magazine/LessonTile';
+import { LessonTileGrid, unitTilesToLessonTiles } from '../../components/magazine/LessonTile';
+import { useUnitProgressTiles } from '../../hooks/useUnitProgressTiles';
 import { MagazineDailyChallenges } from '../../components/magazine/MagazineDailyChallenges';
 import { WeekInWords } from '../../components/magazine/WeekInWords';
 import { MagazineGlassCard } from '../../components/magazine/MagazineGlassCard';
@@ -47,6 +48,12 @@ export default function HomeScreen() {
     newsTier,
   );
   const { permissionStatus, requestPermissionsExplicit } = useNotifications({ userId: user?.id });
+  const { tiles: unitTiles, loading: tilesLoading } = useUnitProgressTiles(
+    user?.id,
+    profile?.targetLanguage,
+    4,
+  );
+  const lessonTiles = unitTiles ? unitTilesToLessonTiles(unitTiles) : null;
   const { markItem: markChecklistItem } = useOnboardingChecklist();
   const [showPrePermission, setShowPrePermission] = useState(false);
 
@@ -75,6 +82,7 @@ export default function HomeScreen() {
           streak: profile.streak ?? 0,
           xpEarnedToday: dailyStats?.xpEarned ?? 0,
           preferredHour: 21,
+          idealL2Self: profile.idealL2Self ?? null,
         });
       }
     } finally {
@@ -120,11 +128,11 @@ export default function HomeScreen() {
           contentContainerStyle={{ paddingBottom: 120, paddingTop: 8 }}
         >
           <SafeAreaView edges={['top']}>
-            {/* Date label */}
-            <DateLabel />
-
-            {/* Stats strip — 3 inline pills */}
-            <StatsStrip />
+            {/* Header row — date on left, stats pills on right */}
+            <View style={styles.headerRow}>
+              <DateLabel />
+              <StatsStrip />
+            </View>
 
             {/* News hero card */}
             <NewsHeroCard
@@ -146,8 +154,8 @@ export default function HomeScreen() {
             {/* Today's session band */}
             <SessionBand />
 
-            {/* Continue learning — 2-column tiles */}
-            <LessonTileGrid />
+            {/* Continue learning — 2-column tiles pulled from user's real curriculum */}
+            <LessonTileGrid tiles={lessonTiles} loading={tilesLoading} />
 
             {/* Daily challenges */}
             <MagazineDailyChallenges dailyStats={dailyStats ?? null} />
@@ -241,6 +249,12 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
   sectionTitle: {
     fontFamily: serifFont,
     fontSize: 18,

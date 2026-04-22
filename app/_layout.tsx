@@ -54,6 +54,7 @@ export default function RootLayout() {
       streak: profile.streak ?? 0,
       xpEarnedToday: dailyStats?.xpEarned ?? 0,
       preferredHour: 21,
+      idealL2Self: profile.idealL2Self ?? null,
     }).catch(() => {});
   }, [profile, dailyStats?.xpEarned, permissionGranted]);
 
@@ -66,6 +67,7 @@ export default function RootLayout() {
           streak: profile.streak ?? 0,
           xpEarnedToday: dailyStats?.xpEarned ?? 0,
           preferredHour: 21,
+          idealL2Self: profile.idealL2Self ?? null,
         }).catch(() => {});
       }
     });

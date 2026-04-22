@@ -253,6 +253,33 @@ export async function fetchDueReviewItems(userId: string, limit = 50): Promise<R
   return (data ?? []).map(mapReviewItem);
 }
 
+/**
+ * Fetch due review items with their card data joined. Used for the
+ * lesson warm-up phase (Roediger & Karpicke testing effect —
+ * research.md §5.1). Returns an empty array on failure rather than
+ * throwing; warm-up is best-effort and must never block a lesson start.
+ */
+export async function fetchDueReviewItemsWithCards(
+  userId: string,
+  limit = 5,
+): Promise<Array<{ item: ReviewItem; card: Card }>> {
+  try {
+    const items = await fetchDueReviewItems(userId, limit);
+    if (items.length === 0) return [];
+    const cards = await fetchCardsByIds(items.map((it) => it.cardId));
+    const cardById = new Map(cards.map((c) => [c.id, c]));
+    return items
+      .map((item) => {
+        const card = cardById.get(item.cardId);
+        return card ? { item, card } : null;
+      })
+      .filter((v): v is { item: ReviewItem; card: Card } => v !== null);
+  } catch (err) {
+    console.warn('[warmup] fetchDueReviewItemsWithCards failed (non-fatal):', err);
+    return [];
+  }
+}
+
 export async function fetchReviewItemCount(userId: string): Promise<number> {
   const { count, error } = await supabase
     .from('review_items')
@@ -751,6 +778,75 @@ export async function upsertLessonCompletion(
 
   if (error) throw error;
   return mapLessonCompletion(data);
+}
+
+export interface UnitProgressTile {
+  unitId: string;
+  courseId: string;
+  title: string;
+  lessonCount: number;
+  completedCount: number;
+  progress: number;
+  nextLessonId: string | null;
+  orderIndex: number;
+}
+
+/**
+ * Build an ordered list of units with progress + the next-up lesson for the
+ * user's primary course in `targetLanguage`. Used by the home-screen
+ * "Continue learning" tile grid.
+ *
+ * Returns [] if no published course exists for the language yet.
+ */
+export async function fetchUnitProgressTiles(
+  userId: string,
+  targetLanguage: string,
+  limit = 4,
+): Promise<UnitProgressTile[]> {
+  const courses = await fetchCourses(targetLanguage);
+  if (courses.length === 0) return [];
+  const course = courses[0];
+
+  const units = await fetchUnits(course.id);
+  if (units.length === 0) return [];
+
+  const [lessonsByUnit, completions] = await Promise.all([
+    Promise.all(units.map((u) => fetchLessons(u.id).then((lessons) => ({ unitId: u.id, lessons })))),
+    fetchLessonCompletions(userId, course.id),
+  ]);
+  const completedSet = new Set(completions.map((c) => c.lessonId));
+
+  const tiles: UnitProgressTile[] = units.map((unit) => {
+    const lessons = lessonsByUnit.find((entry) => entry.unitId === unit.id)?.lessons ?? [];
+    const completedCount = lessons.filter((l) => completedSet.has(l.id)).length;
+    const lessonCount = lessons.length > 0 ? lessons.length : unit.totalLessons;
+    const progress = lessonCount > 0 ? completedCount / lessonCount : 0;
+    const nextLesson = lessons.find((l) => !completedSet.has(l.id)) ?? null;
+    return {
+      unitId: unit.id,
+      courseId: course.id,
+      title: unit.title,
+      lessonCount,
+      completedCount,
+      progress,
+      nextLessonId: nextLesson?.id ?? null,
+      orderIndex: unit.orderIndex,
+    };
+  });
+
+  // Prefer units the user is actively progressing through: in-progress first,
+  // then not-yet-started, then fully completed; preserve order_index within
+  // each bucket so the sequence still matches the curriculum.
+  const bucket = (t: UnitProgressTile) =>
+    t.completedCount > 0 && t.completedCount < t.lessonCount ? 0 : t.completedCount === 0 ? 1 : 2;
+  const sorted = [...tiles].sort((a, b) => {
+    const ba = bucket(a);
+    const bb = bucket(b);
+    if (ba !== bb) return ba - bb;
+    return a.orderIndex - b.orderIndex;
+  });
+
+  return sorted.slice(0, limit);
 }
 
 export async function fetchLessonCompletions(

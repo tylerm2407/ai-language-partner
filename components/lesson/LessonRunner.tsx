@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { View, Text, ScrollView, Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { ProgressBar } from '../ui/ProgressBar';
@@ -22,7 +22,37 @@ import { CorrectSparkle } from '../animations/CorrectSparkle';
 import { WrongShake } from '../animations/WrongShake';
 import { HeartBreak } from '../animations/HeartBreak';
 import { CelebrationOverlay } from '../ui/CelebrationOverlay';
-import type { Exercise, LanguageCode } from '../../types';
+import { fetchDueReviewItemsWithCards, upsertReviewItem } from '../../lib/supabase-queries';
+import { calculateNextReview } from '../../lib/srs';
+import type { Exercise, LanguageCode, ReviewItem, Card } from '../../types';
+
+// ─── SRS Warm-Up (research.md §5.1 & §13.1) ──────────────────────────────
+// Retrieval practice ~50% higher long-term retention than re-study. Starting
+// every lesson with 3-5 due SRS items primes the learner and closes the gap
+// where review activity and lesson activity were separate surfaces.
+const WARMUP_MAX_ITEMS = 5;
+const WARMUP_FETCH_TIMEOUT_MS = 1500;
+
+function warmupToExercise(entry: { item: ReviewItem; card: Card }): Exercise {
+  const { card } = entry;
+  return {
+    id: `warmup-${entry.item.id}`,
+    lessonId: 'warmup',
+    type: 'translate_to_target',
+    orderIndex: 0,
+    prompt: card.nativeText,
+    promptAudioUrl: null,
+    correctAnswer: card.targetText,
+    acceptedAnswers: [card.targetText],
+    options: null,
+    hintText: card.exampleSentence ?? null,
+    cardId: card.id,
+    skillType: card.skillType,
+    subskill: card.subskill,
+    targetWord: card.targetText,
+    explanation: card.exampleSentenceTranslation ?? undefined,
+  };
+}
 
 interface LessonRunnerProps {
   exercises: Exercise[];
@@ -73,11 +103,74 @@ export function LessonRunner({
   const [lastAnswerCorrect, setLastAnswerCorrect] = useState<boolean | null>(null);
   const [heartBreakTrigger, setHeartBreakTrigger] = useState(false);
 
-  const currentExercise = exercises[currentIndex];
-  const progress = exercises.length > 0 ? (currentIndex + 1) / exercises.length : 0;
+  // SRS warm-up state. `warmupResolved` gates the lesson: true once the
+  // warm-up either loaded (with items or zero) or the fetch timed out.
+  const [warmupResolved, setWarmupResolved] = useState(false);
+  const [warmupEntries, setWarmupEntries] = useState<Array<{ item: ReviewItem; card: Card }>>([]);
+  const [warmupIndex, setWarmupIndex] = useState(0);
+  const [warmupPhase, setWarmupPhase] = useState(false);
+  const warmupFetchedRef = useRef(false);
+
+  useEffect(() => {
+    if (warmupFetchedRef.current) return;
+    warmupFetchedRef.current = true;
+    let timedOut = false;
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      setWarmupResolved(true);
+    }, WARMUP_FETCH_TIMEOUT_MS);
+    fetchDueReviewItemsWithCards(userId, WARMUP_MAX_ITEMS)
+      .then((entries) => {
+        if (timedOut) return;
+        clearTimeout(timeout);
+        if (entries.length > 0) {
+          setWarmupEntries(entries);
+          setWarmupPhase(true);
+        }
+        setWarmupResolved(true);
+      })
+      .catch(() => {
+        clearTimeout(timeout);
+        setWarmupResolved(true);
+      });
+    return () => clearTimeout(timeout);
+  }, [userId]);
+
+  const warmupExercise = warmupEntries[warmupIndex]
+    ? warmupToExercise(warmupEntries[warmupIndex])
+    : null;
+  const currentExercise = warmupPhase ? warmupExercise : exercises[currentIndex];
+  const progress = warmupPhase
+    ? warmupEntries.length > 0
+      ? (warmupIndex + 1) / warmupEntries.length
+      : 0
+    : exercises.length > 0
+      ? (currentIndex + 1) / exercises.length
+      : 0;
 
   const handleAnswer = useCallback(
     (correct: boolean, answer: string) => {
+      if (warmupPhase) {
+        // Warm-up answers feed the SRS machinery but do not affect the
+        // lesson accuracy/XP aggregates. Intentionally do not lose hearts
+        // on warm-up misses (different pedagogy).
+        setShowResult(true);
+        setLastAnswerCorrect(correct);
+        const entry = warmupEntries[warmupIndex];
+        if (entry) {
+          const rating = correct ? 4 : 2;
+          const next = calculateNextReview(entry.item, rating);
+          upsertReviewItem({
+            id: entry.item.id,
+            userId: entry.item.userId,
+            cardId: entry.item.cardId,
+            ...next,
+            lastReviewedAt: new Date().toISOString(),
+          }).catch((err) => console.warn('[warmup] upsertReviewItem failed:', err));
+        }
+        return;
+      }
+      if (!currentExercise) return;
       setAnswers((prev) => [...prev, { exerciseId: currentExercise.id, correct, answer }]);
       setShowResult(true);
       setLastAnswerCorrect(correct);
@@ -93,10 +186,23 @@ export function LessonRunner({
         }
       }
     },
-    [currentExercise, isUnlimitedHearts, hearts, onLoseHeart]
+    [currentExercise, isUnlimitedHearts, hearts, onLoseHeart, warmupPhase, warmupEntries, warmupIndex]
   );
 
   const handleNext = () => {
+    if (warmupPhase) {
+      if (warmupIndex < warmupEntries.length - 1) {
+        setWarmupIndex((i) => i + 1);
+        setShowResult(false);
+        setLastAnswerCorrect(null);
+      } else {
+        // Warm-up done — transition into the main lesson.
+        setWarmupPhase(false);
+        setShowResult(false);
+        setLastAnswerCorrect(null);
+      }
+      return;
+    }
     if (currentIndex < exercises.length - 1) {
       setCurrentIndex((prev) => prev + 1);
       setShowResult(false);
@@ -129,7 +235,15 @@ export function LessonRunner({
     }
   };
 
-  if (exercises.length === 0) {
+  if (!warmupResolved) {
+    return (
+      <View className="flex-1 items-center justify-center p-6">
+        <Text className="text-text-secondary text-base">Preparing your lesson…</Text>
+      </View>
+    );
+  }
+
+  if (exercises.length === 0 && !warmupPhase) {
     return (
       <View className="flex-1 items-center justify-center p-6">
         <Text className="text-text-secondary text-lg text-center mb-4">
@@ -174,9 +288,21 @@ export function LessonRunner({
           <Button label="Exit" variant="danger" onPress={onExit} style={{ paddingHorizontal: 16, paddingVertical: 8 }} />
           <HeartsDisplay hearts={hearts} maxHearts={maxHearts} isUnlimited={isUnlimitedHearts} />
           <Text className="text-text-secondary text-sm">
-            {currentIndex + 1} / {exercises.length}
+            {warmupPhase
+              ? `Warm-up ${warmupIndex + 1} / ${warmupEntries.length}`
+              : `${currentIndex + 1} / ${exercises.length}`}
           </Text>
         </View>
+        {warmupPhase && (
+          <View className="mb-2">
+            <Text className="text-xs font-semibold text-primary uppercase tracking-wider">
+              Quick Review
+            </Text>
+            <Text className="text-xs text-text-secondary mt-0.5">
+              A few items due for practice before we start.
+            </Text>
+          </View>
+        )}
         <ProgressBar progress={progress} />
       </View>
 
@@ -186,7 +312,7 @@ export function LessonRunner({
       {/* Exercise */}
       <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 40 }}>
         <ExerciseWrapper {...wrapperProps}>
-          {renderExercise(
+          {currentExercise && renderExercise(
             currentExercise,
             handleAnswer,
             showResult,

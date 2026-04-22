@@ -116,30 +116,55 @@ interface ScheduleStreakSaveReminderParams {
   xpEarnedToday: number;
   /** Local hour (0-23). Clamped to [18, 22] — evening-only, before quiet hours. */
   preferredHour?: number;
+  /** Learner's Ideal L2 Self (Dörnyei L2MSS). When present, enriches the
+   * reminder body with a concrete, personalized reason to practice —
+   * the strongest predictor of sustained effort per the research. */
+  idealL2Self?: string | null;
 }
 
-function streakSaveContent(streak: number): { title: string; body: string } {
+/**
+ * Trim an ideal-self sentence to a fragment safe for notification body.
+ * Push notifications cap around 178 chars; we budget ~60 for the user's
+ * fragment after the enclosing copy. Word-boundary ellipsis.
+ */
+function idealSelfFragment(idealL2Self: string, maxLen = 60): string {
+  const cleaned = idealL2Self.trim().replace(/\.$/, '');
+  if (cleaned.length <= maxLen) return cleaned;
+  const cut = cleaned.slice(0, maxLen);
+  const lastSpace = cut.lastIndexOf(' ');
+  return `${cut.slice(0, lastSpace > 20 ? lastSpace : maxLen).trimEnd()}…`;
+}
+
+function streakSaveContent(
+  streak: number,
+  idealL2Self?: string | null,
+): { title: string; body: string } {
+  const hasVision = typeof idealL2Self === 'string' && idealL2Self.trim().length > 0;
+  const visionBody = hasVision
+    ? `The you who will ${idealSelfFragment(idealL2Self as string)} — don't lose today.`
+    : null;
+
   if (streak >= 30) {
     return {
       title: `Your ${streak}-day streak is on the line 🔥`,
-      body: "Lumi's watching. Two minutes saves it.",
+      body: visionBody ?? "Lumi's watching. Two minutes saves it.",
     };
   }
   if (streak >= 7) {
     return {
       title: `Your ${streak}-day streak is on the line 🔥`,
-      body: 'Two minutes saves it. Tap to practice.',
+      body: visionBody ?? 'Two minutes saves it. Tap to practice.',
     };
   }
   if (streak >= 2) {
     return {
       title: `Day ${streak} — keep it going 🔥`,
-      body: 'A quick lesson locks in your streak.',
+      body: visionBody ?? 'A quick lesson locks in your streak.',
     };
   }
   return {
     title: "Time for today's practice",
-    body: '5 minutes keeps the habit going.',
+    body: visionBody ?? '5 minutes keeps the habit going.',
   };
 }
 
@@ -154,6 +179,7 @@ export async function scheduleStreakSaveReminder({
   streak,
   xpEarnedToday,
   preferredHour = 21,
+  idealL2Self,
 }: ScheduleStreakSaveReminderParams): Promise<void> {
   if (Platform.OS === 'web') return;
 
@@ -165,7 +191,7 @@ export async function scheduleStreakSaveReminder({
   if (xpEarnedToday > 0) return;
 
   const hour = Math.max(18, Math.min(preferredHour, 22));
-  const { title, body } = streakSaveContent(streak);
+  const { title, body } = streakSaveContent(streak, idealL2Self);
 
   await Notifications.scheduleNotificationAsync({
     content: {

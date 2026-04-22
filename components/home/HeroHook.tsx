@@ -59,8 +59,25 @@ interface HeroHookProps {
   dailyGoalMinutes?: number;
   streak?: number;
   motivation?: MotivationReason | null;
+  /** Learner's persistent Ideal L2 Self (Dörnyei L2MSS). When set, it
+   * overrides the enum-based motivationHook because a concrete personal
+   * vision beats a generic outcome line. research.md §11.1. */
+  idealL2Self?: string | null;
   /** Fallback when displayName + motivation are both absent — keeps layout. */
   fallbackSubtitle?: string | null;
+}
+
+/**
+ * Format the Ideal L2 Self into a hook line. Kept tight because the
+ * original user input can be long (up to 300 chars) but the hero card
+ * reserves ~2 lines.
+ */
+function idealSelfHook(idealL2Self: string, lang: string): string {
+  const trimmed = idealL2Self.trim();
+  // Start with a lower-case fragment to read naturally after "You said you want to…"
+  const fragment = trimmed.charAt(0).toLowerCase() + trimmed.slice(1).replace(/\.$/, '');
+  const capped = fragment.length > 90 ? `${fragment.slice(0, 87).trimEnd()}…` : fragment;
+  return `You said you want to ${capped}. Every minute in ${lang} gets you closer.`;
 }
 
 export function HeroHook({
@@ -69,14 +86,17 @@ export function HeroHook({
   dailyGoalMinutes = 10,
   streak = 0,
   motivation,
+  idealL2Self,
   fallbackSubtitle,
 }: HeroHookProps) {
   const hour = new Date().getHours();
   const greeting = timeGreeting(hour);
   const lang = languageName(targetLanguage);
-  const hook = motivation
-    ? motivationHook(motivation, lang, dailyGoalMinutes)
-    : fallbackSubtitle ?? motivationHook('curious', lang, dailyGoalMinutes);
+  const hook = idealL2Self && idealL2Self.trim()
+    ? idealSelfHook(idealL2Self, lang)
+    : motivation
+      ? motivationHook(motivation, lang, dailyGoalMinutes)
+      : fallbackSubtitle ?? motivationHook('curious', lang, dailyGoalMinutes);
   const mascotState = streak >= 1 ? 'happy' : 'idle';
 
   return (

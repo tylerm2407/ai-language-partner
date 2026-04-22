@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, Pressable, ScrollView, Alert } from 'react-native';
+import { View, Text, Pressable, ScrollView, Alert, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
@@ -10,6 +10,25 @@ import { PlacementTest } from '../../components/onboarding/PlacementTest';
 import { GradientBackground } from '../../components/ui/GradientBackground';
 import { SUPPORTED_LANGUAGES, DAILY_GOALS } from '../../config/app';
 import type { LanguageCode, ProficiencyLevel, MotivationReason } from '../../types';
+
+// Dörnyei L2MSS: the learner's vision of themselves as a competent L2 user
+// is the single strongest predictor of sustained effort (r ≈ 0.61). The
+// language-specific placeholder gives a vivid, concrete anchor instead of
+// an abstract prompt. research.md §11.1.
+const IDEAL_SELF_PLACEHOLDER: Partial<Record<LanguageCode, string>> = {
+  es: 'Ordering coffee in Madrid without switching to English.',
+  fr: 'Reading a whole novel in French by next summer.',
+  de: 'Understanding the in-jokes at my partner\'s family dinners.',
+  it: 'Navigating an Italian road trip with the locals.',
+  pt: 'Chatting with my neighbors in Lisbon about football.',
+  ja: 'Watching anime without subtitles.',
+  ko: 'Singing K-pop and understanding every line.',
+  zh: 'Haggling at a Beijing street market.',
+  ar: 'Reading Arabic poetry the way it was written.',
+  hi: 'Watching Bollywood films without subtitles.',
+  ru: 'Reading a Tolstoy short story in the original.',
+  en: 'Giving a confident talk at work in English.',
+};
 
 const LEVELS: { value: ProficiencyLevel; label: string; description: string }[] = [
   { value: 'beginner', label: 'Beginner', description: 'I know a few words' },
@@ -27,9 +46,11 @@ const MOTIVATIONS: { value: MotivationReason; label: string; description: string
   { value: 'curious', label: 'Just curious', description: 'See where the journey takes me' },
 ];
 
-type Step = 'language' | 'motivation' | 'level' | 'placement' | 'goal';
+type Step = 'language' | 'motivation' | 'idealSelf' | 'level' | 'placement' | 'goal';
 
-const ALL_STEPS: Step[] = ['language', 'motivation', 'level', 'placement', 'goal'];
+const ALL_STEPS: Step[] = ['language', 'motivation', 'idealSelf', 'level', 'placement', 'goal'];
+
+const IDEAL_SELF_MAX_CHARS = 300;
 
 export default function OnboardingScreen() {
   const { user } = useAuth();
@@ -39,6 +60,7 @@ export default function OnboardingScreen() {
   const [step, setStep] = useState<Step>('language');
   const [targetLanguage, setTargetLanguage] = useState<LanguageCode | null>(null);
   const [motivation, setMotivation] = useState<MotivationReason | null>(null);
+  const [idealL2Self, setIdealL2Self] = useState<string>('');
   const [level, setLevel] = useState<ProficiencyLevel | null>(null);
   const [dailyGoal, setDailyGoal] = useState<number>(10);
   const [saving, setSaving] = useState(false);
@@ -53,6 +75,8 @@ export default function OnboardingScreen() {
         targetLanguage,
         level,
         dailyGoalMinutes: dailyGoal,
+        motivationReason: motivation,
+        idealL2Self: idealL2Self.trim() ? idealL2Self.trim() : null,
       });
       await updateOnboardingChecklist(user.id, {
         chooseLanguage: true,
@@ -172,8 +196,49 @@ export default function OnboardingScreen() {
               <View className="flex-1">
                 <Button
                   label="Continue"
-                  onPress={() => setStep('level')}
+                  onPress={() => setStep('idealSelf')}
                   disabled={!motivation}
+                />
+              </View>
+            </View>
+          </>
+        )}
+
+        {step === 'idealSelf' && (
+          <>
+            <Text className="text-[28px] font-bold text-text-primary mb-2" accessibilityRole="header">
+              Picture a moment you&apos;d love to have in this language.
+            </Text>
+            <Text className="text-base text-text-secondary mb-6">
+              One sentence is enough. You can skip this if you&apos;d rather not say.
+            </Text>
+
+            <View className="bg-dark-card rounded-2xl p-4 mb-4 border border-transparent focus:border-primary">
+              <TextInput
+                value={idealL2Self}
+                onChangeText={(text) => setIdealL2Self(text.slice(0, IDEAL_SELF_MAX_CHARS))}
+                placeholder={(targetLanguage && IDEAL_SELF_PLACEHOLDER[targetLanguage]) ?? IDEAL_SELF_PLACEHOLDER.en}
+                placeholderTextColor="#6b7280"
+                multiline
+                numberOfLines={4}
+                maxLength={IDEAL_SELF_MAX_CHARS}
+                className="text-lg text-text-primary min-h-[100px]"
+                style={{ textAlignVertical: 'top' }}
+                accessibilityLabel="Your ideal L2 self — a sentence describing your language vision"
+              />
+              <Text className="text-xs text-text-secondary mt-2 text-right">
+                {idealL2Self.length} / {IDEAL_SELF_MAX_CHARS}
+              </Text>
+            </View>
+
+            <View className="flex-row gap-3 mt-2">
+              <View className="flex-1">
+                <Button label="Back" variant="secondary" onPress={() => setStep('motivation')} />
+              </View>
+              <View className="flex-1">
+                <Button
+                  label={idealL2Self.trim() ? 'Continue' : 'Skip'}
+                  onPress={() => setStep('level')}
                 />
               </View>
             </View>
@@ -209,7 +274,7 @@ export default function OnboardingScreen() {
 
             <View className="flex-row gap-3 mt-6">
               <View className="flex-1">
-                <Button label="Back" variant="secondary" onPress={() => setStep('motivation')} />
+                <Button label="Back" variant="secondary" onPress={() => setStep('idealSelf')} />
               </View>
               <View className="flex-1">
                 <Button
