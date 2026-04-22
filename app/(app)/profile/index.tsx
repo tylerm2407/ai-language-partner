@@ -13,6 +13,9 @@ import { LeagueBadge } from '../../../components/gamification/LeagueBadge';
 import { AchievementGrid } from '../../../components/gamification/AchievementGrid';
 import { Avatar } from '../../../components/avatar/Avatar';
 import { AvatarCustomizer } from '../../../components/avatar/AvatarCustomizer';
+import { FourStrandsCard } from '../../../components/stats/FourStrandsCard';
+import { useDailyStats } from '../../../hooks/useDailyStats';
+import { strandMinutesFromDailyStats } from '../../../lib/four-strands';
 import { DEFAULT_AVATAR_CONFIG } from '../../../components/avatar/constants';
 import { updateAvatarConfig, joinClassroom } from '../../../lib/supabase-queries';
 import JoinClassModal from '../../../components/school/JoinClassModal';
@@ -32,6 +35,13 @@ export default function ProfileScreen() {
   const { profile, subscription, setProfile } = useAppStore();
   const { enrolledClasses, loadStudentSchoolData, roles, activeRole, setActiveRole } = useSchoolStore();
   const { level, tier } = useLevel();
+  const { dailyStats } = useDailyStats();
+  const strandTotals = strandMinutesFromDailyStats({
+    listeningMinutes: dailyStats?.listeningMinutes,
+    readingMinutes: dailyStats?.readingMinutes,
+    speakingMinutes: dailyStats?.speakingMinutes,
+    writingMinutes: dailyStats?.writingMinutes,
+  });
   const router = useRouter();
   const [customizerVisible, setCustomizerVisible] = useState(false);
   const [joinModalVisible, setJoinModalVisible] = useState(false);
@@ -115,6 +125,11 @@ export default function ProfileScreen() {
           <View className="mt-3">
             <LeagueBadge tier={tier} />
           </View>
+        </View>
+
+        {/* Four Strands balance (Nation, research.md §14.3) */}
+        <View className="mb-4">
+          <FourStrandsCard totals={strandTotals} />
         </View>
 
         {/* Achievements */}

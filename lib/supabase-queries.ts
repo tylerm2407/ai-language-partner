@@ -444,6 +444,8 @@ export async function upsertDailyStats(
     minutes_practiced: (existing?.minutesPracticed ?? 0) + (updates.minutesPracticed ?? 0),
     speaking_minutes: (existing?.speakingMinutes ?? 0) + (updates.speakingMinutes ?? 0),
     listening_minutes: (existing?.listeningMinutes ?? 0) + (updates.listeningMinutes ?? 0),
+    reading_minutes: (existing?.readingMinutes ?? 0) + (updates.readingMinutes ?? 0),
+    writing_minutes: (existing?.writingMinutes ?? 0) + (updates.writingMinutes ?? 0),
     xp_earned: (existing?.xpEarned ?? 0) + (updates.xpEarned ?? 0),
     accuracy: updates.accuracy ?? existing?.accuracy ?? 0,
   };
@@ -786,6 +788,8 @@ function mapDailyStats(row: Record<string, unknown>): DailyStats {
     minutesPracticed: row.minutes_practiced as number,
     speakingMinutes: row.speaking_minutes as number,
     listeningMinutes: row.listening_minutes as number,
+    readingMinutes: (row.reading_minutes as number) ?? 0,
+    writingMinutes: (row.writing_minutes as number) ?? 0,
     xpEarned: row.xp_earned as number,
     accuracy: row.accuracy as number,
   };

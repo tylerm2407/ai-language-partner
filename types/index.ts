@@ -261,6 +261,8 @@ export interface DailyStats {
   minutesPracticed: number;
   speakingMinutes: number;
   listeningMinutes: number;
+  readingMinutes: number;
+  writingMinutes: number;
   xpEarned: number;
   accuracy: number; // 0-1
 }

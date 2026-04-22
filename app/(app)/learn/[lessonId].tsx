@@ -3,6 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { fetchLessonWithExercises } from '../../../lib/supabase-queries';
+import { orderExercisesForCognitiveLoad, lessonIsAlreadyOrdered } from '../../../lib/lesson-ordering';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAppStore } from '../../../stores/useAppStore';
 import { useProfile } from '../../../hooks/useProfile';
@@ -114,7 +115,11 @@ export default function LessonScreen() {
     <GradientBackground variant="raised">
     <SafeAreaView className="flex-1">
       <LessonRunner
-        exercises={lesson.exercises}
+        exercises={
+          lessonIsAlreadyOrdered(lesson.exercises)
+            ? lesson.exercises
+            : orderExercisesForCognitiveLoad(lesson.exercises)
+        }
         lessonTitle={lesson.title}
         xpReward={lesson.xpReward}
         userId={user?.id ?? ''}
