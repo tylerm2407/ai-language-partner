@@ -12,19 +12,21 @@ import Animated, {
   interpolate,
 } from 'react-native-reanimated';
 
-import { DEEP_NEBULA } from '../../config/gradients';
+// ── Color palette — matched to the deep-space reference image ────
+// Almost-black at top, deep indigo mid, dark violet base
+const BASE_TOP = '#08081a';
+const BASE_MID = '#0d0e25';
+const BASE_BOT = '#110a28';
 
-// ── Aurora Color Palette ──────────────────────────────────────
-// Deep Nebula: #0a0520 / #1a0a3e / #0f0a2e base
-// Accent: #4F8EF7 (blue), #7C3AED (violet), #A855F7 (lilac)
-const BASE_GRADIENT: [string, string, string] = [...DEEP_NEBULA];
-const AURORA_BLUE = 'rgba(79, 142, 247, 0.40)';
-const AURORA_VIOLET = 'rgba(124, 58, 237, 0.55)';
-const AURORA_LIGHT_BLUE = 'rgba(95, 160, 255, 0.30)';
-const BAND_LILAC = 'rgba(168, 85, 247, 0.14)';
+// Nebula bloom — concentrated purple, center-right
+const NEBULA_PURPLE = 'rgba(60, 20, 120, 0.55)';
+// Subtle steel-blue wash — upper-left quadrant
+const NEBULA_BLUE = 'rgba(30, 50, 100, 0.30)';
+// Faint warm lilac tint at very bottom edge
+const BOTTOM_WARM = 'rgba(80, 50, 90, 0.20)';
 
 // ── Star Config ───────────────────────────────────────────────
-const STAR_COUNT = 80;
+const STAR_COUNT = 65;
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
 interface StarData {
@@ -34,6 +36,8 @@ interface StarData {
   baseOpacity: number;
   delay: number;
   duration: number;
+  /** Warm stars get a slight warm tint (#FFF5E6), cool stars stay white */
+  warm: boolean;
 }
 
 function generateStars(count: number): StarData[] {
@@ -42,16 +46,17 @@ function generateStars(count: number): StarData[] {
     stars.push({
       x: Math.random() * SCREEN_W,
       y: Math.random() * SCREEN_H,
-      size: 1 + Math.random() * 1.5,
-      baseOpacity: 0.1 + Math.random() * 0.45,
-      delay: Math.random() * 3000,
-      duration: 2000 + Math.random() * 2000,
+      size: 0.8 + Math.random() * 1.4, // smaller, 0.8–2.2px
+      baseOpacity: 0.15 + Math.random() * 0.55,
+      delay: Math.random() * 5000,
+      duration: 3000 + Math.random() * 4000, // slower twinkle
+      warm: Math.random() > 0.5,
     });
   }
   return stars;
 }
 
-// ── Individual Star Component ─────────────────────────────────
+// ── Individual Star ──────────────────────────────────────────
 function Star({ data }: { data: StarData }) {
   const progress = useSharedValue(0);
 
@@ -60,8 +65,8 @@ function Star({ data }: { data: StarData }) {
       data.delay,
       withRepeat(
         withSequence(
-          withTiming(1, { duration: data.duration / 2, easing: Easing.inOut(Easing.ease) }),
-          withTiming(0, { duration: data.duration / 2, easing: Easing.inOut(Easing.ease) }),
+          withTiming(1, { duration: data.duration * 0.45, easing: Easing.inOut(Easing.ease) }),
+          withTiming(0, { duration: data.duration * 0.55, easing: Easing.inOut(Easing.ease) }),
         ),
         -1,
         false,
@@ -70,8 +75,8 @@ function Star({ data }: { data: StarData }) {
   }, [data.delay, data.duration, progress]);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(progress.value, [0, 1], [data.baseOpacity * 0.2, data.baseOpacity]),
-    transform: [{ scale: interpolate(progress.value, [0, 1], [0.8, 1.2]) }],
+    opacity: interpolate(progress.value, [0, 1], [data.baseOpacity * 0.15, data.baseOpacity]),
+    transform: [{ scale: interpolate(progress.value, [0, 1], [0.85, 1.15]) }],
   }));
 
   return (
@@ -84,7 +89,7 @@ function Star({ data }: { data: StarData }) {
           width: data.size,
           height: data.size,
           borderRadius: data.size / 2,
-          backgroundColor: '#FFFFFF',
+          backgroundColor: data.warm ? '#FFF5E8' : '#FFFFFF',
         },
         animatedStyle,
       ]}
@@ -92,7 +97,7 @@ function Star({ data }: { data: StarData }) {
   );
 }
 
-// ── Starfield (memoized to avoid re-generating stars) ─────────
+// ── Starfield (memoized) ─────────────────────────────────────
 const Starfield = React.memo(function Starfield() {
   const stars = useMemo(() => generateStars(STAR_COUNT), []);
 
@@ -105,46 +110,14 @@ const Starfield = React.memo(function Starfield() {
   );
 });
 
-// ── Aurora Glow Layer ─────────────────────────────────────────
-function AuroraGlow() {
+// ── Nebula Glow Layer — slow breathing + gentle drift ────────
+function NebulaGlow() {
+  const breathe = useSharedValue(0);
   const drift = useSharedValue(0);
 
   useEffect(() => {
-    drift.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 11000, easing: Easing.inOut(Easing.ease) }),
-        withTiming(0, { duration: 11000, easing: Easing.inOut(Easing.ease) }),
-      ),
-      -1,
-      false,
-    );
-  }, [drift]);
-
-  const auroraStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateY: interpolate(drift.value, [0, 1], [0, -40]) },
-      { skewY: `${interpolate(drift.value, [0, 1], [-8, -4])}deg` },
-    ],
-  }));
-
-  return (
-    <Animated.View style={[styles.auroraContainer, auroraStyle]} pointerEvents="none">
-      {/* Blue glow — top-left */}
-      <View style={[styles.auroraBlob, styles.auroraBlobBlue]} />
-      {/* Violet glow — right-center */}
-      <View style={[styles.auroraBlob, styles.auroraBlobViolet]} />
-      {/* Light blue glow — bottom-center */}
-      <View style={[styles.auroraBlob, styles.auroraBlobLightBlue]} />
-    </Animated.View>
-  );
-}
-
-// ── Light Band ────────────────────────────────────────────────
-function LightBand() {
-  const shimmer = useSharedValue(0);
-
-  useEffect(() => {
-    shimmer.value = withRepeat(
+    // Slow breathing — opacity pulse
+    breathe.value = withRepeat(
       withSequence(
         withTiming(1, { duration: 8000, easing: Easing.inOut(Easing.ease) }),
         withTiming(0, { duration: 8000, easing: Easing.inOut(Easing.ease) }),
@@ -152,28 +125,49 @@ function LightBand() {
       -1,
       false,
     );
-  }, [shimmer]);
+    // Very slow spatial drift
+    drift.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 14000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0, { duration: 14000, easing: Easing.inOut(Easing.ease) }),
+      ),
+      -1,
+      false,
+    );
+  }, [breathe, drift]);
 
-  const bandStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(shimmer.value, [0, 1], [0.6, 1.0]),
+  const purpleStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(breathe.value, [0, 1], [0.7, 1.0]),
+    transform: [
+      { translateX: interpolate(drift.value, [0, 1], [0, 12]) },
+      { translateY: interpolate(drift.value, [0, 1], [0, -8]) },
+    ],
+  }));
+
+  const blueStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(breathe.value, [0, 1], [0.6, 0.9]),
+    transform: [
+      { translateX: interpolate(drift.value, [0, 1], [0, -8]) },
+      { translateY: interpolate(drift.value, [0, 1], [0, 6]) },
+    ],
+  }));
+
+  const warmStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(breathe.value, [0, 1], [0.5, 0.8]),
   }));
 
   return (
-    <Animated.View style={[StyleSheet.absoluteFill, bandStyle]} pointerEvents="none">
-      <LinearGradient
-        colors={['transparent', BAND_LILAC, 'transparent']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        locations={[0.35, 0.55, 0.75]}
-        style={StyleSheet.absoluteFill}
-      />
-    </Animated.View>
-  );
-}
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      {/* Purple nebula bloom — center-right, the dominant feature */}
+      <Animated.View style={[styles.blob, styles.blobPurple, purpleStyle]} />
 
-// ── Grain Overlay ─────────────────────────────────────────────
-function GrainOverlay() {
-  return <View style={styles.grain} pointerEvents="none" />;
+      {/* Subtle steel-blue wash — upper-left */}
+      <Animated.View style={[styles.blob, styles.blobBlue, blueStyle]} />
+
+      {/* Faint warm bottom edge */}
+      <Animated.View style={[styles.blob, styles.blobWarm, warmStyle]} />
+    </View>
+  );
 }
 
 // ── Main Component ────────────────────────────────────────────
@@ -185,24 +179,18 @@ interface AuroraBackgroundProps {
 export function AuroraBackground({ children, style }: AuroraBackgroundProps) {
   return (
     <View style={[styles.container, style]}>
-      {/* Layer 0: Base gradient */}
+      {/* Layer 0: Vertical gradient — near-black → deep indigo → dark violet */}
       <LinearGradient
-        colors={[...BASE_GRADIENT]}
-        locations={[0, 0.6, 1]}
+        colors={[BASE_TOP, BASE_MID, BASE_BOT]}
+        locations={[0, 0.5, 1]}
         style={StyleSheet.absoluteFill}
       />
 
-      {/* Layer 1: Aurora glow blobs (animated drift) */}
-      <AuroraGlow />
+      {/* Layer 1: Nebula glow blobs (slow breathe + drift) */}
+      <NebulaGlow />
 
-      {/* Layer 2: Diagonal light band (animated shimmer) */}
-      <LightBand />
-
-      {/* Layer 3: Twinkling stars */}
+      {/* Layer 2: Twinkling stars */}
       <Starfield />
-
-      {/* Layer 4: Film grain texture */}
-      <GrainOverlay />
 
       {/* Content */}
       {children}
@@ -214,52 +202,37 @@ export function AuroraBackground({ children, style }: AuroraBackgroundProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DEEP_NEBULA[0],
+    backgroundColor: BASE_TOP,
   },
-  auroraContainer: {
-    ...StyleSheet.absoluteFillObject,
-    top: '-10%',
-    left: '-10%',
-    right: '-10%',
-    bottom: '-10%',
-  },
-  auroraBlob: {
+  blob: {
     position: 'absolute',
     borderRadius: 9999,
   },
-  auroraBlobBlue: {
-    // ellipse 80% 30% at 20% 25%
-    left: '5%',
-    top: '15%',
-    width: '90%',
-    height: '35%',
-    backgroundColor: AURORA_BLUE,
-    transform: [{ scaleX: 1.6 }],
+  // Purple nebula — large ellipse, center-right, ~40-70% vertical
+  blobPurple: {
+    right: '-20%',
+    top: '35%',
+    width: '110%',
+    height: '45%',
+    backgroundColor: NEBULA_PURPLE,
+    transform: [{ scaleX: 1.3 }],
   },
-  auroraBlobViolet: {
-    // ellipse 100% 35% at 85% 55%
-    right: '-15%',
-    top: '40%',
-    width: '100%',
+  // Steel-blue wash — upper-left quadrant
+  blobBlue: {
+    left: '-15%',
+    top: '5%',
+    width: '80%',
     height: '40%',
-    backgroundColor: AURORA_VIOLET,
+    backgroundColor: NEBULA_BLUE,
+    transform: [{ scaleX: 1.5 }],
+  },
+  // Warm lilac tint — bottom strip
+  blobWarm: {
+    left: '0%',
+    bottom: '-5%',
+    width: '100%',
+    height: '20%',
+    backgroundColor: BOTTOM_WARM,
     transform: [{ scaleX: 1.8 }],
-  },
-  auroraBlobLightBlue: {
-    // ellipse 90% 28% at 40% 85%
-    left: '5%',
-    bottom: '5%',
-    width: '85%',
-    height: '30%',
-    backgroundColor: AURORA_LIGHT_BLUE,
-    transform: [{ scaleX: 1.6 }],
-  },
-  grain: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.04,
-    backgroundColor: 'transparent',
-    // Film grain via a subtle noise pattern
-    // On native this is very subtle — just a slight texture
-    borderWidth: 0,
   },
 });
