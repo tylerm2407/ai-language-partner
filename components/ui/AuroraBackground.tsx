@@ -12,14 +12,16 @@ import Animated, {
   interpolate,
 } from 'react-native-reanimated';
 
+import { DEEP_NEBULA } from '../../config/gradients';
+
 // ── Aurora Color Palette ──────────────────────────────────────
-// From Claude Design: #05060f / #0a0f1e / #0f0a2e base
+// Deep Nebula: #0a0520 / #1a0a3e / #0f0a2e base
 // Accent: #4F8EF7 (blue), #7C3AED (violet), #A855F7 (lilac)
-const BASE_GRADIENT: [string, string, string] = ['#05060f', '#0a0f1e', '#0f0a2e'];
-const AURORA_BLUE = 'rgba(79, 142, 247, 0.45)';
-const AURORA_VIOLET = 'rgba(124, 58, 237, 0.50)';
-const AURORA_LIGHT_BLUE = 'rgba(95, 160, 255, 0.35)';
-const BAND_LILAC = 'rgba(168, 85, 247, 0.12)';
+const BASE_GRADIENT: [string, string, string] = [...DEEP_NEBULA];
+const AURORA_BLUE = 'rgba(79, 142, 247, 0.40)';
+const AURORA_VIOLET = 'rgba(124, 58, 237, 0.55)';
+const AURORA_LIGHT_BLUE = 'rgba(95, 160, 255, 0.30)';
+const BAND_LILAC = 'rgba(168, 85, 247, 0.14)';
 
 // ── Star Config ───────────────────────────────────────────────
 const STAR_COUNT = 80;
@@ -212,7 +214,7 @@ export function AuroraBackground({ children, style }: AuroraBackgroundProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#05060f',
+    backgroundColor: DEEP_NEBULA[0],
   },
   auroraContainer: {
     ...StyleSheet.absoluteFillObject,

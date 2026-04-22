@@ -100,6 +100,20 @@ export const colors = {
     empty: '#64748B',
   },
 
+  /** Magazine / editorial palette */
+  magazine: {
+    nebulaTop: '#0a0520',
+    nebulaMid: '#1a0a3e',
+    accentBlue: '#4F8EF7',
+    accentViolet: '#7C3AED',
+    accentLilac: '#A855F7',
+    heartsCoral: '#FF6B6B',
+    xpGold: '#FFB547',
+    streakFlame: '#FF8A3D',
+    glassBg: 'rgba(20,25,50,0.5)',
+    glassBorder: 'rgba(255,255,255,0.10)',
+  },
+
   /** Correction-banner error-type chip styles */
   correctionChip: {
     grammar: { bg: 'rgba(56, 189, 248, 0.22)', text: '#7DD3FC' },
@@ -142,6 +156,9 @@ export const typography = {
     semibold: 'Inter_600SemiBold',
     bold: 'Inter_700Bold',
     display: 'PlayfairDisplay_700Bold', // celebration / hero only
+    serif: 'Georgia', // magazine editorial headlines (system font on iOS, Noto Serif on Android)
+    mono: 'JetBrainsMono_400Regular',
+    monoMedium: 'JetBrainsMono_500Medium',
   },
   scale: {
     // Title / Display

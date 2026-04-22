@@ -313,4 +313,59 @@ When editing any existing screen:
 
 ---
 
-**Last updated:** 2026-04-21 (Phase 0 foundation landed).
+## Magazine Home (Phase 1)
+
+### Deep Nebula Palette
+
+| Token | Value | Usage |
+|---|---|---|
+| `magazine.nebulaTop` | `#0a0520` | Aurora base top |
+| `magazine.nebulaMid` | `#1a0a3e` | Aurora base mid |
+| `magazine.accentBlue` | `#4F8EF7` | Active tab gradient start, links |
+| `magazine.accentViolet` | `#7C3AED` | Active tab gradient end |
+| `magazine.accentLilac` | `#A855F7` | Kickers, premium accents |
+| `magazine.heartsCoral` | `#FF6B6B` | Hearts pill |
+| `magazine.xpGold` | `#FFB547` | XP pill |
+| `magazine.streakFlame` | `#FF8A3D` | Streak pill |
+| `magazine.glassBg` | `rgba(20,25,50,0.5)` | Magazine glass card fill |
+| `magazine.glassBorder` | `rgba(255,255,255,0.10)` | Magazine glass card border |
+
+### Font Roles
+
+| Family | Token | Usage |
+|---|---|---|
+| Georgia (system) | `typography.family.serif` | Headlines, section titles, big numbers |
+| JetBrains Mono | `typography.family.mono` / `monoMedium` | Date labels, meta text, stat values, duration pills |
+| Inter | (existing) | Body text, UI labels |
+
+### Floating Glass Pill Tab Bar
+
+- `<FloatingTabBar />` — custom `tabBar` for Expo Router `<Tabs>`
+- Positioned absolute, centered, `bottom: safeArea + 12`
+- BlurView pill (iOS) / semi-transparent fallback (Android)
+- 4 icons: Home, Learn, Chat, Profile — no labels
+- Active icon: gradient circle (`#4F8EF7` → `#7C3AED`)
+- Width: 240px, height: 56px, borderRadius: 999
+
+### MagazineGlassCard
+
+- `expo-blur` BlurView (intensity 40, tint "dark") on iOS
+- Semi-transparent fallback on Android
+- Fill: `magazine.glassBg`, border: 0.5px `magazine.glassBorder`, radius: 20
+- Used by all magazine-style cards on the home screen
+
+### Home Screen Layout (top to bottom)
+
+1. `<DateLabel />` — JetBrains Mono, uppercase, letterSpacing 3
+2. `<StatsStrip />` — 3 glass pills (streak/XP/hearts)
+3. `<NewsHeroCard />` — editorial news with Georgia serif headline
+4. `<SessionBand />` — play button + today's session
+5. `<LessonTileGrid />` — 2-column continue learning tiles
+6. `<MagazineDailyChallenges />` — "Your daily three"
+7. `<WeekInWords />` — big serif number + 7-day dot grid
+8. `<OnboardingChecklist />` — new users only (unchanged)
+9. Quick Actions — restyled with MagazineGlassCard
+
+---
+
+**Last updated:** 2026-04-22 (Phase 1 Magazine Home landed).

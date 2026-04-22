@@ -16,6 +16,10 @@ import {
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
 import { PlayfairDisplay_700Bold } from '@expo-google-fonts/playfair-display';
+import {
+  JetBrainsMono_400Regular,
+  JetBrainsMono_500Medium,
+} from '@expo-google-fonts/jetbrains-mono';
 
 export default function RootLayout() {
   const { session, loading: authLoading } = useAuth();
@@ -32,6 +36,8 @@ export default function RootLayout() {
     Inter_600SemiBold,
     Inter_700Bold,
     PlayfairDisplay_700Bold,
+    JetBrainsMono_400Regular,
+    JetBrainsMono_500Medium,
   });
 
   // Mount notification listeners + read current permission status.
