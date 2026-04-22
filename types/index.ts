@@ -135,7 +135,7 @@ export type ExerciseType =
   | 'sentence_transformation'
   | 'mini_dialogue';
 
-export type SkillType = 'vocabulary' | 'grammar' | 'mixed';
+export type SkillType = 'vocabulary' | 'grammar' | 'mixed' | 'chunk';
 export type ResponseMode = 'tap' | 'type' | 'speak';
 export type ContentSourceType = 'imported' | 'ai_generated' | 'seed' | 'manual';
 

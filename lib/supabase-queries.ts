@@ -239,6 +239,31 @@ export async function fetchCardsByCourse(courseId: string): Promise<Card[]> {
   return (data ?? []).map(mapCard);
 }
 
+/**
+ * Fetch cards restricted to a specific skill_type. Used by the chunk
+ * drill surface so formulaic multi-word expressions (Wray 2002 /
+ * N. Ellis 1996) can be reviewed as first-class SRS items instead of
+ * being buried as JSONB on a vocab card. research.md §8.
+ */
+export async function fetchCardsBySkillType(
+  courseId: string,
+  skillType: 'vocabulary' | 'grammar' | 'chunk',
+  level?: UserProfile['level'],
+): Promise<Card[]> {
+  let query = supabase
+    .from('cards')
+    .select('*')
+    .eq('course_id', courseId)
+    .eq('skill_type', skillType);
+  if (level) {
+    query = query.in('cefr_level', allowedCefrLevelsFor(level));
+  }
+  const { data, error } = await query
+    .order('frequency_rank', { ascending: true, nullsFirst: false });
+  if (error) throw error;
+  return (data ?? []).map(mapCard);
+}
+
 // ─── Review Items (SRS) ─────────────────────────────────────────
 
 export async function fetchDueReviewItems(userId: string, limit = 50): Promise<ReviewItem[]> {
@@ -322,6 +347,50 @@ export async function upsertReviewItem(item: Omit<ReviewItem, 'id'> & { id?: str
 
   if (error) throw error;
   return mapReviewItem(data);
+}
+
+/**
+ * Per-card rolling accuracy (last N reviews) — used by the interleaving
+ * gate (research.md §5.4, improvements.md §A.7). When a card hits ≥80%
+ * over its last 5 reviews it's considered "past threshold" and safe for
+ * interleaving; below that, it stays in blocked practice (consecutive
+ * exposures). Hwang 2025 warns that interleaving low-accuracy items
+ * overloads working memory.
+ *
+ * Returns null if fewer than 3 reviews exist (not enough signal yet).
+ */
+export async function fetchCardRollingAccuracy(
+  userId: string,
+  cardId: string,
+  windowSize = 5,
+): Promise<number | null> {
+  const { data, error } = await supabase
+    .from('review_logs')
+    .select('was_correct')
+    .eq('user_id', userId)
+    .eq('card_id', cardId)
+    .order('reviewed_at', { ascending: false })
+    .limit(windowSize);
+  if (error) {
+    console.warn('[interleave] rolling-accuracy query failed:', error.message);
+    return null;
+  }
+  const rows = data ?? [];
+  if (rows.length < 3) return null;
+  const correct = rows.filter((r) => r.was_correct === true).length;
+  return correct / rows.length;
+}
+
+export const INTERLEAVE_THRESHOLD = 0.8;
+
+/** True iff the card is past the 80% accuracy threshold (ready for
+ *  interleaved review). Falsy for items without enough history. */
+export async function isCardReadyForInterleaving(
+  userId: string,
+  cardId: string,
+): Promise<boolean> {
+  const acc = await fetchCardRollingAccuracy(userId, cardId);
+  return acc !== null && acc >= INTERLEAVE_THRESHOLD;
 }
 
 export async function insertReviewLog(log: Omit<ReviewLog, 'id'>): Promise<void> {
