@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { SRS_DEFAULTS } from '../config/app';
 import type {
   UserProfile,
   OnboardingChecklist,
@@ -386,6 +387,27 @@ export async function upsertDailyStats(
 
   if (error) throw error;
   return mapDailyStats(data);
+}
+
+/**
+ * New-cards-per-day cap gate (research.md §5.2 + §13.1).
+ *
+ * Reads today's `daily_stats.cards_learned` as the counter for "new cards
+ * introduced today". Returns true iff the learner has room for another
+ * new card. Uses SRS_DEFAULTS.newCardsPerDay as the cap (20 by default).
+ *
+ * This is a soft gate — callers should check before introducing a new
+ * card via insertNewReviewItem / addCardToReview. Paired with
+ * incrementNewCardsToday() which bumps the counter on success.
+ */
+export async function canIntroduceNewCard(userId: string): Promise<boolean> {
+  const stats = await fetchTodayStats(userId);
+  const introducedToday = stats?.cardsLearned ?? 0;
+  return introducedToday < SRS_DEFAULTS.newCardsPerDay;
+}
+
+export async function incrementNewCardsToday(userId: string): Promise<void> {
+  await upsertDailyStats(userId, { cardsLearned: 1 });
 }
 
 export async function fetchStatsRange(userId: string, startDate: string, endDate: string): Promise<DailyStats[]> {
@@ -1052,12 +1074,40 @@ export async function updateStreakShield(
 
 // ─── Reading ──────────────────────────────────────────────────
 
-export async function fetchReadingPassagesByCourse(courseId: string): Promise<ReadingPassage[]> {
-  const { data, error } = await supabase
+/**
+ * Map a ProficiencyLevel to the CEFR band the learner can comfortably read
+ * (current level + 1 sub-level above, per Krashen i+1). Used to gate content
+ * surfaces so learners don't get flooded with C1 text at A2. research.md §1.1.
+ */
+export function allowedCefrLevelsFor(level: UserProfile['level'] | undefined): string[] {
+  const ladder = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+  const map: Record<UserProfile['level'], number> = {
+    beginner: 0,
+    elementary: 1,
+    intermediate: 2,
+    upper_intermediate: 3,
+    advanced: 4,
+  };
+  if (!level) return ladder; // unknown level → don't filter
+  const idx = map[level] ?? 2;
+  // Learner's level + 1 sub-level (i+1). Include everything at/below too
+  // so they can re-visit easier content when they want.
+  return ladder.slice(0, Math.min(ladder.length, idx + 2));
+}
+
+export async function fetchReadingPassagesByCourse(
+  courseId: string,
+  level?: UserProfile['level'],
+): Promise<ReadingPassage[]> {
+  let query = supabase
     .from('reading_passages')
     .select('*')
     .eq('course_id', courseId)
-    .eq('is_published', true)
+    .eq('is_published', true);
+  if (level) {
+    query = query.in('cefr_level', allowedCefrLevelsFor(level));
+  }
+  const { data, error } = await query
     .order('cefr_level', { ascending: true })
     .order('created_at', { ascending: true });
 
@@ -1121,11 +1171,25 @@ export async function upsertReadingProgress(
   if (error) throw error;
 }
 
+export class NewCardsCapReachedError extends Error {
+  readonly code = 'NEW_CARDS_CAP_REACHED' as const;
+  constructor(public readonly cap: number) {
+    super(`Daily new-card cap of ${cap} already reached.`);
+  }
+}
+
 export async function addCardFromAnnotation(
   userId: string,
   annotation: ReadingAnnotation,
   courseId: string
 ): Promise<ReviewItem> {
+  // Enforce the 20-new-cards/day cap before introducing a new card
+  // (research.md §5.2). Existing review items are re-upserted without
+  // counting as a "new" introduction.
+  if (!(await canIntroduceNewCard(userId))) {
+    throw new NewCardsCapReachedError(SRS_DEFAULTS.newCardsPerDay);
+  }
+
   // If annotation already links to a card, use it; otherwise create one
   let cardId = annotation.cardId;
 
@@ -1147,7 +1211,7 @@ export async function addCardFromAnnotation(
     cardId = card.id;
   }
 
-  return upsertReviewItem({
+  const reviewItem = await upsertReviewItem({
     userId,
     cardId: cardId!,
     easeFactor: 2.5,
@@ -1157,15 +1221,27 @@ export async function addCardFromAnnotation(
     lastReviewedAt: null,
     status: 'new',
   });
+
+  // Increment the daily counter only on successful introduction.
+  await incrementNewCardsToday(userId).catch(() => {});
+
+  return reviewItem;
 }
 
 // ─── Writing ──────────────────────────────────────────────────
 
-export async function fetchWritingPromptsByCourse(courseId: string): Promise<WritingPrompt[]> {
-  const { data, error } = await supabase
+export async function fetchWritingPromptsByCourse(
+  courseId: string,
+  level?: UserProfile['level'],
+): Promise<WritingPrompt[]> {
+  let query = supabase
     .from('writing_prompts')
     .select('*')
-    .eq('course_id', courseId)
+    .eq('course_id', courseId);
+  if (level) {
+    query = query.in('cefr_level', allowedCefrLevelsFor(level));
+  }
+  const { data, error } = await query
     .order('cefr_level', { ascending: true })
     .order('created_at', { ascending: true });
 
@@ -2014,6 +2090,13 @@ export async function saveCorrectionAsCard(params: {
   const { userId, targetLanguage, original, corrected, shortLabel, explanation } = params;
   if (!corrected.trim()) return null;
 
+  // Enforce the 20-new-cards/day cap. Return null (silent skip) rather
+  // than throwing — the correction was still logged to correction_log,
+  // and the UX shouldn't break on a rate-limit.
+  if (!(await canIntroduceNewCard(userId))) {
+    return null;
+  }
+
   // Native text prefers shortLabel (concise) but falls back to explanation.
   const nativeText = shortLabel.trim() || explanation.trim().slice(0, 200) || 'Correction';
 
@@ -2054,6 +2137,10 @@ export async function saveCorrectionAsCard(params: {
     );
 
   if (riErr) throw riErr;
+
+  // Increment the daily counter only on successful introduction.
+  await incrementNewCardsToday(userId).catch(() => {});
+
   return { cardId: card.id };
 }
 

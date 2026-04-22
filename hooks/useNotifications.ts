@@ -144,6 +144,34 @@ function streakSaveContent(
     ? `The you who will ${idealSelfFragment(idealL2Self as string)} — don't lose today.`
     : null;
 
+  // Research-backed milestones (research.md §12): 30 days = meaningful
+  // milestone, 66 days = habit is automatic (Lally et al.), 100 days = rare
+  // territory. Celebrate these, then fall through to normal streak copy.
+  if (streak === 100) {
+    return {
+      title: '100 days 🎉 You are officially that person',
+      body: hasVision
+        ? `Still on track to ${idealSelfFragment(idealL2Self as string)}. Keep going.`
+        : "100 straight days. That's who you are now.",
+    };
+  }
+  if (streak === 66) {
+    return {
+      title: '66 days — your habit is automatic',
+      body: hasVision
+        ? `Every day of the last 66 got you closer to ${idealSelfFragment(idealL2Self as string)}.`
+        : "Science says habits lock in around day 66. You're locked in.",
+    };
+  }
+  if (streak === 30) {
+    return {
+      title: '30-day streak 🔥 Major milestone',
+      body: hasVision
+        ? `One month closer to ${idealSelfFragment(idealL2Self as string)}.`
+        : 'You just crossed the hardest threshold. Keep the streak.',
+    };
+  }
+
   if (streak >= 30) {
     return {
       title: `Your ${streak}-day streak is on the line 🔥`,
