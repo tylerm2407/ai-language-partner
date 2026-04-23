@@ -16,10 +16,12 @@ import { AvatarCustomizer } from '../../../components/avatar/AvatarCustomizer';
 import { FourStrandsCard } from '../../../components/stats/FourStrandsCard';
 import { useDailyStats } from '../../../hooks/useDailyStats';
 import { strandMinutesFromDailyStats } from '../../../lib/four-strands';
+import { CompletedLessonsSection } from '../../../components/profile/CompletedLessonsSection';
 import { DEFAULT_AVATAR_CONFIG } from '../../../components/avatar/constants';
 import { updateAvatarConfig, joinClassroom } from '../../../lib/supabase-queries';
 import JoinClassModal from '../../../components/school/JoinClassModal';
 import RoleSwitcher from '../../../components/school/RoleSwitcher';
+import { BecomeTeacherSheet } from '../../../components/school/BecomeTeacherSheet';
 import type { AvatarConfig } from '../../../types';
 
 const LEVEL_LABELS: Record<string, string> = {
@@ -45,6 +47,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const [customizerVisible, setCustomizerVisible] = useState(false);
   const [joinModalVisible, setJoinModalVisible] = useState(false);
+  const [becomeTeacherVisible, setBecomeTeacherVisible] = useState(false);
 
   // Load student school data on mount
   useEffect(() => {
@@ -135,6 +138,9 @@ export default function ProfileScreen() {
         {/* Achievements */}
         <AchievementGrid />
 
+        {/* Completed Lessons */}
+        <CompletedLessonsSection userId={user?.id} />
+
         {/* My Classes */}
         <Text className="text-xl font-bold text-text-primary mb-3">My Classes</Text>
 
@@ -167,7 +173,7 @@ export default function ProfileScreen() {
         </Pressable>
 
         {/* Role Switcher — only show if user has teacher role */}
-        {roles.includes('teacher') && (
+        {roles.includes('teacher') ? (
           <View className="mb-6">
             <RoleSwitcher
               activeRole={activeRole}
@@ -179,6 +185,20 @@ export default function ProfileScreen() {
               }}
             />
           </View>
+        ) : (
+          <Pressable
+            className="bg-dark-card rounded-2xl p-5 mb-6 flex-row items-center"
+            onPress={() => setBecomeTeacherVisible(true)}
+            accessibilityRole="button"
+            accessibilityLabel="I teach a class"
+          >
+            <Ionicons name="school-outline" size={24} color="#A855F7" />
+            <View className="ml-4 flex-1">
+              <Text className="text-base font-semibold text-text-primary">I teach a class</Text>
+              <Text className="text-sm text-text-secondary">Create classes, assign work, grade submissions</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#7DD3FC" />
+          </Pressable>
         )}
 
         {/* Settings */}
@@ -258,6 +278,17 @@ export default function ProfileScreen() {
       onClose={() => setJoinModalVisible(false)}
       onJoin={handleJoinClass}
     />
+    {user?.id && (
+      <BecomeTeacherSheet
+        visible={becomeTeacherVisible}
+        onClose={() => setBecomeTeacherVisible(false)}
+        onClaimed={() => {
+          setBecomeTeacherVisible(false);
+          router.replace('/(teacher)' as any);
+        }}
+        userId={user.id}
+      />
+    )}
     </GradientBackground>
   );
 }

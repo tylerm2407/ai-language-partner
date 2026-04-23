@@ -2,61 +2,118 @@ import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MagazineGlassCard } from './MagazineGlassCard';
-import { colors, typography, radii } from '../../config/theme';
+import { colors, typography } from '../../config/theme';
+import type { UnitProgressTile } from '../../lib/supabase-queries';
 
-interface LessonTileData {
+export interface LessonTileData {
   id: string;
   title: string;
   lessonCount: number;
-  progress: number; // 0-1
+  completedCount: number;
+  progress: number;
+  nextLessonId: string | null;
   gradientColors: [string, string];
 }
 
 interface LessonTileGridProps {
-  tiles?: LessonTileData[];
+  tiles?: LessonTileData[] | null;
+  loading?: boolean;
 }
 
 const serifFont = Platform.select({ ios: 'Georgia', default: 'serif' });
 
-// Default tiles when no real data is available
-const DEFAULT_TILES: LessonTileData[] = [
-  { id: '1', title: 'Greetings', lessonCount: 5, progress: 0.6, gradientColors: ['#4F8EF7', '#7C3AED'] },
-  { id: '2', title: 'Food & Drink', lessonCount: 8, progress: 0.2, gradientColors: ['#A855F7', '#EC4899'] },
-  { id: '3', title: 'Travel', lessonCount: 6, progress: 0, gradientColors: ['#22C55E', '#38BDF8'] },
-  { id: '4', title: 'Daily Life', lessonCount: 7, progress: 0, gradientColors: ['#FFB547', '#FF6B6B'] },
+const GRADIENT_PALETTE: [string, string][] = [
+  ['#4F8EF7', '#7C3AED'],
+  ['#A855F7', '#EC4899'],
+  ['#22C55E', '#38BDF8'],
+  ['#FFB547', '#FF6B6B'],
+  ['#38BDF8', '#6366F1'],
+  ['#F472B6', '#A855F7'],
 ];
+
+export function unitTilesToLessonTiles(units: UnitProgressTile[]): LessonTileData[] {
+  return units.map((unit, i) => ({
+    id: unit.unitId,
+    title: unit.title,
+    lessonCount: unit.lessonCount,
+    completedCount: unit.completedCount,
+    progress: unit.progress,
+    nextLessonId: unit.nextLessonId,
+    gradientColors: GRADIENT_PALETTE[i % GRADIENT_PALETTE.length],
+  }));
+}
 
 function Tile({ tile }: { tile: LessonTileData }) {
   const router = useRouter();
+  const isComplete = tile.progress >= 1 && tile.lessonCount > 0;
+  const meta = isComplete
+    ? `Completed · ${tile.lessonCount} lessons`
+    : tile.completedCount > 0
+      ? `${tile.completedCount}/${tile.lessonCount} lessons`
+      : `${tile.lessonCount} lessons`;
+
+  const onPress = () => {
+    if (tile.nextLessonId) {
+      router.push(`/learn/${tile.nextLessonId}` as any);
+    } else {
+      router.push('/learn' as any);
+    }
+  };
+
+  const progressPct = Math.min(Math.max(tile.progress, 0), 1) * 100;
 
   return (
     <Pressable
       style={styles.tile}
-      onPress={() => router.push('/learn' as any)}
+      onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${tile.title} - ${tile.lessonCount} lessons`}
+      accessibilityLabel={`${tile.title} · ${meta} · ${Math.round(progressPct)} percent complete`}
     >
       <MagazineGlassCard>
-        {/* Gradient swatch */}
-        <LinearGradient
-          colors={tile.gradientColors}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.swatch}
-        />
-        <Text style={styles.tileTitle}>{tile.title}</Text>
-        <Text style={styles.tileMeta}>{tile.lessonCount} lessons</Text>
-        {tile.progress > 0 && (
-          <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: `${tile.progress * 100}%` }]} />
-          </View>
-        )}
+        {/* Progress bar — empty track when no lessons started, gradient
+            fill scales with tile.progress. Replaces the old decorative
+            gradient swatch so the top-of-tile bar carries real signal. */}
+        <View style={styles.swatchTrack}>
+          {progressPct > 0 && (
+            <LinearGradient
+              colors={tile.gradientColors}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[styles.swatchFill, { width: `${progressPct}%` }]}
+            />
+          )}
+        </View>
+        <Text style={styles.tileTitle} numberOfLines={1}>
+          {tile.title}
+        </Text>
+        <Text style={styles.tileMeta}>{meta}</Text>
       </MagazineGlassCard>
     </Pressable>
   );
 }
 
-export function LessonTileGrid({ tiles = DEFAULT_TILES }: LessonTileGridProps) {
+export function LessonTileGrid({ tiles, loading }: LessonTileGridProps) {
+  if (loading && !tiles) {
+    return (
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Continue learning</Text>
+        <View style={styles.grid}>
+          {[0, 1, 2, 3].map((i) => (
+            <View key={i} style={styles.tile}>
+              <MagazineGlassCard>
+                <View style={styles.swatchTrack} />
+                <View style={styles.skeletonLine} />
+                <View style={[styles.skeletonLine, styles.skeletonLineShort]} />
+              </MagazineGlassCard>
+            </View>
+          ))}
+        </View>
+      </View>
+    );
+  }
+
+  if (!tiles || tiles.length === 0) return null;
+
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>Continue learning</Text>
@@ -89,10 +146,16 @@ const styles = StyleSheet.create({
     width: '47%',
     flexGrow: 1,
   },
-  swatch: {
+  swatchTrack: {
     height: 6,
     borderRadius: 3,
     marginBottom: 12,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    overflow: 'hidden',
+  },
+  swatchFill: {
+    height: '100%',
+    borderRadius: 3,
   },
   tileTitle: {
     fontFamily: typography.family.semibold,
@@ -105,16 +168,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.text.tertiary,
   },
-  progressTrack: {
-    height: 3,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 2,
-    marginTop: 10,
-    overflow: 'hidden',
+  skeletonLine: {
+    height: 10,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    marginBottom: 6,
   },
-  progressFill: {
-    height: '100%',
-    backgroundColor: colors.magazine.accentBlue,
-    borderRadius: 2,
+  skeletonLineShort: {
+    width: '40%',
   },
 });

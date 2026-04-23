@@ -962,6 +962,33 @@ export async function fetchLessonCompletions(
   return (data ?? []).map(mapLessonCompletion);
 }
 
+export interface LessonCompletionWithTitle extends LessonCompletion {
+  lessonTitle: string;
+}
+
+/**
+ * Fetch the user's recent lesson completions joined with the lesson title
+ * from the `lessons` table. Powers the Profile > Completed Lessons section.
+ * Ordered newest-first.
+ */
+export async function fetchCompletedLessonsWithTitles(
+  userId: string,
+  limit = 25,
+): Promise<LessonCompletionWithTitle[]> {
+  const { data, error } = await supabase
+    .from('lesson_completions')
+    .select('*, lessons(title)')
+    .eq('user_id', userId)
+    .order('completed_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []).map((row: Record<string, unknown>) => {
+    const base = mapLessonCompletion(row);
+    const joined = row.lessons as { title?: string } | null;
+    return { ...base, lessonTitle: joined?.title ?? 'Untitled lesson' };
+  });
+}
+
 function mapLessonCompletion(row: Record<string, unknown>): LessonCompletion {
   return {
     id: row.id as string,
@@ -1388,6 +1415,9 @@ export async function fetchDailyNews(
 ): Promise<DailyNewsArticle | null> {
   const targetDate = date ?? new Date().toISOString().split('T')[0];
 
+  // Try today first. If the caller specified an explicit date, honor it
+  // strictly and do not fall back — historical queries should only return
+  // the article for that exact date.
   const { data, error } = await supabase
     .from('daily_news')
     .select('*')
@@ -1397,7 +1427,25 @@ export async function fetchDailyNews(
     .maybeSingle();
 
   if (error && error.code !== 'PGRST116') throw error;
-  return data ? mapDailyNewsArticle(data) : null;
+  if (data) return mapDailyNewsArticle(data);
+  if (date) return null;
+
+  // Fallback: today's UTC row isn't there yet (common between local
+  // midnight and ~5 AM ET when the cron fires). Return the most recent
+  // available article for this language + tier so the home card never
+  // shows an empty state when there IS content to surface.
+  const { data: fallback, error: fallbackErr } = await supabase
+    .from('daily_news')
+    .select('*')
+    .eq('language', language)
+    .eq('tier', tier)
+    .lte('date', targetDate)
+    .order('date', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (fallbackErr && fallbackErr.code !== 'PGRST116') throw fallbackErr;
+  return fallback ? mapDailyNewsArticle(fallback) : null;
 }
 
 /**
@@ -2389,6 +2437,16 @@ export async function fetchClassroomStudents(
   }));
 }
 
+export async function fetchOrganizationById(organizationId: string): Promise<Organization | null> {
+  const { data, error } = await supabase
+    .from('organizations')
+    .select('*')
+    .eq('id', organizationId)
+    .maybeSingle();
+  if (error && error.code !== 'PGRST116') throw error;
+  return data ? mapOrganization(data) : null;
+}
+
 export async function fetchTeacherOrganization(userId: string): Promise<Organization | null> {
   const { data, error } = await supabase
     .from('organization_members')
@@ -2437,6 +2495,123 @@ export async function fetchSubmissionDetail(submissionId: string): Promise<Assig
 
 export async function fetchSubmissionTranscript(chatSessionId: string): Promise<ConversationMessage[]> {
   return loadChatMessages(chatSessionId);
+}
+
+export interface PendingGradeItem {
+  submission: AssignmentSubmission;
+  assignmentId: string;
+  assignmentTitle: string;
+  assignmentKind: 'conversation' | 'lesson' | 'writing';
+  classroomId: string;
+  classroomName: string;
+  studentName: string;
+}
+
+/**
+ * Unified teacher grade queue — all submissions across the teacher's classes
+ * that are `submitted` but not yet teacher-graded. Oldest first.
+ */
+export async function fetchTeacherGradeQueue(teacherId: string): Promise<PendingGradeItem[]> {
+  const classrooms = await fetchTeacherClassrooms(teacherId);
+  if (classrooms.length === 0) return [];
+  const classroomById = new Map(classrooms.map((c) => [c.id, c]));
+  const classroomIds = classrooms.map((c) => c.id);
+
+  const { data: assignments, error: aErr } = await supabase
+    .from('assignments')
+    .select('id, classroom_id, title, kind')
+    .in('classroom_id', classroomIds);
+  if (aErr) throw aErr;
+  const assignmentById = new Map<string, { id: string; classroomId: string; title: string; kind: string }>();
+  (assignments ?? []).forEach((a) => {
+    assignmentById.set(a.id as string, {
+      id: a.id as string,
+      classroomId: a.classroom_id as string,
+      title: a.title as string,
+      kind: (a.kind as string) ?? 'conversation',
+    });
+  });
+  if (assignmentById.size === 0) return [];
+
+  const { data: submissions, error: sErr } = await supabase
+    .from('assignment_submissions')
+    .select('*, user_profiles!inner(display_name)')
+    .in('assignment_id', Array.from(assignmentById.keys()))
+    .eq('status', 'submitted')
+    .is('teacher_score', null)
+    .order('submitted_at', { ascending: true });
+  if (sErr) throw sErr;
+
+  return (submissions ?? []).map((row) => {
+    const a = assignmentById.get(row.assignment_id as string)!;
+    const classroom = classroomById.get(a.classroomId);
+    return {
+      submission: mapSubmission(row),
+      assignmentId: a.id,
+      assignmentTitle: a.title,
+      assignmentKind: a.kind as 'conversation' | 'lesson' | 'writing',
+      classroomId: a.classroomId,
+      classroomName: classroom?.name ?? 'Unknown class',
+      studentName: ((row.user_profiles as Record<string, unknown>)?.display_name as string) ?? 'Student',
+    };
+  });
+}
+
+/**
+ * CSV export of all submissions for a classroom. Returns a CSV string with
+ * headers student,email,assignment,kind,status,final_score,max_points,submitted_at.
+ * Generated client-side against the service-role-scoped read path.
+ */
+export async function exportClassroomGradebookCsv(classroomId: string): Promise<string> {
+  const { data: assignments, error: aErr } = await supabase
+    .from('assignments')
+    .select('id, title, kind, max_points')
+    .eq('classroom_id', classroomId);
+  if (aErr) throw aErr;
+  if (!assignments || assignments.length === 0) return 'student,email,assignment,kind,status,final_score,max_points,submitted_at\n';
+
+  const assignmentIds = assignments.map((a) => a.id as string);
+  const { data: submissions, error: sErr } = await supabase
+    .from('assignment_submissions')
+    .select(`
+      *,
+      user_profiles!inner(display_name, user_id)
+    `)
+    .in('assignment_id', assignmentIds);
+  if (sErr) throw sErr;
+
+  // Fetch emails via auth.users is not available client-side; skip and
+  // leave email column blank — teachers who need emails should use CSV
+  // import flow instead. (FERPA-safer default.)
+
+  const assignmentById = new Map(
+    (assignments ?? []).map((a) => [a.id as string, a]),
+  );
+
+  const rows: string[] = ['student,email,assignment,kind,status,final_score,max_points,submitted_at'];
+  const esc = (s: string | number | null | undefined) => {
+    if (s == null) return '';
+    const str = String(s);
+    return str.includes(',') || str.includes('"') || str.includes('\n')
+      ? `"${str.replace(/"/g, '""')}"`
+      : str;
+  };
+  for (const row of submissions ?? []) {
+    const a = assignmentById.get(row.assignment_id as string);
+    if (!a) continue;
+    const profile = row.user_profiles as Record<string, unknown>;
+    rows.push([
+      esc((profile?.display_name as string) ?? ''),
+      '',
+      esc(a.title as string),
+      esc((a.kind as string) ?? 'conversation'),
+      esc(row.status as string),
+      esc((row.final_score as number) ?? (row.auto_score as number) ?? ''),
+      esc((a.max_points as number) ?? 100),
+      esc(row.submitted_at as string),
+    ].join(','));
+  }
+  return rows.join('\n');
 }
 
 // ─── School: Student Queries ────────────────────────────────────
@@ -2508,34 +2683,65 @@ export async function callSchoolAction(action: string, body: Record<string, unkn
   return data;
 }
 
+export async function claimTeacherRole(): Promise<{ organizationId: string }> {
+  const result = await callSchoolAction('claim-teacher-role', {});
+  return { organizationId: result.organizationId as string };
+}
+
 export async function createClassroom(data: {
   name: string;
   targetLanguage: string;
   level: string;
-  organizationId: string;
+  organizationId?: string;
 }): Promise<Classroom> {
-  const result = await callSchoolAction('create_classroom', data);
+  const result = await callSchoolAction('create-classroom', data);
   return mapClassroom(result.classroom);
 }
 
+export async function linkLessonToAssignments(
+  lessonId: string,
+  lessonCompletionId: string,
+  score?: number,
+): Promise<{ linked: string[] }> {
+  const result = await callSchoolAction('link-lesson-submission', {
+    lessonId,
+    lessonCompletionId,
+    ...(typeof score === 'number' ? { score } : {}),
+  });
+  return { linked: (result?.linked as string[]) ?? [] };
+}
+
+export async function linkWritingToAssignments(
+  writingSubmissionId: string,
+  promptId?: string | null,
+  score?: number,
+): Promise<{ linked: string[] }> {
+  const result = await callSchoolAction('link-writing-submission', {
+    writingSubmissionId,
+    ...(promptId ? { promptId } : {}),
+    ...(typeof score === 'number' ? { score } : {}),
+  });
+  return { linked: (result?.linked as string[]) ?? [] };
+}
+
 export async function joinClassroom(inviteCode: string): Promise<ClassEnrollment> {
-  const result = await callSchoolAction('join_classroom', { inviteCode });
+  const result = await callSchoolAction('join-classroom', { inviteCode });
   return mapEnrollment(result.enrollment);
 }
 
 export async function leaveClassroom(classroomId: string): Promise<void> {
-  await callSchoolAction('leave_classroom', { classroomId });
+  await callSchoolAction('leave-classroom', { classroomId });
 }
 
 export async function createAssignment(data: Record<string, unknown>): Promise<Assignment> {
-  const result = await callSchoolAction('create_assignment', data);
+  const result = await callSchoolAction('create-assignment', data);
   return mapAssignment(result.assignment);
 }
 
 export async function startAssignment(
   assignmentId: string
 ): Promise<{ submission: AssignmentSubmission; chatSessionId: string }> {
-  const result = await callSchoolAction('start_assignment', { assignmentId });
+  const result = await callSchoolAction('start-assignment', { assignmentId });
   return {
     submission: mapSubmission(result.submission),
     chatSessionId: result.chatSessionId as string,
@@ -2543,7 +2749,7 @@ export async function startAssignment(
 }
 
 export async function submitAssignment(assignmentId: string): Promise<AssignmentSubmission> {
-  const result = await callSchoolAction('submit_assignment', { assignmentId });
+  const result = await callSchoolAction('submit-assignment', { assignmentId });
   return mapSubmission(result.submission);
 }
 
@@ -2552,7 +2758,7 @@ export async function gradeSubmission(
   teacherScore: number,
   teacherFeedback: string
 ): Promise<AssignmentSubmission> {
-  const result = await callSchoolAction('grade_submission', {
+  const result = await callSchoolAction('grade-submission', {
     submissionId,
     teacherScore,
     teacherFeedback,
