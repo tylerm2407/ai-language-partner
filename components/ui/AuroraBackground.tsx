@@ -14,7 +14,7 @@ export function AuroraBackground({ children, style }: AuroraBackgroundProps) {
       {/* Looping nebula video background */}
       <Video
         source={require('../../assets/nebula-bg.mp4')}
-        style={StyleSheet.absoluteFill}
+        style={[StyleSheet.absoluteFill, { transform: [{ scale: 0.85 }] }]}
         resizeMode={ResizeMode.COVER}
         shouldPlay
         isLooping
