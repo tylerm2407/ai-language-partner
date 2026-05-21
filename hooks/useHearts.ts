@@ -12,7 +12,7 @@ export function useHearts() {
   const [heartsState, setHeartsState] = useState<HeartsState>({ current: 5, max: 5, nextRegenAt: null });
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const tier = (subscription?.tier ?? 'free') as SubscriptionTier;
+  const tier = (subscription?.tier ?? 'starter') as SubscriptionTier;
   const isUnlimited = PLANS[tier]?.unlimitedHearts ?? false;
 
   // Compute hearts from profile
@@ -37,7 +37,10 @@ export function useHearts() {
       if (state.current > profile.hearts) {
         if (user) {
           updateHearts(user.id, state.current, state.current >= profile.maxHearts ? null : profile.lastHeartLostAt).catch(console.error);
-          setProfile({ ...profile, hearts: state.current, lastHeartLostAt: state.current >= profile.maxHearts ? null : profile.lastHeartLostAt });
+          const freshProfile = useAppStore.getState().profile;
+          if (freshProfile) {
+            setProfile({ ...freshProfile, hearts: state.current, lastHeartLostAt: state.current >= freshProfile.maxHearts ? null : freshProfile.lastHeartLostAt });
+          }
         }
       }
     }, 60_000);
@@ -58,7 +61,10 @@ export function useHearts() {
     } catch (err) {
       console.warn('Failed to update hearts in DB:', err);
     }
-    setProfile({ ...profile, hearts: newHearts, lastHeartLostAt: now });
+    const freshProfile = useAppStore.getState().profile;
+    if (freshProfile) {
+      setProfile({ ...freshProfile, hearts: newHearts, lastHeartLostAt: now });
+    }
     setHeartsState({ current: newHearts, max: profile.maxHearts, nextRegenAt: new Date(Date.now() + 4 * 60 * 60 * 1000) });
   }, [user, profile, isUnlimited, heartsState, setProfile]);
 

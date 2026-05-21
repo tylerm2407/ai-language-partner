@@ -197,12 +197,16 @@ export async function fetchLessons(unitId: string): Promise<Lesson[]> {
 export async function fetchLessonWithExercises(lessonId: string): Promise<Lesson | null> {
   const { data: lessonData, error: lessonError } = await supabase
     .from('lessons')
-    .select('*')
+    .select('*, units!inner(course_id)')
     .eq('id', lessonId)
     .single();
 
   if (lessonError) throw lessonError;
   if (!lessonData) return null;
+
+  // Flatten the joined course_id onto the lesson row so mapLesson can read it.
+  const unitJoin = lessonData.units as { course_id?: string } | null;
+  const lessonRow = { ...lessonData, course_id: unitJoin?.course_id ?? null };
 
   const { data: exerciseData, error: exerciseError } = await supabase
     .from('exercises')
@@ -212,7 +216,7 @@ export async function fetchLessonWithExercises(lessonId: string): Promise<Lesson
 
   if (exerciseError) throw exerciseError;
 
-  return mapLesson(lessonData, (exerciseData ?? []).map(mapExercise));
+  return mapLesson(lessonRow, (exerciseData ?? []).map(mapExercise));
 }
 
 // ─── Cards ──────────────────────────────────────────────────────
@@ -703,6 +707,7 @@ function mapLesson(row: Record<string, unknown>, exercises: Exercise[]): Lesson 
   return {
     id: row.id as string,
     unitId: row.unit_id as string,
+    courseId: (row.course_id as string) ?? null,
     title: row.title as string,
     description: row.description as string,
     orderIndex: row.order_index as number,

@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { Alert } from 'react-native';
 import { useAuth } from './useAuth';
 import {
   fetchPassageWithAnnotations,
@@ -93,12 +94,17 @@ export function useReadingPassage(passageId: string | null): UseReadingPassageRe
   const completeReading = useCallback(async (comprehensionScore: number) => {
     if (!user || !passageId) return;
     const timeSpentMs = Date.now() - startTimeRef.current;
-    await upsertReadingProgress(user.id, passageId, {
-      comprehensionScore,
-      wordsLookedUp,
-      timeSpentMs,
-      completedAt: new Date().toISOString(),
-    });
+    try {
+      await upsertReadingProgress(user.id, passageId, {
+        comprehensionScore,
+        wordsLookedUp,
+        timeSpentMs,
+        completedAt: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.error('Failed to save reading progress:', err);
+      Alert.alert('Save Error', 'Your reading progress could not be saved. Please try again.');
+    }
   }, [user, passageId, wordsLookedUp]);
 
   return {

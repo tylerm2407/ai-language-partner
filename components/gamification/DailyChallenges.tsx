@@ -1,65 +1,31 @@
+import { useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ProgressBar } from '../ui/ProgressBar';
 import { GlassSurface } from '../ui/GlassSurface';
 import { ChallengeCompletePop } from '../animations/ChallengeCompletePop';
 import { QuestCountdown } from './QuestCountdown';
+import { useDailyChallenges } from '../../hooks/useDailyChallenges';
 import type { DailyStats } from '../../types';
 
 interface DailyChallengesProps {
   dailyStats: DailyStats | null;
 }
 
-interface Challenge {
-  type: string;
-  title: string;
-  icon: string;
-  color: string;
-  current: number;
-  target: number;
-  unit: string;
-}
-
-const chestIcons: Record<string, { outline: string; filled: string; color: string }> = {
-  lessons: { outline: 'cube-outline', filled: 'cube', color: '#CD7F32' },
-  cards: { outline: 'gift-outline', filled: 'gift', color: '#A855F7' },
-  practice: { outline: 'diamond-outline', filled: 'diamond', color: '#34D399' },
-};
-
 export function DailyChallenges({ dailyStats }: DailyChallengesProps) {
-  // Use hardcoded challenges based on daily stats (no DB dependency)
-  const challenges: Challenge[] = [
-    {
-      type: 'lessons',
-      title: 'Complete 2 lessons',
-      icon: 'book',
-      color: '#38BDF8',
-      current: dailyStats?.lessonsCompleted ?? 0,
-      target: 2,
-      unit: 'lessons',
-    },
-    {
-      type: 'cards',
-      title: 'Review 10 cards',
-      icon: 'layers',
-      color: '#A855F7',
-      current: dailyStats?.cardsReviewed ?? 0,
-      target: 10,
-      unit: 'cards',
-    },
-    {
-      type: 'practice',
-      title: 'Practice for 5 minutes',
-      icon: 'time',
-      color: '#34D399',
-      current: dailyStats?.minutesPracticed ?? 0,
-      target: 5,
-      unit: 'min',
-    },
-  ];
+  const { challenges, allCompleted, bonusXpClaimed, multiplier, claimBonusXp } = useDailyChallenges();
+  const [claiming, setClaiming] = useState(false);
 
-  const completedCount = challenges.filter((c) => c.current >= c.target).length;
-  const allComplete = completedCount === challenges.length;
+  const completedCount = challenges.filter((c) => c.completed).length;
+
+  const handleClaimBonus = async () => {
+    setClaiming(true);
+    try {
+      await claimBonusXp();
+    } finally {
+      setClaiming(false);
+    }
+  };
 
   return (
     <GlassSurface innerStyle={{ padding: 20 }} style={{ marginBottom: 24 }}>
@@ -119,16 +85,6 @@ export function DailyChallenges({ dailyStats }: DailyChallengesProps) {
               <Text className="text-xs text-text-secondary">
                 {Math.min(challenge.current, challenge.target)}/{challenge.target} {challenge.unit}
               </Text>
-              {chestIcons[challenge.type] && (
-                <Ionicons
-                  name={(isComplete
-                    ? chestIcons[challenge.type].filled
-                    : chestIcons[challenge.type].outline) as any}
-                  size={16}
-                  color={chestIcons[challenge.type].color}
-                  style={{ marginLeft: 8 }}
-                />
-              )}
             </View>
             <View className="ml-[38px] flex-row items-center gap-2">
               <View className="flex-1">
@@ -143,15 +99,31 @@ export function DailyChallenges({ dailyStats }: DailyChallengesProps) {
       })}
 
       {/* Bonus XP Indicator */}
-      {allComplete && (
+      {allCompleted && (
         <View className="mt-3 pt-3 border-t border-dark-border">
-          <View className="flex-row items-center justify-center gap-2">
-            <Ionicons name="star" size={18} color="#FBBF24" />
-            <Text className="text-sm font-semibold text-streak">
-              All challenges complete! +50 Bonus XP
-            </Text>
-            <Ionicons name="star" size={18} color="#FBBF24" />
-          </View>
+          {bonusXpClaimed ? (
+            <View className="flex-row items-center justify-center gap-2">
+              <Ionicons name="star" size={18} color="#FBBF24" />
+              <Text className="text-sm font-semibold text-streak">
+                All challenges complete! +{Math.round(50 * multiplier)} Bonus XP claimed
+              </Text>
+              <Ionicons name="star" size={18} color="#FBBF24" />
+            </View>
+          ) : (
+            <Pressable
+              onPress={handleClaimBonus}
+              disabled={claiming}
+              style={{ opacity: claiming ? 0.6 : 1 }}
+            >
+              <View className="flex-row items-center justify-center gap-2">
+                <Ionicons name="star" size={18} color="#FBBF24" />
+                <Text className="text-sm font-semibold text-streak">
+                  Claim +{Math.round(50 * multiplier)} Bonus XP
+                </Text>
+                <Ionicons name="star" size={18} color="#FBBF24" />
+              </View>
+            </Pressable>
+          )}
         </View>
       )}
     </GlassSurface>

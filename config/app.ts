@@ -1,5 +1,10 @@
 import type { ProficiencyLevel } from '../types';
 
+// ─── Feature flags ───────────────────────────────────────────────────────
+// School/teacher features are built but deferred for public launch.
+// Flip to true when ready to enable for schools.
+export const SCHOOL_ENABLED = false;
+
 export const SRS_DEFAULTS = {
   initialEaseFactor: 2.5,
   minimumEaseFactor: 1.3,

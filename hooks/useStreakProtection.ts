@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from './useAuth';
 import { useAppStore } from '../stores/useAppStore';
 import { useStreakFreeze, repairStreak, logStreakEvent, updateStreakShield } from '../lib/supabase-queries';
@@ -11,12 +11,14 @@ export function useStreakProtection() {
   const [showRepairModal, setShowRepairModal] = useState(false);
   const [brokenStreak, setBrokenStreak] = useState(0);
 
-  const tier = (subscription?.tier ?? 'free') as SubscriptionTier;
+  const tier = (subscription?.tier ?? 'starter') as SubscriptionTier;
   const hasShield = PLANS[tier]?.streakShield ?? false;
+  const isRepairingRef = useRef(false);
 
   // Check for broken streak on load
   useEffect(() => {
     if (!profile || !user) return;
+    if (isRepairingRef.current) return;
 
     // If streak is 0 but we have streak freezes or shield, user might have missed a day
     // This is a simplified check — in production you'd check last activity date
@@ -24,16 +26,25 @@ export function useStreakProtection() {
       // Streak was already reset by the server, check if repairable
       if (hasShield && !profile.streakShieldUsedAt) {
         // Auto-apply shield for paid users
+        isRepairingRef.current = true;
         const today = new Date().toISOString().split('T')[0];
-        repairStreak(user.id, profile.longestStreak, profile.longestStreak).catch(console.error);
-        updateStreakShield(user.id, true, today).catch(console.error);
-        logStreakEvent(user.id, 'shield_used', profile.longestStreak).catch(console.error);
-        setProfile({
-          ...profile,
-          streak: profile.longestStreak,
-          streakShieldActive: true,
-          streakShieldUsedAt: today,
-        });
+        (async () => {
+          try {
+            await repairStreak(user.id, profile.longestStreak, profile.longestStreak);
+            await updateStreakShield(user.id, true, today);
+            await logStreakEvent(user.id, 'shield_used', profile.longestStreak);
+            setProfile({
+              ...profile,
+              streak: profile.longestStreak,
+              streakShieldActive: true,
+              streakShieldUsedAt: today,
+            });
+          } catch (err) {
+            console.error('Failed to auto-repair streak with shield:', err);
+          } finally {
+            isRepairingRef.current = false;
+          }
+        })();
       } else if (profile.streakFreezes > 0) {
         // Show repair modal for free users with freezes
         setBrokenStreak(profile.longestStreak);

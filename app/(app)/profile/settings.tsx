@@ -1,12 +1,15 @@
 import { useState } from 'react';
-import { View, Text, Pressable, ScrollView, TextInput, Alert } from 'react-native';
+import { View, Text, Pressable, ScrollView, TextInput, Alert, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useProfile } from '../../../hooks/useProfile';
+import { useAuth } from '../../../hooks/useAuth';
 import { Button } from '../../../components/ui/Button';
 import { GradientBackground } from '../../../components/ui/GradientBackground';
+import { colors } from '../../../config/theme';
 import { SUPPORTED_LANGUAGES, DAILY_GOALS } from '../../../config/app';
+import { supabase } from '../../../lib/supabase';
 import type { LanguageCode, ProficiencyLevel } from '../../../types';
 
 const LEVELS: { value: ProficiencyLevel; label: string }[] = [
@@ -20,12 +23,14 @@ const LEVELS: { value: ProficiencyLevel; label: string }[] = [
 export default function SettingsScreen() {
   const router = useRouter();
   const { profile, updateProfile } = useProfile();
+  const { signOut } = useAuth();
 
   const [displayName, setDisplayName] = useState(profile?.displayName ?? '');
   const [targetLanguage, setTargetLanguage] = useState<LanguageCode>(profile?.targetLanguage ?? 'es');
   const [level, setLevel] = useState<ProficiencyLevel>(profile?.level ?? 'beginner');
   const [dailyGoal, setDailyGoal] = useState(profile?.dailyGoalMinutes ?? 10);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const hasChanges =
     displayName !== (profile?.displayName ?? '') ||
@@ -56,7 +61,7 @@ export default function SettingsScreen() {
       {/* Header */}
       <View className="flex-row items-center px-4 py-3 border-b border-dark-border">
         <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Go back">
-          <Ionicons name="arrow-back" size={24} color="#F1F5F9" />
+          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
         </Pressable>
         <Text className="text-lg font-semibold text-text-primary ml-3">Settings</Text>
       </View>
@@ -69,7 +74,7 @@ export default function SettingsScreen() {
           value={displayName}
           onChangeText={setDisplayName}
           placeholder="Your name"
-          placeholderTextColor="#64748B"
+          placeholderTextColor={colors.text.quaternary}
           autoCapitalize="words"
           accessibilityLabel="Display name"
         />
@@ -92,7 +97,7 @@ export default function SettingsScreen() {
               <Text className="text-xl mr-3">{lang.flag}</Text>
               <Text className="text-base font-semibold text-text-primary">{lang.name}</Text>
               {targetLanguage === lang.code && (
-                <Ionicons name="checkmark-circle" size={20} color="#38BDF8" style={{ marginLeft: 'auto' }} />
+                <Ionicons name="checkmark-circle" size={20} color={colors.league.diamond} style={{ marginLeft: 'auto' }} />
               )}
             </Pressable>
           ))}
@@ -115,7 +120,7 @@ export default function SettingsScreen() {
             >
               <Text className="text-base font-semibold text-text-primary">{l.label}</Text>
               {level === l.value && (
-                <Ionicons name="checkmark-circle" size={20} color="#38BDF8" style={{ position: 'absolute', right: 16, top: 16 }} />
+                <Ionicons name="checkmark-circle" size={20} color={colors.league.diamond} style={{ position: 'absolute', right: 16, top: 16 }} />
               )}
             </Pressable>
           ))}
@@ -153,6 +158,91 @@ export default function SettingsScreen() {
           loading={saving}
           disabled={!hasChanges || saving}
         />
+
+        {/* Legal */}
+        <View className="mt-10 mb-6">
+          <Text className="text-sm font-semibold text-text-secondary mb-2 uppercase tracking-wide">Legal</Text>
+          <Pressable
+            className="bg-dark-card rounded-2xl p-5 mb-3 flex-row items-center"
+            onPress={() => Linking.openURL('https://fluenci.com/privacy')}
+            accessibilityRole="link"
+            accessibilityLabel="Privacy Policy"
+          >
+            <Ionicons name="shield-checkmark-outline" size={24} color={colors.premium.base} />
+            <Text className="text-base font-semibold text-text-primary ml-4 flex-1">Privacy Policy</Text>
+            <Ionicons name="open-outline" size={18} color={colors.correctionChip.grammar.text} />
+          </Pressable>
+          <Pressable
+            className="bg-dark-card rounded-2xl p-5 mb-3 flex-row items-center"
+            onPress={() => Linking.openURL('https://fluenci.com/terms')}
+            accessibilityRole="link"
+            accessibilityLabel="Terms of Service"
+          >
+            <Ionicons name="document-text-outline" size={24} color={colors.premium.base} />
+            <Text className="text-base font-semibold text-text-primary ml-4 flex-1">Terms of Service</Text>
+            <Ionicons name="open-outline" size={18} color={colors.correctionChip.grammar.text} />
+          </Pressable>
+        </View>
+
+        {/* Delete Account */}
+        <View className="mb-4">
+          <Text className="text-sm font-semibold text-text-secondary mb-2 uppercase tracking-wide">Danger Zone</Text>
+          <Pressable
+            className="bg-error-bg py-4 rounded-[14px] items-center"
+            disabled={deleting}
+            onPress={() => {
+              Alert.alert(
+                'Delete Account',
+                'This will permanently delete your account and all your data. This cannot be undone.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Delete My Account',
+                    style: 'destructive',
+                    onPress: () => {
+                      Alert.alert(
+                        'Are you absolutely sure?',
+                        'All your progress, streaks, and subscription will be lost forever.',
+                        [
+                          { text: 'Cancel', style: 'cancel' },
+                          {
+                            text: 'Yes, Delete Everything',
+                            style: 'destructive',
+                            onPress: async () => {
+                              setDeleting(true);
+                              try {
+                                const { data: { session } } = await supabase.auth.getSession();
+                                if (!session?.access_token) {
+                                  Alert.alert('Error', 'Please sign in again before deleting your account.');
+                                  return;
+                                }
+                                const res = await supabase.functions.invoke('delete-account', {
+                                  headers: { Authorization: `Bearer ${session.access_token}` },
+                                });
+                                if (res.error) throw res.error;
+                                await signOut();
+                              } catch {
+                                Alert.alert('Error', 'Failed to delete account. Please try again or contact support.');
+                              } finally {
+                                setDeleting(false);
+                              }
+                            },
+                          },
+                        ]
+                      );
+                    },
+                  },
+                ]
+              );
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Delete account"
+          >
+            <Text className="text-error-dark text-base font-semibold">
+              {deleting ? 'Deleting...' : 'Delete Account'}
+            </Text>
+          </Pressable>
+        </View>
       </ScrollView>
     </SafeAreaView>
     </GradientBackground>

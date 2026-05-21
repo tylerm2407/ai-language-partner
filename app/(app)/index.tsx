@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
 import { useAppStore } from '../../stores/useAppStore';
 import { useSchoolStore } from '../../stores/useSchoolStore';
+import { SCHOOL_ENABLED } from '../../config/app';
 import { fetchStatsRange } from '../../lib/supabase-queries';
 import { Ionicons } from '@expo/vector-icons';
 import { GradientBackground } from '../../components/ui/GradientBackground';
@@ -15,6 +16,7 @@ import { useDailyNews } from '../../hooks/useDailyNews';
 import { useNotifications, scheduleStreakSaveReminder } from '../../hooks/useNotifications';
 import { useOnboardingChecklist } from '../../hooks/useOnboardingChecklist';
 import { StreakRepairModal } from '../../components/gamification/StreakRepairModal';
+import { OutOfHeartsModal } from '../../components/gamification/OutOfHeartsModal';
 import { PrePermissionSheet } from '../../components/gamification/PrePermissionSheet';
 import { OnboardingChecklistFab } from '../../components/onboarding/OnboardingChecklistFab';
 import { levelToNewsTier } from '../../config/app';
@@ -37,10 +39,11 @@ export default function HomeScreen() {
   const router = useRouter();
   const { profile, dailyStats, reviewCount, loading, loadUserData, motivation } = useAppStore();
   const [weeklyStats, setWeeklyStats] = useState<DailyStats[]>([]);
-  const { hearts, maxHearts, isUnlimited } = useHearts();
+  const { hearts, maxHearts, isUnlimited, canPlay, nextRegenAt } = useHearts();
   const { level, tier, xpInLevel, xpToNextLevel, progress: levelProgress } = useLevel();
   const { showRepairModal, brokenStreak, freezesAvailable, repairWithFreeze, dismissRepair, hasShield } = useStreakProtection();
   const { enrolledClasses, pendingAssignments, loadStudentSchoolData } = useSchoolStore();
+  const schoolEnabled = SCHOOL_ENABLED;
   const newsTier = levelToNewsTier(profile?.level ?? 'intermediate');
   const { article, isLoading: newsLoading, error: newsError, hasRead: newsHasRead } = useDailyNews(
     user?.id ?? '',
@@ -56,6 +59,7 @@ export default function HomeScreen() {
   const lessonTiles = unitTiles ? unitTilesToLessonTiles(unitTiles) : null;
   const { markItem: markChecklistItem } = useOnboardingChecklist();
   const [showPrePermission, setShowPrePermission] = useState(false);
+  const [showOutOfHearts, setShowOutOfHearts] = useState(false);
 
   // Show the pre-permission sheet once, after the learner has completed
   // their first lesson. Only asks if the OS permission is still undetermined;
@@ -116,7 +120,7 @@ export default function HomeScreen() {
     if (user?.id) {
       loadUserData(user.id);
       loadWeeklyStats(user.id);
-      loadStudentSchoolData(user.id);
+      if (schoolEnabled) loadStudentSchoolData(user.id);
     }
   }, [user?.id, loadUserData, loadWeeklyStats, loadStudentSchoolData]);
 
@@ -169,7 +173,13 @@ export default function HomeScreen() {
             <MagazineGlassCard style={styles.quickAction}>
               <Pressable
                 style={styles.quickActionRow}
-                onPress={() => router.push('/learn' as any)}
+                onPress={() => {
+                  if (!canPlay) {
+                    setShowOutOfHearts(true);
+                    return;
+                  }
+                  router.push('/learn' as any);
+                }}
                 accessibilityRole="button"
                 accessibilityLabel="Start a Lesson"
               >
@@ -239,6 +249,13 @@ export default function HomeScreen() {
           visible={showPrePermission}
           onEnable={handleEnableReminders}
           onDismiss={handleDismissPrePermission}
+        />
+
+        {/* Out of Hearts Modal */}
+        <OutOfHeartsModal
+          visible={showOutOfHearts}
+          nextRegenAt={nextRegenAt}
+          onDismiss={() => setShowOutOfHearts(false)}
         />
 
         {/* Floating onboarding checklist FAB */}

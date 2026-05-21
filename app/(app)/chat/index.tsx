@@ -19,6 +19,8 @@ import type { ConversationMessage, Assignment, AssignmentSubmission } from '../.
 import { Ionicons } from '@expo/vector-icons';
 import { getOrCreateChatSession, saveChatMessage, loadChatMessages, fetchStudentAssignments, submitAssignment } from '../../../lib/supabase-queries';
 import { SCENARIO_META, SCENARIO_ORDER, type ScenarioKey } from '../../../types/scenarios';
+import { SCHOOL_ENABLED } from '../../../config/app';
+import { colors } from '../../../config/theme';
 
 /**
  * Scenario metadata (label/icon/description) is imported from
@@ -75,13 +77,15 @@ export default function ChatScreen() {
   const [shouldStartListening, setShouldStartListening] = useState(false);
 
   const chatSessionIdRef = useRef<string | null>(null);
+  // Track the current ElevenLabs TTS sound for cleanup on error/unmount
+  const ttsSoundRef = useRef<Audio.Sound | null>(null);
 
   const targetLanguage = profile?.targetLanguage ?? 'es';
   const level = profile?.level ?? 'beginner';
 
-  // Load assignment data if assignmentId param present
+  // Load assignment data if assignmentId param present (school feature)
   useEffect(() => {
-    if (params.assignmentId && user?.id) {
+    if (SCHOOL_ENABLED && params.assignmentId && user?.id) {
       loadAssignmentData(params.assignmentId);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -284,7 +288,7 @@ export default function ChatScreen() {
                 return [...updated];
               });
             }
-          });
+          }).catch(console.error);
         }
       }
 
@@ -313,8 +317,22 @@ export default function ChatScreen() {
     }
   })();
 
+  // Clean up ElevenLabs TTS sound on unmount
+  useEffect(() => {
+    return () => {
+      ttsSoundRef.current?.unloadAsync().catch(() => {});
+    };
+  }, []);
+
   // Auto-play ElevenLabs TTS for assistant messages in voice mode
   const speakWithElevenLabs = useCallback(async (text: string, isHandsFree = false) => {
+    // Unload any previously playing TTS sound before creating a new one
+    if (ttsSoundRef.current) {
+      await ttsSoundRef.current.unloadAsync().catch(() => {});
+      ttsSoundRef.current = null;
+    }
+
+    let sound: Audio.Sound | null = null;
     try {
       if (isHandsFree) {
         setHandsFreeState('TTS_PLAYING');
@@ -327,12 +345,17 @@ export default function ChatScreen() {
         playsInSilentModeIOS: true,
         staysActiveInBackground: isHandsFree,
       });
-      const { sound } = await Audio.Sound.createAsync({ uri: dataUri });
+      const result = await Audio.Sound.createAsync({ uri: dataUri });
+      sound = result.sound;
+      ttsSoundRef.current = sound;
       await sound.playAsync();
 
       sound.setOnPlaybackStatusUpdate((status) => {
         if (status.isLoaded && status.didJustFinish) {
-          sound.unloadAsync();
+          sound?.unloadAsync().catch(() => {});
+          if (ttsSoundRef.current === sound) {
+            ttsSoundRef.current = null;
+          }
           // After TTS finishes in hands-free mode, signal ChatInput to restart listening
           if (isHandsFree) {
             setShouldStartListening(true);
@@ -340,6 +363,13 @@ export default function ChatScreen() {
         }
       });
     } catch (err) {
+      // Clean up sound if it was created before the error
+      if (sound) {
+        sound.unloadAsync().catch(() => {});
+        if (ttsSoundRef.current === sound) {
+          ttsSoundRef.current = null;
+        }
+      }
       console.error('Auto-speak failed:', err);
       if (isHandsFree) {
         // Don't break the loop on TTS error -- restart listening
@@ -565,7 +595,7 @@ export default function ChatScreen() {
                 <View className="p-5">
                   <View className="flex-row items-center mb-3">
                     <View className="w-10 h-10 rounded-full bg-primary/15 items-center justify-center">
-                      <Ionicons name={scenario.icon} size={22} color="#A855F7" />
+                      <Ionicons name={scenario.icon} size={22} color={colors.premium.base} />
                     </View>
                     <View className="ml-4 flex-1">
                       <Text className="text-base font-semibold text-text-primary">{scenario.label}</Text>
@@ -581,7 +611,7 @@ export default function ChatScreen() {
                       accessibilityRole="button"
                       accessibilityLabel={`Text chat: ${scenario.label}`}
                     >
-                      <Ionicons name="chatbubble-outline" size={16} color="#FFFFFF" />
+                      <Ionicons name="chatbubble-outline" size={16} color={colors.text.onPrimary} />
                       <Text className="text-sm font-semibold text-white ml-2">Text Chat</Text>
                     </Pressable>
                     <Pressable
@@ -591,7 +621,7 @@ export default function ChatScreen() {
                       accessibilityLabel={`Live voice: ${scenario.label}`}
                       accessibilityHint="Start a real-time voice conversation"
                     >
-                      <Ionicons name="mic" size={16} color="#FFFFFF" />
+                      <Ionicons name="mic" size={16} color={colors.text.onPrimary} />
                       <Text className="text-sm font-semibold text-white ml-2">Live Voice</Text>
                     </Pressable>
                   </View>
@@ -613,7 +643,7 @@ export default function ChatScreen() {
       {assignmentMode && currentAssignment && (
         <GlassSurface style={{ marginHorizontal: 12, marginTop: 4, marginBottom: 4 }}>
           <View className="px-4 py-2 flex-row items-center">
-            <Ionicons name="school-outline" size={18} color="#A855F7" />
+            <Ionicons name="school-outline" size={18} color={colors.premium.base} />
             <Text className="text-sm text-text-primary font-semibold ml-2 flex-1" numberOfLines={1}>
               Assignment: {currentAssignment.title}
             </Text>
@@ -655,7 +685,7 @@ export default function ChatScreen() {
           accessibilityRole="button"
           accessibilityLabel="Go back"
         >
-          <Ionicons name="arrow-back" size={24} color="#F1F5F9" />
+          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
         </Pressable>
         <Text className="text-lg font-semibold text-text-primary ml-3 flex-1" numberOfLines={1}>
           {selectedScenario.label}
@@ -670,7 +700,7 @@ export default function ChatScreen() {
             accessibilityLabel="Submit assignment"
             className="h-9 px-3 rounded-full items-center justify-center flex-row mr-2 bg-success"
           >
-            <Ionicons name="checkmark-circle-outline" size={16} color="#FFFFFF" />
+            <Ionicons name="checkmark-circle-outline" size={16} color={colors.text.onPrimary} />
             <Text className="text-xs font-semibold text-white ml-1.5">
               {submitting ? 'Submitting...' : 'Submit'}
             </Text>
@@ -688,9 +718,9 @@ export default function ChatScreen() {
           }`}
         >
           <Ionicons
-            name="car-outline"
+            name="mic-outline"
             size={16}
-            color={handsFreeActive ? '#FFFFFF' : '#64748B'}
+            color={handsFreeActive ? colors.text.onPrimary : colors.text.quaternary}
           />
           <Text
             className={`text-xs font-sans-semibold ml-1.5 ${
@@ -709,7 +739,7 @@ export default function ChatScreen() {
             accessibilityLabel={voiceMode ? 'Switch to text mode' : 'Switch to voice mode'}
             className={`w-9 h-9 rounded-full items-center justify-center ${voiceMode ? 'bg-primary' : 'bg-dark-card'}`}
           >
-            <Ionicons name={voiceMode ? 'mic' : 'mic-outline'} size={20} color={voiceMode ? '#FFFFFF' : '#C4B5FD'} />
+            <Ionicons name={voiceMode ? 'mic' : 'mic-outline'} size={20} color={voiceMode ? colors.text.onPrimary : colors.indigo[300]} />
           </Pressable>
         )}
       </View>

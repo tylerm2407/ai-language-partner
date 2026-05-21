@@ -51,12 +51,12 @@ export async function openCheckout(options: CheckoutOptions): Promise<void> {
  */
 export const PRICING_PLANS = [
   {
-    key: 'free' as const,
-    planId: 'free' as PlanId,
-    name: 'Free',
-    price: '$0',
-    period: '',
-    features: PLAN_FEATURES.free,
+    key: 'starter_monthly' as const,
+    planId: 'starter' as PlanId,
+    name: 'Starter',
+    price: '$3.79',
+    period: '/month',
+    features: PLAN_FEATURES.starter,
   },
   {
     key: 'basic_monthly' as const,

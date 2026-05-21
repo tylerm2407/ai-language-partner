@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { AppState } from 'react-native';
 import { useAuth } from './useAuth';
 import { useAppStore } from '../stores/useAppStore';
 import { fetchDailyChallenges, upsertDailyChallenges } from '../lib/supabase-queries';
@@ -11,7 +12,18 @@ export function useDailyChallenges() {
   const [record, setRecord] = useState<DailyChallengesRecord | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const today = new Date().toISOString().split('T')[0];
+  const [today, setToday] = useState(() => new Date().toISOString().split('T')[0]);
+
+  // Refresh when app comes to foreground (handles midnight rollover)
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        const now = new Date().toISOString().split('T')[0];
+        setToday(prev => prev !== now ? now : prev);
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
   // Load or create today's challenges
   useEffect(() => {

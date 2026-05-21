@@ -7,7 +7,7 @@
  *   - supabase/functions/score-pronunciation/index.ts
  */
 
-export type PlanId = 'free' | 'basic' | 'premium' | 'vip';
+export type PlanId = 'starter' | 'basic' | 'premium' | 'vip';
 
 export interface SchoolContractConfig {
   dailyVoiceMinutes: number;
@@ -35,10 +35,10 @@ export interface PlanDefinition {
 }
 
 export const PLANS: Record<PlanId, PlanDefinition> = {
-  free: {
-    name: 'Free',
-    priceMonthlyUsd: 0,
-    dailyTextMessages: 5,
+  starter: {
+    name: 'Starter',
+    priceMonthlyUsd: 3.79,
+    dailyTextMessages: 10,
     dailyVoiceMinutes: 5,
     dailyWritingGrades: 1,
     dailyPronunciationScores: 2,
@@ -87,13 +87,14 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
 
 /** Feature bullet points for the subscription/pricing UI. */
 export const PLAN_FEATURES: Record<PlanId, string[]> = {
-  free: [
-    '5 text messages per day',
+  starter: [
+    '10 text messages per day',
     '5 minutes of AI voice per day',
     '1 writing grade per day',
     '2 pronunciation scores per day',
     'Basic SRS review',
     '5 hearts per day',
+    '7-day free trial',
   ],
   basic: [
     '25 text messages per day',
@@ -137,7 +138,7 @@ export function getPlanLimits(planId: PlanId | string): {
   dailyWritingGrades: number;
   dailyPronunciationScores: number;
 } {
-  const plan = PLANS[planId as PlanId] ?? PLANS.free;
+  const plan = PLANS[planId as PlanId] ?? PLANS.starter;
   return {
     dailyTextMessages: plan.dailyTextMessages,
     dailyVoiceMinutes: plan.dailyVoiceMinutes,

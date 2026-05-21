@@ -1,8 +1,10 @@
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { useState } from 'react';
+import { View, Text, StyleSheet, Platform, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MagazineGlassCard } from './MagazineGlassCard';
 import { ProgressBar } from '../ui/ProgressBar';
 import { QuestCountdown } from '../gamification/QuestCountdown';
+import { useDailyChallenges } from '../../hooks/useDailyChallenges';
 import { colors, typography, radii } from '../../config/theme';
 import type { DailyStats } from '../../types';
 
@@ -12,46 +14,18 @@ interface MagazineDailyChallengesProps {
 
 const serifFont = Platform.select({ ios: 'Georgia', default: 'serif' });
 
-interface Challenge {
-  type: string;
-  title: string;
-  icon: string;
-  color: string;
-  current: number;
-  target: number;
-  xp: number;
-}
-
 export function MagazineDailyChallenges({ dailyStats }: MagazineDailyChallengesProps) {
-  const challenges: Challenge[] = [
-    {
-      type: 'lessons',
-      title: 'Complete 2 lessons',
-      icon: 'book',
-      color: '#38BDF8',
-      current: dailyStats?.lessonsCompleted ?? 0,
-      target: 2,
-      xp: 15,
-    },
-    {
-      type: 'cards',
-      title: 'Review 10 cards',
-      icon: 'layers',
-      color: '#A855F7',
-      current: dailyStats?.cardsReviewed ?? 0,
-      target: 10,
-      xp: 15,
-    },
-    {
-      type: 'practice',
-      title: 'Practice for 5 minutes',
-      icon: 'time',
-      color: '#34D399',
-      current: dailyStats?.minutesPracticed ?? 0,
-      target: 5,
-      xp: 20,
-    },
-  ];
+  const { challenges, allCompleted, bonusXpClaimed, multiplier, claimBonusXp } = useDailyChallenges();
+  const [claiming, setClaiming] = useState(false);
+
+  const handleClaimBonus = async () => {
+    setClaiming(true);
+    try {
+      await claimBonusXp();
+    } finally {
+      setClaiming(false);
+    }
+  };
 
   return (
     <MagazineGlassCard style={styles.card}>
@@ -91,11 +65,28 @@ export function MagazineDailyChallenges({ dailyStats }: MagazineDailyChallengesP
               </View>
             </View>
             <View style={styles.xpPill}>
-              <Text style={styles.xpText}>+{c.xp}</Text>
+              <Text style={styles.xpText}>+{c.xpReward}</Text>
             </View>
           </View>
         );
       })}
+
+      {/* Bonus XP Claim */}
+      {allCompleted && (
+        <View style={styles.bonusSection}>
+          {bonusXpClaimed ? (
+            <Text style={styles.bonusClaimed}>
+              +{Math.round(50 * multiplier)} Bonus XP claimed
+            </Text>
+          ) : (
+            <Pressable onPress={handleClaimBonus} disabled={claiming} style={{ opacity: claiming ? 0.6 : 1 }}>
+              <Text style={styles.bonusClaim}>
+                Claim +{Math.round(50 * multiplier)} Bonus XP
+              </Text>
+            </Pressable>
+          )}
+        </View>
+      )}
     </MagazineGlassCard>
   );
 }
@@ -160,5 +151,24 @@ const styles = StyleSheet.create({
     fontFamily: typography.family.monoMedium,
     fontSize: 11,
     color: colors.magazine.xpGold,
+  },
+  bonusSection: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.text.secondary + '40',
+    alignItems: 'center',
+  },
+  bonusClaimed: {
+    fontFamily: typography.family.regular,
+    fontSize: 13,
+    color: colors.success.base,
+    fontWeight: '600',
+  },
+  bonusClaim: {
+    fontFamily: typography.family.regular,
+    fontSize: 13,
+    color: colors.magazine.xpGold,
+    fontWeight: '600',
   },
 });

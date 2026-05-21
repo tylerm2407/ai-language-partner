@@ -33,25 +33,21 @@ export function useAuth() {
   }, []);
 
   const signInWithEmail = useCallback(async (email: string, password: string) => {
-    // Try sign in first
-    const { error: signInError } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+  }, []);
+
+  const signUpWithEmail = useCallback(async (email: string, password: string) => {
+    const { error } = await supabase.auth.signUp({
       email,
       password,
     });
-    if (!signInError) return;
+    if (error) throw error;
+  }, []);
 
-    // If invalid credentials, try creating a new account
-    if (signInError.message.includes('Invalid login credentials')) {
-      const { error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { email_confirm: true } },
-      });
-      if (signUpError) throw signUpError;
-      return;
-    }
-
-    throw signInError;
+  const resetPassword = useCallback(async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    if (error) throw error;
   }, []);
 
   const signOut = useCallback(async () => {
@@ -64,6 +60,8 @@ export function useAuth() {
     user: session?.user ?? null,
     loading,
     signInWithEmail,
+    signUpWithEmail,
+    resetPassword,
     signOut,
   };
 }

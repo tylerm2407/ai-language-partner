@@ -4,6 +4,7 @@ import { View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GRADIENT_COLORS } from '../../config/gradients';
 import { useSchoolStore } from '../../stores/useSchoolStore';
+import { ErrorBoundary } from '../../components/ui/ErrorBoundary';
 
 function TabBarBackground() {
   return (
@@ -24,6 +25,7 @@ export default function TeacherLayout() {
   const isAdmin = roles.includes('school_admin');
 
   return (
+    <ErrorBoundary>
     <View className="flex-1 bg-dark">
       <Tabs
         screenOptions={{
@@ -96,5 +98,6 @@ export default function TeacherLayout() {
         />
       </Tabs>
     </View>
+    </ErrorBoundary>
   );
 }

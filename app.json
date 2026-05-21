@@ -58,11 +58,20 @@
       ],
       "expo-asset",
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-updates",
+      [
+        "@sentry/react-native/expo",
+        {
+          "organization": "novawealth",
+          "project": "fluenci"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
     },
+    "privacyUrl": "https://fluenci.com/privacy",
     "extra": {
       "router": {},
       "eas": {

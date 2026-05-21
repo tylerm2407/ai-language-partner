@@ -5,6 +5,57 @@ import { GeminiLiveSession, GeminiLiveState } from '../lib/gemini-live';
 import { supabase } from '../lib/supabase';
 import type { LanguageCode, ProficiencyLevel } from '../types';
 
+/**
+ * Prepend a 44-byte WAV header to raw PCM base64 so iOS can identify the format.
+ * Gemini Live returns PCM 16-bit 16kHz mono — iOS needs a proper WAV container.
+ *
+ * NOTE: Uses atob/btoa which works fine for typical Gemini Live chunks (a few
+ * seconds of audio). For very large payloads this would need a streaming approach.
+ */
+function pcmToWavBase64(
+  pcmBase64: string,
+  sampleRate = 16000,
+  channels = 1,
+  bitsPerSample = 16
+): string {
+  const pcmBytes = atob(pcmBase64);
+  const pcmLength = pcmBytes.length;
+  const headerLength = 44;
+  const totalLength = headerLength + pcmLength;
+
+  // Build 44-byte WAV header
+  const header = new Uint8Array(headerLength);
+  const view = new DataView(header.buffer);
+
+  // RIFF chunk
+  header.set([0x52, 0x49, 0x46, 0x46], 0); // "RIFF"
+  view.setUint32(4, totalLength - 8, true); // file size - 8
+  header.set([0x57, 0x41, 0x56, 0x45], 8); // "WAVE"
+
+  // fmt sub-chunk
+  header.set([0x66, 0x6d, 0x74, 0x20], 12); // "fmt "
+  view.setUint32(16, 16, true);              // subchunk1 size (PCM = 16)
+  view.setUint16(20, 1, true);               // audio format (PCM = 1)
+  view.setUint16(22, channels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * channels * bitsPerSample / 8, true); // byte rate
+  view.setUint16(32, channels * bitsPerSample / 8, true);              // block align
+  view.setUint16(34, bitsPerSample, true);
+
+  // data sub-chunk
+  header.set([0x64, 0x61, 0x74, 0x61], 36); // "data"
+  view.setUint32(40, pcmLength, true);
+
+  // Combine header + PCM bytes into a single Uint8Array, then base64-encode
+  const combined = new Uint8Array(totalLength);
+  combined.set(header, 0);
+  for (let i = 0; i < pcmLength; i++) {
+    combined[i + headerLength] = pcmBytes.charCodeAt(i);
+  }
+
+  return btoa(String.fromCharCode(...combined));
+}
+
 export interface UseGeminiLiveOptions {
   targetLanguage: LanguageCode;
   level: ProficiencyLevel;
@@ -78,7 +129,8 @@ export function useGeminiLive(options: UseGeminiLiveOptions) {
           onAudioChunk: async (base64Audio) => {
             // Play audio chunk
             try {
-              const dataUri = `data:audio/pcm;base64,${base64Audio}`;
+              const wavBase64 = pcmToWavBase64(base64Audio);
+              const dataUri = `data:audio/wav;base64,${wavBase64}`;
               const { sound } = await Audio.Sound.createAsync({ uri: dataUri });
               soundQueueRef.current.push(sound);
               await sound.playAsync();

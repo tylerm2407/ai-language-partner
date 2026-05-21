@@ -73,7 +73,7 @@ export function useAudioRecorder() {
     if (!audioUri) return null;
     try {
       const file = new File(audioUri);
-      const base64 = file.base64();
+      const base64 = await file.base64();
       return base64;
     } catch {
       return null;

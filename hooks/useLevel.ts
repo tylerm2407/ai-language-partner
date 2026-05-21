@@ -40,7 +40,7 @@ export function useLevel() {
       }
     }
     prevLevelRef.current = level;
-  }, [profile?.totalXp]);
+  }, [profile?.totalXp, user?.id, profile?.xpLevel, profile?.leagueTier]);
 
   const dismissLevelUp = useCallback(() => {
     setLevelUpInfo(null);

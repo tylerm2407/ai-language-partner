@@ -107,6 +107,7 @@ export interface Unit {
 export interface Lesson {
   id: string;
   unitId: string;
+  courseId: string | null;
   title: string;
   description: string;
   orderIndex: number;
@@ -395,7 +396,7 @@ export interface PracticeSession {
 
 // ─── Subscription ───────────────────────────────────────────────
 
-export type SubscriptionTier = 'free' | 'basic' | 'premium' | 'vip';
+export type SubscriptionTier = 'starter' | 'basic' | 'premium' | 'vip';
 
 export interface Subscription {
   id: string;

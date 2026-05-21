@@ -1,10 +1,13 @@
 import '../global.css';
+import * as Sentry from '@sentry/react-native';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useAppStore } from '../stores/useAppStore';
+import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 import { useSchoolStore } from '../stores/useSchoolStore';
+import { SCHOOL_ENABLED } from '../config/app';
 import { useNotifications, scheduleStreakSaveReminder } from '../hooks/useNotifications';
 import { View, ActivityIndicator, AppState } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -21,7 +24,13 @@ import {
   JetBrainsMono_500Medium,
 } from '@expo-google-fonts/jetbrains-mono';
 
-export default function RootLayout() {
+Sentry.init({
+  dsn: '__YOUR_SENTRY_DSN__', // TODO: Replace with your Sentry DSN from sentry.io
+  tracesSampleRate: 0.2,
+  enabled: !__DEV__,
+});
+
+function RootLayout() {
   const { session, loading: authLoading } = useAuth();
   const { profile, dailyStats, loading: dataLoading, loadUserData } = useAppStore();
   const { roles, activeRole, loadRoles } = useSchoolStore();
@@ -84,8 +93,12 @@ export default function RootLayout() {
     }
   }, [session?.user?.id, dataLoaded, loadUserData, session]);
 
-  // Load user roles after data is loaded
+  // Load user roles after data is loaded (skip when school features disabled)
   useEffect(() => {
+    if (!SCHOOL_ENABLED) {
+      setRolesLoaded(true);
+      return;
+    }
     if (session?.user?.id && dataLoaded && !rolesLoaded) {
       loadRoles(session.user.id).then(() => setRolesLoaded(true));
     }
@@ -108,10 +121,10 @@ export default function RootLayout() {
       // Signed in but onboarding not finished — go to onboarding
       router.replace('/(public)/onboarding');
     } else if (session && dataLoaded && profile?.onboardingCompleted) {
-      // Role-based routing
-      if (roles.includes('teacher') && activeRole === 'teacher' && !inTeacherGroup) {
+      // Role-based routing (teacher routing only when school features enabled)
+      if (SCHOOL_ENABLED && roles.includes('teacher') && activeRole === 'teacher' && !inTeacherGroup) {
         router.replace('/(teacher)' as any);
-      } else if (activeRole === 'learner' && !inAuthGroup) {
+      } else if ((!SCHOOL_ENABLED || activeRole === 'learner') && !inAuthGroup) {
         router.replace('/(app)');
       }
     } else if (!session && (inAuthGroup || inTeacherGroup)) {
@@ -133,8 +146,12 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <Slot />
+      <ErrorBoundary>
+        <Slot />
+      </ErrorBoundary>
       <StatusBar style="light" />
     </GestureHandlerRootView>
   );
 }
+
+export default Sentry.wrap(RootLayout);

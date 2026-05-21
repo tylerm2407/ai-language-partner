@@ -39,6 +39,10 @@
         "appleId": "tcm2407@icloud.com",
         "ascAppId": "6761507250",
         "appleTeamId": "3RZVA8RPRT"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./google-play-service-account.json",
+        "track": "internal"
       }
     }
   }
