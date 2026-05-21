@@ -7,6 +7,8 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getPlanLimits } from '../_shared/plan-limits.ts';
+import { getAuthenticatedUser } from '../_shared/auth.ts';
+import { corsHeaders, corsResponse } from '../_shared/cors.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -46,14 +48,13 @@ async function getUserTier(supabase: ReturnType<typeof createClient>, userId: st
     .single();
 
   if (data?.is_active && data.tier) return data.tier;
-  return 'free';
+  return 'starter';
 }
 
 interface ScoreRequest {
   audioBase64: string;
   expectedText: string;
   language: string;
-  userId?: string; // passed from client for usage tracking
   acceptedVariants?: string[];
   targetWord?: string;
   targetGrammar?: string;
@@ -61,23 +62,26 @@ interface ScoreRequest {
 
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', {
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST',
-        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-      },
-    });
+    return corsResponse();
   }
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
   try {
+    // Verify authentication
+    const authUser = await getAuthenticatedUser(req);
+    if (!authUser) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const authenticatedUserId = authUser.userId;
+
     const {
       audioBase64,
       expectedText,
       language,
-      userId,
       acceptedVariants,
       targetWord,
       targetGrammar,
@@ -86,25 +90,23 @@ serve(async (req: Request) => {
     if (!audioBase64 || !expectedText) {
       return new Response(
         JSON.stringify({ error: 'audioBase64 and expectedText are required' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     // ── Enforce daily pronunciation score limit ───────────────
-    if (userId) {
-      const tier = await getUserTier(supabase, userId);
-      const limits = getPlanLimits(tier);
+    const tier = await getUserTier(supabase, authenticatedUserId);
+    const limits = getPlanLimits(tier);
 
-      const usage = await getOrCreateDailyUsage(supabase, userId);
-      if (((usage.pronunciation_scores as number) ?? 0) >= limits.dailyPronunciationScores) {
-        return new Response(
-          JSON.stringify({
-            error: "You've reached your daily pronunciation scoring limit. Upgrade your plan for more.",
-            code: 'DAILY_PRONUNCIATION_LIMIT_REACHED',
-          }),
-          { status: 429, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
+    const usage = await getOrCreateDailyUsage(supabase, authenticatedUserId);
+    if (((usage.pronunciation_scores as number) ?? 0) >= limits.dailyPronunciationScores) {
+      return new Response(
+        JSON.stringify({
+          error: "You've reached your daily pronunciation scoring limit. Upgrade your plan for more.",
+          code: 'DAILY_PRONUNCIATION_LIMIT_REACHED',
+        }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Step 1: Transcribe audio using OpenAI Whisper
@@ -120,14 +122,12 @@ serve(async (req: Request) => {
       (targetGrammar ? normalizedTranscription.includes(targetGrammar.toLowerCase().trim()) : false);
 
     // Increment pronunciation_scores after successful processing
-    if (userId) {
-      const date = todayUTC();
-      await supabase.rpc('increment_daily_usage', {
-        p_user_id: userId,
-        p_date: date,
-        p_pronunciation_scores: 1,
-      });
-    }
+    const date = todayUTC();
+    await supabase.rpc('increment_daily_usage', {
+      p_user_id: authenticatedUserId,
+      p_date: date,
+      p_pronunciation_scores: 1,
+    });
 
     return new Response(
       JSON.stringify({
@@ -139,12 +139,12 @@ serve(async (req: Request) => {
         matchedVariant: score.matchedVariant,
         targetPresent,
       }),
-      { headers: { 'Content-Type': 'application/json' } }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     return new Response(
       JSON.stringify({ error: error.message }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });

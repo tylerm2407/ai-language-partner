@@ -262,12 +262,22 @@ serve(async (req: Request) => {
 
     geminiWs.onerror = (event) => {
       console.error('[voice-proxy] Gemini WebSocket error:', event);
+      // Clear the billing interval — this session is dead
+      if (voiceTickInterval) {
+        clearInterval(voiceTickInterval);
+        voiceTickInterval = null;
+      }
       if (clientWs.readyState === WebSocket.OPEN) {
         clientWs.close(1011, 'Upstream error');
       }
     };
 
     geminiWs.onclose = (event) => {
+      // Clear the billing interval if not already cleared by onerror
+      if (voiceTickInterval) {
+        clearInterval(voiceTickInterval);
+        voiceTickInterval = null;
+      }
       if (clientWs.readyState === WebSocket.OPEN) {
         clientWs.close(event.code, event.reason || 'Upstream closed');
       }
@@ -290,6 +300,11 @@ serve(async (req: Request) => {
 
   clientWs.onerror = (event) => {
     console.error('[voice-proxy] Client WebSocket error:', event);
+    // Clear the billing interval — client connection is broken
+    if (voiceTickInterval) {
+      clearInterval(voiceTickInterval);
+      voiceTickInterval = null;
+    }
     if (geminiWs && geminiWs.readyState === WebSocket.OPEN) {
       geminiWs.close(1011, 'Client error');
     }

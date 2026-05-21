@@ -46,7 +46,7 @@ serve(async (req: Request) => {
       .eq('user_id', authUser.userId)
       .single();
 
-    const tier = sub?.is_active && sub.tier ? sub.tier : 'free';
+    const tier = sub?.is_active && sub.tier ? sub.tier : 'starter';
     const limits = getPlanLimits(tier);
 
     const todayUTC = new Date().toISOString().split('T')[0];

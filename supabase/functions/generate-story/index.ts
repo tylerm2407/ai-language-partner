@@ -55,13 +55,13 @@ serve(async (req: Request) => {
       .eq('user_id', authUser.userId)
       .single();
 
-    const tierValue = sub?.is_active && sub.tier ? sub.tier : 'free';
+    const tierValue = sub?.is_active && sub.tier ? sub.tier : 'starter';
     const limits = getPlanLimits(tierValue);
 
     const todayUTC = new Date().toISOString().split('T')[0];
     const { data: usageRow } = await supabase
       .from('daily_usage')
-      .select('text_messages')
+      .select('text_messages, stories_generated')
       .eq('user_id', authUser.userId)
       .eq('date', todayUTC)
       .single();
@@ -69,6 +69,15 @@ serve(async (req: Request) => {
     if (((usageRow?.text_messages as number) ?? 0) >= limits.dailyTextMessages) {
       return new Response(
         JSON.stringify({ error: "You've reached your daily AI usage limit. Upgrade your plan for more.", code: 'DAILY_TEXT_LIMIT_REACHED' }),
+        { status: 429, headers }
+      );
+    }
+
+    // Hard cap: max 3 generate-story calls per day per user
+    const MAX_DAILY_STORY_CALLS = 3;
+    if (((usageRow?.stories_generated as number) ?? 0) >= MAX_DAILY_STORY_CALLS) {
+      return new Response(
+        JSON.stringify({ error: "You've reached the daily story generation limit (3 per day). Try again tomorrow.", code: 'DAILY_STORY_LIMIT_REACHED' }),
         { status: 429, headers }
       );
     }
@@ -82,7 +91,7 @@ serve(async (req: Request) => {
 
     const languageName = LANGUAGE_NAMES[language] ?? language;
     const wordRange = WORD_COUNTS[cefrLevel] ?? WORD_COUNTS['A1'];
-    const storyCount = Math.min(count, 5); // cap at 5 per request
+    const storyCount = Math.min(count, 3); // cap at 3 per request
 
     const bookIds: string[] = [];
 
@@ -184,11 +193,12 @@ RESPOND ONLY IN VALID JSON:
       bookIds.push(book.id);
     }
 
-    // Increment text_messages by number of stories generated
+    // Increment text_messages by number of stories generated + count the call
     await supabase.rpc('increment_daily_usage', {
       p_user_id: authUser.userId,
       p_date: todayUTC,
       p_text_messages: bookIds.length,
+      p_stories_generated: 1,
     });
 
     return new Response(JSON.stringify({ bookIds }), { headers });

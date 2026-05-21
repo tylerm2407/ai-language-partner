@@ -5,6 +5,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, corsResponse } from '../_shared/cors.ts';
+import { getAuthenticatedUser } from '../_shared/auth.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -174,10 +175,10 @@ function resolveVoiceId(
 }
 
 const PLAN_LIMITS: Record<string, { dailyVoiceMinutes: number | 'unlimited' }> = {
-  free:      { dailyVoiceMinutes: 5 },
-  basic:     { dailyVoiceMinutes: 20 },
-  premium:   { dailyVoiceMinutes: 45 },
-  vip:       { dailyVoiceMinutes: 60 },
+  starter:   { dailyVoiceMinutes: 5 },
+  basic:     { dailyVoiceMinutes: 10 },
+  premium:   { dailyVoiceMinutes: 20 },
+  vip:       { dailyVoiceMinutes: 30 },
 };
 
 interface TTSRequest {
@@ -208,7 +209,7 @@ async function getUserTier(supabase: ReturnType<typeof createClient>, userId: st
     .single();
 
   if (data?.is_active && data.tier) return data.tier;
-  return 'free';
+  return 'starter';
 }
 
 async function getVoiceMinutesUsed(supabase: ReturnType<typeof createClient>, userId: string): Promise<number> {
@@ -229,7 +230,17 @@ serve(async (req: Request) => {
   }
 
   try {
-    const { text, language, userId, voiceIndex, voiceMode, voiceRotationKey } =
+    // Verify authentication
+    const authUser = await getAuthenticatedUser(req);
+    if (!authUser) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const authenticatedUserId = authUser.userId;
+
+    const { text, language, voiceIndex, voiceMode, voiceRotationKey } =
       (await req.json()) as TTSRequest;
 
     if (!ELEVENLABS_API_KEY) {
@@ -246,14 +257,14 @@ serve(async (req: Request) => {
       );
     }
 
-    // Enforce daily voice minute limits
-    if (userId) {
+    // Enforce daily voice minute limits using the authenticated user ID
+    if (authenticatedUserId) {
       const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-      const tier = await getUserTier(supabase, userId);
-      const limits = PLAN_LIMITS[tier] ?? PLAN_LIMITS.free;
+      const tier = await getUserTier(supabase, authenticatedUserId);
+      const limits = PLAN_LIMITS[tier] ?? PLAN_LIMITS.starter;
 
       if (limits.dailyVoiceMinutes !== 'unlimited') {
-        const used = await getVoiceMinutesUsed(supabase, userId);
+        const used = await getVoiceMinutesUsed(supabase, authenticatedUserId);
         if (used >= limits.dailyVoiceMinutes) {
           return new Response(
             JSON.stringify({
@@ -306,6 +317,17 @@ serve(async (req: Request) => {
       binary += String.fromCharCode(...uint8.subarray(i, i + CHUNK));
     }
     const base64 = btoa(binary);
+
+    // Increment voice_minutes usage after successful TTS
+    if (authenticatedUserId) {
+      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      await supabase.rpc('increment_daily_usage', {
+        p_user_id: authenticatedUserId,
+        p_voice_minutes: 1,
+      }).then(({ error }) => {
+        if (error) console.error('[tts] Failed to increment voice_minutes:', error.message);
+      });
+    }
 
     return new Response(JSON.stringify({ audioBase64: base64 }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

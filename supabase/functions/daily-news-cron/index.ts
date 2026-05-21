@@ -160,9 +160,27 @@ serve(async (req: Request) => {
   }
   const cronSecret = secretData as string;
 
+  // Validate the secret is strong enough — catch misconfiguration early
+  if (!cronSecret || cronSecret.length < 16) {
+    console.error('[SECURITY] CRON_SECRET is missing or too short. Set a 32+ byte random value in Vault.');
+    return json({ error: 'Cron secret is not configured securely' }, 500);
+  }
+
   const authHeader = req.headers.get('authorization') ?? '';
   const providedKey = authHeader.replace(/^Bearer\s+/i, '');
-  if (!providedKey || providedKey !== cronSecret) {
+
+  // Constant-time comparison to prevent timing attacks
+  if (!providedKey || providedKey.length !== cronSecret.length) {
+    return json({ error: 'Unauthorized — cron invocation only' }, 401);
+  }
+  const encoder = new TextEncoder();
+  const a = encoder.encode(providedKey);
+  const b = encoder.encode(cronSecret);
+  let mismatch = 0;
+  for (let i = 0; i < a.length; i++) {
+    mismatch |= a[i] ^ b[i];
+  }
+  if (mismatch !== 0) {
     return json({ error: 'Unauthorized — cron invocation only' }, 401);
   }
 

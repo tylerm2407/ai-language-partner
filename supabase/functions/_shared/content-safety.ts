@@ -197,6 +197,30 @@ export function checkLevel(content: string, targetLevel: string): LevelCheckResu
  * @param content - The text to sanitize.
  * @returns Sanitized text with PII replaced by placeholders.
  */
+// ─── Backwards-Compatible Wrapper ───────────────────────────────────
+// Several Edge Functions and validated-generate.ts import
+// `validateContentSafety` / `SafetyCheck`. This async wrapper adapts
+// the synchronous `validateContent` into the expected shape.
+
+export interface SafetyCheck {
+  safe: boolean;
+  reasons: string[];
+}
+
+/**
+ * Async wrapper around `validateContent` that maps `ContentSafetyResult`
+ * into the `SafetyCheck` shape expected by callers (grade-writing,
+ * validated-generate, tests).
+ */
+export async function validateContentSafety(
+  content: string,
+  options?: { userAge?: number; language?: string; fn?: string },
+): Promise<SafetyCheck> {
+  const isMinor = options?.userAge != null && options.userAge < 18;
+  const result = validateContent(content, { isMinor });
+  return { safe: result.safe, reasons: result.flags };
+}
+
 export function sanitizeContent(content: string): string {
   let sanitized = content;
   sanitized = sanitized.replace(EMAIL_PATTERN, '[EMAIL REMOVED]');

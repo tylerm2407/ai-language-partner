@@ -50,7 +50,7 @@ serve(async (req: Request) => {
       .eq('user_id', userId)
       .single();
 
-    const tier = sub?.is_active && sub.tier ? sub.tier : 'free';
+    const tier = sub?.is_active && sub.tier ? sub.tier : 'starter';
     const limits = getPlanLimits(tier);
 
     // Check remaining voice minutes

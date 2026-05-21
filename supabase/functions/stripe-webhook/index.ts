@@ -114,7 +114,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   await supabase
     .from('subscriptions')
     .update({
-      tier: 'free',
+      tier: 'starter',
       is_active: false,
       current_period_end: null,
     })
@@ -133,7 +133,7 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
 }
 
 function determineTier(priceId: string | undefined): string {
-  if (!priceId) return 'free';
+  if (!priceId) return 'starter';
 
   const BASIC_MONTHLY = Deno.env.get('STRIPE_BASIC_MONTHLY_PRICE_ID');
   const BASIC_YEARLY = Deno.env.get('STRIPE_BASIC_YEARLY_PRICE_ID');
@@ -145,5 +145,6 @@ function determineTier(priceId: string | undefined): string {
   if (priceId === BASIC_MONTHLY || priceId === BASIC_YEARLY) return 'basic';
   if (priceId === PREMIUM_MONTHLY || priceId === PREMIUM_YEARLY) return 'premium';
   if (priceId === VIP_MONTHLY || priceId === VIP_YEARLY) return 'vip';
-  return 'basic'; // default to basic for unknown price IDs
+  console.warn(`[stripe-webhook] Unknown price ID: ${priceId}, defaulting to starter`);
+  return 'starter';
 }

@@ -137,7 +137,7 @@ serve(async (req: Request) => {
       .eq('user_id', user.id)
       .single();
 
-    const tier = sub?.is_active && sub.tier ? sub.tier : 'free';
+    const tier = sub?.is_active && sub.tier ? sub.tier : 'starter';
     const limits = getPlanLimits(tier);
 
     const todayUTC = new Date().toISOString().split('T')[0];
@@ -192,7 +192,7 @@ serve(async (req: Request) => {
           },
           body: JSON.stringify({
             model: TEXT_MODEL,
-            max_tokens: 1024,
+            max_tokens: 2048,
             system: systemPrompt,
             messages: [{ role: 'user', content: userMessage }],
           }),
@@ -236,9 +236,10 @@ serve(async (req: Request) => {
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
-  } catch (error) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   }

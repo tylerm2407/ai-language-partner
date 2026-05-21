@@ -5,6 +5,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import Stripe from 'https://esm.sh/stripe@13.0.0?target=deno';
 import { corsHeaders, corsResponse } from '../_shared/cors.ts';
+import { getAuthenticatedUser } from '../_shared/auth.ts';
 
 const STRIPE_SECRET_KEY = Deno.env.get('STRIPE_SECRET_KEY');
 
@@ -31,7 +32,17 @@ serve(async (req: Request) => {
     return corsResponse();
   }
 
+  const headers = { ...corsHeaders, 'Content-Type': 'application/json' };
+
   try {
+    const authUser = await getAuthenticatedUser(req);
+    if (!authUser) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers }
+      );
+    }
+
     if (!STRIPE_SECRET_KEY) {
       return new Response(
         JSON.stringify({ error: 'STRIPE_SECRET_KEY not configured' }),
@@ -45,6 +56,15 @@ serve(async (req: Request) => {
     });
 
     const { userId, email, priceKey, successUrl, cancelUrl } = (await req.json()) as CheckoutRequest;
+
+    if (userId !== authUser.userId) {
+      return new Response(
+        JSON.stringify({ error: 'Forbidden' }),
+        { status: 403, headers }
+      );
+    }
+
+    const authenticatedUserId = authUser.userId;
 
     const priceId = PRICE_IDS[priceKey];
     if (!priceId || priceId.startsWith('price_placeholder')) {
@@ -63,7 +83,7 @@ serve(async (req: Request) => {
     } else {
       const customer = await stripe.customers.create({
         email,
-        metadata: { supabase_user_id: userId },
+        metadata: { supabase_user_id: authenticatedUserId },
       });
       customerId = customer.id;
     }
@@ -75,9 +95,9 @@ serve(async (req: Request) => {
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: successUrl ?? 'languageai://subscription-success',
       cancel_url: cancelUrl ?? 'languageai://subscription-cancel',
-      metadata: { supabase_user_id: userId },
+      metadata: { supabase_user_id: authenticatedUserId },
       subscription_data: {
-        metadata: { supabase_user_id: userId },
+        metadata: { supabase_user_id: authenticatedUserId },
       },
     });
 

@@ -3,7 +3,7 @@
  * Mirrors lib/plans.ts on the client — keep in sync.
  */
 
-export type PlanTier = 'free' | 'basic' | 'premium' | 'vip';
+export type PlanTier = 'starter' | 'basic' | 'premium' | 'vip';
 
 export interface PlanLimits {
   dailyTextMessages: number;
@@ -14,14 +14,14 @@ export interface PlanLimits {
 }
 
 export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
-  free:      { dailyTextMessages: 5,  dailyVoiceMinutes: 5,  dailyWritingGrades: 1,  dailyPronunciationScores: 2, offlineMode: false },
+  starter:   { dailyTextMessages: 10, dailyVoiceMinutes: 5,  dailyWritingGrades: 1,  dailyPronunciationScores: 2, offlineMode: false },
   basic:     { dailyTextMessages: 25, dailyVoiceMinutes: 10, dailyWritingGrades: 3,  dailyPronunciationScores: 3, offlineMode: false },
   premium:   { dailyTextMessages: 50, dailyVoiceMinutes: 20, dailyWritingGrades: 7,  dailyPronunciationScores: 5, offlineMode: true },
   vip:       { dailyTextMessages: 75, dailyVoiceMinutes: 30, dailyWritingGrades: 12, dailyPronunciationScores: 7, offlineMode: true },
 };
 
 export function getPlanLimits(tier: string): PlanLimits {
-  return PLAN_LIMITS[tier as PlanTier] ?? PLAN_LIMITS.free;
+  return PLAN_LIMITS[tier as PlanTier] ?? PLAN_LIMITS.starter;
 }
 
 /**
@@ -37,21 +37,21 @@ export async function getEffectiveLimits(userId: string, supabase: any): Promise
     });
 
     if (error || !data) {
-      return getPlanLimits('free');
+      return getPlanLimits('starter');
     }
 
     // data may be a single JSONB object or an array with one element
     const row = Array.isArray(data) ? data[0] : data;
-    if (!row) return getPlanLimits('free');
+    if (!row) return getPlanLimits('starter');
 
     return {
-      dailyTextMessages: typeof row.dailyTextMessages === 'number' ? row.dailyTextMessages : (row.daily_text_messages ?? PLAN_LIMITS.free.dailyTextMessages),
-      dailyVoiceMinutes: typeof row.dailyVoiceMinutes === 'number' ? row.dailyVoiceMinutes : (row.daily_voice_minutes ?? PLAN_LIMITS.free.dailyVoiceMinutes),
-      dailyWritingGrades: typeof row.dailyWritingGrades === 'number' ? row.dailyWritingGrades : (row.daily_writing_grades ?? PLAN_LIMITS.free.dailyWritingGrades),
-      dailyPronunciationScores: typeof row.dailyPronunciationScores === 'number' ? row.dailyPronunciationScores : (row.daily_pronunciation_scores ?? PLAN_LIMITS.free.dailyPronunciationScores),
+      dailyTextMessages: typeof row.dailyTextMessages === 'number' ? row.dailyTextMessages : (row.daily_text_messages ?? PLAN_LIMITS.starter.dailyTextMessages),
+      dailyVoiceMinutes: typeof row.dailyVoiceMinutes === 'number' ? row.dailyVoiceMinutes : (row.daily_voice_minutes ?? PLAN_LIMITS.starter.dailyVoiceMinutes),
+      dailyWritingGrades: typeof row.dailyWritingGrades === 'number' ? row.dailyWritingGrades : (row.daily_writing_grades ?? PLAN_LIMITS.starter.dailyWritingGrades),
+      dailyPronunciationScores: typeof row.dailyPronunciationScores === 'number' ? row.dailyPronunciationScores : (row.daily_pronunciation_scores ?? PLAN_LIMITS.starter.dailyPronunciationScores),
       offlineMode: row.offlineMode === true || row.offline_mode === true || false,
     };
   } catch {
-    return getPlanLimits('free');
+    return getPlanLimits('starter');
   }
 }

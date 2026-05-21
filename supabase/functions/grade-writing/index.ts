@@ -84,7 +84,7 @@ serve(async (req: Request) => {
       .eq('user_id', userId)
       .single();
 
-    const tier = sub?.is_active && sub.tier ? sub.tier : 'free';
+    const tier = sub?.is_active && sub.tier ? sub.tier : 'starter';
     const limits = getPlanLimits(tier);
 
     const date = todayUTC();
@@ -198,9 +198,10 @@ serve(async (req: Request) => {
       JSON.stringify(feedback),
       { headers }
     );
-  } catch (error) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: message }),
       { status: 500, headers }
     );
   }
