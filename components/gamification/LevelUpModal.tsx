@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { GRADIENT_COLORS, GRADIENT_START, GRADIENT_END } from '../../config/gradients';
 import { Ionicons } from '@expo/vector-icons';
 import { getLeagueConfig } from '../../lib/levels';
+import { colors } from '../../config/theme';
 import type { LeagueTier } from '../../lib/levels';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -88,11 +89,11 @@ export function LevelUpModal({ visible, newLevel, newTier, tierChanged, onDismis
     }
   }, [visible, cardScale, cardOpacity, backdropOpacity, levelScale]);
 
-  const confettiColors = [leagueConfig.color, '#FBBF24', '#34D399', '#38BDF8', '#F472B6', '#A855F7'];
+  const confettiColors = [leagueConfig.color, colors.warning.base, colors.success.light, colors.league.diamond, '#F472B6', colors.premium.base];
 
   return (
     <Modal transparent visible={visible} animationType="none" onRequestClose={onDismiss}>
-      <Animated.View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.7)', opacity: backdropOpacity }}>
+      <Animated.View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.surface.overlay, opacity: backdropOpacity }}>
         <Animated.View style={{ width: SCREEN_WIDTH * 0.82, borderRadius: 24, overflow: 'hidden', transform: [{ scale: cardScale }], opacity: cardOpacity }}>
           <LinearGradient
             colors={[...GRADIENT_COLORS]}

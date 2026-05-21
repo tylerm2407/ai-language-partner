@@ -12,6 +12,7 @@ import { GradientBorderCard } from '../../../components/ui/GradientBorderCard';
 import { TactileButton } from '../../../components/ui/TactileButton';
 import { levelToNewsTier } from '../../../config/app';
 import type { DailyNewsArticle, VocabularyHighlight } from '../../../types';
+import { colors } from '../../../config/theme';
 
 export default function NewsReaderScreen() {
   const { date } = useLocalSearchParams<{ date: string }>();
@@ -73,14 +74,14 @@ export default function NewsReaderScreen() {
             accessibilityRole="button"
             accessibilityLabel="Go back"
           >
-            <Ionicons name="arrow-back" size={22} color="#E2E8F0" />
+            <Ionicons name="arrow-back" size={22} color={colors.text.primary} />
           </Pressable>
           <Text className="text-lg font-semibold text-text-primary ml-3 flex-1">
             Daily News
           </Text>
           {readAt && (
             <View className="flex-row items-center bg-success-bg/40 rounded-full px-3 py-1">
-              <Ionicons name="checkmark-circle" size={14} color="#22C55E" />
+              <Ionicons name="checkmark-circle" size={14} color={colors.success.base} />
               <Text className="text-xs font-semibold text-success ml-1">Read</Text>
             </View>
           )}
@@ -96,7 +97,7 @@ export default function NewsReaderScreen() {
             </View>
           ) : !article ? (
             <View className="mt-8 items-center">
-              <Ionicons name="newspaper-outline" size={48} color="#64748B" />
+              <Ionicons name="newspaper-outline" size={48} color={colors.text.quaternary} />
               <Text className="text-text-secondary text-base mt-4 text-center">
                 No article available for this date yet.
               </Text>
@@ -138,7 +139,7 @@ export default function NewsReaderScreen() {
                     <Ionicons
                       name={showTranslation ? 'eye-off-outline' : 'eye-outline'}
                       size={20}
-                      color="#38BDF8"
+                      color={colors.league.diamond}
                     />
                     <Text className="text-primary font-semibold ml-2">
                       {showTranslation ? 'Hide Translation' : 'Show Translation'}

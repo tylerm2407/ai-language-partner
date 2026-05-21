@@ -1,8 +1,11 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable } from 'react-native';
+import { View, TextInput, Pressable } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { FeedbackCard } from './FeedbackCard';
 import { HighlightedText } from '../shared/HighlightedText';
+import { Body, Caption } from '../ui/Text';
+import { colors, spacing, radii } from '../../config/theme';
 import { gradeAnswer } from '../../lib/grading';
 import type { GradeResult } from '../../lib/grading';
 import type { Exercise } from '../../types';
@@ -68,34 +71,42 @@ export function ClozeExercise({
 
   return (
     <View style={{ flex: 1 }}>
-      <Text style={{ fontSize: 14, fontWeight: '600', color: '#6366F1', marginBottom: 8 }}>
+      <Caption tone="accent" style={{ fontWeight: '600', marginBottom: spacing.xs }}>
         Fill in the blank
-      </Text>
+      </Caption>
 
       {/* Context sentence with blank */}
       <View style={{
-        backgroundColor: '#F9FAFB', borderRadius: 20, padding: 24, marginBottom: 20, minHeight: 120,
+        backgroundColor: colors.surface.cardAlt, borderRadius: radii.xxl, padding: spacing.lg, marginBottom: spacing.lg + spacing.xxs, minHeight: 120,
         justifyContent: 'center',
       }}>
-        <Text style={{ fontSize: 18, lineHeight: 28, color: '#111' }}>
+        <Body size="lg" style={{ lineHeight: 28 }}>
           <HighlightedText text={beforeBlank} highlight={highlight} />
           <View style={{
             borderBottomWidth: 2,
-            borderBottomColor: isRevealed ? (isCorrect ? '#22C55E' : '#EF4444') : '#6366F1',
+            borderBottomColor: isRevealed ? (isCorrect ? colors.success.base : colors.error.base) : colors.indigo[500],
             minWidth: 80,
           }}>
-            <Text style={{
-              fontSize: 18,
-              fontWeight: '600',
-              color: isRevealed ? (isCorrect ? '#22C55E' : '#EF4444') : '#6366F1',
-              textAlign: 'center',
-              paddingHorizontal: 4,
-            }}>
-              {isRevealed ? (isCorrect ? userInput : exercise.correctAnswer) : userInput || '___'}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+              {isRevealed && (
+                <Ionicons
+                  name={isCorrect ? 'checkmark-circle' : 'close-circle'}
+                  size={20}
+                  color={isCorrect ? colors.success.base : colors.error.base}
+                  style={{ marginRight: spacing.xxs }}
+                />
+              )}
+              <Body size="lg" weight="semibold" style={{
+                color: isRevealed ? (isCorrect ? colors.success.base : colors.error.base) : colors.indigo[500],
+                textAlign: 'center',
+                paddingHorizontal: spacing.xxs,
+              }}>
+                {isRevealed ? (isCorrect ? userInput : exercise.correctAnswer) : userInput || '___'}
+              </Body>
+            </View>
           </View>
           <HighlightedText text={afterBlank} highlight={highlight} />
-        </Text>
+        </Body>
       </View>
 
       {/* Input */}
@@ -104,19 +115,19 @@ export function ClozeExercise({
           value={userInput}
           onChangeText={setUserInput}
           placeholder="Type the missing word..."
-          placeholderTextColor="#999"
+          placeholderTextColor={colors.text.quaternary}
           autoFocus
           style={{
             borderWidth: 2,
-            borderColor: '#D1D5DB',
-            borderRadius: 14,
-            paddingHorizontal: 16,
+            borderColor: colors.border.strong,
+            borderRadius: radii.lg,
+            paddingHorizontal: spacing.md,
             paddingVertical: 10,
             fontSize: 18,
             fontWeight: '600',
             textAlign: 'center',
-            color: '#111',
-            marginBottom: 16,
+            color: colors.text.primary,
+            marginBottom: spacing.md,
           }}
           accessibilityLabel="Missing word"
         />
@@ -124,9 +135,9 @@ export function ClozeExercise({
 
       {/* Hint */}
       {exercise.hintText && !isRevealed && (
-        <Text style={{ fontSize: 14, color: '#999', fontStyle: 'italic', marginBottom: 16 }}>
+        <Caption tone="tertiary" style={{ fontStyle: 'italic', marginBottom: spacing.md }}>
           Hint: {exercise.hintText}
-        </Text>
+        </Caption>
       )}
 
       {/* Differentiated feedback */}
@@ -148,15 +159,15 @@ export function ClozeExercise({
           onPress={handleCheck}
           disabled={userInput.trim().length === 0}
           style={{
-            backgroundColor: userInput.trim().length > 0 ? '#6366F1' : '#C7D2FE',
-            paddingVertical: 16,
-            borderRadius: 14,
+            backgroundColor: userInput.trim().length > 0 ? colors.indigo[500] : colors.indigo[200],
+            paddingVertical: spacing.md,
+            borderRadius: radii.lg,
             alignItems: 'center',
           }}
           accessibilityRole="button"
           accessibilityLabel="Check answer"
         >
-          <Text style={{ color: '#fff', fontSize: 18, fontWeight: '600' }}>Check</Text>
+          <Body size="lg" weight="semibold" tone="onPrimary">Check</Body>
         </Pressable>
       )}
     </View>

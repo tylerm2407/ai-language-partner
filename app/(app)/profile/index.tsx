@@ -5,10 +5,12 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAppStore } from '../../../stores/useAppStore';
 import { useSchoolStore } from '../../../stores/useSchoolStore';
+import { SCHOOL_ENABLED } from '../../../config/app';
 import { useLevel } from '../../../hooks/useLevel';
 import { Ionicons } from '@expo/vector-icons';
 import { SUPPORTED_LANGUAGES } from '../../../config/app';
 import { GradientBackground } from '../../../components/ui/GradientBackground';
+import { colors } from '../../../config/theme';
 import { LeagueBadge } from '../../../components/gamification/LeagueBadge';
 import { AchievementGrid } from '../../../components/gamification/AchievementGrid';
 import { Avatar } from '../../../components/avatar/Avatar';
@@ -49,9 +51,9 @@ export default function ProfileScreen() {
   const [joinModalVisible, setJoinModalVisible] = useState(false);
   const [becomeTeacherVisible, setBecomeTeacherVisible] = useState(false);
 
-  // Load student school data on mount
+  // Load student school data on mount (only when school features enabled)
   useEffect(() => {
-    if (user?.id) loadStudentSchoolData(user.id);
+    if (SCHOOL_ENABLED && user?.id) loadStudentSchoolData(user.id);
   }, [user?.id, loadStudentSchoolData]);
 
   const handleJoinClass = async (code: string) => {
@@ -141,64 +143,68 @@ export default function ProfileScreen() {
         {/* Completed Lessons */}
         <CompletedLessonsSection userId={user?.id} />
 
-        {/* My Classes */}
-        <Text className="text-xl font-bold text-text-primary mb-3">My Classes</Text>
+        {/* My Classes — hidden when school features are disabled */}
+        {SCHOOL_ENABLED && (
+          <>
+            <Text className="text-xl font-bold text-text-primary mb-3">My Classes</Text>
 
-        {enrolledClasses.length > 0 ? (
-          enrolledClasses.map((enrollment) => (
-            <View key={enrollment.id} className="bg-dark-card rounded-2xl p-5 mb-3 flex-row items-center">
-              <Ionicons name="school-outline" size={24} color="#A855F7" />
-              <View className="ml-4 flex-1">
-                <Text className="text-base font-semibold text-text-primary">{enrollment.classroom?.name ?? 'Class'}</Text>
-                <Text className="text-sm text-text-secondary">
-                  {enrollment.classroom?.targetLanguage?.toUpperCase() ?? ''} · {enrollment.classroom?.level ?? ''}
-                </Text>
+            {enrolledClasses.length > 0 ? (
+              enrolledClasses.map((enrollment) => (
+                <View key={enrollment.id} className="bg-dark-card rounded-2xl p-5 mb-3 flex-row items-center">
+                  <Ionicons name="school-outline" size={24} color={colors.premium.base} />
+                  <View className="ml-4 flex-1">
+                    <Text className="text-base font-semibold text-text-primary">{enrollment.classroom?.name ?? 'Class'}</Text>
+                    <Text className="text-sm text-text-secondary">
+                      {enrollment.classroom?.targetLanguage?.toUpperCase() ?? ''} · {enrollment.classroom?.level ?? ''}
+                    </Text>
+                  </View>
+                </View>
+              ))
+            ) : (
+              <View className="bg-dark-card rounded-2xl p-5 mb-3 items-center">
+                <Text className="text-text-secondary text-sm">Not enrolled in any classes</Text>
               </View>
-            </View>
-          ))
-        ) : (
-          <View className="bg-dark-card rounded-2xl p-5 mb-3 items-center">
-            <Text className="text-text-secondary text-sm">Not enrolled in any classes</Text>
-          </View>
-        )}
+            )}
 
-        <Pressable
-          className="bg-dark-card rounded-2xl p-5 mb-6 flex-row items-center justify-center"
-          onPress={() => setJoinModalVisible(true)}
-          accessibilityRole="button"
-          accessibilityLabel="Join a class"
-        >
-          <Ionicons name="add-circle-outline" size={24} color="#A855F7" />
-          <Text className="text-base font-semibold text-primary ml-3">Join a Class</Text>
-        </Pressable>
+            <Pressable
+              className="bg-dark-card rounded-2xl p-5 mb-6 flex-row items-center justify-center"
+              onPress={() => setJoinModalVisible(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Join a class"
+            >
+              <Ionicons name="add-circle-outline" size={24} color={colors.premium.base} />
+              <Text className="text-base font-semibold text-primary ml-3">Join a Class</Text>
+            </Pressable>
 
-        {/* Role Switcher — only show if user has teacher role */}
-        {roles.includes('teacher') ? (
-          <View className="mb-6">
-            <RoleSwitcher
-              activeRole={activeRole}
-              onSwitch={(role) => {
-                setActiveRole(role);
-                if (role === 'teacher') {
-                  router.replace('/(teacher)' as any);
-                }
-              }}
-            />
-          </View>
-        ) : (
-          <Pressable
-            className="bg-dark-card rounded-2xl p-5 mb-6 flex-row items-center"
-            onPress={() => setBecomeTeacherVisible(true)}
-            accessibilityRole="button"
-            accessibilityLabel="I teach a class"
-          >
-            <Ionicons name="school-outline" size={24} color="#A855F7" />
-            <View className="ml-4 flex-1">
-              <Text className="text-base font-semibold text-text-primary">I teach a class</Text>
-              <Text className="text-sm text-text-secondary">Create classes, assign work, grade submissions</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#7DD3FC" />
-          </Pressable>
+            {/* Role Switcher — only show if user has teacher role */}
+            {roles.includes('teacher') ? (
+              <View className="mb-6">
+                <RoleSwitcher
+                  activeRole={activeRole}
+                  onSwitch={(role) => {
+                    setActiveRole(role);
+                    if (role === 'teacher') {
+                      router.replace('/(teacher)' as any);
+                    }
+                  }}
+                />
+              </View>
+            ) : (
+              <Pressable
+                className="bg-dark-card rounded-2xl p-5 mb-6 flex-row items-center"
+                onPress={() => setBecomeTeacherVisible(true)}
+                accessibilityRole="button"
+                accessibilityLabel="I teach a class"
+              >
+                <Ionicons name="school-outline" size={24} color={colors.premium.base} />
+                <View className="ml-4 flex-1">
+                  <Text className="text-base font-semibold text-text-primary">I teach a class</Text>
+                  <Text className="text-sm text-text-secondary">Create classes, assign work, grade submissions</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.correctionChip.grammar.text} />
+              </Pressable>
+            )}
+          </>
         )}
 
         {/* Settings */}
@@ -210,12 +216,12 @@ export default function ProfileScreen() {
           accessibilityRole="button"
           accessibilityLabel="Subscription"
         >
-          <Ionicons name="card" size={24} color="#A855F7" />
+          <Ionicons name="card" size={24} color={colors.premium.base} />
           <View className="ml-4 flex-1">
             <Text className="text-base font-semibold text-text-primary">Subscription</Text>
-            <Text className="text-sm text-text-secondary capitalize">{subscription?.tier ?? 'Free'}</Text>
+            <Text className="text-sm text-text-secondary capitalize">{subscription?.tier ?? 'Starter'}</Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color="#7DD3FC" />
+          <Ionicons name="chevron-forward" size={20} color={colors.correctionChip.grammar.text} />
         </Pressable>
 
         <Pressable
@@ -224,16 +230,16 @@ export default function ProfileScreen() {
           accessibilityRole="button"
           accessibilityLabel="Edit settings"
         >
-          <Ionicons name="settings" size={24} color="#A855F7" />
+          <Ionicons name="settings" size={24} color={colors.premium.base} />
           <View className="ml-4 flex-1">
             <Text className="text-base font-semibold text-text-primary">Edit Settings</Text>
             <Text className="text-sm text-text-secondary">Language, level, daily goal, name</Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color="#7DD3FC" />
+          <Ionicons name="chevron-forward" size={20} color={colors.correctionChip.grammar.text} />
         </Pressable>
 
         <View className="bg-dark-card rounded-2xl p-5 mb-3 flex-row items-center">
-          <Ionicons name="language" size={24} color="#A855F7" />
+          <Ionicons name="language" size={24} color={colors.premium.base} />
           <View className="ml-4 flex-1">
             <Text className="text-base font-semibold text-text-primary">Target Language</Text>
             <Text className="text-sm text-text-secondary">{languageLabel}</Text>
@@ -241,7 +247,7 @@ export default function ProfileScreen() {
         </View>
 
         <View className="bg-dark-card rounded-2xl p-5 mb-3 flex-row items-center">
-          <Ionicons name="trending-up" size={24} color="#A855F7" />
+          <Ionicons name="trending-up" size={24} color={colors.premium.base} />
           <View className="ml-4 flex-1">
             <Text className="text-base font-semibold text-text-primary">Level</Text>
             <Text className="text-sm text-text-secondary">{levelLabel}</Text>
@@ -249,7 +255,7 @@ export default function ProfileScreen() {
         </View>
 
         <View className="bg-dark-card rounded-2xl p-5 mb-6 flex-row items-center">
-          <Ionicons name="time" size={24} color="#A855F7" />
+          <Ionicons name="time" size={24} color={colors.premium.base} />
           <View className="ml-4 flex-1">
             <Text className="text-base font-semibold text-text-primary">Daily Goal</Text>
             <Text className="text-sm text-text-secondary">{profile?.dailyGoalMinutes ?? 10} minutes</Text>

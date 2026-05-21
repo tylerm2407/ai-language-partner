@@ -19,6 +19,7 @@ import { AudioPlayButton } from '../../../components/audio/AudioPlayButton';
 import { GradientBackground } from '../../../components/ui/GradientBackground';
 import { GradientBorderCard } from '../../../components/ui/GradientBorderCard';
 import { trackEvent } from '../../../lib/analytics';
+import { colors } from '../../../config/theme';
 import type { ConversationMessage, LanguageCode, ProficiencyLevel } from '../../../types';
 
 const TOPICS: { label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
@@ -137,12 +138,12 @@ export default function PracticeScreen() {
                     accessibilityLabel={`Practice topic: ${item.label}`}
                   >
                     <View className="w-10 h-10 rounded-full bg-primary/15 items-center justify-center">
-                      <Ionicons name={item.icon} size={22} color="#A855F7" />
+                      <Ionicons name={item.icon} size={22} color={colors.premium.base} />
                     </View>
                     <View className="ml-4 flex-1">
                       <Text className="text-base font-semibold text-text-primary">{item.label}</Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={20} color="#7DD3FC" />
+                    <Ionicons name="chevron-forward" size={20} color={colors.correctionChip.grammar.text} />
                   </Pressable>
                 </GradientBorderCard>
               )}
@@ -150,8 +151,8 @@ export default function PracticeScreen() {
           </View>
 
           {isLoading && (
-            <View className="absolute inset-0 justify-center items-center" style={{ backgroundColor: 'rgba(12,15,20,0.8)' }}>
-              <ActivityIndicator size="large" color="#38BDF8" />
+            <View className="absolute inset-0 justify-center items-center" style={{ backgroundColor: colors.surface.overlay }}>
+              <ActivityIndicator size="large" color={colors.league.diamond} />
               <Text className="text-text-secondary mt-3">Starting session...</Text>
             </View>
           )}
@@ -223,7 +224,7 @@ export default function PracticeScreen() {
                       style={{
                         borderTopWidth: 0.5,
                         borderTopColor:
-                          item.role === 'user' ? 'rgba(255,255,255,0.3)' : '#252A35',
+                          item.role === 'user' ? 'rgba(255,255,255,0.3)' : colors.surface.cardAlt,
                       }}
                     >
                       <Text
@@ -264,7 +265,7 @@ export default function PracticeScreen() {
               value={input}
               onChangeText={setInput}
               placeholder="Type a message..."
-              placeholderTextColor="#64748B"
+              placeholderTextColor={colors.text.quaternary}
               multiline
               maxLength={500}
               className="flex-1 border-2 border-dark-border bg-dark-card-alt rounded-[14px] px-4 py-3 text-base text-text-primary mr-3 max-h-24"

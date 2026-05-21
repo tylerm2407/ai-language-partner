@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { View, Text, TextInput, Pressable, ActivityIndicator } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { AudioPlayButton } from '../audio/AudioPlayButton';
 import { FeedbackCard } from './FeedbackCard';
+import { Body, Caption } from '../ui/Text';
+import { colors, spacing, radii } from '../../config/theme';
 import { gradeAnswer } from '../../lib/grading';
 import type { GradeResult } from '../../lib/grading';
 import { usePhonemeDrill } from '../../hooks/usePhonemeDrill';
@@ -73,16 +76,16 @@ export function DictationExercise({
 
   return (
     <View style={{ flex: 1 }}>
-      <Text style={{ fontSize: 14, fontWeight: '600', color: '#6366F1', marginBottom: 8 }}>
+      <Caption tone="accent" style={{ fontWeight: '600', marginBottom: spacing.xs }}>
         Dictation
-      </Text>
-      <Text style={{ fontSize: 18, fontWeight: '600', color: '#111', marginBottom: 20 }}>
+      </Caption>
+      <Body size="lg" weight="semibold" style={{ marginBottom: spacing.lg + spacing.xxs }}>
         Listen and type what you hear
-      </Text>
+      </Body>
 
       {/* Audio Player */}
       <View style={{
-        backgroundColor: '#F9FAFB', borderRadius: 20, padding: 24, marginBottom: 20,
+        backgroundColor: colors.surface.cardAlt, borderRadius: radii.xxl, padding: spacing.lg, marginBottom: spacing.lg + spacing.xxs,
         alignItems: 'center', minHeight: 120, justifyContent: 'center',
       }}>
         {exercise.promptAudioUrl ? (
@@ -94,9 +97,9 @@ export function DictationExercise({
             >
               <AudioPlayButton audioUrl={exercise.promptAudioUrl} size={64} />
             </Pressable>
-            <Text style={{ fontSize: 14, color: '#999', marginTop: 8 }}>
+            <Caption tone="tertiary" style={{ marginTop: spacing.xs }}>
               Tap to play {playCount > 0 ? '(replay)' : ''}
-            </Text>
+            </Caption>
             {/* HVPT replay: rotate voices on subsequent listens. Only
                 offered when we know the target language. */}
             {targetLanguage ? (
@@ -109,23 +112,23 @@ export function DictationExercise({
                 accessibilityRole="button"
                 accessibilityLabel="Replay in a different voice"
                 style={{
-                  marginTop: 12,
-                  paddingHorizontal: 14,
-                  paddingVertical: 8,
-                  borderRadius: 12,
+                  marginTop: spacing.sm,
+                  paddingHorizontal: spacing.sm + 2,
+                  paddingVertical: spacing.xs,
+                  borderRadius: radii.md,
                   borderWidth: 1,
-                  borderColor: '#C7D2FE',
-                  backgroundColor: '#EEF2FF',
+                  borderColor: colors.border.default,
+                  backgroundColor: colors.surface.card,
                   flexDirection: 'row',
                   alignItems: 'center',
                 }}
               >
                 {phonemeDrill.isPlaying ? (
-                  <ActivityIndicator size="small" color="#6366F1" />
+                  <ActivityIndicator size="small" color={colors.indigo[500]} />
                 ) : (
-                  <Text style={{ color: '#4338CA', fontSize: 13, fontWeight: '600' }}>
+                  <Caption tone="accent" style={{ fontWeight: '600' }}>
                     Replay in a different voice
-                  </Text>
+                  </Caption>
                 )}
               </Pressable>
             ) : null}
@@ -143,49 +146,64 @@ export function DictationExercise({
               accessibilityLabel="Play audio"
               style={{
                 width: 64, height: 64, borderRadius: 32,
-                backgroundColor: '#6366F1',
+                backgroundColor: colors.indigo[500],
                 alignItems: 'center', justifyContent: 'center',
               }}
             >
               {phonemeDrill.isPlaying ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={colors.text.onPrimary} />
               ) : (
-                <Text style={{ color: '#fff', fontSize: 24, fontWeight: '700' }}>
+                <Text style={{ color: colors.text.onPrimary, fontSize: 24, fontWeight: '700' }}>
                   {'▶'}
                 </Text>
               )}
             </Pressable>
-            <Text style={{ fontSize: 14, color: '#999', marginTop: 8 }}>
+            <Caption tone="tertiary" style={{ marginTop: spacing.xs }}>
               Tap to play {playCount > 0 ? '(replay)' : ''}
-            </Text>
+            </Caption>
           </View>
         ) : (
-          <Text style={{ fontSize: 16, color: '#999' }}>No audio available</Text>
+          <Body tone="tertiary">No audio available</Body>
         )}
       </View>
 
       {/* Text Input */}
-      <TextInput
-        value={userInput}
-        onChangeText={setUserInput}
-        placeholder="Type what you heard..."
-        placeholderTextColor="#999"
-        editable={!isRevealed}
-        multiline
-        style={{
-          borderWidth: 2,
-          borderColor: isRevealed ? (isCorrect ? '#22C55E' : '#EF4444') : '#D1D5DB',
-          borderRadius: 14,
-          paddingHorizontal: 16,
-          paddingVertical: 10,
-          fontSize: 16,
-          minHeight: 80,
-          textAlignVertical: 'top',
-          color: '#111',
-          marginBottom: 16,
-        }}
-        accessibilityLabel="Type what you heard"
-      />
+      <View>
+        <TextInput
+          value={userInput}
+          onChangeText={setUserInput}
+          placeholder="Type what you heard..."
+          placeholderTextColor={colors.text.quaternary}
+          editable={!isRevealed}
+          multiline
+          style={{
+            borderWidth: 2,
+            borderColor: isRevealed ? (isCorrect ? colors.success.base : colors.error.base) : colors.border.strong,
+            borderRadius: radii.lg,
+            paddingHorizontal: spacing.md,
+            paddingVertical: 10,
+            fontSize: 16,
+            minHeight: 80,
+            textAlignVertical: 'top',
+            color: colors.text.primary,
+            marginBottom: spacing.md,
+          }}
+          accessibilityLabel="Type what you heard"
+        />
+        {isRevealed && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs }}>
+            <Ionicons
+              name={isCorrect ? 'checkmark-circle' : 'close-circle'}
+              size={20}
+              color={isCorrect ? colors.success.base : colors.error.base}
+              style={{ marginRight: spacing.xxs }}
+            />
+            <Caption style={{ color: isCorrect ? colors.success.base : colors.error.base }}>
+              {isCorrect ? 'Correct' : 'Incorrect'}
+            </Caption>
+          </View>
+        )}
+      </View>
 
       {/* Differentiated feedback */}
       {result && isRevealed && effectiveLanguage && onContinue ? (
@@ -206,13 +224,13 @@ export function DictationExercise({
           onPress={handleCheck}
           disabled={userInput.trim().length === 0}
           style={{
-            backgroundColor: userInput.trim().length > 0 ? '#6366F1' : '#C7D2FE',
-            paddingVertical: 16, borderRadius: 14, alignItems: 'center',
+            backgroundColor: userInput.trim().length > 0 ? colors.indigo[500] : colors.indigo[200],
+            paddingVertical: spacing.md, borderRadius: radii.lg, alignItems: 'center',
           }}
           accessibilityRole="button"
           accessibilityLabel="Check answer"
         >
-          <Text style={{ color: '#fff', fontSize: 18, fontWeight: '600' }}>Check</Text>
+          <Body size="lg" weight="semibold" tone="onPrimary">Check</Body>
         </Pressable>
       )}
     </View>

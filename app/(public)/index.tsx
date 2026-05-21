@@ -4,6 +4,8 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { GradientBackground } from '../../components/ui/GradientBackground';
+import { useMotion } from '../../hooks/useMotion';
+import { colors } from '../../config/theme';
 
 const GREETINGS = [
   { word: 'Hello', lang: 'English' },
@@ -19,6 +21,7 @@ const GREETINGS = [
 
 export default function WelcomeScreen() {
   const router = useRouter();
+  const { shouldReduce } = useMotion();
   const [greetingIndex, setGreetingIndex] = useState(0);
 
   const logoOpacity = useRef(new Animated.Value(0)).current;
@@ -30,40 +33,53 @@ export default function WelcomeScreen() {
   const greetingOpacity = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(logoOpacity, { toValue: 1, duration: 600, useNativeDriver: true }),
-      Animated.timing(logoTranslateY, { toValue: 0, duration: 600, useNativeDriver: true }),
-    ]).start();
-
-    Animated.sequence([
-      Animated.delay(300),
-      Animated.timing(subtitleOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
-    ]).start();
-
-    Animated.sequence([
-      Animated.delay(400),
-      Animated.timing(socialOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
-    ]).start();
-
-    Animated.sequence([
-      Animated.delay(600),
+    if (shouldReduce) {
+      logoOpacity.setValue(1);
+      logoTranslateY.setValue(0);
+      subtitleOpacity.setValue(1);
+      socialOpacity.setValue(1);
+      buttonsOpacity.setValue(1);
+      buttonsTranslateY.setValue(0);
+    } else {
       Animated.parallel([
-        Animated.timing(buttonsOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
-        Animated.timing(buttonsTranslateY, { toValue: 0, duration: 500, useNativeDriver: true }),
-      ]),
-    ]).start();
-  }, []);
+        Animated.timing(logoOpacity, { toValue: 1, duration: 600, useNativeDriver: true }),
+        Animated.timing(logoTranslateY, { toValue: 0, duration: 600, useNativeDriver: true }),
+      ]).start();
+
+      Animated.sequence([
+        Animated.delay(300),
+        Animated.timing(subtitleOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
+      ]).start();
+
+      Animated.sequence([
+        Animated.delay(400),
+        Animated.timing(socialOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
+      ]).start();
+
+      Animated.sequence([
+        Animated.delay(600),
+        Animated.parallel([
+          Animated.timing(buttonsOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
+          Animated.timing(buttonsTranslateY, { toValue: 0, duration: 500, useNativeDriver: true }),
+        ]),
+      ]).start();
+    }
+  }, [shouldReduce]);
 
   // Language cycling
   useEffect(() => {
     const interval = setInterval(() => {
-      Animated.timing(greetingOpacity, { toValue: 0, duration: 300, useNativeDriver: true }).start(() => {
+      if (shouldReduce) {
         setGreetingIndex((prev) => (prev + 1) % GREETINGS.length);
-        Animated.timing(greetingOpacity, { toValue: 1, duration: 300, useNativeDriver: true }).start();
-      });
+      } else {
+        Animated.timing(greetingOpacity, { toValue: 0, duration: 300, useNativeDriver: true }).start(() => {
+          setGreetingIndex((prev) => (prev + 1) % GREETINGS.length);
+          Animated.timing(greetingOpacity, { toValue: 1, duration: 300, useNativeDriver: true }).start();
+        });
+      }
     }, 2000);
     return () => clearInterval(interval);
-  }, []);
+  }, [shouldReduce]);
 
   return (
     <GradientBackground>
@@ -93,22 +109,22 @@ export default function WelcomeScreen() {
         {/* Social Proof + Value Props */}
         <Animated.View style={{ opacity: socialOpacity, width: '100%', marginBottom: 32 }}>
           <View className="flex-row items-center justify-center mb-4">
-            <Ionicons name="people" size={16} color="#7DD3FC" />
+            <Ionicons name="people" size={16} color={colors.correctionChip.grammar.text} />
             <Text className="text-sm text-text-secondary ml-2">
-              Join thousands of learners worldwide
+              AI-powered fluency, one lesson at a time
             </Text>
           </View>
           <View className="gap-3">
             <View className="flex-row items-center">
-              <Ionicons name="chatbubbles-outline" size={18} color="#A855F7" />
+              <Ionicons name="chatbubbles-outline" size={18} color={colors.premium.base} />
               <Text className="text-sm text-text-tertiary ml-3">AI-powered conversations</Text>
             </View>
             <View className="flex-row items-center">
-              <Ionicons name="newspaper-outline" size={18} color="#38BDF8" />
+              <Ionicons name="newspaper-outline" size={18} color={colors.league.diamond} />
               <Text className="text-sm text-text-tertiary ml-3">Daily news in your target language</Text>
             </View>
             <View className="flex-row items-center">
-              <Ionicons name="trending-up-outline" size={18} color="#34D399" />
+              <Ionicons name="trending-up-outline" size={18} color={colors.success.light} />
               <Text className="text-sm text-text-tertiary ml-3">Personalized to your level</Text>
             </View>
           </View>

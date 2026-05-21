@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { View, Text, TextInput, Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { ExerciseCard } from './ExerciseCard';
 import { FeedbackCard } from './FeedbackCard';
 import { HighlightedText } from '../shared/HighlightedText';
 import { Button } from '../ui/Button';
+import { colors } from '../../config/theme';
 import { gradeAnswer } from '../../lib/grading';
 import type { GradeResult } from '../../lib/grading';
 import type { Exercise } from '../../types';
@@ -103,6 +105,18 @@ export function FillBlankExercise({
         accessibilityLabel="Fill in the blank input"
         accessibilityHint="Type the missing word"
       />
+      {submitted && result && (
+        <View className="flex-row items-center mt-2">
+          <Ionicons
+            name={result.isCorrect ? 'checkmark-circle' : 'close-circle'}
+            size={20}
+            color={result.isCorrect ? colors.success.base : colors.error.base}
+          />
+          <Text className={`ml-1 text-sm font-semibold ${result.isCorrect ? 'text-success' : 'text-error'}`}>
+            {result.isCorrect ? 'Correct' : 'Incorrect'}
+          </Text>
+        </View>
+      )}
 
       {result && onContinue && language ? (
         <FeedbackCard

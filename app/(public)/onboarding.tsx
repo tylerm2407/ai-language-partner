@@ -8,6 +8,7 @@ import { useAppStore } from '../../stores/useAppStore';
 import { Button } from '../../components/ui/Button';
 import { PlacementTest } from '../../components/onboarding/PlacementTest';
 import { GradientBackground } from '../../components/ui/GradientBackground';
+import { colors } from '../../config/theme';
 import { SUPPORTED_LANGUAGES, DAILY_GOALS } from '../../config/app';
 import type { LanguageCode, ProficiencyLevel, MotivationReason } from '../../types';
 
@@ -137,7 +138,7 @@ export default function OnboardingScreen() {
             {SUPPORTED_LANGUAGES.map((lang) => (
               <Pressable
                 key={lang.code}
-                className={`p-[18px] rounded-2xl mb-3 flex-row items-center ${
+                className={`p-4 rounded-2xl mb-3 flex-row items-center ${
                   targetLanguage === lang.code
                     ? 'bg-primary-tint border-2 border-primary'
                     : 'bg-dark-card border-2 border-transparent'
@@ -174,7 +175,7 @@ export default function OnboardingScreen() {
             {MOTIVATIONS.map((m) => (
               <Pressable
                 key={m.value}
-                className={`p-[18px] rounded-2xl mb-3 ${
+                className={`p-4 rounded-2xl mb-3 ${
                   motivation === m.value
                     ? 'bg-primary-tint border-2 border-primary'
                     : 'bg-dark-card border-2 border-transparent'
@@ -218,7 +219,7 @@ export default function OnboardingScreen() {
                 value={idealL2Self}
                 onChangeText={(text) => setIdealL2Self(text.slice(0, IDEAL_SELF_MAX_CHARS))}
                 placeholder={(targetLanguage && IDEAL_SELF_PLACEHOLDER[targetLanguage]) ?? IDEAL_SELF_PLACEHOLDER.en}
-                placeholderTextColor="#6b7280"
+                placeholderTextColor={colors.text.quaternary}
                 multiline
                 numberOfLines={4}
                 maxLength={IDEAL_SELF_MAX_CHARS}
@@ -257,7 +258,7 @@ export default function OnboardingScreen() {
             {LEVELS.map((l) => (
               <Pressable
                 key={l.value}
-                className={`p-[18px] rounded-2xl mb-3 ${
+                className={`p-4 rounded-2xl mb-3 ${
                   level === l.value
                     ? 'bg-primary-tint border-2 border-primary'
                     : 'bg-dark-card border-2 border-transparent'
@@ -319,7 +320,7 @@ export default function OnboardingScreen() {
             {DAILY_GOALS.map((goal) => (
               <Pressable
                 key={goal}
-                className={`p-[18px] rounded-2xl mb-3 flex-row items-center justify-between ${
+                className={`p-4 rounded-2xl mb-3 flex-row items-center justify-between ${
                   dailyGoal === goal
                     ? 'bg-primary-tint border-2 border-primary'
                     : 'bg-dark-card border-2 border-transparent'

@@ -9,6 +9,7 @@ import { PRICING_PLANS, openCheckout } from '../../../lib/stripe';
 import { Button } from '../../../components/ui/Button';
 import { Badge } from '../../../components/ui/Badge';
 import { Ionicons } from '@expo/vector-icons';
+import { colors } from '../../../config/theme';
 
 export default function SubscriptionScreen() {
   const { user } = useAuth();
@@ -16,7 +17,7 @@ export default function SubscriptionScreen() {
   const router = useRouter();
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
-  const currentTier = subscription?.tier ?? 'free';
+  const currentTier = subscription?.tier ?? 'starter';
 
   // Refresh subscription every time this screen comes into focus
   useFocusEffect(
@@ -49,7 +50,7 @@ export default function SubscriptionScreen() {
       {/* Header */}
       <View className="flex-row items-center px-4 py-3 border-b border-dark-border">
         <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Go back">
-          <Ionicons name="arrow-back" size={24} color="#F1F5F9" />
+          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
         </Pressable>
         <Text className="text-lg font-semibold text-text-primary ml-3">Subscription</Text>
       </View>
@@ -94,12 +95,12 @@ export default function SubscriptionScreen() {
 
               {plan.features.map((feature, idx) => (
                 <View key={idx} className="flex-row items-center mb-2">
-                  <Ionicons name="checkmark-circle" size={18} color={isCurrentPlan ? '#34D399' : '#34D399'} />
+                  <Ionicons name="checkmark-circle" size={18} color={colors.success.light} />
                   <Text className="text-sm text-text-secondary ml-2">{feature}</Text>
                 </View>
               ))}
 
-              {plan.planId !== 'free' && !isCurrentPlan && (
+              {plan.planId !== 'starter' && !isCurrentPlan && (
                 <View className="mt-4">
                   <Button
                     label="Subscribe"
@@ -111,7 +112,7 @@ export default function SubscriptionScreen() {
                 </View>
               )}
 
-              {isCurrentPlan && plan.planId !== 'free' && (
+              {isCurrentPlan && plan.planId !== 'starter' && (
                 <Text className="text-sm text-success font-medium text-center mt-3">
                   Active until {subscription?.currentPeriodEnd
                     ? new Date(subscription.currentPeriodEnd).toLocaleDateString()

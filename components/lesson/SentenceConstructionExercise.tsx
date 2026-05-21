@@ -1,8 +1,11 @@
 import { useState, useMemo } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Pressable } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { FeedbackCard } from './FeedbackCard';
 import { HighlightedText } from '../shared/HighlightedText';
+import { Body, Caption } from '../ui/Text';
+import { colors, spacing, radii } from '../../config/theme';
 import { gradeAnswer } from '../../lib/grading';
 import type { GradeResult } from '../../lib/grading';
 import type { Exercise } from '../../types';
@@ -85,9 +88,9 @@ export function SentenceConstructionExercise({
 
   return (
     <View style={{ flex: 1 }}>
-      <Text style={{ fontSize: 14, fontWeight: '600', color: '#6366F1', marginBottom: 8 }}>
+      <Caption tone="accent" style={{ fontWeight: '600', marginBottom: spacing.xs }}>
         Arrange the words
-      </Text>
+      </Caption>
       <HighlightedText
         text={exercise.prompt}
         highlight={highlight}
@@ -96,31 +99,41 @@ export function SentenceConstructionExercise({
 
       {/* Answer area */}
       <View style={{
-        backgroundColor: '#F9FAFB', borderRadius: 16, padding: 16, marginBottom: 20,
-        minHeight: 80, flexDirection: 'row', flexWrap: 'wrap', gap: 8,
+        backgroundColor: colors.surface.cardAlt, borderRadius: radii.xl, padding: spacing.md, marginBottom: spacing.lg + spacing.xxs,
+        minHeight: 80, flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs,
         borderWidth: isRevealed ? 2 : 0,
-        borderColor: isRevealed ? (isCorrect ? '#22C55E' : '#EF4444') : 'transparent',
+        borderColor: isRevealed ? (isCorrect ? colors.success.base : colors.error.base) : 'transparent',
       }}>
+        {isRevealed && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xxs }}>
+            <Ionicons
+              name={isCorrect ? 'checkmark-circle' : 'close-circle'}
+              size={20}
+              color={isCorrect ? colors.success.base : colors.error.base}
+              style={{ marginRight: spacing.xxs }}
+            />
+          </View>
+        )}
         {placed.length === 0 && (
-          <Text style={{ fontSize: 16, color: '#999' }}>Tap words below to build the sentence</Text>
+          <Body tone="tertiary">Tap words below to build the sentence</Body>
         )}
         {placed.map((tileIndex, placedIndex) => (
           <Pressable
             key={`placed-${placedIndex}`}
             onPress={() => !isRevealed && handleTapPlaced(placedIndex)}
             style={{
-              backgroundColor: '#E0E7FF',
+              backgroundColor: colors.indigo[900],
               borderWidth: 2,
-              borderColor: '#6366F1',
-              borderRadius: 8,
-              paddingHorizontal: 12,
-              paddingVertical: 8,
+              borderColor: colors.indigo[500],
+              borderRadius: radii.sm,
+              paddingHorizontal: spacing.sm,
+              paddingVertical: spacing.xs,
             }}
             disabled={isRevealed}
             accessibilityRole="button"
             accessibilityLabel={`Remove word: ${tiles[tileIndex]}`}
           >
-            <Text style={{ fontSize: 16, fontWeight: '600', color: '#6366F1' }}>{tiles[tileIndex]}</Text>
+            <Body weight="semibold" tone="accent">{tiles[tileIndex]}</Body>
           </Pressable>
         ))}
       </View>
@@ -128,22 +141,22 @@ export function SentenceConstructionExercise({
       {/* Available tiles */}
       {!isRevealed && (
         <View style={{
-          flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20,
+          flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.lg + spacing.xxs,
         }}>
           {availableIndices.map((tileIndex) => (
             <Pressable
               key={`tile-${tileIndex}`}
               onPress={() => handleTapAvailable(tileIndex)}
               style={{
-                backgroundColor: '#F9FAFB',
-                borderRadius: 8,
-                paddingHorizontal: 12,
-                paddingVertical: 8,
+                backgroundColor: colors.surface.card,
+                borderRadius: radii.sm,
+                paddingHorizontal: spacing.sm,
+                paddingVertical: spacing.xs,
               }}
               accessibilityRole="button"
               accessibilityLabel={`Add word: ${tiles[tileIndex]}`}
             >
-              <Text style={{ fontSize: 16, fontWeight: '600', color: '#111' }}>{tiles[tileIndex]}</Text>
+              <Body weight="semibold">{tiles[tileIndex]}</Body>
             </Pressable>
           ))}
         </View>
@@ -168,13 +181,13 @@ export function SentenceConstructionExercise({
           onPress={handleCheck}
           disabled={placed.length === 0}
           style={{
-            backgroundColor: placed.length > 0 ? '#6366F1' : '#C7D2FE',
-            paddingVertical: 16, borderRadius: 14, alignItems: 'center',
+            backgroundColor: placed.length > 0 ? colors.indigo[500] : colors.indigo[200],
+            paddingVertical: spacing.md, borderRadius: radii.lg, alignItems: 'center',
           }}
           accessibilityRole="button"
           accessibilityLabel="Check answer"
         >
-          <Text style={{ color: '#fff', fontSize: 18, fontWeight: '600' }}>Check</Text>
+          <Body size="lg" weight="semibold" tone="onPrimary">Check</Body>
         </Pressable>
       )}
     </View>

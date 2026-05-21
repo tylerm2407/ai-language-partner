@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
+import { View, Text, ScrollView, Pressable, Alert, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useEffect, useState, useCallback } from 'react';
@@ -20,11 +20,13 @@ import { Badge } from '../../../components/ui/Badge';
 import { GradientBackground } from '../../../components/ui/GradientBackground';
 import { GlassSurface } from '../../../components/ui/GlassSurface';
 import { LearningPath } from '../../../components/learning-path/LearningPath';
+import { Heading, Body, Caption } from '../../../components/ui/Text';
+import { TactileButton } from '../../../components/ui/TactileButton';
+import { colors, spacing, radii } from '../../../config/theme';
 import type { Course, Unit, Lesson, ReadingPassage, WritingPrompt, ReadingBook, UserBookProgress } from '../../../types';
 import { Ionicons } from '@expo/vector-icons';
 import { BookCard } from '../../../components/reading/BookCard';
 import { ContinueReadingSection } from '../../../components/reading/ContinueReadingSection';
-import { FlatList } from 'react-native';
 
 const CEFR_LABELS: Record<string, string> = {
   A1: 'Beginner',
@@ -197,7 +199,7 @@ export default function LearnScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={`Review ${reviewCount} cards due`}
               >
-                <Ionicons name="refresh" size={24} color="#34D399" />
+                <Ionicons name="refresh" size={24} color={colors.success.light} />
                 <View className="ml-4 flex-1">
                   <Text className="text-base font-semibold text-text-primary">Review Cards</Text>
                   <Text className="text-sm text-text-secondary">{reviewCount} cards due for review</Text>
@@ -257,7 +259,7 @@ export default function LearnScreen() {
                   accessibilityLabel={tab.label}
                   accessibilityState={{ selected: isActive }}
                 >
-                  <Ionicons name={tab.icon} size={16} color={isActive ? '#FFFFFF' : '#94A3B8'} />
+                  <Ionicons name={tab.icon} size={16} color={isActive ? colors.text.onPrimary : colors.text.tertiary} />
                   <Text
                     className={`text-sm font-sans-semibold ml-1.5 ${isActive ? 'text-white' : 'text-text-secondary'}`}
                   >
@@ -308,7 +310,7 @@ export default function LearnScreen() {
                       accessibilityRole="button"
                       accessibilityLabel={passage.title}
                     >
-                      <Ionicons name="reader-outline" size={22} color="#38BDF8" />
+                      <Ionicons name="reader-outline" size={22} color={colors.league.diamond} />
                       <View className="flex-1 ml-3">
                         <Text className="text-base font-medium text-text-primary">{passage.title}</Text>
                         <View className="flex-row items-center gap-2 mt-1">
@@ -320,7 +322,7 @@ export default function LearnScreen() {
                           </View>
                         </View>
                       </View>
-                      <Ionicons name="chevron-forward" size={18} color="#7DD3FC" />
+                      <Ionicons name="chevron-forward" size={18} color={colors.correctionChip.grammar.text} />
                     </Pressable>
                   </GlassSurface>
                 ))}
@@ -328,13 +330,13 @@ export default function LearnScreen() {
             )}
 
             {/* Library Section */}
-            <Text style={{ fontSize: 18, fontWeight: '700', color: '#111111', marginTop: 16, marginBottom: 10 }}>
+            <Heading level={3} style={{ marginTop: spacing.md, marginBottom: spacing.xs + 2 }}>
               Library
-            </Text>
+            </Heading>
 
             {/* CEFR Level Sub-tabs — pill style */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
-              <View style={{ flexDirection: 'row', gap: 8 }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: spacing.sm + 2 }}>
+              <View style={{ flexDirection: 'row', gap: spacing.xs }}>
                 {['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].map((level) => {
                   const isActive = selectedCefrTab === level;
                   const count = isActive ? libraryBooks.length : null;
@@ -348,20 +350,20 @@ export default function LearnScreen() {
                         flexDirection: 'row',
                         alignItems: 'center',
                         height: 44,
-                        paddingHorizontal: 16,
-                        borderRadius: 22,
-                        backgroundColor: isActive ? '#6366F1' : '#F9FAFB',
+                        paddingHorizontal: spacing.md,
+                        borderRadius: radii.pill,
+                        backgroundColor: isActive ? colors.indigo[500] : colors.surface.cardAlt,
                       }}
                     >
-                      <Text
+                      <Body
+                        size="sm"
+                        weight="semibold"
                         style={{
-                          fontSize: 14,
-                          fontWeight: '600',
-                          color: isActive ? '#FFFFFF' : '#666666',
+                          color: isActive ? colors.text.onPrimary : colors.text.tertiary,
                         }}
                       >
                         {level}
-                      </Text>
+                      </Body>
                       {isActive && count !== null && count > 0 && (
                         <View
                           style={{
@@ -375,9 +377,9 @@ export default function LearnScreen() {
                             paddingHorizontal: 6,
                           }}
                         >
-                          <Text style={{ fontSize: 11, fontWeight: '700', color: '#FFFFFF' }}>
+                          <Caption size="sm" tone="onPrimary" style={{ fontWeight: '700' }}>
                             {count}
-                          </Text>
+                          </Caption>
                         </View>
                       )}
                     </Pressable>
@@ -387,12 +389,12 @@ export default function LearnScreen() {
             </ScrollView>
 
             {loadingLibrary ? (
-              <Text style={{ fontSize: 14, color: '#666666', paddingVertical: 16 }}>Loading library...</Text>
+              <Body size="sm" tone="tertiary" style={{ paddingVertical: spacing.md }}>Loading library...</Body>
             ) : libraryBooks.length === 0 ? (
-              <View style={{ paddingVertical: 16, alignItems: 'center' }}>
-                <Text style={{ fontSize: 14, color: '#666666', marginBottom: 12 }}>
+              <View style={{ paddingVertical: spacing.md, alignItems: 'center' }}>
+                <Body size="sm" tone="tertiary" style={{ marginBottom: spacing.sm }}>
                   No books available for this level yet.
-                </Text>
+                </Body>
                 <Pressable
                   onPress={async () => {
                     if (!profile?.targetLanguage) return;
@@ -414,16 +416,16 @@ export default function LearnScreen() {
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
-                    backgroundColor: '#6366F1',
-                    borderRadius: 14,
-                    paddingHorizontal: 20,
-                    paddingVertical: 12,
+                    backgroundColor: colors.indigo[500],
+                    borderRadius: radii.lg,
+                    paddingHorizontal: spacing.md + spacing.xxs,
+                    paddingVertical: spacing.sm,
                   }}
                 >
-                  <Ionicons name="sparkles" size={18} color="#FFFFFF" />
-                  <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 14, marginLeft: 8 }}>
+                  <Ionicons name="sparkles" size={18} color={colors.text.onPrimary} />
+                  <Body size="sm" tone="onPrimary" weight="semibold" style={{ marginLeft: spacing.xs }}>
                     Generate Stories
-                  </Text>
+                  </Body>
                 </Pressable>
               </View>
             ) : (
@@ -454,10 +456,10 @@ export default function LearnScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="View writing history"
               >
-                <Ionicons name="time-outline" size={20} color="#6366F1" />
+                <Ionicons name="time-outline" size={20} color={colors.indigo[500]} />
                 <Text className="text-sm font-sans-semibold text-primary ml-2">View Writing History</Text>
                 <View className="flex-1" />
-                <Ionicons name="chevron-forward" size={16} color="#6366F1" />
+                <Ionicons name="chevron-forward" size={16} color={colors.indigo[500]} />
               </Pressable>
             </GlassSurface>
 
@@ -474,7 +476,7 @@ export default function LearnScreen() {
                     accessibilityRole="button"
                     accessibilityLabel={prompt.promptText}
                   >
-                    <Ionicons name="create-outline" size={22} color="#A855F7" />
+                    <Ionicons name="create-outline" size={22} color={colors.premium.base} />
                     <View className="flex-1 ml-3">
                       <Text className="text-base font-medium text-text-primary" numberOfLines={2}>
                         {prompt.promptText}
@@ -493,7 +495,7 @@ export default function LearnScreen() {
                         </View>
                       </View>
                     </View>
-                    <Ionicons name="chevron-forward" size={18} color="#7DD3FC" />
+                    <Ionicons name="chevron-forward" size={18} color={colors.correctionChip.grammar.text} />
                   </Pressable>
                 </GlassSurface>
               ))

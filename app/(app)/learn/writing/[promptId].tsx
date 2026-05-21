@@ -16,6 +16,7 @@ import { WritingExercise } from '../../../../components/writing/WritingExercise'
 import { WritingFeedbackView } from '../../../../components/writing/WritingFeedbackView';
 import { supabase } from '../../../../lib/supabase';
 import type { WritingPrompt, WritingFeedback, WritingSubmission } from '../../../../types';
+import { colors } from '../../../../config/theme';
 
 export default function WritingPromptScreen() {
   const { promptId } = useLocalSearchParams<{ promptId: string }>();
@@ -140,7 +141,7 @@ export default function WritingPromptScreen() {
     return (
       <GradientBackground variant="raised">
         <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color="#6366F1" />
+          <ActivityIndicator size="large" color={colors.indigo[500]} />
         </SafeAreaView>
       </GradientBackground>
     );
@@ -150,9 +151,9 @@ export default function WritingPromptScreen() {
     return (
       <GradientBackground variant="raised">
         <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-          <Text style={{ fontSize: 16, color: '#EF4444', textAlign: 'center' }}>{error}</Text>
+          <Text style={{ fontSize: 16, color: colors.error.base, textAlign: 'center' }}>{error}</Text>
           <Pressable onPress={() => router.back()} style={{ marginTop: 16 }} accessibilityRole="button">
-            <Text style={{ fontSize: 16, color: '#6366F1' }}>Go Back</Text>
+            <Text style={{ fontSize: 16, color: colors.indigo[500] }}>Go Back</Text>
           </Pressable>
         </SafeAreaView>
       </GradientBackground>
@@ -176,7 +177,7 @@ export default function WritingPromptScreen() {
     return (
       <GradientBackground variant="raised">
         <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <Text style={{ fontSize: 16, color: '#9CA3AF' }}>Writing prompt not found.</Text>
+          <Text style={{ fontSize: 16, color: colors.text.tertiary }}>Writing prompt not found.</Text>
         </SafeAreaView>
       </GradientBackground>
     );

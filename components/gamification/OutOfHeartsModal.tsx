@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GRADIENT_COLORS, GRADIENT_START, GRADIENT_END } from '../../config/gradients';
 import { formatRegenTime } from '../../lib/hearts';
+import { colors } from '../../config/theme';
 
 interface OutOfHeartsModalProps {
   visible: boolean;
@@ -17,7 +18,7 @@ export function OutOfHeartsModal({ visible, nextRegenAt, onDismiss }: OutOfHeart
 
   return (
     <Modal transparent visible={visible} animationType="fade" onRequestClose={onDismiss}>
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.7)' }}>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.surface.overlay }}>
         <View style={{ width: '85%', borderRadius: 24, overflow: 'hidden' }}>
           <LinearGradient
             colors={[...GRADIENT_COLORS]}
@@ -27,7 +28,7 @@ export function OutOfHeartsModal({ visible, nextRegenAt, onDismiss }: OutOfHeart
           >
             <View style={{ borderRadius: 22.5, padding: 32, alignItems: 'center', backgroundColor: '#151921' }}>
               {/* Broken heart icon */}
-              <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: '#EF444420', justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
+              <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: colors.error.tint, justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
                 <Ionicons name="heart-dislike" size={40} color="#EF4444" />
               </View>
 
@@ -42,9 +43,9 @@ export function OutOfHeartsModal({ visible, nextRegenAt, onDismiss }: OutOfHeart
               {/* Regen timer */}
               {nextRegenAt && (
                 <View className="flex-row items-center gap-2 mb-6">
-                  <Ionicons name="time" size={18} color="#38BDF8" />
+                  <Ionicons name="time" size={18} color={colors.league.diamond} />
                   <Text className="text-base text-text-secondary">
-                    Next heart in <Text style={{ color: '#38BDF8', fontWeight: '700' }}>{regenText}</Text>
+                    Next heart in <Text style={{ color: colors.league.diamond, fontWeight: '700' }}>{regenText}</Text>
                   </Text>
                 </View>
               )}

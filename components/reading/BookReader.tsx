@@ -4,6 +4,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons';
 import { WordTooltip } from './WordTooltip';
 import { usePageNarrator } from '../../hooks/usePageNarrator';
+import { colors, radii, spacing } from '../../config/theme';
 import type { ReadingBook, BookAnnotation, ReviewItem } from '../../types';
 
 interface Props {
@@ -114,8 +115,8 @@ export function BookReader({
     return map;
   }, [annotations]);
 
-  const handleWordPress = useCallback((word: string) => {
-    const cleaned = word.replace(/[.,!?;:"""''()]/g, '').toLowerCase();
+  const handleWordPress = useCallback((phrase: string) => {
+    const cleaned = phrase.replace(/[.,!?;:"""''()]/g, '').toLowerCase();
     const ann = annotationMap.get(cleaned);
     if (ann) {
       setSelectedAnnotation(ann);
@@ -181,17 +182,17 @@ export function BookReader({
   }, [narrator, onExit]);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface.raised }}>
       {/* Header */}
-      <View style={{ paddingHorizontal: 16, paddingVertical: 8, flexDirection: 'row', alignItems: 'center' }}>
-        <Pressable onPress={handleExit} style={{ padding: 8 }} accessibilityRole="button" accessibilityLabel="Exit reading">
-          <Ionicons name="close" size={24} color="#666" />
+      <View style={{ paddingHorizontal: spacing.md, paddingVertical: spacing.xs, flexDirection: 'row', alignItems: 'center' }}>
+        <Pressable onPress={handleExit} style={{ padding: spacing.xs }} accessibilityRole="button" accessibilityLabel="Exit reading">
+          <Ionicons name="close" size={24} color={colors.text.secondary} />
         </Pressable>
-        <View style={{ flex: 1, marginLeft: 8 }}>
-          <Text style={{ fontSize: 16, fontWeight: '600', color: '#111' }} numberOfLines={1}>
+        <View style={{ flex: 1, marginLeft: spacing.xs }}>
+          <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary }} numberOfLines={1}>
             {book.title}
           </Text>
-          <Text style={{ fontSize: 12, color: '#999' }}>
+          <Text style={{ fontSize: 12, color: colors.text.tertiary }}>
             Page {currentPage + 1} of {totalPages}
           </Text>
         </View>
@@ -199,62 +200,62 @@ export function BookReader({
           <>
             <Pressable
               onPress={narrator.cycleSpeed}
-              style={{ paddingHorizontal: 6, paddingVertical: 4, marginRight: 4 }}
+              style={{ paddingHorizontal: 6, paddingVertical: spacing.xxs, marginRight: spacing.xxs }}
               accessibilityRole="button"
               accessibilityLabel={`Playback speed ${narrator.speed}x`}
             >
-              <Text style={{ fontSize: 13, fontWeight: '600', color: '#6366F1' }}>{narrator.speed}x</Text>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: colors.indigo[400] }}>{narrator.speed}x</Text>
             </Pressable>
             <Pressable
               onPress={handlePlayPause}
-              style={{ padding: 8 }}
+              style={{ padding: spacing.xs }}
               accessibilityRole="button"
               accessibilityLabel={narrator.isPlaying && !narrator.isPaused ? 'Pause narration' : 'Play narration'}
             >
               <Ionicons
                 name={narrator.isPlaying && !narrator.isPaused ? 'pause-circle' : 'play-circle'}
                 size={28}
-                color="#6366F1"
+                color={colors.indigo[400]}
               />
             </Pressable>
           </>
         )}
         <Pressable
           onPress={() => setShowFontControls(!showFontControls)}
-          style={{ padding: 8 }}
+          style={{ padding: spacing.xs }}
           accessibilityRole="button"
           accessibilityLabel="Font size"
         >
-          <Ionicons name="text" size={20} color="#6366F1" />
+          <Ionicons name="text" size={20} color={colors.indigo[400]} />
         </Pressable>
       </View>
 
       {/* Progress Bar */}
-      <View style={{ height: 3, backgroundColor: '#F3F4F6', marginHorizontal: 16 }}>
-        <View style={{ height: 3, backgroundColor: '#6366F1', width: `${progressPercent}%` }} />
+      <View style={{ height: 3, backgroundColor: colors.surface.cardAlt, marginHorizontal: spacing.md }}>
+        <View style={{ height: 3, backgroundColor: colors.indigo[500], width: `${progressPercent}%` }} />
       </View>
 
       {/* Font Size Controls */}
       {showFontControls && (
-        <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingVertical: 8, gap: 12 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingVertical: spacing.xs, gap: spacing.sm }}>
           <Pressable
             onPress={() => setFontSizeIndex(Math.max(0, fontSizeIndex - 1))}
             disabled={fontSizeIndex === 0}
-            style={{ padding: 8, opacity: fontSizeIndex === 0 ? 0.3 : 1 }}
+            style={{ padding: spacing.xs, opacity: fontSizeIndex === 0 ? 0.3 : 1 }}
             accessibilityRole="button"
             accessibilityLabel="Decrease font size"
           >
-            <Text style={{ fontSize: 14, color: '#6366F1', fontWeight: '600' }}>A-</Text>
+            <Text style={{ fontSize: 14, color: colors.indigo[400], fontWeight: '600' }}>A-</Text>
           </Pressable>
-          <Text style={{ fontSize: 14, color: '#666' }}>{fontSize}px</Text>
+          <Text style={{ fontSize: 14, color: colors.text.secondary }}>{fontSize}px</Text>
           <Pressable
             onPress={() => setFontSizeIndex(Math.min(FONT_SIZES.length - 1, fontSizeIndex + 1))}
             disabled={fontSizeIndex === FONT_SIZES.length - 1}
-            style={{ padding: 8, opacity: fontSizeIndex === FONT_SIZES.length - 1 ? 0.3 : 1 }}
+            style={{ padding: spacing.xs, opacity: fontSizeIndex === FONT_SIZES.length - 1 ? 0.3 : 1 }}
             accessibilityRole="button"
             accessibilityLabel="Increase font size"
           >
-            <Text style={{ fontSize: 18, color: '#6366F1', fontWeight: '600' }}>A+</Text>
+            <Text style={{ fontSize: 18, color: colors.indigo[400], fontWeight: '600' }}>A+</Text>
           </Pressable>
         </View>
       )}
@@ -262,11 +263,11 @@ export function BookReader({
       {/* Page Content */}
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 20, paddingBottom: 20 }}
+        contentContainerStyle={{ padding: spacing.xl, paddingBottom: spacing.xl }}
         keyboardShouldPersistTaps="handled"
       >
         <Pressable onPress={() => setSelectedAnnotation(null)}>
-          <Text style={{ fontSize, lineHeight: fontSize * 1.7, color: '#111' }}>
+          <Text style={{ fontSize, lineHeight: fontSize * 1.7, color: colors.text.primary }}>
             {renderAnnotatedWords(currentPageText, annotationMap, selectedAnnotation, handleWordPress, fontSize)}
           </Text>
         </Pressable>
@@ -285,20 +286,20 @@ export function BookReader({
 
       {/* Page Navigation — always visible at bottom */}
       <View style={{
-        flexDirection: 'row', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12 + insets.bottom + 60, gap: 12,
-        borderTopWidth: 1, borderTopColor: '#E5E7EB', backgroundColor: '#fff',
+        flexDirection: 'row', paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.sm + insets.bottom + 60, gap: spacing.sm,
+        borderTopWidth: 1, borderTopColor: colors.border.default, backgroundColor: colors.surface.raised,
       }}>
         <Pressable
           onPress={() => goToPage(currentPage - 1)}
           disabled={currentPage === 0}
           style={{
-            flex: 1, paddingVertical: 14, borderRadius: 14, alignItems: 'center',
-            backgroundColor: currentPage === 0 ? '#F3F4F6' : '#F9FAFB',
+            flex: 1, paddingVertical: 14, borderRadius: radii.lg, alignItems: 'center',
+            backgroundColor: currentPage === 0 ? colors.surface.cardAlt : colors.surface.card,
           }}
           accessibilityRole="button"
           accessibilityLabel="Previous page"
         >
-          <Text style={{ fontSize: 16, fontWeight: '600', color: currentPage === 0 ? '#999' : '#111' }}>
+          <Text style={{ fontSize: 16, fontWeight: '600', color: currentPage === 0 ? colors.text.tertiary : colors.text.primary }}>
             Previous
           </Text>
         </Pressable>
@@ -306,13 +307,13 @@ export function BookReader({
           onPress={() => goToPage(currentPage + 1)}
           disabled={currentPage >= totalPages - 1}
           style={{
-            flex: 1, paddingVertical: 14, borderRadius: 14, alignItems: 'center',
-            backgroundColor: currentPage >= totalPages - 1 ? '#C7D2FE' : '#6366F1',
+            flex: 1, paddingVertical: 14, borderRadius: radii.lg, alignItems: 'center',
+            backgroundColor: currentPage >= totalPages - 1 ? colors.indigo[200] : colors.indigo[500],
           }}
           accessibilityRole="button"
           accessibilityLabel="Next page"
         >
-          <Text style={{ fontSize: 16, fontWeight: '600', color: '#fff' }}>
+          <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.onPrimary }}>
             {currentPage >= totalPages - 1 ? 'Finish' : 'Next'}
           </Text>
         </Pressable>
@@ -321,47 +322,116 @@ export function BookReader({
   );
 }
 
-// Render words with tap-to-translate for annotated words
+// Render words with tap-to-translate for annotated words and phrases
 function renderAnnotatedWords(
   text: string,
   annotationMap: Map<string, BookAnnotation>,
   selectedAnnotation: BookAnnotation | null,
-  onPress: (word: string) => void,
+  onPress: (phrase: string) => void,
   fontSize: number,
 ): React.JSX.Element[] {
-  const words = text.split(/(\s+)/);
-  return words.map((word, i) => {
-    if (/^\s+$/.test(word)) {
-      return <Text key={i}>{word}</Text>;
+  const tokens = text.split(/(\s+)/);
+  const result: React.JSX.Element[] = [];
+
+  // Determine the max phrase length (in words) from annotation keys
+  const maxPhraseWords = Math.max(
+    1,
+    ...Array.from(annotationMap.keys()).map((k) => k.split(/\s+/).length),
+  );
+
+  let i = 0;
+  while (i < tokens.length) {
+    const token = tokens[i];
+
+    // Whitespace tokens pass through as-is
+    if (/^\s+$/.test(token)) {
+      result.push(<Text key={i}>{token}</Text>);
+      i++;
+      continue;
     }
 
-    const cleaned = word.replace(/[.,!?;:"""''()]/g, '').toLowerCase();
-    const hasAnnotation = annotationMap.has(cleaned);
-    const isSelected = selectedAnnotation?.wordOrPhrase.toLowerCase() === cleaned;
+    // Try matching phrases from longest to shortest
+    let matched = false;
+    for (let phraseLen = maxPhraseWords; phraseLen >= 2; phraseLen--) {
+      // Collect the next `phraseLen` word tokens (skipping whitespace)
+      const wordTokens: { index: number; raw: string }[] = [];
+      let j = i;
+      while (wordTokens.length < phraseLen && j < tokens.length) {
+        if (!/^\s+$/.test(tokens[j])) {
+          wordTokens.push({ index: j, raw: tokens[j] });
+        }
+        j++;
+      }
 
-    if (hasAnnotation) {
-      return (
-        <Text
-          key={i}
-          onPress={() => onPress(word)}
-          style={{
-            fontSize,
-            lineHeight: fontSize * 1.7,
-            color: isSelected ? '#6366F1' : '#111',
-            textDecorationLine: 'underline',
-            textDecorationColor: 'rgba(99, 102, 241, 0.3)',
-            fontWeight: isSelected ? '600' : '400',
-          }}
-          accessibilityRole="button"
-          accessibilityLabel={`Translate: ${word}`}
-        >
-          {word}
-        </Text>
-      );
+      if (wordTokens.length < phraseLen) continue;
+
+      const phrase = wordTokens
+        .map((wt) => wt.raw.replace(/[.,!?;:"""''()]/g, '').toLowerCase())
+        .join(' ');
+
+      if (annotationMap.has(phrase)) {
+        const lastIndex = wordTokens[wordTokens.length - 1].index;
+        const matchedText = tokens.slice(i, lastIndex + 1).join('');
+        const isSelected = selectedAnnotation?.wordOrPhrase.toLowerCase() === phrase;
+
+        result.push(
+          <Text
+            key={`ann-${i}`}
+            onPress={() => onPress(matchedText)}
+            style={{
+              fontSize,
+              lineHeight: fontSize * 1.7,
+              color: isSelected ? colors.indigo[400] : colors.text.primary,
+              textDecorationLine: 'underline',
+              textDecorationColor: 'rgba(99, 102, 241, 0.3)',
+              fontWeight: isSelected ? '600' : '400',
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={`Translate: ${matchedText.trim()}`}
+          >
+            {matchedText}
+          </Text>,
+        );
+
+        i = lastIndex + 1;
+        matched = true;
+        break;
+      }
     }
 
-    return <Text key={i}>{word}</Text>;
-  });
+    if (!matched) {
+      // Single-word annotation check
+      const cleaned = token.replace(/[.,!?;:"""''()]/g, '').toLowerCase();
+      const hasAnnotation = annotationMap.has(cleaned);
+      const isSelected = selectedAnnotation?.wordOrPhrase.toLowerCase() === cleaned;
+
+      if (hasAnnotation) {
+        result.push(
+          <Text
+            key={`ann-${i}`}
+            onPress={() => onPress(token)}
+            style={{
+              fontSize,
+              lineHeight: fontSize * 1.7,
+              color: isSelected ? colors.indigo[400] : colors.text.primary,
+              textDecorationLine: 'underline',
+              textDecorationColor: 'rgba(99, 102, 241, 0.3)',
+              fontWeight: isSelected ? '600' : '400',
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={`Translate: ${token}`}
+          >
+            {token}
+          </Text>,
+        );
+      } else {
+        result.push(<Text key={`word-${i}`}>{token}</Text>);
+      }
+      i++;
+    }
+  }
+
+  return result;
 }
 
 // Simplified tooltip for book annotations
@@ -381,38 +451,38 @@ function BookWordTooltip({
 
   return (
     <View style={{
-      backgroundColor: '#F9FAFB', borderRadius: 14, padding: 16,
-      borderWidth: 1, borderColor: '#E5E7EB',
+      backgroundColor: colors.surface.card, borderRadius: radii.lg, padding: spacing.md,
+      borderWidth: 1, borderColor: colors.border.default,
     }}>
-      <View style={{ marginBottom: 8 }}>
-        <Text style={{ fontSize: 18, fontWeight: '600', color: '#111' }}>
+      <View style={{ marginBottom: spacing.xs }}>
+        <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text.primary }}>
           {annotation.wordOrPhrase}
         </Text>
-        <Text style={{ fontSize: 16, color: '#666', marginTop: 2 }}>
+        <Text style={{ fontSize: 16, color: colors.text.secondary, marginTop: 2 }}>
           {annotation.translation}
         </Text>
         {annotation.partOfSpeech && (
-          <Text style={{ fontSize: 13, color: '#999', fontStyle: 'italic', marginTop: 2 }}>
+          <Text style={{ fontSize: 13, color: colors.text.tertiary, fontStyle: 'italic', marginTop: 2 }}>
             {annotation.partOfSpeech}
           </Text>
         )}
       </View>
-      <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
+      <View style={{ flexDirection: 'row', gap: 10, marginTop: spacing.xs }}>
         <Pressable
           onPress={handleAdd}
-          style={{ flex: 1, backgroundColor: '#6366F1', paddingVertical: 10, borderRadius: 10, alignItems: 'center' }}
+          style={{ flex: 1, backgroundColor: colors.indigo[500], paddingVertical: 10, borderRadius: radii.md, alignItems: 'center' }}
           accessibilityRole="button"
           accessibilityLabel="Add to review queue"
         >
-          <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>Add to Review</Text>
+          <Text style={{ color: colors.text.onPrimary, fontSize: 14, fontWeight: '600' }}>Add to Review</Text>
         </Pressable>
         <Pressable
           onPress={onDismiss}
-          style={{ flex: 1, backgroundColor: '#F3F4F6', paddingVertical: 10, borderRadius: 10, alignItems: 'center' }}
+          style={{ flex: 1, backgroundColor: colors.surface.cardAlt, paddingVertical: 10, borderRadius: radii.md, alignItems: 'center' }}
           accessibilityRole="button"
           accessibilityLabel="Dismiss"
         >
-          <Text style={{ color: '#666', fontSize: 14, fontWeight: '600' }}>Dismiss</Text>
+          <Text style={{ color: colors.text.secondary, fontSize: 14, fontWeight: '600' }}>Dismiss</Text>
         </Pressable>
       </View>
     </View>

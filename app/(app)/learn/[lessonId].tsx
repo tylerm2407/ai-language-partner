@@ -1,4 +1,4 @@
-import { ActivityIndicator, Text } from 'react-native';
+import { ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -18,7 +18,9 @@ import { OutOfHeartsModal } from '../../../components/gamification/OutOfHeartsMo
 import { AchievementModal } from '../../../components/gamification/AchievementModal';
 import { checkAndAwardAchievements, type AchievementDefinition } from '../../../lib/achievements';
 import { Button } from '../../../components/ui/Button';
+import { Body } from '../../../components/ui/Text';
 import { GradientBackground } from '../../../components/ui/GradientBackground';
+import { colors } from '../../../config/theme';
 import type { Lesson } from '../../../types';
 
 export default function LessonScreen() {
@@ -57,7 +59,7 @@ export default function LessonScreen() {
     return (
       <GradientBackground variant="raised">
       <SafeAreaView className="flex-1 items-center justify-center">
-        <ActivityIndicator size="large" color="#38BDF8" />
+        <ActivityIndicator size="large" color={colors.league.diamond} />
       </SafeAreaView>
       </GradientBackground>
     );
@@ -67,7 +69,7 @@ export default function LessonScreen() {
     return (
       <GradientBackground variant="raised">
       <SafeAreaView className="flex-1 items-center justify-center px-8">
-        <Text className="text-lg text-text-secondary mb-4">Lesson not found</Text>
+        <Body size="lg" tone="secondary" style={{ marginBottom: 16 }}>Lesson not found</Body>
         <Button label="Go Back" variant="secondary" onPress={() => router.back()} />
       </SafeAreaView>
       </GradientBackground>
@@ -86,7 +88,7 @@ export default function LessonScreen() {
     // Record lesson completion
     if (lesson && user?.id) {
       const score = result.totalExercises > 0 ? result.correctCount / result.totalExercises : 0;
-      await markLessonComplete(lesson.id, lesson.unitId, score, result.xpEarned, 0).catch(console.error);
+      await markLessonComplete(lesson.id, lesson.courseId ?? '', score, result.xpEarned, 0).catch(console.error);
 
       // Mark onboarding checklist item
       markOnboardingItem('firstLesson').catch(console.error);

@@ -5,6 +5,7 @@ import * as Haptics from 'expo-haptics';
 import { ExerciseCard } from './ExerciseCard';
 import { FeedbackCard } from './FeedbackCard';
 import { HighlightedText } from '../shared/HighlightedText';
+import { colors } from '../../config/theme';
 import { useAudioRecorder } from '../../hooks/useAudioRecorder';
 import { useAudioPlayer } from '../../hooks/useAudioPlayer';
 import { usePhonemeDrill } from '../../hooks/usePhonemeDrill';
@@ -146,7 +147,7 @@ export function SpeakingExercise({
             accessibilityRole="button"
             accessibilityLabel="Play prompt audio"
           >
-            <Ionicons name={playing ? 'volume-high' : 'play-circle'} size={28} color="#38BDF8" />
+            <Ionicons name={playing ? 'volume-high' : 'play-circle'} size={28} color={colors.indigo[400]} />
             <Text className="text-text-primary text-base ml-3">Listen to the prompt</Text>
           </Pressable>
           {/* HVPT replay: rotate through per-language voices on each tap. */}
@@ -158,9 +159,9 @@ export function SpeakingExercise({
             accessibilityLabel="Replay in a different voice"
           >
             {phonemeDrill.isPlaying ? (
-              <ActivityIndicator size="small" color="#38BDF8" />
+              <ActivityIndicator size="small" color={colors.indigo[400]} />
             ) : (
-              <Ionicons name="refresh" size={20} color="#38BDF8" />
+              <Ionicons name="refresh" size={20} color={colors.indigo[400]} />
             )}
             <Text className="text-text-secondary text-sm ml-2">Replay in a different voice</Text>
           </Pressable>
@@ -200,7 +201,7 @@ export function SpeakingExercise({
 
       {scoring && (
         <View className="items-center py-4">
-          <ActivityIndicator size="large" color="#38BDF8" />
+          <ActivityIndicator size="large" color={colors.indigo[400]} />
           <Text className="text-text-tertiary text-sm mt-2">Scoring pronunciation...</Text>
         </View>
       )}
@@ -213,7 +214,15 @@ export function SpeakingExercise({
               {scoreState.score}%
             </Text>
           </View>
-          <Text className="text-text-primary text-base mt-3 text-center">{scoreState.feedback}</Text>
+          <View className="flex-row items-center mt-3">
+            <Ionicons
+              name={scoreState.score >= 60 ? 'checkmark-circle' : 'close-circle'}
+              size={20}
+              color={scoreState.score >= 60 ? colors.success.base : colors.error.base}
+              style={{ marginRight: 6 }}
+            />
+            <Text className="text-text-primary text-base text-center">{scoreState.feedback}</Text>
+          </View>
           {scoreState.transcription && (
             <Text className="text-text-tertiary text-xs mt-2 text-center italic">
               Heard: "{scoreState.transcription}"

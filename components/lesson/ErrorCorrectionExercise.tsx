@@ -1,8 +1,11 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable } from 'react-native';
+import { View, TextInput, Pressable } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { FeedbackCard } from './FeedbackCard';
 import { HighlightedText } from '../shared/HighlightedText';
+import { Body, Caption } from '../ui/Text';
+import { colors, spacing, radii } from '../../config/theme';
 import { gradeAnswer } from '../../lib/grading';
 import type { GradeResult } from '../../lib/grading';
 import type { Exercise } from '../../types';
@@ -61,47 +64,62 @@ export function ErrorCorrectionExercise({
 
   return (
     <View style={{ flex: 1 }}>
-      <Text style={{ fontSize: 14, fontWeight: '600', color: '#6366F1', marginBottom: 8 }}>
+      <Caption tone="accent" style={{ fontWeight: '600', marginBottom: spacing.xs }}>
         Find and fix the error
-      </Text>
+      </Caption>
 
       {/* Sentence with error */}
       <View style={{
-        backgroundColor: '#FEE2E2', borderRadius: 20, padding: 24, marginBottom: 20, minHeight: 100,
+        backgroundColor: colors.error.tint, borderRadius: radii.xxl, padding: spacing.lg, marginBottom: spacing.lg + spacing.xxs, minHeight: 100,
         justifyContent: 'center',
       }}>
         <HighlightedText
           text={errorSentence}
           highlight={highlight}
-          className="text-[#111] text-[18px] leading-7"
+          className="text-text-primary text-[18px] leading-7"
         />
-        <Text style={{ fontSize: 13, color: '#EF4444', marginTop: 8, fontStyle: 'italic' }}>
+        <Caption tone="error" style={{ marginTop: spacing.xs, fontStyle: 'italic' }}>
           This sentence contains an error. Type the corrected version below.
-        </Text>
+        </Caption>
       </View>
 
       {/* Corrected Input */}
-      <TextInput
-        value={userInput}
-        onChangeText={setUserInput}
-        placeholder="Type the corrected sentence..."
-        placeholderTextColor="#999"
-        editable={!isRevealed}
-        multiline
-        style={{
-          borderWidth: 2,
-          borderColor: isRevealed ? (isCorrect ? '#22C55E' : '#EF4444') : '#D1D5DB',
-          borderRadius: 14,
-          paddingHorizontal: 16,
-          paddingVertical: 10,
-          fontSize: 16,
-          minHeight: 80,
-          textAlignVertical: 'top',
-          color: '#111',
-          marginBottom: 16,
-        }}
-        accessibilityLabel="Corrected sentence"
-      />
+      <View>
+        <TextInput
+          value={userInput}
+          onChangeText={setUserInput}
+          placeholder="Type the corrected sentence..."
+          placeholderTextColor={colors.text.quaternary}
+          editable={!isRevealed}
+          multiline
+          style={{
+            borderWidth: 2,
+            borderColor: isRevealed ? (isCorrect ? colors.success.base : colors.error.base) : colors.border.strong,
+            borderRadius: radii.lg,
+            paddingHorizontal: spacing.md,
+            paddingVertical: 10,
+            fontSize: 16,
+            minHeight: 80,
+            textAlignVertical: 'top',
+            color: colors.text.primary,
+            marginBottom: spacing.md,
+          }}
+          accessibilityLabel="Corrected sentence"
+        />
+        {isRevealed && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs }}>
+            <Ionicons
+              name={isCorrect ? 'checkmark-circle' : 'close-circle'}
+              size={20}
+              color={isCorrect ? colors.success.base : colors.error.base}
+              style={{ marginRight: spacing.xxs }}
+            />
+            <Caption style={{ color: isCorrect ? colors.success.base : colors.error.base }}>
+              {isCorrect ? 'Correct' : 'Incorrect'}
+            </Caption>
+          </View>
+        )}
+      </View>
 
       {/* Differentiated feedback */}
       {result && isRevealed && language && onContinue ? (
@@ -122,13 +140,13 @@ export function ErrorCorrectionExercise({
           onPress={handleCheck}
           disabled={userInput.trim().length === 0}
           style={{
-            backgroundColor: userInput.trim().length > 0 ? '#6366F1' : '#C7D2FE',
-            paddingVertical: 16, borderRadius: 14, alignItems: 'center',
+            backgroundColor: userInput.trim().length > 0 ? colors.indigo[500] : colors.indigo[200],
+            paddingVertical: spacing.md, borderRadius: radii.lg, alignItems: 'center',
           }}
           accessibilityRole="button"
           accessibilityLabel="Check answer"
         >
-          <Text style={{ color: '#fff', fontSize: 18, fontWeight: '600' }}>Check</Text>
+          <Body size="lg" weight="semibold" tone="onPrimary">Check</Body>
         </Pressable>
       )}
     </View>

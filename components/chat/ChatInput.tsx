@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import { File } from 'expo-file-system/next';
+import { colors } from '../../config/theme';
 
 export type HandsFreeState = 'IDLE' | 'CONNECTING' | 'LISTENING' | 'PROCESSING' | 'AI_RESPONDING' | 'TTS_PLAYING';
 
@@ -36,7 +37,7 @@ const METERING_INTERVAL_MS = 200;
 /** Read an audio file as base64 string. */
 async function readAudioAsBase64(uri: string): Promise<string> {
   const file = new File(uri);
-  const base64 = file.base64();
+  const base64 = await file.base64();
   return base64;
 }
 
@@ -358,12 +359,12 @@ export function ChatInput({
 
     const statusColor = (() => {
       switch (handsFreeState) {
-        case 'CONNECTING': return '#FBBF24';
-        case 'LISTENING': return '#34D399';
-        case 'PROCESSING': return '#FBBF24';
-        case 'AI_RESPONDING': return '#38BDF8';
-        case 'TTS_PLAYING': return '#38BDF8';
-        default: return '#94A3B8';
+        case 'CONNECTING': return colors.warning.light;
+        case 'LISTENING': return colors.success.base;
+        case 'PROCESSING': return colors.warning.light;
+        case 'AI_RESPONDING': return colors.league.diamond;
+        case 'TTS_PLAYING': return colors.league.diamond;
+        default: return colors.text.tertiary;
       }
     })();
 
@@ -403,7 +404,7 @@ export function ChatInput({
               return (
                 <View
                   key={i}
-                  style={{ width: 3, height: barHeight, borderRadius: 1.5, backgroundColor: '#34D399' }}
+                  style={{ width: 3, height: barHeight, borderRadius: 1.5, backgroundColor: colors.success.base }}
                 />
               );
             })}
@@ -425,7 +426,7 @@ export function ChatInput({
             accessibilityLabel="Switch to keyboard"
             className="w-8 h-8 rounded-full bg-dark-card items-center justify-center"
           >
-            <Ionicons name="keypad-outline" size={18} color="#7DD3FC" />
+            <Ionicons name="keypad-outline" size={18} color={colors.correctionChip.grammar.text} />
           </Pressable>
         </View>
 
@@ -455,7 +456,7 @@ export function ChatInput({
               return (
                 <View
                   key={i}
-                  style={{ width: 3, height: barHeight, borderRadius: 1.5, backgroundColor: '#34D399' }}
+                  style={{ width: 3, height: barHeight, borderRadius: 1.5, backgroundColor: colors.success.base }}
                 />
               );
             })}
@@ -479,14 +480,14 @@ export function ChatInput({
           accessibilityLabel="Switch to voice mode"
           className="w-11 h-11 items-center justify-center mr-2"
         >
-          <Ionicons name="mic-outline" size={22} color="#7DD3FC" />
+          <Ionicons name="mic-outline" size={22} color={colors.correctionChip.grammar.text} />
         </Pressable>
       )}
 
       <TextInput
         className="flex-1 border-2 border-dark-border bg-dark-card-alt rounded-[14px] px-4 py-3 text-base text-text-primary mr-3 max-h-24 font-sans"
         placeholder="Type your message..."
-        placeholderTextColor="#64748B"
+        placeholderTextColor={colors.text.quaternary}
         value={value}
         onChangeText={onChangeText}
         multiline

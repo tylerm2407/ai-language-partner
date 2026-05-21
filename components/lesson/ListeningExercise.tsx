@@ -5,6 +5,7 @@ import * as Haptics from 'expo-haptics';
 import { ExerciseCard } from './ExerciseCard';
 import { FeedbackCard } from './FeedbackCard';
 import { Button } from '../ui/Button';
+import { colors } from '../../config/theme';
 import { gradeAnswer } from '../../lib/grading';
 import type { GradeResult } from '../../lib/grading';
 import { useAudioPlayer } from '../../hooks/useAudioPlayer';
@@ -144,13 +145,26 @@ export function ListeningExercise({
           {exercise.options!.map((option, index) => (
             <Pressable
               key={index}
-              className={`p-4 rounded-[14px] mb-2.5 ${getOptionStyle(option)}`}
+              className={`p-4 rounded-[14px] mb-2.5 flex-row items-center ${getOptionStyle(option)}`}
               onPress={() => handleSelectOption(option)}
               disabled={submitted || showResult}
               accessibilityRole="button"
               accessibilityLabel={`Option ${index + 1}: ${option}`}
             >
-              <Text className="text-text-primary text-[17px] font-semibold">
+              {(submitted || showResult) && (() => {
+                const isCorrectOption =
+                  option.toLowerCase() === exercise.correctAnswer.toLowerCase() ||
+                  exercise.acceptedAnswers.map((a) => a.toLowerCase()).includes(option.toLowerCase());
+                const isSelected = option === answer;
+                if (isCorrectOption) {
+                  return <Ionicons name="checkmark-circle" size={20} color={colors.success.base} style={{ marginRight: 8 }} />;
+                }
+                if (isSelected && !isCorrectOption) {
+                  return <Ionicons name="close-circle" size={20} color={colors.error.base} style={{ marginRight: 8 }} />;
+                }
+                return null;
+              })()}
+              <Text className="text-text-primary text-[17px] font-semibold flex-1">
                 {option}
               </Text>
             </Pressable>
@@ -168,6 +182,18 @@ export function ListeningExercise({
             autoCapitalize="none"
             accessibilityLabel="Listening answer input"
           />
+          {submitted && result && (
+            <View className="flex-row items-center mt-2">
+              <Ionicons
+                name={result.isCorrect ? 'checkmark-circle' : 'close-circle'}
+                size={20}
+                color={result.isCorrect ? colors.success.base : colors.error.base}
+              />
+              <Text className={`ml-1 text-sm font-semibold ${result.isCorrect ? 'text-success' : 'text-error'}`}>
+                {result.isCorrect ? 'Correct' : 'Incorrect'}
+              </Text>
+            </View>
+          )}
           {!submitted && !showResult && (
             <View className="mt-4">
               <Button

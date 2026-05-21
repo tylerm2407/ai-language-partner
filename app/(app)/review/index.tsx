@@ -1,12 +1,15 @@
 import { useEffect, useState, useRef } from 'react';
-import { View, Text, Pressable, ActivityIndicator } from 'react-native';
+import { View, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useReviewQueue } from '../../../hooks/useReviewQueue';
 import { AudioPlayButton } from '../../../components/audio/AudioPlayButton';
 import { ProgressBar } from '../../../components/ui/ProgressBar';
+import { TactileButton } from '../../../components/ui/TactileButton';
+import { Heading, Body, Caption } from '../../../components/ui/Text';
 import { trackEvent } from '../../../lib/analytics';
+import { colors, spacing, radii } from '../../../config/theme';
 import type { ReviewRating } from '../../../types';
 
 export default function ReviewScreen() {
@@ -19,6 +22,7 @@ export default function ReviewScreen() {
   const [error, setError] = useState<string | null>(null);
   const [showAnswer, setShowAnswer] = useState(false);
   const cardStartRef = useRef(Date.now());
+  const isSubmittingRef = useRef(false);
 
   useEffect(() => {
     loadQueue();
@@ -37,17 +41,19 @@ export default function ReviewScreen() {
 
   const handleRate = async (rating: ReviewRating) => {
     if (!currentCard) return;
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
 
     const responseTimeMs = Date.now() - cardStartRef.current;
     const userAnswer = showAnswer ? 'revealed' : '';
 
-    if (rating >= 3) {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } else {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    }
-
     try {
+      if (rating >= 3) {
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
+
       await submitReview(currentCard.item, rating, userAnswer, responseTimeMs);
       setReviewedCount((r) => r + 1);
       if (rating >= 3) setCorrectCount((c) => c + 1);
@@ -55,16 +61,18 @@ export default function ReviewScreen() {
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to submit review');
+    } finally {
+      setShowAnswer(false);
+      cardStartRef.current = Date.now();
+      isSubmittingRef.current = false;
     }
-    setShowAnswer(false);
-    cardStartRef.current = Date.now();
   };
 
   if (isLoading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#0C0F14', justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#38BDF8" />
-        <Text style={{ marginTop: 12, color: '#94A3B8' }}>Loading review queue...</Text>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface.base, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={colors.league.diamond} />
+        <Body size="sm" tone="tertiary" style={{ marginTop: spacing.sm }}>Loading review queue...</Body>
       </SafeAreaView>
     );
   }
@@ -81,56 +89,45 @@ export default function ReviewScreen() {
     });
 
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#0C0F14' }}>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-          <Text style={{ fontSize: 32, fontWeight: '700', marginBottom: 8, color: '#F1F5F9' }} accessibilityRole="header">
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface.base }}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.lg }}>
+          <Heading level={1} style={{ marginBottom: spacing.xs }}>
             Review Complete!
-          </Text>
+          </Heading>
 
           <View
             style={{
-              backgroundColor: '#151921',
-              borderRadius: 20,
-              padding: 24,
+              backgroundColor: colors.surface.card,
+              borderRadius: radii.xxl,
+              padding: spacing.lg,
               width: '100%',
-              marginTop: 24,
-              marginBottom: 32,
+              marginTop: spacing.lg,
+              marginBottom: spacing.xl,
             }}
           >
             <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
               <View style={{ alignItems: 'center' }}>
-                <Text style={{ fontSize: 28, fontWeight: '700', color: '#38BDF8' }}>
+                <Heading level={1} style={{ color: colors.league.diamond }}>
                   {reviewedCount}
-                </Text>
-                <Text style={{ fontSize: 13, color: '#94A3B8' }}>Reviewed</Text>
+                </Heading>
+                <Caption tone="tertiary">Reviewed</Caption>
               </View>
               <View style={{ alignItems: 'center' }}>
-                <Text style={{ fontSize: 28, fontWeight: '700', color: '#22C55E' }}>
+                <Heading level={1} style={{ color: colors.success.base }}>
                   {correctCount}
-                </Text>
-                <Text style={{ fontSize: 13, color: '#94A3B8' }}>Correct</Text>
+                </Heading>
+                <Caption tone="tertiary">Correct</Caption>
               </View>
               <View style={{ alignItems: 'center' }}>
-                <Text style={{ fontSize: 28, fontWeight: '700', color: accuracy >= 80 ? '#22C55E' : '#F59E0B' }}>
+                <Heading level={1} style={{ color: accuracy >= 80 ? colors.success.base : colors.warning.base }}>
                   {accuracy}%
-                </Text>
-                <Text style={{ fontSize: 13, color: '#94A3B8' }}>Accuracy</Text>
+                </Heading>
+                <Caption tone="tertiary">Accuracy</Caption>
               </View>
             </View>
           </View>
 
-          <Pressable
-            onPress={() => router.back()}
-            style={{
-              backgroundColor: '#38BDF8',
-              paddingHorizontal: 48,
-              paddingVertical: 16,
-              borderRadius: 14,
-            }}
-            accessibilityRole="button"
-          >
-            <Text style={{ color: '#fff', fontSize: 18, fontWeight: '600' }}>Done</Text>
-          </Pressable>
+          <TactileButton label="Done" onPress={() => router.back()} />
         </View>
       </SafeAreaView>
     );
@@ -140,40 +137,32 @@ export default function ReviewScreen() {
 
   if (isComplete || !currentCard) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#0C0F14' }}>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-          <Text style={{ fontSize: 28, fontWeight: '700', marginBottom: 8, color: '#F1F5F9' }} accessibilityRole="header">
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface.base }}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.lg }}>
+          <Heading level={1} style={{ marginBottom: spacing.xs }}>
             All caught up!
-          </Text>
-          <Text style={{ fontSize: 16, color: '#94A3B8', textAlign: 'center', marginBottom: 24 }}>
+          </Heading>
+          <Body tone="tertiary" style={{ textAlign: 'center', marginBottom: spacing.lg }}>
             No cards due for review. Learn new words or come back later.
-          </Text>
-          <Pressable
+          </Body>
+          <TactileButton
+            label="Learn New Words"
             onPress={() => router.push('/(app)/learn')}
-            style={{
-              backgroundColor: '#38BDF8',
-              paddingHorizontal: 32,
-              paddingVertical: 14,
-              borderRadius: 12,
-              marginBottom: 12,
-            }}
-            accessibilityRole="button"
-          >
-            <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>Learn New Words</Text>
-          </Pressable>
+            style={{ marginBottom: spacing.sm }}
+          />
           {/* Top-mistakes drill entry (research.md §10 — Lyster & Ranta). */}
           <Pressable
             onPress={() => router.push('/(app)/review/top-mistakes')}
             style={{
-              paddingHorizontal: 20,
-              paddingVertical: 10,
-              borderRadius: 12,
+              paddingHorizontal: spacing.md + spacing.xxs,
+              paddingVertical: spacing.xs + 2,
+              borderRadius: radii.md,
               borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.12)',
+              borderColor: colors.border.default,
             }}
             accessibilityRole="button"
           >
-            <Text style={{ color: '#94A3B8', fontSize: 14 }}>See top mistakes this week</Text>
+            <Body size="sm" tone="tertiary">See top mistakes this week</Body>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -186,100 +175,100 @@ export default function ReviewScreen() {
   const progress = queue.length > 0 ? currentIndex / queue.length : 0;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#0C0F14' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface.base }}>
       {/* Header */}
-      <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+      <View style={{ paddingHorizontal: spacing.md + spacing.xxs, paddingTop: spacing.xs, paddingBottom: spacing.sm }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs }}>
           <Pressable
             onPress={() => router.back()}
-            style={{ padding: 8, marginRight: 8 }}
+            style={{ padding: spacing.xs, marginRight: spacing.xs }}
             accessibilityRole="button"
             accessibilityLabel="Exit review"
           >
-            <Text style={{ fontSize: 20, color: '#94A3B8' }}>x</Text>
+            <Body tone="tertiary" style={{ fontSize: 20 }}>x</Body>
           </Pressable>
           <View style={{ flex: 1 }}>
             <ProgressBar progress={progress} />
           </View>
-          <Text style={{ marginLeft: 12, fontSize: 14, color: '#94A3B8' }}>
+          <Body size="sm" tone="tertiary" style={{ marginLeft: spacing.sm }}>
             {currentIndex + 1}/{queue.length}
-          </Text>
+          </Body>
         </View>
       </View>
 
       {/* Card */}
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24 }}>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.lg }}>
         <Pressable
           onPress={handleReveal}
           style={{
             width: '100%',
             minHeight: 280,
-            backgroundColor: '#151921',
-            borderRadius: 24,
+            backgroundColor: colors.surface.card,
+            borderRadius: radii.xxl + 4,
             justifyContent: 'center',
             alignItems: 'center',
-            padding: 32,
+            padding: spacing.xl,
           }}
           accessibilityRole="button"
           accessibilityLabel={showAnswer ? 'Card answer shown' : 'Tap to reveal answer'}
         >
           {/* Front: target language text */}
-          <Text style={{ fontSize: 28, fontWeight: '700', textAlign: 'center', marginBottom: 8, color: '#F1F5F9' }}>
+          <Heading level={1} style={{ textAlign: 'center', marginBottom: spacing.xs }}>
             {card.targetText}
-          </Text>
+          </Heading>
 
           {card.partOfSpeech && (
-            <Text style={{ fontSize: 14, color: '#64748B', marginBottom: 12, fontStyle: 'italic' }}>
+            <Body size="sm" style={{ color: colors.text.quaternary, marginBottom: spacing.sm, fontStyle: 'italic' }}>
               {card.partOfSpeech}
-            </Text>
+            </Body>
           )}
 
           {card.audioUrl && (
-            <View style={{ marginBottom: 16 }}>
+            <View style={{ marginBottom: spacing.md }}>
               <AudioPlayButton audioUrl={card.audioUrl} size={48} />
             </View>
           )}
 
           {showAnswer ? (
-            <View style={{ marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#1E293B', width: '100%', alignItems: 'center' }}>
-              <Text style={{ fontSize: 22, fontWeight: '600', color: '#38BDF8', textAlign: 'center' }}>
+            <View style={{ marginTop: spacing.md, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.surface.cardAlt, width: '100%', alignItems: 'center' }}>
+              <Heading level={3} style={{ color: colors.league.diamond, textAlign: 'center' }}>
                 {card.nativeText}
-              </Text>
+              </Heading>
               {card.exampleSentence && (
-                <Text style={{ fontSize: 15, color: '#94A3B8', marginTop: 12, textAlign: 'center', fontStyle: 'italic' }}>
+                <Body size="sm" tone="tertiary" style={{ marginTop: spacing.sm, textAlign: 'center', fontStyle: 'italic' }}>
                   {card.exampleSentence}
-                </Text>
+                </Body>
               )}
               {card.exampleSentenceTranslation && (
-                <Text style={{ fontSize: 14, color: '#64748B', marginTop: 4, textAlign: 'center' }}>
+                <Body size="sm" style={{ color: colors.text.quaternary, marginTop: spacing.xxs, textAlign: 'center' }}>
                   {card.exampleSentenceTranslation}
-                </Text>
+                </Body>
               )}
             </View>
           ) : (
-            <Text style={{ fontSize: 15, color: '#64748B', marginTop: 16 }}>
+            <Body size="sm" style={{ color: colors.text.quaternary, marginTop: spacing.md }}>
               Tap to reveal
-            </Text>
+            </Body>
           )}
         </Pressable>
       </View>
 
       {/* Rating Buttons */}
       {showAnswer && (
-        <View style={{ paddingHorizontal: 20, paddingBottom: 24 }}>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            <RatingButton label="Again" sublabel="1m" color="#EF4444" onPress={() => handleRate(1)} />
-            <RatingButton label="Hard" sublabel="6m" color="#F59E0B" onPress={() => handleRate(2)} />
-            <RatingButton label="Good" sublabel="10m" color="#22C55E" onPress={() => handleRate(3)} />
-            <RatingButton label="Easy" sublabel="4d" color="#38BDF8" onPress={() => handleRate(5)} />
+        <View style={{ paddingHorizontal: spacing.md + spacing.xxs, paddingBottom: spacing.lg }}>
+          <View style={{ flexDirection: 'row', gap: spacing.xs }}>
+            <RatingButton label="Again" sublabel="1m" color={colors.error.base} onPress={() => handleRate(1)} />
+            <RatingButton label="Hard" sublabel="6m" color={colors.warning.base} onPress={() => handleRate(2)} />
+            <RatingButton label="Good" sublabel="10m" color={colors.success.base} onPress={() => handleRate(3)} />
+            <RatingButton label="Easy" sublabel="4d" color={colors.league.diamond} onPress={() => handleRate(5)} />
           </View>
         </View>
       )}
 
       {error && (
-        <Text style={{ fontSize: 14, color: '#EF4444', textAlign: 'center', paddingBottom: 12 }}>
+        <Body size="sm" tone="error" style={{ textAlign: 'center', paddingBottom: spacing.sm }}>
           {error}
-        </Text>
+        </Body>
       )}
     </SafeAreaView>
   );
@@ -302,15 +291,15 @@ function RatingButton({
       style={{
         flex: 1,
         backgroundColor: color,
-        paddingVertical: 14,
-        borderRadius: 14,
+        paddingVertical: spacing.sm + 2,
+        borderRadius: radii.lg,
         alignItems: 'center',
       }}
       accessibilityRole="button"
       accessibilityLabel={`Rate: ${label}`}
     >
-      <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>{label}</Text>
-      <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, marginTop: 2 }}>{sublabel}</Text>
+      <Body size="sm" tone="onPrimary" weight="bold">{label}</Body>
+      <Caption size="sm" tone="onPrimary" style={{ opacity: 0.7, marginTop: 2 }}>{sublabel}</Caption>
     </Pressable>
   );
 }

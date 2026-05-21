@@ -1,10 +1,12 @@
 import { useState, useRef } from 'react';
-import { View, TextInput, Platform } from 'react-native';
+import { View, Text, TextInput, Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { ExerciseCard } from './ExerciseCard';
 import { FeedbackCard } from './FeedbackCard';
 import { HighlightedText } from '../shared/HighlightedText';
 import { Button } from '../ui/Button';
+import { colors } from '../../config/theme';
 import { gradeAnswer } from '../../lib/grading';
 import type { GradeResult } from '../../lib/grading';
 import type { Exercise } from '../../types';
@@ -94,6 +96,18 @@ export function TranslationExercise({
         accessibilityLabel="Translation input"
         accessibilityHint="Type your translation of the prompt"
       />
+      {submitted && result && (
+        <View className="flex-row items-center mt-2">
+          <Ionicons
+            name={result.isCorrect ? 'checkmark-circle' : 'close-circle'}
+            size={20}
+            color={result.isCorrect ? colors.success.base : colors.error.base}
+          />
+          <Text className={`ml-1 text-sm font-semibold ${result.isCorrect ? 'text-success' : 'text-error'}`}>
+            {result.isCorrect ? 'Correct' : 'Incorrect'}
+          </Text>
+        </View>
+      )}
 
       {result && onContinue && language ? (
         <FeedbackCard

@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { getTextToSpeech, translateText, VoiceError } from '../../lib/ai';
 import { saveCorrectionAsCard } from '../../lib/supabase-queries';
 import { isClose } from '../../lib/fuzzyMatch';
+import { colors, radii, spacing } from '../../config/theme';
 import {
   normalizeCorrection,
   type ConversationMessage,
@@ -35,7 +36,7 @@ function HighlightedContent({ text, isUser }: { text: string; isUser: boolean })
             <Text
               key={index}
               className="font-bold"
-              style={!isUser ? { backgroundColor: 'rgba(56, 189, 248, 0.15)', borderRadius: 4 } : undefined}
+              style={!isUser ? { backgroundColor: colors.correctionChip.grammar.bg, borderRadius: spacing.xxs } : undefined}
             >
               {word}
             </Text>
@@ -180,7 +181,7 @@ export function ChatBubble({ message, targetLanguage, userId, nativeLanguage }: 
         <HighlightedContent text={message.content} isUser={isUser} />
 
         {/* Action row — Listen always, Translate on AI replies only. */}
-        <View className="flex-row items-center mt-2" style={{ gap: 12 }}>
+        <View className="flex-row items-center mt-2" style={{ gap: spacing.sm }}>
           {/* Speaker button — available on every message so learners can hear
               their own sentences pronounced by a native voice too. */}
           <Pressable
@@ -191,17 +192,17 @@ export function ChatBubble({ message, targetLanguage, userId, nativeLanguage }: 
             hitSlop={8}
           >
             {isLoadingAudio ? (
-              <ActivityIndicator size="small" color={isUser ? '#FFFFFF' : '#7DD3FC'} />
+              <ActivityIndicator size="small" color={isUser ? colors.text.onPrimary : colors.correctionChip.grammar.text} />
             ) : (
               <Ionicons
                 name={isPlaying ? 'stop-circle' : 'volume-medium-outline'}
                 size={isPlaying ? 20 : 16}
-                color={isPlaying ? '#EF4444' : isUser ? '#FFFFFF' : '#7DD3FC'}
+                color={isPlaying ? colors.error.base : isUser ? colors.text.onPrimary : colors.correctionChip.grammar.text}
               />
             )}
             <Text
               className="text-xs ml-1"
-              style={{ color: isUser ? 'rgba(255,255,255,0.9)' : '#C4B5FD' }}
+              style={{ color: isUser ? 'rgba(255,255,255,0.9)' : colors.indigo[300] }}
             >
               {isLoadingAudio ? 'Loading...' : isPlaying ? 'Stop' : 'Listen'}
             </Text>
@@ -218,11 +219,11 @@ export function ChatBubble({ message, targetLanguage, userId, nativeLanguage }: 
               disabled={isLoadingTranslation}
             >
               {isLoadingTranslation ? (
-                <ActivityIndicator size="small" color="#7DD3FC" />
+                <ActivityIndicator size="small" color={colors.correctionChip.grammar.text} />
               ) : (
-                <Ionicons name="language-outline" size={16} color="#7DD3FC" />
+                <Ionicons name="language-outline" size={16} color={colors.correctionChip.grammar.text} />
               )}
-              <Text className="text-xs ml-1" style={{ color: '#C4B5FD' }}>
+              <Text className="text-xs ml-1" style={{ color: colors.indigo[300] }}>
                 {isLoadingTranslation ? 'Translating...' : showTranslation ? 'Hide' : 'Translate'}
               </Text>
             </Pressable>
@@ -234,13 +235,13 @@ export function ChatBubble({ message, targetLanguage, userId, nativeLanguage }: 
         {!isUser && showTranslation && translation && (
           <Text
             className="text-sm italic mt-2"
-            style={{ color: 'rgba(255,255,255,0.65)' }}
+            style={{ color: colors.text.tertiary }}
           >
             {translation}
           </Text>
         )}
         {!isUser && translationError && (
-          <Text className="text-xs mt-2" style={{ color: '#FCA5A5' }}>
+          <Text className="text-xs mt-2" style={{ color: colors.error.light }}>
             Couldn't translate. Tap to retry.
           </Text>
         )}
@@ -281,18 +282,18 @@ export function ChatBubble({ message, targetLanguage, userId, nativeLanguage }: 
 
 const SEVERITY_STYLES: Record<CorrectionSeverity, { bg: string; border: string; label: string }> = {
   minor:    { bg: 'rgba(148, 163, 184, 0.15)', border: 'rgba(148, 163, 184, 0.35)', label: 'MINOR' },
-  moderate: { bg: 'rgba(251, 191, 36, 0.15)',  border: 'rgba(251, 191, 36, 0.35)',  label: 'MODERATE' },
-  critical: { bg: 'rgba(239, 68, 68, 0.15)',   border: 'rgba(239, 68, 68, 0.40)',   label: 'CRITICAL' },
+  moderate: { bg: colors.warning.tint,          border: colors.warning.border,        label: 'MODERATE' },
+  critical: { bg: colors.error.tint,            border: colors.error.border,          label: 'CRITICAL' },
 };
 
 const ERROR_TYPE_STYLES: Record<CorrectionErrorType, { bg: string; text: string; label: string }> = {
-  grammar:    { bg: 'rgba(56, 189, 248, 0.22)', text: '#7DD3FC', label: 'GRAMMAR' },
-  vocabulary: { bg: 'rgba(168, 85, 247, 0.22)', text: '#C084FC', label: 'VOCAB' },
-  spelling:   { bg: 'rgba(148, 163, 184, 0.22)', text: '#CBD5E1', label: 'SPELLING' },
-  word_order: { bg: 'rgba(251, 146, 60, 0.22)', text: '#FB923C', label: 'WORD ORDER' },
-  tense:      { bg: 'rgba(52, 211, 153, 0.22)', text: '#6EE7B7', label: 'TENSE' },
-  gender:     { bg: 'rgba(244, 114, 182, 0.22)', text: '#F472B6', label: 'GENDER' },
-  other:      { bg: 'rgba(148, 163, 184, 0.22)', text: '#CBD5E1', label: 'CORRECTION' },
+  grammar:    { bg: colors.correctionChip.grammar.bg,     text: colors.correctionChip.grammar.text,     label: 'GRAMMAR' },
+  vocabulary: { bg: colors.correctionChip.vocabulary.bg,   text: colors.correctionChip.vocabulary.text,   label: 'VOCAB' },
+  spelling:   { bg: colors.correctionChip.spelling.bg,     text: colors.correctionChip.spelling.text,     label: 'SPELLING' },
+  word_order: { bg: colors.correctionChip.word_order.bg,   text: colors.correctionChip.word_order.text,   label: 'WORD ORDER' },
+  tense:      { bg: colors.correctionChip.tense.bg,        text: colors.correctionChip.tense.text,        label: 'TENSE' },
+  gender:     { bg: colors.correctionChip.gender.bg,        text: colors.correctionChip.gender.text,        label: 'GENDER' },
+  other:      { bg: colors.correctionChip.other.bg,         text: colors.correctionChip.other.text,         label: 'CORRECTION' },
 };
 
 interface CorrectionBannerProps {
@@ -455,11 +456,11 @@ export function CorrectionBanner({
             {typeStyle.label}
           </Text>
         </View>
-        <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 10, fontWeight: '600' }}>
+        <Text style={{ color: colors.text.quaternary, fontSize: 10, fontWeight: '600' }}>
           · {severityStyle.label}
         </Text>
         {showRepetition && (
-          <Text style={{ color: '#FBBF24', fontSize: 10, fontWeight: '600' }}>
+          <Text style={{ color: colors.warning.light, fontSize: 10, fontWeight: '600' }}>
             · {correction.repetitionCount}× this week
           </Text>
         )}
@@ -467,24 +468,24 @@ export function CorrectionBanner({
 
       {/* Diff block */}
       {hasDiff && (
-        <View style={{ marginTop: 8 }}>
+        <View style={{ marginTop: spacing.xs }}>
           <View className="flex-row items-start" style={{ gap: 6 }}>
-            <Text style={{ color: '#FCA5A5', fontSize: 14, fontWeight: '700' }}>✗</Text>
+            <Text style={{ color: colors.error.light, fontSize: 14, fontWeight: '700' }}>✗</Text>
             <Text
               style={{
-                color: '#FCA5A5',
+                color: colors.error.light,
                 fontSize: 14,
                 flex: 1,
                 textDecorationLine: 'line-through',
-                textDecorationColor: '#FCA5A5',
+                textDecorationColor: colors.error.light,
               }}
             >
               {correction.original}
             </Text>
           </View>
           <View className="flex-row items-start mt-1" style={{ gap: 6 }}>
-            <Text style={{ color: '#6EE7B7', fontSize: 14, fontWeight: '700' }}>✓</Text>
-            <Text style={{ color: '#6EE7B7', fontSize: 14, fontWeight: '600', flex: 1 }}>
+            <Text style={{ color: colors.success.light, fontSize: 14, fontWeight: '700' }}>✓</Text>
+            <Text style={{ color: colors.success.light, fontSize: 14, fontWeight: '600', flex: 1 }}>
               {correction.corrected}
             </Text>
             <Pressable
@@ -494,12 +495,12 @@ export function CorrectionBanner({
               accessibilityLabel="Listen to corrected phrase"
             >
               {isLoadingCorrectedAudio ? (
-                <ActivityIndicator size="small" color="#6EE7B7" />
+                <ActivityIndicator size="small" color={colors.success.light} />
               ) : (
                 <Ionicons
                   name={isPlayingCorrectedAudio ? 'stop-circle' : 'volume-medium-outline'}
                   size={16}
-                  color={isPlayingCorrectedAudio ? '#EF4444' : '#6EE7B7'}
+                  color={isPlayingCorrectedAudio ? colors.error.base : colors.success.light}
                 />
               )}
             </Pressable>
@@ -508,7 +509,7 @@ export function CorrectionBanner({
       )}
 
       {/* shortLabel — always visible */}
-      <Text style={{ color: '#F1F5F9', fontSize: 13, fontWeight: '600', marginTop: hasDiff ? 8 : 6 }}>
+      <Text style={{ color: colors.text.primary, fontSize: 13, fontWeight: '600', marginTop: hasDiff ? spacing.xs : 6 }}>
         {correction.shortLabel}
       </Text>
 
@@ -525,15 +526,15 @@ export function CorrectionBanner({
             <Ionicons
               name={whyExpanded ? 'chevron-down-outline' : 'chevron-forward-outline'}
               size={14}
-              color="#C4B5FD"
+              color={colors.indigo[300]}
             />
-            <Text style={{ color: '#C4B5FD', fontSize: 12, marginLeft: 2, fontWeight: '600' }}>
+            <Text style={{ color: colors.indigo[300], fontSize: 12, marginLeft: 2, fontWeight: '600' }}>
               Why?
             </Text>
           </Pressable>
           {whyExpanded && (
-            <View style={{ marginTop: 4, paddingLeft: 16 }}>
-              <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13, lineHeight: 18 }}>
+            <View style={{ marginTop: spacing.xxs, paddingLeft: spacing.md }}>
+              <Text style={{ color: colors.text.primary, fontSize: 13, lineHeight: 18 }}>
                 {translatedExplanation ?? correction.explanation}
               </Text>
               <Pressable
@@ -544,11 +545,11 @@ export function CorrectionBanner({
                 className="flex-row items-center mt-2"
               >
                 {isTranslatingExplanation ? (
-                  <ActivityIndicator size="small" color="#7DD3FC" />
+                  <ActivityIndicator size="small" color={colors.correctionChip.grammar.text} />
                 ) : (
-                  <Ionicons name="language-outline" size={12} color="#7DD3FC" />
+                  <Ionicons name="language-outline" size={12} color={colors.correctionChip.grammar.text} />
                 )}
-                <Text style={{ color: '#7DD3FC', fontSize: 11, marginLeft: 4 }}>
+                <Text style={{ color: colors.correctionChip.grammar.text, fontSize: 11, marginLeft: spacing.xxs }}>
                   {isTranslatingExplanation
                     ? 'Translating…'
                     : translatedExplanation
@@ -565,23 +566,23 @@ export function CorrectionBanner({
       {correction.example && (
         <View
           style={{
-            marginTop: 8,
-            paddingLeft: 8,
+            marginTop: spacing.xs,
+            paddingLeft: spacing.xs,
             borderLeftWidth: 2,
-            borderLeftColor: 'rgba(110, 231, 183, 0.4)',
+            borderLeftColor: colors.success.border,
           }}
         >
-          <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 11, fontWeight: '600', marginBottom: 2 }}>
+          <Text style={{ color: colors.text.tertiary, fontSize: 11, fontWeight: '600', marginBottom: 2 }}>
             EXAMPLE
           </Text>
-          <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13, fontStyle: 'italic' }}>
+          <Text style={{ color: colors.text.primary, fontSize: 13, fontStyle: 'italic' }}>
             {correction.example}
           </Text>
         </View>
       )}
 
       {/* Action row: Save + Try again */}
-      <View className="flex-row items-center mt-3" style={{ gap: 12 }}>
+      <View className="flex-row items-center mt-3" style={{ gap: spacing.sm }}>
         <Pressable
           onPress={handleSaveToReview}
           disabled={saveState === 'saving' || saveState === 'saved'}
@@ -592,19 +593,19 @@ export function CorrectionBanner({
           style={{ opacity: saveState === 'saved' ? 0.7 : 1 }}
         >
           {saveState === 'saving' ? (
-            <ActivityIndicator size="small" color="#7DD3FC" />
+            <ActivityIndicator size="small" color={colors.correctionChip.grammar.text} />
           ) : (
             <Ionicons
               name={saveState === 'saved' ? 'checkmark-circle' : 'bookmark-outline'}
               size={14}
-              color={saveState === 'saved' ? '#6EE7B7' : saveState === 'error' ? '#FCA5A5' : '#7DD3FC'}
+              color={saveState === 'saved' ? colors.success.light : saveState === 'error' ? colors.error.light : colors.correctionChip.grammar.text}
             />
           )}
           <Text
             style={{
-              color: saveState === 'saved' ? '#6EE7B7' : saveState === 'error' ? '#FCA5A5' : '#C4B5FD',
+              color: saveState === 'saved' ? colors.success.light : saveState === 'error' ? colors.error.light : colors.indigo[300],
               fontSize: 12,
-              marginLeft: 4,
+              marginLeft: spacing.xxs,
               fontWeight: '600',
             }}
           >
@@ -633,9 +634,9 @@ export function CorrectionBanner({
             <Ionicons
               name={drillOpen ? 'close-circle-outline' : 'pencil-outline'}
               size={14}
-              color="#7DD3FC"
+              color={colors.correctionChip.grammar.text}
             />
-            <Text style={{ color: '#C4B5FD', fontSize: 12, marginLeft: 4, fontWeight: '600' }}>
+            <Text style={{ color: colors.indigo[300], fontSize: 12, marginLeft: spacing.xxs, fontWeight: '600' }}>
               {drillOpen ? 'Cancel' : 'Try again'}
             </Text>
           </Pressable>
@@ -645,7 +646,7 @@ export function CorrectionBanner({
       {/* Mini drill */}
       {drillOpen && (
         <View style={{ marginTop: 10 }}>
-          <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, marginBottom: 6 }}>
+          <Text style={{ color: colors.text.tertiary, fontSize: 11, marginBottom: 6 }}>
             Type the corrected version:
           </Text>
           <View className="flex-row items-center" style={{ gap: 6 }}>
@@ -656,17 +657,17 @@ export function CorrectionBanner({
                 if (drillResult) setDrillResult(null);
               }}
               placeholder={correction.original || '...'}
-              placeholderTextColor="rgba(255,255,255,0.35)"
+              placeholderTextColor={colors.text.disabled}
               style={{
                 flex: 1,
-                backgroundColor: 'rgba(0,0,0,0.25)',
-                borderRadius: 8,
+                backgroundColor: colors.surface.overlay,
+                borderRadius: radii.sm,
                 paddingHorizontal: 10,
-                paddingVertical: 8,
-                color: '#F1F5F9',
+                paddingVertical: spacing.xs,
+                color: colors.text.primary,
                 fontSize: 13,
                 borderWidth: 1,
-                borderColor: 'rgba(255,255,255,0.1)',
+                borderColor: colors.border.default,
               }}
               autoCapitalize="none"
               autoCorrect={false}
@@ -679,25 +680,25 @@ export function CorrectionBanner({
               accessibilityRole="button"
               accessibilityLabel={drillResult === 'correct' ? 'Try again' : 'Submit attempt'}
               style={{
-                backgroundColor: '#38BDF8',
-                borderRadius: 8,
-                paddingHorizontal: 12,
-                paddingVertical: 8,
+                backgroundColor: colors.league.diamond,
+                borderRadius: radii.sm,
+                paddingHorizontal: spacing.sm,
+                paddingVertical: spacing.xs,
                 opacity: !drillInput.trim() && drillResult !== 'correct' ? 0.4 : 1,
               }}
             >
-              <Text style={{ color: '#0C0F14', fontSize: 12, fontWeight: '700' }}>
+              <Text style={{ color: colors.surface.base, fontSize: 12, fontWeight: '700' }}>
                 {drillResult === 'correct' ? 'Again' : 'Check'}
               </Text>
             </Pressable>
           </View>
           {drillResult === 'correct' && (
-            <Text style={{ color: '#6EE7B7', fontSize: 12, marginTop: 6, fontWeight: '600' }}>
+            <Text style={{ color: colors.success.light, fontSize: 12, marginTop: 6, fontWeight: '600' }}>
               ✓ Nailed it!
             </Text>
           )}
           {drillResult === 'incorrect' && (
-            <Text style={{ color: '#FCA5A5', fontSize: 12, marginTop: 6 }}>
+            <Text style={{ color: colors.error.light, fontSize: 12, marginTop: 6 }}>
               ✗ Not quite — the target was "{correction.corrected}". Try again.
             </Text>
           )}

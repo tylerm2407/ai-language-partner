@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useReadingPassage } from '../../../../hooks/useReadingPassage';
 import { ReadingPassageViewer } from '../../../../components/reading/ReadingPassageViewer';
 import { ComprehensionQuestions } from '../../../../components/reading/ComprehensionQuestions';
+import { colors } from '../../../../config/theme';
 
 export default function ReadingPassageScreen() {
   const { passageId } = useLocalSearchParams<{ passageId: string }>();
@@ -27,18 +28,18 @@ export default function ReadingPassageScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#6366F1" />
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface.base, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={colors.indigo[500]} />
       </SafeAreaView>
     );
   }
 
   if (error || !passage) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' }}>
-        <Text style={{ fontSize: 16, color: '#999' }}>{error ?? 'Passage not found.'}</Text>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface.base, justifyContent: 'center', alignItems: 'center' }}>
+        <Text style={{ fontSize: 16, color: colors.text.quaternary }}>{error ?? 'Passage not found.'}</Text>
         <Pressable onPress={() => router.back()} style={{ marginTop: 16 }} accessibilityRole="button">
-          <Text style={{ fontSize: 16, color: '#6366F1' }}>Go Back</Text>
+          <Text style={{ fontSize: 16, color: colors.indigo[500] }}>Go Back</Text>
         </Pressable>
       </SafeAreaView>
     );
@@ -46,16 +47,16 @@ export default function ReadingPassageScreen() {
 
   if (phase === 'complete') {
     const scorePercent = Math.round(score * 100);
-    const scoreColor = scorePercent >= 80 ? '#22C55E' : scorePercent >= 60 ? '#CA8A04' : '#EF4444';
-    const scoreBg = scorePercent >= 80 ? '#DCFCE7' : scorePercent >= 60 ? '#FEF9C3' : '#FEE2E2';
+    const scoreColor = scorePercent >= 80 ? colors.success.base : scorePercent >= 60 ? colors.warning.base : colors.error.base;
+    const scoreBg = scorePercent >= 80 ? 'rgba(34, 197, 94, 0.15)' : scorePercent >= 60 ? 'rgba(245, 158, 11, 0.15)' : 'rgba(239, 68, 68, 0.15)';
 
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface.base }}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-          <Text style={{ fontSize: 28, fontWeight: '700', marginBottom: 8 }} accessibilityRole="header">
+          <Text style={{ fontSize: 28, fontWeight: '700', marginBottom: 8, color: colors.text.primary }} accessibilityRole="header">
             Reading Complete!
           </Text>
-          <Text style={{ fontSize: 16, color: '#666', marginBottom: 24 }}>{passage.title}</Text>
+          <Text style={{ fontSize: 16, color: colors.text.tertiary, marginBottom: 24 }}>{passage.title}</Text>
 
           <View style={{
             width: 100, height: 100, borderRadius: 50,
@@ -64,17 +65,17 @@ export default function ReadingPassageScreen() {
             <Text style={{ fontSize: 32, fontWeight: '700', color: scoreColor }}>{scorePercent}%</Text>
           </View>
 
-          <Text style={{ fontSize: 14, color: '#666', marginBottom: 32 }}>Comprehension Score</Text>
+          <Text style={{ fontSize: 14, color: colors.text.tertiary, marginBottom: 32 }}>Comprehension Score</Text>
 
           <Pressable
             onPress={() => router.back()}
             style={{
-              backgroundColor: '#6366F1', paddingHorizontal: 48, paddingVertical: 16, borderRadius: 14,
+              backgroundColor: colors.indigo[500], paddingHorizontal: 48, paddingVertical: 16, borderRadius: 14,
             }}
             accessibilityRole="button"
             accessibilityLabel="Continue"
           >
-            <Text style={{ color: '#fff', fontSize: 18, fontWeight: '600' }}>Continue</Text>
+            <Text style={{ color: colors.text.onPrimary, fontSize: 18, fontWeight: '600' }}>Continue</Text>
           </Pressable>
         </View>
       </SafeAreaView>
