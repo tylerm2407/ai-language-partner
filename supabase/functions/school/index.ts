@@ -679,9 +679,11 @@ async function bulkEnroll(supabase: any, userId: string, body: SchoolRequest, ip
   const enrolled: string[] = [];
   const errors: Array<{ email: string; reason: string }> = [];
 
+  const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
   for (const student of students) {
     const email = student.email?.trim()?.toLowerCase();
-    if (!email) {
+    if (!email || !EMAIL_REGEX.test(email)) {
       errors.push({ email: student.email ?? '(empty)', reason: 'Invalid email' });
       continue;
     }
@@ -694,12 +696,20 @@ async function bulkEnroll(supabase: any, userId: string, body: SchoolRequest, ip
     }
 
     try {
-      // Check if user exists
-      const { data: { users } } = await supabase.auth.admin.listUsers({ filter: `email.eq.${email}` });
-      let studentUserId: string;
+      // Look up existing user by exact email. Do NOT use
+      // auth.admin.listUsers({ filter }) here: supabase-js ignores the
+      // unsupported `filter` option and returns the first page of ALL
+      // users, which silently enrolled an arbitrary user.
+      const { data: existingUserId, error: lookupErr } = await supabase
+        .rpc('get_user_id_by_email', { p_email: email });
+      if (lookupErr) {
+        errors.push({ email, reason: `User lookup failed: ${lookupErr.message}` });
+        continue;
+      }
 
-      if (users && users.length > 0) {
-        studentUserId = users[0].id;
+      let studentUserId: string;
+      if (existingUserId) {
+        studentUserId = existingUserId as string;
       } else {
         // Create new user
         const { data: newUser, error: createErr } = await supabase.auth.admin.createUser({
@@ -708,10 +718,17 @@ async function bulkEnroll(supabase: any, userId: string, body: SchoolRequest, ip
           user_metadata: { display_name: student.name ?? email.split('@')[0] },
         });
         if (createErr || !newUser?.user) {
-          errors.push({ email, reason: createErr?.message ?? 'Failed to create user' });
-          continue;
+          // Handle create/lookup race: another request may have created it.
+          const { data: racedId } = await supabase.rpc('get_user_id_by_email', { p_email: email });
+          if (racedId) {
+            studentUserId = racedId as string;
+          } else {
+            errors.push({ email, reason: createErr?.message ?? 'Failed to create user' });
+            continue;
+          }
+        } else {
+          studentUserId = newUser.user.id;
         }
-        studentUserId = newUser.user.id;
       }
 
       // Check if already enrolled

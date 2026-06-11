@@ -87,17 +87,17 @@ serve(async (req: Request) => {
     const tier = sub?.is_active && sub.tier ? sub.tier : 'starter';
     const limits = getPlanLimits(tier);
 
-    const date = todayUTC();
-    // Fetch current usage without incrementing
-    const { data: currentUsage } = await supabase
-      .from('daily_usage')
-      .select('writing_grades')
-      .eq('user_id', userId)
-      .eq('date', date)
-      .single();
-
-    const currentGrades = (currentUsage?.writing_grades as number) ?? 0;
-    if (currentGrades >= limits.dailyWritingGrades) {
+    // Atomic check-and-consume (migration 037) — race-free under
+    // concurrent requests, replaces read-then-increment.
+    const { data: quotaOk, error: quotaErr } = await supabase.rpc('consume_daily_quota', {
+      p_user_id: userId,
+      p_counter: 'writing_grades',
+      p_limit: limits.dailyWritingGrades,
+    });
+    if (quotaErr) {
+      console.error('[grade-writing] consume_daily_quota failed:', quotaErr.message);
+    }
+    if (quotaErr || quotaOk !== true) {
       return new Response(
         JSON.stringify({
           error: "You've reached your daily writing grade limit. Upgrade your plan for more.",
@@ -187,12 +187,7 @@ serve(async (req: Request) => {
       };
     }
 
-    // Increment writing_grades after successful AI grading
-    await supabase.rpc('increment_daily_usage', {
-      p_user_id: userId,
-      p_date: date,
-      p_writing_grades: 1,
-    });
+    // Quota already consumed atomically before the LLM call.
 
     return new Response(
       JSON.stringify(feedback),

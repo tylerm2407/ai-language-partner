@@ -14,32 +14,6 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const OPENAI_API_KEY = Deno.env.get('OPENAI_KEY');
 
-function todayUTC(): string {
-  return new Date().toISOString().split('T')[0];
-}
-
-async function getOrCreateDailyUsage(supabase: ReturnType<typeof createClient>, userId: string) {
-  const date = todayUTC();
-  const { data } = await supabase
-    .from('daily_usage')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('date', date)
-    .single();
-
-  if (data) return data;
-
-  const { data: created, error } = await supabase
-    .from('daily_usage')
-    .upsert({ user_id: userId, date, text_messages: 0, voice_minutes: 0 }, { onConflict: 'user_id,date' })
-    .select()
-    .single();
-
-  if (error) throw error;
-  return created;
-}
-
-
 async function getUserTier(supabase: ReturnType<typeof createClient>, userId: string): Promise<string> {
   const { data } = await supabase
     .from('subscriptions')
@@ -98,8 +72,17 @@ serve(async (req: Request) => {
     const tier = await getUserTier(supabase, authenticatedUserId);
     const limits = getPlanLimits(tier);
 
-    const usage = await getOrCreateDailyUsage(supabase, authenticatedUserId);
-    if (((usage.pronunciation_scores as number) ?? 0) >= limits.dailyPronunciationScores) {
+    // Atomic check-and-consume (migration 037) — race-free under
+    // concurrent requests, replaces read-then-increment.
+    const { data: quotaOk, error: quotaErr } = await supabase.rpc('consume_daily_quota', {
+      p_user_id: authenticatedUserId,
+      p_counter: 'pronunciation_scores',
+      p_limit: limits.dailyPronunciationScores,
+    });
+    if (quotaErr) {
+      console.error('[score-pronunciation] consume_daily_quota failed:', quotaErr.message);
+    }
+    if (quotaErr || quotaOk !== true) {
       return new Response(
         JSON.stringify({
           error: "You've reached your daily pronunciation scoring limit. Upgrade your plan for more.",
@@ -121,13 +104,7 @@ serve(async (req: Request) => {
       (targetWord ? normalizedTranscription.includes(targetWord.toLowerCase().trim()) : false) ||
       (targetGrammar ? normalizedTranscription.includes(targetGrammar.toLowerCase().trim()) : false);
 
-    // Increment pronunciation_scores after successful processing
-    const date = todayUTC();
-    await supabase.rpc('increment_daily_usage', {
-      p_user_id: authenticatedUserId,
-      p_date: date,
-      p_pronunciation_scores: 1,
-    });
+    // Quota already consumed atomically before transcription.
 
     return new Response(
       JSON.stringify({

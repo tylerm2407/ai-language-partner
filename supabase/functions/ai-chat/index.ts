@@ -91,48 +91,29 @@ async function verifyBearer(req: Request): Promise<string | null> {
 
 // ─── Usage helpers ────────────────────────────────────────────────────────
 
-function todayUTC(): string {
-  return new Date().toISOString().split('T')[0];
-}
-
-async function getOrCreateDailyUsage(
+/**
+ * Atomic check-and-consume of a daily quota counter (migration 037).
+ * Returns false when the user is at their limit. Replaces the old
+ * read-check-increment pattern, which was racy under concurrent requests.
+ */
+async function consumeDailyQuota(
   supabase: ReturnType<typeof createClient>,
-  userId: string
-) {
-  const date = todayUTC();
-  const { data } = await supabase
-    .from('daily_usage')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('date', date)
-    .single();
-
-  if (data) return data;
-
-  const { data: created, error: insertErr } = await supabase
-    .from('daily_usage')
-    .upsert(
-      { user_id: userId, date, text_messages: 0, voice_minutes: 0 },
-      { onConflict: 'user_id,date' }
-    )
-    .select()
-    .single();
-
-  if (insertErr) throw insertErr;
-  return created;
-}
-
-async function incrementTextMessages(
-  supabase: ReturnType<typeof createClient>,
-  userId: string
-) {
-  const date = todayUTC();
-  const usage = await getOrCreateDailyUsage(supabase, userId);
-  await supabase
-    .from('daily_usage')
-    .update({ text_messages: (usage.text_messages ?? 0) + 1 })
-    .eq('user_id', userId)
-    .eq('date', date);
+  userId: string,
+  counter: string,
+  limit: number
+): Promise<boolean> {
+  const { data, error } = await supabase.rpc('consume_daily_quota', {
+    p_user_id: userId,
+    p_counter: counter,
+    p_limit: limit,
+  });
+  if (error) {
+    // Fail closed: if quota accounting is broken we'd rather block than
+    // hand out unmetered LLM calls.
+    console.error('[ai-chat] consume_daily_quota failed:', error.message);
+    return false;
+  }
+  return data === true;
 }
 
 // ─── Main handler ─────────────────────────────────────────────────────────
@@ -194,8 +175,13 @@ serve(async (req: Request) => {
     }
 
     const limits = await getEffectiveLimits(authenticatedUserId, supabase);
-    const usage = await getOrCreateDailyUsage(supabase, authenticatedUserId);
-    if ((usage.text_messages ?? 0) >= limits.dailyTextMessages) {
+    const allowed = await consumeDailyQuota(
+      supabase,
+      authenticatedUserId,
+      'text_messages',
+      limits.dailyTextMessages
+    );
+    if (!allowed) {
       return new Response(
         JSON.stringify({
           error:
@@ -252,7 +238,7 @@ serve(async (req: Request) => {
       ? { reply: rawText, correction: null, vocabularyHighlights: [] }
       : parseAIResponse(rawText);
 
-    await incrementTextMessages(supabase, authenticatedUserId);
+    // Quota already consumed atomically before the LLM call.
 
     // Log correction + compute repetition count. Non-fatal: chat reply
     // returns even if logging/counting fails.

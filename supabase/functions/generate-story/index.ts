@@ -58,26 +58,33 @@ serve(async (req: Request) => {
     const tierValue = sub?.is_active && sub.tier ? sub.tier : 'starter';
     const limits = getPlanLimits(tierValue);
 
-    const todayUTC = new Date().toISOString().split('T')[0];
-    const { data: usageRow } = await supabase
-      .from('daily_usage')
-      .select('text_messages, stories_generated')
-      .eq('user_id', authUser.userId)
-      .eq('date', todayUTC)
-      .single();
-
-    if (((usageRow?.text_messages as number) ?? 0) >= limits.dailyTextMessages) {
+    // Atomic check-and-consume (migration 037) — race-free under
+    // concurrent requests. Hard cap: max 3 generate-story calls/day.
+    const MAX_DAILY_STORY_CALLS = 3;
+    const { data: storyQuotaOk, error: storyQuotaErr } = await supabase.rpc('consume_daily_quota', {
+      p_user_id: authUser.userId,
+      p_counter: 'stories_generated',
+      p_limit: MAX_DAILY_STORY_CALLS,
+    });
+    if (storyQuotaErr) {
+      console.error('[generate-story] consume_daily_quota failed:', storyQuotaErr.message);
+    }
+    if (storyQuotaErr || storyQuotaOk !== true) {
       return new Response(
-        JSON.stringify({ error: "You've reached your daily AI usage limit. Upgrade your plan for more.", code: 'DAILY_TEXT_LIMIT_REACHED' }),
+        JSON.stringify({ error: "You've reached the daily story generation limit (3 per day). Try again tomorrow.", code: 'DAILY_STORY_LIMIT_REACHED' }),
         { status: 429, headers }
       );
     }
 
-    // Hard cap: max 3 generate-story calls per day per user
-    const MAX_DAILY_STORY_CALLS = 3;
-    if (((usageRow?.stories_generated as number) ?? 0) >= MAX_DAILY_STORY_CALLS) {
+    // Each story also counts against the daily text-message budget.
+    const { data: textQuotaOk } = await supabase.rpc('consume_daily_quota', {
+      p_user_id: authUser.userId,
+      p_counter: 'text_messages',
+      p_limit: limits.dailyTextMessages,
+    });
+    if (textQuotaOk !== true) {
       return new Response(
-        JSON.stringify({ error: "You've reached the daily story generation limit (3 per day). Try again tomorrow.", code: 'DAILY_STORY_LIMIT_REACHED' }),
+        JSON.stringify({ error: "You've reached your daily AI usage limit. Upgrade your plan for more.", code: 'DAILY_TEXT_LIMIT_REACHED' }),
         { status: 429, headers }
       );
     }
@@ -193,13 +200,15 @@ RESPOND ONLY IN VALID JSON:
       bookIds.push(book.id);
     }
 
-    // Increment text_messages by number of stories generated + count the call
-    await supabase.rpc('increment_daily_usage', {
-      p_user_id: authUser.userId,
-      p_date: todayUTC,
-      p_text_messages: bookIds.length,
-      p_stories_generated: 1,
-    });
+    // One story + one text message were consumed atomically up front;
+    // record any additional stories in this batch against text_messages.
+    if (bookIds.length > 1) {
+      await supabase.rpc('increment_daily_usage', {
+        p_user_id: authUser.userId,
+        p_date: new Date().toISOString().split('T')[0],
+        p_text_messages: bookIds.length - 1,
+      });
+    }
 
     return new Response(JSON.stringify({ bookIds }), { headers });
   } catch (error) {
