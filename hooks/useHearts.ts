@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from './useAuth';
 import { useAppStore } from '../stores/useAppStore';
-import { updateHearts } from '../lib/supabase-queries';
+import { spendHeart, syncHearts } from '../lib/supabase-queries';
 import { computeHearts, type HeartsState } from '../lib/hearts';
 import { PLANS } from '../lib/plans';
 import type { SubscriptionTier } from '../types';
@@ -33,15 +33,19 @@ export function useHearts() {
     intervalRef.current = setInterval(() => {
       const state = computeHearts(profile.hearts, profile.maxHearts, profile.lastHeartLostAt);
       setHeartsState(state);
-      // If hearts regenerated, update DB
-      if (state.current > profile.hearts) {
-        if (user) {
-          updateHearts(user.id, state.current, state.current >= profile.maxHearts ? null : profile.lastHeartLostAt).catch(console.error);
-          const freshProfile = useAppStore.getState().profile;
-          if (freshProfile) {
-            setProfile({ ...freshProfile, hearts: state.current, lastHeartLostAt: state.current >= freshProfile.maxHearts ? null : freshProfile.lastHeartLostAt });
-          }
-        }
+      // If hearts regenerated, sync with the server-authoritative state
+      // (the RPC applies regen and returns the canonical values).
+      if (state.current > profile.hearts && user) {
+        syncHearts()
+          .then((row) => {
+            if (!row) return;
+            const freshProfile = useAppStore.getState().profile;
+            if (freshProfile) {
+              setProfile({ ...freshProfile, hearts: row.hearts, lastHeartLostAt: row.lastHeartLostAt });
+            }
+            setHeartsState(computeHearts(row.hearts, row.maxHearts, row.lastHeartLostAt));
+          })
+          .catch(console.error);
       }
     }, 60_000);
 
@@ -54,18 +58,22 @@ export function useHearts() {
 
   const loseHeart = useCallback(async () => {
     if (!user || !profile || isUnlimited) return;
-    const now = new Date().toISOString();
-    const newHearts = Math.max(0, heartsState.current - 1);
+    // Optimistic local update; the RPC is authoritative (applies pending
+    // regen, decrements, and returns canonical state).
+    const optimistic = Math.max(0, heartsState.current - 1);
+    setHeartsState({ current: optimistic, max: profile.maxHearts, nextRegenAt: new Date(Date.now() + 4 * 60 * 60 * 1000) });
     try {
-      await updateHearts(user.id, newHearts, now);
+      const row = await spendHeart();
+      if (row) {
+        const freshProfile = useAppStore.getState().profile;
+        if (freshProfile) {
+          setProfile({ ...freshProfile, hearts: row.hearts, lastHeartLostAt: row.lastHeartLostAt });
+        }
+        setHeartsState(computeHearts(row.hearts, row.maxHearts, row.lastHeartLostAt));
+      }
     } catch (err) {
-      console.warn('Failed to update hearts in DB:', err);
+      console.warn('Failed to spend heart in DB:', err);
     }
-    const freshProfile = useAppStore.getState().profile;
-    if (freshProfile) {
-      setProfile({ ...freshProfile, hearts: newHearts, lastHeartLostAt: now });
-    }
-    setHeartsState({ current: newHearts, max: profile.maxHearts, nextRegenAt: new Date(Date.now() + 4 * 60 * 60 * 1000) });
   }, [user, profile, isUnlimited, heartsState, setProfile]);
 
   return { hearts: heartsState.current, maxHearts: heartsState.max, nextRegenAt: heartsState.nextRegenAt, isUnlimited, canPlay, loseHeart };

@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from './useAuth';
 import { useAppStore } from '../stores/useAppStore';
-import { updateLevel } from '../lib/supabase-queries';
-import { getLevelFromXp, getXpProgress, getLeagueTier, type LeagueTier } from '../lib/levels';
+import { getXpProgress, getLeagueTier, type LeagueTier } from '../lib/levels';
 
 interface LevelState {
   level: number;
@@ -33,9 +32,9 @@ export function useLevel() {
       const tierChanged = tier !== prevTier;
       setLevelUpInfo({ newLevel: level, newTier: tier, tierChanged });
 
-      // Update DB
+      // xp_level/league_tier are derived server-side by increment_xp
+      // (migration 036) — only mirror the change into local state.
       if (user && (level !== profile.xpLevel || tier !== profile.leagueTier)) {
-        updateLevel(user.id, level, tier).catch(console.error);
         setProfile({ ...profile, xpLevel: level, leagueTier: tier });
       }
     }

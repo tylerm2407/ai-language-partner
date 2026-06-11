@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from './useAuth';
 import { useAppStore } from '../stores/useAppStore';
-import { consumeStreakFreeze, repairStreak, logStreakEvent, updateStreakShield } from '../lib/supabase-queries';
+import { repairStreakWithFreeze, repairStreakWithShield } from '../lib/supabase-queries';
 import { PLANS } from '../lib/plans';
 import type { SubscriptionTier } from '../types';
 
@@ -25,20 +25,22 @@ export function useStreakProtection() {
     if (profile.streak === 0 && profile.longestStreak > 0) {
       // Streak was already reset by the server, check if repairable
       if (hasShield && !profile.streakShieldUsedAt) {
-        // Auto-apply shield for paid users
+        // Auto-apply shield for paid users — single atomic RPC (verifies the
+        // plan server-side, restores the streak, logs the event).
         isRepairingRef.current = true;
         const today = new Date().toISOString().split('T')[0];
         (async () => {
           try {
-            await repairStreak(user.id, profile.longestStreak, profile.longestStreak);
-            await updateStreakShield(user.id, true, today);
-            await logStreakEvent(user.id, 'shield_used', profile.longestStreak);
-            setProfile({
-              ...profile,
-              streak: profile.longestStreak,
-              streakShieldActive: true,
-              streakShieldUsedAt: today,
-            });
+            const result = await repairStreakWithShield();
+            if (result) {
+              setProfile({
+                ...profile,
+                streak: result.streak,
+                longestStreak: result.longestStreak,
+                streakShieldActive: true,
+                streakShieldUsedAt: today,
+              });
+            }
           } catch (err) {
             console.error('Failed to auto-repair streak with shield:', err);
           } finally {
@@ -56,19 +58,22 @@ export function useStreakProtection() {
   const repairWithFreeze = useCallback(async () => {
     if (!user || !profile) return;
     try {
-      await consumeStreakFreeze(user.id);
-      await repairStreak(user.id, brokenStreak, profile.longestStreak);
-      await logStreakEvent(user.id, 'freeze_used', brokenStreak);
-      setProfile({
-        ...profile,
-        streak: brokenStreak,
-        streakFreezes: profile.streakFreezes - 1,
-      });
+      // Single atomic RPC: consumes the freeze, restores the streak, logs
+      // the event — no partial states on failure.
+      const result = await repairStreakWithFreeze();
+      if (result) {
+        setProfile({
+          ...profile,
+          streak: result.streak,
+          longestStreak: result.longestStreak,
+          streakFreezes: result.streakFreezes,
+        });
+      }
       setShowRepairModal(false);
     } catch (err) {
       console.error('Failed to repair streak:', err);
     }
-  }, [user, profile, brokenStreak, setProfile]);
+  }, [user, profile, setProfile]);
 
   const dismissRepair = useCallback(() => {
     setShowRepairModal(false);

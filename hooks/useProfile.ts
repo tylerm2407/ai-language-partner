@@ -23,11 +23,14 @@ export function useProfile() {
     setProfile({ ...profile, totalXp: profile.totalXp + xp });
   }, [user, profile, setProfile]);
 
-  const setStreak = useCallback(async (streak: number, longestStreak: number) => {
+  /** Server-derived streak refresh (max +1/day, based on daily_stats activity). */
+  const refreshStreak = useCallback(async () => {
     if (!user || !profile) return;
-    await updateStreak(user.id, streak, longestStreak);
-    setProfile({ ...profile, streak, longestStreak });
+    const result = await updateStreak();
+    if (result) {
+      setProfile({ ...profile, streak: result.streak, longestStreak: result.longestStreak });
+    }
   }, [user, profile, setProfile]);
 
-  return { profile, loading, updateProfile, earnXp, setStreak };
+  return { profile, loading, updateProfile, earnXp, refreshStreak };
 }

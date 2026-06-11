@@ -101,29 +101,29 @@ export async function upsertProfile(
   return mapProfile(data);
 }
 
-export async function updateStreak(userId: string, streak: number, longestStreak: number): Promise<void> {
-  const { error } = await supabase
-    .from('user_profiles')
-    .update({ streak, longest_streak: longestStreak, updated_at: new Date().toISOString() })
-    .eq('user_id', userId);
-
+/**
+ * Server-derived streak update. The RPC derives the streak from daily_stats
+ * activity (max +1 per calendar day, idempotent) — clients cannot set streak
+ * values directly (blocked by the gamification guard trigger, migration 036).
+ */
+export async function updateStreak(): Promise<{ streak: number; longestStreak: number } | null> {
+  const { data, error } = await supabase.rpc('update_streak');
   if (error) throw error;
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return null;
+  return { streak: row.streak as number, longestStreak: row.longest_streak as number };
 }
 
+/**
+ * XP is server-authoritative: increment_xp validates the caller, caps the
+ * per-call amount, and derives xp_level/league_tier in the same statement.
+ */
 export async function addXp(userId: string, xp: number): Promise<void> {
-  const { data: profile } = await supabase
-    .from('user_profiles')
-    .select('total_xp')
-    .eq('user_id', userId)
-    .single();
-
-  if (!profile) return;
-
-  const { error } = await supabase
-    .from('user_profiles')
-    .update({ total_xp: profile.total_xp + xp, updated_at: new Date().toISOString() })
-    .eq('user_id', userId);
-
+  if (xp <= 0) return;
+  const { error } = await supabase.rpc('increment_xp', {
+    p_user_id: userId,
+    p_amount: Math.min(Math.round(xp), 500),
+  });
   if (error) throw error;
 }
 
@@ -461,6 +461,11 @@ export async function upsertDailyStats(
     .single();
 
   if (error) throw error;
+
+  // Streak is server-derived from daily_stats activity (migration 036).
+  // Non-fatal: stats are already saved; the streak catches up next call.
+  await supabase.rpc('update_streak');
+
   return mapDailyStats(data);
 }
 
@@ -1007,46 +1012,37 @@ function mapLessonCompletion(row: Record<string, unknown>): LessonCompletion {
   };
 }
 
-// ─── Hearts ──────────────────────────────────────────────────────
+// ─── Hearts (server-authoritative — migration 036) ──────────────
 
-export async function updateHearts(
-  userId: string,
-  hearts: number,
-  lastHeartLostAt: string | null
-): Promise<void> {
-  const payload: Record<string, unknown> = {
-    hearts,
-    updated_at: new Date().toISOString(),
-  };
-  if (lastHeartLostAt !== undefined) {
-    payload.last_heart_lost_at = lastHeartLostAt;
-  }
-
-  const { error } = await supabase
-    .from('user_profiles')
-    .update(payload)
-    .eq('user_id', userId);
-
-  if (error) throw error;
+export interface HeartsRow {
+  hearts: number;
+  maxHearts: number;
+  lastHeartLostAt: string | null;
 }
 
-// ─── XP Levels & Leagues ────────────────────────────────────────
+function mapHeartsRow(data: unknown): HeartsRow | null {
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return null;
+  const r = row as Record<string, unknown>;
+  return {
+    hearts: r.hearts as number,
+    maxHearts: r.max_hearts as number,
+    lastHeartLostAt: (r.last_heart_lost_at as string | null) ?? null,
+  };
+}
 
-export async function updateLevel(
-  userId: string,
-  xpLevel: number,
-  leagueTier: LeagueTier
-): Promise<void> {
-  const { error } = await supabase
-    .from('user_profiles')
-    .update({
-      xp_level: xpLevel,
-      league_tier: leagueTier,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('user_id', userId);
-
+/** Spend one heart (applies pending 4h regen first). */
+export async function spendHeart(): Promise<HeartsRow | null> {
+  const { data, error } = await supabase.rpc('spend_heart');
   if (error) throw error;
+  return mapHeartsRow(data);
+}
+
+/** Apply pending heart regen server-side and return the canonical state. */
+export async function syncHearts(): Promise<HeartsRow | null> {
+  const { data, error } = await supabase.rpc('sync_hearts');
+  if (error) throw error;
+  return mapHeartsRow(data);
 }
 
 // ─── Daily Challenges ────────────────────────────────────────────
@@ -1103,45 +1099,41 @@ function mapDailyChallengesRecord(row: Record<string, unknown>): DailyChallenges
   };
 }
 
-// ─── Streak Protection ──────────────────────────────────────────
+// ─── Streak Protection (server-authoritative — migration 036) ──
 
-export async function consumeStreakFreeze(userId: string): Promise<void> {
-  const { data: profile } = await supabase
-    .from('user_profiles')
-    .select('streak_freezes')
-    .eq('user_id', userId)
-    .single();
-
-  if (!profile || (profile.streak_freezes as number) <= 0) {
-    throw new Error('No streak freezes available');
-  }
-
-  const { error } = await supabase
-    .from('user_profiles')
-    .update({
-      streak_freezes: (profile.streak_freezes as number) - 1,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('user_id', userId);
-
+/**
+ * Atomically consume one streak freeze, restore the streak to the user's
+ * longest, and log the streak event — all in one RPC.
+ */
+export async function repairStreakWithFreeze(): Promise<{
+  streak: number;
+  longestStreak: number;
+  streakFreezes: number;
+} | null> {
+  const { data, error } = await supabase.rpc('repair_streak_with_freeze');
   if (error) throw error;
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return null;
+  return {
+    streak: row.streak as number,
+    longestStreak: row.longest_streak as number,
+    streakFreezes: row.streak_freezes as number,
+  };
 }
 
-export async function repairStreak(
-  userId: string,
-  streak: number,
-  longestStreak: number
-): Promise<void> {
-  const { error } = await supabase
-    .from('user_profiles')
-    .update({
-      streak,
-      longest_streak: longestStreak,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('user_id', userId);
-
+/**
+ * Atomically apply the paid-plan streak shield (tier verified server-side),
+ * restore the streak, and log the streak event.
+ */
+export async function repairStreakWithShield(): Promise<{
+  streak: number;
+  longestStreak: number;
+} | null> {
+  const { data, error } = await supabase.rpc('repair_streak_with_shield');
   if (error) throw error;
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return null;
+  return { streak: row.streak as number, longestStreak: row.longest_streak as number };
 }
 
 export async function logStreakEvent(
@@ -1160,22 +1152,6 @@ export async function logStreakEvent(
   if (error) throw error;
 }
 
-export async function updateStreakShield(
-  userId: string,
-  active: boolean,
-  usedAt: string | null
-): Promise<void> {
-  const { error } = await supabase
-    .from('user_profiles')
-    .update({
-      streak_shield_active: active,
-      streak_shield_used_at: usedAt,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('user_id', userId);
-
-  if (error) throw error;
-}
 
 // ─── Reading ──────────────────────────────────────────────────
 
