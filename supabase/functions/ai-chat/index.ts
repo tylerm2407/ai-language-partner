@@ -20,6 +20,7 @@ import { getEffectiveLimits } from '../_shared/plan-limits.ts';
 import { getScenario } from '../_shared/scenarios.ts';
 import { generateValidated } from '../_shared/validated-generate.ts';
 import { proficiencyToCefr } from '../_shared/cefr.ts';
+import { checkBurstLimit } from '../_shared/burst-limit.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -171,6 +172,15 @@ serve(async (req: Request) => {
       return new Response(
         JSON.stringify({ error: 'ANTHROPIC_API_KEY not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Burst limit first — a rate-limited request should not consume quota.
+    const burstOk = await checkBurstLimit(supabase, authenticatedUserId, 'ai-chat', 20, 60);
+    if (!burstOk) {
+      return new Response(
+        JSON.stringify({ error: 'Too many requests. Please slow down.', code: 'RATE_LIMITED' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 

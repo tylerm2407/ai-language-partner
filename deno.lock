@@ -1,0 +1,68 @@
+{
+  "version": "5",
+  "remote": {
+    "https://deno.land/std@0.168.0/fmt/colors.ts": "03ad95e543d2808bc43c17a3dd29d25b43d0f16287fe562a0be89bf632454a12",
+    "https://deno.land/std@0.168.0/testing/_diff.ts": "a23e7fc2b4d8daa3e158fa06856bedf5334ce2a2831e8bf9e509717f455adb2c",
+    "https://deno.land/std@0.168.0/testing/_format.ts": "cd11136e1797791045e639e9f0f4640d5b4166148796cad37e6ef75f7d7f3832",
+    "https://deno.land/std@0.168.0/testing/asserts.ts": "51353e79437361d4b02d8e32f3fc83b22231bc8f8d4c841d86fd32b0b0afe940"
+  },
+  "workspace": {
+    "packageJson": {
+      "dependencies": [
+        "npm:@expo-google-fonts/inter@~0.4.2",
+        "npm:@expo-google-fonts/jetbrains-mono@~0.4.1",
+        "npm:@expo-google-fonts/playfair-display@~0.4.2",
+        "npm:@expo/vector-icons@^15.0.3",
+        "npm:@react-native-async-storage/async-storage@2.2.0",
+        "npm:@react-native-community/netinfo@11.4.1",
+        "npm:@sentry/react-native@^8.11.1",
+        "npm:@supabase/supabase-js@^2.45.0",
+        "npm:@types/jest@^29.5.14",
+        "npm:@types/react@19.1",
+        "npm:eslint-config-expo@10.0",
+        "npm:eslint@^9.39.4",
+        "npm:event-target-shim@^6.0.2",
+        "npm:expo-asset@~12.0.12",
+        "npm:expo-av@~16.0.8",
+        "npm:expo-blur@~15.0.8",
+        "npm:expo-clipboard@~8.0.8",
+        "npm:expo-constants@~18.0.13",
+        "npm:expo-font@~14.0.11",
+        "npm:expo-haptics@~15.0.8",
+        "npm:expo-linear-gradient@~15.0.8",
+        "npm:expo-linking@~8.0.11",
+        "npm:expo-network@~8.0.8",
+        "npm:expo-notifications@~0.32.16",
+        "npm:expo-router@~6.0.23",
+        "npm:expo-speech@~14.0.8",
+        "npm:expo-status-bar@~3.0.9",
+        "npm:expo-updates@~29.0.17",
+        "npm:expo-web-browser@~15.0.10",
+        "npm:expo@54.0",
+        "npm:jest-expo@54.0",
+        "npm:jest@29.7",
+        "npm:nativewind@^4.1.0",
+        "npm:react-dom@19.1.0",
+        "npm:react-native-css-interop@~0.2.3",
+        "npm:react-native-gesture-handler@2.28",
+        "npm:react-native-reanimated@~4.1.1",
+        "npm:react-native-safe-area-context@5.6",
+        "npm:react-native-screens@4.16",
+        "npm:react-native-svg@15.12.1",
+        "npm:react-native-url-polyfill@2",
+        "npm:react-native-web@0.21",
+        "npm:react-native-worklets@~0.5.2",
+        "npm:react-native@0.81.5",
+        "npm:react@19.1.0",
+        "npm:sharp@~0.34.5",
+        "npm:tailwindcss@^3.4.0",
+        "npm:typescript-eslint@^8.61.0",
+        "npm:typescript@5.9",
+        "npm:zustand@5"
+      ],
+      "overrides": {
+        "react-native-worklets": "^0.5.2"
+      }
+    }
+  }
+}

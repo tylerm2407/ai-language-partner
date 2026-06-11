@@ -6,6 +6,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, corsResponse } from '../_shared/cors.ts';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
+import { checkBurstLimit } from '../_shared/burst-limit.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -201,6 +202,29 @@ function todayUTC(): string {
   return new Date().toISOString().split('T')[0];
 }
 
+/** Storage bucket for content-addressed TTS audio (migration 038). */
+const TTS_BUCKET = 'tts-cache';
+
+/** Cost control: longest legitimate inputs are chat replies / story paragraphs. */
+const MAX_TTS_CHARS = 2000;
+
+async function sha256Hex(input: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+function bufferToBase64(buffer: ArrayBuffer): string {
+  const uint8 = new Uint8Array(buffer);
+  const CHUNK = 8192;
+  let binary = '';
+  for (let i = 0; i < uint8.length; i += CHUNK) {
+    binary += String.fromCharCode(...uint8.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
+}
+
 async function getUserTier(supabase: ReturnType<typeof createClient>, userId: string): Promise<string> {
   const { data } = await supabase
     .from('subscriptions')
@@ -257,31 +281,61 @@ serve(async (req: Request) => {
       );
     }
 
-    // Enforce daily voice minute limits using the authenticated user ID
-    if (authenticatedUserId) {
-      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-      const tier = await getUserTier(supabase, authenticatedUserId);
-      const limits = PLAN_LIMITS[tier] ?? PLAN_LIMITS.starter;
-
-      if (limits.dailyVoiceMinutes !== 'unlimited') {
-        const used = await getVoiceMinutesUsed(supabase, authenticatedUserId);
-        if (used >= limits.dailyVoiceMinutes) {
-          return new Response(
-            JSON.stringify({
-              error: "You've reached your daily voice limit. Upgrade your plan for more.",
-              code: 'DAILY_VOICE_LIMIT_REACHED',
-            }),
-            { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-      }
+    // Cost control: cap input length (longest legit inputs are chat replies
+    // and story paragraphs; anything bigger is abuse or a client bug).
+    if (text.length > MAX_TTS_CHARS) {
+      return new Response(
+        JSON.stringify({ error: `text exceeds maximum length of ${MAX_TTS_CHARS} characters` }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     const voiceId = resolveVoiceId(language, text, {
       voiceIndex,
       voiceMode,
       voiceRotationKey,
     });
+
+    const cleanText = text.replace(/\*\*/g, '').trim();
+
+    // ── Cache lookup: content-addressed by voice + language + text ──
+    // Cache hits cost nothing, so they bypass quota and burst limits.
+    const cachePath = `${await sha256Hex(`${voiceId}|${language}|${cleanText}`)}.mp3`;
+    const { data: cachedFile } = await supabase.storage.from(TTS_BUCKET).download(cachePath);
+    if (cachedFile) {
+      const base64 = bufferToBase64(await cachedFile.arrayBuffer());
+      return new Response(JSON.stringify({ audioBase64: base64, cached: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // ── Burst limit: max 30 generations per user per minute ──
+    const burstOk = await checkBurstLimit(supabase, authenticatedUserId, 'tts', 30, 60);
+    if (!burstOk) {
+      return new Response(
+        JSON.stringify({ error: 'Too many requests. Please slow down.', code: 'RATE_LIMITED' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ── Daily voice minute limit ──
+    const tier = await getUserTier(supabase, authenticatedUserId);
+    const limits = PLAN_LIMITS[tier] ?? PLAN_LIMITS.starter;
+
+    if (limits.dailyVoiceMinutes !== 'unlimited') {
+      const used = await getVoiceMinutesUsed(supabase, authenticatedUserId);
+      if (used >= limits.dailyVoiceMinutes) {
+        return new Response(
+          JSON.stringify({
+            error: "You've reached your daily voice limit. Upgrade your plan for more.",
+            code: 'DAILY_VOICE_LIMIT_REACHED',
+          }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
 
     const response = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream`,
@@ -292,7 +346,7 @@ serve(async (req: Request) => {
           'xi-api-key': ELEVENLABS_API_KEY,
         },
         body: JSON.stringify({
-          text: text.replace(/\*\*/g, ''),
+          text: cleanText,
           model_id: 'eleven_flash_v2_5',
           voice_settings: {
             stability: 0.5,
@@ -308,26 +362,26 @@ serve(async (req: Request) => {
       throw new Error(`ElevenLabs API error: ${response.status} - ${errorText}`);
     }
 
-    // Return base64-encoded JSON (compatible with supabase.functions.invoke)
     const audioBuffer = await response.arrayBuffer();
-    const uint8 = new Uint8Array(audioBuffer);
-    const CHUNK = 8192;
-    let binary = '';
-    for (let i = 0; i < uint8.length; i += CHUNK) {
-      binary += String.fromCharCode(...uint8.subarray(i, i + CHUNK));
-    }
-    const base64 = btoa(binary);
+    const base64 = bufferToBase64(audioBuffer);
 
-    // Increment voice_minutes usage after successful TTS
-    if (authenticatedUserId) {
-      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-      await supabase.rpc('increment_daily_usage', {
-        p_user_id: authenticatedUserId,
-        p_voice_minutes: 1,
-      }).then(({ error }) => {
-        if (error) console.error('[tts] Failed to increment voice_minutes:', error.message);
-      });
+    // Store in cache (best-effort — response does not depend on it).
+    const upload = await supabase.storage
+      .from(TTS_BUCKET)
+      .upload(cachePath, audioBuffer, { contentType: 'audio/mpeg', upsert: true });
+    if (upload.error) {
+      console.warn('[tts] cache upload failed:', upload.error.message);
     }
+
+    // Increment voice_minutes usage after successful TTS generation.
+    await supabase.rpc('increment_daily_usage', {
+      p_user_id: authenticatedUserId,
+      p_date: new Date().toISOString().split('T')[0],
+      p_text_messages: 0,
+      p_voice_minutes: 1,
+    }).then(({ error }) => {
+      if (error) console.error('[tts] Failed to increment voice_minutes:', error.message);
+    });
 
     return new Response(JSON.stringify({ audioBase64: base64 }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

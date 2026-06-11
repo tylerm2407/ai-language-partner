@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Content safety validation for AI-generated content.
  * All AI outputs must pass through validateContent() before display to learners.
  * Required by COPPA compliance and CLAUDE.md architecture rules.
@@ -30,6 +30,27 @@ const PROFANITY_PATTERNS = [
   /\b(fuck|shit|damn|ass|bitch|bastard|crap|dick|piss|cunt|slut|whore)\b/i,
   /\bf+u+c+k+/i,
   /\bs+h+i+t+/i,
+];
+
+/**
+ * Strong profanity in the app's target languages (es/fr/de/it/pt).
+ * Matched against diacritic-stripped text (see normalizeForMatching), so
+ * accented evasions like "jodér" still match. Terms whose stripped form
+ * collides with a common innocent word (e.g. es "coño" → "cono" = cone)
+ * are deliberately excluded from this deterministic pass — the LLM pass
+ * covers those.
+ */
+const MULTILINGUAL_PROFANITY_PATTERNS = [
+  // Spanish
+  /\b(mierda|joder|puta|puto|cabron|gilipollas|pendejo|verga|polla|maricon)\b/i,
+  // French
+  /\b(merde|putain|salope|connard|connasse|encule|pute|batard)\b/i,
+  // German
+  /\b(scheisse|scheiss|fotze|hurensohn|arschloch|fick|wichser)\b/i,
+  // Italian
+  /\b(cazzo|puttana|stronzo|vaffanculo|troia|merda)\b/i,
+  // Portuguese
+  /\b(caralho|porra|foda|merda|puta|buceta|viado)\b/i,
 ];
 
 /** Violence-related patterns */
@@ -83,6 +104,19 @@ function testPatterns(content: string, patterns: RegExp[]): boolean {
   return patterns.some((p) => p.test(content));
 }
 
+/**
+ * NFD-normalize and strip combining diacritics so accented evasions
+ * ("jodér") match their base forms, and `\b` word boundaries (ASCII-only
+ * in JS regex) work for accented languages.
+ */
+function normalizeForMatching(content: string): string {
+  return content
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/ß/g, 'ss')
+    .toLowerCase();
+}
+
 function cefrIndex(level: string): number {
   const idx = CEFR_LEVELS.indexOf(level as typeof CEFR_LEVELS[number]);
   return idx === -1 ? -1 : idx;
@@ -103,11 +137,24 @@ export function validateContent(
   options?: { isMinor?: boolean }
 ): ContentSafetyResult {
   const flags: string[] = [];
+  const normalized = normalizeForMatching(content);
 
-  if (testPatterns(content, PROFANITY_PATTERNS)) flags.push('profanity');
-  if (testPatterns(content, VIOLENCE_PATTERNS)) flags.push('violence');
-  if (testPatterns(content, SEXUAL_PATTERNS)) flags.push('sexual_content');
-  if (testPatterns(content, HATE_SPEECH_PATTERNS)) flags.push('hate_speech');
+  if (
+    testPatterns(content, PROFANITY_PATTERNS) ||
+    testPatterns(normalized, PROFANITY_PATTERNS) ||
+    testPatterns(normalized, MULTILINGUAL_PROFANITY_PATTERNS)
+  ) {
+    flags.push('profanity');
+  }
+  if (testPatterns(content, VIOLENCE_PATTERNS) || testPatterns(normalized, VIOLENCE_PATTERNS)) {
+    flags.push('violence');
+  }
+  if (testPatterns(content, SEXUAL_PATTERNS) || testPatterns(normalized, SEXUAL_PATTERNS)) {
+    flags.push('sexual_content');
+  }
+  if (testPatterns(content, HATE_SPEECH_PATTERNS) || testPatterns(normalized, HATE_SPEECH_PATTERNS)) {
+    flags.push('hate_speech');
+  }
 
   // PII detection
   if (EMAIL_PATTERN.test(content) || PHONE_PATTERN.test(content) || SSN_PATTERN.test(content)) {

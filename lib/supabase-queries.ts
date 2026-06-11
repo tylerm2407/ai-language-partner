@@ -234,10 +234,13 @@ export async function fetchCardsByIds(cardIds: string[]): Promise<Card[]> {
 }
 
 export async function fetchCardsByCourse(courseId: string): Promise<Card[]> {
+  // Cap: courses can hold thousands of cards at full content scale —
+  // callers needing more should page with .range().
   const { data, error } = await supabase
     .from('cards')
     .select('*')
-    .eq('course_id', courseId);
+    .eq('course_id', courseId)
+    .limit(500);
 
   if (error) throw error;
   return (data ?? []).map(mapCard);
@@ -497,7 +500,8 @@ export async function fetchStatsRange(userId: string, startDate: string, endDate
     .eq('user_id', userId)
     .gte('date', startDate)
     .lte('date', endDate)
-    .order('date', { ascending: true });
+    .order('date', { ascending: true })
+    .limit(400);
 
   if (error) throw error;
   return (data ?? []).map(mapDailyStats);
@@ -1706,7 +1710,8 @@ export async function fetchAllUserWritingSubmissions(
     .from('user_writing_submissions')
     .select('*')
     .eq('user_id', userId)
-    .order('submitted_at', { ascending: false });
+    .order('submitted_at', { ascending: false })
+    .limit(200);
 
   // Note: cefrLevel filtering requires a join; we'll filter client-side for simplicity
   const { data, error } = await query;
