@@ -2,7 +2,7 @@
 
 **Canonical source of truth.** All UI changes must conform. Do not introduce new colors, spacing values, or component patterns outside of the approved token set in `config/theme.ts`.
 
-> **Phase 0 status:** foundation primitives + theme tokens are live; per-screen rollout in progress. See [`redesign-plan.md`](./redesign-plan.md) for phasing and [`design-research.md`](./design-research.md) for the empirical/industry research anchoring every decision.
+> **Phase 0 status:** foundation primitives + theme tokens are live; per-screen rollout in progress. See [`redesign-plan.md`](./docs/strategy/redesign-plan.md) for phasing and [`design-research.md`](./docs/strategy/design-research.md) for the empirical/industry research anchoring every decision.
 
 ---
 

@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fluenci — Bryant University IT Meeting</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0a0b10;
+    --surface: #12141c;
+    --card: #181a24;
+    --border: rgba(255,255,255,0.08);
+    --text: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --accent: #6366f1;
+    --accent-light: #818cf8;
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --error: #ef4444;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  .slide {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    width: 100vw;
+    padding: 60px 80px;
+    position: relative;
+  }
+
+  .slide.active { display: flex; }
+
+  .slide-content {
+    max-width: 1100px;
+    width: 100%;
+  }
+
+  /* Title slide */
+  .slide.title-slide {
+    justify-content: center;
+    text-align: center;
+  }
+
+  .slide.title-slide h1 {
+    font-size: 3.2em;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 16px;
+    background: linear-gradient(135deg, #818cf8, #6366f1);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .slide.title-slide .subtitle {
+    font-size: 1.4em;
+    color: var(--text-secondary);
+    font-weight: 400;
+    margin-bottom: 40px;
+  }
+
+  .slide.title-slide .meta {
+    font-size: 0.9em;
+    color: var(--text-secondary);
+    opacity: 0.7;
+  }
+
+  /* Section headers */
+  h2 {
+    font-size: 2em;
+    font-weight: 700;
+    margin-bottom: 32px;
+    letter-spacing: -0.01em;
+  }
+
+  h2 .accent { color: var(--accent-light); }
+
+  h3 {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: var(--accent-light);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 20px;
+    font-size: 0.85em;
+  }
+
+  /* Content elements */
+  .grid { display: grid; gap: 20px; }
+  .grid-2 { grid-template-columns: 1fr 1fr; }
+  .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .grid-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+  }
+
+  .card h4 {
+    font-size: 1em;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: var(--accent-light);
+  }
+
+  .card p, .card li {
+    font-size: 0.88em;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
+  .card ul { list-style: none; padding: 0; }
+  .card ul li { padding: 4px 0; }
+  .card ul li::before {
+    content: "→ ";
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .stat-card {
+    text-align: center;
+    padding: 28px 20px;
+  }
+
+  .stat-card .number {
+    font-size: 2.4em;
+    font-weight: 700;
+    color: var(--accent-light);
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+
+  .stat-card .label {
+    font-size: 0.8em;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88em;
+  }
+
+  th {
+    text-align: left;
+    padding: 12px 16px;
+    background: var(--card);
+    color: var(--accent-light);
+    font-weight: 600;
+    font-size: 0.8em;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-bottom: 1px solid var(--border);
+  }
+
+  td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  tr:last-child td { border-bottom: none; }
+
+  /* Badges */
+  .badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 0.75em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .badge-green { background: rgba(34,197,94,0.15); color: var(--success); }
+  .badge-yellow { background: rgba(245,158,11,0.15); color: var(--warning); }
+  .badge-red { background: rgba(239,68,68,0.15); color: var(--error); }
+  .badge-blue { background: rgba(99,102,241,0.15); color: var(--accent-light); }
+
+  /* Bullets */
+  .bullets { list-style: none; padding: 0; }
+  .bullets li {
+    padding: 10px 0;
+    font-size: 1em;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .bullets li:last-child { border-bottom: none; }
+  .bullets .icon {
+    color: var(--accent-light);
+    font-size: 1.1em;
+    flex-shrink: 0;
+    width: 24px;
+    text-align: center;
+  }
+
+  .bullets strong { color: var(--text); }
+
+  /* Diagram */
+  .arch-diagram {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 40px;
+    text-align: center;
+  }
+
+  .arch-row {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin: 12px 0;
+    flex-wrap: wrap;
+  }
+
+  .arch-box {
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 0.82em;
+    font-weight: 600;
+    min-width: 130px;
+  }
+
+  .arch-client { background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3); color: var(--accent-light); }
+  .arch-supabase { background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.3); color: var(--success); }
+  .arch-ai { background: rgba(168,85,247,0.12); border: 1px solid rgba(168,85,247,0.3); color: #a855f7; }
+  .arch-payment { background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.3); color: var(--warning); }
+
+  .arch-arrow {
+    color: var(--text-secondary);
+    font-size: 1.4em;
+    margin: 4px 0;
+    opacity: 0.5;
+  }
+
+  .arch-label {
+    font-size: 0.7em;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+
+  /* Two column layout */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    align-items: start;
+  }
+
+  .col h4 {
+    font-size: 1em;
+    font-weight: 600;
+    color: var(--accent-light);
+    margin-bottom: 16px;
+  }
+
+  .col ul { list-style: none; padding: 0; }
+  .col ul li {
+    padding: 6px 0;
+    font-size: 0.9em;
+    color: var(--text-secondary);
+  }
+  .col ul li::before {
+    content: "✓ ";
+    color: var(--success);
+    font-weight: 700;
+  }
+
+  .col ul.roadmap li::before {
+    content: "◯ ";
+    color: var(--warning);
+  }
+
+  /* Progress indicator */
+  .progress {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    background: var(--accent);
+    transition: width 0.3s ease;
+    z-index: 100;
+  }
+
+  /* Slide counter */
+  .slide-counter {
+    position: fixed;
+    bottom: 20px;
+    right: 30px;
+    font-size: 0.8em;
+    color: var(--text-secondary);
+    opacity: 0.5;
+    z-index: 100;
+  }
+
+  /* Logo */
+  .logo {
+    font-weight: 700;
+    font-size: 0.9em;
+    color: var(--accent-light);
+    position: fixed;
+    top: 24px;
+    left: 30px;
+    z-index: 100;
+    letter-spacing: 0.04em;
+  }
+
+  .logo.hide { display: none; }
+
+  /* Highlight box */
+  .highlight-box {
+    background: rgba(99,102,241,0.08);
+    border-left: 3px solid var(--accent);
+    padding: 20px 24px;
+    border-radius: 0 8px 8px 0;
+    margin: 20px 0;
+  }
+
+  .highlight-box p {
+    font-size: 1em;
+    color: var(--text);
+    line-height: 1.6;
+  }
+
+  .highlight-box strong { color: var(--accent-light); }
+
+  /* Q&A */
+  .qa-item {
+    padding: 16px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .qa-item:last-child { border-bottom: none; }
+
+  .qa-q {
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 6px;
+    font-size: 0.95em;
+  }
+
+  .qa-a {
+    color: var(--text-secondary);
+    font-size: 0.88em;
+    line-height: 1.5;
+  }
+
+  /* Contact slide */
+  .contact-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 24px;
+  }
+
+  .contact-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+
+  .contact-item .label {
+    font-size: 0.75em;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .contact-item .value {
+    font-size: 0.95em;
+    color: var(--accent-light);
+    font-weight: 500;
+  }
+
+  /* Section divider slides */
+  .section-divider {
+    text-align: center;
+  }
+
+  .section-divider h2 {
+    font-size: 2.8em;
+    margin-bottom: 12px;
+  }
+
+  .section-divider p {
+    font-size: 1.1em;
+    color: var(--text-secondary);
+  }
+
+  .divider-number {
+    font-size: 0.8em;
+    color: var(--accent);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    margin-bottom: 12px;
+    display: block;
+  }
+
+  /* Emphasis text */
+  .em-text {
+    font-size: 1.3em;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    max-width: 700px;
+    text-align: center;
+  }
+
+  .em-text strong {
+    color: var(--text);
+  }
+</style>
+</head>
+<body>
+
+<div class="logo" id="logo">FLUENCI</div>
+<div class="progress" id="progress"></div>
+<div class="slide-counter" id="counter"></div>
+
+<!-- ============ SLIDE 1: TITLE ============ -->
+<div class="slide title-slide active" data-hide-logo="true">
+  <div class="slide-content">
+    <h1>Fluenci</h1>
+    <p class="subtitle">AI-Powered Language Learning for Higher Education</p>
+    <p class="meta">Prepared for Bryant University IT &nbsp;·&nbsp; April 2026</p>
+    <p class="meta" style="margin-top:8px; opacity:0.5;">Tyler Moore &nbsp;·&nbsp; NovaWealth</p>
+  </div>
+</div>
+
+<!-- ============ SLIDE 2: AGENDA ============ -->
+<div class="slide">
+  <div class="slide-content">
+    <h3>Today's Agenda</h3>
+    <h2>What We'll Cover</h2>
+    <div class="grid grid-2" style="margin-top: 8px;">
+      <div class="card">
+        <h4>1. The Problem & Solution</h4>
+        <p>What Fluenci does and why it matters for language departments</p>
+      </div>
+      <div class="card">
+        <h4>2. Architecture & Security</h4>
+        <p>Infrastructure, encryption, access control, data flow</p>
+      </div>
+      <div class="card">
+        <h4>3. Compliance & Privacy</h4>
+        <p>FERPA alignment, data handling, subprocessors, WCAG</p>
+      </div>
+      <div class="card">
+        <h4>4. Pilot Proposal & Roadmap</h4>
+        <p>Scoped pilot, support model, what's in progress</p>
+      </div>
+    </div>
+    <div class="highlight-box" style="margin-top: 24px;">
+      <p>All documentation referenced today is available in our <strong>compliance docs package</strong> — we'll share access at the end.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SLIDE 3: THE PROBLEM ============ -->
+<div class="slide">
+  <div class="slide-content">
+    <h3>Context</h3>
+    <h2>The Problem We Solve</h2>
+    <p class="em-text" style="text-align: left; max-width: 100%; margin-bottom: 32px;">
+      Language departments face <strong>growing enrollment with limited tutoring resources</strong>. Students need daily, personalized practice outside the classroom — but human tutors don't scale.
+    </p>
+    <div class="grid grid-3">
+      <div class="card stat-card">
+        <div class="number">5</div>
+        <div class="label">Minutes/day needed<br>for language retention</div>
+      </div>
+      <div class="card stat-card">
+        <div class="number">4</div>
+        <div class="label">Skills to train<br>Listening · Speaking · Reading · Writing</div>
+      </div>
+      <div class="card stat-card">
+        <div class="number">24/7</div>
+        <div class="label">AI tutor availability<br>vs. limited office hours</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SLIDE 4: THE SOLUTION ============ -->
+<div class="slide">
+  <div class="slide-content">
+    <h3>Product Overview</h3>
+    <h2>What Fluenci Does</h2>
+    <div class="grid grid-2">
+      <div>
+        <ul class="bullets">
+          <li><span class="icon">🎙</span><span><strong>AI conversation practice</strong> — Real-time voice dialogue adapted to the student's CEFR level</span></li>
+          <li><span class="icon">📝</span><span><strong>10+ exercise types</strong> — Recognition → comprehension → production progression</span></li>
+          <li><span class="icon">🔁</span><span><strong>Spaced repetition (SM-2)</strong> — Adaptive review scheduling to optimize retention</span></li>
+          <li><span class="icon">📊</span><span><strong>Teacher dashboard</strong> — Create assignments, auto-grade with AI, manual override</span></li>
+        </ul>
+      </div>
+      <div>
+        <ul class="bullets">
+          <li><span class="icon">🏫</span><span><strong>Classroom management</strong> — Invite codes, bulk CSV enrollment, role-based access</span></li>
+          <li><span class="icon">📈</span><span><strong>CEFR trajectory tracking</strong> — Students and teachers see proficiency progress over time</span></li>
+          <li><span class="icon">✍️</span><span><strong>Writing assignments</strong> — AI grading with rubric feedback + teacher override</span></li>
+          <li><span class="icon">📱</span><span><strong>Mobile-first</strong> — iOS and Android via React Native / Expo</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SLIDE 5: SECURITY AT A GLANCE ============ -->
+<div class="slide">
+  <div class="slide-content">
+    <h3>Security & Compliance</h3>
+    <h2>Security <span class="accent">At a Glance</span></h2>
+    <div class="grid grid-4">
+      <div class="card stat-card">
+        <div class="number" style="font-size:1.6em;">AES-256</div>
+        <div class="label">Encryption at rest</div>
+      </div>
+      <div class="card stat-card">
+        <div class="number" style="font-size:1.6em;">TLS 1.2+</div>
+        <div class="label">Encryption in transit</div>
+      </div>
+      <div class="card stat-card">
+        <div class="number" style="font-size:1.6em;">RLS</div>
+        <div class="label">Row-Level Security<br>on every table</div>
+      </div>
+      <div class="card stat-card">
+        <div class="number" style="font-size:1.6em;">72 hr</div>
+        <div class="label">Breach notification SLA</div>
+      </div>
+    </div>
+    <div class="grid grid-3" style="margin-top: 16px;">
+      <div class="card" style="text-align:center; padding: 16px;">
+        <span class="badge badge-green">FERPA ALIGNED</span>
+      </div>
+      <div class="card" style="text-align:center; padding: 16px;">
+        <span class="badge badge-green">WCAG 2.1 AA</span>
+      </div>
+      <div class="card" style="text-align:center; padding: 16px;">
+        <span class="badge badge-green">COPPA COMPLIANT</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SLIDE 6: ARCHITECTURE ============ -->
+<div class="slide">
+  <div class="slide-content">
+    <h3>Technical Architecture</h3>
+    <h2>System <span class="accent">Architecture</span></h2>
+    <div class="arch-diagram">
+      <div class="arch-label">Client Layer</div>
+      <div class="arch-row">
+        <div class="arch-box arch-client">📱 Mobile App<br><small>React Native / Expo</small></div>
+      </div>
+      <div class="arch-arrow">↕ HTTPS / TLS 1.2+</div>
+      <div class="arch-label">Application Layer — Supabase (AWS us-east-1)</div>
+      <div class="arch-row">
+        <div class="arch-box arch-supabase">🔐 Supabase Auth<br><small>JWT · MFA</small></div>
+        <div class="arch-box arch-supabase">⚡ Edge Functions<br><small>Deno Isolates</small></div>
+        <div class="arch-box arch-supabase">🗄 PostgreSQL<br><small>RLS · AES-256</small></div>
+        <div class="arch-box arch-supabase">📦 Storage<br><small>S3 · SSE</small></div>
+      </div>
+      <div class="arch-arrow">↕ TLS · DPA in place</div>
+      <div class="arch-label">AI Service Providers</div>
+      <div class="arch-row">
+        <div class="arch-box arch-ai">Anthropic Claude<br><small>Tutoring · Grading</small></div>
+        <div class="arch-box arch-ai">Google Gemini<br><small>Voice Practice</small></div>
+        <div class="arch-box arch-ai">OpenAI Whisper<br><small>Speech-to-Text</small></div>
+        <div class="arch-box arch-ai">ElevenLabs<br><small>Text-to-Speech</small></div>
+      </div>
+      <div class="arch-row" style="margin-top: 12px;">
+        <div class="arch-box arch-payment">Stripe<br><small>Payments</small></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SLIDE 7: DATA FLOW ============ -->
+<div class="slide">
+  <div class="slide-content">
+    <h3>Data Governance</h3>
+    <h2>PII <span class="accent">Data Flow</span></h2>
+    <div class="highlight-box">
+      <p>Student PII (email, name) is stored <strong>only in Supabase PostgreSQL</strong>. AI providers receive chat text or voice audio for processing — <strong>no student identifiers are sent to ElevenLabs</strong>. All AI API providers are contractually prohibited from training on input data.</p>
+    </div>
+    <table style="margin-top: 20px;">
+      <tr><th>Subprocessor</th><th>Data Received</th><th>Student PII?</th><th>DPA</th></tr>
+      <tr><td><strong>Supabase</strong> (AWS)</td><td>All application data</td><td>Yes</td><td>✓</td></tr>
+      <tr><td><strong>Anthropic</strong> (Claude)</td><td>Chat messages, assignment text</td><td>Yes (transient)</td><td>✓</td></tr>
+      <tr><td><strong>Google</strong> (Gemini)</td><td>Voice audio, conversation context</td><td>Yes (transient)</td><td>✓</td></tr>
+      <tr><td><strong>OpenAI</strong> (Whisper)</td><td>Voice audio recordings</td><td>Yes (transient)</td><td>✓</td></tr>
+      <tr><td><strong>ElevenLabs</strong></td><td>Target language text only</td><td>No</td><td>✓</td></tr>
+      <tr><td><strong>Stripe</strong></td><td>Email, subscription tier</td><td>Minimal</td><td>✓</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ============ SLIDE 8: AUTH & ACCESS CONTROL ============ -->
+<div class="slide">
+  <div class="slide-content">
+    <h3>Access Control</h3>
+    <h2>Authentication & <span class="accent">Authorization</span></h2>
+    <div class="two-col">
+      <div class="col">
+        <h4>Authentication</h4>
+        <ul>
+          <li>Email/password or magic link via Supabase Auth</li>
+          <li>JWT tokens with 1-hour expiry</li>
+          <li>Automatic refresh token rotation</li>
+          <li>MFA (TOTP) supported for admin/teacher roles</li>
+          <li>Email domain restriction for institutional pilots</li>
+        </ul>
+      </div>
+      <div class="col">
+        <h4>Role-Based Access Control</h4>
+        <table style="font-size: 0.85em;">
+          <tr><th>Role</th><th>Access Scope</th></tr>
+          <tr><td><strong>Learner</strong></td><td>Own profile, progress, chat, enrolled classrooms</td></tr>
+          <tr><td><strong>Teacher</strong></td><td>+ Classroom management, assignments, grading, student progress</td></tr>
+          <tr><td><strong>School Admin</strong></td><td>+ Org management, teacher provisioning, audit logs, data export/deletion</td></tr>
+        </table>
+      </div>
+    </div>
+    <div class="highlight-box" style="margin-top: 20px;">
+      <p><strong>Row-Level Security</strong> is enabled on every database table. Students cannot access other students' data. Teachers only see their own classrooms. Admins are scoped to their organization.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SLIDE 9: FERPA ============ -->
+<div class="slide">
+  <div class="slide-content">
+    <h3>Regulatory Compliance</h3>
+    <h2>FERPA <span class="accent">Alignment</span></h2>
+    <div class="two-col">
+      <div class="col">
+        <h4>School Official Exception</h4>
+        <p style="color: var(--text-secondary); font-size: 0.9em; line-height: 1.7;">
+          Fluenci operates as a <strong style="color:var(--text);">"school official"</strong> under FERPA (34 CFR § 99.31(a)(1)(i)(B)):
+        </p>
+        <ul style="margin-top: 12px;">
+          <li>Performs a service the institution would otherwise use employees to provide</li>
+          <li>Under the direct control of the institution regarding education records</li>
+          <li>Uses records only for authorized educational purposes</li>
+        </ul>
+      </div>
+      <div class="col">
+        <h4>Student Data Commitments</h4>
+        <ul>
+          <li>Data used exclusively for language instruction</li>
+          <li>Never used for advertising or marketing</li>
+          <li>Never sold or shared with third parties</li>
+          <li>AI providers cannot train on student data</li>
+          <li>Institution can export all data at any time</li>
+          <li>Full deletion within 30 days of termination</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SLIDE 10: DATA RETENTION ============ -->
+<div class="slide">
+  <div class="slide-content">
+    <h3>Data Lifecycle</h3>
+    <h2>Retention & <span class="accent">Deletion</span></h2>
+    <table>
+      <tr><th>Data Type</th><th>Retention Period</th><th>Deletion Method</th></tr>
+      <tr><td>Email, display name</td><td>Contract duration + 30 days</td><td>Anonymized via purge-org-data API</td></tr>
+      <tr><td>Learning progress (CEFR, XP, streaks)</td><td>Contract duration + 30 days</td><td>Deleted with org purge</td></tr>
+      <tr><td>Chat messages</td><td>Contract duration + 30 days</td><td>Deleted with org purge</td></tr>
+      <tr><td>Voice recordings</td><td>90 days after creation</td><td>Auto-deleted</td></tr>
+      <tr><td>Assignment submissions</td><td>Contract duration + 30 days</td><td>Deleted with org purge</td></tr>
+      <tr><td>Usage analytics</td><td>Aggregated after 90 days (no PII)</td><td>PII stripped automatically</td></tr>
+      <tr><td>Payment data</td><td>Managed by Stripe</td><td>Only Stripe customer ID stored</td></tr>
+    </table>
+    <div class="highlight-box" style="margin-top: 20px;">
+      <p><strong>On contract termination:</strong> Full JSON data export provided → all PII anonymized or deleted within 30 days → written confirmation sent to institution.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SLIDE 11: AUDIT & INCIDENT RESPONSE ============ -->
+<div class="slide">
+  <div class="slide-content">
+    <h3>Operational Security</h3>
+    <h2>Audit Logging & <span class="accent">Incident Response</span></h2>
+    <div class="two-col">
+      <div class="col">
+        <h4>Audit Logging</h4>
+        <p style="color: var(--text-secondary); font-size: 0.88em; line-height: 1.7; margin-bottom: 12px;">
+          All administrative and security-relevant actions logged to an immutable audit table:
+        </p>
+        <ul>
+          <li>Actor ID + role</li>
+          <li>Timestamp + IP address</li>
+          <li>Action type (create, read, update, delete)</li>
+          <li>Resource type and ID</li>
+          <li>Org admins can query their own logs</li>
+        </ul>
+      </div>
+      <div class="col">
+        <h4>Incident Response Plan</h4>
+        <table style="font-size: 0.82em;">
+          <tr><th>Severity</th><th>Response</th></tr>
+          <tr><td><span class="badge badge-red">P1 Critical</span></td><td>&lt; 1 hour</td></tr>
+          <tr><td><span class="badge badge-yellow">P2 Major</span></td><td>&lt; 4 hours</td></tr>
+          <tr><td><span class="badge badge-blue">P3 Minor</span></td><td>&lt; 24 hours</td></tr>
+          <tr><td>P4 Info</td><td>&lt; 72 hours</td></tr>
+        </table>
+        <p style="color: var(--text-secondary); font-size: 0.85em; margin-top: 12px;">
+          5-phase process: Detection → Containment → Eradication → Notification → Post-Mortem
+        </p>
+        <p style="color: var(--text-secondary); font-size: 0.85em; margin-top: 6px;">
+          <strong style="color:var(--text);">72-hour breach notification</strong> to institutional IT contact + full report within 14 days.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SLIDE 12: INFRASTRUCTURE ============ -->
+<div class="slide">
+  <div class="slide-content">
+    <h3>Infrastructure</h3>
+    <h2>Hosting & <span class="accent">Resilience</span></h2>
+    <div class="grid grid-2">
+      <div class="card">
+        <h4>Infrastructure</h4>
+        <ul>
+          <li>Supabase (managed PostgreSQL) on AWS us-east-1</li>
+          <li>Cloudflare CDN + WAF on all endpoints</li>
+          <li>Edge Functions in Deno isolate sandboxes</li>
+          <li>Database behind connection pooling (no public endpoint)</li>
+          <li>Separate dev/staging/production environments</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>Backup & Recovery</h4>
+        <ul>
+          <li>Automated daily backups</li>
+          <li>30-day point-in-time recovery window</li>
+          <li>RTO: &lt; 4 hours</li>
+          <li>RPO: &lt; 1 minute (database via PITR)</li>
+          <li>99.9% uptime target (Supabase SLA)</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>Secrets Management</h4>
+        <ul>
+          <li>All API keys in Supabase Secrets Manager</li>
+          <li>No secrets in client-side code</li>
+          <li>Service role key server-side only</li>
+          <li>Client uses anon key (limited by RLS)</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>Vulnerability Management</h4>
+        <ul>
+          <li>npm audit on every build</li>
+          <li>GitHub Dependabot alerts</li>
+          <li>Critical patches within 48 hours</li>
+          <li>All changes code-reviewed before deploy</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SLIDE 13: ACCESSIBILITY ============ -->
+<div class="slide">
+  <div class="slide-content">
+    <h3>Accessibility</h3>
+    <h2>WCAG 2.1 <span class="accent">AA Conformance</span></h2>
+    <div class="two-col">
+      <div class="col">
+        <h4>What's Implemented</h4>
+        <ul>
+          <li>14.6:1 contrast ratio (exceeds AAA 7:1 requirement)</li>
+          <li>44pt minimum touch targets (Apple HIG)</li>
+          <li>VoiceOver support with logical reading order</li>
+          <li>All interactive elements have accessibility labels</li>
+          <li>Dynamic Type support (system font scaling)</li>
+          <li>No color-only information conveyance</li>
+          <li>Gesture alternatives for all swipe actions</li>
+          <li>Timer-based exercises can be paused/extended</li>
+        </ul>
+      </div>
+      <div class="col">
+        <h4>VPAT Summary</h4>
+        <p style="color: var(--text-secondary); font-size: 0.88em; margin-bottom: 12px;">
+          Full VPAT available covering all WCAG 2.1 Level A and AA criteria.
+        </p>
+        <table style="font-size: 0.82em;">
+          <tr><th>Category</th><th>Status</th></tr>
+          <tr><td>Perceivable (1.x)</td><td><span class="badge badge-green">Supports</span></td></tr>
+          <tr><td>Operable (2.x)</td><td><span class="badge badge-green">Supports</span></td></tr>
+          <tr><td>Understandable (3.x)</td><td><span class="badge badge-green">Supports</span></td></tr>
+          <tr><td>Robust (4.x)</td><td><span class="badge badge-green">Supports</span></td></tr>
+        </table>
+        <p style="color: var(--text-secondary); font-size: 0.82em; margin-top: 12px;">
+          Known gaps documented with remediation plans. Contact: accessibility@fluenci.app
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SLIDE 14: HECVAT HIGHLIGHTS ============ -->
+<div class="slide">
+  <div class="slide-content">
+    <h3>Vendor Assessment</h3>
+    <h2>HECVAT Lite <span class="accent">Highlights</span></h2>
+    <p style="color: var(--text-secondary); font-size: 0.9em; margin-bottom: 24px;">Pre-filled HECVAT Lite available for your review. Key answers:</p>
+    <div class="grid grid-2">
+      <div>
+        <div class="qa-item">
+          <div class="qa-q">Data encrypted at rest and in transit?</div>
+          <div class="qa-a">Yes — AES-256 at rest via AWS KMS, TLS 1.2+ in transit with HSTS</div>
+        </div>
+        <div class="qa-item">
+          <div class="qa-q">Incident response plan documented?</div>
+          <div class="qa-a">Yes — 5-phase IRP with severity classification and 72-hour notification SLA</div>
+        </div>
+        <div class="qa-item">
+          <div class="qa-q">Data breach notification process?</div>
+          <div class="qa-a">72-hour notification to institutional IT contact, full report within 14 days</div>
+        </div>
+        <div class="qa-item">
+          <div class="qa-q">Can institutions export and delete data?</div>
+          <div class="qa-a">Yes — export-org-data and purge-org-data API endpoints, admin UI available</div>
+        </div>
+      </div>
+      <div>
+        <div class="qa-item">
+          <div class="qa-q">Environments separated?</div>
+          <div class="qa-a">Yes — separate Supabase projects for dev, staging, and production</div>
+        </div>
+        <div class="qa-item">
+          <div class="qa-q">Automated backups?</div>
+          <div class="qa-a">Yes — daily with 30-day PITR. Quarterly restoration testing.</div>
+        </div>
+        <div class="qa-item">
+          <div class="qa-q">Will you sign a DPA?</div>
+          <div class="qa-a">Yes — template available, open to institution-specific modifications</div>
+        </div>
+        <div class="qa-item">
+          <div class="qa-q">Student data used for AI training?</div>
+          <div class="qa-a">No — all AI providers contractually prohibited from training on input data</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SLIDE 15: COMMON IT QUESTIONS ============ -->
+<div class="slide">
+  <div class="slide-content">
+    <h3>Anticipated Questions</h3>
+    <h2>Questions <span class="accent">We're Ready For</span></h2>
+    <div class="grid grid-2">
+      <div>
+        <div class="qa-item">
+          <div class="qa-q">Where is data hosted?</div>
+          <div class="qa-a">AWS us-east-1 (Virginia) via Supabase. US-only. No offshore data transfer.</div>
+        </div>
+        <div class="qa-item">
+          <div class="qa-q">Do you support SSO?</div>
+          <div class="qa-a">Email domain restriction (@bryant.edu) for pilot. SAML 2.0 on our roadmap for production rollout.</div>
+        </div>
+        <div class="qa-item">
+          <div class="qa-q">What happens if you go out of business?</div>
+          <div class="qa-a">90-day notice with full data export opportunity. All data deleted after export. Documented in BCP.</div>
+        </div>
+      </div>
+      <div>
+        <div class="qa-item">
+          <div class="qa-q">Who do we call when something breaks?</div>
+          <div class="qa-a">Dedicated support channel (Slack or email). P1: 1-hour response. P2: 4-hour. Weekly check-ins during pilot.</div>
+        </div>
+        <div class="qa-item">
+          <div class="qa-q">Can students use this on any device?</div>
+          <div class="qa-a">iOS and Android apps. No web version currently — mobile-first design.</div>
+        </div>
+        <div class="qa-item">
+          <div class="qa-q">How is content moderated?</div>
+          <div class="qa-a">Content safety pipeline validates all AI outputs before display. Stricter filtering for minors. No unreviewed AI content reaches students.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SLIDE 16: PILOT PROPOSAL ============ -->
+<div class="slide">
+  <div class="slide-content">
+    <h3>Partnership</h3>
+    <h2>Pilot <span class="accent">Proposal</span></h2>
+    <div class="grid grid-3">
+      <div class="card">
+        <h4>Phase 1: Setup (2 Weeks)</h4>
+        <ul>
+          <li>Create Bryant org + admin account</li>
+          <li>Configure @bryant.edu domain restriction</li>
+          <li>Provision teacher accounts</li>
+          <li>Teacher training session (30 min)</li>
+          <li>End-to-end flow test</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>Phase 2: Pilot (1 Term)</h4>
+        <ul>
+          <li>1-3 classrooms, 20-90 students</li>
+          <li>Weekly teacher check-ins</li>
+          <li>Usage monitoring + support channel</li>
+          <li>Track: engagement, completion, satisfaction</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>Phase 3: Evaluate (2 Weeks)</h4>
+        <ul>
+          <li>Usage data export + analytics report</li>
+          <li>Teacher debrief interview</li>
+          <li>Go/no-go recommendation</li>
+          <li>Expansion proposal (if go)</li>
+        </ul>
+      </div>
+    </div>
+    <div class="grid grid-2" style="margin-top: 16px;">
+      <div class="card" style="text-align: center;">
+        <h4>Pilot Pricing</h4>
+        <p>Free or reduced-rate. Success metrics defined upfront. No commitment beyond pilot term.</p>
+      </div>
+      <div class="card" style="text-align: center;">
+        <h4>Data Guarantee</h4>
+        <p>Full export + deletion within 30 days of termination. Written confirmation provided.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SLIDE 17: SUPPORT MODEL ============ -->
+<div class="slide">
+  <div class="slide-content">
+    <h3>Operations</h3>
+    <h2>Support <span class="accent">Model</span></h2>
+    <div class="two-col">
+      <div class="col">
+        <h4>Support During Pilot</h4>
+        <ul>
+          <li>Dedicated Slack channel or email thread</li>
+          <li>Weekly check-ins (first month), biweekly after</li>
+          <li>Direct access to engineering for P1/P2 issues</li>
+          <li>Student + teacher quickstart guides provided</li>
+        </ul>
+        <table style="font-size: 0.82em; margin-top: 16px;">
+          <tr><th>Severity</th><th>Response</th><th>Resolution</th></tr>
+          <tr><td>P1 Critical</td><td>1 hour</td><td>4 hours</td></tr>
+          <tr><td>P2 Major</td><td>4 hours</td><td>24 hours</td></tr>
+          <tr><td>P3 Minor</td><td>24 hours</td><td>Next release</td></tr>
+          <tr><td>P4 Info</td><td>48 hours</td><td>N/A</td></tr>
+        </table>
+      </div>
+      <div class="col">
+        <h4>Documentation Package</h4>
+        <p style="color: var(--text-secondary); font-size: 0.88em; margin-bottom: 12px;">All of the following ready to share today:</p>
+        <ul>
+          <li>Security Overview for IT Teams</li>
+          <li>Privacy & FERPA Alignment Statement</li>
+          <li>HECVAT Lite (pre-filled)</li>
+          <li>Incident Response Plan</li>
+          <li>Architecture & Data Flow Diagrams</li>
+          <li>Accessibility Statement & VPAT</li>
+          <li>Privacy Policy (web-publishable)</li>
+          <li>Terms of Service</li>
+          <li>Data Processing Agreement (template)</li>
+          <li>Risk Register & BCP/DR Plan</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SLIDE 18: WHAT'S IN PROGRESS ============ -->
+<div class="slide">
+  <div class="slide-content">
+    <h3>Transparency</h3>
+    <h2>What's <span class="accent">In Progress</span></h2>
+    <p style="color: var(--text-secondary); font-size: 0.9em; margin-bottom: 24px;">We believe in being upfront about where we are. These items are on our roadmap:</p>
+    <div class="grid grid-2">
+      <div class="card">
+        <h4>Coming Soon</h4>
+        <ul>
+          <li>SAML 2.0 SSO — For campus-wide identity integration (Shibboleth, Okta, Azure AD)</li>
+          <li>Third-party penetration test — Planned before general availability launch</li>
+          <li>SOC 2 Type I — Supabase holds SOC 2 Type II for infrastructure; pursuing our own certification</li>
+          <li>LTI 1.3 integration — Embed assignments in Canvas, Blackboard, Moodle</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>Future Roadmap</h4>
+        <ul>
+          <li>SCIM provisioning — Automated user lifecycle management</li>
+          <li>OIDC support — Additional identity federation option</li>
+          <li>Multi-region deployment — Geographic redundancy beyond us-east-1</li>
+          <li>Automated accessibility testing in CI — axe-core integration</li>
+        </ul>
+      </div>
+    </div>
+    <div class="highlight-box" style="margin-top: 20px;">
+      <p><strong>For the Bryant pilot:</strong> Email domain restriction (@bryant.edu) provides secure institutional scoping without SSO. All other security and compliance controls are production-ready today.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SLIDE 19: NEXT STEPS ============ -->
+<div class="slide">
+  <div class="slide-content" style="text-align: center;">
+    <h3>Next Steps</h3>
+    <h2>Let's Get <span class="accent">Started</span></h2>
+    <p class="em-text" style="margin: 0 auto 40px;">
+      Our goal today was to earn the right to the next step — whether that's a <strong>security review</strong>, a <strong>stakeholder introduction</strong>, or a <strong>scoped pilot</strong>.
+    </p>
+    <div class="grid grid-3" style="max-width: 800px; margin: 0 auto;">
+      <div class="card stat-card">
+        <div class="number" style="font-size: 1.4em;">1</div>
+        <div class="label">Share docs package<br>for security review</div>
+      </div>
+      <div class="card stat-card">
+        <div class="number" style="font-size: 1.4em;">2</div>
+        <div class="label">Identify pilot<br>language course(s)</div>
+      </div>
+      <div class="card stat-card">
+        <div class="number" style="font-size: 1.4em;">3</div>
+        <div class="label">Sign DPA &<br>begin setup</div>
+      </div>
+    </div>
+    <div class="contact-grid" style="max-width: 700px; margin: 40px auto 0;">
+      <div class="contact-item">
+        <div><div class="label">Partnerships</div><div class="value">partnerships@fluenci.app</div></div>
+      </div>
+      <div class="contact-item">
+        <div><div class="label">Security</div><div class="value">security@fluenci.app</div></div>
+      </div>
+      <div class="contact-item">
+        <div><div class="label">Privacy</div><div class="value">privacy@fluenci.app</div></div>
+      </div>
+      <div class="contact-item">
+        <div><div class="label">Website</div><div class="value">fluenci.app</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SLIDE 20: THANK YOU ============ -->
+<div class="slide title-slide">
+  <div class="slide-content">
+    <h1>Thank You</h1>
+    <p class="subtitle">Questions?</p>
+    <p class="meta" style="margin-top: 30px;">Tyler Moore &nbsp;·&nbsp; partnerships@fluenci.app &nbsp;·&nbsp; fluenci.app</p>
+  </div>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const progress = document.getElementById('progress');
+  const counter = document.getElementById('counter');
+  const logo = document.getElementById('logo');
+  let current = 0;
+
+  function updateSlide() {
+    slides.forEach((s, i) => s.classList.toggle('active', i === current));
+    const pct = ((current + 1) / slides.length) * 100;
+    progress.style.width = pct + '%';
+    counter.textContent = (current + 1) + ' / ' + slides.length;
+
+    // Hide logo on title slides
+    const hideLogo = slides[current].dataset.hideLogo === 'true';
+    logo.classList.toggle('hide', hideLogo);
+  }
+
+  function next() {
+    if (current < slides.length - 1) { current++; updateSlide(); }
+  }
+
+  function prev() {
+    if (current > 0) { current--; updateSlide(); }
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') { e.preventDefault(); next(); }
+    if (e.key === 'ArrowLeft' || e.key === 'Backspace') { e.preventDefault(); prev(); }
+    if (e.key === 'Home') { current = 0; updateSlide(); }
+    if (e.key === 'End') { current = slides.length - 1; updateSlide(); }
+    if (e.key === 'f' || e.key === 'F') {
+      if (!document.fullscreenElement) { document.documentElement.requestFullscreen(); }
+      else { document.exitFullscreen(); }
+    }
+  });
+
+  // Touch/swipe support
+  let touchStartX = 0;
+  document.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; });
+  document.addEventListener('touchend', (e) => {
+    const diff = touchStartX - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) { diff > 0 ? next() : prev(); }
+  });
+
+  // Click to advance (right half) or go back (left half)
+  document.addEventListener('click', (e) => {
+    if (e.clientX > window.innerWidth * 0.5) next();
+    else prev();
+  });
+
+  updateSlide();
+</script>
+
+</body>
+</html>

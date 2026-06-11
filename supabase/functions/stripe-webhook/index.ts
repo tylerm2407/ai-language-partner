@@ -69,7 +69,14 @@ serve(async (req: Request) => {
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const userId = session.metadata?.supabase_user_id;
-  if (!userId) return;
+  if (!userId) {
+    // A paid checkout with no user mapping means a customer paid and got nothing —
+    // surface loudly instead of silently dropping the event.
+    console.error(
+      `[stripe-webhook] checkout.session.completed ${session.id} missing supabase_user_id metadata; cannot provision subscription`
+    );
+    return;
+  }
 
   const subscriptionId = session.subscription as string;
   const customerId = session.customer as string;
@@ -79,7 +86,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const priceId = subscription.items.data[0]?.price?.id;
   const tier = determineTier(priceId);
 
-  await supabase.from('subscriptions').upsert(
+  const { error } = await supabase.from('subscriptions').upsert(
     {
       user_id: userId,
       tier,
@@ -90,17 +97,25 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     },
     { onConflict: 'user_id' }
   );
+  // Throw so the webhook returns non-2xx and Stripe retries — otherwise a failed
+  // write here leaves a paying customer without their subscription.
+  if (error) throw new Error(`subscriptions upsert failed for user ${userId}: ${error.message}`);
 }
 
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   const userId = subscription.metadata?.supabase_user_id;
-  if (!userId) return;
+  if (!userId) {
+    console.error(
+      `[stripe-webhook] customer.subscription.updated ${subscription.id} missing supabase_user_id metadata`
+    );
+    return;
+  }
 
   const priceId = subscription.items.data[0]?.price?.id;
   const tier = determineTier(priceId);
   const isActive = subscription.status === 'active' || subscription.status === 'trialing';
 
-  await supabase
+  const { error } = await supabase
     .from('subscriptions')
     .update({
       tier,
@@ -108,10 +123,11 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
       is_active: isActive,
     })
     .eq('stripe_subscription_id', subscription.id);
+  if (error) throw new Error(`subscriptions update failed for ${subscription.id}: ${error.message}`);
 }
 
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
-  await supabase
+  const { error } = await supabase
     .from('subscriptions')
     .update({
       tier: 'starter',
@@ -119,6 +135,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
       current_period_end: null,
     })
     .eq('stripe_subscription_id', subscription.id);
+  if (error) throw new Error(`subscriptions downgrade failed for ${subscription.id}: ${error.message}`);
 }
 
 async function handlePaymentFailed(invoice: Stripe.Invoice) {
@@ -126,10 +143,11 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
   if (!subscriptionId) return;
 
   // Mark subscription as inactive on payment failure
-  await supabase
+  const { error } = await supabase
     .from('subscriptions')
     .update({ is_active: false })
     .eq('stripe_subscription_id', subscriptionId);
+  if (error) throw new Error(`subscriptions deactivate failed for ${subscriptionId}: ${error.message}`);
 }
 
 function determineTier(priceId: string | undefined): string {

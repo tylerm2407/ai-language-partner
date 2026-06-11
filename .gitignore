@@ -10,7 +10,6 @@ dist/
 web-build/
 .env
 .env.local
-package-lock.json
 
 # Claude Code local settings
 .claude/settings.local.json
