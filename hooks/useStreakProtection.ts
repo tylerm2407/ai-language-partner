@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from './useAuth';
 import { useAppStore } from '../stores/useAppStore';
-import { useStreakFreeze, repairStreak, logStreakEvent, updateStreakShield } from '../lib/supabase-queries';
+import { consumeStreakFreeze, repairStreak, logStreakEvent, updateStreakShield } from '../lib/supabase-queries';
 import { PLANS } from '../lib/plans';
 import type { SubscriptionTier } from '../types';
 
@@ -56,7 +56,7 @@ export function useStreakProtection() {
   const repairWithFreeze = useCallback(async () => {
     if (!user || !profile) return;
     try {
-      await useStreakFreeze(user.id);
+      await consumeStreakFreeze(user.id);
       await repairStreak(user.id, brokenStreak, profile.longestStreak);
       await logStreakEvent(user.id, 'freeze_used', brokenStreak);
       setProfile({

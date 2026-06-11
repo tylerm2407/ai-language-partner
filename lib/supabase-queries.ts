@@ -1105,7 +1105,7 @@ function mapDailyChallengesRecord(row: Record<string, unknown>): DailyChallenges
 
 // ─── Streak Protection ──────────────────────────────────────────
 
-export async function useStreakFreeze(userId: string): Promise<void> {
+export async function consumeStreakFreeze(userId: string): Promise<void> {
   const { data: profile } = await supabase
     .from('user_profiles')
     .select('streak_freezes')

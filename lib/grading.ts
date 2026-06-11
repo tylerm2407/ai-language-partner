@@ -131,6 +131,17 @@ export function classifyError(
       singleTokenSubDistance === null &&
       userTokens.some((t, i) => t !== correctTokens[i]));
 
+  // Collocation exercises test word choice itself, so a whole-token swap is
+  // a vocabulary miss even when it's only an edit or two away ("make a
+  // shower" vs "take a shower") — lexical outranks the typo heuristic here.
+  if (
+    hints.exerciseType === 'collocation_match' &&
+    sameTokenCount &&
+    userTokens.filter((t, i) => t !== correctTokens[i]).length === 1
+  ) {
+    return 'lexical';
+  }
+
   if (spellingSignal) return 'spelling';
   if (lexicalSignal) return 'lexical';
 

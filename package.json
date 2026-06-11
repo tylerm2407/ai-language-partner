@@ -9,9 +9,11 @@
     "tunnel": "expo start --tunnel",
     "ios": "expo start --ios",
     "android": "expo start --android",
-    "lint": "eslint . --ext .ts,.tsx",
+    "lint": "eslint .",
     "test": "jest",
-    "typecheck": "tsc --noEmit"
+    "test:functions": "deno test --allow-read --allow-env supabase/functions",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm run lint && npm test"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",

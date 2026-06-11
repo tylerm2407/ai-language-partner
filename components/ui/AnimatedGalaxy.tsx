@@ -220,9 +220,10 @@ const StarView = React.memo(({ x, y, r, color, opacity }: StarData) => (
     }}
   />
 ));
+StarView.displayName = 'StarView';
 
 // ─── Hero star with glow ──────────────────────────────────────────────────────
-const HeroStarView = React.memo(({ star, glowMul }: { star: HeroStarData; glowMul: number }) => {
+const HeroStarView = React.memo(function HeroStarView({ star, glowMul }: { star: HeroStarData; glowMul: number }) {
   const glowR = star.r * 6 * glowMul;
   return (
     <>
