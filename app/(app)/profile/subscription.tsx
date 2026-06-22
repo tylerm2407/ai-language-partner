@@ -14,6 +14,7 @@ import {
   isPurchasesAvailable,
 } from '../../../lib/purchases';
 import { PLAN_FEATURES, type PlanId } from '../../../lib/plans';
+import { trackEvent } from '../../../lib/analytics';
 import { Button } from '../../../components/ui/Button';
 import { Badge } from '../../../components/ui/Badge';
 import { Ionicons } from '@expo/vector-icons';
@@ -56,6 +57,8 @@ export default function SubscriptionScreen() {
 
   useEffect(() => {
     loadOfferings();
+    trackEvent('paywall_viewed', { currentTier });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadOfferings]);
 
   // Refresh server-side subscription state whenever the screen is focused.
@@ -71,6 +74,7 @@ export default function SubscriptionScreen() {
     try {
       const result = await purchasePackage(pkg);
       if (result.status === 'success') {
+        trackEvent('purchase_completed', { tier: result.tier ?? tierFromPackage(pkg) });
         // RevenueCat webhook updates the server tier within seconds; poll a
         // couple of times so the UI reflects it without a manual refresh.
         await refreshSubscription(user.id);
@@ -94,6 +98,7 @@ export default function SubscriptionScreen() {
         await refreshSubscription(user.id);
         setTimeout(() => user && refreshSubscription(user.id), 2500);
         if (result.tier && result.tier !== 'starter') {
+          trackEvent('purchase_restored', { tier: result.tier });
           Alert.alert('Purchases restored', 'Your subscription has been restored.');
         } else {
           Alert.alert('No purchases found', 'We couldn’t find an active subscription to restore.');

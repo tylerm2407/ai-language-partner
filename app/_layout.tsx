@@ -10,6 +10,7 @@ import { useSchoolStore } from '../stores/useSchoolStore';
 import { SCHOOL_ENABLED } from '../config/app';
 import { useNotifications, scheduleStreakSaveReminder } from '../hooks/useNotifications';
 import { configurePurchases, identifyPurchaser, resetPurchaser } from '../lib/purchases';
+import { identifyUser, resetAnalytics } from '../lib/analytics';
 import { View, ActivityIndicator, AppState } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
@@ -86,15 +87,19 @@ function RootLayout() {
     return () => sub.remove();
   }, [profile, dailyStats?.xpEarned, permissionGranted]);
 
-  // Configure RevenueCat and tie purchases to the signed-in user. Idempotent;
-  // no-op on builds without IAP keys (e.g. Expo Go). Detaches on logout.
+  // Tie purchases, analytics, and crash reports to the signed-in user.
+  // Idempotent; analytics/IAP no-op until a provider/keys are configured.
   useEffect(() => {
     const userId = session?.user?.id ?? null;
     configurePurchases(userId);
     if (userId) {
       identifyPurchaser(userId);
+      identifyUser(userId);
+      Sentry.setUser({ id: userId });
     } else {
       resetPurchaser();
+      resetAnalytics();
+      Sentry.setUser(null);
     }
   }, [session?.user?.id]);
 
