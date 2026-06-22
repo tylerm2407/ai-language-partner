@@ -110,7 +110,15 @@ export default function WritingPromptScreen() {
       const bonusXp = Math.round(overallScore * 15);
       await addXp(user.id, baseXp + bonusXp);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to grade writing');
+      const msg = e instanceof Error ? e.message : 'Failed to grade writing';
+      // Surface plan limits clearly instead of a raw "429: …[CODE]" string.
+      if (msg.includes('DAILY_WRITING_LIMIT_REACHED')) {
+        setError("You've used all your writing grades for today. Upgrade your plan in Profile → Subscription for more.");
+      } else if (msg.includes('RATE_LIMITED')) {
+        setError("You're submitting too quickly. Please wait a moment and try again.");
+      } else {
+        setError('We couldn’t grade your writing. Please try again — your submission was saved.');
+      }
     } finally {
       setIsGrading(false);
     }

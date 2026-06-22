@@ -405,9 +405,11 @@ export default function ChatScreen() {
       timestamp: new Date().toISOString(),
     };
 
-    // Load persisted history or start fresh
+    // Load persisted history or start fresh. Key sessions by the stable
+    // scenario.key so renaming/localizing a label doesn't orphan history;
+    // fall back to label only for custom (teacher) scenarios with no key.
     if (user?.id) {
-      loadPersistedHistory(user.id, scenario.label, firstMessage);
+      loadPersistedHistory(user.id, scenario.key ?? scenario.label, firstMessage);
     } else {
       setMessages([firstMessage]);
     }

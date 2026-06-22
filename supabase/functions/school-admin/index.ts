@@ -153,16 +153,15 @@ async function addTeacher(supabase: any, adminUserId: string, body: AdminRequest
 
   if (!organizationId || !userEmail) return errorResponse('Missing required fields: organizationId, userEmail');
 
-  // Look up user by email in auth.users via admin API
-  const { data: { users }, error: lookupErr } = await supabase.auth.admin.listUsers({
-    filter: `email.eq.${userEmail}`,
+  // Look up user by EXACT email. Do NOT use auth.admin.listUsers({ filter }) —
+  // supabase-js ignores the unsupported `filter` option and returns the first
+  // page of ALL users, so users[0] would be an arbitrary user (privilege
+  // escalation). Use the exact-match RPC instead (migration 037).
+  const { data: teacherUserId, error: lookupErr } = await supabase.rpc('get_user_id_by_email', {
+    p_email: String(userEmail).trim().toLowerCase(),
   });
-  if (lookupErr) return errorResponse(`Failed to look up users: ${lookupErr.message}`, 500);
-
-  const user = users?.[0] ?? null;
-  if (!user) return errorResponse(`No user found with email: ${userEmail}`, 404);
-
-  const teacherUserId = user.id;
+  if (lookupErr) return errorResponse(`Failed to look up user: ${lookupErr.message}`, 500);
+  if (!teacherUserId) return errorResponse(`No user found with email: ${userEmail}`, 404);
 
   // Upsert teacher role in user_roles
   await supabase

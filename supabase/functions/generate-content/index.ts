@@ -130,7 +130,7 @@ serve(async (req: Request) => {
       );
     }
 
-    // ── Rate limit: count against text messages ──────────────
+    // ── Rate limit: atomic check-and-consume against text messages ──
     const { data: sub } = await supabase
       .from('subscriptions')
       .select('tier, is_active')
@@ -140,15 +140,15 @@ serve(async (req: Request) => {
     const tier = sub?.is_active && sub.tier ? sub.tier : 'starter';
     const limits = getPlanLimits(tier);
 
-    const todayUTC = new Date().toISOString().split('T')[0];
-    const { data: usageRow } = await supabase
-      .from('daily_usage')
-      .select('text_messages')
-      .eq('user_id', user.id)
-      .eq('date', todayUTC)
-      .single();
-
-    if (((usageRow?.text_messages as number) ?? 0) >= limits.dailyTextMessages) {
+    const { data: quotaOk, error: quotaErr } = await supabase.rpc('consume_daily_quota', {
+      p_user_id: user.id,
+      p_counter: 'text_messages',
+      p_limit: limits.dailyTextMessages,
+    });
+    if (quotaErr) {
+      console.error('[generate-content] consume_daily_quota failed:', quotaErr.message);
+    }
+    if (quotaErr || quotaOk !== true) {
       return new Response(
         JSON.stringify({ error: "You've reached your daily AI usage limit. Upgrade your plan for more.", code: 'DAILY_TEXT_LIMIT_REACHED' }),
         { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
@@ -219,12 +219,7 @@ serve(async (req: Request) => {
     // Parse the JSON response from Claude
     const result = parseAIJSON(rawText);
 
-    // Increment text_messages after successful AI call
-    await supabase.rpc('increment_daily_usage', {
-      p_user_id: user.id,
-      p_date: todayUTC,
-      p_text_messages: 1,
-    });
+    // Quota already consumed atomically before the AI call (consume_daily_quota).
 
     return new Response(
       JSON.stringify({

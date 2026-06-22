@@ -53,8 +53,27 @@ function formatTimestamp(iso: string): string {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-// Cache audio URIs by message ID to avoid re-fetching
+// Cache loaded Audio.Sound objects by message ID to avoid re-fetching.
+// Bounded LRU: native Audio.Sound objects hold memory, so evict + unload the
+// oldest once we exceed the cap (long chats would otherwise grow unbounded).
 const audioCache = new Map<string, Audio.Sound>();
+const MAX_AUDIO_CACHE = 12;
+
+async function cacheSound(id: string, sound: Audio.Sound): Promise<void> {
+  if (audioCache.size >= MAX_AUDIO_CACHE) {
+    const oldestKey = audioCache.keys().next().value;
+    if (oldestKey !== undefined) {
+      const old = audioCache.get(oldestKey);
+      audioCache.delete(oldestKey);
+      try {
+        await old?.unloadAsync();
+      } catch {
+        // already unloaded — ignore
+      }
+    }
+  }
+  audioCache.set(id, sound);
+}
 
 // Cache translated text by message ID — translations are deterministic enough
 // that one tap per message is plenty; subsequent toggles are instant.
@@ -143,7 +162,7 @@ export function ChatBubble({ message, targetLanguage, userId, nativeLanguage }: 
 
       const { sound } = await Audio.Sound.createAsync({ uri: dataUri });
       soundRef.current = sound;
-      audioCache.set(message.id, sound);
+      await cacheSound(message.id, sound);
 
       sound.setOnPlaybackStatusUpdate((status) => {
         if (status.isLoaded && status.didJustFinish) {

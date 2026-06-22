@@ -257,9 +257,11 @@ export default function ReviewScreen() {
       {showAnswer && (
         <View style={{ paddingHorizontal: spacing.md + spacing.xxs, paddingBottom: spacing.lg }}>
           <View style={{ flexDirection: 'row', gap: spacing.xs }}>
+            {/* Rating scale matches learn/review.tsx and .claude/rules/learning.md
+                (3+ = pass): Again=1 fails/resets, Hard=3 passes with difficulty. */}
             <RatingButton label="Again" sublabel="1m" color={colors.error.base} onPress={() => handleRate(1)} />
-            <RatingButton label="Hard" sublabel="6m" color={colors.warning.base} onPress={() => handleRate(2)} />
-            <RatingButton label="Good" sublabel="10m" color={colors.success.base} onPress={() => handleRate(3)} />
+            <RatingButton label="Hard" sublabel="6m" color={colors.warning.base} onPress={() => handleRate(3)} />
+            <RatingButton label="Good" sublabel="10m" color={colors.success.base} onPress={() => handleRate(4)} />
             <RatingButton label="Easy" sublabel="4d" color={colors.league.diamond} onPress={() => handleRate(5)} />
           </View>
         </View>
