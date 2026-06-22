@@ -10,10 +10,14 @@
 // UNAUTHORIZED_UNSUPPORTED_TOKEN_ALGORITHM root cause.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, corsResponse } from '../_shared/cors.ts';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
+import { checkBurstLimit } from '../_shared/burst-limit.ts';
 
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const TEXT_MODEL = 'claude-haiku-4-5-20251001';
 const MAX_INPUT_CHARS = 1500;
 
@@ -38,6 +42,13 @@ serve(async (req: Request) => {
 
   if (!ANTHROPIC_API_KEY) {
     return json({ error: 'ANTHROPIC_API_KEY not configured' }, 500);
+  }
+
+  // Burst limit: caps abusive loops without nerfing the legit translate button.
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  const burstOk = await checkBurstLimit(supabase, authUser.userId, 'translate', 30, 60);
+  if (!burstOk) {
+    return json({ error: 'Too many requests. Please slow down.', code: 'RATE_LIMITED' }, 429);
   }
 
   let body: TranslateRequest;

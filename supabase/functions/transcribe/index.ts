@@ -5,9 +5,14 @@
 // Deploy: npx supabase functions deploy transcribe
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
+import { checkBurstLimit } from '../_shared/burst-limit.ts';
+import { MAX_AUDIO_BASE64_SIZE } from '../_shared/validation.ts';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_KEY');
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 interface TranscribeRequest {
   audioBase64: string;
@@ -48,6 +53,22 @@ serve(async (req: Request) => {
       return new Response(
         JSON.stringify({ error: 'audioBase64 is required' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Cost/abuse guard: cap audio size and rate before hitting Whisper.
+    if (audioBase64.length > MAX_AUDIO_BASE64_SIZE) {
+      return new Response(
+        JSON.stringify({ error: 'Audio too large.' }),
+        { status: 413, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const burstOk = await checkBurstLimit(supabase, authUser.userId, 'transcribe', 30, 60);
+    if (!burstOk) {
+      return new Response(
+        JSON.stringify({ error: 'Too many requests. Please slow down.', code: 'RATE_LIMITED' }),
+        { status: 429, headers: { 'Content-Type': 'application/json' } }
       );
     }
 

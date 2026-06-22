@@ -171,7 +171,13 @@ export function LessonRunner({
         return;
       }
       if (!currentExercise) return;
-      setAnswers((prev) => [...prev, { exerciseId: currentExercise.id, correct, answer }]);
+      // De-dupe by exerciseId: a "Try again" retry re-invokes this handler for
+      // the same exercise, so replace any prior entry instead of appending —
+      // otherwise answers.length exceeds exercises.length and accuracy/XP inflate.
+      setAnswers((prev) => [
+        ...prev.filter((a) => a.exerciseId !== currentExercise.id),
+        { exerciseId: currentExercise.id, correct, answer },
+      ]);
       setShowResult(true);
       setLastAnswerCorrect(correct);
 

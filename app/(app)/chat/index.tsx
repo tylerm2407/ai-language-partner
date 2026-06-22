@@ -501,14 +501,30 @@ export default function ChatScreen() {
     } catch (err) {
       console.error('[chat] sendChatMessage failed:', err);
       const detail = err instanceof Error ? err.message : String(err);
-      setMessages((prev) => [...prev, {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: `Sorry, I had trouble responding. (${detail})`,
-        audioUrl: null,
-        correction: null,
-        timestamp: new Date().toISOString(),
-      }]);
+
+      // Daily limit reached → convert into an upgrade prompt at the moment of
+      // highest intent, instead of showing a confusing error bubble.
+      if (detail.includes('DAILY_TEXT_LIMIT_REACHED')) {
+        Alert.alert(
+          'Daily limit reached',
+          "You've used all your messages for today. Upgrade your plan for more daily conversations.",
+          [
+            { text: 'Not now', style: 'cancel' },
+            { text: 'See plans', onPress: () => router.push('/(app)/profile/subscription') },
+          ]
+        );
+      } else if (detail.includes('RATE_LIMITED')) {
+        Alert.alert('Slow down a moment', 'You’re sending messages very quickly. Please try again in a few seconds.');
+      } else {
+        setMessages((prev) => [...prev, {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: 'Sorry, I had trouble responding. Please try again.',
+          audioUrl: null,
+          correction: null,
+          timestamp: new Date().toISOString(),
+        }]);
+      }
       // If hands-free, restart listening even after error
       if (handsFreeActive) {
         setShouldStartListening(true);

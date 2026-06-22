@@ -9,6 +9,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getPlanLimits } from '../_shared/plan-limits.ts';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { corsHeaders, corsResponse } from '../_shared/cors.ts';
+import { checkBurstLimit } from '../_shared/burst-limit.ts';
+import { MAX_AUDIO_BASE64_SIZE } from '../_shared/validation.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -65,6 +67,21 @@ serve(async (req: Request) => {
       return new Response(
         JSON.stringify({ error: 'audioBase64 and expectedText are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Cost/abuse guard: cap audio size and burst rate before Whisper.
+    if (audioBase64.length > MAX_AUDIO_BASE64_SIZE) {
+      return new Response(
+        JSON.stringify({ error: 'Audio too large.' }),
+        { status: 413, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const burstOk = await checkBurstLimit(supabase, authenticatedUserId, 'score-pronunciation', 20, 60);
+    if (!burstOk) {
+      return new Response(
+        JSON.stringify({ error: 'Too many requests. Please slow down.', code: 'RATE_LIMITED' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 

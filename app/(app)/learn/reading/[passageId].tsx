@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { View, ActivityIndicator, Text, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -25,6 +25,7 @@ export default function ReadingPassageScreen() {
 
   const [phase, setPhase] = useState<'reading' | 'questions' | 'complete'>('reading');
   const [score, setScore] = useState(0);
+  const finishingRef = useRef(false);
 
   if (isLoading) {
     return (
@@ -104,13 +105,17 @@ export default function ReadingPassageScreen() {
       onSelectWord={selectWord}
       onDismissTooltip={dismissTooltip}
       onAddToReview={(annotation) => addToReview(annotation, passage.courseId)}
-      onContinue={() => {
+      onContinue={async () => {
         if (questions.length > 0) {
           setPhase('questions');
-        } else {
-          completeReading(1);
-          router.back();
+          return;
         }
+        // No comprehension questions — mark read. Await the write before
+        // navigating so it isn't cancelled on unmount; guard double-taps.
+        if (finishingRef.current) return;
+        finishingRef.current = true;
+        await completeReading(1);
+        router.back();
       }}
       onExit={() => router.back()}
     />

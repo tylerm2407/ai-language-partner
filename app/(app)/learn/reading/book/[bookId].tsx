@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, Pressable, ActivityIndicator, Alert, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -28,6 +28,9 @@ export default function BookDetailScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isReading, setIsReading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Guards against re-awarding XP when the reader re-fires onComplete (paging
+  // back and forth across the last page, narration auto-advance, etc.).
+  const hasCompletedRef = useRef(false);
 
   const isUnlimitedPlan = subscription?.tier === 'vip' && subscription?.isActive;
 
@@ -131,6 +134,12 @@ export default function BookDetailScreen() {
 
   const handleComplete = useCallback(async () => {
     if (!user || !bookId || !book) return;
+    // Award once per session, and never re-award a book already finished.
+    if (hasCompletedRef.current || progress?.completedAt) {
+      setIsReading(false);
+      return;
+    }
+    hasCompletedRef.current = true;
     try {
       await upsertBookProgress(user.id, bookId, {
         percentComplete: 100,
@@ -147,9 +156,10 @@ export default function BookDetailScreen() {
         [{ text: 'Continue', onPress: () => setIsReading(false) }]
       );
     } catch {
+      hasCompletedRef.current = false; // allow a retry if the write failed
       Alert.alert('Error', 'Failed to save completion');
     }
-  }, [user, bookId, book]);
+  }, [user, bookId, book, progress?.completedAt]);
 
   if (isLoading) {
     return (

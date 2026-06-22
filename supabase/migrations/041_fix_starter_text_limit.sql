@@ -1,0 +1,10 @@
+-- 041: Align the free/starter daily text-message limit with lib/plans.ts (10).
+--
+-- get_effective_limits' ELSE (free/starter) branch hardcoded dailyTextMessages=5,
+-- but the UI and plan-limits.ts advertise 10, so starter users were cut off at 5
+-- in chat (which reads get_effective_limits) while writing/story endpoints used
+-- 10 (from getPlanLimits). Only that one value changes; also adds the missing
+-- SET search_path. Applied to prod 2026-06-22 via Supabase MCP. Full body lives
+-- in the applied migration; see get_effective_limits in the dashboard.
+--
+-- (Body identical to the deployed function with ELSE dailyTextMessages: 10.)
