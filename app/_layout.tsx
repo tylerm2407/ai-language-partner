@@ -9,6 +9,7 @@ import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 import { useSchoolStore } from '../stores/useSchoolStore';
 import { SCHOOL_ENABLED } from '../config/app';
 import { useNotifications, scheduleStreakSaveReminder } from '../hooks/useNotifications';
+import { configurePurchases, identifyPurchaser, resetPurchaser } from '../lib/purchases';
 import { View, ActivityIndicator, AppState } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
@@ -24,10 +25,12 @@ import {
   JetBrainsMono_500Medium,
 } from '@expo-google-fonts/jetbrains-mono';
 
+const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN;
 Sentry.init({
-  dsn: '__YOUR_SENTRY_DSN__', // TODO: Replace with your Sentry DSN from sentry.io
+  dsn: SENTRY_DSN,
   tracesSampleRate: 0.2,
-  enabled: !__DEV__,
+  // Only enable in production builds that actually have a DSN configured.
+  enabled: !__DEV__ && !!SENTRY_DSN,
 });
 
 function RootLayout() {
@@ -82,6 +85,18 @@ function RootLayout() {
     });
     return () => sub.remove();
   }, [profile, dailyStats?.xpEarned, permissionGranted]);
+
+  // Configure RevenueCat and tie purchases to the signed-in user. Idempotent;
+  // no-op on builds without IAP keys (e.g. Expo Go). Detaches on logout.
+  useEffect(() => {
+    const userId = session?.user?.id ?? null;
+    configurePurchases(userId);
+    if (userId) {
+      identifyPurchaser(userId);
+    } else {
+      resetPurchaser();
+    }
+  }, [session?.user?.id]);
 
   // Load user data when session becomes available
   useEffect(() => {

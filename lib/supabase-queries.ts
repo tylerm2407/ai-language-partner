@@ -846,6 +846,7 @@ function mapSubscription(row: Record<string, unknown>): Subscription {
     stripeSubscriptionId: row.stripe_subscription_id as string | null,
     currentPeriodEnd: row.current_period_end as string | null,
     isActive: row.is_active as boolean,
+    cancelAtPeriodEnd: (row.cancel_at_period_end as boolean) ?? false,
   };
 }
 

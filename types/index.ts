@@ -406,6 +406,7 @@ export interface Subscription {
   stripeSubscriptionId: string | null;
   currentPeriodEnd: string | null;
   isActive: boolean;
+  cancelAtPeriodEnd: boolean;
 }
 
 // ─── Daily Usage (quota tracking) ───────────────────────────────
