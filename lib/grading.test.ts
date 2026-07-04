@@ -203,3 +203,62 @@ describe('gradeAnswer populates errorType', () => {
     expect(result.errorType).toBeNull();
   });
 });
+
+describe('gradeAnswer strict grammar grading', () => {
+  it('rejects a wrong grammar form that is within fuzzy typo distance', () => {
+    // "hablo" (indicative) vs "hable" (present subjunctive): 1 edit apart.
+    // Without strict grammar grading this was wrongly accepted as a typo.
+    const result = gradeAnswer('hablo', 'hable', [], {
+      exerciseHints: { skillType: 'grammar', targetGrammar: 'present_subjunctive' },
+    });
+    expect(result.isCorrect).toBe(false);
+    expect(result.errorType).toBe('grammar');
+  });
+
+  it('rejects a within-distance distractor tapped on a grammar multiple_choice', () => {
+    // German "können" (indicative) vs "könnten" (Konjunktiv II): 1 edit. A
+    // tapped distractor must never grade correct.
+    const result = gradeAnswer('können', 'könnten', [], {
+      exerciseHints: { skillType: 'grammar', exerciseType: 'multiple_choice' },
+    });
+    expect(result.isCorrect).toBe(false);
+  });
+
+  it('rejects a within-distance wrong form on a word_form exercise (grammar by type)', () => {
+    // No skillType/targetGrammar, but word_form is inherently a grammar shape.
+    const result = gradeAnswer('ran', 'run', [], {
+      exerciseHints: { exerciseType: 'word_form' },
+    });
+    expect(result.isCorrect).toBe(false);
+  });
+
+  it('still accepts an exact grammar answer', () => {
+    const result = gradeAnswer('hable', 'hable', [], {
+      exerciseHints: { skillType: 'grammar' },
+    });
+    expect(result.isCorrect).toBe(true);
+    expect(result.errorType).toBeNull();
+  });
+
+  it('still normalizes case and trailing punctuation under strict grammar grading', () => {
+    // Strict removes fuzzy typo tolerance, but normalize() still applies.
+    const result = gradeAnswer('Hable.', 'hable', [], {
+      exerciseHints: { skillType: 'grammar' },
+    });
+    expect(result.isCorrect).toBe(true);
+  });
+
+  it('still accepts a listed accepted_answer under strict grammar grading', () => {
+    const result = gradeAnswer('haya comido', 'hubiera comido', ['haya comido'], {
+      exerciseHints: { skillType: 'grammar' },
+    });
+    expect(result.isCorrect).toBe(true);
+  });
+
+  it('does NOT make vocabulary answers strict (typo still accepted)', () => {
+    const result = gradeAnswer('recieve', 'receive', [], {
+      exerciseHints: { skillType: 'vocabulary' },
+    });
+    expect(result.isCorrect).toBe(true);
+  });
+});

@@ -31,6 +31,28 @@ export interface ExerciseHints {
 }
 
 /**
+ * True when the exercise tests grammar: an explicit `targetGrammar`, a
+ * `skillType` of `grammar`, or an inherently grammar-shaped exercise type.
+ * Grammar exercises are graded strictly (no fuzzy typo tolerance) because a
+ * form one or two edits away from the answer is usually a different — wrong —
+ * grammatical form, not a mechanical typo.
+ */
+export function isGrammarExercise(hints: ExerciseHints = {}): boolean {
+  const isGrammarExerciseType =
+    hints.exerciseType === 'word_form' ||
+    hints.exerciseType === 'sentence_transformation' ||
+    hints.exerciseType === 'error_correction' ||
+    hints.exerciseType === 'cloze_deletion' ||
+    hints.exerciseType === 'sentence_construction';
+
+  return (
+    Boolean(hints.targetGrammar) ||
+    hints.skillType === 'grammar' ||
+    isGrammarExerciseType
+  );
+}
+
+/**
  * Classify the learner's error into one of four pedagogical categories used
  * by the feedback UI. Returns `null` when we can't confidently assign one.
  *
@@ -57,13 +79,6 @@ export function classifyError(
     return 'phonological';
   }
 
-  const isGrammarExerciseType =
-    hints.exerciseType === 'word_form' ||
-    hints.exerciseType === 'sentence_transformation' ||
-    hints.exerciseType === 'error_correction' ||
-    hints.exerciseType === 'cloze_deletion' ||
-    hints.exerciseType === 'sentence_construction';
-
   const isLexicalExerciseType =
     hints.exerciseType === 'translate_to_native' ||
     hints.exerciseType === 'translate_to_target' ||
@@ -71,10 +86,7 @@ export function classifyError(
 
   // Grammar signal is strongest — explicit targetGrammar or a grammar-skill
   // exercise should win over a coincidentally small edit-distance.
-  const grammarSignal =
-    Boolean(hints.targetGrammar) ||
-    hints.skillType === 'grammar' ||
-    isGrammarExerciseType;
+  const grammarSignal = isGrammarExercise(hints);
 
   // Spelling: mechanical typo on any exercise where the shape is similar.
   // We keep this cheaper check independent so callers with no hints still
@@ -178,8 +190,10 @@ export function gradeAnswer(
     };
   }
 
-  // Strict mode: no fuzzy matching
-  if (options?.strict) {
+  // Strict mode: no fuzzy matching. Explicitly requested, or implied for any
+  // grammar exercise — a near-miss on a grammar form is a different (wrong)
+  // form, not a typo, so fuzzy tolerance must not accept it.
+  if (options?.strict || isGrammarExercise(hints)) {
     return {
       isCorrect: false,
       accuracy: 0,
