@@ -190,9 +190,10 @@ export function gradeAnswer(
     };
   }
 
-  // Strict mode: no fuzzy matching. Explicitly requested, or implied for any
-  // grammar exercise — a near-miss on a grammar form is a different (wrong)
-  // form, not a typo, so fuzzy tolerance must not accept it.
+  // Strict mode: no fuzzy or accent tolerance. Explicitly requested, or
+  // implied for any grammar exercise — a near-miss on a grammar form is a
+  // different (wrong) form, not a typo ("hablo" vs "habló" is a different
+  // tense), so neither typo nor accent tolerance may accept it.
   if (options?.strict || isGrammarExercise(hints)) {
     return {
       isCorrect: false,
@@ -204,10 +205,30 @@ export function gradeAnswer(
     };
   }
 
+  // Accent-tolerant match: diacritic-stripped forms are equal but the raw
+  // normalized forms differ (e.g. "cafe" vs "café"). Accepted as correct —
+  // Duolingo-style — but the feedback nudges the learner toward the accents.
+  const stripped = stripDiacritics(normalized);
+  const accentMatch = allAccepted.find(
+    (accepted) => stripDiacritics(accepted) === stripped
+  );
+  if (accentMatch !== undefined) {
+    const distance = levenshtein(normalized, accentMatch);
+    const maxLen = Math.max(normalized.length, accentMatch.length);
+    return {
+      isCorrect: true,
+      accuracy: maxLen === 0 ? 1 : 1 - distance / maxLen,
+      feedback: `Correct! (Watch the accents: "${correctAnswer}")`,
+      normalizedUserAnswer: normalized,
+      normalizedCorrectAnswer: normalizedCorrect,
+      errorType: null,
+    };
+  }
+
   // Fuzzy match: check Levenshtein distance
   const bestMatch = allAccepted.reduce(
     (best, accepted) => {
-      const distance = levenshtein(normalized, accepted);
+      const distance = levenshtein(stripped, stripDiacritics(accepted));
       const maxLen = Math.max(normalized.length, accepted.length);
       const similarity = maxLen === 0 ? 1 : 1 - distance / maxLen;
 
@@ -256,7 +277,9 @@ export function gradeAnswer(
 
 /**
  * Normalize text for comparison: lowercase, trim, remove extra spaces,
- * normalize accents for Latin scripts.
+ * normalize quotes, strip trailing punctuation. Accent folding is handled
+ * separately by `stripDiacritics` in the comparison path, so accented and
+ * unaccented forms can be told apart for feedback.
  */
 export function normalize(text: string): string {
   return text
@@ -268,6 +291,17 @@ export function normalize(text: string): string {
     .replace(/[""]/g, '"')
     // Remove trailing punctuation for comparison
     .replace(/[.!?]+$/, '');
+}
+
+/**
+ * Strip combining diacritics after NFD decomposition so accented and
+ * unaccented forms compare equal ("café" -> "cafe", "está" -> "esta").
+ * Letters that decompose fold to their base — including ñ -> n, so "nino"
+ * matches "niño" (intentional, Duolingo-style). Letters that don't decompose
+ * (e.g. German ß) are left as-is.
+ */
+export function stripDiacritics(text: string): string {
+  return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
 /**

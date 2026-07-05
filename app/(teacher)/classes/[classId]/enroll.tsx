@@ -1,9 +1,8 @@
 import { useState, useMemo } from 'react';
-import { View, Text, TextInput, FlatList, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, FlatList, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable } from 'react-native';
 import { GradientBackground } from '../../../../components/ui/GradientBackground';
 import { GlassSurface } from '../../../../components/ui/GlassSurface';
 import { GradientButton } from '../../../../components/ui/GradientButton';
@@ -79,6 +78,10 @@ export default function BulkEnrollScreen() {
   return (
     <GradientBackground>
       <SafeAreaView className="flex-1" edges={['top']}>
+        <KeyboardAvoidingView
+          className="flex-1"
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
         <View className="flex-1 px-4 pt-2">
           <Pressable
             onPress={() => router.back()}
@@ -192,6 +195,7 @@ export default function BulkEnrollScreen() {
             </>
           )}
         </View>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </GradientBackground>
   );

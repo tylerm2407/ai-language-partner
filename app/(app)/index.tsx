@@ -5,8 +5,10 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
 import { useAppStore } from '../../stores/useAppStore';
 import { useSchoolStore } from '../../stores/useSchoolStore';
-import { SCHOOL_ENABLED } from '../../config/app';
+import { SCHOOL_ENABLED, levelToNewsTier } from '../../config/app';
 import { fetchStatsRange } from '../../lib/supabase-queries';
+import { localDayKey } from '../../lib/dates';
+import { useTimezoneSync } from '../../hooks/useProfile';
 import { Ionicons } from '@expo/vector-icons';
 import { GradientBackground } from '../../components/ui/GradientBackground';
 import { useHearts } from '../../hooks/useHearts';
@@ -19,7 +21,6 @@ import { StreakRepairModal } from '../../components/gamification/StreakRepairMod
 import { OutOfHeartsModal } from '../../components/gamification/OutOfHeartsModal';
 import { PrePermissionSheet } from '../../components/gamification/PrePermissionSheet';
 import { OnboardingChecklistFab } from '../../components/onboarding/OnboardingChecklistFab';
-import { levelToNewsTier } from '../../config/app';
 import { DateLabel } from '../../components/magazine/DateLabel';
 import { StatsStrip } from '../../components/magazine/StatsStrip';
 import { NewsHeroCard } from '../../components/magazine/NewsHeroCard';
@@ -37,12 +38,15 @@ const serifFont = Platform.select({ ios: 'Georgia', default: 'serif' });
 export default function HomeScreen() {
   const { user } = useAuth();
   const router = useRouter();
-  const { profile, dailyStats, reviewCount, loading, loadUserData, motivation } = useAppStore();
+  const { profile, dailyStats, reviewCount, loadUserData } = useAppStore();
+  // Keep user_profiles.timezone tracking the device — the server derives
+  // streak/challenge/quota days from it (migration 044). One-shot per session.
+  useTimezoneSync();
   const [weeklyStats, setWeeklyStats] = useState<DailyStats[]>([]);
-  const { hearts, maxHearts, isUnlimited, canPlay, nextRegenAt } = useHearts();
-  const { level, tier, xpInLevel, xpToNextLevel, progress: levelProgress } = useLevel();
-  const { showRepairModal, brokenStreak, freezesAvailable, repairWithFreeze, dismissRepair, hasShield } = useStreakProtection();
-  const { enrolledClasses, pendingAssignments, loadStudentSchoolData } = useSchoolStore();
+  const { canPlay, nextRegenAt } = useHearts();
+  useLevel(); // level-up detection mirrors xpLevel/leagueTier into the store
+  const { showRepairModal, brokenStreak, freezesAvailable, repairWithFreeze, dismissRepair } = useStreakProtection();
+  const { loadStudentSchoolData } = useSchoolStore();
   const schoolEnabled = SCHOOL_ENABLED;
   const newsTier = levelToNewsTier(profile?.level ?? 'intermediate');
   const { article, isLoading: newsLoading, error: newsError, hasRead: newsHasRead } = useDailyNews(
@@ -51,7 +55,7 @@ export default function HomeScreen() {
     newsTier,
   );
   const { permissionStatus, requestPermissionsExplicit } = useNotifications({ userId: user?.id });
-  const { tiles: unitTiles, loading: tilesLoading } = useUnitProgressTiles(
+  const { tiles: unitTiles, loading: tilesLoading, error: tilesError, refetch: refetchTiles } = useUnitProgressTiles(
     user?.id,
     profile?.targetLanguage,
     4,
@@ -106,8 +110,8 @@ export default function HomeScreen() {
     const mondayOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
     const monday = new Date(today);
     monday.setDate(today.getDate() - mondayOffset);
-    const startDate = monday.toISOString().split('T')[0];
-    const endDate = today.toISOString().split('T')[0];
+    const startDate = localDayKey(monday);
+    const endDate = localDayKey(today);
     try {
       const stats = await fetchStatsRange(userId, startDate, endDate);
       setWeeklyStats(stats);
@@ -122,7 +126,7 @@ export default function HomeScreen() {
       loadWeeklyStats(user.id);
       if (schoolEnabled) loadStudentSchoolData(user.id);
     }
-  }, [user?.id, loadUserData, loadWeeklyStats, loadStudentSchoolData]);
+  }, [user?.id, loadUserData, loadWeeklyStats, loadStudentSchoolData, schoolEnabled]);
 
   return (
     <GradientBackground>
@@ -159,7 +163,7 @@ export default function HomeScreen() {
             <SessionBand />
 
             {/* Continue learning — 2-column tiles pulled from user's real curriculum */}
-            <LessonTileGrid tiles={lessonTiles} loading={tilesLoading} />
+            <LessonTileGrid tiles={lessonTiles} loading={tilesLoading} error={tilesError} onRetry={refetchTiles} />
 
             {/* Daily challenges */}
             <MagazineDailyChallenges dailyStats={dailyStats ?? null} />

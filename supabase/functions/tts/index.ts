@@ -7,6 +7,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, corsResponse } from '../_shared/cors.ts';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { checkBurstLimit } from '../_shared/burst-limit.ts';
+import { getPlanLimits } from '../_shared/plan-limits.ts';
+import { getUserToday } from '../_shared/user-day.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -175,13 +177,6 @@ function resolveVoiceId(
   return voices[0];
 }
 
-const PLAN_LIMITS: Record<string, { dailyVoiceMinutes: number | 'unlimited' }> = {
-  starter:   { dailyVoiceMinutes: 5 },
-  basic:     { dailyVoiceMinutes: 10 },
-  premium:   { dailyVoiceMinutes: 20 },
-  vip:       { dailyVoiceMinutes: 30 },
-};
-
 interface TTSRequest {
   text: string;
   language: string;
@@ -196,10 +191,6 @@ interface TTSRequest {
   /** Stable key for 'rotate' mode so the same learner + same repetition
    *  slot deterministically gets the same voice on retry. */
   voiceRotationKey?: string;
-}
-
-function todayUTC(): string {
-  return new Date().toISOString().split('T')[0];
 }
 
 /** Storage bucket for content-addressed TTS audio (migration 038). */
@@ -225,7 +216,8 @@ function bufferToBase64(buffer: ArrayBuffer): string {
   return btoa(binary);
 }
 
-async function getUserTier(supabase: ReturnType<typeof createClient>, userId: string): Promise<string> {
+// deno-lint-ignore no-explicit-any
+async function getUserTier(supabase: any, userId: string): Promise<string> {
   const { data } = await supabase
     .from('subscriptions')
     .select('tier, is_active')
@@ -236,8 +228,10 @@ async function getUserTier(supabase: ReturnType<typeof createClient>, userId: st
   return 'starter';
 }
 
-async function getVoiceMinutesUsed(supabase: ReturnType<typeof createClient>, userId: string): Promise<number> {
-  const date = todayUTC();
+/** `date` is the user's local day from getUserToday — must match the day
+ *  key increment_daily_usage writes (migration 044). */
+// deno-lint-ignore no-explicit-any
+async function getVoiceMinutesUsed(supabase: any, userId: string, date: string): Promise<number> {
   const { data } = await supabase
     .from('daily_usage')
     .select('voice_minutes')
@@ -322,19 +316,22 @@ serve(async (req: Request) => {
 
     // ── Daily voice minute limit ──
     const tier = await getUserTier(supabase, authenticatedUserId);
-    const limits = PLAN_LIMITS[tier] ?? PLAN_LIMITS.starter;
+    const limits = getPlanLimits(tier);
 
-    if (limits.dailyVoiceMinutes !== 'unlimited') {
-      const used = await getVoiceMinutesUsed(supabase, authenticatedUserId);
-      if (used >= limits.dailyVoiceMinutes) {
-        return new Response(
-          JSON.stringify({
-            error: "You've reached your daily voice limit. Upgrade your plan for more.",
-            code: 'DAILY_VOICE_LIMIT_REACHED',
-          }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+    // dailyVoiceMinutes is always a finite number — no unlimited tier exists
+    // (see _shared/plan-limits.ts), so the limit check is unconditional.
+    // User-local day key (migration 044), fetched once and reused for the
+    // usage increment after generation.
+    const userDay = await getUserToday(supabase, authenticatedUserId);
+    const used = await getVoiceMinutesUsed(supabase, authenticatedUserId, userDay);
+    if (used >= limits.dailyVoiceMinutes) {
+      return new Response(
+        JSON.stringify({
+          error: "You've reached your daily voice limit. Upgrade your plan for more.",
+          code: 'DAILY_VOICE_LIMIT_REACHED',
+        }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const response = await fetch(
@@ -374,9 +371,11 @@ serve(async (req: Request) => {
     }
 
     // Increment voice_minutes usage after successful TTS generation.
+    // p_date is ignored by SQL since migration 044 (day resolved via
+    // fluenci_user_today) — passed for clarity/consistency only.
     await supabase.rpc('increment_daily_usage', {
       p_user_id: authenticatedUserId,
-      p_date: new Date().toISOString().split('T')[0],
+      p_date: userDay,
       p_text_messages: 0,
       p_voice_minutes: 1,
     }).then(({ error }) => {
@@ -386,9 +385,11 @@ serve(async (req: Request) => {
     return new Response(JSON.stringify({ audioBase64: base64 }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
-  } catch (error) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('[tts] unhandled error:', message);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: 'Failed to generate audio. Please try again.' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

@@ -1,9 +1,8 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Alert, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, TextInput, Alert, ActivityIndicator, ScrollView, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable } from 'react-native';
 import { GradientBackground } from '../../../components/ui/GradientBackground';
 import { GlassSurface } from '../../../components/ui/GlassSurface';
 import { GradientButton } from '../../../components/ui/GradientButton';
@@ -73,7 +72,16 @@ export default function DataManagementScreen() {
   return (
     <GradientBackground>
       <SafeAreaView className="flex-1" edges={['top']}>
-        <ScrollView className="flex-1 px-4 pt-2" contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
+        <KeyboardAvoidingView
+          className="flex-1"
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+        <ScrollView
+          className="flex-1 px-4 pt-2"
+          contentContainerStyle={{ paddingBottom: 100 }}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           <Pressable
             onPress={() => router.back()}
             accessibilityRole="button"
@@ -176,6 +184,7 @@ export default function DataManagementScreen() {
             </Pressable>
           </GlassSurface>
         </ScrollView>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </GradientBackground>
   );

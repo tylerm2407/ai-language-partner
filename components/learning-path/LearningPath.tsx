@@ -2,13 +2,14 @@ import { useEffect, useRef, useMemo } from 'react';
 import { ScrollView, View, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useLessonProgress } from '../../hooks/useLessonProgress';
+import { Body } from '../ui/Text';
+import { Button } from '../ui/Button';
 import { generatePathLayout, getLessonIcon } from '../../lib/learning-path';
 import { PathNode } from './PathNode';
 import { PathConnector } from './PathConnector';
 import { SectionBanner } from './SectionBanner';
 import { TreasureNode } from './TreasureNode';
 import type { Unit, Lesson } from '../../types';
-import type { PathItem } from '../../lib/learning-path';
 
 interface LearningPathProps {
   units: { unit: Unit; lessons: Lesson[] }[];
@@ -19,7 +20,7 @@ export function LearningPath({ units, courseId }: LearningPathProps) {
   const router = useRouter();
   const scrollRef = useRef<ScrollView>(null);
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
-  const { getLessonState, getScore, loading } = useLessonProgress(courseId);
+  const { getLessonState, getScore, loading, error, retry } = useLessonProgress(courseId);
 
   const pathItems = useMemo(() => {
     if (loading) return [];
@@ -56,6 +57,19 @@ export function LearningPath({ units, courseId }: LearningPathProps) {
 
   // Track global lesson index for icon assignment
   let globalLessonIndex = 0;
+
+  // Progress failed to load — without it every lesson would render locked,
+  // which is indistinguishable from real state. Surface the failure instead.
+  if (error) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 }}>
+        <Body size="lg" tone="secondary" style={{ marginBottom: 16, textAlign: 'center' }}>
+          Couldn't load your progress. Check your connection and try again.
+        </Body>
+        <Button label="Try Again" variant="primary" onPress={retry} />
+      </View>
+    );
+  }
 
   return (
     <ScrollView

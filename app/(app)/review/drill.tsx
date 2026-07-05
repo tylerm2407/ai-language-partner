@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { View, Text, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -108,6 +108,10 @@ export default function DrillScreen() {
   // lesson_completions (it's not an official lesson).
   return (
     <View style={{ flex: 1, backgroundColor: '#0C0F14' }}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
       <LessonRunner
         exercises={exercises}
         lessonTitle={`Drill: ${shortLabel}`}
@@ -119,6 +123,7 @@ export default function DrillScreen() {
         onExit={() => router.back()}
         isUnlimitedHearts
       />
+      </KeyboardAvoidingView>
     </View>
   );
 }

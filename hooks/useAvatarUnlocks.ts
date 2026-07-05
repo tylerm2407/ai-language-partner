@@ -1,14 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './useAuth';
-import { useAppStore } from '../stores/useAppStore';
 import { useLevel } from './useLevel';
 import { fetchAvatarAccessories, fetchUserUnlocks } from '../lib/supabase-queries';
 import type { AvatarAccessory } from '../types';
 
 export function useAvatarUnlocks() {
   const { user } = useAuth();
-  const { profile } = useAppStore();
-  const { level } = useLevel();
+  // useLevel is kept mounted for its level-up side effects (mirrors xp_level /
+  // league_tier into the app store); its return value isn't needed here.
+  useLevel();
   const [accessories, setAccessories] = useState<AvatarAccessory[]>([]);
   const [unlockedIds, setUnlockedIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);

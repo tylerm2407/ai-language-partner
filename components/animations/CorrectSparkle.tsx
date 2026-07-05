@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { View, Animated, StyleSheet, Easing } from 'react-native';
+import { View, Animated, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 const PARTICLE_COUNT = 8;

@@ -4,11 +4,13 @@ import { Audio } from 'expo-av';
 export function useAudioPlayer() {
   const [playing, setPlaying] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const soundRef = useRef<Audio.Sound | null>(null);
 
   const play = useCallback(async (uri: string) => {
     try {
       setLoading(true);
+      setError(null);
       if (soundRef.current) {
         await soundRef.current.unloadAsync();
       }
@@ -25,9 +27,10 @@ export function useAudioPlayer() {
           setPlaying(false);
         }
       });
-    } catch {
+    } catch (err) {
       setPlaying(false);
       setLoading(false);
+      setError(err instanceof Error ? err.message : 'Audio playback failed');
     }
   }, []);
 
@@ -45,5 +48,5 @@ export function useAudioPlayer() {
     }
   }, []);
 
-  return { playing, loading, play, stop, cleanup };
+  return { playing, loading, error, play, stop, cleanup };
 }

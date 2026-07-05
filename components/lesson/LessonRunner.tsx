@@ -22,8 +22,18 @@ import { CorrectSparkle } from '../animations/CorrectSparkle';
 import { WrongShake } from '../animations/WrongShake';
 import { HeartBreak } from '../animations/HeartBreak';
 import { CelebrationOverlay } from '../ui/CelebrationOverlay';
-import { fetchDueReviewItemsWithCards, upsertReviewItem } from '../../lib/supabase-queries';
-import { calculateNextReview } from '../../lib/srs';
+import {
+  fetchDueReviewItemsWithCards,
+  fetchReviewItemsByCardIds,
+  upsertReviewItem,
+  tryConsumeNewCardSlot,
+} from '../../lib/supabase-queries';
+import { calculateNextReview, createNewReviewItem } from '../../lib/srs';
+import {
+  saveLessonSession,
+  loadLessonSession,
+  clearLessonSession,
+} from '../../lib/lesson-session-storage';
 import type { Exercise, LanguageCode, ReviewItem, Card } from '../../types';
 
 // ─── SRS Warm-Up (research.md §5.1 & §13.1) ──────────────────────────────
@@ -54,8 +64,79 @@ function warmupToExercise(entry: { item: ReviewItem; card: Card }): Exercise {
   };
 }
 
+/**
+ * Feed a main-lesson exercise result into spaced repetition
+ * (.claude/rules/learning.md — "Failed items get added to the review queue
+ * immediately"). Uses the same rating convention as the warm-up
+ * (4 = pass, 2 = fail) so SM-2 state stays coherent across both paths.
+ *
+ * `existingItems` is the prefetched map of the user's review items for this
+ * lesson's cards (see the prefetch effect). Cards with prior history grade
+ * from their REAL accumulated SM-2 state (interval/ease factor continue),
+ * and are not new — so they skip the daily new-card cap and its counter.
+ * If the prefetch failed (`null`) or the card has no row, we fall back to a
+ * fresh SM-2 baseline via upsertReviewItem's (user_id, card_id) conflict
+ * target — exact for first-seen cards, the common case inside a lesson.
+ * Each upsert result is written back into the map so repeat exercises on
+ * the same card within one session chain state instead of re-baselining.
+ *
+ * The daily new-card cap is enforced with tryConsumeNewCardSlot — one
+ * atomic check-and-consume RPC (silent skip when the cap is hit), same as
+ * saveCorrectionAsCard / addCardFromAnnotation. `introducedThisSession`
+ * de-dupes cap accounting when the same card backs multiple exercises or
+ * an exercise is retried.
+ */
+async function recordLessonSrsResult(
+  userId: string,
+  cardId: string,
+  correct: boolean,
+  introducedThisSession: Set<string>,
+  existingItems: Map<string, ReviewItem> | null,
+): Promise<void> {
+  const rating = correct ? 4 : 2;
+
+  const existing = existingItems?.get(cardId);
+  if (existing) {
+    // Known card: continue accumulated SM-2 state. Not new, so no cap
+    // slot is consumed.
+    const next = calculateNextReview(existing, rating);
+    const saved = await upsertReviewItem({
+      id: existing.id,
+      userId,
+      cardId,
+      ...next,
+      lastReviewedAt: new Date().toISOString(),
+    });
+    existingItems?.set(cardId, saved);
+    return;
+  }
+
+  if (!introducedThisSession.has(cardId)) {
+    if (!(await tryConsumeNewCardSlot())) {
+      console.warn('[lesson-srs] daily new-card cap reached; skipping card', cardId);
+      return;
+    }
+    // Mark before the upsert: the slot is already consumed, so a retry of
+    // the same card must not consume a second one.
+    introducedThisSession.add(cardId);
+  }
+  const next = calculateNextReview({ id: '', ...createNewReviewItem(userId, cardId) }, rating);
+  const saved = await upsertReviewItem({
+    userId,
+    cardId,
+    ...next,
+    lastReviewedAt: new Date().toISOString(),
+  });
+  existingItems?.set(cardId, saved);
+}
+
 interface LessonRunnerProps {
   exercises: Exercise[];
+  /**
+   * Stable lesson id used to persist/resume mid-lesson progress. Omit it
+   * (e.g. review drills) to disable session persistence entirely.
+   */
+  lessonId?: string;
   lessonTitle: string;
   xpReward: number;
   userId: string;
@@ -82,6 +163,7 @@ export interface LessonResult {
 
 export function LessonRunner({
   exercises,
+  lessonId,
   lessonTitle,
   xpReward,
   userId,
@@ -111,9 +193,74 @@ export function LessonRunner({
   const [warmupPhase, setWarmupPhase] = useState(false);
   const warmupFetchedRef = useRef(false);
 
+  // ── Session resume ────────────────────────────────────────────────────
+  // Mid-lesson progress is persisted to AsyncStorage after every answer so
+  // backgrounding/kill/crash doesn't restart the lesson. The snapshot is
+  // loaded before the warm-up fetch so a resumed session skips silently to
+  // the saved exercise (a resumed lesson already had its warm-up).
+  const sessionStartedAtRef = useRef(Date.now());
+  const resumedRef = useRef(false);
+  const restoreAttemptedRef = useRef(false);
+  const [restoreChecked, setRestoreChecked] = useState(false);
+  // Cards already introduced to SRS this session (cap accounting de-dupe).
+  const srsIntroducedRef = useRef<Set<string>>(new Set());
+  // Prefetched review items for this lesson's cards, keyed by cardId, so
+  // grading continues real SM-2 state instead of re-baselining cards the
+  // user has history with. `null` = prefetch pending/failed → fresh-baseline
+  // fallback in recordLessonSrsResult (never blocks the lesson).
+  const existingReviewItemsRef = useRef<Map<string, ReviewItem> | null>(null);
+  const srsPrefetchStartedRef = useRef(false);
+
   useEffect(() => {
-    if (warmupFetchedRef.current) return;
+    if (srsPrefetchStartedRef.current || !userId) return;
+    srsPrefetchStartedRef.current = true;
+    const cardIds = [
+      ...new Set(exercises.map((e) => e.cardId).filter((id): id is string => !!id)),
+    ];
+    if (cardIds.length === 0) {
+      existingReviewItemsRef.current = new Map();
+      return;
+    }
+    fetchReviewItemsByCardIds(userId, cardIds)
+      .then((items) => {
+        existingReviewItemsRef.current = new Map(items.map((it) => [it.cardId, it]));
+      })
+      .catch((err) => {
+        console.warn(
+          '[lesson-srs] prefetch of existing review items failed; grading from fresh SM-2 baseline:',
+          err,
+        );
+      });
+  }, [userId, exercises]);
+
+  useEffect(() => {
+    if (restoreAttemptedRef.current) return;
+    restoreAttemptedRef.current = true;
+    if (!lessonId || !userId) {
+      setRestoreChecked(true);
+      return;
+    }
+    loadLessonSession(userId, lessonId)
+      .then((snapshot) => {
+        if (snapshot && snapshot.answers.length > 0 && exercises.length > 0) {
+          resumedRef.current = true;
+          sessionStartedAtRef.current = snapshot.startedAt;
+          setCurrentIndex(Math.min(snapshot.exerciseIndex, exercises.length - 1));
+          setAnswers(snapshot.answers);
+        }
+      })
+      .catch((err) => console.warn('[lesson-session] restore failed:', err))
+      .finally(() => setRestoreChecked(true));
+  }, [userId, lessonId, exercises]);
+
+  useEffect(() => {
+    if (!restoreChecked || warmupFetchedRef.current) return;
     warmupFetchedRef.current = true;
+    if (resumedRef.current) {
+      // Resumed mid-lesson: skip the warm-up and drop into the saved spot.
+      setWarmupResolved(true);
+      return;
+    }
     let timedOut = false;
     const timeout = setTimeout(() => {
       timedOut = true;
@@ -134,7 +281,7 @@ export function LessonRunner({
         setWarmupResolved(true);
       });
     return () => clearTimeout(timeout);
-  }, [userId]);
+  }, [userId, restoreChecked]);
 
   const warmupExercise = warmupEntries[warmupIndex]
     ? warmupToExercise(warmupEntries[warmupIndex])
@@ -166,7 +313,14 @@ export function LessonRunner({
             cardId: entry.item.cardId,
             ...next,
             lastReviewedAt: new Date().toISOString(),
-          }).catch((err) => console.warn('[warmup] upsertReviewItem failed:', err));
+          })
+            .then((saved) => {
+              // Keep the prefetched map current: if this card also backs a
+              // main-lesson exercise, its SRS result must chain from the
+              // warm-up's advancement, not the stale pre-warm-up state.
+              existingReviewItemsRef.current?.set(entry.item.cardId, saved);
+            })
+            .catch((err) => console.warn('[warmup] upsertReviewItem failed:', err));
         }
         return;
       }
@@ -174,12 +328,37 @@ export function LessonRunner({
       // De-dupe by exerciseId: a "Try again" retry re-invokes this handler for
       // the same exercise, so replace any prior entry instead of appending —
       // otherwise answers.length exceeds exercises.length and accuracy/XP inflate.
-      setAnswers((prev) => [
-        ...prev.filter((a) => a.exerciseId !== currentExercise.id),
+      const nextAnswers = [
+        ...answers.filter((a) => a.exerciseId !== currentExercise.id),
         { exerciseId: currentExercise.id, correct, answer },
-      ]);
+      ];
+      setAnswers(nextAnswers);
       setShowResult(true);
       setLastAnswerCorrect(correct);
+
+      // Persist a resume snapshot after every answer so an interrupted
+      // lesson picks up where it left off. Fire-and-forget — never blocks
+      // the grading UI.
+      if (lessonId && userId) {
+        saveLessonSession(userId, lessonId, {
+          exerciseIndex: currentIndex + 1,
+          answers: nextAnswers,
+          startedAt: sessionStartedAtRef.current,
+        }).catch((err) => console.warn('[lesson-session] save failed:', err));
+      }
+
+      // Feed the result into SRS — same fire-and-forget pattern as the
+      // warm-up above. Exercises without a linked card (e.g. AI free
+      // production) are skipped.
+      if (currentExercise.cardId) {
+        recordLessonSrsResult(
+          userId,
+          currentExercise.cardId,
+          correct,
+          srsIntroducedRef.current,
+          existingReviewItemsRef.current,
+        ).catch((err) => console.warn('[lesson-srs] SRS update failed:', err));
+      }
 
       if (!correct && !isUnlimitedHearts) {
         onLoseHeart?.();
@@ -192,7 +371,7 @@ export function LessonRunner({
         }
       }
     },
-    [currentExercise, isUnlimitedHearts, hearts, onLoseHeart, warmupPhase, warmupEntries, warmupIndex]
+    [currentExercise, isUnlimitedHearts, hearts, onLoseHeart, warmupPhase, warmupEntries, warmupIndex, answers, currentIndex, lessonId, userId]
   );
 
   const handleNext = () => {
@@ -236,9 +415,27 @@ export function LessonRunner({
         answers: allAnswers,
       };
 
+      // Lesson finished — the resume snapshot is no longer needed.
+      if (lessonId && userId) {
+        clearLessonSession(userId, lessonId).catch((err) =>
+          console.warn('[lesson-session] clear failed:', err),
+        );
+      }
+
       setCompleted(true);
       onComplete(result);
     }
+  };
+
+  // Explicit quit discards the resume snapshot; forced exits (e.g. out of
+  // hearts) keep it so the learner can resume once hearts regenerate.
+  const handleQuit = () => {
+    if (lessonId && userId) {
+      clearLessonSession(userId, lessonId).catch((err) =>
+        console.warn('[lesson-session] clear failed:', err),
+      );
+    }
+    onExit();
   };
 
   if (!warmupResolved) {
@@ -291,7 +488,7 @@ export function LessonRunner({
       {/* Header */}
       <View className="px-4 pt-2 pb-4">
         <View className="flex-row items-center justify-between mb-3">
-          <Button label="Exit" variant="danger" onPress={onExit} style={{ paddingHorizontal: 16, paddingVertical: 8 }} />
+          <Button label="Exit" variant="danger" onPress={handleQuit} style={{ paddingHorizontal: 16, paddingVertical: 8 }} />
           <HeartsDisplay hearts={hearts} maxHearts={maxHearts} isUnlimited={isUnlimitedHearts} />
           <Text className="text-text-secondary text-sm">
             {warmupPhase
@@ -316,7 +513,11 @@ export function LessonRunner({
       <HeartBreak trigger={heartBreakTrigger} />
 
       {/* Exercise */}
-      <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 40 }}>
+      <ScrollView
+        className="flex-1 px-4"
+        contentContainerStyle={{ paddingBottom: 40 }}
+        keyboardShouldPersistTaps="handled"
+      >
         <ExerciseWrapper {...wrapperProps}>
           {currentExercise && renderExercise(
             currentExercise,

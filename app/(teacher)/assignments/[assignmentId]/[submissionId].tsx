@@ -7,6 +7,8 @@ import {
   Pressable,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -17,7 +19,7 @@ import { GradientButton } from '../../../../components/ui/GradientButton';
 import StatusBadge from '../../../../components/school/StatusBadge';
 import TranscriptViewer from '../../../../components/school/TranscriptViewer';
 import { fetchSubmissionDetail, fetchSubmissionTranscript, gradeSubmission } from '../../../../lib/supabase-queries';
-import type { AssignmentSubmission, ConversationGrade, ConversationMessage } from '../../../../types';
+import type { AssignmentSubmission, ConversationMessage } from '../../../../types';
 
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return '—';
@@ -116,10 +118,15 @@ export default function GradingScreen() {
   return (
     <GradientBackground>
       <SafeAreaView className="flex-1" edges={['top']}>
+        <KeyboardAvoidingView
+          className="flex-1"
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
         <ScrollView
           className="flex-1 px-4 pt-2"
           contentContainerStyle={{ paddingBottom: 120 }}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
           {/* Back + Header */}
           <Pressable
@@ -438,6 +445,7 @@ export default function GradingScreen() {
             accessibilityHint="Save your feedback and score for this submission"
           />
         </ScrollView>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </GradientBackground>
   );

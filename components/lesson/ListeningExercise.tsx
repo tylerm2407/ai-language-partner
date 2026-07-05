@@ -33,7 +33,7 @@ export function ListeningExercise({
   const [answer, setAnswer] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [result, setResult] = useState<GradeResult | null>(null);
-  const { playing, loading, play } = useAudioPlayer();
+  const { playing, loading, error: audioError, play } = useAudioPlayer();
 
   const isChoiceType = exercise.type === 'listening_choice' && exercise.options;
 
@@ -137,6 +137,20 @@ export function ListeningExercise({
         <Text className="text-text-tertiary text-sm text-center mb-4">
           No audio available for this exercise
         </Text>
+      )}
+
+      {/* Playback failure — distinct from "no audio available" */}
+      {audioError && (
+        <View
+          className="flex-row items-center justify-center mb-4"
+          accessibilityRole="alert"
+          accessibilityLabel="Audio failed to play. Tap play to retry."
+        >
+          <Ionicons name="alert-circle" size={16} color={colors.error.base} />
+          <Text className="text-error text-sm ml-1">
+            Audio failed to play — tap play to retry
+          </Text>
+        </View>
       )}
 
       {/* Choice or typed answer */}

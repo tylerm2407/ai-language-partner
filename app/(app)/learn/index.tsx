@@ -1,5 +1,4 @@
 import { View, Text, ScrollView, Pressable, Alert, FlatList } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useEffect, useState, useCallback } from 'react';
 import {
@@ -21,7 +20,6 @@ import { GradientBackground } from '../../../components/ui/GradientBackground';
 import { GlassSurface } from '../../../components/ui/GlassSurface';
 import { LearningPath } from '../../../components/learning-path/LearningPath';
 import { Heading, Body, Caption } from '../../../components/ui/Text';
-import { TactileButton } from '../../../components/ui/TactileButton';
 import { colors, spacing, radii } from '../../../config/theme';
 import type { Course, Unit, Lesson, ReadingPassage, WritingPrompt, ReadingBook, UserBookProgress } from '../../../types';
 import { Ionicons } from '@expo/vector-icons';
@@ -64,6 +62,7 @@ export default function LearnScreen() {
   const [libraryBooks, setLibraryBooks] = useState<ReadingBook[]>([]);
   const [selectedCefrTab, setSelectedCefrTab] = useState<string>('A1');
   const [loadingLibrary, setLoadingLibrary] = useState(false);
+  const [libraryError, setLibraryError] = useState<string | null>(null);
   const [inProgressBooks, setInProgressBooks] = useState<{ book: ReadingBook; progress: UserBookProgress }[]>([]);
   const [bookProgressMap, setBookProgressMap] = useState<Map<string, UserBookProgress>>(new Map());
 
@@ -134,6 +133,7 @@ export default function LearnScreen() {
   const loadLibraryBooks = async (cefrLevel: string) => {
     if (!profile?.targetLanguage) return;
     setLoadingLibrary(true);
+    setLibraryError(null);
     try {
       const books = await fetchBooksByLanguageAndLevel(profile.targetLanguage, cefrLevel);
       setLibraryBooks(books);
@@ -150,7 +150,7 @@ export default function LearnScreen() {
         setBookProgressMap(progressMap);
       }
     } catch {
-      // Silent fail
+      setLibraryError("Couldn't load the library. Check your connection and try again.");
     } finally {
       setLoadingLibrary(false);
     }
@@ -165,8 +165,14 @@ export default function LearnScreen() {
       const books = await fetchInProgressBooks(userId, profile.targetLanguage);
       setInProgressBooks(books);
     } catch {
-      // Silent fail
+      setLibraryError("Couldn't load your books in progress. Check your connection and try again.");
     }
+  };
+
+  const retryLibrary = () => {
+    setLibraryError(null);
+    loadLibraryBooks(selectedCefrTab);
+    loadInProgressBooks();
   };
 
   const handleCefrTabChange = (level: string) => {
@@ -178,7 +184,6 @@ export default function LearnScreen() {
     return <LoadingScreen message="Loading courses..." />;
   }
 
-  const selectedCourse = courses.find((c) => c.id === selectedCourseId);
   const courseUnits = selectedCourseId ? units[selectedCourseId] : undefined;
 
   return (
@@ -390,6 +395,24 @@ export default function LearnScreen() {
 
             {loadingLibrary ? (
               <Body size="sm" tone="tertiary" style={{ paddingVertical: spacing.md }}>Loading library...</Body>
+            ) : libraryError ? (
+              /* Non-blocking library error — distinct from "no books yet" */
+              <View style={{ paddingVertical: spacing.md, alignItems: 'center' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm, paddingHorizontal: spacing.md }}>
+                  <Ionicons name="alert-circle" size={16} color={colors.error.base} />
+                  <Body size="sm" tone="error" style={{ marginLeft: spacing.xxs, flexShrink: 1 }}>
+                    {libraryError}
+                  </Body>
+                </View>
+                <Pressable
+                  onPress={retryLibrary}
+                  accessibilityRole="button"
+                  accessibilityLabel="Retry loading library"
+                  style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.md }}
+                >
+                  <Body size="sm" weight="semibold" tone="accent">Try again</Body>
+                </Pressable>
+              </View>
             ) : libraryBooks.length === 0 ? (
               <View style={{ paddingVertical: spacing.md, alignItems: 'center' }}>
                 <Body size="sm" tone="tertiary" style={{ marginBottom: spacing.sm }}>

@@ -8,15 +8,6 @@ import { fetchAllUserWritingSubmissions } from '../../../../lib/supabase-queries
 import type { WritingSubmission } from '../../../../types';
 import { GradientBackground } from '../../../../components/ui/GradientBackground';
 
-const CEFR_COLORS: Record<string, { bg: string; text: string }> = {
-  A1: { bg: '#DCFCE7', text: '#22C55E' },
-  A2: { bg: '#E0E7FF', text: '#6366F1' },
-  B1: { bg: '#FEF9C3', text: '#CA8A04' },
-  B2: { bg: '#FEE2E2', text: '#EF4444' },
-  C1: { bg: '#E0E7FF', text: '#6366F1' },
-  C2: { bg: '#F3F4F6', text: '#666666' },
-};
-
 export default function WritingHistoryScreen() {
   const router = useRouter();
   const { user } = useAuth();

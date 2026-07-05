@@ -28,7 +28,7 @@
 
 ### Grading
 - **Exact match** for single-word answers (case-insensitive, accent-tolerant).
-- **Fuzzy match** for sentences: allow minor typos (Levenshtein distance <= 2 for words under 8 chars).
+- **Fuzzy match** for sentences: allow minor typos (Levenshtein distance <= 1 for answers of 4 chars or fewer, <= 2 otherwise).
 - **AI grading** for free production: send to Edge Function for semantic evaluation.
 - Always show the correct answer after a wrong attempt.
 

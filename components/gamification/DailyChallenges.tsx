@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text, Pressable, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ProgressBar } from '../ui/ProgressBar';
 import { GlassSurface } from '../ui/GlassSurface';
@@ -22,6 +22,9 @@ export function DailyChallenges({ dailyStats }: DailyChallengesProps) {
     setClaiming(true);
     try {
       await claimBonusXp();
+    } catch (err) {
+      console.error('Failed to claim bonus XP:', err);
+      Alert.alert('Claim failed', 'Could not claim your bonus XP. Please try again.');
     } finally {
       setClaiming(false);
     }

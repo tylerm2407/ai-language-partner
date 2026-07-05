@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { SRS_DEFAULTS } from '../config/app';
+import { localToday } from './dates';
 import type {
   UserProfile,
   OnboardingChecklist,
@@ -357,6 +358,30 @@ export async function upsertReviewItem(item: Omit<ReviewItem, 'id'> & { id?: str
 }
 
 /**
+ * Batch-fetch the user's existing review items for a set of cards. Used by
+ * the lesson runner to continue accumulated SM-2 state (interval/ease
+ * factor) for cards the user already has history with, instead of resetting
+ * them to a fresh baseline. review_items is unique on (user_id, card_id)
+ * — the upsert conflict target — so at most one row exists per card and
+ * `.limit(cardIds.length)` is exact. A lesson passes 10-15 card ids.
+ */
+export async function fetchReviewItemsByCardIds(
+  userId: string,
+  cardIds: string[],
+): Promise<ReviewItem[]> {
+  if (cardIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from('review_items')
+    .select('*')
+    .eq('user_id', userId)
+    .in('card_id', cardIds)
+    .limit(cardIds.length);
+
+  if (error) throw error;
+  return (data ?? []).map(mapReviewItem);
+}
+
+/**
  * Per-card rolling accuracy (last N reviews) — used by the interleaving
  * gate (research.md §5.4, improvements.md §A.7). When a card hits ≥80%
  * over its last 5 reviews it's considered "past threshold" and safe for
@@ -420,7 +445,7 @@ export async function insertReviewLog(log: Omit<ReviewLog, 'id'>): Promise<void>
 // ─── Daily Stats ────────────────────────────────────────────────
 
 export async function fetchTodayStats(userId: string): Promise<DailyStats | null> {
-  const today = new Date().toISOString().split('T')[0];
+  const today = localToday();
 
   const { data, error } = await supabase
     .from('daily_stats')
@@ -437,7 +462,7 @@ export async function upsertDailyStats(
   userId: string,
   updates: Partial<Omit<DailyStats, 'id' | 'userId' | 'date'>>
 ): Promise<DailyStats> {
-  const today = new Date().toISOString().split('T')[0];
+  const today = localToday();
 
   // Fetch existing or create new
   const existing = await fetchTodayStats(userId);
@@ -475,22 +500,19 @@ export async function upsertDailyStats(
 /**
  * New-cards-per-day cap gate (research.md §5.2 + §13.1).
  *
- * Reads today's `daily_stats.cards_learned` as the counter for "new cards
- * introduced today". Returns true iff the learner has room for another
- * new card. Uses SRS_DEFAULTS.newCardsPerDay as the cap (20 by default).
- *
- * This is a soft gate — callers should check before introducing a new
- * card via insertNewReviewItem / addCardToReview. Paired with
- * incrementNewCardsToday() which bumps the counter on success.
+ * Atomically consumes one slot of the daily new-card cap. The RPC
+ * (migration 044) upserts today's daily_stats row (user-timezone day) and
+ * increments `cards_learned` only while it is below the cap — a single
+ * check-and-increment statement, so two concurrent sessions can no longer
+ * both pass a separate read-then-write check. Returns true iff a slot was
+ * consumed; callers should only introduce the new card when it did.
  */
-export async function canIntroduceNewCard(userId: string): Promise<boolean> {
-  const stats = await fetchTodayStats(userId);
-  const introducedToday = stats?.cardsLearned ?? 0;
-  return introducedToday < SRS_DEFAULTS.newCardsPerDay;
-}
-
-export async function incrementNewCardsToday(userId: string): Promise<void> {
-  await upsertDailyStats(userId, { cardsLearned: 1 });
+export async function tryConsumeNewCardSlot(): Promise<boolean> {
+  const { data, error } = await supabase.rpc('try_consume_new_card_slot', {
+    p_cap: SRS_DEFAULTS.newCardsPerDay,
+  });
+  if (error) throw error;
+  return data === true;
 }
 
 export async function fetchStatsRange(userId: string, startDate: string, endDate: string): Promise<DailyStats[]> {
@@ -555,7 +577,7 @@ export async function updatePracticeSession(
  * Uses upsert with the UNIQUE(user_id, date) constraint.
  */
 export async function getOrCreateDailyUsage(userId: string): Promise<DailyUsage> {
-  const today = new Date().toISOString().split('T')[0];
+  const today = localToday();
 
   const { data, error } = await supabase
     .from('daily_usage')
@@ -591,7 +613,7 @@ export async function incrementDailyUsage(
   }
 ): Promise<DailyUsage> {
   const current = await getOrCreateDailyUsage(userId);
-  const today = new Date().toISOString().split('T')[0];
+  const today = localToday();
 
   const { data, error } = await supabase
     .from('daily_usage')
@@ -972,7 +994,12 @@ export async function fetchLessonCompletions(
     query = query.eq('course_id', courseId);
   }
 
-  const { data, error } = await query;
+  // Callers build a completeness map from this (lesson locking/progress), so
+  // a tight limit would incorrectly mark lessons incomplete. Completions are
+  // unique per (user, lesson); 2000 completed lessons is years of use and
+  // far beyond the current curriculum — this is a runaway-query guard, not
+  // pagination.
+  const { data, error } = await query.limit(2000);
   if (error) throw error;
   return (data ?? []).map(mapLessonCompletion);
 }
@@ -1090,6 +1117,18 @@ export async function upsertDailyChallenges(
 
   if (error) throw error;
   return mapDailyChallengesRecord(data);
+}
+
+/**
+ * Atomically claim today's daily-challenge bonus XP server-side. The RPC
+ * validates completion + double-claim, computes the streak multiplier, and
+ * grants the XP (migration 043) — clients cannot write XP directly.
+ */
+export async function claimDailyChallengeBonus(): Promise<{ bonusXp: number; totalXp: number }> {
+  const { data, error } = await supabase.rpc('claim_daily_challenge_bonus');
+  if (error) throw error;
+  const row = Array.isArray(data) ? data[0] : data;
+  return { bonusXp: (row?.bonus_xp as number) ?? 0, totalXp: (row?.total_xp as number) ?? 0 };
 }
 
 function mapDailyChallengesRecord(row: Record<string, unknown>): DailyChallengesRecord {
@@ -1270,9 +1309,8 @@ export async function addCardFromAnnotation(
   courseId: string
 ): Promise<ReviewItem> {
   // Enforce the 20-new-cards/day cap before introducing a new card
-  // (research.md §5.2). Existing review items are re-upserted without
-  // counting as a "new" introduction.
-  if (!(await canIntroduceNewCard(userId))) {
+  // (research.md §5.2) — atomic check-and-consume, migration 044.
+  if (!(await tryConsumeNewCardSlot())) {
     throw new NewCardsCapReachedError(SRS_DEFAULTS.newCardsPerDay);
   }
 
@@ -1307,9 +1345,6 @@ export async function addCardFromAnnotation(
     lastReviewedAt: null,
     status: 'new',
   });
-
-  // Increment the daily counter only on successful introduction.
-  await incrementNewCardsToday(userId).catch(() => {});
 
   return reviewItem;
 }
@@ -1399,7 +1434,7 @@ export async function fetchDailyNews(
   tier: NewsTier,
   date?: string,
 ): Promise<DailyNewsArticle | null> {
-  const targetDate = date ?? new Date().toISOString().split('T')[0];
+  const targetDate = date ?? localToday();
 
   // Try today first. If the caller specified an explicit date, honor it
   // strictly and do not fall back — historical queries should only return
@@ -1416,7 +1451,7 @@ export async function fetchDailyNews(
   if (data) return mapDailyNewsArticle(data);
   if (date) return null;
 
-  // Fallback: today's UTC row isn't there yet (common between local
+  // Fallback: today's row isn't there yet (common between local
   // midnight and ~5 AM ET when the cron fires). Return the most recent
   // available article for this language + tier so the home card never
   // shows an empty state when there IS content to surface.
@@ -1663,7 +1698,11 @@ export async function fetchUserBookProgress(
     query = query.eq('book_id', bookId);
   }
 
-  const { data, error } = await query;
+  // Without a bookId this feeds the library progress map. Progress is unique
+  // per (user, book) and ordered by last_read_at desc, so if a user somehow
+  // exceeds the cap we drop only their least-recently-read books — the ones
+  // least likely to be on screen. 500 started books is a generous ceiling.
+  const { data, error } = await query.limit(500);
   if (error) throw error;
   return (data ?? []).map(mapUserBookProgress);
 }
@@ -1679,7 +1718,10 @@ export async function fetchInProgressBooks(
     .gt('percent_complete', 0)
     .is('completed_at', null)
     .eq('reading_books.language', language)
-    .order('last_read_at', { ascending: false });
+    .order('last_read_at', { ascending: false })
+    // Powers the "Continue Reading" rail — a small horizontal list of the
+    // most recently read books. 10 most-recent is more than the UI shows.
+    .limit(10);
 
   if (error) throw error;
   return (data ?? []).map((row: Record<string, unknown>) => ({
@@ -1692,15 +1734,19 @@ export async function fetchWritingSubmissionsByPrompt(
   userId: string,
   promptId: string
 ): Promise<WritingSubmission[]> {
+  // Callers derive the max attempt number and the latest score, so fetch the
+  // HIGHEST attempts (desc + limit keeps the newest 25 if a user somehow
+  // exceeds the cap), then reverse to preserve the ascending-order contract.
   const { data, error } = await supabase
     .from('user_writing_submissions')
     .select('*')
     .eq('user_id', userId)
     .eq('prompt_id', promptId)
-    .order('attempt_number', { ascending: true });
+    .order('attempt_number', { ascending: false })
+    .limit(25);
 
   if (error) throw error;
-  return (data ?? []).map(mapWritingSubmission);
+  return (data ?? []).map(mapWritingSubmission).reverse();
 }
 
 export async function fetchAllUserWritingSubmissions(
@@ -2198,10 +2244,11 @@ export async function saveCorrectionAsCard(params: {
   const { userId, targetLanguage, original, corrected, shortLabel, explanation } = params;
   if (!corrected.trim()) return null;
 
-  // Enforce the 20-new-cards/day cap. Return null (silent skip) rather
-  // than throwing — the correction was still logged to correction_log,
-  // and the UX shouldn't break on a rate-limit.
-  if (!(await canIntroduceNewCard(userId))) {
+  // Enforce the 20-new-cards/day cap — atomic check-and-consume
+  // (migration 044). Return null (silent skip) rather than throwing —
+  // the correction was still logged to correction_log, and the UX
+  // shouldn't break on a rate-limit.
+  if (!(await tryConsumeNewCardSlot())) {
     return null;
   }
 
@@ -2245,9 +2292,6 @@ export async function saveCorrectionAsCard(params: {
     );
 
   if (riErr) throw riErr;
-
-  // Increment the daily counter only on successful introduction.
-  await incrementNewCardsToday(userId).catch(() => {});
 
   return { cardId: card.id };
 }

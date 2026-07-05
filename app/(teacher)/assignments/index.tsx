@@ -14,7 +14,7 @@ import type { Assignment } from '../../../types';
 export default function AssignmentsListScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const { classrooms, loadTeacherData } = useSchoolStore();
+  const { loadTeacherData } = useSchoolStore();
   const [loading, setLoading] = useState(true);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
 

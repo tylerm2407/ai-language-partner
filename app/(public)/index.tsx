@@ -64,7 +64,7 @@ export default function WelcomeScreen() {
         ]),
       ]).start();
     }
-  }, [shouldReduce]);
+  }, [shouldReduce, buttonsOpacity, buttonsTranslateY, logoOpacity, logoTranslateY, socialOpacity, subtitleOpacity]);
 
   // Language cycling
   useEffect(() => {
@@ -79,7 +79,7 @@ export default function WelcomeScreen() {
       }
     }, 2000);
     return () => clearInterval(interval);
-  }, [shouldReduce]);
+  }, [shouldReduce, greetingOpacity]);
 
   return (
     <GradientBackground>

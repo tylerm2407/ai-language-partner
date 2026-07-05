@@ -10,7 +10,6 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useProfile } from '../../../hooks/useProfile';
 import { usePracticeSession } from '../../../hooks/usePracticeSession';
@@ -20,7 +19,7 @@ import { GradientBackground } from '../../../components/ui/GradientBackground';
 import { GradientBorderCard } from '../../../components/ui/GradientBorderCard';
 import { trackEvent } from '../../../lib/analytics';
 import { colors } from '../../../config/theme';
-import type { ConversationMessage, LanguageCode, ProficiencyLevel } from '../../../types';
+import type { LanguageCode, ProficiencyLevel } from '../../../types';
 
 const TOPICS: { label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { label: 'Daily Routine', icon: 'sunny' },
@@ -36,7 +35,6 @@ const TOPICS: { label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
 ];
 
 export default function PracticeScreen() {
-  const router = useRouter();
   const { profile } = useProfile();
   const {
     messages,

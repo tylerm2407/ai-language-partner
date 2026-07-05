@@ -1,6 +1,7 @@
 import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { MagazineGlassCard } from './MagazineGlassCard';
 import { colors, typography } from '../../config/theme';
 import type { UnitProgressTile } from '../../lib/supabase-queries';
@@ -18,6 +19,8 @@ export interface LessonTileData {
 interface LessonTileGridProps {
   tiles?: LessonTileData[] | null;
   loading?: boolean;
+  error?: string | null;
+  onRetry?: () => void;
 }
 
 const serifFont = Platform.select({ ios: 'Georgia', default: 'serif' });
@@ -92,7 +95,33 @@ function Tile({ tile }: { tile: LessonTileData }) {
   );
 }
 
-export function LessonTileGrid({ tiles, loading }: LessonTileGridProps) {
+export function LessonTileGrid({ tiles, loading, error, onRetry }: LessonTileGridProps) {
+  // Fetch failed with nothing cached — show a "couldn't load" card instead of
+  // silently collapsing the section (which reads as "no lessons").
+  if (!loading && error && (!tiles || tiles.length === 0)) {
+    return (
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Continue learning</Text>
+        <MagazineGlassCard>
+          <View style={styles.errorRow}>
+            <Ionicons name="alert-circle" size={16} color={colors.error.base} />
+            <Text style={styles.errorText}>Couldn't load your lessons.</Text>
+          </View>
+          {onRetry && (
+            <Pressable
+              onPress={onRetry}
+              style={styles.retryButton}
+              accessibilityRole="button"
+              accessibilityLabel="Retry loading lessons"
+            >
+              <Text style={styles.retryText}>Try again</Text>
+            </Pressable>
+          )}
+        </MagazineGlassCard>
+      </View>
+    );
+  }
+
   if (loading && !tiles) {
     return (
       <View style={styles.section}>
@@ -176,5 +205,25 @@ const styles = StyleSheet.create({
   },
   skeletonLineShort: {
     width: '40%',
+  },
+  errorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  errorText: {
+    fontFamily: typography.family.regular,
+    fontSize: 13,
+    color: colors.error.base,
+  },
+  retryButton: {
+    minHeight: 44,
+    justifyContent: 'center',
+    alignSelf: 'flex-start',
+  },
+  retryText: {
+    fontFamily: typography.family.semibold,
+    fontSize: 13,
+    color: colors.indigo[400],
   },
 });

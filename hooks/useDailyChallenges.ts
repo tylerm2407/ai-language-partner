@@ -1,24 +1,26 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { AppState } from 'react-native';
 import { useAuth } from './useAuth';
 import { useAppStore } from '../stores/useAppStore';
-import { fetchDailyChallenges, upsertDailyChallenges } from '../lib/supabase-queries';
+import { fetchDailyChallenges, upsertDailyChallenges, claimDailyChallengeBonus } from '../lib/supabase-queries';
+import { localToday, localDayKey } from '../lib/dates';
 import { pickDailyChallenges, getChallengeMultiplier } from '../lib/challenges';
 import type { DailyChallenge, DailyChallengesRecord, DailyStats } from '../types';
 
 export function useDailyChallenges() {
   const { user } = useAuth();
-  const { dailyStats } = useAppStore();
+  const { dailyStats, profile, setProfile } = useAppStore();
   const [record, setRecord] = useState<DailyChallengesRecord | null>(null);
   const [loading, setLoading] = useState(true);
+  const claimInFlight = useRef(false);
 
-  const [today, setToday] = useState(() => new Date().toISOString().split('T')[0]);
+  const [today, setToday] = useState(() => localToday());
 
   // Refresh when app comes to foreground (handles midnight rollover)
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
-        const now = new Date().toISOString().split('T')[0];
+        const now = localToday();
         setToday(prev => prev !== now ? now : prev);
       }
     });
@@ -34,6 +36,19 @@ export function useDailyChallenges() {
       try {
         let existing = await fetchDailyChallenges(user.id, today);
         if (!existing) {
+          // Carry the challenge streak across days — it continues only if
+          // yesterday's bonus was claimed, otherwise it resets to 0. Without
+          // this, every new day's row started at 0 and the streak multiplier
+          // could never grow past 1x.
+          let carriedStreak = 0;
+          try {
+            const y = new Date();
+            y.setDate(y.getDate() - 1);
+            const yesterday = await fetchDailyChallenges(user.id, localDayKey(y));
+            if (yesterday?.bonusXpClaimed) carriedStreak = yesterday.challengeStreak;
+          } catch (err) {
+            console.error('Failed to read yesterday\'s challenges:', err);
+          }
           // Generate new challenges for today
           const templates = pickDailyChallenges(user.id, today);
           const challenges: DailyChallenge[] = templates.map((t) => ({
@@ -41,7 +56,7 @@ export function useDailyChallenges() {
             current: 0,
             completed: false,
           }));
-          existing = await upsertDailyChallenges(user.id, today, challenges, false, false, 0);
+          existing = await upsertDailyChallenges(user.id, today, challenges, false, false, carriedStreak);
         }
         setRecord(existing);
       } catch (err) {
@@ -84,21 +99,34 @@ export function useDailyChallenges() {
         ).catch(console.error);
       }
     }
-  }, [dailyStats]);
+    // `record` must be a dep: on most app opens dailyStats resolves before
+    // the challenges load, so keying on dailyStats alone leaves progress
+    // stale until the next stat change. The JSON-equality guard above stops
+    // the setRecord → re-run cycle from looping.
+  }, [dailyStats, record]);
 
   const multiplier = getChallengeMultiplier(record?.challengeStreak ?? 0);
 
   const claimBonusXp = useCallback(async () => {
     if (!user || !record || record.bonusXpClaimed || !record.allCompleted) return 0;
+    if (claimInFlight.current) return 0;
+    claimInFlight.current = true;
 
-    const bonusXp = Math.round(50 * multiplier);
-    const newStreak = record.challengeStreak + 1;
-
-    await upsertDailyChallenges(user.id, today, record.challenges, true, true, newStreak);
-    setRecord({ ...record, bonusXpClaimed: true, challengeStreak: newStreak });
-
-    return bonusXp;
-  }, [user, record, multiplier, today]);
+    try {
+      // Server-authoritative: the RPC validates completion + double-claim,
+      // computes the streak multiplier, and grants the XP atomically
+      // (migration 043). On failure it throws — local state stays unclaimed.
+      const { bonusXp, totalXp } = await claimDailyChallengeBonus();
+      setRecord({ ...record, bonusXpClaimed: true, challengeStreak: record.challengeStreak + 1 });
+      // Guard against a null/zero RPC row: never replace displayed XP with 0.
+      if (profile && totalXp > 0) {
+        setProfile({ ...profile, totalXp });
+      }
+      return bonusXp;
+    } finally {
+      claimInFlight.current = false;
+    }
+  }, [user, record, profile, setProfile]);
 
   return {
     challenges: record?.challenges ?? [],

@@ -5,6 +5,7 @@ import { File } from 'expo-file-system/next';
 export function useAudioRecorder() {
   const [recording, setRecording] = useState(false);
   const [audioUri, setAudioUri] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const recordingRef = useRef<Audio.Recording | null>(null);
 
   // If the consumer unmounts mid-recording (e.g. user navigates away while
@@ -23,6 +24,7 @@ export function useAudioRecorder() {
 
   const startRecording = useCallback(async () => {
     try {
+      setError(null);
       // Clean up any stale recording before creating a new one
       if (recordingRef.current) {
         try {
@@ -34,7 +36,10 @@ export function useAudioRecorder() {
       }
 
       const permission = await Audio.requestPermissionsAsync();
-      if (!permission.granted) return;
+      if (!permission.granted) {
+        setError('Microphone permission denied. Enable the microphone in Settings to record.');
+        return;
+      }
 
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
@@ -47,8 +52,9 @@ export function useAudioRecorder() {
       recordingRef.current = rec;
       setRecording(true);
       setAudioUri(null);
-    } catch {
+    } catch (err) {
       setRecording(false);
+      setError(err instanceof Error ? err.message : 'Could not start recording');
     }
   }, []);
 
@@ -63,8 +69,9 @@ export function useAudioRecorder() {
       setRecording(false);
       setAudioUri(uri);
       return uri;
-    } catch {
+    } catch (err) {
       setRecording(false);
+      setError(err instanceof Error ? err.message : 'Recording failed');
       return null;
     }
   }, []);
@@ -75,10 +82,11 @@ export function useAudioRecorder() {
       const file = new File(audioUri);
       const base64 = await file.base64();
       return base64;
-    } catch {
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not process the recording');
       return null;
     }
   }, [audioUri]);
 
-  return { recording, audioUri, startRecording, stopRecording, getBase64 };
+  return { recording, audioUri, error, startRecording, stopRecording, getBase64 };
 }

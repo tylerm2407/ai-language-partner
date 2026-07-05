@@ -1,5 +1,5 @@
 import React from 'react';
-import { Circle, G, Line, Path, Rect } from 'react-native-svg';
+import { Circle, G, Line, Rect } from 'react-native-svg';
 
 interface AccessoryLayerProps {
   size: number;

@@ -9,7 +9,7 @@ import { corsResponse, corsHeaders } from '../_shared/cors.ts';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { getPlanLimits } from '../_shared/plan-limits.ts';
 import { isValidUUID, isValidCefrLevel, isValidLanguage, sanitizeText } from '../_shared/validation.ts';
-import { validateContentSafety } from '../_shared/content-safety.ts';
+import { gradeWithValidation } from './grading.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -22,10 +22,6 @@ interface GradeRequest {
   promptId: string;
   targetLanguage: string;
   cefrLevel: string;
-}
-
-function todayUTC(): string {
-  return new Date().toISOString().split('T')[0];
 }
 
 serve(async (req: Request) => {
@@ -123,69 +119,33 @@ serve(async (req: Request) => {
       prompt?.target_grammar ?? []
     );
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: TEXT_MODEL,
-        max_tokens: 1500,
-        system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
-        messages: [{ role: 'user', content: sanitizeText(submissionText, 5000) }],
-      }),
+    // Safety + parse orchestration (retry → safety-retry → parse-retry →
+    // honest fallback). See grading.ts. Never fabricates scores: on
+    // unrecoverable failure the response carries graded: false and zeros.
+    const feedback = await gradeWithValidation(async () => {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: TEXT_MODEL,
+          max_tokens: 1500,
+          system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
+          messages: [{ role: 'user', content: sanitizeText(submissionText, 5000) }],
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Anthropic API error: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      return data.content?.[0]?.text ?? '';
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Anthropic API error: ${response.status} - ${errorText}`);
-    }
-
-    const data = await response.json();
-    const aiReply = data.content?.[0]?.text ?? '';
-
-    // Safety-check the raw feedback text before we parse/persist it. Level
-    // check is N/A here because grading feedback is written in English, not
-    // the target language. Fail-open on validator outage.
-    const safetyResult = await validateContentSafety(aiReply, { language: 'en' });
-    if (!safetyResult.safe) {
-      console.warn(JSON.stringify({
-        evt: 'safety_reject',
-        fn: 'grade-writing',
-        reasons: safetyResult.reasons,
-        ts: new Date().toISOString(),
-      }));
-      return new Response(
-        JSON.stringify({ error: 'grading-failed', retryable: true }),
-        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      );
-    }
-
-    // Parse AI response as JSON
-    let feedback;
-    try {
-      feedback = JSON.parse(aiReply);
-    } catch {
-      feedback = {
-        grammar: 12,
-        vocabulary: 12,
-        coherence: 12,
-        task_completion: 12,
-        total: 48,
-        grammarScore: 50,
-        vocabularyScore: 50,
-        coherenceScore: 50,
-        spellingScore: 50,
-        sentenceStructureScore: 50,
-        strengths: [],
-        improvements: [],
-        correctedVersion: null,
-        corrections: [],
-        overallFeedback: aiReply,
-      };
-    }
 
     // Quota already consumed atomically before the LLM call.
 
@@ -195,8 +155,9 @@ serve(async (req: Request) => {
     );
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
+    console.error('[grade-writing] unhandled error:', message);
     return new Response(
-      JSON.stringify({ error: message }),
+      JSON.stringify({ error: 'Failed to grade writing. Please try again.' }),
       { status: 500, headers }
     );
   }

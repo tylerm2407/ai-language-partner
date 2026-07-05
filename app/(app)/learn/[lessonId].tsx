@@ -1,7 +1,7 @@
-import { ActivityIndicator } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { fetchLessonWithExercises } from '../../../lib/supabase-queries';
 import { orderExercisesForCognitiveLoad, lessonIsAlreadyOrdered } from '../../../lib/lesson-ordering';
 import { useAuth } from '../../../hooks/useAuth';
@@ -36,21 +36,34 @@ export default function LessonScreen() {
   const { markItem: markOnboardingItem } = useOnboardingChecklist();
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [showOutOfHearts, setShowOutOfHearts] = useState(false);
-  const [achievementQueue, setAchievementQueue] = useState<AchievementDefinition[]>([]);
+  const [, setAchievementQueue] = useState<AchievementDefinition[]>([]);
   const [showingAchievement, setShowingAchievement] = useState<AchievementDefinition | null>(null);
 
-  useEffect(() => {
+  const loadLesson = useCallback(() => {
     if (!lessonId) return;
+    setLoading(true);
+    setLoadError(null);
     fetchLessonWithExercises(lessonId).then((data) => {
       setLesson(data);
       setLoading(false);
-    }).catch(() => setLoading(false));
+    }).catch((err) => {
+      setLoadError(err instanceof Error ? err.message : 'Failed to load lesson');
+      setLoading(false);
+    });
   }, [lessonId]);
 
-  // Check if user can play (has hearts) — show modal on mount
   useEffect(() => {
-    if (!canPlay && !showOutOfHearts) {
+    loadLesson();
+  }, [loadLesson]);
+
+  // Check if user can play (has hearts) — show modal on mount.
+  // Deliberately not keyed on showOutOfHearts: including it re-shows the
+  // modal after dismiss (setShowOutOfHearts(false) re-fires the effect while
+  // canPlay is still false) until router.back() unmounts the screen.
+  useEffect(() => {
+    if (!canPlay) {
       setShowOutOfHearts(true);
     }
   }, [canPlay]);
@@ -60,6 +73,24 @@ export default function LessonScreen() {
       <GradientBackground variant="raised">
       <SafeAreaView className="flex-1 items-center justify-center">
         <ActivityIndicator size="large" color={colors.league.diamond} />
+      </SafeAreaView>
+      </GradientBackground>
+    );
+  }
+
+  // Network/server failure — distinct from "lesson doesn't exist" so the
+  // user knows a retry can help.
+  if (loadError) {
+    return (
+      <GradientBackground variant="raised">
+      <SafeAreaView className="flex-1 items-center justify-center px-8">
+        <Body size="lg" tone="secondary" style={{ marginBottom: 16, textAlign: 'center' }}>
+          Couldn't load this lesson. Check your connection and try again.
+        </Body>
+        <Button label="Try Again" variant="primary" onPress={loadLesson} />
+        <View style={{ marginTop: 12 }}>
+          <Button label="Go Back" variant="secondary" onPress={() => router.back()} />
+        </View>
       </SafeAreaView>
       </GradientBackground>
     );
@@ -116,12 +147,17 @@ export default function LessonScreen() {
   return (
     <GradientBackground variant="raised">
     <SafeAreaView className="flex-1">
+      <KeyboardAvoidingView
+        className="flex-1"
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
       <LessonRunner
         exercises={
           lessonIsAlreadyOrdered(lesson.exercises)
             ? lesson.exercises
             : orderExercisesForCognitiveLoad(lesson.exercises)
         }
+        lessonId={lesson.id}
         lessonTitle={lesson.title}
         xpReward={lesson.xpReward}
         userId={user?.id ?? ''}
@@ -134,6 +170,7 @@ export default function LessonScreen() {
         nextRegenAt={nextRegenAt}
         onLoseHeart={loseHeart}
       />
+      </KeyboardAvoidingView>
 
       {/* Level Up Modal */}
       {levelUpInfo && (

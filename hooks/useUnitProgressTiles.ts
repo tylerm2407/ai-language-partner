@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { fetchUnitProgressTiles } from '../lib/supabase-queries';
 import type { UnitProgressTile } from '../lib/supabase-queries';
 
@@ -9,6 +9,8 @@ export function useUnitProgressTiles(
 ) {
   const [tiles, setTiles] = useState<UnitProgressTile[] | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!userId || !targetLanguage) {
@@ -16,17 +18,27 @@ export function useUnitProgressTiles(
       return;
     }
 
+    let cancelled = false;
     setLoading(true);
+    setError(null);
     fetchUnitProgressTiles(userId, targetLanguage, limit)
       .then((data) => {
+        if (cancelled) return;
         setTiles(data);
         setLoading(false);
       })
-      .catch(() => {
+      .catch((err) => {
+        if (cancelled) return;
         setTiles(null);
+        setError(err instanceof Error ? err.message : 'Failed to load lesson progress');
         setLoading(false);
       });
-  }, [userId, targetLanguage, limit]);
+    return () => { cancelled = true; };
+  }, [userId, targetLanguage, limit, reloadKey]);
 
-  return { tiles, loading };
+  const refetch = useCallback(() => {
+    setReloadKey((k) => k + 1);
+  }, []);
+
+  return { tiles, loading, error, refetch };
 }

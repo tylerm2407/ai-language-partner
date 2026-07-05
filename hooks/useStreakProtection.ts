@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from './useAuth';
 import { useAppStore } from '../stores/useAppStore';
 import { repairStreakWithFreeze, repairStreakWithShield } from '../lib/supabase-queries';
+import { localToday } from '../lib/dates';
 import { PLANS } from '../lib/plans';
 import type { SubscriptionTier } from '../types';
 
@@ -28,7 +29,7 @@ export function useStreakProtection() {
         // Auto-apply shield for paid users — single atomic RPC (verifies the
         // plan server-side, restores the streak, logs the event).
         isRepairingRef.current = true;
-        const today = new Date().toISOString().split('T')[0];
+        const today = localToday();
         (async () => {
           try {
             const result = await repairStreakWithShield();

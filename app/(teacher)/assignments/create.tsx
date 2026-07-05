@@ -7,6 +7,8 @@ import {
   Pressable,
   Alert,
   Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -132,7 +134,7 @@ export default function CreateAssignmentScreen() {
   const [level, setLevel] = useState<ProficiencyLevel>(
     classrooms[0]?.level ?? 'beginner',
   );
-  const [targetLanguage, setTargetLanguage] = useState<LanguageCode>(
+  const [, setTargetLanguage] = useState<LanguageCode>(
     classrooms[0]?.targetLanguage ?? 'es',
   );
   const [minDuration, setMinDuration] = useState<number>(10);
@@ -190,10 +192,15 @@ export default function CreateAssignmentScreen() {
   return (
     <GradientBackground>
       <SafeAreaView className="flex-1" edges={['top']}>
+        <KeyboardAvoidingView
+          className="flex-1"
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
         <ScrollView
           className="flex-1 px-4 pt-2"
           contentContainerStyle={{ paddingBottom: 120 }}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
           {/* Back + Header */}
           <Pressable
@@ -744,6 +751,7 @@ export default function CreateAssignmentScreen() {
             </View>
           </View>
         </ScrollView>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </GradientBackground>
   );

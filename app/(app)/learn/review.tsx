@@ -1,8 +1,7 @@
-import { View, Text, Pressable } from 'react-native';
+import { View, Text, Pressable, Platform, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useEffect, useState, useRef } from 'react';
-import { Platform, Alert } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useReviewQueue } from '../../../hooks/useReviewQueue';
 import { useDailyStats } from '../../../hooks/useDailyStats';
