@@ -35,8 +35,8 @@ export default function StudentProgressScreen() {
     studentId: string;
   }>();
   const [loading, setLoading] = useState(true);
-  const [student, setStudent] = useState<StudentInfo | null>(null);
-  const [submissions, setSubmissions] = useState<SubmissionRow[]>([]);
+  const [student] = useState<StudentInfo | null>(null);
+  const [submissions] = useState<SubmissionRow[]>([]);
 
   useEffect(() => {
     // TODO: fetch student info and submissions from API

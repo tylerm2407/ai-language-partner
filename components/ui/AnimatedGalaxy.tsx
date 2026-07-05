@@ -273,7 +273,7 @@ export function AnimatedGalaxy({
     near:    generateLayer(preset.near, 3, 5,    0.50, 0.95, 256),
     heroes:  generateHeroes(preset.hero, 999),
     nebulae: generateNebulae(777),
-  }), [density]);
+  }), [preset.far, preset.hero, preset.mid, preset.near]);
 
   // ── Split into twinkle sub-groups ──
   const { farA, farB, midA, midB, nearA, nearB } = useMemo(() => ({

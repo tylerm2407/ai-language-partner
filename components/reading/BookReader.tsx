@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { View, Text, Pressable, Dimensions, ScrollView } from 'react-native';
+import { View, Text, Pressable, ScrollView } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { WordTooltip } from './WordTooltip';
 import { usePageNarrator } from '../../hooks/usePageNarrator';
 import { colors, radii, spacing } from '../../config/theme';
 import type { ReadingBook, BookAnnotation, ReviewItem } from '../../types';
@@ -37,7 +36,7 @@ export function BookReader({
   const [currentPage, setCurrentPage] = useState(0);
   const [selectedAnnotation, setSelectedAnnotation] = useState<BookAnnotation | null>(null);
   const [showFontControls, setShowFontControls] = useState(false);
-  const [autoAdvance, setAutoAdvance] = useState(true);
+  const [autoAdvance] = useState(true);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const narrator = usePageNarrator();
   const insets = useSafeAreaInsets();

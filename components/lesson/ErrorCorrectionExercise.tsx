@@ -35,6 +35,8 @@ export function ErrorCorrectionExercise({
   const highlight = exercise.targetWord ?? exercise.targetGrammar;
 
   const handleCheck = () => {
+    if (!userInput.trim() || isRevealed) return;
+
     const grade = gradeAnswer(userInput, exercise.correctAnswer, exercise.acceptedAnswers, {
       exerciseHints: {
         exerciseType: exercise.type,

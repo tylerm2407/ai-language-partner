@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Modal, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, Modal, Pressable, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { GlassSurface } from '../ui/GlassSurface';
 import { GradientButton } from '../ui/GradientButton';
@@ -54,6 +54,10 @@ export default function JoinClassModal({ visible, onClose, onJoin }: JoinClassMo
       animationType="fade"
       onRequestClose={handleClose}
     >
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
       <Pressable
         style={{
           flex: 1,
@@ -187,6 +191,7 @@ export default function JoinClassModal({ visible, onClose, onJoin }: JoinClassMo
           </GlassSurface>
         </Pressable>
       </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

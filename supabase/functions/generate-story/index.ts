@@ -3,6 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsResponse, corsHeaders } from '../_shared/cors.ts';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { getPlanLimits } from '../_shared/plan-limits.ts';
+import { getUserToday } from '../_shared/user-day.ts';
 import { generateValidated } from '../_shared/validated-generate.ts';
 import type { CEFR } from '../_shared/level-checker.ts';
 
@@ -202,16 +203,23 @@ RESPOND ONLY IN VALID JSON:
 
     // One story + one text message were consumed atomically up front;
     // record any additional stories in this batch against text_messages.
+    // p_date is ignored by SQL since migration 044 (day resolved via
+    // fluenci_user_today) — passed as the user-local day for consistency.
     if (bookIds.length > 1) {
       await supabase.rpc('increment_daily_usage', {
         p_user_id: authUser.userId,
-        p_date: new Date().toISOString().split('T')[0],
+        p_date: await getUserToday(supabase, authUser.userId),
         p_text_messages: bookIds.length - 1,
       });
     }
 
     return new Response(JSON.stringify({ bookIds }), { headers });
-  } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 500, headers });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('[generate-story] unhandled error:', message);
+    return new Response(
+      JSON.stringify({ error: 'Failed to generate story. Please try again.' }),
+      { status: 500, headers }
+    );
   }
 });

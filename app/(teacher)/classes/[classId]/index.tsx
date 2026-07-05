@@ -31,8 +31,8 @@ export default function ClassDetailScreen() {
   const [tab, setTab] = useState<Tab>('students');
   const [loading, setLoading] = useState(true);
   const [classroom, setClassroom] = useState<Classroom | null>(null);
-  const [students, setStudents] = useState<StudentRowData[]>([]);
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [students] = useState<StudentRowData[]>([]);
+  const [assignments] = useState<Assignment[]>([]);
 
   useEffect(() => {
     const found = classrooms.find((c) => c.id === classId) ?? null;

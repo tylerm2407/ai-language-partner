@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, ActivityIndicator, Text, Pressable } from 'react-native';
+import { ActivityIndicator, Text, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../../../../hooks/useAuth';
@@ -30,7 +30,7 @@ export default function WritingPromptScreen() {
   const [error, setError] = useState<string | null>(null);
   const [attemptNumber, setAttemptNumber] = useState(1);
   const [previousScore, setPreviousScore] = useState<number | null>(null);
-  const [pastSubmissions, setPastSubmissions] = useState<WritingSubmission[]>([]);
+  const [, setPastSubmissions] = useState<WritingSubmission[]>([]);
 
   useEffect(() => {
     if (!promptId || !user) return;

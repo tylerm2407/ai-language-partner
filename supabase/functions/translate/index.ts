@@ -14,6 +14,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, corsResponse } from '../_shared/cors.ts';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { checkBurstLimit } from '../_shared/burst-limit.ts';
+import { translateWithValidation } from './translate-core.ts';
 
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -73,7 +74,11 @@ serve(async (req: Request) => {
 
   const systemPrompt = `You translate a short conversational message from ${sourceLanguage} into ${targetLanguage}. Return ONLY the translation — no quotes, no preamble, no explanation, no "Here is the translation:" lead-in. Preserve tone, punctuation, and emoji. If the input already appears to be in ${targetLanguage}, return it unchanged. Do not add commentary.`;
 
-  try {
+  // One retry on transient API failure; output is safety-validated
+  // (regenerated once if unsafe). There is no sensible pre-authored
+  // fallback for an arbitrary translation, so persistent failure is an
+  // honest 502 with a clean message — details stay in server logs.
+  const outcome = await translateWithValidation(async () => {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -91,13 +96,19 @@ serve(async (req: Request) => {
 
     if (!response.ok) {
       const errorText = await response.text();
-      return json({ error: `Anthropic API error: ${response.status} - ${errorText}` }, 500);
+      throw new Error(`Anthropic API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
-    const translation = (data.content?.[0]?.text ?? '').trim();
-    return json({ translation });
-  } catch (err) {
-    return json({ error: (err as Error).message }, 500);
+    return (data.content?.[0]?.text ?? '').trim();
+  }, targetLanguage);
+
+  if (!outcome.ok) {
+    return json(
+      { error: 'Translation is temporarily unavailable. Please try again.', code: 'TRANSLATION_UNAVAILABLE' },
+      502,
+    );
   }
+
+  return json({ translation: outcome.translation });
 });

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Alert, Pressable } from 'react-native';
+import { View, Text, TextInput, Alert, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../../components/ui/Button';
@@ -61,6 +61,10 @@ export default function AuthScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-dark">
+      <KeyboardAvoidingView
+        className="flex-1"
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
       <View className="flex-1 justify-center px-8">
         <Text className="text-3xl font-bold text-text-primary mb-2" accessibilityRole="header">
           {title}
@@ -129,6 +133,7 @@ export default function AuthScreen() {
           )}
         </View>
       </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

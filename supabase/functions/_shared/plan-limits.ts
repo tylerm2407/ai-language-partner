@@ -7,6 +7,9 @@ export type PlanTier = 'starter' | 'basic' | 'premium' | 'vip';
 
 export interface PlanLimits {
   dailyTextMessages: number;
+  /** Always a finite number of minutes. No plan tier (or school contract
+   *  override) grants unlimited voice — do not compare against an
+   *  'unlimited' sentinel. */
   dailyVoiceMinutes: number;
   dailyWritingGrades: number;
   dailyPronunciationScores: number;

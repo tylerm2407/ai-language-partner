@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
+import * as Sentry from '@sentry/react-native';
 import { useAuth } from './useAuth';
 import { createPracticeSession, updatePracticeSession } from '../lib/supabase-queries';
 import { sendChatMessage, getTextToSpeech } from '../lib/ai';
@@ -158,10 +159,22 @@ export function usePracticeSession() {
   const endSession = useCallback(async () => {
     if (!sessionId) return;
     const durationMinutes = (Date.now() - startTimeRef.current) / 60000;
-    await updatePracticeSession(sessionId, {
-      durationMinutes,
-      endedAt: new Date().toISOString(),
-    });
+    try {
+      await updatePracticeSession(sessionId, {
+        durationMinutes,
+        endedAt: new Date().toISOString(),
+      });
+    } catch (err) {
+      // The conversation is over — losing the endedAt stamp shouldn't block
+      // the user from leaving. Log it and move on.
+      console.error('[practice] endSession update failed:', err);
+      Sentry.addBreadcrumb({
+        category: 'practice',
+        message: 'endSession updatePracticeSession failed',
+        level: 'error',
+        data: { sessionId, durationMinutes },
+      });
+    }
     setSessionId(null);
     setMessages([]);
   }, [sessionId]);

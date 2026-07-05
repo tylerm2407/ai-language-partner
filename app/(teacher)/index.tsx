@@ -6,7 +6,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { GradientBackground } from '../../components/ui/GradientBackground';
 import { GlassSurface } from '../../components/ui/GlassSurface';
 import { useSchoolStore } from '../../stores/useSchoolStore';
-import { useAppStore } from '../../stores/useAppStore';
 import { useAuth } from '../../hooks/useAuth';
 import { useTeacherDashboard } from '../../hooks/useTeacherDashboard';
 
@@ -55,7 +54,6 @@ export default function TeacherDashboardScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { organization, classrooms, loadTeacherData } = useSchoolStore();
-  const { profile } = useAppStore();
 
   const {
     totalStudents,

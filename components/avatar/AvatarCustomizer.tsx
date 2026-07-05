@@ -10,7 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AvatarConfig } from '../../types';
 import { Avatar } from './Avatar';
-import { SKIN_TONES, HAIR_COLORS, EYE_COLORS, DEFAULT_AVATAR_CONFIG } from './constants';
+import { SKIN_TONES, HAIR_COLORS, EYE_COLORS } from './constants';
 
 interface AvatarCustomizerProps {
   visible: boolean;

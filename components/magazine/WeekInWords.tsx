@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { MagazineGlassCard } from './MagazineGlassCard';
 import { colors, typography } from '../../config/theme';
+import { localDayKey } from '../../lib/dates';
 import type { DailyStats } from '../../types';
 
 interface WeekInWordsProps {
@@ -21,7 +22,7 @@ export function WeekInWords({ stats }: WeekInWordsProps) {
   for (let i = 0; i < 7; i++) {
     const date = new Date(today);
     date.setDate(today.getDate() - mondayOffset + i);
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = localDayKey(date);
     const dayStat = stats.find((s) => s.date === dateStr);
     const xp = dayStat?.xpEarned ?? 0;
     totalXp += xp;

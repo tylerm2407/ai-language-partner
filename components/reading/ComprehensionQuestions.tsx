@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { View, Text, Pressable, TextInput, ScrollView } from 'react-native';
+import { View, Text, Pressable, TextInput, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { ProgressBar } from '../ui/ProgressBar';
@@ -77,6 +77,10 @@ export function ComprehensionQuestions({ questions, onComplete, onExit }: Props)
         </View>
       </View>
 
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
       <ScrollView contentContainerStyle={{ padding: 20, flexGrow: 1 }} keyboardShouldPersistTaps="handled">
         {/* Question */}
         <Text style={{ fontSize: 14, fontWeight: '600', color: '#6366F1', marginBottom: 8 }}>
@@ -214,6 +218,7 @@ export function ComprehensionQuestions({ questions, onComplete, onExit }: Props)
           </Pressable>
         )}
       </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

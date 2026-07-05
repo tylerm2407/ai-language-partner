@@ -47,6 +47,19 @@ export function computeHearts(
 }
 
 /**
+ * Optimistically spend one heart locally. Pure: returns a new state and never
+ * mutates the input, so callers can snapshot the previous state and restore it
+ * verbatim if the authoritative server RPC fails.
+ */
+export function spendHeartLocally(state: HeartsState, now: number = Date.now()): HeartsState {
+  return {
+    current: Math.max(0, state.current - 1),
+    max: state.max,
+    nextRegenAt: new Date(now + REGEN_INTERVAL_MS),
+  };
+}
+
+/**
  * Format time until next heart regen as "Xh Ym"
  */
 export function formatRegenTime(nextRegenAt: Date | null): string {

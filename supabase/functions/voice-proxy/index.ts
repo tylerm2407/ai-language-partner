@@ -9,6 +9,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsResponse, corsHeaders } from '../_shared/cors.ts';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { getEffectiveLimits } from '../_shared/plan-limits.ts';
+import { getUserToday } from '../_shared/user-day.ts';
 import { isValidLanguage, isValidProficiencyLevel, sanitizeText } from '../_shared/validation.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -193,12 +194,15 @@ serve(async (req: Request) => {
 
   const limits = await getEffectiveLimits(userId, supabase);
 
-  const todayUTC = new Date().toISOString().split('T')[0];
+  // Day key must match what increment_daily_usage writes (user-local
+  // midnight rollover, migration 044). Fetched once and reused for the
+  // tick increments and session-end reconciliation below.
+  const userDay = await getUserToday(supabase, userId);
   const { data: usageRow } = await supabase
     .from('daily_usage')
     .select('voice_minutes')
     .eq('user_id', userId)
-    .eq('date', todayUTC)
+    .eq('date', userDay)
     .single();
 
   const currentVoiceMinutes = parseFloat(usageRow?.voice_minutes as string) || 0;
@@ -231,10 +235,11 @@ serve(async (req: Request) => {
       // ── Periodic tick: increment voice_minutes every 60s ──────
       voiceTickInterval = setInterval(async () => {
         try {
-          const date = new Date().toISOString().split('T')[0];
+          // p_date is ignored by SQL since migration 044 (day resolved via
+          // fluenci_user_today) — passed for clarity/consistency only.
           const { data: usage } = await supabase.rpc('increment_daily_usage', {
             p_user_id: userId,
-            p_date: date,
+            p_date: userDay,
             p_voice_minutes: 1,
           });
 
@@ -320,10 +325,10 @@ serve(async (req: Request) => {
     const fractionalMinute = elapsedMinutes % 1;
     if (fractionalMinute > 0.05) { // ignore sub-3-second sessions
       try {
-        const date = new Date().toISOString().split('T')[0];
+        // p_date ignored by SQL since migration 044 — see tick above.
         await supabase.rpc('increment_daily_usage', {
           p_user_id: userId,
-          p_date: date,
+          p_date: userDay,
           p_voice_minutes: parseFloat(fractionalMinute.toFixed(2)),
         });
       } catch (err) {

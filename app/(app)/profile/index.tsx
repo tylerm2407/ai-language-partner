@@ -1,14 +1,12 @@
 import { useState, useEffect } from 'react';
 import { View, Text, Pressable, ScrollView, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAppStore } from '../../../stores/useAppStore';
 import { useSchoolStore } from '../../../stores/useSchoolStore';
-import { SCHOOL_ENABLED } from '../../../config/app';
+import { SCHOOL_ENABLED, SUPPORTED_LANGUAGES } from '../../../config/app';
 import { useLevel } from '../../../hooks/useLevel';
 import { Ionicons } from '@expo/vector-icons';
-import { SUPPORTED_LANGUAGES } from '../../../config/app';
 import { GradientBackground } from '../../../components/ui/GradientBackground';
 import { colors } from '../../../config/theme';
 import { LeagueBadge } from '../../../components/gamification/LeagueBadge';

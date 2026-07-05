@@ -16,19 +16,34 @@ export function useLessonProgress(courseId?: string) {
     completions: new Map(),
     loading: true,
   });
+  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!user?.id) return;
+    let cancelled = false;
+    setError(null);
     fetchLessonCompletions(user.id, courseId)
       .then((data) => {
+        if (cancelled) return;
         const map = new Map<string, LessonCompletion>();
         for (const c of data) {
           map.set(c.lessonId, c);
         }
         setState({ completions: map, loading: false });
       })
-      .catch(() => setState((prev) => ({ ...prev, loading: false })));
-  }, [user?.id, courseId]);
+      .catch((err) => {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : 'Failed to load lesson progress');
+        setState((prev) => ({ ...prev, loading: false }));
+      });
+    return () => { cancelled = true; };
+  }, [user?.id, courseId, reloadKey]);
+
+  const retry = useCallback(() => {
+    setState((prev) => ({ ...prev, loading: true }));
+    setReloadKey((k) => k + 1);
+  }, []);
 
   const getLessonState = useCallback(
     (lessonId: string, orderedLessonIds: string[]): LessonState => {
@@ -65,6 +80,8 @@ export function useLessonProgress(courseId?: string) {
   return {
     completions: state.completions,
     loading: state.loading,
+    error,
+    retry,
     getLessonState,
     getScore,
     markLessonComplete,

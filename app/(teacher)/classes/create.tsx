@@ -6,8 +6,9 @@ import {
   ScrollView,
   Pressable,
   Alert,
-  ActivityIndicator,
   Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -59,10 +60,15 @@ export default function CreateClassScreen() {
   return (
     <GradientBackground>
       <SafeAreaView className="flex-1" edges={['top']}>
+        <KeyboardAvoidingView
+          className="flex-1"
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
         <ScrollView
           className="flex-1 px-4 pt-2"
           contentContainerStyle={{ paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
           {/* Back button + header */}
           <Pressable
@@ -247,6 +253,7 @@ export default function CreateClassScreen() {
             accessibilityHint="Create a new class with the selected settings"
           />
         </ScrollView>
+        </KeyboardAvoidingView>
       </SafeAreaView>
 
       {/* Invite Code Modal */}

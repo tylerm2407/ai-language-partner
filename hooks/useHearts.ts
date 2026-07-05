@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from './useAuth';
 import { useAppStore } from '../stores/useAppStore';
-import { spendHeart, syncHearts } from '../lib/supabase-queries';
-import { computeHearts, type HeartsState } from '../lib/hearts';
+import { spendHeart, syncHearts, type HeartsRow } from '../lib/supabase-queries';
+import { computeHearts, spendHeartLocally, type HeartsState } from '../lib/hearts';
 import { PLANS } from '../lib/plans';
 import type { SubscriptionTier } from '../types';
 
@@ -11,6 +11,16 @@ export function useHearts() {
   const { profile, subscription, setProfile } = useAppStore();
   const [heartsState, setHeartsState] = useState<HeartsState>({ current: 5, max: 5, nextRegenAt: null });
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Mirror of heartsState readable synchronously inside the spend chain
+  // (avoids stale closures when spends are queued back to back).
+  const heartsStateRef = useRef<HeartsState>(heartsState);
+  // Serializes concurrent loseHeart calls so optimistic math never interleaves.
+  const spendChainRef = useRef<Promise<void>>(Promise.resolve());
+
+  const applyHeartsState = useCallback((state: HeartsState) => {
+    heartsStateRef.current = state;
+    setHeartsState(state);
+  }, []);
 
   const tier = (subscription?.tier ?? 'starter') as SubscriptionTier;
   const isUnlimited = PLANS[tier]?.unlimitedHearts ?? false;
@@ -19,12 +29,22 @@ export function useHearts() {
   useEffect(() => {
     if (!profile) return;
     if (isUnlimited) {
-      setHeartsState({ current: profile.maxHearts, max: profile.maxHearts, nextRegenAt: null });
+      applyHeartsState({ current: profile.maxHearts, max: profile.maxHearts, nextRegenAt: null });
       return;
     }
     const state = computeHearts(profile.hearts, profile.maxHearts, profile.lastHeartLostAt);
-    setHeartsState(state);
-  }, [profile, isUnlimited]);
+    applyHeartsState(state);
+  }, [profile, isUnlimited, applyHeartsState]);
+
+  // Adopt the server-authoritative hearts row into the profile + local state.
+  const reconcileFromServer = useCallback((row: HeartsRow | null) => {
+    if (!row) return;
+    const freshProfile = useAppStore.getState().profile;
+    if (freshProfile) {
+      setProfile({ ...freshProfile, hearts: row.hearts, lastHeartLostAt: row.lastHeartLostAt });
+    }
+    applyHeartsState(computeHearts(row.hearts, row.maxHearts, row.lastHeartLostAt));
+  }, [setProfile, applyHeartsState]);
 
   // Poll regen every 60s
   useEffect(() => {
@@ -32,49 +52,45 @@ export function useHearts() {
 
     intervalRef.current = setInterval(() => {
       const state = computeHearts(profile.hearts, profile.maxHearts, profile.lastHeartLostAt);
-      setHeartsState(state);
+      applyHeartsState(state);
       // If hearts regenerated, sync with the server-authoritative state
       // (the RPC applies regen and returns the canonical values).
       if (state.current > profile.hearts && user) {
-        syncHearts()
-          .then((row) => {
-            if (!row) return;
-            const freshProfile = useAppStore.getState().profile;
-            if (freshProfile) {
-              setProfile({ ...freshProfile, hearts: row.hearts, lastHeartLostAt: row.lastHeartLostAt });
-            }
-            setHeartsState(computeHearts(row.hearts, row.maxHearts, row.lastHeartLostAt));
-          })
-          .catch(console.error);
+        syncHearts().then(reconcileFromServer).catch(console.error);
       }
     }, 60_000);
 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [isUnlimited, profile, user, setProfile]);
+  }, [isUnlimited, profile, user, applyHeartsState, reconcileFromServer]);
 
   const canPlay = isUnlimited || heartsState.current > 0;
 
   const loseHeart = useCallback(async () => {
     if (!user || !profile || isUnlimited) return;
-    // Optimistic local update; the RPC is authoritative (applies pending
-    // regen, decrements, and returns canonical state).
-    const optimistic = Math.max(0, heartsState.current - 1);
-    setHeartsState({ current: optimistic, max: profile.maxHearts, nextRegenAt: new Date(Date.now() + 4 * 60 * 60 * 1000) });
-    try {
-      const row = await spendHeart();
-      if (row) {
-        const freshProfile = useAppStore.getState().profile;
-        if (freshProfile) {
-          setProfile({ ...freshProfile, hearts: row.hearts, lastHeartLostAt: row.lastHeartLostAt });
-        }
-        setHeartsState(computeHearts(row.hearts, row.maxHearts, row.lastHeartLostAt));
+    // Chain onto any in-flight spend so optimistic math never interleaves.
+    const task = spendChainRef.current.then(async () => {
+      // Optimistic local update; the RPC is authoritative (applies pending
+      // regen, decrements, and returns canonical state).
+      const previous = heartsStateRef.current;
+      applyHeartsState(spendHeartLocally(previous));
+      try {
+        const row = await spendHeart();
+        // Reconcile from the RPC's returned authoritative values. A null row
+        // (no profile) keeps the optimistic value; the 60s poll will settle it.
+        reconcileFromServer(row);
+      } catch (err) {
+        console.error('Failed to spend heart in DB:', err);
+        // Revert the optimistic decrement, then let the server settle truth.
+        applyHeartsState(previous);
+        syncHearts().then(reconcileFromServer).catch(console.error);
       }
-    } catch (err) {
-      console.warn('Failed to spend heart in DB:', err);
-    }
-  }, [user, profile, isUnlimited, heartsState, setProfile]);
+    });
+    // Keep the chain alive even if a link rejects unexpectedly.
+    spendChainRef.current = task.catch(() => {});
+    await task;
+  }, [user, profile, isUnlimited, applyHeartsState, reconcileFromServer]);
 
   return { hearts: heartsState.current, maxHearts: heartsState.max, nextRegenAt: heartsState.nextRegenAt, isUnlimited, canPlay, loseHeart };
 }

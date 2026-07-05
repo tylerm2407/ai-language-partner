@@ -1,5 +1,6 @@
 import { View, Text } from 'react-native';
 import { GlassSurface } from '../ui/GlassSurface';
+import { localDayKey } from '../../lib/dates';
 import type { DailyStats } from '../../types';
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -19,7 +20,7 @@ export function WeeklyChart({ stats, metric = 'xpEarned' }: WeeklyChartProps) {
   for (let i = 0; i < 7; i++) {
     const date = new Date(today);
     date.setDate(today.getDate() - mondayOffset + i);
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = localDayKey(date);
     const dayStat = stats.find((s) => s.date === dateStr);
     const value = dayStat ? dayStat[metric] : 0;
     const isToday = date.toDateString() === today.toDateString();

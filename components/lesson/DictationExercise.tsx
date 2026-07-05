@@ -46,6 +46,8 @@ export function DictationExercise({
   const phonemeDrill = usePhonemeDrill(targetLanguage ?? 'en', 4, { userId });
 
   const handleCheck = () => {
+    if (!userInput.trim() || isRevealed) return;
+
     const grade = gradeAnswer(userInput, exercise.correctAnswer, exercise.acceptedAnswers, {
       exerciseHints: {
         exerciseType: exercise.type,

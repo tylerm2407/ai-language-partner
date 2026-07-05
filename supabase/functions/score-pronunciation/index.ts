@@ -11,12 +11,15 @@ import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { corsHeaders, corsResponse } from '../_shared/cors.ts';
 import { checkBurstLimit } from '../_shared/burst-limit.ts';
 import { MAX_AUDIO_BASE64_SIZE } from '../_shared/validation.ts';
+import { validateContentSafety } from '../_shared/content-safety.ts';
+import { calculatePronunciationScore } from './scoring.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const OPENAI_API_KEY = Deno.env.get('OPENAI_KEY');
 
-async function getUserTier(supabase: ReturnType<typeof createClient>, userId: string): Promise<string> {
+// deno-lint-ignore no-explicit-any
+async function getUserTier(supabase: any, userId: string): Promise<string> {
   const { data } = await supabase
     .from('subscriptions')
     .select('tier, is_active')
@@ -121,23 +124,46 @@ serve(async (req: Request) => {
       (targetWord ? normalizedTranscription.includes(targetWord.toLowerCase().trim()) : false) ||
       (targetGrammar ? normalizedTranscription.includes(targetGrammar.toLowerCase().trim()) : false);
 
+    // Step 4: Whisper output is user-audio-derived and unfiltered — safety
+    // check before echoing it back. The score (computed above from the raw
+    // transcription) is still returned; only the echoed text is replaced.
+    // phonemeErrors quote transcribed words, so they are suppressed too.
+    const transcriptionSafety = await validateContentSafety(transcription, {
+      language,
+      fn: 'score-pronunciation',
+    });
+    if (!transcriptionSafety.safe) {
+      console.log(JSON.stringify({
+        evt: 'safety_reject',
+        fn: 'score-pronunciation',
+        reasons: transcriptionSafety.reasons,
+        ts: new Date().toISOString(),
+      }));
+    }
+    const safeTranscription = transcriptionSafety.safe
+      ? transcription
+      : '[transcription unavailable]';
+    const safePhonemeErrors = transcriptionSafety.safe ? score.phonemeErrors : [];
+
     // Quota already consumed atomically before transcription.
 
     return new Response(
       JSON.stringify({
         score: score.score,
         feedback: score.feedback,
-        phonemeErrors: score.phonemeErrors,
-        transcription,
+        phonemeErrors: safePhonemeErrors,
+        transcription: safeTranscription,
         isCorrect: score.score >= 60,
         matchedVariant: score.matchedVariant,
         targetPresent,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-  } catch (error) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('[score-pronunciation] unhandled error:', message);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: 'Failed to score pronunciation. Please try again.' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
@@ -183,80 +209,4 @@ async function transcribeAudio(audioBase64: string, language: string): Promise<s
 
   const data = await response.json();
   return data.text ?? '';
-}
-
-/**
- * Compare transcription against expected text and accepted variants, generate a score.
- */
-function calculatePronunciationScore(
-  transcription: string,
-  expectedText: string,
-  acceptedVariants: string[]
-): { score: number; feedback: string; phonemeErrors: string[]; matchedVariant: string | null } {
-  const normalizedTranscription = transcription.toLowerCase().trim();
-  const normalizedExpected = expectedText.toLowerCase().trim();
-
-  // Check all variants (expected text + accepted variants) for the best match
-  const allVariants = [normalizedExpected, ...acceptedVariants.map(v => v.toLowerCase().trim())];
-  let bestScore = 0;
-  let bestMatchedVariant: string | null = null;
-  let bestPhonemeErrors: string[] = [];
-
-  for (const variant of allVariants) {
-    const expectedWords = variant.split(/\s+/);
-    const transcribedWords = normalizedTranscription.split(/\s+/);
-    const phonemeErrors: string[] = [];
-
-    let matchCount = 0;
-    for (let i = 0; i < expectedWords.length; i++) {
-      const expected = expectedWords[i];
-      const transcribed = transcribedWords[i] ?? '';
-
-      if (expected === transcribed) {
-        matchCount++;
-      } else if (levenshteinDistance(expected, transcribed) <= 2) {
-        matchCount += 0.7; // partial credit for close pronunciation
-        phonemeErrors.push(`"${expected}" heard as "${transcribed}"`);
-      } else {
-        phonemeErrors.push(`"${expected}" not recognized`);
-      }
-    }
-
-    const variantScore = Math.round((matchCount / Math.max(expectedWords.length, 1)) * 100);
-
-    if (variantScore > bestScore) {
-      bestScore = variantScore;
-      bestMatchedVariant = variantScore > bestScore ? variant : bestMatchedVariant;
-      bestPhonemeErrors = phonemeErrors;
-      bestMatchedVariant = variant !== normalizedExpected ? variant : null;
-    }
-  }
-
-  let feedback: string;
-  if (bestScore >= 90) feedback = 'Excellent pronunciation!';
-  else if (bestScore >= 75) feedback = 'Good job! A few sounds need work.';
-  else if (bestScore >= 60) feedback = 'Decent attempt. Keep practicing the highlighted words.';
-  else feedback = 'Needs improvement. Try listening to the audio again and repeat slowly.';
-
-  return { score: bestScore, feedback, phonemeErrors: bestPhonemeErrors, matchedVariant: bestMatchedVariant };
-}
-
-function levenshteinDistance(a: string, b: string): number {
-  const m = a.length;
-  const n = b.length;
-  if (m === 0) return n;
-  if (n === 0) return m;
-
-  let prev = Array.from({ length: n + 1 }, (_, i) => i);
-  let curr = new Array(n + 1);
-
-  for (let i = 1; i <= m; i++) {
-    curr[0] = i;
-    for (let j = 1; j <= n; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost);
-    }
-    [prev, curr] = [curr, prev];
-  }
-  return prev[n];
 }

@@ -172,7 +172,7 @@ export class GeminiLiveSession {
 
     if (!serverContent) return;
 
-    const modelTurn = serverContent.modelTurn as { parts?: Array<Record<string, unknown>> } | undefined;
+    const modelTurn = serverContent.modelTurn as { parts?: Record<string, unknown>[] } | undefined;
 
     if (modelTurn?.parts) {
       for (const part of modelTurn.parts) {

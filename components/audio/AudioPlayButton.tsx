@@ -1,5 +1,8 @@
-import { Pressable, Text, ActivityIndicator } from 'react-native';
+import { useEffect } from 'react';
+import { Pressable, Text, ActivityIndicator, Platform } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { useAudioPlayer } from '../../hooks/useAudioPlayer';
+import { colors } from '../../config/theme';
 
 interface AudioPlayButtonProps {
   audioUrl: string;
@@ -11,7 +14,15 @@ interface AudioPlayButtonProps {
  * Used in exercises, card reviews, and AI practice.
  */
 export function AudioPlayButton({ audioUrl, size = 48 }: AudioPlayButtonProps) {
-  const { play, stop, playing, loading } = useAudioPlayer();
+  const { play, stop, playing, loading, error } = useAudioPlayer();
+
+  // Playback failure feedback — error haptic; the button flips to an
+  // alert state ("!") and pressing it again retries.
+  useEffect(() => {
+    if (error && Platform.OS !== 'web') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    }
+  }, [error]);
 
   const handlePress = async () => {
     if (playing) {
@@ -28,18 +39,24 @@ export function AudioPlayButton({ audioUrl, size = 48 }: AudioPlayButtonProps) {
         width: size,
         height: size,
         borderRadius: size / 2,
-        backgroundColor: '#6366F1',
+        backgroundColor: error ? colors.error.base : colors.indigo[500],
         justifyContent: 'center',
         alignItems: 'center',
       }}
       accessibilityRole="button"
-      accessibilityLabel={playing ? 'Pause audio' : 'Play audio'}
+      accessibilityLabel={
+        error
+          ? 'Audio failed to play. Tap to retry.'
+          : playing
+            ? 'Pause audio'
+            : 'Play audio'
+      }
     >
       {loading ? (
         <ActivityIndicator color="#fff" size="small" />
       ) : (
         <Text style={{ color: '#fff', fontSize: size * 0.4, fontWeight: '700' }}>
-          {playing ? '||' : '\u25B6'}
+          {error ? '!' : playing ? '||' : '▶'}
         </Text>
       )}
     </Pressable>

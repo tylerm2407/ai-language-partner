@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, Pressable, ScrollView, TextInput, Alert, Linking } from 'react-native';
+import { View, Text, Pressable, ScrollView, TextInput, Alert, Linking, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -66,7 +66,15 @@ export default function SettingsScreen() {
         <Text className="text-lg font-semibold text-text-primary ml-3">Settings</Text>
       </View>
 
-      <ScrollView className="flex-1 px-4 pt-6" contentContainerStyle={{ paddingBottom: 100 }}>
+      <KeyboardAvoidingView
+        className="flex-1"
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+      <ScrollView
+        className="flex-1 px-4 pt-6"
+        contentContainerStyle={{ paddingBottom: 100 }}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Display Name */}
         <Text className="text-sm font-semibold text-text-secondary mb-2 uppercase tracking-wide">Display Name</Text>
         <TextInput
@@ -244,6 +252,7 @@ export default function SettingsScreen() {
           </Pressable>
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
     </GradientBackground>
   );

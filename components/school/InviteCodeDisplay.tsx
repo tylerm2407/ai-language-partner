@@ -20,7 +20,7 @@ export default function InviteCodeDisplay({ code, active, onRegenerate }: Invite
       await Share.share({
         message: `Join my class on Fluenci! Use invite code: ${code}`,
       });
-    } catch (_) {
+    } catch {
       // User cancelled or share failed silently
     }
   };

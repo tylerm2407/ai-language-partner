@@ -36,7 +36,7 @@ Sentry.init({
 
 function RootLayout() {
   const { session, loading: authLoading } = useAuth();
-  const { profile, dailyStats, loading: dataLoading, loadUserData } = useAppStore();
+  const { profile, dailyStats, loadUserData } = useAppStore();
   const { roles, activeRole, loadRoles } = useSchoolStore();
   const segments = useSegments() as string[];
   const router = useRouter();

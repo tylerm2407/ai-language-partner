@@ -32,8 +32,8 @@ export function SpeakingExercise({
   cefrLevel,
   onContinue,
 }: SpeakingExerciseProps) {
-  const { recording, audioUri, startRecording, stopRecording, getBase64 } = useAudioRecorder();
-  const { playing, play } = useAudioPlayer();
+  const { recording, audioUri, error: recorderError, startRecording, stopRecording, getBase64 } = useAudioRecorder();
+  const { playing, error: playerError, play } = useAudioPlayer();
   const [scoring, setScoring] = useState(false);
   const [scoreState, setScoreState] = useState<
     | { score: number; feedback: string; transcription?: string }
@@ -186,6 +186,20 @@ export function SpeakingExercise({
       <Text className="text-text-secondary text-sm text-center mb-4">
         {recording ? 'Recording... Tap to stop' : scoreState ? '' : 'Tap to record your answer'}
       </Text>
+
+      {/* Mic/audio failure — distinct from "no answer recorded yet" */}
+      {(recorderError || playerError) && (
+        <View
+          className="flex-row items-center justify-center mb-4 px-4"
+          accessibilityRole="alert"
+          accessibilityLabel={`Audio error: ${recorderError ?? playerError}`}
+        >
+          <Ionicons name="alert-circle" size={16} color={colors.error.base} />
+          <Text className="text-error text-sm ml-1 text-center flex-shrink">
+            {recorderError ?? playerError}
+          </Text>
+        </View>
+      )}
 
       {/* Score button */}
       {audioUri && !scoreState && !scoring && (

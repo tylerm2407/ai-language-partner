@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAudioRecorder } from '../../hooks/useAudioRecorder';
+import { colors } from '../../config/theme';
 
 interface RecordButtonProps {
   onRecordingComplete: (result: { uri: string; base64: string; durationMs: number }) => void;
@@ -8,7 +10,7 @@ interface RecordButtonProps {
 }
 
 export function RecordButton({ onRecordingComplete, size = 64 }: RecordButtonProps) {
-  const { recording, startRecording, stopRecording, getBase64 } = useAudioRecorder();
+  const { recording, error, startRecording, stopRecording, getBase64 } = useAudioRecorder();
   const [durationMs, setDurationMs] = useState(0);
   const startTimeRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -66,6 +68,19 @@ export function RecordButton({ onRecordingComplete, size = 64 }: RecordButtonPro
       <Text style={{ marginTop: 8, fontSize: 12, color: '#666' }}>
         {recording ? 'Release to stop' : 'Hold to speak'}
       </Text>
+
+      {error && (
+        <View
+          style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}
+          accessibilityRole="alert"
+          accessibilityLabel={`Recording error: ${error}`}
+        >
+          <Ionicons name="alert-circle" size={14} color={colors.error.base} />
+          <Text style={{ marginLeft: 4, fontSize: 12, color: colors.error.base }}>
+            {error}
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
