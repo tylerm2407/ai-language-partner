@@ -1,5 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import { RESET_PASSWORD_REDIRECT } from '../lib/auth-links';
+import { clearReadCache } from '../lib/read-cache';
 import type { Session } from '@supabase/supabase-js';
 
 export function useAuth() {
@@ -46,13 +48,25 @@ export function useAuth() {
   }, []);
 
   const resetPassword = useCallback(async (email: string) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: RESET_PASSWORD_REDIRECT,
+    });
+    if (error) throw error;
+  }, []);
+
+  /** Set a new password for the signed-in user (used after a recovery deep link). */
+  const updatePassword = useCallback(async (newPassword: string) => {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
     if (error) throw error;
   }, []);
 
   const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
+    // Shared-device hygiene: drop all cached content (review queue and
+    // progress tiles are user-scoped; wiping shared course content too is
+    // harmless and simpler). Best-effort — never block sign-out.
+    await clearReadCache().catch(() => {});
   }, []);
 
   return {
@@ -62,6 +76,7 @@ export function useAuth() {
     signInWithEmail,
     signUpWithEmail,
     resetPassword,
+    updatePassword,
     signOut,
   };
 }

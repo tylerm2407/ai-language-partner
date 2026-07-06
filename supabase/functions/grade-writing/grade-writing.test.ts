@@ -8,6 +8,7 @@ import {
   buildFallbackFeedback,
   gradeWithValidation,
   parseGradingResponse,
+  shouldRefundQuota,
 } from './grading.ts';
 
 const VALID_GRADE = JSON.stringify({
@@ -77,6 +78,28 @@ Deno.test('buildFallbackFeedback: no fake scores, flagged graded: false', () => 
     String(fb.overallFeedback).toLowerCase().includes('unavailable'),
     'fallback must state that AI feedback is unavailable',
   );
+});
+
+// ─── shouldRefundQuota ───────────────────────────────────────────────
+
+Deno.test('shouldRefundQuota: true for the no-grade fallback (graded: false)', () => {
+  assertEquals(shouldRefundQuota(buildFallbackFeedback()), true);
+});
+
+Deno.test('shouldRefundQuota: false for a real grade (graded: true), even a low one', () => {
+  const parsed = parseGradingResponse(VALID_GRADE);
+  assert(parsed !== null);
+  assertEquals(shouldRefundQuota(parsed), false);
+  assertEquals(shouldRefundQuota({ graded: true, total: 0 }), false);
+});
+
+Deno.test('shouldRefundQuota: fallback from the orchestration path triggers a refund', async () => {
+  const result = await gradeWithValidation(
+    () => Promise.resolve('not json at all'),
+    noopLog,
+  );
+  assertEquals(result.graded, false);
+  assertEquals(shouldRefundQuota(result), true);
 });
 
 // ─── gradeWithValidation orchestration ───────────────────────────────

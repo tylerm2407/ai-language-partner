@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './useAuth';
 import { fetchLessonCompletions, upsertLessonCompletion } from '../lib/supabase-queries';
+import { enqueue, isNetworkError } from '../lib/offline-queue';
 import type { LessonCompletion } from '../types';
 
 export type LessonState = 'completed' | 'active' | 'locked';
@@ -67,7 +68,29 @@ export function useLessonProgress(courseId?: string) {
   const markLessonComplete = useCallback(
     async (lessonId: string, courseId: string, score: number, xpEarned: number, timeSpentMs: number) => {
       if (!user?.id) return;
-      const completion = await upsertLessonCompletion(user.id, lessonId, courseId, score, xpEarned, timeSpentMs);
+      let completion: LessonCompletion;
+      try {
+        completion = await upsertLessonCompletion(user.id, lessonId, courseId, score, xpEarned, timeSpentMs);
+      } catch (err) {
+        if (!isNetworkError(err)) throw err;
+        // Network blip: queue the write for replay on reconnect and treat
+        // the lesson as locally complete. The upsert is conflict-safe on
+        // (user_id, lesson_id), so the replay is idempotent.
+        await enqueue(user.id, {
+          type: 'lesson-completion',
+          payload: { lessonId, courseId, score, xpEarned, timeSpentMs },
+        });
+        completion = {
+          id: `offline:${lessonId}`,
+          userId: user.id,
+          lessonId,
+          courseId,
+          score,
+          xpEarned,
+          timeSpentMs,
+          completedAt: new Date().toISOString(),
+        };
+      }
       setState((prev) => {
         const newMap = new Map(prev.completions);
         newMap.set(lessonId, completion);

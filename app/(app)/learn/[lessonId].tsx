@@ -3,6 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { fetchLessonWithExercises } from '../../../lib/supabase-queries';
+import { cachedFetch, readCacheKey } from '../../../lib/read-cache';
 import { orderExercisesForCognitiveLoad, lessonIsAlreadyOrdered } from '../../../lib/lesson-ordering';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAppStore } from '../../../stores/useAppStore';
@@ -45,7 +46,14 @@ export default function LessonScreen() {
     if (!lessonId) return;
     setLoading(true);
     setLoadError(null);
-    fetchLessonWithExercises(lessonId).then((data) => {
+    // Stale-while-revalidate: a recently-opened lesson renders from cache
+    // (playable offline) while the fetch revalidates silently. The error
+    // screen only shows when the fetch fails AND nothing is cached.
+    cachedFetch<Lesson | null>(
+      readCacheKey('lesson', lessonId),
+      () => fetchLessonWithExercises(lessonId),
+      { onCached: (cached) => { setLesson(cached); setLoading(false); } },
+    ).then(({ data }) => {
       setLesson(data);
       setLoading(false);
     }).catch((err) => {
@@ -111,10 +119,13 @@ export default function LessonScreen() {
     if (result.xpEarned > 0) {
       await earnXp(result.xpEarned);
     }
+    // Must not block completion recording: earnXp survives offline (queued),
+    // but if addStats threw here the lesson would never be marked complete —
+    // and replaying it would award XP twice under a fresh idempotency key.
     await addStats({
       lessonsCompleted: 1,
       xpEarned: result.xpEarned,
-    });
+    }).catch((err) => console.error('[lesson] addStats failed:', err));
 
     // Record lesson completion
     if (lesson && user?.id) {

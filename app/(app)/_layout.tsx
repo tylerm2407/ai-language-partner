@@ -3,8 +3,12 @@ import { ErrorBoundary } from '../../components/ui/ErrorBoundary';
 import { OfflineBanner } from '../../components/ui/OfflineBanner';
 import { View } from 'react-native';
 import { FloatingTabBar } from '../../components/navigation/FloatingTabBar';
+import { useOfflineQueueFlush } from '../../hooks/useOfflineQueueFlush';
 
 export default function AppLayout() {
+  // Replay queued offline writes on mount / reconnect / foreground.
+  useOfflineQueueFlush();
+
   return (
     <ErrorBoundary>
       <View className="flex-1 bg-dark">
