@@ -85,6 +85,15 @@ function isGradingObject(value: unknown): boolean {
 }
 
 /**
+ * Whether the consumed writing_grades quota should be refunded: only when
+ * the honest no-grade fallback shipped (graded: false). A real grade —
+ * however low — keeps the quota consumed.
+ */
+export function shouldRefundQuota(feedback: GradingFeedback): boolean {
+  return feedback.graded === false;
+}
+
+/**
  * Full grading orchestration: safety (via generateValidated: retry →
  * safety-retry → fallback) plus a one-shot retry on unparseable JSON.
  *

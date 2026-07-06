@@ -5,6 +5,7 @@ import {
   fetchLessons,
   fetchLessonWithExercises,
 } from '../lib/supabase-queries';
+import { cachedFetch, readCacheKey } from '../lib/read-cache';
 import type { Course, Unit, Lesson } from '../types';
 
 export function useCoursesAndLessons() {
@@ -21,7 +22,14 @@ export function useCoursesAndLessons() {
       setLoading(true);
       setError(null);
       try {
-        const data = await fetchCourses(targetLanguage);
+        // Stale-while-revalidate: cached courses paint immediately; a fetch
+        // failure with a cache resolves stale instead of throwing, so the
+        // error path below only runs when there's nothing to show.
+        const { data } = await cachedFetch<Course[]>(
+          readCacheKey('courses', targetLanguage ?? 'all'),
+          () => fetchCourses(targetLanguage),
+          { onCached: (cached) => { setCourses(cached); setLoading(false); } },
+        );
         setCourses(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load courses');
@@ -38,7 +46,11 @@ export function useCoursesAndLessons() {
     const attempt = async (): Promise<Unit[]> => {
       setError(null);
       try {
-        const data = await fetchUnits(courseId);
+        const { data } = await cachedFetch<Unit[]>(
+          readCacheKey('units', courseId),
+          () => fetchUnits(courseId),
+          { onCached: (cached) => setUnits((prev) => ({ ...prev, [courseId]: cached })) },
+        );
         setUnits((prev) => ({ ...prev, [courseId]: data }));
         return data;
       } catch (err) {
@@ -55,7 +67,11 @@ export function useCoursesAndLessons() {
     const attempt = async (): Promise<Lesson[]> => {
       setError(null);
       try {
-        const data = await fetchLessons(unitId);
+        const { data } = await cachedFetch<Lesson[]>(
+          readCacheKey('lessons', unitId),
+          () => fetchLessons(unitId),
+          { onCached: (cached) => setLessons((prev) => ({ ...prev, [unitId]: cached })) },
+        );
         setLessons((prev) => ({ ...prev, [unitId]: data }));
         return data;
       } catch (err) {

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { fetchUnitProgressTiles } from '../lib/supabase-queries';
 import type { UnitProgressTile } from '../lib/supabase-queries';
+import { cachedFetch, readCacheKey } from '../lib/read-cache';
 
 export function useUnitProgressTiles(
   userId?: string,
@@ -21,8 +22,22 @@ export function useUnitProgressTiles(
     let cancelled = false;
     setLoading(true);
     setError(null);
-    fetchUnitProgressTiles(userId, targetLanguage, limit)
-      .then((data) => {
+    // Stale-while-revalidate: cached tiles paint immediately; a fetch failure
+    // with a cache resolves stale, so the error path only runs when there's
+    // nothing to show. Limit is part of the key — a 4-tile entry must not be
+    // served for an 8-tile request.
+    cachedFetch<UnitProgressTile[]>(
+      readCacheKey('unit-tiles', userId, targetLanguage, String(limit ?? 4)),
+      () => fetchUnitProgressTiles(userId, targetLanguage, limit),
+      {
+        onCached: (cached) => {
+          if (cancelled) return;
+          setTiles(cached);
+          setLoading(false);
+        },
+      },
+    )
+      .then(({ data }) => {
         if (cancelled) return;
         setTiles(data);
         setLoading(false);

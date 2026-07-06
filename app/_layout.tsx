@@ -4,6 +4,7 @@ import { Slot, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { useAuthDeepLinks } from '../hooks/useAuthDeepLinks';
 import { useAppStore } from '../stores/useAppStore';
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 import { useSchoolStore } from '../stores/useSchoolStore';
@@ -42,6 +43,9 @@ function RootLayout() {
   const router = useRouter();
   const [dataLoaded, setDataLoaded] = useState(false);
   const [rolesLoaded, setRolesLoaded] = useState(false);
+
+  // Supabase auth deep links: password recovery + email confirmation.
+  useAuthDeepLinks();
 
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
@@ -132,6 +136,11 @@ function RootLayout() {
     if (authLoading || !fontsLoaded) return;
     if (session && !dataLoaded) return; // Wait for data to load
     if (session && dataLoaded && !rolesLoaded) return; // Wait for roles
+
+    // Password recovery in progress — useAuthDeepLinks routed the user to the
+    // reset screen with a live session; don't route them away until they've
+    // set a new password (the screen navigates onward itself).
+    if (segments[1] === 'reset-password') return;
 
     const inAuthGroup = segments[0] === '(app)';
     const inTeacherGroup = segments[0] === '(teacher)';

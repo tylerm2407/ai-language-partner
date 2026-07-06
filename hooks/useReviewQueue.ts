@@ -8,7 +8,14 @@ import {
   insertReviewLog,
 } from '../lib/supabase-queries';
 import { calculateNextReview } from '../lib/srs';
+import { cachedFetch, readCacheKey } from '../lib/read-cache';
 import type { ReviewItem, Card, ReviewRating } from '../types';
+
+/** Cached together — review items are unusable without their cards. */
+interface ReviewQueuePayload {
+  items: ReviewItem[];
+  cards: Record<string, Card>;
+}
 
 export function useReviewQueue() {
   const { user } = useAuth();
@@ -21,15 +28,30 @@ export function useReviewQueue() {
     if (!user) return;
     setLoading(true);
     try {
-      const reviewItems = await fetchDueReviewItems(user.id);
-      setItems(reviewItems);
-      if (reviewItems.length > 0) {
-        const cardIds = reviewItems.map((r) => r.cardId);
-        const fetched = await fetchCardsByIds(cardIds);
-        const map: Record<string, Card> = {};
-        fetched.forEach((c) => { map[c.id] = c; });
-        setCards(map);
-      }
+      // Stale-while-revalidate: a cached queue paints immediately; a fetch
+      // failure with a cache resolves stale instead of throwing, so callers
+      // only see an error when there's nothing to show (same as before).
+      const { data } = await cachedFetch<ReviewQueuePayload>(
+        readCacheKey('review-queue', user.id),
+        async () => {
+          const reviewItems = await fetchDueReviewItems(user.id);
+          const map: Record<string, Card> = {};
+          if (reviewItems.length > 0) {
+            const fetched = await fetchCardsByIds(reviewItems.map((r) => r.cardId));
+            fetched.forEach((c) => { map[c.id] = c; });
+          }
+          return { items: reviewItems, cards: map };
+        },
+        {
+          onCached: (cached) => {
+            setItems(cached.items);
+            setCards(cached.cards);
+            setLoading(false);
+          },
+        },
+      );
+      setItems(data.items);
+      setCards(data.cards);
     } finally {
       setLoading(false);
     }

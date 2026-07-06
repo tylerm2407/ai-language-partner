@@ -9,7 +9,7 @@ import { corsResponse, corsHeaders } from '../_shared/cors.ts';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { getPlanLimits } from '../_shared/plan-limits.ts';
 import { isValidUUID, isValidCefrLevel, isValidLanguage, sanitizeText } from '../_shared/validation.ts';
-import { gradeWithValidation } from './grading.ts';
+import { gradeWithValidation, shouldRefundQuota } from './grading.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -147,7 +147,26 @@ serve(async (req: Request) => {
       return data.content?.[0]?.text ?? '';
     });
 
-    // Quota already consumed atomically before the LLM call.
+    // Quota was consumed atomically before the LLM call. If the honest
+    // no-grade fallback shipped (graded: false), the user paid for nothing —
+    // refund the writing_grades unit (migration 045, service-role only).
+    // A refund failure never blocks the response: the fallback still ships.
+    if (shouldRefundQuota(feedback)) {
+      const { error: refundErr } = await supabase.rpc('refund_daily_quota', {
+        p_user_id: userId,
+        p_counter: 'writing_grades',
+        p_amount: 1,
+      });
+      if (refundErr) {
+        console.error(JSON.stringify({
+          evt: 'quota_refund_failed',
+          fn: 'grade-writing',
+          counter: 'writing_grades',
+          error: refundErr.message,
+          ts: new Date().toISOString(),
+        }));
+      }
+    }
 
     return new Response(
       JSON.stringify(feedback),

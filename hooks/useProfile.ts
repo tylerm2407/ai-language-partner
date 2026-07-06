@@ -1,7 +1,8 @@
 import { useCallback, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { useAppStore } from '../stores/useAppStore';
-import { upsertProfile, addXp, updateStreak } from '../lib/supabase-queries';
+import { upsertProfile, incrementXpIdempotent, updateStreak } from '../lib/supabase-queries';
+import { enqueue, isNetworkError, makeXpKey } from '../lib/offline-queue';
 import type { UserProfile } from '../types';
 
 // Module-level guard: the timezone sync runs at most once per user per app
@@ -58,7 +59,18 @@ export function useProfile() {
 
   const earnXp = useCallback(async (xp: number) => {
     if (!user || !profile) return;
-    await addXp(user.id, xp);
+    // Idempotent award: the key is generated per call, so a replay of this
+    // exact award (offline queue, lost-response retry) can never double-award.
+    const key = makeXpKey('earn');
+    try {
+      await incrementXpIdempotent(xp, key);
+    } catch (err) {
+      if (!isNetworkError(err)) throw err;
+      // Network blip: queue the award for replay on reconnect (same key)
+      // and keep the local update below so the UI reflects the earned XP;
+      // the server catches up when the queue flushes.
+      await enqueue(user.id, { type: 'xp-award', payload: { amount: xp }, key });
+    }
     setProfile({ ...profile, totalXp: profile.totalXp + xp });
   }, [user, profile, setProfile]);
 

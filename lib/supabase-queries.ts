@@ -128,6 +128,22 @@ export async function addXp(userId: string, xp: number): Promise<void> {
   if (error) throw error;
 }
 
+/**
+ * Idempotent XP award (migration 046) — same caller guard / 1-500 cap /
+ * level derivation as increment_xp, but keyed: the server records `key`
+ * in client_events and replays of the same key are no-ops. Used by
+ * earnXp and offline-queue replays so a lost-response retry can never
+ * double-award.
+ */
+export async function incrementXpIdempotent(amount: number, key: string): Promise<void> {
+  if (amount <= 0) return;
+  const { error } = await supabase.rpc('increment_xp_idempotent', {
+    p_amount: Math.min(Math.round(amount), 500),
+    p_key: key,
+  });
+  if (error) throw error;
+}
+
 export async function markOnboardingComplete(userId: string): Promise<void> {
   const { error } = await supabase
     .from('user_profiles')

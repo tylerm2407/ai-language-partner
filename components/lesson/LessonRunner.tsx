@@ -29,6 +29,7 @@ import {
   tryConsumeNewCardSlot,
 } from '../../lib/supabase-queries';
 import { calculateNextReview, createNewReviewItem } from '../../lib/srs';
+import { enqueue, isNetworkError } from '../../lib/offline-queue';
 import {
   saveLessonSession,
   loadLessonSession,
@@ -100,19 +101,41 @@ async function recordLessonSrsResult(
     // Known card: continue accumulated SM-2 state. Not new, so no cap
     // slot is consumed.
     const next = calculateNextReview(existing, rating);
-    const saved = await upsertReviewItem({
+    const payload = {
       id: existing.id,
       userId,
       cardId,
       ...next,
       lastReviewedAt: new Date().toISOString(),
-    });
-    existingItems?.set(cardId, saved);
+    };
+    try {
+      const saved = await upsertReviewItem(payload);
+      existingItems?.set(cardId, saved);
+    } catch (err) {
+      if (!isNetworkError(err)) throw err;
+      // Network blip: queue the exact failed payload for replay on
+      // reconnect, and chain in-session state from the locally computed
+      // result so repeat exercises on this card keep advancing SM-2.
+      console.warn('[lesson-srs] offline; queueing review upsert for card', cardId);
+      await enqueue(userId, { type: 'review-upsert', payload });
+      existingItems?.set(cardId, payload);
+    }
     return;
   }
 
   if (!introducedThisSession.has(cardId)) {
-    if (!(await tryConsumeNewCardSlot())) {
+    let slotConsumed: boolean;
+    try {
+      slotConsumed = await tryConsumeNewCardSlot();
+    } catch (err) {
+      if (!isNetworkError(err)) throw err;
+      // Offline: the atomic cap RPC can't run, so a brand-new card can't be
+      // introduced safely. Skip SRS for it — the card is introduced the
+      // next time it's answered online.
+      console.warn('[lesson-srs] offline; skipping new-card SRS for card', cardId);
+      return;
+    }
+    if (!slotConsumed) {
       console.warn('[lesson-srs] daily new-card cap reached; skipping card', cardId);
       return;
     }
@@ -121,13 +144,24 @@ async function recordLessonSrsResult(
     introducedThisSession.add(cardId);
   }
   const next = calculateNextReview({ id: '', ...createNewReviewItem(userId, cardId) }, rating);
-  const saved = await upsertReviewItem({
+  const payload = {
     userId,
     cardId,
     ...next,
     lastReviewedAt: new Date().toISOString(),
-  });
-  existingItems?.set(cardId, saved);
+  };
+  try {
+    const saved = await upsertReviewItem(payload);
+    existingItems?.set(cardId, saved);
+  } catch (err) {
+    if (!isNetworkError(err)) throw err;
+    // The cap slot was already consumed (this session), so the upsert must
+    // not be lost: queue it for replay. The map is deliberately NOT updated
+    // here — the payload has no row id yet, and a repeat exercise simply
+    // re-baselines and enqueues again (FIFO replay: last write wins).
+    console.warn('[lesson-srs] offline; queueing review upsert for card', cardId);
+    await enqueue(userId, { type: 'review-upsert', payload });
+  }
 }
 
 interface LessonRunnerProps {
@@ -307,20 +341,32 @@ export function LessonRunner({
         if (entry) {
           const rating = correct ? 4 : 2;
           const next = calculateNextReview(entry.item, rating);
-          upsertReviewItem({
+          const payload = {
             id: entry.item.id,
             userId: entry.item.userId,
             cardId: entry.item.cardId,
             ...next,
             lastReviewedAt: new Date().toISOString(),
-          })
+          };
+          upsertReviewItem(payload)
             .then((saved) => {
               // Keep the prefetched map current: if this card also backs a
               // main-lesson exercise, its SRS result must chain from the
               // warm-up's advancement, not the stale pre-warm-up state.
               existingReviewItemsRef.current?.set(entry.item.cardId, saved);
             })
-            .catch((err) => console.warn('[warmup] upsertReviewItem failed:', err));
+            .catch((err) => {
+              console.warn('[warmup] upsertReviewItem failed:', err);
+              if (isNetworkError(err)) {
+                // Network blip: queue the exact failed payload for replay on
+                // reconnect, and chain in-session state from the locally
+                // computed result (same role as `saved` above).
+                enqueue(userId, { type: 'review-upsert', payload }).catch((queueErr) =>
+                  console.warn('[warmup] offline enqueue failed:', queueErr),
+                );
+                existingReviewItemsRef.current?.set(entry.item.cardId, payload);
+              }
+            });
         }
         return;
       }
