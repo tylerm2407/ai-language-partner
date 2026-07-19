@@ -1,4 +1,4 @@
-# CLAUDE.md — Fluenci (Language Learning App)
+# AGENTS.md — Fluenci (Language Learning App)
 
 ## 0. Quick Start
 ```bash
@@ -49,9 +49,9 @@ Edge functions deploy via `npx supabase functions deploy <name>` or the Supabase
 
 ## 4. Rules
 - TypeScript strict; no `any` in app code. Type DB rows in `types/index.ts`.
-- Design system: see `.claude/rules/design.md` → `DESIGN.md` is canonical (dark theme, tokens in `config/theme.ts`).
-- Learning domain (SM-2 formulas, lesson structure, grading): `.claude/rules/learning.md`. Do not change SRS/scoring logic without updating its tests.
-- Mobile UI (safe areas, accessibility, gestures, performance): `.claude/rules/mobile-ui.md`.
+- Design system: see `.Codex/rules/design.md` → `DESIGN.md` is canonical (dark theme, tokens in `config/theme.ts`).
+- Learning domain (SM-2 formulas, lesson structure, grading): `.Codex/rules/learning.md`. Do not change SRS/scoring logic without updating its tests.
+- Mobile UI (safe areas, accessibility, gestures, performance): `.Codex/rules/mobile-ui.md`.
 - New DB queries go through `lib/supabase-queries.ts` in the matching domain section; user-growable tables always query with `.limit()` or `.range()`.
 - Edge functions: always authenticate via `_shared/auth.ts`, validate input via `_shared/validation.ts`, generate AI content via `_shared/validated-generate.ts`, cap tokens and input length.
 - Never write gamification columns (`total_xp`, `xp_level`, `hearts`, `max_hearts`, `last_heart_lost_at`, `streak`, `longest_streak`, `streak_freezes`, `league_tier`, `streak_shield_*`) by direct table update — a DB trigger blocks it. Use the RPCs: `increment_xp`, `spend_heart`, `sync_hearts`, `update_streak`, `use_streak_freeze`, `set_streak_shield`, `sync_level`.
@@ -72,4 +72,4 @@ Edge functions deploy via `npx supabase functions deploy <name>` or the Supabase
 - Don't bypass the content-safety pipeline for any user-visible AI output.
 - Don't add dependencies casually — this ships in an app binary; check size and maintenance.
 - Don't expose model/system prompts in UI or logs.
-- Don't change scoring/CEFR thresholds without updating tests and `.claude/rules/learning.md`.
+- Don't change scoring/CEFR thresholds without updating tests and `.Codex/rules/learning.md`.
