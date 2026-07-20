@@ -25,22 +25,35 @@ export function useTeacherDashboard(userId: string | undefined) {
     recentSubmissions: [],
   });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     if (!userId || classrooms.length === 0) return;
     setLoading(true);
+    setError(null);
     try {
-      // Fetch students for all classrooms in parallel
-      const studentCounts = await Promise.all(
-        classrooms.map((c) => fetchClassroomStudents(c.id).then((s) => s.length).catch(() => 0))
+      let failedFetches = 0;
+
+      // Fetch students for all classrooms in parallel; count failures
+      // instead of silently treating them as empty classrooms.
+      const studentResults = await Promise.allSettled(
+        classrooms.map((c) => fetchClassroomStudents(c.id))
       );
-      const totalStudents = studentCounts.reduce((sum, count) => sum + count, 0);
+      let totalStudents = 0;
+      for (const result of studentResults) {
+        if (result.status === 'fulfilled') totalStudents += result.value.length;
+        else failedFetches++;
+      }
 
       // Fetch assignments for all classrooms in parallel
-      const allAssignmentArrays = await Promise.all(
-        classrooms.map((c) => fetchClassroomAssignments(c.id).catch(() => []))
+      const assignmentResults = await Promise.allSettled(
+        classrooms.map((c) => fetchClassroomAssignments(c.id))
       );
-      const allAssignments = allAssignmentArrays.flat();
+      const allAssignments: Assignment[] = [];
+      for (const result of assignmentResults) {
+        if (result.status === 'fulfilled') allAssignments.push(...result.value);
+        else failedFetches++;
+      }
 
       // Upcoming: published assignments with a future due date
       const now = new Date().toISOString();
@@ -60,9 +73,17 @@ export function useTeacherDashboard(userId: string | undefined) {
       const recentSubmissions: AssignmentSubmission[] = [];
 
       if (publishedIds.length > 0) {
-        const submissionArrays = await Promise.all(
-          publishedIds.slice(0, 20).map((id) => fetchAssignmentSubmissions(id).catch(() => []))
+        // Bounded per-assignment fan-out (max 20). No batched query function
+        // is exported for cross-assignment submissions, so failures are
+        // counted and surfaced rather than swallowed.
+        const submissionResults = await Promise.allSettled(
+          publishedIds.slice(0, 20).map((id) => fetchAssignmentSubmissions(id))
         );
+        const submissionArrays: AssignmentSubmission[][] = [];
+        for (const result of submissionResults) {
+          if (result.status === 'fulfilled') submissionArrays.push(result.value);
+          else failedFetches++;
+        }
 
         for (const subs of submissionArrays) {
           const submitted = subs.filter((s) => s.status === 'submitted');
@@ -95,8 +116,13 @@ export function useTeacherDashboard(userId: string | undefined) {
         upcomingAssignments,
         recentSubmissions: recentSubmissions.slice(0, 10),
       });
+
+      if (failedFetches > 0) {
+        setError('Some dashboard data failed to load. Pull to refresh to retry.');
+      }
     } catch (err) {
       console.error('useTeacherDashboard refresh error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load dashboard');
     } finally {
       setLoading(false);
     }
@@ -109,6 +135,7 @@ export function useTeacherDashboard(userId: string | undefined) {
   return {
     ...stats,
     loading: loading || storeLoading,
+    error,
     refresh,
   };
 }

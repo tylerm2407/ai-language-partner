@@ -61,7 +61,7 @@ export function useClassManagement(userId: string | undefined) {
       setLoading(true);
       setError(null);
       try {
-        await callSchoolAction('archive_classroom', { classroomId });
+        await callSchoolAction('archive-classroom', { classroomId });
         await refreshClasses();
         return true;
       } catch (err) {
@@ -81,7 +81,7 @@ export function useClassManagement(userId: string | undefined) {
       setLoading(true);
       setError(null);
       try {
-        const result = await callSchoolAction('regenerate_invite_code', { classroomId });
+        const result = await callSchoolAction('regenerate-invite-code', { classroomId });
         await refreshClasses();
         return result.inviteCode as string;
       } catch (err) {
@@ -101,7 +101,7 @@ export function useClassManagement(userId: string | undefined) {
       setLoading(true);
       setError(null);
       try {
-        await callSchoolAction('remove_student', { classroomId, studentId });
+        await callSchoolAction('remove-student', { classroomId, studentId });
         return true;
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to remove student';

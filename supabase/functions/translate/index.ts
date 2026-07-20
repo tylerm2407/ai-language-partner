@@ -35,6 +35,17 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
+/** Cache key: sha256 hex of (source_text, source_lang, target_lang). */
+async function cacheKey(text: string, sourceLang: string, targetLang: string): Promise<string> {
+  const digest = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(JSON.stringify([sourceLang, targetLang, text])),
+  );
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return corsResponse();
 
@@ -70,6 +81,22 @@ serve(async (req: Request) => {
   // If source == target, translation is a no-op. Save the round-trip.
   if (sourceLanguage === targetLanguage) {
     return json({ translation: input });
+  }
+
+  // DB-backed cache: identical (text, source, target) requests skip the
+  // Haiku call entirely. Lookup failure is non-fatal — fall through to
+  // generation so a cache outage never breaks translation.
+  const hash = await cacheKey(input, sourceLanguage, targetLanguage);
+  const { data: cached, error: cacheErr } = await supabase
+    .from('translation_cache')
+    .select('translation')
+    .eq('hash', hash)
+    .maybeSingle();
+  if (cacheErr) {
+    console.warn('[translate] cache lookup failed (non-fatal):', cacheErr.message);
+  }
+  if (cached && typeof cached.translation === 'string') {
+    return json({ translation: cached.translation });
   }
 
   const systemPrompt = `You translate a short conversational message from ${sourceLanguage} into ${targetLanguage}. Return ONLY the translation — no quotes, no preamble, no explanation, no "Here is the translation:" lead-in. Preserve tone, punctuation, and emoji. If the input already appears to be in ${targetLanguage}, return it unchanged. Do not add commentary.`;
@@ -108,6 +135,18 @@ serve(async (req: Request) => {
       { error: 'Translation is temporarily unavailable. Please try again.', code: 'TRANSLATION_UNAVAILABLE' },
       502,
     );
+  }
+
+  // Populate the cache for next time. Conflicts (concurrent identical
+  // requests) and write failures are non-fatal — the translation still ships.
+  const { error: insertErr } = await supabase
+    .from('translation_cache')
+    .upsert(
+      { hash, translation: outcome.translation },
+      { onConflict: 'hash', ignoreDuplicates: true },
+    );
+  if (insertErr) {
+    console.warn('[translate] cache write failed (non-fatal):', insertErr.message);
   }
 
   return json({ translation: outcome.translation });

@@ -7,6 +7,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, corsResponse } from '../_shared/cors.ts';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
+import { isValidUUID } from '../_shared/validation.ts';
 import { logAudit, getClientIp } from '../_shared/audit.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -59,9 +60,16 @@ serve(async (req: Request) => {
       case 'submit-assignment':
         return await submitAssignment(supabase, userId, body, ip);
       case 'grade-assignment':
+      case 'grade-submission':
         return await gradeAssignment(supabase, userId, body, ip);
       case 'bulk-enroll':
         return await bulkEnroll(supabase, userId, body, ip);
+      case 'archive-classroom':
+        return await archiveClassroom(supabase, userId, body, ip);
+      case 'regenerate-invite-code':
+        return await regenerateInviteCode(supabase, userId, body, ip);
+      case 'remove-student':
+        return await removeStudent(supabase, userId, body, ip);
       default:
         return errorResponse(`Unknown action: ${action}`);
     }
@@ -185,13 +193,13 @@ async function joinClassroom(supabase: any, userId: string, email: string, body:
   // Look up classroom by invite code
   const { data: classroom, error: lookupErr } = await supabase
     .from('classrooms')
-    .select('id, name, organization_id, invite_code_active, archived_at, organizations!inner(id, is_active, max_seats)')
+    .select('id, name, organization_id, invite_code_active, archived, organizations!inner(id, is_active, max_seats)')
     .eq('invite_code', inviteCode)
     .single();
 
   if (lookupErr || !classroom) return errorResponse('Invalid invite code', 404);
   if (!classroom.invite_code_active) return errorResponse('Invite code is no longer active');
-  if (classroom.archived_at) return errorResponse('Classroom has been archived');
+  if (classroom.archived) return errorResponse('Classroom has been archived');
   if (!classroom.organizations?.is_active) return errorResponse('Organization is not active');
 
   // Check seat limit
@@ -544,6 +552,100 @@ async function gradeAssignment(supabase: any, userId: string, body: SchoolReques
   });
 
   return jsonResponse({ submission: updated });
+}
+
+// ─── Classroom Management ─────────────────────────────────────────
+
+async function archiveClassroom(supabase: any, userId: string, body: SchoolRequest, ip?: string): Promise<Response> {
+  const { classroomId } = body as any;
+  if (!classroomId || typeof classroomId !== 'string' || !isValidUUID(classroomId)) {
+    return errorResponse('Missing or invalid classroomId');
+  }
+
+  const isTeacher = await isClassroomTeacher(supabase, userId, classroomId);
+  if (!isTeacher) return errorResponse('Must be teacher of this classroom', 403);
+
+  const { data: classroom, error } = await supabase
+    .from('classrooms')
+    .update({ archived: true, invite_code_active: false })
+    .eq('id', classroomId)
+    .select()
+    .single();
+
+  if (error) return errorResponse(`Failed to archive classroom: ${error.message}`, 500);
+
+  logAudit(supabase, {
+    actorId: userId, actorRole: 'teacher', organizationId: classroom.organization_id,
+    action: 'update', resourceType: 'classroom', resourceId: classroomId, ipAddress: ip,
+    metadata: { action: 'archive' },
+  });
+
+  return jsonResponse({ classroom });
+}
+
+async function regenerateInviteCode(supabase: any, userId: string, body: SchoolRequest, ip?: string): Promise<Response> {
+  const { classroomId } = body as any;
+  if (!classroomId || typeof classroomId !== 'string' || !isValidUUID(classroomId)) {
+    return errorResponse('Missing or invalid classroomId');
+  }
+
+  const isTeacher = await isClassroomTeacher(supabase, userId, classroomId);
+  if (!isTeacher) return errorResponse('Must be teacher of this classroom', 403);
+
+  const { data: inviteCode, error: codeErr } = await supabase.rpc('generate_invite_code');
+  if (codeErr) return errorResponse(`Failed to generate invite code: ${codeErr.message}`, 500);
+
+  const { data: classroom, error } = await supabase
+    .from('classrooms')
+    .update({ invite_code: inviteCode, invite_code_active: true })
+    .eq('id', classroomId)
+    .select()
+    .single();
+
+  if (error) return errorResponse(`Failed to update invite code: ${error.message}`, 500);
+
+  logAudit(supabase, {
+    actorId: userId, actorRole: 'teacher', organizationId: classroom.organization_id,
+    action: 'update', resourceType: 'classroom', resourceId: classroomId, ipAddress: ip,
+    metadata: { action: 'regenerate_invite_code' },
+  });
+
+  return jsonResponse({ inviteCode, classroom });
+}
+
+async function removeStudent(supabase: any, userId: string, body: SchoolRequest, ip?: string): Promise<Response> {
+  const { classroomId, studentId } = body as any;
+  if (!classroomId || typeof classroomId !== 'string' || !isValidUUID(classroomId)) {
+    return errorResponse('Missing or invalid classroomId');
+  }
+  if (!studentId || typeof studentId !== 'string' || !isValidUUID(studentId)) {
+    return errorResponse('Missing or invalid studentId');
+  }
+
+  const isTeacher = await isClassroomTeacher(supabase, userId, classroomId);
+  if (!isTeacher) return errorResponse('Must be teacher of this classroom', 403);
+
+  const { data: dropped, error } = await supabase
+    .from('classroom_enrollments')
+    .update({ dropped_at: new Date().toISOString() })
+    .eq('classroom_id', classroomId)
+    .eq('student_id', studentId)
+    .is('dropped_at', null)
+    .select('id');
+
+  if (error) return errorResponse(`Failed to remove student: ${error.message}`, 500);
+  if (!dropped || dropped.length === 0) {
+    return errorResponse('Student is not actively enrolled in this classroom', 404);
+  }
+
+  const { data: cls } = await supabase.from('classrooms').select('organization_id').eq('id', classroomId).single();
+  logAudit(supabase, {
+    actorId: userId, actorRole: 'teacher', organizationId: cls?.organization_id,
+    action: 'delete', resourceType: 'enrollment', resourceId: dropped[0].id, ipAddress: ip,
+    metadata: { classroomId, studentId },
+  });
+
+  return jsonResponse({ success: true });
 }
 
 // ─── AI Grading ───────────────────────────────────────────────────

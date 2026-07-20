@@ -18,8 +18,9 @@ import { AudioPlayButton } from '../../../components/audio/AudioPlayButton';
 import { GradientBackground } from '../../../components/ui/GradientBackground';
 import { GradientBorderCard } from '../../../components/ui/GradientBorderCard';
 import { trackEvent } from '../../../lib/analytics';
+import { getTargetLanguage } from '../../../lib/language';
 import { colors } from '../../../config/theme';
-import type { LanguageCode, ProficiencyLevel } from '../../../types';
+import type { ProficiencyLevel } from '../../../types';
 
 const TOPICS: { label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { label: 'Daily Routine', icon: 'sunny' },
@@ -74,11 +75,23 @@ export default function PracticeScreen() {
     };
   }, [cleanupAudio]);
 
-  const targetLanguage = (profile?.targetLanguage ?? 'es') as LanguageCode;
+  const targetLanguage = getTargetLanguage(profile);
   const level = (profile?.level ?? 'beginner') as ProficiencyLevel;
 
   const isSending = sending;
   const isLoading = starting;
+
+  // Profile not loaded yet — target language unknown, so don't start or
+  // grade a session in a defaulted language. Show the screen's spinner.
+  if (!targetLanguage) {
+    return (
+      <GradientBackground>
+        <SafeAreaView className="flex-1 justify-center items-center">
+          <ActivityIndicator size="large" color={colors.league.diamond} />
+        </SafeAreaView>
+      </GradientBackground>
+    );
+  }
 
   const handleStartSession = async (topic: string) => {
     setStarting(true);

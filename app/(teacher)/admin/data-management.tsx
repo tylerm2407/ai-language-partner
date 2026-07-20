@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Alert, ActivityIndicator, ScrollView, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
+import { View, Text, TextInput, Alert, ActivityIndicator, ScrollView, KeyboardAvoidingView, Platform, Pressable, Share } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import * as Clipboard from 'expo-clipboard';
+import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { GradientBackground } from '../../../components/ui/GradientBackground';
 import { GlassSurface } from '../../../components/ui/GlassSurface';
@@ -15,20 +17,43 @@ export default function DataManagementScreen() {
   const [exporting, setExporting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmText, setConfirmText] = useState('');
-  const [exportSuccess, setExportSuccess] = useState(false);
+  const [exportResult, setExportResult] = useState<Record<string, unknown> | null>(null);
+  const [copiedExport, setCopiedExport] = useState(false);
 
   const handleExport = async () => {
     if (!organization?.id) return;
     setExporting(true);
     try {
-      await callSchoolAdminAction('export-org-data', { organizationId: organization.id });
-      setExportSuccess(true);
-      Alert.alert('Export Complete', 'Organization data has been exported successfully. Check your email for the download link.');
+      const result = await callSchoolAdminAction('export-org-data', { organizationId: organization.id });
+      setExportResult(result);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Export failed';
-      Alert.alert('Error', message);
+      Alert.alert('Error', message, [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Retry', onPress: handleExport },
+      ]);
     } finally {
       setExporting(false);
+    }
+  };
+
+  const exportCount = (key: string): number =>
+    Array.isArray(exportResult?.[key]) ? (exportResult[key] as unknown[]).length : 0;
+
+  const handleCopyExport = async () => {
+    if (!exportResult) return;
+    await Clipboard.setStringAsync(JSON.stringify(exportResult, null, 2));
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    setCopiedExport(true);
+    setTimeout(() => setCopiedExport(false), 2000);
+  };
+
+  const handleShareExport = async () => {
+    if (!exportResult) return;
+    try {
+      await Share.share({ message: JSON.stringify(exportResult, null, 2) });
+    } catch {
+      // User cancelled the share sheet
     }
   };
 
@@ -106,7 +131,7 @@ export default function DataManagementScreen() {
           </Text>
           <GlassSurface style={{ marginBottom: 24 }} innerStyle={{ padding: 16 }}>
             <Text className="text-sm text-text-secondary mb-4" style={{ fontFamily: 'Inter_400Regular' }}>
-              Download a complete export of all organization data including students, assignments, submissions, and chat transcripts in JSON format.
+              Generate a complete export of all organization data including students, assignments, submissions, and chat transcripts in JSON format. You can then copy or share the exported data.
             </Text>
             <GradientButton
               label={exporting ? 'Exporting...' : 'Export Organization Data'}
@@ -114,12 +139,67 @@ export default function DataManagementScreen() {
               loading={exporting}
               accessibilityHint="Export all organization data"
             />
-            {exportSuccess && (
-              <View className="flex-row items-center mt-3" style={{ gap: 6 }}>
-                <Ionicons name="checkmark-circle" size={16} color="#22C55E" />
-                <Text style={{ color: '#22C55E', fontSize: 13, fontFamily: 'Inter_500Medium' }}>
-                  Export completed successfully
+            {exportResult && (
+              <View className="mt-4">
+                <View className="flex-row items-center mb-2" style={{ gap: 6 }}>
+                  <Ionicons name="checkmark-circle" size={16} color="#22C55E" />
+                  <Text style={{ color: '#22C55E', fontSize: 13, fontFamily: 'Inter_500Medium' }}>
+                    Export ready
+                  </Text>
+                </View>
+                <Text className="text-sm text-text-secondary mb-3" style={{ fontFamily: 'Inter_400Regular' }}>
+                  {exportCount('classrooms')} classrooms · {exportCount('members')} members ·{' '}
+                  {exportCount('assignments')} assignments · {exportCount('submissions')} submissions ·{' '}
+                  {exportCount('chatMessages')} chat messages
                 </Text>
+                <View className="flex-row" style={{ gap: 10 }}>
+                  <Pressable
+                    onPress={handleCopyExport}
+                    accessibilityRole="button"
+                    accessibilityLabel="Copy export JSON to clipboard"
+                    className="flex-row items-center"
+                    style={{
+                      backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                      paddingHorizontal: 14,
+                      paddingVertical: 10,
+                      borderRadius: 10,
+                      gap: 6,
+                    }}
+                  >
+                    <Ionicons
+                      name={copiedExport ? 'checkmark-circle' : 'copy-outline'}
+                      size={16}
+                      color={copiedExport ? '#22C55E' : '#38BDF8'}
+                    />
+                    <Text
+                      style={{
+                        color: copiedExport ? '#22C55E' : '#38BDF8',
+                        fontSize: 14,
+                        fontFamily: 'Inter_600SemiBold',
+                      }}
+                    >
+                      {copiedExport ? 'Copied' : 'Copy JSON'}
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={handleShareExport}
+                    accessibilityRole="button"
+                    accessibilityLabel="Share export JSON"
+                    className="flex-row items-center"
+                    style={{
+                      backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                      paddingHorizontal: 14,
+                      paddingVertical: 10,
+                      borderRadius: 10,
+                      gap: 6,
+                    }}
+                  >
+                    <Ionicons name="share-outline" size={16} color="#38BDF8" />
+                    <Text style={{ color: '#38BDF8', fontSize: 14, fontFamily: 'Inter_600SemiBold' }}>
+                      Share
+                    </Text>
+                  </Pressable>
+                </View>
               </View>
             )}
           </GlassSurface>

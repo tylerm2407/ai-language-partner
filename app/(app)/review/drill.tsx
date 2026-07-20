@@ -7,7 +7,8 @@ import { useAuth } from '../../../hooks/useAuth';
 import { useAppStore } from '../../../stores/useAppStore';
 import { LessonRunner } from '../../../components/lesson/LessonRunner';
 import { fetchDrillExercises } from '../../../lib/supabase-queries';
-import type { Exercise, LanguageCode } from '../../../types';
+import { getTargetLanguage } from '../../../lib/language';
+import type { Exercise } from '../../../types';
 
 /**
  * Top-mistakes drill: a focused 3-exercise mini-lesson built from the
@@ -48,10 +49,12 @@ export default function DrillScreen() {
     load();
   }, [load]);
 
-  const targetLanguage: LanguageCode = profile?.targetLanguage ?? 'en';
+  const targetLanguage = getTargetLanguage(profile);
   const cefrLevel = profile?.level ?? undefined;
 
-  if (loading) {
+  // Also wait for the profile: the drill grades in the user's target
+  // language, so never fall back to a default while it loads.
+  if (loading || !targetLanguage) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: '#0C0F14', justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color="#38BDF8" />

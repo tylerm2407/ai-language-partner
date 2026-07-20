@@ -5,13 +5,13 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../../hooks/useAuth';
 import { fetchAllUserWritingSubmissions } from '../../../../lib/supabase-queries';
-import type { WritingSubmission } from '../../../../types';
+import type { WritingSubmissionWithPrompt } from '../../../../lib/supabase-queries';
 import { GradientBackground } from '../../../../components/ui/GradientBackground';
 
 export default function WritingHistoryScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const [submissions, setSubmissions] = useState<WritingSubmission[]>([]);
+  const [submissions, setSubmissions] = useState<WritingSubmissionWithPrompt[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -23,7 +23,7 @@ export default function WritingHistoryScreen() {
   }, [user]);
 
   // Group by prompt
-  const groupedByPrompt = submissions.reduce<Record<string, WritingSubmission[]>>((acc, sub) => {
+  const groupedByPrompt = submissions.reduce<Record<string, WritingSubmissionWithPrompt[]>>((acc, sub) => {
     if (!acc[sub.promptId]) acc[sub.promptId] = [];
     acc[sub.promptId].push(sub);
     return acc;
@@ -86,8 +86,13 @@ export default function WritingHistoryScreen() {
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 15, color: '#FFFFFF', fontWeight: '500' }} numberOfLines={2}>
-                      {entry.submissions[0].submissionText.slice(0, 80)}...
+                      {entry.submissions[0].promptTitle ?? `${entry.submissions[0].submissionText.slice(0, 80)}...`}
                     </Text>
+                    {entry.submissions[0].promptTitle != null && (
+                      <Text style={{ fontSize: 13, color: '#9CA3AF', marginTop: 2 }} numberOfLines={1}>
+                        {entry.submissions[0].submissionText.slice(0, 80)}
+                      </Text>
+                    )}
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 8 }}>
                       <Text style={{ fontSize: 13, color: '#999' }}>
                         {entry.attemptCount} attempt{entry.attemptCount !== 1 ? 's' : ''}

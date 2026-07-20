@@ -223,7 +223,9 @@ serve(async (req: Request) => {
           body: JSON.stringify({
             model: TEXT_MODEL,
             max_tokens: 600,
-            system: systemPrompt,
+            system: [
+              { type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } },
+            ],
             messages: windowMessages(messages).map((m) => ({
               role: m.role === 'assistant' ? 'assistant' : 'user',
               content: m.content,

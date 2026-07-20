@@ -10,6 +10,7 @@ import { GradientBackground } from '../../../components/ui/GradientBackground';
 import { colors } from '../../../config/theme';
 import { SUPPORTED_LANGUAGES, DAILY_GOALS } from '../../../config/app';
 import { supabase } from '../../../lib/supabase';
+import { getTargetLanguage } from '../../../lib/language';
 import type { LanguageCode, ProficiencyLevel } from '../../../types';
 
 const LEVELS: { value: ProficiencyLevel; label: string }[] = [
@@ -26,7 +27,9 @@ export default function SettingsScreen() {
   const { signOut } = useAuth();
 
   const [displayName, setDisplayName] = useState(profile?.displayName ?? '');
-  const [targetLanguage, setTargetLanguage] = useState<LanguageCode>(profile?.targetLanguage ?? 'es');
+  // null while the profile hasn't loaded — no language is preselected and
+  // Save won't overwrite the stored language with a default.
+  const [targetLanguage, setTargetLanguage] = useState<LanguageCode | null>(getTargetLanguage(profile));
   const [level, setLevel] = useState<ProficiencyLevel>(profile?.level ?? 'beginner');
   const [dailyGoal, setDailyGoal] = useState(profile?.dailyGoalMinutes ?? 10);
   const [saving, setSaving] = useState(false);
@@ -34,7 +37,7 @@ export default function SettingsScreen() {
 
   const hasChanges =
     displayName !== (profile?.displayName ?? '') ||
-    targetLanguage !== profile?.targetLanguage ||
+    targetLanguage !== getTargetLanguage(profile) ||
     level !== profile?.level ||
     dailyGoal !== profile?.dailyGoalMinutes;
 
@@ -43,7 +46,8 @@ export default function SettingsScreen() {
     try {
       await updateProfile({
         displayName: displayName.trim() || undefined,
-        targetLanguage,
+        // Only write the language when one is actually selected.
+        ...(targetLanguage ? { targetLanguage } : {}),
         level,
         dailyGoalMinutes: dailyGoal,
       });

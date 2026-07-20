@@ -8,6 +8,7 @@ import { useSchoolStore } from '../../stores/useSchoolStore';
 import { SCHOOL_ENABLED, levelToNewsTier } from '../../config/app';
 import { fetchStatsRange } from '../../lib/supabase-queries';
 import { localDayKey } from '../../lib/dates';
+import { getTargetLanguage } from '../../lib/language';
 import { useTimezoneSync } from '../../hooks/useProfile';
 import { Ionicons } from '@expo/vector-icons';
 import { GradientBackground } from '../../components/ui/GradientBackground';
@@ -51,7 +52,9 @@ export default function HomeScreen() {
   const newsTier = levelToNewsTier(profile?.level ?? 'intermediate');
   const { article, isLoading: newsLoading, error: newsError, hasRead: newsHasRead } = useDailyNews(
     user?.id ?? '',
-    profile?.targetLanguage ?? 'es',
+    // '' = profile not loaded yet; the hook skips fetching until the real
+    // target language is known instead of defaulting to a language.
+    getTargetLanguage(profile) ?? '',
     newsTier,
   );
   const { permissionStatus, requestPermissionsExplicit } = useNotifications({ userId: user?.id });

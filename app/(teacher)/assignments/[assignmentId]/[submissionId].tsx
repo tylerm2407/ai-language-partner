@@ -18,8 +18,9 @@ import { GlassSurface } from '../../../../components/ui/GlassSurface';
 import { GradientButton } from '../../../../components/ui/GradientButton';
 import StatusBadge from '../../../../components/school/StatusBadge';
 import TranscriptViewer from '../../../../components/school/TranscriptViewer';
-import { fetchSubmissionDetail, fetchSubmissionTranscript, gradeSubmission } from '../../../../lib/supabase-queries';
-import type { AssignmentSubmission, ConversationMessage } from '../../../../types';
+import { fetchSubmissionDetail, fetchSubmissionTranscript, fetchClassroomAssignments, gradeSubmission } from '../../../../lib/supabase-queries';
+import { useSchoolStore } from '../../../../stores/useSchoolStore';
+import type { Assignment, AssignmentSubmission, ConversationMessage } from '../../../../types';
 
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return '—';
@@ -62,6 +63,7 @@ export default function GradingScreen() {
   }>();
   const [loading, setLoading] = useState(true);
   const [submission, setSubmission] = useState<AssignmentSubmission | null>(null);
+  const [assignment, setAssignment] = useState<Assignment | null>(null);
   const [transcript, setTranscript] = useState<ConversationMessage[]>([]);
   const [scoreOverride, setScoreOverride] = useState('');
   const [comments, setComments] = useState('');
@@ -77,6 +79,17 @@ export default function GradingScreen() {
         if (sub?.chatSessionId) {
           const messages = await fetchSubmissionTranscript(sub.chatSessionId);
           setTranscript(messages);
+        }
+        // Resolve the assignment (source of the target language) from the
+        // teacher's classrooms — same lookup as the submissions list screen.
+        const { classrooms } = useSchoolStore.getState();
+        for (const classroom of classrooms) {
+          const assignments = await fetchClassroomAssignments(classroom.id);
+          const found = assignments.find((a) => a.id === assignmentId);
+          if (found) {
+            setAssignment(found);
+            break;
+          }
         }
       } catch (err) {
         console.error('Failed to load submission:', err);
@@ -367,7 +380,10 @@ export default function GradingScreen() {
             Conversation Transcript
           </Text>
           {transcript.length > 0 ? (
-            <TranscriptViewer messages={transcript} targetLanguage="es" />
+            <TranscriptViewer
+              messages={transcript}
+              targetLanguage={assignment?.targetLanguage ?? 'en'}
+            />
           ) : (
             <GlassSurface
               style={{ marginBottom: 20 }}

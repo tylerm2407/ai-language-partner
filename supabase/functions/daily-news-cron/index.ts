@@ -204,61 +204,75 @@ serve(async (req: Request) => {
   let failed = 0;
   const failures: { language: string; tier: Tier; error: string }[] = [];
 
+  // Build the pending (language, tier) work list, skipping rows that exist.
+  const pending: { language: { code: string; name: string }; tier: Tier }[] = [];
   for (const language of SUPPORTED_LANGUAGES) {
     for (const tier of TIERS) {
-      const key = `${language.code}:${tier}`;
-      if (existingSet.has(key)) {
+      if (existingSet.has(`${language.code}:${tier}`)) {
         skipped += 1;
-        continue;
-      }
-
-      try {
-        const article = await generateOne(language, tier);
-        if (!article) {
-          // Safety fallback returned null — record as skipped, cron will retry.
-          skipped += 1;
-          continue;
-        }
-
-        const row = {
-          date: today,
-          language: language.code,
-          tier,
-          cefr_level: TIER_CEFR[tier],
-          title: article.title ?? '',
-          title_translation: article.titleTranslation ?? null,
-          summary: article.summary ?? '',
-          content: article.content ?? '',
-          content_translation: article.contentTranslation ?? null,
-          vocabulary_highlights: article.vocabularyHighlights ?? [],
-          source_topic: article.sourceTopic ?? null,
-        };
-
-        const { error: insertErr } = await supabase
-          .from('daily_news')
-          .insert(row);
-
-        if (insertErr) {
-          // 23505 = unique_violation — a concurrent fire already inserted.
-          // Treat as success.
-          if (insertErr.code === '23505') {
-            skipped += 1;
-          } else {
-            failed += 1;
-            failures.push({ language: language.code, tier, error: insertErr.message });
-          }
-        } else {
-          generated += 1;
-        }
-      } catch (err) {
-        failed += 1;
-        failures.push({
-          language: language.code,
-          tier,
-          error: err instanceof Error ? err.message : String(err),
-        });
+      } else {
+        pending.push({ language, tier });
       }
     }
+  }
+
+  const processOne = async (language: { code: string; name: string }, tier: Tier): Promise<void> => {
+    try {
+      const article = await generateOne(language, tier);
+      if (!article) {
+        // Safety fallback returned null — record as skipped, cron will retry.
+        skipped += 1;
+        return;
+      }
+
+      const row = {
+        date: today,
+        language: language.code,
+        tier,
+        cefr_level: TIER_CEFR[tier],
+        title: article.title ?? '',
+        title_translation: article.titleTranslation ?? null,
+        summary: article.summary ?? '',
+        content: article.content ?? '',
+        content_translation: article.contentTranslation ?? null,
+        vocabulary_highlights: article.vocabularyHighlights ?? [],
+        source_topic: article.sourceTopic ?? null,
+      };
+
+      const { error: insertErr } = await supabase
+        .from('daily_news')
+        .insert(row);
+
+      if (insertErr) {
+        // 23505 = unique_violation — a concurrent fire already inserted.
+        // Treat as success.
+        if (insertErr.code === '23505') {
+          skipped += 1;
+        } else {
+          failed += 1;
+          failures.push({ language: language.code, tier, error: insertErr.message });
+        }
+      } else {
+        generated += 1;
+      }
+    } catch (err) {
+      failed += 1;
+      failures.push({
+        language: language.code,
+        tier,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  };
+
+  // Bounded concurrency: batches of 3 instead of 18 serial awaits.
+  // processOne never rejects (all errors are recorded in `failures`), but
+  // allSettled guarantees one bad promise can never kill the whole run.
+  const BATCH_SIZE = 3;
+  for (let i = 0; i < pending.length; i += BATCH_SIZE) {
+    await Promise.allSettled(
+      pending.slice(i, i + BATCH_SIZE).map(({ language, tier }) => processOne(language, tier)),
+    );
   }
 
   const durationMs = Date.now() - startedAt;

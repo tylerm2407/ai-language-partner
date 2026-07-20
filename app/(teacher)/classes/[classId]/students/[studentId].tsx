@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,13 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { GradientBackground } from '../../../../../components/ui/GradientBackground';
 import { GlassSurface } from '../../../../../components/ui/GlassSurface';
+import { GradientButton } from '../../../../../components/ui/GradientButton';
 import StatusBadge from '../../../../../components/school/StatusBadge';
+import {
+  fetchClassroomStudents,
+  fetchClassroomAssignments,
+  fetchAssignmentSubmissions,
+} from '../../../../../lib/supabase-queries';
 import type { SubmissionStatus } from '../../../../../types';
 
 interface StudentInfo {
@@ -35,13 +41,63 @@ export default function StudentProgressScreen() {
     studentId: string;
   }>();
   const [loading, setLoading] = useState(true);
-  const [student] = useState<StudentInfo | null>(null);
-  const [submissions] = useState<SubmissionRow[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [student, setStudent] = useState<StudentInfo | null>(null);
+  const [submissions, setSubmissions] = useState<SubmissionRow[]>([]);
+
+  const load = useCallback(async () => {
+    if (!classId || !studentId) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const [enrollments, assignments] = await Promise.all([
+        fetchClassroomStudents(classId),
+        fetchClassroomAssignments(classId),
+      ]);
+
+      const enrollment = enrollments.find((e) => e.studentId === studentId);
+      setStudent(
+        enrollment
+          ? {
+              id: enrollment.studentId,
+              name: enrollment.displayName,
+              enrolledAt: enrollment.enrolledAt,
+            }
+          : null,
+      );
+
+      // Per-assignment fetch (no batched cross-assignment query is exported),
+      // filtered down to this student's submissions.
+      const submissionArrays = await Promise.all(
+        assignments.map((a) => fetchAssignmentSubmissions(a.id)),
+      );
+      const rows: SubmissionRow[] = [];
+      assignments.forEach((assignment, i) => {
+        const sub = submissionArrays[i].find((s) => s.studentId === studentId);
+        if (sub) {
+          rows.push({
+            id: sub.id,
+            assignmentTitle: assignment.title,
+            status: sub.status,
+            score: sub.finalScore ?? sub.autoScore,
+            submittedAt: sub.submittedAt,
+          });
+        }
+      });
+      rows.sort((a, b) => (b.submittedAt ?? '').localeCompare(a.submittedAt ?? ''));
+      setSubmissions(rows);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load student data';
+      setError(message);
+      console.error('Failed to load student progress:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [classId, studentId]);
 
   useEffect(() => {
-    // TODO: fetch student info and submissions from API
-    setLoading(false);
-  }, [classId, studentId]);
+    load();
+  }, [load]);
 
   if (loading) {
     return (
@@ -84,6 +140,28 @@ export default function StudentProgressScreen() {
           >
             {student?.name ?? 'Student'}
           </Text>
+
+          {/* Error state + retry */}
+          {error && (
+            <GlassSurface
+              style={{ marginBottom: 20 }}
+              innerStyle={{ padding: 20, alignItems: 'center' }}
+            >
+              <Ionicons name="warning-outline" size={32} color="#EF4444" />
+              <Text
+                className="text-sm text-text-secondary mt-2 text-center"
+                style={{ fontFamily: 'Inter_400Regular' }}
+              >
+                {error}
+              </Text>
+              <GradientButton
+                label="Retry"
+                onPress={load}
+                style={{ marginTop: 12, minWidth: 140 }}
+                accessibilityHint="Retry loading student data"
+              />
+            </GlassSurface>
+          )}
 
           {/* Student Info Card */}
           <GlassSurface

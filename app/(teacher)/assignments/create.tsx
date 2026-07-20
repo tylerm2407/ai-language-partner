@@ -17,6 +17,7 @@ import { GradientBackground } from '../../../components/ui/GradientBackground';
 import { GlassSurface } from '../../../components/ui/GlassSurface';
 import { GradientButton } from '../../../components/ui/GradientButton';
 import { useSchoolStore } from '../../../stores/useSchoolStore';
+import { useAssignmentBuilder, type AssignmentFormState } from '../../../hooks/useAssignmentBuilder';
 import type { ProficiencyLevel, LanguageCode, Classroom } from '../../../types';
 
 // ─── Scenarios ──────────────────────────────────────────────────
@@ -134,7 +135,7 @@ export default function CreateAssignmentScreen() {
   const [level, setLevel] = useState<ProficiencyLevel>(
     classrooms[0]?.level ?? 'beginner',
   );
-  const [, setTargetLanguage] = useState<LanguageCode>(
+  const [targetLanguage, setTargetLanguage] = useState<LanguageCode>(
     classrooms[0]?.targetLanguage ?? 'es',
   );
   const [minDuration, setMinDuration] = useState<number>(10);
@@ -143,10 +144,48 @@ export default function CreateAssignmentScreen() {
   const [grammarFocus, setGrammarFocus] = useState('');
   const [instructions, setInstructions] = useState('');
   const [dueDate, setDueDate] = useState('');
-  const [loading, setLoading] = useState(false);
   const [showClassPicker, setShowClassPicker] = useState(false);
 
+  const { publish, saveDraft, loading, error } = useAssignmentBuilder();
+
   const selectedClass = classrooms.find((c) => c.id === selectedClassId);
+
+  const parseList = (value: string): string[] =>
+    value.split(',').map((s) => s.trim()).filter(Boolean);
+
+  /** Collect the current form values; returns null (after alerting) if the due date is invalid. */
+  const buildFormValues = (): Partial<AssignmentFormState> | null => {
+    let dueAt: string | null = null;
+    if (dueDate.trim()) {
+      const parsed = new Date(dueDate.trim());
+      if (Number.isNaN(parsed.getTime())) {
+        Alert.alert('Invalid Date', 'Please enter the due date as YYYY-MM-DD.');
+        return null;
+      }
+      dueAt = parsed.toISOString();
+    }
+    return {
+      classroomId: selectedClassId,
+      title: title.trim(),
+      scenarioKey: selectedScenario === 'custom' ? null : selectedScenario,
+      customScenario:
+        selectedScenario === 'custom'
+          ? {
+              label: customLabel.trim(),
+              description: customDescription.trim(),
+              systemContext: customContext.trim(),
+            }
+          : null,
+      targetLanguage,
+      level,
+      minDurationMinutes: minDuration,
+      mode,
+      vocabularyFocus: parseList(vocabFocus),
+      grammarFocus: parseList(grammarFocus),
+      instructions: instructions.trim(),
+      dueAt,
+    };
+  };
 
   const handleClassSelect = (c: Classroom) => {
     setSelectedClassId(c.id);
@@ -164,18 +203,15 @@ export default function CreateAssignmentScreen() {
       Alert.alert('Required', 'Please select a scenario.');
       return;
     }
-    setLoading(true);
-    try {
-      // TODO: call createAssignment from useAssignmentBuilder hook
+    const values = buildFormValues();
+    if (!values) return;
+    const assignment = await publish(values);
+    if (assignment) {
       Alert.alert('Published', 'Assignment has been published.', [
         { text: 'OK', onPress: () => router.back() },
       ]);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to publish';
-      Alert.alert('Error', message);
-    } finally {
-      setLoading(false);
     }
+    // On failure the hook sets `error`, rendered inline below with a retry.
   };
 
   const handleSaveDraft = async () => {
@@ -183,10 +219,14 @@ export default function CreateAssignmentScreen() {
       Alert.alert('Required', 'Please enter an assignment title.');
       return;
     }
-    // TODO: save as draft
-    Alert.alert('Saved', 'Draft saved.', [
-      { text: 'OK', onPress: () => router.back() },
-    ]);
+    const values = buildFormValues();
+    if (!values) return;
+    const assignment = await saveDraft(values);
+    if (assignment) {
+      Alert.alert('Saved', 'Draft saved.', [
+        { text: 'OK', onPress: () => router.back() },
+      ]);
+    }
   };
 
   return (
@@ -714,13 +754,36 @@ export default function CreateAssignmentScreen() {
             />
           </GlassSurface>
 
+          {/* Error state + retry via the action buttons */}
+          {error && (
+            <View
+              className="flex-row items-center mb-4"
+              style={{
+                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                borderRadius: 12,
+                padding: 12,
+                gap: 8,
+              }}
+            >
+              <Ionicons name="warning-outline" size={18} color="#EF4444" />
+              <Text
+                className="text-sm flex-1"
+                style={{ color: '#EF4444', fontFamily: 'Inter_500Medium' }}
+              >
+                {error}
+              </Text>
+            </View>
+          )}
+
           {/* Action Buttons */}
           <View className="flex-row" style={{ gap: 12 }}>
             <Pressable
               onPress={handleSaveDraft}
+              disabled={loading}
               accessibilityRole="button"
               accessibilityLabel="Save as draft"
               style={{
+                opacity: loading ? 0.5 : 1,
                 flex: 1,
                 paddingVertical: 16,
                 borderRadius: 14,

@@ -17,6 +17,8 @@ import { GradientBackground } from '../../../components/ui/GradientBackground';
 import { GlassSurface } from '../../../components/ui/GlassSurface';
 import { GradientButton } from '../../../components/ui/GradientButton';
 import { SUPPORTED_LANGUAGES } from '../../../config/app';
+import { useAuth } from '../../../hooks/useAuth';
+import { useClassManagement } from '../../../hooks/useClassManagement';
 import type { LanguageCode, ProficiencyLevel } from '../../../types';
 
 const LEVELS: { value: ProficiencyLevel; label: string }[] = [
@@ -29,10 +31,11 @@ const LEVELS: { value: ProficiencyLevel; label: string }[] = [
 
 export default function CreateClassScreen() {
   const router = useRouter();
+  const { user } = useAuth();
+  const { createClass, loading, error } = useClassManagement(user?.id);
   const [name, setName] = useState('');
   const [language, setLanguage] = useState<LanguageCode>('es');
   const [level, setLevel] = useState<ProficiencyLevel>('beginner');
-  const [loading, setLoading] = useState(false);
   const [inviteCode, setInviteCode] = useState<string | null>(null);
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
 
@@ -43,18 +46,15 @@ export default function CreateClassScreen() {
       Alert.alert('Required', 'Please enter a class name.');
       return;
     }
-    setLoading(true);
-    try {
-      // TODO: call createClassroom from useClassManagement hook
-      // For now simulate the response
-      const mockCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-      setInviteCode(mockCode);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to create class';
-      Alert.alert('Error', message);
-    } finally {
-      setLoading(false);
+    const classroom = await createClass({
+      name: name.trim(),
+      targetLanguage: language,
+      level,
+    });
+    if (classroom) {
+      setInviteCode(classroom.inviteCode);
     }
+    // On failure the hook sets `error`, rendered inline below with a retry.
   };
 
   return (
@@ -243,6 +243,39 @@ export default function CreateClassScreen() {
               </Pressable>
             ))}
           </View>
+
+          {/* Error state + retry */}
+          {error && (
+            <View
+              className="flex-row items-center mb-4"
+              style={{
+                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                borderRadius: 12,
+                padding: 12,
+                gap: 8,
+              }}
+            >
+              <Ionicons name="warning-outline" size={18} color="#EF4444" />
+              <Text
+                className="text-sm flex-1"
+                style={{ color: '#EF4444', fontFamily: 'Inter_500Medium' }}
+              >
+                {error}
+              </Text>
+              <Pressable
+                onPress={handleCreate}
+                accessibilityRole="button"
+                accessibilityLabel="Retry creating class"
+                style={{ paddingVertical: 4, paddingHorizontal: 8 }}
+              >
+                <Text
+                  style={{ color: '#38BDF8', fontSize: 13, fontFamily: 'Inter_600SemiBold' }}
+                >
+                  Retry
+                </Text>
+              </Pressable>
+            </View>
+          )}
 
           {/* Create Button */}
           <GradientButton

@@ -8,12 +8,18 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import * as Clipboard from 'expo-clipboard';
+import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { GradientBackground } from '../../../../components/ui/GradientBackground';
 import { GlassSurface } from '../../../../components/ui/GlassSurface';
 import { GradientButton } from '../../../../components/ui/GradientButton';
 import AssignmentCard from '../../../../components/school/AssignmentCard';
 import { useSchoolStore } from '../../../../stores/useSchoolStore';
+import {
+  fetchClassroomStudents,
+  fetchClassroomAssignments,
+} from '../../../../lib/supabase-queries';
 import type { Classroom, Assignment } from '../../../../types';
 
 interface StudentRowData {
@@ -30,16 +36,54 @@ export default function ClassDetailScreen() {
   const { classrooms } = useSchoolStore();
   const [tab, setTab] = useState<Tab>('students');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [classroom, setClassroom] = useState<Classroom | null>(null);
-  const [students] = useState<StudentRowData[]>([]);
-  const [assignments] = useState<Assignment[]>([]);
+  const [students, setStudents] = useState<StudentRowData[]>([]);
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [copied, setCopied] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!classId) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const [enrollments, classAssignments] = await Promise.all([
+        fetchClassroomStudents(classId),
+        fetchClassroomAssignments(classId),
+      ]);
+      setStudents(
+        enrollments.map((e) => ({
+          id: e.studentId,
+          name: e.displayName,
+          enrolledAt: e.enrolledAt,
+        })),
+      );
+      setAssignments(classAssignments);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load class data';
+      setError(message);
+      console.error('Failed to load class detail:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [classId]);
 
   useEffect(() => {
     const found = classrooms.find((c) => c.id === classId) ?? null;
     setClassroom(found);
-    // TODO: fetch students and assignments for this class from API
-    setLoading(false);
   }, [classId, classrooms]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const handleCopyInviteCode = useCallback(async () => {
+    if (!classroom?.inviteCode) return;
+    await Clipboard.setStringAsync(classroom.inviteCode);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [classroom?.inviteCode]);
 
   const renderStudentItem = useCallback(
     ({ item }: { item: StudentRowData }) => (
@@ -168,7 +212,27 @@ export default function ClassDetailScreen() {
                   {classroom.inviteCode}
                 </Text>
               </View>
-              <Ionicons name="copy-outline" size={20} color="#38BDF8" />
+              <Pressable
+                onPress={handleCopyInviteCode}
+                accessibilityRole="button"
+                accessibilityLabel={copied ? 'Invite code copied' : 'Copy invite code'}
+                hitSlop={12}
+                className="flex-row items-center"
+                style={{ gap: 6 }}
+              >
+                {copied && (
+                  <Text
+                    style={{ color: '#22C55E', fontSize: 12, fontFamily: 'Inter_600SemiBold' }}
+                  >
+                    Copied
+                  </Text>
+                )}
+                <Ionicons
+                  name={copied ? 'checkmark-circle' : 'copy-outline'}
+                  size={20}
+                  color={copied ? '#22C55E' : '#38BDF8'}
+                />
+              </Pressable>
             </GlassSurface>
           )}
 
@@ -213,7 +277,29 @@ export default function ClassDetailScreen() {
           </View>
 
           {/* Tab Content */}
-          {tab === 'students' ? (
+          {error ? (
+            <View className="flex-1 justify-center items-center" style={{ paddingBottom: 80 }}>
+              <Ionicons name="warning-outline" size={48} color="#EF4444" />
+              <Text
+                className="text-base text-text-primary mt-3"
+                style={{ fontFamily: 'Inter_600SemiBold' }}
+              >
+                Couldn't load class data
+              </Text>
+              <Text
+                className="text-sm text-text-secondary mt-1 text-center px-8"
+                style={{ fontFamily: 'Inter_400Regular' }}
+              >
+                {error}
+              </Text>
+              <GradientButton
+                label="Retry"
+                onPress={load}
+                style={{ marginTop: 16, minWidth: 140 }}
+                accessibilityHint="Retry loading students and assignments"
+              />
+            </View>
+          ) : tab === 'students' ? (
             <>
               <GradientButton
                 label="Bulk Enroll Students"

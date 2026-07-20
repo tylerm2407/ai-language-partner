@@ -62,6 +62,7 @@ export default function TeacherDashboardScreen() {
     upcomingAssignments,
     recentSubmissions,
     loading,
+    error,
     refresh,
   } = useTeacherDashboard(user?.id);
 
@@ -162,6 +163,34 @@ export default function TeacherDashboardScreen() {
             <ActivityIndicator color="#38BDF8" size="large" style={{ marginTop: 32 }} />
           ) : (
             <>
+              {/* Load Error */}
+              {error && (
+                <GlassSurface
+                  style={{ marginBottom: 16 }}
+                  innerStyle={{ padding: 14, flexDirection: 'row', alignItems: 'center' }}
+                >
+                  <Ionicons name="warning-outline" size={18} color="#F59E0B" />
+                  <Text
+                    className="text-sm text-text-secondary flex-1 ml-2"
+                    style={{ fontFamily: 'Inter_400Regular' }}
+                  >
+                    {error}
+                  </Text>
+                  <Pressable
+                    onPress={refresh}
+                    accessibilityRole="button"
+                    accessibilityLabel="Retry loading dashboard"
+                    style={{ paddingVertical: 6, paddingHorizontal: 12 }}
+                  >
+                    <Text
+                      style={{ color: '#38BDF8', fontSize: 13, fontFamily: 'Inter_600SemiBold' }}
+                    >
+                      Retry
+                    </Text>
+                  </Pressable>
+                </GlassSurface>
+              )}
+
               {/* Quick Stats */}
               <View className="flex-row mb-6" style={{ gap: 10 }}>
                 {stats.map((stat) => (

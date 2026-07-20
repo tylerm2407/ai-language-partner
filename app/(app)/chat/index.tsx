@@ -15,9 +15,10 @@ import { GradientBackground } from '../../../components/ui/GradientBackground';
 import { GlassSurface } from '../../../components/ui/GlassSurface';
 import AssignmentTimer from '../../../components/school/AssignmentTimer';
 import { useAssignmentTimer } from '../../../hooks/useAssignmentTimer';
-import type { ConversationMessage, Assignment, AssignmentSubmission } from '../../../types';
+import type { ConversationMessage, Assignment, AssignmentSubmission, LanguageCode } from '../../../types';
 import { Ionicons } from '@expo/vector-icons';
 import { getOrCreateChatSession, saveChatMessage, loadChatMessages, fetchStudentAssignments, submitAssignment } from '../../../lib/supabase-queries';
+import { getTargetLanguage } from '../../../lib/language';
 import { SCENARIO_META, SCENARIO_ORDER, type ScenarioKey } from '../../../types/scenarios';
 import { SCHOOL_ENABLED } from '../../../config/app';
 import { colors } from '../../../config/theme';
@@ -53,6 +54,25 @@ const SCENARIOS: Scenario[] = SCENARIO_ORDER.map((key) => {
 });
 
 export default function ChatScreen() {
+  const { profile } = useAppStore();
+  const targetLanguage = getTargetLanguage(profile);
+
+  // Profile not loaded yet — the target language is unknown, so don't
+  // default to any language. Mirrors the assignment-loading state below.
+  if (!targetLanguage) {
+    return (
+      <GradientBackground>
+        <View className="flex-1 items-center justify-center">
+          <Text className="text-text-secondary">Loading...</Text>
+        </View>
+      </GradientBackground>
+    );
+  }
+
+  return <ChatSession targetLanguage={targetLanguage} />;
+}
+
+function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
   const { user } = useAuth();
   const { profile } = useAppStore();
   const { markItem: markOnboardingItem } = useOnboardingChecklist();
@@ -80,7 +100,6 @@ export default function ChatScreen() {
   // Track the current ElevenLabs TTS sound for cleanup on error/unmount
   const ttsSoundRef = useRef<Audio.Sound | null>(null);
 
-  const targetLanguage = profile?.targetLanguage ?? 'es';
   const level = profile?.level ?? 'beginner';
 
   // Load assignment data if assignmentId param present (school feature)

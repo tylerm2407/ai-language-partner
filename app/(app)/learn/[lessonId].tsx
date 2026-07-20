@@ -18,6 +18,7 @@ import { LevelUpModal } from '../../../components/gamification/LevelUpModal';
 import { OutOfHeartsModal } from '../../../components/gamification/OutOfHeartsModal';
 import { AchievementModal } from '../../../components/gamification/AchievementModal';
 import { checkAndAwardAchievements, type AchievementDefinition } from '../../../lib/achievements';
+import { getTargetLanguage } from '../../../lib/language';
 import { Button } from '../../../components/ui/Button';
 import { Body } from '../../../components/ui/Text';
 import { GradientBackground } from '../../../components/ui/GradientBackground';
@@ -76,7 +77,11 @@ export default function LessonScreen() {
     }
   }, [canPlay]);
 
-  if (loading) {
+  const targetLanguage = getTargetLanguage(profile);
+
+  // Also wait for the profile: grading needs the real target language, so
+  // never fall back to a default while it loads.
+  if (loading || !targetLanguage) {
     return (
       <GradientBackground variant="raised">
       <SafeAreaView className="flex-1 items-center justify-center">
@@ -172,7 +177,7 @@ export default function LessonScreen() {
         lessonTitle={lesson.title}
         xpReward={lesson.xpReward}
         userId={user?.id ?? ''}
-        targetLanguage={profile?.targetLanguage ?? 'es'}
+        targetLanguage={targetLanguage}
         onComplete={handleComplete}
         onExit={() => router.back()}
         hearts={hearts}

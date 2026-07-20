@@ -15,6 +15,7 @@ import {
 import { WritingExercise } from '../../../../components/writing/WritingExercise';
 import { WritingFeedbackView } from '../../../../components/writing/WritingFeedbackView';
 import { supabase } from '../../../../lib/supabase';
+import { getTargetLanguage } from '../../../../lib/language';
 import type { WritingPrompt, WritingFeedback, WritingSubmission } from '../../../../types';
 import { colors } from '../../../../config/theme';
 
@@ -65,7 +66,10 @@ export default function WritingPromptScreen() {
   }, [promptId, user]);
 
   const handleSubmit = async (text: string, wordCount: number, timeSpentMs: number) => {
-    if (!user || !prompt) return;
+    // Grading must use the user's real target language — if the profile
+    // hasn't loaded yet, don't grade in a defaulted language.
+    const targetLanguage = getTargetLanguage(profile);
+    if (!user || !prompt || !targetLanguage) return;
 
     try {
       setIsGrading(true);
@@ -79,7 +83,7 @@ export default function WritingPromptScreen() {
           submissionId: submission.id,
           submissionText: text,
           promptId: prompt.id,
-          targetLanguage: profile?.targetLanguage ?? 'es',
+          targetLanguage,
           cefrLevel: prompt.cefrLevel,
           userId: user.id,
         },

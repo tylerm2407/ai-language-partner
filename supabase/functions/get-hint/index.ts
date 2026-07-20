@@ -42,11 +42,30 @@ serve(async (req: Request) => {
 
     const { cardId, exerciseType, targetLanguage } = (await req.json()) as HintRequest;
 
-    // Fetch the card data
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // Hints are deterministic per (card, exercise type) — serve from cache
+    // when possible. Lookup failure is non-fatal; fall through to generation.
+    const { data: cachedHint, error: hintCacheErr } = await supabase
+      .from('hint_cache')
+      .select('hint')
+      .eq('card_id', cardId)
+      .eq('exercise_type', exerciseType)
+      .maybeSingle();
+    if (hintCacheErr) {
+      console.warn('[get-hint] hint_cache lookup failed (non-fatal):', hintCacheErr.message);
+    }
+    if (cachedHint && typeof cachedHint.hint === 'string') {
+      return new Response(
+        JSON.stringify({ hint: cachedHint.hint }),
+        { headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Fetch the card data (only the columns hint generation uses)
     const { data: card, error: cardError } = await supabase
       .from('cards')
-      .select('*')
+      .select('target_text, native_text, part_of_speech, example_sentence, cefr_level')
       .eq('id', cardId)
       .single();
 
@@ -59,6 +78,14 @@ serve(async (req: Request) => {
 
     // Generate hint via Claude AI, fall back to static rules
     const hint = await generateAIHint(card, exerciseType, targetLanguage);
+
+    // Cache for next time. Write failure is non-fatal — the hint still ships.
+    const { error: hintWriteErr } = await supabase
+      .from('hint_cache')
+      .upsert({ card_id: cardId, exercise_type: exerciseType, hint });
+    if (hintWriteErr) {
+      console.warn('[get-hint] hint_cache write failed (non-fatal):', hintWriteErr.message);
+    }
 
     return new Response(
       JSON.stringify({ hint }),

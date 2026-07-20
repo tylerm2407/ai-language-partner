@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { createAssignment } from '../lib/supabase-queries';
 import type { Assignment, LanguageCode, ProficiencyLevel } from '../types';
 
-interface AssignmentFormState {
+export interface AssignmentFormState {
   title: string;
   description: string;
   scenarioKey: string | null;
@@ -55,83 +55,91 @@ export function useAssignmentBuilder(defaults?: Partial<AssignmentFormState>) {
     setError(null);
   }, [defaults]);
 
-  const saveDraft = useCallback(async (): Promise<Assignment | null> => {
-    if (!form.classroomId) {
-      setError('Classroom is required');
-      return null;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      const assignment = await createAssignment({
-        classroomId: form.classroomId,
-        title: form.title || 'Untitled Assignment',
-        description: form.description,
-        status: 'draft',
-        scenarioKey: form.scenarioKey,
-        customScenario: form.customScenario,
-        targetLanguage: form.targetLanguage,
-        level: form.level,
-        minDurationMinutes: form.minDurationMinutes,
-        mode: form.mode,
-        vocabularyFocus: form.vocabularyFocus,
-        grammarFocus: form.grammarFocus,
-        instructions: form.instructions,
-        dueAt: form.dueAt,
-        lateSubmissionAllowed: form.lateSubmissionAllowed,
-        maxPoints: form.maxPoints,
-      });
-      return assignment;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to save draft';
-      setError(message);
-      console.error('saveDraft error:', err);
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, [form]);
+  const saveDraft = useCallback(
+    async (overrides?: Partial<AssignmentFormState>): Promise<Assignment | null> => {
+      const merged = { ...form, ...overrides };
+      if (!merged.classroomId) {
+        setError('Classroom is required');
+        return null;
+      }
+      setLoading(true);
+      setError(null);
+      try {
+        const assignment = await createAssignment({
+          classroomId: merged.classroomId,
+          title: merged.title || 'Untitled Assignment',
+          description: merged.description,
+          status: 'draft',
+          scenarioKey: merged.scenarioKey,
+          customScenario: merged.customScenario,
+          targetLanguage: merged.targetLanguage,
+          level: merged.level,
+          minDurationMinutes: merged.minDurationMinutes,
+          mode: merged.mode,
+          vocabularyFocus: merged.vocabularyFocus,
+          grammarFocus: merged.grammarFocus,
+          instructions: merged.instructions,
+          dueAt: merged.dueAt,
+          lateSubmissionAllowed: merged.lateSubmissionAllowed,
+          maxPoints: merged.maxPoints,
+        });
+        return assignment;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to save draft';
+        setError(message);
+        console.error('saveDraft error:', err);
+        return null;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [form]
+  );
 
-  const publish = useCallback(async (): Promise<Assignment | null> => {
-    if (!form.classroomId) {
-      setError('Classroom is required');
-      return null;
-    }
-    if (!form.title.trim()) {
-      setError('Title is required');
-      return null;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      const assignment = await createAssignment({
-        classroomId: form.classroomId,
-        title: form.title,
-        description: form.description,
-        status: 'published',
-        scenarioKey: form.scenarioKey,
-        customScenario: form.customScenario,
-        targetLanguage: form.targetLanguage,
-        level: form.level,
-        minDurationMinutes: form.minDurationMinutes,
-        mode: form.mode,
-        vocabularyFocus: form.vocabularyFocus,
-        grammarFocus: form.grammarFocus,
-        instructions: form.instructions,
-        dueAt: form.dueAt,
-        lateSubmissionAllowed: form.lateSubmissionAllowed,
-        maxPoints: form.maxPoints,
-      });
-      return assignment;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to publish assignment';
-      setError(message);
-      console.error('publish error:', err);
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, [form]);
+  const publish = useCallback(
+    async (overrides?: Partial<AssignmentFormState>): Promise<Assignment | null> => {
+      const merged = { ...form, ...overrides };
+      if (!merged.classroomId) {
+        setError('Classroom is required');
+        return null;
+      }
+      if (!merged.title.trim()) {
+        setError('Title is required');
+        return null;
+      }
+      setLoading(true);
+      setError(null);
+      try {
+        const assignment = await createAssignment({
+          classroomId: merged.classroomId,
+          title: merged.title,
+          description: merged.description,
+          status: 'published',
+          scenarioKey: merged.scenarioKey,
+          customScenario: merged.customScenario,
+          targetLanguage: merged.targetLanguage,
+          level: merged.level,
+          minDurationMinutes: merged.minDurationMinutes,
+          mode: merged.mode,
+          vocabularyFocus: merged.vocabularyFocus,
+          grammarFocus: merged.grammarFocus,
+          instructions: merged.instructions,
+          dueAt: merged.dueAt,
+          lateSubmissionAllowed: merged.lateSubmissionAllowed,
+          maxPoints: merged.maxPoints,
+        });
+        return assignment;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to publish assignment';
+        setError(message);
+        console.error('publish error:', err);
+        return null;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [form]
+  );
 
   return {
     form,

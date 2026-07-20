@@ -11,6 +11,7 @@ import { GradientBackground } from '../../../components/ui/GradientBackground';
 import { GradientBorderCard } from '../../../components/ui/GradientBorderCard';
 import { TactileButton } from '../../../components/ui/TactileButton';
 import { levelToNewsTier } from '../../../config/app';
+import { getTargetLanguage } from '../../../lib/language';
 import type { DailyNewsArticle, VocabularyHighlight } from '../../../types';
 import { colors } from '../../../config/theme';
 
@@ -25,11 +26,13 @@ export default function NewsReaderScreen() {
   const [readAt, setReadAt] = useState<string | null>(null);
   const [isMarking, setIsMarking] = useState<boolean>(false);
 
-  const targetLanguage = profile?.targetLanguage ?? 'es';
+  const targetLanguage = getTargetLanguage(profile);
   const tier = levelToNewsTier(profile?.level ?? 'intermediate');
 
   const loadArticle = useCallback(async () => {
-    if (!user?.id || !date) return;
+    // Wait until the profile has loaded — never fetch news in a defaulted
+    // language. The skeleton stays up until the effect re-runs.
+    if (!user?.id || !date || !targetLanguage) return;
     setIsLoading(true);
     try {
       const data = await fetchDailyNews(targetLanguage, tier, date);

@@ -282,8 +282,10 @@ export async function fetchCardsBySkillType(
   if (level) {
     query = query.in('cefr_level', allowedCefrLevelsFor(level));
   }
+  // Cap matches fetchCardsByCourse — callers needing more should page.
   const { data, error } = await query
-    .order('frequency_rank', { ascending: true, nullsFirst: false });
+    .order('frequency_rank', { ascending: true, nullsFirst: false })
+    .limit(500);
   if (error) throw error;
   return (data ?? []).map(mapCard);
 }
@@ -314,16 +316,21 @@ export async function fetchDueReviewItemsWithCards(
   limit = 5,
 ): Promise<Array<{ item: ReviewItem; card: Card }>> {
   try {
-    const items = await fetchDueReviewItems(userId, limit);
-    if (items.length === 0) return [];
-    const cards = await fetchCardsByIds(items.map((it) => it.cardId));
-    const cardById = new Map(cards.map((c) => [c.id, c]));
-    return items
-      .map((item) => {
-        const card = cardById.get(item.cardId);
-        return card ? { item, card } : null;
-      })
-      .filter((v): v is { item: ReviewItem; card: Card } => v !== null);
+    // Single joined query (cards!inner) instead of due-items + cards-by-ids;
+    // the inner join also drops any item whose card no longer exists, same
+    // as the old cardById filter did.
+    const { data, error } = await supabase
+      .from('review_items')
+      .select('*, cards!inner(*)')
+      .eq('user_id', userId)
+      .lte('next_due', new Date().toISOString())
+      .order('next_due', { ascending: true })
+      .limit(limit);
+    if (error) throw error;
+    return (data ?? []).map((row: Record<string, unknown>) => ({
+      item: mapReviewItem(row),
+      card: mapCard(row.cards as Record<string, unknown>),
+    }));
   } catch (err) {
     console.warn('[warmup] fetchDueReviewItemsWithCards failed (non-fatal):', err);
     return [];
@@ -478,30 +485,24 @@ export async function upsertDailyStats(
   userId: string,
   updates: Partial<Omit<DailyStats, 'id' | 'userId' | 'date'>>
 ): Promise<DailyStats> {
-  const today = localToday();
-
-  // Fetch existing or create new
-  const existing = await fetchTodayStats(userId);
-
-  const merged = {
-    user_id: userId,
-    date: today,
-    lessons_completed: (existing?.lessonsCompleted ?? 0) + (updates.lessonsCompleted ?? 0),
-    cards_reviewed: (existing?.cardsReviewed ?? 0) + (updates.cardsReviewed ?? 0),
-    cards_learned: (existing?.cardsLearned ?? 0) + (updates.cardsLearned ?? 0),
-    minutes_practiced: (existing?.minutesPracticed ?? 0) + (updates.minutesPracticed ?? 0),
-    speaking_minutes: (existing?.speakingMinutes ?? 0) + (updates.speakingMinutes ?? 0),
-    listening_minutes: (existing?.listeningMinutes ?? 0) + (updates.listeningMinutes ?? 0),
-    reading_minutes: (existing?.readingMinutes ?? 0) + (updates.readingMinutes ?? 0),
-    writing_minutes: (existing?.writingMinutes ?? 0) + (updates.writingMinutes ?? 0),
-    xp_earned: (existing?.xpEarned ?? 0) + (updates.xpEarned ?? 0),
-    accuracy: updates.accuracy ?? existing?.accuracy ?? 0,
-  };
-
+  // Atomic server-side upsert (migration 048): INSERT ... ON CONFLICT adds
+  // the deltas under the row lock, closing the lost-update race the old
+  // fetch-then-upsert had between two concurrent sessions. `accuracy` keeps
+  // its set-if-provided (not additive) semantics.
   const { data, error } = await supabase
-    .from('daily_stats')
-    .upsert(merged, { onConflict: 'user_id,date' })
-    .select()
+    .rpc('upsert_daily_stats', {
+      p_user_id: userId,
+      p_lessons_completed: updates.lessonsCompleted ?? 0,
+      p_cards_reviewed: updates.cardsReviewed ?? 0,
+      p_cards_learned: updates.cardsLearned ?? 0,
+      p_minutes_practiced: updates.minutesPracticed ?? 0,
+      p_speaking_minutes: updates.speakingMinutes ?? 0,
+      p_listening_minutes: updates.listeningMinutes ?? 0,
+      p_reading_minutes: updates.readingMinutes ?? 0,
+      p_writing_minutes: updates.writingMinutes ?? 0,
+      p_xp_earned: updates.xpEarned ?? 0,
+      p_accuracy: updates.accuracy ?? null,
+    })
     .single();
 
   if (error) throw error;
@@ -510,7 +511,7 @@ export async function upsertDailyStats(
   // Non-fatal: stats are already saved; the streak catches up next call.
   await supabase.rpc('update_streak');
 
-  return mapDailyStats(data);
+  return mapDailyStats(data as Record<string, unknown>);
 }
 
 /**
@@ -628,24 +629,22 @@ export async function incrementDailyUsage(
     pronunciationScoresDelta?: number;
   }
 ): Promise<DailyUsage> {
-  const current = await getOrCreateDailyUsage(userId);
-  const today = localToday();
-
+  // Atomic server-side counter (migration 048): INSERT ... ON CONFLICT adds
+  // the deltas in one statement, closing the lost-update race the old
+  // read-then-write pair had. Named args omit p_date so PostgREST resolves
+  // to the 048 overload; the day is keyed server-side (user timezone).
   const { data, error } = await supabase
-    .from('daily_usage')
-    .update({
-      text_messages: current.textMessages + (deltas.textMessagesDelta ?? 0),
-      voice_minutes: current.voiceMinutes + (deltas.voiceMinutesDelta ?? 0),
-      writing_grades: current.writingGrades + (deltas.writingGradesDelta ?? 0),
-      pronunciation_scores: current.pronunciationScores + (deltas.pronunciationScoresDelta ?? 0),
+    .rpc('increment_daily_usage', {
+      p_user_id: userId,
+      p_text_messages: deltas.textMessagesDelta ?? 0,
+      p_voice_minutes: deltas.voiceMinutesDelta ?? 0,
+      p_writing_grades: deltas.writingGradesDelta ?? 0,
+      p_pronunciation_scores: deltas.pronunciationScoresDelta ?? 0,
     })
-    .eq('user_id', userId)
-    .eq('date', today)
-    .select()
     .single();
 
   if (error) throw error;
-  return mapDailyUsage(data);
+  return mapDailyUsage(data as Record<string, unknown>);
 }
 
 // ─── Subscriptions ──────────────────────────────────────────────
@@ -958,14 +957,28 @@ export async function fetchUnitProgressTiles(
   const units = await fetchUnits(course.id);
   if (units.length === 0) return [];
 
-  const [lessonsByUnit, completions] = await Promise.all([
-    Promise.all(units.map((u) => fetchLessons(u.id).then((lessons) => ({ unitId: u.id, lessons })))),
+  // Single query for all units' lessons (was one fetchLessons per unit —
+  // N+1), grouped client-side; order_index sort is preserved per unit.
+  const [lessonsResult, completions] = await Promise.all([
+    supabase
+      .from('lessons')
+      .select('*')
+      .in('unit_id', units.map((u) => u.id))
+      .order('order_index', { ascending: true }),
     fetchLessonCompletions(userId, course.id),
   ]);
+  if (lessonsResult.error) throw lessonsResult.error;
+  const lessonsByUnit = new Map<string, Lesson[]>();
+  for (const row of lessonsResult.data ?? []) {
+    const lesson = mapLesson(row, []);
+    const list = lessonsByUnit.get(lesson.unitId);
+    if (list) list.push(lesson);
+    else lessonsByUnit.set(lesson.unitId, [lesson]);
+  }
   const completedSet = new Set(completions.map((c) => c.lessonId));
 
   const tiles: UnitProgressTile[] = units.map((unit) => {
-    const lessons = lessonsByUnit.find((entry) => entry.unitId === unit.id)?.lessons ?? [];
+    const lessons = lessonsByUnit.get(unit.id) ?? [];
     const completedCount = lessons.filter((l) => completedSet.has(l.id)).length;
     const lessonCount = lessons.length > 0 ? lessons.length : unit.totalLessons;
     const progress = lessonCount > 0 ? completedCount / lessonCount : 0;
@@ -1765,13 +1778,18 @@ export async function fetchWritingSubmissionsByPrompt(
   return (data ?? []).map(mapWritingSubmission).reverse();
 }
 
+export interface WritingSubmissionWithPrompt extends WritingSubmission {
+  /** The writing prompt's text (writing_prompts has no separate title column). */
+  promptTitle: string | null;
+}
+
 export async function fetchAllUserWritingSubmissions(
   userId: string,
   cefrLevel?: string
-): Promise<WritingSubmission[]> {
+): Promise<WritingSubmissionWithPrompt[]> {
   let query = supabase
     .from('user_writing_submissions')
-    .select('*')
+    .select('*, writing_prompts(prompt_text)')
     .eq('user_id', userId)
     .order('submitted_at', { ascending: false })
     .limit(200);
@@ -1779,7 +1797,11 @@ export async function fetchAllUserWritingSubmissions(
   // Note: cefrLevel filtering requires a join; we'll filter client-side for simplicity
   const { data, error } = await query;
   if (error) throw error;
-  return (data ?? []).map(mapWritingSubmission);
+  return (data ?? []).map((row: Record<string, unknown>) => ({
+    ...mapWritingSubmission(row),
+    promptTitle:
+      (row.writing_prompts as { prompt_text?: string | null } | null)?.prompt_text ?? null,
+  }));
 }
 
 // ─── Reading Book Mappers ───────────────────────────────────────
