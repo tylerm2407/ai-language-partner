@@ -84,3 +84,17 @@ BEGIN
      WHERE du.user_id = p_user_id AND du.date = v_today;
 END;
 $$;
+
+-- ── HOLE 2b: revoke authenticated from the date-carrying overloads ──
+-- Migration 036 intended these three to be service_role-only, but prod
+-- drifted and still grants EXECUTE to authenticated — the same negative/
+-- non-finite delta reset vector as the no-date overload above. Only edge
+-- functions (service_role) call the date-carrying overloads; the client's
+-- incrementDailyUsage() uses the no-date overload (clamped above), so this
+-- revoke is safe. service_role keeps its explicit grant.
+REVOKE EXECUTE ON FUNCTION public.increment_daily_usage(uuid, date, integer, real)
+  FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.increment_daily_usage(uuid, date, integer, real, real)
+  FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.increment_daily_usage(uuid, date, integer, real, real, integer, integer, integer)
+  FROM PUBLIC, anon, authenticated;
