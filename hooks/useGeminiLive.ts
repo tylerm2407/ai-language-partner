@@ -166,6 +166,14 @@ export function useGeminiLive(options: UseGeminiLiveOptions) {
               setTimeout(() => startSession(), 1000);
               return;
             }
+            if (err.message === 'SAFETY_VIOLATION') {
+              onError?.(
+                new Error(
+                  'The conversation was ended because a response was flagged as inappropriate. Please try a different topic.'
+                )
+              );
+              return;
+            }
             onError?.(err);
           },
         }

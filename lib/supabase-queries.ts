@@ -601,19 +601,26 @@ export async function getOrCreateDailyUsage(userId: string): Promise<DailyUsage>
     .select('*')
     .eq('user_id', userId)
     .eq('date', today)
-    .single();
+    .maybeSingle();
 
+  if (error) throw error;
   if (data) return mapDailyUsage(data);
 
-  // Row doesn't exist — create it via upsert to handle race conditions
-  const { data: created, error: insertErr } = await supabase
-    .from('daily_usage')
-    .upsert({ user_id: userId, date: today, text_messages: 0, voice_minutes: 0 }, { onConflict: 'user_id,date' })
-    .select()
-    .single();
-
-  if (insertErr) throw insertErr;
-  return mapDailyUsage(created);
+  // No usage row yet today. The client only READS this table — the row is
+  // created server-side on first quota consumption (consume_daily_quota /
+  // increment_daily_usage do INSERT ... ON CONFLICT under service role).
+  // Writing it here would require a client-writable RLS policy, which lets
+  // a user reset their own quota counters (migration 050 makes this table
+  // SELECT-only). Return a zeroed view until the first consumption lands.
+  return {
+    id: '',
+    userId,
+    date: today,
+    textMessages: 0,
+    voiceMinutes: 0,
+    writingGrades: 0,
+    pronunciationScores: 0,
+  };
 }
 
 /**

@@ -27,8 +27,20 @@ import Purchases, {
 } from 'react-native-purchases';
 import type { PlanId } from './plans';
 
-const IOS_KEY = process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY;
-const ANDROID_KEY = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY;
+/**
+ * Return a usable RevenueCat key, or undefined if it is missing or an
+ * unreplaced `appl_REPLACE_WITH_…` / `goog_REPLACE_WITH_…` placeholder.
+ * Without this, a production build with placeholder keys still passes the
+ * `Boolean(key)` check, configures the SDK with a dummy key, and ships a
+ * dead paywall (offerings/purchases silently fail → $0 revenue).
+ */
+function resolveKey(key: string | undefined): string | undefined {
+  if (!key || key.includes('REPLACE_WITH')) return undefined;
+  return key;
+}
+
+const IOS_KEY = resolveKey(process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY);
+const ANDROID_KEY = resolveKey(process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY);
 
 /** Paid tiers that map to RevenueCat entitlements (excludes the free 'starter'). */
 type PaidTier = Exclude<PlanId, 'starter'>;

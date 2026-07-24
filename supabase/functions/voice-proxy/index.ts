@@ -11,6 +11,14 @@ import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { getEffectiveLimits } from '../_shared/plan-limits.ts';
 import { getUserToday } from '../_shared/user-day.ts';
 import { isValidLanguage, isValidProficiencyLevel, sanitizeText } from '../_shared/validation.ts';
+import { validateContent } from '../_shared/content-safety.ts';
+
+/** Minimal shape of the Gemini Live server messages we inspect for safety. */
+interface GeminiServerMessage {
+  serverContent?: {
+    outputTranscription?: { text?: string };
+  };
+}
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -84,6 +92,9 @@ function buildSetupMessage(targetLanguage: string, level: string, topic: string)
       systemInstruction: {
         parts: [{ text: buildSystemPrompt(targetLanguage, level, topic) }],
       },
+      // Stream a text transcript of the model's spoken output so the proxy
+      // can run it through the content-safety pipeline (CLAUDE.md §1).
+      outputAudioTranscription: {},
     },
   });
 }
@@ -225,6 +236,10 @@ serve(async (req: Request) => {
   let voiceTickInterval: ReturnType<typeof setInterval> | null = null;
   const sessionStartTime = Date.now();
 
+  // Safety-monitor state for the model's output transcript (see onmessage).
+  let outputTranscript = '';
+  let safetyTripped = false;
+
   clientWs.onopen = () => {
     geminiWs = new WebSocket(geminiUri);
 
@@ -259,9 +274,54 @@ serve(async (req: Request) => {
     };
 
     geminiWs.onmessage = (event) => {
-      // Forward Gemini responses to client
+      // Forward Gemini responses to the client first to keep audio latency flat.
       if (clientWs.readyState === WebSocket.OPEN) {
         clientWs.send(event.data);
+      }
+
+      // Safety monitor: Gemini streams a text transcript of its spoken reply
+      // (outputAudioTranscription) incrementally. Validate the accumulated
+      // transcript on every update — Gemini does not guarantee that
+      // turnComplete arrives after the last transcript chunk (or at all), so
+      // the check cannot be deferred to turn end. On a violation, terminate
+      // the session so a derailed conversation cannot continue. (Streaming
+      // audio can't be pre-screened without buffering it — this cuts the
+      // session at the first unsafe turn and logs it for review.)
+      if (typeof event.data !== 'string' || safetyTripped) return;
+      let msg: GeminiServerMessage;
+      try {
+        msg = JSON.parse(event.data) as GeminiServerMessage;
+      } catch {
+        return;
+      }
+
+      const chunk = msg.serverContent?.outputTranscription?.text;
+      if (typeof chunk !== 'string' || !chunk) return;
+      outputTranscript += chunk;
+
+      // Bound memory/cost with a sliding tail. A prohibited phrase is far
+      // shorter than this window, so trimming the head can't split a match,
+      // and we never reset on turnComplete (whose ordering vs. transcript
+      // chunks Gemini doesn't guarantee) — so a phrase spanning a turn
+      // boundary, or a final one-word reply arriving after turnComplete, is
+      // still validated.
+      if (outputTranscript.length > 4000) outputTranscript = outputTranscript.slice(-2000);
+
+      // Validate the whole accumulated tail. Output transcription is word/
+      // phrase-granular, so this won't split words mid-token; checking the
+      // full buffer (rather than dropping the trailing token) closes the gap
+      // where a final unsafe word never gets a following boundary.
+      const { safe, flags } = validateContent(outputTranscript);
+      if (!safe) {
+        safetyTripped = true;
+        console.error('[voice-proxy] Unsafe model output blocked:', flags.join(','));
+        if (clientWs.readyState === WebSocket.OPEN) {
+          clientWs.send(JSON.stringify({ type: 'safety_violation' }));
+          clientWs.close(4030, 'Safety violation');
+        }
+        if (geminiWs && geminiWs.readyState === WebSocket.OPEN) {
+          geminiWs.close(1000, 'Safety violation');
+        }
       }
     };
 

@@ -103,6 +103,12 @@ export class GeminiLiveSession {
 
       this.ws.onclose = (event) => {
         console.log('[GeminiLive] WebSocket closed:', event.code, event.reason);
+        // 4030 = proxy ended the session for a content-safety violation.
+        // Surface it so the UI can explain the disconnect instead of the
+        // session vanishing silently.
+        if (event.code === 4030) {
+          this.callbacks.onError?.(new Error('SAFETY_VIOLATION'));
+        }
         this.cleanup();
         this.setState('DISCONNECTED');
       };
