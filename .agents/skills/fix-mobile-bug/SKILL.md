@@ -1,3 +1,8 @@
+---
+name: fix-mobile-bug
+description: "Skill: Fix a Mobile-Specific Bug. When Tyler reports a layout issue, performance problem, crash, or iOS-specific bug."
+---
+
 # Skill: Fix a Mobile-Specific Bug
 
 ## When to Use

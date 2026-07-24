@@ -1,3 +1,8 @@
+---
+name: new-learning-feature
+description: "Skill: Add a New Learning Feature / Exercise Type. When Tyler asks to add a new exercise type, learning mode, or practice activity."
+---
+
 # Skill: Add a New Learning Feature / Exercise Type
 
 ## When to Use
