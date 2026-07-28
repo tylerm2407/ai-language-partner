@@ -1,16 +1,48 @@
-import { useState } from 'react';
-import { View, Text, Pressable, ScrollView, Alert, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import {
+  View,
+  Text,
+  Pressable,
+  ScrollView,
+  Alert,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
-import { upsertProfile, markOnboardingComplete, updateOnboardingChecklist } from '../../lib/supabase-queries';
+import {
+  upsertProfile,
+  markOnboardingComplete,
+  updateOnboardingChecklist,
+  updateAvatarConfig,
+} from '../../lib/supabase-queries';
 import { useAppStore } from '../../stores/useAppStore';
 import { Button } from '../../components/ui/Button';
-import { PlacementTest } from '../../components/onboarding/PlacementTest';
+import { PlacementTest, LEVEL_LABELS } from '../../components/onboarding/PlacementTest';
 import { GradientBackground } from '../../components/ui/GradientBackground';
+import { Avatar } from '../../components/avatar/Avatar';
+import { AvatarCustomizer } from '../../components/avatar/AvatarCustomizer';
+import { DEFAULT_AVATAR_CONFIG } from '../../components/avatar/constants';
 import { colors } from '../../config/theme';
 import { SUPPORTED_LANGUAGES, DAILY_GOALS } from '../../config/app';
-import type { LanguageCode, ProficiencyLevel, MotivationReason } from '../../types';
+import {
+  loadPendingOnboarding,
+  savePendingOnboarding,
+  clearPendingOnboarding,
+  isFlushable,
+  type PendingOnboarding,
+  type PendingOnboardingDraft,
+  type PlacementResult,
+} from '../../lib/pending-onboarding';
+import type {
+  LanguageCode,
+  ProficiencyLevel,
+  MotivationReason,
+  AvatarConfig,
+} from '../../types';
 
 // Dörnyei L2MSS: the learner's vision of themselves as a competent L2 user
 // is the single strongest predictor of sustained effort (r ≈ 0.61). The
@@ -47,41 +79,93 @@ const MOTIVATIONS: { value: MotivationReason; label: string; description: string
   { value: 'curious', label: 'Just curious', description: 'See where the journey takes me' },
 ];
 
-type Step = 'language' | 'motivation' | 'idealSelf' | 'level' | 'placement' | 'goal';
+type Step =
+  | 'language'
+  | 'motivation'
+  | 'idealSelf'
+  | 'level'
+  | 'placement'
+  | 'result'
+  | 'identity'
+  | 'goal';
 
-const ALL_STEPS: Step[] = ['language', 'motivation', 'idealSelf', 'level', 'placement', 'goal'];
+const ALL_STEPS: Step[] = [
+  'language',
+  'motivation',
+  'idealSelf',
+  'level',
+  'placement',
+  'result',
+  'identity',
+  'goal',
+];
 
 const IDEAL_SELF_MAX_CHARS = 300;
+const DISPLAY_NAME_MAX_CHARS = 24;
+
+// Smart defaults (DESIGN.md §UX Psychology Principles #1): every picker opens
+// pre-selected on the most common choice, so the learner's job is "scan and
+// adjust" rather than "fill this out". The CTA always names the current
+// selection, so a default is a visible recommendation and never a silent one.
+const DEFAULT_LANGUAGE: LanguageCode = 'es';
+const DEFAULT_MOTIVATION: MotivationReason = 'travel';
+const DEFAULT_LEVEL: ProficiencyLevel = 'beginner';
+const DEFAULT_DAILY_GOAL = 10;
+
+/** A band counts as a strength when the learner got most of it right. */
+const STRENGTH_THRESHOLD = 0.5;
 
 export default function OnboardingScreen() {
   const { user } = useAuth();
   const router = useRouter();
   const { loadUserData, setMotivation: storeSetMotivation } = useAppStore();
 
-  const [step, setStep] = useState<Step>('language');
-  const [targetLanguage, setTargetLanguage] = useState<LanguageCode | null>(null);
-  const [motivation, setMotivation] = useState<MotivationReason | null>(null);
-  const [idealL2Self, setIdealL2Self] = useState<string>('');
-  const [level, setLevel] = useState<ProficiencyLevel | null>(null);
-  const [dailyGoal, setDailyGoal] = useState<number>(10);
-  const [saving, setSaving] = useState(false);
-  const [placementCompleted, setPlacementCompleted] = useState(false);
+  // `hydrated` gates the first render until the local draft has been read, so
+  // a resumed flow never flashes the defaults first. `flushing` covers the
+  // post-signup path where this screen exists only to write the profile.
+  const [hydrated, setHydrated] = useState(false);
+  const [flushing, setFlushing] = useState(false);
+  const [startedAt, setStartedAt] = useState<number | undefined>(undefined);
 
-  const handleSaveProfile = async () => {
-    if (!user || !targetLanguage || !level) return;
-    setSaving(true);
-    try {
-      await upsertProfile(user.id, {
+  const [step, setStep] = useState<Step>('language');
+  const [targetLanguage, setTargetLanguage] = useState<LanguageCode>(DEFAULT_LANGUAGE);
+  const [motivation, setMotivation] = useState<MotivationReason>(DEFAULT_MOTIVATION);
+  const [idealL2Self, setIdealL2Self] = useState<string>('');
+  const [level, setLevel] = useState<ProficiencyLevel>(DEFAULT_LEVEL);
+  const [placement, setPlacement] = useState<PlacementResult | null>(null);
+  const [displayName, setDisplayName] = useState<string>('');
+  const [avatarConfig, setAvatarConfig] = useState<AvatarConfig>(DEFAULT_AVATAR_CONFIG);
+  const [customizerOpen, setCustomizerOpen] = useState(false);
+  const [dailyGoal, setDailyGoal] = useState<number>(DEFAULT_DAILY_GOAL);
+  const [saving, setSaving] = useState(false);
+
+  const languageName =
+    SUPPORTED_LANGUAGES.find((l) => l.code === targetLanguage)?.name ?? 'your language';
+
+  /**
+   * Write the collected answers into the real profile. Shared by the
+   * post-signup flush and by the already-authenticated path (an existing
+   * account whose onboarding never finished).
+   */
+  const writeProfile = useCallback(
+    async (userId: string, draft: PendingOnboardingDraft) => {
+      await upsertProfile(userId, {
         nativeLanguage: 'en' as LanguageCode,
-        targetLanguage,
-        level,
-        dailyGoalMinutes: dailyGoal,
-        motivationReason: motivation,
-        idealL2Self: idealL2Self.trim() ? idealL2Self.trim() : null,
+        targetLanguage: draft.targetLanguage ?? DEFAULT_LANGUAGE,
+        level: draft.level ?? DEFAULT_LEVEL,
+        dailyGoalMinutes: draft.dailyGoalMinutes ?? DEFAULT_DAILY_GOAL,
+        motivationReason: draft.motivation,
+        idealL2Self: draft.idealL2Self,
+        ...(draft.displayName ? { displayName: draft.displayName } : {}),
       });
-      await updateOnboardingChecklist(user.id, {
+
+      if (draft.avatarConfig) {
+        await updateAvatarConfig(userId, draft.avatarConfig);
+      }
+
+      await updateOnboardingChecklist(userId, {
         chooseLanguage: true,
-        placementTest: placementCompleted,
+        placementTest: !!draft.placement,
         firstLesson: false,
         aiConversation: false,
         dailyReminder: false,
@@ -89,13 +173,116 @@ export default function OnboardingScreen() {
         dismissed: false,
         completedAt: null,
       });
-      await markOnboardingComplete(user.id);
+      await markOnboardingComplete(userId);
+
       // Persist transient motivation in the store so Home's HeroHook can use it.
-      storeSetMotivation(motivation);
-      await loadUserData(user.id);
+      storeSetMotivation(draft.motivation);
+      await clearPendingOnboarding();
+      await loadUserData(userId);
       router.replace('/(app)');
+    },
+    [loadUserData, router, storeSetMotivation],
+  );
+
+  const applyPending = useCallback((pending: PendingOnboarding) => {
+    setStartedAt(pending.startedAt);
+    if (pending.targetLanguage) setTargetLanguage(pending.targetLanguage);
+    if (pending.motivation) setMotivation(pending.motivation);
+    if (pending.idealL2Self) setIdealL2Self(pending.idealL2Self);
+    if (pending.level) setLevel(pending.level);
+    if (pending.placement) setPlacement(pending.placement);
+    if (pending.displayName) setDisplayName(pending.displayName);
+    if (pending.avatarConfig) setAvatarConfig(pending.avatarConfig);
+    if (pending.dailyGoalMinutes) setDailyGoal(pending.dailyGoalMinutes);
+  }, []);
+
+  // Mount: read the local draft. If the learner has just signed up and the
+  // draft is complete, this screen's only job is to flush it and get out.
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      let pending: PendingOnboarding | null = null;
+      try {
+        pending = await loadPendingOnboarding();
+      } catch (err) {
+        console.error('loadPendingOnboarding failed:', err);
+      }
+      if (cancelled) return;
+
+      if (user && isFlushable(pending) && pending) {
+        setFlushing(true);
+        try {
+          await writeProfile(user.id, pending);
+          return;
+        } catch (err: unknown) {
+          if (cancelled) return;
+          console.error('flush pending onboarding failed:', err);
+          // Don't strand the learner on a spinner — drop them back into the
+          // flow with their answers intact so they can retry the last step.
+          Alert.alert(
+            'We couldn\'t save your setup',
+            'Your answers are still here. Please try again.',
+          );
+          applyPending(pending);
+          setStep('goal');
+          setFlushing(false);
+          setHydrated(true);
+          return;
+        }
+      }
+
+      if (pending) applyPending(pending);
+      setHydrated(true);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user, writeProfile, applyPending]);
+
+  const draft: PendingOnboardingDraft = useMemo(
+    () => ({
+      targetLanguage,
+      motivation,
+      idealL2Self: idealL2Self.trim() ? idealL2Self.trim() : null,
+      level,
+      placement,
+      displayName: displayName.trim() ? displayName.trim() : null,
+      avatarConfig,
+      dailyGoalMinutes: dailyGoal,
+      completedAt: null,
+    }),
+    [targetLanguage, motivation, idealL2Self, level, placement, displayName, avatarConfig, dailyGoal],
+  );
+
+  // Mirror every answer to local storage so a backgrounded or killed app
+  // resumes where it left off. Only meaningful pre-auth.
+  useEffect(() => {
+    if (!hydrated || user || flushing) return;
+    savePendingOnboarding(draft, startedAt).catch((err) => {
+      console.error('savePendingOnboarding failed:', err);
+    });
+  }, [hydrated, user, flushing, draft, startedAt]);
+
+  const handleFinish = async () => {
+    setSaving(true);
+    try {
+      if (user) {
+        // Already signed in (account existed but onboarding never completed).
+        await writeProfile(user.id, draft);
+        return;
+      }
+      // Pre-auth: park the answers and send them to sign-up. The root route
+      // guard bounces back here once a session exists, and the mount effect
+      // above flushes the draft into the profile.
+      await savePendingOnboarding(
+        { ...draft, completedAt: new Date().toISOString() },
+        startedAt,
+      );
+      router.replace('/(public)/auth');
     } catch (err: unknown) {
-      console.error('handleSaveProfile error:', err);
+      console.error('handleFinish error:', err);
       const message =
         err instanceof Error
           ? err.message
@@ -107,6 +294,33 @@ export default function OnboardingScreen() {
       setSaving(false);
     }
   };
+
+  const stepIndex = ALL_STEPS.indexOf(step);
+  // Goal gradient (DESIGN.md §UX Psychology Principles #2): the learner is
+  // credited for the step they're on, so this never reads 0%.
+  const progressPct = Math.round(((stepIndex + 1) / ALL_STEPS.length) * 100);
+
+  const strengths = useMemo(
+    () => (placement?.bands ?? []).filter((b) => b.correct / b.total >= STRENGTH_THRESHOLD),
+    [placement],
+  );
+  const focusAreas = useMemo(
+    () => (placement?.bands ?? []).filter((b) => b.correct / b.total < STRENGTH_THRESHOLD),
+    [placement],
+  );
+
+  if (!hydrated || flushing) {
+    return (
+      <GradientBackground>
+        <SafeAreaView className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color={colors.indigo[500]} />
+          {flushing && (
+            <Text className="text-base text-text-secondary mt-4">Setting up your course…</Text>
+          )}
+        </SafeAreaView>
+      </GradientBackground>
+    );
+  }
 
   return (
     <GradientBackground>
@@ -120,18 +334,25 @@ export default function OnboardingScreen() {
         contentContainerStyle={{ paddingBottom: 40 }}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Step indicator */}
-        <View className="flex-row gap-2 mb-8">
-          {ALL_STEPS.map((s) => {
-            const currentIdx = ALL_STEPS.indexOf(step);
-            const thisIdx = ALL_STEPS.indexOf(s);
-            return (
-              <View
-                key={s}
-                className={`flex-1 h-1.5 rounded-full ${thisIdx <= currentIdx ? 'bg-primary' : 'bg-dark-card-alt'}`}
-              />
-            );
-          })}
+        {/* Step indicator — always shows real, non-zero progress */}
+        <View className="mb-8">
+          <View className="flex-row items-center justify-between mb-2">
+            <Text className="text-xs font-semibold text-text-tertiary">
+              Step {stepIndex + 1} of {ALL_STEPS.length}
+            </Text>
+            <Text className="text-xs font-semibold text-primary">{progressPct}% set up</Text>
+          </View>
+          <View className="flex-row gap-2">
+            {ALL_STEPS.map((s) => {
+              const thisIdx = ALL_STEPS.indexOf(s);
+              return (
+                <View
+                  key={s}
+                  className={`flex-1 h-1.5 rounded-full ${thisIdx <= stepIndex ? 'bg-primary' : 'bg-dark-card-alt'}`}
+                />
+              );
+            })}
+          </View>
         </View>
 
         {step === 'language' && (
@@ -140,7 +361,7 @@ export default function OnboardingScreen() {
               What language do you want to learn?
             </Text>
             <Text className="text-base text-text-secondary mb-6">
-              You can change this later in settings.
+              Spanish is our most popular course — change it any time.
             </Text>
 
             {SUPPORTED_LANGUAGES.map((lang) => (
@@ -162,11 +383,7 @@ export default function OnboardingScreen() {
             ))}
 
             <View className="mt-6">
-              <Button
-                label="Continue"
-                onPress={() => setStep('motivation')}
-                disabled={!targetLanguage}
-              />
+              <Button label={`Continue with ${languageName}`} onPress={() => setStep('motivation')} />
             </View>
           </>
         )}
@@ -203,11 +420,7 @@ export default function OnboardingScreen() {
                 <Button label="Back" variant="secondary" onPress={() => setStep('language')} />
               </View>
               <View className="flex-1">
-                <Button
-                  label="Continue"
-                  onPress={() => setStep('idealSelf')}
-                  disabled={!motivation}
-                />
+                <Button label="Continue" onPress={() => setStep('idealSelf')} />
               </View>
             </View>
           </>
@@ -226,7 +439,7 @@ export default function OnboardingScreen() {
               <TextInput
                 value={idealL2Self}
                 onChangeText={(text) => setIdealL2Self(text.slice(0, IDEAL_SELF_MAX_CHARS))}
-                placeholder={(targetLanguage && IDEAL_SELF_PLACEHOLDER[targetLanguage]) ?? IDEAL_SELF_PLACEHOLDER.en}
+                placeholder={IDEAL_SELF_PLACEHOLDER[targetLanguage] ?? IDEAL_SELF_PLACEHOLDER.en}
                 placeholderTextColor={colors.text.quaternary}
                 multiline
                 numberOfLines={4}
@@ -260,7 +473,7 @@ export default function OnboardingScreen() {
               What&apos;s your level?
             </Text>
             <Text className="text-base text-text-secondary mb-6">
-              We&apos;ll personalize your experience.
+              Not sure? Leave it — the next step measures it for you.
             </Text>
 
             {LEVELS.map((l) => (
@@ -286,11 +499,7 @@ export default function OnboardingScreen() {
                 <Button label="Back" variant="secondary" onPress={() => setStep('idealSelf')} />
               </View>
               <View className="flex-1">
-                <Button
-                  label="Continue"
-                  onPress={() => setStep('placement')}
-                  disabled={!level}
-                />
+                <Button label="Continue" onPress={() => setStep('placement')} />
               </View>
             </View>
           </>
@@ -302,16 +511,145 @@ export default function OnboardingScreen() {
               Quick Placement Test
             </Text>
             <Text className="text-base text-text-secondary mb-6">
-              Answer a few questions so we can fine-tune your starting level.
+              Ten questions. You&apos;ll get your {languageName} level at the end — free, no account
+              needed.
             </Text>
             <PlacementTest
-              targetLanguage={targetLanguage ?? 'es'}
-              onComplete={(suggestedLevel) => {
-                setLevel(suggestedLevel);
-                setPlacementCompleted(true);
-                setStep('goal');
+              targetLanguage={targetLanguage}
+              onComplete={(result) => {
+                setPlacement(result);
+                setLevel(result.suggestedLevel);
+                setStep('result');
               }}
-              onSkip={() => setStep('goal')}
+              onSkip={() => setStep('identity')}
+            />
+          </>
+        )}
+
+        {/*
+          Reciprocity (DESIGN.md §UX Psychology Principles #3): the learner
+          receives a real, useful assessment here — before any account exists.
+          The sign-up later reads as saving something they already own.
+        */}
+        {step === 'result' && placement && (
+          <>
+            <Text className="text-[28px] font-bold text-text-primary mb-2" accessibilityRole="header">
+              Your {languageName} level
+            </Text>
+            <Text className="text-base text-text-secondary mb-6">
+              Based on the {placement.totalCount} questions you just answered.
+            </Text>
+
+            <View className="bg-dark-card rounded-2xl p-5 mb-4 border-2 border-primary items-center">
+              <Text className="text-[32px] font-bold text-primary mb-1">
+                {LEVEL_LABELS[placement.suggestedLevel]}
+              </Text>
+              <Text className="text-base text-text-secondary">
+                {placement.correctCount} of {placement.totalCount} correct
+              </Text>
+            </View>
+
+            {strengths.length > 0 && (
+              <View className="bg-dark-card rounded-2xl p-4 mb-3">
+                <Text className="text-sm font-bold text-success mb-3">WHAT YOU ALREADY HAVE</Text>
+                {strengths.map((band) => (
+                  <View key={band.level} className="flex-row justify-between mb-2">
+                    <Text className="text-base text-text-primary">{LEVEL_LABELS[band.level]}</Text>
+                    <Text className="text-base text-text-secondary">
+                      {band.correct}/{band.total}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {focusAreas.length > 0 && (
+              <View className="bg-dark-card rounded-2xl p-4 mb-3">
+                <Text className="text-sm font-bold text-warning mb-3">WHERE WE&apos;LL START</Text>
+                {focusAreas.map((band) => (
+                  <View key={band.level} className="flex-row justify-between mb-2">
+                    <Text className="text-base text-text-primary">{LEVEL_LABELS[band.level]}</Text>
+                    <Text className="text-base text-text-secondary">
+                      {band.correct}/{band.total}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            <View className="mt-4">
+              <Button label="Continue" onPress={() => setStep('identity')} />
+            </View>
+            <Pressable
+              onPress={() => setStep('placement')}
+              className="py-3 items-center mt-1"
+              accessibilityRole="button"
+              accessibilityLabel="Retake the placement test"
+            >
+              <Text className="text-sm text-text-secondary">Retake the test</Text>
+            </Pressable>
+          </>
+        )}
+
+        {/*
+          IKEA effect (DESIGN.md §UX Psychology Principles #4): the learner
+          builds something of their own before the sign-up gate, so leaving
+          means abandoning it rather than skipping a form.
+        */}
+        {step === 'identity' && (
+          <>
+            <Text className="text-[28px] font-bold text-text-primary mb-2" accessibilityRole="header">
+              Make it yours
+            </Text>
+            <Text className="text-base text-text-secondary mb-6">
+              Pick a name and a look. This is who you&apos;ll be in {languageName}.
+            </Text>
+
+            <View className="items-center mb-6">
+              <Avatar config={avatarConfig} size="large" expression="happy" />
+              <Pressable
+                onPress={() => setCustomizerOpen(true)}
+                className="mt-4 px-5 py-3 rounded-[14px] bg-dark-card-alt"
+                accessibilityRole="button"
+                accessibilityLabel="Customize your avatar"
+              >
+                <Text className="text-base font-semibold text-primary">Customize avatar</Text>
+              </Pressable>
+            </View>
+
+            <View className="bg-dark-card rounded-2xl p-4 mb-4">
+              <TextInput
+                value={displayName}
+                onChangeText={(text) => setDisplayName(text.slice(0, DISPLAY_NAME_MAX_CHARS))}
+                placeholder="What should we call you?"
+                placeholderTextColor={colors.text.quaternary}
+                maxLength={DISPLAY_NAME_MAX_CHARS}
+                className="text-lg text-text-primary"
+                accessibilityLabel="Your display name"
+              />
+            </View>
+
+            <View className="flex-row gap-3 mt-2">
+              <View className="flex-1">
+                <Button
+                  label="Back"
+                  variant="secondary"
+                  onPress={() => setStep(placement ? 'result' : 'placement')}
+                />
+              </View>
+              <View className="flex-1">
+                <Button label="Continue" onPress={() => setStep('goal')} />
+              </View>
+            </View>
+
+            <AvatarCustomizer
+              visible={customizerOpen}
+              initialConfig={avatarConfig}
+              onClose={() => setCustomizerOpen(false)}
+              onSave={(config) => {
+                setAvatarConfig(config);
+                setCustomizerOpen(false);
+              }}
             />
           </>
         )}
@@ -322,7 +660,7 @@ export default function OnboardingScreen() {
               Set your daily goal
             </Text>
             <Text className="text-base text-text-secondary mb-6">
-              How many minutes per day do you want to practice?
+              Ten minutes a day is what most learners pick. You can change it later.
             </Text>
 
             {DAILY_GOALS.map((goal) => (
@@ -349,12 +687,12 @@ export default function OnboardingScreen() {
 
             <View className="flex-row gap-3 mt-6">
               <View className="flex-1">
-                <Button label="Back" variant="secondary" onPress={() => setStep('placement')} />
+                <Button label="Back" variant="secondary" onPress={() => setStep('identity')} />
               </View>
               <View className="flex-1">
                 <Button
-                  label="Start learning"
-                  onPress={handleSaveProfile}
+                  label={user ? 'Start learning' : 'Save my progress'}
+                  onPress={handleFinish}
                   loading={saving}
                   disabled={saving}
                 />

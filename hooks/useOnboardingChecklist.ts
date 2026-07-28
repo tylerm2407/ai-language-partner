@@ -14,6 +14,16 @@ const CHECKLIST_ITEMS: { key: ChecklistKey; label: string; icon: string; route: 
   { key: 'dailyReminder', label: 'Set daily reminder', icon: 'notifications-outline', route: null },
 ];
 
+/**
+ * Goal gradient (DESIGN.md §UX Psychology Principles #2): the checklist never
+ * starts at zero. Work the learner has genuinely already done is listed and
+ * pre-checked, so the meter opens with real momentum rather than an empty bar.
+ * These are display-only — they carry no persisted state.
+ */
+const GRANTED_ITEMS: { key: string; label: string; icon: string }[] = [
+  { key: 'accountCreated', label: 'Create your account', icon: 'person-add-outline' },
+];
+
 export function useOnboardingChecklist() {
   const { user } = useAuth();
   const { profile, setProfile } = useAppStore();
@@ -49,10 +59,13 @@ export function useOnboardingChecklist() {
 
   const completedCount = useMemo(() => {
     if (!effectiveChecklist) return 0;
-    return CHECKLIST_ITEMS.filter((item) => effectiveChecklist[item.key]).length;
+    return (
+      GRANTED_ITEMS.length +
+      CHECKLIST_ITEMS.filter((item) => effectiveChecklist[item.key]).length
+    );
   }, [effectiveChecklist]);
 
-  const totalCount = CHECKLIST_ITEMS.length;
+  const totalCount = GRANTED_ITEMS.length + CHECKLIST_ITEMS.length;
 
   const allComplete = completedCount === totalCount;
 
@@ -77,14 +90,16 @@ export function useOnboardingChecklist() {
     if (!effectiveChecklist || effectiveChecklist[key]) return;
     const updated: OnboardingChecklist = { ...effectiveChecklist, [key]: true };
 
-    // Check if all items are now complete
+    // Check if all actionable items are now complete. Compare against the
+    // persisted items only — the granted items carry no state and would
+    // otherwise make this count unreachable.
     const newCompletedCount = CHECKLIST_ITEMS.filter((item) => updated[item.key]).length;
-    if (newCompletedCount === totalCount) {
+    if (newCompletedCount === CHECKLIST_ITEMS.length) {
       updated.completedAt = new Date().toISOString();
     }
 
     await persistChecklist(updated);
-  }, [effectiveChecklist, persistChecklist, totalCount]);
+  }, [effectiveChecklist, persistChecklist]);
 
   const toggleCollapsed = useCallback(async () => {
     if (!effectiveChecklist) return;
@@ -96,10 +111,13 @@ export function useOnboardingChecklist() {
     await persistChecklist({ ...effectiveChecklist, dismissed: true });
   }, [effectiveChecklist, persistChecklist]);
 
-  const items = CHECKLIST_ITEMS.map((item) => ({
-    ...item,
-    completed: effectiveChecklist?.[item.key] ?? false,
-  }));
+  const items: { key: string; label: string; icon: string; route: string | null; completed: boolean }[] = [
+    ...GRANTED_ITEMS.map((item) => ({ ...item, route: null, completed: true })),
+    ...CHECKLIST_ITEMS.map((item) => ({
+      ...item,
+      completed: effectiveChecklist?.[item.key] ?? false,
+    })),
+  ];
 
   return {
     isVisible,

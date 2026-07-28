@@ -131,9 +131,14 @@ export default function WelcomeScreen() {
         </Animated.View>
 
         <Animated.View style={{ opacity: buttonsOpacity, transform: [{ translateY: buttonsTranslateY }], width: '100%' }}>
+          {/*
+            Straight into onboarding — no account required. The sign-up gate
+            comes after the learner has a placement result and an avatar of
+            their own (DESIGN.md §UX Psychology Principles #3 and #4).
+          */}
           <Pressable
             className="w-full bg-primary py-4 rounded-[14px] items-center mb-4"
-            onPress={() => router.push('/(public)/auth')}
+            onPress={() => router.push('/(public)/onboarding')}
             accessibilityRole="button"
             accessibilityLabel="Get started"
           >

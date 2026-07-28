@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GRADIENT_COLORS, GRADIENT_START, GRADIENT_END } from '../../config/gradients';
 import { formatRegenTime } from '../../lib/hearts';
+import { useAppStore } from '../../stores/useAppStore';
 import { colors } from '../../config/theme';
 
 interface OutOfHeartsModalProps {
@@ -14,7 +15,16 @@ interface OutOfHeartsModalProps {
 
 export function OutOfHeartsModal({ visible, nextRegenAt, onDismiss }: OutOfHeartsModalProps) {
   const router = useRouter();
+  const { profile, dailyStats } = useAppStore();
   const regenText = formatRegenTime(nextRegenAt);
+
+  // Loss aversion (DESIGN.md §UX Psychology Principles #5), bound by the
+  // ethical guardrails in that section: the stake named here must be real and
+  // already owned. Only surfaced when the learner genuinely has a live streak
+  // and has not yet banked XP today — otherwise nothing is actually at risk
+  // and the line is not shown at all.
+  const streak = profile?.streak ?? 0;
+  const streakAtRisk = streak > 0 && (dailyStats?.xpEarned ?? 0) === 0;
 
   return (
     <Modal transparent visible={visible} animationType="fade" onRequestClose={onDismiss}>
@@ -39,6 +49,23 @@ export function OutOfHeartsModal({ visible, nextRegenAt, onDismiss }: OutOfHeart
               <Text className="text-base text-text-secondary text-center mb-6">
                 You've run out of hearts. Wait for them to regenerate or upgrade for unlimited hearts.
               </Text>
+
+              {/* Real, already-owned stake — rendered only when it is true */}
+              {streakAtRisk && (
+                <View
+                  className="w-full flex-row items-center gap-2 mb-6 p-3 rounded-2xl"
+                  style={{ backgroundColor: colors.streak.tint }}
+                >
+                  <Ionicons name="flame" size={18} color={colors.streak.fire} />
+                  <Text className="flex-1 text-sm text-text-secondary">
+                    Your{' '}
+                    <Text style={{ color: colors.streak.fire, fontWeight: '700' }}>
+                      {streak}-day streak
+                    </Text>{' '}
+                    still needs a lesson today.
+                  </Text>
+                </View>
+              )}
 
               {/* Regen timer */}
               {nextRegenAt && (

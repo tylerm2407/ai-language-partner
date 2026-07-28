@@ -3,6 +3,7 @@ import { View, Text, Pressable } from 'react-native';
 import { ProgressBar } from '../ui/ProgressBar';
 import { Button } from '../ui/Button';
 import type { ProficiencyLevel, LanguageCode } from '../../types';
+import type { PlacementResult, PlacementBandResult } from '../../lib/pending-onboarding';
 
 interface PlacementQuestion {
   question: string;
@@ -124,7 +125,12 @@ const PLACEMENT_QUESTIONS: Record<string, PlacementQuestion[]> = {
 
 interface PlacementTestProps {
   targetLanguage: LanguageCode;
-  onComplete: (suggestedLevel: ProficiencyLevel) => void;
+  /**
+   * Fired once the final question is answered. The band breakdown feeds the
+   * pre-signup result reveal (DESIGN.md §UX Psychology Principles #3) — the
+   * learner sees what they're strong at before being asked for an email.
+   */
+  onComplete: (result: PlacementResult) => void;
   onSkip: () => void;
 }
 
@@ -136,7 +142,16 @@ function scoreToLevel(correct: number): ProficiencyLevel {
   return 'advanced';
 }
 
-const LEVEL_LABELS: Record<ProficiencyLevel, string> = {
+/** Canonical easiest-to-hardest order used when grouping answers into bands. */
+const BAND_ORDER: ProficiencyLevel[] = [
+  'beginner',
+  'elementary',
+  'intermediate',
+  'upper_intermediate',
+  'advanced',
+];
+
+export const LEVEL_LABELS: Record<ProficiencyLevel, string> = {
   beginner: 'Beginner',
   elementary: 'Elementary',
   intermediate: 'Intermediate',
@@ -144,13 +159,25 @@ const LEVEL_LABELS: Record<ProficiencyLevel, string> = {
   advanced: 'Advanced',
 };
 
+type PlacementAnswer = { level: ProficiencyLevel; correct: boolean };
+
+function toBands(answers: PlacementAnswer[]): PlacementBandResult[] {
+  return BAND_ORDER.map((level) => {
+    const forLevel = answers.filter((a) => a.level === level);
+    return {
+      level,
+      correct: forLevel.filter((a) => a.correct).length,
+      total: forLevel.length,
+    };
+  }).filter((band) => band.total > 0);
+}
+
 export function PlacementTest({ targetLanguage, onComplete, onSkip }: PlacementTestProps) {
   const questions = PLACEMENT_QUESTIONS[targetLanguage] ?? PLACEMENT_QUESTIONS.es;
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [correctCount, setCorrectCount] = useState(0);
+  const [answers, setAnswers] = useState<PlacementAnswer[]>([]);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [showResult, setShowResult] = useState(false);
-  const [finished, setFinished] = useState(false);
 
   const question = questions[currentIndex];
   const progress = currentIndex / questions.length;
@@ -158,44 +185,30 @@ export function PlacementTest({ targetLanguage, onComplete, onSkip }: PlacementT
   const handleSelect = (optionIndex: number) => {
     if (selectedOption !== null) return;
     setSelectedOption(optionIndex);
-
-    const isCorrect = optionIndex === question.correctIndex;
-    if (isCorrect) setCorrectCount((c) => c + 1);
+    setAnswers((prev) => [
+      ...prev,
+      { level: question.level, correct: optionIndex === question.correctIndex },
+    ]);
     setShowResult(true);
   };
 
+  // The result screen lives in the onboarding flow, not here — it is the
+  // reciprocity moment and needs to own its own CTA.
   const handleNext = () => {
     if (currentIndex + 1 >= questions.length) {
-      setFinished(true);
-    } else {
-      setCurrentIndex((i) => i + 1);
-      setSelectedOption(null);
-      setShowResult(false);
+      const correctCount = answers.filter((a) => a.correct).length;
+      onComplete({
+        suggestedLevel: scoreToLevel(correctCount),
+        correctCount,
+        totalCount: questions.length,
+        bands: toBands(answers),
+      });
+      return;
     }
+    setCurrentIndex((i) => i + 1);
+    setSelectedOption(null);
+    setShowResult(false);
   };
-
-  if (finished) {
-    const suggestedLevel = scoreToLevel(correctCount);
-    return (
-      <View className="flex-1">
-        <View className="items-center justify-center flex-1 px-4">
-          <View className="w-[100px] h-[100px] rounded-full bg-primary-tint items-center justify-center mb-6">
-            <Text className="text-[32px] font-bold text-primary">{correctCount}</Text>
-          </View>
-          <Text className="text-[28px] font-bold text-text-primary mb-2 text-center">
-            Test Complete!
-          </Text>
-          <Text className="text-base text-text-secondary mb-2 text-center">
-            You got {correctCount} out of {questions.length} correct
-          </Text>
-          <Text className="text-lg font-semibold text-primary mb-8 text-center">
-            We suggest: {LEVEL_LABELS[suggestedLevel]}
-          </Text>
-          <Button label={`Start as ${LEVEL_LABELS[suggestedLevel]}`} onPress={() => onComplete(suggestedLevel)} />
-        </View>
-      </View>
-    );
-  }
 
   return (
     <View className="flex-1">
@@ -245,7 +258,7 @@ export function PlacementTest({ targetLanguage, onComplete, onSkip }: PlacementT
       {/* Next button */}
       {showResult && (
         <View className="mt-4">
-          <Button label={currentIndex + 1 >= questions.length ? 'See Results' : 'Next'} onPress={handleNext} />
+          <Button label={currentIndex + 1 >= questions.length ? 'See my level' : 'Next'} onPress={handleNext} />
         </View>
       )}
     </View>

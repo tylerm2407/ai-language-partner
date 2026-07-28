@@ -1,0 +1,135 @@
+/**
+ * Pre-auth onboarding persistence.
+ *
+ * Onboarding runs before the user has an account (DESIGN.md §UX Psychology
+ * Principles #3 Reciprocity and #4 IKEA Effect): the learner picks a language,
+ * takes the placement test, sees their result, and personalises an avatar
+ * before they are ever asked for an email. Those answers live here until a
+ * session exists, at which point the onboarding screen flushes them into the
+ * real profile and clears this entry.
+ *
+ * Device-local by design. If the user never signs up, nothing is written
+ * server-side and the draft simply expires.
+ */
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import type {
+  AvatarConfig,
+  LanguageCode,
+  MotivationReason,
+  ProficiencyLevel,
+} from '../types';
+
+export const PENDING_ONBOARDING_KEY = 'pending-onboarding';
+export const PENDING_ONBOARDING_SCHEMA_VERSION = 1;
+/** Drafts older than this are discarded on load. */
+export const PENDING_ONBOARDING_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** Per-CEFR-band breakdown produced by the placement test. */
+export interface PlacementBandResult {
+  level: ProficiencyLevel;
+  correct: number;
+  total: number;
+}
+
+export interface PlacementResult {
+  suggestedLevel: ProficiencyLevel;
+  correctCount: number;
+  totalCount: number;
+  bands: PlacementBandResult[];
+}
+
+export interface PendingOnboarding {
+  version: number;
+  targetLanguage: LanguageCode | null;
+  motivation: MotivationReason | null;
+  idealL2Self: string | null;
+  level: ProficiencyLevel | null;
+  /** Null when the learner skipped the placement test. */
+  placement: PlacementResult | null;
+  displayName: string | null;
+  avatarConfig: AvatarConfig | null;
+  dailyGoalMinutes: number | null;
+  /** Epoch ms the draft was first created — the TTL reference. */
+  startedAt: number;
+  /** ISO timestamp set when the pre-auth flow finished and auth was reached. */
+  completedAt: string | null;
+}
+
+export type PendingOnboardingDraft = Omit<PendingOnboarding, 'version' | 'startedAt'>;
+
+export function emptyPendingOnboarding(): PendingOnboardingDraft {
+  return {
+    targetLanguage: null,
+    motivation: null,
+    idealL2Self: null,
+    level: null,
+    placement: null,
+    displayName: null,
+    avatarConfig: null,
+    dailyGoalMinutes: null,
+    completedAt: null,
+  };
+}
+
+function isValidPending(value: unknown): value is PendingOnboarding {
+  if (typeof value !== 'object' || value === null) return false;
+  const v = value as Record<string, unknown>;
+  return typeof v.version === 'number' && typeof v.startedAt === 'number';
+}
+
+/**
+ * Persist the draft. `startedAt` is preserved across saves so the TTL measures
+ * from when onboarding began, not from the most recent keystroke.
+ */
+export async function savePendingOnboarding(
+  draft: PendingOnboardingDraft,
+  startedAt?: number,
+): Promise<void> {
+  const payload: PendingOnboarding = {
+    version: PENDING_ONBOARDING_SCHEMA_VERSION,
+    startedAt: startedAt ?? Date.now(),
+    ...draft,
+  };
+  await AsyncStorage.setItem(PENDING_ONBOARDING_KEY, JSON.stringify(payload));
+}
+
+/**
+ * Load the draft. Returns null (and clears the entry) when it is missing,
+ * corrupt, from a different schema version, or past its TTL.
+ */
+export async function loadPendingOnboarding(): Promise<PendingOnboarding | null> {
+  const raw = await AsyncStorage.getItem(PENDING_ONBOARDING_KEY);
+  if (raw === null) return null;
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    await AsyncStorage.removeItem(PENDING_ONBOARDING_KEY);
+    return null;
+  }
+
+  if (!isValidPending(parsed) || parsed.version !== PENDING_ONBOARDING_SCHEMA_VERSION) {
+    await AsyncStorage.removeItem(PENDING_ONBOARDING_KEY);
+    return null;
+  }
+
+  if (Date.now() - parsed.startedAt > PENDING_ONBOARDING_TTL_MS) {
+    await AsyncStorage.removeItem(PENDING_ONBOARDING_KEY);
+    return null;
+  }
+
+  return parsed;
+}
+
+export async function clearPendingOnboarding(): Promise<void> {
+  await AsyncStorage.removeItem(PENDING_ONBOARDING_KEY);
+}
+
+/**
+ * A draft is only flushable once the learner reached the auth screen with the
+ * two fields the profile cannot be written without.
+ */
+export function isFlushable(pending: PendingOnboarding | null): boolean {
+  return !!pending?.completedAt && !!pending.targetLanguage && !!pending.level;
+}

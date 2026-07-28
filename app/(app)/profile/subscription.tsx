@@ -1,7 +1,7 @@
 import { View, Text, Pressable, ScrollView, Alert, ActivityIndicator, Linking, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import type { PurchasesPackage } from 'react-native-purchases';
 import { useAuth } from '../../../hooks/useAuth';
@@ -26,11 +26,17 @@ const MANAGE_URL =
     ? 'https://apps.apple.com/account/subscriptions'
     : 'https://play.google.com/store/account/subscriptions';
 
-const TIER_ORDER: PlanId[] = ['basic', 'premium', 'vip'];
+/**
+ * Contrast effect (DESIGN.md §UX Psychology Principles #6): the brain scores a
+ * price against whatever it saw immediately before, so the list leads with the
+ * richest tier and its annual term. Every figure shown is the real store
+ * price — the framing changes, the numbers do not.
+ */
+const DISPLAY_TIER_ORDER: PlanId[] = ['vip', 'premium', 'basic'];
 
 export default function SubscriptionScreen() {
   const { user } = useAuth();
-  const { subscription, refreshSubscription } = useAppStore();
+  const { profile, subscription, refreshSubscription } = useAppStore();
   const router = useRouter();
 
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);
@@ -111,13 +117,27 @@ export default function SubscriptionScreen() {
     }
   };
 
-  // Sort packages by tier then term so the list reads basic→premium→vip.
-  const sortedPackages = [...packages].sort((a, b) => {
-    const ta = TIER_ORDER.indexOf(tierFromPackage(a));
-    const tb = TIER_ORDER.indexOf(tierFromPackage(b));
-    if (ta !== tb) return ta - tb;
-    return a.product.price - b.product.price;
-  });
+  // Richest tier first, and the annual term ahead of the monthly one within
+  // each tier, so the largest genuine figure sets the reference point.
+  const sortedPackages = useMemo(
+    () =>
+      [...packages].sort((a, b) => {
+        const ta = DISPLAY_TIER_ORDER.indexOf(tierFromPackage(a));
+        const tb = DISPLAY_TIER_ORDER.indexOf(tierFromPackage(b));
+        if (ta !== tb) return ta - tb;
+        return b.product.price - a.product.price;
+      }),
+    [packages],
+  );
+
+  // Real monthly price per tier — the basis for the annual saving figure.
+  const monthlyPriceByTier = useMemo(() => {
+    const byTier: Partial<Record<PlanId, number>> = {};
+    for (const pkg of packages) {
+      if (pkg.packageType === 'MONTHLY') byTier[tierFromPackage(pkg)] = pkg.product.price;
+    }
+    return byTier;
+  }, [packages]);
 
   return (
     <SafeAreaView className="flex-1 bg-dark">
@@ -133,6 +153,24 @@ export default function SubscriptionScreen() {
         <Text className="text-base text-text-secondary mb-6">
           Unlock unlimited hearts, streak protection, AI conversations, and more
         </Text>
+
+        {/*
+          Loss aversion (DESIGN.md §UX Psychology Principles #5) held to the
+          ethical guardrails in that section: a real, already-owned streak, a
+          true statement about the free tier, and no countdown or guilt copy.
+        */}
+        {currentTier === 'starter' && (profile?.streak ?? 0) > 0 && (
+          <View className="rounded-2xl p-4 mb-6 bg-dark-card flex-row items-center">
+            <Ionicons name="flame" size={20} color={colors.streak.fire} />
+            <Text className="flex-1 text-sm text-text-secondary ml-3">
+              Your{' '}
+              <Text style={{ color: colors.streak.fire, fontWeight: '700' }}>
+                {profile?.streak}-day streak
+              </Text>{' '}
+              has no streak shield on the free plan.
+            </Text>
+          </View>
+        )}
 
         {/* Current plan banner */}
         {currentTier !== 'starter' && (
@@ -172,6 +210,16 @@ export default function SubscriptionScreen() {
             const isPopular = tier === 'premium';
             const features = PLAN_FEATURES[tier] ?? [];
 
+            // Annual plans lead with their true per-month equivalent; the
+            // full amount and billing term stay visible directly beneath it.
+            const isAnnual = pkg.packageType === 'ANNUAL';
+            const perMonthString = isAnnual ? pkg.product.pricePerMonthString : null;
+            const monthlyPrice = monthlyPriceByTier[tier];
+            const savingsPct =
+              isAnnual && monthlyPrice && monthlyPrice > 0
+                ? Math.round((1 - pkg.product.price / (monthlyPrice * 12)) * 100)
+                : 0;
+
             return (
               <View
                 key={pkg.identifier}
@@ -193,11 +241,23 @@ export default function SubscriptionScreen() {
                 </View>
 
                 <View className="flex-row items-baseline mb-1">
-                  <Text className="text-2xl font-bold text-text-primary">{pkg.product.priceString}</Text>
-                  <Text className="text-sm text-text-secondary ml-1">
-                    /{pkg.packageType === 'ANNUAL' ? 'year' : 'month'}
+                  <Text className="text-2xl font-bold text-text-primary">
+                    {perMonthString ?? pkg.product.priceString}
                   </Text>
+                  <Text className="text-sm text-text-secondary ml-1">
+                    /{isAnnual && perMonthString ? 'mo' : 'month'}
+                  </Text>
+                  {savingsPct > 0 && (
+                    <View className="bg-success-bg rounded-lg px-2 py-0.5 ml-2">
+                      <Text className="text-xs font-bold text-success">SAVE {savingsPct}%</Text>
+                    </View>
+                  )}
                 </View>
+                {isAnnual && (
+                  <Text className="text-sm text-text-secondary mb-1">
+                    Billed annually at {pkg.product.priceString}
+                  </Text>
+                )}
                 <Text className="text-lg font-semibold text-text-primary mb-3">{pkg.product.title}</Text>
 
                 {features.map((feature, idx) => (

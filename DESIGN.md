@@ -368,4 +368,80 @@ When editing any existing screen:
 
 ---
 
-**Last updated:** 2026-04-22 (Phase 1 Magazine Home landed).
+## UX Psychology Principles
+
+Source: *"The UX Psychology Behind Apps People Can't Stop Using"* — uxpeak (YouTube, 11:34, `2TlIg3VokY8`).
+These are **behavioral rules**, not visual tokens. They govern flow design (onboarding, paywall, review queue, upgrade prompts), not colors or spacing. Nothing here overrides §Accessibility or §Core Principles.
+
+**Status:** all six implemented. The "Fluenci surfaces" lines below record where each principle landed; surfaces marked *(backlog)* are identified but not yet built.
+
+The structural change all six depend on: **onboarding now runs before authentication.** Answers live in `lib/pending-onboarding.ts` (AsyncStorage, 7-day TTL) until a session exists, at which point `app/(public)/onboarding.tsx` flushes them into the profile and clears the draft. The root route guard in `app/_layout.tsx` was not modified — onboarding remains its destination and simply gained a pre-auth mode.
+
+### 1. Smart Defaults — kill decision fatigue
+
+More options lowers completion, it doesn't raise it. Cited research: a jam-tasting study where a 24-flavor display converted ~3% of shoppers vs ~30% for a 6-flavor display. In most products 70–90% of users never touch a default value — a default reads as a *recommendation*, not a blank.
+
+**Rule:** pre-select the most common choice in every field. Never ship an empty form when the answer is guessable. Shift the user's job from "fill this out" to "scan and adjust."
+
+Also: put the outcome on the CTA. "Search" → "See 12 results."
+
+Fluenci surfaces: placement test (pre-select likely CEFR from prior answers), daily-goal picker, new-cards-per-day setting (default 20), reminder-time picker, classroom-assignment creation form (teacher side), language pair.
+
+### 2. Goal Gradient — never start at zero
+
+Cited research: a car-wash loyalty card needing 8 stamps completed at roughly double the rate when presented as a 10-stamp card with 2 already filled. Same real work, different perceived distance. The closer the finish line feels, the faster people move. **You choose where the starting line is.**
+
+**Rule:** no progress indicator ever renders at 0%. Find something the user already did and count it (account created, language picked, placement test taken). LinkedIn's profile-strength meter is the canonical example — it is never empty.
+
+Fluenci surfaces: onboarding checklist (`<OnboardingChecklist />` — count signup + placement test as complete on first paint), unit/lesson progress rings, profile completeness, streak calendar, teacher classroom setup.
+
+### 3. Reciprocity — give value before asking for anything
+
+Free samples can lift purchase rate dramatically; receiving something first creates an unconscious debt. Cialdini rates reciprocity the strongest single driver of compliance. Gating results behind a signup wall reads as holding the user's own output hostage.
+
+**Rule:** deliver a genuinely useful partial result *before* the account or paywall gate. Then offer to save/extend it. The gate should feel like preserving value already received, not paying an entry toll.
+
+Fluenci surfaces: placement test → show CEFR level + strengths/gaps **before** signup, then "save your level"; first lesson playable anonymously; free AI chat turns before quota prompt; writing feedback shows top corrections free, full rubric on upgrade; reading passage first page free.
+
+Anti-pattern to avoid: "Create an account to see your results."
+
+### 4. IKEA / Endowment Effect — let them build before they commit
+
+People value what they built more than an identical thing handed to them; merely *feeling* ownership is enough. A bare email/password screen contains nothing the user would lose by closing the tab.
+
+**Rule:** front-load creation and personalization ahead of the signup screen. Label the button **Continue**, not Sign up — by then leaving means abandoning something they made. Duolingo's model: language chosen, goal set, first lesson done, *then* account.
+
+Fluenci surfaces: pre-auth onboarding — pick language, pick goal, name/customize avatar or mascot, complete lesson 1; teacher onboarding — build the classroom (name, color, subject) before org signup.
+
+### 5. Loss Aversion & Status Quo Bias — frame the cost of inaction
+
+Kahneman: losing something hurts roughly twice as much as gaining the same thing feels good. A screen selling what the user *could* gain uses the weaker motivator; showing what they're about to lose engages loss aversion plus the instinct to protect what's already held.
+
+**Rule:** for act-now screens, show concrete, named, already-owned things at risk — not abstract feature lists.
+
+Fluenci surfaces: streak at risk (name the exact streak count and day), hearts depleting, "your 340 review cards go overdue tonight," downgrade flow listing what's lost, teacher trial expiry naming the actual classrooms.
+
+**Ethical boundary — binding, not optional.** The video's example uses a manufactured countdown and a shaming dismiss label ("I'll risk it"). Fluenci does **not** ship that. Constraints:
+- Every stated loss must be **factually true** and already-owned by the user (a real streak, real cards, real files). No invented scarcity, no fake countdowns.
+- Dismiss options stay neutral ("Not now"). No guilt-labeled escape hatches.
+- No loss framing in learner-facing streak/hearts UI aimed at minors or in B2B/classroom contexts.
+- Apple 3.1 / App Store review and the EU DSA both scrutinize manipulative subscription prompts. A dark pattern here is a rejection risk, not just an ethics one.
+
+### 6. Contrast Effect — control the anchor
+
+The brain evaluates a number relative to whatever it processed immediately before. $50 in isolation reads as $600/year; $50 shown directly under a $1,900 cart item, labeled "just 2.6%," barely registers. Menus anchor with an expensive item; agents show an overpriced house first.
+
+**Rule:** never display a price in isolation. Control what the user sees first, because that first number becomes the ruler for everything after.
+
+Fluenci surfaces: paywall — anchor on annual total or on a tutor-cost comparison before showing monthly; show annual plan first with per-month equivalent; B2B seat pricing anchored against per-student tutoring cost; XP/gem costs anchored against a larger balance.
+
+### Applying These
+
+- These principles govern **flow and copy**, so they mostly land in `app/(public)/` onboarding, paywall screens, and `components/gamification/`.
+- Any implementation still obeys §Motion, §Accessibility, and the token system. A psychology win never justifies a raw hex or an ungated animation.
+- Loss-aversion and contrast work touches paywall/subscription surfaces → route through security/compliance review before shipping.
+- Underlying insight from the source: users decide relative, not absolute. Defaults read as advice, the first number sets the scale, a gift creates obligation, building creates ownership, and visible progress creates momentum even when granted.
+
+---
+
+**Last updated:** 2026-07-27 (UX Psychology Principles documented — not yet implemented).
