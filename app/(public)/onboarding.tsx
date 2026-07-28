@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -116,7 +116,11 @@ const DEFAULT_DAILY_GOAL = 10;
 const STRENGTH_THRESHOLD = 0.5;
 
 export default function OnboardingScreen() {
-  const { user } = useAuth();
+  // `authLoading` matters: useAuth resolves the session asynchronously, so
+  // `user` is null on the first render even for a signed-in learner. Treating
+  // that null as "signed out" would skip the flush below and drop the learner
+  // back into the flow they just finished.
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const { loadUserData, setMotivation: storeSetMotivation } = useAppStore();
 
@@ -126,6 +130,13 @@ export default function OnboardingScreen() {
   const [hydrated, setHydrated] = useState(false);
   const [flushing, setFlushing] = useState(false);
   const [startedAt, setStartedAt] = useState<number | undefined>(undefined);
+  // Tracked in state rather than hardcoded in `draft`, so the background
+  // persist effect below can never overwrite the flag that marks the draft
+  // ready to flush.
+  const [completedAt, setCompletedAt] = useState<string | null>(null);
+  // A flush writes the profile and navigates away; it must happen at most
+  // once even if this effect re-runs on a dependency identity change.
+  const flushedRef = useRef(false);
 
   const [step, setStep] = useState<Step>('language');
   const [targetLanguage, setTargetLanguage] = useState<LanguageCode>(DEFAULT_LANGUAGE);
@@ -186,6 +197,7 @@ export default function OnboardingScreen() {
 
   const applyPending = useCallback((pending: PendingOnboarding) => {
     setStartedAt(pending.startedAt);
+    setCompletedAt(pending.completedAt);
     if (pending.targetLanguage) setTargetLanguage(pending.targetLanguage);
     if (pending.motivation) setMotivation(pending.motivation);
     if (pending.idealL2Self) setIdealL2Self(pending.idealL2Self);
@@ -199,6 +211,10 @@ export default function OnboardingScreen() {
   // Mount: read the local draft. If the learner has just signed up and the
   // draft is complete, this screen's only job is to flush it and get out.
   useEffect(() => {
+    // Until the session has resolved we cannot tell a signed-out learner from
+    // a signed-in one whose session is still loading. Stay on the loader.
+    if (authLoading) return;
+
     let cancelled = false;
 
     (async () => {
@@ -210,13 +226,15 @@ export default function OnboardingScreen() {
       }
       if (cancelled) return;
 
-      if (user && isFlushable(pending) && pending) {
+      if (user && isFlushable(pending) && pending && !flushedRef.current) {
+        flushedRef.current = true;
         setFlushing(true);
         try {
           await writeProfile(user.id, pending);
           return;
         } catch (err: unknown) {
           if (cancelled) return;
+          flushedRef.current = false;
           console.error('flush pending onboarding failed:', err);
           // Don't strand the learner on a spinner — drop them back into the
           // flow with their answers intact so they can retry the last step.
@@ -239,7 +257,7 @@ export default function OnboardingScreen() {
     return () => {
       cancelled = true;
     };
-  }, [user, writeProfile, applyPending]);
+  }, [authLoading, user, writeProfile, applyPending]);
 
   const draft: PendingOnboardingDraft = useMemo(
     () => ({
@@ -251,19 +269,20 @@ export default function OnboardingScreen() {
       displayName: displayName.trim() ? displayName.trim() : null,
       avatarConfig,
       dailyGoalMinutes: dailyGoal,
-      completedAt: null,
+      completedAt,
     }),
-    [targetLanguage, motivation, idealL2Self, level, placement, displayName, avatarConfig, dailyGoal],
+    [targetLanguage, motivation, idealL2Self, level, placement, displayName, avatarConfig, dailyGoal, completedAt],
   );
 
   // Mirror every answer to local storage so a backgrounded or killed app
-  // resumes where it left off. Only meaningful pre-auth.
+  // resumes where it left off. Only meaningful pre-auth — and never while the
+  // session is still resolving, or this would race the flush above.
   useEffect(() => {
-    if (!hydrated || user || flushing) return;
+    if (authLoading || !hydrated || user || flushing) return;
     savePendingOnboarding(draft, startedAt).catch((err) => {
       console.error('savePendingOnboarding failed:', err);
     });
-  }, [hydrated, user, flushing, draft, startedAt]);
+  }, [authLoading, hydrated, user, flushing, draft, startedAt]);
 
   const handleFinish = async () => {
     setSaving(true);
@@ -276,10 +295,9 @@ export default function OnboardingScreen() {
       // Pre-auth: park the answers and send them to sign-up. The root route
       // guard bounces back here once a session exists, and the mount effect
       // above flushes the draft into the profile.
-      await savePendingOnboarding(
-        { ...draft, completedAt: new Date().toISOString() },
-        startedAt,
-      );
+      const stamp = new Date().toISOString();
+      setCompletedAt(stamp);
+      await savePendingOnboarding({ ...draft, completedAt: stamp }, startedAt);
       router.replace('/(public)/auth');
     } catch (err: unknown) {
       console.error('handleFinish error:', err);
