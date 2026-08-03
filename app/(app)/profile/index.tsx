@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { View, Text, Pressable, ScrollView, Alert } from 'react-native';
+import { View, Text, Pressable, ScrollView, Alert, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAppStore } from '../../../stores/useAppStore';
@@ -8,7 +9,11 @@ import { SCHOOL_ENABLED, SUPPORTED_LANGUAGES } from '../../../config/app';
 import { useLevel } from '../../../hooks/useLevel';
 import { Ionicons } from '@expo/vector-icons';
 import { GradientBackground } from '../../../components/ui/GradientBackground';
-import { colors } from '../../../config/theme';
+import { colors, radii, spacing, typography } from '../../../config/theme';
+import { Heading, Body, Caption } from '../../../components/ui/Text';
+import { Chip } from '../../../components/ui/Chip';
+import { Card } from '../../../components/ui/Card';
+import { LevelBadge } from '../../../components/stats/LevelBadge';
 import { LeagueBadge } from '../../../components/gamification/LeagueBadge';
 import { AchievementGrid } from '../../../components/gamification/AchievementGrid';
 import { Avatar } from '../../../components/avatar/Avatar';
@@ -32,11 +37,28 @@ const LEVEL_LABELS: Record<string, string> = {
   advanced: 'Advanced',
 };
 
+/** One of the three stat tiles under the level ladder. */
+function StatCard({ icon, value, label }: { icon: React.ReactNode; value: string; label: string }) {
+  return (
+    <Card style={styles.statCard} variant="standard">
+      <View style={styles.statIcon}>{icon}</View>
+      <Body size="lg" weight="extrabold" style={styles.statValue}>
+        {value}
+      </Body>
+      <Caption size="sm" tone="tertiary" style={styles.statLabel}>
+        {label}
+      </Caption>
+    </Card>
+  );
+}
+
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const { profile, subscription, setProfile } = useAppStore();
   const { enrolledClasses, loadStudentSchoolData, roles, activeRole, setActiveRole } = useSchoolStore();
-  const { level, tier } = useLevel();
+  // useLevel() is also a side effect — it mirrors level-ups into the store.
+  // Only `tier` is read here; the numeric level moved into <LevelBadge/>.
+  const { tier } = useLevel();
   const { dailyStats } = useDailyStats();
   const strandTotals = strandMinutesFromDailyStats({
     listeningMinutes: dailyStats?.listeningMinutes,
@@ -82,52 +104,76 @@ export default function ProfileScreen() {
 
   return (
     <GradientBackground>
-    <View className="flex-1">
+    <SafeAreaView className="flex-1" edges={['top']}>
       <ScrollView className="flex-1 px-4 pt-2" contentContainerStyle={{ paddingBottom: 100 }}>
-        <Text className="text-[28px] font-bold text-text-primary mb-6" accessibilityRole="header">Profile</Text>
+        {/* Header — title + settings. Settings also has a row further down; the
+            header affordance is the primary one. */}
+        <View style={styles.headerRow}>
+          <Heading level={2}>Profile</Heading>
+          <Pressable
+            onPress={() => router.push('/profile/settings' as any)}
+            accessibilityRole="button"
+            accessibilityLabel="Settings"
+            style={styles.iconButton}
+            hitSlop={8}
+          >
+            <Ionicons name="settings-outline" size={18} color={colors.text.secondary} />
+          </Pressable>
+        </View>
 
-        {/* User Info */}
-        <View className="bg-dark-card rounded-2xl p-5 mb-4">
+        {/* Identity — avatar in a primary ring, name, mono meta, language chip */}
+        <View style={styles.identityRow}>
           <Pressable
             onPress={() => setCustomizerVisible(true)}
             accessibilityLabel="Customize avatar"
             accessibilityRole="button"
-            style={{ marginBottom: 12 }}
+            style={styles.avatarRing}
           >
             <Avatar
               config={profile?.avatarConfig ?? undefined}
-              size="large"
+              size="medium"
               expression="neutral"
               animated
             />
           </Pressable>
-          <Text className="text-lg font-semibold text-text-primary">{profile?.displayName ?? user?.email}</Text>
-          {profile?.displayName && (
-            <Text className="text-sm text-text-secondary">{user?.email}</Text>
-          )}
+          <View style={styles.identityText}>
+            <Heading level={3} numberOfLines={1}>
+              {profile?.displayName ?? user?.email ?? 'Learner'}
+            </Heading>
+            <Text style={styles.identityMeta} numberOfLines={1}>
+              {profile?.displayName ? user?.email ?? '' : ''}
+            </Text>
+            <View style={styles.identityChips}>
+              {languageLabel ? <Chip variant="premium" label={languageLabel.toUpperCase()} /> : null}
+              <LeagueBadge tier={tier} />
+            </View>
+          </View>
+        </View>
 
-          {/* Stats row */}
-          <View className="flex-row mt-4 gap-4">
-            <View className="items-center">
-              <Text className="text-lg font-bold text-primary">{profile?.totalXp ?? 0}</Text>
-              <Text className="text-xs text-text-secondary">XP</Text>
-            </View>
-            <View className="items-center">
-              <Text className="text-lg font-bold text-text-primary">Lv. {level}</Text>
-              <Text className="text-xs text-text-secondary">Level</Text>
-            </View>
-            <View className="items-center">
-              <Text className="text-lg font-bold text-streak">{profile?.streak ?? 0}</Text>
-              <Text className="text-xs text-text-secondary">Streak</Text>
-            </View>
-            <View className="items-center">
-              <Text className="text-lg font-bold text-text-primary">{profile?.longestStreak ?? 0}</Text>
-              <Text className="text-xs text-text-secondary">Best</Text>
-            </View>
-          </View>
-          <View className="mt-3">
-            <LeagueBadge tier={tier} />
-          </View>
+        {/* Level ladder */}
+        <View style={styles.blockSpacing}>
+          <LevelBadge level={profile?.level ?? 'beginner'} />
+        </View>
+
+        {/* Three stat cards. The deck's third card is a words-learned count,
+            which the profile doesn't track — best streak is the closest real
+            metric, same shape. */}
+        <View style={styles.statGrid}>
+          <StatCard
+            icon={<Ionicons name="flame" size={16} color={colors.streak.fire} />}
+            value={String(profile?.streak ?? 0)}
+            label="Day streak"
+          />
+          <StatCard
+            icon={<Ionicons name="star" size={16} color={colors.warning.base} />}
+            value={(profile?.totalXp ?? 0).toLocaleString()}
+            label="Total XP"
+          />
+          <StatCard
+            icon={<Ionicons name="trophy" size={16} color={colors.action.accent} />}
+            value={String(profile?.longestStreak ?? 0)}
+            label="Best streak"
+          />
         </View>
 
         {/* Four Strands balance (Nation, research.md §14.3) */}
@@ -270,29 +316,111 @@ export default function ProfileScreen() {
           <Text className="text-error-dark text-lg font-semibold">Sign Out</Text>
         </Pressable>
       </ScrollView>
-    </View>
+    </SafeAreaView>
     <AvatarCustomizer
       visible={customizerVisible}
       onClose={() => setCustomizerVisible(false)}
       initialConfig={profile?.avatarConfig ?? DEFAULT_AVATAR_CONFIG}
       onSave={handleSaveAvatar}
     />
-    <JoinClassModal
-      visible={joinModalVisible}
-      onClose={() => setJoinModalVisible(false)}
-      onJoin={handleJoinClass}
-    />
-    {user?.id && (
-      <BecomeTeacherSheet
-        visible={becomeTeacherVisible}
-        onClose={() => setBecomeTeacherVisible(false)}
-        onClaimed={() => {
-          setBecomeTeacherVisible(false);
-          router.replace('/(teacher)' as any);
-        }}
-        userId={user.id}
-      />
+    {SCHOOL_ENABLED && (
+      <>
+        <JoinClassModal
+          visible={joinModalVisible}
+          onClose={() => setJoinModalVisible(false)}
+          onJoin={handleJoinClass}
+        />
+        {user?.id && (
+          <BecomeTeacherSheet
+            visible={becomeTeacherVisible}
+            onClose={() => setBecomeTeacherVisible(false)}
+            onClaimed={() => {
+              setBecomeTeacherVisible(false);
+              router.replace('/(teacher)' as any);
+            }}
+            userId={user.id}
+          />
+        )}
+      </>
     )}
     </GradientBackground>
   );
 }
+
+const styles = StyleSheet.create({
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
+  },
+  iconButton: {
+    width: 44, // Apple HIG minimum touch target
+    height: 44,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.border.default,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  identityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  avatarRing: {
+    width: 64,
+    height: 64,
+    borderRadius: radii.xxl,
+    backgroundColor: colors.action.primaryTint,
+    borderWidth: 2,
+    borderColor: colors.action.primaryFill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  identityText: {
+    flex: 1,
+    minWidth: 0,
+  },
+  identityMeta: {
+    fontFamily: typography.family.mono,
+    fontSize: typography.scale.tiny.fontSize,
+    lineHeight: typography.scale.tiny.lineHeight,
+    color: colors.text.tertiary,
+    marginTop: 2,
+  },
+  identityChips: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.xxs,
+    marginTop: spacing.xs,
+  },
+  blockSpacing: {
+    marginBottom: spacing.md,
+  },
+  statGrid: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+    marginBottom: spacing.md,
+  },
+  statCard: {
+    flex: 1,
+    padding: spacing.sm,
+    alignItems: 'center',
+  },
+  statIcon: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xxs,
+  },
+  statValue: {
+    letterSpacing: -0.4,
+    fontVariant: ['tabular-nums'],
+  },
+  statLabel: {
+    textAlign: 'center',
+  },
+});
