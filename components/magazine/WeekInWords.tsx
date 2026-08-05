@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { MagazineGlassCard } from './MagazineGlassCard';
 import { colors, typography } from '../../config/theme';
 import { localDayKey } from '../../lib/dates';
@@ -9,7 +9,9 @@ interface WeekInWordsProps {
 }
 
 const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-const serifFont = Platform.select({ ios: 'Georgia', default: 'serif' });
+// Editorial face. Fraunces_600SemiBold carries its own weight — never pair it
+// with fontWeight, which makes Android synthesize a second bolding pass.
+const serifFont = typography.family.serif;
 
 export function WeekInWords({ stats }: WeekInWordsProps) {
   const today = new Date();
@@ -75,7 +77,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontFamily: serifFont,
     fontSize: 18,
-    fontWeight: '600',
     color: colors.text.primary,
     marginBottom: 16,
   },
@@ -85,8 +86,12 @@ const styles = StyleSheet.create({
   bigNumber: {
     fontFamily: serifFont,
     fontSize: 56,
-    fontWeight: 'bold',
     color: colors.text.primary,
+    // Deliberately under minLineHeight(56, 'display') = 70. This renders digits
+    // only, which stop at Fraunces' capHeight (0.700em = 39px here) while the
+    // line box still reserves 60 - descent(14px) = 46px above the baseline. Do
+    // not raise it to 70 — that would add 10px of dead space. If this ever
+    // renders letters, it must go to 70.
     lineHeight: 60,
   },
   bigLabel: {

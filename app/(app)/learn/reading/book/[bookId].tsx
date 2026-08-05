@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, Pressable, ActivityIndicator, Alert, Image } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../../../hooks/useAuth';
@@ -15,6 +16,7 @@ import {
 import { BookReader } from '../../../../../components/reading/BookReader';
 import { supabase } from '../../../../../lib/supabase';
 import type { ReadingBook, BookAnnotation, UserBookProgress, Subscription } from '../../../../../types';
+import { colors } from '../../../../../config/theme';
 
 export default function BookDetailScreen() {
   const { bookId } = useLocalSearchParams<{ bookId: string }>();
@@ -162,18 +164,18 @@ export default function BookDetailScreen() {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#6366F1" />
+      <View style={{ flex: 1, backgroundColor: colors.surface.raised, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#818CF8" />
       </View>
     );
   }
 
   if (error || !book) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-        <Text style={{ fontSize: 16, color: '#EF4444', textAlign: 'center' }}>{error ?? 'Book not found'}</Text>
+      <View style={{ flex: 1, backgroundColor: colors.surface.raised, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+        <Text style={{ fontSize: 16, color: colors.error.light, textAlign: 'center' }}>{error ?? 'Book not found'}</Text>
         <Pressable onPress={() => router.back()} style={{ marginTop: 16 }} accessibilityRole="button">
-          <Text style={{ fontSize: 16, color: '#6366F1' }}>Go Back</Text>
+          <Text style={{ fontSize: 16, color: colors.action.accent }}>Go Back</Text>
         </Pressable>
       </View>
     );
@@ -202,7 +204,7 @@ export default function BookDetailScreen() {
   const estimatedMinutes = Math.round(book.wordCount / 200); // ~200 wpm reading speed
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#fff' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface.raised }} edges={['top']}>
       {/* Header */}
       <View style={{ paddingHorizontal: 16, paddingTop: 8, flexDirection: 'row', alignItems: 'center' }}>
         <Pressable onPress={() => router.back()} style={{ padding: 8 }} accessibilityRole="button" accessibilityLabel="Go back">
@@ -226,72 +228,72 @@ export default function BookDetailScreen() {
 
         {/* CEFR Badge */}
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-          <View style={{ backgroundColor: '#E0E7FF', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
-            <Text style={{ fontSize: 14, color: '#6366F1', fontWeight: '600' }}>{book.cefrLevel}</Text>
+          <View style={{ backgroundColor: colors.action.primaryTint, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
+            <Text style={{ fontSize: 14, color: colors.action.accent, fontWeight: '600' }}>{book.cefrLevel}</Text>
           </View>
-          <View style={{ backgroundColor: '#F3F4F6', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, marginLeft: 8 }}>
-            <Text style={{ fontSize: 13, color: '#666' }}>{book.source === 'ai_generated' ? 'AI Story' : book.source === 'gutenberg' ? 'Classic' : 'Wikisource'}</Text>
+          <View style={{ backgroundColor: colors.surface.cardAlt, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, marginLeft: 8 }}>
+            <Text style={{ fontSize: 13, color: colors.text.tertiary }}>{book.source === 'ai_generated' ? 'AI Story' : book.source === 'gutenberg' ? 'Classic' : 'Wikisource'}</Text>
           </View>
         </View>
 
         {/* Title & Author */}
-        <Text style={{ fontSize: 28, fontWeight: '700', color: '#111', marginBottom: 4 }}>{book.title}</Text>
+        <Text style={{ fontSize: 28, fontWeight: '700', color: colors.text.primary, marginBottom: 4 }}>{book.title}</Text>
         {book.author && (
-          <Text style={{ fontSize: 16, color: '#666', marginBottom: 12 }}>by {book.author}</Text>
+          <Text style={{ fontSize: 16, color: colors.text.tertiary, marginBottom: 12 }}>by {book.author}</Text>
         )}
 
         {/* Description */}
         {book.description && (
-          <Text style={{ fontSize: 15, color: '#666', lineHeight: 22, marginBottom: 16 }}>{book.description}</Text>
+          <Text style={{ fontSize: 15, color: colors.text.tertiary, lineHeight: 22, marginBottom: 16 }}>{book.description}</Text>
         )}
 
         {/* Stats */}
-        <View style={{ backgroundColor: '#F9FAFB', borderRadius: 16, padding: 16, marginBottom: 16 }}>
+        <View style={{ backgroundColor: colors.surface.card, borderRadius: 16, padding: 16, marginBottom: 16 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
             <View style={{ alignItems: 'center' }}>
-              <Ionicons name="document-text-outline" size={20} color="#6366F1" />
-              <Text style={{ fontSize: 16, fontWeight: '600', color: '#111', marginTop: 4 }}>
+              <Ionicons name="document-text-outline" size={20} color="#818CF8" />
+              <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary, marginTop: 4 }}>
                 {book.wordCount.toLocaleString()}
               </Text>
-              <Text style={{ fontSize: 12, color: '#999' }}>words</Text>
+              <Text style={{ fontSize: 12, color: colors.text.tertiary }}>words</Text>
             </View>
             <View style={{ alignItems: 'center' }}>
-              <Ionicons name="time-outline" size={20} color="#6366F1" />
-              <Text style={{ fontSize: 16, fontWeight: '600', color: '#111', marginTop: 4 }}>
+              <Ionicons name="time-outline" size={20} color="#818CF8" />
+              <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary, marginTop: 4 }}>
                 ~{estimatedMinutes} min
               </Text>
-              <Text style={{ fontSize: 12, color: '#999' }}>to read</Text>
+              <Text style={{ fontSize: 12, color: colors.text.tertiary }}>to read</Text>
             </View>
             <View style={{ alignItems: 'center' }}>
-              <Ionicons name="star-outline" size={20} color="#6366F1" />
-              <Text style={{ fontSize: 16, fontWeight: '600', color: '#111', marginTop: 4 }}>
+              <Ionicons name="star-outline" size={20} color="#818CF8" />
+              <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary, marginTop: 4 }}>
                 {Math.min(500, Math.round(book.wordCount / 10))} XP
               </Text>
-              <Text style={{ fontSize: 12, color: '#999' }}>reward</Text>
+              <Text style={{ fontSize: 12, color: colors.text.tertiary }}>reward</Text>
             </View>
           </View>
         </View>
 
         {/* Progress (if started) */}
         {isStarted && !isCompleted && (
-          <View style={{ backgroundColor: '#F9FAFB', borderRadius: 16, padding: 16, marginBottom: 16 }}>
-            <Text style={{ fontSize: 14, fontWeight: '600', color: '#666', marginBottom: 8 }}>Your Progress</Text>
-            <View style={{ height: 8, backgroundColor: '#F3F4F6', borderRadius: 4 }}>
+          <View style={{ backgroundColor: colors.surface.card, borderRadius: 16, padding: 16, marginBottom: 16 }}>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text.tertiary, marginBottom: 8 }}>Your Progress</Text>
+            <View style={{ height: 8, backgroundColor: colors.surface.cardAlt, borderRadius: 4 }}>
               <View style={{
-                height: 8, backgroundColor: '#6366F1', borderRadius: 4,
+                height: 8, backgroundColor: '#4F46E5', borderRadius: 4,
                 width: `${Math.round(progress!.percentComplete)}%`,
               }} />
             </View>
-            <Text style={{ fontSize: 13, color: '#999', marginTop: 4 }}>
+            <Text style={{ fontSize: 13, color: colors.text.tertiary, marginTop: 4 }}>
               {Math.round(progress!.percentComplete)}% complete
             </Text>
           </View>
         )}
 
         {isCompleted && (
-          <View style={{ backgroundColor: '#DCFCE7', borderRadius: 16, padding: 16, marginBottom: 16, flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ backgroundColor: colors.success.tint, borderRadius: 16, padding: 16, marginBottom: 16, flexDirection: 'row', alignItems: 'center' }}>
             <Ionicons name="checkmark-circle" size={24} color="#22C55E" />
-            <Text style={{ fontSize: 16, fontWeight: '600', color: '#22C55E', marginLeft: 8 }}>Completed!</Text>
+            <Text style={{ fontSize: 16, fontWeight: '600', color: colors.success.light, marginLeft: 8 }}>Completed!</Text>
           </View>
         )}
 
@@ -303,21 +305,21 @@ export default function BookDetailScreen() {
             accessibilityRole="button"
             accessibilityLabel="Upgrade to listen to this book"
           >
-            <Ionicons name="headset-outline" size={24} color="#6366F1" />
+            <Ionicons name="headset-outline" size={24} color="#818CF8" />
             <View style={{ flex: 1, marginLeft: 12 }}>
-              <Text style={{ fontSize: 15, fontWeight: '600', color: '#111' }}>Listen to this book</Text>
-              <Text style={{ fontSize: 13, color: '#666', marginTop: 2 }}>Upgrade to VIP for audiobook narration</Text>
+              <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text.primary }}>Listen to this book</Text>
+              <Text style={{ fontSize: 13, color: colors.text.tertiary, marginTop: 2 }}>Upgrade to VIP for audiobook narration</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#6366F1" />
+            <Ionicons name="chevron-forward" size={18} color="#818CF8" />
           </Pressable>
         )}
       </View>
 
       {/* CTA Button */}
-      <View style={{ padding: 20, paddingBottom: 100, borderTopWidth: 1, borderTopColor: '#E5E7EB' }}>
+      <View style={{ padding: 20, paddingBottom: 100, borderTopWidth: 1, borderTopColor: colors.border.default }}>
         <Pressable
           onPress={() => setIsReading(true)}
-          style={{ backgroundColor: '#6366F1', paddingVertical: 16, borderRadius: 14, alignItems: 'center' }}
+          style={{ backgroundColor: '#4F46E5', paddingVertical: 16, borderRadius: 14, alignItems: 'center' }}
           accessibilityRole="button"
           accessibilityLabel={isStarted ? 'Continue reading' : 'Start reading'}
         >
@@ -326,6 +328,6 @@ export default function BookDetailScreen() {
           </Text>
         </Pressable>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }

@@ -3,6 +3,7 @@ import { View, Text, TextInput, Alert, Pressable, KeyboardAvoidingView, Platform
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../../components/ui/Button';
+import { GradientBackground } from '../../components/ui/GradientBackground';
 import { Avatar } from '../../components/avatar/Avatar';
 import { LEVEL_LABELS } from '../../components/onboarding/PlacementTest';
 import { loadPendingOnboarding, type PendingOnboarding } from '../../lib/pending-onboarding';
@@ -98,7 +99,8 @@ export default function AuthScreen() {
     : 'Welcome back to Fluenci';
 
   return (
-    <SafeAreaView className="flex-1 bg-dark">
+    <GradientBackground>
+      <SafeAreaView className="flex-1">
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -202,6 +204,7 @@ export default function AuthScreen() {
         </View>
       </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </GradientBackground>
   );
 }

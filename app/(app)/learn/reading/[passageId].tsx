@@ -6,6 +6,7 @@ import { useReadingPassage } from '../../../../hooks/useReadingPassage';
 import { ReadingPassageViewer } from '../../../../components/reading/ReadingPassageViewer';
 import { ComprehensionQuestions } from '../../../../components/reading/ComprehensionQuestions';
 import { colors } from '../../../../config/theme';
+import { GlowLayer } from '../../../../components/ui/GlowBackground';
 
 export default function ReadingPassageScreen() {
   const { passageId } = useLocalSearchParams<{ passageId: string }>();
@@ -30,7 +31,8 @@ export default function ReadingPassageScreen() {
   if (isLoading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface.base, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color={colors.indigo[500]} />
+        <GlowLayer drift={false} />
+        <ActivityIndicator size="large" color={colors.action.accent} />
       </SafeAreaView>
     );
   }
@@ -38,9 +40,10 @@ export default function ReadingPassageScreen() {
   if (error || !passage) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface.base, justifyContent: 'center', alignItems: 'center' }}>
+        <GlowLayer drift={false} />
         <Text style={{ fontSize: 16, color: colors.text.quaternary }}>{error ?? 'Passage not found.'}</Text>
         <Pressable onPress={() => router.back()} style={{ marginTop: 16 }} accessibilityRole="button">
-          <Text style={{ fontSize: 16, color: colors.indigo[500] }}>Go Back</Text>
+          <Text style={{ fontSize: 16, color: colors.action.accent }}>Go Back</Text>
         </Pressable>
       </SafeAreaView>
     );
@@ -53,6 +56,7 @@ export default function ReadingPassageScreen() {
 
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface.base }}>
+        <GlowLayer drift={false} />
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
           <Text style={{ fontSize: 28, fontWeight: '700', marginBottom: 8, color: colors.text.primary }} accessibilityRole="header">
             Reading Complete!
@@ -71,7 +75,7 @@ export default function ReadingPassageScreen() {
           <Pressable
             onPress={() => router.back()}
             style={{
-              backgroundColor: colors.indigo[500], paddingHorizontal: 48, paddingVertical: 16, borderRadius: 14,
+              backgroundColor: colors.action.primaryFill, paddingHorizontal: 48, paddingVertical: 16, borderRadius: 14,
             }}
             accessibilityRole="button"
             accessibilityLabel="Continue"

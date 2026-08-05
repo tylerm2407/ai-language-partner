@@ -74,7 +74,7 @@ export function XpPopup({ xp, visible, onDone }: XpPopupProps) {
           style={{
             color: '#FFFFFF',
             fontSize: 24,
-            fontFamily: 'Inter_700Bold',
+            fontFamily: 'Nunito_800ExtraBold',
             fontWeight: '800',
             textAlign: 'center',
           }}

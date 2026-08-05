@@ -3,6 +3,7 @@ import { View, Text, TextInput, Modal, Pressable, ActivityIndicator, KeyboardAvo
 import { Ionicons } from '@expo/vector-icons';
 import { GlassSurface } from '../ui/GlassSurface';
 import { GradientButton } from '../ui/GradientButton';
+import { colors } from '../../config/theme';
 
 interface JoinClassModalProps {
   visible: boolean;
@@ -91,7 +92,7 @@ export default function JoinClassModal({ visible, onClose, onJoin }: JoinClassMo
               style={{
                 color: '#FFFFFF',
                 fontSize: 20,
-                fontFamily: 'Inter_700Bold',
+                fontFamily: 'Nunito_800ExtraBold',
                 textAlign: 'center',
                 marginBottom: 8,
               }}
@@ -102,7 +103,7 @@ export default function JoinClassModal({ visible, onClose, onJoin }: JoinClassMo
               style={{
                 color: '#94A3B8',
                 fontSize: 14,
-                fontFamily: 'Inter_400Regular',
+                fontFamily: 'Nunito_400Regular',
                 textAlign: 'center',
                 marginBottom: 20,
               }}
@@ -118,7 +119,7 @@ export default function JoinClassModal({ visible, onClose, onJoin }: JoinClassMo
                   style={{
                     color: '#22C55E',
                     fontSize: 16,
-                    fontFamily: 'Inter_600SemiBold',
+                    fontFamily: 'Nunito_600SemiBold',
                     marginTop: 12,
                   }}
                 >
@@ -142,10 +143,10 @@ export default function JoinClassModal({ visible, onClose, onJoin }: JoinClassMo
                   editable={!loading}
                   accessibilityLabel="Invite code input"
                   style={{
-                    backgroundColor: 'rgba(30, 35, 50, 0.8)',
+                    backgroundColor: colors.surface.cardAlt,
                     color: '#FFFFFF',
                     fontSize: 22,
-                    fontFamily: 'Inter_600SemiBold',
+                    fontFamily: 'Nunito_600SemiBold',
                     textAlign: 'center',
                     letterSpacing: 4,
                     paddingVertical: 14,
@@ -163,7 +164,7 @@ export default function JoinClassModal({ visible, onClose, onJoin }: JoinClassMo
                     style={{
                       color: '#EF4444',
                       fontSize: 13,
-                      fontFamily: 'Inter_500Medium',
+                      fontFamily: 'Nunito_500Medium',
                       textAlign: 'center',
                       marginBottom: 8,
                     }}
@@ -176,7 +177,7 @@ export default function JoinClassModal({ visible, onClose, onJoin }: JoinClassMo
                 {/* Join button */}
                 <View style={{ marginTop: 12, alignItems: 'center' }}>
                   {loading ? (
-                    <ActivityIndicator size="large" color="#6366F1" />
+                    <ActivityIndicator size="large" color="#818CF8" />
                   ) : (
                     <GradientButton
                       label="Join Class"

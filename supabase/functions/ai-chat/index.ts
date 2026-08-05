@@ -53,6 +53,23 @@ interface ChatRequest {
   assignmentId?: string;
   /** Tagged from the calling client for error-log attribution. */
   chatSessionId?: string;
+  /** Language the learner actually spoke, when it differs from targetLanguage.
+   *  Set by the voice loop from Whisper's detection. */
+  spokenLanguage?: string;
+}
+
+/**
+ * Voice learners code-switch — they hit a wall in the target language and drop
+ * into their own. Answering that in the target language as if nothing happened
+ * is the single most common way a tutor conversation dies. Tell the model what
+ * happened so it can answer the actual question, then steer back.
+ *
+ * Returns null in the normal case (no switch), so the cached prompt is used
+ * unchanged and text chat is completely unaffected.
+ */
+function buildCodeSwitchNote(spokenLanguage: string | undefined, targetLanguage: string): string | null {
+  if (!spokenLanguage || spokenLanguage === targetLanguage) return null;
+  return `The learner just spoke in ${spokenLanguage}, not ${targetLanguage}. They have probably hit a gap in what they can express. Acknowledge briefly in ${spokenLanguage} if that helps them, answer what they actually asked, give them the ${targetLanguage} phrasing they were reaching for, and continue the conversation in ${targetLanguage}. Do not scold them for switching and do not ignore what they said.`;
 }
 
 type CorrectionErrorType =
@@ -143,6 +160,7 @@ serve(async (req: Request) => {
       scenarioKey,
       assignmentId,
       chatSessionId,
+      spokenLanguage,
     } = (await req.json()) as ChatRequest;
     const nativeLanguage = rawNativeLanguage || 'en';
 
@@ -203,6 +221,7 @@ serve(async (req: Request) => {
     }
 
     const systemPrompt = buildSystemPrompt(targetLanguage, level, topic, scenarioKey, nativeLanguage);
+    const codeSwitchNote = buildCodeSwitchNote(spokenLanguage, targetLanguage);
 
     const cefrLevel = proficiencyToCefr(level);
     const fallbackReply = FALLBACK_REPLIES[targetLanguage] ?? FALLBACK_REPLIES.en;
@@ -223,8 +242,12 @@ serve(async (req: Request) => {
           body: JSON.stringify({
             model: TEXT_MODEL,
             max_tokens: 600,
+            // The scenario prompt is the cached prefix; the code-switch note is
+            // appended uncached because it changes turn to turn and would
+            // otherwise invalidate the cache on every switch.
             system: [
               { type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } },
+              ...(codeSwitchNote ? [{ type: 'text', text: codeSwitchNote }] : []),
             ],
             messages: windowMessages(messages).map((m) => ({
               role: m.role === 'assistant' ? 'assistant' : 'user',

@@ -19,6 +19,7 @@ import { GradientButton } from '../../../components/ui/GradientButton';
 import { useSchoolStore } from '../../../stores/useSchoolStore';
 import { useAssignmentBuilder, type AssignmentFormState } from '../../../hooks/useAssignmentBuilder';
 import type { ProficiencyLevel, LanguageCode, Classroom } from '../../../types';
+import { colors } from '../../../config/theme';
 
 // ─── Scenarios ──────────────────────────────────────────────────
 interface Scenario {
@@ -249,10 +250,10 @@ export default function CreateAssignmentScreen() {
             accessibilityLabel="Go back"
             className="flex-row items-center mb-4"
           >
-            <Ionicons name="chevron-back" size={24} color="#38BDF8" />
+            <Ionicons name="chevron-back" size={24} color="#818CF8" />
             <Text
               className="text-base text-primary ml-1"
-              style={{ fontFamily: 'Inter_600SemiBold' }}
+              style={{ fontFamily: 'Nunito_600SemiBold' }}
             >
               Back
             </Text>
@@ -260,7 +261,7 @@ export default function CreateAssignmentScreen() {
 
           <Text
             className="text-[28px] text-text-primary mb-6"
-            style={{ fontFamily: 'Inter_700Bold' }}
+            style={{ fontFamily: 'Nunito_800ExtraBold' }}
             accessibilityRole="header"
           >
             Create Assignment
@@ -271,7 +272,7 @@ export default function CreateAssignmentScreen() {
             <>
               <Text
                 className="text-sm text-text-secondary mb-2"
-                style={{ fontFamily: 'Inter_600SemiBold' }}
+                style={{ fontFamily: 'Nunito_600SemiBold' }}
               >
                 Class
               </Text>
@@ -287,7 +288,7 @@ export default function CreateAssignmentScreen() {
                   <View className="flex-row items-center justify-between">
                     <Text
                       className="text-base text-text-primary"
-                      style={{ fontFamily: 'Inter_400Regular' }}
+                      style={{ fontFamily: 'Nunito_400Regular' }}
                     >
                       {selectedClass?.name ?? 'Select a class'}
                     </Text>
@@ -343,7 +344,7 @@ export default function CreateAssignmentScreen() {
                           color:
                             c.id === selectedClassId ? '#A855F7' : '#F1F5F9',
                           fontSize: 16,
-                          fontFamily: 'Inter_500Medium',
+                          fontFamily: 'Nunito_500Medium',
                         }}
                       >
                         {c.name}
@@ -358,7 +359,7 @@ export default function CreateAssignmentScreen() {
           {/* Title */}
           <Text
             className="text-sm text-text-secondary mb-2"
-            style={{ fontFamily: 'Inter_600SemiBold' }}
+            style={{ fontFamily: 'Nunito_600SemiBold' }}
           >
             Title *
           </Text>
@@ -371,7 +372,7 @@ export default function CreateAssignmentScreen() {
               style={{
                 color: '#F1F5F9',
                 fontSize: 16,
-                fontFamily: 'Inter_400Regular',
+                fontFamily: 'Nunito_400Regular',
                 padding: 14,
               }}
               accessibilityLabel="Assignment title"
@@ -381,7 +382,7 @@ export default function CreateAssignmentScreen() {
           {/* Scenario Picker */}
           <Text
             className="text-sm text-text-secondary mb-2"
-            style={{ fontFamily: 'Inter_600SemiBold' }}
+            style={{ fontFamily: 'Nunito_600SemiBold' }}
           >
             Scenario *
           </Text>
@@ -403,7 +404,7 @@ export default function CreateAssignmentScreen() {
                   backgroundColor:
                     selectedScenario === s.key
                       ? 'rgba(168, 85, 247, 0.2)'
-                      : 'rgba(30, 35, 50, 0.6)',
+                      : colors.surface.cardAlt,
                   borderWidth: 1,
                   borderColor:
                     selectedScenario === s.key
@@ -420,7 +421,7 @@ export default function CreateAssignmentScreen() {
                   style={{
                     color: selectedScenario === s.key ? '#A855F7' : '#94A3B8',
                     fontSize: 11,
-                    fontFamily: 'Inter_600SemiBold',
+                    fontFamily: 'Nunito_600SemiBold',
                     marginTop: 6,
                     textAlign: 'center',
                   }}
@@ -446,7 +447,7 @@ export default function CreateAssignmentScreen() {
                 backgroundColor:
                   selectedScenario === 'custom'
                     ? 'rgba(168, 85, 247, 0.2)'
-                    : 'rgba(30, 35, 50, 0.6)',
+                    : colors.surface.cardAlt,
                 borderWidth: 1,
                 borderColor:
                   selectedScenario === 'custom'
@@ -463,7 +464,7 @@ export default function CreateAssignmentScreen() {
                 style={{
                   color: selectedScenario === 'custom' ? '#A855F7' : '#94A3B8',
                   fontSize: 11,
-                  fontFamily: 'Inter_600SemiBold',
+                  fontFamily: 'Nunito_600SemiBold',
                   marginTop: 6,
                   textAlign: 'center',
                 }}
@@ -485,7 +486,7 @@ export default function CreateAssignmentScreen() {
                   style={{
                     color: '#F1F5F9',
                     fontSize: 15,
-                    fontFamily: 'Inter_400Regular',
+                    fontFamily: 'Nunito_400Regular',
                     padding: 14,
                   }}
                   accessibilityLabel="Custom scenario label"
@@ -501,7 +502,7 @@ export default function CreateAssignmentScreen() {
                   style={{
                     color: '#F1F5F9',
                     fontSize: 15,
-                    fontFamily: 'Inter_400Regular',
+                    fontFamily: 'Nunito_400Regular',
                     padding: 14,
                     minHeight: 60,
                   }}
@@ -518,7 +519,7 @@ export default function CreateAssignmentScreen() {
                   style={{
                     color: '#F1F5F9',
                     fontSize: 15,
-                    fontFamily: 'Inter_400Regular',
+                    fontFamily: 'Nunito_400Regular',
                     padding: 14,
                     minHeight: 80,
                   }}
@@ -531,7 +532,7 @@ export default function CreateAssignmentScreen() {
           {/* Level */}
           <Text
             className="text-sm text-text-secondary mb-2"
-            style={{ fontFamily: 'Inter_600SemiBold' }}
+            style={{ fontFamily: 'Nunito_600SemiBold' }}
           >
             Level
           </Text>
@@ -550,7 +551,7 @@ export default function CreateAssignmentScreen() {
                   backgroundColor:
                     level === lvl.value
                       ? 'rgba(168, 85, 247, 0.2)'
-                      : 'rgba(30, 35, 50, 0.6)',
+                      : colors.surface.cardAlt,
                   borderWidth: 1,
                   borderColor:
                     level === lvl.value
@@ -562,7 +563,7 @@ export default function CreateAssignmentScreen() {
                   style={{
                     color: level === lvl.value ? '#A855F7' : '#94A3B8',
                     fontSize: 13,
-                    fontFamily: 'Inter_600SemiBold',
+                    fontFamily: 'Nunito_600SemiBold',
                   }}
                 >
                   {lvl.label}
@@ -574,7 +575,7 @@ export default function CreateAssignmentScreen() {
           {/* Minimum Duration */}
           <Text
             className="text-sm text-text-secondary mb-2"
-            style={{ fontFamily: 'Inter_600SemiBold' }}
+            style={{ fontFamily: 'Nunito_600SemiBold' }}
           >
             Minimum Duration
           </Text>
@@ -592,20 +593,20 @@ export default function CreateAssignmentScreen() {
                   borderRadius: 999,
                   backgroundColor:
                     minDuration === d
-                      ? 'rgba(56, 189, 248, 0.2)'
-                      : 'rgba(30, 35, 50, 0.6)',
+                      ? colors.action.primaryTint
+                      : colors.surface.cardAlt,
                   borderWidth: 1,
                   borderColor:
                     minDuration === d
-                      ? '#38BDF8'
+                      ? '#818CF8'
                       : 'rgba(255, 255, 255, 0.1)',
                 }}
               >
                 <Text
                   style={{
-                    color: minDuration === d ? '#38BDF8' : '#94A3B8',
+                    color: minDuration === d ? '#818CF8' : '#94A3B8',
                     fontSize: 13,
-                    fontFamily: 'Inter_600SemiBold',
+                    fontFamily: 'Nunito_600SemiBold',
                   }}
                 >
                   {d} min
@@ -617,14 +618,14 @@ export default function CreateAssignmentScreen() {
           {/* Mode */}
           <Text
             className="text-sm text-text-secondary mb-2"
-            style={{ fontFamily: 'Inter_600SemiBold' }}
+            style={{ fontFamily: 'Nunito_600SemiBold' }}
           >
             Mode
           </Text>
           <View
             className="flex-row mb-4"
             style={{
-              backgroundColor: 'rgba(30, 35, 50, 0.6)',
+              backgroundColor: colors.surface.cardAlt,
               borderRadius: 12,
               padding: 3,
             }}
@@ -651,7 +652,7 @@ export default function CreateAssignmentScreen() {
                   style={{
                     color: mode === m.value ? '#A855F7' : '#94A3B8',
                     fontSize: 14,
-                    fontFamily: 'Inter_600SemiBold',
+                    fontFamily: 'Nunito_600SemiBold',
                   }}
                 >
                   {m.label}
@@ -663,7 +664,7 @@ export default function CreateAssignmentScreen() {
           {/* Vocabulary Focus */}
           <Text
             className="text-sm text-text-secondary mb-2"
-            style={{ fontFamily: 'Inter_600SemiBold' }}
+            style={{ fontFamily: 'Nunito_600SemiBold' }}
           >
             Vocabulary Focus (comma-separated)
           </Text>
@@ -676,7 +677,7 @@ export default function CreateAssignmentScreen() {
               style={{
                 color: '#F1F5F9',
                 fontSize: 15,
-                fontFamily: 'Inter_400Regular',
+                fontFamily: 'Nunito_400Regular',
                 padding: 14,
               }}
               accessibilityLabel="Vocabulary focus"
@@ -686,7 +687,7 @@ export default function CreateAssignmentScreen() {
           {/* Grammar Focus */}
           <Text
             className="text-sm text-text-secondary mb-2"
-            style={{ fontFamily: 'Inter_600SemiBold' }}
+            style={{ fontFamily: 'Nunito_600SemiBold' }}
           >
             Grammar Focus (comma-separated)
           </Text>
@@ -699,7 +700,7 @@ export default function CreateAssignmentScreen() {
               style={{
                 color: '#F1F5F9',
                 fontSize: 15,
-                fontFamily: 'Inter_400Regular',
+                fontFamily: 'Nunito_400Regular',
                 padding: 14,
               }}
               accessibilityLabel="Grammar focus"
@@ -709,7 +710,7 @@ export default function CreateAssignmentScreen() {
           {/* Instructions */}
           <Text
             className="text-sm text-text-secondary mb-2"
-            style={{ fontFamily: 'Inter_600SemiBold' }}
+            style={{ fontFamily: 'Nunito_600SemiBold' }}
           >
             Instructions
           </Text>
@@ -723,7 +724,7 @@ export default function CreateAssignmentScreen() {
               style={{
                 color: '#F1F5F9',
                 fontSize: 15,
-                fontFamily: 'Inter_400Regular',
+                fontFamily: 'Nunito_400Regular',
                 padding: 14,
                 minHeight: 80,
               }}
@@ -734,7 +735,7 @@ export default function CreateAssignmentScreen() {
           {/* Due Date */}
           <Text
             className="text-sm text-text-secondary mb-2"
-            style={{ fontFamily: 'Inter_600SemiBold' }}
+            style={{ fontFamily: 'Nunito_600SemiBold' }}
           >
             Due Date
           </Text>
@@ -747,7 +748,7 @@ export default function CreateAssignmentScreen() {
               style={{
                 color: '#F1F5F9',
                 fontSize: 15,
-                fontFamily: 'Inter_400Regular',
+                fontFamily: 'Nunito_400Regular',
                 padding: 14,
               }}
               accessibilityLabel="Due date"
@@ -768,7 +769,7 @@ export default function CreateAssignmentScreen() {
               <Ionicons name="warning-outline" size={18} color="#EF4444" />
               <Text
                 className="text-sm flex-1"
-                style={{ color: '#EF4444', fontFamily: 'Inter_500Medium' }}
+                style={{ color: '#EF4444', fontFamily: 'Nunito_500Medium' }}
               >
                 {error}
               </Text>
@@ -790,14 +791,14 @@ export default function CreateAssignmentScreen() {
                 alignItems: 'center',
                 borderWidth: 1,
                 borderColor: 'rgba(255, 255, 255, 0.15)',
-                backgroundColor: 'rgba(30, 35, 50, 0.6)',
+                backgroundColor: colors.surface.cardAlt,
               }}
             >
               <Text
                 style={{
                   color: '#94A3B8',
                   fontSize: 16,
-                  fontFamily: 'Inter_600SemiBold',
+                  fontFamily: 'Nunito_600SemiBold',
                 }}
               >
                 Save Draft

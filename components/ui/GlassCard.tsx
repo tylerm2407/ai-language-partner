@@ -15,7 +15,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import * as Haptics from 'expo-haptics';
-import { GLASS_BG, GLASS_HIGHLIGHT, GLASS_BORDER } from '../../config/gradients';
+import { GLASS_HIGHLIGHT } from '../../config/gradients';
+import { colors } from '../../config/theme';
 import type { ReactNode } from 'react';
 
 // ---------------------------------------------------------------------------
@@ -47,33 +48,40 @@ export interface GlassCardProps {
 }
 
 // ---------------------------------------------------------------------------
-// Variant presets — tuned for dark cosmic / galaxy backgrounds
+// Variant presets — opaque under the Dark Glow theme.
+//
+// The three variants used to differ by fill ALPHA (0.25 / 0.35 / 0.45), which
+// only worked over a busy video background. Now they differ by surface step and
+// border weight: subtle sits flush, default is the standard card, elevated
+// borrows border.strong. Sheen and drop shadows are gone — the deck is flat and
+// depth comes from the glow layer. `highlightOpacity` is retained in the API
+// (and used for the press-state flash) so call sites keep compiling.
 // ---------------------------------------------------------------------------
 
 const VARIANTS: Record<GlassVariant, VariantConfig> = {
   subtle: {
-    fillColor: 'rgba(21, 25, 33, 0.25)',
-    borderWidth: 0.5,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    highlightOpacity: 0.06,
+    fillColor: colors.surface.card,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+    highlightOpacity: 0,
     shadowOpacity: 0,
     shadowRadius: 0,
   },
   default: {
-    fillColor: GLASS_BG,
+    fillColor: colors.surface.card,
     borderWidth: 1,
-    borderColor: GLASS_BORDER,
-    highlightOpacity: 0.10,
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
+    borderColor: colors.border.default,
+    highlightOpacity: 0,
+    shadowOpacity: 0,
+    shadowRadius: 0,
   },
   elevated: {
-    fillColor: 'rgba(21, 25, 33, 0.45)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.22)',
-    highlightOpacity: 0.16,
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
+    fillColor: colors.surface.cardAlt,
+    borderWidth: 1,
+    borderColor: colors.border.strong,
+    highlightOpacity: 0,
+    shadowOpacity: 0,
+    shadowRadius: 0,
   },
 };
 
@@ -156,18 +164,19 @@ export function GlassCard({
         pointerEvents="none"
       />
 
-      {/* Layer 2 — Specular highlight sheen */}
-      <Animated.View
-        style={[StyleSheet.absoluteFill, pressable ? animatedHighlight : { opacity: highlight }]}
-        pointerEvents="none"
-      >
-        <LinearGradient
-          colors={[...GLASS_HIGHLIGHT]}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 0.4 }}
-          style={[StyleSheet.absoluteFill, { borderRadius }]}
-        />
-      </Animated.View>
+      {/* Layer 2 — press-state flash only. At rest this is fully transparent
+          (every variant's highlightOpacity is 0); it lights up briefly on tap
+          to replace the scale-only press feedback the sheen used to provide. */}
+      {pressable && (
+        <Animated.View style={[StyleSheet.absoluteFill, animatedHighlight]} pointerEvents="none">
+          <LinearGradient
+            colors={[...GLASS_HIGHLIGHT]}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 0.4 }}
+            style={[StyleSheet.absoluteFill, { borderRadius }]}
+          />
+        </Animated.View>
+      )}
 
       {/* Content */}
       <View style={innerStyle}>{children}</View>

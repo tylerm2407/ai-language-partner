@@ -121,7 +121,7 @@ export default function TeacherDashboardScreen() {
           <Ionicons name="school-outline" size={64} color="#64748B" />
           <Text
             className="text-xl text-text-primary mt-4 text-center"
-            style={{ fontFamily: 'Inter_600SemiBold' }}
+            style={{ fontFamily: 'Nunito_600SemiBold' }}
           >
             Not linked to a school
           </Text>
@@ -141,26 +141,26 @@ export default function TeacherDashboardScreen() {
           contentContainerStyle={{ paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={loading} onRefresh={refresh} tintColor="#38BDF8" />
+            <RefreshControl refreshing={loading} onRefresh={refresh} tintColor="#818CF8" />
           }
         >
           {/* Header */}
           <Text
             className="text-[28px] text-text-primary mb-1"
-            style={{ fontFamily: 'Inter_700Bold' }}
+            style={{ fontFamily: 'Nunito_800ExtraBold' }}
             accessibilityRole="header"
           >
             Dashboard
           </Text>
           <Text
             className="text-base text-text-secondary mb-6"
-            style={{ fontFamily: 'Inter_400Regular' }}
+            style={{ fontFamily: 'Nunito_400Regular' }}
           >
             {organization.name}
           </Text>
 
           {loading ? (
-            <ActivityIndicator color="#38BDF8" size="large" style={{ marginTop: 32 }} />
+            <ActivityIndicator color="#818CF8" size="large" style={{ marginTop: 32 }} />
           ) : (
             <>
               {/* Load Error */}
@@ -172,7 +172,7 @@ export default function TeacherDashboardScreen() {
                   <Ionicons name="warning-outline" size={18} color="#F59E0B" />
                   <Text
                     className="text-sm text-text-secondary flex-1 ml-2"
-                    style={{ fontFamily: 'Inter_400Regular' }}
+                    style={{ fontFamily: 'Nunito_400Regular' }}
                   >
                     {error}
                   </Text>
@@ -183,7 +183,7 @@ export default function TeacherDashboardScreen() {
                     style={{ paddingVertical: 6, paddingHorizontal: 12 }}
                   >
                     <Text
-                      style={{ color: '#38BDF8', fontSize: 13, fontFamily: 'Inter_600SemiBold' }}
+                      style={{ color: '#818CF8', fontSize: 13, fontFamily: 'Nunito_600SemiBold' }}
                     >
                       Retry
                     </Text>
@@ -204,13 +204,13 @@ export default function TeacherDashboardScreen() {
                     <Ionicons name={stat.icon} size={22} color={stat.color} />
                     <Text
                       className="text-xl text-text-primary mt-2"
-                      style={{ fontFamily: 'Inter_700Bold' }}
+                      style={{ fontFamily: 'Nunito_700Bold' }}
                     >
                       {stat.value}
                     </Text>
                     <Text
                       className="text-xs text-text-secondary mt-1 text-center"
-                      style={{ fontFamily: 'Inter_500Medium' }}
+                      style={{ fontFamily: 'Nunito_500Medium' }}
                       numberOfLines={1}
                     >
                       {stat.label}
@@ -222,7 +222,7 @@ export default function TeacherDashboardScreen() {
               {/* Upcoming Due Dates */}
               <Text
                 className="text-xl text-text-primary mb-3"
-                style={{ fontFamily: 'Inter_600SemiBold' }}
+                style={{ fontFamily: 'Nunito_600SemiBold' }}
               >
                 Upcoming
               </Text>
@@ -234,7 +234,7 @@ export default function TeacherDashboardScreen() {
                   <Ionicons name="calendar-outline" size={28} color="#64748B" />
                   <Text
                     className="text-sm text-text-secondary mt-2"
-                    style={{ fontFamily: 'Inter_400Regular' }}
+                    style={{ fontFamily: 'Nunito_400Regular' }}
                   >
                     No upcoming assignments
                   </Text>
@@ -255,7 +255,7 @@ export default function TeacherDashboardScreen() {
                     >
                       <Text
                         className="text-base text-text-primary"
-                        style={{ fontFamily: 'Inter_600SemiBold' }}
+                        style={{ fontFamily: 'Nunito_600SemiBold' }}
                         numberOfLines={1}
                       >
                         {item.title}
@@ -266,7 +266,7 @@ export default function TeacherDashboardScreen() {
                       >
                         <Text
                           className="text-xs text-text-secondary"
-                          style={{ fontFamily: 'Inter_500Medium' }}
+                          style={{ fontFamily: 'Nunito_500Medium' }}
                         >
                           {item.classroomName}
                         </Text>
@@ -274,7 +274,7 @@ export default function TeacherDashboardScreen() {
                           <Text
                             className="text-xs"
                             style={{
-                              fontFamily: 'Inter_500Medium',
+                              fontFamily: 'Nunito_500Medium',
                               color: '#F59E0B',
                             }}
                           >
@@ -283,7 +283,7 @@ export default function TeacherDashboardScreen() {
                         )}
                         <Text
                           className="text-xs text-text-secondary"
-                          style={{ fontFamily: 'Inter_500Medium' }}
+                          style={{ fontFamily: 'Nunito_500Medium' }}
                         >
                           {item.submissionCount}/{item.totalStudents} submitted
                         </Text>
@@ -296,7 +296,7 @@ export default function TeacherDashboardScreen() {
               {/* Recent Activity */}
               <Text
                 className="text-xl text-text-primary mt-4 mb-3"
-                style={{ fontFamily: 'Inter_600SemiBold' }}
+                style={{ fontFamily: 'Nunito_600SemiBold' }}
               >
                 Recent Activity
               </Text>
@@ -308,7 +308,7 @@ export default function TeacherDashboardScreen() {
                   <Ionicons name="pulse-outline" size={28} color="#64748B" />
                   <Text
                     className="text-sm text-text-secondary mt-2"
-                    style={{ fontFamily: 'Inter_400Regular' }}
+                    style={{ fontFamily: 'Nunito_400Regular' }}
                   >
                     No recent activity
                   </Text>
@@ -323,14 +323,14 @@ export default function TeacherDashboardScreen() {
                     <Ionicons name={event.icon} size={18} color="#64748B" />
                     <Text
                       className="text-sm text-text-primary flex-1"
-                      style={{ fontFamily: 'Inter_400Regular' }}
+                      style={{ fontFamily: 'Nunito_400Regular' }}
                       numberOfLines={1}
                     >
                       {event.text}
                     </Text>
                     <Text
                       className="text-xs text-text-secondary"
-                      style={{ fontFamily: 'Inter_500Medium' }}
+                      style={{ fontFamily: 'Nunito_500Medium' }}
                     >
                       {formatRelativeTime(event.timestamp)}
                     </Text>

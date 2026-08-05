@@ -6,6 +6,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../hooks/useAuth';
 import { fetchWeeklyTopMistakes } from '../../../lib/supabase-queries';
 import type { WeeklyMistakeRow } from '../../../lib/supabase-queries';
+import { GlowLayer } from '../../../components/ui/GlowBackground';
+import { colors } from '../../../config/theme';
 
 const ERROR_TYPE_META: Record<string, { label: string; icon: keyof typeof Ionicons.glyphMap; color: string }> = {
   grammar: { label: 'Grammar', icon: 'construct-outline', color: '#A78BFA' },
@@ -43,7 +45,8 @@ export default function TopMistakesScreen() {
   }, [load]);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#0C0F14' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface.base }}>
+      <GlowLayer />
       <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12, flexDirection: 'row', alignItems: 'center' }}>
         <Pressable
           onPress={() => router.back()}
@@ -64,7 +67,7 @@ export default function TopMistakesScreen() {
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 80 }}>
         {loading ? (
           <View style={{ paddingVertical: 40, alignItems: 'center' }}>
-            <ActivityIndicator size="large" color="#38BDF8" />
+            <ActivityIndicator size="large" color="#818CF8" />
           </View>
         ) : error ? (
           <View style={{ paddingVertical: 40, alignItems: 'center' }}>
@@ -129,7 +132,7 @@ export default function TopMistakesScreen() {
                     })
                   }
                   style={{
-                    backgroundColor: '#38BDF8',
+                    backgroundColor: colors.action.primaryFill,
                     paddingVertical: 12,
                     borderRadius: 12,
                     alignItems: 'center',

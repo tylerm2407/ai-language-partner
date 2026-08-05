@@ -7,6 +7,7 @@ import { useAuth } from '../../../../hooks/useAuth';
 import { fetchAllUserWritingSubmissions } from '../../../../lib/supabase-queries';
 import type { WritingSubmissionWithPrompt } from '../../../../lib/supabase-queries';
 import { GradientBackground } from '../../../../components/ui/GradientBackground';
+import { colors } from '../../../../config/theme';
 
 export default function WritingHistoryScreen() {
   const router = useRouter();
@@ -41,7 +42,7 @@ export default function WritingHistoryScreen() {
     return (
       <GradientBackground>
         <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color="#6366F1" />
+          <ActivityIndicator size="large" color="#818CF8" />
         </SafeAreaView>
       </GradientBackground>
     );
@@ -71,7 +72,7 @@ export default function WritingHistoryScreen() {
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
           {promptEntries.map((entry) => {
             const scoreColor = entry.bestScore >= 0.8 ? '#22C55E' : entry.bestScore >= 0.6 ? '#CA8A04' : '#EF4444';
-            const scoreBg = entry.bestScore >= 0.8 ? '#DCFCE7' : entry.bestScore >= 0.6 ? '#FEF9C3' : '#FEE2E2';
+            const scoreBg = entry.bestScore >= 0.8 ? colors.success.tint : entry.bestScore >= 0.6 ? colors.warning.tint : colors.error.tint;
             const displayScore = Math.round(entry.bestScore * 100);
 
             return (

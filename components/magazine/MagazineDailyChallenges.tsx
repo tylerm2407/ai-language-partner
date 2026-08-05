@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, Platform, Pressable, Alert } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MagazineGlassCard } from './MagazineGlassCard';
 import { ProgressBar } from '../ui/ProgressBar';
@@ -12,7 +12,9 @@ interface MagazineDailyChallengesProps {
   dailyStats: DailyStats | null;
 }
 
-const serifFont = Platform.select({ ios: 'Georgia', default: 'serif' });
+// Editorial face. Fraunces_600SemiBold carries its own weight — never pair it
+// with fontWeight, which makes Android synthesize a second bolding pass.
+const serifFont = typography.family.serif;
 
 export function MagazineDailyChallenges({ dailyStats }: MagazineDailyChallengesProps) {
   const { challenges, allCompleted, bonusXpClaimed, multiplier, claimBonusXp } = useDailyChallenges();
@@ -107,7 +109,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontFamily: serifFont,
     fontSize: 18,
-    fontWeight: '600',
     color: colors.text.primary,
   },
   challengeRow: {

@@ -27,7 +27,7 @@ export function LevelBadge({ level }: LevelBadgeProps) {
         <Text className="text-base font-sans-semibold text-text-primary">Your Level</Text>
         <View className="flex-row items-center" style={{ backgroundColor: config.bg, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
           <Ionicons name="trophy" size={14} color={config.color} />
-          <Text style={{ color: config.color, fontFamily: 'Inter_700Bold', fontSize: 13, marginLeft: 4 }}>
+          <Text style={{ color: config.color, fontFamily: 'Nunito_700Bold', fontSize: 13, marginLeft: 4 }}>
             {config.label}
           </Text>
         </View>

@@ -107,7 +107,7 @@ export default function AssignmentDetailScreen() {
     return (
       <GradientBackground>
         <SafeAreaView className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#38BDF8" />
+          <ActivityIndicator size="large" color="#818CF8" />
         </SafeAreaView>
       </GradientBackground>
     );

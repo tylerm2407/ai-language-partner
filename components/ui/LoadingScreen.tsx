@@ -9,7 +9,7 @@ export function LoadingScreen({ message }: LoadingScreenProps) {
   return (
     <SafeAreaView className="flex-1 bg-dark">
       <View className="flex-1 items-center justify-center">
-        <ActivityIndicator size="large" color="#38BDF8" />
+        <ActivityIndicator size="large" color="#818CF8" />
         {message && (
           <Text className="text-sm text-text-tertiary mt-4 font-sans">{message}</Text>
         )}

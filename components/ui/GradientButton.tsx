@@ -63,7 +63,7 @@ export function GradientButton({ label, onPress, disabled, loading, style, acces
           {loading ? (
             <ActivityIndicator color="white" />
           ) : (
-            <Text style={{ color: '#FFFFFF', fontSize: 18, fontFamily: 'Inter_600SemiBold' }}>{label}</Text>
+            <Text style={{ color: '#FFFFFF', fontSize: 18, fontFamily: 'Nunito_600SemiBold' }}>{label}</Text>
           )}
         </LinearGradient>
       </Pressable>

@@ -31,7 +31,7 @@ function RubricBar({ label, score, max }: RubricBarProps) {
           style={{
             color: '#94A3B8',
             fontSize: 13,
-            fontFamily: 'Inter_500Medium',
+            fontFamily: 'Nunito_500Medium',
           }}
         >
           {label}
@@ -40,7 +40,7 @@ function RubricBar({ label, score, max }: RubricBarProps) {
           style={{
             color: '#FFFFFF',
             fontSize: 13,
-            fontFamily: 'Inter_600SemiBold',
+            fontFamily: 'Nunito_600SemiBold',
           }}
         >
           {score}/{max}
@@ -78,7 +78,7 @@ export default function RubricDisplay({ grade }: RubricDisplayProps) {
           style={{
             color: totalColor,
             fontSize: 48,
-            fontFamily: 'Inter_700Bold',
+            fontFamily: 'Nunito_800ExtraBold',
           }}
           accessibilityLabel={`Total score: ${grade.totalScore} out of 100`}
         >
@@ -88,7 +88,7 @@ export default function RubricDisplay({ grade }: RubricDisplayProps) {
           style={{
             color: '#64748B',
             fontSize: 13,
-            fontFamily: 'Inter_500Medium',
+            fontFamily: 'Nunito_500Medium',
           }}
         >
           / 100
@@ -107,7 +107,7 @@ export default function RubricDisplay({ grade }: RubricDisplayProps) {
           style={{
             color: '#94A3B8',
             fontSize: 14,
-            fontFamily: 'Inter_400Regular',
+            fontFamily: 'Nunito_400Regular',
             marginTop: 16,
             lineHeight: 20,
           }}
@@ -123,7 +123,7 @@ export default function RubricDisplay({ grade }: RubricDisplayProps) {
             style={{
               color: '#22C55E',
               fontSize: 13,
-              fontFamily: 'Inter_600SemiBold',
+              fontFamily: 'Nunito_600SemiBold',
               marginBottom: 6,
             }}
           >
@@ -141,7 +141,7 @@ export default function RubricDisplay({ grade }: RubricDisplayProps) {
                 style={{
                   color: '#FFFFFF',
                   fontSize: 13,
-                  fontFamily: 'Inter_400Regular',
+                  fontFamily: 'Nunito_400Regular',
                   flex: 1,
                   lineHeight: 18,
                 }}
@@ -160,7 +160,7 @@ export default function RubricDisplay({ grade }: RubricDisplayProps) {
             style={{
               color: '#F59E0B',
               fontSize: 13,
-              fontFamily: 'Inter_600SemiBold',
+              fontFamily: 'Nunito_600SemiBold',
               marginBottom: 6,
             }}
           >
@@ -178,7 +178,7 @@ export default function RubricDisplay({ grade }: RubricDisplayProps) {
                 style={{
                   color: '#FFFFFF',
                   fontSize: 13,
-                  fontFamily: 'Inter_400Regular',
+                  fontFamily: 'Nunito_400Regular',
                   flex: 1,
                   lineHeight: 18,
                 }}

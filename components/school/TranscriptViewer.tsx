@@ -16,7 +16,7 @@ export default function TranscriptViewer({ messages, targetLanguage }: Transcrip
         style={{
           color: '#94A3B8',
           fontSize: 13,
-          fontFamily: 'Inter_600SemiBold',
+          fontFamily: 'Nunito_600SemiBold',
           textTransform: 'uppercase',
           letterSpacing: 1,
           marginBottom: 12,

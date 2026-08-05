@@ -11,6 +11,7 @@ import { Heading, Body, Caption } from '../../../components/ui/Text';
 import { trackEvent } from '../../../lib/analytics';
 import { colors, spacing, radii } from '../../../config/theme';
 import type { ReviewRating } from '../../../types';
+import { GlowLayer } from '../../../components/ui/GlowBackground';
 
 export default function ReviewScreen() {
   const router = useRouter();
@@ -71,6 +72,7 @@ export default function ReviewScreen() {
   if (isLoading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface.base, justifyContent: 'center', alignItems: 'center' }}>
+        <GlowLayer />
         <ActivityIndicator size="large" color={colors.league.diamond} />
         <Body size="sm" tone="tertiary" style={{ marginTop: spacing.sm }}>Loading review queue...</Body>
       </SafeAreaView>
@@ -90,6 +92,7 @@ export default function ReviewScreen() {
 
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface.base }}>
+        <GlowLayer />
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.lg }}>
           <Heading level={1} style={{ marginBottom: spacing.xs }}>
             Review Complete!
@@ -138,6 +141,7 @@ export default function ReviewScreen() {
   if (isComplete || !currentCard) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface.base }}>
+        <GlowLayer />
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.lg }}>
           <Heading level={1} style={{ marginBottom: spacing.xs }}>
             All caught up!
@@ -176,6 +180,7 @@ export default function ReviewScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface.base }}>
+      <GlowLayer />
       {/* Header */}
       <View style={{ paddingHorizontal: spacing.md + spacing.xxs, paddingTop: spacing.xs, paddingBottom: spacing.sm }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs }}>

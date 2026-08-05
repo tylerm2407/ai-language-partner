@@ -5,6 +5,7 @@ import * as Haptics from 'expo-haptics';
 import { ProgressBar } from '../ui/ProgressBar';
 import { gradeAnswer } from '../../lib/grading';
 import type { ReadingQuestion } from '../../types';
+import { colors } from '../../config/theme';
 
 interface Props {
   questions: ReadingQuestion[];
@@ -61,17 +62,17 @@ export function ComprehensionQuestions({ questions, onComplete, onExit }: Props)
       : selectedOption !== null;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface.raised }}>
       {/* Header */}
       <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
           <Pressable onPress={onExit} style={{ padding: 8, marginRight: 8 }} accessibilityRole="button" accessibilityLabel="Exit">
-            <Text style={{ fontSize: 24, color: '#666' }}>x</Text>
+            <Text style={{ fontSize: 24, color: colors.text.tertiary }}>x</Text>
           </Pressable>
           <View style={{ flex: 1 }}>
             <ProgressBar progress={progress} />
           </View>
-          <Text style={{ marginLeft: 12, fontSize: 14, color: '#666' }}>
+          <Text style={{ marginLeft: 12, fontSize: 14, color: colors.text.tertiary }}>
             {currentIndex + 1}/{questions.length}
           </Text>
         </View>
@@ -83,10 +84,10 @@ export function ComprehensionQuestions({ questions, onComplete, onExit }: Props)
       >
       <ScrollView contentContainerStyle={{ padding: 20, flexGrow: 1 }} keyboardShouldPersistTaps="handled">
         {/* Question */}
-        <Text style={{ fontSize: 14, fontWeight: '600', color: '#6366F1', marginBottom: 8 }}>
+        <Text style={{ fontSize: 14, fontWeight: '600', color: colors.action.accent, marginBottom: 8 }}>
           Comprehension
         </Text>
-        <Text style={{ fontSize: 18, fontWeight: '600', color: '#111', marginBottom: 20, lineHeight: 26 }}>
+        <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text.primary, marginBottom: 20, lineHeight: 26 }}>
           {question.questionText}
         </Text>
 
@@ -94,20 +95,23 @@ export function ComprehensionQuestions({ questions, onComplete, onExit }: Props)
         {(question.questionType === 'multiple_choice' || question.questionType === 'true_false') && question.options && (
           <View>
             {question.options.map((option, index) => {
-              let bgColor = '#F3F4F6';
+              // Answer-state fills are the theme's dark tints, not the light
+              // green/red (#DCFCE7 / #FEE2E2) this used before the surface went
+              // dark — those left the option text at ~1.4:1.
+              let bgColor: string = colors.surface.cardAlt;
               let borderColor = 'transparent';
 
               if (isRevealed) {
                 if (option === question.correctAnswer) {
-                  bgColor = '#DCFCE7';
-                  borderColor = '#22C55E';
+                  bgColor = colors.success.tint;
+                  borderColor = colors.success.base;
                 } else if (option === selectedOption && !isCorrect) {
-                  bgColor = '#FEE2E2';
-                  borderColor = '#EF4444';
+                  bgColor = colors.error.tint;
+                  borderColor = colors.error.base;
                 }
               } else if (option === selectedOption) {
-                bgColor = '#E0E7FF';
-                borderColor = '#6366F1';
+                bgColor = colors.action.primaryTint;
+                borderColor = colors.indigo[500];
               }
 
               return (
@@ -126,7 +130,7 @@ export function ComprehensionQuestions({ questions, onComplete, onExit }: Props)
                   accessibilityRole="button"
                   accessibilityLabel={option}
                 >
-                  <Text style={{ fontSize: 17, fontWeight: '600', color: '#111' }}>{option}</Text>
+                  <Text style={{ fontSize: 17, fontWeight: '600', color: colors.text.primary }}>{option}</Text>
                 </Pressable>
               );
             })}
@@ -140,24 +144,24 @@ export function ComprehensionQuestions({ questions, onComplete, onExit }: Props)
               value={textAnswer}
               onChangeText={setTextAnswer}
               placeholder="Type your answer..."
-              placeholderTextColor="#999"
+              placeholderTextColor={colors.text.quaternary}
               editable={!isRevealed}
               style={{
                 borderWidth: 2,
-                borderColor: isRevealed ? (isCorrect ? '#22C55E' : '#EF4444') : '#D1D5DB',
+                borderColor: isRevealed ? (isCorrect ? '#22C55E' : '#EF4444') : colors.border.default,
                 borderRadius: 14,
                 paddingHorizontal: 16,
                 paddingVertical: 10,
                 fontSize: 16,
                 minHeight: 80,
                 textAlignVertical: 'top',
-                color: '#111',
+                color: colors.text.primary,
               }}
               multiline
               accessibilityLabel="Your answer"
             />
             {isRevealed && !isCorrect && (
-              <Text style={{ fontSize: 14, color: '#EF4444', marginTop: 8 }}>
+              <Text style={{ fontSize: 14, color: colors.error.light, marginTop: 8 }}>
                 Correct answer: {question.correctAnswer}
               </Text>
             )}
@@ -167,7 +171,7 @@ export function ComprehensionQuestions({ questions, onComplete, onExit }: Props)
         {/* Feedback */}
         {isRevealed && (
           <View style={{
-            backgroundColor: isCorrect ? '#DCFCE7' : '#FEE2E2',
+            backgroundColor: isCorrect ? colors.success.tint : colors.error.tint,
             borderRadius: 14,
             padding: 16,
             marginTop: 16,
@@ -175,7 +179,7 @@ export function ComprehensionQuestions({ questions, onComplete, onExit }: Props)
             <Text style={{
               fontSize: 16,
               fontWeight: '600',
-              color: isCorrect ? '#22C55E' : '#EF4444',
+              color: isCorrect ? colors.success.light : colors.error.light,
             }}>
               {isCorrect ? 'Correct!' : 'Not quite.'}
             </Text>
@@ -184,13 +188,13 @@ export function ComprehensionQuestions({ questions, onComplete, onExit }: Props)
       </ScrollView>
 
       {/* Bottom Button */}
-      <View style={{ padding: 20, borderTopWidth: 1, borderTopColor: '#E5E7EB' }}>
+      <View style={{ padding: 20, borderTopWidth: 1, borderTopColor: colors.border.default }}>
         {!isRevealed ? (
           <Pressable
             onPress={handleCheck}
             disabled={!canCheck}
             style={{
-              backgroundColor: canCheck ? '#6366F1' : '#C7D2FE',
+              backgroundColor: canCheck ? '#4F46E5' : '#C7D2FE',
               paddingVertical: 16,
               borderRadius: 14,
               alignItems: 'center',
@@ -204,7 +208,7 @@ export function ComprehensionQuestions({ questions, onComplete, onExit }: Props)
           <Pressable
             onPress={handleNext}
             style={{
-              backgroundColor: '#6366F1',
+              backgroundColor: '#4F46E5',
               paddingVertical: 16,
               borderRadius: 14,
               alignItems: 'center',

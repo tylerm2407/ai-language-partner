@@ -39,7 +39,7 @@ export function AudioPlayButton({ audioUrl, size = 48 }: AudioPlayButtonProps) {
         width: size,
         height: size,
         borderRadius: size / 2,
-        backgroundColor: error ? colors.error.base : colors.indigo[500],
+        backgroundColor: error ? colors.error.base : colors.action.primaryFill,
         justifyContent: 'center',
         alignItems: 'center',
       }}

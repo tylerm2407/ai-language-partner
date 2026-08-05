@@ -5,7 +5,7 @@
  *   <Heading level={1}>Learn</Heading>
  *   <Body>Message content</Body>
  *   <Caption>Stat label</Caption>
- *   <Hero>Nailed it!</Hero>  // display face (PlayfairDisplay), celebration moments
+ *   <Hero>Nailed it!</Hero>  // display face (Fraunces), celebration moments
  *
  * All wrappers default color to text.primary; pass `tone="secondary"` /
  * `tone="tertiary"` / `tone="onPrimary"` / tone="accent" to override.
@@ -13,10 +13,11 @@
 
 import React from 'react';
 import { Text as RNText, type TextProps, type TextStyle } from 'react-native';
-import { colors, typography } from '../../config/theme';
+import { colors, minLineHeight, typography } from '../../config/theme';
+import { useDisplayScale } from '../../hooks/useDisplayScale';
 
 type Tone = 'primary' | 'secondary' | 'tertiary' | 'onPrimary' | 'accent' | 'success' | 'error' | 'warning';
-type Weight = 'regular' | 'medium' | 'semibold' | 'bold';
+type Weight = 'regular' | 'medium' | 'semibold' | 'bold' | 'extrabold';
 
 function toneColor(tone: Tone): string {
   switch (tone) {
@@ -50,12 +51,17 @@ interface HeadingProps extends TextProps {
   children: React.ReactNode;
 }
 export function Heading({ level = 1, tone = 'primary', style, children, ...rest }: HeadingProps) {
+  const scale = useDisplayScale();
   const size = level === 1 ? typography.scale.h1 : level === 2 ? typography.scale.h2 : typography.scale.h3;
+  const fontSize = Math.round(size.fontSize * scale);
   const baseStyle: TextStyle = {
-    fontSize: size.fontSize,
-    lineHeight: size.lineHeight,
+    fontSize,
+    // Floored at the face's natural line box for the *scaled* size, so the
+    // no-clip invariant holds at every device width — not just at baseline.
+    lineHeight: Math.max(minLineHeight(fontSize), Math.round(size.lineHeight * scale)),
     color: toneColor(tone),
     fontFamily: familyFor(size.weight),
+    letterSpacing: typography.tracking.heading,
   };
   return (
     <RNText
@@ -110,11 +116,18 @@ interface HeroProps extends TextProps {
   children: React.ReactNode;
 }
 export function Hero({ tone = 'primary', style, children, ...rest }: HeroProps) {
+  const scale = useDisplayScale();
+  const fontSize = Math.round(typography.scale.hero.fontSize * scale);
   const baseStyle: TextStyle = {
-    fontSize: typography.scale.hero.fontSize,
-    lineHeight: typography.scale.hero.lineHeight,
+    fontSize,
+    // 'display' leading — Fraunces needs more room than Nunito.
+    lineHeight: Math.max(
+      minLineHeight(fontSize, 'display'),
+      Math.round(typography.scale.hero.lineHeight * scale),
+    ),
     color: toneColor(tone),
     fontFamily: typography.family.display,
+    letterSpacing: -0.8,
   };
   return <RNText style={[baseStyle, style]} {...rest}>{children}</RNText>;
 }

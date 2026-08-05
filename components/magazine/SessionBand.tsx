@@ -1,4 +1,4 @@
-import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,7 +6,9 @@ import { MagazineGlassCard } from './MagazineGlassCard';
 import { colors, typography, radii } from '../../config/theme';
 import { useAppStore } from '../../stores/useAppStore';
 
-const serifFont = Platform.select({ ios: 'Georgia', default: 'serif' });
+// Editorial face. Fraunces_600SemiBold carries its own weight — never pair it
+// with fontWeight, which makes Android synthesize a second bolding pass.
+const serifFont = typography.family.serif;
 
 export function SessionBand() {
   const router = useRouter();
@@ -77,7 +79,6 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: serifFont,
     fontSize: 18,
-    fontWeight: '600',
     color: colors.text.primary,
   },
   durationPill: {

@@ -86,7 +86,7 @@ export function ClozeExercise({
           <HighlightedText text={beforeBlank} highlight={highlight} />
           <View style={{
             borderBottomWidth: 2,
-            borderBottomColor: isRevealed ? (isCorrect ? colors.success.base : colors.error.base) : colors.indigo[500],
+            borderBottomColor: isRevealed ? (isCorrect ? colors.success.base : colors.error.base) : colors.action.primaryFill,
             minWidth: 80,
           }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
@@ -99,7 +99,7 @@ export function ClozeExercise({
                 />
               )}
               <Body size="lg" weight="semibold" style={{
-                color: isRevealed ? (isCorrect ? colors.success.base : colors.error.base) : colors.indigo[500],
+                color: isRevealed ? (isCorrect ? colors.success.base : colors.error.base) : colors.action.primaryFill,
                 textAlign: 'center',
                 paddingHorizontal: spacing.xxs,
               }}>
@@ -161,7 +161,7 @@ export function ClozeExercise({
           onPress={handleCheck}
           disabled={userInput.trim().length === 0}
           style={{
-            backgroundColor: userInput.trim().length > 0 ? colors.indigo[500] : colors.indigo[200],
+            backgroundColor: userInput.trim().length > 0 ? colors.action.primaryFill : colors.indigo[200],
             paddingVertical: spacing.md,
             borderRadius: radii.lg,
             alignItems: 'center',

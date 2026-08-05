@@ -39,8 +39,8 @@ interface TactileButtonProps {
 
 const STYLES = {
   primary: {
-    fill: colors.indigo[500],
-    slab: colors.indigo[700],
+    fill: colors.action.primaryFill,
+    slab: colors.action.primarySlab,
     text: colors.text.onPrimary,
     borderColor: 'transparent',
   },
@@ -167,13 +167,18 @@ export function TactileButton({
         ]}
       >
         {leftIcon && <View style={styles.leftIcon}>{leftIcon}</View>}
+        {/* CTA labels are uppercase + tracked, the deck's button voice. Weight
+            is extrabold: Nunito's rounded terminals read lighter than Inter at
+            the same numeric weight, so semibold looked underset on a fill. */}
         <Body
           size="lg"
-          weight="semibold"
+          weight="extrabold"
           style={{
             color: palette.text,
             fontSize: typography.scale.bodyLg.fontSize,
             lineHeight: typography.scale.bodyLg.lineHeight,
+            letterSpacing: typography.tracking.cta,
+            textTransform: 'uppercase',
           }}
         >
           {loading ? 'Loading…' : label}

@@ -1,6 +1,17 @@
+/**
+ * MagazineGlassCard — the editorial card shell. The name is historical; the
+ * blur is gone.
+ *
+ * Was: iOS BlurView at intensity 40 over a translucent fill, with an opaque
+ * Android fallback — so the two platforms never actually matched. Now a single
+ * opaque surface.card + 1px border on both, which is what the Dark Glow deck
+ * specifies: flat cards, depth supplied by the ambient glow behind them.
+ *
+ * radius xxl (20) / padding 20 — matches NewsHeroCard, SessionBand, LessonTile.
+ */
+
 import React from 'react';
-import { View, StyleSheet, Platform, type ViewStyle } from 'react-native';
-import { BlurView } from 'expo-blur';
+import { View, StyleSheet, type ViewStyle } from 'react-native';
 import { colors, radii } from '../../config/theme';
 
 interface MagazineGlassCardProps {
@@ -9,41 +20,15 @@ interface MagazineGlassCardProps {
 }
 
 export function MagazineGlassCard({ children, style }: MagazineGlassCardProps) {
-  // expo-blur works well on iOS; on Android use fallback
-  if (Platform.OS === 'android') {
-    return (
-      <View style={[styles.fallback, style]}>
-        {children}
-      </View>
-    );
-  }
-
-  return (
-    <View style={[styles.outer, style]}>
-      <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
-      <View style={styles.inner}>
-        {children}
-      </View>
-    </View>
-  );
+  return <View style={[styles.card, style]}>{children}</View>;
 }
 
 const styles = StyleSheet.create({
-  outer: {
+  card: {
     borderRadius: radii.xxl,
-    borderWidth: 0.5,
-    borderColor: colors.magazine.glassBorder,
-    overflow: 'hidden',
-  },
-  inner: {
-    backgroundColor: colors.magazine.glassBg,
-    padding: 20,
-  },
-  fallback: {
-    borderRadius: radii.xxl,
-    borderWidth: 0.5,
-    borderColor: colors.magazine.glassBorder,
-    backgroundColor: colors.magazine.glassBg,
+    borderWidth: 1,
+    borderColor: colors.border.default,
+    backgroundColor: colors.surface.card,
     padding: 20,
     overflow: 'hidden',
   },

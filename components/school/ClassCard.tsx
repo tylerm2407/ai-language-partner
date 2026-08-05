@@ -31,7 +31,7 @@ export default function ClassCard({ classroom, onPress, showStudentCount }: Clas
         {/* Name */}
         <Text
           className="text-lg text-text-primary mb-1"
-          style={{ fontFamily: 'Inter_600SemiBold' }}
+          style={{ fontFamily: 'Nunito_600SemiBold' }}
           numberOfLines={1}
         >
           {classroom.name}
@@ -43,7 +43,7 @@ export default function ClassCard({ classroom, onPress, showStudentCount }: Clas
             style={{
               color: '#94A3B8',
               fontSize: 13,
-              fontFamily: 'Inter_500Medium',
+              fontFamily: 'Nunito_500Medium',
               textTransform: 'uppercase',
             }}
           >
@@ -59,9 +59,9 @@ export default function ClassCard({ classroom, onPress, showStudentCount }: Clas
           >
             <Text
               style={{
-                color: '#6366F1',
+                color: '#818CF8',
                 fontSize: 11,
-                fontFamily: 'Inter_600SemiBold',
+                fontFamily: 'Nunito_600SemiBold',
               }}
             >
               {levelLabel(classroom.level)}
@@ -78,7 +78,7 @@ export default function ClassCard({ classroom, onPress, showStudentCount }: Clas
                 style={{
                   color: '#64748B',
                   fontSize: 12,
-                  fontFamily: 'Inter_500Medium',
+                  fontFamily: 'Nunito_500Medium',
                   marginLeft: 4,
                 }}
               >
@@ -89,12 +89,12 @@ export default function ClassCard({ classroom, onPress, showStudentCount }: Clas
 
           {classroom.activeAssignmentCount != null && classroom.activeAssignmentCount > 0 && (
             <View className="flex-row items-center">
-              <Ionicons name="document-text-outline" size={14} color="#6366F1" />
+              <Ionicons name="document-text-outline" size={14} color="#818CF8" />
               <Text
                 style={{
-                  color: '#6366F1',
+                  color: '#818CF8',
                   fontSize: 12,
-                  fontFamily: 'Inter_500Medium',
+                  fontFamily: 'Nunito_500Medium',
                   marginLeft: 4,
                 }}
               >

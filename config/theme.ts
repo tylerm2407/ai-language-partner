@@ -3,21 +3,43 @@
  * See redesign-plan.md for rationale; see design-research.md for empirical
  * citations behind each choice.
  *
- * Canonical palette is DARK. Body text is validated WCAG AAA (≥7:1) against
- * surface.base (#0C0F14). Primary is Indigo #6366F1 with a brighter #818CF8
- * variant for accents that must stay legible on dark.
+ * Canonical palette is DARK GLOW. Body text is validated WCAG AAA (≥7:1)
+ * against surface.base (#08090F). Primary FILLS are Indigo 600 (#4F46E5 —
+ * white 6.4:1, clears AA) with the brighter #818CF8 (indigo.400) reserved for
+ * text/icon accents on dark. See DESIGN.md §Primary.
  */
 
 // ─── Colors ──────────────────────────────────────────────────────────────
 export const colors = {
-  /** Screen-level surfaces, from darkest to progressively lighter */
+  /** Screen-level surfaces, from darkest to progressively lighter.
+   *  base/raised/sunken are deepened for the glow direction — the blob layer
+   *  reads as depth against a near-black void. Cards are unchanged so content
+   *  contrast is untouched. */
   surface: {
-    base: '#0C0F14', // primary app background (most ornamental screens)
-    raised: '#12161D', // reading / review / lesson content (+ contrast for focus)
+    base: '#08090F', // primary app background (glow layer paints over this)
+    raised: '#0E1119', // reading / review / lesson content (+ contrast for focus)
+    sunken: '#060710', // behind-content wells (scroll under, inset tracks)
     card: '#151921',
     cardAlt: '#1C212B',
-    overlay: 'rgba(12, 15, 20, 0.85)', // modal backdrops
+    overlay: 'rgba(6, 8, 12, 0.82)', // modal backdrops / celebration scrim
     sheet: '#1A1F29', // bottom-sheet fill
+  },
+
+  /** Semantic action roles. Fills must clear AA against text.onPrimary, which
+   *  indigo.500 does NOT (4.47:1) — every CTA fill goes through these. */
+  action: {
+    primaryFill: '#4F46E5', // indigo.600 — white 6.4:1
+    primarySlab: '#3730A3', // indigo.800 — tactile slab drops one step with the fill
+    primaryTint: 'rgba(99, 102, 241, 0.15)',
+    accent: '#818CF8', // indigo.400 — text links, small icons, progress glow (6.43:1)
+  },
+
+  /** Ambient glow layer — three blurred radial blobs between the base fill
+   *  (z0) and content (z5). Rendered by components/ui/GlowBackground.tsx. */
+  glow: {
+    indigo: 'rgba(99, 102, 241, 1)', // indigo.500
+    violet: 'rgba(124, 58, 237, 1)', // magazine.accentViolet
+    lilacIndigo: 'rgba(129, 140, 248, 1)', // indigo.400
   },
 
   /** Hairline borders on dark */
@@ -30,12 +52,13 @@ export const colors = {
 
   /** Text tokens — contrast ratios measured vs surface.base */
   text: {
-    primary: '#F1F5F9', // 14.6:1 (AAA)
-    secondary: '#CBD5E1', // 10.2:1 (AAA)
-    tertiary: '#94A3B8', // 5.8:1 (AA large)
-    quaternary: '#64748B', // 3.7:1 (placeholders only)
-    onPrimary: '#FFFFFF', // text on indigo.500 button
-    onSuccess: '#052E1A', // dark text on bright success (if used)
+    primary: '#F1F5F9', // 15.6:1 (AAA)
+    secondary: '#CBD5E1', // 10.9:1 (AAA)
+    tertiary: '#94A3B8', // 6.2:1 (AA)
+    quaternary: '#64748B', // 3.9:1 (large UI only — timestamps, placeholders)
+    onPrimary: '#FFFFFF', // text on action.primaryFill (6.4:1)
+    onSuccess: '#052E1A', // dark text on bright success (7.1:1)
+    onWarning: '#0C0F14', // dark text on bright warning (9.0:1)
     disabled: 'rgba(241, 245, 249, 0.38)',
   },
 
@@ -78,7 +101,10 @@ export const colors = {
   streak: {
     base: '#F59E0B',
     fire: '#F97316',
-    tint: 'rgba(245, 158, 11, 0.18)',
+    /** Orange-based so a streak chip never reads as a warning chip — the two
+     *  sat side by side on Home in identical amber. */
+    tint: 'rgba(249, 115, 22, 0.15)',
+    light: '#FDBA74', // streak chip label on dark
   },
   premium: {
     base: '#A855F7',
@@ -110,8 +136,10 @@ export const colors = {
     heartsCoral: '#FF6B6B',
     xpGold: '#FFB547',
     streakFlame: '#FF8A3D',
-    glassBg: 'rgba(20,25,50,0.5)',
-    glassBorder: 'rgba(255,255,255,0.10)',
+    // Opaque under Dark Glow — the editorial voice is carried by type
+    // (Fraunces + mono), not by a differently-tinted card.
+    glassBg: '#151921',
+    glassBorder: 'rgba(255,255,255,0.12)',
   },
 
   /** Correction-banner error-type chip styles */
@@ -149,30 +177,89 @@ export const radii = {
 } as const;
 
 // ─── Typography ──────────────────────────────────────────────────────────
+
+/**
+ * Natural line box of each face, in em, read from the font binaries.
+ *
+ * A `lineHeight` below these numbers does not compress the text — both
+ * platforms pin the baseline and clip the ascender, so the TOP of the glyphs
+ * disappears. Use `minLineHeight()` for any fontSize not already in the scale.
+ *
+ * Read from the font binaries as `ascender - descender + lineGap` over
+ * `head.unitsPerEm`. All three faces set OS/2 `fsSelection` bit 7
+ * (USE_TYPO_METRICS), so the platform lays out against the typo metrics — which
+ * here equal hhea — and NOT the larger usWin* pair:
+ *
+ *   face            typo/hhea   usWin*   capHeight
+ *   Nunito            1.364     1.377      0.705
+ *   Fraunces          1.233     1.474      0.700
+ *   JetBrains Mono    1.320     1.320        —
+ *
+ * These replaced Inter's ~1.21em. The scale's old lineHeights were Inter's and
+ * clipped every heading by 1-5px after the font swap.
+ */
+export const leading = {
+  /** Nunito — body, headings, CTA labels. */
+  sans: 1.364,
+  /** Fraunces — display face. Tighter than Nunito despite being larger on screen. */
+  display: 1.233,
+  /** JetBrains Mono — meta rows, eyebrows. */
+  mono: 1.32,
+} as const;
+
+/**
+ * Smallest lineHeight that will not clip `face` at `fontSize`.
+ *
+ * This is the whole-font bound (ascender to descender). Text that renders only
+ * capitals or digits has ~0.3em of unused headroom and can safely sit tighter —
+ * but only assume that where the content is provably numeric.
+ */
+export function minLineHeight(fontSize: number, face: keyof typeof leading = 'sans'): number {
+  return Math.ceil(fontSize * leading[face]);
+}
+
 export const typography = {
   family: {
-    regular: 'Inter_400Regular',
-    medium: 'Inter_500Medium',
-    semibold: 'Inter_600SemiBold',
-    bold: 'Inter_700Bold',
-    display: 'PlayfairDisplay_700Bold', // celebration / hero only
-    serif: 'Georgia', // magazine editorial headlines (system font on iOS, Noto Serif on Android)
+    regular: 'Nunito_400Regular',
+    medium: 'Nunito_500Medium',
+    semibold: 'Nunito_600SemiBold',
+    bold: 'Nunito_700Bold',
+    extrabold: 'Nunito_800ExtraBold', // headings, CTA labels
+    display: 'Fraunces_700Bold', // celebration / hero only
+    serif: 'Fraunces_600SemiBold', // magazine editorial headlines
     mono: 'JetBrainsMono_400Regular',
     monoMedium: 'JetBrainsMono_500Medium',
   },
+  /** Every scale step carries its own weight. Applying fontSize without the
+   *  matching lineHeight + weight drops two thirds of the token — see
+   *  components/ui/Text.tsx, which always emits all three together.
+   *
+   *  Every lineHeight below is >= minLineHeight(fontSize, face). Going under it
+   *  clips the ascender — config/theme.test.ts enforces this. */
   scale: {
-    // Title / Display
-    hero: { fontSize: 32, lineHeight: 38, weight: 'bold' as const },
-    h1: { fontSize: 28, lineHeight: 34, weight: 'bold' as const },
-    h2: { fontSize: 24, lineHeight: 30, weight: 'bold' as const },
-    h3: { fontSize: 22, lineHeight: 28, weight: 'semibold' as const },
+    // Title / Display — hero renders in the display face (Fraunces)
+    hero: { fontSize: 32, lineHeight: 40, weight: 'extrabold' as const },
+    h1: { fontSize: 28, lineHeight: 39, weight: 'extrabold' as const },
+    h2: { fontSize: 24, lineHeight: 33, weight: 'extrabold' as const },
+    h3: { fontSize: 22, lineHeight: 31, weight: 'bold' as const },
     // Body
-    bodyLg: { fontSize: 17, lineHeight: 25, weight: 'semibold' as const },
-    body: { fontSize: 16, lineHeight: 24, weight: 'regular' as const },
-    bodySm: { fontSize: 14, lineHeight: 20, weight: 'regular' as const },
+    bodyLg: { fontSize: 17, lineHeight: 25, weight: 'bold' as const },
+    body: { fontSize: 16, lineHeight: 24, weight: 'medium' as const },
+    bodySm: { fontSize: 14, lineHeight: 20, weight: 'medium' as const },
     // Meta
-    caption: { fontSize: 13, lineHeight: 18, weight: 'medium' as const },
-    tiny: { fontSize: 12, lineHeight: 16, weight: 'medium' as const },
+    caption: { fontSize: 13, lineHeight: 18, weight: 'semibold' as const },
+    tiny: { fontSize: 12, lineHeight: 17, weight: 'semibold' as const },
+  },
+  /** Editorial letter-spacing. Mono eyebrows/labels are tracked wide; display
+   *  headings tighten. Values are the deck's, verbatim. */
+  tracking: {
+    dateLabel: 3, // DateLabel mono 12px
+    eyebrow: 1.5, // mono meta rows (`3 MIN READ · READ →`)
+    kicker: 2, // serif kicker (`TODAY'S READ · NIVEL A2`)
+    banner: 1, // uppercase section banners
+    cta: 0.9, // uppercase TactileButton labels
+    chip: 0.4, // Chip label
+    heading: -0.6, // h1/h2 optical tightening
   },
 } as const;
 

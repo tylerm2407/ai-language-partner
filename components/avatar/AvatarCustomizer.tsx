@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   tabActive: {
-    borderBottomColor: '#38BDF8',
+    borderBottomColor: '#818CF8',
   },
   tabText: {
     fontSize: 13,
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
     color: '#64748B',
   },
   tabTextActive: {
-    color: '#38BDF8',
+    color: '#818CF8',
   },
   content: {
     flex: 1,
@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   swatchSelected: {
-    borderColor: '#38BDF8',
+    borderColor: '#818CF8',
   },
   optionGrid: {
     flexDirection: 'row',
@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   optionCardSelected: {
-    borderColor: '#38BDF8',
+    borderColor: '#818CF8',
   },
   optionCardText: {
     fontSize: 11,

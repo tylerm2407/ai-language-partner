@@ -7,6 +7,7 @@ import { GlassSurface } from '../../../components/ui/GlassSurface';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAppStore } from '../../../stores/useAppStore';
 import { useSchoolStore } from '../../../stores/useSchoolStore';
+import { colors } from '../../../config/theme';
 
 export default function TeacherProfileScreen() {
   const router = useRouter();
@@ -36,7 +37,7 @@ export default function TeacherProfileScreen() {
         >
           <Text
             className="text-[28px] text-text-primary mb-6"
-            style={{ fontFamily: 'Inter_700Bold' }}
+            style={{ fontFamily: 'Nunito_800ExtraBold' }}
             accessibilityRole="header"
           >
             Profile
@@ -61,23 +62,23 @@ export default function TeacherProfileScreen() {
                   width: 40,
                   height: 40,
                   borderRadius: 20,
-                  backgroundColor: 'rgba(56, 189, 248, 0.2)',
+                  backgroundColor: colors.action.primaryTint,
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
               >
-                <Ionicons name="swap-horizontal" size={20} color="#38BDF8" />
+                <Ionicons name="swap-horizontal" size={20} color="#818CF8" />
               </View>
               <View className="ml-3 flex-1">
                 <Text
                   className="text-base text-text-primary"
-                  style={{ fontFamily: 'Inter_600SemiBold' }}
+                  style={{ fontFamily: 'Nunito_600SemiBold' }}
                 >
                   Switch to Learner Mode
                 </Text>
                 <Text
                   className="text-xs text-text-secondary"
-                  style={{ fontFamily: 'Inter_400Regular' }}
+                  style={{ fontFamily: 'Nunito_400Regular' }}
                 >
                   Currently in Teacher mode
                 </Text>
@@ -107,14 +108,14 @@ export default function TeacherProfileScreen() {
               <View className="ml-4">
                 <Text
                   className="text-lg text-text-primary"
-                  style={{ fontFamily: 'Inter_600SemiBold' }}
+                  style={{ fontFamily: 'Nunito_600SemiBold' }}
                 >
                   {profile?.displayName ?? user?.email}
                 </Text>
                 {profile?.displayName && (
                   <Text
                     className="text-sm text-text-secondary"
-                    style={{ fontFamily: 'Inter_400Regular' }}
+                    style={{ fontFamily: 'Nunito_400Regular' }}
                   >
                     {user?.email}
                   </Text>
@@ -128,7 +129,7 @@ export default function TeacherProfileScreen() {
             <>
               <Text
                 className="text-xl text-text-primary mb-3"
-                style={{ fontFamily: 'Inter_600SemiBold' }}
+                style={{ fontFamily: 'Nunito_600SemiBold' }}
               >
                 School
               </Text>
@@ -138,13 +139,13 @@ export default function TeacherProfileScreen() {
                   <View className="ml-4 flex-1">
                     <Text
                       className="text-base text-text-primary"
-                      style={{ fontFamily: 'Inter_600SemiBold' }}
+                      style={{ fontFamily: 'Nunito_600SemiBold' }}
                     >
                       {organization.name}
                     </Text>
                     <Text
                       className="text-sm text-text-secondary capitalize"
-                      style={{ fontFamily: 'Inter_400Regular' }}
+                      style={{ fontFamily: 'Nunito_400Regular' }}
                     >
                       {activeRole ?? 'Teacher'}
                     </Text>
@@ -157,7 +158,7 @@ export default function TeacherProfileScreen() {
           {/* Settings Links */}
           <Text
             className="text-xl text-text-primary mb-3"
-            style={{ fontFamily: 'Inter_600SemiBold' }}
+            style={{ fontFamily: 'Nunito_600SemiBold' }}
           >
             Settings
           </Text>
@@ -172,13 +173,13 @@ export default function TeacherProfileScreen() {
             <View className="ml-4 flex-1">
               <Text
                 className="text-base text-text-primary"
-                style={{ fontFamily: 'Inter_600SemiBold' }}
+                style={{ fontFamily: 'Nunito_600SemiBold' }}
               >
                 Subscription
               </Text>
               <Text
                 className="text-sm text-text-secondary capitalize"
-                style={{ fontFamily: 'Inter_400Regular' }}
+                style={{ fontFamily: 'Nunito_400Regular' }}
               >
                 {subscription?.tier ?? 'Free'}
               </Text>
@@ -196,13 +197,13 @@ export default function TeacherProfileScreen() {
             <View className="ml-4 flex-1">
               <Text
                 className="text-base text-text-primary"
-                style={{ fontFamily: 'Inter_600SemiBold' }}
+                style={{ fontFamily: 'Nunito_600SemiBold' }}
               >
                 Settings
               </Text>
               <Text
                 className="text-sm text-text-secondary"
-                style={{ fontFamily: 'Inter_400Regular' }}
+                style={{ fontFamily: 'Nunito_400Regular' }}
               >
                 Account preferences
               </Text>
@@ -219,7 +220,7 @@ export default function TeacherProfileScreen() {
           >
             <Text
               className="text-error-dark text-lg"
-              style={{ fontFamily: 'Inter_600SemiBold' }}
+              style={{ fontFamily: 'Nunito_600SemiBold' }}
             >
               Sign Out
             </Text>

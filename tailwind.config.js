@@ -8,11 +8,15 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        dark: "#0C0F14",
-        "dark-card": "rgba(21, 25, 33, 0.35)",
-        "dark-card-alt": "rgba(28, 32, 41, 0.35)",
-        "dark-border": "#252A35",
-        "accent-blue": "#A855F7",
+        // Mirrors config/theme.ts — that file is canonical. Cards are OPAQUE
+        // here: the glow layer supplies depth, so translucent card fills only
+        // muddied it (see DESIGN.md §Glow).
+        dark: "#08090F",
+        "dark-raised": "#0E1119",
+        "dark-card": "#151921",
+        "dark-card-alt": "#1C212B",
+        "dark-border": "rgba(255, 255, 255, 0.12)",
+        "accent-blue": "#818CF8",
         "accent-purple": "#A855F7",
         "accent-pink": "#F472B6",
         "accent-violet": "#A78BFA",
@@ -20,9 +24,10 @@ module.exports = {
         "gradient-start": "#A855F7",
         "gradient-end": "#38BDF8",
         primary: {
-          DEFAULT: "#38BDF8",
-          light: "#7DD3FC",
-          tint: "#0C1A2E",
+          DEFAULT: "#4F46E5", // indigo.600 — fills (white 6.4:1)
+          light: "#818CF8", // indigo.400 — text/icon accents on dark
+          slab: "#3730A3", // indigo.800 — tactile slab
+          tint: "rgba(99, 102, 241, 0.15)",
         },
         success: {
           DEFAULT: "#34D399",
@@ -40,20 +45,24 @@ module.exports = {
         },
         streak: "#FBBF24",
         surface: {
-          DEFAULT: "rgba(21, 25, 33, 0.35)",
-          alt: "rgba(28, 32, 41, 0.35)",
+          DEFAULT: "#151921",
+          alt: "#1C212B",
         },
-        border: "#252A35",
-        "input-border": "#333A48",
+        border: "rgba(255, 255, 255, 0.12)",
+        "input-border": "rgba(255, 255, 255, 0.24)",
         "text-primary": "#F1F5F9",
-        "text-secondary": "#94A3B8",
-        "text-tertiary": "#64748B",
+        "text-secondary": "#CBD5E1",
+        "text-tertiary": "#94A3B8",
+        "text-quaternary": "#64748B",
       },
       fontFamily: {
-        sans: ['Inter_400Regular'],
-        'sans-medium': ['Inter_500Medium'],
-        'sans-semibold': ['Inter_600SemiBold'],
-        'sans-bold': ['Inter_700Bold'],
+        sans: ['Nunito_400Regular'],
+        'sans-medium': ['Nunito_500Medium'],
+        'sans-semibold': ['Nunito_600SemiBold'],
+        'sans-bold': ['Nunito_700Bold'],
+        'sans-extrabold': ['Nunito_800ExtraBold'],
+        serif: ['Fraunces_600SemiBold'],
+        mono: ['JetBrainsMono_400Regular'],
       },
       boxShadow: {
         card: '0 4px 24px rgba(0,0,0,0.35)',

@@ -19,6 +19,7 @@ import { Button } from '../../../components/ui/Button';
 import { Badge } from '../../../components/ui/Badge';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../../config/theme';
+import { GlowLayer } from '../../../components/ui/GlowBackground';
 
 // Manage/cancel deep links (App Store requires a path to manage the sub).
 const MANAGE_URL =
@@ -140,7 +141,8 @@ export default function SubscriptionScreen() {
   }, [packages]);
 
   return (
-    <SafeAreaView className="flex-1 bg-dark">
+    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.surface.base }}>
+      <GlowLayer />
       <View className="flex-row items-center px-4 py-3 border-b border-dark-border">
         <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Go back">
           <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
@@ -194,7 +196,7 @@ export default function SubscriptionScreen() {
           </View>
         ) : loadingOfferings ? (
           <View className="py-12 items-center">
-            <ActivityIndicator size="large" color={colors.indigo[500]} />
+            <ActivityIndicator size="large" color={colors.action.accent} />
           </View>
         ) : offeringsError ? (
           <View className="rounded-2xl p-5 mb-4 border border-dark-border bg-dark-card">

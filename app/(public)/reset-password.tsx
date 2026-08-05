@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../../components/ui/Button';
+import { GradientBackground } from '../../components/ui/GradientBackground';
 import { colors } from '../../config/theme';
 
 export default function ResetPasswordScreen() {
@@ -41,7 +42,8 @@ export default function ResetPasswordScreen() {
   // without going through the email. Send the user back for a fresh link.
   if (!session) {
     return (
-      <SafeAreaView className="flex-1 bg-dark">
+      <GradientBackground>
+        <SafeAreaView className="flex-1">
         <View className="flex-1 justify-center px-8">
           <Text className="text-3xl font-bold text-text-primary mb-2" accessibilityRole="header">
             Link Expired
@@ -55,12 +57,14 @@ export default function ResetPasswordScreen() {
             onPress={() => router.replace('/(public)/auth')}
           />
         </View>
-      </SafeAreaView>
+        </SafeAreaView>
+      </GradientBackground>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-dark">
+    <GradientBackground>
+      <SafeAreaView className="flex-1">
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -105,6 +109,7 @@ export default function ResetPasswordScreen() {
           />
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </GradientBackground>
   );
 }

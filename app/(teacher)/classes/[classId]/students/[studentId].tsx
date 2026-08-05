@@ -103,7 +103,7 @@ export default function StudentProgressScreen() {
     return (
       <GradientBackground>
         <SafeAreaView className="flex-1 justify-center items-center">
-          <ActivityIndicator color="#38BDF8" size="large" />
+          <ActivityIndicator color="#818CF8" size="large" />
         </SafeAreaView>
       </GradientBackground>
     );
@@ -124,10 +124,10 @@ export default function StudentProgressScreen() {
             accessibilityLabel="Go back"
             className="flex-row items-center mb-4"
           >
-            <Ionicons name="chevron-back" size={24} color="#38BDF8" />
+            <Ionicons name="chevron-back" size={24} color="#818CF8" />
             <Text
               className="text-base text-primary ml-1"
-              style={{ fontFamily: 'Inter_600SemiBold' }}
+              style={{ fontFamily: 'Nunito_600SemiBold' }}
             >
               Back
             </Text>
@@ -135,7 +135,7 @@ export default function StudentProgressScreen() {
 
           <Text
             className="text-[28px] text-text-primary mb-4"
-            style={{ fontFamily: 'Inter_700Bold' }}
+            style={{ fontFamily: 'Nunito_800ExtraBold' }}
             accessibilityRole="header"
           >
             {student?.name ?? 'Student'}
@@ -150,7 +150,7 @@ export default function StudentProgressScreen() {
               <Ionicons name="warning-outline" size={32} color="#EF4444" />
               <Text
                 className="text-sm text-text-secondary mt-2 text-center"
-                style={{ fontFamily: 'Inter_400Regular' }}
+                style={{ fontFamily: 'Nunito_400Regular' }}
               >
                 {error}
               </Text>
@@ -184,13 +184,13 @@ export default function StudentProgressScreen() {
               <View className="ml-4">
                 <Text
                   className="text-lg text-text-primary"
-                  style={{ fontFamily: 'Inter_600SemiBold' }}
+                  style={{ fontFamily: 'Nunito_600SemiBold' }}
                 >
                   {student?.name ?? 'Unknown'}
                 </Text>
                 <Text
                   className="text-sm text-text-secondary"
-                  style={{ fontFamily: 'Inter_400Regular' }}
+                  style={{ fontFamily: 'Nunito_400Regular' }}
                 >
                   Enrolled{' '}
                   {student?.enrolledAt
@@ -207,7 +207,7 @@ export default function StudentProgressScreen() {
           {/* Assignment History */}
           <Text
             className="text-xl text-text-primary mb-3"
-            style={{ fontFamily: 'Inter_600SemiBold' }}
+            style={{ fontFamily: 'Nunito_600SemiBold' }}
           >
             Assignment History
           </Text>
@@ -220,7 +220,7 @@ export default function StudentProgressScreen() {
               <Ionicons name="document-text-outline" size={32} color="#64748B" />
               <Text
                 className="text-sm text-text-secondary mt-2"
-                style={{ fontFamily: 'Inter_400Regular' }}
+                style={{ fontFamily: 'Nunito_400Regular' }}
               >
                 No submissions yet
               </Text>
@@ -235,7 +235,7 @@ export default function StudentProgressScreen() {
                 <View className="flex-row items-center justify-between mb-1">
                   <Text
                     className="text-base text-text-primary flex-1 mr-2"
-                    style={{ fontFamily: 'Inter_600SemiBold' }}
+                    style={{ fontFamily: 'Nunito_600SemiBold' }}
                     numberOfLines={1}
                   >
                     {sub.assignmentTitle}
@@ -248,7 +248,7 @@ export default function StudentProgressScreen() {
                       style={{
                         color: '#22C55E',
                         fontSize: 13,
-                        fontFamily: 'Inter_600SemiBold',
+                        fontFamily: 'Nunito_600SemiBold',
                       }}
                     >
                       {sub.score}/100
@@ -257,7 +257,7 @@ export default function StudentProgressScreen() {
                   {sub.submittedAt && (
                     <Text
                       className="text-xs text-text-secondary"
-                      style={{ fontFamily: 'Inter_400Regular' }}
+                      style={{ fontFamily: 'Nunito_400Regular' }}
                     >
                       {new Date(sub.submittedAt).toLocaleDateString(undefined, {
                         month: 'short',

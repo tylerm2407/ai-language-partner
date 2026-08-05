@@ -1,5 +1,5 @@
 import { Text, StyleSheet } from 'react-native';
-import { colors, typography } from '../../config/theme';
+import { colors, typography, spacing } from '../../config/theme';
 
 const DAYS = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
 const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
@@ -21,9 +21,9 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: typography.family.mono,
     fontSize: 12,
-    letterSpacing: 3,
+    letterSpacing: typography.tracking.dateLabel,
     color: colors.text.secondary,
     textTransform: 'uppercase',
-    marginBottom: 12,
+    marginBottom: spacing.xs,
   },
 });

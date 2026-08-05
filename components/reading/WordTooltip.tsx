@@ -2,6 +2,7 @@ import { View, Text, Pressable } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { AudioPlayButton } from '../audio/AudioPlayButton';
 import type { ReadingAnnotation, ReviewItem } from '../../types';
+import { colors } from '../../config/theme';
 
 interface Props {
   annotation: ReadingAnnotation;
@@ -20,24 +21,24 @@ export function WordTooltip({ annotation, onAddToReview, onDismiss }: Props) {
 
   return (
     <View style={{
-      backgroundColor: '#F9FAFB',
+      backgroundColor: colors.surface.card,
       borderRadius: 14,
       padding: 16,
       marginTop: 12,
       borderWidth: 1,
-      borderColor: '#E5E7EB',
+      borderColor: colors.border.default,
     }}>
       {/* Word & Translation */}
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 18, fontWeight: '600', color: '#111' }}>
+          <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text.primary }}>
             {annotation.wordOrPhrase}
           </Text>
-          <Text style={{ fontSize: 16, color: '#666', marginTop: 2 }}>
+          <Text style={{ fontSize: 16, color: colors.text.tertiary, marginTop: 2 }}>
             {annotation.translation}
           </Text>
           {annotation.partOfSpeech && (
-            <Text style={{ fontSize: 13, color: '#999', fontStyle: 'italic', marginTop: 2 }}>
+            <Text style={{ fontSize: 13, color: colors.text.tertiary, fontStyle: 'italic', marginTop: 2 }}>
               {annotation.partOfSpeech}
             </Text>
           )}
@@ -53,7 +54,7 @@ export function WordTooltip({ annotation, onAddToReview, onDismiss }: Props) {
           onPress={handleAddToReview}
           style={{
             flex: 1,
-            backgroundColor: '#6366F1',
+            backgroundColor: '#4F46E5',
             paddingVertical: 10,
             borderRadius: 10,
             alignItems: 'center',
@@ -67,7 +68,7 @@ export function WordTooltip({ annotation, onAddToReview, onDismiss }: Props) {
           onPress={onDismiss}
           style={{
             flex: 1,
-            backgroundColor: '#F3F4F6',
+            backgroundColor: colors.surface.cardAlt,
             paddingVertical: 10,
             borderRadius: 10,
             alignItems: 'center',
@@ -75,7 +76,7 @@ export function WordTooltip({ annotation, onAddToReview, onDismiss }: Props) {
           accessibilityRole="button"
           accessibilityLabel="Dismiss"
         >
-          <Text style={{ color: '#666', fontSize: 14, fontWeight: '600' }}>Dismiss</Text>
+          <Text style={{ color: colors.text.tertiary, fontSize: 14, fontWeight: '600' }}>Dismiss</Text>
         </Pressable>
       </View>
     </View>

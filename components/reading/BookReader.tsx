@@ -231,7 +231,7 @@ export function BookReader({
 
       {/* Progress Bar */}
       <View style={{ height: 3, backgroundColor: colors.surface.cardAlt, marginHorizontal: spacing.md }}>
-        <View style={{ height: 3, backgroundColor: colors.indigo[500], width: `${progressPercent}%` }} />
+        <View style={{ height: 3, backgroundColor: colors.action.primaryFill, width: `${progressPercent}%` }} />
       </View>
 
       {/* Font Size Controls */}
@@ -307,7 +307,7 @@ export function BookReader({
           disabled={currentPage >= totalPages - 1}
           style={{
             flex: 1, paddingVertical: 14, borderRadius: radii.lg, alignItems: 'center',
-            backgroundColor: currentPage >= totalPages - 1 ? colors.indigo[200] : colors.indigo[500],
+            backgroundColor: currentPage >= totalPages - 1 ? colors.indigo[200] : colors.action.primaryFill,
           }}
           accessibilityRole="button"
           accessibilityLabel="Next page"
@@ -469,7 +469,7 @@ function BookWordTooltip({
       <View style={{ flexDirection: 'row', gap: 10, marginTop: spacing.xs }}>
         <Pressable
           onPress={handleAdd}
-          style={{ flex: 1, backgroundColor: colors.indigo[500], paddingVertical: 10, borderRadius: radii.md, alignItems: 'center' }}
+          style={{ flex: 1, backgroundColor: colors.action.primaryFill, paddingVertical: 10, borderRadius: radii.md, alignItems: 'center' }}
           accessibilityRole="button"
           accessibilityLabel="Add to review queue"
         >

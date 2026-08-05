@@ -36,7 +36,7 @@ const VARIANT_STYLES: Record<Variant, { bg: string; text: string }> = {
   error: { bg: colors.error.tint, text: colors.error.light },
   warning: { bg: colors.warning.tint, text: colors.warning.light },
   premium: { bg: colors.premium.tint, text: colors.premium.base },
-  streak: { bg: colors.streak.tint, text: colors.streak.base },
+  streak: { bg: colors.streak.tint, text: colors.streak.light },
 };
 
 export function Chip({ label, variant = 'neutral', leftIcon, onPress, customColors, style }: ChipProps) {

@@ -1,6 +1,17 @@
+/**
+ * GradientBorderCard — 1.5px indigo→lilac gradient rule around an opaque card.
+ *
+ * Used by SectionBanner and LevelBadge. The gradient BORDER is the whole point
+ * of the component and stays; the glass inner fill and specular sheen are gone,
+ * replaced with surface.card so it matches every other card under the Dark Glow
+ * theme. Border runs primary → premium (indigo.600 → #A855F7), the deck's
+ * `linear-gradient(135deg, primary, lilac)`.
+ */
+
 import { View, type ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { GRADIENT_COLORS, GRADIENT_START, GRADIENT_END, GLASS_BG, GLASS_HIGHLIGHT, GLASS_BORDER } from '../../config/gradients';
+import { BORDER_GRADIENT_COLORS } from '../../config/gradients';
+import { colors } from '../../config/theme';
 
 interface GradientBorderCardProps {
   children: React.ReactNode;
@@ -15,7 +26,7 @@ export function GradientBorderCard({
   children,
   borderWidth = 1.5,
   borderRadius = 18,
-  innerBg = GLASS_BG,
+  innerBg = colors.surface.card,
   style,
   innerStyle,
 }: GradientBorderCardProps) {
@@ -23,9 +34,11 @@ export function GradientBorderCard({
 
   return (
     <LinearGradient
-      colors={[...GRADIENT_COLORS]}
-      start={GRADIENT_START}
-      end={GRADIENT_END}
+      colors={[...BORDER_GRADIENT_COLORS]}
+      // 135deg — diagonal, matching the deck. The old horizontal sweep made the
+      // rule read as a flat two-tone band on wide cards.
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
       style={[{ borderRadius, padding: borderWidth }, style]}
     >
       <View
@@ -35,27 +48,12 @@ export function GradientBorderCard({
             backgroundColor: innerBg,
             borderRadius: innerRadius,
             borderWidth: 1,
-            borderColor: GLASS_BORDER,
+            borderColor: colors.border.default,
             overflow: 'hidden',
           },
           innerStyle,
         ]}
       >
-        {/* Specular highlight sheen */}
-        <LinearGradient
-          colors={[...GLASS_HIGHLIGHT]}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 0.5 }}
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            borderRadius: innerRadius,
-          }}
-          pointerEvents="none"
-        />
         {children}
       </View>
     </LinearGradient>

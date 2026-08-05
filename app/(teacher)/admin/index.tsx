@@ -29,14 +29,14 @@ export default function AdminHubScreen() {
         <View className="flex-1 px-4 pt-2">
           <Text
             className="text-[28px] text-text-primary mb-1"
-            style={{ fontFamily: 'Inter_700Bold' }}
+            style={{ fontFamily: 'Nunito_800ExtraBold' }}
             accessibilityRole="header"
           >
             Admin
           </Text>
           <Text
             className="text-base text-text-secondary mb-6"
-            style={{ fontFamily: 'Inter_400Regular' }}
+            style={{ fontFamily: 'Nunito_400Regular' }}
           >
             {organization?.name ?? 'Organization'}
           </Text>
@@ -45,13 +45,13 @@ export default function AdminHubScreen() {
           <GlassSurface style={{ marginBottom: 20 }} innerStyle={{ padding: 16 }}>
             <Text
               className="text-sm text-text-secondary mb-2"
-              style={{ fontFamily: 'Inter_600SemiBold' }}
+              style={{ fontFamily: 'Nunito_600SemiBold' }}
             >
               Organization Details
             </Text>
             <View className="flex-row items-center justify-between mb-1">
-              <Text className="text-sm text-text-secondary" style={{ fontFamily: 'Inter_400Regular' }}>Status</Text>
-              <Text style={{ color: '#22C55E', fontSize: 14, fontFamily: 'Inter_600SemiBold' }}>Active</Text>
+              <Text className="text-sm text-text-secondary" style={{ fontFamily: 'Nunito_400Regular' }}>Status</Text>
+              <Text style={{ color: '#22C55E', fontSize: 14, fontFamily: 'Nunito_600SemiBold' }}>Active</Text>
             </View>
           </GlassSurface>
 
@@ -77,12 +77,12 @@ export default function AdminHubScreen() {
                   <Ionicons
                     name={action.icon}
                     size={20}
-                    color={action.icon === 'trash-outline' ? '#EF4444' : '#38BDF8'}
+                    color={action.icon === 'trash-outline' ? '#EF4444' : '#818CF8'}
                   />
                 </View>
                 <View className="ml-3 flex-1">
-                  <Text className="text-base text-text-primary" style={{ fontFamily: 'Inter_600SemiBold' }}>{action.title}</Text>
-                  <Text className="text-xs text-text-secondary" style={{ fontFamily: 'Inter_400Regular' }}>{action.subtitle}</Text>
+                  <Text className="text-base text-text-primary" style={{ fontFamily: 'Nunito_600SemiBold' }}>{action.title}</Text>
+                  <Text className="text-xs text-text-secondary" style={{ fontFamily: 'Nunito_400Regular' }}>{action.subtitle}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color="#64748B" />
               </GlassSurface>

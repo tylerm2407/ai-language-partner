@@ -16,16 +16,16 @@ export interface GlassSurfaceProps {
 }
 
 /**
- * GlassSurface — SIMPLIFIED (Phase 0).
+ * GlassSurface — flat card surface. The name is historical; there is no glass.
  *
  * Formerly: 6-layer chromatic-aberration glass with specular sheen.
- * Now: single dark fill + hairline border. Same API so every existing
- * consumer (profile, teacher dashboard, modals, etc.) keeps working.
+ * Now: opaque surface.card + 1px border.default, matching every other card
+ * primitive under the Dark Glow theme. Same API so every existing consumer
+ * (profile, teacher dashboard, modals, etc.) keeps working.
  *
- * The chromatic-aberration "glass" treatment was visually busy and
- * competed with learning content (Mayer coherence). Replaced with a flat
- * card surface that still reads as an elevated region but without the
- * decorative sheen. See design-research.md + redesign-plan.md.
+ * Depth comes from the ambient glow layer behind the card, not from the card
+ * itself — per-card translucency competed with the glow and muddied it.
+ * See DESIGN.md §Glow + §Cards.
  */
 export function GlassSurface({
   children,
@@ -55,7 +55,7 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: colors.surface.card,
     borderWidth: 1,
-    borderColor: colors.border.subtle,
+    borderColor: colors.border.default,
     overflow: 'hidden',
   },
 });

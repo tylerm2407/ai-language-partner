@@ -10,6 +10,8 @@ import { Button } from '../../../components/ui/Button';
 import { LoadingScreen } from '../../../components/ui/LoadingScreen';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import type { ReviewRating } from '../../../types';
+import { GlowLayer } from '../../../components/ui/GlowBackground';
+import { colors } from '../../../config/theme';
 
 export default function ReviewScreen() {
   const router = useRouter();
@@ -63,7 +65,8 @@ export default function ReviewScreen() {
 
   if (items.length === 0) {
     return (
-      <SafeAreaView className="flex-1 bg-dark">
+      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.surface.base }}>
+        <GlowLayer drift={false} />
         <EmptyState
           icon="checkmark-circle"
           title="All caught up!"
@@ -80,7 +83,8 @@ export default function ReviewScreen() {
 
   if (isComplete) {
     return (
-      <SafeAreaView className="flex-1 bg-dark items-center justify-center px-8">
+      <SafeAreaView className="flex-1 items-center justify-center px-8" style={{ backgroundColor: colors.surface.base }}>
+        <GlowLayer drift={false} />
         <View className="w-[100px] h-[100px] rounded-full bg-success-bg items-center justify-center mb-6">
           <Text className="text-[32px] font-bold text-success">{reviewed}</Text>
         </View>
@@ -99,7 +103,8 @@ export default function ReviewScreen() {
   const card = cards[item.cardId];
 
   return (
-    <SafeAreaView className="flex-1 bg-dark">
+    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.surface.base }}>
+      <GlowLayer drift={false} />
       {/* Header */}
       <View className="px-4 pt-2 pb-4">
         <View className="flex-row items-center justify-between mb-3">

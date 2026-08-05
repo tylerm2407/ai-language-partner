@@ -331,7 +331,7 @@ export default function OnboardingScreen() {
     return (
       <GradientBackground>
         <SafeAreaView className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={colors.indigo[500]} />
+          <ActivityIndicator size="large" color={colors.action.accent} />
           {flushing && (
             <Text className="text-base text-text-secondary mt-4">Setting up your course…</Text>
           )}

@@ -18,7 +18,7 @@ export function DailyNewsCard({ article, isLoading, error, hasRead = false, onPr
       <GlassSurface style={{ marginBottom: 24 }}>
         <View className="p-5 flex-row items-center">
           <View className="w-11 h-11 rounded-full bg-dark-card-alt items-center justify-center mr-4">
-            <Ionicons name="newspaper-outline" size={22} color="#38BDF8" />
+            <Ionicons name="newspaper-outline" size={22} color="#818CF8" />
           </View>
           <View className="flex-1">
             <Text className="text-sm font-semibold text-primary mb-1">Today&apos;s News</Text>
@@ -37,7 +37,7 @@ export function DailyNewsCard({ article, isLoading, error, hasRead = false, onPr
       <GlassSurface style={{ marginBottom: 24 }}>
         <View className="p-5 flex-row items-center">
           <View className="w-11 h-11 rounded-full bg-dark-card-alt items-center justify-center mr-4">
-            <Ionicons name="newspaper-outline" size={22} color="#38BDF8" />
+            <Ionicons name="newspaper-outline" size={22} color="#818CF8" />
           </View>
           <View className="flex-1">
             <Text className="text-sm font-semibold text-primary mb-1">Today&apos;s News</Text>
@@ -60,7 +60,7 @@ export function DailyNewsCard({ article, isLoading, error, hasRead = false, onPr
         accessibilityLabel={hasRead ? "Today's News, already read" : "Today's News"}
       >
         <View className="w-11 h-11 rounded-full bg-dark-card-alt items-center justify-center mr-4">
-          <Ionicons name="newspaper-outline" size={22} color="#38BDF8" />
+          <Ionicons name="newspaper-outline" size={22} color="#818CF8" />
         </View>
         <View className="flex-1">
           <View className="flex-row items-center mb-1">

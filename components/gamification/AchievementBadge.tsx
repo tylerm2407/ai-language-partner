@@ -70,7 +70,7 @@ export function AchievementBadge({ achievement, earned, earnedAt, isNew }: Achie
       {/* Title */}
       <Text
         className="text-text-secondary text-center mt-1"
-        style={{ fontSize: 10, lineHeight: 13 }}
+        style={{ fontSize: 10, lineHeight: 14 }}
         numberOfLines={2}
       >
         {achievement.title}

@@ -38,7 +38,7 @@ function RubricRow({ label, score }: { label: string; score: number }) {
     <View className="flex-row items-center justify-between mb-2">
       <Text
         className="text-sm text-text-secondary"
-        style={{ fontFamily: 'Inter_500Medium' }}
+        style={{ fontFamily: 'Nunito_500Medium' }}
       >
         {label}
       </Text>
@@ -46,7 +46,7 @@ function RubricRow({ label, score }: { label: string; score: number }) {
         style={{
           color: score >= 80 ? '#22C55E' : score >= 60 ? '#F59E0B' : '#EF4444',
           fontSize: 14,
-          fontFamily: 'Inter_700Bold',
+          fontFamily: 'Nunito_700Bold',
         }}
       >
         {score}%
@@ -122,7 +122,7 @@ export default function GradingScreen() {
     return (
       <GradientBackground>
         <SafeAreaView className="flex-1 justify-center items-center">
-          <ActivityIndicator color="#38BDF8" size="large" />
+          <ActivityIndicator color="#818CF8" size="large" />
         </SafeAreaView>
       </GradientBackground>
     );
@@ -148,10 +148,10 @@ export default function GradingScreen() {
             accessibilityLabel="Go back"
             className="flex-row items-center mb-4"
           >
-            <Ionicons name="chevron-back" size={24} color="#38BDF8" />
+            <Ionicons name="chevron-back" size={24} color="#818CF8" />
             <Text
               className="text-base text-primary ml-1"
-              style={{ fontFamily: 'Inter_600SemiBold' }}
+              style={{ fontFamily: 'Nunito_600SemiBold' }}
             >
               Back
             </Text>
@@ -159,7 +159,7 @@ export default function GradingScreen() {
 
           <Text
             className="text-[28px] text-text-primary mb-4"
-            style={{ fontFamily: 'Inter_700Bold' }}
+            style={{ fontFamily: 'Nunito_800ExtraBold' }}
             accessibilityRole="header"
           >
             Review Submission
@@ -187,13 +187,13 @@ export default function GradingScreen() {
                 <View className="ml-3">
                   <Text
                     className="text-base text-text-primary"
-                    style={{ fontFamily: 'Inter_600SemiBold' }}
+                    style={{ fontFamily: 'Nunito_600SemiBold' }}
                   >
                     {submission?.studentName ?? 'Student'}
                   </Text>
                   <Text
                     className="text-xs text-text-secondary"
-                    style={{ fontFamily: 'Inter_400Regular' }}
+                    style={{ fontFamily: 'Nunito_400Regular' }}
                   >
                     Submitted {formatDate(submission?.submittedAt ?? null)}
                   </Text>
@@ -211,7 +211,7 @@ export default function GradingScreen() {
                     style={{
                       color: '#94A3B8',
                       fontSize: 12,
-                      fontFamily: 'Inter_500Medium',
+                      fontFamily: 'Nunito_500Medium',
                       marginLeft: 4,
                     }}
                   >
@@ -232,7 +232,7 @@ export default function GradingScreen() {
                     style={{
                       color: '#EF4444',
                       fontSize: 11,
-                      fontFamily: 'Inter_600SemiBold',
+                      fontFamily: 'Nunito_600SemiBold',
                     }}
                   >
                     Late
@@ -245,7 +245,7 @@ export default function GradingScreen() {
           {/* AI Rubric */}
           <Text
             className="text-xl text-text-primary mb-3"
-            style={{ fontFamily: 'Inter_600SemiBold' }}
+            style={{ fontFamily: 'Nunito_600SemiBold' }}
           >
             AI Evaluation
           </Text>
@@ -275,15 +275,15 @@ export default function GradingScreen() {
                 <View className="flex-row items-center justify-between">
                   <Text
                     className="text-base text-text-primary"
-                    style={{ fontFamily: 'Inter_600SemiBold' }}
+                    style={{ fontFamily: 'Nunito_600SemiBold' }}
                   >
                     Total Score
                   </Text>
                   <Text
                     style={{
-                      color: '#38BDF8',
+                      color: '#818CF8',
                       fontSize: 20,
-                      fontFamily: 'Inter_700Bold',
+                      fontFamily: 'Nunito_800ExtraBold',
                     }}
                   >
                     {aiFeedback.totalScore}%
@@ -295,7 +295,7 @@ export default function GradingScreen() {
               {aiFeedback.summary ? (
                 <Text
                   className="text-sm text-text-secondary mt-3"
-                  style={{ fontFamily: 'Inter_400Regular' }}
+                  style={{ fontFamily: 'Nunito_400Regular' }}
                 >
                   {aiFeedback.summary}
                 </Text>
@@ -306,7 +306,7 @@ export default function GradingScreen() {
                 <View className="mt-3">
                   <Text
                     className="text-xs text-text-secondary mb-1"
-                    style={{ fontFamily: 'Inter_600SemiBold' }}
+                    style={{ fontFamily: 'Nunito_600SemiBold' }}
                   >
                     Strengths
                   </Text>
@@ -320,7 +320,7 @@ export default function GradingScreen() {
                       />
                       <Text
                         className="text-sm text-text-primary flex-1"
-                        style={{ fontFamily: 'Inter_400Regular' }}
+                        style={{ fontFamily: 'Nunito_400Regular' }}
                       >
                         {s}
                       </Text>
@@ -334,7 +334,7 @@ export default function GradingScreen() {
                 <View className="mt-3">
                   <Text
                     className="text-xs text-text-secondary mb-1"
-                    style={{ fontFamily: 'Inter_600SemiBold' }}
+                    style={{ fontFamily: 'Nunito_600SemiBold' }}
                   >
                     Areas for Improvement
                   </Text>
@@ -348,7 +348,7 @@ export default function GradingScreen() {
                       />
                       <Text
                         className="text-sm text-text-primary flex-1"
-                        style={{ fontFamily: 'Inter_400Regular' }}
+                        style={{ fontFamily: 'Nunito_400Regular' }}
                       >
                         {s}
                       </Text>
@@ -365,7 +365,7 @@ export default function GradingScreen() {
               <Ionicons name="analytics-outline" size={28} color="#64748B" />
               <Text
                 className="text-sm text-text-secondary mt-2"
-                style={{ fontFamily: 'Inter_400Regular' }}
+                style={{ fontFamily: 'Nunito_400Regular' }}
               >
                 AI evaluation not available
               </Text>
@@ -375,7 +375,7 @@ export default function GradingScreen() {
           {/* Transcript placeholder */}
           <Text
             className="text-xl text-text-primary mb-3"
-            style={{ fontFamily: 'Inter_600SemiBold' }}
+            style={{ fontFamily: 'Nunito_600SemiBold' }}
           >
             Conversation Transcript
           </Text>
@@ -392,7 +392,7 @@ export default function GradingScreen() {
               <Ionicons name="chatbox-outline" size={28} color="#64748B" />
               <Text
                 className="text-sm text-text-secondary mt-2"
-                style={{ fontFamily: 'Inter_400Regular' }}
+                style={{ fontFamily: 'Nunito_400Regular' }}
               >
                 No transcript available
               </Text>
@@ -402,14 +402,14 @@ export default function GradingScreen() {
           {/* Teacher Feedback */}
           <Text
             className="text-xl text-text-primary mb-3"
-            style={{ fontFamily: 'Inter_600SemiBold' }}
+            style={{ fontFamily: 'Nunito_600SemiBold' }}
           >
             Teacher Feedback
           </Text>
 
           <Text
             className="text-sm text-text-secondary mb-2"
-            style={{ fontFamily: 'Inter_600SemiBold' }}
+            style={{ fontFamily: 'Nunito_600SemiBold' }}
           >
             Score Override (0-100)
           </Text>
@@ -423,7 +423,7 @@ export default function GradingScreen() {
               style={{
                 color: '#F1F5F9',
                 fontSize: 16,
-                fontFamily: 'Inter_400Regular',
+                fontFamily: 'Nunito_400Regular',
                 padding: 14,
               }}
               accessibilityLabel="Score override"
@@ -432,7 +432,7 @@ export default function GradingScreen() {
 
           <Text
             className="text-sm text-text-secondary mb-2"
-            style={{ fontFamily: 'Inter_600SemiBold' }}
+            style={{ fontFamily: 'Nunito_600SemiBold' }}
           >
             Comments
           </Text>
@@ -446,7 +446,7 @@ export default function GradingScreen() {
               style={{
                 color: '#F1F5F9',
                 fontSize: 15,
-                fontFamily: 'Inter_400Regular',
+                fontFamily: 'Nunito_400Regular',
                 padding: 14,
                 minHeight: 100,
               }}

@@ -1,14 +1,20 @@
 // Supabase Edge Function: Speech-to-Text via OpenAI Whisper
-// Accepts base64-encoded audio and returns transcribed text.
-// DEPRECATED: Still used by hold-to-talk voice mode as a fallback.
-// Hands-free mode now uses Gemini Live with built-in VAD and STT.
+// Accepts base64-encoded audio and returns transcribed text plus the language
+// Whisper actually heard. Used by both hold-to-talk and the hands-free loop.
+//
+// The caller's `language` is a HINT, never a constraint: passing Whisper a
+// `language` forces decoding into it, so a learner who drops into their native
+// language mid-session gets mistranslated word-salad back. Learners code-switch
+// constantly, so we let Whisper detect and report instead, and the tutor adapts.
+//
 // Deploy: npx supabase functions deploy transcribe
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'npm:@supabase/supabase-js@2';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { checkBurstLimit } from '../_shared/burst-limit.ts';
 import { MAX_AUDIO_BASE64_SIZE } from '../_shared/validation.ts';
+import { toLanguageCode } from '../_shared/language.ts';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -16,8 +22,10 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 interface TranscribeRequest {
   audioBase64: string;
+  /** Hint only — see the header note. Used as a fallback if detection fails. */
   language: string;
 }
+
 
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -84,9 +92,8 @@ serve(async (req: Request) => {
     const audioBlob = new Blob([bytes], { type: 'audio/m4a' });
     formData.append('file', audioBlob, 'audio.m4a');
     formData.append('model', 'whisper-1');
-    if (language) {
-      formData.append('language', language);
-    }
+    // verbose_json is the only response format that reports detected language.
+    formData.append('response_format', 'verbose_json');
 
     const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
@@ -104,7 +111,13 @@ serve(async (req: Request) => {
     const data = await response.json();
 
     return new Response(
-      JSON.stringify({ text: data.text ?? '', language: language }),
+      JSON.stringify({
+        text: data.text ?? '',
+        // Whisper reports an English language *name* ("spanish"), not a code.
+        // Unrecognised names fall back to the caller's hint rather than null so
+        // downstream code always has something to key on.
+        language: toLanguageCode(data.language) ?? language ?? null,
+      }),
       { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
     );
   } catch (error) {

@@ -1,10 +1,19 @@
+/**
+ * FloatingTabBar — 240×56 pill, 40px active circle, 44pt hit targets.
+ *
+ * Geometry is unchanged. The BlurView + translucent fill are gone: the pill is
+ * now an opaque surface.card with a 1px border, matching every other surface
+ * under the Dark Glow theme (and no longer smearing the glow blobs behind it).
+ * That also drops the iOS/Android fork — both platforms render identically.
+ */
+
 import React from 'react';
-import { View, Pressable, StyleSheet, Platform } from 'react-native';
-import { BlurView } from 'expo-blur';
+import { View, Pressable, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, radii } from '../../config/theme';
+import { BORDER_GRADIENT_COLORS } from '../../config/gradients';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 
 const TAB_ICONS: Record<string, { active: string; inactive: string }> = {
@@ -52,7 +61,7 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
           >
             {isFocused ? (
               <LinearGradient
-                colors={[colors.magazine.accentBlue, colors.magazine.accentViolet]}
+                colors={[...BORDER_GRADIENT_COLORS]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.activeCircle}
@@ -70,24 +79,9 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
     </View>
   );
 
-  if (Platform.OS === 'android') {
-    return (
-      <View style={[styles.container, { bottom: bottomOffset }]}>
-        <View style={[styles.pill, styles.pillFallback]}>
-          {inner}
-        </View>
-      </View>
-    );
-  }
-
   return (
     <View style={[styles.container, { bottom: bottomOffset }]}>
-      <View style={styles.pill}>
-        <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
-        <View style={styles.pillOverlay}>
-          {inner}
-        </View>
-      </View>
+      <View style={styles.pill}>{inner}</View>
     </View>
   );
 }
@@ -104,16 +98,10 @@ const styles = StyleSheet.create({
     width: 240,
     height: 56,
     borderRadius: radii.pill,
-    borderWidth: 0.5,
-    borderColor: colors.magazine.glassBorder,
+    borderWidth: 1,
+    borderColor: colors.border.default,
+    backgroundColor: colors.surface.card,
     overflow: 'hidden',
-  },
-  pillOverlay: {
-    flex: 1,
-    backgroundColor: colors.magazine.glassBg,
-  },
-  pillFallback: {
-    backgroundColor: colors.magazine.glassBg,
   },
   tabRow: {
     flex: 1,

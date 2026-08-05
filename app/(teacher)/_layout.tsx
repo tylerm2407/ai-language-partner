@@ -2,7 +2,8 @@ import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { GRADIENT_COLORS } from '../../config/gradients';
+import { BORDER_GRADIENT_COLORS } from '../../config/gradients';
+import { colors } from '../../config/theme';
 import { useSchoolStore } from '../../stores/useSchoolStore';
 import { ErrorBoundary } from '../../components/ui/ErrorBoundary';
 
@@ -10,12 +11,15 @@ function TabBarBackground() {
   return (
     <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
       <LinearGradient
-        colors={[`${GRADIENT_COLORS[0]}4D`, `${GRADIENT_COLORS[1]}4D`]}
+        colors={[`${BORDER_GRADIENT_COLORS[0]}4D`, `${BORDER_GRADIENT_COLORS[1]}4D`]}
         start={{ x: 0, y: 0.5 }}
         end={{ x: 1, y: 0.5 }}
         style={{ height: 1 }}
       />
-      <View style={{ flex: 1, backgroundColor: 'rgba(12, 15, 20, 0.95)' }} />
+      {/* Opaque card fill — matching the learner FloatingTabBar. The old
+          rgba(12,15,20,.95) was keyed to the pre-glow base and read as a
+          lighter grey band once the base deepened to #08090F. */}
+      <View style={{ flex: 1, backgroundColor: colors.surface.card }} />
     </View>
   );
 }
@@ -30,7 +34,7 @@ export default function TeacherLayout() {
       <Tabs
         screenOptions={{
           headerShown: false,
-          tabBarActiveTintColor: '#38BDF8',
+          tabBarActiveTintColor: '#818CF8',
           tabBarInactiveTintColor: '#64748B',
           tabBarStyle: {
             borderTopWidth: 0,
@@ -40,10 +44,10 @@ export default function TeacherLayout() {
           tabBarBackground: () => <TabBarBackground />,
           tabBarLabelStyle: {
             fontSize: 12,
-            fontFamily: 'Inter_600SemiBold',
+            fontFamily: 'Nunito_600SemiBold',
           },
           tabBarIconStyle: {
-            shadowColor: '#38BDF8',
+            shadowColor: '#818CF8',
             shadowOffset: { width: 0, height: 2 },
             shadowOpacity: 0.3,
             shadowRadius: 6,

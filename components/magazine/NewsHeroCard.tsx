@@ -1,4 +1,4 @@
-import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { MagazineGlassCard } from './MagazineGlassCard';
 import { colors, typography } from '../../config/theme';
 import type { DailyNewsArticle } from '../../types';
@@ -12,7 +12,9 @@ interface NewsHeroCardProps {
   onPress: () => void;
 }
 
-const serifFont = Platform.select({ ios: 'Georgia', default: 'serif' });
+// Editorial face. Fraunces_600SemiBold carries its own weight — never pair it
+// with fontWeight, which makes Android synthesize a second bolding pass.
+const serifFont = typography.family.serif;
 
 export function NewsHeroCard({ article, isLoading, error, hasRead, level, onPress }: NewsHeroCardProps) {
   // Loading skeleton
@@ -76,9 +78,8 @@ const styles = StyleSheet.create({
   headline: {
     fontFamily: serifFont,
     fontSize: 26,
-    fontWeight: 'bold',
     color: colors.text.primary,
-    lineHeight: 32,
+    lineHeight: 33, // minLineHeight(26, 'display') — headlines carry descenders
     marginBottom: 8,
   },
   lede: {

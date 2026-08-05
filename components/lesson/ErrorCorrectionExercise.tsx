@@ -142,7 +142,7 @@ export function ErrorCorrectionExercise({
           onPress={handleCheck}
           disabled={userInput.trim().length === 0}
           style={{
-            backgroundColor: userInput.trim().length > 0 ? colors.indigo[500] : colors.indigo[200],
+            backgroundColor: userInput.trim().length > 0 ? colors.action.primaryFill : colors.indigo[200],
             paddingVertical: spacing.md, borderRadius: radii.lg, alignItems: 'center',
           }}
           accessibilityRole="button"

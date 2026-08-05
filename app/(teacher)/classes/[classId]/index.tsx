@@ -21,6 +21,7 @@ import {
   fetchClassroomAssignments,
 } from '../../../../lib/supabase-queries';
 import type { Classroom, Assignment } from '../../../../types';
+import { colors } from '../../../../config/theme';
 
 interface StudentRowData {
   id: string;
@@ -114,13 +115,13 @@ export default function ClassDetailScreen() {
             <View className="ml-3 flex-1">
               <Text
                 className="text-base text-text-primary"
-                style={{ fontFamily: 'Inter_600SemiBold' }}
+                style={{ fontFamily: 'Nunito_600SemiBold' }}
               >
                 {item.name}
               </Text>
               <Text
                 className="text-xs text-text-secondary"
-                style={{ fontFamily: 'Inter_400Regular' }}
+                style={{ fontFamily: 'Nunito_400Regular' }}
               >
                 Enrolled{' '}
                 {new Date(item.enrolledAt).toLocaleDateString(undefined, {
@@ -153,7 +154,7 @@ export default function ClassDetailScreen() {
     return (
       <GradientBackground>
         <SafeAreaView className="flex-1 justify-center items-center">
-          <ActivityIndicator color="#38BDF8" size="large" />
+          <ActivityIndicator color="#818CF8" size="large" />
         </SafeAreaView>
       </GradientBackground>
     );
@@ -170,10 +171,10 @@ export default function ClassDetailScreen() {
             accessibilityLabel="Go back"
             className="flex-row items-center mb-4"
           >
-            <Ionicons name="chevron-back" size={24} color="#38BDF8" />
+            <Ionicons name="chevron-back" size={24} color="#818CF8" />
             <Text
               className="text-base text-primary ml-1"
-              style={{ fontFamily: 'Inter_600SemiBold' }}
+              style={{ fontFamily: 'Nunito_600SemiBold' }}
             >
               Back
             </Text>
@@ -181,7 +182,7 @@ export default function ClassDetailScreen() {
 
           <Text
             className="text-[28px] text-text-primary mb-2"
-            style={{ fontFamily: 'Inter_700Bold' }}
+            style={{ fontFamily: 'Nunito_800ExtraBold' }}
             accessibilityRole="header"
           >
             {classroom?.name ?? 'Class'}
@@ -201,13 +202,13 @@ export default function ClassDetailScreen() {
               <View>
                 <Text
                   className="text-xs text-text-secondary"
-                  style={{ fontFamily: 'Inter_500Medium' }}
+                  style={{ fontFamily: 'Nunito_500Medium' }}
                 >
                   Invite Code
                 </Text>
                 <Text
                   className="text-lg text-primary"
-                  style={{ fontFamily: 'Inter_700Bold', letterSpacing: 2 }}
+                  style={{ fontFamily: 'Nunito_700Bold', letterSpacing: 2 }}
                 >
                   {classroom.inviteCode}
                 </Text>
@@ -222,7 +223,7 @@ export default function ClassDetailScreen() {
               >
                 {copied && (
                   <Text
-                    style={{ color: '#22C55E', fontSize: 12, fontFamily: 'Inter_600SemiBold' }}
+                    style={{ color: '#22C55E', fontSize: 12, fontFamily: 'Nunito_600SemiBold' }}
                   >
                     Copied
                   </Text>
@@ -230,7 +231,7 @@ export default function ClassDetailScreen() {
                 <Ionicons
                   name={copied ? 'checkmark-circle' : 'copy-outline'}
                   size={20}
-                  color={copied ? '#22C55E' : '#38BDF8'}
+                  color={copied ? '#22C55E' : '#818CF8'}
                 />
               </Pressable>
             </GlassSurface>
@@ -240,7 +241,7 @@ export default function ClassDetailScreen() {
           <View
             className="flex-row mb-4"
             style={{
-              backgroundColor: 'rgba(30, 35, 50, 0.6)',
+              backgroundColor: colors.surface.cardAlt,
               borderRadius: 12,
               padding: 3,
             }}
@@ -267,7 +268,7 @@ export default function ClassDetailScreen() {
                   style={{
                     color: tab === t ? '#A855F7' : '#94A3B8',
                     fontSize: 14,
-                    fontFamily: 'Inter_600SemiBold',
+                    fontFamily: 'Nunito_600SemiBold',
                   }}
                 >
                   {t.charAt(0).toUpperCase() + t.slice(1)}
@@ -282,13 +283,13 @@ export default function ClassDetailScreen() {
               <Ionicons name="warning-outline" size={48} color="#EF4444" />
               <Text
                 className="text-base text-text-primary mt-3"
-                style={{ fontFamily: 'Inter_600SemiBold' }}
+                style={{ fontFamily: 'Nunito_600SemiBold' }}
               >
                 Couldn't load class data
               </Text>
               <Text
                 className="text-sm text-text-secondary mt-1 text-center px-8"
-                style={{ fontFamily: 'Inter_400Regular' }}
+                style={{ fontFamily: 'Nunito_400Regular' }}
               >
                 {error}
               </Text>
@@ -312,13 +313,13 @@ export default function ClassDetailScreen() {
                   <Ionicons name="people-outline" size={48} color="#64748B" />
                   <Text
                     className="text-base text-text-primary mt-3"
-                    style={{ fontFamily: 'Inter_600SemiBold' }}
+                    style={{ fontFamily: 'Nunito_600SemiBold' }}
                   >
                     No students enrolled
                   </Text>
                   <Text
                     className="text-sm text-text-secondary mt-1 text-center px-8"
-                    style={{ fontFamily: 'Inter_400Regular' }}
+                    style={{ fontFamily: 'Nunito_400Regular' }}
                   >
                     Share the invite code with students so they can join this class.
                   </Text>
@@ -346,13 +347,13 @@ export default function ClassDetailScreen() {
                   <Ionicons name="document-text-outline" size={48} color="#64748B" />
                   <Text
                     className="text-base text-text-primary mt-3"
-                    style={{ fontFamily: 'Inter_600SemiBold' }}
+                    style={{ fontFamily: 'Nunito_600SemiBold' }}
                   >
                     No assignments yet
                   </Text>
                   <Text
                     className="text-sm text-text-secondary mt-1 text-center px-8"
-                    style={{ fontFamily: 'Inter_400Regular' }}
+                    style={{ fontFamily: 'Nunito_400Regular' }}
                   >
                     Create an assignment to give your students conversation practice.
                   </Text>

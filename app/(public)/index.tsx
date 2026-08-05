@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { GradientBackground } from '../../components/ui/GradientBackground';
 import { useMotion } from '../../hooks/useMotion';
-import { colors } from '../../config/theme';
+import { colors, typography } from '../../config/theme';
 
 const GREETINGS = [
   { word: 'Hello', lang: 'English' },
@@ -87,7 +87,7 @@ export default function WelcomeScreen() {
       <View className="flex-1 items-center justify-center px-8">
         <Animated.View style={{ opacity: logoOpacity, transform: [{ translateY: logoTranslateY }], alignItems: 'center' }}>
           <Text
-            style={{ fontFamily: 'PlayfairDisplay_700Bold', fontSize: 48 }}
+            style={{ fontFamily: typography.family.display, fontSize: 48 }}
             className="text-primary mb-1"
             accessibilityRole="header"
           >

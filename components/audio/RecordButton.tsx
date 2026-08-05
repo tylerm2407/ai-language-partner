@@ -51,7 +51,7 @@ export function RecordButton({ onRecordingComplete, size = 64 }: RecordButtonPro
           width: size,
           height: size,
           borderRadius: size / 2,
-          backgroundColor: recording ? '#EF4444' : '#6366F1',
+          backgroundColor: recording ? '#EF4444' : '#4F46E5',
           justifyContent: 'center',
           alignItems: 'center',
           borderWidth: recording ? 4 : 0,

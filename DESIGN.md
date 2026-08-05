@@ -33,16 +33,47 @@ import { colors, spacing, radii, typography, motion, elevation } from '../../con
 
 ## Color Palette
 
-### Surfaces (dark-canonical)
+### Surfaces (dark-canonical — "Dark Glow")
 
 | Token | Hex | Usage |
 |---|---|---|
-| `surface.base` | `#0C0F14` | Primary app background (home, chat, practice, profile) |
-| `surface.raised` | `#12161D` | Reading / lesson / review screens — focus surface |
-| `surface.card` | `#151921` | Card fills |
+| `surface.base` | `#08090F` | Primary app background (home, chat, practice, profile) |
+| `surface.raised` | `#0E1119` | Reading / lesson / review screens — focus surface |
+| `surface.sunken` | `#060710` | Behind-content wells, inset tracks |
+| `surface.card` | `#151921` | Card fills — **opaque** |
 | `surface.cardAlt` | `#1C212B` | Nested cards, input fills |
-| `surface.overlay` | `rgba(12,15,20,0.85)` | Modal/sheet backdrop |
+| `surface.overlay` | `rgba(6,8,12,0.82)` | Modal/sheet backdrop, celebration scrim |
 | `surface.sheet` | `#1A1F29` | Bottom-sheet fill |
+
+`base` / `raised` / `sunken` are deepened toward black so the ambient glow layer
+reads as depth instead of washing out a flat fill. Card steps are unchanged —
+content contrast is untouched.
+
+### Glow (ambient background)
+
+Every screen background is `components/ui/GradientBackground.tsx`, which renders
+three low-opacity indigo/violet radial blobs behind screen content. Tokens live
+in `colors.glow.*`.
+
+| Blob | Size | Anchor | Color | Alpha | Loop |
+|---|---|---|---|---|---|
+| 1 | 340 | top `-80`, left `-100` | `glow.indigo` `#6366F1` | 0.35 | 9s |
+| 2 | 380 | bottom `-120`, right `-120` | `glow.violet` `#7C3AED` | 0.30 | 12s |
+| 3 | 260 | top 38%, left 55% | `glow.lilacIndigo` `#818CF8` | 0.20 | 15s |
+
+Rules:
+- **Never stack two glow layers.** `GradientBackground` (or a single `GlowLayer`)
+  per screen — two layers compound alpha and the composition breaks.
+- Drift gates on `useMotion().shouldReduce`. Focus surfaces pass
+  `variant="raised"`, which keeps the glow but spends no motion.
+- Blobs are radial gradients with a soft stop ramp, **not** blurred views. A
+  full-screen `BlurView` under every screen costs Android scroll frames for no
+  visual gain on an already-soft shape.
+- The layer is `pointerEvents="none"` and carries **no** `zIndex`. React Native
+  paints siblings in declaration order and treats a sibling without `zIndex` as
+  0, so a positive `zIndex` here would put the blobs *over* the content. Keep it
+  as the first child instead. When dropping a bare `<GlowLayer />` into a screen
+  that owns its own root, it must come first.
 
 ### Borders
 
@@ -57,22 +88,33 @@ import { colors, spacing, radii, typography, motion, elevation } from '../../con
 
 | Token | Hex | Ratio | Usage |
 |---|---|---|---|
-| `text.primary` | `#F1F5F9` | 14.6:1 (AAA) | Headings, body |
-| `text.secondary` | `#CBD5E1` | 10.2:1 (AAA) | Descriptions, metadata |
-| `text.tertiary` | `#94A3B8` | 5.8:1 (AA large) | Placeholders, helper text |
-| `text.quaternary` | `#64748B` | 3.7:1 (UI large only) | Muted timestamps |
-| `text.onPrimary` | `#FFFFFF` | — | Text on `indigo.500` buttons |
+| `text.primary` | `#F1F5F9` | 15.6:1 (AAA) | Headings, body |
+| `text.secondary` | `#CBD5E1` | 10.9:1 (AAA) | Descriptions, metadata |
+| `text.tertiary` | `#94A3B8` | 6.2:1 (AA) | Placeholders, helper text |
+| `text.quaternary` | `#64748B` | 3.9:1 (UI large only) | Muted timestamps |
+| `text.onPrimary` | `#FFFFFF` | 6.4:1 on `action.primaryFill` | Text on filled CTAs |
+| `text.onSuccess` | `#052E1A` | 7.1:1 on `success.base` | Text on bright success fills |
+| `text.onWarning` | `#0C0F14` | 9.0:1 on `warning.base` | Text on bright warning fills |
 | `text.disabled` | `rgba(241,245,249,0.38)` | — | Disabled button labels |
 
-### Primary (Indigo)
+### Primary (Indigo) — fills vs accents
+
+**The distinction is load-bearing.** White on `indigo.500` is 4.47:1, which is
+*under* AA — and that was every CTA in the app. Fills use `indigo.600`; the
+brighter `indigo.400` is for text and icons, where it clears AA on dark.
 
 | Token | Hex | Usage |
 |---|---|---|
-| `indigo.500` | `#6366F1` | **CANONICAL PRIMARY.** Buttons, active tabs, focused inputs |
-| `indigo.400` | `#818CF8` | Accents on dark (small icons, text links, progress glow) |
-| `indigo.700` | `#4338CA` | Tactile button bottom slab |
-| `indigo.300` | `#A5B4FC` | Chips, subtle accents |
-| `indigo.100` / `200` / `300` | — | Reserve for rare tint moments |
+| `action.primaryFill` | `#4F46E5` (indigo.600) | **All solid CTA fills.** White on it is 6.4:1 |
+| `action.primarySlab` | `#3730A3` (indigo.800) | Tactile button bottom slab — drops one step with the fill |
+| `action.accent` | `#818CF8` (indigo.400) | Text links, small icons, spinners, progress glow (6.43:1) |
+| `action.primaryTint` | `rgba(99,102,241,0.15)` | Selected-row fills, icon-circle backgrounds |
+| `indigo.500` | `#6366F1` | **Borders and gradient stops only** — never a fill behind white text |
+| `indigo.200` | `#C7D2FE` | Disabled CTA fill |
+
+Semantic chip labels follow the same rule: text on a dark tint uses that
+semantic's `.light` step (`success.light`, `warning.light`, `error.light`,
+`streak.light`), never the base — the bases land at or under AA at small sizes.
 
 ### Semantic
 
@@ -81,7 +123,10 @@ import { colors, spacing, radii, typography, motion, elevation } from '../../con
 | `success` | `#22C55E` | `rgba(34,197,94,0.15)` | `rgba(34,197,94,0.35)` | Correct, completed |
 | `error` | `#EF4444` | `rgba(239,68,68,0.15)` | `rgba(239,68,68,0.40)` | Incorrect, destructive |
 | `warning` | `#F59E0B` | `rgba(245,158,11,0.15)` | `rgba(245,158,11,0.35)` | Review needed, warnings |
-| `streak` | `#F59E0B` (base) / `#F97316` (fire) | `rgba(245,158,11,0.18)` | — | Streak counters + fire animation |
+| `streak` | `#F59E0B` (base) / `#F97316` (fire) / `#FDBA74` (light) | `rgba(249,115,22,0.15)` | — | Streak counters + fire animation |
+
+`streak.tint` is deliberately **orange**, not amber — a streak chip and a warning
+chip sit side by side on Home and were previously the same fill.
 | `premium` | `#A855F7` | `rgba(168,85,247,0.18)` | — | Super tier, pro moments |
 
 ### League Tiers
@@ -101,26 +146,81 @@ grammar · vocabulary · spelling · word_order · tense · gender · other — 
 ## Typography
 
 Font families (loaded via `@expo-google-fonts`):
-- `Inter_400Regular`, `Inter_500Medium`, `Inter_600SemiBold`, `Inter_700Bold`
-- `PlayfairDisplay_700Bold` — **display only**, used by `<Hero>` on celebration screens
+- **Nunito** — `Nunito_400Regular`, `_500Medium`, `_600SemiBold`, `_700Bold`, `_800ExtraBold`.
+  The UI/body face. Rounded terminals read friendlier than Inter, and lighter at
+  the same numeric weight — which is why the scale below runs one step heavier
+  than a geometric sans would.
+- **Fraunces** — `Fraunces_600SemiBold` (`typography.family.serif`) for magazine
+  editorial headlines, `Fraunces_700Bold` (`family.display`) for `<Hero>` on
+  celebration screens.
+- **JetBrains Mono** — `JetBrainsMono_400Regular` / `_500Medium` for eyebrows,
+  date labels, counts, durations.
+
+Never pair a custom `fontFamily` with `fontWeight` — the face already carries the
+weight, and Android then synthesizes a second bolding pass on top of it.
 
 Use the typography primitives from `components/ui/Text.tsx`:
 
 ```tsx
-<Heading level={1}>Learn</Heading>        // 28/34 Bold
-<Heading level={2}>Spanish A2</Heading>   // 24/30 Bold
-<Heading level={3}>Unit 4</Heading>       // 22/28 Semibold
-<Body size="lg">Option text</Body>         // 17/25 Semibold
-<Body>Message content</Body>               // 16/24 Regular
-<Body size="sm">Helper text</Body>         // 14/20 Regular
-<Caption>Stat label</Caption>              // 13/18 Medium
-<Caption size="sm">Badge text</Caption>    // 12/16 Medium
-<Hero>Nailed it!</Hero>                    // 32/38 PlayfairDisplay 700 (celebration only)
+<Heading level={1}>Learn</Heading>        // 28/39 ExtraBold, ls -0.6
+<Heading level={2}>Spanish A2</Heading>   // 24/33 ExtraBold, ls -0.6
+<Heading level={3}>Unit 4</Heading>       // 22/31 Bold
+<Body size="lg">Option text</Body>         // 17/25 Bold
+<Body>Message content</Body>               // 16/24 Medium
+<Body size="sm">Helper text</Body>         // 14/20 Medium
+<Caption>Stat label</Caption>              // 13/18 Semibold
+<Caption size="sm">Badge text</Caption>    // 12/17 Semibold
+<Hero>Nailed it!</Hero>                    // 32/40 Fraunces 700 (celebration only)
 ```
 
 Tones: `primary` (default) / `secondary` / `tertiary` / `onPrimary` / `accent` / `success` / `error` / `warning`.
 
 **Never** use raw `<Text>` with inline `fontSize` / `color`. Dynamic Type must be supported end-to-end.
+
+### Line height is not a free parameter
+
+A `lineHeight` below the face's natural line box does not compress the text — iOS
+(`RCTTextAttributes.mm`) and Android (`TextAttributes.kt`) both pin the baseline
+and clip the **ascender**, so the top of the glyphs is cut off. Every step in the
+scale is `>= minLineHeight(fontSize, face)`; `config/theme.test.ts` enforces it.
+
+`leading` in `config/theme.ts`, read from the font binaries. All three faces set
+OS/2 `fsSelection` bit 7 (USE_TYPO_METRICS), so layout uses the typo metrics —
+which here equal hhea — and not the larger `usWin*` pair:
+
+| Face | typo / hhea | usWin* | capHeight |
+|---|---|---|---|
+| Nunito | **1.364em** | 1.377 | 0.705 |
+| Fraunces | **1.233em** | 1.474 | 0.700 |
+| JetBrains Mono | **1.320em** | 1.320 | — |
+
+Use `minLineHeight(fontSize, face)` for any size not in the scale. The one
+sanctioned exception is text that is *provably* digits-or-capitals only — those
+stop at capHeight and have ~0.3em of headroom (see `WeekInWords.bigNumber`, which
+documents why it sits under the bound). Never assume it for user or AI content.
+
+Both platforms scale explicit `lineHeight` by the font-size multiplier, so a
+correct *ratio* stays correct at every Dynamic Type size. Getting the ratio right
+is what makes accessibility scaling safe — there is no per-device font math.
+
+### Adapting to screen size
+
+`hooks/useDisplayScale.ts` scales **display type only** against a 390pt baseline
+window, clamped to `[0.88, 1.10]`. `<Heading>` and `<Hero>` apply it so page
+titles keep their line count on a 320pt phone and don't look lost on a 430pt one.
+
+Body, caption and mono steps deliberately do **not** width-scale — iOS governs
+reading size through Dynamic Type, and overriding that per-device fights the
+platform and hurts accessibility. Width scaling here is for headline fit, not
+readability. The clamp is narrow on purpose: unbounded scaling turns a tablet
+into a billboard.
+
+`<Heading>`/`<Hero>` floor the scaled lineHeight at `minLineHeight(scaledSize)`,
+so the no-clip invariant holds at every width, not just at baseline.
+
+Screens must take their top inset from `SafeAreaView edges={['top']}` (the app
+convention) or `useSafeAreaInsets()`. A screen that renders a title against the
+physical top of the window is cut off by the status bar and Dynamic Island.
 
 ---
 
@@ -291,9 +391,13 @@ Every PR must pass:
 
 | Old primitive | Replacement | Notes |
 |---|---|---|
-| Looping video background | Solid `surface.base` / `surface.raised` | Mayer coherence; Apple HIG compliance |
+| Looping video background (`nebula-bg.mp4`) | `<GlowBackground>` blob layer | Removed a 1.9MB asset + an `expo-av` player from every screen |
+| `AuroraBackground` | `GlowBackground` (via `GradientBackground`) | Deleted; `GradientBackground` keeps the same API |
 | `GradientBackground` (video) | `<Surface>` (identical API alias remains) | Backward compat — zero screen changes needed |
-| `GlassSurface` 6-layer chromatic | 2-layer dark fill + hairline border | Same API; visually flat |
+| `GlassSurface` 6-layer chromatic | Opaque `surface.card` + hairline border | Same API; visually flat |
+| `BlurView` glass (cards, tab bar, stat pills) | Opaque `surface.card` + 1px border | See "There is no glass" |
+| Light-theme reading surfaces | `surface.raised` + dark tokens | The book reader and comprehension flow were a white island in a dark app |
+| Sky `#38BDF8` chrome accent (teacher side) | `action.accent` `#818CF8` | Sky is retained only as a *product* color: `PathNode` active, `LevelBadge` intermediate, progress gradient stops |
 | `GradientButton` | `<TactileButton variant="primary">` | Slab + haptic instead of gradient |
 | `AnimatedGalaxy` | Static starfield SVG (welcome/celebration only) | Decorative motion retired from chrome |
 | Ad-hoc `<Text fontSize={…}>` | `<Heading>`, `<Body>`, `<Caption>`, `<Hero>` | Scale enforced centrally |
@@ -327,44 +431,117 @@ When editing any existing screen:
 | `magazine.heartsCoral` | `#FF6B6B` | Hearts pill |
 | `magazine.xpGold` | `#FFB547` | XP pill |
 | `magazine.streakFlame` | `#FF8A3D` | Streak pill |
-| `magazine.glassBg` | `rgba(20,25,50,0.5)` | Magazine glass card fill |
-| `magazine.glassBorder` | `rgba(255,255,255,0.10)` | Magazine glass card border |
+| `magazine.glassBg` | `#151921` | Editorial card fill — **opaque**, same as `surface.card` |
+| `magazine.glassBorder` | `rgba(255,255,255,0.12)` | Editorial card border |
 
 ### Font Roles
 
 | Family | Token | Usage |
 |---|---|---|
-| Georgia (system) | `typography.family.serif` | Headlines, section titles, big numbers |
+| Fraunces | `typography.family.serif` | Headlines, section titles, big numbers |
 | JetBrains Mono | `typography.family.mono` / `monoMedium` | Date labels, meta text, stat values, duration pills |
-| Inter | (existing) | Body text, UI labels |
+| Nunito | `typography.family.*` | Body text, UI labels |
 
-### Floating Glass Pill Tab Bar
+### There is no glass
+
+**All card primitives are opaque.** `GlassSurface`, `GlassCard`,
+`MagazineGlassCard`, `GradientBorderCard` and `FloatingTabBar` keep their names
+for API compatibility but render `surface.card` + a 1px `border.default`. Nothing
+in the app uses `BlurView`.
+
+Depth is supplied **once**, by the glow layer behind content. Per-card
+translucency competed with it and muddied the blobs; blur also cost real Android
+scroll frames and forced an iOS/Android visual fork that never matched.
+
+### Floating Tab Bar
 
 - `<FloatingTabBar />` — custom `tabBar` for Expo Router `<Tabs>`
-- Positioned absolute, centered, `bottom: safeArea + 12`
-- BlurView pill (iOS) / semi-transparent fallback (Android)
-- 4 icons: Home, Learn, Chat, Profile — no labels
-- Active icon: gradient circle (`#4F8EF7` → `#7C3AED`)
-- Width: 240px, height: 56px, borderRadius: 999
-
-### MagazineGlassCard
-
-- `expo-blur` BlurView (intensity 40, tint "dark") on iOS
-- Semi-transparent fallback on Android
-- Fill: `magazine.glassBg`, border: 0.5px `magazine.glassBorder`, radius: 20
-- Used by all magazine-style cards on the home screen
+- Positioned absolute, centered, `bottom: max(safeArea.bottom, 16) + 12`
+- Opaque `surface.card` pill, 1px `border.default` — identical on both platforms
+- 4 icons: Home, Learn, Chat, Profile — no labels. Glyph *switches* on focus
+  (`home-outline` → `home`), it is not just recolored
+- Active icon: 40px gradient circle, `action.primaryFill` → `magazine.accentViolet`
+- Width: 240px, height: 56px, borderRadius: 999, 44pt hit targets
 
 ### Home Screen Layout (top to bottom)
 
-1. `<DateLabel />` — JetBrains Mono, uppercase, letterSpacing 3
-2. `<StatsStrip />` — 3 glass pills (streak/XP/hearts)
-3. `<NewsHeroCard />` — editorial news with Georgia serif headline
+1. Header row — `<DateLabel />` (mono, uppercase, ls 3) + target-language
+   greeting `<Heading level={2}>` on the left, `<Mascot size="xs" />` on the right
+2. `<StatsStrip />` — streak + XP `<Chip>`s and `<HeartsDisplay size={16} />`
+3. `<NewsHeroCard />` — editorial news with a Fraunces headline
 4. `<SessionBand />` — play button + today's session
 5. `<LessonTileGrid />` — 2-column continue learning tiles
+
+The greeting comes from `targetLanguageGreeting()` in `lib/language.ts` — it
+greets the learner in the language they're studying, which is a free daily dose
+of comprehensible input on a string they will read every session.
 6. `<MagazineDailyChallenges />` — "Your daily three"
 7. `<WeekInWords />` — big serif number + 7-day dot grid
 8. `<OnboardingChecklist />` — new users only (unchanged)
 9. Quick Actions — restyled with MagazineGlassCard
+
+---
+
+## Live AI Chat
+
+### Header (top to bottom, left to right)
+
+`chevron-back` 22 in `text.tertiary` · `<Mascot size="xs" />` · title/status stack
+· elapsed-time `<Chip variant="primary">` · controls.
+
+The stack is `<Body weight="extrabold">` (the scenario label) over a status row: a
+6px `success.base` dot plus `<Caption size="sm">` reading `Live · A2`. The dot and
+the word "Live" appear only while hands-free is active.
+
+The level is a bare CEFR code, not the deck's "Nivel A2" — "Nivel" is Spanish and
+the target language varies, so localising the noun would mean 12 translations of
+a word the code already conveys.
+
+The hands-free toggle **collapses to icon-only once live**, because the status row
+already says so. It keeps its "Live Voice" label while off, where it is the only
+affordance advertising the feature.
+
+### Message bubbles
+
+- Assistant: `surface.card`, 1px `border.default`, r18 / bottom-left r4.
+- Learner: `action.primaryFill`, no border, r18 / bottom-right r4.
+- `maxWidth: 84%`, padding 12, copy at body/600 (`font-sans-semibold`).
+- Translation renders **outside** the bubble as a caption, and stays opt-in —
+  auto-translating every assistant turn would bill a translate call per message.
+
+`<TypingIndicator />` wears the same shell as an assistant bubble: 8px dots in
+`text.tertiary`, `marginHorizontal: 3`, staggered `translateY(-6)` bounce at
+0/150/300ms. A bounce, not a scale pulse.
+
+### CorrectionBanner
+
+Fill carries the **error type** (`correctionChip[type].bg`); border carries
+**severity**. The deck's lilac banner is simply the vocabulary family — it is not
+a uniform tint. Severity keeps its `· MINOR` text label, which is the non-colour
+cue §Accessibility requires once the fill stops encoding it.
+
+Diff is inline: `original` struck through in `error.light` → `arrow-forward` →
+`corrected` in `success.light`/extrabold. Colour stays on both halves; strike and
+weight alone are weaker error cues. The action row is separated by a 1px
+`border.default` hairline.
+
+### LiveComposer
+
+One card — `surface.card`, 1px border, r20, padding 12 — holding
+`[keypad-outline 40x40 r12]` · `[waveform]` · `[mic 56x56 r28]`. Both voice
+branches of `ChatInput` render it, so hold-to-talk and hands-free share a shape.
+
+Two departures from the deck:
+
+- It stays **in flow with margins**, not absolutely positioned. Chat is a tab
+  screen, so the composer must clear the FloatingTabBar *and* live inside
+  `KeyboardAvoidingView`; absolute positioning fights both.
+- The 20 bars are driven by the real `meterLevel`, not the deck's fixed CSS
+  shimmer. Faking amplitude on a live mic would misreport whether the app is
+  hearing the learner. Idle rests at the deck's own 0.35 `scaleY` floor.
+
+The waveform is `accessibilityElementsHidden` — the status line above the card
+carries state for VoiceOver.
 
 ---
 

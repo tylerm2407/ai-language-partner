@@ -1,4 +1,6 @@
 import { View, Text, ActivityIndicator } from 'react-native';
+import { colors, spacing, typography } from '../../config/theme';
+import { Body } from '../ui/Text';
 import { ACHIEVEMENTS } from '../../lib/achievements';
 import { useAchievements } from '../../hooks/useAchievements';
 import { AchievementBadge } from './AchievementBadge';
@@ -16,19 +18,26 @@ export function AchievementGrid() {
 
   return (
     <View className="mb-4">
-      {/* Section header */}
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <Text className="text-base font-bold text-text-primary" style={{ letterSpacing: 1 }}>
-          ACHIEVEMENTS
-        </Text>
-        <Text className="text-sm text-text-secondary">
-          {loading ? '...' : `${earnedCount}/${TOTAL}`}
+      {/* Section header — sentence case title with a mono count, matching the
+          other editorial section heads (Home's "Continue learning"). */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: spacing.xs }}>
+        <Body size="lg" weight="extrabold">
+          Achievements
+        </Body>
+        <Text
+          style={{
+            fontFamily: typography.family.mono,
+            fontSize: typography.scale.tiny.fontSize,
+            color: colors.text.tertiary,
+          }}
+        >
+          {loading ? '—' : `${earnedCount} / ${TOTAL}`}
         </Text>
       </View>
 
       {loading ? (
         <View style={{ paddingVertical: 24, alignItems: 'center' }}>
-          <ActivityIndicator color="#6366F1" />
+          <ActivityIndicator color="#818CF8" />
         </View>
       ) : (
         <View

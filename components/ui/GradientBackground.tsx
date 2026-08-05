@@ -1,21 +1,23 @@
 /**
- * GradientBackground — Aurora ambient (default) + focus variants.
+ * GradientBackground — the app's single screen-background entry point.
  *
- * Default (`variant="base"` or `variant="cosmic"`): the Claude Design
- * aurora background — deep navy base with animated aurora glow blobs,
- * twinkling starfield, diagonal light band, and film grain.
+ * Variants:
+ *   `base` / `cosmic` (default) — the Dark Glow ambient: surface.base with the
+ *      drifting indigo/violet blob layer. See components/ui/GlowBackground.tsx.
+ *   `raised` — the same glow WITHOUT drift, on surface.raised. Learning
+ *      surfaces (lesson runner, writing prompt, drills) keep the theme's depth
+ *      but spend no motion, per Mayer's coherence principle.
+ *   `plain` — solid surface.base, no glow. Sheets, modals, and anything that
+ *      already sits over a scrim.
  *
- * Focus (`variant="raised"`): calm, motion-free surface.raised — used on
- *   learning surfaces (lesson runner, writing prompt) where Mayer's
- *   coherence principle requires zero decorative motion.
- *
- * Plain (`variant="plain"`): pure solid surface.base — used by sheets/modals.
+ * `cosmic` is retained as an alias of `base` so existing call sites keep
+ * working unchanged.
  */
 
 import React from 'react';
 import { View, StyleSheet, type ViewStyle } from 'react-native';
 import { colors } from '../../config/theme';
-import { AuroraBackground } from './AuroraBackground';
+import { GlowBackground } from './GlowBackground';
 
 type Variant = 'base' | 'cosmic' | 'raised' | 'plain';
 
@@ -30,13 +32,6 @@ export function GradientBackground({
   style,
   variant = 'base',
 }: GradientBackgroundProps) {
-  if (variant === 'raised') {
-    return (
-      <View style={[styles.flex, { backgroundColor: colors.surface.raised }, style]}>
-        {children}
-      </View>
-    );
-  }
   if (variant === 'plain') {
     return (
       <View style={[styles.flex, { backgroundColor: colors.surface.base }, style]}>
@@ -44,11 +39,16 @@ export function GradientBackground({
       </View>
     );
   }
-  return (
-    <AuroraBackground style={style}>
-      {children}
-    </AuroraBackground>
-  );
+
+  if (variant === 'raised') {
+    return (
+      <GlowBackground style={style} backgroundColor={colors.surface.raised} drift={false}>
+        {children}
+      </GlowBackground>
+    );
+  }
+
+  return <GlowBackground style={style}>{children}</GlowBackground>;
 }
 
 const styles = StyleSheet.create({

@@ -1,4 +1,5 @@
 import { View, Text, ScrollView, Pressable, Alert, FlatList } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useEffect, useState, useCallback } from 'react';
 import {
@@ -188,7 +189,7 @@ export default function LearnScreen() {
 
   return (
     <GradientBackground>
-      <View className="flex-1">
+      <SafeAreaView className="flex-1" edges={['top']}>
         {/* Header */}
         <View className="px-4 pt-2 pb-2">
           <Text className="text-[28px] font-bold text-text-primary mb-4" accessibilityRole="header">
@@ -357,7 +358,7 @@ export default function LearnScreen() {
                         height: 44,
                         paddingHorizontal: spacing.md,
                         borderRadius: radii.pill,
-                        backgroundColor: isActive ? colors.indigo[500] : colors.surface.cardAlt,
+                        backgroundColor: isActive ? colors.action.primaryFill : colors.surface.cardAlt,
                       }}
                     >
                       <Body
@@ -439,7 +440,7 @@ export default function LearnScreen() {
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
-                    backgroundColor: colors.indigo[500],
+                    backgroundColor: colors.action.primaryFill,
                     borderRadius: radii.lg,
                     paddingHorizontal: spacing.md + spacing.xxs,
                     paddingVertical: spacing.sm,
@@ -479,10 +480,10 @@ export default function LearnScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="View writing history"
               >
-                <Ionicons name="time-outline" size={20} color={colors.indigo[500]} />
+                <Ionicons name="time-outline" size={20} color={colors.action.accent} />
                 <Text className="text-sm font-sans-semibold text-primary ml-2">View Writing History</Text>
                 <View className="flex-1" />
-                <Ionicons name="chevron-forward" size={16} color={colors.indigo[500]} />
+                <Ionicons name="chevron-forward" size={16} color={colors.action.accent} />
               </Pressable>
             </GlassSurface>
 
@@ -525,7 +526,7 @@ export default function LearnScreen() {
             )}
           </ScrollView>
         ) : null}
-      </View>
+      </SafeAreaView>
     </GradientBackground>
   );
 }

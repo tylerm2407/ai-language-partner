@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { colors } from '../../config/theme';
 
 interface RoleSwitcherProps {
   activeRole: 'learner' | 'teacher';
@@ -12,7 +13,7 @@ export default function RoleSwitcher({ activeRole, onSwitch }: RoleSwitcherProps
     <View
       style={{
         flexDirection: 'row',
-        backgroundColor: 'rgba(30, 35, 50, 0.8)',
+        backgroundColor: colors.surface.cardAlt,
         borderRadius: 12,
         padding: 3,
       }}
@@ -31,7 +32,7 @@ export default function RoleSwitcher({ activeRole, onSwitch }: RoleSwitcherProps
           justifyContent: 'center',
           paddingVertical: 10,
           borderRadius: 10,
-          backgroundColor: activeRole === 'learner' ? '#6366F1' : 'transparent',
+          backgroundColor: activeRole === 'learner' ? '#4F46E5' : 'transparent',
         }}
       >
         <Ionicons
@@ -43,7 +44,7 @@ export default function RoleSwitcher({ activeRole, onSwitch }: RoleSwitcherProps
           style={{
             color: activeRole === 'learner' ? '#FFFFFF' : '#94A3B8',
             fontSize: 14,
-            fontFamily: 'Inter_600SemiBold',
+            fontFamily: 'Nunito_600SemiBold',
             marginLeft: 6,
           }}
         >
@@ -64,7 +65,7 @@ export default function RoleSwitcher({ activeRole, onSwitch }: RoleSwitcherProps
           justifyContent: 'center',
           paddingVertical: 10,
           borderRadius: 10,
-          backgroundColor: activeRole === 'teacher' ? '#6366F1' : 'transparent',
+          backgroundColor: activeRole === 'teacher' ? '#4F46E5' : 'transparent',
         }}
       >
         <Ionicons
@@ -76,7 +77,7 @@ export default function RoleSwitcher({ activeRole, onSwitch }: RoleSwitcherProps
           style={{
             color: activeRole === 'teacher' ? '#FFFFFF' : '#94A3B8',
             fontSize: 14,
-            fontFamily: 'Inter_600SemiBold',
+            fontFamily: 'Nunito_600SemiBold',
             marginLeft: 6,
           }}
         >

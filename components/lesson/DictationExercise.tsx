@@ -126,7 +126,7 @@ export function DictationExercise({
                 }}
               >
                 {phonemeDrill.isPlaying ? (
-                  <ActivityIndicator size="small" color={colors.indigo[500]} />
+                  <ActivityIndicator size="small" color={colors.action.accent} />
                 ) : (
                   <Caption tone="accent" style={{ fontWeight: '600' }}>
                     Replay in a different voice
@@ -148,7 +148,7 @@ export function DictationExercise({
               accessibilityLabel="Play audio"
               style={{
                 width: 64, height: 64, borderRadius: 32,
-                backgroundColor: colors.indigo[500],
+                backgroundColor: colors.action.primaryFill,
                 alignItems: 'center', justifyContent: 'center',
               }}
             >
@@ -226,7 +226,7 @@ export function DictationExercise({
           onPress={handleCheck}
           disabled={userInput.trim().length === 0}
           style={{
-            backgroundColor: userInput.trim().length > 0 ? colors.indigo[500] : colors.indigo[200],
+            backgroundColor: userInput.trim().length > 0 ? colors.action.primaryFill : colors.indigo[200],
             paddingVertical: spacing.md, borderRadius: radii.lg, alignItems: 'center',
           }}
           accessibilityRole="button"

@@ -1,12 +1,12 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { View, Text, Pressable, FlatList, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Audio } from 'expo-av';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAppStore } from '../../../stores/useAppStore';
 import { useOnboardingChecklist } from '../../../hooks/useOnboardingChecklist';
-import { sendChatMessage, getTextToSpeech, analyzeConversationTurn, VoiceError } from '../../../lib/ai';
-import { useGeminiLive } from '../../../hooks/useGeminiLive';
+import { sendChatMessage, getTextToSpeech, VoiceError } from '../../../lib/ai';
 import { ChatBubble } from '../../../components/chat/ChatBubble';
 import { ChatInput } from '../../../components/chat/ChatInput';
 import type { HandsFreeState } from '../../../components/chat/ChatInput';
@@ -15,13 +15,29 @@ import { GradientBackground } from '../../../components/ui/GradientBackground';
 import { GlassSurface } from '../../../components/ui/GlassSurface';
 import AssignmentTimer from '../../../components/school/AssignmentTimer';
 import { useAssignmentTimer } from '../../../hooks/useAssignmentTimer';
-import type { ConversationMessage, Assignment, AssignmentSubmission, LanguageCode } from '../../../types';
+import type { ConversationMessage, Assignment, AssignmentSubmission, LanguageCode, ProficiencyLevel } from '../../../types';
 import { Ionicons } from '@expo/vector-icons';
 import { getOrCreateChatSession, saveChatMessage, loadChatMessages, fetchStudentAssignments, submitAssignment } from '../../../lib/supabase-queries';
 import { getTargetLanguage } from '../../../lib/language';
 import { SCENARIO_META, SCENARIO_ORDER, type ScenarioKey } from '../../../types/scenarios';
 import { SCHOOL_ENABLED } from '../../../config/app';
-import { colors } from '../../../config/theme';
+import { colors, radii, spacing } from '../../../config/theme';
+import { Body, Caption } from '../../../components/ui/Text';
+import { Chip } from '../../../components/ui/Chip';
+import { Mascot } from '../../../components/mascot/Mascot';
+
+/**
+ * CEFR code for the header status row. The deck reads "Nivel A2", but "Nivel" is
+ * Spanish and the target language varies — the bare CEFR code is international,
+ * so the row reads "Live · A2" instead of localising the noun 12 ways.
+ */
+const CEFR_FOR_LEVEL: Record<ProficiencyLevel, string> = {
+  beginner: 'A1',
+  elementary: 'A2',
+  intermediate: 'B1',
+  upper_intermediate: 'B2',
+  advanced: 'C1',
+};
 
 /**
  * Scenario metadata (label/icon/description) is imported from
@@ -95,6 +111,13 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
   const [handsFreeActive, setHandsFreeActive] = useState(false);
   const [handsFreeState, setHandsFreeState] = useState<HandsFreeState>('IDLE');
   const [shouldStartListening, setShouldStartListening] = useState(false);
+
+  // Live sessions run the same stopwatch assignments use, so the header chip has
+  // something to show outside assignment mode. `start()` no-ops when running.
+  const startTimer = assignmentTimer.start;
+  useEffect(() => {
+    if (handsFreeActive) startTimer();
+  }, [handsFreeActive, startTimer]);
 
   const chatSessionIdRef = useRef<string | null>(null);
   // Track the current ElevenLabs TTS sound for cleanup on error/unmount
@@ -254,97 +277,27 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
     saveChatMessage(sessionId, msg).catch(console.error);
   }, []);
 
-  // Gemini Live voice session for hands-free mode
-  const geminiLive = useGeminiLive({
-    targetLanguage,
-    level,
-    topic: selectedScenario?.customContext || selectedScenario?.label,
-    onTranscript: useCallback((userText: string, aiText: string) => {
-      // Add user message to chat UI
-      if (userText) {
-        const userMsg: ConversationMessage = {
-          id: Date.now().toString(),
-          role: 'user',
-          content: userText,
-          audioUrl: null,
-          correction: null,
-          timestamp: new Date().toISOString(),
-        };
-        setMessages((prev) => [...prev, userMsg]);
-        // Persist user transcript
-        if (chatSessionIdRef.current) {
-          saveChatMessage(chatSessionIdRef.current, userMsg).catch(console.error);
-        }
-      }
-
-      // Add AI message to chat UI
-      if (aiText) {
-        const aiMsg: ConversationMessage = {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: aiText,
-          audioUrl: null,
-          correction: null,
-          timestamp: new Date().toISOString(),
-        };
-        setMessages((prev) => [...prev, aiMsg]);
-        // Persist AI transcript
-        if (chatSessionIdRef.current) {
-          saveChatMessage(chatSessionIdRef.current, aiMsg).catch(console.error);
-        }
-
-        // Async: analyze turn for corrections (non-blocking)
-        if (userText) {
-          analyzeConversationTurn(userText, aiText, targetLanguage, level).then((analysis) => {
-            if (analysis.correction) {
-              // Update the last assistant message with the correction
-              setMessages((prev) => {
-                const updated = [...prev];
-                const lastAssistant = [...updated].reverse().find((m) => m.role === 'assistant');
-                if (lastAssistant) {
-                  lastAssistant.correction = analysis.correction;
-                }
-                return [...updated];
-              });
-            }
-          }).catch(console.error);
-        }
-      }
-
-      setTimeout(() => flatListRef.current?.scrollToEnd(), 100);
-    }, [targetLanguage, level]),
-    onError: useCallback((error: Error) => {
-      console.error('Gemini Live error:', error);
-      Alert.alert(
-        'Voice Session Error',
-        'The voice session encountered an error. You can try again or switch to text mode.',
-        [{ text: 'OK' }]
-      );
-    }, []),
-  });
-
-  const isGeminiLiveActive = geminiLive.state !== 'DISCONNECTED';
-
-  // Map Gemini Live state to HandsFreeState for ChatInput display
-  const geminiLiveHandsFreeState: HandsFreeState = (() => {
-    switch (geminiLive.state) {
-      case 'CONNECTING': return 'CONNECTING';
-      case 'CONNECTED': return 'CONNECTING';
-      case 'LISTENING': return 'LISTENING';
-      case 'AI_SPEAKING': return 'AI_RESPONDING';
-      default: return 'IDLE';
-    }
-  })();
-
-  // Clean up ElevenLabs TTS sound on unmount
+  // Clean up TTS sound on unmount
   useEffect(() => {
     return () => {
       ttsSoundRef.current?.unloadAsync().catch(() => {});
     };
   }, []);
 
-  // Auto-play ElevenLabs TTS for assistant messages in voice mode
-  const speakWithElevenLabs = useCallback(async (text: string, isHandsFree = false) => {
+  /** Cut off any in-flight TTS — leaving live mode shouldn't leave a voice talking. */
+  const stopSpeaking = useCallback(() => {
+    const sound = ttsSoundRef.current;
+    if (!sound) return;
+    ttsSoundRef.current = null;
+    sound.setOnPlaybackStatusUpdate(null);
+    sound.unloadAsync().catch(() => {});
+  }, []);
+
+  // Auto-play TTS for assistant messages in voice mode. In hands-free this is
+  // the pivot of the loop: playback finishing is what re-opens the mic, so every
+  // exit path from here must either set TTS_PLAYING → shouldStartListening or
+  // hand the turn back some other way, or the conversation stalls silently.
+  const speakReply = useCallback(async (text: string, isHandsFree = false) => {
     // Unload any previously playing TTS sound before creating a new one
     if (ttsSoundRef.current) {
       await ttsSoundRef.current.unloadAsync().catch(() => {});
@@ -433,21 +386,21 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
       setMessages([firstMessage]);
     }
 
-    // If user chose "Live voice", start hands-free immediately
+    // If user chose "Live voice", open the loop by speaking the greeting; the
+    // mic opens when that finishes. Seed the state as TTS_PLAYING *before*
+    // activating hands-free — ChatInput starts recording the moment it sees
+    // handsFreeMode with state IDLE, which would otherwise record the greeting.
     if (liveVoice) {
       setVoiceMode(true);
+      setHandsFreeState('TTS_PLAYING');
       setHandsFreeActive(true);
-      geminiLive.startSession().catch((err) => {
-        console.error('Failed to start live voice:', err);
-        setHandsFreeActive(false);
-        Alert.alert('Voice Session Error', 'Could not start live voice. You can use text or hold-to-talk instead.', [{ text: 'OK' }]);
-      });
+      speakReply(greeting, true);
     } else if (voiceMode && !handsFreeActive) {
-      speakWithElevenLabs(greeting, false);
+      speakReply(greeting, false);
     }
   };
 
-  const handleSend = async (messageText?: string) => {
+  const handleSend = async (messageText?: string, spokenLanguage?: string | null) => {
     // Guard against non-string callers (e.g. Pressable's GestureResponderEvent).
     const candidate = typeof messageText === 'string' ? messageText : input;
     const text = candidate.trim();
@@ -498,6 +451,10 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
         level,
         scenarioKey: scenarioKey ?? undefined,
         topic: topicPayload,
+        // Only worth sending when it contradicts the target — the tutor only
+        // needs to know that a switch happened, not that nothing happened.
+        spokenLanguage:
+          spokenLanguage && spokenLanguage !== targetLanguage ? spokenLanguage : undefined,
       });
 
       const assistantMsg: ConversationMessage = {
@@ -514,10 +471,11 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
       // Mark onboarding checklist item on first successful chat
       markOnboardingItem('aiConversation').catch(console.error);
 
-      // Auto-speak in hold-to-talk voice mode (ElevenLabs TTS)
-      // In hands-free mode, Gemini Live handles TTS natively
-      if (voiceMode && !isGeminiLiveActive) {
-        speakWithElevenLabs(response.reply, handsFreeActive);
+      if (voiceMode) {
+        speakReply(response.reply, handsFreeActive);
+      } else if (handsFreeActive) {
+        // Hands-free with TTS off still has to hand the turn back.
+        setShouldStartListening(true);
       }
     } catch (err) {
       console.error('[chat] sendChatMessage failed:', err);
@@ -555,8 +513,8 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
     }
   };
 
-  const handleVoiceMessage = async (text: string) => {
-    await handleSend(text);
+  const handleVoiceMessage = async (text: string, spokenLanguage: string | null) => {
+    await handleSend(text, spokenLanguage);
   };
 
   const toggleVoiceMode = () => {
@@ -565,31 +523,22 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
       setHandsFreeActive(false);
       setHandsFreeState('IDLE');
     }
+    stopSpeaking();
     setVoiceMode((prev) => !prev);
   };
 
-  const toggleHandsFree = async () => {
+  const toggleHandsFree = () => {
     if (handsFreeActive) {
-      // Deactivate hands-free — disconnect Gemini Live
-      await geminiLive.endSession();
+      stopSpeaking();
       setHandsFreeActive(false);
       setHandsFreeState('IDLE');
       setShouldStartListening(false);
     } else {
-      // Activate hands-free — start Gemini Live session
+      // IDLE is ChatInput's cue to open the mic, so entering here goes straight
+      // to listening rather than replaying a greeting mid-conversation.
+      setHandsFreeState('IDLE');
       setHandsFreeActive(true);
       setVoiceMode(true);
-      try {
-        await geminiLive.startSession();
-      } catch (err) {
-        console.error('Failed to start hands-free session:', err);
-        setHandsFreeActive(false);
-        Alert.alert(
-          'Voice Session Error',
-          'Could not start the live voice session. Please check your connection and try again.',
-          [{ text: 'OK' }]
-        );
-      }
     }
   };
 
@@ -675,7 +624,7 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
   // Chat interface
   return (
     <GradientBackground>
-    <View className="flex-1">
+    <SafeAreaView className="flex-1" edges={['top']}>
       {/* Assignment Banner */}
       {assignmentMode && currentAssignment && (
         <GlassSurface style={{ marginHorizontal: 12, marginTop: 4, marginBottom: 4 }}>
@@ -701,16 +650,18 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
         />
       )}
 
-      {/* Header */}
-      <View className="flex-row items-center px-4 py-3 border-b border-dark-border">
+      {/* Header — deck screen 08: chevron · mascot · title/status stack · chip */}
+      <View
+        className="flex-row items-center px-4 py-3 border-b border-dark-border"
+        style={{ gap: spacing.sm }}
+      >
         <Pressable
-          onPress={async () => {
+          onPress={() => {
+            stopSpeaking();
             if (assignmentMode) {
-              if (isGeminiLiveActive) await geminiLive.endSession();
               handleAssignmentBack();
               return;
             }
-            if (isGeminiLiveActive) await geminiLive.endSession();
             setSelectedScenario(null);
             setMessages([]);
             setVoiceMode(false);
@@ -721,12 +672,40 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
           }}
           accessibilityRole="button"
           accessibilityLabel="Go back"
+          hitSlop={8}
         >
-          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
+          <Ionicons name="chevron-back" size={22} color={colors.text.tertiary} />
         </Pressable>
-        <Text className="text-lg font-semibold text-text-primary ml-3 flex-1" numberOfLines={1}>
-          {selectedScenario.label}
-        </Text>
+
+        <Mascot size="xs" />
+
+        <View className="flex-1">
+          <Body weight="extrabold" numberOfLines={1}>
+            {selectedScenario.label}
+          </Body>
+          <View className="flex-row items-center" style={{ gap: spacing.xxs }}>
+            {handsFreeActive && (
+              <View
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: radii.pill,
+                  backgroundColor: colors.success.base,
+                }}
+              />
+            )}
+            <Caption size="sm">
+              {handsFreeActive ? 'Live · ' : ''}
+              {CEFR_FOR_LEVEL[level]}
+            </Caption>
+          </View>
+        </View>
+
+        {/* Elapsed clock. useAssignmentTimer is a plain stopwatch despite the
+            name — assignments read isMinimumMet, live sessions just show this. */}
+        {assignmentTimer.running && (
+          <Chip label={assignmentTimer.formattedElapsed} variant="primary" />
+        )}
 
         {/* Submit Assignment Button */}
         {assignmentMode && assignmentTimer.isMinimumMet && (
@@ -735,7 +714,7 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
             disabled={submitting}
             accessibilityRole="button"
             accessibilityLabel="Submit assignment"
-            className="h-9 px-3 rounded-full items-center justify-center flex-row mr-2 bg-success"
+            className="h-9 px-3 rounded-full items-center justify-center flex-row bg-success"
           >
             <Ionicons name="checkmark-circle-outline" size={16} color={colors.text.onPrimary} />
             <Text className="text-xs font-semibold text-white ml-1.5">
@@ -744,28 +723,29 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
           </Pressable>
         )}
 
-        {/* Hands-free toggle */}
+        {/* Hands-free toggle. Collapses to icon-only once live, because the status
+            row above already reads "Live" — that buys back the width the deck's
+            mascot + status stack needs. Keeps its label while off, where it is
+            the only thing advertising the feature. */}
         <Pressable
           onPress={toggleHandsFree}
           accessibilityRole="button"
           accessibilityLabel={handsFreeActive ? 'End live voice conversation' : 'Start live voice conversation'}
           accessibilityHint="Real-time bidirectional voice conversation with AI tutor"
-          className={`h-9 px-3 rounded-full items-center justify-center flex-row mr-2 ${
-            handsFreeActive ? 'bg-success' : 'bg-dark-card'
+          className={`h-9 rounded-full items-center justify-center flex-row ${
+            handsFreeActive ? 'w-9 bg-success' : 'px-3 bg-dark-card'
           }`}
         >
           <Ionicons
-            name="mic-outline"
+            name={handsFreeActive ? 'mic' : 'mic-outline'}
             size={16}
             color={handsFreeActive ? colors.text.onPrimary : colors.text.quaternary}
           />
-          <Text
-            className={`text-xs font-sans-semibold ml-1.5 ${
-              handsFreeActive ? 'text-white' : 'text-text-tertiary'
-            }`}
-          >
-            {handsFreeActive ? 'Live' : 'Live Voice'}
-          </Text>
+          {!handsFreeActive && (
+            <Text className="text-xs font-sans-semibold ml-1.5 text-text-tertiary">
+              Live Voice
+            </Text>
+          )}
         </Pressable>
 
         {/* Voice mode toggle (hidden when hands-free is active) */}
@@ -812,14 +792,13 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
           onVoiceMessage={handleVoiceMessage}
           targetLanguage={targetLanguage}
           handsFreeMode={handsFreeActive}
-          handsFreeState={isGeminiLiveActive ? geminiLiveHandsFreeState : handsFreeState}
+          handsFreeState={handsFreeState}
           onHandsFreeStateChange={handleHandsFreeStateChange}
           shouldStartListening={shouldStartListening}
           onListeningStarted={handleListeningStarted}
-          geminiLiveActive={isGeminiLiveActive}
         />
       </KeyboardAvoidingView>
-    </View>
+    </SafeAreaView>
     </GradientBackground>
   );
 }

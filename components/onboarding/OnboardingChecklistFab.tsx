@@ -463,6 +463,6 @@ const styles = StyleSheet.create({
   itemLabel: {
     flex: 1,
     fontSize: 15,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: 'Nunito_500Medium',
   },
 });

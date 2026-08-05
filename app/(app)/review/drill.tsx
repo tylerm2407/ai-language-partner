@@ -9,6 +9,8 @@ import { LessonRunner } from '../../../components/lesson/LessonRunner';
 import { fetchDrillExercises } from '../../../lib/supabase-queries';
 import { getTargetLanguage } from '../../../lib/language';
 import type { Exercise } from '../../../types';
+import { GlowLayer } from '../../../components/ui/GlowBackground';
+import { colors } from '../../../config/theme';
 
 /**
  * Top-mistakes drill: a focused 3-exercise mini-lesson built from the
@@ -56,8 +58,9 @@ export default function DrillScreen() {
   // language, so never fall back to a default while it loads.
   if (loading || !targetLanguage) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#0C0F14', justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#38BDF8" />
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface.base, justifyContent: 'center', alignItems: 'center' }}>
+        <GlowLayer drift={false} />
+        <ActivityIndicator size="large" color="#818CF8" />
         <Text style={{ color: '#94A3B8', marginTop: 12 }}>Finding targeted exercises…</Text>
       </SafeAreaView>
     );
@@ -65,7 +68,8 @@ export default function DrillScreen() {
 
   if (!user?.id || !exercises || exercises.length === 0) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#0C0F14' }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface.base }}>
+        <GlowLayer drift={false} />
         <View style={{ padding: 20, flexDirection: 'row', alignItems: 'center' }}>
           <Pressable
             onPress={() => router.back()}
@@ -92,7 +96,7 @@ export default function DrillScreen() {
             onPress={() => router.back()}
             style={{
               marginTop: 20,
-              backgroundColor: '#38BDF8',
+              backgroundColor: colors.action.primaryFill,
               paddingHorizontal: 32,
               paddingVertical: 12,
               borderRadius: 12,
@@ -110,7 +114,8 @@ export default function DrillScreen() {
   // a standalone lesson in the UX sense and we don't log completion to
   // lesson_completions (it's not an official lesson).
   return (
-    <View style={{ flex: 1, backgroundColor: '#0C0F14' }}>
+    <View style={{ flex: 1, backgroundColor: colors.surface.base }}>
+      <GlowLayer drift={false} />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}

@@ -5,7 +5,7 @@
 // Deploy: npx supabase functions deploy score-pronunciation
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'npm:@supabase/supabase-js@2';
 import { getPlanLimits } from '../_shared/plan-limits.ts';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { corsHeaders, corsResponse } from '../_shared/cors.ts';

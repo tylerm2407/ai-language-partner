@@ -20,6 +20,7 @@ import { SUPPORTED_LANGUAGES } from '../../../config/app';
 import { useAuth } from '../../../hooks/useAuth';
 import { useClassManagement } from '../../../hooks/useClassManagement';
 import type { LanguageCode, ProficiencyLevel } from '../../../types';
+import { colors } from '../../../config/theme';
 
 const LEVELS: { value: ProficiencyLevel; label: string }[] = [
   { value: 'beginner', label: 'Beginner' },
@@ -77,10 +78,10 @@ export default function CreateClassScreen() {
             accessibilityLabel="Go back"
             className="flex-row items-center mb-4"
           >
-            <Ionicons name="chevron-back" size={24} color="#38BDF8" />
+            <Ionicons name="chevron-back" size={24} color="#818CF8" />
             <Text
               className="text-base text-primary ml-1"
-              style={{ fontFamily: 'Inter_600SemiBold' }}
+              style={{ fontFamily: 'Nunito_600SemiBold' }}
             >
               Back
             </Text>
@@ -88,7 +89,7 @@ export default function CreateClassScreen() {
 
           <Text
             className="text-[28px] text-text-primary mb-6"
-            style={{ fontFamily: 'Inter_700Bold' }}
+            style={{ fontFamily: 'Nunito_800ExtraBold' }}
             accessibilityRole="header"
           >
             Create Class
@@ -97,7 +98,7 @@ export default function CreateClassScreen() {
           {/* Class Name */}
           <Text
             className="text-sm text-text-secondary mb-2"
-            style={{ fontFamily: 'Inter_600SemiBold' }}
+            style={{ fontFamily: 'Nunito_600SemiBold' }}
           >
             Class Name *
           </Text>
@@ -110,7 +111,7 @@ export default function CreateClassScreen() {
               style={{
                 color: '#F1F5F9',
                 fontSize: 16,
-                fontFamily: 'Inter_400Regular',
+                fontFamily: 'Nunito_400Regular',
                 padding: 14,
               }}
               accessibilityLabel="Class name input"
@@ -120,7 +121,7 @@ export default function CreateClassScreen() {
           {/* Language Picker */}
           <Text
             className="text-sm text-text-secondary mb-2"
-            style={{ fontFamily: 'Inter_600SemiBold' }}
+            style={{ fontFamily: 'Nunito_600SemiBold' }}
           >
             Target Language
           </Text>
@@ -133,7 +134,7 @@ export default function CreateClassScreen() {
               <View className="flex-row items-center justify-between">
                 <Text
                   className="text-base text-text-primary"
-                  style={{ fontFamily: 'Inter_400Regular' }}
+                  style={{ fontFamily: 'Nunito_400Regular' }}
                 >
                   {selectedLang ? `${selectedLang.flag} ${selectedLang.name}` : language}
                 </Text>
@@ -189,7 +190,7 @@ export default function CreateClassScreen() {
                         style={{
                           color: lang.code === language ? '#A855F7' : '#F1F5F9',
                           fontSize: 16,
-                          fontFamily: 'Inter_500Medium',
+                          fontFamily: 'Nunito_500Medium',
                         }}
                       >
                         {lang.flag} {lang.name}
@@ -204,7 +205,7 @@ export default function CreateClassScreen() {
           {/* Level Picker */}
           <Text
             className="text-sm text-text-secondary mb-2"
-            style={{ fontFamily: 'Inter_600SemiBold' }}
+            style={{ fontFamily: 'Nunito_600SemiBold' }}
           >
             Proficiency Level
           </Text>
@@ -223,7 +224,7 @@ export default function CreateClassScreen() {
                   backgroundColor:
                     level === lvl.value
                       ? 'rgba(168, 85, 247, 0.2)'
-                      : 'rgba(30, 35, 50, 0.6)',
+                      : colors.surface.cardAlt,
                   borderWidth: 1,
                   borderColor:
                     level === lvl.value
@@ -235,7 +236,7 @@ export default function CreateClassScreen() {
                   style={{
                     color: level === lvl.value ? '#A855F7' : '#94A3B8',
                     fontSize: 13,
-                    fontFamily: 'Inter_600SemiBold',
+                    fontFamily: 'Nunito_600SemiBold',
                   }}
                 >
                   {lvl.label}
@@ -258,7 +259,7 @@ export default function CreateClassScreen() {
               <Ionicons name="warning-outline" size={18} color="#EF4444" />
               <Text
                 className="text-sm flex-1"
-                style={{ color: '#EF4444', fontFamily: 'Inter_500Medium' }}
+                style={{ color: '#EF4444', fontFamily: 'Nunito_500Medium' }}
               >
                 {error}
               </Text>
@@ -269,7 +270,7 @@ export default function CreateClassScreen() {
                 style={{ paddingVertical: 4, paddingHorizontal: 8 }}
               >
                 <Text
-                  style={{ color: '#38BDF8', fontSize: 13, fontFamily: 'Inter_600SemiBold' }}
+                  style={{ color: '#818CF8', fontSize: 13, fontFamily: 'Nunito_600SemiBold' }}
                 >
                   Retry
                 </Text>
@@ -310,13 +311,13 @@ export default function CreateClassScreen() {
             <Ionicons name="checkmark-circle" size={48} color="#22C55E" />
             <Text
               className="text-xl text-text-primary mt-4 mb-2"
-              style={{ fontFamily: 'Inter_700Bold' }}
+              style={{ fontFamily: 'Nunito_700Bold' }}
             >
               Class Created
             </Text>
             <Text
               className="text-sm text-text-secondary mb-4 text-center"
-              style={{ fontFamily: 'Inter_400Regular' }}
+              style={{ fontFamily: 'Nunito_400Regular' }}
             >
               Share this invite code with your students
             </Text>
@@ -333,7 +334,7 @@ export default function CreateClassScreen() {
                 style={{
                   color: '#A855F7',
                   fontSize: 28,
-                  fontFamily: 'Inter_700Bold',
+                  fontFamily: 'Nunito_800ExtraBold',
                   letterSpacing: 4,
                 }}
               >

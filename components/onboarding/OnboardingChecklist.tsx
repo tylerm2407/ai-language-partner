@@ -143,7 +143,7 @@ export function OnboardingChecklist() {
         accessibilityLabel={collapsed ? 'Expand onboarding checklist' : 'Collapse onboarding checklist'}
       >
         <View className="flex-row items-center gap-2">
-          <Ionicons name="rocket-outline" size={18} color="#38BDF8" />
+          <Ionicons name="rocket-outline" size={18} color="#818CF8" />
           <Text className="text-base font-semibold text-text-primary">Get Started</Text>
         </View>
         <View className="flex-row items-center gap-2">

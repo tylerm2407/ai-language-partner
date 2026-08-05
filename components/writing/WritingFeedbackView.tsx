@@ -124,7 +124,7 @@ export function WritingFeedbackView({ feedback, previousScore, attemptNumber = 1
         {feedback.correctedVersion && (
           <View style={{ backgroundColor: colors.surface.card, borderRadius: radii.xl, padding: spacing.xl, marginBottom: spacing.md }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs }}>
-              <Ionicons name="create" size={18} color={colors.indigo[500]} />
+              <Ionicons name="create" size={18} color={colors.action.accent} />
               <Text style={{ fontSize: 16, fontWeight: '600', marginLeft: 6, color: colors.text.onPrimary }}>Corrected Version</Text>
             </View>
             <Text style={{ fontSize: 15, color: colors.text.onPrimary, lineHeight: 22, fontStyle: 'italic' }}>
@@ -181,7 +181,7 @@ export function WritingFeedbackView({ feedback, previousScore, attemptNumber = 1
         <Pressable
           onPress={onContinue}
           style={{
-            flex: 1, backgroundColor: colors.indigo[500], paddingVertical: spacing.md, borderRadius: radii.lg, alignItems: 'center',
+            flex: 1, backgroundColor: colors.action.primaryFill, paddingVertical: spacing.md, borderRadius: radii.lg, alignItems: 'center',
           }}
           accessibilityRole="button"
           accessibilityLabel="Continue"

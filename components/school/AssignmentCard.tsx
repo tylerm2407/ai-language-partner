@@ -61,7 +61,7 @@ export default function AssignmentCard({ assignment, onPress, submission }: Assi
         <View className="flex-row items-center justify-between mb-1">
           <Text
             className="text-lg text-text-primary flex-1 mr-2"
-            style={{ fontFamily: 'Inter_600SemiBold' }}
+            style={{ fontFamily: 'Nunito_600SemiBold' }}
             numberOfLines={1}
           >
             {assignment.title}
@@ -74,7 +74,7 @@ export default function AssignmentCard({ assignment, onPress, submission }: Assi
           <Text
             className="text-sm text-text-secondary mb-3"
             numberOfLines={2}
-            style={{ fontFamily: 'Inter_400Regular' }}
+            style={{ fontFamily: 'Nunito_400Regular' }}
           >
             {assignment.description}
           </Text>
@@ -92,7 +92,7 @@ export default function AssignmentCard({ assignment, onPress, submission }: Assi
               style={{
                 color: getDueColor(assignment.dueAt),
                 fontSize: 12,
-                fontFamily: 'Inter_500Medium',
+                fontFamily: 'Nunito_500Medium',
                 marginLeft: 4,
               }}
             >
@@ -111,7 +111,7 @@ export default function AssignmentCard({ assignment, onPress, submission }: Assi
               style={{
                 color: '#94A3B8',
                 fontSize: 12,
-                fontFamily: 'Inter_500Medium',
+                fontFamily: 'Nunito_500Medium',
                 marginLeft: 4,
               }}
             >
@@ -127,7 +127,7 @@ export default function AssignmentCard({ assignment, onPress, submission }: Assi
                 style={{
                   color: '#94A3B8',
                   fontSize: 12,
-                  fontFamily: 'Inter_500Medium',
+                  fontFamily: 'Nunito_500Medium',
                   marginLeft: 4,
                 }}
               >

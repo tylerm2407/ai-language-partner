@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { View, TextInput, Pressable, ActivityIndicator, Text, Alert, Animated, Easing } from 'react-native';
+import { View, TextInput, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import { File } from 'expo-file-system/next';
-import { colors } from '../../config/theme';
+import { colors, spacing } from '../../config/theme';
+import { LiveComposer } from './LiveComposer';
 
 export type HandsFreeState = 'IDLE' | 'CONNECTING' | 'LISTENING' | 'PROCESSING' | 'AI_RESPONDING' | 'TTS_PLAYING';
 
@@ -14,7 +15,9 @@ interface ChatInputProps {
   onSend: () => void;
   sending: boolean;
   voiceMode?: boolean;
-  onVoiceMessage?: (text: string) => void;
+  /** `spokenLanguage` is what Whisper detected, which may differ from the
+   *  target language when the learner code-switches. */
+  onVoiceMessage?: (text: string, spokenLanguage: string | null) => void;
   targetLanguage?: string;
   /** When true, enables continuous hands-free conversation loop. */
   handsFreeMode?: boolean;
@@ -26,8 +29,6 @@ interface ChatInputProps {
   shouldStartListening?: boolean;
   /** Acknowledge that listening has started so parent can reset the signal. */
   onListeningStarted?: () => void;
-  /** When true, Gemini Live handles all audio — ChatInput is display-only in hands-free mode. */
-  geminiLiveActive?: boolean;
 }
 
 const SILENCE_THRESHOLD_DB = -35;
@@ -54,7 +55,6 @@ export function ChatInput({
   onHandsFreeStateChange,
   shouldStartListening = false,
   onListeningStarted,
-  geminiLiveActive = false,
 }: ChatInputProps) {
   const insets = useSafeAreaInsets();
   const [isRecording, setIsRecording] = useState(false);
@@ -77,24 +77,6 @@ export function ChatInput({
   // Recording object prepared at a time and will throw otherwise.
   const isStartingRef = useRef(false);
   const unloadPromiseRef = useRef<Promise<void> | null>(null);
-
-  // Pulsing animation for hands-free listening indicator
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    if (handsFreeMode && handsFreeState === 'LISTENING' && isRecording) {
-      const pulse = Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, { toValue: 1.15, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-          Animated.timing(pulseAnim, { toValue: 1, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        ])
-      );
-      pulse.start();
-      return () => pulse.stop();
-    } else {
-      pulseAnim.setValue(1);
-    }
-  }, [handsFreeMode, handsFreeState, isRecording, pulseAnim]);
 
   const clearSilenceTimer = useCallback(() => {
     if (silenceTimerRef.current) {
@@ -223,8 +205,8 @@ export function ChatInput({
           const base64Audio = await readAudioAsBase64(uri);
           const { transcribeAudio } = await import('../../lib/ai');
           const transcribed = await transcribeAudio(base64Audio, targetLanguage);
-          if (transcribed.trim()) {
-            onVoiceMessage(transcribed.trim());
+          if (transcribed.text.trim()) {
+            onVoiceMessage(transcribed.text.trim(), transcribed.language);
           } else {
             // No speech detected, restart listening
             onHandsFreeStateChange?.('LISTENING');
@@ -286,8 +268,8 @@ export function ChatInput({
           const base64Audio = await readAudioAsBase64(uri);
           const { transcribeAudio } = await import('../../lib/ai');
           const transcribed = await transcribeAudio(base64Audio, targetLanguage);
-          if (transcribed.trim()) {
-            onVoiceMessage(transcribed.trim());
+          if (transcribed.text.trim()) {
+            onVoiceMessage(transcribed.text.trim(), transcribed.language);
           }
         } catch (err) {
           console.error('Transcription failed:', err);
@@ -310,19 +292,15 @@ export function ChatInput({
   };
 
   // Auto-start listening when parent signals (e.g. after TTS finishes)
-  // Skip when Gemini Live is active — it handles audio internally.
   useEffect(() => {
-    if (geminiLiveActive) return;
     if (handsFreeMode && shouldStartListening && !isRecording && !isStoppingRef.current) {
       onListeningStarted?.();
       startRecording(true);
     }
-  }, [handsFreeMode, shouldStartListening, geminiLiveActive]);
+  }, [handsFreeMode, shouldStartListening]);
 
-  // Start listening when hands-free mode is first activated (legacy path)
-  // Skip when Gemini Live is active — parent manages the session.
+  // Start listening when hands-free mode is first activated.
   useEffect(() => {
-    if (geminiLiveActive) return;
     if (handsFreeMode && handsFreeState === 'IDLE' && !isRecording && !sending) {
       startRecording(true);
     }
@@ -342,18 +320,18 @@ export function ChatInput({
       setIsRecording(false);
       isStoppingRef.current = false;
     };
-  }, [handsFreeMode, geminiLiveActive]);
+  }, [handsFreeMode]);
 
   // Hands-free mode UI
   if (handsFreeMode) {
     const statusText = (() => {
       switch (handsFreeState) {
         case 'CONNECTING': return 'Connecting...';
-        case 'LISTENING': return geminiLiveActive ? 'Listening...' : (isRecording ? 'Listening...' : 'Starting...');
+        case 'LISTENING': return isRecording ? 'Listening...' : 'Starting...';
         case 'PROCESSING': return 'Transcribing...';
-        case 'AI_RESPONDING': return geminiLiveActive ? 'Speaking...' : 'Thinking...';
+        case 'AI_RESPONDING': return 'Thinking...';
         case 'TTS_PLAYING': return 'Speaking...';
-        default: return geminiLiveActive ? 'Connecting...' : 'Starting...';
+        default: return 'Starting...';
       }
     })();
 
@@ -368,104 +346,55 @@ export function ChatInput({
       }
     })();
 
+    // No keypad affordance here: exiting live is the header's "Live" toggle, and
+    // ChatInput has no callback to end the hands-free loop from inside.
     return (
-      <View className="items-center px-4 py-6 border-t border-dark-border bg-dark" style={{ paddingBottom: 24 + insets.bottom + 60 }}>
-        {/* Pulsing mic indicator */}
-        <Animated.View
-          style={{ transform: [{ scale: pulseAnim }] }}
-          className={`w-20 h-20 rounded-full items-center justify-center ${
-            handsFreeState === 'LISTENING' && isRecording ? 'bg-success' : 'bg-dark-card'
-          }`}
-        >
-          <Ionicons
-            name={handsFreeState === 'LISTENING' ? 'mic' : handsFreeState === 'TTS_PLAYING' ? 'volume-high' : 'ellipsis-horizontal'}
-            size={36}
-            color={statusColor}
-          />
-        </Animated.View>
-
-        <Text style={{ color: statusColor }} className="text-sm font-sans-semibold mt-3">
-          {statusText}
-        </Text>
-
-        <Text className="text-xs text-text-tertiary mt-1">
-          {geminiLiveActive ? 'Gemini Live voice active' : 'Hands-free mode active'}
-        </Text>
-        {errorMessage && (
-          <View className="bg-error-bg rounded-xl px-4 py-2 mt-2">
-            <Text className="text-xs text-error-dark text-center">{errorMessage}</Text>
-          </View>
-        )}
-        {/* Amplitude meter for hands-free */}
-        {handsFreeState === 'LISTENING' && !geminiLiveActive && (
-          <View className="flex-row items-center justify-center mt-2 h-4" style={{ gap: 3 }}>
-            {[0, 1, 2, 3, 4, 5, 6].map((i) => {
-              const barHeight = Math.max(4, meterLevel * 16 * (1 - Math.abs(i - 3) * 0.15));
-              return (
-                <View
-                  key={i}
-                  style={{ width: 3, height: barHeight, borderRadius: 1.5, backgroundColor: colors.success.base }}
-                />
-              );
-            })}
-          </View>
-        )}
-      </View>
+      <LiveComposer
+        meterLevel={meterLevel}
+        live={handsFreeState === 'LISTENING' && isRecording}
+        micIcon={
+          handsFreeState === 'LISTENING'
+            ? 'mic'
+            : handsFreeState === 'TTS_PLAYING'
+              ? 'volume-high'
+              : 'ellipsis-horizontal'
+        }
+        micColor={handsFreeState === 'LISTENING' ? colors.success.base : colors.action.primaryFill}
+        micAccessibilityLabel={`Live voice: ${statusText}`}
+        statusText={statusText}
+        statusColor={statusColor}
+        errorMessage={errorMessage}
+        bottomPadding={spacing.lg + insets.bottom + 60}
+      />
     );
   }
 
-  // Voice mode UI (hold-to-talk, unchanged)
+  // Voice mode UI (hold-to-talk) — same composer card, press-and-hold mic.
   if (voiceMode && !showTextFallback) {
     return (
-      <View className="items-center px-4 py-4 border-t border-dark-border bg-dark" style={{ paddingBottom: 16 + insets.bottom + 60 }}>
-        {/* Switch to keyboard */}
-        <View className="flex-row w-full justify-end mb-3">
-          <Pressable
-            onPress={() => setShowTextFallback(true)}
-            accessibilityRole="button"
-            accessibilityLabel="Switch to keyboard"
-            className="w-8 h-8 rounded-full bg-dark-card items-center justify-center"
-          >
-            <Ionicons name="keypad-outline" size={18} color={colors.correctionChip.grammar.text} />
-          </Pressable>
-        </View>
-
-        {/* Large mic button */}
-        <Pressable
-          onPressIn={() => startRecording(false)}
-          onPressOut={stopRecording}
-          accessibilityRole="button"
-          accessibilityLabel={isRecording ? 'Release to stop recording' : 'Hold to record'}
-          className={`w-20 h-20 rounded-full items-center justify-center ${
-            isRecording ? 'bg-error-dark' : 'bg-primary'
-          }`}
-          style={isRecording ? { transform: [{ scale: 1.1 }] } : undefined}
-        >
-          {sending ? (
-            <ActivityIndicator color="white" size="small" />
-          ) : (
-            <Ionicons name={isRecording ? 'mic' : 'mic-outline'} size={36} color="white" />
-          )}
-        </Pressable>
-
-        {/* Amplitude meter */}
-        {isRecording && (
-          <View className="flex-row items-center justify-center mt-2 h-4" style={{ gap: 3 }}>
-            {[0, 1, 2, 3, 4, 5, 6].map((i) => {
-              const barHeight = Math.max(4, meterLevel * 16 * (1 - Math.abs(i - 3) * 0.15));
-              return (
-                <View
-                  key={i}
-                  style={{ width: 3, height: barHeight, borderRadius: 1.5, backgroundColor: colors.success.base }}
-                />
-              );
-            })}
-          </View>
-        )}
-        <Text className={`text-xs mt-2 ${tooShortMessage ? 'text-warning' : 'text-text-secondary'}`}>
-          {tooShortMessage ?? (isTranscribing ? 'Transcribing...' : isRecording ? 'Listening...' : 'Hold to talk')}
-        </Text>
-      </View>
+      <LiveComposer
+        meterLevel={meterLevel}
+        live={isRecording}
+        micIcon={isRecording ? 'mic' : 'mic-outline'}
+        micColor={isRecording ? colors.success.base : colors.action.primaryFill}
+        micAccessibilityLabel={isRecording ? 'Release to stop recording' : 'Hold to record'}
+        statusText={
+          tooShortMessage ??
+          (isTranscribing ? 'Transcribing…' : isRecording ? 'Listening…' : 'Hold to talk')
+        }
+        statusColor={
+          tooShortMessage
+            ? colors.warning.light
+            : isRecording
+              ? colors.success.base
+              : colors.text.secondary
+        }
+        busy={sending}
+        onMicPressIn={() => startRecording(false)}
+        onMicPressOut={stopRecording}
+        onKeypad={() => setShowTextFallback(true)}
+        bottomPadding={spacing.md + insets.bottom + 60}
+      />
     );
   }
 

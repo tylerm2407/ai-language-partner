@@ -24,9 +24,9 @@
   "workspace": {
     "packageJson": {
       "dependencies": [
-        "npm:@expo-google-fonts/inter@~0.4.2",
+        "npm:@expo-google-fonts/fraunces@~0.4.1",
         "npm:@expo-google-fonts/jetbrains-mono@~0.4.1",
-        "npm:@expo-google-fonts/playfair-display@~0.4.2",
+        "npm:@expo-google-fonts/nunito@~0.4.2",
         "npm:@expo/vector-icons@^15.0.3",
         "npm:@react-native-async-storage/async-storage@2.2.0",
         "npm:@react-native-community/netinfo@11.4.1",

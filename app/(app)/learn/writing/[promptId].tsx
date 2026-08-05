@@ -153,7 +153,7 @@ export default function WritingPromptScreen() {
     return (
       <GradientBackground variant="raised">
         <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color={colors.indigo[500]} />
+          <ActivityIndicator size="large" color={colors.action.accent} />
         </SafeAreaView>
       </GradientBackground>
     );
@@ -165,7 +165,7 @@ export default function WritingPromptScreen() {
         <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
           <Text style={{ fontSize: 16, color: colors.error.base, textAlign: 'center' }}>{error}</Text>
           <Pressable onPress={() => router.back()} style={{ marginTop: 16 }} accessibilityRole="button">
-            <Text style={{ fontSize: 16, color: colors.indigo[500] }}>Go Back</Text>
+            <Text style={{ fontSize: 16, color: colors.action.accent }}>Go Back</Text>
           </Pressable>
         </SafeAreaView>
       </GradientBackground>

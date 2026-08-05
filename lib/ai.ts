@@ -33,6 +33,9 @@ export interface AIChatRequest {
   /** Free-form topic string. Used by Practice screen / assignments where we
    *  don't have a pre-authored scenario. */
   topic?: string;
+  /** Set only when the learner spoke a language other than `targetLanguage`,
+   *  so the tutor can acknowledge the switch and steer back. */
+  spokenLanguage?: string;
 }
 
 export interface AIChatResponse {
@@ -243,14 +246,21 @@ export async function getTextToSpeech(
   return data.audioBase64 as string;
 }
 
+export interface Transcription {
+  text: string;
+  /** Language Whisper actually heard, which may not be `language` — learners
+   *  code-switch. Null when detection failed and no hint was supplied. */
+  language: string | null;
+}
+
 /**
  * Transcribe audio using Whisper STT.
- * Accepts base64-encoded audio, returns transcribed text.
+ * `language` is a hint only; the returned `language` is what was detected.
  */
 export async function transcribeAudio(
   audioBase64: string,
   language: string
-): Promise<string> {
+): Promise<Transcription> {
   const { data, error } = await supabase.functions.invoke('transcribe', {
     body: { audioBase64, language },
   });
@@ -286,39 +296,8 @@ export async function transcribeAudio(
     throw new VoiceError(data.error);
   }
 
-  return (data as { text: string }).text;
-}
-
-/**
- * Check voice limits and get remaining minutes.
- * Voice config and system prompt are built server-side in voice-proxy.
- * No API keys or model config are exposed to the client.
- */
-export async function getVoiceSessionToken(
-  targetLanguage: string,
-  level: string,
-  topic?: string
-): Promise<{ remainingMinutes: number }> {
-  const { data, error } = await supabase.functions.invoke('voice-session-token', {
-    body: { targetLanguage, level, topic },
-  });
-
-  if (error) throw new Error(`Voice session token error: ${error.message}`);
-  return data as { remainingMinutes: number };
-}
-
-/**
- * Report voice session usage after session ends.
- */
-export async function reportVoiceSessionEnd(
-  durationMinutes: number
-): Promise<{ remainingMinutes: number | 'unlimited'; totalUsedToday: number }> {
-  const { data, error } = await supabase.functions.invoke('voice-session-end', {
-    body: { durationMinutes },
-  });
-
-  if (error) throw new Error(`Voice session end error: ${error.message}`);
-  return data as { remainingMinutes: number | 'unlimited'; totalUsedToday: number };
+  const result = data as { text: string; language?: string | null };
+  return { text: result.text, language: result.language ?? null };
 }
 
 // ─── Content Generation ─────────────────────────────────────────
@@ -348,7 +327,8 @@ export async function generateContent(request: GenerateContentRequest): Promise<
 
 /**
  * Analyze a voice conversation turn to extract corrections and vocabulary.
- * Called asynchronously after each Gemini Live turn.
+ * Currently unused: the cascade voice loop gets corrections inline from
+ * `sendChatMessage`. Kept for richer post-turn analysis of spoken input.
  */
 export async function analyzeConversationTurn(
   userMessage: string,

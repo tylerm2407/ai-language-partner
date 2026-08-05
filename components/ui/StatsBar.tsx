@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { GRADIENT_COLORS, GRADIENT_START, GRADIENT_END } from '../../config/gradients';
 import { useAppStore } from '../../stores/useAppStore';
 import { useHearts } from '../../hooks/useHearts';
+import { colors } from '../../config/theme';
 
 export function StatsBar() {
   const profile = useAppStore((s) => s.profile);
@@ -15,7 +16,7 @@ export function StatsBar() {
   const totalXp = profile?.totalXp ?? 0;
 
   return (
-    <View style={{ backgroundColor: 'rgba(12, 15, 20, 0.95)', paddingTop: insets.top }}>
+    <View style={{ backgroundColor: colors.surface.base, paddingTop: insets.top }}>
       <View className="flex-row items-center justify-around" style={{ height: 48 }}>
         {/* Streak */}
         <Pressable

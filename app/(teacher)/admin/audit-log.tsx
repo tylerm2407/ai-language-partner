@@ -7,6 +7,7 @@ import { GradientBackground } from '../../../components/ui/GradientBackground';
 import { GlassSurface } from '../../../components/ui/GlassSurface';
 import { useSchoolStore } from '../../../stores/useSchoolStore';
 import { fetchAuditLogs } from '../../../lib/supabase-queries';
+import { colors } from '../../../config/theme';
 
 interface AuditEntry {
   id: string;
@@ -28,7 +29,7 @@ function formatTimestamp(dateStr: string): string {
 
 const ACTION_COLORS: Record<string, string> = {
   create: '#22C55E',
-  update: '#38BDF8',
+  update: '#818CF8',
   delete: '#EF4444',
   grant: '#A855F7',
   read: '#94A3B8',
@@ -75,13 +76,13 @@ export default function AuditLogScreen() {
             accessibilityLabel="Go back"
             className="flex-row items-center mb-4"
           >
-            <Ionicons name="chevron-back" size={24} color="#38BDF8" />
-            <Text className="text-base text-primary ml-1" style={{ fontFamily: 'Inter_600SemiBold' }}>Back</Text>
+            <Ionicons name="chevron-back" size={24} color="#818CF8" />
+            <Text className="text-base text-primary ml-1" style={{ fontFamily: 'Nunito_600SemiBold' }}>Back</Text>
           </Pressable>
 
           <Text
             className="text-[28px] text-text-primary mb-4"
-            style={{ fontFamily: 'Inter_700Bold' }}
+            style={{ fontFamily: 'Nunito_800ExtraBold' }}
             accessibilityRole="header"
           >
             Audit Log
@@ -97,16 +98,16 @@ export default function AuditLogScreen() {
                   paddingHorizontal: 12,
                   paddingVertical: 6,
                   borderRadius: 999,
-                  backgroundColor: filter === opt ? 'rgba(56, 189, 248, 0.2)' : 'rgba(30, 35, 50, 0.6)',
+                  backgroundColor: filter === opt ? colors.action.primaryTint : colors.surface.cardAlt,
                 }}
                 accessibilityRole="button"
                 accessibilityState={{ selected: filter === opt }}
               >
                 <Text
                   style={{
-                    color: filter === opt ? '#38BDF8' : '#94A3B8',
+                    color: filter === opt ? '#818CF8' : '#94A3B8',
                     fontSize: 13,
-                    fontFamily: 'Inter_600SemiBold',
+                    fontFamily: 'Nunito_600SemiBold',
                   }}
                 >
                   {opt.charAt(0).toUpperCase() + opt.slice(1)}
@@ -116,7 +117,7 @@ export default function AuditLogScreen() {
           </View>
 
           {loading ? (
-            <ActivityIndicator color="#38BDF8" size="large" style={{ marginTop: 32 }} />
+            <ActivityIndicator color="#818CF8" size="large" style={{ marginTop: 32 }} />
           ) : (
             <FlatList
               data={entries}
@@ -124,7 +125,7 @@ export default function AuditLogScreen() {
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingBottom: 100 }}
               refreshControl={
-                <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#38BDF8" />
+                <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#818CF8" />
               }
               renderItem={({ item }) => (
                 <GlassSurface style={{ marginBottom: 8 }} innerStyle={{ padding: 12 }}>
@@ -138,23 +139,23 @@ export default function AuditLogScreen() {
                           backgroundColor: `${ACTION_COLORS[item.action] ?? '#94A3B8'}20`,
                         }}
                       >
-                        <Text style={{ color: ACTION_COLORS[item.action] ?? '#94A3B8', fontSize: 11, fontFamily: 'Inter_600SemiBold' }}>
+                        <Text style={{ color: ACTION_COLORS[item.action] ?? '#94A3B8', fontSize: 11, fontFamily: 'Nunito_600SemiBold' }}>
                           {item.action.toUpperCase()}
                         </Text>
                       </View>
-                      <Text className="text-xs text-text-secondary" style={{ fontFamily: 'Inter_500Medium' }}>
+                      <Text className="text-xs text-text-secondary" style={{ fontFamily: 'Nunito_500Medium' }}>
                         {item.actorRole}
                       </Text>
                     </View>
-                    <Text className="text-xs text-text-secondary" style={{ fontFamily: 'Inter_400Regular' }}>
+                    <Text className="text-xs text-text-secondary" style={{ fontFamily: 'Nunito_400Regular' }}>
                       {formatTimestamp(item.createdAt)}
                     </Text>
                   </View>
-                  <Text className="text-sm text-text-primary" style={{ fontFamily: 'Inter_400Regular' }}>
+                  <Text className="text-sm text-text-primary" style={{ fontFamily: 'Nunito_400Regular' }}>
                     {item.resourceType}{item.resourceId ? ` (${item.resourceId.slice(0, 8)}...)` : ''}
                   </Text>
                   {item.ipAddress && (
-                    <Text className="text-xs text-text-secondary mt-1" style={{ fontFamily: 'Inter_400Regular' }}>
+                    <Text className="text-xs text-text-secondary mt-1" style={{ fontFamily: 'Nunito_400Regular' }}>
                       IP: {item.ipAddress}
                     </Text>
                   )}
@@ -163,7 +164,7 @@ export default function AuditLogScreen() {
               ListEmptyComponent={
                 <View className="items-center mt-8">
                   <Ionicons name="document-text-outline" size={48} color="#64748B" />
-                  <Text className="text-base text-text-secondary mt-3" style={{ fontFamily: 'Inter_500Medium' }}>
+                  <Text className="text-base text-text-secondary mt-3" style={{ fontFamily: 'Nunito_500Medium' }}>
                     No audit entries found
                   </Text>
                 </View>

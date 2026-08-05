@@ -1,14 +1,15 @@
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { ReadingBook, UserBookProgress } from '../../types';
+import { colors } from '../../config/theme';
 
 const CEFR_BADGE_COLORS: Record<string, { bg: string; text: string }> = {
-  A1: { bg: '#DCFCE7', text: '#22C55E' },
-  A2: { bg: '#E0E7FF', text: '#6366F1' },
-  B1: { bg: '#FEF9C3', text: '#CA8A04' },
-  B2: { bg: '#FEE2E2', text: '#EF4444' },
-  C1: { bg: '#E0E7FF', text: '#6366F1' },
-  C2: { bg: '#FEE2E2', text: '#EF4444' },
+  A1: { bg: colors.success.tint, text: colors.success.light },
+  A2: { bg: colors.action.primaryTint, text: colors.action.accent },
+  B1: { bg: colors.warning.tint, text: colors.warning.light },
+  B2: { bg: colors.error.tint, text: colors.error.light },
+  C1: { bg: colors.action.primaryTint, text: colors.action.accent },
+  C2: { bg: colors.error.tint, text: colors.error.light },
 };
 
 interface InProgressBook {
@@ -27,8 +28,8 @@ export function ContinueReadingSection({ books, onPress }: ContinueReadingSectio
   return (
     <View style={{ marginBottom: 16 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-        <Ionicons name="book" size={18} color="#6366F1" />
-        <Text style={{ fontSize: 18, fontWeight: '700', color: '#111111', marginLeft: 8 }}>
+        <Ionicons name="book" size={18} color="#818CF8" />
+        <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text.primary, marginLeft: 8 }}>
           Continue Reading
         </Text>
       </View>
@@ -39,7 +40,7 @@ export function ContinueReadingSection({ books, onPress }: ContinueReadingSectio
         contentContainerStyle={{ gap: 12 }}
       >
         {books.map(({ book, progress }) => {
-          const cefrColor = CEFR_BADGE_COLORS[book.cefrLevel] ?? { bg: '#F3F4F6', text: '#666666' };
+          const cefrColor = CEFR_BADGE_COLORS[book.cefrLevel] ?? { bg: colors.surface.cardAlt, text: colors.text.tertiary };
           const percent = Math.round(progress.percentComplete);
 
           return (
@@ -50,14 +51,14 @@ export function ContinueReadingSection({ books, onPress }: ContinueReadingSectio
               accessibilityLabel={`Continue reading ${book.title}, ${percent}% complete`}
               style={{
                 width: 200,
-                backgroundColor: '#F9FAFB',
+                backgroundColor: colors.surface.card,
                 borderRadius: 14,
                 padding: 14,
               }}
             >
               <Text
                 numberOfLines={2}
-                style={{ fontSize: 14, fontWeight: '600', color: '#111111', marginBottom: 8 }}
+                style={{ fontSize: 14, fontWeight: '600', color: colors.text.primary, marginBottom: 8 }}
               >
                 {book.title}
               </Text>
@@ -82,7 +83,7 @@ export function ContinueReadingSection({ books, onPress }: ContinueReadingSectio
               <View
                 style={{
                   height: 4,
-                  backgroundColor: '#F3F4F6',
+                  backgroundColor: colors.surface.cardAlt,
                   borderRadius: 2,
                   overflow: 'hidden',
                   marginBottom: 6,
@@ -92,17 +93,17 @@ export function ContinueReadingSection({ books, onPress }: ContinueReadingSectio
                   style={{
                     height: 4,
                     width: `${Math.min(percent, 100)}%`,
-                    backgroundColor: '#6366F1',
+                    backgroundColor: '#4F46E5',
                     borderRadius: 2,
                   }}
                 />
               </View>
 
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Text style={{ fontSize: 12, fontWeight: '400', color: '#666666' }}>
+                <Text style={{ fontSize: 12, fontWeight: '400', color: colors.text.tertiary }}>
                   {percent}%
                 </Text>
-                <Text style={{ fontSize: 12, fontWeight: '600', color: '#6366F1' }}>
+                <Text style={{ fontSize: 12, fontWeight: '600', color: colors.action.accent }}>
                   Continue →
                 </Text>
               </View>

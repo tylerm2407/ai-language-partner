@@ -16,12 +16,16 @@ import { View, ActivityIndicator, AppState } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
   useFonts,
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-} from '@expo-google-fonts/inter';
-import { PlayfairDisplay_700Bold } from '@expo-google-fonts/playfair-display';
+  Nunito_400Regular,
+  Nunito_500Medium,
+  Nunito_600SemiBold,
+  Nunito_700Bold,
+  Nunito_800ExtraBold,
+} from '@expo-google-fonts/nunito';
+import {
+  Fraunces_600SemiBold,
+  Fraunces_700Bold,
+} from '@expo-google-fonts/fraunces';
 import {
   JetBrainsMono_400Regular,
   JetBrainsMono_500Medium,
@@ -48,11 +52,13 @@ function RootLayout() {
   useAuthDeepLinks();
 
   const [fontsLoaded] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
-    PlayfairDisplay_700Bold,
+    Nunito_400Regular,
+    Nunito_500Medium,
+    Nunito_600SemiBold,
+    Nunito_700Bold,
+    Nunito_800ExtraBold,
+    Fraunces_600SemiBold,
+    Fraunces_700Bold,
     JetBrainsMono_400Regular,
     JetBrainsMono_500Medium,
   });
@@ -166,7 +172,7 @@ function RootLayout() {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
         <View className="flex-1 items-center justify-center bg-dark">
-          <ActivityIndicator size="large" color="#38BDF8" />
+          <ActivityIndicator size="large" color="#818CF8" />
           <StatusBar style="light" />
         </View>
       </GestureHandlerRootView>

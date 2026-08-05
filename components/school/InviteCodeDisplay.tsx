@@ -42,7 +42,7 @@ export default function InviteCodeDisplay({ code, active, onRegenerate }: Invite
           style={{
             color: active ? '#22C55E' : '#64748B',
             fontSize: 12,
-            fontFamily: 'Inter_500Medium',
+            fontFamily: 'Nunito_500Medium',
           }}
         >
           {active ? 'Active' : 'Inactive'}
@@ -90,12 +90,12 @@ export default function InviteCodeDisplay({ code, active, onRegenerate }: Invite
             borderRadius: 10,
           }}
         >
-          <Ionicons name="copy-outline" size={16} color="#6366F1" />
+          <Ionicons name="copy-outline" size={16} color="#818CF8" />
           <Text
             style={{
-              color: '#6366F1',
+              color: '#818CF8',
               fontSize: 14,
-              fontFamily: 'Inter_600SemiBold',
+              fontFamily: 'Nunito_600SemiBold',
               marginLeft: 6,
             }}
           >
@@ -116,12 +116,12 @@ export default function InviteCodeDisplay({ code, active, onRegenerate }: Invite
             borderRadius: 10,
           }}
         >
-          <Ionicons name="share-outline" size={16} color="#6366F1" />
+          <Ionicons name="share-outline" size={16} color="#818CF8" />
           <Text
             style={{
-              color: '#6366F1',
+              color: '#818CF8',
               fontSize: 14,
-              fontFamily: 'Inter_600SemiBold',
+              fontFamily: 'Nunito_600SemiBold',
               marginLeft: 6,
             }}
           >
@@ -148,7 +148,7 @@ export default function InviteCodeDisplay({ code, active, onRegenerate }: Invite
               style={{
                 color: '#EF4444',
                 fontSize: 14,
-                fontFamily: 'Inter_600SemiBold',
+                fontFamily: 'Nunito_600SemiBold',
                 marginLeft: 6,
               }}
             >

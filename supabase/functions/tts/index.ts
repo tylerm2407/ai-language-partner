@@ -1,5 +1,15 @@
-// Supabase Edge Function: Text-to-Speech via ElevenLabs
-// Proxies TTS requests to ElevenLabs API and returns base64 JSON.
+// Supabase Edge Function: Text-to-Speech
+// Proxies TTS requests to a provider and returns base64 JSON.
+//
+// Two providers: ElevenLabs (default) and fish.audio (~8x cheaper per
+// character). fish is used only for languages explicitly listed in the
+// FISH_VOICE_MAP secret, and falls back to ElevenLabs if the call fails.
+// That opt-in-per-language shape is deliberate: this app teaches pronunciation,
+// so a voice ships only after someone has listened to it in that language.
+//
+// Secrets: ELEVENLABS_KEY (required), FISH_KEY + FISH_VOICE_MAP (optional).
+// FISH_VOICE_MAP is JSON: {"es":["<reference_id>", ...], "fr":[...]}
+//
 // Deploy: npx supabase functions deploy tts
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
@@ -13,6 +23,32 @@ import { getUserToday } from '../_shared/user-day.ts';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_KEY');
+const FISH_API_KEY = Deno.env.get('FISH_KEY');
+
+/** Per-language fish.audio reference_ids, opt-in via the FISH_VOICE_MAP secret.
+ *  A malformed value must not take voice down, so it degrades to "no fish". */
+const FISH_VOICE_MAP: Record<string, string[]> = (() => {
+  const raw = Deno.env.get('FISH_VOICE_MAP');
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      console.error('[tts] FISH_VOICE_MAP must be a JSON object; ignoring.');
+      return {};
+    }
+    const map: Record<string, string[]> = {};
+    for (const [lang, ids] of Object.entries(parsed)) {
+      const valid = Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string' && id.length > 0) : [];
+      if (valid.length > 0) map[lang] = valid;
+    }
+    return map;
+  } catch (err) {
+    console.error('[tts] FISH_VOICE_MAP is not valid JSON; ignoring.', err);
+    return {};
+  }
+})();
+
+type TTSProvider = 'elevenlabs' | 'fish';
 
 // ElevenLabs voice IDs — native-sounding voices per language.
 // Curated from ElevenLabs voice library for natural pronunciation.
@@ -138,13 +174,15 @@ function simpleHash(input: string): number {
 }
 
 /** Resolve the voice ID for a request given the optional voice selector
- *  parameters. Falls back to VOICE_MAP[language][0] or DEFAULT_VOICE_ID. */
+ *  parameters. `voices` is the provider's voice list for the language; an empty
+ *  one falls back to DEFAULT_VOICE_ID (an ElevenLabs id, so fish callers must
+ *  check for a non-empty list before calling). */
 function resolveVoiceId(
+  voices: string[] | undefined,
   language: string,
   text: string,
   opts: { voiceIndex?: number; voiceMode?: VoiceMode; voiceRotationKey?: string }
 ): string {
-  const voices = VOICE_MAP[language];
   if (!voices || voices.length === 0) return DEFAULT_VOICE_ID;
 
   const { voiceIndex, voiceMode, voiceRotationKey } = opts;
@@ -198,6 +236,58 @@ const TTS_BUCKET = 'tts-cache';
 
 /** Cost control: longest legitimate inputs are chat replies / story paragraphs. */
 const MAX_TTS_CHARS = 2000;
+
+/** Generate speech with ElevenLabs. Throws on a non-2xx response. */
+async function generateWithElevenLabs(voiceId: string, text: string): Promise<ArrayBuffer> {
+  const response = await fetch(
+    `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'xi-api-key': ELEVENLABS_API_KEY!,
+      },
+      body: JSON.stringify({
+        text,
+        model_id: 'eleven_flash_v2_5',
+        voice_settings: {
+          stability: 0.5,
+          similarity_boost: 0.75,
+          style: 0.3,
+        },
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`ElevenLabs API error: ${response.status} - ${await response.text()}`);
+  }
+  return await response.arrayBuffer();
+}
+
+/** Generate speech with fish.audio. Throws on a non-2xx response. */
+async function generateWithFish(referenceId: string, text: string): Promise<ArrayBuffer> {
+  const response = await fetch('https://api.fish.audio/v1/tts', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${FISH_API_KEY!}`,
+      'model': 's2-pro',
+    },
+    body: JSON.stringify({
+      text,
+      reference_id: referenceId,
+      format: 'mp3',
+      // Conversational turnaround matters more here than maximum fidelity.
+      latency: 'balanced',
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`fish.audio API error: ${response.status} - ${await response.text()}`);
+  }
+  return await response.arrayBuffer();
+}
 
 async function sha256Hex(input: string): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
@@ -286,21 +376,38 @@ serve(async (req: Request) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    const voiceId = resolveVoiceId(language, text, {
-      voiceIndex,
-      voiceMode,
-      voiceRotationKey,
-    });
-
     const cleanText = text.replace(/\*\*/g, '').trim();
+    const voiceOpts = { voiceIndex, voiceMode, voiceRotationKey };
 
-    // ── Cache lookup: content-addressed by voice + language + text ──
-    // Cache hits cost nothing, so they bypass quota and burst limits.
-    const cachePath = `${await sha256Hex(`${voiceId}|${language}|${cleanText}`)}.mp3`;
-    const { data: cachedFile } = await supabase.storage.from(TTS_BUCKET).download(cachePath);
-    if (cachedFile) {
-      const base64 = bufferToBase64(await cachedFile.arrayBuffer());
-      return new Response(JSON.stringify({ audioBase64: base64, cached: true }), {
+    // fish only handles languages it has vetted voices for; everything else
+    // stays on ElevenLabs.
+    const fishVoices = FISH_API_KEY ? FISH_VOICE_MAP[language] : undefined;
+    const provider: TTSProvider = fishVoices && fishVoices.length > 0 ? 'fish' : 'elevenlabs';
+    const voiceId = resolveVoiceId(
+      provider === 'fish' ? fishVoices : VOICE_MAP[language],
+      language,
+      cleanText,
+      voiceOpts
+    );
+
+    /** Cache is content-addressed by voice + language + text, namespaced per
+     *  provider so the two renderings of the same line never collide.
+     *  ElevenLabs deliberately keeps the original un-namespaced key so the
+     *  existing tts-cache bucket stays warm across this change. */
+    const cacheKeyFor = async (p: TTSProvider, v: string) => {
+      const key = p === 'fish' ? `fish|${v}|${language}|${cleanText}` : `${v}|${language}|${cleanText}`;
+      return `${await sha256Hex(key)}.mp3`;
+    };
+    const readCache = async (path: string): Promise<ArrayBuffer | null> => {
+      const { data } = await supabase.storage.from(TTS_BUCKET).download(path);
+      return data ? await data.arrayBuffer() : null;
+    };
+
+    // ── Cache lookup ── hits cost nothing, so they bypass quota and burst limits.
+    let cachePath = await cacheKeyFor(provider, voiceId);
+    const cached = await readCache(cachePath);
+    if (cached) {
+      return new Response(JSON.stringify({ audioBase64: bufferToBase64(cached), cached: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -334,32 +441,32 @@ serve(async (req: Request) => {
       );
     }
 
-    const response = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'xi-api-key': ELEVENLABS_API_KEY,
-        },
-        body: JSON.stringify({
-          text: cleanText,
-          model_id: 'eleven_flash_v2_5',
-          voice_settings: {
-            stability: 0.5,
-            similarity_boost: 0.75,
-            style: 0.3,
-          },
-        }),
-      }
-    );
+    let audioBuffer: ArrayBuffer;
+    if (provider === 'fish') {
+      try {
+        audioBuffer = await generateWithFish(voiceId, cleanText);
+      } catch (fishError) {
+        // Voice is a core surface — a fish outage must not silence the tutor.
+        console.error('[tts] fish.audio failed, falling back to ElevenLabs:', fishError);
+        const fallbackVoiceId = resolveVoiceId(VOICE_MAP[language], language, cleanText, voiceOpts);
+        cachePath = await cacheKeyFor('elevenlabs', fallbackVoiceId);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`ElevenLabs API error: ${response.status} - ${errorText}`);
+        // Check the fallback's own cache entry first: if fish is down for a
+        // while, every request lands here and would otherwise re-bill ElevenLabs
+        // for lines it has already rendered.
+        const fallbackCached = await readCache(cachePath);
+        if (fallbackCached) {
+          return new Response(
+            JSON.stringify({ audioBase64: bufferToBase64(fallbackCached), cached: true }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        audioBuffer = await generateWithElevenLabs(fallbackVoiceId, cleanText);
+      }
+    } else {
+      audioBuffer = await generateWithElevenLabs(voiceId, cleanText);
     }
 
-    const audioBuffer = await response.arrayBuffer();
     const base64 = bufferToBase64(audioBuffer);
 
     // Store in cache (best-effort — response does not depend on it).

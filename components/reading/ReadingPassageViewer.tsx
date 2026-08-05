@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AudioPlayButton } from '../audio/AudioPlayButton';
 import { WordTooltip } from './WordTooltip';
 import type { ReadingPassage, ReadingAnnotation, ReviewItem } from '../../types';
+import { colors } from '../../config/theme';
 
 interface Props {
   passage: ReadingPassage;
@@ -29,7 +30,7 @@ export function ReadingPassageViewer({
   const renderAnnotatedText = useCallback(() => {
     const { content } = passage;
     if (annotations.length === 0) {
-      return <Text style={{ fontSize: 16, lineHeight: 26, color: '#111' }}>{content}</Text>;
+      return <Text style={{ fontSize: 16, lineHeight: 26, color: colors.text.primary }}>{content}</Text>;
     }
 
     const segments: ReactElement[] = [];
@@ -42,7 +43,7 @@ export function ReadingPassageViewer({
       // Plain text before this annotation
       if (annotation.startIndex > lastIndex) {
         segments.push(
-          <Text key={`plain-${i}`} style={{ fontSize: 16, lineHeight: 26, color: '#111' }}>
+          <Text key={`plain-${i}`} style={{ fontSize: 16, lineHeight: 26, color: colors.text.primary }}>
             {content.slice(lastIndex, annotation.startIndex)}
           </Text>
         );
@@ -57,7 +58,7 @@ export function ReadingPassageViewer({
           style={{
             fontSize: 16,
             lineHeight: 26,
-            color: isSelected ? '#6366F1' : '#111',
+            color: isSelected ? '#4F46E5' : '#111',
             textDecorationLine: 'underline',
             textDecorationColor: 'rgba(99, 102, 241, 0.3)',
             fontWeight: isSelected ? '600' : '400',
@@ -75,7 +76,7 @@ export function ReadingPassageViewer({
     // Remaining plain text
     if (lastIndex < content.length) {
       segments.push(
-        <Text key="plain-end" style={{ fontSize: 16, lineHeight: 26, color: '#111' }}>
+        <Text key="plain-end" style={{ fontSize: 16, lineHeight: 26, color: colors.text.primary }}>
           {content.slice(lastIndex)}
         </Text>
       );
@@ -85,15 +86,15 @@ export function ReadingPassageViewer({
   }, [passage, annotations, selectedAnnotation, onSelectWord]);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface.raised }}>
       {/* Header */}
       <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12, flexDirection: 'row', alignItems: 'center' }}>
         <Pressable onPress={onExit} style={{ padding: 8 }} accessibilityRole="button" accessibilityLabel="Exit reading">
-          <Text style={{ fontSize: 24, color: '#666' }}>x</Text>
+          <Text style={{ fontSize: 24, color: colors.text.tertiary }}>x</Text>
         </Pressable>
         <View style={{ flex: 1, marginLeft: 8 }}>
           <Text style={{ fontSize: 18, fontWeight: '600' }} numberOfLines={1}>{passage.title}</Text>
-          <Text style={{ fontSize: 13, color: '#999' }}>{passage.wordCount} words | {passage.cefrLevel}</Text>
+          <Text style={{ fontSize: 13, color: colors.text.tertiary }}>{passage.wordCount} words | {passage.cefrLevel}</Text>
         </View>
         {passage.audioUrl && (
           <AudioPlayButton audioUrl={passage.audioUrl} size={40} />
@@ -107,7 +108,7 @@ export function ReadingPassageViewer({
       >
         <Pressable onPress={onDismissTooltip} style={{ minHeight: 200 }}>
           <View style={{
-            backgroundColor: '#F9FAFB',
+            backgroundColor: colors.surface.card,
             borderRadius: 16,
             padding: 20,
           }}>
@@ -126,7 +127,7 @@ export function ReadingPassageViewer({
 
         {/* Source Attribution */}
         {passage.sourceAttribution && (
-          <Text style={{ fontSize: 12, color: '#999', fontStyle: 'italic', marginTop: 12 }}>
+          <Text style={{ fontSize: 12, color: colors.text.tertiary, fontStyle: 'italic', marginTop: 12 }}>
             Source: {passage.sourceAttribution}
           </Text>
         )}
@@ -135,13 +136,13 @@ export function ReadingPassageViewer({
       {/* Continue Button */}
       <View style={{
         position: 'absolute', bottom: 0, left: 0, right: 0,
-        padding: 20, backgroundColor: '#fff',
-        borderTopWidth: 1, borderTopColor: '#E5E7EB',
+        padding: 20, backgroundColor: colors.surface.raised,
+        borderTopWidth: 1, borderTopColor: colors.border.default,
       }}>
         <Pressable
           onPress={onContinue}
           style={{
-            backgroundColor: '#6366F1', paddingVertical: 16, borderRadius: 14, alignItems: 'center',
+            backgroundColor: '#4F46E5', paddingVertical: 16, borderRadius: 14, alignItems: 'center',
           }}
           accessibilityRole="button"
           accessibilityLabel="Continue to questions"

@@ -124,7 +124,7 @@ export function SentenceConstructionExercise({
             style={{
               backgroundColor: colors.indigo[900],
               borderWidth: 2,
-              borderColor: colors.indigo[500],
+              borderColor: colors.action.primaryFill,
               borderRadius: radii.sm,
               paddingHorizontal: spacing.sm,
               paddingVertical: spacing.xs,
@@ -181,7 +181,7 @@ export function SentenceConstructionExercise({
           onPress={handleCheck}
           disabled={placed.length === 0}
           style={{
-            backgroundColor: placed.length > 0 ? colors.indigo[500] : colors.indigo[200],
+            backgroundColor: placed.length > 0 ? colors.action.primaryFill : colors.indigo[200],
             paddingVertical: spacing.md, borderRadius: radii.lg, alignItems: 'center',
           }}
           accessibilityRole="button"

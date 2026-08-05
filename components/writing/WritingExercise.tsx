@@ -65,7 +65,7 @@ export function WritingExercise({ prompt, isGrading, attemptNumber = 1, onSubmit
     return (
       <GradientBackground>
         <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color="#6366F1" />
+          <ActivityIndicator size="large" color="#818CF8" />
           <Text style={{ fontSize: 16, color: '#9CA3AF', marginTop: 16 }}>Checking your writing...</Text>
         </SafeAreaView>
       </GradientBackground>
@@ -87,7 +87,7 @@ export function WritingExercise({ prompt, isGrading, attemptNumber = 1, onSubmit
               <Text style={{ fontSize: 24, color: '#9CA3AF' }}>x</Text>
             </Pressable>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 14, fontWeight: '600', color: '#6366F1' }}>Writing Practice</Text>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: '#818CF8' }}>Writing Practice</Text>
               <Text style={{ fontSize: 13, color: '#999' }}>
                 {prompt.cefrLevel} | {scaffoldType !== 'free' ? scaffoldType.replace('_', ' ') : prompt.promptType}
                 {attemptNumber > 1 ? ` | Attempt ${attemptNumber}` : ''}
@@ -113,7 +113,7 @@ export function WritingExercise({ prompt, isGrading, attemptNumber = 1, onSubmit
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                 {prompt.targetVocabulary.map((word, i) => (
                   <View key={i} style={{ backgroundColor: '#1E2330', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
-                    <Text style={{ fontSize: 14, color: '#6366F1', fontWeight: '600' }}>{word}</Text>
+                    <Text style={{ fontSize: 14, color: '#818CF8', fontWeight: '600' }}>{word}</Text>
                   </View>
                 ))}
               </View>
@@ -206,7 +206,7 @@ export function WritingExercise({ prompt, isGrading, attemptNumber = 1, onSubmit
             onPress={handleSubmit}
             disabled={!canSubmit}
             style={{
-              backgroundColor: canSubmit ? '#6366F1' : '#C7D2FE',
+              backgroundColor: canSubmit ? '#4F46E5' : '#C7D2FE',
               paddingVertical: 16,
               borderRadius: 14,
               alignItems: 'center',

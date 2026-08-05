@@ -44,9 +44,9 @@ export default function StudentRow({
       >
         <Text
           style={{
-            color: '#6366F1',
+            color: '#818CF8',
             fontSize: 16,
-            fontFamily: 'Inter_700Bold',
+            fontFamily: 'Nunito_700Bold',
           }}
         >
           {initial}
@@ -59,7 +59,7 @@ export default function StudentRow({
           style={{
             color: '#FFFFFF',
             fontSize: 15,
-            fontFamily: 'Inter_600SemiBold',
+            fontFamily: 'Nunito_600SemiBold',
           }}
           numberOfLines={1}
         >
@@ -69,7 +69,7 @@ export default function StudentRow({
           style={{
             color: '#64748B',
             fontSize: 12,
-            fontFamily: 'Inter_400Regular',
+            fontFamily: 'Nunito_400Regular',
             marginTop: 2,
           }}
         >
@@ -108,7 +108,7 @@ export default function StudentRow({
             style={{
               color: '#94A3B8',
               fontSize: 10,
-              fontFamily: 'Inter_500Medium',
+              fontFamily: 'Nunito_500Medium',
               textAlign: 'center',
               marginTop: 2,
             }}
