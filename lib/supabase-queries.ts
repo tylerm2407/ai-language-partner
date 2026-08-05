@@ -2,6 +2,12 @@ import { supabase } from './supabase';
 import { SRS_DEFAULTS } from '../config/app';
 import { localToday } from './dates';
 import type {
+  ProficiencyEvidence,
+  VocabEvidenceItem,
+  ReadingEvidenceItem,
+  WritingEvidenceItem,
+} from './cefr-proficiency';
+import type {
   UserProfile,
   OnboardingChecklist,
   Course,
@@ -66,7 +72,7 @@ export async function fetchProfile(userId: string): Promise<UserProfile | null> 
 
 export async function upsertProfile(
   userId: string,
-  updates: Partial<Pick<UserProfile, 'displayName' | 'nativeLanguage' | 'targetLanguage' | 'level' | 'dailyGoalMinutes' | 'timezone' | 'motivationReason' | 'idealL2Self'>>
+  updates: Partial<Pick<UserProfile, 'displayName' | 'nativeLanguage' | 'targetLanguage' | 'level' | 'dailyGoalMinutes' | 'timezone' | 'motivationReason' | 'idealL2Self' | 'adultMode'>>
 ): Promise<UserProfile> {
   const row: Record<string, unknown> = {
     user_id: userId,
@@ -80,6 +86,7 @@ export async function upsertProfile(
   if (updates.timezone !== undefined) row.timezone = updates.timezone;
   if (updates.motivationReason !== undefined) row.motivation_reason = updates.motivationReason;
   if (updates.idealL2Self !== undefined) row.ideal_l2_self = updates.idealL2Self;
+  if (updates.adultMode !== undefined) row.adult_mode = updates.adultMode;
 
   const { data, error } = await supabase
     .from('user_profiles')
@@ -546,6 +553,131 @@ export async function fetchStatsRange(userId: string, startDate: string, endDate
   return (data ?? []).map(mapDailyStats);
 }
 
+// ─── Proficiency Evidence (CEFR report) ─────────────────────────
+
+// Caps on the evidence pulled for a report. These are user-growable tables, so
+// every read is bounded per the project rule. The estimator works on ratios,
+// not raw totals, so a capped sample still yields a sound level — and no
+// realistic learner approaches these ceilings.
+const PROFICIENCY_VOCAB_LIMIT = 2000;
+const PROFICIENCY_READING_LIMIT = 500;
+const PROFICIENCY_WRITING_LIMIT = 500;
+/** ~2 years of daily rows; also the active-day count for confidence scoring. */
+const PROFICIENCY_STATS_DAY_LIMIT = 730;
+
+/**
+ * Read `cefr_level` off a PostgREST embedded resource. Depending on how the
+ * relationship is inferred an embed arrives as an object or a single-element
+ * array, so handle both rather than trusting one shape.
+ */
+function nestedCefrLevel(embedded: unknown): string | null {
+  const node = Array.isArray(embedded) ? embedded[0] : embedded;
+  if (!node || typeof node !== 'object') return null;
+  const value = (node as { cefr_level?: unknown }).cefr_level;
+  return typeof value === 'string' ? value : null;
+}
+
+/**
+ * Gather every piece of in-app evidence the CEFR estimator can use.
+ *
+ * Read-only aggregation over history the app already records — no new
+ * assessment is run and nothing is written. The shape returned is consumed by
+ * `buildProficiencyReport` in `lib/cefr-proficiency.ts`.
+ *
+ * Errors are thrown rather than swallowed: a proficiency report built from a
+ * silently truncated dataset would understate the learner's level, which is
+ * worse than showing them a retry.
+ */
+export async function fetchProficiencyEvidence(
+  userId: string
+): Promise<ProficiencyEvidence> {
+  const [vocabRes, readingRes, writingRes, statsRes, reviewCountRes] = await Promise.all([
+    // Every review item with its card's CEFR tag. Inner join drops orphaned
+    // items, matching fetchDueReviewItemsWithCards.
+    supabase
+      .from('review_items')
+      .select('status, repetitions, interval, cards!inner(cefr_level)')
+      .eq('user_id', userId)
+      .limit(PROFICIENCY_VOCAB_LIMIT),
+
+    supabase
+      .from('user_reading_progress')
+      .select('comprehension_score, completed_at, reading_passages!inner(cefr_level)')
+      .eq('user_id', userId)
+      .limit(PROFICIENCY_READING_LIMIT),
+
+    supabase
+      .from('user_writing_submissions')
+      .select('overall_score, word_count, writing_prompts!inner(cefr_level)')
+      .eq('user_id', userId)
+      .limit(PROFICIENCY_WRITING_LIMIT),
+
+    supabase
+      .from('daily_stats')
+      .select('date, listening_minutes, speaking_minutes')
+      .eq('user_id', userId)
+      .order('date', { ascending: false })
+      .limit(PROFICIENCY_STATS_DAY_LIMIT),
+
+    supabase
+      .from('review_logs')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId),
+  ]);
+
+  if (vocabRes.error) throw vocabRes.error;
+  if (readingRes.error) throw readingRes.error;
+  if (writingRes.error) throw writingRes.error;
+  if (statsRes.error) throw statsRes.error;
+  if (reviewCountRes.error) throw reviewCountRes.error;
+
+  const vocabulary: VocabEvidenceItem[] = (vocabRes.data ?? []).map(
+    (row: Record<string, unknown>) => ({
+      cefrLevel: nestedCefrLevel(row.cards),
+      status: row.status as ReviewItem['status'],
+      repetitions: (row.repetitions as number) ?? 0,
+      interval: (row.interval as number) ?? 0,
+    })
+  );
+
+  const reading: ReadingEvidenceItem[] = (readingRes.data ?? []).map(
+    (row: Record<string, unknown>) => ({
+      cefrLevel: nestedCefrLevel(row.reading_passages),
+      comprehension: (row.comprehension_score as number | null) ?? null,
+      completed: row.completed_at != null,
+    })
+  );
+
+  const writing: WritingEvidenceItem[] = (writingRes.data ?? []).map(
+    (row: Record<string, unknown>) => ({
+      cefrLevel: nestedCefrLevel(row.writing_prompts),
+      overallScore: (row.overall_score as number | null) ?? null,
+      wordCount: (row.word_count as number) ?? 0,
+    })
+  );
+
+  const statRows = (statsRes.data ?? []) as Record<string, unknown>[];
+  const listeningMinutes = statRows.reduce(
+    (sum, row) => sum + ((row.listening_minutes as number) ?? 0),
+    0
+  );
+  const speakingMinutes = statRows.reduce(
+    (sum, row) => sum + ((row.speaking_minutes as number) ?? 0),
+    0
+  );
+
+  return {
+    vocabulary,
+    reading,
+    writing,
+    listeningMinutes,
+    speakingMinutes,
+    // One daily_stats row per active day, so the row count is the day count.
+    activeDays: statRows.length,
+    totalReviews: reviewCountRes.count ?? 0,
+  };
+}
+
 // ─── Practice Sessions ──────────────────────────────────────────
 
 export async function createPracticeSession(
@@ -699,6 +831,8 @@ function mapProfile(row: Record<string, unknown>): UserProfile {
     // L2 Motivational Self System (migration 028). Null-safe for legacy rows.
     motivationReason: (row.motivation_reason as UserProfile['motivationReason']) ?? null,
     idealL2Self: (row.ideal_l2_self as string | null) ?? null,
+    // Adult mode (migration 052). Defaults false for rows written before it.
+    adultMode: (row.adult_mode as boolean) ?? false,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };

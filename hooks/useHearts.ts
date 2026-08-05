@@ -4,11 +4,13 @@ import { useAppStore } from '../stores/useAppStore';
 import { spendHeart, syncHearts, type HeartsRow } from '../lib/supabase-queries';
 import { computeHearts, spendHeartLocally, type HeartsState } from '../lib/hearts';
 import { PLANS } from '../lib/plans';
+import { useAdultMode } from './useAdultMode';
 import type { SubscriptionTier } from '../types';
 
 export function useHearts() {
   const { user } = useAuth();
   const { profile, subscription, setProfile } = useAppStore();
+  const { heartsGateLessons } = useAdultMode();
   const [heartsState, setHeartsState] = useState<HeartsState>({ current: 5, max: 5, nextRegenAt: null });
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // Mirror of heartsState readable synchronously inside the spend chain
@@ -23,18 +25,26 @@ export function useHearts() {
   }, []);
 
   const tier = (subscription?.tier ?? 'starter') as SubscriptionTier;
+  /** The subscription grants unlimited hearts. Drives "unlimited" messaging. */
   const isUnlimited = PLANS[tier]?.unlimitedHearts ?? false;
+  /**
+   * Hearts do not apply right now — either the plan grants unlimited, or the
+   * learner is in adult mode, where hearts must never interrupt a lesson.
+   * All gating below keys off this rather than `isUnlimited`, so the two
+   * reasons stay distinguishable for messaging.
+   */
+  const heartsExempt = isUnlimited || !heartsGateLessons;
 
   // Compute hearts from profile
   useEffect(() => {
     if (!profile) return;
-    if (isUnlimited) {
+    if (heartsExempt) {
       applyHeartsState({ current: profile.maxHearts, max: profile.maxHearts, nextRegenAt: null });
       return;
     }
     const state = computeHearts(profile.hearts, profile.maxHearts, profile.lastHeartLostAt);
     applyHeartsState(state);
-  }, [profile, isUnlimited, applyHeartsState]);
+  }, [profile, heartsExempt, applyHeartsState]);
 
   // Adopt the server-authoritative hearts row into the profile + local state.
   const reconcileFromServer = useCallback((row: HeartsRow | null) => {
@@ -48,7 +58,7 @@ export function useHearts() {
 
   // Poll regen every 60s
   useEffect(() => {
-    if (isUnlimited || !profile) return;
+    if (heartsExempt || !profile) return;
 
     intervalRef.current = setInterval(() => {
       const state = computeHearts(profile.hearts, profile.maxHearts, profile.lastHeartLostAt);
@@ -63,12 +73,12 @@ export function useHearts() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [isUnlimited, profile, user, applyHeartsState, reconcileFromServer]);
+  }, [heartsExempt, profile, user, applyHeartsState, reconcileFromServer]);
 
-  const canPlay = isUnlimited || heartsState.current > 0;
+  const canPlay = heartsExempt || heartsState.current > 0;
 
   const loseHeart = useCallback(async () => {
-    if (!user || !profile || isUnlimited) return;
+    if (!user || !profile || heartsExempt) return;
     // Chain onto any in-flight spend so optimistic math never interleaves.
     const task = spendChainRef.current.then(async () => {
       // Optimistic local update; the RPC is authoritative (applies pending
@@ -90,7 +100,7 @@ export function useHearts() {
     // Keep the chain alive even if a link rejects unexpectedly.
     spendChainRef.current = task.catch(() => {});
     await task;
-  }, [user, profile, isUnlimited, applyHeartsState, reconcileFromServer]);
+  }, [user, profile, heartsExempt, applyHeartsState, reconcileFromServer]);
 
-  return { hearts: heartsState.current, maxHearts: heartsState.max, nextRegenAt: heartsState.nextRegenAt, isUnlimited, canPlay, loseHeart };
+  return { hearts: heartsState.current, maxHearts: heartsState.max, nextRegenAt: heartsState.nextRegenAt, isUnlimited, heartsExempt, canPlay, loseHeart };
 }

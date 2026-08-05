@@ -16,6 +16,7 @@ import { CollocationMatch } from './CollocationMatch';
 import { WordFormExercise } from './WordFormExercise';
 import { SentenceTransformExercise } from './SentenceTransformExercise';
 import { MiniDialogueExercise } from './MiniDialogueExercise';
+import { useAdultMode } from '../../hooks/useAdultMode';
 import { HeartsDisplay } from '../gamification/HeartsDisplay';
 import { OutOfHeartsModal } from '../gamification/OutOfHeartsModal';
 import { CorrectSparkle } from '../animations/CorrectSparkle';
@@ -211,6 +212,7 @@ export function LessonRunner({
   nextRegenAt = null,
   onLoseHeart,
 }: LessonRunnerProps) {
+  const { showHearts, showXpCelebration } = useAdultMode();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showResult, setShowResult] = useState(false);
   const [answers, setAnswers] = useState<{ exerciseId: string; correct: boolean; answer: string }[]>([]);
@@ -518,7 +520,11 @@ export function LessonRunner({
           visible
           mood={mood}
           title={title}
-          subtitle={`+${xpEarned} XP · ${correctCount}/${exercises.length} correct`}
+          subtitle={
+            showXpCelebration
+              ? `+${xpEarned} XP · ${correctCount}/${exercises.length} correct`
+              : `${correctCount}/${exercises.length} correct`
+          }
           ctaLabel="Continue"
           onDismiss={onExit}
         />
@@ -535,7 +541,9 @@ export function LessonRunner({
       <View className="px-4 pt-2 pb-4">
         <View className="flex-row items-center justify-between mb-3">
           <Button label="Exit" variant="danger" onPress={handleQuit} style={{ paddingHorizontal: 16, paddingVertical: 8 }} />
-          <HeartsDisplay hearts={hearts} maxHearts={maxHearts} isUnlimited={isUnlimitedHearts} />
+          {showHearts && (
+            <HeartsDisplay hearts={hearts} maxHearts={maxHearts} isUnlimited={isUnlimitedHearts} />
+          )}
           <Text className="text-text-secondary text-sm">
             {warmupPhase
               ? `Warm-up ${warmupIndex + 1} / ${warmupEntries.length}`

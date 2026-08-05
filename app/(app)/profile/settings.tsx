@@ -32,6 +32,7 @@ export default function SettingsScreen() {
   const [targetLanguage, setTargetLanguage] = useState<LanguageCode | null>(getTargetLanguage(profile));
   const [level, setLevel] = useState<ProficiencyLevel>(profile?.level ?? 'beginner');
   const [dailyGoal, setDailyGoal] = useState(profile?.dailyGoalMinutes ?? 10);
+  const [adultMode, setAdultMode] = useState(profile?.adultMode ?? false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -39,7 +40,8 @@ export default function SettingsScreen() {
     displayName !== (profile?.displayName ?? '') ||
     targetLanguage !== getTargetLanguage(profile) ||
     level !== profile?.level ||
-    dailyGoal !== profile?.dailyGoalMinutes;
+    dailyGoal !== profile?.dailyGoalMinutes ||
+    adultMode !== (profile?.adultMode ?? false);
 
   const handleSave = async () => {
     setSaving(true);
@@ -50,6 +52,7 @@ export default function SettingsScreen() {
         ...(targetLanguage ? { targetLanguage } : {}),
         level,
         dailyGoalMinutes: dailyGoal,
+        adultMode,
       });
       router.back();
     } catch {
@@ -162,6 +165,37 @@ export default function SettingsScreen() {
             </Pressable>
           ))}
         </View>
+
+        {/* Adult mode — the gamification opt-out. Framed by what it removes,
+            because that is the reason an adult learner turns it on. */}
+        <Text className="text-sm font-semibold text-text-secondary mb-2 uppercase tracking-wide">
+          Adult Mode
+        </Text>
+        <Pressable
+          className={`p-4 rounded-2xl mb-8 flex-row items-center ${
+            adultMode ? 'bg-primary-tint border-2 border-primary' : 'bg-dark-card border-2 border-transparent'
+          }`}
+          onPress={() => setAdultMode((v) => !v)}
+          accessibilityRole="switch"
+          accessibilityState={{ checked: adultMode }}
+          accessibilityLabel="Adult mode"
+          accessibilityHint="Turns off hearts, streaks, leagues and XP celebration"
+        >
+          <Ionicons
+            name={adultMode ? 'checkmark-circle' : 'ellipse-outline'}
+            size={24}
+            color={adultMode ? colors.action.accent : colors.text.tertiary}
+          />
+          <View className="ml-3 flex-1">
+            <Text className="text-base font-semibold text-text-primary">
+              Turn off game mechanics
+            </Text>
+            <Text className="text-sm text-text-secondary mt-0.5">
+              No hearts, no streaks, no leagues, no XP. Progress is shown as your CEFR level.
+              Nothing is lost — your history is kept if you switch back.
+            </Text>
+          </View>
+        </Pressable>
 
         {/* Save */}
         <Button

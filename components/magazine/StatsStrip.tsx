@@ -1,47 +1,65 @@
-import { View, Text, StyleSheet, Platform } from 'react-native';
-import { BlurView } from 'expo-blur';
+/**
+ * StatsStrip — the streak / XP / hearts row under the Home greeting.
+ *
+ * Was: three emoji (🔥 ⚡ ❤️) in blurred glass pills with mono values. Now the
+ * deck's StatsRow — two Chips with Ionicons plus the real HeartsDisplay, so the
+ * row uses the same chip primitive and heart glyphs as the rest of the app
+ * instead of a parallel emoji vocabulary.
+ *
+ * Streak and XP deliberately do NOT share a fill: streak.tint is orange,
+ * warning.tint is amber.
+ */
+
+import { View, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../../stores/useAppStore';
 import { useHearts } from '../../hooks/useHearts';
-import { colors, typography, radii } from '../../config/theme';
+import { useAdultMode } from '../../hooks/useAdultMode';
+import { Chip } from '../ui/Chip';
+import { HeartsDisplay } from '../gamification/HeartsDisplay';
+import { cefrBandForProficiencyLevel } from '../../lib/cefr-proficiency';
+import { colors, spacing } from '../../config/theme';
 
-function Pill({ emoji, value, color }: { emoji: string; value: number | string; color: string }) {
-  const inner = (
-    <>
-      <Text style={styles.emoji}>{emoji}</Text>
-      <Text style={[styles.value, { color }]}>{value}</Text>
-    </>
-  );
+export function StatsStrip() {
+  const profile = useAppStore((s) => s.profile);
+  const { hearts, maxHearts, isUnlimited } = useHearts();
+  const { showStreak, showHearts, showXpCelebration } = useAdultMode();
 
-  if (Platform.OS === 'android') {
+  const streak = profile?.streak ?? 0;
+  const totalXp = profile?.totalXp ?? 0;
+
+  // Adult mode replaces the streak/XP/hearts row with a single competence
+  // label. The point of the mode is that progress is measured in what you can
+  // do, not in points earned — so this row states the level rather than a score.
+  if (!showStreak && !showHearts && !showXpCelebration) {
+    const band = cefrBandForProficiencyLevel(profile?.level ?? 'beginner');
     return (
-      <View style={[styles.pill, styles.pillFallback]}>
-        {inner}
+      <View style={styles.row}>
+        <Chip
+          variant="primary"
+          label={`Level ${band}`}
+          leftIcon={<Ionicons name="ribbon-outline" size={14} color={colors.action.accent} />}
+          style={styles.chip}
+        />
       </View>
     );
   }
 
   return (
-    <View style={styles.pill}>
-      <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill} />
-      <View style={styles.pillContent}>
-        {inner}
-      </View>
-    </View>
-  );
-}
-
-export function StatsStrip() {
-  const profile = useAppStore((s) => s.profile);
-  const { hearts, isUnlimited } = useHearts();
-
-  const streak = profile?.streak ?? 0;
-  const totalXp = profile?.totalXp ?? 0;
-
-  return (
     <View style={styles.row}>
-      <Pill emoji="🔥" value={streak} color={colors.magazine.streakFlame} />
-      <Pill emoji="⚡" value={totalXp} color={colors.magazine.xpGold} />
-      <Pill emoji="❤️" value={isUnlimited ? '∞' : hearts} color={colors.magazine.heartsCoral} />
+      <Chip
+        variant="streak"
+        label={String(streak)}
+        leftIcon={<Ionicons name="flame" size={14} color={colors.streak.fire} />}
+        style={styles.chip}
+      />
+      <Chip
+        variant="warning"
+        label={totalXp.toLocaleString()}
+        leftIcon={<Ionicons name="star" size={14} color={colors.warning.base} />}
+        style={styles.chip}
+      />
+      <HeartsDisplay hearts={hearts} maxHearts={maxHearts} isUnlimited={isUnlimited} size={16} />
     </View>
   );
 }
@@ -49,36 +67,13 @@ export function StatsStrip() {
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
-    gap: 6,
-    marginBottom: 24,
-  },
-  pill: {
-    flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: radii.pill,
-    borderWidth: 0.5,
-    borderColor: colors.magazine.glassBorder,
-    overflow: 'hidden',
-    height: 34,
+    gap: spacing.xs,
+    marginBottom: spacing.lg,
   },
-  pillContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.magazine.glassBg,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  pillFallback: {
-    backgroundColor: colors.magazine.glassBg,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  emoji: {
-    fontSize: 14,
-    marginRight: 4,
-  },
-  value: {
-    fontFamily: typography.family.monoMedium,
-    fontSize: 14,
+  chip: {
+    // Chip defaults to alignSelf flex-start; in a centered row it must not
+    // stretch its own cross-axis.
+    alignSelf: 'center',
   },
 });

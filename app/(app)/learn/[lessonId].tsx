@@ -32,7 +32,9 @@ export default function LessonScreen() {
   const { profile } = useAppStore();
   const { earnXp } = useProfile();
   const { addStats } = useDailyStats();
-  const { hearts, maxHearts, isUnlimited, canPlay, loseHeart, nextRegenAt } = useHearts();
+  // heartsExempt (not isUnlimited) so adult mode also skips heart spending —
+  // in adult mode a wrong answer must never end the lesson.
+  const { hearts, maxHearts, heartsExempt, canPlay, loseHeart, nextRegenAt } = useHearts();
   const { levelUpInfo, dismissLevelUp } = useLevel();
   const { markLessonComplete } = useLessonProgress();
   const { markItem: markOnboardingItem } = useOnboardingChecklist();
@@ -182,7 +184,7 @@ export default function LessonScreen() {
         onExit={() => router.back()}
         hearts={hearts}
         maxHearts={maxHearts}
-        isUnlimitedHearts={isUnlimited}
+        isUnlimitedHearts={heartsExempt}
         nextRegenAt={nextRegenAt}
         onLoseHeart={loseHeart}
       />

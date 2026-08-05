@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet, Platform } from 'react-native';
+import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
@@ -8,11 +8,12 @@ import { useSchoolStore } from '../../stores/useSchoolStore';
 import { SCHOOL_ENABLED, levelToNewsTier } from '../../config/app';
 import { fetchStatsRange } from '../../lib/supabase-queries';
 import { localDayKey } from '../../lib/dates';
-import { getTargetLanguage } from '../../lib/language';
+import { getTargetLanguage, targetLanguageGreeting } from '../../lib/language';
 import { useTimezoneSync } from '../../hooks/useProfile';
 import { Ionicons } from '@expo/vector-icons';
 import { GradientBackground } from '../../components/ui/GradientBackground';
 import { useHearts } from '../../hooks/useHearts';
+import { useAdultMode } from '../../hooks/useAdultMode';
 import { useLevel } from '../../hooks/useLevel';
 import { useStreakProtection } from '../../hooks/useStreakProtection';
 import { useDailyNews } from '../../hooks/useDailyNews';
@@ -31,10 +32,10 @@ import { useUnitProgressTiles } from '../../hooks/useUnitProgressTiles';
 import { MagazineDailyChallenges } from '../../components/magazine/MagazineDailyChallenges';
 import { WeekInWords } from '../../components/magazine/WeekInWords';
 import { MagazineGlassCard } from '../../components/magazine/MagazineGlassCard';
-import { colors, typography } from '../../config/theme';
+import { Mascot } from '../../components/mascot/Mascot';
+import { Heading } from '../../components/ui/Text';
+import { colors, typography, spacing } from '../../config/theme';
 import type { DailyStats } from '../../types';
-
-const serifFont = Platform.select({ ios: 'Georgia', default: 'serif' });
 
 export default function HomeScreen() {
   const { user } = useAuth();
@@ -45,6 +46,7 @@ export default function HomeScreen() {
   useTimezoneSync();
   const [weeklyStats, setWeeklyStats] = useState<DailyStats[]>([]);
   const { canPlay, nextRegenAt } = useHearts();
+  const { showStreak, showDailyChallenges } = useAdultMode();
   useLevel(); // level-up detection mirrors xpLevel/leagueTier into the store
   const { showRepairModal, brokenStreak, freezesAvailable, repairWithFreeze, dismissRepair } = useStreakProtection();
   const { loadStudentSchoolData } = useSchoolStore();
@@ -65,6 +67,7 @@ export default function HomeScreen() {
   );
   const lessonTiles = unitTiles ? unitTilesToLessonTiles(unitTiles) : null;
   const { markItem: markChecklistItem } = useOnboardingChecklist();
+  const greeting = targetLanguageGreeting(getTargetLanguage(profile));
   const [showPrePermission, setShowPrePermission] = useState(false);
   const [showOutOfHearts, setShowOutOfHearts] = useState(false);
 
@@ -88,7 +91,9 @@ export default function HomeScreen() {
   const handleEnableReminders = async () => {
     try {
       const status = await requestPermissionsExplicit();
-      if (status === 'granted' && profile) {
+      // The streak-save reminder is the guilt notification adult mode exists to
+      // remove, so it is not scheduled while the mode is on.
+      if (status === 'granted' && profile && showStreak) {
         await scheduleStreakSaveReminder({
           streak: profile.streak ?? 0,
           xpEarnedToday: dailyStats?.xpEarned ?? 0,
@@ -139,11 +144,21 @@ export default function HomeScreen() {
           contentContainerStyle={{ paddingBottom: 120, paddingTop: 8 }}
         >
           <SafeAreaView edges={['top']}>
-            {/* Header row — date on left, stats pills on right */}
+            {/* Header — date + target-language greeting on the left, mascot on
+                the right. Stats get their own row beneath so the greeting has
+                room to breathe (they used to share this row with the date). */}
             <View style={styles.headerRow}>
-              <DateLabel />
-              <StatsStrip />
+              <View style={styles.headerText}>
+                <DateLabel />
+                <Heading level={2}>
+                  {greeting}
+                  {profile?.displayName ? `, ${profile.displayName}` : ''}
+                </Heading>
+              </View>
+              <Mascot state={(profile?.streak ?? 0) >= 1 ? 'happy' : 'idle'} size="xs" />
             </View>
+
+            <StatsStrip />
 
             {/* News hero card */}
             <NewsHeroCard
@@ -168,8 +183,8 @@ export default function HomeScreen() {
             {/* Continue learning — 2-column tiles pulled from user's real curriculum */}
             <LessonTileGrid tiles={lessonTiles} loading={tilesLoading} error={tilesError} onRetry={refetchTiles} />
 
-            {/* Daily challenges */}
-            <MagazineDailyChallenges dailyStats={dailyStats ?? null} />
+            {/* Daily challenges — a pressure mechanic, so adult mode drops it */}
+            {showDailyChallenges && <MagazineDailyChallenges dailyStats={dailyStats ?? null} />}
 
             {/* Week in words */}
             <WeekInWords stats={weeklyStats} />
@@ -241,9 +256,10 @@ export default function HomeScreen() {
           </SafeAreaView>
         </ScrollView>
 
-        {/* Streak Repair Modal */}
+        {/* Streak Repair Modal — the streak still runs server-side in adult
+            mode, but never interrupts the learner to mourn a broken one. */}
         <StreakRepairModal
-          visible={showRepairModal}
+          visible={showStreak && showRepairModal}
           brokenStreak={brokenStreak}
           freezesAvailable={freezesAvailable}
           onRepair={repairWithFreeze}
@@ -275,17 +291,20 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    gap: spacing.xs,
+  },
+  headerText: {
+    flex: 1,
+    minWidth: 0,
   },
   sectionTitle: {
-    fontFamily: serifFont,
+    fontFamily: typography.family.serif,
     fontSize: 18,
-    fontWeight: '600',
     color: colors.text.primary,
-    marginBottom: 12,
-    marginTop: 4,
+    marginBottom: spacing.sm,
+    marginTop: spacing.xxs,
   },
   quickAction: {
     marginBottom: 12,

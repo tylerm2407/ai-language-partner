@@ -4,17 +4,20 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '../../stores/useAppStore';
 import { useHearts } from '../../hooks/useHearts';
 import { useLevel } from '../../hooks/useLevel';
+import { useAdultMode } from '../../hooks/useAdultMode';
 import { StreakIndicator } from './StreakIndicator';
 import { DailyGoalRing } from './DailyGoalRing';
 import { XpCounter } from './XpCounter';
 import { HeartIndicator } from './HeartIndicator';
 import { LevelProgressStrip } from './LevelProgressStrip';
+import { colors } from '../../config/theme';
 
 function StatsBarInner() {
   const profile = useAppStore((s) => s.profile);
   const dailyStats = useAppStore((s) => s.dailyStats);
   const { hearts, isUnlimited } = useHearts();
   const { progress: levelProgress } = useLevel();
+  const { showStreak, showHearts, showXpCelebration } = useAdultMode();
   const insets = useSafeAreaInsets();
 
   const streak = profile?.streak ?? 0;
@@ -30,24 +33,28 @@ function StatsBarInner() {
 
   return (
     <View style={[styles.outer, { paddingTop: insets.top }]}>
+      {/* Adult mode keeps only the daily-goal ring: that target is one the
+          learner set for themselves, unlike the streak/XP/hearts pressure. */}
       <View style={styles.row}>
-        <StreakIndicator
-          streak={streak}
-          xpEarned={xpEarned}
-          dailyGoalMet={dailyGoalMet}
-        />
+        {showStreak && (
+          <StreakIndicator
+            streak={streak}
+            xpEarned={xpEarned}
+            dailyGoalMet={dailyGoalMet}
+          />
+        )}
         <DailyGoalRing progress={dailyGoalProgress} />
-        <XpCounter totalXp={totalXp} />
-        <HeartIndicator hearts={hearts} isUnlimited={isUnlimited} />
+        {showXpCelebration && <XpCounter totalXp={totalXp} />}
+        {showHearts && <HeartIndicator hearts={hearts} isUnlimited={isUnlimited} />}
       </View>
-      <LevelProgressStrip progress={levelProgress} />
+      {showXpCelebration && <LevelProgressStrip progress={levelProgress} />}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   outer: {
-    backgroundColor: 'rgba(12, 15, 20, 0.95)',
+    backgroundColor: colors.surface.base,
   },
   row: {
     height: 48,

@@ -55,6 +55,13 @@ export interface UserProfile {
   // for accounts created before migration 028.
   motivationReason: MotivationReason | null;
   idealL2Self: string | null;
+  /**
+   * Adult mode (migration 052) — suppresses the pressure mechanics: hearts
+   * gating, streak guilt, league standings and XP celebration. Underlying
+   * values keep accruing server-side so turning the mode off restores the
+   * learner's history rather than revealing a reset account.
+   */
+  adultMode: boolean;
   createdAt: string;
   updatedAt: string;
 }
