@@ -6,6 +6,7 @@ import type {
   ProficiencyLevel,
 } from '../types';
 import type { ScenarioKey } from '../types/scenarios';
+import type { VoiceGender } from './voice-preference';
 
 // All AI calls go through Supabase Edge Functions.
 // The AI API key lives in Edge Function secrets, never on the client.
@@ -191,6 +192,9 @@ export interface TTSVoiceOptions {
   voiceMode?: TTSVoiceMode;
   /** Stable key used when `voiceMode === 'rotate'`. */
   voiceRotationKey?: string;
+  /** Learner's preferred tutor voice gender. Server falls back to the
+   *  language's default voices where no match exists. */
+  voiceGender?: VoiceGender;
 }
 
 /**

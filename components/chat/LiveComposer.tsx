@@ -21,6 +21,7 @@
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radii, spacing, typography } from '../../config/theme';
+import type { VoiceGender } from '../../lib/voice-preference';
 
 /** Deck: 20 bars, w3 / h24 / r1.5, gap 3, opacity .35 + (i % 5) * 0.13. */
 const BAR_COUNT = 20;
@@ -60,7 +61,15 @@ interface LiveComposerProps {
   errorMessage?: string | null;
   /** Bottom padding — caller adds safe-area inset + tab bar clearance. */
   bottomPadding: number;
+  /** Tutor voice preference. Omit both to hide the switch. */
+  voiceGender?: VoiceGender;
+  onVoiceGenderChange?: (gender: VoiceGender) => void;
 }
+
+const VOICE_OPTIONS: { value: VoiceGender; label: string }[] = [
+  { value: 'female', label: 'Female' },
+  { value: 'male', label: 'Male' },
+];
 
 export function LiveComposer({
   meterLevel,
@@ -78,6 +87,8 @@ export function LiveComposer({
   keypadAccessibilityLabel = 'Switch to keyboard',
   errorMessage,
   bottomPadding,
+  voiceGender,
+  onVoiceGenderChange,
 }: LiveComposerProps) {
   const level = live ? meterLevel : 0;
   const interactive = Boolean(onMicPress || onMicPressIn);
@@ -96,6 +107,56 @@ export function LiveComposer({
       >
         {statusText}
       </Text>
+
+      {/* Voice switch. Sits above the card rather than inside it because the
+          card's three controls are all per-turn actions and this is a setting —
+          and because a fourth pill would crowd the mic below 44pt. */}
+      {voiceGender && onVoiceGenderChange && (
+        <View
+          accessibilityRole="radiogroup"
+          accessibilityLabel="Tutor voice"
+          style={{
+            flexDirection: 'row',
+            alignSelf: 'center',
+            gap: spacing.xxs,
+            padding: spacing.xxs,
+            marginBottom: spacing.xs,
+            borderRadius: radii.pill,
+            backgroundColor: colors.surface.cardAlt,
+          }}
+        >
+          {VOICE_OPTIONS.map(({ value, label }) => {
+            const selected = voiceGender === value;
+            return (
+              <Pressable
+                key={value}
+                onPress={() => onVoiceGenderChange(value)}
+                accessibilityRole="radio"
+                accessibilityState={{ selected }}
+                accessibilityLabel={`${label} tutor voice`}
+                hitSlop={8}
+                style={{
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: spacing.xs,
+                  borderRadius: radii.pill,
+                  backgroundColor: selected ? colors.action.primaryFill : 'transparent',
+                }}
+              >
+                <Text
+                  style={{
+                    color: selected ? colors.text.onPrimary : colors.text.tertiary,
+                    fontFamily: typography.family.semibold,
+                    fontSize: typography.scale.caption.fontSize,
+                    lineHeight: typography.scale.caption.lineHeight,
+                  }}
+                >
+                  {label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
 
       <View
         style={{

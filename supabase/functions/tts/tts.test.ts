@@ -123,3 +123,46 @@ Deno.test('VOICE_MAP: documented voice-count summary (snapshot)', async () => {
     assert(lang in summary, `missing summary entry for ${lang}`);
   }
 });
+
+// ─── Voice gender coverage ───────────────────────────────────────
+//
+// The learner-facing male/female switch is only honest if every language can
+// actually produce both. These parse ELEVENLABS_VOICE_GENDER out of index.ts
+// the same way loadVoiceMap does, for the same reason (index.ts calls serve()
+// at import time and can't be imported from a test).
+
+async function loadVoiceGenders(): Promise<Record<string, string>> {
+  const src = await Deno.readTextFile(INDEX_PATH);
+  const marker = 'const ELEVENLABS_VOICE_GENDER: Record<string, VoiceGender> = {';
+  const start = src.indexOf(marker);
+  assert(start >= 0, 'ELEVENLABS_VOICE_GENDER declaration not found');
+  const end = src.indexOf('};', start);
+  assert(end > start, 'Could not find end of ELEVENLABS_VOICE_GENDER');
+
+  const genders: Record<string, string> = {};
+  const re = /'?([A-Za-z0-9]{15,40})'?\s*:\s*'(male|female)'/g;
+  let m: RegExpExecArray | null;
+  const body = src.slice(start + marker.length, end);
+  while ((m = re.exec(body)) !== null) genders[m[1]] = m[2];
+  return genders;
+}
+
+Deno.test('every VOICE_MAP voice has a known gender', async () => {
+  const map = await loadVoiceMap();
+  const genders = await loadVoiceGenders();
+  for (const [lang, voices] of Object.entries(map)) {
+    for (const id of voices) {
+      assert(genders[id], `voice ${id} in ${lang} has no gender entry`);
+    }
+  }
+});
+
+Deno.test('every language offers both a male and a female voice', async () => {
+  const map = await loadVoiceMap();
+  const genders = await loadVoiceGenders();
+  for (const [lang, voices] of Object.entries(map)) {
+    const present = new Set(voices.map((id) => genders[id]));
+    assert(present.has('male'), `${lang} has no male voice — the gender switch would be a lie`);
+    assert(present.has('female'), `${lang} has no female voice — the gender switch would be a lie`);
+  }
+});

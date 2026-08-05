@@ -6,6 +6,7 @@ import { Audio } from 'expo-av';
 import { File } from 'expo-file-system/next';
 import { colors, spacing } from '../../config/theme';
 import { LiveComposer } from './LiveComposer';
+import type { VoiceGender } from '../../lib/voice-preference';
 
 export type HandsFreeState = 'IDLE' | 'CONNECTING' | 'LISTENING' | 'PROCESSING' | 'AI_RESPONDING' | 'TTS_PLAYING';
 
@@ -29,6 +30,9 @@ interface ChatInputProps {
   shouldStartListening?: boolean;
   /** Acknowledge that listening has started so parent can reset the signal. */
   onListeningStarted?: () => void;
+  /** Tutor voice preference — surfaced as a switch in the hands-free composer. */
+  voiceGender?: VoiceGender;
+  onVoiceGenderChange?: (gender: VoiceGender) => void;
 }
 
 const SILENCE_THRESHOLD_DB = -35;
@@ -55,6 +59,8 @@ export function ChatInput({
   onHandsFreeStateChange,
   shouldStartListening = false,
   onListeningStarted,
+  voiceGender,
+  onVoiceGenderChange,
 }: ChatInputProps) {
   const insets = useSafeAreaInsets();
   const [isRecording, setIsRecording] = useState(false);
@@ -365,6 +371,8 @@ export function ChatInput({
         statusColor={statusColor}
         errorMessage={errorMessage}
         bottomPadding={spacing.lg + insets.bottom + 60}
+        voiceGender={voiceGender}
+        onVoiceGenderChange={onVoiceGenderChange}
       />
     );
   }

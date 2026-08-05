@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { getTextToSpeech, translateText, VoiceError } from '../../lib/ai';
 import { saveCorrectionAsCard } from '../../lib/supabase-queries';
 import { isClose } from '../../lib/fuzzyMatch';
+import type { VoiceGender } from '../../lib/voice-preference';
 import { colors, radii, spacing, typography } from '../../config/theme';
 import {
   normalizeCorrection,
@@ -20,6 +21,9 @@ interface ChatBubbleProps {
   userId?: string;
   /** User's native language from profile; target of Translate button. Defaults to 'en'. */
   nativeLanguage?: string;
+  /** Learner's tutor voice preference, so replaying a line matches the voice
+   *  that first spoke it instead of reverting to the default. */
+  voiceGender?: VoiceGender;
 }
 
 /** Render message content with **bold** words highlighted as vocabulary. */
@@ -82,7 +86,7 @@ async function cacheSound(id: string, sound: Audio.Sound): Promise<void> {
 // that one tap per message is plenty; subsequent toggles are instant.
 const translationCache = new Map<string, string>();
 
-export function ChatBubble({ message, targetLanguage, userId, nativeLanguage }: ChatBubbleProps) {
+export function ChatBubble({ message, targetLanguage, userId, nativeLanguage, voiceGender }: ChatBubbleProps) {
   const isUser = message.role === 'user';
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -159,7 +163,8 @@ export function ChatBubble({ message, targetLanguage, userId, nativeLanguage }: 
       const base64 = await getTextToSpeech(
         message.content,
         targetLanguage ?? 'en',
-        userId
+        userId,
+        { voiceGender }
       );
       const dataUri = `data:audio/mpeg;base64,${base64}`;
 
@@ -284,6 +289,7 @@ export function ChatBubble({ message, targetLanguage, userId, nativeLanguage }: 
           targetLanguage={targetLanguage ?? 'en'}
           nativeLanguage={nativeLanguage ?? 'en'}
           userId={userId}
+          voiceGender={voiceGender}
         />
       )}
     </View>
@@ -327,6 +333,8 @@ interface CorrectionBannerProps {
   targetLanguage: string;
   nativeLanguage: string;
   userId?: string;
+  /** Matches the corrected-line playback to the learner's chosen tutor voice. */
+  voiceGender?: VoiceGender;
 }
 
 export function CorrectionBanner({
@@ -336,6 +344,7 @@ export function CorrectionBanner({
   targetLanguage,
   nativeLanguage,
   userId,
+  voiceGender,
 }: CorrectionBannerProps) {
   const severityStyle = SEVERITY_STYLES[correction.severity];
   const typeStyle = ERROR_TYPE_STYLES[correction.errorType];
@@ -400,7 +409,7 @@ export function CorrectionBanner({
     }
     setIsLoadingCorrectedAudio(true);
     try {
-      const base64 = await getTextToSpeech(correction.corrected, targetLanguage, userId);
+      const base64 = await getTextToSpeech(correction.corrected, targetLanguage, userId, { voiceGender });
       const { sound } = await Audio.Sound.createAsync({ uri: `data:audio/mpeg;base64,${base64}` });
       correctedSoundRef.current = sound;
       sound.setOnPlaybackStatusUpdate((status) => {

@@ -19,6 +19,12 @@ import type { ConversationMessage, Assignment, AssignmentSubmission, LanguageCod
 import { Ionicons } from '@expo/vector-icons';
 import { getOrCreateChatSession, saveChatMessage, loadChatMessages, fetchStudentAssignments, submitAssignment } from '../../../lib/supabase-queries';
 import { getTargetLanguage } from '../../../lib/language';
+import {
+  DEFAULT_VOICE_GENDER,
+  loadVoiceGender,
+  saveVoiceGender,
+  type VoiceGender,
+} from '../../../lib/voice-preference';
 import { SCENARIO_META, SCENARIO_ORDER, type ScenarioKey } from '../../../types/scenarios';
 import { SCHOOL_ENABLED } from '../../../config/app';
 import { colors, radii, spacing } from '../../../config/theme';
@@ -106,6 +112,12 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
   const [currentAssignment, setCurrentAssignment] = useState<(Assignment & { submission?: AssignmentSubmission }) | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const assignmentTimer = useAssignmentTimer(currentAssignment?.minDurationMinutes ?? 15);
+
+  // Tutor voice preference (device-local; see lib/voice-preference.ts).
+  const [voiceGender, setVoiceGender] = useState<VoiceGender>(DEFAULT_VOICE_GENDER);
+  useEffect(() => {
+    loadVoiceGender().then(setVoiceGender).catch(() => { /* keep the default */ });
+  }, []);
 
   // Hands-free state
   const [handsFreeActive, setHandsFreeActive] = useState(false);
@@ -310,7 +322,7 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
         setHandsFreeState('TTS_PLAYING');
       }
 
-      const base64 = await getTextToSpeech(text, targetLanguage, user?.id);
+      const base64 = await getTextToSpeech(text, targetLanguage, user?.id, { voiceGender });
       const dataUri = `data:audio/mpeg;base64,${base64}`;
 
       await Audio.setAudioModeAsync({
@@ -357,7 +369,15 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
         Alert.alert('Voice Unavailable', message, [{ text: 'OK' }]);
       }
     }
-  }, [targetLanguage, user?.id]);
+  }, [targetLanguage, user?.id, voiceGender]);
+
+  /** Switch tutor voice. Cuts off the current line so the next thing the
+   *  learner hears is the voice they just chose, not the one they rejected. */
+  const handleVoiceGenderChange = useCallback((gender: VoiceGender) => {
+    setVoiceGender(gender);
+    stopSpeaking();
+    saveVoiceGender(gender).catch(console.error);
+  }, [stopSpeaking]);
 
   const startChat = (scenario: Scenario, liveVoice = false) => {
     setSelectedScenario(scenario);
@@ -778,6 +798,7 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
               targetLanguage={targetLanguage}
               userId={user?.id}
               nativeLanguage={profile?.nativeLanguage}
+              voiceGender={voiceGender}
             />
           )}
           ListFooterComponent={sending ? <TypingIndicator /> : null}
@@ -796,6 +817,8 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
           onHandsFreeStateChange={handleHandsFreeStateChange}
           shouldStartListening={shouldStartListening}
           onListeningStarted={handleListeningStarted}
+          voiceGender={voiceGender}
+          onVoiceGenderChange={handleVoiceGenderChange}
         />
       </KeyboardAvoidingView>
     </SafeAreaView>

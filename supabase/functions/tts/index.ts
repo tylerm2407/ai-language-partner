@@ -25,9 +25,17 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_KEY');
 const FISH_API_KEY = Deno.env.get('FISH_KEY');
 
-/** Per-language fish.audio reference_ids, opt-in via the FISH_VOICE_MAP secret.
- *  A malformed value must not take voice down, so it degrades to "no fish". */
-const FISH_VOICE_MAP: Record<string, string[]> = (() => {
+type TTSProvider = 'elevenlabs' | 'fish';
+export type VoiceGender = 'male' | 'female';
+
+const GENDERS: VoiceGender[] = ['male', 'female'];
+
+/** Per-language, per-gender fish.audio reference_ids, opt-in via the
+ *  FISH_VOICE_MAP secret:
+ *    {"es": {"male": ["<id>"], "female": ["<id>", "<id>"]}}
+ *  A malformed value must not take voice down, so it degrades to "no fish"
+ *  and every request falls through to ElevenLabs. */
+const FISH_VOICE_MAP: Record<string, Partial<Record<VoiceGender, string[]>>> = (() => {
   const raw = Deno.env.get('FISH_VOICE_MAP');
   if (!raw) return {};
   try {
@@ -36,10 +44,21 @@ const FISH_VOICE_MAP: Record<string, string[]> = (() => {
       console.error('[tts] FISH_VOICE_MAP must be a JSON object; ignoring.');
       return {};
     }
-    const map: Record<string, string[]> = {};
-    for (const [lang, ids] of Object.entries(parsed)) {
-      const valid = Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string' && id.length > 0) : [];
-      if (valid.length > 0) map[lang] = valid;
+    const map: Record<string, Partial<Record<VoiceGender, string[]>>> = {};
+    for (const [lang, byGender] of Object.entries(parsed)) {
+      if (!byGender || typeof byGender !== 'object' || Array.isArray(byGender)) {
+        console.error(`[tts] FISH_VOICE_MAP.${lang} must be {male:[],female:[]}; skipping.`);
+        continue;
+      }
+      const entry: Partial<Record<VoiceGender, string[]>> = {};
+      for (const gender of GENDERS) {
+        const ids = (byGender as Record<string, unknown>)[gender];
+        const valid = Array.isArray(ids)
+          ? ids.filter((id): id is string => typeof id === 'string' && id.length > 0)
+          : [];
+        if (valid.length > 0) entry[gender] = valid;
+      }
+      if (Object.keys(entry).length > 0) map[lang] = entry;
     }
     return map;
   } catch (err) {
@@ -47,8 +66,6 @@ const FISH_VOICE_MAP: Record<string, string[]> = (() => {
     return {};
   }
 })();
-
-type TTSProvider = 'elevenlabs' | 'fish';
 
 // ElevenLabs voice IDs — native-sounding voices per language.
 // Curated from ElevenLabs voice library for natural pronunciation.
@@ -160,6 +177,39 @@ const VOICE_MAP: Record<string, string[]> = {
 
 const DEFAULT_VOICE_ID = 'EXAVITQu4vr4xnSDxMaL';
 
+/** Gender of each ElevenLabs voice used in VOICE_MAP above, so the learner's
+ *  male/female preference works on the ElevenLabs path too — including the
+ *  languages where fish has no vetted voice for the requested gender.
+ *  Keyed by id rather than restructuring VOICE_MAP, because the same voices
+ *  recur across languages and the HVPT rotation ordering matters. */
+const ELEVENLABS_VOICE_GENDER: Record<string, VoiceGender> = {
+  '21m00Tcm4TlvDq8ikWAM': 'female', // Rachel
+  '9BWtsMINqrJLrRacOk9x': 'female', // Aria
+  CwhRBWXzGAHq8TQ4Fs17: 'male', // Roger
+  EXAVITQu4vr4xnSDxMaL: 'female', // Sarah
+  FGY2WhTYpPnrIDTdsKH5: 'female', // Laura
+  jsCqWAovK2LkecY7zXl4: 'female', // Freya
+  onwK4e9ZLuTAKqWW03F9: 'male', // Daniel
+  pFZP5JQG7iQjIQuC4Bku: 'female', // Lily
+  pqHfZKP75CvOlQylNhV4: 'male', // Bill
+  TX3LPaxmHKxFdv7VOQHJ: 'male', // Liam
+  TxGEqnHWrfWFTfGW9XjX: 'male', // Josh
+  VR6AewLTigWG4xSOukaG: 'male', // Arnold
+  XB0fDUnXU5powFXDhCwa: 'female', // Charlotte
+  Xb7hH8MSUJpSbSDYk0k2: 'female', // Alice
+  XrExE9yKIg1WjnnlVkGX: 'female', // Matilda
+};
+
+/** ElevenLabs voices for a language, narrowed to the requested gender.
+ *  Falls back to the full list when the language has none of that gender, so a
+ *  preference never leaves the learner with no voice at all. */
+function elevenLabsVoices(language: string, gender?: VoiceGender): string[] | undefined {
+  const all = VOICE_MAP[language];
+  if (!all || !gender) return all;
+  const matching = all.filter((id) => ELEVENLABS_VOICE_GENDER[id] === gender);
+  return matching.length > 0 ? matching : all;
+}
+
 type VoiceMode = 'default' | 'rotate' | 'random';
 
 /** Simple deterministic hash → non-negative integer. Used only for picking a
@@ -229,6 +279,9 @@ interface TTSRequest {
   /** Stable key for 'rotate' mode so the same learner + same repetition
    *  slot deterministically gets the same voice on retry. */
   voiceRotationKey?: string;
+  /** Learner's preferred tutor voice gender. Honoured per provider where a
+   *  matching voice exists; otherwise the language's default voices are used. */
+  voiceGender?: VoiceGender;
 }
 
 /** Storage bucket for content-addressed TTS audio (migration 038). */
@@ -348,8 +401,11 @@ serve(async (req: Request) => {
     }
     const authenticatedUserId = authUser.userId;
 
-    const { text, language, voiceIndex, voiceMode, voiceRotationKey } =
+    const { text, language, voiceIndex, voiceMode, voiceRotationKey, voiceGender: rawGender } =
       (await req.json()) as TTSRequest;
+    const voiceGender = GENDERS.includes(rawGender as VoiceGender)
+      ? (rawGender as VoiceGender)
+      : undefined;
 
     if (!ELEVENLABS_API_KEY) {
       return new Response(
@@ -379,12 +435,19 @@ serve(async (req: Request) => {
     const cleanText = text.replace(/\*\*/g, '').trim();
     const voiceOpts = { voiceIndex, voiceMode, voiceRotationKey };
 
-    // fish only handles languages it has vetted voices for; everything else
-    // stays on ElevenLabs.
-    const fishVoices = FISH_API_KEY ? FISH_VOICE_MAP[language] : undefined;
+    // fish only handles languages it has vetted voices for, and only in the
+    // genders it has them for — a learner who asked for a male tutor in a
+    // language where fish has only a female voice goes to ElevenLabs rather
+    // than silently getting the wrong voice.
+    const fishForLanguage = FISH_API_KEY ? FISH_VOICE_MAP[language] : undefined;
+    const fishVoices = fishForLanguage
+      ? voiceGender
+        ? fishForLanguage[voiceGender]
+        : fishForLanguage.female ?? fishForLanguage.male
+      : undefined;
     const provider: TTSProvider = fishVoices && fishVoices.length > 0 ? 'fish' : 'elevenlabs';
     const voiceId = resolveVoiceId(
-      provider === 'fish' ? fishVoices : VOICE_MAP[language],
+      provider === 'fish' ? fishVoices : elevenLabsVoices(language, voiceGender),
       language,
       cleanText,
       voiceOpts
@@ -448,7 +511,12 @@ serve(async (req: Request) => {
       } catch (fishError) {
         // Voice is a core surface — a fish outage must not silence the tutor.
         console.error('[tts] fish.audio failed, falling back to ElevenLabs:', fishError);
-        const fallbackVoiceId = resolveVoiceId(VOICE_MAP[language], language, cleanText, voiceOpts);
+        const fallbackVoiceId = resolveVoiceId(
+          elevenLabsVoices(language, voiceGender),
+          language,
+          cleanText,
+          voiceOpts
+        );
         cachePath = await cacheKeyFor('elevenlabs', fallbackVoiceId);
 
         // Check the fallback's own cache entry first: if fish is down for a
