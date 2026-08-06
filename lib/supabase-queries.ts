@@ -3013,3 +3013,38 @@ export async function callSchoolAdminAction(action: string, body: Record<string,
   if (error) throw error;
   return data;
 }
+
+// ─── AI Content Reports ──────────────────────────────────────────
+// In-app flagging of offensive/harmful AI output (migration 053).
+// Google Play's generative-AI policy requires this mechanism to exist in
+// the app and to feed content filtering. Reports are append-only.
+
+export type AiReportSurface =
+  | 'chat' | 'writing' | 'voice' | 'reading' | 'story' | 'hint' | 'news';
+
+export type AiReportReason =
+  | 'offensive' | 'harmful' | 'sexual' | 'inaccurate' | 'nonsense' | 'other';
+
+/** Max stored length of the reported output — mirrors the CHECK in migration 053. */
+const MAX_REPORTED_CONTENT = 4000;
+
+export async function reportAiContent(params: {
+  surface: AiReportSurface;
+  reason: AiReportReason;
+  content: string;
+  comment?: string;
+  context?: Record<string, unknown>;
+}): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Must be signed in to report content');
+
+  const { error } = await supabase.from('ai_content_reports').insert({
+    user_id: user.id,
+    surface: params.surface,
+    reason: params.reason,
+    reported_content: params.content.slice(0, MAX_REPORTED_CONTENT),
+    user_comment: params.comment?.slice(0, 1000) ?? null,
+    context: params.context ?? {},
+  });
+  if (error) throw error;
+}

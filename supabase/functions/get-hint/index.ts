@@ -6,6 +6,8 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { generateValidated } from '../_shared/validated-generate.ts';
+import { checkBurstLimit } from '../_shared/burst-limit.ts';
+import { isValidExerciseType, isValidLanguage, isValidUUID } from '../_shared/validation.ts';
 import type { CEFR } from '../_shared/level-checker.ts';
 
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
@@ -42,7 +44,26 @@ serve(async (req: Request) => {
 
     const { cardId, exerciseType, targetLanguage } = (await req.json()) as HintRequest;
 
+    // Validate every field that reaches the cache key or the model. Without this
+    // a caller can loop random exerciseType values to force cache misses, giving
+    // unbounded Haiku calls and unbounded hint_cache growth.
+    if (!isValidUUID(cardId) || !isValidExerciseType(exerciseType) || !isValidLanguage(targetLanguage)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid request' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // Hints are cheap individually but uncapped in aggregate — bound the burst.
+    const burstOk = await checkBurstLimit(supabase, authUser.userId, 'get-hint', 30, 60);
+    if (!burstOk) {
+      return new Response(
+        JSON.stringify({ error: 'Too many requests. Please slow down.', code: 'RATE_LIMITED' }),
+        { status: 429, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Hints are deterministic per (card, exercise type) — serve from cache
     // when possible. Lookup failure is non-fatal; fall through to generation.

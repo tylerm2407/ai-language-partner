@@ -50,3 +50,17 @@ verify_jwt = false
 # be rejected by the gate before reaching the function.
 [functions.daily-news-cron]
 verify_jwt = false
+
+# ─── stripe-webhook ───────────────────────────────────────────────────────
+# MUST be false. Stripe cannot present a Supabase JWT, so the platform gate
+# rejects every webhook before the handler runs. Auth here is the Stripe
+# signature check (stripe.webhooks.constructEvent against
+# STRIPE_WEBHOOK_SECRET), which is stronger than the JWT gate for this path.
+[functions.stripe-webhook]
+verify_jwt = false
+
+# ─── revenuecat-webhook ───────────────────────────────────────────────────
+# Same reasoning as stripe-webhook: RevenueCat authenticates via its own
+# shared-secret Authorization header, checked in the function body.
+[functions.revenuecat-webhook]
+verify_jwt = false

@@ -94,6 +94,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       stripe_subscription_id: subscriptionId,
       current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
       is_active: true,
+      cancel_at_period_end: subscription.cancel_at_period_end ?? false,
     },
     { onConflict: 'user_id' }
   );
@@ -121,6 +122,9 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
       tier,
       current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
       is_active: isActive,
+      // Without this the app never shows "cancels on <date>" for the Stripe rail —
+      // a cancelled user looks fully active right up until the period ends.
+      cancel_at_period_end: subscription.cancel_at_period_end ?? false,
     })
     .eq('stripe_subscription_id', subscription.id);
   if (error) throw new Error(`subscriptions update failed for ${subscription.id}: ${error.message}`);
@@ -133,6 +137,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
       tier: 'starter',
       is_active: false,
       current_period_end: null,
+      cancel_at_period_end: false,
     })
     .eq('stripe_subscription_id', subscription.id);
   if (error) throw new Error(`subscriptions downgrade failed for ${subscription.id}: ${error.message}`);
@@ -151,7 +156,9 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
 }
 
 function determineTier(priceId: string | undefined): string {
-  if (!priceId) return 'starter';
+  if (!priceId) {
+    throw new Error('[stripe-webhook] subscription item has no price ID; refusing to guess a tier');
+  }
 
   const BASIC_MONTHLY = Deno.env.get('STRIPE_BASIC_MONTHLY_PRICE_ID');
   const BASIC_YEARLY = Deno.env.get('STRIPE_BASIC_YEARLY_PRICE_ID');
@@ -163,6 +170,10 @@ function determineTier(priceId: string | undefined): string {
   if (priceId === BASIC_MONTHLY || priceId === BASIC_YEARLY) return 'basic';
   if (priceId === PREMIUM_MONTHLY || priceId === PREMIUM_YEARLY) return 'premium';
   if (priceId === VIP_MONTHLY || priceId === VIP_YEARLY) return 'vip';
-  console.warn(`[stripe-webhook] Unknown price ID: ${priceId}, defaulting to starter`);
-  return 'starter';
+  // Silently falling back to 'starter' here means the customer pays and gets nothing,
+  // with no alert. Throw instead: the webhook returns non-2xx, Stripe retries for
+  // 3 days, and the error is visible while there is still time to fix the price ID.
+  throw new Error(
+    `[stripe-webhook] Unknown price ID ${priceId} — check STRIPE_*_PRICE_ID secrets. Refusing to downgrade a paying customer to starter.`
+  );
 }

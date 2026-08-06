@@ -1,15 +1,33 @@
 // Supabase Edge Function: Delete Account
 // Permanently deletes a user's account and all associated data.
-// Apple App Store requirement: apps must offer account deletion.
+// Apple App Store 5.1.1(v) + GDPR erasure requirement.
 // Deploy: npx supabase functions deploy delete-account
+//
+// Ordering matters and is deliberate:
+//   1. Cancel billing FIRST — once the rows are gone we no longer know what to cancel.
+//   2. Refuse if the user still owns an organization (organizations.created_by is
+//      ON DELETE RESTRICT, so the auth delete would fail anyway, but with an opaque error).
+//   3. Delete the rows that do NOT cascade.
+//   4. Delete the auth user — every other user table is ON DELETE CASCADE to auth.users,
+//      so this removes the rest atomically inside Postgres.
+//   5. Verify nothing is left behind before reporting success.
+// Every step fails CLOSED: if we cannot complete deletion we abort and report it,
+// rather than destroying the identity and orphaning the data.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import Stripe from 'https://esm.sh/stripe@13.0.0?target=deno';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsResponse, corsHeaders } from '../_shared/cors.ts';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const STRIPE_SECRET_KEY = Deno.env.get('STRIPE_SECRET_KEY');
+
+// Tables holding user rows that are NOT ON DELETE CASCADE to auth.users.
+// Everything else is cleaned up by the cascade when the auth user is deleted.
+// Keep this list in sync if a new table adds a user_id without an FK.
+const NON_CASCADING_TABLES = [{ table: 'client_events', column: 'user_id' }];
 
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -21,63 +39,149 @@ serve(async (req: Request) => {
   try {
     const authUser = await getAuthenticatedUser(req);
     if (!authUser) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers }
-      );
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers });
     }
 
     const userId = authUser.userId;
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Delete user data from all tables (cascade handles most, but be explicit)
-    // Order matters: delete dependent rows first
-    const tablesToClean = [
-      { table: 'correction_log', column: 'user_id' },
-      { table: 'review_logs', column: 'user_id' },
-      { table: 'review_items', column: 'user_id' },
-      { table: 'daily_usage', column: 'user_id' },
-      { table: 'lesson_progress', column: 'user_id' },
-      { table: 'daily_stats', column: 'user_id' },
-      { table: 'achievements', column: 'user_id' },
-      { table: 'practice_sessions', column: 'user_id' },
-      { table: 'user_news_reads', column: 'user_id' },
-      { table: 'subscriptions', column: 'user_id' },
-      { table: 'user_profiles', column: 'user_id' },
-    ];
+    // --- 1. Cancel billing before anything is destroyed -------------------
+    const { data: subscription, error: subReadError } = await supabase
+      .from('subscriptions')
+      .select('stripe_subscription_id, tier, is_active')
+      .eq('user_id', userId)
+      .maybeSingle();
 
-    for (const { table, column } of tablesToClean) {
-      const { error } = await supabase
-        .from(table)
-        .delete()
-        .eq(column, userId);
+    if (subReadError) {
+      console.error(`[delete-account] could not read subscription for ${userId}:`, subReadError.message);
+      return new Response(
+        JSON.stringify({
+          error: 'Could not verify your subscription status. Nothing was deleted. Please try again.',
+        }),
+        { status: 500, headers }
+      );
+    }
 
-      if (error) {
-        console.error(`Failed to delete from ${table}:`, error.message);
-        // Continue deleting other tables even if one fails
+    if (subscription?.stripe_subscription_id) {
+      if (!STRIPE_SECRET_KEY) {
+        console.error('[delete-account] STRIPE_SECRET_KEY not configured; refusing to delete a Stripe subscriber');
+        return new Response(
+          JSON.stringify({
+            error: 'Could not cancel your subscription. Nothing was deleted. Please contact support.',
+          }),
+          { status: 500, headers }
+        );
+      }
+
+      const stripe = new Stripe(STRIPE_SECRET_KEY, {
+        apiVersion: '2023-10-16',
+        httpClient: Stripe.createFetchHttpClient(),
+      });
+
+      try {
+        await stripe.subscriptions.cancel(subscription.stripe_subscription_id);
+      } catch (err: unknown) {
+        // A subscription that is already gone is not a failure — anything else is.
+        const code = (err as { code?: string })?.code;
+        const status = (err as { statusCode?: number })?.statusCode;
+        const alreadyGone = code === 'resource_missing' || status === 404;
+        if (!alreadyGone) {
+          const message = err instanceof Error ? err.message : String(err);
+          console.error(`[delete-account] Stripe cancel failed for ${userId}:`, message);
+          return new Response(
+            JSON.stringify({
+              error:
+                'Could not cancel your subscription, so your account was not deleted. Please contact support.',
+            }),
+            { status: 500, headers }
+          );
+        }
       }
     }
 
-    // Delete the auth user last (this is irreversible)
-    const { error: deleteError } = await supabase.auth.admin.deleteUser(userId);
+    // Store-billed subscriptions (RevenueCat / StoreKit / Play Billing) cannot be
+    // cancelled server-side — only the user can, in their store account. Tell them.
+    const hasStoreSubscription =
+      !!subscription?.is_active && !subscription?.stripe_subscription_id && subscription?.tier !== 'starter';
 
+    // --- 2. Refuse while the user still owns an organization --------------
+    const { data: ownedOrgs, error: orgError } = await supabase
+      .from('organizations')
+      .select('id, name')
+      .eq('created_by', userId)
+      .limit(5);
+
+    if (orgError) {
+      console.error(`[delete-account] org ownership check failed for ${userId}:`, orgError.message);
+      return new Response(
+        JSON.stringify({ error: 'Could not verify account ownership. Nothing was deleted. Please try again.' }),
+        { status: 500, headers }
+      );
+    }
+
+    if (ownedOrgs && ownedOrgs.length > 0) {
+      return new Response(
+        JSON.stringify({
+          error:
+            'You still own an organization. Transfer ownership or delete the organization first, then delete your account.',
+          code: 'OWNS_ORGANIZATION',
+          organizations: ownedOrgs.map((o) => o.name),
+        }),
+        { status: 409, headers }
+      );
+    }
+
+    // --- 3. Delete rows that do not cascade -------------------------------
+    for (const { table, column } of NON_CASCADING_TABLES) {
+      const { error } = await supabase.from(table).delete().eq(column, userId);
+      if (error) {
+        console.error(`[delete-account] failed to delete from ${table} for ${userId}:`, error.message);
+        return new Response(
+          JSON.stringify({
+            error: 'Account deletion could not be completed. Nothing was deleted. Please contact support.',
+          }),
+          { status: 500, headers }
+        );
+      }
+    }
+
+    // --- 4. Delete the auth user (cascades every remaining user table) ----
+    const { error: deleteError } = await supabase.auth.admin.deleteUser(userId);
     if (deleteError) {
-      console.error('Failed to delete auth user:', deleteError.message);
+      console.error(`[delete-account] failed to delete auth user ${userId}:`, deleteError.message);
       return new Response(
         JSON.stringify({ error: 'Failed to delete account. Please contact support.' }),
         { status: 500, headers }
       );
     }
 
-    return new Response(
-      JSON.stringify({ success: true }),
-      { headers }
-    );
-  } catch (error) {
-    console.error('Delete account error:', error.message);
-    return new Response(
-      JSON.stringify({ error: 'An unexpected error occurred' }),
-      { status: 500, headers }
-    );
+    // --- 5. Verify the erasure actually happened --------------------------
+    const { count: remainingProfiles, error: verifyError } = await supabase
+      .from('user_profiles')
+      .select('user_id', { count: 'exact', head: true })
+      .eq('user_id', userId);
+
+    if (verifyError || (remainingProfiles ?? 0) > 0) {
+      // The identity is gone but data survived — this must be visible, not swallowed.
+      console.error(
+        `[delete-account] INCOMPLETE ERASURE for ${userId}: ${remainingProfiles ?? 'unknown'} profile rows remain`,
+        verifyError?.message ?? ''
+      );
+      return new Response(
+        JSON.stringify({
+          error: 'Your account was removed but some data may remain. Please contact support so we can finish.',
+        }),
+        { status: 500, headers }
+      );
+    }
+
+    return new Response(JSON.stringify({ success: true, hasStoreSubscription }), { headers });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('[delete-account] unexpected error:', message);
+    return new Response(JSON.stringify({ error: 'An unexpected error occurred' }), {
+      status: 500,
+      headers,
+    });
   }
 });

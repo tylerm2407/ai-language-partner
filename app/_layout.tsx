@@ -12,7 +12,7 @@ import { SCHOOL_ENABLED } from '../config/app';
 import { useNotifications, scheduleStreakSaveReminder } from '../hooks/useNotifications';
 import { configurePurchases, identifyPurchaser, resetPurchaser } from '../lib/purchases';
 import { identifyUser, resetAnalytics } from '../lib/analytics';
-import { View, ActivityIndicator, AppState } from 'react-native';
+import { View, ActivityIndicator, AppState, Text, Pressable } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
   useFonts,
@@ -41,7 +41,7 @@ Sentry.init({
 
 function RootLayout() {
   const { session, loading: authLoading } = useAuth();
-  const { profile, dailyStats, loadUserData } = useAppStore();
+  const { profile, dailyStats, loadUserData, error: profileError } = useAppStore();
   const { roles, activeRole, loadRoles } = useSchoolStore();
   const segments = useSegments() as string[];
   const router = useRouter();
@@ -152,6 +152,11 @@ function RootLayout() {
     const inTeacherGroup = segments[0] === '(teacher)';
     const inOnboarding = segments[1] === 'onboarding';
 
+    // A failed profile load also leaves profile === null. Routing on that would
+    // send an existing user into the placement test and overwrite their level,
+    // so when the load errored we hold position and show a retry instead.
+    if (session && dataLoaded && !profile && profileError) return;
+
     if (session && dataLoaded && (!profile || !profile.onboardingCompleted) && !inOnboarding) {
       // Signed in but onboarding not finished — go to onboarding
       router.replace('/(public)/onboarding');
@@ -166,13 +171,39 @@ function RootLayout() {
       // Not signed in — go to public
       router.replace('/(public)');
     }
-  }, [session, authLoading, fontsLoaded, dataLoaded, rolesLoaded, profile, segments, router, roles, activeRole]);
+  }, [session, authLoading, fontsLoaded, dataLoaded, rolesLoaded, profile, profileError, segments, router, roles, activeRole]);
 
   if (authLoading || !fontsLoaded || (session && (!dataLoaded || !rolesLoaded))) {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
         <View className="flex-1 items-center justify-center bg-dark">
           <ActivityIndicator size="large" color="#818CF8" />
+          <StatusBar style="light" />
+        </View>
+      </GestureHandlerRootView>
+    );
+  }
+
+  // Profile load failed (offline, timeout, transient 5xx). Never fall through to
+  // onboarding here — that would overwrite a real user's level. Offer a retry.
+  if (session && dataLoaded && !profile && profileError) {
+    return (
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <View className="flex-1 items-center justify-center bg-dark px-6">
+          <Text className="text-white text-xl font-semibold text-center mb-2">
+            Couldn&apos;t load your profile
+          </Text>
+          <Text className="text-text-secondary text-base text-center mb-6">
+            Check your connection and try again. Your progress is safe.
+          </Text>
+          <Pressable
+            onPress={() => setDataLoaded(false)}
+            className="bg-primary px-6 py-3 rounded-2xl"
+            accessibilityRole="button"
+            accessibilityLabel="Retry loading your profile"
+          >
+            <Text className="text-white text-base font-semibold">Try Again</Text>
+          </Pressable>
           <StatusBar style="light" />
         </View>
       </GestureHandlerRootView>

@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Fluenci — App Store Launch Readiness</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+/* ============================================================
+   BRAND TOKENS  —  premium-site-builder Phase 2
+   style: dark-luxury · derived from Fluenci config/theme.ts
+   ============================================================ */
+:root{
+  /* primary — indigo (Fluenci brand) */
+  --p-300:#A5B4FC; --p-400:#818CF8; --p-500:#6366F1; --p-600:#4F46E5; --p-700:#4338CA;
+  /* accent — sky */
+  --a-300:#7DD3FC; --a-400:#38BDF8; --a-500:#0EA5E9;
+  /* neutral */
+  --n-50:#F8FAFC; --n-200:#E2E8F0; --n-300:#CBD5E1; --n-400:#94A3B8;
+  --n-500:#64748B; --n-600:#475569; --n-700:#334155; --n-800:#1E293B;
+  /* semantic */
+  --ok:#22C55E; --ok-dim:rgba(34,197,94,.12);
+  --warn:#F59E0B; --warn-dim:rgba(245,158,11,.12);
+  --err:#EF4444; --err-dim:rgba(239,68,68,.12);
+  --info:#38BDF8; --info-dim:rgba(56,189,248,.12);
+  --dec:#A855F7; --dec-dim:rgba(168,85,247,.13);
+  /* surface */
+  --bg:#0C0F14; --card:#12161D; --elevated:#171C25; --overlay:rgba(255,255,255,.04);
+  --line:rgba(255,255,255,.07); --line-strong:rgba(255,255,255,.12);
+  /* type */
+  --display:'Space Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --body:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace;
+  /* motion */
+  --fast:200ms; --normal:400ms; --slow:800ms;
+  --ease-out:cubic-bezier(.16,1,.3,1);
+  /* layout — 8px grid */
+  --max:1120px; --pad:96px; --r:16px;
+}
+@media (max-width:900px){ :root{ --pad:64px } }
+@media (max-width:600px){ :root{ --pad:48px } }
+
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){ html{scroll-behavior:auto} }
+body{
+  margin:0; background:var(--bg); color:var(--n-200);
+  font-family:var(--body); font-size:16px; line-height:1.65;
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+}
+/* ambient field — replaces the 3D hero orb, no runtime cost */
+body::before{
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background:
+    radial-gradient(680px 420px at 12% -8%, rgba(99,102,241,.16), transparent 62%),
+    radial-gradient(560px 400px at 92% 4%, rgba(56,189,248,.10), transparent 60%),
+    radial-gradient(900px 600px at 50% 108%, rgba(99,102,241,.07), transparent 62%);
+}
+.wrap{position:relative; z-index:1; max-width:var(--max); margin:0 auto; padding:0 24px}
+
+/* ---------- top bar ---------- */
+.bar{
+  position:sticky; top:0; z-index:50;
+  background:rgba(12,15,20,.72); backdrop-filter:blur(14px) saturate(1.4);
+  -webkit-backdrop-filter:blur(14px) saturate(1.4);
+  border-bottom:1px solid var(--line);
+}
+.bar-in{max-width:var(--max); margin:0 auto; padding:14px 24px; display:flex; align-items:center; gap:16px}
+.mark{display:flex; align-items:center; gap:10px; font-family:var(--display); font-weight:700; letter-spacing:-.02em; color:var(--n-50); font-size:17px}
+.dot{width:9px; height:9px; border-radius:50%; background:var(--p-500); box-shadow:0 0 0 4px rgba(99,102,241,.16)}
+.bar nav{margin-left:auto; display:flex; gap:4px; flex-wrap:wrap}
+.bar nav a{
+  color:var(--n-400); text-decoration:none; font-size:13.5px; font-weight:500;
+  padding:7px 11px; border-radius:9px; transition:color var(--fast) var(--ease-out), background var(--fast) var(--ease-out);
+}
+.bar nav a:hover,.bar nav a:focus-visible{color:var(--n-50); background:var(--overlay)}
+@media (max-width:820px){ .bar nav{display:none} }
+
+/* ---------- hero ---------- */
+.hero{padding:clamp(56px,9vw,104px) 0 40px}
+.eyebrow{
+  display:inline-flex; align-items:center; gap:9px; font-family:var(--mono);
+  font-size:11.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--p-300);
+  border:1px solid rgba(99,102,241,.28); background:rgba(99,102,241,.08);
+  padding:7px 13px; border-radius:999px;
+}
+h1{
+  font-family:var(--display); font-weight:700; color:var(--n-50);
+  font-size:clamp(38px,6.4vw,68px); line-height:1.03; letter-spacing:-.035em;
+  margin:24px 0 0; max-width:15ch;
+}
+h1 em{
+  font-style:normal;
+  background:linear-gradient(100deg,var(--p-400) 0%,var(--a-400) 100%);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+.lede{font-size:clamp(16.5px,2vw,19px); color:var(--n-400); max-width:60ch; margin:24px 0 0}
+.lede strong{color:var(--n-200); font-weight:600}
+
+/* verdict strip */
+.verdict{
+  margin-top:40px; display:flex; align-items:center; gap:18px; flex-wrap:wrap;
+  padding:20px 24px; border-radius:var(--r);
+  border:1px solid rgba(239,68,68,.24); background:linear-gradient(180deg,rgba(239,68,68,.09),rgba(239,68,68,.03));
+}
+.verdict .tag{
+  font-family:var(--display); font-weight:700; font-size:13px; letter-spacing:.1em;
+  color:var(--err); border:1px solid rgba(239,68,68,.35); padding:5px 11px; border-radius:8px; white-space:nowrap;
+}
+.verdict p{margin:0; font-size:15.5px; color:var(--n-300)}
+
+/* progress */
+.prog{margin-top:32px}
+.prog-head{display:flex; justify-content:space-between; align-items:baseline; font-size:13px; color:var(--n-500); font-family:var(--mono); letter-spacing:.04em}
+.prog-head b{color:var(--n-200); font-weight:600}
+.track{margin-top:10px; height:8px; border-radius:999px; background:rgba(255,255,255,.06); overflow:hidden}
+.fill{height:100%; width:0; border-radius:999px; background:linear-gradient(90deg,var(--p-500),var(--a-400)); transition:width 1.2s var(--ease-out)}
+
+/* ---------- stats ---------- */
+.stats{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-top:44px}
+@media (max-width:860px){ .stats{grid-template-columns:repeat(2,1fr)} }
+.stat{
+  padding:22px 20px; border-radius:var(--r); background:var(--card); border:1px solid var(--line);
+  transition:border-color var(--normal) var(--ease-out), transform var(--normal) var(--ease-out);
+}
+.stat:hover{border-color:var(--line-strong); transform:translateY(-2px)}
+.stat .v{font-family:var(--display); font-size:clamp(26px,3.4vw,34px); font-weight:700; color:var(--n-50); letter-spacing:-.03em; line-height:1}
+.stat .v.good{color:var(--ok)} .stat .v.bad{color:var(--err)}
+.stat .k{margin-top:9px; font-size:12.5px; color:var(--n-500); letter-spacing:.03em}
+
+/* ---------- sections ---------- */
+section{padding:var(--pad) 0 0}
+.sec-head{display:flex; align-items:flex-start; gap:16px; margin-bottom:8px}
+.sec-num{font-family:var(--mono); font-size:12px; color:var(--n-600); padding-top:10px; letter-spacing:.1em}
+h2{
+  font-family:var(--display); font-weight:700; color:var(--n-50);
+  font-size:clamp(24px,3.4vw,34px); letter-spacing:-.028em; margin:0; line-height:1.15;
+}
+.sec-sub{color:var(--n-500); font-size:15px; margin:10px 0 0; max-width:66ch}
+
+/* filter chips */
+.chips{display:flex; gap:8px; flex-wrap:wrap; margin:28px 0 0}
+.chip{
+  font-family:var(--body); font-size:13px; font-weight:500; color:var(--n-400);
+  background:var(--card); border:1px solid var(--line); padding:8px 14px; border-radius:999px;
+  cursor:pointer; transition:all var(--fast) var(--ease-out);
+}
+.chip:hover{color:var(--n-200); border-color:var(--line-strong)}
+.chip[aria-pressed="true"]{background:rgba(99,102,241,.14); border-color:rgba(99,102,241,.4); color:var(--p-300)}
+
+/* item cards */
+.items{margin-top:24px; display:flex; flex-direction:column; gap:12px}
+.item{
+  position:relative; border-radius:var(--r); background:var(--card);
+  border:1px solid var(--line); padding:22px 24px 22px 26px; overflow:hidden;
+  transition:border-color var(--normal) var(--ease-out), background var(--normal) var(--ease-out);
+}
+.item::before{content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--n-700)}
+.item[data-sev="blocker"]::before{background:var(--err)}
+.item[data-sev="should"]::before{background:var(--warn)}
+.item[data-sev="store"]::before{background:var(--info)}
+.item[data-sev="done"]::before{background:var(--ok)}
+.item[data-sev="decide"]::before{background:var(--dec)}
+.item[data-sev="minor"]::before{background:var(--n-600)}
+.item:hover{border-color:var(--line-strong); background:var(--elevated)}
+.item.hidden{display:none}
+.item.checked{opacity:.42}
+.item.checked .it-title{text-decoration:line-through; text-decoration-color:var(--n-600)}
+
+.it-top{display:flex; align-items:flex-start; gap:14px}
+.box{
+  appearance:none; -webkit-appearance:none; flex:none; margin:2px 0 0;
+  width:20px; height:20px; border-radius:6px; border:1.5px solid var(--n-600);
+  background:transparent; cursor:pointer; position:relative;
+  transition:all var(--fast) var(--ease-out);
+}
+.box:hover{border-color:var(--p-400)}
+.box:checked{background:var(--p-500); border-color:var(--p-500)}
+.box:checked::after{
+  content:''; position:absolute; left:6.5px; top:2.5px; width:5px; height:10px;
+  border:solid #fff; border-width:0 2px 2px 0; transform:rotate(45deg);
+}
+.box:focus-visible{outline:2px solid var(--p-400); outline-offset:2px}
+.it-title{font-family:var(--display); font-weight:600; font-size:17px; color:var(--n-50); letter-spacing:-.012em; margin:0; flex:1}
+.badge{
+  flex:none; font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase;
+  padding:4px 9px; border-radius:6px; white-space:nowrap;
+}
+.badge.blocker{color:var(--err); background:var(--err-dim)}
+.badge.should{color:var(--warn); background:var(--warn-dim)}
+.badge.store{color:var(--info); background:var(--info-dim)}
+.badge.done{color:var(--ok); background:var(--ok-dim)}
+.badge.decide{color:var(--dec); background:var(--dec-dim)}
+.badge.minor{color:var(--n-400); background:var(--overlay)}
+.it-body{margin:12px 0 0 34px; font-size:14.8px; color:var(--n-400)}
+.it-body p{margin:0 0 8px}
+.it-body p:last-child{margin-bottom:0}
+.it-body strong{color:var(--n-200); font-weight:600}
+code{
+  font-family:var(--mono); font-size:12.6px; color:var(--a-300);
+  background:rgba(56,189,248,.08); border:1px solid rgba(56,189,248,.14);
+  padding:1.5px 6px; border-radius:5px; white-space:nowrap;
+}
+.why{
+  display:block; margin-top:10px; padding-left:12px; border-left:2px solid var(--line-strong);
+  font-size:14px; color:var(--n-500);
+}
+.why b{color:var(--n-300); font-weight:600}
+
+/* green grid */
+.green{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:24px}
+@media (max-width:760px){ .green{grid-template-columns:1fr} }
+.g{
+  display:flex; gap:13px; align-items:flex-start; padding:17px 19px; border-radius:13px;
+  background:rgba(34,197,94,.045); border:1px solid rgba(34,197,94,.16);
+}
+.g .ck{flex:none; width:19px; height:19px; border-radius:50%; background:var(--ok-dim); border:1px solid rgba(34,197,94,.4); position:relative; margin-top:2px}
+.g .ck::after{content:''; position:absolute; left:6px; top:3px; width:4px; height:8px; border:solid var(--ok); border-width:0 1.8px 1.8px 0; transform:rotate(45deg)}
+.g div{font-size:14.5px; color:var(--n-300)}
+.g b{color:var(--n-50); font-weight:600; font-family:var(--display)}
+
+/* next actions */
+.next{margin-top:24px; display:grid; grid-template-columns:repeat(3,1fr); gap:14px}
+@media (max-width:860px){ .next{grid-template-columns:1fr} }
+.step{padding:24px 22px; border-radius:var(--r); background:var(--card); border:1px solid var(--line); transition:border-color var(--normal) var(--ease-out), transform var(--normal) var(--ease-out)}
+.step:hover{border-color:rgba(99,102,241,.32); transform:translateY(-3px)}
+.step .n{font-family:var(--mono); font-size:11.5px; color:var(--p-400); letter-spacing:.14em}
+.step h3{font-family:var(--display); font-size:17.5px; color:var(--n-50); margin:12px 0 8px; letter-spacing:-.015em; font-weight:600}
+.step p{margin:0; font-size:14.2px; color:var(--n-500)}
+.step .t{margin-top:14px; font-family:var(--mono); font-size:11.5px; color:var(--n-600); letter-spacing:.05em}
+
+/* caveat */
+.caveat{
+  margin-top:32px; padding:22px 24px; border-radius:var(--r);
+  border:1px solid rgba(245,158,11,.22); background:rgba(245,158,11,.05);
+  font-size:14.8px; color:var(--n-400);
+}
+.caveat b{color:var(--warn); font-family:var(--display); font-weight:600; display:block; margin-bottom:7px; font-size:14px; letter-spacing:.02em}
+
+footer{margin-top:var(--pad); padding:36px 0 56px; border-top:1px solid var(--line); color:var(--n-600); font-size:13px}
+footer .f{display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap}
+footer code{font-size:12px}
+
+/* scroll reveal */
+.rv{opacity:0; transform:translateY(20px); transition:opacity var(--slow) var(--ease-out), transform var(--slow) var(--ease-out)}
+.rv.in{opacity:1; transform:none}
+@media (prefers-reduced-motion:reduce){
+  .rv{opacity:1; transform:none; transition:none}
+  .fill{transition:none}
+  .stat:hover,.step:hover{transform:none}
+}
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <div class="bar-in">
+    <div class="mark"><span class="dot" aria-hidden="true"></span>Fluenci</div>
+    <nav>
+      <a href="#green">Verified</a>
+      <a href="#blockers">Punch list</a>
+      <a href="#next">Next steps</a>
+    </nav>
+  </div>
+</div>
+
+<main class="wrap">
+
+  <!-- ============ HERO ============ -->
+  <header class="hero">
+    <span class="eyebrow">Status Report · updated 6 Aug 2026</span>
+    <h1>App Store<br />launch <em>readiness</em></h1>
+    <p class="lede">Nine items fixed, applied to production, and verified. <strong>Every remaining blocker needs an account, a purchase, or a decision — none of them are code.</strong></p>
+
+    <div class="verdict">
+      <span class="tag">2 BLOCKERS</span>
+      <p>The RevenueCat production keys, and the fact that <strong>fluenci.com is not registered to you</strong> — it redirects to a domain-sale page that the app links to as its privacy policy. Everything else on the code side is done: typecheck clean, lint clean, 205/205 tests, migrations applied, functions deployed.</p>
+    </div>
+
+    <div class="prog">
+      <div class="prog-head"><span>CODE-SIDE PUNCH LIST</span><b><span id="pv">0</span> / 9 cleared</b></div>
+      <div class="track"><div class="fill" id="pf"></div></div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="v good" data-count="9">0</div><div class="k">Fixed, deployed, verified</div></div>
+      <div class="stat"><div class="v good" data-count="205">0</div><div class="k">Tests passing (12 suites)</div></div>
+      <div class="stat"><div class="v good" data-count="0">0</div><div class="k">TypeScript &amp; lint errors</div></div>
+      <div class="stat"><div class="v bad" data-count="2">0</div><div class="k">Blockers left (neither is code)</div></div>
+    </div>
+  </header>
+
+  <!-- ============ GREEN ============ -->
+  <section id="green" class="rv">
+    <div class="sec-head">
+      <span class="sec-num">01</span>
+      <div>
+        <h2>Verified green</h2>
+        <p class="sec-sub">Run and confirmed in the working tree today — not carried over from the July audit.</p>
+      </div>
+    </div>
+    <div class="green">
+      <div class="g"><span class="ck" aria-hidden="true"></span><div><b>npm run typecheck</b> — clean, strict mode</div></div>
+      <div class="g"><span class="ck" aria-hidden="true"></span><div><b>npm test</b> — 205/205 across 12 suites</div></div>
+      <div class="g"><span class="ck" aria-hidden="true"></span><div><b>npm run lint</b> — 0 errors, 14 warnings</div></div>
+      <div class="g"><span class="ck" aria-hidden="true"></span><div><b>P0-2 closed</b> — <code>050_lock_down_daily_usage.sql</code> shuts the quota self-reset hole</div></div>
+      <div class="g"><span class="ck" aria-hidden="true"></span><div><b>P0-3 closed</b> — live-voice safety landed in <code>884e748</code></div></div>
+      <div class="g"><span class="ck" aria-hidden="true"></span><div><b>P0-4 closed</b> — Sentry DSN now wired into preview + production in <code>eas.json</code></div></div>
+      <div class="g"><span class="ck" aria-hidden="true"></span><div><b>Paywall basics</b> — Restore Purchases and both legal links present <em>in the binary</em> (though the domain they point at is not yours — see blockers)</div></div>
+      <div class="g"><span class="ck" aria-hidden="true"></span><div><b>B2B surfaces gated off</b> — <code>SCHOOL_ENABLED = false</code> shrinks the review surface</div></div>
+      <div class="g"><span class="ck" aria-hidden="true"></span><div><b>Migrations 053 + 054</b> — applied to production and re-verified via the advisors</div></div>
+      <div class="g"><span class="ck" aria-hidden="true"></span><div><b>4 edge functions redeployed</b> — <code>stripe-webhook</code>, <code>delete-account</code>, <code>get-hint</code>, <code>ai-chat</code></div></div>
+      <div class="g"><span class="ck" aria-hidden="true"></span><div><b>Database is Fluenci-only</b> — no foreign tables, columns, functions, or cron jobs remain</div></div>
+      <div class="g"><span class="ck" aria-hidden="true"></span><div><b>All 11 client RPCs exist in prod</b> — offline XP replay verified intact</div></div>
+    </div>
+  </section>
+
+  <!-- ============ PUNCH LIST ============ -->
+  <section id="blockers" class="rv">
+    <div class="sec-head">
+      <span class="sec-num">02</span>
+      <div>
+        <h2>The punch list</h2>
+        <p class="sec-sub">Filter by severity. Tick items off as you clear them — progress is saved in this browser, so you can close the file and come back.</p>
+      </div>
+    </div>
+
+    <div class="chips" role="group" aria-label="Filter by severity">
+      <button class="chip" data-f="all" aria-pressed="true">All</button>
+      <button class="chip" data-f="blocker" aria-pressed="false">Hard blockers · 2</button>
+      <button class="chip" data-f="store" aria-pressed="false">Store-side · 4</button>
+      <button class="chip" data-f="should" aria-pressed="false">Before submitting · 1</button>
+      <button class="chip" data-f="decide" aria-pressed="false">Your call · 3</button>
+      <button class="chip" data-f="done" aria-pressed="false">Fixed · 9</button>
+    </div>
+
+        <div class="items" id="list">
+
+      <!-- BLOCKERS -->
+      <article class="item" data-sev="blocker" data-id="b1">
+        <div class="it-top">
+          <input type="checkbox" class="box" aria-label="Mark RevenueCat keys as done" />
+          <h3 class="it-title">RevenueCat keys are still placeholders</h3>
+          <span class="badge blocker">Blocker</span>
+        </div>
+        <div class="it-body">
+          <p><code>eas.json:38-39</code> — production <em>and</em> preview both still hold <code>appl_REPLACE_WITH_REVENUECAT_IOS_PUBLIC_KEY</code> and <code>goog_REPLACE_…</code>.</p>
+          <p>In the store binary the paywall renders and looks fine, but every offerings fetch and purchase fails. It works in dev only because that profile has a real <code>test_</code> key.</p>
+          <span class="why"><b>Only you can do this one:</b> paste the real keys from the RevenueCat dashboard, then run a full sandbox purchase <em>and</em> restore.</span>
+        </div>
+      </article>
+
+      <article class="item" data-sev="blocker" data-id="b5">
+        <div class="it-top">
+          <input type="checkbox" class="box" aria-label="Mark domain as done" />
+          <h3 class="it-title">fluenci.com isn't yours — it's parked for sale</h3>
+          <span class="badge blocker">Blocker</span>
+        </div>
+        <div class="it-body">
+          <p>Fetching <code>https://fluenci.com/privacy</code> 302-redirects to <code>hugedomains.com/domain_profile.cfm?d=fluenci.com</code>. The domain is listed for sale, not registered to you.</p>
+          <p>The binary links to it from <code>profile/settings.tsx:213,223</code> and <code>profile/subscription.tsx:319,322</code>, and <code>app.json</code> declares it as <code>privacyUrl</code>.</p>
+          <span class="why"><b>Why this is fatal:</b> a reviewer clicks the privacy link and lands on a domain-sale page. Guaranteed rejection under App Store 5.1.1 and Play's data-safety rules. The policy text already exists in <code>docs/privacy_policy.md</code> and <code>docs/terms_of_service.md</code> — it just has nowhere to live. Buy the domain or repoint every link to one you control.</span>
+        </div>
+      </article>
+
+      <!-- STORE SIDE -->
+      <article class="item" data-sev="store" data-id="t1">
+        <div class="it-top">
+          <input type="checkbox" class="box" aria-label="Mark screenshots as done" />
+          <h3 class="it-title">Screenshots and store metadata don't exist yet</h3>
+          <span class="badge store">Store-side</span>
+        </div>
+        <div class="it-body">
+          <p>Nothing in the repo. The App Store Connect record is live (<code>ascAppId 6761507250</code>), but screenshots, description, and keywords all still need producing.</p>
+        </div>
+      </article>
+
+      <article class="item" data-sev="store" data-id="t3">
+        <div class="it-top">
+          <input type="checkbox" class="box" aria-label="Mark AI disclosure as done" />
+          <h3 class="it-title">Apple AI age-rating + third-party data disclosure</h3>
+          <span class="badge store">Store-side</span>
+        </div>
+        <div class="it-body">
+          <p>You send user text and voice to Anthropic, OpenAI, and Google. That requires disclosure under Apple 5.1.2(i), plus the newer AI-chatbot age-rating questionnaire.</p>
+        </div>
+      </article>
+
+      <article class="item" data-sev="store" data-id="t4">
+        <div class="it-top">
+          <input type="checkbox" class="box" aria-label="Mark privacy labels as done" />
+          <h3 class="it-title">Privacy labels must declare third-party SDKs</h3>
+          <span class="badge store">Store-side</span>
+        </div>
+        <div class="it-body">
+          <p>App Privacy labels and the Play Data-safety form both need RevenueCat, Sentry, and Supabase declared — SDK-collected data counts as yours.</p>
+        </div>
+      </article>
+
+      <article class="item" data-sev="store" data-id="s5">
+        <div class="it-top">
+          <input type="checkbox" class="box" aria-label="Mark SMTP as done" />
+          <h3 class="it-title">Custom SMTP still not configured</h3>
+          <span class="badge store">Store-side</span>
+        </div>
+        <div class="it-body">
+          <p>Supabase's built-in auth email is capped around <strong>2 emails per hour</strong> — that alone kills a launch day. Wire up SendGrid or SES and raise the new-user rate limit.</p>
+          <span class="why"><b>Dashboard-only:</b> can't be done from code or the MCP. Supabase project settings → Auth → SMTP.</span>
+        </div>
+      </article>
+
+      <article class="item" data-sev="should" data-id="s6">
+        <div class="it-top">
+          <input type="checkbox" class="box" aria-label="Mark RevenueCat reconciliation as done" />
+          <h3 class="it-title">RevenueCat webhook reconciliation job</h3>
+          <span class="badge should">Before submit</span>
+        </div>
+        <div class="it-body">
+          <p>RevenueCat retries a failed webhook five times over roughly 2.5 hours, then gives up permanently. Stripe retries for three days.</p>
+          <span class="why"><b>Consequence:</b> a brief endpoint outage during launch permanently loses entitlement updates. Needs a scheduled job polling RC customer-info as a backstop — deferred because it depends on the real RevenueCat keys being in place first.</span>
+        </div>
+      </article>
+
+      <!-- DECISIONS -->
+      <article class="item" data-sev="decide" data-id="d1">
+        <div class="it-top">
+          <input type="checkbox" class="box" aria-label="Mark Bryant users decision as done" />
+          <h3 class="it-title">180 unused @bryant.edu auth accounts</h3>
+          <span class="badge decide">Your call</span>
+        </div>
+        <div class="it-body">
+          <p><code>auth.users</code> holds 185 accounts. Only 5 have Fluenci profiles. The other 180 are all <code>@bryant.edu</code>, all created 2026-03-29, all email-confirmed, and <strong>not one has ever signed in.</strong></p>
+          <span class="why"><b>These are yours, not another app's</b> — they're the Bryant University pilot accounts you pre-provisioned. I left them alone: deleting 180 real university identities is irreversible and school features currently ship disabled (<code>SCHOOL_ENABLED = false</code>). Tell me whether to purge them or keep them for the pilot.</span>
+        </div>
+      </article>
+
+      <article class="item" data-sev="decide" data-id="d2">
+        <div class="it-top">
+          <input type="checkbox" class="box" aria-label="Mark foreign functions decision as done" />
+          <h3 class="it-title">Other apps' edge functions are still deployed here</h3>
+          <span class="badge decide">Your call</span>
+        </div>
+        <div class="it-body">
+          <p>The database is clean, but the <em>edge functions</em> are not. Still deployed on this project:</p>
+          <p><code>nearby-stores</code>, <code>scan-receipt</code>, <code>estimate-grocery-prices</code> (CostClarity) · <code>earnings-calendar</code>, <code>economic-calendar</code>, <code>insider-trading</code>, <code>stock-data</code>, <code>ipo-calendar</code> (MarketPulse / PropFirm) · plus <code>check-subscription</code>, <code>send-notification</code>, <code>handle-standalone-webhook</code> of unclear ownership.</p>
+          <span class="why"><b>I did not delete these.</b> If CostClarity or MarketPulse point at this same project, removing them breaks those apps instantly. Confirm they're dead and I'll clean them out.</span>
+        </div>
+      </article>
+
+      <article class="item" data-sev="decide" data-id="d3">
+        <div class="it-top">
+          <input type="checkbox" class="box" aria-label="Mark perf advisor decision as done" />
+          <h3 class="it-title">Performance advisor: 291 findings, all deferred</h3>
+          <span class="badge decide">Your call</span>
+        </div>
+        <div class="it-body">
+          <p>179 <code>multiple_permissive_policies</code>, 54 <code>auth_rls_initplan</code> (the <code>(select auth.uid())</code> wrapping), 19 unindexed foreign keys, 38 unused indexes.</p>
+          <span class="why"><b>Why I stopped:</b> clearing these means rewriting ~180 RLS policies on a production database days before submission, and every one of them is a correctness risk. None of it is a launch blocker at 5 users — it's a scale problem, not a ship problem. Worth doing deliberately after launch.</span>
+        </div>
+      </article>
+
+      <!-- FIXED -->
+      <article class="item" data-sev="done" data-id="f1">
+        <div class="it-top">
+          <input type="checkbox" class="box" aria-label="Fixed" />
+          <h3 class="it-title">Stripe webhooks were being rejected before the handler ran</h3>
+          <span class="badge done">Fixed</span>
+        </div>
+        <div class="it-body">
+          <p>Found while preparing the deploy, and not in the original audit. <code>stripe-webhook</code> was deployed with <code>verify_jwt: true</code> and had no entry in <code>supabase/config.toml</code>. Stripe cannot present a Supabase JWT, so the platform gate returned 401 on <em>every</em> webhook — the signature check inside the function never executed.</p>
+          <span class="why"><b>Fix:</b> added explicit <code>verify_jwt = false</code> entries for <code>stripe-webhook</code> and <code>revenuecat-webhook</code> and redeployed. Auth is now the Stripe signature check, which is the correct control for this path. Verified live: the function is at version 36 with <code>verify_jwt: false</code>.</span>
+        </div>
+      </article>
+
+      <article class="item" data-sev="done" data-id="f2">
+        <div class="it-top">
+          <input type="checkbox" class="box" aria-label="Fixed" />
+          <h3 class="it-title">delete-account rewritten to fail closed and cancel billing</h3>
+          <span class="badge done">Fixed</span>
+        </div>
+        <div class="it-body">
+          <p>Checking the live schema showed nearly every user table is already <code>ON DELETE CASCADE</code> to <code>auth.users</code> — so the old hand-rolled delete loop was both redundant <em>and</em> wrong: it referenced <code>lesson_progress</code>, a table that doesn't exist, and missed 14 that do.</p>
+          <p>Now: cancel Stripe first → refuse if the user still owns an organization (<code>organizations.created_by</code> is <code>RESTRICT</code>, so the delete would have failed with an opaque error) → delete the one non-cascading table → delete the auth user → verify no rows survived. Every step aborts rather than half-deleting.</p>
+          <span class="why"><b>Also:</b> store-billed subscriptions can't be cancelled server-side, so the app now tells the user to cancel in the App Store instead of silently leaving them subscribed.</span>
+        </div>
+      </article>
+
+      <article class="item" data-sev="done" data-id="f3">
+        <div class="it-top">
+          <input type="checkbox" class="box" aria-label="Fixed" />
+          <h3 class="it-title">In-app AI content reporting built</h3>
+          <span class="badge done">Fixed</span>
+        </div>
+        <div class="it-body">
+          <p>Migration <code>053</code> adds <code>ai_content_reports</code> (append-only: insert + select own, no update or delete policy). New <code>ReportContentSheet</code> composed from the existing <code>Sheet</code> and typography primitives — six reasons, optional detail, failure surfaced rather than swallowed.</p>
+          <p>Wired into chat AI replies, the voice transcript (same bubbles), and writing feedback. Migration applied to production.</p>
+        </div>
+      </article>
+
+      <article class="item" data-sev="done" data-id="f4">
+        <div class="it-top">
+          <input type="checkbox" class="box" aria-label="Fixed" />
+          <h3 class="it-title">Schema reconciled — no drift found</h3>
+          <span class="badge done">Fixed</span>
+        </div>
+        <div class="it-body">
+          <p>Checked all 11 RPCs the client actually calls against live <code>pg_proc</code>: <code>increment_xp</code>, <code>increment_xp_idempotent</code>, <code>spend_heart</code>, <code>sync_hearts</code>, <code>update_streak</code>, <code>repair_streak_with_freeze</code>, <code>repair_streak_with_shield</code>, <code>claim_daily_challenge_bonus</code>, <code>increment_daily_usage</code>, <code>try_consume_new_card_slot</code>, <code>upsert_daily_stats</code>. All present. Offline XP replay is intact.</p>
+          <span class="why"><b>Also:</b> the four duplicate migration numbers are renumbered (<code>020a/020b</code>, <code>027a/027b</code>), and <code>CLAUDE.md</code>'s claim that <code>user_profiles</code> carries other apps' columns is now stale — all 29 columns are Fluenci's.</span>
+        </div>
+      </article>
+
+      <article class="item" data-sev="done" data-id="f5">
+        <div class="it-top">
+          <input type="checkbox" class="box" aria-label="Fixed" />
+          <h3 class="it-title">Security advisor findings cleared</h3>
+          <span class="badge done">Fixed</span>
+        </div>
+        <div class="it-body">
+          <p>Migration <code>054</code> revokes anon/PUBLIC execute on eight <code>SECURITY DEFINER</code> functions. The important one was <code>increment_rate_limit</code>: its cache key is <code>burst:&lt;action&gt;:&lt;user_id&gt;</code>, so an <em>anonymous</em> caller could burn a known user's burst window and lock them out of AI features.</p>
+          <span class="why"><b>Accepted, not fixed:</b> the 20 remaining <code>authenticated_security_definer</code> warnings are the gamification RPCs — they're the sanctioned write path and each carries its own <code>auth.uid()</code> guard. The 3 RLS-without-policy notices are service-role-only cache tables where deny-all is correct. <code>pg_net</code> in public stays; moving it breaks the news cron.</span>
+        </div>
+      </article>
+
+      <article class="item" data-sev="done" data-id="f6">
+        <div class="it-top">
+          <input type="checkbox" class="box" aria-label="Fixed" />
+          <h3 class="it-title">Stripe cancellation + silent-downgrade bug</h3>
+          <span class="badge done">Fixed</span>
+        </div>
+        <div class="it-body">
+          <p><code>cancel_at_period_end</code> is now recorded on checkout, update, and delete, so the app can show "cancels on &lt;date&gt;" for the Stripe rail.</p>
+          <span class="why"><b>Also:</b> <code>determineTier</code> no longer defaults an unknown price ID to <code>starter</code> with a console warning. It throws, so the webhook returns non-2xx, Stripe retries for 3 days, and a misconfigured price ID surfaces instead of quietly charging someone for nothing.</span>
+        </div>
+      </article>
+
+      <article class="item" data-sev="done" data-id="f7">
+        <div class="it-top">
+          <input type="checkbox" class="box" aria-label="Fixed" />
+          <h3 class="it-title">Network blip no longer dumps users into onboarding</h3>
+          <span class="badge done">Fixed</span>
+        </div>
+        <div class="it-body">
+          <p>The route guard now checks the store's error state before acting on <code>!profile</code>. On a failed profile load the app holds position and renders a "Couldn't load your profile / Try Again" screen instead of routing into the placement test and overwriting the user's level.</p>
+        </div>
+      </article>
+
+      <article class="item" data-sev="done" data-id="f8">
+        <div class="it-top">
+          <input type="checkbox" class="box" aria-label="Fixed" />
+          <h3 class="it-title">AI endpoints hardened</h3>
+          <span class="badge done">Fixed</span>
+        </div>
+        <div class="it-body">
+          <p><code>ai-chat</code>: messages capped at 2 000 chars each and 100 turns, topic sanitized to 200 chars, assignment context to 800, and target language / proficiency level validated against their enums before any paid call.</p>
+          <p><code>get-hint</code>: <code>cardId</code> checked as a UUID, <code>exerciseType</code> validated against the 16-value enum, language validated, plus a 30/60s burst limit. The cache-miss amplification attack is closed.</p>
+        </div>
+      </article>
+
+      <article class="item" data-sev="done" data-id="f9">
+        <div class="it-top">
+          <input type="checkbox" class="box" aria-label="Fixed" />
+          <h3 class="it-title">Config cleanup</h3>
+          <span class="badge done">Fixed</span>
+        </div>
+        <div class="it-body">
+          <p><code>app.json</code> <code>userInterfaceStyle</code> switched from <code>light</code> to <code>dark</code> to match the actual theme. The stale <code>"CaseMate user legal profiles"</code> comment on <code>user_profiles</code> — the last foreign-app artefact in the database — is replaced with an accurate one.</p>
+        </div>
+      </article>
+
+    </div>
+
+<div class="caveat">
+      <b>The shared-project caveat has mostly dissolved</b>
+      Everything here was checked against the running database, not just the migration files. The <code>public</code> schema is entirely Fluenci's — 47 tables, no foreign columns, no foreign functions, no foreign cron jobs — and the only artefact left from the old CaseMate era was a stale table comment, now corrected. Two surfaces are <em>not</em> clean: <code>auth.users</code> (185 accounts, 180 of them unused Bryant pilot logins) and the deployed edge functions, which still include CostClarity's and MarketPulse's. Both are flagged above as your call rather than cleaned up unilaterally.
+    </div>
+  </section>
+
+  <!-- ============ NEXT ============ -->
+  <section id="next" class="rv">
+    <div class="sec-head">
+      <span class="sec-num">03</span>
+      <div>
+        <h2>Realistic path to submission</h2>
+        <p class="sec-sub">Ordered so nothing blocks on something later in the list.</p>
+      </div>
+    </div>
+    <div class="next">
+      <div class="step">
+        <div class="n">STEP 01</div>
+        <h3>Buy the domain</h3>
+        <p>Register a domain you control, host the privacy policy and terms already written in <code>docs/</code>, and repoint the four in-app links plus <code>app.json</code>.</p>
+        <div class="t">BLOCKING · ~1 HOUR</div>
+      </div>
+      <div class="step">
+        <div class="n">STEP 02</div>
+        <h3>Wire up billing</h3>
+        <p>Real RevenueCat keys into <code>eas.json</code>, confirm the <code>STRIPE_*_PRICE_ID</code> secrets, custom SMTP, then a full sandbox purchase and restore test.</p>
+        <div class="t">BLOCKING · ~HALF DAY</div>
+      </div>
+      <div class="step">
+        <div class="n">STEP 03</div>
+        <h3>Store package</h3>
+        <p>Screenshots and copy, App Privacy labels, the AI age-rating questionnaire and third-party disclosure — then submit.</p>
+        <div class="t">~1 DAY</div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="f">
+      <span>Fluenci — launch readiness, updated 6 Aug 2026 after the remediation pass</span>
+      <span>Working tree on <code>master</code> · migrations 053 &amp; 054 applied to production</span>
+    </div>
+  </footer>
+
+</main>
+
+<script>
+(function(){
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---- scroll reveal ---- */
+  var rv = document.querySelectorAll('.rv');
+  if ('IntersectionObserver' in window && !reduce) {
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+      });
+    }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+    rv.forEach(function(el){ io.observe(el); });
+  } else {
+    rv.forEach(function(el){ el.classList.add('in'); });
+  }
+
+  /* ---- counters + progress bar ---- */
+  function animate(el, to, dur){
+    if (reduce || to === 0) { el.textContent = String(to); return; }
+    var start = null;
+    function tick(ts){
+      if (!start) start = ts;
+      var p = Math.min((ts - start) / dur, 1);
+      var eased = 1 - Math.pow(1 - p, 3);
+      el.textContent = String(Math.round(to * eased));
+      if (p < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+  function runHero(){
+    document.querySelectorAll('[data-count]').forEach(function(el){
+      animate(el, parseInt(el.getAttribute('data-count'), 10), 1100);
+    });
+    animate(document.getElementById('pv'), 9, 1100);
+    document.getElementById('pf').style.width = '100%';
+  }
+  if ('IntersectionObserver' in window) {
+    var hio = new IntersectionObserver(function(e){
+      if (e[0].isIntersecting) { runHero(); hio.disconnect(); }
+    }, { threshold: 0.3 });
+    hio.observe(document.querySelector('.stats'));
+  } else { runHero(); }
+
+  /* ---- severity filter ---- */
+  var chips = document.querySelectorAll('.chip');
+  var items = document.querySelectorAll('.item');
+  chips.forEach(function(chip){
+    chip.addEventListener('click', function(){
+      var f = chip.getAttribute('data-f');
+      chips.forEach(function(c){ c.setAttribute('aria-pressed', String(c === chip)); });
+      items.forEach(function(it){
+        it.classList.toggle('hidden', f !== 'all' && it.getAttribute('data-sev') !== f);
+      });
+    });
+  });
+
+  /* ---- checkbox state, persisted ---- */
+  var KEY = 'fluenci-launch-checklist';
+  var saved = {};
+  try { saved = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { saved = {}; }
+
+  items.forEach(function(it){
+    var id = it.getAttribute('data-id');
+    var box = it.querySelector('.box');
+    if (saved[id]) { box.checked = true; it.classList.add('checked'); }
+    box.addEventListener('change', function(){
+      it.classList.toggle('checked', box.checked);
+      saved[id] = box.checked;
+      try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch (e) {}
+    });
+  });
+})();
+</script>
+</body>
+</html>

@@ -265,7 +265,32 @@ export default function SettingsScreen() {
                                 const res = await supabase.functions.invoke('delete-account', {
                                   headers: { Authorization: `Bearer ${session.access_token}` },
                                 });
-                                if (res.error) throw res.error;
+                                if (res.error) {
+                                  // The function fails closed and explains why (e.g. the user still
+                                  // owns an organization). Show that instead of a generic error.
+                                  let serverMessage: string | null = null;
+                                  const context = (res.error as { context?: Response }).context;
+                                  if (context && typeof context.json === 'function') {
+                                    try {
+                                      const body = await context.json();
+                                      if (typeof body?.error === 'string') serverMessage = body.error;
+                                    } catch {
+                                      // Body was not JSON — fall through to the generic message.
+                                    }
+                                  }
+                                  Alert.alert(
+                                    'Account Not Deleted',
+                                    serverMessage ??
+                                      'Failed to delete account. Please try again or contact support.'
+                                  );
+                                  return;
+                                }
+                                if (res.data?.hasStoreSubscription) {
+                                  Alert.alert(
+                                    'Cancel Your Subscription',
+                                    'Your account is deleted, but your subscription was purchased through the App Store and must be cancelled there. Open Settings > Apple Account > Subscriptions to cancel it.'
+                                  );
+                                }
                                 await signOut();
                               } catch {
                                 Alert.alert('Error', 'Failed to delete account. Please try again or contact support.');

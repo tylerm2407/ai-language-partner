@@ -21,6 +21,19 @@ import { getScenario } from '../_shared/scenarios.ts';
 import { generateValidated } from '../_shared/validated-generate.ts';
 import { proficiencyToCefr } from '../_shared/cefr.ts';
 import { checkBurstLimit } from '../_shared/burst-limit.ts';
+import {
+  isValidLanguage,
+  isValidProficiencyLevel,
+  sanitizeText,
+} from '../_shared/validation.ts';
+
+// Caps on untrusted request input. A single turn well over this is not a
+// learner practising — it is cost abuse or a prompt-injection payload.
+const MAX_MESSAGE_CHARS = 2000;
+const MAX_TOPIC_CHARS = 200;
+const MAX_MESSAGES = 100;
+// Assignment context is teacher-authored (trusted-ish) but still bounded.
+const MAX_ASSIGNMENT_TOPIC_CHARS = 800;
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -152,7 +165,7 @@ serve(async (req: Request) => {
 
   try {
     const {
-      messages,
+      messages: rawMessages,
       targetLanguage,
       nativeLanguage: rawNativeLanguage,
       level,
@@ -164,7 +177,35 @@ serve(async (req: Request) => {
     } = (await req.json()) as ChatRequest;
     const nativeLanguage = rawNativeLanguage || 'en';
 
-    let topic = rawTopic;
+    // Validate untrusted input before it reaches a paid model call.
+    if (!Array.isArray(rawMessages) || rawMessages.length === 0) {
+      return new Response(
+        JSON.stringify({ error: 'messages must be a non-empty array' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    if (!isValidLanguage(targetLanguage)) {
+      return new Response(
+        JSON.stringify({ error: 'Unsupported target language' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    if (!isValidProficiencyLevel(level)) {
+      return new Response(
+        JSON.stringify({ error: 'Unsupported proficiency level' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Cap both the number of turns and the size of each one. windowMessages()
+    // trims history for the model, but an uncapped single message would still
+    // go straight into the Anthropic call.
+    const messages = rawMessages.slice(-MAX_MESSAGES).map((m) => ({
+      ...m,
+      content: sanitizeText(String(m?.content ?? ''), MAX_MESSAGE_CHARS),
+    }));
+
+    let topic = rawTopic ? sanitizeText(rawTopic, MAX_TOPIC_CHARS) : rawTopic;
     if (assignmentId) {
       const { data: assignment } = await supabase
         .from('assignments')
@@ -182,7 +223,10 @@ serve(async (req: Request) => {
         if (assignment.grammar_focus)
           extras.push(`Grammar focus: ${JSON.stringify(assignment.grammar_focus)}`);
         const assignmentContext = [scenarioDesc, ...extras].filter(Boolean).join('. ');
-        topic = topic ? `${topic}. Assignment: ${assignmentContext}` : assignmentContext;
+        topic = sanitizeText(
+          topic ? `${topic}. Assignment: ${assignmentContext}` : assignmentContext,
+          MAX_ASSIGNMENT_TOPIC_CHARS
+        );
       }
     }
 

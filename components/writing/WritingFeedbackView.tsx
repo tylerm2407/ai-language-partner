@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ProgressBar } from '../ui/ProgressBar';
 import { Ionicons } from '@expo/vector-icons';
 import type { WritingFeedback } from '../../types';
 import { GradientBackground } from '../ui/GradientBackground';
+import { ReportContentSheet } from '../ui/ReportContentSheet';
 import { colors, radii, spacing } from '../../config/theme';
 
 interface Props {
@@ -24,6 +26,7 @@ export function WritingFeedbackView({ feedback, previousScore, attemptNumber = 1
   const scoreColor = overallScore >= 80 ? colors.success.base : overallScore >= 60 ? colors.warning.base : colors.error.base;
   const scoreBg = overallScore >= 80 ? colors.success.tint : overallScore >= 60 ? colors.warning.tint : colors.error.tint;
 
+  const [reportOpen, setReportOpen] = useState(false);
   const canRetry = attemptNumber < maxAttempts;
   const improvementDelta = previousScore != null ? overallScore - Math.round(previousScore * 100) : null;
 
@@ -118,6 +121,20 @@ export function WritingFeedbackView({ feedback, previousScore, attemptNumber = 1
         <View style={{ backgroundColor: colors.surface.card, borderRadius: radii.xl, padding: spacing.xl, marginBottom: spacing.md }}>
           <Text style={{ fontSize: 16, fontWeight: '600', marginBottom: spacing.xs, color: colors.text.onPrimary }}>Feedback</Text>
           <Text style={{ fontSize: 15, color: colors.text.tertiary, lineHeight: 22 }}>{feedback.overallFeedback}</Text>
+
+          {/* Google Play generative-AI policy: users must be able to flag AI output. */}
+          <Pressable
+            onPress={() => setReportOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Report this feedback"
+            hitSlop={8}
+            style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm, minHeight: 44 }}
+          >
+            <Ionicons name="flag-outline" size={14} color={colors.text.quaternary} />
+            <Text style={{ fontSize: 12, color: colors.text.quaternary, marginLeft: spacing.xxs }}>
+              Report this feedback
+            </Text>
+          </Pressable>
         </View>
 
         {/* Corrected Version */}
@@ -189,6 +206,14 @@ export function WritingFeedbackView({ feedback, previousScore, attemptNumber = 1
           <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text.onPrimary }}>Continue</Text>
         </Pressable>
       </View>
+
+      <ReportContentSheet
+        visible={reportOpen}
+        onDismiss={() => setReportOpen(false)}
+        content={feedback.overallFeedback}
+        surface="writing"
+        context={{ overallScore }}
+      />
     </SafeAreaView>
     </GradientBackground>
   );

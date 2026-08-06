@@ -7,6 +7,7 @@ import { saveCorrectionAsCard } from '../../lib/supabase-queries';
 import { isClose } from '../../lib/fuzzyMatch';
 import type { VoiceGender } from '../../lib/voice-preference';
 import { colors, radii, spacing, typography } from '../../config/theme';
+import { ReportContentSheet } from '../ui/ReportContentSheet';
 import {
   normalizeCorrection,
   type ConversationMessage,
@@ -104,6 +105,8 @@ export function ChatBubble({ message, targetLanguage, userId, nativeLanguage, vo
   const [showTranslation, setShowTranslation] = useState(false);
   const [isLoadingTranslation, setIsLoadingTranslation] = useState(false);
   const [translationError, setTranslationError] = useState<string | null>(null);
+  // Reporting offensive AI output — required by Google Play's generative-AI policy.
+  const [reportOpen, setReportOpen] = useState(false);
   const translation = translationCache.get(message.id) ?? null;
 
   const handleTranslate = async () => {
@@ -255,6 +258,23 @@ export function ChatBubble({ message, targetLanguage, userId, nativeLanguage, vo
               </Text>
             </Pressable>
           )}
+
+          {/* Report — AI replies only. Google Play requires an in-app way to
+              flag offensive generative-AI output. */}
+          {!isUser && (
+            <Pressable
+              onPress={() => setReportOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Report this response"
+              className="flex-row items-center"
+              hitSlop={8}
+            >
+              <Ionicons name="flag-outline" size={14} color={colors.text.tertiary} />
+              <Text className="text-xs ml-1" style={{ color: colors.text.tertiary }}>
+                Report
+              </Text>
+            </Pressable>
+          )}
         </View>
 
         {!isUser && translationError && (
@@ -290,6 +310,16 @@ export function ChatBubble({ message, targetLanguage, userId, nativeLanguage, vo
           nativeLanguage={nativeLanguage ?? 'en'}
           userId={userId}
           voiceGender={voiceGender}
+        />
+      )}
+
+      {!isUser && (
+        <ReportContentSheet
+          visible={reportOpen}
+          onDismiss={() => setReportOpen(false)}
+          content={message.content}
+          surface="chat"
+          context={{ messageId: message.id, targetLanguage: targetLanguage ?? null }}
         />
       )}
     </View>

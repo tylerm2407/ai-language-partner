@@ -31,6 +31,22 @@ export function isValidProficiencyLevel(level: string): boolean {
   return VALID_PROFICIENCY_LEVELS.includes(level as typeof VALID_PROFICIENCY_LEVELS[number]);
 }
 
+/**
+ * Exercise types accepted from clients. Mirrors `ExerciseType` in types/index.ts.
+ * Anything used as a cache key must be validated against this — an unvalidated
+ * value lets a caller force unlimited cache misses and unbounded table growth.
+ */
+export const VALID_EXERCISE_TYPES = [
+  'multiple_choice', 'listening_choice', 'listening_type', 'translate_to_target',
+  'translate_to_native', 'speaking', 'fill_blank', 'free_production',
+  'cloze_deletion', 'sentence_construction', 'dictation', 'error_correction',
+  'collocation_match', 'word_form', 'sentence_transformation', 'mini_dialogue',
+] as const;
+
+export function isValidExerciseType(value: string): boolean {
+  return VALID_EXERCISE_TYPES.includes(value as typeof VALID_EXERCISE_TYPES[number]);
+}
+
 /** Limit string length to prevent prompt injection payloads. */
 export function sanitizeText(text: string, maxLength: number): string {
   return text.slice(0, maxLength).trim();
