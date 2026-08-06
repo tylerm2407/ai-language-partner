@@ -9,6 +9,7 @@ import { colors } from '../../config/theme';
 import { gradeAnswer } from '../../lib/grading';
 import type { GradeResult } from '../../lib/grading';
 import { useAudioPlayer } from '../../hooks/useAudioPlayer';
+import { getTextToSpeech } from '../../lib/ai';
 import type { Exercise } from '../../types';
 
 interface ListeningExerciseProps {
@@ -34,12 +35,48 @@ export function ListeningExercise({
   const [submitted, setSubmitted] = useState(false);
   const [result, setResult] = useState<GradeResult | null>(null);
   const { playing, loading, error: audioError, play } = useAudioPlayer();
+  // Synthesised audio for exercises with no pre-recorded clip. Held for the
+  // life of the exercise so replays don't re-hit the network.
+  const [synthesizedUri, setSynthesizedUri] = useState<string | null>(null);
+  const [synthesizing, setSynthesizing] = useState(false);
+  const [synthesisError, setSynthesisError] = useState<string | null>(null);
 
   const isChoiceType = exercise.type === 'listening_choice' && exercise.options;
 
-  const handlePlayAudio = () => {
+  // `prompt` carries the text to be spoken — the card header shows a fixed
+  // "Listen and answer" label, so the field is never rendered. For
+  // listening_type that is the sentence the learner transcribes; for
+  // listening_choice it is the sentence they pick a translation of.
+  const canSynthesize = !exercise.promptAudioUrl && !!language && !!exercise.prompt;
+
+  const handlePlayAudio = async () => {
     if (exercise.promptAudioUrl) {
       play(exercise.promptAudioUrl);
+      return;
+    }
+    if (synthesizedUri) {
+      play(synthesizedUri);
+      return;
+    }
+    if (!canSynthesize) return;
+
+    // No content pack ships pre-recorded audio, so listening exercises are
+    // voiced on demand. The TTS function is content-addressed server-side, so
+    // the first learner to hear a given sentence pays for it and every
+    // subsequent play — for them and for everyone else — is a cache hit.
+    setSynthesizing(true);
+    setSynthesisError(null);
+    try {
+      const base64 = await getTextToSpeech(exercise.prompt, language!, userId);
+      const uri = `data:audio/mpeg;base64,${base64}`;
+      setSynthesizedUri(uri);
+      await play(uri);
+    } catch (err) {
+      setSynthesisError(
+        err instanceof Error ? err.message : 'Could not load the audio for this exercise',
+      );
+    } finally {
+      setSynthesizing(false);
     }
   };
 
@@ -122,21 +159,38 @@ export function ListeningExercise({
       <Pressable
         className="bg-primary w-20 h-20 rounded-full items-center justify-center self-center mb-6"
         onPress={handlePlayAudio}
-        disabled={playing || loading || !exercise.promptAudioUrl}
+        disabled={playing || loading || synthesizing || (!exercise.promptAudioUrl && !canSynthesize)}
         accessibilityRole="button"
-        accessibilityLabel={playing ? 'Audio playing' : 'Play audio'}
+        accessibilityLabel={
+          synthesizing ? 'Loading audio' : playing ? 'Audio playing' : 'Play audio'
+        }
       >
         <Ionicons
-          name={playing ? 'volume-high' : 'play'}
+          name={synthesizing ? 'hourglass' : playing ? 'volume-high' : 'play'}
           size={36}
           color="white"
         />
       </Pressable>
 
-      {!exercise.promptAudioUrl && (
+      {!exercise.promptAudioUrl && !canSynthesize && (
         <Text className="text-text-tertiary text-sm text-center mb-4">
           No audio available for this exercise
         </Text>
+      )}
+
+      {/* Synthesis failure — the audio could not be produced at all, which is
+          distinct from a clip that exists but failed to play. */}
+      {synthesisError && (
+        <View
+          className="flex-row items-center justify-center mb-4"
+          accessibilityRole="alert"
+          accessibilityLabel={`Audio unavailable. ${synthesisError}. Tap play to retry.`}
+        >
+          <Ionicons name="alert-circle" size={16} color={colors.error.base} />
+          <Text className="text-error text-sm ml-1 flex-1">
+            Couldn&apos;t load the audio — tap play to retry
+          </Text>
+        </View>
       )}
 
       {/* Playback failure — distinct from "no audio available" */}

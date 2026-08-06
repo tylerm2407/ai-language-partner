@@ -88,6 +88,19 @@ describe('save / load round-trip', () => {
     expect(second?.level).toBe('advanced');
   });
 
+  it('round-trips an explicit false adultMode without collapsing it to null', async () => {
+    // Guards the truthiness trap in onboarding's applyPending: a learner who
+    // deliberately picks Gamified must not have that read back as "unanswered"
+    // and silently re-defaulted.
+    await savePendingOnboarding(makeDraft({ adultMode: false }));
+    expect((await loadPendingOnboarding())?.adultMode).toBe(false);
+  });
+
+  it('round-trips an explicit true adultMode', async () => {
+    await savePendingOnboarding(makeDraft({ adultMode: true }));
+    expect((await loadPendingOnboarding())?.adultMode).toBe(true);
+  });
+
   it('round-trips the placement band breakdown', async () => {
     const draft = makeDraft({
       placement: {
@@ -104,6 +117,36 @@ describe('save / load round-trip', () => {
     const loaded = await loadPendingOnboarding();
     expect(loaded?.placement?.bands).toHaveLength(2);
     expect(loaded?.placement?.suggestedLevel).toBe('intermediate');
+  });
+});
+
+describe('forward compatibility', () => {
+  it('loads a draft written before the adultMode field existed', async () => {
+    // The schema version was deliberately NOT bumped when adultMode was added,
+    // so drafts from shipped builds must still parse rather than being wiped
+    // mid-signup. Written as a literal because makeDraft() now always includes
+    // the field.
+    await AsyncStorage.setItem(
+      PENDING_ONBOARDING_KEY,
+      JSON.stringify({
+        version: PENDING_ONBOARDING_SCHEMA_VERSION,
+        startedAt: Date.now() - 1_000,
+        targetLanguage: 'es',
+        motivation: 'travel',
+        idealL2Self: null,
+        level: 'elementary',
+        placement: null,
+        displayName: null,
+        avatarConfig: null,
+        dailyGoalMinutes: 10,
+        completedAt: null,
+      }),
+    );
+
+    const loaded = await loadPendingOnboarding();
+    expect(loaded).not.toBeNull();
+    expect(loaded?.targetLanguage).toBe('es');
+    expect(loaded?.adultMode).toBeUndefined();
   });
 });
 
