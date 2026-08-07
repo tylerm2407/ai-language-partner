@@ -15,7 +15,7 @@ const RADIUS = (SIZE - STROKE_WIDTH) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 const BG_COLOR = 'rgba(100, 116, 139, 0.2)';
-const PROGRESS_COLOR = '#38BDF8';
+const PROGRESS_COLOR = '#86B4CE';
 
 function DailyGoalRingInner({ progress }: DailyGoalRingProps) {
   const clampedProgress = Math.min(1, Math.max(0, progress));

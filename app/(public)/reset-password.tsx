@@ -6,6 +6,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../../components/ui/Button';
 import { GradientBackground } from '../../components/ui/GradientBackground';
 import { colors } from '../../config/theme';
+import { authErrorCopy } from '../../lib/auth-errors';
 
 export default function ResetPasswordScreen() {
   const { session, updatePassword } = useAuth();
@@ -16,11 +17,11 @@ export default function ResetPasswordScreen() {
 
   const handleSubmit = async () => {
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
+      Alert.alert('Password too short', 'Use at least 6 characters.');
       return;
     }
     if (password !== confirm) {
-      Alert.alert('Error', 'Passwords do not match');
+      Alert.alert("Passwords don't match", 'Re-enter the same password in both fields.');
       return;
     }
 
@@ -31,8 +32,8 @@ export default function ResetPasswordScreen() {
         { text: 'Continue', onPress: () => router.replace('/(app)') },
       ]);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Something went wrong';
-      Alert.alert('Error', message);
+      const { title, message } = authErrorCopy(err);
+      Alert.alert(title, message);
     } finally {
       setLoading(false);
     }

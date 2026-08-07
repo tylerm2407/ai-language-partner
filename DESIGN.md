@@ -8,8 +8,8 @@
 
 ## Core Principles
 
-1. **Canonical theme is DARK.** Surface.base `#0C0F14` is the default screen background. Reading/lesson/review surfaces step up to `surface.raised` (`#12161D`) for focus.
-2. **Indigo is the primary brand.** `#6366F1` anchors CTAs and focused states. `#818CF8` is the brighter variant reserved for accents that must stay legible on dark.
+1. **Canonical theme is STUDIO GRAPHITE.** Surface.base `#0F0E0C` is the default screen background — warm graphite, not neutral near-black. Reading/lesson/review surfaces step up to `surface.raised` (`#151412`) for focus.
+2. **Brass is the primary brand.** `#C8A24A` anchors CTAs and focused states; `#E0BE6B` is the lifted step for small text and icons. Brass is a **light** accent, so filled CTAs carry a **near-black** label (`text.onPrimary` `#14120E`) — white on brass is 2.4:1 and fails outright.
 3. **Motion is earned.** No global animation in chrome. Animation appears in (a) state transitions, (b) micro-feedback (≤200ms), (c) celebration moments. Everything else is static.
 4. **Every animation gates `useMotion().shouldReduce`.** Honor `AccessibilityInfo.isReduceMotionEnabled` without exception. App Store accessibility criterion.
 5. **Body text is WCAG AAA.** `text.primary` (`#F1F5F9`) is 14.6:1 against `surface.base`. Never pure white on pure black (halation).
@@ -33,84 +33,106 @@ import { colors, spacing, radii, typography, motion, elevation } from '../../con
 
 ## Color Palette
 
-### Surfaces (dark-canonical — "Dark Glow")
+### Surfaces (dark-canonical — "Studio Graphite")
 
 | Token | Hex | Usage |
 |---|---|---|
-| `surface.base` | `#08090F` | Primary app background (home, chat, practice, profile) |
-| `surface.raised` | `#0E1119` | Reading / lesson / review screens — focus surface |
-| `surface.sunken` | `#060710` | Behind-content wells, inset tracks |
-| `surface.card` | `#151921` | Card fills — **opaque** |
-| `surface.cardAlt` | `#1C212B` | Nested cards, input fills |
-| `surface.overlay` | `rgba(6,8,12,0.82)` | Modal/sheet backdrop, celebration scrim |
-| `surface.sheet` | `#1A1F29` | Bottom-sheet fill |
+| `surface.base` | `#0F0E0C` | Primary app background (home, chat, practice, profile) |
+| `surface.raised` | `#151412` | Reading / lesson / review screens — focus surface |
+| `surface.sunken` | `#0A0908` | Behind-content wells, inset tracks |
+| `surface.card` | `#1B1A17` | Card fills — **opaque** |
+| `surface.cardAlt` | `#24221E` | Nested cards, input fills |
+| `surface.overlay` | `rgba(10,9,8,0.84)` | Modal/sheet backdrop, celebration scrim |
+| `surface.sheet` | `#1B1A17` | Bottom-sheet fill |
 
-`base` / `raised` / `sunken` are deepened toward black so the ambient glow layer
-reads as depth instead of washing out a flat fill. Card steps are unchanged —
-content contrast is untouched.
+The graphite carries a deliberate **warm bias** — base is `#0F0E0C`, not a
+neutral `#0E0E10`. A neutral near-black under a gold accent reads clinical; two
+points of red/green bias is what keeps the theme professional without being
+cold, and it costs nothing in contrast (base luminance is unchanged to four
+decimal places).
 
-### Glow (ambient background)
+Surfaces are no longer deepened toward a void. The old palette had to be
+near-black so three saturated blobs had something to glow against; depth now
+comes from the surface steps and hairline borders, which is why `card` sits a
+full step lighter than it used to.
+
+### Ambient wash (background)
 
 Every screen background is `components/ui/GradientBackground.tsx`, which renders
-three low-opacity indigo/violet radial blobs behind screen content. Tokens live
-in `colors.glow.*`.
+**one** top-anchored warm radial wash behind screen content. Tokens live in
+`colors.glow.*`.
 
-| Blob | Size | Anchor | Color | Alpha | Loop |
-|---|---|---|---|---|---|
-| 1 | 340 | top `-80`, left `-100` | `glow.indigo` `#6366F1` | 0.35 | 9s |
-| 2 | 380 | bottom `-120`, right `-120` | `glow.violet` `#7C3AED` | 0.30 | 12s |
-| 3 | 260 | top 38%, left 55% | `glow.lilacIndigo` `#818CF8` | 0.20 | 15s |
+| Property | Value |
+|---|---|
+| Tint | `glow.brass` `#C8A24A` |
+| Peak alpha | `0.10` |
+| Height | 320, anchored 45% above the top edge |
+| Horizontal overscan | 1.6× window width, so the falloff sits off-screen |
+| Motion | **none** |
 
 Rules:
-- **Never stack two glow layers.** `GradientBackground` (or a single `GlowLayer`)
-  per screen — two layers compound alpha and the composition breaks.
-- Drift gates on `useMotion().shouldReduce`. Focus surfaces pass
-  `variant="raised"`, which keeps the glow but spends no motion.
-- Blobs are radial gradients with a soft stop ramp, **not** blurred views. A
+- **Never stack two wash layers.** `GradientBackground` (or a single
+  `GlowLayer`) per screen — two layers compound alpha.
+- **The wash does not animate.** Chrome motion is retired (§Motion rule 2), so
+  nothing here gates on Reduce Motion — it is static for every user. `GlowLayer`
+  and `GlowBackground` still accept a `drift` prop; it is ignored, and kept only
+  so the screens that pass `drift={false}` keep compiling.
+- It is a radial gradient with a soft stop ramp, **not** a blurred view. A
   full-screen `BlurView` under every screen costs Android scroll frames for no
   visual gain on an already-soft shape.
 - The layer is `pointerEvents="none"` and carries **no** `zIndex`. React Native
   paints siblings in declaration order and treats a sibling without `zIndex` as
-  0, so a positive `zIndex` here would put the blobs *over* the content. Keep it
+  0, so a positive `zIndex` here would put the wash *over* the content. Keep it
   as the first child instead. When dropping a bare `<GlowLayer />` into a screen
   that owns its own root, it must come first.
 
 ### Borders
 
+Warm-white alpha, so a hairline on a warm card does not read as a cool seam.
+
 | Token | Value | Usage |
 |---|---|---|
-| `border.subtle` | `rgba(255,255,255,0.06)` | Card outlines |
-| `border.default` | `rgba(255,255,255,0.12)` | Dividers, button outlines |
-| `border.strong` | `rgba(255,255,255,0.24)` | Focus borders |
-| `border.focus` | `#6366F1` | Input focus |
+| `border.subtle` | `rgba(245,240,230,0.07)` | Card outlines |
+| `border.default` | `rgba(245,240,230,0.13)` | Dividers, button outlines |
+| `border.strong` | `rgba(245,240,230,0.24)` | Focus borders |
+| `border.focus` | `#C8A24A` | Input focus |
 
 ### Text (AAA on `surface.base`)
 
+Warm off-whites, not cool slate — `#F1F5F9` over warm graphite reads blue.
+
 | Token | Hex | Ratio | Usage |
 |---|---|---|---|
-| `text.primary` | `#F1F5F9` | 15.6:1 (AAA) | Headings, body |
-| `text.secondary` | `#CBD5E1` | 10.9:1 (AAA) | Descriptions, metadata |
-| `text.tertiary` | `#94A3B8` | 6.2:1 (AA) | Placeholders, helper text |
-| `text.quaternary` | `#64748B` | 3.9:1 (UI large only) | Muted timestamps |
-| `text.onPrimary` | `#FFFFFF` | 6.4:1 on `action.primaryFill` | Text on filled CTAs |
-| `text.onSuccess` | `#052E1A` | 7.1:1 on `success.base` | Text on bright success fills |
-| `text.onWarning` | `#0C0F14` | 9.0:1 on `warning.base` | Text on bright warning fills |
-| `text.disabled` | `rgba(241,245,249,0.38)` | — | Disabled button labels |
+| `text.primary` | `#F2EFE9` | 16.9:1 (AAA) | Headings, body |
+| `text.secondary` | `#D6D1C7` | 12.7:1 (AAA) | Descriptions, metadata |
+| `text.tertiary` | `#9C968A` | 6.6:1 (AA) | Placeholders, helper text |
+| `text.quaternary` | `#7A756B` | 4.2:1 (UI large only) | Muted timestamps |
+| `text.onPrimary` | `#14120E` | 7.9:1 on `action.primaryFill` | Text on filled CTAs — **dark, not white** |
+| `text.onSuccess` | `#0A1710` | 5.9:1 on `success.base` | Text on success fills |
+| `text.onWarning` | `#14120E` | 7.3:1 on `warning.base` | Text on warning fills |
+| `text.disabled` | `rgba(242,239,233,0.38)` | — | Disabled button labels |
 
-### Primary (Indigo) — fills vs accents
+### Primary (Brass) — fills vs accents
 
-**The distinction is load-bearing.** White on `indigo.500` is 4.47:1, which is
-*under* AA — and that was every CTA in the app. Fills use `indigo.600`; the
-brighter `indigo.400` is for text and icons, where it clears AA on dark.
+**The polarity is load-bearing, and it is inverted from the old indigo set.**
+Indigo was a dark fill needing white text. Brass is a *light* fill, so every
+solid CTA carries a **near-black** label. White on `#C8A24A` is 2.4:1 — worse
+than the 4.47:1 problem indigo had. Any new brass background must be checked for
+this; see §What We Retired for the sites that were fixed during the migration.
 
 | Token | Hex | Usage |
 |---|---|---|
-| `action.primaryFill` | `#4F46E5` (indigo.600) | **All solid CTA fills.** White on it is 6.4:1 |
-| `action.primarySlab` | `#3730A3` (indigo.800) | Tactile button bottom slab — drops one step with the fill |
-| `action.accent` | `#818CF8` (indigo.400) | Text links, small icons, spinners, progress glow (6.43:1) |
-| `action.primaryTint` | `rgba(99,102,241,0.15)` | Selected-row fills, icon-circle backgrounds |
-| `indigo.500` | `#6366F1` | **Borders and gradient stops only** — never a fill behind white text |
-| `indigo.200` | `#C7D2FE` | Disabled CTA fill |
+| `action.primaryFill` | `#C8A24A` (brass.500) | **All solid CTA fills.** `text.onPrimary` on it is 7.9:1; on `surface.base` it is 8.0:1 |
+| `action.accent` | `#E0BE6B` (brass.300) | Text links, small icons, spinners, progress (10.8:1) |
+| `action.primaryTint` | `rgba(200,162,74,0.14)` | Selected-row fills, icon-circle backgrounds |
+| `brass.400` | `#D0B063` | Mid step — gradient stops, pressed states (9.3:1) |
+| `brass.700` | `#8E6F2F` | Deep step — gradient stops, rules |
+| `brass.800` | `#6D5424` | Disabled CTA fill — **needs a light label**, not `text.onPrimary` |
+| `action.primarySlab` | `#8E6F2F` | **Deprecated.** Slab CTAs are retired; retained only so pre-Studio call sites type-check |
+
+`colors.indigo.*` still exists as a **deprecated alias** onto the brass steps, so
+pre-Studio call sites (`colors.indigo[400]`) compile and pick up the new palette
+instead of silently staying indigo. Migrate to `colors.brass.*`.
 
 Semantic chip labels follow the same rule: text on a dark tint uses that
 semantic's `.light` step (`success.light`, `warning.light`, `error.light`,
@@ -120,22 +142,39 @@ semantic's `.light` step (`success.light`, `warning.light`, `error.light`,
 
 | Token | Base | Tint | Border | Usage |
 |---|---|---|---|---|
-| `success` | `#22C55E` | `rgba(34,197,94,0.15)` | `rgba(34,197,94,0.35)` | Correct, completed |
-| `error` | `#EF4444` | `rgba(239,68,68,0.15)` | `rgba(239,68,68,0.40)` | Incorrect, destructive |
-| `warning` | `#F59E0B` | `rgba(245,158,11,0.15)` | `rgba(245,158,11,0.35)` | Review needed, warnings |
-| `streak` | `#F59E0B` (base) / `#F97316` (fire) / `#FDBA74` (light) | `rgba(249,115,22,0.15)` | — | Streak counters + fire animation |
+| `success` | `#4E9F6B` | `rgba(78,159,107,0.15)` | `rgba(78,159,107,0.35)` | Correct, completed |
+| `error` | `#C0555F` | `rgba(192,85,95,0.15)` | `rgba(192,85,95,0.40)` | Incorrect, destructive |
+| `warning` | `#D9913C` | `rgba(217,145,60,0.15)` | `rgba(217,145,60,0.35)` | Review needed, warnings |
+| `streak` | `#E2673C` (base) / `#F0763D` (fire) / `#F2A886` (light) | `rgba(226,103,60,0.15)` | — | Streak counters + fire animation |
+| `premium` | `#E0BE6B` | `rgba(224,190,107,0.16)` | — | Super tier, pro moments |
 
-`streak.tint` is deliberately **orange**, not amber — a streak chip and a warning
-chip sit side by side on Home and were previously the same fill.
-| `premium` | `#A855F7` | `rgba(168,85,247,0.18)` | — | Super tier, pro moments |
+Every base is **desaturated** relative to the old Tailwind-bright set. A `#22C55E`
+green and an `#EF4444` red next to a gold accent is a traffic light.
+
+Small text never uses a semantic *base* — it uses the `.light` step
+(`success.light` 9.7:1, `error.light` 8.2:1, `streak.light`), because the bases
+land at or under AA at 13px. `error.base` in particular is 4.3:1 and is for fills
+and icons only; the **`danger` CTA fill is `error.dark`**, since a 17px bold
+label is under the 14pt "large text" threshold and needs the full 4.5:1.
+
+Three warm tokens now share a canvas — brass (43°), warning (33°), streak (20°).
+`streak` is deliberately ember and well clear of both, but the icon+text rule in
+§Accessibility Mandatory is **load-bearing** here, not decorative.
+
+`premium` is the brand's own accent at its brightest, not a separate hue: a
+purple next to brass reads as a second brand, and the most valuable tier should
+look like the most concentrated version of the brand color.
 
 ### League Tiers
 
-Bronze `#CD7F32` · Silver `#C0C0C0` · Gold `#FFD700` · Platinum `#A78BFA` · Diamond `#38BDF8`
+Retuned as metals that live in the graphite world — the old `#FFD700` gold sat
+brighter than every CTA on screen.
+
+Bronze `#9C6B3F` · Silver `#A8AAAE` · Gold `#D2A840` · Platinum `#C3C9D2` · Diamond `#86B4CE`
 
 ### Hearts
 
-Filled: `#EF4444` · Empty: `#64748B`
+Filled: `#C0555F` · Empty: `#55524B`
 
 ### Correction-banner error-type chips
 
@@ -291,17 +330,26 @@ All haptics fire regardless of Reduce Motion (they are not motion) but respect t
 ### Surface (replaces GradientBackground)
 
 ```tsx
-<Surface variant="base">      // dark #0C0F14
-<Surface variant="raised">    // dark #12161D — reading/focus
-<Surface variant="card">      // #151921
-<Surface variant="cardAlt">   // #1C212B
+<Surface variant="base">      // graphite #0F0E0C
+<Surface variant="raised">    // graphite #151412 — reading/focus
+<Surface variant="card">      // #1B1A17
+<Surface variant="cardAlt">   // #24221E
 ```
 
 > `<GradientBackground>` is a backward-compatible alias — new code should use `<Surface>` directly.
 
 ### TactileButton (canonical CTA)
 
-Duolingo-style slab button with a darker bottom edge that collapses on press, paired with a light haptic.
+**Flat.** A single filled pill with an optional hairline border; on press it
+scales to 0.96 and drops to 90% opacity, paired with a light haptic.
+
+It used to be a Duolingo-style slab — the fill sitting on a darker bottom edge
+that collapsed on press. That slab was the single strongest visual tell tying the
+app to Duolingo and is retired. The component name and its whole prop surface are
+unchanged, so no call site moved.
+
+`primary` is a brass fill with a **near-black** label. `danger` is `error.dark`
+with a light label (see §Semantic for why not `error.base`).
 
 ```tsx
 <TactileButton label="Continue" />                    // primary, full width
@@ -349,13 +397,32 @@ Full-screen reward moment — mascot + confetti + headline + optional CTA.
 
 Moods: `correct` / `lessonComplete` / `streakMilestone` / `levelUp`. Motion auto-gates Reduce Motion.
 
-### Mascot
+### Mascot — the dragon, at moments only
 
 ```tsx
 <Mascot state="happy" size="md" />
 ```
 
 States: `idle` / `happy` / `thinking` / `cheering` / `sad` / `disappointed`. Sizes: `xs` (32) / `sm` (48) / `md` (80) / `lg` (128). Static SVG today; Rive upgrade deferred.
+
+**Placement is a hard rule, not a preference.**
+
+| Allowed | Forbidden |
+|---|---|
+| Celebration overlays (`CelebrationOverlay`, level-up, streak milestone) | Home header |
+| Empty states | Chat header |
+| Onboarding / pre-permission sheets | Tab bar |
+| Streak-at-risk and out-of-hearts moments | Any persistent chrome |
+
+The Duolingo tell is a mascot living in **permanent chrome**, not a mascot
+existing. A character in the header is the same silhouette whatever the
+character is, and it also spends the screen's most animated element on a surface
+where nothing is being celebrated. Keeping the dragon to moments makes each
+appearance an event, which is where its animation budget is worth spending.
+
+Chrome placements were removed from `app/(app)/index.tsx` and
+`app/(app)/chat/index.tsx` in the Studio Graphite migration. Do not reintroduce
+them.
 
 ### ScreenHeader
 
@@ -397,10 +464,18 @@ Every PR must pass:
 | `GlassSurface` 6-layer chromatic | Opaque `surface.card` + hairline border | Same API; visually flat |
 | `BlurView` glass (cards, tab bar, stat pills) | Opaque `surface.card` + 1px border | See "There is no glass" |
 | Light-theme reading surfaces | `surface.raised` + dark tokens | The book reader and comprehension flow were a white island in a dark app |
-| Sky `#38BDF8` chrome accent (teacher side) | `action.accent` `#818CF8` | Sky is retained only as a *product* color: `PathNode` active, `LevelBadge` intermediate, progress gradient stops |
+| Sky `#38BDF8` chrome accent (teacher side) | `action.accent` `#E0BE6B` | Sky survives only as a *product* color, retuned to `#86B4CE`: `PathNode` active, `LevelBadge` intermediate, diamond league, one unit-tile gradient |
 | `GradientButton` | `<TactileButton variant="primary">` | Slab + haptic instead of gradient |
 | `AnimatedGalaxy` | Static starfield SVG (welcome/celebration only) | Decorative motion retired from chrome |
 | Ad-hoc `<Text fontSize={…}>` | `<Heading>`, `<Body>`, `<Caption>`, `<Hero>` | Scale enforced centrally |
+| **Slab CTA** (`TactileButton` bottom edge) | Flat pill + 0.96 press scale | The strongest single Duolingo tell. `action.primarySlab` and `elevation.tactile` are deprecated shims |
+| **Indigo brand** (`#6366F1` / `#4F46E5` / `#818CF8`) | Brass (`#C8A24A` / `#E0BE6B`) | `colors.indigo.*` is a deprecated alias onto the brass steps |
+| **Three drifting glow blobs** | One static top wash | Removed the theme's decorative signature and all chrome motion; `drift` prop is now ignored |
+| **Mascot in chrome** (Home + chat headers) | Moments only — see §Mascot | A permanent mascot is the Duolingo silhouette regardless of the character |
+| **Chip scoreboard** (streak / XP / hearts pills) | Mono meta row — `7 DAY · 1,240 XP` | Three saturated pills under the greeting *was* the Duolingo header |
+| Rainbow unit-tile gradients | Six tonal one-hue pairs | Two-hue sweeps read as a consumer game |
+| Saturated semantics (`#22C55E` / `#EF4444` / `#F59E0B`) | Desaturated jade / clay / amber | A traffic light next to a gold accent |
+| White labels on primary fills | `text.onPrimary` `#14120E` | Polarity inverted — brass is a *light* fill. Fixed at 8 call sites (reading CTAs, writing submit, record button, role switcher, word tooltip) |
 
 ---
 
@@ -423,16 +498,20 @@ When editing any existing screen:
 
 | Token | Value | Usage |
 |---|---|---|
-| `magazine.nebulaTop` | `#0a0520` | Aurora base top |
-| `magazine.nebulaMid` | `#1a0a3e` | Aurora base mid |
-| `magazine.accentBlue` | `#4F8EF7` | Active tab gradient start, links |
-| `magazine.accentViolet` | `#7C3AED` | Active tab gradient end |
-| `magazine.accentLilac` | `#A855F7` | Kickers, premium accents |
-| `magazine.heartsCoral` | `#FF6B6B` | Hearts pill |
-| `magazine.xpGold` | `#FFB547` | XP pill |
-| `magazine.streakFlame` | `#FF8A3D` | Streak pill |
-| `magazine.glassBg` | `#151921` | Editorial card fill — **opaque**, same as `surface.card` |
-| `magazine.glassBorder` | `rgba(255,255,255,0.12)` | Editorial card border |
+| `magazine.nebulaTop` | `#0F0E0C` | Base top |
+| `magazine.nebulaMid` | `#1B1A17` | Base mid |
+| `magazine.accentBlue` | `#D0B063` | Active tab gradient start, links |
+| `magazine.accentViolet` | `#B08C3B` | Active tab gradient end |
+| `magazine.accentLilac` | `#E0BE6B` | Kickers, premium accents |
+| `magazine.heartsCoral` | `#C0555F` | Hearts pill |
+| `magazine.xpGold` | `#D0B063` | XP pill |
+| `magazine.streakFlame` | `#E2673C` | Streak pill |
+| `magazine.glassBg` | `#1B1A17` | Editorial card fill — **opaque**, same as `surface.card` |
+| `magazine.glassBorder` | `rgba(245,240,230,0.13)` | Editorial card border |
+
+The `accentBlue` / `accentViolet` / `accentLilac` names are historical — they are
+brass steps now. Every gradient stop pair in `config/gradients.ts` runs *within*
+one hue rather than across two.
 
 ### Font Roles
 
@@ -466,8 +545,10 @@ scroll frames and forced an iOS/Android visual fork that never matched.
 ### Home Screen Layout (top to bottom)
 
 1. Header row — `<DateLabel />` (mono, uppercase, ls 3) + target-language
-   greeting `<Heading level={2}>` on the left, `<Mascot size="xs" />` on the right
-2. `<StatsStrip />` — streak + XP `<Chip>`s and `<HeartsDisplay size={16} />`
+   greeting `<Heading level={2}>`. **No mascot** — see §Mascot
+2. `<StatsStrip />` — mono meta row (`7 DAY · 1,240 XP`) + `<HeartsDisplay size={14} />`.
+   Hearts keep their glyph row because they are a spendable resource and a count
+   of shapes reads faster than a numeral; streak and XP do not
 3. `<NewsHeroCard />` — editorial news with a Fraunces headline
 4. `<SessionBand />` — play button + today's session
 5. `<LessonTileGrid />` — 2-column continue learning tiles
@@ -621,4 +702,4 @@ Fluenci surfaces: paywall — anchor on annual total or on a tutor-cost comparis
 
 ---
 
-**Last updated:** 2026-07-27 (UX Psychology Principles documented — not yet implemented).
+**Last updated:** 2026-08-06 (Studio Graphite + Ink & Brass: palette, flat CTA, single ambient wash, mascot restricted to moments).

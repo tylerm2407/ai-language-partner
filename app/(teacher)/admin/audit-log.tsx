@@ -28,11 +28,11 @@ function formatTimestamp(dateStr: string): string {
 }
 
 const ACTION_COLORS: Record<string, string> = {
-  create: '#22C55E',
-  update: '#818CF8',
-  delete: '#EF4444',
-  grant: '#A855F7',
-  read: '#94A3B8',
+  create: '#4E9F6B',
+  update: '#E0BE6B',
+  delete: '#C0555F',
+  grant: '#E0BE6B',
+  read: '#9C968A',
 };
 
 export default function AuditLogScreen() {
@@ -76,7 +76,7 @@ export default function AuditLogScreen() {
             accessibilityLabel="Go back"
             className="flex-row items-center mb-4"
           >
-            <Ionicons name="chevron-back" size={24} color="#818CF8" />
+            <Ionicons name="chevron-back" size={24} color="#E0BE6B" />
             <Text className="text-base text-primary ml-1" style={{ fontFamily: 'Nunito_600SemiBold' }}>Back</Text>
           </Pressable>
 
@@ -105,7 +105,7 @@ export default function AuditLogScreen() {
               >
                 <Text
                   style={{
-                    color: filter === opt ? '#818CF8' : '#94A3B8',
+                    color: filter === opt ? '#E0BE6B' : '#9C968A',
                     fontSize: 13,
                     fontFamily: 'Nunito_600SemiBold',
                   }}
@@ -117,7 +117,7 @@ export default function AuditLogScreen() {
           </View>
 
           {loading ? (
-            <ActivityIndicator color="#818CF8" size="large" style={{ marginTop: 32 }} />
+            <ActivityIndicator color="#E0BE6B" size="large" style={{ marginTop: 32 }} />
           ) : (
             <FlatList
               data={entries}
@@ -125,7 +125,7 @@ export default function AuditLogScreen() {
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingBottom: 100 }}
               refreshControl={
-                <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#818CF8" />
+                <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#E0BE6B" />
               }
               renderItem={({ item }) => (
                 <GlassSurface style={{ marginBottom: 8 }} innerStyle={{ padding: 12 }}>
@@ -136,10 +136,10 @@ export default function AuditLogScreen() {
                           paddingHorizontal: 6,
                           paddingVertical: 2,
                           borderRadius: 4,
-                          backgroundColor: `${ACTION_COLORS[item.action] ?? '#94A3B8'}20`,
+                          backgroundColor: `${ACTION_COLORS[item.action] ?? '#9C968A'}20`,
                         }}
                       >
-                        <Text style={{ color: ACTION_COLORS[item.action] ?? '#94A3B8', fontSize: 11, fontFamily: 'Nunito_600SemiBold' }}>
+                        <Text style={{ color: ACTION_COLORS[item.action] ?? '#9C968A', fontSize: 11, fontFamily: 'Nunito_600SemiBold' }}>
                           {item.action.toUpperCase()}
                         </Text>
                       </View>
@@ -163,7 +163,7 @@ export default function AuditLogScreen() {
               )}
               ListEmptyComponent={
                 <View className="items-center mt-8">
-                  <Ionicons name="document-text-outline" size={48} color="#64748B" />
+                  <Ionicons name="document-text-outline" size={48} color="#7A756B" />
                   <Text className="text-base text-text-secondary mt-3" style={{ fontFamily: 'Nunito_500Medium' }}>
                     No audit entries found
                   </Text>

@@ -48,11 +48,11 @@ export function StreakFireAnimation({ streak, visible }: StreakFireAnimationProp
           width: flameSize + 20,
           height: flameSize + 20,
           borderRadius: (flameSize + 20) / 2,
-          backgroundColor: '#F59E0B',
+          backgroundColor: '#D9913C',
           opacity: glowOpacity,
         }}
       />
-      <Ionicons name="flame" size={flameSize} color="#F59E0B" />
+      <Ionicons name="flame" size={flameSize} color="#D9913C" />
     </Animated.View>
   );
 }

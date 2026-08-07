@@ -27,13 +27,17 @@ interface LessonTileGridProps {
 // with fontWeight, which makes Android synthesize a second bolding pass.
 const serifFont = typography.family.serif;
 
+// Unit tiles cycle this palette so adjacent units stay distinguishable. Under
+// Studio Graphite the pairs are muted and tonal — each is one hue stepped from
+// light to dark, not a two-hue sweep. The old set was six saturated rainbow
+// gradients, which is the single loudest thing a Home screen can carry.
 const GRADIENT_PALETTE: [string, string][] = [
-  ['#4F8EF7', '#7C3AED'],
-  ['#A855F7', '#EC4899'],
-  ['#22C55E', '#38BDF8'],
-  ['#FFB547', '#FF6B6B'],
-  ['#38BDF8', '#6366F1'],
-  ['#F472B6', '#A855F7'],
+  ['#D0B063', '#8E6F2F'], // brass
+  ['#E2673C', '#9E434C'], // ember → clay
+  ['#4E9F6B', '#2F6B47'], // jade
+  ['#C8A24A', '#B4762D'], // brass → amber
+  ['#86B4CE', '#4C6E82'], // slate blue — the one cool tile, for spacing
+  ['#B497C4', '#6E5580'], // mauve
 ];
 
 export function unitTilesToLessonTiles(units: UnitProgressTile[]): LessonTileData[] {

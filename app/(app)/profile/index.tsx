@@ -184,6 +184,35 @@ export default function ProfileScreen() {
           </View>
         )}
 
+        {/* Proficiency report — the evidence-backed answer to "what level am I
+            actually at?", which is the question a streak count never answers.
+            It sits directly under the level ladder, above achievements and
+            completed lessons, because it is the most credible artifact on this
+            screen and it used to be the last thing a learner would ever find.
+            Adult mode has nothing above it at all, so it becomes the first
+            thing on the profile — which is the whole point of that mode. */}
+        <Pressable
+          className="rounded-2xl p-5 mb-4 flex-row items-center"
+          style={{
+            backgroundColor: colors.premium.tint,
+            borderWidth: 1,
+            borderColor: colors.premium.base,
+          }}
+          onPress={() => router.push('/profile/proficiency' as any)}
+          accessibilityRole="button"
+          accessibilityLabel="View your proficiency report"
+          accessibilityHint="Shows your estimated CEFR level per skill and the evidence behind it"
+        >
+          <Ionicons name="ribbon-outline" size={24} color={colors.premium.base} />
+          <View className="ml-4 flex-1">
+            <Text className="text-base font-semibold text-text-primary">Proficiency Report</Text>
+            <Text className="text-sm text-text-secondary">
+              Your estimated CEFR level and the evidence behind it
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={colors.premium.base} />
+        </Pressable>
+
         {/* Four Strands balance (Nation, research.md §14.3) */}
         <View className="mb-4">
           <FourStrandsCard totals={strandTotals} />
@@ -258,24 +287,6 @@ export default function ProfileScreen() {
             )}
           </>
         )}
-
-        {/* Proficiency report — the evidence-backed answer to "what level am I
-            actually at?", which is the question a streak count never answers. */}
-        <Pressable
-          className="bg-dark-card rounded-2xl p-5 mb-6 flex-row items-center"
-          onPress={() => router.push('/profile/proficiency' as any)}
-          accessibilityRole="button"
-          accessibilityLabel="View your proficiency report"
-        >
-          <Ionicons name="ribbon-outline" size={24} color={colors.premium.base} />
-          <View className="ml-4 flex-1">
-            <Text className="text-base font-semibold text-text-primary">Proficiency Report</Text>
-            <Text className="text-sm text-text-secondary">
-              Your estimated CEFR level and the evidence behind it
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.correctionChip.grammar.text} />
-        </Pressable>
 
         {/* Settings */}
         <Text className="text-xl font-bold text-text-primary mb-3">Settings</Text>

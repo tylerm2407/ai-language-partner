@@ -11,6 +11,7 @@ import { colors } from '../../../config/theme';
 import { SUPPORTED_LANGUAGES, DAILY_GOALS } from '../../../config/app';
 import { supabase } from '../../../lib/supabase';
 import { getTargetLanguage } from '../../../lib/language';
+import { getReduceMotion, setReduceMotion } from '../../../lib/motion-preference';
 import type { LanguageCode, ProficiencyLevel } from '../../../types';
 
 const LEVELS: { value: ProficiencyLevel; label: string }[] = [
@@ -35,6 +36,17 @@ export default function SettingsScreen() {
   const [adultMode, setAdultMode] = useState(profile?.adultMode ?? false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // Reduce motion is device-local and applies the instant it is tapped — it is
+  // not part of the profile save. A user turning motion off is usually doing it
+  // *because* something on screen is bothering them right now; making them find
+  // "Save Changes" first would be the wrong response to that.
+  const [reduceMotion, setReduceMotionState] = useState(getReduceMotion);
+  const toggleReduceMotion = () => {
+    const next = !reduceMotion;
+    setReduceMotionState(next);
+    setReduceMotion(next).catch(() => {});
+  };
 
   const hasChanges =
     displayName !== (profile?.displayName ?? '') ||
@@ -193,6 +205,38 @@ export default function SettingsScreen() {
             <Text className="text-sm text-text-secondary mt-0.5">
               No hearts, no streaks, no leagues, no XP. Progress is shown as your CEFR level.
               Nothing is lost — your history is kept if you switch back.
+            </Text>
+          </View>
+        </Pressable>
+
+        {/* Motion — WCAG 2.2 SC 2.2.2 (Level A) asks for a mechanism to stop
+            auto-starting motion. The OS Reduce Motion switch is honored too;
+            this is the in-app equivalent, and either one suppresses motion. */}
+        <Text className="text-sm font-semibold text-text-secondary mb-2 uppercase tracking-wide">
+          Motion
+        </Text>
+        <Pressable
+          className={`p-4 rounded-2xl mb-8 flex-row items-center ${
+            reduceMotion ? 'bg-primary-tint border-2 border-primary' : 'bg-dark-card border-2 border-transparent'
+          }`}
+          onPress={toggleReduceMotion}
+          accessibilityRole="switch"
+          accessibilityState={{ checked: reduceMotion }}
+          accessibilityLabel="Reduce motion"
+          accessibilityHint="Stops looping and decorative animation throughout the app"
+        >
+          <Ionicons
+            name={reduceMotion ? 'checkmark-circle' : 'ellipse-outline'}
+            size={24}
+            color={reduceMotion ? colors.action.accent : colors.text.tertiary}
+          />
+          <View className="ml-3 flex-1">
+            <Text className="text-base font-semibold text-text-primary">
+              Reduce motion
+            </Text>
+            <Text className="text-sm text-text-secondary mt-0.5">
+              Stops looping and celebratory animation. Applies straight away, and
+              follows your device&apos;s Reduce Motion setting as well.
             </Text>
           </View>
         </Pressable>

@@ -4,7 +4,7 @@
  * Used by SectionBanner and LevelBadge. The gradient BORDER is the whole point
  * of the component and stays; the glass inner fill and specular sheen are gone,
  * replaced with surface.card so it matches every other card under the Dark Glow
- * theme. Border runs primary → premium (indigo.600 → #A855F7), the deck's
+ * theme. Border runs primary → premium (indigo.600 → #E0BE6B), the deck's
  * `linear-gradient(135deg, primary, lilac)`.
  */
 

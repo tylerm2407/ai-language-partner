@@ -44,7 +44,7 @@ function RubricRow({ label, score }: { label: string; score: number }) {
       </Text>
       <Text
         style={{
-          color: score >= 80 ? '#22C55E' : score >= 60 ? '#F59E0B' : '#EF4444',
+          color: score >= 80 ? '#4E9F6B' : score >= 60 ? '#D9913C' : '#C0555F',
           fontSize: 14,
           fontFamily: 'Nunito_700Bold',
         }}
@@ -122,7 +122,7 @@ export default function GradingScreen() {
     return (
       <GradientBackground>
         <SafeAreaView className="flex-1 justify-center items-center">
-          <ActivityIndicator color="#818CF8" size="large" />
+          <ActivityIndicator color="#E0BE6B" size="large" />
         </SafeAreaView>
       </GradientBackground>
     );
@@ -148,7 +148,7 @@ export default function GradingScreen() {
             accessibilityLabel="Go back"
             className="flex-row items-center mb-4"
           >
-            <Ionicons name="chevron-back" size={24} color="#818CF8" />
+            <Ionicons name="chevron-back" size={24} color="#E0BE6B" />
             <Text
               className="text-base text-primary ml-1"
               style={{ fontFamily: 'Nunito_600SemiBold' }}
@@ -177,12 +177,12 @@ export default function GradingScreen() {
                     width: 40,
                     height: 40,
                     borderRadius: 20,
-                    backgroundColor: 'rgba(168, 85, 247, 0.2)',
+                    backgroundColor: 'rgba(224, 190, 107, 0.2)',
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
                 >
-                  <Ionicons name="person" size={20} color="#A855F7" />
+                  <Ionicons name="person" size={20} color="#E0BE6B" />
                 </View>
                 <View className="ml-3">
                   <Text
@@ -206,10 +206,10 @@ export default function GradingScreen() {
             <View className="flex-row items-center" style={{ gap: 12 }}>
               {submission?.conversationDurationMinutes != null && (
                 <View className="flex-row items-center">
-                  <Ionicons name="time-outline" size={14} color="#94A3B8" />
+                  <Ionicons name="time-outline" size={14} color="#9C968A" />
                   <Text
                     style={{
-                      color: '#94A3B8',
+                      color: '#9C968A',
                       fontSize: 12,
                       fontFamily: 'Nunito_500Medium',
                       marginLeft: 4,
@@ -230,7 +230,7 @@ export default function GradingScreen() {
                 >
                   <Text
                     style={{
-                      color: '#EF4444',
+                      color: '#C0555F',
                       fontSize: 11,
                       fontFamily: 'Nunito_600SemiBold',
                     }}
@@ -281,7 +281,7 @@ export default function GradingScreen() {
                   </Text>
                   <Text
                     style={{
-                      color: '#818CF8',
+                      color: '#E0BE6B',
                       fontSize: 20,
                       fontFamily: 'Nunito_800ExtraBold',
                     }}
@@ -315,7 +315,7 @@ export default function GradingScreen() {
                       <Ionicons
                         name="checkmark-circle"
                         size={14}
-                        color="#22C55E"
+                        color="#4E9F6B"
                         style={{ marginTop: 2, marginRight: 6 }}
                       />
                       <Text
@@ -343,7 +343,7 @@ export default function GradingScreen() {
                       <Ionicons
                         name="arrow-up-circle"
                         size={14}
-                        color="#F59E0B"
+                        color="#D9913C"
                         style={{ marginTop: 2, marginRight: 6 }}
                       />
                       <Text
@@ -362,7 +362,7 @@ export default function GradingScreen() {
               style={{ marginBottom: 16 }}
               innerStyle={{ padding: 20, alignItems: 'center' }}
             >
-              <Ionicons name="analytics-outline" size={28} color="#64748B" />
+              <Ionicons name="analytics-outline" size={28} color="#7A756B" />
               <Text
                 className="text-sm text-text-secondary mt-2"
                 style={{ fontFamily: 'Nunito_400Regular' }}
@@ -389,7 +389,7 @@ export default function GradingScreen() {
               style={{ marginBottom: 20 }}
               innerStyle={{ padding: 20, alignItems: 'center' }}
             >
-              <Ionicons name="chatbox-outline" size={28} color="#64748B" />
+              <Ionicons name="chatbox-outline" size={28} color="#7A756B" />
               <Text
                 className="text-sm text-text-secondary mt-2"
                 style={{ fontFamily: 'Nunito_400Regular' }}
@@ -418,10 +418,10 @@ export default function GradingScreen() {
               value={scoreOverride}
               onChangeText={setScoreOverride}
               placeholder="Leave blank to use AI score"
-              placeholderTextColor="#64748B"
+              placeholderTextColor="#7A756B"
               keyboardType="numeric"
               style={{
-                color: '#F1F5F9',
+                color: '#F2EFE9',
                 fontSize: 16,
                 fontFamily: 'Nunito_400Regular',
                 padding: 14,
@@ -441,10 +441,10 @@ export default function GradingScreen() {
               value={comments}
               onChangeText={setComments}
               placeholder="Add feedback for the student..."
-              placeholderTextColor="#64748B"
+              placeholderTextColor="#7A756B"
               multiline
               style={{
-                color: '#F1F5F9',
+                color: '#F2EFE9',
                 fontSize: 15,
                 fontFamily: 'Nunito_400Regular',
                 padding: 14,

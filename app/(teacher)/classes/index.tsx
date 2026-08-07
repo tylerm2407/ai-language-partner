@@ -63,10 +63,10 @@ export default function ClassListScreen() {
           />
 
           {loading ? (
-            <ActivityIndicator color="#818CF8" size="large" style={{ marginTop: 32 }} />
+            <ActivityIndicator color="#E0BE6B" size="large" style={{ marginTop: 32 }} />
           ) : classrooms.length === 0 ? (
             <View className="flex-1 justify-center items-center" style={{ paddingBottom: 80 }}>
-              <Ionicons name="school-outline" size={56} color="#64748B" />
+              <Ionicons name="school-outline" size={56} color="#7A756B" />
               <Text
                 className="text-lg text-text-primary mt-4"
                 style={{ fontFamily: 'Nunito_600SemiBold' }}

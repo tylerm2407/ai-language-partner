@@ -10,13 +10,13 @@ import { GlowLayer } from '../../../components/ui/GlowBackground';
 import { colors } from '../../../config/theme';
 
 const ERROR_TYPE_META: Record<string, { label: string; icon: keyof typeof Ionicons.glyphMap; color: string }> = {
-  grammar: { label: 'Grammar', icon: 'construct-outline', color: '#A78BFA' },
-  vocabulary: { label: 'Vocabulary', icon: 'book-outline', color: '#60A5FA' },
-  spelling: { label: 'Spelling', icon: 'text-outline', color: '#FBBF24' },
-  word_order: { label: 'Word order', icon: 'swap-horizontal-outline', color: '#F472B6' },
-  tense: { label: 'Tense', icon: 'time-outline', color: '#34D399' },
-  gender: { label: 'Gender', icon: 'female-outline', color: '#F472B6' },
-  other: { label: 'Other', icon: 'alert-circle-outline', color: '#94A3B8' },
+  grammar: { label: 'Grammar', icon: 'construct-outline', color: '#B497C4' },
+  vocabulary: { label: 'Vocabulary', icon: 'book-outline', color: '#86B4CE' },
+  spelling: { label: 'Spelling', icon: 'text-outline', color: '#D9913C' },
+  word_order: { label: 'Word order', icon: 'swap-horizontal-outline', color: '#E0A5B6' },
+  tense: { label: 'Tense', icon: 'time-outline', color: '#4E9F6B' },
+  gender: { label: 'Gender', icon: 'female-outline', color: '#E0A5B6' },
+  other: { label: 'Other', icon: 'alert-circle-outline', color: '#9C968A' },
 };
 
 export default function TopMistakesScreen() {
@@ -54,10 +54,10 @@ export default function TopMistakesScreen() {
           accessibilityRole="button"
           accessibilityLabel="Back"
         >
-          <Ionicons name="chevron-back" size={24} color="#94A3B8" />
+          <Ionicons name="chevron-back" size={24} color="#9C968A" />
         </Pressable>
         <Text
-          style={{ fontSize: 22, fontWeight: '700', color: '#F1F5F9' }}
+          style={{ fontSize: 22, fontWeight: '700', color: '#F2EFE9' }}
           accessibilityRole="header"
         >
           Top mistakes this week
@@ -67,19 +67,19 @@ export default function TopMistakesScreen() {
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 80 }}>
         {loading ? (
           <View style={{ paddingVertical: 40, alignItems: 'center' }}>
-            <ActivityIndicator size="large" color="#818CF8" />
+            <ActivityIndicator size="large" color="#E0BE6B" />
           </View>
         ) : error ? (
           <View style={{ paddingVertical: 40, alignItems: 'center' }}>
-            <Text style={{ color: '#F87171', fontSize: 14 }}>{error}</Text>
+            <Text style={{ color: '#E39098', fontSize: 14 }}>{error}</Text>
           </View>
         ) : rows.length === 0 ? (
           <View style={{ paddingVertical: 60, alignItems: 'center' }}>
-            <Ionicons name="sparkles-outline" size={48} color="#94A3B8" />
-            <Text style={{ color: '#F1F5F9', fontSize: 18, fontWeight: '600', marginTop: 12, textAlign: 'center' }}>
+            <Ionicons name="sparkles-outline" size={48} color="#9C968A" />
+            <Text style={{ color: '#F2EFE9', fontSize: 18, fontWeight: '600', marginTop: 12, textAlign: 'center' }}>
               No recurring mistakes this week
             </Text>
-            <Text style={{ color: '#94A3B8', fontSize: 14, marginTop: 4, textAlign: 'center' }}>
+            <Text style={{ color: '#9C968A', fontSize: 14, marginTop: 4, textAlign: 'center' }}>
               Keep practicing — we'll surface patterns as they appear.
             </Text>
           </View>
@@ -90,7 +90,7 @@ export default function TopMistakesScreen() {
               <View
                 key={`${row.shortLabel}-${row.errorType}-${idx}`}
                 style={{
-                  backgroundColor: '#151921',
+                  backgroundColor: '#1B1A17',
                   borderRadius: 20,
                   padding: 16,
                   marginBottom: 12,
@@ -113,12 +113,12 @@ export default function TopMistakesScreen() {
                     <Text style={{ fontSize: 11, fontWeight: '600', color: meta.color, textTransform: 'uppercase' }}>
                       {meta.label}
                     </Text>
-                    <Text style={{ fontSize: 16, fontWeight: '600', color: '#F1F5F9' }}>
+                    <Text style={{ fontSize: 16, fontWeight: '600', color: '#F2EFE9' }}>
                       {row.shortLabel}
                     </Text>
                   </View>
                 </View>
-                <Text style={{ fontSize: 13, color: '#94A3B8', marginBottom: 12 }}>
+                <Text style={{ fontSize: 13, color: '#9C968A', marginBottom: 12 }}>
                   Made {row.count} {row.count === 1 ? 'time' : 'times'} this week.
                 </Text>
                 <Pressable

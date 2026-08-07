@@ -252,7 +252,7 @@ AvatarCustomizer.displayName = 'AvatarCustomizer';
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#0C0F14',
+    backgroundColor: '#0F0E0C',
   },
   container: {
     flex: 1,
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
     width: 160,
     height: 160,
     borderRadius: 80,
-    backgroundColor: '#151921',
+    backgroundColor: '#1B1A17',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -292,15 +292,15 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   tabActive: {
-    borderBottomColor: '#818CF8',
+    borderBottomColor: '#E0BE6B',
   },
   tabText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#64748B',
+    color: '#7A756B',
   },
   tabTextActive: {
-    color: '#818CF8',
+    color: '#E0BE6B',
   },
   content: {
     flex: 1,
@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   swatchSelected: {
-    borderColor: '#818CF8',
+    borderColor: '#E0BE6B',
   },
   optionGrid: {
     flexDirection: 'row',
@@ -340,14 +340,14 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 12,
-    backgroundColor: '#151921',
+    backgroundColor: '#1B1A17',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
     borderColor: 'transparent',
   },
   optionCardSelected: {
-    borderColor: '#818CF8',
+    borderColor: '#E0BE6B',
   },
   optionCardText: {
     fontSize: 11,
@@ -357,7 +357,7 @@ const styles = StyleSheet.create({
   },
   placeholderText: {
     fontSize: 14,
-    color: '#64748B',
+    color: '#7A756B',
     textAlign: 'center',
     paddingVertical: 32,
   },
@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 48,
     borderRadius: 14,
-    backgroundColor: '#151921',
+    backgroundColor: '#1B1A17',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -384,7 +384,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 48,
     borderRadius: 14,
-    backgroundColor: '#A855F7',
+    backgroundColor: '#E0BE6B',
     alignItems: 'center',
     justifyContent: 'center',
   },

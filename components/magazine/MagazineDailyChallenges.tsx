@@ -49,7 +49,7 @@ export function MagazineDailyChallenges({ dailyStats }: MagazineDailyChallengesP
           <View key={c.type} style={styles.challengeRow}>
             <View style={[styles.iconCircle, { backgroundColor: c.color + '20' }]}>
               {isComplete ? (
-                <Ionicons name="checkmark" size={14} color="#22C55E" />
+                <Ionicons name="checkmark" size={14} color="#4E9F6B" />
               ) : (
                 <Ionicons name={c.icon as any} size={14} color={c.color} />
               )}

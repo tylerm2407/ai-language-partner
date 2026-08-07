@@ -48,10 +48,10 @@ const SIZE_PX: Record<MascotSize, number> = { xs: 32, sm: 48, md: 80, lg: 128 };
 const STAR_FILL = colors.indigo[500];
 const STAR_STROKE = colors.indigo[700];
 const TRAIL_COLOR = colors.indigo[400];
-const EYE_COLOR = '#F8FAFC'; // near-ivory — AAA against indigo-500
-const PUPIL_COLOR = '#0C0F14';
+const EYE_COLOR = '#F2EFE9'; // near-ivory — AAA against indigo-500
+const PUPIL_COLOR = '#0F0E0C';
 const MOUTH_COLOR = colors.indigo[800];
-const SPARK_COLOR = '#FDE68A';
+const SPARK_COLOR = '#EFBB7C';
 
 /**
  * 4-point rounded star silhouette. viewBox 0 0 100 100, centered at (55, 45)

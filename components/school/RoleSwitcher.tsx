@@ -32,17 +32,17 @@ export default function RoleSwitcher({ activeRole, onSwitch }: RoleSwitcherProps
           justifyContent: 'center',
           paddingVertical: 10,
           borderRadius: 10,
-          backgroundColor: activeRole === 'learner' ? '#4F46E5' : 'transparent',
+          backgroundColor: activeRole === 'learner' ? '#C8A24A' : 'transparent',
         }}
       >
         <Ionicons
           name="person-outline"
           size={16}
-          color={activeRole === 'learner' ? '#FFFFFF' : '#94A3B8'}
+          color={activeRole === 'learner' ? '#14120E' : '#9C968A'}
         />
         <Text
           style={{
-            color: activeRole === 'learner' ? '#FFFFFF' : '#94A3B8',
+            color: activeRole === 'learner' ? '#14120E' : '#9C968A',
             fontSize: 14,
             fontFamily: 'Nunito_600SemiBold',
             marginLeft: 6,
@@ -65,17 +65,17 @@ export default function RoleSwitcher({ activeRole, onSwitch }: RoleSwitcherProps
           justifyContent: 'center',
           paddingVertical: 10,
           borderRadius: 10,
-          backgroundColor: activeRole === 'teacher' ? '#4F46E5' : 'transparent',
+          backgroundColor: activeRole === 'teacher' ? '#C8A24A' : 'transparent',
         }}
       >
         <Ionicons
           name="school-outline"
           size={16}
-          color={activeRole === 'teacher' ? '#FFFFFF' : '#94A3B8'}
+          color={activeRole === 'teacher' ? '#14120E' : '#9C968A'}
         />
         <Text
           style={{
-            color: activeRole === 'teacher' ? '#FFFFFF' : '#94A3B8',
+            color: activeRole === 'teacher' ? '#14120E' : '#9C968A',
             fontSize: 14,
             fontFamily: 'Nunito_600SemiBold',
             marginLeft: 6,

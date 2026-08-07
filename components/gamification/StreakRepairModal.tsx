@@ -26,18 +26,18 @@ export function StreakRepairModal({ visible, brokenStreak, freezesAvailable, onR
             end={GRADIENT_END}
             style={{ borderRadius: 24, padding: 1.5 }}
           >
-            <View style={{ borderRadius: 22.5, padding: 32, alignItems: 'center', backgroundColor: '#151921' }}>
+            <View style={{ borderRadius: 22.5, padding: 32, alignItems: 'center', backgroundColor: '#1B1A17' }}>
               {/* Broken streak icon */}
               <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: colors.warning.tint, justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
-                <Ionicons name="snow" size={40} color="#F59E0B" />
+                <Ionicons name="snow" size={40} color="#D9913C" />
               </View>
 
               <Text style={{ color: colors.text.primary, fontSize: 24, fontWeight: '700', textAlign: 'center', marginBottom: 8 }}>
-                Oh no!
+                Streak broken
               </Text>
 
               <Text style={{ color: colors.text.tertiary, fontSize: 16, textAlign: 'center', marginBottom: 24, lineHeight: 22 }}>
-                Your {brokenStreak}-day streak was broken! Use a streak freeze to repair it.
+                Your {brokenStreak}-day streak ended. A streak freeze will restore it.
               </Text>
 
               {freezesAvailable > 0 ? (

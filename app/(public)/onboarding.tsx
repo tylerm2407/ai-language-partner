@@ -28,6 +28,7 @@ import { AvatarCustomizer } from '../../components/avatar/AvatarCustomizer';
 import { DEFAULT_AVATAR_CONFIG } from '../../components/avatar/constants';
 import { colors } from '../../config/theme';
 import { SUPPORTED_LANGUAGES, DAILY_GOALS } from '../../config/app';
+import { authErrorCopy } from '../../lib/auth-errors';
 import {
   loadPendingOnboarding,
   savePendingOnboarding,
@@ -338,13 +339,10 @@ export default function OnboardingScreen() {
       router.replace('/(public)/auth');
     } catch (err: unknown) {
       console.error('handleFinish error:', err);
-      const message =
-        err instanceof Error
-          ? err.message
-          : typeof err === 'object' && err !== null && 'message' in err
-            ? String((err as Record<string, unknown>).message)
-            : 'Something went wrong';
-      Alert.alert('Error', message);
+      // The learner's answers are still in AsyncStorage at this point, so the
+      // copy can honestly promise nothing was lost.
+      const { title, message } = authErrorCopy(err);
+      Alert.alert(title, `${message}\n\nYour answers are saved on this device.`);
     } finally {
       setSaving(false);
     }
@@ -776,14 +774,16 @@ export default function OnboardingScreen() {
                 accessibilityState={{ selected: dailyGoal === goal }}
               >
                 <Text className="text-lg font-semibold text-text-primary">{goal} minutes</Text>
-                {/* Intensity labels run Casual → … → Insane, which is a dare.
-                    Adult mode drops them: a time budget is a practical choice,
-                    not a measure of how serious the learner is. */}
-                {!adultMode && goal === 5 && <Text className="text-sm text-text-secondary">Casual</Text>}
-                {!adultMode && goal === 10 && <Text className="text-sm text-text-secondary">Regular</Text>}
-                {!adultMode && goal === 15 && <Text className="text-sm text-text-secondary">Serious</Text>}
-                {!adultMode && goal === 20 && <Text className="text-sm text-text-secondary">Intense</Text>}
-                {!adultMode && goal === 30 && <Text className="text-sm text-text-secondary">Insane</Text>}
+                {/* Labels describe the commitment, not the learner. The scale
+                    used to end at "Insane", which dares the user into a budget
+                    they will miss — and a missed daily goal is the first step
+                    out of the habit. Adult mode drops them entirely: a time
+                    budget is a practical choice, not a measure of seriousness. */}
+                {!adultMode && goal === 5 && <Text className="text-sm text-text-secondary">A few minutes</Text>}
+                {!adultMode && goal === 10 && <Text className="text-sm text-text-secondary">Most popular</Text>}
+                {!adultMode && goal === 15 && <Text className="text-sm text-text-secondary">Steady</Text>}
+                {!adultMode && goal === 20 && <Text className="text-sm text-text-secondary">Committed</Text>}
+                {!adultMode && goal === 30 && <Text className="text-sm text-text-secondary">Intensive</Text>}
               </Pressable>
             ))}
 

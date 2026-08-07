@@ -67,7 +67,7 @@ export default function TeacherProfileScreen() {
                   justifyContent: 'center',
                 }}
               >
-                <Ionicons name="swap-horizontal" size={20} color="#818CF8" />
+                <Ionicons name="swap-horizontal" size={20} color="#E0BE6B" />
               </View>
               <View className="ml-3 flex-1">
                 <Text
@@ -83,7 +83,7 @@ export default function TeacherProfileScreen() {
                   Currently in Teacher mode
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color="#7DD3FC" />
+              <Ionicons name="chevron-forward" size={20} color="#A8C6DC" />
             </GlassSurface>
           </Pressable>
 
@@ -98,12 +98,12 @@ export default function TeacherProfileScreen() {
                   width: 48,
                   height: 48,
                   borderRadius: 24,
-                  backgroundColor: 'rgba(168, 85, 247, 0.2)',
+                  backgroundColor: 'rgba(224, 190, 107, 0.2)',
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
               >
-                <Ionicons name="person" size={24} color="#A855F7" />
+                <Ionicons name="person" size={24} color="#E0BE6B" />
               </View>
               <View className="ml-4">
                 <Text
@@ -135,7 +135,7 @@ export default function TeacherProfileScreen() {
               </Text>
               <View className="bg-dark-card rounded-2xl p-5 mb-4">
                 <View className="flex-row items-center">
-                  <Ionicons name="school" size={24} color="#A855F7" />
+                  <Ionicons name="school" size={24} color="#E0BE6B" />
                   <View className="ml-4 flex-1">
                     <Text
                       className="text-base text-text-primary"
@@ -169,7 +169,7 @@ export default function TeacherProfileScreen() {
             accessibilityRole="button"
             accessibilityLabel="Subscription"
           >
-            <Ionicons name="card" size={24} color="#A855F7" />
+            <Ionicons name="card" size={24} color="#E0BE6B" />
             <View className="ml-4 flex-1">
               <Text
                 className="text-base text-text-primary"
@@ -184,7 +184,7 @@ export default function TeacherProfileScreen() {
                 {subscription?.tier ?? 'Free'}
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#7DD3FC" />
+            <Ionicons name="chevron-forward" size={20} color="#A8C6DC" />
           </Pressable>
 
           <Pressable
@@ -193,7 +193,7 @@ export default function TeacherProfileScreen() {
             accessibilityRole="button"
             accessibilityLabel="Edit settings"
           >
-            <Ionicons name="settings" size={24} color="#A855F7" />
+            <Ionicons name="settings" size={24} color="#E0BE6B" />
             <View className="ml-4 flex-1">
               <Text
                 className="text-base text-text-primary"
@@ -208,7 +208,7 @@ export default function TeacherProfileScreen() {
                 Account preferences
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#7DD3FC" />
+            <Ionicons name="chevron-forward" size={20} color="#A8C6DC" />
           </Pressable>
 
           {/* Sign Out */}

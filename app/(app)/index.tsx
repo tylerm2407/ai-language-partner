@@ -9,6 +9,7 @@ import { SCHOOL_ENABLED, levelToNewsTier } from '../../config/app';
 import { fetchStatsRange } from '../../lib/supabase-queries';
 import { localDayKey } from '../../lib/dates';
 import { getTargetLanguage, targetLanguageGreeting } from '../../lib/language';
+import { cefrBandForProficiencyLevel } from '../../lib/cefr-proficiency';
 import { useTimezoneSync } from '../../hooks/useProfile';
 import { Ionicons } from '@expo/vector-icons';
 import { GradientBackground } from '../../components/ui/GradientBackground';
@@ -32,7 +33,6 @@ import { useUnitProgressTiles } from '../../hooks/useUnitProgressTiles';
 import { MagazineDailyChallenges } from '../../components/magazine/MagazineDailyChallenges';
 import { WeekInWords } from '../../components/magazine/WeekInWords';
 import { MagazineGlassCard } from '../../components/magazine/MagazineGlassCard';
-import { Mascot } from '../../components/mascot/Mascot';
 import { Heading } from '../../components/ui/Text';
 import { colors, typography, spacing } from '../../config/theme';
 import type { DailyStats } from '../../types';
@@ -144,9 +144,15 @@ export default function HomeScreen() {
           contentContainerStyle={{ paddingBottom: 120, paddingTop: 8 }}
         >
           <SafeAreaView edges={['top']}>
-            {/* Header — date + target-language greeting on the left, mascot on
-                the right. Stats get their own row beneath so the greeting has
-                room to breathe (they used to share this row with the date). */}
+            {/* Header — date + target-language greeting. Stats get their own
+                row beneath so the greeting has room to breathe (they used to
+                share this row with the date).
+
+                The mascot used to sit on the right of this row. It is gone from
+                chrome on purpose: a permanent mascot in the header is the
+                Duolingo silhouette regardless of what the character looks like.
+                The dragon now appears only at moments — celebration, level-up,
+                streak-at-risk, empty states — where it lands as an event. */}
             <View style={styles.headerRow}>
               <View style={styles.headerText}>
                 <DateLabel />
@@ -155,7 +161,6 @@ export default function HomeScreen() {
                   {profile?.displayName ? `, ${profile.displayName}` : ''}
                 </Heading>
               </View>
-              <Mascot state={(profile?.streak ?? 0) >= 1 ? 'happy' : 'idle'} size="xs" />
             </View>
 
             <StatsStrip />
@@ -166,7 +171,7 @@ export default function HomeScreen() {
               isLoading={newsLoading}
               error={newsError}
               hasRead={newsHasRead}
-              level={profile?.level ?? 'intermediate'}
+              level={cefrBandForProficiencyLevel(profile?.level ?? 'intermediate')}
               onPress={() => {
                 if (article) {
                   router.push({
@@ -223,7 +228,7 @@ export default function HomeScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="Practice with AI"
               >
-                <View style={[styles.quickActionIcon, { backgroundColor: 'rgba(168,85,247,0.15)' }]}>
+                <View style={[styles.quickActionIcon, { backgroundColor: 'rgba(224,190,107,0.15)' }]}>
                   <Ionicons name="chatbubbles" size={18} color={colors.magazine.accentLilac} />
                 </View>
                 <View style={styles.quickActionText}>
@@ -243,7 +248,7 @@ export default function HomeScreen() {
                   accessibilityLabel={`Review ${reviewCount} flashcards`}
                 >
                   <View style={[styles.quickActionIcon, { backgroundColor: 'rgba(34,211,153,0.15)' }]}>
-                    <Ionicons name="refresh" size={18} color="#34D399" />
+                    <Ionicons name="refresh" size={18} color="#4E9F6B" />
                   </View>
                   <View style={styles.quickActionText}>
                     <Text style={styles.quickActionTitle}>Review Cards</Text>

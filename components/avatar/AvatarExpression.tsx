@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing } from 'react-native';
 import { AvatarConfig, AvatarExpression as AvatarExpressionType } from '../../types';
+import { useMotion } from '../../hooks/useMotion';
 import { AvatarSvg } from './AvatarSvg';
 
 interface AvatarExpressionProps {
@@ -14,6 +15,7 @@ export const AvatarExpression = React.memo(
   ({ config, size, expression, animated }: AvatarExpressionProps) => {
     const scale = useRef(new Animated.Value(1)).current;
     const rotation = useRef(new Animated.Value(0)).current;
+    const { shouldReduce } = useMotion();
 
     useEffect(() => {
       scale.stopAnimation();
@@ -21,7 +23,11 @@ export const AvatarExpression = React.memo(
       scale.setValue(1);
       rotation.setValue(0);
 
-      if (!animated) return;
+      // `animated` defaults to true, so the 'neutral' idle breathe runs
+      // indefinitely wherever an avatar is shown. Reduce Motion suppresses
+      // every expression here — the one-shot reactions are decorative too,
+      // and the avatar reads identically at rest.
+      if (!animated || shouldReduce) return;
 
       let anim: Animated.CompositeAnimation | null = null;
 
@@ -69,7 +75,7 @@ export const AvatarExpression = React.memo(
       anim?.start();
 
       return () => anim?.stop();
-    }, [expression, animated, scale, rotation]);
+    }, [expression, animated, shouldReduce, scale, rotation]);
 
     const rotateInterpolation = rotation.interpolate({
       inputRange: [-360, 360],

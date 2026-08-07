@@ -53,7 +53,7 @@ export function GradientButton({ label, onPress, disabled, loading, style, acces
             borderRadius: 14,
             alignItems: 'center' as const,
             opacity: disabled || loading ? 0.6 : 1,
-            shadowColor: '#7878FA',
+            shadowColor: '#C8A24A',
             shadowOffset: { width: 0, height: 4 },
             shadowOpacity: 0.3,
             shadowRadius: 12,

@@ -38,6 +38,7 @@ import { Sheet } from '../ui/Sheet';
 import { Heading, Body, Caption } from '../ui/Text';
 import { useOnboardingChecklist } from '../../hooks/useOnboardingChecklist';
 import { useProfile } from '../../hooks/useProfile';
+import { useMotion } from '../../hooks/useMotion';
 import { colors, radii, spacing } from '../../config/theme';
 
 const FAB_SIZE = 60;
@@ -47,7 +48,7 @@ const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
 const AnimatedCircle = Animated.createAnimatedComponent(SvgCircle);
 
-const CONFETTI_COLORS = ['#FBBF24', '#34D399', '#38BDF8', '#A855F7', '#F472B6', '#60A5FA'];
+const CONFETTI_COLORS = ['#E0BE6B', '#7FC79A', '#86B4CE', '#C8A24A', '#E2673C', '#B497C4'];
 const PARTICLE_COUNT = 12;
 
 function ConfettiParticle({ index }: { index: number }) {
@@ -126,10 +127,13 @@ export function OnboardingChecklistFab({ bottomOffset = 100 }: OnboardingCheckli
   const [showConfetti, setShowConfetti] = useState(false);
 
   // Pulse the FAB subtly while it has pending items — draws the eye
-  // without being noisy. Gated off once all items are complete.
+  // without being noisy. Gated off once all items are complete, and off
+  // entirely under Reduce Motion: an indefinite pulse on the home screen is
+  // WCAG 2.2 SC 2.2.2 territory, and the ring already conveys progress.
+  const { shouldReduce } = useMotion();
   const pulse = useRef(new Animated.Value(1)).current;
   useEffect(() => {
-    if (!isVisible || allComplete) return;
+    if (!isVisible || allComplete || shouldReduce) return;
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulse, { toValue: 1.08, duration: 900, useNativeDriver: true }),
@@ -141,7 +145,7 @@ export function OnboardingChecklistFab({ bottomOffset = 100 }: OnboardingCheckli
       loop.stop();
       pulse.setValue(1);
     };
-  }, [isVisible, allComplete, pulse]);
+  }, [isVisible, allComplete, shouldReduce, pulse]);
 
   // Animate the progress ring as `progress` advances
   const progressAnim = useRef(new Animated.Value(progress)).current;

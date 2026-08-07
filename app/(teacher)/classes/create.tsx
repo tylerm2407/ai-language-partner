@@ -78,7 +78,7 @@ export default function CreateClassScreen() {
             accessibilityLabel="Go back"
             className="flex-row items-center mb-4"
           >
-            <Ionicons name="chevron-back" size={24} color="#818CF8" />
+            <Ionicons name="chevron-back" size={24} color="#E0BE6B" />
             <Text
               className="text-base text-primary ml-1"
               style={{ fontFamily: 'Nunito_600SemiBold' }}
@@ -107,9 +107,9 @@ export default function CreateClassScreen() {
               value={name}
               onChangeText={setName}
               placeholder="e.g. Spanish 101"
-              placeholderTextColor="#64748B"
+              placeholderTextColor="#7A756B"
               style={{
-                color: '#F1F5F9',
+                color: '#F2EFE9',
                 fontSize: 16,
                 fontFamily: 'Nunito_400Regular',
                 padding: 14,
@@ -138,7 +138,7 @@ export default function CreateClassScreen() {
                 >
                   {selectedLang ? `${selectedLang.flag} ${selectedLang.name}` : language}
                 </Text>
-                <Ionicons name="chevron-down" size={18} color="#64748B" />
+                <Ionicons name="chevron-down" size={18} color="#7A756B" />
               </View>
             </GlassSurface>
           </Pressable>
@@ -159,7 +159,7 @@ export default function CreateClassScreen() {
             >
               <View
                 style={{
-                  backgroundColor: '#151921',
+                  backgroundColor: '#1B1A17',
                   borderRadius: 18,
                   padding: 8,
                   width: '80%',
@@ -181,14 +181,14 @@ export default function CreateClassScreen() {
                         paddingHorizontal: 16,
                         backgroundColor:
                           lang.code === language
-                            ? 'rgba(168, 85, 247, 0.15)'
+                            ? 'rgba(224, 190, 107, 0.15)'
                             : 'transparent',
                         borderRadius: 12,
                       }}
                     >
                       <Text
                         style={{
-                          color: lang.code === language ? '#A855F7' : '#F1F5F9',
+                          color: lang.code === language ? '#E0BE6B' : '#F2EFE9',
                           fontSize: 16,
                           fontFamily: 'Nunito_500Medium',
                         }}
@@ -223,18 +223,18 @@ export default function CreateClassScreen() {
                   borderRadius: 999,
                   backgroundColor:
                     level === lvl.value
-                      ? 'rgba(168, 85, 247, 0.2)'
+                      ? 'rgba(224, 190, 107, 0.2)'
                       : colors.surface.cardAlt,
                   borderWidth: 1,
                   borderColor:
                     level === lvl.value
-                      ? '#A855F7'
+                      ? '#E0BE6B'
                       : 'rgba(255, 255, 255, 0.1)',
                 }}
               >
                 <Text
                   style={{
-                    color: level === lvl.value ? '#A855F7' : '#94A3B8',
+                    color: level === lvl.value ? '#E0BE6B' : '#9C968A',
                     fontSize: 13,
                     fontFamily: 'Nunito_600SemiBold',
                   }}
@@ -256,10 +256,10 @@ export default function CreateClassScreen() {
                 gap: 8,
               }}
             >
-              <Ionicons name="warning-outline" size={18} color="#EF4444" />
+              <Ionicons name="warning-outline" size={18} color="#C0555F" />
               <Text
                 className="text-sm flex-1"
-                style={{ color: '#EF4444', fontFamily: 'Nunito_500Medium' }}
+                style={{ color: '#C0555F', fontFamily: 'Nunito_500Medium' }}
               >
                 {error}
               </Text>
@@ -270,7 +270,7 @@ export default function CreateClassScreen() {
                 style={{ paddingVertical: 4, paddingHorizontal: 8 }}
               >
                 <Text
-                  style={{ color: '#818CF8', fontSize: 13, fontFamily: 'Nunito_600SemiBold' }}
+                  style={{ color: '#E0BE6B', fontSize: 13, fontFamily: 'Nunito_600SemiBold' }}
                 >
                   Retry
                 </Text>
@@ -308,7 +308,7 @@ export default function CreateClassScreen() {
             style={{ width: '85%' }}
             innerStyle={{ padding: 28, alignItems: 'center' }}
           >
-            <Ionicons name="checkmark-circle" size={48} color="#22C55E" />
+            <Ionicons name="checkmark-circle" size={48} color="#4E9F6B" />
             <Text
               className="text-xl text-text-primary mt-4 mb-2"
               style={{ fontFamily: 'Nunito_700Bold' }}
@@ -323,7 +323,7 @@ export default function CreateClassScreen() {
             </Text>
             <View
               style={{
-                backgroundColor: 'rgba(168, 85, 247, 0.15)',
+                backgroundColor: 'rgba(224, 190, 107, 0.15)',
                 paddingVertical: 16,
                 paddingHorizontal: 32,
                 borderRadius: 14,
@@ -332,7 +332,7 @@ export default function CreateClassScreen() {
             >
               <Text
                 style={{
-                  color: '#A855F7',
+                  color: '#E0BE6B',
                   fontSize: 28,
                   fontFamily: 'Nunito_800ExtraBold',
                   letterSpacing: 4,

@@ -30,7 +30,6 @@ import { SCHOOL_ENABLED } from '../../../config/app';
 import { colors, radii, spacing } from '../../../config/theme';
 import { Body, Caption } from '../../../components/ui/Text';
 import { Chip } from '../../../components/ui/Chip';
-import { Mascot } from '../../../components/mascot/Mascot';
 
 /**
  * CEFR code for the header status row. The deck reads "Nivel A2", but "Nivel" is
@@ -696,8 +695,6 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
         >
           <Ionicons name="chevron-back" size={22} color={colors.text.tertiary} />
         </Pressable>
-
-        <Mascot size="xs" />
 
         <View className="flex-1">
           <Body weight="extrabold" numberOfLines={1}>

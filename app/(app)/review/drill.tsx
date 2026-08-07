@@ -60,8 +60,8 @@ export default function DrillScreen() {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface.base, justifyContent: 'center', alignItems: 'center' }}>
         <GlowLayer drift={false} />
-        <ActivityIndicator size="large" color="#818CF8" />
-        <Text style={{ color: '#94A3B8', marginTop: 12 }}>Finding targeted exercises…</Text>
+        <ActivityIndicator size="large" color="#E0BE6B" />
+        <Text style={{ color: '#9C968A', marginTop: 12 }}>Finding targeted exercises…</Text>
       </SafeAreaView>
     );
   }
@@ -77,18 +77,18 @@ export default function DrillScreen() {
             accessibilityRole="button"
             accessibilityLabel="Back"
           >
-            <Ionicons name="chevron-back" size={24} color="#94A3B8" />
+            <Ionicons name="chevron-back" size={24} color="#9C968A" />
           </Pressable>
-          <Text style={{ fontSize: 20, fontWeight: '700', color: '#F1F5F9' }} accessibilityRole="header">
+          <Text style={{ fontSize: 20, fontWeight: '700', color: '#F2EFE9' }} accessibilityRole="header">
             Drill
           </Text>
         </View>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-          <Ionicons name="construct-outline" size={48} color="#94A3B8" />
-          <Text style={{ color: '#F1F5F9', fontSize: 18, fontWeight: '600', marginTop: 12, textAlign: 'center' }}>
+          <Ionicons name="construct-outline" size={48} color="#9C968A" />
+          <Text style={{ color: '#F2EFE9', fontSize: 18, fontWeight: '600', marginTop: 12, textAlign: 'center' }}>
             No targeted exercises yet
           </Text>
-          <Text style={{ color: '#94A3B8', fontSize: 14, marginTop: 4, textAlign: 'center' }}>
+          <Text style={{ color: '#9C968A', fontSize: 14, marginTop: 4, textAlign: 'center' }}>
             We couldn't find exercises tagged with "{shortLabel}". Come back
             later — the library updates regularly.
           </Text>

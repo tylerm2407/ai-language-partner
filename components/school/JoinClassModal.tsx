@@ -84,7 +84,7 @@ export default function JoinClassModal({ visible, onClose, onJoin }: JoinClassMo
               style={{ position: 'absolute', top: 12, right: 12, zIndex: 1 }}
               hitSlop={8}
             >
-              <Ionicons name="close" size={24} color="#94A3B8" />
+              <Ionicons name="close" size={24} color="#9C968A" />
             </Pressable>
 
             {/* Title */}
@@ -101,7 +101,7 @@ export default function JoinClassModal({ visible, onClose, onJoin }: JoinClassMo
             </Text>
             <Text
               style={{
-                color: '#94A3B8',
+                color: '#9C968A',
                 fontSize: 14,
                 fontFamily: 'Nunito_400Regular',
                 textAlign: 'center',
@@ -114,10 +114,10 @@ export default function JoinClassModal({ visible, onClose, onJoin }: JoinClassMo
             {/* Success state */}
             {success ? (
               <View style={{ alignItems: 'center', paddingVertical: 20 }}>
-                <Ionicons name="checkmark-circle" size={48} color="#22C55E" />
+                <Ionicons name="checkmark-circle" size={48} color="#4E9F6B" />
                 <Text
                   style={{
-                    color: '#22C55E',
+                    color: '#4E9F6B',
                     fontSize: 16,
                     fontFamily: 'Nunito_600SemiBold',
                     marginTop: 12,
@@ -136,7 +136,7 @@ export default function JoinClassModal({ visible, onClose, onJoin }: JoinClassMo
                     setCode(text.toUpperCase().slice(0, 8));
                   }}
                   placeholder="ABCD1234"
-                  placeholderTextColor="#64748B"
+                  placeholderTextColor="#7A756B"
                   maxLength={8}
                   autoCapitalize="characters"
                   autoCorrect={false}
@@ -153,7 +153,7 @@ export default function JoinClassModal({ visible, onClose, onJoin }: JoinClassMo
                     paddingHorizontal: 16,
                     borderRadius: 12,
                     borderWidth: 1,
-                    borderColor: error ? '#EF4444' : 'rgba(255, 255, 255, 0.15)',
+                    borderColor: error ? '#C0555F' : 'rgba(255, 255, 255, 0.15)',
                     marginBottom: 8,
                   }}
                 />
@@ -162,7 +162,7 @@ export default function JoinClassModal({ visible, onClose, onJoin }: JoinClassMo
                 {error && (
                   <Text
                     style={{
-                      color: '#EF4444',
+                      color: '#C0555F',
                       fontSize: 13,
                       fontFamily: 'Nunito_500Medium',
                       textAlign: 'center',
@@ -177,7 +177,7 @@ export default function JoinClassModal({ visible, onClose, onJoin }: JoinClassMo
                 {/* Join button */}
                 <View style={{ marginTop: 12, alignItems: 'center' }}>
                   {loading ? (
-                    <ActivityIndicator size="large" color="#818CF8" />
+                    <ActivityIndicator size="large" color="#E0BE6B" />
                   ) : (
                     <GradientButton
                       label="Join Class"

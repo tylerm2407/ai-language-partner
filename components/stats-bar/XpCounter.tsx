@@ -6,7 +6,7 @@ interface XpCounterProps {
   totalXp: number;
 }
 
-const XP_COLOR = '#38BDF8';
+const XP_COLOR = '#86B4CE';
 
 function XpCounterInner({ totalXp }: XpCounterProps) {
   const scale = useRef(new Animated.Value(1)).current;

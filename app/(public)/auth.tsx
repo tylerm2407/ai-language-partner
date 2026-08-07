@@ -7,6 +7,7 @@ import { GradientBackground } from '../../components/ui/GradientBackground';
 import { Avatar } from '../../components/avatar/Avatar';
 import { LEVEL_LABELS } from '../../components/onboarding/PlacementTest';
 import { loadPendingOnboarding, type PendingOnboarding } from '../../lib/pending-onboarding';
+import { authErrorCopy } from '../../lib/auth-errors';
 import { SUPPORTED_LANGUAGES } from '../../config/app';
 import { colors } from '../../config/theme';
 
@@ -52,8 +53,8 @@ export default function AuthScreen() {
         Alert.alert('Check your email', 'We sent you a password reset link.');
         setMode('sign_in');
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : 'Something went wrong';
-        Alert.alert('Error', message);
+        const { title, message } = authErrorCopy(err);
+        Alert.alert(title, message);
       } finally {
         setLoading(false);
       }
@@ -61,7 +62,7 @@ export default function AuthScreen() {
     }
 
     if (!password || password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
+      Alert.alert('Password too short', 'Use at least 6 characters.');
       return;
     }
 
@@ -73,8 +74,8 @@ export default function AuthScreen() {
         await signUpWithEmail(email.trim(), password);
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Something went wrong';
-      Alert.alert('Error', message);
+      const { title, message } = authErrorCopy(err);
+      Alert.alert(title, message);
     } finally {
       setLoading(false);
     }

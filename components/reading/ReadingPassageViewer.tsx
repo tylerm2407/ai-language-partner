@@ -58,9 +58,12 @@ export function ReadingPassageViewer({
           style={{
             fontSize: 16,
             lineHeight: 26,
-            color: isSelected ? '#4F46E5' : '#111',
+            // Unselected annotated words are body copy on a dark card. This was
+            // `#111` — a leftover from when the reading surface was a light
+            // island, and near-black on `surface.card` is invisible.
+            color: isSelected ? colors.action.primaryFill : colors.text.primary,
             textDecorationLine: 'underline',
-            textDecorationColor: 'rgba(99, 102, 241, 0.3)',
+            textDecorationColor: 'rgba(200, 162, 74, 0.3)',
             fontWeight: isSelected ? '600' : '400',
           }}
           accessibilityRole="button"
@@ -93,7 +96,9 @@ export function ReadingPassageViewer({
           <Text style={{ fontSize: 24, color: colors.text.tertiary }}>x</Text>
         </Pressable>
         <View style={{ flex: 1, marginLeft: 8 }}>
-          <Text style={{ fontSize: 18, fontWeight: '600' }} numberOfLines={1}>{passage.title}</Text>
+          {/* Pre-existing: this carried no color at all, so it rendered in RN's
+              default black on the dark header. */}
+          <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text.primary }} numberOfLines={1}>{passage.title}</Text>
           <Text style={{ fontSize: 13, color: colors.text.tertiary }}>{passage.wordCount} words | {passage.cefrLevel}</Text>
         </View>
         {passage.audioUrl && (
@@ -142,12 +147,12 @@ export function ReadingPassageViewer({
         <Pressable
           onPress={onContinue}
           style={{
-            backgroundColor: '#4F46E5', paddingVertical: 16, borderRadius: 14, alignItems: 'center',
+            backgroundColor: '#C8A24A', paddingVertical: 16, borderRadius: 14, alignItems: 'center',
           }}
           accessibilityRole="button"
           accessibilityLabel="Continue to questions"
         >
-          <Text style={{ color: '#fff', fontSize: 18, fontWeight: '600' }}>Continue to Questions</Text>
+          <Text style={{ color: '#14120E', fontSize: 18, fontWeight: '600' }}>Continue to Questions</Text>
         </Pressable>
       </View>
     </SafeAreaView>

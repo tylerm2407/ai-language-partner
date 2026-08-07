@@ -8,6 +8,9 @@ interface NewsHeroCardProps {
   isLoading: boolean;
   error: string | null;
   hasRead: boolean;
+  /** Bare CEFR code (A1–C2). Not a localized noun: the target language varies,
+   *  so "Nivel"/"Niveau"/"Livello" would mean 9 translations of a word the code
+   *  already carries. See DESIGN.md §Live AI Chat. */
   level: string;
   onPress: () => void;
 }
@@ -49,7 +52,7 @@ export function NewsHeroCard({ article, isLoading, error, hasRead, level, onPres
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel="Today's News">
       <MagazineGlassCard style={styles.card}>
         <Text style={styles.kicker}>
-          TODAY'S READ {'·'} NIVEL {level.toUpperCase()}
+          TODAY'S READ {'·'} {level.toUpperCase()}
         </Text>
         <Text style={styles.headline}>{article.title}</Text>
         {article.summary ? (

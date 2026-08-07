@@ -51,7 +51,7 @@ export default function AdminHubScreen() {
             </Text>
             <View className="flex-row items-center justify-between mb-1">
               <Text className="text-sm text-text-secondary" style={{ fontFamily: 'Nunito_400Regular' }}>Status</Text>
-              <Text style={{ color: '#22C55E', fontSize: 14, fontFamily: 'Nunito_600SemiBold' }}>Active</Text>
+              <Text style={{ color: '#4E9F6B', fontSize: 14, fontFamily: 'Nunito_600SemiBold' }}>Active</Text>
             </View>
           </GlassSurface>
 
@@ -77,14 +77,14 @@ export default function AdminHubScreen() {
                   <Ionicons
                     name={action.icon}
                     size={20}
-                    color={action.icon === 'trash-outline' ? '#EF4444' : '#818CF8'}
+                    color={action.icon === 'trash-outline' ? '#C0555F' : '#E0BE6B'}
                   />
                 </View>
                 <View className="ml-3 flex-1">
                   <Text className="text-base text-text-primary" style={{ fontFamily: 'Nunito_600SemiBold' }}>{action.title}</Text>
                   <Text className="text-xs text-text-secondary" style={{ fontFamily: 'Nunito_400Regular' }}>{action.subtitle}</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={18} color="#64748B" />
+                <Ionicons name="chevron-forward" size={18} color="#7A756B" />
               </GlassSurface>
             </Pressable>
           ))}

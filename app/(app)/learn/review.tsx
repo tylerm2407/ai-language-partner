@@ -92,7 +92,7 @@ export default function ReviewScreen() {
           Review Complete!
         </Text>
         <Text className="text-base text-text-secondary mb-8">
-          You reviewed {reviewed} cards. Great work!
+          You reviewed {reviewed} cards.
         </Text>
         <Button label="Done" onPress={() => router.back()} />
       </SafeAreaView>

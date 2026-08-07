@@ -16,7 +16,7 @@ export function SectionBanner({ sectionIndex, unitIndex, title }: SectionBannerP
             style={{
               fontSize: 14,
               fontWeight: '700',
-              color: '#E2E8F0',
+              color: '#D6D1C7',
               textTransform: 'uppercase',
               letterSpacing: 1,
               textAlign: 'center',

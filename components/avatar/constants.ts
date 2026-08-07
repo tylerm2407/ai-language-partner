@@ -11,7 +11,7 @@ export const HAIR_COLORS = [
 ];
 
 export const EYE_COLORS = [
-  '#4A3728', '#2E86AB', '#22C55E', '#8B6914', '#6C63FF', '#1A1A2E',
+  '#4A3728', '#2E86AB', '#4E9F6B', '#8B6914', '#6C63FF', '#1A1A2E',
 ];
 
 export const DEFAULT_AVATAR_CONFIG: AvatarConfig = {

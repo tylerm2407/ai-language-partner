@@ -12,6 +12,7 @@ import { SCHOOL_ENABLED } from '../config/app';
 import { useNotifications, scheduleStreakSaveReminder } from '../hooks/useNotifications';
 import { configurePurchases, identifyPurchaser, resetPurchaser } from '../lib/purchases';
 import { identifyUser, resetAnalytics } from '../lib/analytics';
+import { hydrateMotionPreference } from '../lib/motion-preference';
 import { View, ActivityIndicator, AppState, Text, Pressable } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
@@ -50,6 +51,13 @@ function RootLayout() {
 
   // Supabase auth deep links: password recovery + email confirmation.
   useAuthDeepLinks();
+
+  // Read the stored "Reduce motion" preference before the first animated frame
+  // can run. Every `useMotion()` caller re-reads it on mount, so a late resolve
+  // still propagates.
+  useEffect(() => {
+    hydrateMotionPreference().catch(() => {});
+  }, []);
 
   const [fontsLoaded] = useFonts({
     Nunito_400Regular,
@@ -177,7 +185,7 @@ function RootLayout() {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
         <View className="flex-1 items-center justify-center bg-dark">
-          <ActivityIndicator size="large" color="#818CF8" />
+          <ActivityIndicator size="large" color="#E0BE6B" />
           <StatusBar style="light" />
         </View>
       </GestureHandlerRootView>

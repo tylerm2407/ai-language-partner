@@ -31,7 +31,7 @@ export function QuestCountdown() {
 
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-      <Ionicons name="time-outline" size={12} color="#9CA3AF" />
+      <Ionicons name="time-outline" size={12} color="#9C968A" />
       <Text className="text-text-secondary" style={{ fontSize: 12 }}>
         Resets in {time.hours}h {time.minutes}m
       </Text>

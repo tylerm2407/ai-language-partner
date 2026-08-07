@@ -113,7 +113,7 @@ export default function DataManagementScreen() {
             accessibilityLabel="Go back"
             className="flex-row items-center mb-4"
           >
-            <Ionicons name="chevron-back" size={24} color="#818CF8" />
+            <Ionicons name="chevron-back" size={24} color="#E0BE6B" />
             <Text className="text-base text-primary ml-1" style={{ fontFamily: 'Nunito_600SemiBold' }}>Back</Text>
           </Pressable>
 
@@ -142,8 +142,8 @@ export default function DataManagementScreen() {
             {exportResult && (
               <View className="mt-4">
                 <View className="flex-row items-center mb-2" style={{ gap: 6 }}>
-                  <Ionicons name="checkmark-circle" size={16} color="#22C55E" />
-                  <Text style={{ color: '#22C55E', fontSize: 13, fontFamily: 'Nunito_500Medium' }}>
+                  <Ionicons name="checkmark-circle" size={16} color="#4E9F6B" />
+                  <Text style={{ color: '#4E9F6B', fontSize: 13, fontFamily: 'Nunito_500Medium' }}>
                     Export ready
                   </Text>
                 </View>
@@ -169,11 +169,11 @@ export default function DataManagementScreen() {
                     <Ionicons
                       name={copiedExport ? 'checkmark-circle' : 'copy-outline'}
                       size={16}
-                      color={copiedExport ? '#22C55E' : '#818CF8'}
+                      color={copiedExport ? '#4E9F6B' : '#E0BE6B'}
                     />
                     <Text
                       style={{
-                        color: copiedExport ? '#22C55E' : '#818CF8',
+                        color: copiedExport ? '#4E9F6B' : '#E0BE6B',
                         fontSize: 14,
                         fontFamily: 'Nunito_600SemiBold',
                       }}
@@ -194,8 +194,8 @@ export default function DataManagementScreen() {
                       gap: 6,
                     }}
                   >
-                    <Ionicons name="share-outline" size={16} color="#818CF8" />
-                    <Text style={{ color: '#818CF8', fontSize: 14, fontFamily: 'Nunito_600SemiBold' }}>
+                    <Ionicons name="share-outline" size={16} color="#E0BE6B" />
+                    <Text style={{ color: '#E0BE6B', fontSize: 14, fontFamily: 'Nunito_600SemiBold' }}>
                       Share
                     </Text>
                   </Pressable>
@@ -205,7 +205,7 @@ export default function DataManagementScreen() {
           </GlassSurface>
 
           {/* Danger Zone */}
-          <Text className="text-xl mb-3" style={{ fontFamily: 'Nunito_600SemiBold', color: '#EF4444' }}>
+          <Text className="text-xl mb-3" style={{ fontFamily: 'Nunito_600SemiBold', color: '#C0555F' }}>
             Danger Zone
           </Text>
           <GlassSurface
@@ -213,7 +213,7 @@ export default function DataManagementScreen() {
             innerStyle={{ padding: 16 }}
           >
             <View className="flex-row items-center mb-3" style={{ gap: 8 }}>
-              <Ionicons name="warning-outline" size={20} color="#EF4444" />
+              <Ionicons name="warning-outline" size={20} color="#C0555F" />
               <Text className="text-base text-text-primary" style={{ fontFamily: 'Nunito_600SemiBold' }}>
                 Permanently Delete All Data
               </Text>
@@ -230,9 +230,9 @@ export default function DataManagementScreen() {
                 value={confirmText}
                 onChangeText={setConfirmText}
                 placeholder="Organization name"
-                placeholderTextColor="#64748B"
+                placeholderTextColor="#7A756B"
                 style={{
-                  color: '#F1F5F9',
+                  color: '#F2EFE9',
                   fontSize: 15,
                   fontFamily: 'Nunito_400Regular',
                   padding: 14,
@@ -245,7 +245,7 @@ export default function DataManagementScreen() {
               onPress={handleDelete}
               disabled={deleting || confirmText !== organization?.name}
               style={{
-                backgroundColor: confirmText === organization?.name ? '#EF4444' : 'rgba(239, 68, 68, 0.3)',
+                backgroundColor: confirmText === organization?.name ? '#C0555F' : 'rgba(239, 68, 68, 0.3)',
                 paddingVertical: 14,
                 borderRadius: 12,
                 alignItems: 'center',

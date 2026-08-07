@@ -8,9 +8,11 @@ interface StreakIndicatorProps {
   dailyGoalMet: boolean;
 }
 
-const COLD_COLOR = '#64748B';
-const WARM_COLOR = '#FBBF24';
-const BLAZING_COLOR = '#FFD700';
+// The streak flame runs on the streak ramp (ember → fire), not on gold. Gold is
+// the brand accent now, so a blazing streak in #FFD700 read as a CTA.
+const COLD_COLOR = '#7A756B';
+const WARM_COLOR = '#E2673C';
+const BLAZING_COLOR = '#F0763D';
 
 function StreakIndicatorInner({ streak, xpEarned, dailyGoalMet }: StreakIndicatorProps) {
   const isCold = xpEarned === 0;

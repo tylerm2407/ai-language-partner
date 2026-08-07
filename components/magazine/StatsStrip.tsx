@@ -1,24 +1,36 @@
 /**
  * StatsStrip — the streak / XP / hearts row under the Home greeting.
  *
- * Was: three emoji (🔥 ⚡ ❤️) in blurred glass pills with mono values. Now the
- * deck's StatsRow — two Chips with Ionicons plus the real HeartsDisplay, so the
- * row uses the same chip primitive and heart glyphs as the rest of the app
- * instead of a parallel emoji vocabulary.
+ * Was: three Chips with Ionicons (streak in orange, XP in amber) plus hearts.
+ * Now: one mono meta row — `7 DAY · 1,240 XP` — reading as a dateline rather
+ * than as a scoreboard.
  *
- * Streak and XP deliberately do NOT share a fill: streak.tint is orange,
- * warning.tint is amber.
+ * Three saturated pills stacked directly under the greeting was the Duolingo
+ * header, and it was also spending the loudest color on the screen on numbers
+ * the learner is not being asked to act on. Under Studio Graphite the numbers
+ * stay (they are real progress) but they are set in the same mono voice as
+ * DateLabel, one type step down, and the brass accent is reserved for the CTA
+ * further down the screen.
+ *
+ * Hearts keep their glyph row: hearts are a spendable resource and the count
+ * has to be readable at a glance, which a mono numeral does not do as well as
+ * five filled/empty shapes.
+ *
+ * Render conditions are unchanged — this is a restyle, not a behaviour change.
  */
 
-import { View, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../../stores/useAppStore';
 import { useHearts } from '../../hooks/useHearts';
 import { useAdultMode } from '../../hooks/useAdultMode';
-import { Chip } from '../ui/Chip';
 import { HeartsDisplay } from '../gamification/HeartsDisplay';
 import { cefrBandForProficiencyLevel } from '../../lib/cefr-proficiency';
-import { colors, spacing } from '../../config/theme';
+import { colors, spacing, typography } from '../../config/theme';
+
+function Separator() {
+  return <Text style={[styles.meta, styles.separator]}>·</Text>;
+}
 
 export function StatsStrip() {
   const profile = useAppStore((s) => s.profile);
@@ -35,31 +47,21 @@ export function StatsStrip() {
     const band = cefrBandForProficiencyLevel(profile?.level ?? 'beginner');
     return (
       <View style={styles.row}>
-        <Chip
-          variant="primary"
-          label={`Level ${band}`}
-          leftIcon={<Ionicons name="ribbon-outline" size={14} color={colors.action.accent} />}
-          style={styles.chip}
-        />
+        <Ionicons name="ribbon-outline" size={13} color={colors.action.accent} />
+        <Text style={[styles.meta, styles.emphasis]}>LEVEL {band}</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.row}>
-      <Chip
-        variant="streak"
-        label={String(streak)}
-        leftIcon={<Ionicons name="flame" size={14} color={colors.streak.fire} />}
-        style={styles.chip}
-      />
-      <Chip
-        variant="warning"
-        label={totalXp.toLocaleString()}
-        leftIcon={<Ionicons name="star" size={14} color={colors.warning.base} />}
-        style={styles.chip}
-      />
-      <HeartsDisplay hearts={hearts} maxHearts={maxHearts} isUnlimited={isUnlimited} size={16} />
+      <Text style={[styles.meta, styles.emphasis]}>{streak}</Text>
+      <Text style={styles.meta}>DAY</Text>
+      <Separator />
+      <Text style={[styles.meta, styles.emphasis]}>{totalXp.toLocaleString()}</Text>
+      <Text style={styles.meta}>XP</Text>
+      <Separator />
+      <HeartsDisplay hearts={hearts} maxHearts={maxHearts} isUnlimited={isUnlimited} size={14} />
     </View>
   );
 }
@@ -68,12 +70,25 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: spacing.xxs,
     marginBottom: spacing.lg,
   },
-  chip: {
-    // Chip defaults to alignSelf flex-start; in a centered row it must not
-    // stretch its own cross-axis.
-    alignSelf: 'center',
+  /** Mono meta voice, matching DateLabel. lineHeight is deliberately left to
+   *  the face's natural line box — see config/theme.ts §leading. */
+  meta: {
+    fontFamily: typography.family.mono,
+    fontSize: 12,
+    letterSpacing: typography.tracking.eyebrow,
+    color: colors.text.tertiary,
+    textTransform: 'uppercase',
+  },
+  /** The value itself, not its unit. */
+  emphasis: {
+    fontFamily: typography.family.monoMedium,
+    color: colors.text.secondary,
+  },
+  separator: {
+    color: colors.text.quaternary,
+    marginHorizontal: spacing.xxs,
   },
 });

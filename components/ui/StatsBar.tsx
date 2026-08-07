@@ -25,10 +25,10 @@ export function StatsBar() {
           accessibilityLabel={`${streak} day streak`}
           accessibilityRole="button"
         >
-          <Ionicons name="flame" size={20} color="#FBBF24" />
+          <Ionicons name="flame" size={20} color="#D9913C" />
           <Text
             className="ml-1"
-            style={{ color: '#FBBF24', fontSize: 14, fontWeight: 'bold' }}
+            style={{ color: '#D9913C', fontSize: 14, fontWeight: 'bold' }}
           >
             {streak}
           </Text>
@@ -41,10 +41,10 @@ export function StatsBar() {
           accessibilityLabel={`${totalXp} total XP`}
           accessibilityRole="button"
         >
-          <Ionicons name="flash" size={20} color="#38BDF8" />
+          <Ionicons name="flash" size={20} color="#86B4CE" />
           <Text
             className="ml-1"
-            style={{ color: '#38BDF8', fontSize: 14, fontWeight: 'bold' }}
+            style={{ color: '#86B4CE', fontSize: 14, fontWeight: 'bold' }}
           >
             {totalXp}
           </Text>
@@ -57,10 +57,10 @@ export function StatsBar() {
           accessibilityLabel={isUnlimited ? 'Unlimited hearts' : `${hearts} hearts remaining`}
           accessibilityRole="button"
         >
-          <Ionicons name="heart" size={20} color="#EF4444" />
+          <Ionicons name="heart" size={20} color="#C0555F" />
           <Text
             className="ml-1"
-            style={{ color: '#EF4444', fontSize: 14, fontWeight: 'bold' }}
+            style={{ color: '#C0555F', fontSize: 14, fontWeight: 'bold' }}
           >
             {isUnlimited ? '∞' : hearts}
           </Text>

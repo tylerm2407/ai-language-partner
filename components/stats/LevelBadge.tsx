@@ -6,11 +6,14 @@ import { GRADIENT_COLORS, GRADIENT_START, GRADIENT_END } from '../../config/grad
 import type { ProficiencyLevel } from '../../types';
 
 const LEVEL_CONFIG: Record<ProficiencyLevel, { label: string; color: string; bg: string; order: number }> = {
-  beginner: { label: 'Beginner', color: '#34D399', bg: '#0D261A', order: 0 },
-  elementary: { label: 'Elementary', color: '#60A5FA', bg: '#1A2340', order: 1 },
-  intermediate: { label: 'Intermediate', color: '#38BDF8', bg: '#0C1A2E', order: 2 },
-  upper_intermediate: { label: 'Upper Intermediate', color: '#A78BFA', bg: '#251A35', order: 3 },
-  advanced: { label: 'Advanced', color: '#FBBF24', bg: '#26210F', order: 4 },
+  // Each badge is a hue-tinted dark fill carrying its own label color. The
+  // fills are graphite tinted toward the label's hue, not the saturated
+  // navy/plum they used to be — see DESIGN.md §Surfaces.
+  beginner: { label: 'Beginner', color: '#4E9F6B', bg: '#16271D', order: 0 },
+  elementary: { label: 'Elementary', color: '#86B4CE', bg: '#1B2530', order: 1 },
+  intermediate: { label: 'Intermediate', color: '#A8C6DC', bg: '#1B1A17', order: 2 },
+  upper_intermediate: { label: 'Upper Intermediate', color: '#B497C4', bg: '#26202D', order: 3 },
+  advanced: { label: 'Advanced', color: '#E0BE6B', bg: '#262013', order: 4 },
 };
 
 interface LevelBadgeProps {

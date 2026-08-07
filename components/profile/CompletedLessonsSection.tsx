@@ -32,10 +32,10 @@ function formatCompletedAt(iso: string): string {
 
 function scoreBadge(score: number): { label: string; color: string } {
   const pct = Math.round(score * 100);
-  if (pct >= 90) return { label: `${pct}%`, color: '#22C55E' };
-  if (pct >= 70) return { label: `${pct}%`, color: '#38BDF8' };
-  if (pct >= 50) return { label: `${pct}%`, color: '#F59E0B' };
-  return { label: `${pct}%`, color: '#EF4444' };
+  if (pct >= 90) return { label: `${pct}%`, color: '#4E9F6B' };
+  if (pct >= 70) return { label: `${pct}%`, color: '#86B4CE' };
+  if (pct >= 50) return { label: `${pct}%`, color: '#D9913C' };
+  return { label: `${pct}%`, color: '#C0555F' };
 }
 
 export function CompletedLessonsSection({ userId, previewCount = 5 }: Props) {
@@ -71,7 +71,7 @@ export function CompletedLessonsSection({ userId, previewCount = 5 }: Props) {
 
       {loading ? (
         <View className="bg-dark-card rounded-2xl p-5 items-center">
-          <ActivityIndicator size="small" color="#A855F7" />
+          <ActivityIndicator size="small" color="#E0BE6B" />
         </View>
       ) : !completions || completions.length === 0 ? (
         <View className="bg-dark-card rounded-2xl p-5 items-center">

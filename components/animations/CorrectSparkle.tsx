@@ -3,7 +3,10 @@ import { View, Animated, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 const PARTICLE_COUNT = 8;
-const COLORS = ['#34D399', '#38BDF8', '#FBBF24', '#A855F7'];
+// Celebration particles stay bright — this is a reward moment, and Studio
+// Graphite restrains chrome, not rewards. They are pulled into the warm palette
+// so the burst reads as the brand's own confetti rather than generic rainbow.
+const COLORS = ['#E0BE6B', '#E2673C', '#7FC79A', '#C8A24A'];
 
 function Particle({ index, trigger }: { index: number; trigger: boolean }) {
   const angle = (index / PARTICLE_COUNT) * Math.PI * 2;
@@ -79,7 +82,7 @@ export function CorrectSparkle({ trigger = false, children }: CorrectSparkleProp
   return (
     <Animated.View style={{ transform: [{ scale: pulseScale }] }}>
       <Animated.View
-        style={[StyleSheet.absoluteFill, { backgroundColor: '#34D399', borderRadius: 20, opacity: pulseOpacity }]}
+        style={[StyleSheet.absoluteFill, { backgroundColor: '#4E9F6B', borderRadius: 20, opacity: pulseOpacity }]}
         pointerEvents="none"
       />
       {children}

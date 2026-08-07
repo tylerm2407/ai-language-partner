@@ -27,11 +27,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { BookCard } from '../../../components/reading/BookCard';
 import { ContinueReadingSection } from '../../../components/reading/ContinueReadingSection';
 
+/** Council of Europe CEFR band names. These are the standard labels, not a
+ *  difficulty ladder of our own — the whole proficiency claim rests on them
+ *  matching what the framework actually says. */
 const CEFR_LABELS: Record<string, string> = {
   A1: 'Beginner',
-  A2: 'Intermediate',
-  B1: 'Advanced',
-  B2: 'Professor',
+  A2: 'Elementary',
+  B1: 'Intermediate',
+  B2: 'Upper intermediate',
+  C1: 'Advanced',
+  C2: 'Proficient',
 };
 
 const CEFR_COLORS: Record<string, { bg: string; text: string }> = {
@@ -282,7 +287,7 @@ export default function LearnScreen() {
           <EmptyState
             icon="book-outline"
             title="No courses yet"
-            description="Courses will appear here once they are published to your Supabase database."
+            description="There are no courses for this language yet. Check back soon."
           />
         ) : activeTab === 'vocab' ? (
           /* Vocab tab — Learning Path */

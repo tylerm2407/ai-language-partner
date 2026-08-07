@@ -1,6 +1,7 @@
 import { Pressable, View, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef } from 'react';
+import { useMotion } from '../../hooks/useMotion';
 import type { PathNodeState } from '../../lib/learning-path';
 
 interface PathNodeProps {
@@ -12,17 +13,23 @@ interface PathNodeProps {
 }
 
 const STATE_COLORS: Record<PathNodeState, string> = {
-  active: '#38BDF8',
-  completed: '#34D399',
-  locked: '#1C2029',
+  active: '#86B4CE',
+  completed: '#4E9F6B',
+  locked: '#24221E',
 };
 
 export function PathNode({ state, icon, score, onPress, isActive }: PathNodeProps) {
   const scale = useRef(new Animated.Value(1)).current;
+  const { shouldReduce } = useMotion();
 
   useEffect(() => {
-    if (isActive) {
-      Animated.loop(
+    // The active node pulses indefinitely, which is exactly the shape WCAG 2.2
+    // SC 2.2.2 governs: auto-starting, longer than five seconds, alongside
+    // other content. Reduce Motion (OS switch or the in-app toggle) stops it
+    // and leaves the node at rest — the node is still identifiable by colour
+    // and position, so nothing is lost by holding still.
+    if (isActive && !shouldReduce) {
+      const loop = Animated.loop(
         Animated.sequence([
           Animated.timing(scale, {
             toValue: 1.08,
@@ -37,16 +44,20 @@ export function PathNode({ state, icon, score, onPress, isActive }: PathNodeProp
             useNativeDriver: true,
           }),
         ])
-      ).start();
-    } else {
-      scale.setValue(1);
+      );
+      loop.start();
+      return () => {
+        loop.stop();
+        scale.setValue(1);
+      };
     }
-  }, [isActive, scale]);
+    scale.setValue(1);
+  }, [isActive, shouldReduce, scale]);
 
   const isLocked = state === 'locked';
   const isCompleted = state === 'completed';
   const displayIcon = isLocked ? 'lock-closed' : isCompleted ? 'checkmark' : icon;
-  const iconColor = isLocked ? '#64748B' : '#FFFFFF';
+  const iconColor = isLocked ? '#7A756B' : '#FFFFFF';
   const hasStarBadge = isCompleted && score !== null && score >= 0.9;
 
   return (
@@ -81,7 +92,7 @@ export function PathNode({ state, icon, score, onPress, isActive }: PathNodeProp
               width: 22,
               height: 22,
               borderRadius: 11,
-              backgroundColor: '#FBBF24',
+              backgroundColor: '#D9913C',
               alignItems: 'center',
               justifyContent: 'center',
             }}

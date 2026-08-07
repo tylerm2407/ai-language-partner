@@ -57,10 +57,10 @@ export function HeartBreak({ trigger }: HeartBreakProps) {
       pointerEvents="none"
     >
       <Animated.View style={{ transform: [{ translateX: leftX }] }}>
-        <Ionicons name="heart-half" size={40} color="#EF4444" style={{ transform: [{ scaleX: -1 }] }} />
+        <Ionicons name="heart-half" size={40} color="#C0555F" style={{ transform: [{ scaleX: -1 }] }} />
       </Animated.View>
       <Animated.View style={{ transform: [{ translateX: rightX }] }}>
-        <Ionicons name="heart-half" size={40} color="#EF4444" />
+        <Ionicons name="heart-half" size={40} color="#C0555F" />
       </Animated.View>
     </Animated.View>
   );

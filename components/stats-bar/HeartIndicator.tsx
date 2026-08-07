@@ -7,9 +7,9 @@ interface HeartIndicatorProps {
   isUnlimited: boolean;
 }
 
-const HEART_COLOR = '#EF4444';
-const LOW_HEART_COLOR = '#DC2626';
-const EMPTY_COLOR = '#64748B';
+const HEART_COLOR = '#C0555F';
+const LOW_HEART_COLOR = '#9E434C';
+const EMPTY_COLOR = '#7A756B';
 
 function HeartIndicatorInner({ hearts, isUnlimited }: HeartIndicatorProps) {
   const scale = useRef(new Animated.Value(1)).current;

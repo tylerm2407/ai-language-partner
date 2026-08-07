@@ -20,7 +20,7 @@ export function TreasureNode({ isOpen }: TreasureNodeProps) {
       <Ionicons
         name={isOpen ? 'gift' : 'gift-outline'}
         size={28}
-        color={isOpen ? '#FBBF24' : '#333A48'}
+        color={isOpen ? '#D9913C' : '#55524B'}
       />
     </View>
   );

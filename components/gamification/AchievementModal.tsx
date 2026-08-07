@@ -105,7 +105,7 @@ export function AchievementModal({ achievement, visible, onDismiss }: {
 
   if (!achievement) return null;
 
-  const confettiColors = [achievement.color, '#FBBF24', '#34D399', '#38BDF8', '#F472B6', '#60A5FA'];
+  const confettiColors = [achievement.color, '#E0BE6B', '#7FC79A', '#86B4CE', '#E2673C', '#B497C4'];
 
   return (
     <Modal transparent visible={visible} animationType="none" onRequestClose={onDismiss}>
@@ -137,7 +137,7 @@ export function AchievementModal({ achievement, visible, onDismiss }: {
           borderRadius: 22.5,
           padding: 32,
           alignItems: 'center',
-          backgroundColor: '#151921',
+          backgroundColor: '#1B1A17',
         }}>
           {/* Confetti Particles */}
           <View style={{ position: 'absolute', top: '40%', left: '50%' }}>
@@ -193,7 +193,7 @@ export function AchievementModal({ achievement, visible, onDismiss }: {
             accessibilityRole="button"
             accessibilityLabel="Dismiss achievement"
           >
-            <Text className="text-white text-lg font-bold">Awesome!</Text>
+            <Text className="text-white text-lg font-bold">Continue</Text>
           </Pressable>
         </View>
         </LinearGradient>

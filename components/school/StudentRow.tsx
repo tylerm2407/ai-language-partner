@@ -36,7 +36,7 @@ export default function StudentRow({
           width: 40,
           height: 40,
           borderRadius: 20,
-          backgroundColor: 'rgba(99, 102, 241, 0.2)',
+          backgroundColor: 'rgba(200, 162, 74, 0.2)',
           alignItems: 'center',
           justifyContent: 'center',
           marginRight: 12,
@@ -44,7 +44,7 @@ export default function StudentRow({
       >
         <Text
           style={{
-            color: '#818CF8',
+            color: '#E0BE6B',
             fontSize: 16,
             fontFamily: 'Nunito_700Bold',
           }}
@@ -67,7 +67,7 @@ export default function StudentRow({
         </Text>
         <Text
           style={{
-            color: '#64748B',
+            color: '#7A756B',
             fontSize: 12,
             fontFamily: 'Nunito_400Regular',
             marginTop: 2,
@@ -99,14 +99,14 @@ export default function StudentRow({
                 height: '100%',
                 width: `${Math.min(100, Math.round(completionRate * 100))}%`,
                 backgroundColor:
-                  completionRate >= 0.8 ? '#22C55E' : completionRate >= 0.5 ? '#F59E0B' : '#EF4444',
+                  completionRate >= 0.8 ? '#4E9F6B' : completionRate >= 0.5 ? '#D9913C' : '#C0555F',
                 borderRadius: 3,
               }}
             />
           </View>
           <Text
             style={{
-              color: '#94A3B8',
+              color: '#9C968A',
               fontSize: 10,
               fontFamily: 'Nunito_500Medium',
               textAlign: 'center',
@@ -127,7 +127,7 @@ export default function StudentRow({
           hitSlop={8}
           style={{ padding: 4 }}
         >
-          <Ionicons name="trash-outline" size={18} color="#EF4444" />
+          <Ionicons name="trash-outline" size={18} color="#C0555F" />
         </Pressable>
       )}
     </View>

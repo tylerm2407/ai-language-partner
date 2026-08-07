@@ -13,7 +13,7 @@ interface EmptyStateProps {
 export function EmptyState({ icon, title, description, actionLabel, onAction }: EmptyStateProps) {
   return (
     <View className="bg-dark-card rounded-2xl p-8 items-center">
-      <Ionicons name={icon} size={48} color="#7DD3FC" />
+      <Ionicons name={icon} size={48} color="#A8C6DC" />
       <Text className="text-lg font-sans-semibold text-text-primary mt-4 mb-2">{title}</Text>
       <Text className="text-sm font-sans text-text-secondary text-center mb-4">{description}</Text>
       {actionLabel && onAction && (

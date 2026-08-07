@@ -82,7 +82,7 @@ export default function SubmissionsListScreen() {
     return (
       <GradientBackground>
         <SafeAreaView className="flex-1 justify-center items-center">
-          <ActivityIndicator color="#818CF8" size="large" />
+          <ActivityIndicator color="#E0BE6B" size="large" />
         </SafeAreaView>
       </GradientBackground>
     );
@@ -99,7 +99,7 @@ export default function SubmissionsListScreen() {
             accessibilityLabel="Go back"
             className="flex-row items-center mb-4"
           >
-            <Ionicons name="chevron-back" size={24} color="#818CF8" />
+            <Ionicons name="chevron-back" size={24} color="#E0BE6B" />
             <Text
               className="text-base text-primary ml-1"
               style={{ fontFamily: 'Nunito_600SemiBold' }}
@@ -125,10 +125,10 @@ export default function SubmissionsListScreen() {
               <View className="flex-row flex-wrap" style={{ gap: 12 }}>
                 {assignment.scenarioKey && (
                   <View className="flex-row items-center">
-                    <Ionicons name="chatbubbles-outline" size={14} color="#94A3B8" />
+                    <Ionicons name="chatbubbles-outline" size={14} color="#9C968A" />
                     <Text
                       style={{
-                        color: '#94A3B8',
+                        color: '#9C968A',
                         fontSize: 12,
                         fontFamily: 'Nunito_500Medium',
                         marginLeft: 4,
@@ -139,10 +139,10 @@ export default function SubmissionsListScreen() {
                   </View>
                 )}
                 <View className="flex-row items-center">
-                  <Ionicons name="calendar-outline" size={14} color="#94A3B8" />
+                  <Ionicons name="calendar-outline" size={14} color="#9C968A" />
                   <Text
                     style={{
-                      color: '#94A3B8',
+                      color: '#9C968A',
                       fontSize: 12,
                       fontFamily: 'Nunito_500Medium',
                       marginLeft: 4,
@@ -152,10 +152,10 @@ export default function SubmissionsListScreen() {
                   </Text>
                 </View>
                 <View className="flex-row items-center">
-                  <Ionicons name="options-outline" size={14} color="#94A3B8" />
+                  <Ionicons name="options-outline" size={14} color="#9C968A" />
                   <Text
                     style={{
-                      color: '#94A3B8',
+                      color: '#9C968A',
                       fontSize: 12,
                       fontFamily: 'Nunito_500Medium',
                       marginLeft: 4,
@@ -166,10 +166,10 @@ export default function SubmissionsListScreen() {
                 </View>
                 {assignment.minDurationMinutes > 0 && (
                   <View className="flex-row items-center">
-                    <Ionicons name="time-outline" size={14} color="#94A3B8" />
+                    <Ionicons name="time-outline" size={14} color="#9C968A" />
                     <Text
                       style={{
-                        color: '#94A3B8',
+                        color: '#9C968A',
                         fontSize: 12,
                         fontFamily: 'Nunito_500Medium',
                         marginLeft: 4,
@@ -241,7 +241,7 @@ export default function SubmissionsListScreen() {
           {/* Submissions List */}
           {submissions.length === 0 ? (
             <View className="flex-1 justify-center items-center" style={{ paddingBottom: 80 }}>
-              <Ionicons name="people-outline" size={48} color="#64748B" />
+              <Ionicons name="people-outline" size={48} color="#7A756B" />
               <Text
                 className="text-base text-text-primary mt-3"
                 style={{ fontFamily: 'Nunito_600SemiBold' }}
@@ -292,7 +292,7 @@ export default function SubmissionsListScreen() {
                       {item.finalScore !== null && (
                         <Text
                           style={{
-                            color: '#22C55E',
+                            color: '#4E9F6B',
                             fontSize: 13,
                             fontFamily: 'Nunito_600SemiBold',
                           }}
@@ -311,7 +311,7 @@ export default function SubmissionsListScreen() {
                       {item.isLate && (
                         <Text
                           style={{
-                            color: '#EF4444',
+                            color: '#C0555F',
                             fontSize: 11,
                             fontFamily: 'Nunito_600SemiBold',
                           }}

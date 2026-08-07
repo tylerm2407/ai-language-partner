@@ -113,7 +113,7 @@ export function WordFormExercise({
       <TextInput
         className={`border-2 ${getBorderClass()} rounded-[14px] px-4 py-2.5 text-base text-text-primary`}
         placeholder="Type the correct word form..."
-        placeholderTextColor="#64748B"
+        placeholderTextColor="#7A756B"
         value={answer}
         onChangeText={setAnswer}
         editable={!submitted && !showResult}

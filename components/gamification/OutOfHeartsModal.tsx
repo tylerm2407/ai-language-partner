@@ -36,10 +36,10 @@ export function OutOfHeartsModal({ visible, nextRegenAt, onDismiss }: OutOfHeart
             end={GRADIENT_END}
             style={{ borderRadius: 24, padding: 1.5 }}
           >
-            <View style={{ borderRadius: 22.5, padding: 32, alignItems: 'center', backgroundColor: '#151921' }}>
+            <View style={{ borderRadius: 22.5, padding: 32, alignItems: 'center', backgroundColor: '#1B1A17' }}>
               {/* Broken heart icon */}
               <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: colors.error.tint, justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
-                <Ionicons name="heart-dislike" size={40} color="#EF4444" />
+                <Ionicons name="heart-dislike" size={40} color="#C0555F" />
               </View>
 
               <Text className="text-2xl font-bold text-text-primary text-center mb-2">

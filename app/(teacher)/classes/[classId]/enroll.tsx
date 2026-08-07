@@ -89,7 +89,7 @@ export default function BulkEnrollScreen() {
             accessibilityLabel="Go back"
             className="flex-row items-center mb-4"
           >
-            <Ionicons name="chevron-back" size={24} color="#818CF8" />
+            <Ionicons name="chevron-back" size={24} color="#E0BE6B" />
             <Text className="text-base text-primary ml-1" style={{ fontFamily: 'Nunito_600SemiBold' }}>Back</Text>
           </Pressable>
 
@@ -113,10 +113,10 @@ export default function BulkEnrollScreen() {
               value={emailText}
               onChangeText={setEmailText}
               placeholder={'student1@school.edu\nstudent2@school.edu\nstudent3@school.edu'}
-              placeholderTextColor="#64748B"
+              placeholderTextColor="#7A756B"
               multiline
               style={{
-                color: '#F1F5F9',
+                color: '#F2EFE9',
                 fontSize: 14,
                 fontFamily: 'Nunito_400Regular',
                 padding: 14,
@@ -130,15 +130,15 @@ export default function BulkEnrollScreen() {
           {/* Counter */}
           <View className="flex-row items-center mb-4" style={{ gap: 12 }}>
             <View className="flex-row items-center" style={{ gap: 4 }}>
-              <Ionicons name="checkmark-circle" size={16} color="#22C55E" />
-              <Text style={{ color: '#22C55E', fontSize: 13, fontFamily: 'Nunito_600SemiBold' }}>
+              <Ionicons name="checkmark-circle" size={16} color="#4E9F6B" />
+              <Text style={{ color: '#4E9F6B', fontSize: 13, fontFamily: 'Nunito_600SemiBold' }}>
                 {validEmails.length} valid
               </Text>
             </View>
             {invalidEmails.length > 0 && (
               <View className="flex-row items-center" style={{ gap: 4 }}>
-                <Ionicons name="alert-circle" size={16} color="#EF4444" />
-                <Text style={{ color: '#EF4444', fontSize: 13, fontFamily: 'Nunito_600SemiBold' }}>
+                <Ionicons name="alert-circle" size={16} color="#C0555F" />
+                <Text style={{ color: '#C0555F', fontSize: 13, fontFamily: 'Nunito_600SemiBold' }}>
                   {invalidEmails.length} invalid
                 </Text>
               </View>
@@ -160,16 +160,16 @@ export default function BulkEnrollScreen() {
               <View className="flex-row items-center mb-3" style={{ gap: 12 }}>
                 {successCount > 0 && (
                   <View className="flex-row items-center" style={{ gap: 4 }}>
-                    <Ionicons name="checkmark-circle" size={18} color="#22C55E" />
-                    <Text style={{ color: '#22C55E', fontSize: 14, fontFamily: 'Nunito_600SemiBold' }}>
+                    <Ionicons name="checkmark-circle" size={18} color="#4E9F6B" />
+                    <Text style={{ color: '#4E9F6B', fontSize: 14, fontFamily: 'Nunito_600SemiBold' }}>
                       {successCount} enrolled
                     </Text>
                   </View>
                 )}
                 {errorCount > 0 && (
                   <View className="flex-row items-center" style={{ gap: 4 }}>
-                    <Ionicons name="close-circle" size={18} color="#EF4444" />
-                    <Text style={{ color: '#EF4444', fontSize: 14, fontFamily: 'Nunito_600SemiBold' }}>
+                    <Ionicons name="close-circle" size={18} color="#C0555F" />
+                    <Text style={{ color: '#C0555F', fontSize: 14, fontFamily: 'Nunito_600SemiBold' }}>
                       {errorCount} failed
                     </Text>
                   </View>
@@ -183,10 +183,10 @@ export default function BulkEnrollScreen() {
                 contentContainerStyle={{ paddingBottom: 100 }}
                 renderItem={({ item }) => (
                   <GlassSurface style={{ marginBottom: 6 }} innerStyle={{ padding: 10, flexDirection: 'row', alignItems: 'center' }}>
-                    <Ionicons name="close-circle" size={16} color="#EF4444" style={{ marginRight: 8 }} />
+                    <Ionicons name="close-circle" size={16} color="#C0555F" style={{ marginRight: 8 }} />
                     <View className="flex-1">
                       <Text className="text-sm text-text-primary" style={{ fontFamily: 'Nunito_500Medium' }}>{item.email}</Text>
-                      <Text className="text-xs" style={{ color: '#EF4444', fontFamily: 'Nunito_400Regular' }}>{item.error}</Text>
+                      <Text className="text-xs" style={{ color: '#C0555F', fontFamily: 'Nunito_400Regular' }}>{item.error}</Text>
                     </View>
                   </GlassSurface>
                 )}

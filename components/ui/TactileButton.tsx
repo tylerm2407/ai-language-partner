@@ -1,16 +1,20 @@
 /**
  * TactileButton — the canonical CTA primitive.
  *
- * Visual: Duolingo-style "slab" button — the fill color sits on top of a
- * darker bottom edge (the slab); on press, the fill translates down ~3px
- * so the slab collapses, simulating a physical click. Paired with a light
- * haptic on press.
+ * Visual: FLAT. A single filled pill with an optional hairline border. On press
+ * it scales to 0.96 and drops to 90% opacity, paired with a light haptic.
+ *
+ * This used to be a Duolingo-style "slab" button — the fill sitting on a darker
+ * bottom edge that collapsed on press. That slab was the single strongest
+ * visual tell tying the app to Duolingo, and it is retired under Studio
+ * Graphite (DESIGN.md §What We Retired). The name and the whole prop surface
+ * are unchanged so no call site had to move.
  *
  * Variants:
- *   primary   — indigo fill, indigo-700 slab. Default CTA.
+ *   primary   — brass fill, DARK label. Default CTA.
  *   secondary — surface-card fill, hairline border. "Cancel" / "Skip".
- *   danger    — red fill, red-dark slab. Destructive / exit.
- *   ghost     — transparent fill, indigo label only. Tertiary actions.
+ *   danger    — error.dark fill, light label. Destructive / exit.
+ *   ghost     — transparent fill, brass label only. Tertiary actions.
  *
  * Haptic + press animation both honor useMotion.shouldReduce.
  */
@@ -39,32 +43,37 @@ interface TactileButtonProps {
 
 const STYLES = {
   primary: {
+    // Brass is a LIGHT fill — the label is near-black (7.9:1). White here is
+    // 2.4:1 and was the failure mode the old indigo palette had inverted.
     fill: colors.action.primaryFill,
-    slab: colors.action.primarySlab,
     text: colors.text.onPrimary,
     borderColor: 'transparent',
+    borderWidth: 0,
   },
   secondary: {
     fill: colors.surface.card,
-    slab: colors.surface.cardAlt,
     text: colors.text.primary,
     borderColor: colors.border.default,
+    borderWidth: 1,
   },
   danger: {
-    fill: colors.error.base,
-    slab: colors.error.dark,
-    text: colors.text.onPrimary,
+    // error.dark, not error.base: the label is 17px bold, which is under the
+    // 14pt threshold for "large text", so it needs the full 4.5:1. On
+    // error.base that lands at 3.9:1; on error.dark it is 5.5:1.
+    fill: colors.error.dark,
+    text: colors.text.primary,
     borderColor: 'transparent',
+    borderWidth: 0,
   },
   ghost: {
     fill: 'transparent',
-    slab: 'transparent',
-    text: colors.indigo[400],
+    text: colors.action.accent,
     borderColor: 'transparent',
+    borderWidth: 0,
   },
 } as const;
 
-const SLAB_HEIGHT = 4;
+const PRESS_SCALE = 0.96;
 
 export function TactileButton({
   label,
@@ -79,19 +88,18 @@ export function TactileButton({
   fullWidth = true,
 }: TactileButtonProps) {
   const palette = STYLES[variant];
-  const translateY = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(1)).current;
   const { shouldReduce, duration } = useMotion();
 
-  const isGhost = variant === 'ghost';
-  const paddingVertical = size === 'lg' ? spacing.md : spacing.sm;
   const paddingHorizontal = spacing.xl;
+  const paddingVertical = size === 'lg' ? spacing.md : spacing.sm;
   const height = size === 'lg' ? 56 : 44;
 
   const handlePressIn = () => {
     if (disabled || loading) return;
     if (!shouldReduce) {
-      Animated.timing(translateY, {
-        toValue: SLAB_HEIGHT,
+      Animated.timing(scale, {
+        toValue: PRESS_SCALE,
         duration: duration.instant,
         useNativeDriver: true,
       }).start();
@@ -103,8 +111,8 @@ export function TactileButton({
   const handlePressOut = () => {
     if (disabled || loading) return;
     if (!shouldReduce) {
-      Animated.timing(translateY, {
-        toValue: 0,
+      Animated.timing(scale, {
+        toValue: 1,
         duration: duration.instant,
         useNativeDriver: true,
       }).start();
@@ -127,42 +135,21 @@ export function TactileButton({
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ disabled: isDisabled, busy: loading }}
       disabled={isDisabled}
-      style={[
-        styles.wrapper,
-        fullWidth ? styles.fullWidth : undefined,
-        style,
-      ]}
+      style={[styles.wrapper, fullWidth ? styles.fullWidth : undefined, style]}
     >
-      {/* Slab (bottom edge). Invisible on ghost. */}
-      {!isGhost && (
-        <View
-          style={[
-            StyleSheet.absoluteFill,
-            {
-              backgroundColor: palette.slab,
-              borderRadius: radii.lg,
-              opacity: isDisabled ? 0.4 : 1,
-            },
-          ]}
-          pointerEvents="none"
-        />
-      )}
-
-      {/* Fill (top surface, translates down on press) */}
       <Animated.View
         style={[
           styles.fill,
           {
             backgroundColor: palette.fill,
             borderColor: palette.borderColor,
-            borderWidth: isGhost ? 0 : variant === 'secondary' ? 1 : 0,
+            borderWidth: palette.borderWidth,
             borderRadius: radii.lg,
             height,
             paddingHorizontal,
             paddingVertical,
-            transform: [{ translateY }],
-            opacity: isDisabled ? 0.5 : 1,
-            marginBottom: isGhost ? 0 : SLAB_HEIGHT,
+            transform: [{ scale }],
+            opacity: isDisabled ? 0.45 : 1,
           },
         ]}
       >
@@ -191,7 +178,6 @@ export function TactileButton({
 const styles = StyleSheet.create({
   wrapper: {
     alignSelf: 'flex-start',
-    position: 'relative',
   },
   fullWidth: {
     alignSelf: 'stretch',

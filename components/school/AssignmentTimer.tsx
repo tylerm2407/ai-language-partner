@@ -37,7 +37,7 @@ export default function AssignmentTimer({ elapsedSeconds, requiredMinutes }: Ass
     >
       <Text
         style={{
-          color: met ? '#22C55E' : '#94A3B8',
+          color: met ? '#4E9F6B' : '#9C968A',
           fontSize: 14,
           fontFamily: 'Nunito_600SemiBold',
           fontVariant: ['tabular-nums'],

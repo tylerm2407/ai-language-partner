@@ -3,154 +3,202 @@
  * See redesign-plan.md for rationale; see design-research.md for empirical
  * citations behind each choice.
  *
- * Canonical palette is DARK GLOW. Body text is validated WCAG AAA (≥7:1)
- * against surface.base (#08090F). Primary FILLS are Indigo 600 (#4F46E5 —
- * white 6.4:1, clears AA) with the brighter #818CF8 (indigo.400) reserved for
- * text/icon accents on dark. See DESIGN.md §Primary.
+ * Canonical palette is STUDIO GRAPHITE + INK & BRASS. Body text is validated
+ * WCAG AAA (>=7:1) against surface.base (#0F0E0C). Primary FILLS are brass
+ * (#C8A24A) carrying DARK text — text.onPrimary is near-black (7.9:1), not
+ * white (white on brass is 2.4:1 and fails outright). See DESIGN.md §Primary.
+ *
+ * The graphite carries a deliberate warm bias (base is #0F0E0C, not a neutral
+ * #0E0E10). A neutral near-black under a gold accent reads clinical; two points
+ * of red/green bias in the surface is what keeps the theme professional without
+ * being cold, and it costs nothing in contrast (base luminance is unchanged to
+ * four decimal places).
  */
 
 // ─── Colors ──────────────────────────────────────────────────────────────
 export const colors = {
   /** Screen-level surfaces, from darkest to progressively lighter.
-   *  base/raised/sunken are deepened for the glow direction — the blob layer
-   *  reads as depth against a near-black void. Cards are unchanged so content
-   *  contrast is untouched. */
+   *  Warm graphite. There is no ambient blob layer any more — depth comes from
+   *  the surface steps and hairline borders, so `base` no longer has to be a
+   *  near-void for a glow to read against it. */
   surface: {
-    base: '#08090F', // primary app background (glow layer paints over this)
-    raised: '#0E1119', // reading / review / lesson content (+ contrast for focus)
-    sunken: '#060710', // behind-content wells (scroll under, inset tracks)
-    card: '#151921',
-    cardAlt: '#1C212B',
-    overlay: 'rgba(6, 8, 12, 0.82)', // modal backdrops / celebration scrim
-    sheet: '#1A1F29', // bottom-sheet fill
+    base: '#0F0E0C', // primary app background
+    raised: '#151412', // reading / review / lesson content (+ contrast for focus)
+    sunken: '#0A0908', // behind-content wells (scroll under, inset tracks)
+    card: '#1B1A17',
+    cardAlt: '#24221E',
+    overlay: 'rgba(10, 9, 8, 0.84)', // modal backdrops / celebration scrim
+    sheet: '#1B1A17', // bottom-sheet fill
   },
 
-  /** Semantic action roles. Fills must clear AA against text.onPrimary, which
-   *  indigo.500 does NOT (4.47:1) — every CTA fill goes through these. */
+  /** Semantic action roles.
+   *
+   *  The indigo palette needed a fill/accent split because indigo.500 under
+   *  white was 4.47:1. Brass inverts the problem: it is a LIGHT accent, so the
+   *  fill carries dark text and the same hex works as both fill and accent.
+   *  `accent` is the lifted step, used where a small glyph or 13px link needs
+   *  more separation from the surface than the fill step gives. */
   action: {
-    primaryFill: '#4F46E5', // indigo.600 — white 6.4:1
-    primarySlab: '#3730A3', // indigo.800 — tactile slab drops one step with the fill
-    primaryTint: 'rgba(99, 102, 241, 0.15)',
-    accent: '#818CF8', // indigo.400 — text links, small icons, progress glow (6.43:1)
+    primaryFill: '#C8A24A', // brass.500 — text.onPrimary 7.9:1, on base 8.0:1
+    /** @deprecated Slab CTAs are retired — see DESIGN.md §What We Retired.
+     *  Retained only so pre-Studio call sites type-check; do not use. */
+    primarySlab: '#8E6F2F', // brass.700
+    primaryTint: 'rgba(200, 162, 74, 0.14)',
+    accent: '#E0BE6B', // brass.300 — text links, small icons, progress (10.8:1)
   },
 
-  /** Ambient glow layer — three blurred radial blobs between the base fill
-   *  (z0) and content (z5). Rendered by components/ui/GlowBackground.tsx. */
+  /** Ambient wash. ONE top-anchored warm gradient, not the retired three-blob
+   *  layer. Rendered by components/ui/GlowBackground.tsx. */
   glow: {
-    indigo: 'rgba(99, 102, 241, 1)', // indigo.500
-    violet: 'rgba(124, 58, 237, 1)', // magazine.accentViolet
-    lilacIndigo: 'rgba(129, 140, 248, 1)', // indigo.400
+    brass: 'rgba(200, 162, 74, 1)', // the wash tint
+    ember: 'rgba(226, 103, 60, 1)', // celebration-only second stop
   },
 
-  /** Hairline borders on dark */
+  /** Hairline borders. Warm-white alpha, so a 1px rule on a warm card does not
+   *  read as a cool seam. */
   border: {
-    subtle: 'rgba(255, 255, 255, 0.06)',
-    default: 'rgba(255, 255, 255, 0.12)',
-    strong: 'rgba(255, 255, 255, 0.24)',
-    focus: '#6366F1',
+    subtle: 'rgba(245, 240, 230, 0.07)',
+    default: 'rgba(245, 240, 230, 0.13)',
+    strong: 'rgba(245, 240, 230, 0.24)',
+    focus: '#C8A24A',
   },
 
-  /** Text tokens — contrast ratios measured vs surface.base */
+  /** Text tokens — contrast ratios measured vs surface.base (#0F0E0C).
+   *  Warm off-whites, not cool slate. #F1F5F9 over a warm graphite reads blue. */
   text: {
-    primary: '#F1F5F9', // 15.6:1 (AAA)
-    secondary: '#CBD5E1', // 10.9:1 (AAA)
-    tertiary: '#94A3B8', // 6.2:1 (AA)
-    quaternary: '#64748B', // 3.9:1 (large UI only — timestamps, placeholders)
-    onPrimary: '#FFFFFF', // text on action.primaryFill (6.4:1)
-    onSuccess: '#052E1A', // dark text on bright success (7.1:1)
-    onWarning: '#0C0F14', // dark text on bright warning (9.0:1)
-    disabled: 'rgba(241, 245, 249, 0.38)',
+    primary: '#F2EFE9', // 16.9:1 (AAA)
+    secondary: '#D6D1C7', // 12.7:1 (AAA)
+    tertiary: '#9C968A', // 6.6:1 (AA)
+    quaternary: '#7A756B', // 4.2:1 (large UI only — timestamps, placeholders)
+    onPrimary: '#14120E', // DARK on brass fills (7.9:1). Never white — see header.
+    onSuccess: '#0A1710', // dark text on success fill (5.9:1)
+    onWarning: '#14120E', // dark text on warning fill (7.3:1)
+    disabled: 'rgba(242, 239, 233, 0.38)',
   },
 
-  /** Indigo — primary brand */
+  /** Brass — primary brand. Steps are ordered by lightness like any Tailwind-
+   *  shaped scale, so 300 is LIGHTER than 500. On a dark canvas the useful
+   *  steps run 300–500; 600+ exist for pressed states and gradient stops. */
+  brass: {
+    50: '#FBF7EC',
+    100: '#F4EBD3',
+    200: '#E9D9AC',
+    300: '#E0BE6B', // accent step — small text/icons on dark (10.8:1)
+    400: '#D0B063', // 9.3:1
+    500: '#C8A24A', // CANONICAL PRIMARY — fills, 8.0:1
+    600: '#B08C3B',
+    700: '#8E6F2F',
+    800: '#6D5424',
+    900: '#4C3A19',
+  },
+
+  /**
+   * @deprecated Indigo is retired. These keys alias the brass scale by step so
+   * pre-Studio call sites (`colors.indigo[400]`) keep compiling and pick up the
+   * new palette instead of silently staying indigo. Migrate to `colors.brass`.
+   */
   indigo: {
-    50: '#EEF2FF',
-    100: '#E0E7FF',
-    200: '#C7D2FE',
-    300: '#A5B4FC',
-    400: '#818CF8', // brighter primary for accents on dark
-    500: '#6366F1', // CANONICAL PRIMARY
-    600: '#4F46E5',
-    700: '#4338CA', // button bottom-slab edge
-    800: '#3730A3',
-    900: '#312E81',
+    50: '#FBF7EC',
+    100: '#F4EBD3',
+    200: '#E9D9AC',
+    300: '#E0BE6B',
+    400: '#D0B063',
+    500: '#C8A24A',
+    600: '#C8A24A',
+    700: '#8E6F2F',
+    800: '#6D5424',
+    900: '#4C3A19',
   },
 
-  /** Semantic */
+  /** Semantic.
+   *
+   *  Every base below is desaturated relative to the old Tailwind-bright set.
+   *  A #22C55E green and a #EF4444 red next to a gold accent is a traffic light;
+   *  muted jade and clay keep the semantics legible without shouting over the
+   *  brand color. `.light` steps are what small text uses — the bases sit at or
+   *  under AA at 13px, exactly as they did before. */
   success: {
-    base: '#22C55E',
-    dark: '#16A34A',
-    light: '#6EE7B7',
-    tint: 'rgba(34, 197, 94, 0.15)',
-    border: 'rgba(34, 197, 94, 0.35)',
+    base: '#4E9F6B', // 6.0:1 — fills and icons
+    dark: '#3C7E54',
+    light: '#7FC79A', // 9.7:1 — chip labels, inline diffs
+    tint: 'rgba(78, 159, 107, 0.15)',
+    border: 'rgba(78, 159, 107, 0.35)',
   },
   error: {
-    base: '#EF4444',
-    dark: '#DC2626',
-    light: '#FCA5A5',
-    tint: 'rgba(239, 68, 68, 0.15)',
-    border: 'rgba(239, 68, 68, 0.40)',
+    base: '#C0555F', // 4.3:1 — fills and icons only
+    dark: '#9E434C',
+    light: '#E39098', // 8.2:1 — chip labels, inline diffs
+    tint: 'rgba(192, 85, 95, 0.15)',
+    border: 'rgba(192, 85, 95, 0.40)',
   },
   warning: {
-    base: '#F59E0B',
-    dark: '#D97706',
-    light: '#FCD34D',
-    tint: 'rgba(245, 158, 11, 0.15)',
-    border: 'rgba(245, 158, 11, 0.35)',
+    base: '#D9913C', // 7.4:1
+    dark: '#B4762D',
+    light: '#EFBB7C',
+    tint: 'rgba(217, 145, 60, 0.15)',
+    border: 'rgba(217, 145, 60, 0.35)',
   },
   streak: {
-    base: '#F59E0B',
-    fire: '#F97316',
-    /** Orange-based so a streak chip never reads as a warning chip — the two
-     *  sat side by side on Home in identical amber. */
-    tint: 'rgba(249, 115, 22, 0.15)',
-    light: '#FDBA74', // streak chip label on dark
+    base: '#E2673C', // ember — 5.8:1
+    fire: '#F0763D',
+    /** Ember-orange, deliberately hotter than `warning` and well clear of the
+     *  brass accent. Three warm tokens now share a canvas — brass (43°),
+     *  warning (33°), streak (20°) — so the icon+label rule in DESIGN.md
+     *  §Accessibility is load-bearing here, not decorative. */
+    tint: 'rgba(226, 103, 60, 0.15)',
+    light: '#F2A886', // streak chip label on dark
   },
   premium: {
-    base: '#A855F7',
-    tint: 'rgba(168, 85, 247, 0.18)',
+    /** Premium is the brand's own accent at its brightest, not a separate hue.
+     *  A purple next to brass reads as a second brand; the most valuable tier
+     *  should look like the most concentrated version of the brand color. */
+    base: '#E0BE6B',
+    tint: 'rgba(224, 190, 107, 0.16)',
   },
 
-  /** League tier colors (kept from existing DESIGN.md) */
+  /** League tier colors — retuned as metals that live in the graphite world.
+   *  The old #FFD700 gold sat brighter than every CTA on screen. */
   league: {
-    bronze: '#CD7F32',
-    silver: '#C0C0C0',
-    gold: '#FFD700',
-    platinum: '#A78BFA',
-    diamond: '#38BDF8',
+    bronze: '#9C6B3F',
+    silver: '#A8AAAE',
+    gold: '#D2A840',
+    platinum: '#C3C9D2',
+    diamond: '#86B4CE',
   },
 
   /** Heart colors (gamification) */
   heart: {
-    filled: '#EF4444',
-    empty: '#64748B',
+    filled: '#C0555F',
+    empty: '#55524B',
   },
 
   /** Magazine / editorial palette */
   magazine: {
-    nebulaTop: '#0a0520',
-    nebulaMid: '#1a0a3e',
-    accentBlue: '#4F8EF7',
-    accentViolet: '#7C3AED',
-    accentLilac: '#A855F7',
-    heartsCoral: '#FF6B6B',
-    xpGold: '#FFB547',
-    streakFlame: '#FF8A3D',
-    // Opaque under Dark Glow — the editorial voice is carried by type
+    nebulaTop: '#0F0E0C',
+    nebulaMid: '#1B1A17',
+    accentBlue: '#D0B063', // active-tab gradient start
+    accentViolet: '#B08C3B', // active-tab gradient end
+    accentLilac: '#E0BE6B', // kickers, premium accents
+    heartsCoral: '#C0555F',
+    xpGold: '#D0B063',
+    streakFlame: '#E2673C',
+    // Opaque under Studio Graphite — the editorial voice is carried by type
     // (Fraunces + mono), not by a differently-tinted card.
-    glassBg: '#151921',
-    glassBorder: 'rgba(255,255,255,0.12)',
+    glassBg: '#1B1A17',
+    glassBorder: 'rgba(245, 240, 230, 0.13)',
   },
 
-  /** Correction-banner error-type chip styles */
+  /** Correction-banner error-type chip styles. Hues stay distinguishable (they
+   *  encode error TYPE) but are desaturated into the warm-graphite world; the
+   *  old set was six saturated Tailwind tints on one banner. */
   correctionChip: {
-    grammar: { bg: 'rgba(56, 189, 248, 0.22)', text: '#7DD3FC' },
-    vocabulary: { bg: 'rgba(168, 85, 247, 0.22)', text: '#C084FC' },
-    spelling: { bg: 'rgba(148, 163, 184, 0.22)', text: '#CBD5E1' },
-    word_order: { bg: 'rgba(251, 146, 60, 0.22)', text: '#FB923C' },
-    tense: { bg: 'rgba(52, 211, 153, 0.22)', text: '#6EE7B7' },
-    gender: { bg: 'rgba(244, 114, 182, 0.22)', text: '#F472B6' },
-    other: { bg: 'rgba(148, 163, 184, 0.22)', text: '#CBD5E1' },
+    grammar: { bg: 'rgba(125, 166, 199, 0.20)', text: '#A8C6DC' },
+    vocabulary: { bg: 'rgba(178, 150, 190, 0.20)', text: '#C9B3D4' },
+    spelling: { bg: 'rgba(200, 196, 186, 0.18)', text: '#CFCABF' },
+    word_order: { bg: 'rgba(226, 140, 80, 0.20)', text: '#E8A97E' },
+    tense: { bg: 'rgba(110, 180, 140, 0.20)', text: '#9BD4B4' },
+    gender: { bg: 'rgba(210, 130, 150, 0.20)', text: '#E0A5B6' },
+    other: { bg: 'rgba(200, 196, 186, 0.18)', text: '#CFCABF' },
   },
 } as const;
 
@@ -284,7 +332,7 @@ export const motion = {
 } as const;
 
 // ─── Shadow / elevation ──────────────────────────────────────────────────
-/** Flat by default. Shadows only permitted for tactile button slab + modals. */
+/** Flat by default. Shadows are permitted only for modals/sheets. */
 export const elevation = {
   none: {
     shadowColor: 'transparent',
@@ -293,7 +341,8 @@ export const elevation = {
     shadowOffset: { width: 0, height: 0 },
     elevation: 0,
   },
-  /** For raised tactile buttons (slab edge). Shadow is visual slab, not drop. */
+  /** @deprecated The slab CTA is retired — Studio CTAs are flat and press with
+   *  a 0.96 scale. Retained so pre-Studio call sites type-check. */
   tactile: {
     shadowColor: '#000',
     shadowOpacity: 0.4,

@@ -39,7 +39,7 @@ export function XpCounterTick({ targetXp, trigger, style }: XpCounterTickProps) 
 
   return (
     <Animated.View style={[{ transform: [{ scale }] }, style]}>
-      <Text style={{ color: '#38BDF8', fontSize: 32, fontWeight: '800', textAlign: 'center' }}>
+      <Text style={{ color: '#86B4CE', fontSize: 32, fontWeight: '800', textAlign: 'center' }}>
         +{displayValue} XP
       </Text>
     </Animated.View>
