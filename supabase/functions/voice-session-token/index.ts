@@ -1,6 +1,13 @@
 // Supabase Edge Function: Voice Session Token
 // Authenticates user, checks voice limits, returns remaining minutes.
-// Voice config and system prompt are built server-side in voice-proxy.
+//
+// Despite the name it mints no token: it is purely an auth + quota pre-check.
+// It dates from the Gemini Live architecture, where a `voice-proxy` function
+// built the voice config and system prompt server-side. That was replaced by
+// the turn-based fish.audio TTS + transcribe loop and voice-proxy was deleted
+// (source recoverable at 21cabe2^). Nothing in the app calls this endpoint
+// today — it is retained only as the limit-check surface if live voice returns.
+//
 // Deploy: npx supabase functions deploy voice-session-token
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
@@ -75,8 +82,8 @@ serve(async (req: Request) => {
       );
     }
 
-    // Voice config and system prompt are now built server-side in voice-proxy.
-    // This endpoint only handles auth and limit checking.
+    // Auth and limit checking only — there is no voice config to hand back
+    // since the turn-based path builds its prompt in ai-chat and its audio in tts.
     return new Response(
       JSON.stringify({ remainingMinutes }),
       { headers }

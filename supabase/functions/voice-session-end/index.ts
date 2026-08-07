@@ -1,10 +1,18 @@
 // Supabase Edge Function: Voice Session End
-// Returns remaining voice minutes after a Gemini Live session ends.
+// Returns remaining voice minutes at the end of a voice session.
 //
-// NOTE: Voice minutes are counted server-side by the voice-proxy edge function
-// (tick interval every 60s + fractional remainder on close). This endpoint does
-// NOT increment usage — it only reads current totals and returns remaining
-// minutes so the client can update its UI. This avoids double-counting.
+// NOTE: this endpoint does NOT increment usage — it only reads current totals
+// and returns remaining minutes so the client can update its UI. Voice minutes
+// are metered by `tts` (which calls increment_daily_usage after each successful
+// generation) and gated by `transcribe`; both return DAILY_VOICE_LIMIT_REACHED
+// when the plan cap is hit. Keeping the increment there and the read here is
+// what avoids double-counting.
+//
+// HISTORY: metering used to live in a `voice-proxy` function that held a
+// WebSocket open to Gemini Live. That architecture was replaced by the
+// turn-based fish.audio TTS + transcribe loop, and voice-proxy was deleted
+// (source recoverable at 21cabe2^). Nothing calls this endpoint today either —
+// it is retained only as the limit-check surface if live voice returns.
 //
 // Deploy: npx supabase functions deploy voice-session-end
 

@@ -64,3 +64,14 @@ verify_jwt = false
 # shared-secret Authorization header, checked in the function body.
 [functions.revenuecat-webhook]
 verify_jwt = false
+
+# ─── voice-session-token / voice-session-end ──────────────────────────────
+# Both authenticate in the function body via getAuthenticatedUser
+# (_shared/auth.ts), same as ai-chat, so the platform gate stays off. Without
+# these entries the CLI would default them back to verify_jwt = true on the
+# next deploy and silently start rejecting this project's user tokens.
+[functions.voice-session-token]
+verify_jwt = false
+
+[functions.voice-session-end]
+verify_jwt = false
