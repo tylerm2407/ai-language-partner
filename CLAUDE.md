@@ -54,12 +54,25 @@ Edge functions deploy via `npx supabase functions deploy <name>` or the Supabase
 - Mobile UI (safe areas, accessibility, gestures, performance): `.claude/rules/mobile-ui.md`.
 - New DB queries go through `lib/supabase-queries.ts` in the matching domain section; user-growable tables always query with `.limit()` or `.range()`.
 - Edge functions: always authenticate via `_shared/auth.ts`, validate input via `_shared/validation.ts`, generate AI content via `_shared/validated-generate.ts`, cap tokens and input length.
-- Never write gamification columns (`total_xp`, `xp_level`, `hearts`, `max_hearts`, `last_heart_lost_at`, `streak`, `longest_streak`, `streak_freezes`, `league_tier`, `streak_shield_*`) by direct table update — a DB trigger blocks it. Use the RPCs: `increment_xp`, `spend_heart`, `sync_hearts`, `update_streak`, `use_streak_freeze`, `set_streak_shield`, `sync_level`.
+- Never write gamification columns (`total_xp`, `xp_level`, `hearts`, `max_hearts`, `last_heart_lost_at`, `streak`, `longest_streak`, `streak_freezes`, `league_tier`, `streak_shield_*`) by direct table update — a DB trigger blocks it. Use the RPCs: `increment_xp`, `increment_xp_idempotent`, `spend_heart`, `sync_hearts`, `update_streak`, `repair_streak_with_freeze`, `repair_streak_with_shield`. (Verified against live `pg_proc` — `use_streak_freeze`, `set_streak_shield` and `sync_level` do not exist and never did.)
 
 ## 5. Database — READ BEFORE TOUCHING
-- **The production Supabase project (`ngqpsuixmumdnqbqxjxv`) is SHARED with other NovaWealth apps** (CostClarity and others). `user_profiles` contains columns from multiple apps. Never run `supabase db reset` or `db push` against it. Never drop/alter tables you don't recognize — they may belong to another app.
+- The production Supabase project is `ngqpsuixmumdnqbqxjxv`. Never run `supabase db reset` or `db push` against it.
+- **This project used to be shared with other NovaWealth apps (CostClarity, FinancialCourseWork, CaseMate). As of 2026-08-06 it no longer is** — the `public` schema was audited table by table and is entirely Fluenci's (no foreign tables, columns, functions, or cron jobs), and the 12 leftover foreign edge functions were deleted. `user_profiles` does *not* carry other apps' columns. The one surface still not Fluenci-only is `auth.users`: of 185 accounts, 180 are pre-provisioned `@bryant.edu` pilot logins that have never signed in.
 - Prod migration history uses auto-generated timestamps (applied via dashboard/MCP), so the numbered files in `supabase/migrations/` are a *record of intent*, not the applied history. Apply schema changes via the Supabase MCP `apply_migration` tool (or dashboard) **and** mirror the SQL as a new numbered file in `supabase/migrations/`.
 - RLS is mandatory on every new table. For permission helpers use `SECURITY DEFINER` functions with `SET search_path = public` and a caller guard (`auth.uid()` check) — see migrations 024/025/031 for the pattern.
+- **Every new policy MUST be written as:**
+  ```sql
+  CREATE POLICY "..." ON public.<table>
+    FOR SELECT              -- never FOR ALL unless clients genuinely need to write
+    TO authenticated        -- omitting this targets `public`, i.e. anon too
+    USING ((select auth.uid()) = user_id);   -- wrapped, not bare auth.uid()
+  ```
+  - `TO authenticated` — a policy with no `TO` clause applies to the `public` role, so Postgres evaluates it for `anon` on every query. Migration 058 scoped the 57 policies that were missing it.
+  - `(select auth.uid())` — bare `auth.uid()` is re-evaluated per row (it parses the JWT claims JSON each time) and can stop the planner using a `user_id` index as an index qual. The `select` wrapper makes it a once-per-query InitPlan.
+  - **`FOR ALL` needs an explicit `WITH CHECK`.** Without one, Postgres reuses the `USING` expression as the write check — and `USING (auth.uid() = user_id)` stays true while you rewrite any *other* column of your own row. That is exactly how the subscription tier self-grant in migration 057 happened. Prefer a `FOR SELECT` policy plus service-role writes.
+  - Client-writable is the exception, not the default: anything with economic meaning (tier, quotas, XP) is written by a guarded RPC or a service-role edge function (§1.2).
+- Service-role-only tables (`api_cache`, `hint_cache`, `translation_cache`, `client_events`) have RLS enabled with **no policies at all** — service_role bypasses RLS, so that is deny-all to clients and is the intended state. The advisor reports it as INFO `rls_enabled_no_policy`; accept it, don't "fix" it by adding a permissive policy.
 
 ## 6. Error Handling & Testing
 - No bare/swallowed catches: surface errors to the UI (error state + retry) or rethrow. Returning `[]` on failure hides outages.
