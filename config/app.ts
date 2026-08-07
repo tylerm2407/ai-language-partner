@@ -5,11 +5,18 @@ import type { ProficiencyLevel } from '../types';
 // Flip to true when ready to enable for schools.
 export const SCHOOL_ENABLED = false;
 
-// Hands-free (eyes-free commute) mode. Off until it has had a real device
-// pass: none of the audio-session, background-playback or endpointer
-// behaviour can be verified on a machine with no simulator, so shipping it
-// enabled would mean shipping it untested.
-export const HANDSFREE_ENABLED = false;
+// Hands-free (eyes-free commute) mode.
+//
+// ON at Tyler's call. Worth knowing what that does and does not expose: the
+// audio-session refactor and the review-queue fixes are NOT gated by this flag
+// and were already live regardless. The flag controls one thing — whether the
+// Practice tab offers the hands-free entry point.
+//
+// Still unverified on hardware at the time this was switched on: audio routing,
+// background playback with the screen locked, incoming-call handling, the
+// endpointer in real road noise, and Bluetooth car audio. Turn it back off if
+// any of those misbehave — the entry point is the only thing that disappears.
+export const HANDSFREE_ENABLED = true;
 
 export const HANDSFREE_DEFAULTS = {
   targetDurationMs: 20 * 60 * 1000,

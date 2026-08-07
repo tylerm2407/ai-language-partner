@@ -1,6 +1,22 @@
 # Spec: Niche Tracks
 
-Status: Draft for review (no code written)
+> ## ⏸ PARKED — deferred to v2
+>
+> **Do not build from this spec.** Parked 2026-08-07 to keep the v1 scope on the
+> App Store launch. Nothing here has been implemented: no schema, no RPC, no
+> onboarding step, no content.
+>
+> The design is sound and was validated against production — carrier courses and
+> restrictive row-level policies both hold up — so this is a pause, not a
+> rewrite. Before it resumes, three decisions are still open (§8): healthcare
+> pricing tier, one active track vs several, and the subject-matter review
+> budget.
+>
+> One correction already folded in: the third launch track cannot be Interview
+> English. English is not a selectable target language and there is no English
+> course, so that track has no host language. §9.1 covers the options.
+
+Status: **Parked — v2** (no code written)
 Author: spec pass, 2026-08-05
 Scope: product + technical design for vertical/purpose-specific language tracks in Fluenci
 
