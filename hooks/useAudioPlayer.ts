@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { Audio } from 'expo-av';
+import { setAudioSessionMode } from '../lib/audio-session';
 
 export function useAudioPlayer() {
   const [playing, setPlaying] = useState(false);
@@ -11,6 +12,10 @@ export function useAudioPlayer() {
     try {
       setLoading(true);
       setError(null);
+      // Claim playback mode explicitly. This hook previously set nothing and
+      // inherited whatever the last recorder left behind — which, before the
+      // restore was added to useAudioRecorder, meant playing out the earpiece.
+      await setAudioSessionMode('playback');
       if (soundRef.current) {
         await soundRef.current.unloadAsync();
       }

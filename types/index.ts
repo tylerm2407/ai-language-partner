@@ -257,6 +257,27 @@ export interface ReviewLog {
   reviewedAt: string;
 }
 
+// ─── Hands-Free Sessions ────────────────────────────
+
+/**
+ * One eyes-free commute session (migration 059). Deliberately carries no
+ * ratings or XP — those flow through the normal review path, so this row only
+ * describes the shape of the session itself.
+ */
+export interface HandsFreeSessionRow {
+  id: string;
+  userId: string;
+  startedAt: string;
+  endedAt: string | null;
+  plannedDurationMs: number;
+  actualDurationMs: number | null;
+  itemsAttempted: number;
+  itemsCorrect: number;
+  /** Only 'in_app' is reachable in Phase A; the rest await lock screen / CarPlay. */
+  surface: 'in_app' | 'lock_screen' | 'carplay' | 'android_auto';
+  endedReason: 'completed' | 'user_ended' | 'interrupted' | 'error' | null;
+}
+
 // ─── Stats ──────────────────────────────────────────────────────
 
 export interface DailyStats {

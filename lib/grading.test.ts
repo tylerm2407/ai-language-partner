@@ -2,7 +2,7 @@
  * Unit tests for error classification in `gradeAnswer` / `classifyError`.
  */
 
-import { classifyError, gradeAnswer } from './grading';
+import { classifyError, gradeAnswer, gradeSpeechTranscription } from './grading';
 
 describe('classifyError', () => {
   describe('phonological', () => {
@@ -297,5 +297,69 @@ describe('gradeAnswer strict grammar grading', () => {
       exerciseHints: { skillType: 'vocabulary' },
     });
     expect(result.isCorrect).toBe(true);
+  });
+});
+
+/**
+ * `gradeSpeechTranscription` had no tests despite being the scoring function
+ * for every spoken answer. These characterise its behaviour on what
+ * speech-to-text actually produces — dropped articles, missing accents,
+ * added punctuation — because the 60-point pass mark sits on raw
+ * Levenshtein similarity and it was not obvious whether that is too harsh.
+ */
+describe('gradeSpeechTranscription', () => {
+  it('scores an exact match at 100', () => {
+    const r = gradeSpeechTranscription('la manzana', 'la manzana', []);
+    expect(r.score).toBe(100);
+    expect(r.isCorrect).toBe(true);
+  });
+
+  it('ignores case and trailing punctuation the recogniser adds', () => {
+    expect(gradeSpeechTranscription('La manzana.', 'la manzana', []).score).toBe(100);
+  });
+
+  it('accepts a variant over the primary answer', () => {
+    const r = gradeSpeechTranscription('manzana', 'la manzana', ['manzana']);
+    expect(r.score).toBe(100);
+    expect(r.isCorrect).toBe(true);
+  });
+
+  it('tolerates a dropped article', () => {
+    expect(gradeSpeechTranscription('manzana', 'la manzana', []).isCorrect).toBe(true);
+  });
+
+  it('tolerates a missing accent', () => {
+    // Unlike gradeAnswer this does NOT strip diacritics; it relies on edit
+    // distance absorbing them, which is a weaker guarantee on short answers.
+    expect(gradeSpeechTranscription('esta bien', 'está bien', []).isCorrect).toBe(true);
+  });
+
+  it('rejects a completely different utterance', () => {
+    expect(gradeSpeechTranscription('el perro corre', 'la manzana roja', []).isCorrect).toBe(false);
+  });
+
+  it('scores an empty transcript at zero rather than crashing', () => {
+    const r = gradeSpeechTranscription('', 'la manzana', []);
+    expect(r.score).toBe(0);
+    expect(r.isCorrect).toBe(false);
+  });
+
+  it('reports whether the target word was actually said', () => {
+    expect(gradeSpeechTranscription('la manzana roja', 'la manzana roja', [], 'manzana')
+      .targetPresent).toBe(true);
+    expect(gradeSpeechTranscription('la fruta roja', 'la manzana roja', [], 'manzana')
+      .targetPresent).toBe(false);
+  });
+
+  it('is harsher on short answers than long ones for the same single error', () => {
+    // Edit distance is length-normalised, so one wrong character costs far
+    // more on a two-word card. That is where false negatives will appear.
+    const short = gradeSpeechTranscription('si', 'no', []);
+    const long = gradeSpeechTranscription(
+      'la manzana roja esta en la mesa',
+      'la manzana roja está en la mesa',
+      [],
+    );
+    expect(short.score).toBeLessThan(long.score);
   });
 });

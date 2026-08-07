@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Audio } from 'expo-av';
 import { File } from 'expo-file-system/next';
+import { setAudioSessionMode } from '../lib/audio-session';
 
 export function useAudioRecorder() {
   const [recording, setRecording] = useState(false);
@@ -18,6 +19,9 @@ export function useAudioRecorder() {
       if (rec) {
         recordingRef.current = null;
         rec.stopAndUnloadAsync().catch(() => { /* already dead */ });
+        // Unmounting mid-recording leaves the session in record mode, which
+        // would route the next screen's playback to the earpiece.
+        void setAudioSessionMode('idle');
       }
     };
   }, []);
@@ -41,10 +45,7 @@ export function useAudioRecorder() {
         return;
       }
 
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-      });
+      await setAudioSessionMode('record');
 
       const { recording: rec } = await Audio.Recording.createAsync(
         Audio.RecordingOptionsPresets.HIGH_QUALITY
@@ -66,10 +67,18 @@ export function useAudioRecorder() {
       recordingRef.current = null; // Null ref BEFORE async work to prevent races
       await rec.stopAndUnloadAsync();
       const uri = rec.getURI();
+      // Hand the session back. Without this iOS stays in PlayAndRecord and
+      // routes every subsequent playback to the earpiece — the bug this hook
+      // shipped with, and the reason lesson audio went quiet after a speaking
+      // exercise.
+      await setAudioSessionMode('idle');
       setRecording(false);
       setAudioUri(uri);
       return uri;
     } catch (err) {
+      // Restore on the failure path too — a stop that threw still leaves the
+      // session in record mode.
+      await setAudioSessionMode('idle');
       setRecording(false);
       setError(err instanceof Error ? err.message : 'Recording failed');
       return null;

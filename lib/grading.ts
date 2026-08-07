@@ -3,7 +3,7 @@
  * Handles exact match, fuzzy match (typo tolerance), and accent normalization.
  */
 
-import type { FeedbackErrorType, ExerciseType, SkillType } from '../types';
+import type { FeedbackErrorType, ExerciseType, SkillType, ReviewRating } from '../types';
 
 export interface GradeResult {
   isCorrect: boolean;
@@ -407,4 +407,38 @@ export function gradeToRating(grade: GradeResult, responseTimeMs: number): 0 | 1
   if (grade.accuracy === 1 && wasFast) return 5; // perfect + fast = easy
   if (grade.accuracy === 1) return 4; // perfect but slow
   return 3; // correct with typo
+}
+
+/**
+ * Map a spoken answer's similarity score to an SM-2 rating.
+ *
+ * Separate from `gradeToRating` because the two take incompatible shapes —
+ * `GradeResult.accuracy` is 0–1 while `SpeechGradeResult.score` is 0–100 — and
+ * because response time means something different out loud.
+ *
+ * `thinkingTimeMs` must have the endpointer's silence window SUBTRACTED. A
+ * voice turn cannot end until the detector has heard ~1.2s of silence, so raw
+ * response time carries a floor that has nothing to do with how well the
+ * learner knew the answer. Against `gradeToRating`'s 5-second threshold that
+ * floor alone would make a 5 nearly unreachable, quietly flattening the top of
+ * the rating scale and slowing every interval.
+ *
+ * The pass boundary is 60, matching `gradeSpeechTranscription`'s own
+ * `isCorrect`, which in turn lines up with SM-2 treating <3 as a lapse.
+ */
+export function speechScoreToRating(
+  /** 0–100 similarity from `gradeSpeechTranscription`. */
+  score: number,
+  /** Response time with endpointer lag already removed. */
+  thinkingTimeMs: number,
+  opts: { fastThresholdMs?: number } = {},
+): ReviewRating {
+  const fastThresholdMs = opts.fastThresholdMs ?? 3500;
+  const wasFast = thinkingTimeMs < fastThresholdMs;
+
+  if (score < 40) return 1; // nothing like it
+  if (score < 60) return 2; // close, but a lapse
+  if (score < 80) return 3; // passed with difficulty
+  if (score < 95) return 4; // good
+  return wasFast ? 5 : 4; // effortless only when it was actually effortless
 }

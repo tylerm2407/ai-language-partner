@@ -17,12 +17,15 @@ import {
   isNetworkError,
   makeXpKey,
   offlineQueueKey,
+  newClientLogId,
   type OfflineQueueInput,
+  type ReviewLogPayload,
   type ReviewUpsertPayload,
 } from './offline-queue';
 import {
   fetchReviewItemsByCardIds,
   incrementXpIdempotent,
+  insertReviewLogIdempotent,
   upsertLessonCompletion,
   upsertReviewItem,
 } from './supabase-queries';
@@ -54,6 +57,7 @@ jest.mock('@sentry/react-native', () => ({
 jest.mock('./supabase-queries', () => ({
   fetchReviewItemsByCardIds: jest.fn(),
   incrementXpIdempotent: jest.fn(),
+  insertReviewLogIdempotent: jest.fn(),
   upsertLessonCompletion: jest.fn(),
   upsertReviewItem: jest.fn(),
 }));
@@ -62,6 +66,7 @@ const mockFetchByCardIds = fetchReviewItemsByCardIds as jest.Mock;
 const mockIncrementXp = incrementXpIdempotent as jest.Mock;
 const mockUpsertCompletion = upsertLessonCompletion as jest.Mock;
 const mockUpsertReview = upsertReviewItem as jest.Mock;
+const mockInsertReviewLog = insertReviewLogIdempotent as jest.Mock;
 
 const USER = 'user-1';
 const KEY = offlineQueueKey(USER);
@@ -392,5 +397,71 @@ describe('invalid stored payloads', () => {
     await flush(USER);
     expect(mockUpsertCompletion).toHaveBeenCalledTimes(1);
     expect(await AsyncStorage.getItem(KEY)).toBeNull();
+  });
+});
+
+describe('review-log replay', () => {
+  function logPayload(overrides: Partial<ReviewLogPayload> = {}): ReviewLogPayload {
+    return {
+      userId: USER,
+      cardId: 'card-1',
+      reviewItemId: 'ri-1',
+      rating: 4,
+      responseTimeMs: 1200,
+      userAnswer: 'la manzana',
+      wasCorrect: true,
+      reviewedAt: new Date().toISOString(),
+      clientLogId: newClientLogId(),
+      ...overrides,
+    };
+  }
+
+  it('round-trips through the queue and replays once', async () => {
+    const payload = logPayload();
+    await enqueue(USER, { type: 'review-log', payload });
+    const processed = await flush(USER);
+    expect(processed).toBe(1);
+    expect(mockInsertReviewLog).toHaveBeenCalledWith(payload);
+  });
+
+  it('preserves the client id across a retry so the replay is the same review', async () => {
+    // The id is minted at submit time precisely so a retry is de-duplicated by
+    // the database rather than inserted twice.
+    const payload = logPayload();
+    mockInsertReviewLog.mockRejectedValueOnce(new Error('Network request failed'));
+    await enqueue(USER, { type: 'review-log', payload });
+    await flush(USER);
+    await flush(USER);
+    const ids = mockInsertReviewLog.mock.calls.map((c) => c[0].clientLogId);
+    expect(new Set(ids).size).toBe(1);
+  });
+
+  it('rejects a stored review-log with no client id', async () => {
+    // Without one it cannot be replayed idempotently, so it must not survive
+    // a reload rather than risk double-logging.
+    await AsyncStorage.setItem(
+      KEY,
+      JSON.stringify({
+        version: OFFLINE_QUEUE_SCHEMA_VERSION,
+        items: [
+          {
+            id: 'x',
+            createdAt: Date.now(),
+            attempts: 0,
+            type: 'review-log',
+            payload: { userId: USER, cardId: 'c', rating: 4 },
+          },
+        ],
+      }),
+    );
+    expect(await flush(USER)).toBe(0);
+    expect(mockInsertReviewLog).not.toHaveBeenCalled();
+  });
+});
+
+describe('newClientLogId', () => {
+  it('produces distinct ids', () => {
+    const ids = new Set(Array.from({ length: 200 }, () => newClientLogId()));
+    expect(ids.size).toBe(200);
   });
 });

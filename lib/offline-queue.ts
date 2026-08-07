@@ -29,10 +29,11 @@ import * as Sentry from '@sentry/react-native';
 import {
   fetchReviewItemsByCardIds,
   incrementXpIdempotent,
+  insertReviewLogIdempotent,
   upsertLessonCompletion,
   upsertReviewItem,
 } from './supabase-queries';
-import type { ReviewItem } from '../types';
+import type { ReviewItem, ReviewLog } from '../types';
 
 export const OFFLINE_QUEUE_SCHEMA_VERSION = 1;
 export const OFFLINE_QUEUE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -53,6 +54,15 @@ export interface XpAwardPayload {
   amount: number;
 }
 
+/**
+ * A review log awaiting replay.
+ *
+ * `clientLogId` is minted at SUBMIT time, not at enqueue time, so the online
+ * attempt and every queued retry all carry the same id. Generating it here
+ * would defeat the point — each retry would look like a new review.
+ */
+export type ReviewLogPayload = Omit<ReviewLog, 'id'> & { clientLogId: string };
+
 interface QueueItemBase {
   id: string;
   createdAt: number;
@@ -61,12 +71,14 @@ interface QueueItemBase {
 
 export type OfflineQueueItem =
   | (QueueItemBase & { type: 'review-upsert'; payload: ReviewUpsertPayload })
+  | (QueueItemBase & { type: 'review-log'; payload: ReviewLogPayload })
   | (QueueItemBase & { type: 'lesson-completion'; payload: LessonCompletionPayload })
   | (QueueItemBase & { type: 'xp-award'; payload: XpAwardPayload; key: string });
 
 /** What callers pass to enqueue() — id/createdAt/attempts are added here. */
 export type OfflineQueueInput =
   | { type: 'review-upsert'; payload: ReviewUpsertPayload }
+  | { type: 'review-log'; payload: ReviewLogPayload }
   | { type: 'lesson-completion'; payload: LessonCompletionPayload }
   | { type: 'xp-award'; payload: XpAwardPayload; key: string };
 
@@ -76,6 +88,19 @@ export function offlineQueueKey(userId: string): string {
 
 function randomId(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/**
+ * Idempotency key for a review log, generated at SUBMIT time so the online
+ * attempt and every queued replay carry the same id and the database de-dupes
+ * them (migration 059).
+ *
+ * Uses the same generator as the XP keys rather than a UUID: expo-crypto is
+ * not installed, and pulling in a native dependency to produce an id whose
+ * only requirement is per-user uniqueness would be disproportionate.
+ */
+export function newClientLogId(): string {
+  return `rl:${randomId()}`;
 }
 
 /**
@@ -125,6 +150,11 @@ function isValidItem(value: unknown): value is OfflineQueueItem {
   }
   if (typeof v.payload !== 'object' || v.payload === null) return false;
   if (v.type === 'xp-award') return typeof v.key === 'string';
+  // A review log without its client id cannot be replayed idempotently, so
+  // reject it here rather than letting a retry double-log.
+  if (v.type === 'review-log') {
+    return typeof (v.payload as Record<string, unknown>).clientLogId === 'string';
+  }
   return v.type === 'review-upsert' || v.type === 'lesson-completion';
 }
 
@@ -268,6 +298,14 @@ async function executeItem(userId: string, item: OfflineQueueItem): Promise<'don
         return 'skip';
       }
       await upsertReviewItem(payload);
+      return 'done';
+    }
+    case 'review-log': {
+      // Idempotent by construction: the unique index on
+      // (user_id, client_log_id) drops a duplicate rather than trusting the
+      // client to send exactly once. No staleness guard is needed — unlike a
+      // review item, a log is an immutable historical fact.
+      await insertReviewLogIdempotent(item.payload);
       return 'done';
     }
     case 'lesson-completion': {

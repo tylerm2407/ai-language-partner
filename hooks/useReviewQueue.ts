@@ -5,9 +5,10 @@ import {
   fetchDueReviewItems,
   fetchCardsByIds,
   upsertReviewItem,
-  insertReviewLog,
+  insertReviewLogIdempotent,
 } from '../lib/supabase-queries';
 import { calculateNextReview } from '../lib/srs';
+import { enqueue, isNetworkError, newClientLogId } from '../lib/offline-queue';
 import { cachedFetch, readCacheKey } from '../lib/read-cache';
 import type { ReviewItem, Card, ReviewRating } from '../types';
 
@@ -67,18 +68,27 @@ export function useReviewQueue() {
 
     const next = calculateNextReview(item, rating);
     const wasCorrect = rating >= 3;
+    const reviewedAt = new Date().toISOString();
+    // Minted here, not at enqueue time, so the online attempt and any queued
+    // retry are the same review rather than two.
+    const clientLogId = newClientLogId();
 
-    await upsertReviewItem({
+    const itemPayload = {
       ...item,
       easeFactor: next.easeFactor,
       interval: next.interval,
       repetitions: next.repetitions,
       nextDue: next.nextDue,
-      lastReviewedAt: new Date().toISOString(),
-      status: next.repetitions === 0 ? 'learning' : 'review',
-    });
+      lastReviewedAt: reviewedAt,
+      // Use the status SM-2 computed. This previously recomputed it as
+      // learning-or-review, which silently dropped 'graduated' — so a card
+      // that reached a 21-day interval never actually graduated, and the
+      // distinction between "still being learned" and "known" was invisible
+      // everywhere downstream, including the proficiency report.
+      status: next.status,
+    };
 
-    await insertReviewLog({
+    const logPayload = {
       userId: user.id,
       cardId: item.cardId,
       reviewItemId: item.id,
@@ -86,10 +96,35 @@ export function useReviewQueue() {
       responseTimeMs,
       userAnswer: answer,
       wasCorrect,
-      reviewedAt: new Date().toISOString(),
-    });
+      reviewedAt,
+      clientLogId,
+    };
 
-    await refreshReviewCount(user.id);
+    // Queue on network failure rather than throwing. Reviews happen on trains
+    // and in lifts; losing one because the tunnel arrived mid-tap is a silent
+    // data loss the learner cannot detect or repair. Non-network errors still
+    // propagate — a schema or permission failure must surface.
+    try {
+      await upsertReviewItem(itemPayload);
+    } catch (err) {
+      if (!isNetworkError(err)) throw err;
+      await enqueue(user.id, { type: 'review-upsert', payload: itemPayload });
+    }
+
+    try {
+      await insertReviewLogIdempotent(logPayload);
+    } catch (err) {
+      if (!isNetworkError(err)) throw err;
+      await enqueue(user.id, { type: 'review-log', payload: logPayload });
+    }
+
+    // Best-effort: a failed count refresh must not make a saved review look
+    // like a failed one.
+    try {
+      await refreshReviewCount(user.id);
+    } catch (err) {
+      console.warn('[review] refreshReviewCount failed (non-fatal):', err);
+    }
   }, [user, refreshReviewCount]);
 
   return { items, cards, reviewCount, loading, loadQueue, submitReview };

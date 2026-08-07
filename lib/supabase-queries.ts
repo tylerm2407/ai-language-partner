@@ -17,6 +17,7 @@ import type {
   Exercise,
   ReviewItem,
   ReviewLog,
+  HandsFreeSessionRow,
   DailyStats,
   DailyUsage,
   PracticeSession,
@@ -318,31 +319,45 @@ export async function fetchDueReviewItems(userId: string, limit = 50): Promise<R
  * research.md §5.1). Returns an empty array on failure rather than
  * throwing; warm-up is best-effort and must never block a lesson start.
  */
+export async function fetchDueReviewItemsWithCardsStrict(
+  userId: string,
+  limit: number,
+): Promise<{ item: ReviewItem; card: Card }[]> {
+  const { data, error } = await supabase
+    .from('review_items')
+    .select('*, cards!inner(*)')
+    .eq('user_id', userId)
+    .lte('next_due', new Date().toISOString())
+    .order('next_due', { ascending: true })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []).map((row: Record<string, unknown>) => ({
+    item: mapReviewItem(row),
+    card: mapCard(row.cards as Record<string, unknown>),
+  }));
+}
+
+/**
+ * Lenient wrapper for the lesson warm-up phase: returns an empty array on
+ * failure rather than throwing, because warm-up is best-effort and must never
+ * block a lesson start.
+ *
+ * Prefer the strict variant above anywhere the difference between "nothing is
+ * due" and "the server could not be reached" matters — a hands-free session
+ * that reads a network blip as "all caught up" wastes the learner's commute.
+ */
 export async function fetchDueReviewItemsWithCards(
   userId: string,
   limit = 5,
-): Promise<Array<{ item: ReviewItem; card: Card }>> {
+): Promise<{ item: ReviewItem; card: Card }[]> {
   try {
-    // Single joined query (cards!inner) instead of due-items + cards-by-ids;
-    // the inner join also drops any item whose card no longer exists, same
-    // as the old cardById filter did.
-    const { data, error } = await supabase
-      .from('review_items')
-      .select('*, cards!inner(*)')
-      .eq('user_id', userId)
-      .lte('next_due', new Date().toISOString())
-      .order('next_due', { ascending: true })
-      .limit(limit);
-    if (error) throw error;
-    return (data ?? []).map((row: Record<string, unknown>) => ({
-      item: mapReviewItem(row),
-      card: mapCard(row.cards as Record<string, unknown>),
-    }));
+    return await fetchDueReviewItemsWithCardsStrict(userId, limit);
   } catch (err) {
     console.warn('[warmup] fetchDueReviewItemsWithCards failed (non-fatal):', err);
     return [];
   }
 }
+
 
 export async function fetchReviewItemCount(userId: string): Promise<number> {
   const { count, error } = await supabase
@@ -470,6 +485,116 @@ export async function insertReviewLog(log: Omit<ReviewLog, 'id'>): Promise<void>
     });
 
   if (error) throw error;
+}
+
+/**
+ * Insert a review log that is safe to replay.
+ *
+ * `review_logs` is append-only with no natural conflict target, so an offline
+ * flush that retries — the normal case after a tunnel, not an edge case —
+ * would insert the same review twice and inflate the learner's history.
+ * Migration 059 adds a partial unique index on (user_id, client_log_id) so the
+ * duplicate is dropped by the database rather than by hoping the client only
+ * ever sends once.
+ */
+export async function insertReviewLogIdempotent(
+  log: Omit<ReviewLog, 'id'> & { clientLogId: string },
+): Promise<void> {
+  const { error } = await supabase
+    .from('review_logs')
+    .upsert(
+      {
+        user_id: log.userId,
+        card_id: log.cardId,
+        review_item_id: log.reviewItemId,
+        rating: log.rating,
+        response_time_ms: log.responseTimeMs,
+        user_answer: log.userAnswer,
+        was_correct: log.wasCorrect,
+        reviewed_at: log.reviewedAt,
+        client_log_id: log.clientLogId,
+      },
+      { onConflict: 'user_id,client_log_id', ignoreDuplicates: true },
+    );
+
+  if (error) throw error;
+}
+
+// ─── Hands-Free Sessions ───────────────────────
+
+/** Open a hands-free session record. Returns the row id so it can be closed later. */
+export async function insertHandsFreeSession(params: {
+  userId: string;
+  plannedDurationMs: number;
+  surface?: HandsFreeSessionRow['surface'];
+}): Promise<string> {
+  const { data, error } = await supabase
+    .from('handsfree_sessions')
+    .insert({
+      user_id: params.userId,
+      planned_duration_ms: params.plannedDurationMs,
+      surface: params.surface ?? 'in_app',
+    })
+    .select('id')
+    .single();
+
+  if (error) throw error;
+  return data.id as string;
+}
+
+/** Close out a hands-free session with its outcome. */
+export async function finalizeHandsFreeSession(
+  id: string,
+  patch: {
+    endedAt: string;
+    actualDurationMs: number;
+    itemsAttempted: number;
+    itemsCorrect: number;
+    endedReason: NonNullable<HandsFreeSessionRow['endedReason']>;
+  },
+): Promise<void> {
+  const { error } = await supabase
+    .from('handsfree_sessions')
+    .update({
+      ended_at: patch.endedAt,
+      actual_duration_ms: patch.actualDurationMs,
+      items_attempted: patch.itemsAttempted,
+      items_correct: patch.itemsCorrect,
+      ended_reason: patch.endedReason,
+    })
+    .eq('id', id);
+
+  if (error) throw error;
+}
+
+export async function fetchRecentHandsFreeSessions(
+  userId: string,
+  limit = 20,
+): Promise<HandsFreeSessionRow[]> {
+  const { data, error } = await supabase
+    .from('handsfree_sessions')
+    .select('*')
+    .eq('user_id', userId)
+    .order('started_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return (data ?? []).map(mapHandsFreeSession);
+}
+
+function mapHandsFreeSession(row: Record<string, unknown>): HandsFreeSessionRow {
+  return {
+    id: row.id as string,
+    userId: row.user_id as string,
+    startedAt: row.started_at as string,
+    endedAt: (row.ended_at as string | null) ?? null,
+    plannedDurationMs: (row.planned_duration_ms as number) ?? 0,
+    actualDurationMs: (row.actual_duration_ms as number | null) ?? null,
+    itemsAttempted: (row.items_attempted as number) ?? 0,
+    itemsCorrect: (row.items_correct as number) ?? 0,
+    surface: (row.surface as HandsFreeSessionRow['surface']) ?? 'in_app',
+    endedReason: (row.ended_reason as HandsFreeSessionRow['endedReason']) ?? null,
+  };
 }
 
 // ─── Daily Stats ────────────────────────────────────────────────
