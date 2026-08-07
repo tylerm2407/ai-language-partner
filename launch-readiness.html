@@ -272,7 +272,7 @@ footer code{font-size:12px}
   <header class="hero">
     <span class="eyebrow">Status Report · updated 6 Aug 2026</span>
     <h1>App Store<br />launch <em>readiness</em></h1>
-    <p class="lede">Nine items fixed, applied to production, and verified. <strong>Every remaining blocker needs an account, a purchase, or a decision — none of them are code.</strong></p>
+    <p class="lede">Thirteen items fixed, applied to production, and verified — including <strong>two privilege-escalation holes found while cleaning up what looked like performance warnings.</strong> Every remaining blocker needs an account, a purchase, or a decision.</p>
 
     <div class="verdict">
       <span class="tag">2 BLOCKERS</span>
@@ -280,13 +280,13 @@ footer code{font-size:12px}
     </div>
 
     <div class="prog">
-      <div class="prog-head"><span>CODE-SIDE PUNCH LIST</span><b><span id="pv">0</span> / 9 cleared</b></div>
+      <div class="prog-head"><span>CODE-SIDE PUNCH LIST</span><b><span id="pv">0</span> / 13 cleared</b></div>
       <div class="track"><div class="fill" id="pf"></div></div>
     </div>
 
     <div class="stats">
-      <div class="stat"><div class="v good" data-count="9">0</div><div class="k">Fixed, deployed, verified</div></div>
-      <div class="stat"><div class="v good" data-count="205">0</div><div class="k">Tests passing (12 suites)</div></div>
+      <div class="stat"><div class="v good" data-count="13">0</div><div class="k">Fixed, deployed, verified</div></div>
+      <div class="stat"><div class="v good" data-count="208">0</div><div class="k">Tests passing (12 suites)</div></div>
       <div class="stat"><div class="v good" data-count="0">0</div><div class="k">TypeScript &amp; lint errors</div></div>
       <div class="stat"><div class="v bad" data-count="2">0</div><div class="k">Blockers left (neither is code)</div></div>
     </div>
@@ -332,8 +332,8 @@ footer code{font-size:12px}
       <button class="chip" data-f="blocker" aria-pressed="false">Hard blockers · 2</button>
       <button class="chip" data-f="store" aria-pressed="false">Store-side · 4</button>
       <button class="chip" data-f="should" aria-pressed="false">Before submitting · 1</button>
-      <button class="chip" data-f="decide" aria-pressed="false">Your call · 3</button>
-      <button class="chip" data-f="done" aria-pressed="false">Fixed · 9</button>
+      <button class="chip" data-f="decide" aria-pressed="false">Your call · 2</button>
+      <button class="chip" data-f="done" aria-pressed="false">Fixed · 13</button>
     </div>
 
         <div class="items" id="list">
@@ -436,32 +436,72 @@ footer code{font-size:12px}
         </div>
       </article>
 
-      <article class="item" data-sev="decide" data-id="d2">
-        <div class="it-top">
-          <input type="checkbox" class="box" aria-label="Mark foreign functions decision as done" />
-          <h3 class="it-title">Other apps' edge functions are still deployed here</h3>
-          <span class="badge decide">Your call</span>
-        </div>
-        <div class="it-body">
-          <p>The database is clean, but the <em>edge functions</em> are not. Still deployed on this project:</p>
-          <p><code>nearby-stores</code>, <code>scan-receipt</code>, <code>estimate-grocery-prices</code> (CostClarity) · <code>earnings-calendar</code>, <code>economic-calendar</code>, <code>insider-trading</code>, <code>stock-data</code>, <code>ipo-calendar</code> (MarketPulse / PropFirm) · plus <code>check-subscription</code>, <code>send-notification</code>, <code>handle-standalone-webhook</code> of unclear ownership.</p>
-          <span class="why"><b>I did not delete these.</b> If CostClarity or MarketPulse point at this same project, removing them breaks those apps instantly. Confirm they're dead and I'll clean them out.</span>
-        </div>
-      </article>
-
       <article class="item" data-sev="decide" data-id="d3">
         <div class="it-top">
-          <input type="checkbox" class="box" aria-label="Mark perf advisor decision as done" />
-          <h3 class="it-title">Performance advisor: 291 findings, all deferred</h3>
+          <input type="checkbox" class="box" aria-label="Mark remaining advisor work as done" />
+          <h3 class="it-title">Remaining performance work: Stage C and D</h3>
           <span class="badge decide">Your call</span>
         </div>
         <div class="it-body">
-          <p>179 <code>multiple_permissive_policies</code>, 54 <code>auth_rls_initplan</code> (the <code>(select auth.uid())</code> wrapping), 19 unindexed foreign keys, 38 unused indexes.</p>
-          <span class="why"><b>Why I stopped:</b> clearing these means rewriting ~180 RLS policies on a production database days before submission, and every one of them is a correctness risk. None of it is a launch blocker at 5 users — it's a scale problem, not a ship problem. Worth doing deliberately after launch.</span>
+          <p>Down from 291 findings to 116. What's left: <strong>47 <code>auth_rls_initplan</code></strong> (wrap bare <code>auth.uid()</code> as <code>(select auth.uid())</code>), 11 <code>multiple_permissive_policies</code> (the genuinely-overlapping school policies), 19 unindexed foreign keys, 38 unused indexes.</p>
+          <span class="why"><b>Recommendation:</b> Stage C is worth doing, but only the five large tables carry a measurable win — <code>exercises</code> (14,472 rows), <code>reading_books</code> (10,375), <code>daily_news</code> (1,923), <code>cards</code> (3,168), <code>book_annotations</code>. Use <code>ALTER POLICY</code>, never <code>DROP</code>+<code>CREATE</code>. Stage D (merging school policies) can wait for the B2B launch, and the index work should wait for real query patterns.</span>
         </div>
       </article>
 
       <!-- FIXED -->
+      <article class="item" data-sev="done" data-id="f11">
+        <div class="it-top">
+          <input type="checkbox" class="box" aria-label="Fixed" />
+          <h3 class="it-title">Any signed-in user could grant themselves the top paid tier</h3>
+          <span class="badge done">Fixed</span>
+        </div>
+        <div class="it-body">
+          <p>Found inside the "performance" pile. The policy <code>"Users read own subscription"</code> was <code>FOR ALL</code> with <code>USING (auth.uid() = user_id)</code> and <strong>no <code>WITH CHECK</code></strong>. For a <code>FOR ALL</code> policy Postgres falls back to the USING expression as the check — and that expression stays true when you change your own row's <code>tier</code>, because it only constrains <code>user_id</code>.</p>
+          <p>With table-level INSERT/UPDATE grants to <code>authenticated</code> and no trigger on the table, this was directly exploitable:</p>
+          <p><code>update subscriptions set tier='vip', is_active=true where user_id = auth.uid();</code></p>
+          <span class="why"><b>Why it costs money:</b> <code>get_effective_limits()</code> reads that row to set daily AI quotas, so a user could self-grant unlimited paid-model usage. Migration 057 drops the writable policy, replaces it with SELECT-only, and revokes the INSERT/UPDATE/DELETE grants. Verified by simulating a real user session: the escalation now returns <em>permission denied for table subscriptions</em>.</span>
+        </div>
+      </article>
+
+      <article class="item" data-sev="done" data-id="f12">
+        <div class="it-top">
+          <input type="checkbox" class="box" aria-label="Fixed" />
+          <h3 class="it-title">api_cache was world-writable — burst limits were bypassable</h3>
+          <span class="badge done">Fixed</span>
+        </div>
+        <div class="it-body">
+          <p>A policy named <code>"Allow service role full access to cache"</code> was actually declared <code>FOR ALL TO public USING (true) WITH CHECK (true)</code>. The name was a lie: <code>public</code> means every role, so any signed-in user could read, write, and delete the whole table.</p>
+          <p><code>api_cache</code> is the burst rate-limit store — <code>increment_rate_limit()</code> keeps its counter there under <code>burst:&lt;action&gt;:&lt;user_id&gt;</code>. So a user could reset their own burst window at will, defeating every AI rate limit including the <code>get-hint</code> one added earlier today.</p>
+          <span class="why"><b>Fix:</b> migration 056 drops both policies. Only service-role code touches this table, and service_role bypasses RLS, so RLS-on-with-no-policies is correct — matching <code>hint_cache</code> and <code>translation_cache</code>. Verified as an authenticated user: 0 rows updatable, 0 deletable, INSERT rejected.</span>
+        </div>
+      </article>
+
+      <article class="item" data-sev="done" data-id="f13">
+        <div class="it-top">
+          <input type="checkbox" class="box" aria-label="Fixed" />
+          <h3 class="it-title">Stage B complete — every policy scoped to authenticated</h3>
+          <span class="badge done">Fixed</span>
+        </div>
+        <div class="it-body">
+          <p>57 policies had no <code>TO</code> clause, so they defaulted to <code>public</code> and were evaluated for <code>anon</code> on every query. Migrations 057 and 058 scope all of them, using <code>ALTER POLICY</code> so the role list swaps atomically with no window where a table sits unprotected.</p>
+          <p><strong>0 policies remain on the public role</strong> (was 57). Total policies 89 → 77 after removing duplicates.</p>
+          <span class="why"><b>Verified by simulation, not by counting:</b> as a real signed-in user — own profile 1 row, cards 3,168, lessons 1,620, grammar rules 180, api_cache 0. As <code>anon</code> — 0 rows on every table tested. XP self-grant still blocked by the migration-036 trigger.</span>
+        </div>
+      </article>
+
+      <article class="item" data-sev="done" data-id="f10">
+        <div class="it-top">
+          <input type="checkbox" class="box" aria-label="Fixed" />
+          <h3 class="it-title">12 dead NovaWealth edge functions removed</h3>
+          <span class="badge done">Fixed</span>
+        </div>
+        <div class="it-body">
+          <p>Deleted: <code>nearby-stores</code>, <code>scan-receipt</code>, <code>estimate-grocery-prices</code> (CostClarity) · <code>earnings-calendar</code>, <code>economic-calendar</code>, <code>insider-trading</code>, <code>stock-data</code>, <code>ipo-calendar</code> (MarketPulse / PropFirm) · <code>generate-course-content-batch</code> (FinancialCourseWork) · <code>check-subscription</code>, <code>send-notification</code>, <code>handle-standalone-webhook</code>.</p>
+          <p><strong>Deployed is now exactly 21 = the 21 in the repo.</strong> Source of all twelve was backed up before deletion.</p>
+          <span class="why"><b>How ownership was decided:</b> "deployed but absent from <code>supabase/functions/</code>", then confirmed individually — each one queried tables that don't exist in this database (<code>modules</code>, <code>quizzes</code>, <code>notifications_log</code>, <code>profiles</code>, <code>user_access</code>).</span>
+        </div>
+      </article>
+
       <article class="item" data-sev="done" data-id="f1">
         <div class="it-top">
           <input type="checkbox" class="box" aria-label="Fixed" />
@@ -573,7 +613,7 @@ footer code{font-size:12px}
 
 <div class="caveat">
       <b>The shared-project caveat has mostly dissolved</b>
-      Everything here was checked against the running database, not just the migration files. The <code>public</code> schema is entirely Fluenci's — 47 tables, no foreign columns, no foreign functions, no foreign cron jobs — and the only artefact left from the old CaseMate era was a stale table comment, now corrected. Two surfaces are <em>not</em> clean: <code>auth.users</code> (185 accounts, 180 of them unused Bryant pilot logins) and the deployed edge functions, which still include CostClarity's and MarketPulse's. Both are flagged above as your call rather than cleaned up unilaterally.
+      Everything here was checked against the running database, not just the migration files. The <code>public</code> schema is entirely Fluenci's — 47 tables, no foreign columns, no foreign functions, no foreign cron jobs — and the stale CaseMate table comment is corrected. The 12 foreign edge functions are now deleted, so deployed matches the repo exactly. <strong>One surface is still not clean:</strong> <code>auth.users</code> holds 185 accounts, 180 of them unused Bryant pilot logins — flagged above rather than purged unilaterally.
     </div>
   </section>
 
@@ -651,7 +691,7 @@ footer code{font-size:12px}
     document.querySelectorAll('[data-count]').forEach(function(el){
       animate(el, parseInt(el.getAttribute('data-count'), 10), 1100);
     });
-    animate(document.getElementById('pv'), 9, 1100);
+    animate(document.getElementById('pv'), 13, 1100);
     document.getElementById('pf').style.width = '100%';
   }
   if ('IntersectionObserver' in window) {
