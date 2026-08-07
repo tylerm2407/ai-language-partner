@@ -5,6 +5,26 @@ import type { ProficiencyLevel } from '../types';
 // Flip to true when ready to enable for schools.
 export const SCHOOL_ENABLED = false;
 
+// Hands-free (eyes-free commute) mode. Off until it has had a real device
+// pass: none of the audio-session, background-playback or endpointer
+// behaviour can be verified on a machine with no simulator, so shipping it
+// enabled would mean shipping it untested.
+export const HANDSFREE_ENABLED = false;
+
+export const HANDSFREE_DEFAULTS = {
+  targetDurationMs: 20 * 60 * 1000,
+  durationOptionsMs: [5, 10, 20, 30].map((m) => m * 60 * 1000),
+  /** Clips kept ready ahead of the current card. */
+  prefetchAhead: 3,
+  /** Clips fetched before the session is allowed to start — tunnel insurance. */
+  prewarmCount: 5,
+  maxAttemptsPerCard: 2,
+  resumeGraceMs: 120_000,
+  /** Ceiling on queue size regardless of duration, so a long session cannot
+   *  pull an unbounded number of rows over a cellular link at startup. */
+  maxQueueItems: 60,
+} as const;
+
 export const SRS_DEFAULTS = {
   initialEaseFactor: 2.5,
   minimumEaseFactor: 1.3,

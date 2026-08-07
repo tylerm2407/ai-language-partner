@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useProfile } from '../../../hooks/useProfile';
 import { usePracticeSession } from '../../../hooks/usePracticeSession';
@@ -20,6 +21,7 @@ import { GradientBorderCard } from '../../../components/ui/GradientBorderCard';
 import { trackEvent } from '../../../lib/analytics';
 import { getTargetLanguage } from '../../../lib/language';
 import { colors } from '../../../config/theme';
+import { HANDSFREE_ENABLED } from '../../../config/app';
 import type { ProficiencyLevel } from '../../../types';
 
 const TOPICS: { label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
@@ -36,6 +38,7 @@ const TOPICS: { label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
 ];
 
 export default function PracticeScreen() {
+  const router = useRouter();
   const { profile } = useProfile();
   const {
     messages,
@@ -133,6 +136,27 @@ export default function PracticeScreen() {
             <Text className="text-base text-text-secondary mb-6">
               Choose a topic to practice {targetLanguage.toUpperCase()} conversation.
             </Text>
+
+            {/* Hands-free lives above the topic list because it is the reason
+                to open this tab on a commute, not a variant of the topics. */}
+            {HANDSFREE_ENABLED && (
+              <Pressable
+                className="bg-dark-card rounded-2xl p-5 mb-6 flex-row items-center"
+                onPress={() => router.push('/practice/handsfree' as any)}
+                accessibilityRole="button"
+                accessibilityLabel="Start a hands-free session"
+                accessibilityHint="Reviews your due cards by voice. No need to look at or touch your phone."
+              >
+                <Ionicons name="car-outline" size={24} color={colors.action.accent} />
+                <View className="ml-4 flex-1">
+                  <Text className="text-base font-semibold text-text-primary">Hands-free session</Text>
+                  <Text className="text-sm text-text-secondary">
+                    Your review queue, out loud. Eyes and hands free.
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.text.tertiary} />
+              </Pressable>
+            )}
 
             <FlatList
               data={TOPICS}
