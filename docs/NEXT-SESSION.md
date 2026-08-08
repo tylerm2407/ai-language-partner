@@ -64,8 +64,8 @@ lock-screen/CarPlay phase later. The lead time is the entire cost of filing earl
 
 Two Claude sessions ran concurrently across both handoffs. Cost so far: one
 overwritten set of uncommitted work, one broken build, and **the theme rewritten
-twice underneath an in-flight session** (Studio Graphite → monochrome within a
-few hours). Historical collision points:
+three times underneath an in-flight session** (indigo → Studio Graphite →
+monochrome → back to indigo, inside a day). Historical collision points:
 
 ```
 lib/supabase-queries.ts     types/index.ts
@@ -83,7 +83,7 @@ and `DESIGN.md` should belong to exactly one session at a time.
 | Area | State |
 |---|---|
 | Hands-free commute mode (Phase A) | Live, **untested on device**, reachable from Home |
-| Monochrome palette (black/charcoal/silver/grey) | Live |
+| Indigo palette (`#4F46E5` CTAs, `#818CF8` accents, 3 drifting glow blobs) | Live — canonical. See §2.1 |
 | Onboarding mode choice (Adult vs Gamified) | Live |
 | Adult mode | Live |
 | CEFR proficiency report | Live, surfaced high on Profile |
@@ -111,6 +111,25 @@ and `DESIGN.md` should belong to exactly one session at a time.
 - **058** scoped all 57 remaining policies to `TO authenticated`
 
 All verified against production. No new advisor warnings.
+
+### 2.1 The palette is settled — do not re-propose one
+
+Indigo is canonical (`3a4bbb6`). Two alternatives shipped and were reverted after
+review on device, so neither should be re-derived from scratch:
+
+| Palette | Why it went | Why it came back |
+|---|---|---|
+| Studio Graphite + Ink & Brass (`8f8c687`) | Indigo read as generic "AI startup" | Professional but not engaging; mapping the old violets to category hues also introduced mauve/rose that read as stray purple |
+| Monochrome, charcoal + silver (`76eb1ef`) | Brass not engaging; stray purple | Reverted by preference |
+
+What survived both attempts is **structural, not chromatic**, and is still live:
+the flat pill CTA (the Duolingo slab stays retired), the mascot-placement rule
+(moments only, never Home or chat chrome), and the mono stats row on Home. See
+DESIGN.md §What We Retired.
+
+The mascot itself is still placeholder star geometry; a **dragon** is the planned
+replacement, and `components/mascot/Mascot.tsx` carries the contrast constraints
+it has to satisfy.
 
 **Read `launch-readiness.html` at the repo root before doing any launch work.**
 It is the living punch list: 2 blockers left (RevenueCat production keys are
