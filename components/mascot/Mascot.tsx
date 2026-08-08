@@ -45,21 +45,13 @@ interface MascotProps {
 
 const SIZE_PX: Record<MascotSize, number> = { xs: 32, sm: 48, md: 80, lg: 128 };
 
-// The body is a MID-DARK silver so the near-white eyes read against it. This is
-// the recurring trap in this component: whenever the palette's accent is light,
-// a body painted in the accent leaves the eyes at ~2-3:1 and the face goes
-// blank. silver.700 puts them at 7.4:1 while the body still holds 2.5:1 against
-// surface.base, which is enough for a silhouette carrying its own stroke.
-//
-// This whole component is placeholder geometry pending the dragon; treat these
-// as the contrast constraints the new artwork has to satisfy, not as a palette.
-const STAR_FILL = colors.silver[700];
-const STAR_STROKE = colors.silver[500];
-const TRAIL_COLOR = colors.silver[300];
-const EYE_COLOR = '#F7F8F9'; // 7.4:1 on STAR_FILL
-const PUPIL_COLOR = '#08090A';
-const MOUTH_COLOR = colors.silver[900];
-const SPARK_COLOR = '#F2F4F6';
+const STAR_FILL = colors.indigo[500];
+const STAR_STROKE = colors.indigo[700];
+const TRAIL_COLOR = colors.indigo[400];
+const EYE_COLOR = '#F8FAFC'; // near-ivory — AAA against indigo-500
+const PUPIL_COLOR = '#0C0F14';
+const MOUTH_COLOR = colors.indigo[800];
+const SPARK_COLOR = '#FDE68A';
 
 /**
  * 4-point rounded star silhouette. viewBox 0 0 100 100, centered at (55, 45)
