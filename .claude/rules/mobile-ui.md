@@ -1,3 +1,7 @@
+---
+paths: ["app/**", "components/**"]
+---
+
 # Mobile UI Rules (iOS-First)
 
 ## Safe Areas & Layout

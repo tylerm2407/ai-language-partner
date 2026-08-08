@@ -1,3 +1,7 @@
+---
+paths: ["lib/srs.ts", "lib/grading.ts", "lib/levels.ts", "lib/hearts.ts", "components/lesson/**", "app/(app)/learn/**", "app/(app)/review/**", "app/(app)/practice/**"]
+---
+
 # Learning Domain Rules
 
 ## Spaced Repetition (SM-2 Algorithm)
