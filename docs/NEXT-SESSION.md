@@ -93,6 +93,26 @@ suites. Keep it there — `npm run check` is the gate.
 
 All three verified by querying production afterwards. No new advisor warnings.
 
+A parallel launch-readiness session applied six more, all verified against
+production and all security-related:
+
+- **053** `ai_content_reports` — in-app flagging of offensive AI output (required
+  by Google Play's generative-AI policy)
+- **054** revoked anon/PUBLIC execute on 8 `SECURITY DEFINER` functions
+- **056** `api_cache` was `FOR ALL TO public USING (true)` — any signed-in user
+  could reset their own burst rate-limit counters. Plus 9 byte-identical
+  duplicate policies dropped.
+- **057** `subscriptions` had a `FOR ALL` policy with no `WITH CHECK`, so any
+  user could `set tier='vip'` on their own row and self-grant unlimited paid AI
+- **058** scoped all 57 remaining policies to `TO authenticated`
+
+**Read `launch-readiness.html` at the repo root before doing any launch work.**
+It is the living punch list: 16 items fixed, 2 blockers left (RevenueCat
+production keys are still placeholders in `eas.json`; `fluenci.com` is not a
+registered domain — it redirects to a for-sale page that the binary links to as
+its privacy policy), and 3 open decisions. `CLAUDE.md` §5 now carries the
+mandatory RLS policy shape — read it before writing any new policy.
+
 ---
 
 ## 4. Hands-free: where the code lives
