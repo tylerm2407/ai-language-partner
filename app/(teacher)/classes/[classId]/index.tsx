@@ -105,12 +105,12 @@ export default function ClassDetailScreen() {
                 width: 36,
                 height: 36,
                 borderRadius: 18,
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                backgroundColor: 'rgba(168, 85, 247, 0.2)',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              <Ionicons name="person-outline" size={18} color="#C9CDD2" />
+              <Ionicons name="person-outline" size={18} color="#A855F7" />
             </View>
             <View className="ml-3 flex-1">
               <Text
@@ -130,7 +130,7 @@ export default function ClassDetailScreen() {
                 })}
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#5C6166" />
+            <Ionicons name="chevron-forward" size={18} color="#64748B" />
           </View>
         </GlassSurface>
       </Pressable>
@@ -154,7 +154,7 @@ export default function ClassDetailScreen() {
     return (
       <GradientBackground>
         <SafeAreaView className="flex-1 justify-center items-center">
-          <ActivityIndicator color="#C9CDD2" size="large" />
+          <ActivityIndicator color="#818CF8" size="large" />
         </SafeAreaView>
       </GradientBackground>
     );
@@ -171,7 +171,7 @@ export default function ClassDetailScreen() {
             accessibilityLabel="Go back"
             className="flex-row items-center mb-4"
           >
-            <Ionicons name="chevron-back" size={24} color="#C9CDD2" />
+            <Ionicons name="chevron-back" size={24} color="#818CF8" />
             <Text
               className="text-base text-primary ml-1"
               style={{ fontFamily: 'Nunito_600SemiBold' }}
@@ -223,7 +223,7 @@ export default function ClassDetailScreen() {
               >
                 {copied && (
                   <Text
-                    style={{ color: '#3FB950', fontSize: 12, fontFamily: 'Nunito_600SemiBold' }}
+                    style={{ color: '#22C55E', fontSize: 12, fontFamily: 'Nunito_600SemiBold' }}
                   >
                     Copied
                   </Text>
@@ -231,7 +231,7 @@ export default function ClassDetailScreen() {
                 <Ionicons
                   name={copied ? 'checkmark-circle' : 'copy-outline'}
                   size={20}
-                  color={copied ? '#3FB950' : '#C9CDD2'}
+                  color={copied ? '#22C55E' : '#818CF8'}
                 />
               </Pressable>
             </GlassSurface>
@@ -260,13 +260,13 @@ export default function ClassDetailScreen() {
                   alignItems: 'center',
                   backgroundColor:
                     tab === t
-                      ? 'rgba(255, 255, 255, 0.2)'
+                      ? 'rgba(168, 85, 247, 0.2)'
                       : 'transparent',
                 }}
               >
                 <Text
                   style={{
-                    color: tab === t ? '#C9CDD2' : '#80868C',
+                    color: tab === t ? '#A855F7' : '#94A3B8',
                     fontSize: 14,
                     fontFamily: 'Nunito_600SemiBold',
                   }}
@@ -280,7 +280,7 @@ export default function ClassDetailScreen() {
           {/* Tab Content */}
           {error ? (
             <View className="flex-1 justify-center items-center" style={{ paddingBottom: 80 }}>
-              <Ionicons name="warning-outline" size={48} color="#F85149" />
+              <Ionicons name="warning-outline" size={48} color="#EF4444" />
               <Text
                 className="text-base text-text-primary mt-3"
                 style={{ fontFamily: 'Nunito_600SemiBold' }}
@@ -310,7 +310,7 @@ export default function ClassDetailScreen() {
               />
               {students.length === 0 ? (
                 <View className="flex-1 justify-center items-center" style={{ paddingBottom: 80 }}>
-                  <Ionicons name="people-outline" size={48} color="#5C6166" />
+                  <Ionicons name="people-outline" size={48} color="#64748B" />
                   <Text
                     className="text-base text-text-primary mt-3"
                     style={{ fontFamily: 'Nunito_600SemiBold' }}
@@ -344,7 +344,7 @@ export default function ClassDetailScreen() {
               />
               {assignments.length === 0 ? (
                 <View className="flex-1 justify-center items-center" style={{ paddingBottom: 80 }}>
-                  <Ionicons name="document-text-outline" size={48} color="#5C6166" />
+                  <Ionicons name="document-text-outline" size={48} color="#64748B" />
                   <Text
                     className="text-base text-text-primary mt-3"
                     style={{ fontFamily: 'Nunito_600SemiBold' }}

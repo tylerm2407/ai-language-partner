@@ -54,7 +54,7 @@ export function WordTooltip({ annotation, onAddToReview, onDismiss }: Props) {
           onPress={handleAddToReview}
           style={{
             flex: 1,
-            backgroundColor: '#F2F4F6',
+            backgroundColor: '#4F46E5',
             paddingVertical: 10,
             borderRadius: 10,
             alignItems: 'center',
@@ -62,7 +62,7 @@ export function WordTooltip({ annotation, onAddToReview, onDismiss }: Props) {
           accessibilityRole="button"
           accessibilityLabel="Add to review queue"
         >
-          <Text style={{ color: '#08090A', fontSize: 14, fontWeight: '600' }}>Add to Review</Text>
+          <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>Add to Review</Text>
         </Pressable>
         <Pressable
           onPress={onDismiss}

@@ -218,7 +218,7 @@ export default function HomeScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="Practice with AI"
               >
-                <View style={[styles.quickActionIcon, { backgroundColor: 'rgba(255,255,255,0.15)' }]}>
+                <View style={[styles.quickActionIcon, { backgroundColor: 'rgba(168,85,247,0.15)' }]}>
                   <Ionicons name="chatbubbles" size={18} color={colors.magazine.accentLilac} />
                 </View>
                 <View style={styles.quickActionText}>
@@ -243,7 +243,7 @@ export default function HomeScreen() {
                   accessibilityLabel="Start a hands-free practice session"
                   accessibilityHint="Runs a spoken review session you can do without looking at the screen"
                 >
-                  <View style={[styles.quickActionIcon, { backgroundColor: 'rgba(255,255,255,0.15)' }]}>
+                  <View style={[styles.quickActionIcon, { backgroundColor: 'rgba(168,85,247,0.15)' }]}>
                     <Ionicons name="headset" size={18} color={colors.premium.base} />
                   </View>
                   <View style={styles.quickActionText}>
@@ -264,7 +264,7 @@ export default function HomeScreen() {
                   accessibilityLabel={`Review ${reviewCount} flashcards`}
                 >
                   <View style={[styles.quickActionIcon, { backgroundColor: 'rgba(34,211,153,0.15)' }]}>
-                    <Ionicons name="refresh" size={18} color="#3FB950" />
+                    <Ionicons name="refresh" size={18} color="#34D399" />
                   </View>
                   <View style={styles.quickActionText}>
                     <Text style={styles.quickActionTitle}>Review Cards</Text>

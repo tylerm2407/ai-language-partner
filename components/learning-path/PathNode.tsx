@@ -13,9 +13,9 @@ interface PathNodeProps {
 }
 
 const STATE_COLORS: Record<PathNodeState, string> = {
-  active: '#C9CDD2',
-  completed: '#3FB950',
-  locked: '#1C1F22',
+  active: '#38BDF8',
+  completed: '#34D399',
+  locked: '#1C2029',
 };
 
 export function PathNode({ state, icon, score, onPress, isActive }: PathNodeProps) {
@@ -57,7 +57,7 @@ export function PathNode({ state, icon, score, onPress, isActive }: PathNodeProp
   const isLocked = state === 'locked';
   const isCompleted = state === 'completed';
   const displayIcon = isLocked ? 'lock-closed' : isCompleted ? 'checkmark' : icon;
-  const iconColor = isLocked ? '#5C6166' : '#FFFFFF';
+  const iconColor = isLocked ? '#64748B' : '#FFFFFF';
   const hasStarBadge = isCompleted && score !== null && score >= 0.9;
 
   return (
@@ -92,7 +92,7 @@ export function PathNode({ state, icon, score, onPress, isActive }: PathNodeProp
               width: 22,
               height: 22,
               borderRadius: 11,
-              backgroundColor: '#E2E6EA',
+              backgroundColor: '#FBBF24',
               alignItems: 'center',
               justifyContent: 'center',
             }}

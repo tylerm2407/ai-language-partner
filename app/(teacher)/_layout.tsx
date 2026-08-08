@@ -18,7 +18,7 @@ function TabBarBackground() {
       />
       {/* Opaque card fill — matching the learner FloatingTabBar. The old
           rgba(12,15,20,.95) was keyed to the pre-glow base and read as a
-          lighter grey band once the base deepened to #08090A. */}
+          lighter grey band once the base deepened to #08090F. */}
       <View style={{ flex: 1, backgroundColor: colors.surface.card }} />
     </View>
   );
@@ -34,8 +34,8 @@ export default function TeacherLayout() {
       <Tabs
         screenOptions={{
           headerShown: false,
-          tabBarActiveTintColor: '#C9CDD2',
-          tabBarInactiveTintColor: '#5C6166',
+          tabBarActiveTintColor: '#818CF8',
+          tabBarInactiveTintColor: '#64748B',
           tabBarStyle: {
             borderTopWidth: 0,
             backgroundColor: 'transparent',
@@ -47,7 +47,7 @@ export default function TeacherLayout() {
             fontFamily: 'Nunito_600SemiBold',
           },
           tabBarIconStyle: {
-            shadowColor: '#C9CDD2',
+            shadowColor: '#818CF8',
             shadowOffset: { width: 0, height: 2 },
             shadowOpacity: 0.3,
             shadowRadius: 6,

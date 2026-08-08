@@ -1,39 +1,87 @@
 /**
- * GlowBackground — the ambient layer for the monochrome theme.
+ * GlowBackground — the ambient layer for the Dark Glow theme.
  *
- * ONE top-anchored silver wash. Not the retired three-blob indigo/violet layer.
- *
- * The blob layer was the theme's decorative signature and it is gone on
- * purpose: three drifting saturated blobs behind every screen is what read as
- * "consumer gamified app" more than any single component did, and it forced
- * `surface.base` down to a near-void so the blobs had something to glow
- * against. Studio Graphite gets its depth from the surface steps and hairline
- * borders instead, so the ambient layer only has to keep the top of the screen
- * from looking like a flat sheet.
+ * Three low-opacity indigo/violet radial blobs sitting between the base fill
+ * and screen content. This is the app's canonical background; see DESIGN.md
+ * §Glow for the token table.
  *
  * Implementation notes:
- *   - A single `react-native-svg` RadialGradient anchored above the top edge,
- *     wider than the window so its horizontal falloff never lands on screen.
- *     Peak alpha is 0.10 — it is a suggestion of light, not a light source.
- *   - There is NO drift. Chrome motion is retired (DESIGN.md §Motion rule 2),
- *     so nothing here needs to gate on Reduce Motion; the layer is static for
- *     every user. The `drift` prop is accepted and ignored for call-site
- *     compatibility.
+ *   - The blobs are `react-native-svg` RadialGradients with a soft stop ramp
+ *     (0.55 → 0.8 → 1.0), NOT a blurred view. A gradient that already fades
+ *     to transparent needs no blur, and a full-screen BlurView under every
+ *     screen costs real scroll frames on Android — the same reason the card
+ *     primitives dropped glass.
+ *   - Drift is three offset 9/12/15s translate+scale loops. It gates on
+ *     `useMotion().shouldReduce`: with Reduce Motion on, blobs render at their
+ *     rest position and never animate.
  *   - `pointerEvents="none"` throughout — this layer never eats a touch.
  */
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { StyleSheet, View, useWindowDimensions, type ViewStyle } from 'react-native';
 import Svg, { Defs, RadialGradient, Stop, Rect } from 'react-native-svg';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
 import { colors } from '../../config/theme';
+import { useMotion } from '../../hooks/useMotion';
 
-/** Peak opacity at the centre of the wash. */
-const WASH_ALPHA = 0.09;
-/** How far the wash reaches down the screen. */
-const WASH_HEIGHT = 320;
-/** Horizontal overscan, as a multiple of window width, so the left/right
- *  falloff of the radial sits off-screen instead of drawing a visible edge. */
-const WASH_OVERSCAN = 1.6;
+// ─── Blob specs ───────────────────────────────────────────────────────────
+// Geometry and alpha are the deck's values verbatim. `anchor` is resolved
+// against the window so the composition holds on every device size.
+interface BlobSpec {
+  size: number;
+  color: string;
+  alpha: number;
+  anchor: { top?: number; left?: number; bottom?: number; right?: number; topPct?: number; leftPct?: number };
+  /** Multi-point drift loop: [x, y, scale] triplets, looped back to rest. */
+  drift: readonly (readonly [number, number, number])[];
+  durationMs: number;
+}
+
+const BLOBS: readonly BlobSpec[] = [
+  {
+    size: 340,
+    color: colors.glow.indigo,
+    alpha: 0.35,
+    anchor: { top: -80, left: -100 },
+    drift: [
+      [70, 55, 1.15],
+      [-40, 80, 0.9],
+      [0, 0, 1],
+    ],
+    durationMs: 9000,
+  },
+  {
+    size: 380,
+    color: colors.glow.violet,
+    alpha: 0.3,
+    anchor: { bottom: -120, right: -120 },
+    drift: [
+      [-65, -50, 0.88],
+      [45, -85, 1.12],
+      [0, 0, 1],
+    ],
+    durationMs: 12000,
+  },
+  {
+    size: 260,
+    color: colors.glow.lilacIndigo,
+    alpha: 0.2,
+    anchor: { topPct: 0.38, leftPct: 0.55 },
+    drift: [
+      [60, -65, 1.2],
+      [-60, -20, 0.9],
+      [0, 0, 1],
+    ],
+    durationMs: 15000,
+  },
+] as const;
 
 /** rgba(r,g,b,1) → its r,g,b triplet, so Stop can take stopOpacity separately. */
 function stripAlpha(rgba: string): string {
@@ -43,8 +91,73 @@ function stripAlpha(rgba: string): string {
   });
 }
 
+function Blob({ spec, animate, index }: { spec: BlobSpec; animate: boolean; index: number }) {
+  const { width, height } = useWindowDimensions();
+  const progress = useSharedValue(0);
+  const gradientId = `glow-blob-${index}`;
+
+  useEffect(() => {
+    if (!animate) {
+      progress.value = 0;
+      return;
+    }
+    // One shared 0→1→2→3 ramp; the animated style reads keyframes off it.
+    progress.value = 0;
+    progress.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: spec.durationMs / 3, easing: Easing.inOut(Easing.ease) }),
+        withTiming(2, { duration: spec.durationMs / 3, easing: Easing.inOut(Easing.ease) }),
+        withTiming(3, { duration: spec.durationMs / 3, easing: Easing.inOut(Easing.ease) }),
+      ),
+      -1,
+      false,
+    );
+  }, [animate, progress, spec.durationMs]);
+
+  const animatedStyle = useAnimatedStyle(() => {
+    const points = [[0, 0, 1] as const, ...spec.drift];
+    const p = progress.value;
+    const from = points[Math.floor(p) % points.length];
+    const to = points[(Math.floor(p) + 1) % points.length];
+    const f = p - Math.floor(p);
+    return {
+      transform: [
+        { translateX: from[0] + (to[0] - from[0]) * f },
+        { translateY: from[1] + (to[1] - from[1]) * f },
+        { scale: from[2] + (to[2] - from[2]) * f },
+      ],
+    };
+  });
+
+  const position: ViewStyle = {
+    top: spec.anchor.topPct != null ? height * spec.anchor.topPct : spec.anchor.top,
+    left: spec.anchor.leftPct != null ? width * spec.anchor.leftPct : spec.anchor.left,
+    bottom: spec.anchor.bottom,
+    right: spec.anchor.right,
+  };
+
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[{ position: 'absolute', width: spec.size, height: spec.size }, position, animatedStyle]}
+    >
+      <Svg width={spec.size} height={spec.size} pointerEvents="none">
+        <Defs>
+          <RadialGradient id={gradientId} cx="50%" cy="50%" r="50%">
+            <Stop offset="0" stopColor={stripAlpha(spec.color)} stopOpacity={spec.alpha} />
+            <Stop offset="0.55" stopColor={stripAlpha(spec.color)} stopOpacity={spec.alpha * 0.45} />
+            <Stop offset="0.8" stopColor={stripAlpha(spec.color)} stopOpacity={spec.alpha * 0.12} />
+            <Stop offset="1" stopColor={stripAlpha(spec.color)} stopOpacity={0} />
+          </RadialGradient>
+        </Defs>
+        <Rect x="0" y="0" width={spec.size} height={spec.size} fill={`url(#${gradientId})`} />
+      </Svg>
+    </Animated.View>
+  );
+}
+
 /**
- * GlowLayer — the wash on its own, as an absolutely-positioned sibling.
+ * GlowLayer — the blob layer on its own, as an absolutely-positioned sibling.
  *
  * Use this when a screen already owns its root container and wrapping it would
  * mean restructuring several early-return branches: drop `<GlowLayer />` in as
@@ -53,96 +166,18 @@ function stripAlpha(rgba: string): string {
  *
  * Must be the FIRST child. It deliberately carries NO positive zIndex: React
  * Native paints siblings in declaration order, and a sibling without zIndex is
- * treated as 0 — so giving the wash zIndex 1 would make it paint OVER the very
+ * treated as 0 — so giving the glow zIndex 1 would make it paint OVER the very
  * content it sits behind. First-child order is what puts it underneath.
  */
-export function GlowLayer(_props: { drift?: boolean } = {}) {
-  const { width } = useWindowDimensions();
-  const washWidth = width * WASH_OVERSCAN;
-  const tint = stripAlpha(colors.glow.silver);
+export function GlowLayer({ drift = true }: { drift?: boolean }) {
+  const { shouldReduce } = useMotion();
+  const animate = drift && !shouldReduce;
 
   return (
     <View pointerEvents="none" style={styles.glowLayer}>
-      <View
-        pointerEvents="none"
-        style={{
-          position: 'absolute',
-          top: -WASH_HEIGHT * 0.45,
-          left: (width - washWidth) / 2,
-          width: washWidth,
-          height: WASH_HEIGHT,
-        }}
-      >
-        <Svg width={washWidth} height={WASH_HEIGHT} pointerEvents="none">
-          <Defs>
-            <RadialGradient id="studio-wash" cx="50%" cy="50%" r="50%">
-              <Stop offset="0" stopColor={tint} stopOpacity={WASH_ALPHA} />
-              <Stop offset="0.55" stopColor={tint} stopOpacity={WASH_ALPHA * 0.4} />
-              <Stop offset="0.85" stopColor={tint} stopOpacity={WASH_ALPHA * 0.1} />
-              <Stop offset="1" stopColor={tint} stopOpacity={0} />
-            </RadialGradient>
-          </Defs>
-          <Rect x="0" y="0" width={washWidth} height={WASH_HEIGHT} fill="url(#studio-wash)" />
-        </Svg>
-      </View>
-    </View>
-  );
-}
-
-/**
- * StatBloom — a soft radial halo that sits BEHIND a numeral.
- *
- * The monochrome palette has no accent colour to draw the eye with, so emphasis
- * has to come from light. A bloom behind the streak count or XP total does the
- * job an accent fill used to do, without introducing a hue.
- *
- * Usage: wrap the numeral, not the whole row. The bloom is absolutely
- * positioned and centred on its parent, so the parent needs a size.
- *
- *   <View style={{ alignItems: 'center', justifyContent: 'center' }}>
- *     <StatBloom size={90} />
- *     <Text>{streak}</Text>
- *   </View>
- *
- * It is `pointerEvents="none"` and carries no zIndex — like `GlowLayer`, it
- * relies on being declared FIRST so React Native paints it underneath.
- *
- * Static: no motion, nothing to gate on Reduce Motion.
- */
-export function StatBloom({
-  size = 90,
-  intensity = 0.16,
-}: {
-  /** Diameter of the halo in px. Should comfortably exceed the numeral. */
-  size?: number;
-  /** Peak opacity at the centre. Keep low — this is light, not a fill. */
-  intensity?: number;
-}) {
-  const tint = stripAlpha(colors.glow.bloom);
-  const id = `stat-bloom-${size}-${Math.round(intensity * 100)}`;
-
-  return (
-    <View
-      pointerEvents="none"
-      style={{
-        position: 'absolute',
-        width: size,
-        height: size,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      <Svg width={size} height={size} pointerEvents="none">
-        <Defs>
-          <RadialGradient id={id} cx="50%" cy="50%" r="50%">
-            <Stop offset="0" stopColor={tint} stopOpacity={intensity} />
-            <Stop offset="0.45" stopColor={tint} stopOpacity={intensity * 0.45} />
-            <Stop offset="0.75" stopColor={tint} stopOpacity={intensity * 0.14} />
-            <Stop offset="1" stopColor={tint} stopOpacity={0} />
-          </RadialGradient>
-        </Defs>
-        <Rect x="0" y="0" width={size} height={size} fill={`url(#${id})`} />
-      </Svg>
+      {BLOBS.map((spec, i) => (
+        <Blob key={i} spec={spec} animate={animate} index={i} />
+      ))}
     </View>
   );
 }
@@ -150,10 +185,10 @@ export function StatBloom({
 interface GlowBackgroundProps {
   children?: React.ReactNode;
   style?: ViewStyle;
-  /** Screen-level fill under the wash. Defaults to surface.base. */
+  /** Screen-level fill under the glow. Defaults to surface.base. */
   backgroundColor?: string;
-  /** @deprecated Accepted and ignored — the ambient layer no longer animates.
-   *  Kept so the screens that pass `drift={false}` keep compiling. */
+  /** Set false on focus surfaces (lesson runner, writing) — Mayer's coherence
+   *  principle wants zero decorative motion while a learner is working. */
   drift?: boolean;
 }
 
@@ -161,10 +196,11 @@ export function GlowBackground({
   children,
   style,
   backgroundColor = colors.surface.base,
+  drift = true,
 }: GlowBackgroundProps) {
   return (
     <View style={[styles.container, { backgroundColor }, style]}>
-      <GlowLayer />
+      <GlowLayer drift={drift} />
       <View style={styles.content}>{children}</View>
     </View>
   );

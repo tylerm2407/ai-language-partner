@@ -165,7 +165,7 @@ export default function BookDetailScreen() {
   if (isLoading) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.surface.raised, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#C9CDD2" />
+        <ActivityIndicator size="large" color="#818CF8" />
       </View>
     );
   }
@@ -208,7 +208,7 @@ export default function BookDetailScreen() {
       {/* Header */}
       <View style={{ paddingHorizontal: 16, paddingTop: 8, flexDirection: 'row', alignItems: 'center' }}>
         <Pressable onPress={() => router.back()} style={{ padding: 8 }} accessibilityRole="button" accessibilityLabel="Go back">
-          <Ionicons name="arrow-back" size={24} color="#5C6166" />
+          <Ionicons name="arrow-back" size={24} color="#666" />
         </Pressable>
       </View>
 
@@ -251,21 +251,21 @@ export default function BookDetailScreen() {
         <View style={{ backgroundColor: colors.surface.card, borderRadius: 16, padding: 16, marginBottom: 16 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
             <View style={{ alignItems: 'center' }}>
-              <Ionicons name="document-text-outline" size={20} color="#C9CDD2" />
+              <Ionicons name="document-text-outline" size={20} color="#818CF8" />
               <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary, marginTop: 4 }}>
                 {book.wordCount.toLocaleString()}
               </Text>
               <Text style={{ fontSize: 12, color: colors.text.tertiary }}>words</Text>
             </View>
             <View style={{ alignItems: 'center' }}>
-              <Ionicons name="time-outline" size={20} color="#C9CDD2" />
+              <Ionicons name="time-outline" size={20} color="#818CF8" />
               <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary, marginTop: 4 }}>
                 ~{estimatedMinutes} min
               </Text>
               <Text style={{ fontSize: 12, color: colors.text.tertiary }}>to read</Text>
             </View>
             <View style={{ alignItems: 'center' }}>
-              <Ionicons name="star-outline" size={20} color="#C9CDD2" />
+              <Ionicons name="star-outline" size={20} color="#818CF8" />
               <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary, marginTop: 4 }}>
                 {Math.min(500, Math.round(book.wordCount / 10))} XP
               </Text>
@@ -280,7 +280,7 @@ export default function BookDetailScreen() {
             <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text.tertiary, marginBottom: 8 }}>Your Progress</Text>
             <View style={{ height: 8, backgroundColor: colors.surface.cardAlt, borderRadius: 4 }}>
               <View style={{
-                height: 8, backgroundColor: '#F2F4F6', borderRadius: 4,
+                height: 8, backgroundColor: '#4F46E5', borderRadius: 4,
                 width: `${Math.round(progress!.percentComplete)}%`,
               }} />
             </View>
@@ -292,7 +292,7 @@ export default function BookDetailScreen() {
 
         {isCompleted && (
           <View style={{ backgroundColor: colors.success.tint, borderRadius: 16, padding: 16, marginBottom: 16, flexDirection: 'row', alignItems: 'center' }}>
-            <Ionicons name="checkmark-circle" size={24} color="#3FB950" />
+            <Ionicons name="checkmark-circle" size={24} color="#22C55E" />
             <Text style={{ fontSize: 16, fontWeight: '600', color: colors.success.light, marginLeft: 8 }}>Completed!</Text>
           </View>
         )}
@@ -301,16 +301,16 @@ export default function BookDetailScreen() {
         {!isUnlimitedPlan && (
           <Pressable
             onPress={() => router.push('/(app)/profile/subscription')}
-            style={{ backgroundColor: '#141618', borderRadius: 16, padding: 16, marginBottom: 16, flexDirection: 'row', alignItems: 'center' }}
+            style={{ backgroundColor: '#EEF2FF', borderRadius: 16, padding: 16, marginBottom: 16, flexDirection: 'row', alignItems: 'center' }}
             accessibilityRole="button"
             accessibilityLabel="Upgrade to listen to this book"
           >
-            <Ionicons name="headset-outline" size={24} color="#C9CDD2" />
+            <Ionicons name="headset-outline" size={24} color="#818CF8" />
             <View style={{ flex: 1, marginLeft: 12 }}>
               <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text.primary }}>Listen to this book</Text>
               <Text style={{ fontSize: 13, color: colors.text.tertiary, marginTop: 2 }}>Upgrade to VIP for audiobook narration</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#C9CDD2" />
+            <Ionicons name="chevron-forward" size={18} color="#818CF8" />
           </Pressable>
         )}
       </View>
@@ -319,11 +319,11 @@ export default function BookDetailScreen() {
       <View style={{ padding: 20, paddingBottom: 100, borderTopWidth: 1, borderTopColor: colors.border.default }}>
         <Pressable
           onPress={() => setIsReading(true)}
-          style={{ backgroundColor: '#F2F4F6', paddingVertical: 16, borderRadius: 14, alignItems: 'center' }}
+          style={{ backgroundColor: '#4F46E5', paddingVertical: 16, borderRadius: 14, alignItems: 'center' }}
           accessibilityRole="button"
           accessibilityLabel={isStarted ? 'Continue reading' : 'Start reading'}
         >
-          <Text style={{ color: '#08090A', fontSize: 18, fontWeight: '600' }}>
+          <Text style={{ color: '#fff', fontSize: 18, fontWeight: '600' }}>
             {isCompleted ? 'Read Again' : isStarted ? 'Continue Reading' : 'Start Reading'}
           </Text>
         </Pressable>

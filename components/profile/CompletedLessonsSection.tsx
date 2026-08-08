@@ -36,10 +36,10 @@ function scoreBadge(score: number): { label: string; color: string } {
   // two signal hues. The middle bands are greyscale and step DOWN in brightness
   // as the score falls — the sweep briefly had 50-69% brighter than 70-89%,
   // which inverted the ladder.
-  if (pct >= 90) return { label: `${pct}%`, color: '#3FB950' };
-  if (pct >= 70) return { label: `${pct}%`, color: '#E2E6EA' };
-  if (pct >= 50) return { label: `${pct}%`, color: '#8C9198' };
-  return { label: `${pct}%`, color: '#F85149' };
+  if (pct >= 90) return { label: `${pct}%`, color: '#22C55E' };
+  if (pct >= 70) return { label: `${pct}%`, color: '#38BDF8' };
+  if (pct >= 50) return { label: `${pct}%`, color: '#F59E0B' };
+  return { label: `${pct}%`, color: '#EF4444' };
 }
 
 export function CompletedLessonsSection({ userId, previewCount = 5 }: Props) {
@@ -75,11 +75,11 @@ export function CompletedLessonsSection({ userId, previewCount = 5 }: Props) {
 
       {loading ? (
         <View className="bg-dark-card rounded-2xl p-5 items-center">
-          <ActivityIndicator size="small" color="#C9CDD2" />
+          <ActivityIndicator size="small" color="#A855F7" />
         </View>
       ) : !completions || completions.length === 0 ? (
         <View className="bg-dark-card rounded-2xl p-5 items-center">
-          <Ionicons name="book-outline" size={28} color="#5C6166" />
+          <Ionicons name="book-outline" size={28} color="#6b7280" />
           <Text className="text-sm text-text-secondary mt-2 text-center">
             No lessons completed yet. Finish your first lesson to see it here.
           </Text>

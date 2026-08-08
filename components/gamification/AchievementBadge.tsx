@@ -24,14 +24,14 @@ export function AchievementBadge({ achievement, earned, earnedAt, isNew }: Achie
           borderRadius: 16,
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: earned ? achievement.color + '20' : '#1C1F22',
+          backgroundColor: earned ? achievement.color + '20' : '#1C2029',
           opacity: earned ? 1 : 0.4,
         }}
       >
         <Ionicons
           name={achievement.icon as any}
           size={32}
-          color={earned ? achievement.color : '#4E5257'}
+          color={earned ? achievement.color : '#333A48'}
         />
 
         {/* Lock overlay for unearned */}
@@ -43,7 +43,7 @@ export function AchievementBadge({ achievement, earned, earnedAt, isNew }: Achie
               right: 4,
             }}
           >
-            <Ionicons name="lock-closed" size={14} color="#4E5257" />
+            <Ionicons name="lock-closed" size={14} color="#333A48" />
           </View>
         )}
 
@@ -54,7 +54,7 @@ export function AchievementBadge({ achievement, earned, earnedAt, isNew }: Achie
               position: 'absolute',
               top: -4,
               right: -4,
-              backgroundColor: '#F85149',
+              backgroundColor: '#EF4444',
               borderRadius: 8,
               paddingHorizontal: 4,
               paddingVertical: 1,

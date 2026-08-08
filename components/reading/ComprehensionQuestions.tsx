@@ -148,7 +148,7 @@ export function ComprehensionQuestions({ questions, onComplete, onExit }: Props)
               editable={!isRevealed}
               style={{
                 borderWidth: 2,
-                borderColor: isRevealed ? (isCorrect ? '#3FB950' : '#F85149') : colors.border.default,
+                borderColor: isRevealed ? (isCorrect ? '#22C55E' : '#EF4444') : colors.border.default,
                 borderRadius: 14,
                 paddingHorizontal: 16,
                 paddingVertical: 10,
@@ -194,7 +194,7 @@ export function ComprehensionQuestions({ questions, onComplete, onExit }: Props)
             onPress={handleCheck}
             disabled={!canCheck}
             style={{
-              backgroundColor: canCheck ? '#F2F4F6' : '#4E5257',
+              backgroundColor: canCheck ? '#4F46E5' : '#C7D2FE',
               paddingVertical: 16,
               borderRadius: 14,
               alignItems: 'center',
@@ -202,16 +202,15 @@ export function ComprehensionQuestions({ questions, onComplete, onExit }: Props)
             accessibilityRole="button"
             accessibilityLabel="Check answer"
           >
-            {/* Brass is a light fill — the label is near-black on it. When
-                disabled the fill drops to brass.800, which needs a light label
-                instead. */}
-            <Text style={{ color: canCheck ? '#08090A' : '#B4B9BF', fontSize: 18, fontWeight: '600' }}>Check</Text>
+            {/* The disabled fill is indigo.200 — a very light lavender. White on
+                it is 1.4:1; the dark indigo step is 7.7:1. */}
+            <Text style={{ color: canCheck ? '#fff' : '#312E81', fontSize: 18, fontWeight: '600' }}>Check</Text>
           </Pressable>
         ) : (
           <Pressable
             onPress={handleNext}
             style={{
-              backgroundColor: '#F2F4F6',
+              backgroundColor: '#4F46E5',
               paddingVertical: 16,
               borderRadius: 14,
               alignItems: 'center',
@@ -219,7 +218,7 @@ export function ComprehensionQuestions({ questions, onComplete, onExit }: Props)
             accessibilityRole="button"
             accessibilityLabel={currentIndex + 1 < questions.length ? 'Next question' : 'Finish'}
           >
-            <Text style={{ color: '#08090A', fontSize: 18, fontWeight: '600' }}>
+            <Text style={{ color: '#fff', fontSize: 18, fontWeight: '600' }}>
               {currentIndex + 1 < questions.length ? 'Next' : 'Finish'}
             </Text>
           </Pressable>

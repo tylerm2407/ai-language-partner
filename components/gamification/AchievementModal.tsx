@@ -105,7 +105,7 @@ export function AchievementModal({ achievement, visible, onDismiss }: {
 
   if (!achievement) return null;
 
-  const confettiColors = [achievement.color, '#C9CDD2', '#56D364', '#C9CDD2', '#E2E6EA', '#ADB3BA'];
+  const confettiColors = [achievement.color, '#FBBF24', '#34D399', '#38BDF8', '#F472B6', '#60A5FA'];
 
   return (
     <Modal transparent visible={visible} animationType="none" onRequestClose={onDismiss}>
@@ -137,7 +137,7 @@ export function AchievementModal({ achievement, visible, onDismiss }: {
           borderRadius: 22.5,
           padding: 32,
           alignItems: 'center',
-          backgroundColor: '#141618',
+          backgroundColor: '#151921',
         }}>
           {/* Confetti Particles */}
           <View style={{ position: 'absolute', top: '40%', left: '50%' }}>

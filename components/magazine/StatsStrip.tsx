@@ -7,10 +7,9 @@
  *
  * Three saturated pills stacked directly under the greeting was the Duolingo
  * header, and it was also spending the loudest color on the screen on numbers
- * the learner is not being asked to act on. Under Studio Graphite the numbers
- * stay (they are real progress) but they are set in the same mono voice as
- * DateLabel, one type step down, and the brass accent is reserved for the CTA
- * further down the screen.
+ * the learner is not being asked to act on. The numbers stay (they are real
+ * progress) but they are set in the same mono voice as DateLabel, one type step
+ * down, and the indigo accent is reserved for the CTA further down the screen.
  *
  * Hearts keep their glyph row: hearts are a spendable resource and the count
  * has to be readable at a glance, which a mono numeral does not do as well as
@@ -25,28 +24,11 @@ import { useAppStore } from '../../stores/useAppStore';
 import { useHearts } from '../../hooks/useHearts';
 import { useAdultMode } from '../../hooks/useAdultMode';
 import { HeartsDisplay } from '../gamification/HeartsDisplay';
-import { StatBloom } from '../ui/GlowBackground';
 import { cefrBandForProficiencyLevel } from '../../lib/cefr-proficiency';
 import { colors, spacing, typography } from '../../config/theme';
 
 function Separator() {
   return <Text style={[styles.meta, styles.separator]}>·</Text>;
-}
-
-/**
- * A value with a soft halo behind it.
- *
- * The monochrome palette has no accent colour to mark "this number matters", so
- * emphasis is carried by light instead. The bloom is declared FIRST so React
- * Native paints it under the numeral — see StatBloom's note on paint order.
- */
-function BloomValue({ children }: { children: React.ReactNode }) {
-  return (
-    <View style={styles.bloomWrap}>
-      <StatBloom size={54} intensity={0.16} />
-      <Text style={[styles.meta, styles.emphasis]}>{children}</Text>
-    </View>
-  );
 }
 
 export function StatsStrip() {
@@ -72,10 +54,10 @@ export function StatsStrip() {
 
   return (
     <View style={styles.row}>
-      <BloomValue>{streak}</BloomValue>
+      <Text style={[styles.meta, styles.emphasis]}>{streak}</Text>
       <Text style={styles.meta}>DAY</Text>
       <Separator />
-      <BloomValue>{totalXp.toLocaleString()}</BloomValue>
+      <Text style={[styles.meta, styles.emphasis]}>{totalXp.toLocaleString()}</Text>
       <Text style={styles.meta}>XP</Text>
       <Separator />
       <HeartsDisplay hearts={hearts} maxHearts={maxHearts} isUnlimited={isUnlimited} size={14} />
@@ -104,11 +86,6 @@ const styles = StyleSheet.create({
   emphasis: {
     fontFamily: typography.family.monoMedium,
     color: colors.text.primary,
-  },
-  /** Hosts the halo. Needs to size itself to the numeral, so no fixed width. */
-  bloomWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   separator: {
     color: colors.text.quaternary,

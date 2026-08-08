@@ -9,9 +9,9 @@ interface RubricDisplayProps {
 }
 
 function scoreColor(total: number): string {
-  if (total >= 80) return '#3FB950';
-  if (total >= 60) return '#E2E6EA';
-  return '#F85149';
+  if (total >= 80) return '#22C55E';
+  if (total >= 60) return '#F59E0B';
+  return '#EF4444';
 }
 
 interface RubricBarProps {
@@ -22,14 +22,14 @@ interface RubricBarProps {
 
 function RubricBar({ label, score, max }: RubricBarProps) {
   const pct = Math.min(100, Math.round((score / max) * 100));
-  const color = score >= max * 0.8 ? '#3FB950' : score >= max * 0.6 ? '#E2E6EA' : '#F85149';
+  const color = score >= max * 0.8 ? '#22C55E' : score >= max * 0.6 ? '#F59E0B' : '#EF4444';
 
   return (
     <View style={{ marginBottom: 12 }}>
       <View className="flex-row items-center justify-between mb-1">
         <Text
           style={{
-            color: '#80868C',
+            color: '#94A3B8',
             fontSize: 13,
             fontFamily: 'Nunito_500Medium',
           }}
@@ -86,7 +86,7 @@ export default function RubricDisplay({ grade }: RubricDisplayProps) {
         </Text>
         <Text
           style={{
-            color: '#5C6166',
+            color: '#64748B',
             fontSize: 13,
             fontFamily: 'Nunito_500Medium',
           }}
@@ -105,7 +105,7 @@ export default function RubricDisplay({ grade }: RubricDisplayProps) {
       {grade.summary ? (
         <Text
           style={{
-            color: '#80868C',
+            color: '#94A3B8',
             fontSize: 14,
             fontFamily: 'Nunito_400Regular',
             marginTop: 16,
@@ -121,7 +121,7 @@ export default function RubricDisplay({ grade }: RubricDisplayProps) {
         <View style={{ marginTop: 16 }}>
           <Text
             style={{
-              color: '#3FB950',
+              color: '#22C55E',
               fontSize: 13,
               fontFamily: 'Nunito_600SemiBold',
               marginBottom: 6,
@@ -134,7 +134,7 @@ export default function RubricDisplay({ grade }: RubricDisplayProps) {
               <Ionicons
                 name="ellipse"
                 size={6}
-                color="#3FB950"
+                color="#22C55E"
                 style={{ marginTop: 6, marginRight: 8 }}
               />
               <Text
@@ -158,7 +158,7 @@ export default function RubricDisplay({ grade }: RubricDisplayProps) {
         <View style={{ marginTop: 16 }}>
           <Text
             style={{
-              color: '#E2E6EA',
+              color: '#F59E0B',
               fontSize: 13,
               fontFamily: 'Nunito_600SemiBold',
               marginBottom: 6,
@@ -171,7 +171,7 @@ export default function RubricDisplay({ grade }: RubricDisplayProps) {
               <Ionicons
                 name="ellipse"
                 size={6}
-                color="#E2E6EA"
+                color="#F59E0B"
                 style={{ marginTop: 6, marginRight: 8 }}
               />
               <Text

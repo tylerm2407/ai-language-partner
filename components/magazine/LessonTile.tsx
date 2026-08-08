@@ -27,21 +27,14 @@ interface LessonTileGridProps {
 // with fontWeight, which makes Android synthesize a second bolding pass.
 const serifFont = typography.family.serif;
 
-// Unit tiles cycle this palette so adjacent units stay distinguishable. With no
-// hue available, separation comes from where each pair sits on the silver ramp:
-// the set walks from brightest to dimmest, so four tiles on screen read as four
-// distinct weights of light rather than four colours.
-//
-// These fill a PROGRESS bar, so every pair runs light → dark in the direction
-// of travel; a pair that got darker toward the leading edge would read as the
-// bar fading out rather than filling.
+// Unit tiles cycle this palette so adjacent units stay distinguishable.
 const GRADIENT_PALETTE: [string, string][] = [
-  ['#FFFFFF', '#C9CDD2'],
-  ['#E2E6EA', '#ADB3BA'],
-  ['#C9CDD2', '#8C9198'],
-  ['#ADB3BA', '#6B7076'],
-  ['#F2F4F6', '#8C9198'],
-  ['#B4B9BF', '#4E5257'],
+  ['#4F8EF7', '#7C3AED'],
+  ['#A855F7', '#EC4899'],
+  ['#22C55E', '#38BDF8'],
+  ['#FFB547', '#FF6B6B'],
+  ['#38BDF8', '#6366F1'],
+  ['#F472B6', '#A855F7'],
 ];
 
 export function unitTilesToLessonTiles(units: UnitProgressTile[]): LessonTileData[] {

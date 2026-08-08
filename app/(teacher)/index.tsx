@@ -79,19 +79,19 @@ export default function TeacherDashboardScreen() {
       label: 'Active Students',
       value: String(totalStudents),
       icon: 'people-outline',
-      color: '#C9CDD2',
+      color: '#A855F7',
     },
     {
       label: 'Pending Grades',
       value: String(pendingSubmissions),
       icon: 'document-text-outline',
-      color: '#E2E6EA',
+      color: '#F59E0B',
     },
     {
       label: 'Avg Completion',
       value: averageCompletionRate > 0 ? `${Math.round(averageCompletionRate * 100)}%` : '—',
       icon: 'stats-chart-outline',
-      color: '#3FB950',
+      color: '#22C55E',
     },
   ];
 
@@ -118,7 +118,7 @@ export default function TeacherDashboardScreen() {
     return (
       <GradientBackground>
         <SafeAreaView className="flex-1 justify-center items-center px-6">
-          <Ionicons name="school-outline" size={64} color="#5C6166" />
+          <Ionicons name="school-outline" size={64} color="#64748B" />
           <Text
             className="text-xl text-text-primary mt-4 text-center"
             style={{ fontFamily: 'Nunito_600SemiBold' }}
@@ -141,7 +141,7 @@ export default function TeacherDashboardScreen() {
           contentContainerStyle={{ paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={loading} onRefresh={refresh} tintColor="#C9CDD2" />
+            <RefreshControl refreshing={loading} onRefresh={refresh} tintColor="#818CF8" />
           }
         >
           {/* Header */}
@@ -160,7 +160,7 @@ export default function TeacherDashboardScreen() {
           </Text>
 
           {loading ? (
-            <ActivityIndicator color="#C9CDD2" size="large" style={{ marginTop: 32 }} />
+            <ActivityIndicator color="#818CF8" size="large" style={{ marginTop: 32 }} />
           ) : (
             <>
               {/* Load Error */}
@@ -169,7 +169,7 @@ export default function TeacherDashboardScreen() {
                   style={{ marginBottom: 16 }}
                   innerStyle={{ padding: 14, flexDirection: 'row', alignItems: 'center' }}
                 >
-                  <Ionicons name="warning-outline" size={18} color="#E2E6EA" />
+                  <Ionicons name="warning-outline" size={18} color="#F59E0B" />
                   <Text
                     className="text-sm text-text-secondary flex-1 ml-2"
                     style={{ fontFamily: 'Nunito_400Regular' }}
@@ -183,7 +183,7 @@ export default function TeacherDashboardScreen() {
                     style={{ paddingVertical: 6, paddingHorizontal: 12 }}
                   >
                     <Text
-                      style={{ color: '#C9CDD2', fontSize: 13, fontFamily: 'Nunito_600SemiBold' }}
+                      style={{ color: '#818CF8', fontSize: 13, fontFamily: 'Nunito_600SemiBold' }}
                     >
                       Retry
                     </Text>
@@ -231,7 +231,7 @@ export default function TeacherDashboardScreen() {
                   style={{ marginBottom: 16 }}
                   innerStyle={{ padding: 20, alignItems: 'center' }}
                 >
-                  <Ionicons name="calendar-outline" size={28} color="#5C6166" />
+                  <Ionicons name="calendar-outline" size={28} color="#64748B" />
                   <Text
                     className="text-sm text-text-secondary mt-2"
                     style={{ fontFamily: 'Nunito_400Regular' }}
@@ -275,7 +275,7 @@ export default function TeacherDashboardScreen() {
                             className="text-xs"
                             style={{
                               fontFamily: 'Nunito_500Medium',
-                              color: '#E2E6EA',
+                              color: '#F59E0B',
                             }}
                           >
                             {formatRelativeTime(item.dueAt)}
@@ -305,7 +305,7 @@ export default function TeacherDashboardScreen() {
                   style={{ marginBottom: 16 }}
                   innerStyle={{ padding: 20, alignItems: 'center' }}
                 >
-                  <Ionicons name="pulse-outline" size={28} color="#5C6166" />
+                  <Ionicons name="pulse-outline" size={28} color="#64748B" />
                   <Text
                     className="text-sm text-text-secondary mt-2"
                     style={{ fontFamily: 'Nunito_400Regular' }}
@@ -320,7 +320,7 @@ export default function TeacherDashboardScreen() {
                     className="flex-row items-center mb-3"
                     style={{ gap: 10 }}
                   >
-                    <Ionicons name={event.icon} size={18} color="#5C6166" />
+                    <Ionicons name={event.icon} size={18} color="#64748B" />
                     <Text
                       className="text-sm text-text-primary flex-1"
                       style={{ fontFamily: 'Nunito_400Regular' }}

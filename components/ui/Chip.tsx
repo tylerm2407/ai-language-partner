@@ -31,7 +31,7 @@ interface ChipProps {
 
 const VARIANT_STYLES: Record<Variant, { bg: string; text: string }> = {
   neutral: { bg: colors.surface.cardAlt, text: colors.text.secondary },
-  primary: { bg: 'rgba(242, 244, 246, 0.22)', text: colors.indigo[300] },
+  primary: { bg: 'rgba(99, 102, 241, 0.22)', text: colors.indigo[300] },
   success: { bg: colors.success.tint, text: colors.success.light },
   error: { bg: colors.error.tint, text: colors.error.light },
   warning: { bg: colors.warning.tint, text: colors.warning.light },

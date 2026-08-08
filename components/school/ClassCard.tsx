@@ -41,7 +41,7 @@ export default function ClassCard({ classroom, onPress, showStudentCount }: Clas
         <View className="flex-row items-center mb-3" style={{ gap: 8 }}>
           <Text
             style={{
-              color: '#80868C',
+              color: '#94A3B8',
               fontSize: 13,
               fontFamily: 'Nunito_500Medium',
               textTransform: 'uppercase',
@@ -51,7 +51,7 @@ export default function ClassCard({ classroom, onPress, showStudentCount }: Clas
           </Text>
           <View
             style={{
-              backgroundColor: 'rgba(242, 244, 246, 0.2)',
+              backgroundColor: 'rgba(99, 102, 241, 0.2)',
               paddingHorizontal: 8,
               paddingVertical: 2,
               borderRadius: 999,
@@ -59,7 +59,7 @@ export default function ClassCard({ classroom, onPress, showStudentCount }: Clas
           >
             <Text
               style={{
-                color: '#C9CDD2',
+                color: '#818CF8',
                 fontSize: 11,
                 fontFamily: 'Nunito_600SemiBold',
               }}
@@ -73,10 +73,10 @@ export default function ClassCard({ classroom, onPress, showStudentCount }: Clas
         <View className="flex-row items-center" style={{ gap: 16 }}>
           {showStudentCount && classroom.studentCount != null && (
             <View className="flex-row items-center">
-              <Ionicons name="people-outline" size={14} color="#5C6166" />
+              <Ionicons name="people-outline" size={14} color="#64748B" />
               <Text
                 style={{
-                  color: '#5C6166',
+                  color: '#64748B',
                   fontSize: 12,
                   fontFamily: 'Nunito_500Medium',
                   marginLeft: 4,
@@ -89,10 +89,10 @@ export default function ClassCard({ classroom, onPress, showStudentCount }: Clas
 
           {classroom.activeAssignmentCount != null && classroom.activeAssignmentCount > 0 && (
             <View className="flex-row items-center">
-              <Ionicons name="document-text-outline" size={14} color="#C9CDD2" />
+              <Ionicons name="document-text-outline" size={14} color="#818CF8" />
               <Text
                 style={{
-                  color: '#C9CDD2',
+                  color: '#818CF8',
                   fontSize: 12,
                   fontFamily: 'Nunito_500Medium',
                   marginLeft: 4,

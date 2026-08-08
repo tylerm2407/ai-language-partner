@@ -185,7 +185,7 @@ function RootLayout() {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
         <View className="flex-1 items-center justify-center bg-dark">
-          <ActivityIndicator size="large" color="#C9CDD2" />
+          <ActivityIndicator size="large" color="#818CF8" />
           <StatusBar style="light" />
         </View>
       </GestureHandlerRootView>

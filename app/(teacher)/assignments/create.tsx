@@ -250,7 +250,7 @@ export default function CreateAssignmentScreen() {
             accessibilityLabel="Go back"
             className="flex-row items-center mb-4"
           >
-            <Ionicons name="chevron-back" size={24} color="#C9CDD2" />
+            <Ionicons name="chevron-back" size={24} color="#818CF8" />
             <Text
               className="text-base text-primary ml-1"
               style={{ fontFamily: 'Nunito_600SemiBold' }}
@@ -292,7 +292,7 @@ export default function CreateAssignmentScreen() {
                     >
                       {selectedClass?.name ?? 'Select a class'}
                     </Text>
-                    <Ionicons name="chevron-down" size={18} color="#5C6166" />
+                    <Ionicons name="chevron-down" size={18} color="#64748B" />
                   </View>
                 </GlassSurface>
               </Pressable>
@@ -315,7 +315,7 @@ export default function CreateAssignmentScreen() {
             >
               <View
                 style={{
-                  backgroundColor: '#141618',
+                  backgroundColor: '#151921',
                   borderRadius: 18,
                   padding: 8,
                   width: '80%',
@@ -334,7 +334,7 @@ export default function CreateAssignmentScreen() {
                         paddingHorizontal: 16,
                         backgroundColor:
                           c.id === selectedClassId
-                            ? 'rgba(255, 255, 255, 0.15)'
+                            ? 'rgba(168, 85, 247, 0.15)'
                             : 'transparent',
                         borderRadius: 12,
                       }}
@@ -342,7 +342,7 @@ export default function CreateAssignmentScreen() {
                       <Text
                         style={{
                           color:
-                            c.id === selectedClassId ? '#C9CDD2' : '#F7F8F9',
+                            c.id === selectedClassId ? '#A855F7' : '#F1F5F9',
                           fontSize: 16,
                           fontFamily: 'Nunito_500Medium',
                         }}
@@ -368,9 +368,9 @@ export default function CreateAssignmentScreen() {
               value={title}
               onChangeText={setTitle}
               placeholder="e.g. Restaurant Conversation Practice"
-              placeholderTextColor="#5C6166"
+              placeholderTextColor="#64748B"
               style={{
-                color: '#F7F8F9',
+                color: '#F1F5F9',
                 fontSize: 16,
                 fontFamily: 'Nunito_400Regular',
                 padding: 14,
@@ -403,23 +403,23 @@ export default function CreateAssignmentScreen() {
                   alignItems: 'center',
                   backgroundColor:
                     selectedScenario === s.key
-                      ? 'rgba(255, 255, 255, 0.2)'
+                      ? 'rgba(168, 85, 247, 0.2)'
                       : colors.surface.cardAlt,
                   borderWidth: 1,
                   borderColor:
                     selectedScenario === s.key
-                      ? '#C9CDD2'
+                      ? '#A855F7'
                       : 'rgba(255, 255, 255, 0.08)',
                 }}
               >
                 <Ionicons
                   name={s.icon}
                   size={22}
-                  color={selectedScenario === s.key ? '#C9CDD2' : '#5C6166'}
+                  color={selectedScenario === s.key ? '#A855F7' : '#64748B'}
                 />
                 <Text
                   style={{
-                    color: selectedScenario === s.key ? '#C9CDD2' : '#80868C',
+                    color: selectedScenario === s.key ? '#A855F7' : '#94A3B8',
                     fontSize: 11,
                     fontFamily: 'Nunito_600SemiBold',
                     marginTop: 6,
@@ -446,23 +446,23 @@ export default function CreateAssignmentScreen() {
                 alignItems: 'center',
                 backgroundColor:
                   selectedScenario === 'custom'
-                    ? 'rgba(255, 255, 255, 0.2)'
+                    ? 'rgba(168, 85, 247, 0.2)'
                     : colors.surface.cardAlt,
                 borderWidth: 1,
                 borderColor:
                   selectedScenario === 'custom'
-                    ? '#C9CDD2'
+                    ? '#A855F7'
                     : 'rgba(255, 255, 255, 0.08)',
               }}
             >
               <Ionicons
                 name="create-outline"
                 size={22}
-                color={selectedScenario === 'custom' ? '#C9CDD2' : '#5C6166'}
+                color={selectedScenario === 'custom' ? '#A855F7' : '#64748B'}
               />
               <Text
                 style={{
-                  color: selectedScenario === 'custom' ? '#C9CDD2' : '#80868C',
+                  color: selectedScenario === 'custom' ? '#A855F7' : '#94A3B8',
                   fontSize: 11,
                   fontFamily: 'Nunito_600SemiBold',
                   marginTop: 6,
@@ -482,9 +482,9 @@ export default function CreateAssignmentScreen() {
                   value={customLabel}
                   onChangeText={setCustomLabel}
                   placeholder="Scenario label"
-                  placeholderTextColor="#5C6166"
+                  placeholderTextColor="#64748B"
                   style={{
-                    color: '#F7F8F9',
+                    color: '#F1F5F9',
                     fontSize: 15,
                     fontFamily: 'Nunito_400Regular',
                     padding: 14,
@@ -497,10 +497,10 @@ export default function CreateAssignmentScreen() {
                   value={customDescription}
                   onChangeText={setCustomDescription}
                   placeholder="Description for students"
-                  placeholderTextColor="#5C6166"
+                  placeholderTextColor="#64748B"
                   multiline
                   style={{
-                    color: '#F7F8F9',
+                    color: '#F1F5F9',
                     fontSize: 15,
                     fontFamily: 'Nunito_400Regular',
                     padding: 14,
@@ -514,10 +514,10 @@ export default function CreateAssignmentScreen() {
                   value={customContext}
                   onChangeText={setCustomContext}
                   placeholder="System context (AI instructions)"
-                  placeholderTextColor="#5C6166"
+                  placeholderTextColor="#64748B"
                   multiline
                   style={{
-                    color: '#F7F8F9',
+                    color: '#F1F5F9',
                     fontSize: 15,
                     fontFamily: 'Nunito_400Regular',
                     padding: 14,
@@ -550,18 +550,18 @@ export default function CreateAssignmentScreen() {
                   borderRadius: 999,
                   backgroundColor:
                     level === lvl.value
-                      ? 'rgba(255, 255, 255, 0.2)'
+                      ? 'rgba(168, 85, 247, 0.2)'
                       : colors.surface.cardAlt,
                   borderWidth: 1,
                   borderColor:
                     level === lvl.value
-                      ? '#C9CDD2'
+                      ? '#A855F7'
                       : 'rgba(255, 255, 255, 0.1)',
                 }}
               >
                 <Text
                   style={{
-                    color: level === lvl.value ? '#C9CDD2' : '#80868C',
+                    color: level === lvl.value ? '#A855F7' : '#94A3B8',
                     fontSize: 13,
                     fontFamily: 'Nunito_600SemiBold',
                   }}
@@ -598,13 +598,13 @@ export default function CreateAssignmentScreen() {
                   borderWidth: 1,
                   borderColor:
                     minDuration === d
-                      ? '#C9CDD2'
+                      ? '#818CF8'
                       : 'rgba(255, 255, 255, 0.1)',
                 }}
               >
                 <Text
                   style={{
-                    color: minDuration === d ? '#C9CDD2' : '#80868C',
+                    color: minDuration === d ? '#818CF8' : '#94A3B8',
                     fontSize: 13,
                     fontFamily: 'Nunito_600SemiBold',
                   }}
@@ -644,13 +644,13 @@ export default function CreateAssignmentScreen() {
                   alignItems: 'center',
                   backgroundColor:
                     mode === m.value
-                      ? 'rgba(255, 255, 255, 0.2)'
+                      ? 'rgba(168, 85, 247, 0.2)'
                       : 'transparent',
                 }}
               >
                 <Text
                   style={{
-                    color: mode === m.value ? '#C9CDD2' : '#80868C',
+                    color: mode === m.value ? '#A855F7' : '#94A3B8',
                     fontSize: 14,
                     fontFamily: 'Nunito_600SemiBold',
                   }}
@@ -673,9 +673,9 @@ export default function CreateAssignmentScreen() {
               value={vocabFocus}
               onChangeText={setVocabFocus}
               placeholder="e.g. menu, allergy, reservation"
-              placeholderTextColor="#5C6166"
+              placeholderTextColor="#64748B"
               style={{
-                color: '#F7F8F9',
+                color: '#F1F5F9',
                 fontSize: 15,
                 fontFamily: 'Nunito_400Regular',
                 padding: 14,
@@ -696,9 +696,9 @@ export default function CreateAssignmentScreen() {
               value={grammarFocus}
               onChangeText={setGrammarFocus}
               placeholder="e.g. conditional tense, polite requests"
-              placeholderTextColor="#5C6166"
+              placeholderTextColor="#64748B"
               style={{
-                color: '#F7F8F9',
+                color: '#F1F5F9',
                 fontSize: 15,
                 fontFamily: 'Nunito_400Regular',
                 padding: 14,
@@ -719,10 +719,10 @@ export default function CreateAssignmentScreen() {
               value={instructions}
               onChangeText={setInstructions}
               placeholder="Additional instructions for students..."
-              placeholderTextColor="#5C6166"
+              placeholderTextColor="#64748B"
               multiline
               style={{
-                color: '#F7F8F9',
+                color: '#F1F5F9',
                 fontSize: 15,
                 fontFamily: 'Nunito_400Regular',
                 padding: 14,
@@ -744,9 +744,9 @@ export default function CreateAssignmentScreen() {
               value={dueDate}
               onChangeText={setDueDate}
               placeholder="YYYY-MM-DD"
-              placeholderTextColor="#5C6166"
+              placeholderTextColor="#64748B"
               style={{
-                color: '#F7F8F9',
+                color: '#F1F5F9',
                 fontSize: 15,
                 fontFamily: 'Nunito_400Regular',
                 padding: 14,
@@ -766,10 +766,10 @@ export default function CreateAssignmentScreen() {
                 gap: 8,
               }}
             >
-              <Ionicons name="warning-outline" size={18} color="#F85149" />
+              <Ionicons name="warning-outline" size={18} color="#EF4444" />
               <Text
                 className="text-sm flex-1"
-                style={{ color: '#F85149', fontFamily: 'Nunito_500Medium' }}
+                style={{ color: '#EF4444', fontFamily: 'Nunito_500Medium' }}
               >
                 {error}
               </Text>
@@ -796,7 +796,7 @@ export default function CreateAssignmentScreen() {
             >
               <Text
                 style={{
-                  color: '#80868C',
+                  color: '#94A3B8',
                   fontSize: 16,
                   fontFamily: 'Nunito_600SemiBold',
                 }}

@@ -160,7 +160,7 @@ export function MiniDialogueExercise({
                   <TextInput
                     className={`border-2 ${getBorderClass(index)} rounded-[10px] px-3 py-2 text-base text-text-primary min-w-[150px]`}
                     placeholder="Type your line..."
-                    placeholderTextColor="#5C6166"
+                    placeholderTextColor="#64748B"
                     value={answers[index] ?? ''}
                     onChangeText={(text) => handleChangeAnswer(index, text)}
                     editable={!submitted && !showResult}

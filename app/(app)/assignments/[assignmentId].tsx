@@ -107,7 +107,7 @@ export default function AssignmentDetailScreen() {
     return (
       <GradientBackground>
         <SafeAreaView className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#C9CDD2" />
+          <ActivityIndicator size="large" color="#818CF8" />
         </SafeAreaView>
       </GradientBackground>
     );
@@ -124,7 +124,7 @@ export default function AssignmentDetailScreen() {
               accessibilityRole="button"
               accessibilityLabel="Go back"
             >
-              <Ionicons name="arrow-back" size={22} color="#B4B9BF" />
+              <Ionicons name="arrow-back" size={22} color="#E2E8F0" />
             </Pressable>
             <Text className="text-lg font-semibold text-text-primary ml-3">Assignment</Text>
           </View>
@@ -147,7 +147,7 @@ export default function AssignmentDetailScreen() {
             accessibilityRole="button"
             accessibilityLabel="Go back"
           >
-            <Ionicons name="arrow-back" size={22} color="#B4B9BF" />
+            <Ionicons name="arrow-back" size={22} color="#E2E8F0" />
           </Pressable>
           <Text className="text-lg font-semibold text-text-primary ml-3 flex-1" numberOfLines={1}>
             Assignment
@@ -166,7 +166,7 @@ export default function AssignmentDetailScreen() {
               {/* Scenario */}
               {(assignment.scenarioKey ?? assignment.customScenario) && (
                 <View className="flex-row items-center mb-3">
-                  <Ionicons name="chatbubbles-outline" size={18} color="#C9CDD2" />
+                  <Ionicons name="chatbubbles-outline" size={18} color="#A855F7" />
                   <Text className="text-sm text-text-primary ml-2">
                     {assignment.customScenario?.label ?? assignment.scenarioKey}
                   </Text>
@@ -189,7 +189,7 @@ export default function AssignmentDetailScreen() {
 
               {/* Duration */}
               <View className="flex-row items-center mb-3">
-                <Ionicons name="time-outline" size={18} color="#5C6166" />
+                <Ionicons name="time-outline" size={18} color="#64748B" />
                 <Text className="text-sm text-text-secondary ml-2">
                   Min duration: {assignment.minDurationMinutes} minutes
                 </Text>
@@ -197,7 +197,7 @@ export default function AssignmentDetailScreen() {
 
               {/* Mode */}
               <View className="flex-row items-center mb-3">
-                <Ionicons name={MODE_ICONS[assignment.mode] ?? 'swap-horizontal-outline'} size={18} color="#5C6166" />
+                <Ionicons name={MODE_ICONS[assignment.mode] ?? 'swap-horizontal-outline'} size={18} color="#64748B" />
                 <Text className="text-sm text-text-secondary ml-2">
                   Mode: {MODE_LABELS[assignment.mode] ?? assignment.mode}
                 </Text>
@@ -205,7 +205,7 @@ export default function AssignmentDetailScreen() {
 
               {/* Due date */}
               <View className="flex-row items-center mb-3">
-                <Ionicons name="calendar-outline" size={18} color="#5C6166" />
+                <Ionicons name="calendar-outline" size={18} color="#64748B" />
                 <Text className="text-sm text-text-secondary ml-2">
                   {assignment.dueAt ? formatDate(assignment.dueAt) : 'No due date'}
                 </Text>
@@ -295,7 +295,7 @@ export default function AssignmentDetailScreen() {
           {submissionStatus === 'submitted' && (
             <GlassSurface style={{ marginBottom: 16 }}>
               <View className="p-5 items-center">
-                <Ionicons name="checkmark-circle" size={48} color="#3FB950" />
+                <Ionicons name="checkmark-circle" size={48} color="#22C55E" />
                 <Text className="text-base font-semibold text-text-primary mt-3">
                   Submitted on {formatDate(assignment.submission?.submittedAt ?? null)}
                 </Text>
@@ -310,8 +310,8 @@ export default function AssignmentDetailScreen() {
               <GlassSurface style={{ marginBottom: 16 }}>
                 <View className="p-5 items-center">
                   <View className="w-20 h-20 rounded-full border-4 items-center justify-center" style={{
-                    borderColor: (assignment.submission.finalScore ?? 0) >= 80 ? '#3FB950' :
-                      (assignment.submission.finalScore ?? 0) >= 60 ? '#E2E6EA' : '#F85149',
+                    borderColor: (assignment.submission.finalScore ?? 0) >= 80 ? '#22C55E' :
+                      (assignment.submission.finalScore ?? 0) >= 60 ? '#F59E0B' : '#EF4444',
                   }}>
                     <Text className="text-2xl font-bold text-text-primary">
                       {assignment.submission.finalScore ?? '-'}

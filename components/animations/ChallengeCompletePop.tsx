@@ -29,7 +29,7 @@ export function ChallengeCompletePop({ trigger }: ChallengeCompletePopProps) {
 
   return (
     <Animated.View style={{ alignItems: 'center', justifyContent: 'center', transform: [{ scale }], opacity }}>
-      <Ionicons name="checkmark-circle" size={28} color="#3FB950" />
+      <Ionicons name="checkmark-circle" size={28} color="#34D399" />
     </Animated.View>
   );
 }

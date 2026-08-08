@@ -90,11 +90,11 @@ export function getXpForLevel(level: number): number {
 }
 
 export const LEAGUE_TIERS: { tier: LeagueTier; label: string; color: string; minLevel: number; maxLevel: number }[] = [
-  { tier: 'bronze', label: 'Bronze', color: '#6B7076', minLevel: 1, maxLevel: 10 },
-  { tier: 'silver', label: 'Silver', color: '#8C9198', minLevel: 11, maxLevel: 25 },
-  { tier: 'gold', label: 'Gold', color: '#ADB3BA', minLevel: 26, maxLevel: 50 },
-  { tier: 'platinum', label: 'Platinum', color: '#C9CDD2', minLevel: 51, maxLevel: 75 },
-  { tier: 'diamond', label: 'Diamond', color: '#C9CDD2', minLevel: 76, maxLevel: 100 },
+  { tier: 'bronze', label: 'Bronze', color: '#CD7F32', minLevel: 1, maxLevel: 10 },
+  { tier: 'silver', label: 'Silver', color: '#C0C0C0', minLevel: 11, maxLevel: 25 },
+  { tier: 'gold', label: 'Gold', color: '#FFD700', minLevel: 26, maxLevel: 50 },
+  { tier: 'platinum', label: 'Platinum', color: '#A78BFA', minLevel: 51, maxLevel: 75 },
+  { tier: 'diamond', label: 'Diamond', color: '#38BDF8', minLevel: 76, maxLevel: 100 },
 ];
 
 /**

@@ -8,7 +8,7 @@ import { GradientBorderCard } from '../ui/GradientBorderCard';
 import { useOnboardingChecklist } from '../../hooks/useOnboardingChecklist';
 import { useProfile } from '../../hooks/useProfile';
 
-const CONFETTI_COLORS = ['#C9CDD2', '#56D364', '#C9CDD2', '#F2F4F6', '#E2E6EA', '#ADB3BA'];
+const CONFETTI_COLORS = ['#FBBF24', '#34D399', '#38BDF8', '#A855F7', '#F472B6', '#60A5FA'];
 const PARTICLE_COUNT = 10;
 
 function ConfettiParticle({ index }: { index: number }) {
@@ -143,7 +143,7 @@ export function OnboardingChecklist() {
         accessibilityLabel={collapsed ? 'Expand onboarding checklist' : 'Collapse onboarding checklist'}
       >
         <View className="flex-row items-center gap-2">
-          <Ionicons name="rocket-outline" size={18} color="#C9CDD2" />
+          <Ionicons name="rocket-outline" size={18} color="#818CF8" />
           <Text className="text-base font-semibold text-text-primary">Get Started</Text>
         </View>
         <View className="flex-row items-center gap-2">
@@ -151,7 +151,7 @@ export function OnboardingChecklist() {
           <Ionicons
             name={collapsed ? 'chevron-down' : 'chevron-up'}
             size={18}
-            color="#5C6166"
+            color="#64748B"
           />
         </View>
       </Pressable>
@@ -187,8 +187,8 @@ export function OnboardingChecklist() {
                   height: 24,
                   borderRadius: 12,
                   borderWidth: item.completed ? 0 : 2,
-                  borderColor: '#5C6166',
-                  backgroundColor: item.completed ? '#3FB950' : 'transparent',
+                  borderColor: '#64748B',
+                  backgroundColor: item.completed ? '#22C55E' : 'transparent',
                   justifyContent: 'center',
                   alignItems: 'center',
                   marginRight: 12,
@@ -201,7 +201,7 @@ export function OnboardingChecklist() {
               <Ionicons
                 name={item.icon as any}
                 size={18}
-                color={item.completed ? '#3FB950' : '#80868C'}
+                color={item.completed ? '#22C55E' : '#94A3B8'}
                 style={{ marginRight: 10 }}
               />
               <Text
@@ -212,7 +212,7 @@ export function OnboardingChecklist() {
                 {item.label}
               </Text>
               {!item.completed && item.route && (
-                <Ionicons name="chevron-forward" size={16} color="#5C6166" />
+                <Ionicons name="chevron-forward" size={16} color="#64748B" />
               )}
             </Pressable>
           ))}

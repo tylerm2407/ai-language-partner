@@ -25,7 +25,7 @@ export const AccessoryLayer = React.memo(({ size, accessory }: AccessoryLayerPro
             cx={leftX}
             cy={eyeY}
             r={lensR}
-            stroke="#7A756B"
+            stroke="#64748B"
             strokeWidth={strokeWidth}
             fill="none"
           />
@@ -34,7 +34,7 @@ export const AccessoryLayer = React.memo(({ size, accessory }: AccessoryLayerPro
             cx={rightX}
             cy={eyeY}
             r={lensR}
-            stroke="#7A756B"
+            stroke="#64748B"
             strokeWidth={strokeWidth}
             fill="none"
           />
@@ -44,7 +44,7 @@ export const AccessoryLayer = React.memo(({ size, accessory }: AccessoryLayerPro
             y1={eyeY}
             x2={rightX - lensR}
             y2={eyeY}
-            stroke="#7A756B"
+            stroke="#64748B"
             strokeWidth={strokeWidth}
           />
           {/* Left arm */}
@@ -53,7 +53,7 @@ export const AccessoryLayer = React.memo(({ size, accessory }: AccessoryLayerPro
             y1={eyeY}
             x2={leftX - lensR - size * 0.04}
             y2={eyeY - size * 0.01}
-            stroke="#7A756B"
+            stroke="#64748B"
             strokeWidth={strokeWidth}
           />
           {/* Right arm */}
@@ -62,7 +62,7 @@ export const AccessoryLayer = React.memo(({ size, accessory }: AccessoryLayerPro
             y1={eyeY}
             x2={rightX + lensR + size * 0.04}
             y2={eyeY - size * 0.01}
-            stroke="#7A756B"
+            stroke="#64748B"
             strokeWidth={strokeWidth}
           />
         </G>

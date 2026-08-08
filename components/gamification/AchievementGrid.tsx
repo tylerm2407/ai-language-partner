@@ -37,7 +37,7 @@ export function AchievementGrid() {
 
       {loading ? (
         <View style={{ paddingVertical: 24, alignItems: 'center' }}>
-          <ActivityIndicator color="#C9CDD2" />
+          <ActivityIndicator color="#818CF8" />
         </View>
       ) : (
         <View

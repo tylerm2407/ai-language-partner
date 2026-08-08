@@ -6,15 +6,15 @@
  *
  * This used to be a Duolingo-style "slab" button — the fill sitting on a darker
  * bottom edge that collapsed on press. That slab was the single strongest
- * visual tell tying the app to Duolingo, and it is retired under Studio
- * Graphite (DESIGN.md §What We Retired). The name and the whole prop surface
- * are unchanged so no call site had to move.
+ * visual tell tying the app to Duolingo, and it stays retired (DESIGN.md
+ * §What We Retired). The name and the whole prop surface are unchanged so no
+ * call site had to move.
  *
  * Variants:
- *   primary   — brass fill, DARK label. Default CTA.
+ *   primary   — indigo.600 fill, white label. Default CTA.
  *   secondary — surface-card fill, hairline border. "Cancel" / "Skip".
- *   danger    — error.dark fill, light label. Destructive / exit.
- *   ghost     — transparent fill, brass label only. Tertiary actions.
+ *   danger    — error.dark fill, white label. Destructive / exit.
+ *   ghost     — transparent fill, indigo.400 label only. Tertiary actions.
  *
  * Haptic + press animation both honor useMotion.shouldReduce.
  */
@@ -43,8 +43,9 @@ interface TactileButtonProps {
 
 const STYLES = {
   primary: {
-    // Brass is a LIGHT fill — the label is near-black (7.9:1). White here is
-    // 2.4:1 and was the failure mode the old indigo palette had inverted.
+    // indigo.600, deliberately not indigo.500: white on .500 is 4.47:1, which
+    // is under AA, and that was every CTA in the app before the fill/accent
+    // split. On .600 it is 6.4:1.
     fill: colors.action.primaryFill,
     text: colors.text.onPrimary,
     borderColor: 'transparent',
@@ -58,10 +59,10 @@ const STYLES = {
   },
   danger: {
     // error.dark, not error.base: the label is 17px bold, which is under the
-    // 14pt threshold for "large text", so it needs the full 4.5:1. On
-    // error.base that lands at 3.9:1; on error.dark it is 5.5:1.
+    // 14pt threshold for "large text", so it needs the full 4.5:1. White on
+    // error.base is 3.8:1; on error.dark it is 4.8:1.
     fill: colors.error.dark,
-    text: colors.text.primary,
+    text: colors.text.onPrimary,
     borderColor: 'transparent',
     borderWidth: 0,
   },

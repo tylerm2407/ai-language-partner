@@ -11,7 +11,7 @@ interface PathConnectorProps {
 
 export function PathConnector({ fromX, fromY, toX, toY, state }: PathConnectorProps) {
   const isCompleted = state === 'completed';
-  const strokeColor = isCompleted ? '#3FB950' : '#1C1F22';
+  const strokeColor = isCompleted ? '#34D399' : '#252A35';
   const strokeWidth = isCompleted ? 3 : 2;
   const strokeDasharray = isCompleted ? undefined : '6,6';
 

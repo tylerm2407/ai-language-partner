@@ -139,7 +139,7 @@ export const HairLayer = React.memo(({ size, hairStyle, hairColor, headShape }: 
             cx={cx + headRadius * 0.85}
             cy={topY + size * 0.06}
             r={size * 0.025}
-            fill="#7A756B"
+            fill="#64748B"
           />
         </G>
       );

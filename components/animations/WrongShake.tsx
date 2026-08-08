@@ -32,7 +32,7 @@ export function WrongShake({ trigger = false, children }: WrongShakeProps) {
   return (
     <Animated.View style={{ transform: [{ translateX }] }}>
       <Animated.View
-        style={[StyleSheet.absoluteFill, { backgroundColor: '#F85149', borderRadius: 20, opacity: tintOpacity }]}
+        style={[StyleSheet.absoluteFill, { backgroundColor: '#EF4444', borderRadius: 20, opacity: tintOpacity }]}
         pointerEvents="none"
       />
       {children}
