@@ -3,202 +3,230 @@
  * See redesign-plan.md for rationale; see design-research.md for empirical
  * citations behind each choice.
  *
- * Canonical palette is STUDIO GRAPHITE + INK & BRASS. Body text is validated
- * WCAG AAA (>=7:1) against surface.base (#0F0E0C). Primary FILLS are brass
- * (#C8A24A) carrying DARK text — text.onPrimary is near-black (7.9:1), not
- * white (white on brass is 2.4:1 and fails outright). See DESIGN.md §Primary.
+ * Canonical palette is MONOCHROME: black, charcoal, silver, grey. Body text is
+ * validated WCAG AAA (>=7:1) against surface.base (#08090A).
  *
- * The graphite carries a deliberate warm bias (base is #0F0E0C, not a neutral
- * #0E0E10). A neutral near-black under a gold accent reads clinical; two points
- * of red/green bias in the surface is what keeps the theme professional without
- * being cold, and it costs nothing in contrast (base luminance is unchanged to
- * four decimal places).
+ * The load-bearing idea: in a monochrome system the CTA is the BRIGHTEST thing
+ * on the screen. `action.primaryFill` is near-white (#F2F4F6) carrying a
+ * near-black label at 18.1:1 — a harder pop than any colored fill can reach,
+ * which is what stops greyscale from reading as drab. Everything else is a step
+ * on the silver ramp, and hierarchy comes from lightness, not hue.
+ *
+ * Exactly TWO hues survive, and only where they do functional work:
+ * `success` (correct) and `error` (incorrect, hearts). Streak, warning,
+ * premium, league tiers, achievement and mistake categories are all greyscale —
+ * they are distinguished by icon and label, per §Core Principles rule 6.
  */
 
 // ─── Colors ──────────────────────────────────────────────────────────────
 export const colors = {
   /** Screen-level surfaces, from darkest to progressively lighter.
-   *  Warm graphite. There is no ambient blob layer any more — depth comes from
-   *  the surface steps and hairline borders, so `base` no longer has to be a
-   *  near-void for a glow to read against it. */
+   *  Neutral charcoal with a very slight cool cast. The steps are wider than
+   *  the previous palette's on purpose — crispness in monochrome comes from
+   *  clearly separated surfaces plus visible hairlines, not from tint. */
   surface: {
-    base: '#0F0E0C', // primary app background
-    raised: '#151412', // reading / review / lesson content (+ contrast for focus)
-    sunken: '#0A0908', // behind-content wells (scroll under, inset tracks)
-    card: '#1B1A17',
-    cardAlt: '#24221E',
-    overlay: 'rgba(10, 9, 8, 0.84)', // modal backdrops / celebration scrim
-    sheet: '#1B1A17', // bottom-sheet fill
+    base: '#08090A', // primary app background
+    raised: '#0E0F11', // reading / review / lesson content (+ contrast for focus)
+    sunken: '#050506', // behind-content wells (scroll under, inset tracks)
+    card: '#141618',
+    cardAlt: '#1C1F22',
+    overlay: 'rgba(5, 5, 6, 0.86)', // modal backdrops / celebration scrim
+    sheet: '#141618', // bottom-sheet fill
   },
 
   /** Semantic action roles.
    *
-   *  The indigo palette needed a fill/accent split because indigo.500 under
-   *  white was 4.47:1. Brass inverts the problem: it is a LIGHT accent, so the
-   *  fill carries dark text and the same hex works as both fill and accent.
-   *  `accent` is the lifted step, used where a small glyph or 13px link needs
-   *  more separation from the surface than the fill step gives. */
+   *  Brass was a light fill too, but at 8:1 it had to compete with the warm
+   *  surfaces around it. Near-white on near-black has nothing to compete with:
+   *  the CTA is simply the highest-contrast element in the composition. */
   action: {
-    primaryFill: '#C8A24A', // brass.500 — text.onPrimary 7.9:1, on base 8.0:1
+    primaryFill: '#F2F4F6', // silver.100 — text.onPrimary 18.1:1, on base 18.1:1
     /** @deprecated Slab CTAs are retired — see DESIGN.md §What We Retired.
      *  Retained only so pre-Studio call sites type-check; do not use. */
-    primarySlab: '#8E6F2F', // brass.700
-    primaryTint: 'rgba(200, 162, 74, 0.14)',
-    accent: '#E0BE6B', // brass.300 — text links, small icons, progress (10.8:1)
+    primarySlab: '#ADB3BA', // silver.400
+    primaryTint: 'rgba(242, 244, 246, 0.10)',
+    accent: '#C9CDD2', // silver.300 — text links, small icons, spinners (12.5:1)
   },
 
-  /** Ambient wash. ONE top-anchored warm gradient, not the retired three-blob
-   *  layer. Rendered by components/ui/GlowBackground.tsx. */
+  /** Ambient light. ONE top-anchored silver wash per screen, plus optional
+   *  `StatBloom` halos behind key numerals. Rendered by
+   *  components/ui/GlowBackground.tsx. */
   glow: {
-    brass: 'rgba(200, 162, 74, 1)', // the wash tint
-    ember: 'rgba(226, 103, 60, 1)', // celebration-only second stop
+    silver: 'rgba(226, 230, 234, 1)', // the wash + bloom tint
+    bloom: 'rgba(242, 244, 246, 1)', // brighter core for stat halos
   },
 
-  /** Hairline borders. Warm-white alpha, so a 1px rule on a warm card does not
-   *  read as a cool seam. */
+  /** Hairline borders. Neutral white alpha, stepped up from the previous
+   *  palette — on pure charcoal a 0.07 hairline disappears, and the crisp
+   *  look depends on the edges actually being visible. */
   border: {
-    subtle: 'rgba(245, 240, 230, 0.07)',
-    default: 'rgba(245, 240, 230, 0.13)',
-    strong: 'rgba(245, 240, 230, 0.24)',
-    focus: '#C8A24A',
+    subtle: 'rgba(255, 255, 255, 0.08)',
+    default: 'rgba(255, 255, 255, 0.15)',
+    strong: 'rgba(255, 255, 255, 0.28)',
+    focus: '#F2F4F6',
   },
 
-  /** Text tokens — contrast ratios measured vs surface.base (#0F0E0C).
-   *  Warm off-whites, not cool slate. #F1F5F9 over a warm graphite reads blue. */
+  /** Text tokens — contrast ratios measured vs surface.base (#08090A).
+   *  Neutral greys. `primary` stops short of pure #FFFFFF: full white on a
+   *  near-black field haloes on OLED (§Core Principles rule 5). */
   text: {
-    primary: '#F2EFE9', // 16.9:1 (AAA)
-    secondary: '#D6D1C7', // 12.7:1 (AAA)
-    tertiary: '#9C968A', // 6.6:1 (AA)
-    quaternary: '#7A756B', // 4.2:1 (large UI only — timestamps, placeholders)
-    onPrimary: '#14120E', // DARK on brass fills (7.9:1). Never white — see header.
-    onSuccess: '#0A1710', // dark text on success fill (5.9:1)
-    onWarning: '#14120E', // dark text on warning fill (7.3:1)
-    disabled: 'rgba(242, 239, 233, 0.38)',
+    primary: '#F7F8F9', // 18.7:1 (AAA)
+    secondary: '#B4B9BF', // 10.1:1 (AAA)
+    tertiary: '#80868C', // 5.4:1 (AA)
+    quaternary: '#5C6166', // 3.2:1 (large UI only — timestamps, placeholders)
+    onPrimary: '#08090A', // DARK on the near-white CTA fill (18.1:1)
+    onSuccess: '#052B10', // dark text on success fill (6.1:1)
+    onWarning: '#08090A', // warning is greyscale now — dark label on it
+    disabled: 'rgba(247, 248, 249, 0.38)',
   },
 
-  /** Brass — primary brand. Steps are ordered by lightness like any Tailwind-
-   *  shaped scale, so 300 is LIGHTER than 500. On a dark canvas the useful
-   *  steps run 300–500; 600+ exist for pressed states and gradient stops. */
-  brass: {
-    50: '#FBF7EC',
-    100: '#F4EBD3',
-    200: '#E9D9AC',
-    300: '#E0BE6B', // accent step — small text/icons on dark (10.8:1)
-    400: '#D0B063', // 9.3:1
-    500: '#C8A24A', // CANONICAL PRIMARY — fills, 8.0:1
-    600: '#B08C3B',
-    700: '#8E6F2F',
-    800: '#6D5424',
-    900: '#4C3A19',
+  /** Silver — the brand ramp. Ordered by lightness like any Tailwind-shaped
+   *  scale, so 100 is the near-white CTA step and 900 is nearly a surface.
+   *  On a charcoal canvas the useful text/icon steps run 100–400; 600+ are
+   *  tracks, dividers, disabled states and gradient stops. */
+  silver: {
+    50: '#FFFFFF',
+    100: '#F2F4F6', // CTA fill (18.1:1)
+    200: '#E2E6EA', // 15.5:1 — streak, emphasis numerals
+    300: '#C9CDD2', // accent step — links, icons (12.5:1)
+    400: '#ADB3BA', // 9.4:1
+    500: '#8C9198', // 6.3:1
+    600: '#6B7076', // 4.0:1 — large UI only
+    700: '#4E5257', // 2.5:1 — disabled glyphs, empty states
+    800: '#33373B', // 1.7:1 — tracks, dividers
+    900: '#1C1F22', // = surface.cardAlt
   },
 
   /**
-   * @deprecated Indigo is retired. These keys alias the brass scale by step so
-   * pre-Studio call sites (`colors.indigo[400]`) keep compiling and pick up the
-   * new palette instead of silently staying indigo. Migrate to `colors.brass`.
+   * @deprecated Brass is retired. These keys alias the silver ramp by step so
+   * pre-monochrome call sites (`colors.brass[300]`) keep compiling and pick up
+   * the new palette instead of silently staying gold. Migrate to
+   * `colors.silver`. Note the ordering flips meaning: brass ran dark-to-light
+   * the same way, so a step-for-step alias is correct.
    */
+  brass: {
+    50: '#FFFFFF',
+    100: '#F2F4F6',
+    200: '#E2E6EA',
+    300: '#C9CDD2',
+    400: '#ADB3BA',
+    500: '#F2F4F6', // was the CTA fill — must stay the CTA fill
+    600: '#ADB3BA',
+    700: '#8C9198',
+    800: '#4E5257',
+    900: '#33373B',
+  },
+
+  /** @deprecated Two palettes ago. Aliases onto silver via `brass`. */
   indigo: {
-    50: '#FBF7EC',
-    100: '#F4EBD3',
-    200: '#E9D9AC',
-    300: '#E0BE6B',
-    400: '#D0B063',
-    500: '#C8A24A',
-    600: '#C8A24A',
-    700: '#8E6F2F',
-    800: '#6D5424',
-    900: '#4C3A19',
+    50: '#FFFFFF',
+    100: '#F2F4F6',
+    200: '#E2E6EA',
+    300: '#C9CDD2',
+    400: '#C9CDD2',
+    500: '#F2F4F6',
+    600: '#F2F4F6',
+    700: '#8C9198',
+    800: '#4E5257',
+    900: '#33373B',
   },
 
   /** Semantic.
    *
-   *  Every base below is desaturated relative to the old Tailwind-bright set.
-   *  A #22C55E green and a #EF4444 red next to a gold accent is a traffic light;
-   *  muted jade and clay keep the semantics legible without shouting over the
-   *  brand color. `.light` steps are what small text uses — the bases sit at or
-   *  under AA at 13px, exactly as they did before. */
+   *  ONLY `success` and `error` carry hue, and only because grading feedback
+   *  is the one place in a learning app where a colour cue is doing real work.
+   *  Both are the GitHub dark-UI pair — engineered for exactly this job:
+   *  legible on near-black, distinguishable under the common colour-vision
+   *  deficiencies, and unsaturated enough not to fight a greyscale system.
+   *
+   *  `.light` steps are what small text uses; the bases are for fills and
+   *  icons. The `danger` CTA fill is `error.dark`, which clears 5.0:1 under a
+   *  white label where `error.base` would not. */
   success: {
-    base: '#4E9F6B', // 6.0:1 — fills and icons
-    dark: '#3C7E54',
-    light: '#7FC79A', // 9.7:1 — chip labels, inline diffs
-    tint: 'rgba(78, 159, 107, 0.15)',
-    border: 'rgba(78, 159, 107, 0.35)',
+    base: '#3FB950', // 7.9:1
+    dark: '#2EA043',
+    light: '#56D364', // 10.3:1 — chip labels, inline diffs
+    tint: 'rgba(63, 185, 80, 0.14)',
+    border: 'rgba(63, 185, 80, 0.32)',
   },
   error: {
-    base: '#C0555F', // 4.3:1 — fills and icons only
-    dark: '#9E434C',
-    light: '#E39098', // 8.2:1 — chip labels, inline diffs
-    tint: 'rgba(192, 85, 95, 0.15)',
-    border: 'rgba(192, 85, 95, 0.40)',
+    base: '#F85149', // 5.9:1
+    dark: '#C93C34', // danger CTA fill — white label 5.0:1
+    light: '#FF7B72', // 7.9:1 — chip labels, inline diffs
+    tint: 'rgba(248, 81, 73, 0.14)',
+    border: 'rgba(248, 81, 73, 0.34)',
   },
+  /** Greyscale. A third hue would break the two-signal rule, and a warning is
+   *  always accompanied by an icon and a label that say so. */
   warning: {
-    base: '#D9913C', // 7.4:1
-    dark: '#B4762D',
-    light: '#EFBB7C',
-    tint: 'rgba(217, 145, 60, 0.15)',
-    border: 'rgba(217, 145, 60, 0.35)',
+    base: '#E2E6EA',
+    dark: '#ADB3BA',
+    light: '#F2F4F6',
+    tint: 'rgba(226, 230, 234, 0.12)',
+    border: 'rgba(226, 230, 234, 0.30)',
   },
+  /** Greyscale — the flame glyph carries the meaning. A warm streak colour was
+   *  the single largest source of stray hue in the previous palette. */
   streak: {
-    base: '#E2673C', // ember — 5.8:1
-    fire: '#F0763D',
-    /** Ember-orange, deliberately hotter than `warning` and well clear of the
-     *  brass accent. Three warm tokens now share a canvas — brass (43°),
-     *  warning (33°), streak (20°) — so the icon+label rule in DESIGN.md
-     *  §Accessibility is load-bearing here, not decorative. */
-    tint: 'rgba(226, 103, 60, 0.15)',
-    light: '#F2A886', // streak chip label on dark
+    base: '#E2E6EA',
+    fire: '#F2F4F6',
+    tint: 'rgba(226, 230, 234, 0.12)',
+    light: '#F7F8F9',
   },
+  /** Premium is pure white — in a monochrome system the brightest possible
+   *  value IS the most valuable one. */
   premium: {
-    /** Premium is the brand's own accent at its brightest, not a separate hue.
-     *  A purple next to brass reads as a second brand; the most valuable tier
-     *  should look like the most concentrated version of the brand color. */
-    base: '#E0BE6B',
-    tint: 'rgba(224, 190, 107, 0.16)',
+    base: '#FFFFFF',
+    tint: 'rgba(255, 255, 255, 0.12)',
   },
 
-  /** League tier colors — retuned as metals that live in the graphite world.
-   *  The old #FFD700 gold sat brighter than every CTA on screen. */
+  /** League tiers. Rank maps to BRIGHTNESS, not to metal colour — bronze is the
+   *  dimmest step and diamond the brightest, so the ladder is legible at a
+   *  glance without five competing hues. */
   league: {
-    bronze: '#9C6B3F',
-    silver: '#A8AAAE',
-    gold: '#D2A840',
-    platinum: '#C3C9D2',
-    diamond: '#86B4CE',
+    bronze: '#6B7076',
+    silver: '#8C9198',
+    gold: '#ADB3BA',
+    platinum: '#C9CDD2',
+    diamond: '#F2F4F6',
   },
 
-  /** Heart colors (gamification) */
+  /** Hearts keep red: they are a depletable resource and the loss signal is
+   *  the one place the app wants an involuntary reaction. */
   heart: {
-    filled: '#C0555F',
-    empty: '#55524B',
+    filled: '#F85149',
+    empty: '#4E5257',
   },
 
-  /** Magazine / editorial palette */
+  /** Magazine / editorial palette. All greyscale — the editorial voice is
+   *  carried by type (Fraunces + mono), never by tint. */
   magazine: {
-    nebulaTop: '#0F0E0C',
-    nebulaMid: '#1B1A17',
-    accentBlue: '#D0B063', // active-tab gradient start
-    accentViolet: '#B08C3B', // active-tab gradient end
-    accentLilac: '#E0BE6B', // kickers, premium accents
-    heartsCoral: '#C0555F',
-    xpGold: '#D0B063',
-    streakFlame: '#E2673C',
-    // Opaque under Studio Graphite — the editorial voice is carried by type
-    // (Fraunces + mono), not by a differently-tinted card.
-    glassBg: '#1B1A17',
-    glassBorder: 'rgba(245, 240, 230, 0.13)',
+    nebulaTop: '#08090A',
+    nebulaMid: '#141618',
+    accentBlue: '#C9CDD2', // active-tab gradient start
+    accentViolet: '#8C9198', // active-tab gradient end
+    accentLilac: '#E2E6EA', // kickers, premium accents
+    heartsCoral: '#F85149',
+    xpGold: '#E2E6EA',
+    streakFlame: '#F2F4F6',
+    glassBg: '#141618',
+    glassBorder: 'rgba(255, 255, 255, 0.15)',
   },
 
-  /** Correction-banner error-type chip styles. Hues stay distinguishable (they
-   *  encode error TYPE) but are desaturated into the warm-graphite world; the
-   *  old set was six saturated Tailwind tints on one banner. */
+  /** Correction-banner error-type chip styles.
+   *
+   *  Deliberately IDENTICAL across all seven types. The chip already prints the
+   *  error type as text ("GRAMMAR", "WORD ORDER"), so hue was encoding nothing
+   *  the label did not already say — it was seven decorative tints on a single
+   *  banner. Severity is carried by the banner border, per DESIGN.md §Chat. */
   correctionChip: {
-    grammar: { bg: 'rgba(125, 166, 199, 0.20)', text: '#A8C6DC' },
-    vocabulary: { bg: 'rgba(178, 150, 190, 0.20)', text: '#C9B3D4' },
-    spelling: { bg: 'rgba(200, 196, 186, 0.18)', text: '#CFCABF' },
-    word_order: { bg: 'rgba(226, 140, 80, 0.20)', text: '#E8A97E' },
-    tense: { bg: 'rgba(110, 180, 140, 0.20)', text: '#9BD4B4' },
-    gender: { bg: 'rgba(210, 130, 150, 0.20)', text: '#E0A5B6' },
-    other: { bg: 'rgba(200, 196, 186, 0.18)', text: '#CFCABF' },
+    grammar: { bg: 'rgba(255, 255, 255, 0.07)', text: '#C9CDD2' },
+    vocabulary: { bg: 'rgba(255, 255, 255, 0.07)', text: '#C9CDD2' },
+    spelling: { bg: 'rgba(255, 255, 255, 0.07)', text: '#C9CDD2' },
+    word_order: { bg: 'rgba(255, 255, 255, 0.07)', text: '#C9CDD2' },
+    tense: { bg: 'rgba(255, 255, 255, 0.07)', text: '#C9CDD2' },
+    gender: { bg: 'rgba(255, 255, 255, 0.07)', text: '#C9CDD2' },
+    other: { bg: 'rgba(255, 255, 255, 0.07)', text: '#C9CDD2' },
   },
 } as const;
 
@@ -341,8 +369,8 @@ export const elevation = {
     shadowOffset: { width: 0, height: 0 },
     elevation: 0,
   },
-  /** @deprecated The slab CTA is retired — Studio CTAs are flat and press with
-   *  a 0.96 scale. Retained so pre-Studio call sites type-check. */
+  /** @deprecated The slab CTA is retired — CTAs are flat and press with a 0.96
+   *  scale. Retained so pre-Studio call sites type-check. */
   tactile: {
     shadowColor: '#000',
     shadowOpacity: 0.4,

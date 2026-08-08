@@ -218,7 +218,11 @@ export default function OnboardingScreen() {
       });
       await markOnboardingComplete(userId);
 
-      // Persist transient motivation in the store so Home's HeroHook can use it.
+      // Keep the chosen motivation in the store for this session. Its only
+      // reader was Home's HeroHook, which was already unimported and has now
+      // been deleted — so nothing consumes this today. Left in place because
+      // the value is cheap and motivation-aware copy is a live idea; if that
+      // does not land, drop `motivation` from useAppStore too.
       storeSetMotivation(draft.motivation);
       await clearPendingOnboarding();
       await loadUserData(userId);

@@ -15,7 +15,6 @@ import { useLessonProgress } from '../../../hooks/useLessonProgress';
 import { useOnboardingChecklist } from '../../../hooks/useOnboardingChecklist';
 import { LessonRunner, type LessonResult } from '../../../components/lesson/LessonRunner';
 import { LevelUpModal } from '../../../components/gamification/LevelUpModal';
-import { OutOfHeartsModal } from '../../../components/gamification/OutOfHeartsModal';
 import { AchievementModal } from '../../../components/gamification/AchievementModal';
 import { checkAndAwardAchievements, type AchievementDefinition } from '../../../lib/achievements';
 import { getTargetLanguage } from '../../../lib/language';
@@ -34,14 +33,13 @@ export default function LessonScreen() {
   const { addStats } = useDailyStats();
   // heartsExempt (not isUnlimited) so adult mode also skips heart spending —
   // in adult mode a wrong answer must never end the lesson.
-  const { hearts, maxHearts, heartsExempt, canPlay, loseHeart, nextRegenAt } = useHearts();
+  const { hearts, maxHearts, heartsExempt, loseHeart } = useHearts();
   const { levelUpInfo, dismissLevelUp } = useLevel();
   const { markLessonComplete } = useLessonProgress();
   const { markItem: markOnboardingItem } = useOnboardingChecklist();
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [showOutOfHearts, setShowOutOfHearts] = useState(false);
   const [, setAchievementQueue] = useState<AchievementDefinition[]>([]);
   const [showingAchievement, setShowingAchievement] = useState<AchievementDefinition | null>(null);
 
@@ -69,15 +67,8 @@ export default function LessonScreen() {
     loadLesson();
   }, [loadLesson]);
 
-  // Check if user can play (has hearts) — show modal on mount.
-  // Deliberately not keyed on showOutOfHearts: including it re-shows the
-  // modal after dismiss (setShowOutOfHearts(false) re-fires the effect while
-  // canPlay is still false) until router.back() unmounts the screen.
-  useEffect(() => {
-    if (!canPlay) {
-      setShowOutOfHearts(true);
-    }
-  }, [canPlay]);
+  // There is no pre-lesson hearts check. Opening a lesson is never blocked —
+  // see hooks/useHearts.ts for the reasoning.
 
   const targetLanguage = getTargetLanguage(profile);
 
@@ -185,7 +176,6 @@ export default function LessonScreen() {
         hearts={hearts}
         maxHearts={maxHearts}
         isUnlimitedHearts={heartsExempt}
-        nextRegenAt={nextRegenAt}
         onLoseHeart={loseHeart}
       />
       </KeyboardAvoidingView>
@@ -200,16 +190,6 @@ export default function LessonScreen() {
           onDismiss={dismissLevelUp}
         />
       )}
-
-      {/* Out of Hearts (pre-lesson check) */}
-      <OutOfHeartsModal
-        visible={showOutOfHearts && !canPlay}
-        nextRegenAt={nextRegenAt}
-        onDismiss={() => {
-          setShowOutOfHearts(false);
-          if (!canPlay) router.back();
-        }}
-      />
 
       {/* Achievement Celebration */}
       <AchievementModal

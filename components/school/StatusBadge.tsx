@@ -11,17 +11,17 @@ interface StatusBadgeProps {
 }
 
 // Chip labels use each semantic's `.light` step on its own tint — the base
-// steps (#4E9F6B, #D9913C, #C0555F) all land at or under AA as small text on
+// steps (#3FB950, #E2E6EA, #F85149) all land at or under AA as small text on
 // dark, which is why the theme carries a lighter variant for exactly this.
 const STATUS_STYLES: Record<BadgeStatus, { bg: string; text: string }> = {
-  not_started: { bg: colors.surface.cardAlt, text: '#9C968A' },
-  in_progress: { bg: 'rgba(200, 162, 74, 0.2)', text: '#E0BE6B' },
-  submitted: { bg: 'rgba(245, 158, 11, 0.2)', text: '#EFBB7C' },
-  graded: { bg: 'rgba(34, 197, 94, 0.2)', text: '#7FC79A' },
-  returned: { bg: 'rgba(239, 68, 68, 0.2)', text: '#E39098' },
-  draft: { bg: colors.surface.cardAlt, text: '#9C968A' },
-  published: { bg: 'rgba(34, 197, 94, 0.2)', text: '#4E9F6B' },
-  closed: { bg: colors.surface.cardAlt, text: '#7A756B' },
+  not_started: { bg: colors.surface.cardAlt, text: '#80868C' },
+  in_progress: { bg: 'rgba(242, 244, 246, 0.2)', text: '#C9CDD2' },
+  submitted: { bg: 'rgba(245, 158, 11, 0.2)', text: '#F2F4F6' },
+  graded: { bg: 'rgba(34, 197, 94, 0.2)', text: '#56D364' },
+  returned: { bg: 'rgba(239, 68, 68, 0.2)', text: '#FF7B72' },
+  draft: { bg: colors.surface.cardAlt, text: '#80868C' },
+  published: { bg: 'rgba(34, 197, 94, 0.2)', text: '#3FB950' },
+  closed: { bg: colors.surface.cardAlt, text: '#5C6166' },
 };
 
 function formatLabel(status: BadgeStatus): string {

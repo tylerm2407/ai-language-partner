@@ -11,8 +11,8 @@ import { colors } from '../../config/theme';
 
 interface SurfaceProps {
   children: React.ReactNode;
-  /** 'base' = primary app background (#0F0E0C). 'raised' = slightly lighter
-   *  (#151412) for reading/lesson/review where sustained focus benefits from
+  /** 'base' = primary app background (#08090A). 'raised' = slightly lighter
+   *  (#0E0F11) for reading/lesson/review where sustained focus benefits from
    *  the contrast step. 'card' for inline card tiles. */
   variant?: 'base' | 'raised' | 'card' | 'cardAlt';
   /** If true, wraps children in SafeAreaView. Default: false. */

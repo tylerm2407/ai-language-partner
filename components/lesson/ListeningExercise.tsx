@@ -243,7 +243,7 @@ export function ListeningExercise({
           <TextInput
             className={`border-2 ${submitted ? (result?.isCorrect ? 'border-success' : 'border-error') : 'border-input-border'} rounded-[14px] px-4 py-2.5 text-base text-text-primary`}
             placeholder="Type what you heard..."
-            placeholderTextColor="#7A756B"
+            placeholderTextColor="#5C6166"
             value={answer}
             onChangeText={setAnswer}
             editable={!submitted && !showResult}

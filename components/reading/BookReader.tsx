@@ -382,7 +382,7 @@ function renderAnnotatedWords(
               lineHeight: fontSize * 1.7,
               color: isSelected ? colors.indigo[400] : colors.text.primary,
               textDecorationLine: 'underline',
-              textDecorationColor: 'rgba(200, 162, 74, 0.3)',
+              textDecorationColor: 'rgba(242, 244, 246, 0.3)',
               fontWeight: isSelected ? '600' : '400',
             }}
             accessibilityRole="button"
@@ -414,7 +414,7 @@ function renderAnnotatedWords(
               lineHeight: fontSize * 1.7,
               color: isSelected ? colors.indigo[400] : colors.text.primary,
               textDecorationLine: 'underline',
-              textDecorationColor: 'rgba(200, 162, 74, 0.3)',
+              textDecorationColor: 'rgba(242, 244, 246, 0.3)',
               fontWeight: isSelected ? '600' : '400',
             }}
             accessibilityRole="button"

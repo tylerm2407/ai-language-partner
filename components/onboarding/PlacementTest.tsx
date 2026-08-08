@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { colors } from '../../config/theme';
 import { ProgressBar } from '../ui/ProgressBar';
 import { Button } from '../ui/Button';
 import type { ProficiencyLevel, LanguageCode } from '../../types';
@@ -228,29 +230,59 @@ export function PlacementTest({ targetLanguage, onComplete, onSkip }: PlacementT
         {question.question}
       </Text>
 
-      {/* Options */}
+      {/* Options.
+
+          Correctness is never signalled by colour alone (WCAG SC 1.4.1, and
+          DESIGN.md Core Principle #6): once the answer is revealed each option
+          carries an icon and a word as well as a fill. This screen is also the
+          first thing a new learner sees, and it previously gave a VoiceOver
+          user no correctness feedback at all — the label was just the option
+          text, identical before and after answering. */}
       {question.options.map((option, idx) => {
+        const isCorrectOption = idx === question.correctIndex;
+        const isChosen = idx === selectedOption;
+        const revealCorrect = showResult && isCorrectOption;
+        const revealWrong = showResult && isChosen && !isCorrectOption;
+
         let optionStyle = 'bg-dark-card border-2 border-transparent';
-        if (showResult) {
-          if (idx === question.correctIndex) {
-            optionStyle = 'bg-success-bg border-2 border-success';
-          } else if (idx === selectedOption && idx !== question.correctIndex) {
-            optionStyle = 'bg-error-bg border-2 border-error';
-          }
-        } else if (idx === selectedOption) {
+        if (revealCorrect) {
+          optionStyle = 'bg-success-bg border-2 border-success';
+        } else if (revealWrong) {
+          optionStyle = 'bg-error-bg border-2 border-error';
+        } else if (!showResult && isChosen) {
           optionStyle = 'bg-primary-tint border-2 border-primary';
         }
+
+        // Spoken state mirrors what the icon and word show, so the audio and
+        // visual channels carry the same information.
+        let a11yLabel = option;
+        if (revealCorrect) a11yLabel = `${option}. Correct answer.`;
+        else if (revealWrong) a11yLabel = `${option}. Your answer, incorrect.`;
 
         return (
           <Pressable
             key={idx}
-            className={`p-4 rounded-2xl mb-3 ${optionStyle}`}
+            className={`p-4 rounded-2xl mb-3 flex-row items-center ${optionStyle}`}
             onPress={() => handleSelect(idx)}
             disabled={selectedOption !== null}
             accessibilityRole="button"
-            accessibilityLabel={option}
+            accessibilityLabel={a11yLabel}
+            accessibilityState={{ disabled: selectedOption !== null, selected: isChosen }}
           >
-            <Text className="text-base font-medium text-text-primary">{option}</Text>
+            <Text className="text-base font-medium text-text-primary flex-1">{option}</Text>
+
+            {revealCorrect && (
+              <View className="flex-row items-center ml-3">
+                <Ionicons name="checkmark-circle" size={18} color={colors.success.light} />
+                <Text className="text-sm font-semibold text-success ml-1.5">Correct</Text>
+              </View>
+            )}
+            {revealWrong && (
+              <View className="flex-row items-center ml-3">
+                <Ionicons name="close-circle" size={18} color={colors.error.light} />
+                <Text className="text-sm font-semibold text-error ml-1.5">Your answer</Text>
+              </View>
+            )}
           </Pressable>
         );
       })}

@@ -85,7 +85,7 @@ export function BookCard({ book, progress, onPress }: BookCardProps) {
               width: 24,
               height: 24,
               borderRadius: 12,
-              backgroundColor: '#4E9F6B',
+              backgroundColor: '#3FB950',
               alignItems: 'center',
               justifyContent: 'center',
             }}
@@ -137,7 +137,7 @@ export function BookCard({ book, progress, onPress }: BookCardProps) {
                 style={{
                   height: 4,
                   width: `${Math.min(percent, 100)}%`,
-                  backgroundColor: '#C8A24A',
+                  backgroundColor: '#F2F4F6',
                   borderRadius: 2,
                 }}
               />

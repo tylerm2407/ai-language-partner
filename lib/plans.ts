@@ -35,9 +35,15 @@ export interface PlanDefinition {
 }
 
 export const PLANS: Record<PlanId, PlanDefinition> = {
+  // `starter` is the tier every signed-in user has before they buy anything
+  // (`subscription?.tier ?? 'starter'`), and it has no Stripe price key — it is
+  // the free plan. It used to carry a $3.79 price and the name "Starter", so a
+  // free user saw only priced cards and no indication any of this was free.
+  // That ambiguity is the mechanism behind the "nothing is free as it says"
+  // complaint that dominates negative reviews across this category.
   starter: {
-    name: 'Starter',
-    priceMonthlyUsd: 3.79,
+    name: 'Free',
+    priceMonthlyUsd: 0,
     dailyTextMessages: 10,
     dailyVoiceMinutes: 5,
     dailyWritingGrades: 1,
@@ -87,44 +93,38 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
 
 /** Feature bullet points for the subscription/pricing UI. */
 export const PLAN_FEATURES: Record<PlanId, string[]> = {
+  // Lessons, reviews and reading are unlimited on every tier including free —
+  // the paid tiers buy AI capacity, not access to learning. "Unlimited hearts"
+  // is deliberately absent: hearts no longer block anything on any tier
+  // (hooks/useHearts.ts), so listing it would be selling a benefit that does
+  // not exist.
   starter: [
-    '10 text messages per day',
-    '5 minutes of AI voice per day',
+    'All lessons, reviews and reading',
+    'Your CEFR proficiency report',
+    '10 tutor messages per day',
+    '5 minutes of voice practice per day',
     '1 writing grade per day',
-    '2 pronunciation scores per day',
-    'Basic SRS review',
-    '5 hearts per day',
-    '7-day free trial',
   ],
   basic: [
-    '25 text messages per day',
-    '10 minutes of AI voice per day',
+    'Everything in Free',
+    '25 tutor messages per day',
+    '10 minutes of voice practice per day',
     '3 writing grades per day',
-    '3 pronunciation scores per day',
-    'Full SRS with adaptive scheduling',
-    'Unlimited hearts',
     'Streak shield protection',
   ],
   premium: [
-    '50 text messages per day',
-    '20 minutes of AI voice per day',
+    'Everything in Basic',
+    '50 tutor messages per day',
+    '20 minutes of voice practice per day',
     '7 writing grades per day',
-    '5 pronunciation scores per day',
-    'Full SRS with adaptive scheduling',
-    'Unlimited hearts',
-    'Streak shield protection',
     'Offline mode',
   ],
   vip: [
-    '75 text messages per day',
-    '30 minutes of AI voice per day',
+    'Everything in Premium',
+    '75 tutor messages per day',
+    '30 minutes of voice practice per day',
     '12 writing grades per day',
-    '7 pronunciation scores per day',
-    'Full SRS with adaptive scheduling',
-    'Unlimited hearts',
-    'Streak shield protection',
     'Audiobook narration',
-    'Offline mode',
     'Priority support',
   ],
 };

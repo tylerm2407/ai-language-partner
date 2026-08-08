@@ -6,14 +6,16 @@ import { GRADIENT_COLORS, GRADIENT_START, GRADIENT_END } from '../../config/grad
 import type { ProficiencyLevel } from '../../types';
 
 const LEVEL_CONFIG: Record<ProficiencyLevel, { label: string; color: string; bg: string; order: number }> = {
-  // Each badge is a hue-tinted dark fill carrying its own label color. The
-  // fills are graphite tinted toward the label's hue, not the saturated
-  // navy/plum they used to be — see DESIGN.md §Surfaces.
-  beginner: { label: 'Beginner', color: '#4E9F6B', bg: '#16271D', order: 0 },
-  elementary: { label: 'Elementary', color: '#86B4CE', bg: '#1B2530', order: 1 },
-  intermediate: { label: 'Intermediate', color: '#A8C6DC', bg: '#1B1A17', order: 2 },
-  upper_intermediate: { label: 'Upper Intermediate', color: '#B497C4', bg: '#26202D', order: 3 },
-  advanced: { label: 'Advanced', color: '#E0BE6B', bg: '#262013', order: 4 },
+  // Proficiency maps to BRIGHTNESS — beginner is the dimmest label and advanced
+  // the brightest, so the ladder is legible without five competing hues. The
+  // green that briefly landed on `beginner` here was wrong twice over: it is
+  // the lowest rank wearing the most emphatic colour, and green is reserved for
+  // correct answers (config/theme.ts §Semantic).
+  beginner: { label: 'Beginner', color: '#6B7076', bg: '#141618', order: 0 },
+  elementary: { label: 'Elementary', color: '#8C9198', bg: '#141618', order: 1 },
+  intermediate: { label: 'Intermediate', color: '#ADB3BA', bg: '#1C1F22', order: 2 },
+  upper_intermediate: { label: 'Upper Intermediate', color: '#C9CDD2', bg: '#1C1F22', order: 3 },
+  advanced: { label: 'Advanced', color: '#F2F4F6', bg: '#1C1F22', order: 4 },
 };
 
 interface LevelBadgeProps {

@@ -59,7 +59,7 @@ export function Button({ label, variant = 'primary', onPress, disabled, loading,
   };
 
   const glowStyle = variant === 'primary' ? {
-    shadowColor: '#E0BE6B',
+    shadowColor: '#C9CDD2',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
@@ -116,7 +116,7 @@ export function Button({ label, variant = 'primary', onPress, disabled, loading,
         accessibilityState={{ disabled: disabled || loading }}
       >
         {loading ? (
-          <ActivityIndicator color={'#E0BE6B'} />
+          <ActivityIndicator color={'#C9CDD2'} />
         ) : (
           <Text className={config.text}>{label}</Text>
         )}

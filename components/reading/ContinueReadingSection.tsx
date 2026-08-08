@@ -28,7 +28,7 @@ export function ContinueReadingSection({ books, onPress }: ContinueReadingSectio
   return (
     <View style={{ marginBottom: 16 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-        <Ionicons name="book" size={18} color="#E0BE6B" />
+        <Ionicons name="book" size={18} color="#C9CDD2" />
         <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text.primary, marginLeft: 8 }}>
           Continue Reading
         </Text>
@@ -93,7 +93,7 @@ export function ContinueReadingSection({ books, onPress }: ContinueReadingSectio
                   style={{
                     height: 4,
                     width: `${Math.min(percent, 100)}%`,
-                    backgroundColor: '#C8A24A',
+                    backgroundColor: '#F2F4F6',
                     borderRadius: 2,
                   }}
                 />

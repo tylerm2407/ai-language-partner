@@ -18,7 +18,6 @@ import { SentenceTransformExercise } from './SentenceTransformExercise';
 import { MiniDialogueExercise } from './MiniDialogueExercise';
 import { useAdultMode } from '../../hooks/useAdultMode';
 import { HeartsDisplay } from '../gamification/HeartsDisplay';
-import { OutOfHeartsModal } from '../gamification/OutOfHeartsModal';
 import { CorrectSparkle } from '../animations/CorrectSparkle';
 import { WrongShake } from '../animations/WrongShake';
 import { HeartBreak } from '../animations/HeartBreak';
@@ -184,7 +183,6 @@ interface LessonRunnerProps {
   hearts?: number;
   maxHearts?: number;
   isUnlimitedHearts?: boolean;
-  nextRegenAt?: Date | null;
   onLoseHeart?: () => void;
 }
 
@@ -209,7 +207,6 @@ export function LessonRunner({
   hearts = 5,
   maxHearts = 5,
   isUnlimitedHearts = false,
-  nextRegenAt = null,
   onLoseHeart,
 }: LessonRunnerProps) {
   const { showHearts, showXpCelebration } = useAdultMode();
@@ -217,7 +214,6 @@ export function LessonRunner({
   const [showResult, setShowResult] = useState(false);
   const [answers, setAnswers] = useState<{ exerciseId: string; correct: boolean; answer: string }[]>([]);
   const [completed, setCompleted] = useState(false);
-  const [showOutOfHearts, setShowOutOfHearts] = useState(false);
   const [lastAnswerCorrect, setLastAnswerCorrect] = useState<boolean | null>(null);
   const [heartBreakTrigger, setHeartBreakTrigger] = useState(false);
 
@@ -412,14 +408,12 @@ export function LessonRunner({
         onLoseHeart?.();
         setHeartBreakTrigger(true);
         setTimeout(() => setHeartBreakTrigger(false), 1200);
-
-        // Check if out of hearts after losing one
-        if (hearts <= 1) {
-          setTimeout(() => setShowOutOfHearts(true), 800);
-        }
+        // Reaching zero no longer ends the lesson — see hooks/useHearts.ts for
+        // why. The counter keeps reading 0 until it regenerates, which is the
+        // feedback; the interruption was the part that cost retention.
       }
     },
-    [currentExercise, isUnlimitedHearts, hearts, onLoseHeart, warmupPhase, warmupEntries, warmupIndex, answers, currentIndex, lessonId, userId]
+    [currentExercise, isUnlimitedHearts, onLoseHeart, warmupPhase, warmupEntries, warmupIndex, answers, currentIndex, lessonId, userId]
   );
 
   const handleNext = () => {
@@ -585,15 +579,6 @@ export function LessonRunner({
         </ExerciseWrapper>
       </ScrollView>
 
-      {/* Out of Hearts Modal */}
-      <OutOfHeartsModal
-        visible={showOutOfHearts}
-        nextRegenAt={nextRegenAt}
-        onDismiss={() => {
-          setShowOutOfHearts(false);
-          onExit();
-        }}
-      />
     </View>
   );
 }

@@ -18,7 +18,7 @@ export function DailyNewsCard({ article, isLoading, error, hasRead = false, onPr
       <GlassSurface style={{ marginBottom: 24 }}>
         <View className="p-5 flex-row items-center">
           <View className="w-11 h-11 rounded-full bg-dark-card-alt items-center justify-center mr-4">
-            <Ionicons name="newspaper-outline" size={22} color="#E0BE6B" />
+            <Ionicons name="newspaper-outline" size={22} color="#C9CDD2" />
           </View>
           <View className="flex-1">
             <Text className="text-sm font-semibold text-primary mb-1">Today&apos;s News</Text>
@@ -37,7 +37,7 @@ export function DailyNewsCard({ article, isLoading, error, hasRead = false, onPr
       <GlassSurface style={{ marginBottom: 24 }}>
         <View className="p-5 flex-row items-center">
           <View className="w-11 h-11 rounded-full bg-dark-card-alt items-center justify-center mr-4">
-            <Ionicons name="newspaper-outline" size={22} color="#E0BE6B" />
+            <Ionicons name="newspaper-outline" size={22} color="#C9CDD2" />
           </View>
           <View className="flex-1">
             <Text className="text-sm font-semibold text-primary mb-1">Today&apos;s News</Text>
@@ -60,14 +60,14 @@ export function DailyNewsCard({ article, isLoading, error, hasRead = false, onPr
         accessibilityLabel={hasRead ? "Today's News, already read" : "Today's News"}
       >
         <View className="w-11 h-11 rounded-full bg-dark-card-alt items-center justify-center mr-4">
-          <Ionicons name="newspaper-outline" size={22} color="#E0BE6B" />
+          <Ionicons name="newspaper-outline" size={22} color="#C9CDD2" />
         </View>
         <View className="flex-1">
           <View className="flex-row items-center mb-1">
             <Text className="text-sm font-semibold text-primary">Today&apos;s News</Text>
             {hasRead && (
               <View className="ml-2 flex-row items-center bg-success-bg/40 rounded-full px-2 py-0.5">
-                <Ionicons name="checkmark-circle" size={12} color="#4E9F6B" />
+                <Ionicons name="checkmark-circle" size={12} color="#3FB950" />
                 <Text className="text-[11px] font-semibold text-success ml-1">Read</Text>
               </View>
             )}
@@ -76,7 +76,7 @@ export function DailyNewsCard({ article, isLoading, error, hasRead = false, onPr
             {article.title}
           </Text>
         </View>
-        <Ionicons name="chevron-forward" size={20} color="#A8C6DC" />
+        <Ionicons name="chevron-forward" size={20} color="#E2E6EA" />
       </Pressable>
     </GlassSurface>
   );

@@ -51,23 +51,23 @@ export function RecordButton({ onRecordingComplete, size = 64 }: RecordButtonPro
           width: size,
           height: size,
           borderRadius: size / 2,
-          backgroundColor: recording ? '#C0555F' : '#C8A24A',
+          backgroundColor: recording ? '#F85149' : '#F2F4F6',
           justifyContent: 'center',
           alignItems: 'center',
           borderWidth: recording ? 4 : 0,
-          borderColor: '#E39098',
+          borderColor: '#FF7B72',
         }}
         accessibilityRole="button"
         accessibilityLabel={recording ? 'Release to stop recording' : 'Hold to record'}
       >
         {/* Idle fill is brass (light) and needs a dark label; the recording
             fill is clay (dark) and needs a light one. */}
-        <Text style={{ color: recording ? '#F2EFE9' : '#14120E', fontSize: size * 0.3, fontWeight: '700' }}>
+        <Text style={{ color: recording ? '#F7F8F9' : '#08090A', fontSize: size * 0.3, fontWeight: '700' }}>
           {recording ? `${durationSec}s` : 'REC'}
         </Text>
       </Pressable>
 
-      <Text style={{ marginTop: 8, fontSize: 12, color: '#7A756B' }}>
+      <Text style={{ marginTop: 8, fontSize: 12, color: '#5C6166' }}>
         {recording ? 'Release to stop' : 'Hold to speak'}
       </Text>
 

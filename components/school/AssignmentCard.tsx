@@ -12,13 +12,13 @@ interface AssignmentCardProps {
 }
 
 function getDueColor(dueAt: string | null): string {
-  if (!dueAt) return '#7A756B';
+  if (!dueAt) return '#5C6166';
   const now = Date.now();
   const due = new Date(dueAt).getTime();
   const hoursLeft = (due - now) / (1000 * 60 * 60);
-  if (hoursLeft < 0) return '#C0555F';
-  if (hoursLeft < 24) return '#D9913C';
-  return '#4E9F6B';
+  if (hoursLeft < 0) return '#F85149';
+  if (hoursLeft < 24) return '#E2E6EA';
+  return '#3FB950';
 }
 
 function formatDue(dueAt: string | null): string {
@@ -105,11 +105,11 @@ export default function AssignmentCard({ assignment, onPress, submission }: Assi
             <Ionicons
               name={MODE_ICON[assignment.mode] as any}
               size={14}
-              color="#9C968A"
+              color="#80868C"
             />
             <Text
               style={{
-                color: '#9C968A',
+                color: '#80868C',
                 fontSize: 12,
                 fontFamily: 'Nunito_500Medium',
                 marginLeft: 4,
@@ -122,10 +122,10 @@ export default function AssignmentCard({ assignment, onPress, submission }: Assi
           {/* Min duration */}
           {assignment.minDurationMinutes > 0 && (
             <View className="flex-row items-center">
-              <Ionicons name="time-outline" size={14} color="#9C968A" />
+              <Ionicons name="time-outline" size={14} color="#80868C" />
               <Text
                 style={{
-                  color: '#9C968A',
+                  color: '#80868C',
                   fontSize: 12,
                   fontFamily: 'Nunito_500Medium',
                   marginLeft: 4,

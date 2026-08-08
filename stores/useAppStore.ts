@@ -10,7 +10,8 @@ interface AppState {
   roles: string[];
   loading: boolean;
   error: string | null;
-  /** Transient, not persisted. Captured during onboarding, consumed by HeroHook copy. */
+  /** Transient, not persisted. Captured during onboarding. Currently has no
+   *  reader — its only consumer was Home's HeroHook, now deleted as dead code. */
   motivation: MotivationReason | null;
 
   loadUserData: (userId: string) => Promise<void>;

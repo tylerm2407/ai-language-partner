@@ -13,34 +13,34 @@
  */
 
 /** Progress fills, XP popups, LevelBadge bar — brass → light brass. */
-export const GRADIENT_COLORS = ['#C8A24A', '#E0BE6B'] as const;
-export const GRADIENT_COLORS_TRANSLUCENT = ['rgba(200,162,74,0.20)', 'rgba(224,190,107,0.12)'] as const;
+export const GRADIENT_COLORS = ['#F2F4F6', '#C9CDD2'] as const;
+export const GRADIENT_COLORS_TRANSLUCENT = ['rgba(242,244,246,0.20)', 'rgba(255,255,255,0.12)'] as const;
 export const GRADIENT_START = { x: 0, y: 0.5 };
 export const GRADIENT_END = { x: 1, y: 0.5 };
 
 /** Gradient RULES (GradientBorderCard, active tab circle, play buttons) —
  *  deep brass → light brass, so the rule reads as a bevel on one metal. */
-export const BORDER_GRADIENT_COLORS = ['#8E6F2F', '#E0BE6B'] as const;
+export const BORDER_GRADIENT_COLORS = ['#8C9198', '#C9CDD2'] as const;
 
-export const BG_GRADIENT_COLORS = ['#151412', '#0F0E0C'] as const;
-export const DARK_BG = '#0F0E0C';
-export const DARK_CARD = '#1B1A17';
+export const BG_GRADIENT_COLORS = ['#0E0F11', '#08090A'] as const;
+export const DARK_BG = '#08090A';
+export const DARK_CARD = '#141618';
 
 /** Ambient palette — kept under the old AURORA_* names because several
  *  components import them; these are now the top wash's colors. */
-export const AURORA_BASE = ['#0F0E0C', '#151412', '#0A0908'] as const;
-export const AURORA_BLUE = '#C8A24A';
-export const AURORA_VIOLET = '#B08C3B';
-export const AURORA_LILAC = '#E0BE6B';
+export const AURORA_BASE = ['#08090A', '#0E0F11', '#050506'] as const;
+export const AURORA_BLUE = '#F2F4F6';
+export const AURORA_VIOLET = '#ADB3BA';
+export const AURORA_LILAC = '#C9CDD2';
 
 /** Card surface tokens. Opaque — see the file header. */
-export const GLASS_BG = '#1B1A17';
-export const GLASS_HIGHLIGHT = ['rgba(245,240,230,0.06)', 'rgba(245,240,230,0)'] as const;
-export const GLASS_BORDER = 'rgba(245, 240, 230, 0.13)';
+export const GLASS_BG = '#141618';
+export const GLASS_HIGHLIGHT = ['rgba(255,255,255,0.06)', 'rgba(255,255,255,0)'] as const;
+export const GLASS_BORDER = 'rgba(255, 255, 255, 0.13)';
 
 /** Magazine / editorial surfaces. Same card fill as everything else — the
  *  editorial direction is carried by type (Fraunces + mono), not by a
  *  different card color. */
-export const DEEP_NEBULA = ['#0F0E0C', '#151412', '#0A0908'] as const;
-export const MAGAZINE_GLASS_BG = '#1B1A17';
-export const MAGAZINE_GLASS_BORDER = 'rgba(245,240,230,0.13)';
+export const DEEP_NEBULA = ['#08090A', '#0E0F11', '#050506'] as const;
+export const MAGAZINE_GLASS_BG = '#141618';
+export const MAGAZINE_GLASS_BORDER = 'rgba(255,255,255,0.13)';

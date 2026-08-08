@@ -27,17 +27,21 @@ interface LessonTileGridProps {
 // with fontWeight, which makes Android synthesize a second bolding pass.
 const serifFont = typography.family.serif;
 
-// Unit tiles cycle this palette so adjacent units stay distinguishable. Under
-// Studio Graphite the pairs are muted and tonal — each is one hue stepped from
-// light to dark, not a two-hue sweep. The old set was six saturated rainbow
-// gradients, which is the single loudest thing a Home screen can carry.
+// Unit tiles cycle this palette so adjacent units stay distinguishable. With no
+// hue available, separation comes from where each pair sits on the silver ramp:
+// the set walks from brightest to dimmest, so four tiles on screen read as four
+// distinct weights of light rather than four colours.
+//
+// These fill a PROGRESS bar, so every pair runs light → dark in the direction
+// of travel; a pair that got darker toward the leading edge would read as the
+// bar fading out rather than filling.
 const GRADIENT_PALETTE: [string, string][] = [
-  ['#D0B063', '#8E6F2F'], // brass
-  ['#E2673C', '#9E434C'], // ember → clay
-  ['#4E9F6B', '#2F6B47'], // jade
-  ['#C8A24A', '#B4762D'], // brass → amber
-  ['#86B4CE', '#4C6E82'], // slate blue — the one cool tile, for spacing
-  ['#B497C4', '#6E5580'], // mauve
+  ['#FFFFFF', '#C9CDD2'],
+  ['#E2E6EA', '#ADB3BA'],
+  ['#C9CDD2', '#8C9198'],
+  ['#ADB3BA', '#6B7076'],
+  ['#F2F4F6', '#8C9198'],
+  ['#B4B9BF', '#4E5257'],
 ];
 
 export function unitTilesToLessonTiles(units: UnitProgressTile[]): LessonTileData[] {

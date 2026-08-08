@@ -48,7 +48,7 @@ const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
 const AnimatedCircle = Animated.createAnimatedComponent(SvgCircle);
 
-const CONFETTI_COLORS = ['#E0BE6B', '#7FC79A', '#86B4CE', '#C8A24A', '#E2673C', '#B497C4'];
+const CONFETTI_COLORS = ['#C9CDD2', '#56D364', '#C9CDD2', '#F2F4F6', '#E2E6EA', '#ADB3BA'];
 const PARTICLE_COUNT = 12;
 
 function ConfettiParticle({ index }: { index: number }) {

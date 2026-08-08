@@ -20,6 +20,8 @@ import { Badge } from '../../../components/ui/Badge';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../../config/theme';
 import { GlowLayer } from '../../../components/ui/GlowBackground';
+import { TrialTimeline } from '../../../components/subscription/TrialTimeline';
+import { trialDaysFromPeriod } from '../../../lib/trial-timeline';
 
 // Manage/cancel deep links (App Store requires a path to manage the sub).
 const MANAGE_URL =
@@ -131,6 +133,24 @@ export default function SubscriptionScreen() {
     [packages],
   );
 
+  // The trial we would actually put the learner on: the cheapest package that
+  // carries a free intro period. Derived from the live StoreKit product rather
+  // than hard-coded, so the timeline can never claim a trial length or price
+  // that differs from what the purchase sheet will charge.
+  const trialOffer = useMemo(() => {
+    let best: { days: number; priceString: string; price: number } | null = null;
+    for (const pkg of packages) {
+      const intro = pkg.product.introPrice;
+      if (!intro || intro.price !== 0) continue;
+      const days = trialDaysFromPeriod(intro.periodUnit, intro.periodNumberOfUnits);
+      if (!days) continue;
+      if (!best || pkg.product.price < best.price) {
+        best = { days, priceString: pkg.product.priceString, price: pkg.product.price };
+      }
+    }
+    return best;
+  }, [packages]);
+
   // Real monthly price per tier — the basis for the annual saving figure.
   const monthlyPriceByTier = useMemo(() => {
     const byTier: Partial<Record<PlanId, number>> = {};
@@ -152,8 +172,13 @@ export default function SubscriptionScreen() {
 
       <ScrollView className="flex-1 px-4 pt-6" contentContainerStyle={{ paddingBottom: 40 }}>
         <Text className="text-2xl font-bold text-text-primary mb-2">Choose Your Plan</Text>
+        {/* Says what a paid plan actually buys. The previous line led with
+            "unlimited hearts", which stopped being true when hearts stopped
+            gating lessons — and it framed the product as selling relief from
+            its own friction rather than selling more practice. */}
         <Text className="text-base text-text-secondary mb-6">
-          Unlock unlimited hearts, streak protection, AI conversations, and more
+          Lessons, reviews and reading are free, always. Paid plans add daily
+          tutor conversation, voice practice and writing feedback.
         </Text>
 
         {/*
@@ -172,6 +197,36 @@ export default function SubscriptionScreen() {
               has no streak shield on the free plan.
             </Text>
           </View>
+        )}
+
+        {/* Free plan, stated explicitly. A non-subscriber is on `starter`, but
+            the screen used to render only priced cards — so the free tier was
+            invisible and the app read as though nothing was free. Naming it,
+            marking it current, and listing what it includes is the direct
+            answer to the most common complaint in this category. */}
+        {currentTier === 'starter' && (
+          <View className="rounded-2xl p-5 mb-4 border-2 border-success bg-success-bg">
+            <View className="flex-row items-center gap-2 mb-2">
+              <Badge variant="success" label="Current Plan" />
+            </View>
+            <View className="flex-row items-baseline mb-3">
+              <Text className="text-2xl font-bold text-text-primary">Free</Text>
+              <Text className="text-sm text-text-secondary ml-2">no card required</Text>
+            </View>
+            {(PLAN_FEATURES.starter ?? []).map((feature, idx) => (
+              <View key={idx} className="flex-row items-center mb-2">
+                <Ionicons name="checkmark-circle" size={18} color={colors.success.light} />
+                <Text className="text-sm text-text-secondary ml-2">{feature}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Trial mechanics, stated before the prices rather than after the
+            purchase. Only rendered when a real free trial exists on a live
+            product. */}
+        {currentTier === 'starter' && trialOffer && (
+          <TrialTimeline trialDays={trialOffer.days} priceString={trialOffer.priceString} />
         )}
 
         {/* Current plan banner */}

@@ -35,7 +35,7 @@ export function DailyChallenges({ dailyStats }: DailyChallengesProps) {
       {/* Header */}
       <View className="flex-row items-center justify-between mb-1">
         <View className="flex-row items-center gap-2">
-          <Ionicons name="flag" size={18} color="#D9913C" />
+          <Ionicons name="flag" size={18} color="#E2E6EA" />
           <Text className="text-base font-semibold text-text-primary">Daily Challenges</Text>
         </View>
         <Text className="text-sm text-text-secondary">
@@ -62,7 +62,7 @@ export function DailyChallenges({ dailyStats }: DailyChallengesProps) {
                   width: 28,
                   height: 28,
                   borderRadius: 14,
-                  backgroundColor: isComplete ? '#4E9F6B20' : challenge.color + '20',
+                  backgroundColor: isComplete ? '#3FB95020' : challenge.color + '20',
                   justifyContent: 'center',
                   alignItems: 'center',
                   marginRight: 10,
@@ -106,11 +106,11 @@ export function DailyChallenges({ dailyStats }: DailyChallengesProps) {
         <View className="mt-3 pt-3 border-t border-dark-border">
           {bonusXpClaimed ? (
             <View className="flex-row items-center justify-center gap-2">
-              <Ionicons name="star" size={18} color="#D9913C" />
+              <Ionicons name="star" size={18} color="#E2E6EA" />
               <Text className="text-sm font-semibold text-streak">
                 All challenges complete! +{Math.round(50 * multiplier)} Bonus XP claimed
               </Text>
-              <Ionicons name="star" size={18} color="#D9913C" />
+              <Ionicons name="star" size={18} color="#E2E6EA" />
             </View>
           ) : (
             <Pressable
@@ -119,11 +119,11 @@ export function DailyChallenges({ dailyStats }: DailyChallengesProps) {
               style={{ opacity: claiming ? 0.6 : 1 }}
             >
               <View className="flex-row items-center justify-center gap-2">
-                <Ionicons name="star" size={18} color="#D9913C" />
+                <Ionicons name="star" size={18} color="#E2E6EA" />
                 <Text className="text-sm font-semibold text-streak">
                   Claim +{Math.round(50 * multiplier)} Bonus XP
                 </Text>
-                <Ionicons name="star" size={18} color="#D9913C" />
+                <Ionicons name="star" size={18} color="#E2E6EA" />
               </View>
             </Pressable>
           )}

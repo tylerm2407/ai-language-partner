@@ -103,7 +103,7 @@ export default function StudentProgressScreen() {
     return (
       <GradientBackground>
         <SafeAreaView className="flex-1 justify-center items-center">
-          <ActivityIndicator color="#E0BE6B" size="large" />
+          <ActivityIndicator color="#C9CDD2" size="large" />
         </SafeAreaView>
       </GradientBackground>
     );
@@ -124,7 +124,7 @@ export default function StudentProgressScreen() {
             accessibilityLabel="Go back"
             className="flex-row items-center mb-4"
           >
-            <Ionicons name="chevron-back" size={24} color="#E0BE6B" />
+            <Ionicons name="chevron-back" size={24} color="#C9CDD2" />
             <Text
               className="text-base text-primary ml-1"
               style={{ fontFamily: 'Nunito_600SemiBold' }}
@@ -147,7 +147,7 @@ export default function StudentProgressScreen() {
               style={{ marginBottom: 20 }}
               innerStyle={{ padding: 20, alignItems: 'center' }}
             >
-              <Ionicons name="warning-outline" size={32} color="#C0555F" />
+              <Ionicons name="warning-outline" size={32} color="#F85149" />
               <Text
                 className="text-sm text-text-secondary mt-2 text-center"
                 style={{ fontFamily: 'Nunito_400Regular' }}
@@ -174,12 +174,12 @@ export default function StudentProgressScreen() {
                   width: 48,
                   height: 48,
                   borderRadius: 24,
-                  backgroundColor: 'rgba(224, 190, 107, 0.2)',
+                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
               >
-                <Ionicons name="person" size={24} color="#E0BE6B" />
+                <Ionicons name="person" size={24} color="#C9CDD2" />
               </View>
               <View className="ml-4">
                 <Text
@@ -217,7 +217,7 @@ export default function StudentProgressScreen() {
               style={{ marginBottom: 16 }}
               innerStyle={{ padding: 20, alignItems: 'center' }}
             >
-              <Ionicons name="document-text-outline" size={32} color="#7A756B" />
+              <Ionicons name="document-text-outline" size={32} color="#5C6166" />
               <Text
                 className="text-sm text-text-secondary mt-2"
                 style={{ fontFamily: 'Nunito_400Regular' }}
@@ -246,7 +246,7 @@ export default function StudentProgressScreen() {
                   {sub.score !== null && (
                     <Text
                       style={{
-                        color: '#4E9F6B',
+                        color: '#3FB950',
                         fontSize: 13,
                         fontFamily: 'Nunito_600SemiBold',
                       }}

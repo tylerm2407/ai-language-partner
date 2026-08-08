@@ -17,16 +17,16 @@ export interface ChallengeTemplate {
 }
 
 const CHALLENGE_POOL: ChallengeTemplate[] = [
-  { type: 'complete_lessons', title: 'Complete 2 lessons', icon: 'book', color: '#86B4CE', target: 2, unit: 'lessons', xpReward: 30, statKey: 'lessonsCompleted' },
-  { type: 'complete_lessons_3', title: 'Complete 3 lessons', icon: 'book', color: '#86B4CE', target: 3, unit: 'lessons', xpReward: 50, statKey: 'lessonsCompleted' },
-  { type: 'review_cards', title: 'Review 10 cards', icon: 'layers', color: '#B497C4', target: 10, unit: 'cards', xpReward: 25, statKey: 'cardsReviewed' },
-  { type: 'review_cards_20', title: 'Review 20 cards', icon: 'layers', color: '#B497C4', target: 20, unit: 'cards', xpReward: 40, statKey: 'cardsReviewed' },
-  { type: 'practice_minutes', title: 'Practice for 10 minutes', icon: 'time', color: '#4E9F6B', target: 10, unit: 'min', xpReward: 30, statKey: 'minutesPracticed' },
-  { type: 'practice_minutes_20', title: 'Practice for 20 minutes', icon: 'time', color: '#4E9F6B', target: 20, unit: 'min', xpReward: 50, statKey: 'minutesPracticed' },
-  { type: 'speaking_exercise', title: 'Speak for 5 minutes', icon: 'mic', color: '#C0555F', target: 5, unit: 'min', xpReward: 35, statKey: 'speakingMinutes' },
-  { type: 'listening_minutes', title: 'Listen for 5 minutes', icon: 'headset', color: '#D9913C', target: 5, unit: 'min', xpReward: 30, statKey: 'listeningMinutes' },
-  { type: 'xp_target', title: 'Earn 100 XP', icon: 'star', color: '#C8A24A', target: 100, unit: 'XP', xpReward: 25, statKey: 'xpEarned' },
-  { type: 'learn_new_cards', title: 'Learn 5 new cards', icon: 'add-circle', color: '#E2673C', target: 5, unit: 'cards', xpReward: 35, statKey: 'cardsLearned' },
+  { type: 'complete_lessons', title: 'Complete 2 lessons', icon: 'book', color: '#C9CDD2', target: 2, unit: 'lessons', xpReward: 30, statKey: 'lessonsCompleted' },
+  { type: 'complete_lessons_3', title: 'Complete 3 lessons', icon: 'book', color: '#C9CDD2', target: 3, unit: 'lessons', xpReward: 50, statKey: 'lessonsCompleted' },
+  { type: 'review_cards', title: 'Review 10 cards', icon: 'layers', color: '#ADB3BA', target: 10, unit: 'cards', xpReward: 25, statKey: 'cardsReviewed' },
+  { type: 'review_cards_20', title: 'Review 20 cards', icon: 'layers', color: '#ADB3BA', target: 20, unit: 'cards', xpReward: 40, statKey: 'cardsReviewed' },
+  { type: 'practice_minutes', title: 'Practice for 10 minutes', icon: 'time', color: '#3FB950', target: 10, unit: 'min', xpReward: 30, statKey: 'minutesPracticed' },
+  { type: 'practice_minutes_20', title: 'Practice for 20 minutes', icon: 'time', color: '#3FB950', target: 20, unit: 'min', xpReward: 50, statKey: 'minutesPracticed' },
+  { type: 'speaking_exercise', title: 'Speak for 5 minutes', icon: 'mic', color: '#F85149', target: 5, unit: 'min', xpReward: 35, statKey: 'speakingMinutes' },
+  { type: 'listening_minutes', title: 'Listen for 5 minutes', icon: 'headset', color: '#E2E6EA', target: 5, unit: 'min', xpReward: 30, statKey: 'listeningMinutes' },
+  { type: 'xp_target', title: 'Earn 100 XP', icon: 'star', color: '#F2F4F6', target: 100, unit: 'XP', xpReward: 25, statKey: 'xpEarned' },
+  { type: 'learn_new_cards', title: 'Learn 5 new cards', icon: 'add-circle', color: '#E2E6EA', target: 5, unit: 'cards', xpReward: 35, statKey: 'cardsLearned' },
 ];
 
 /**

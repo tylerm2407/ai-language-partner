@@ -42,7 +42,7 @@ export default function WritingHistoryScreen() {
     return (
       <GradientBackground>
         <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color="#E0BE6B" />
+          <ActivityIndicator size="large" color="#C9CDD2" />
         </SafeAreaView>
       </GradientBackground>
     );
@@ -54,7 +54,7 @@ export default function WritingHistoryScreen() {
       {/* Header */}
       <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12, flexDirection: 'row', alignItems: 'center' }}>
         <Pressable onPress={() => router.back()} style={{ padding: 8 }} accessibilityRole="button" accessibilityLabel="Go back">
-          <Ionicons name="arrow-back" size={24} color="#9C968A" />
+          <Ionicons name="arrow-back" size={24} color="#80868C" />
         </Pressable>
         <Text style={{ fontSize: 24, fontWeight: '700', color: '#FFFFFF', marginLeft: 8 }} accessibilityRole="header">
           Writing History
@@ -63,15 +63,15 @@ export default function WritingHistoryScreen() {
 
       {promptEntries.length === 0 ? (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-          <Ionicons name="create-outline" size={48} color="#D6D1C7" />
-          <Text style={{ fontSize: 16, color: '#9C968A', marginTop: 12, textAlign: 'center' }}>
+          <Ionicons name="create-outline" size={48} color="#B4B9BF" />
+          <Text style={{ fontSize: 16, color: '#80868C', marginTop: 12, textAlign: 'center' }}>
             No writing submissions yet. Complete a writing exercise to see your history here.
           </Text>
         </View>
       ) : (
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
           {promptEntries.map((entry) => {
-            const scoreColor = entry.bestScore >= 0.8 ? '#4E9F6B' : entry.bestScore >= 0.6 ? '#B4762D' : '#C0555F';
+            const scoreColor = entry.bestScore >= 0.8 ? '#3FB950' : entry.bestScore >= 0.6 ? '#ADB3BA' : '#F85149';
             const scoreBg = entry.bestScore >= 0.8 ? colors.success.tint : entry.bestScore >= 0.6 ? colors.warning.tint : colors.error.tint;
             const displayScore = Math.round(entry.bestScore * 100);
 
@@ -79,7 +79,7 @@ export default function WritingHistoryScreen() {
               <Pressable
                 key={entry.promptId}
                 style={{
-                  backgroundColor: '#1B1A17', borderRadius: 14, padding: 16, marginBottom: 10,
+                  backgroundColor: '#141618', borderRadius: 14, padding: 16, marginBottom: 10,
                 }}
                 onPress={() => router.push(`/learn/writing/${entry.promptId}` as any)}
                 accessibilityRole="button"
@@ -90,15 +90,15 @@ export default function WritingHistoryScreen() {
                       {entry.submissions[0].promptTitle ?? `${entry.submissions[0].submissionText.slice(0, 80)}...`}
                     </Text>
                     {entry.submissions[0].promptTitle != null && (
-                      <Text style={{ fontSize: 13, color: '#9C968A', marginTop: 2 }} numberOfLines={1}>
+                      <Text style={{ fontSize: 13, color: '#80868C', marginTop: 2 }} numberOfLines={1}>
                         {entry.submissions[0].submissionText.slice(0, 80)}
                       </Text>
                     )}
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 8 }}>
-                      <Text style={{ fontSize: 13, color: '#9C968A' }}>
+                      <Text style={{ fontSize: 13, color: '#80868C' }}>
                         {entry.attemptCount} attempt{entry.attemptCount !== 1 ? 's' : ''}
                       </Text>
-                      <Text style={{ fontSize: 13, color: '#9C968A' }}>
+                      <Text style={{ fontSize: 13, color: '#80868C' }}>
                         {new Date(entry.latestDate).toLocaleDateString()}
                       </Text>
                     </View>

@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
 import { useAppStore } from '../../stores/useAppStore';
 import { useSchoolStore } from '../../stores/useSchoolStore';
-import { SCHOOL_ENABLED, levelToNewsTier } from '../../config/app';
+import { SCHOOL_ENABLED, HANDSFREE_ENABLED, levelToNewsTier } from '../../config/app';
 import { fetchStatsRange } from '../../lib/supabase-queries';
 import { localDayKey } from '../../lib/dates';
 import { getTargetLanguage, targetLanguageGreeting } from '../../lib/language';
@@ -13,7 +13,6 @@ import { cefrBandForProficiencyLevel } from '../../lib/cefr-proficiency';
 import { useTimezoneSync } from '../../hooks/useProfile';
 import { Ionicons } from '@expo/vector-icons';
 import { GradientBackground } from '../../components/ui/GradientBackground';
-import { useHearts } from '../../hooks/useHearts';
 import { useAdultMode } from '../../hooks/useAdultMode';
 import { useLevel } from '../../hooks/useLevel';
 import { useStreakProtection } from '../../hooks/useStreakProtection';
@@ -21,7 +20,6 @@ import { useDailyNews } from '../../hooks/useDailyNews';
 import { useNotifications, scheduleStreakSaveReminder } from '../../hooks/useNotifications';
 import { useOnboardingChecklist } from '../../hooks/useOnboardingChecklist';
 import { StreakRepairModal } from '../../components/gamification/StreakRepairModal';
-import { OutOfHeartsModal } from '../../components/gamification/OutOfHeartsModal';
 import { PrePermissionSheet } from '../../components/gamification/PrePermissionSheet';
 import { OnboardingChecklistFab } from '../../components/onboarding/OnboardingChecklistFab';
 import { DateLabel } from '../../components/magazine/DateLabel';
@@ -45,7 +43,6 @@ export default function HomeScreen() {
   // streak/challenge/quota days from it (migration 044). One-shot per session.
   useTimezoneSync();
   const [weeklyStats, setWeeklyStats] = useState<DailyStats[]>([]);
-  const { canPlay, nextRegenAt } = useHearts();
   const { showStreak, showDailyChallenges } = useAdultMode();
   useLevel(); // level-up detection mirrors xpLevel/leagueTier into the store
   const { showRepairModal, brokenStreak, freezesAvailable, repairWithFreeze, dismissRepair } = useStreakProtection();
@@ -69,7 +66,6 @@ export default function HomeScreen() {
   const { markItem: markChecklistItem } = useOnboardingChecklist();
   const greeting = targetLanguageGreeting(getTargetLanguage(profile));
   const [showPrePermission, setShowPrePermission] = useState(false);
-  const [showOutOfHearts, setShowOutOfHearts] = useState(false);
 
   // Show the pre-permission sheet once, after the learner has completed
   // their first lesson. Only asks if the OS permission is still undetermined;
@@ -200,13 +196,7 @@ export default function HomeScreen() {
             <MagazineGlassCard style={styles.quickAction}>
               <Pressable
                 style={styles.quickActionRow}
-                onPress={() => {
-                  if (!canPlay) {
-                    setShowOutOfHearts(true);
-                    return;
-                  }
-                  router.push('/learn' as any);
-                }}
+                onPress={() => router.push('/learn' as any)}
                 accessibilityRole="button"
                 accessibilityLabel="Start a Lesson"
               >
@@ -228,7 +218,7 @@ export default function HomeScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="Practice with AI"
               >
-                <View style={[styles.quickActionIcon, { backgroundColor: 'rgba(224,190,107,0.15)' }]}>
+                <View style={[styles.quickActionIcon, { backgroundColor: 'rgba(255,255,255,0.15)' }]}>
                   <Ionicons name="chatbubbles" size={18} color={colors.magazine.accentLilac} />
                 </View>
                 <View style={styles.quickActionText}>
@@ -239,6 +229,32 @@ export default function HomeScreen() {
               </Pressable>
             </MagazineGlassCard>
 
+            {/* Hands-free. This is the only entry point into the eyes-free
+                session: the Practice tab is `href: null` in the tab layout and
+                is absent from FloatingTabBar's VISIBLE_TABS, so nothing else
+                in the app can reach `/practice`. Removing this link makes the
+                feature unreachable rather than merely hidden. */}
+            {HANDSFREE_ENABLED && (
+              <MagazineGlassCard style={styles.quickAction}>
+                <Pressable
+                  style={styles.quickActionRow}
+                  onPress={() => router.push('/practice/handsfree' as any)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Start a hands-free practice session"
+                  accessibilityHint="Runs a spoken review session you can do without looking at the screen"
+                >
+                  <View style={[styles.quickActionIcon, { backgroundColor: 'rgba(255,255,255,0.15)' }]}>
+                    <Ionicons name="headset" size={18} color={colors.premium.base} />
+                  </View>
+                  <View style={styles.quickActionText}>
+                    <Text style={styles.quickActionTitle}>Hands-free practice</Text>
+                    <Text style={styles.quickActionSub}>Speak and listen — no screen needed</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={colors.text.quaternary} />
+                </Pressable>
+              </MagazineGlassCard>
+            )}
+
             {reviewCount > 0 && (
               <MagazineGlassCard style={styles.quickAction}>
                 <Pressable
@@ -248,7 +264,7 @@ export default function HomeScreen() {
                   accessibilityLabel={`Review ${reviewCount} flashcards`}
                 >
                   <View style={[styles.quickActionIcon, { backgroundColor: 'rgba(34,211,153,0.15)' }]}>
-                    <Ionicons name="refresh" size={18} color="#4E9F6B" />
+                    <Ionicons name="refresh" size={18} color="#3FB950" />
                   </View>
                   <View style={styles.quickActionText}>
                     <Text style={styles.quickActionTitle}>Review Cards</Text>
@@ -277,13 +293,6 @@ export default function HomeScreen() {
           visible={showPrePermission}
           onEnable={handleEnableReminders}
           onDismiss={handleDismissPrePermission}
-        />
-
-        {/* Out of Hearts Modal */}
-        <OutOfHeartsModal
-          visible={showOutOfHearts}
-          nextRegenAt={nextRegenAt}
-          onDismiss={() => setShowOutOfHearts(false)}
         />
 
         {/* Floating onboarding checklist FAB */}

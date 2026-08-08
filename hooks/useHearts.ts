@@ -75,7 +75,18 @@ export function useHearts() {
     };
   }, [heartsExempt, profile, user, applyHeartsState, reconcileFromServer]);
 
-  const canPlay = heartsExempt || heartsState.current > 0;
+  // There is deliberately no `canPlay`. Hearts count down as accuracy feedback
+  // and regenerate, but running out never blocks a lesson.
+  //
+  // Duolingo ran this experiment at ~50M DAU and reversed it: in Feb 2026 they
+  // gave up roughly $50M in bookings to cut free-tier friction, with von Ahn
+  // stating on the earnings call that excessive friction hurt user growth.
+  // Locking a learner out mid-session is also the mechanic behind the single
+  // most common complaint in this category's negative reviews — "paying to
+  // continue" — and that complaint is what our positioning argues against.
+  //
+  // `heartsExempt` still governs whether hearts are spent or shown at all
+  // (unlimited plan, or adult mode). It is not a gate.
 
   const loseHeart = useCallback(async () => {
     if (!user || !profile || heartsExempt) return;
@@ -102,5 +113,5 @@ export function useHearts() {
     await task;
   }, [user, profile, heartsExempt, applyHeartsState, reconcileFromServer]);
 
-  return { hearts: heartsState.current, maxHearts: heartsState.max, nextRegenAt: heartsState.nextRegenAt, isUnlimited, heartsExempt, canPlay, loseHeart };
+  return { hearts: heartsState.current, maxHearts: heartsState.max, nextRegenAt: heartsState.nextRegenAt, isUnlimited, heartsExempt, loseHeart };
 }

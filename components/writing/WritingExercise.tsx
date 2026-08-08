@@ -65,8 +65,8 @@ export function WritingExercise({ prompt, isGrading, attemptNumber = 1, onSubmit
     return (
       <GradientBackground>
         <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color="#E0BE6B" />
-          <Text style={{ fontSize: 16, color: '#9C968A', marginTop: 16 }}>Checking your writing...</Text>
+          <ActivityIndicator size="large" color="#C9CDD2" />
+          <Text style={{ fontSize: 16, color: '#80868C', marginTop: 16 }}>Checking your writing...</Text>
         </SafeAreaView>
       </GradientBackground>
     );
@@ -84,11 +84,11 @@ export function WritingExercise({ prompt, isGrading, attemptNumber = 1, onSubmit
         <View style={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: 12 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Pressable onPress={onExit} style={{ padding: 8, marginRight: 8 }} accessibilityRole="button" accessibilityLabel="Exit">
-              <Text style={{ fontSize: 24, color: '#9C968A' }}>x</Text>
+              <Text style={{ fontSize: 24, color: '#80868C' }}>x</Text>
             </Pressable>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 14, fontWeight: '600', color: '#E0BE6B' }}>Writing Practice</Text>
-              <Text style={{ fontSize: 13, color: '#9C968A' }}>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: '#C9CDD2' }}>Writing Practice</Text>
+              <Text style={{ fontSize: 13, color: '#80868C' }}>
                 {prompt.cefrLevel} | {scaffoldType !== 'free' ? scaffoldType.replace('_', ' ') : prompt.promptType}
                 {attemptNumber > 1 ? ` | Attempt ${attemptNumber}` : ''}
               </Text>
@@ -98,8 +98,8 @@ export function WritingExercise({ prompt, isGrading, attemptNumber = 1, onSubmit
 
         <ScrollView contentContainerStyle={{ padding: 20, flexGrow: 1 }} keyboardShouldPersistTaps="handled">
           {/* Prompt */}
-          <View style={{ backgroundColor: '#1B1A17', borderRadius: 16, padding: 20, marginBottom: 16 }}>
-            <Text style={{ fontSize: 18, fontWeight: '600', color: '#F2EFE9', lineHeight: 26 }}>
+          <View style={{ backgroundColor: '#141618', borderRadius: 16, padding: 20, marginBottom: 16 }}>
+            <Text style={{ fontSize: 18, fontWeight: '600', color: '#F7F8F9', lineHeight: 26 }}>
               {prompt.promptText}
             </Text>
           </View>
@@ -107,13 +107,13 @@ export function WritingExercise({ prompt, isGrading, attemptNumber = 1, onSubmit
           {/* Target Vocabulary Hints */}
           {prompt.targetVocabulary.length > 0 && (
             <View style={{ marginBottom: 16 }}>
-              <Text style={{ fontSize: 14, fontWeight: '600', color: '#9C968A', marginBottom: 6 }}>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: '#80868C', marginBottom: 6 }}>
                 Try to use these words:
               </Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                 {prompt.targetVocabulary.map((word, i) => (
-                  <View key={i} style={{ backgroundColor: '#24221E', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
-                    <Text style={{ fontSize: 14, color: '#E0BE6B', fontWeight: '600' }}>{word}</Text>
+                  <View key={i} style={{ backgroundColor: '#1C1F22', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
+                    <Text style={{ fontSize: 14, color: '#C9CDD2', fontWeight: '600' }}>{word}</Text>
                   </View>
                 ))}
               </View>
@@ -123,13 +123,13 @@ export function WritingExercise({ prompt, isGrading, attemptNumber = 1, onSubmit
           {/* Target Grammar Hints */}
           {prompt.targetGrammar.length > 0 && (
             <View style={{ marginBottom: 16 }}>
-              <Text style={{ fontSize: 14, fontWeight: '600', color: '#9C968A', marginBottom: 6 }}>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: '#80868C', marginBottom: 6 }}>
                 Grammar focus:
               </Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                 {prompt.targetGrammar.map((grammar, i) => (
-                  <View key={i} style={{ backgroundColor: '#24221E', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
-                    <Text style={{ fontSize: 14, color: '#9C968A' }}>{grammar}</Text>
+                  <View key={i} style={{ backgroundColor: '#1C1F22', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
+                    <Text style={{ fontSize: 14, color: '#80868C' }}>{grammar}</Text>
                   </View>
                 ))}
               </View>
@@ -168,18 +168,18 @@ export function WritingExercise({ prompt, isGrading, attemptNumber = 1, onSubmit
                 value={text}
                 onChangeText={setText}
                 placeholder="Start writing..."
-                placeholderTextColor="#9C968A"
+                placeholderTextColor="#80868C"
                 multiline
                 style={{
                   borderWidth: 2,
-                  borderColor: exceedsMaxWords ? '#C0555F' : '#33302B',
+                  borderColor: exceedsMaxWords ? '#F85149' : '#33373B',
                   borderRadius: 14,
                   paddingHorizontal: 16,
                   paddingVertical: 12,
                   fontSize: 16,
                   minHeight: 200,
                   textAlignVertical: 'top',
-                  color: '#F2EFE9',
+                  color: '#F7F8F9',
                   lineHeight: 24,
                 }}
                 accessibilityLabel="Your writing"
@@ -191,7 +191,7 @@ export function WritingExercise({ prompt, isGrading, attemptNumber = 1, onSubmit
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}>
             <Text style={{
               fontSize: 13,
-              color: exceedsMaxWords ? '#C0555F' : !meetsMinWords ? '#B4762D' : '#9C968A',
+              color: exceedsMaxWords ? '#F85149' : !meetsMinWords ? '#ADB3BA' : '#80868C',
             }}>
               {wordCount} word{wordCount !== 1 ? 's' : ''}
               {prompt.minWords ? ` (min ${prompt.minWords})` : ''}
@@ -201,12 +201,12 @@ export function WritingExercise({ prompt, isGrading, attemptNumber = 1, onSubmit
         </ScrollView>
 
         {/* Submit Button */}
-        <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 90, borderTopWidth: 1, borderTopColor: '#33302B' }}>
+        <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 90, borderTopWidth: 1, borderTopColor: '#33373B' }}>
           <Pressable
             onPress={handleSubmit}
             disabled={!canSubmit}
             style={{
-              backgroundColor: canSubmit ? '#C8A24A' : '#6D5424',
+              backgroundColor: canSubmit ? '#F2F4F6' : '#4E5257',
               paddingVertical: 16,
               borderRadius: 14,
               alignItems: 'center',
@@ -216,7 +216,7 @@ export function WritingExercise({ prompt, isGrading, attemptNumber = 1, onSubmit
           >
             {/* Brass is a light fill — near-black label. Disabled drops to
                 brass.800, which needs a light one instead. */}
-            <Text style={{ color: canSubmit ? '#14120E' : '#9C968A', fontSize: 18, fontWeight: '600' }}>Submit</Text>
+            <Text style={{ color: canSubmit ? '#08090A' : '#B4B9BF', fontSize: 18, fontWeight: '600' }}>Submit</Text>
           </Pressable>
         </View>
       </KeyboardAvoidingView>
@@ -252,12 +252,12 @@ function FillBlankInput({
                 value={value}
                 onChangeText={onChange}
                 placeholder="___"
-                placeholderTextColor="#9C968A"
+                placeholderTextColor="#80868C"
                 style={{
                   borderBottomWidth: 2,
-                  borderBottomColor: '#C8A24A',
+                  borderBottomColor: '#F2F4F6',
                   fontSize: 16,
-                  color: '#F2EFE9',
+                  color: '#F7F8F9',
                   minWidth: 80,
                   paddingVertical: 4,
                   textAlign: 'center',
@@ -267,12 +267,12 @@ function FillBlankInput({
             );
           }
           return (
-            <Text key={i} style={{ fontSize: 16, color: '#F2EFE9' }}>{word}</Text>
+            <Text key={i} style={{ fontSize: 16, color: '#F7F8F9' }}>{word}</Text>
           );
         })}
       </View>
       {hint ? (
-        <Text style={{ fontSize: 13, color: '#9C968A', marginTop: 8, fontStyle: 'italic' }}>
+        <Text style={{ fontSize: 13, color: '#80868C', marginTop: 8, fontStyle: 'italic' }}>
           Hint: {hint}
         </Text>
       ) : null}
@@ -295,17 +295,17 @@ function SentenceFrameInput({
     <View style={{ marginBottom: 16 }}>
       {starters.map((starter, i) => (
         <View key={i} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, flexWrap: 'wrap' }}>
-          <Text style={{ fontSize: 16, color: '#F2EFE9', marginRight: 4 }}>{starter}</Text>
+          <Text style={{ fontSize: 16, color: '#F7F8F9', marginRight: 4 }}>{starter}</Text>
           <TextInput
             value={values[i] ?? ''}
             onChangeText={(val) => onChange(i, val)}
             placeholder="..."
-            placeholderTextColor="#9C968A"
+            placeholderTextColor="#80868C"
             style={{
               borderBottomWidth: 2,
-              borderBottomColor: '#C8A24A',
+              borderBottomColor: '#F2F4F6',
               fontSize: 16,
-              color: '#F2EFE9',
+              color: '#F7F8F9',
               flex: 1,
               minWidth: 100,
               paddingVertical: 4,
@@ -333,23 +333,23 @@ function GuidedParagraphInput({
     <View style={{ marginBottom: 16 }}>
       {starters.map((starter, i) => (
         <View key={i} style={{ marginBottom: 12 }}>
-          <Text style={{ fontSize: 14, fontWeight: '600', color: '#9C968A', marginBottom: 4 }}>{starter}</Text>
+          <Text style={{ fontSize: 14, fontWeight: '600', color: '#80868C', marginBottom: 4 }}>{starter}</Text>
           <TextInput
             value={values[i] ?? ''}
             onChangeText={(val) => onChange(i, val)}
             placeholder="Continue writing..."
-            placeholderTextColor="#9C968A"
+            placeholderTextColor="#80868C"
             multiline
             style={{
               borderWidth: 2,
-              borderColor: '#33302B',
+              borderColor: '#33373B',
               borderRadius: 14,
               paddingHorizontal: 16,
               paddingVertical: 10,
               fontSize: 16,
               minHeight: 60,
               textAlignVertical: 'top',
-              color: '#F2EFE9',
+              color: '#F7F8F9',
             }}
             accessibilityLabel={`Continue from: ${starter}`}
           />

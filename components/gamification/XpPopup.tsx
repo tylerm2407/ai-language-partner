@@ -53,7 +53,7 @@ export function XpPopup({ xp, visible, onDone }: XpPopupProps) {
         alignSelf: 'center',
         zIndex: 999,
         borderRadius: 20,
-        shadowColor: '#86B4CE',
+        shadowColor: '#C9CDD2',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.4,
         shadowRadius: 12,
@@ -65,7 +65,7 @@ export function XpPopup({ xp, visible, onDone }: XpPopupProps) {
       pointerEvents="none"
     >
       <LinearGradient
-        colors={['rgba(224, 190, 107, 0.9)', 'rgba(56, 189, 248, 0.9)']}
+        colors={['rgba(255, 255, 255, 0.9)', 'rgba(56, 189, 248, 0.9)']}
         start={GRADIENT_START}
         end={GRADIENT_END}
         style={{ paddingHorizontal: 20, paddingVertical: 10 }}

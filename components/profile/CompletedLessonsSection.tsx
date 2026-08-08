@@ -32,10 +32,14 @@ function formatCompletedAt(iso: string): string {
 
 function scoreBadge(score: number): { label: string; color: string } {
   const pct = Math.round(score * 100);
-  if (pct >= 90) return { label: `${pct}%`, color: '#4E9F6B' };
-  if (pct >= 70) return { label: `${pct}%`, color: '#86B4CE' };
-  if (pct >= 50) return { label: `${pct}%`, color: '#D9913C' };
-  return { label: `${pct}%`, color: '#C0555F' };
+  // A lesson score is grading feedback, so the top and bottom bands keep the
+  // two signal hues. The middle bands are greyscale and step DOWN in brightness
+  // as the score falls — the sweep briefly had 50-69% brighter than 70-89%,
+  // which inverted the ladder.
+  if (pct >= 90) return { label: `${pct}%`, color: '#3FB950' };
+  if (pct >= 70) return { label: `${pct}%`, color: '#E2E6EA' };
+  if (pct >= 50) return { label: `${pct}%`, color: '#8C9198' };
+  return { label: `${pct}%`, color: '#F85149' };
 }
 
 export function CompletedLessonsSection({ userId, previewCount = 5 }: Props) {
@@ -71,11 +75,11 @@ export function CompletedLessonsSection({ userId, previewCount = 5 }: Props) {
 
       {loading ? (
         <View className="bg-dark-card rounded-2xl p-5 items-center">
-          <ActivityIndicator size="small" color="#E0BE6B" />
+          <ActivityIndicator size="small" color="#C9CDD2" />
         </View>
       ) : !completions || completions.length === 0 ? (
         <View className="bg-dark-card rounded-2xl p-5 items-center">
-          <Ionicons name="book-outline" size={28} color="#7A756B" />
+          <Ionicons name="book-outline" size={28} color="#5C6166" />
           <Text className="text-sm text-text-secondary mt-2 text-center">
             No lessons completed yet. Finish your first lesson to see it here.
           </Text>

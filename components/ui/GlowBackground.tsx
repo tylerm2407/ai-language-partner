@@ -1,7 +1,7 @@
 /**
- * GlowBackground — the ambient layer for the Studio Graphite theme.
+ * GlowBackground — the ambient layer for the monochrome theme.
  *
- * ONE top-anchored warm wash. Not the retired three-blob indigo/violet layer.
+ * ONE top-anchored silver wash. Not the retired three-blob indigo/violet layer.
  *
  * The blob layer was the theme's decorative signature and it is gone on
  * purpose: three drifting saturated blobs behind every screen is what read as
@@ -28,7 +28,7 @@ import Svg, { Defs, RadialGradient, Stop, Rect } from 'react-native-svg';
 import { colors } from '../../config/theme';
 
 /** Peak opacity at the centre of the wash. */
-const WASH_ALPHA = 0.1;
+const WASH_ALPHA = 0.09;
 /** How far the wash reaches down the screen. */
 const WASH_HEIGHT = 320;
 /** Horizontal overscan, as a multiple of window width, so the left/right
@@ -59,7 +59,7 @@ function stripAlpha(rgba: string): string {
 export function GlowLayer(_props: { drift?: boolean } = {}) {
   const { width } = useWindowDimensions();
   const washWidth = width * WASH_OVERSCAN;
-  const tint = stripAlpha(colors.glow.brass);
+  const tint = stripAlpha(colors.glow.silver);
 
   return (
     <View pointerEvents="none" style={styles.glowLayer}>
@@ -85,6 +85,64 @@ export function GlowLayer(_props: { drift?: boolean } = {}) {
           <Rect x="0" y="0" width={washWidth} height={WASH_HEIGHT} fill="url(#studio-wash)" />
         </Svg>
       </View>
+    </View>
+  );
+}
+
+/**
+ * StatBloom — a soft radial halo that sits BEHIND a numeral.
+ *
+ * The monochrome palette has no accent colour to draw the eye with, so emphasis
+ * has to come from light. A bloom behind the streak count or XP total does the
+ * job an accent fill used to do, without introducing a hue.
+ *
+ * Usage: wrap the numeral, not the whole row. The bloom is absolutely
+ * positioned and centred on its parent, so the parent needs a size.
+ *
+ *   <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+ *     <StatBloom size={90} />
+ *     <Text>{streak}</Text>
+ *   </View>
+ *
+ * It is `pointerEvents="none"` and carries no zIndex — like `GlowLayer`, it
+ * relies on being declared FIRST so React Native paints it underneath.
+ *
+ * Static: no motion, nothing to gate on Reduce Motion.
+ */
+export function StatBloom({
+  size = 90,
+  intensity = 0.16,
+}: {
+  /** Diameter of the halo in px. Should comfortably exceed the numeral. */
+  size?: number;
+  /** Peak opacity at the centre. Keep low — this is light, not a fill. */
+  intensity?: number;
+}) {
+  const tint = stripAlpha(colors.glow.bloom);
+  const id = `stat-bloom-${size}-${Math.round(intensity * 100)}`;
+
+  return (
+    <View
+      pointerEvents="none"
+      style={{
+        position: 'absolute',
+        width: size,
+        height: size,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <Svg width={size} height={size} pointerEvents="none">
+        <Defs>
+          <RadialGradient id={id} cx="50%" cy="50%" r="50%">
+            <Stop offset="0" stopColor={tint} stopOpacity={intensity} />
+            <Stop offset="0.45" stopColor={tint} stopOpacity={intensity * 0.45} />
+            <Stop offset="0.75" stopColor={tint} stopOpacity={intensity * 0.14} />
+            <Stop offset="1" stopColor={tint} stopOpacity={0} />
+          </RadialGradient>
+        </Defs>
+        <Rect x="0" y="0" width={size} height={size} fill={`url(#${id})`} />
+      </Svg>
     </View>
   );
 }

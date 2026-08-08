@@ -26,10 +26,10 @@ export function StreakRepairModal({ visible, brokenStreak, freezesAvailable, onR
             end={GRADIENT_END}
             style={{ borderRadius: 24, padding: 1.5 }}
           >
-            <View style={{ borderRadius: 22.5, padding: 32, alignItems: 'center', backgroundColor: '#1B1A17' }}>
+            <View style={{ borderRadius: 22.5, padding: 32, alignItems: 'center', backgroundColor: '#141618' }}>
               {/* Broken streak icon */}
               <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: colors.warning.tint, justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
-                <Ionicons name="snow" size={40} color="#D9913C" />
+                <Ionicons name="snow" size={40} color="#E2E6EA" />
               </View>
 
               <Text style={{ color: colors.text.primary, fontSize: 24, fontWeight: '700', textAlign: 'center', marginBottom: 8 }}>

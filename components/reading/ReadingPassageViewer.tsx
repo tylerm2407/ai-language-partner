@@ -63,7 +63,7 @@ export function ReadingPassageViewer({
             // island, and near-black on `surface.card` is invisible.
             color: isSelected ? colors.action.primaryFill : colors.text.primary,
             textDecorationLine: 'underline',
-            textDecorationColor: 'rgba(200, 162, 74, 0.3)',
+            textDecorationColor: 'rgba(242, 244, 246, 0.3)',
             fontWeight: isSelected ? '600' : '400',
           }}
           accessibilityRole="button"
@@ -147,12 +147,12 @@ export function ReadingPassageViewer({
         <Pressable
           onPress={onContinue}
           style={{
-            backgroundColor: '#C8A24A', paddingVertical: 16, borderRadius: 14, alignItems: 'center',
+            backgroundColor: '#F2F4F6', paddingVertical: 16, borderRadius: 14, alignItems: 'center',
           }}
           accessibilityRole="button"
           accessibilityLabel="Continue to questions"
         >
-          <Text style={{ color: '#14120E', fontSize: 18, fontWeight: '600' }}>Continue to Questions</Text>
+          <Text style={{ color: '#08090A', fontSize: 18, fontWeight: '600' }}>Continue to Questions</Text>
         </Pressable>
       </View>
     </SafeAreaView>

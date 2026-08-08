@@ -8,15 +8,15 @@
 
 ## Core Principles
 
-1. **Canonical theme is STUDIO GRAPHITE.** Surface.base `#0F0E0C` is the default screen background — warm graphite, not neutral near-black. Reading/lesson/review surfaces step up to `surface.raised` (`#151412`) for focus.
-2. **Brass is the primary brand.** `#C8A24A` anchors CTAs and focused states; `#E0BE6B` is the lifted step for small text and icons. Brass is a **light** accent, so filled CTAs carry a **near-black** label (`text.onPrimary` `#14120E`) — white on brass is 2.4:1 and fails outright.
+1. **Canonical theme is MONOCHROME** — black, charcoal, silver, grey. Surface.base `#08090A` is the default screen background. Reading/lesson/review surfaces step up to `surface.raised` (`#0E0F11`) for focus.
+2. **The CTA is the brightest thing on the screen.** `action.primaryFill` is near-white `#F2F4F6` carrying a near-black label at **18.1:1**. With no hue to lean on, hierarchy is built entirely from lightness — and the highest-contrast element in the composition is always the primary action. This is what stops greyscale from reading as drab.
 3. **Motion is earned.** No global animation in chrome. Animation appears in (a) state transitions, (b) micro-feedback (≤200ms), (c) celebration moments. Everything else is static.
 4. **Every animation gates `useMotion().shouldReduce`.** Honor `AccessibilityInfo.isReduceMotionEnabled` without exception. App Store accessibility criterion.
-5. **Body text is WCAG AAA.** `text.primary` (`#F1F5F9`) is 14.6:1 against `surface.base`. Never pure white on pure black (halation).
+5. **Body text is WCAG AAA.** `text.primary` (`#F7F8F9`) is 18.7:1 against `surface.base`. Never pure white on pure black (halation) — which is why `text.primary` stops short of `#FFFFFF` even though the palette is greyscale.
 6. **Color is never the only signal.** Correct/incorrect always paired with icon + text label. WCAG SC 1.4.1.
-7. **60-30-10 color distribution.** Neutral surfaces dominate; accent color reserved for CTAs and progress.
+7. **Exactly two hues exist.** `success` (correct) and `error` (incorrect, hearts) — nothing else. Streak, warning, premium, league tiers, achievements, mistake categories and unit tiles are all greyscale, separated by lightness plus their own icon and label. Adding a third hue is a design change, not a detail.
 8. **8pt grid.** Spacing values are 4, 8, 12, 16, 24, 32, 48, 64.
-9. **Three typographic roles.** Display (PlayfairDisplay, celebration only), UI (Inter Bold 700), body (Inter 400/500).
+9. **Three typographic roles.** Display/editorial (Fraunces — `600` for headlines, `700` for `<Hero>` celebration), UI and body (Nunito 400/500/600/700/800), meta labels (JetBrains Mono — eyebrows, dates, counts, durations).
 10. **One mascot.** Consistent across celebration states; static SVG today, Rive state-machine in a future phase.
 
 ---
@@ -33,152 +33,165 @@ import { colors, spacing, radii, typography, motion, elevation } from '../../con
 
 ## Color Palette
 
-### Surfaces (dark-canonical — "Studio Graphite")
+### Surfaces (monochrome charcoal)
 
 | Token | Hex | Usage |
 |---|---|---|
-| `surface.base` | `#0F0E0C` | Primary app background (home, chat, practice, profile) |
-| `surface.raised` | `#151412` | Reading / lesson / review screens — focus surface |
-| `surface.sunken` | `#0A0908` | Behind-content wells, inset tracks |
-| `surface.card` | `#1B1A17` | Card fills — **opaque** |
-| `surface.cardAlt` | `#24221E` | Nested cards, input fills |
-| `surface.overlay` | `rgba(10,9,8,0.84)` | Modal/sheet backdrop, celebration scrim |
-| `surface.sheet` | `#1B1A17` | Bottom-sheet fill |
+| `surface.base` | `#08090A` | Primary app background (home, chat, practice, profile) |
+| `surface.raised` | `#0E0F11` | Reading / lesson / review screens — focus surface |
+| `surface.sunken` | `#050506` | Behind-content wells, inset tracks |
+| `surface.card` | `#141618` | Card fills — **opaque** |
+| `surface.cardAlt` | `#1C1F22` | Nested cards, input fills |
+| `surface.overlay` | `rgba(5,5,6,0.86)` | Modal/sheet backdrop, celebration scrim |
+| `surface.sheet` | `#141618` | Bottom-sheet fill |
 
-The graphite carries a deliberate **warm bias** — base is `#0F0E0C`, not a
-neutral `#0E0E10`. A neutral near-black under a gold accent reads clinical; two
-points of red/green bias is what keeps the theme professional without being
-cold, and it costs nothing in contrast (base luminance is unchanged to four
-decimal places).
+Neutral, with a very slight cool cast. The steps are **wider** than the previous
+palette's on purpose: in a system with no hue, crispness comes from clearly
+separated surfaces plus hairlines you can actually see. A tint-based palette can
+get away with 4-point steps because the colour carries the separation; this one
+cannot.
 
-Surfaces are no longer deepened toward a void. The old palette had to be
-near-black so three saturated blobs had something to glow against; depth now
-comes from the surface steps and hairline borders, which is why `card` sits a
-full step lighter than it used to.
+### Ambient light
 
-### Ambient wash (background)
+Two layers, both static, both silver.
 
-Every screen background is `components/ui/GradientBackground.tsx`, which renders
-**one** top-anchored warm radial wash behind screen content. Tokens live in
-`colors.glow.*`.
+**1. The wash** — `components/ui/GradientBackground.tsx` renders one
+top-anchored radial wash behind screen content.
 
 | Property | Value |
 |---|---|
-| Tint | `glow.brass` `#C8A24A` |
-| Peak alpha | `0.10` |
+| Tint | `glow.silver` `#E2E6EA` |
+| Peak alpha | `0.09` |
 | Height | 320, anchored 45% above the top edge |
 | Horizontal overscan | 1.6× window width, so the falloff sits off-screen |
 | Motion | **none** |
 
+**2. Stat blooms** — `<StatBloom />` from the same module, a soft halo placed
+*behind* a numeral.
+
+| Property | Value |
+|---|---|
+| Tint | `glow.bloom` `#F2F4F6` |
+| Default size / intensity | `90` / `0.16` |
+| Used by | `StatsStrip` (streak, XP) at size `54` |
+
+The bloom exists because the palette has no accent colour to say "this number
+matters". Emphasis is carried by light instead. Use it on figures the learner is
+meant to notice — never as background decoration, and never more than two or
+three to a screen, or it stops meaning anything.
+
 Rules:
 - **Never stack two wash layers.** `GradientBackground` (or a single
   `GlowLayer`) per screen — two layers compound alpha.
-- **The wash does not animate.** Chrome motion is retired (§Motion rule 2), so
-  nothing here gates on Reduce Motion — it is static for every user. `GlowLayer`
-  and `GlowBackground` still accept a `drift` prop; it is ignored, and kept only
-  so the screens that pass `drift={false}` keep compiling.
-- It is a radial gradient with a soft stop ramp, **not** a blurred view. A
+- **Nothing here animates.** Chrome motion is retired (§Motion rule 2), so
+  neither layer gates on Reduce Motion — both are static for every user.
+  `GlowLayer` and `GlowBackground` still accept a `drift` prop; it is ignored,
+  and kept only so the screens that pass `drift={false}` keep compiling.
+- Both are radial gradients with a soft stop ramp, **not** blurred views. A
   full-screen `BlurView` under every screen costs Android scroll frames for no
   visual gain on an already-soft shape.
-- The layer is `pointerEvents="none"` and carries **no** `zIndex`. React Native
-  paints siblings in declaration order and treats a sibling without `zIndex` as
-  0, so a positive `zIndex` here would put the wash *over* the content. Keep it
-  as the first child instead. When dropping a bare `<GlowLayer />` into a screen
-  that owns its own root, it must come first.
+- Both are `pointerEvents="none"` and carry **no** `zIndex`. React Native paints
+  siblings in declaration order and treats a sibling without `zIndex` as 0, so a
+  positive `zIndex` would put the glow *over* the content it sits behind. They
+  must be declared **first** inside their parent.
 
 ### Borders
 
-Warm-white alpha, so a hairline on a warm card does not read as a cool seam.
+Neutral white alpha, stepped up from the previous palette. On pure charcoal a
+`0.07` hairline disappears, and the crisp look depends on edges being visible.
 
 | Token | Value | Usage |
 |---|---|---|
-| `border.subtle` | `rgba(245,240,230,0.07)` | Card outlines |
-| `border.default` | `rgba(245,240,230,0.13)` | Dividers, button outlines |
-| `border.strong` | `rgba(245,240,230,0.24)` | Focus borders |
-| `border.focus` | `#C8A24A` | Input focus |
+| `border.subtle` | `rgba(255,255,255,0.08)` | Card outlines |
+| `border.default` | `rgba(255,255,255,0.15)` | Dividers, button outlines |
+| `border.strong` | `rgba(255,255,255,0.28)` | Focus borders |
+| `border.focus` | `#F2F4F6` | Input focus |
 
 ### Text (AAA on `surface.base`)
 
-Warm off-whites, not cool slate — `#F1F5F9` over warm graphite reads blue.
-
 | Token | Hex | Ratio | Usage |
 |---|---|---|---|
-| `text.primary` | `#F2EFE9` | 16.9:1 (AAA) | Headings, body |
-| `text.secondary` | `#D6D1C7` | 12.7:1 (AAA) | Descriptions, metadata |
-| `text.tertiary` | `#9C968A` | 6.6:1 (AA) | Placeholders, helper text |
-| `text.quaternary` | `#7A756B` | 4.2:1 (UI large only) | Muted timestamps |
-| `text.onPrimary` | `#14120E` | 7.9:1 on `action.primaryFill` | Text on filled CTAs — **dark, not white** |
-| `text.onSuccess` | `#0A1710` | 5.9:1 on `success.base` | Text on success fills |
-| `text.onWarning` | `#14120E` | 7.3:1 on `warning.base` | Text on warning fills |
-| `text.disabled` | `rgba(242,239,233,0.38)` | — | Disabled button labels |
+| `text.primary` | `#F7F8F9` | 18.7:1 (AAA) | Headings, body |
+| `text.secondary` | `#B4B9BF` | 10.1:1 (AAA) | Descriptions, metadata |
+| `text.tertiary` | `#80868C` | 5.4:1 (AA) | Placeholders, helper text |
+| `text.quaternary` | `#5C6166` | 3.2:1 (UI large only) | Muted timestamps |
+| `text.onPrimary` | `#08090A` | 18.1:1 on `action.primaryFill` | Text on filled CTAs — **dark, not white** |
+| `text.onSuccess` | `#052B10` | 6.1:1 on `success.base` | Text on success fills |
+| `text.onWarning` | `#08090A` | — | Warning is greyscale; dark label on it |
+| `text.disabled` | `rgba(247,248,249,0.38)` | — | Disabled button labels |
 
-### Primary (Brass) — fills vs accents
+### Primary (Silver) — fills vs accents
 
-**The polarity is load-bearing, and it is inverted from the old indigo set.**
-Indigo was a dark fill needing white text. Brass is a *light* fill, so every
-solid CTA carries a **near-black** label. White on `#C8A24A` is 2.4:1 — worse
-than the 4.47:1 problem indigo had. Any new brass background must be checked for
-this; see §What We Retired for the sites that were fixed during the migration.
+The polarity is the same trap brass had, and it bites harder here: the primary
+fill is **light**, so a filled CTA carries a **near-black** label. White on
+`#F2F4F6` is 1.1:1 — invisible. Any new light background must be checked.
 
 | Token | Hex | Usage |
 |---|---|---|
-| `action.primaryFill` | `#C8A24A` (brass.500) | **All solid CTA fills.** `text.onPrimary` on it is 7.9:1; on `surface.base` it is 8.0:1 |
-| `action.accent` | `#E0BE6B` (brass.300) | Text links, small icons, spinners, progress (10.8:1) |
-| `action.primaryTint` | `rgba(200,162,74,0.14)` | Selected-row fills, icon-circle backgrounds |
-| `brass.400` | `#D0B063` | Mid step — gradient stops, pressed states (9.3:1) |
-| `brass.700` | `#8E6F2F` | Deep step — gradient stops, rules |
-| `brass.800` | `#6D5424` | Disabled CTA fill — **needs a light label**, not `text.onPrimary` |
-| `action.primarySlab` | `#8E6F2F` | **Deprecated.** Slab CTAs are retired; retained only so pre-Studio call sites type-check |
+| `action.primaryFill` | `#F2F4F6` (silver.100) | **All solid CTA fills.** `text.onPrimary` on it is 18.1:1 |
+| `action.accent` | `#C9CDD2` (silver.300) | Text links, small icons, spinners, progress (12.5:1) |
+| `action.primaryTint` | `rgba(242,244,246,0.10)` | Selected-row fills, icon-circle backgrounds |
+| `silver.200` | `#E2E6EA` | Emphasis numerals, streak (15.5:1) |
+| `silver.400` | `#ADB3BA` | 9.4:1 |
+| `silver.500` | `#8C9198` | 6.3:1 |
+| `silver.700` | `#4E5257` | **Disabled CTA fill** — needs a light label, not `text.onPrimary` |
+| `silver.800` | `#33373B` | Tracks, dividers |
+| `action.primarySlab` | `#ADB3BA` | **Deprecated.** Slab CTAs are retired |
 
-`colors.indigo.*` still exists as a **deprecated alias** onto the brass steps, so
-pre-Studio call sites (`colors.indigo[400]`) compile and pick up the new palette
-instead of silently staying indigo. Migrate to `colors.brass.*`.
-
-Semantic chip labels follow the same rule: text on a dark tint uses that
-semantic's `.light` step (`success.light`, `warning.light`, `error.light`,
-`streak.light`), never the base — the bases land at or under AA at small sizes.
+`colors.brass.*` and `colors.indigo.*` survive as **deprecated aliases** onto the
+silver ramp, so call sites from either previous palette compile and pick up the
+current one instead of silently staying gold or violet. Migrate to
+`colors.silver.*`.
 
 ### Semantic
 
 | Token | Base | Tint | Border | Usage |
 |---|---|---|---|---|
-| `success` | `#4E9F6B` | `rgba(78,159,107,0.15)` | `rgba(78,159,107,0.35)` | Correct, completed |
-| `error` | `#C0555F` | `rgba(192,85,95,0.15)` | `rgba(192,85,95,0.40)` | Incorrect, destructive |
-| `warning` | `#D9913C` | `rgba(217,145,60,0.15)` | `rgba(217,145,60,0.35)` | Review needed, warnings |
-| `streak` | `#E2673C` (base) / `#F0763D` (fire) / `#F2A886` (light) | `rgba(226,103,60,0.15)` | — | Streak counters + fire animation |
-| `premium` | `#E0BE6B` | `rgba(224,190,107,0.16)` | — | Super tier, pro moments |
+| `success` | `#3FB950` | `rgba(63,185,80,0.14)` | `rgba(63,185,80,0.32)` | Correct, completed |
+| `error` | `#F85149` | `rgba(248,81,73,0.14)` | `rgba(248,81,73,0.34)` | Incorrect, destructive |
+| `warning` | `#E2E6EA` | `rgba(226,230,234,0.12)` | `rgba(226,230,234,0.30)` | Review needed — **greyscale** |
+| `streak` | `#E2E6EA` (base) / `#F2F4F6` (fire) | `rgba(226,230,234,0.12)` | — | Streak counters — **greyscale** |
+| `premium` | `#FFFFFF` | `rgba(255,255,255,0.12)` | — | Super tier, pro moments |
 
-Every base is **desaturated** relative to the old Tailwind-bright set. A `#22C55E`
-green and an `#EF4444` red next to a gold accent is a traffic light.
+`success` and `error` are the **only** hues in the system, and they exist because
+grading feedback is the one place in a learning app where colour does real work.
+Both are the GitHub dark-UI pair — engineered for this job: legible on
+near-black, distinguishable under the common colour-vision deficiencies, and
+unsaturated enough not to fight a greyscale system.
 
-Small text never uses a semantic *base* — it uses the `.light` step
-(`success.light` 9.7:1, `error.light` 8.2:1, `streak.light`), because the bases
-land at or under AA at 13px. `error.base` in particular is 4.3:1 and is for fills
-and icons only; the **`danger` CTA fill is `error.dark`**, since a 17px bold
-label is under the 14pt "large text" threshold and needs the full 4.5:1.
+Small text uses the `.light` step (`success.light` `#56D364` 10.3:1,
+`error.light` `#FF7B72` 7.9:1); the bases are for fills and icons. The **`danger`
+CTA fill is `error.dark`** `#C93C34`, which clears 5.0:1 under a white label
+where `error.base` would not.
 
-Three warm tokens now share a canvas — brass (43°), warning (33°), streak (20°).
-`streak` is deliberately ember and well clear of both, but the icon+text rule in
-§Accessibility Mandatory is **load-bearing** here, not decorative.
-
-`premium` is the brand's own accent at its brightest, not a separate hue: a
-purple next to brass reads as a second brand, and the most valuable tier should
-look like the most concentrated version of the brand color.
+`warning` and `streak` are deliberately colourless. A third hue would break rule
+7, and both always ship with an icon and a label that carry the meaning. Premium
+is pure white — in a monochrome system the brightest possible value *is* the most
+valuable one.
 
 ### League Tiers
 
-Retuned as metals that live in the graphite world — the old `#FFD700` gold sat
-brighter than every CTA on screen.
+Rank maps to **brightness**, not to metal colour, so the ladder is legible at a
+glance without five competing hues.
 
-Bronze `#9C6B3F` · Silver `#A8AAAE` · Gold `#D2A840` · Platinum `#C3C9D2` · Diamond `#86B4CE`
+Bronze `#6B7076` · Silver `#8C9198` · Gold `#ADB3BA` · Platinum `#C9CDD2` · Diamond `#F2F4F6`
+
+The same rule governs `LevelBadge` (beginner → advanced) and the `LessonTile`
+unit gradients: dimmest to brightest, in rank order.
 
 ### Hearts
 
-Filled: `#C0555F` · Empty: `#55524B`
+Filled: `#F85149` · Empty: `#4E5257`
+
+Hearts keep red. They are a depletable resource, and depletion is the one place
+the app wants an involuntary reaction.
 
 ### Correction-banner error-type chips
 
-grammar · vocabulary · spelling · word_order · tense · gender · other — see `colors.correctionChip.*` in `config/theme.ts`.
+**All seven types render identically** — `rgba(255,255,255,0.07)` fill, `#C9CDD2`
+label. The chip already prints its type as text ("GRAMMAR", "WORD ORDER"), so hue
+was encoding nothing the label did not already say; it was seven decorative tints
+on a single banner. Severity is carried by the banner border — see §CorrectionBanner.
 
 ---
 
@@ -330,10 +343,10 @@ All haptics fire regardless of Reduce Motion (they are not motion) but respect t
 ### Surface (replaces GradientBackground)
 
 ```tsx
-<Surface variant="base">      // graphite #0F0E0C
-<Surface variant="raised">    // graphite #151412 — reading/focus
-<Surface variant="card">      // #1B1A17
-<Surface variant="cardAlt">   // #24221E
+<Surface variant="base">      // charcoal #08090A
+<Surface variant="raised">    // charcoal #0E0F11 — reading/focus
+<Surface variant="card">      // #141618
+<Surface variant="cardAlt">   // #1C1F22
 ```
 
 > `<GradientBackground>` is a backward-compatible alias — new code should use `<Surface>` directly.
@@ -348,7 +361,7 @@ that collapsed on press. That slab was the single strongest visual tell tying th
 app to Duolingo and is retired. The component name and its whole prop surface are
 unchanged, so no call site moved.
 
-`primary` is a brass fill with a **near-black** label. `danger` is `error.dark`
+`primary` is a near-white silver fill with a **near-black** label. `danger` is `error.dark`
 with a light label (see §Semantic for why not `error.base`).
 
 ```tsx
@@ -421,7 +434,7 @@ where nothing is being celebrated. Keeping the dragon to moments makes each
 appearance an event, which is where its animation budget is worth spending.
 
 Chrome placements were removed from `app/(app)/index.tsx` and
-`app/(app)/chat/index.tsx` in the Studio Graphite migration. Do not reintroduce
+`app/(app)/chat/index.tsx` during the Studio Graphite migration. Do not reintroduce
 them.
 
 ### ScreenHeader
@@ -480,14 +493,35 @@ Every PR must pass:
 | Sky/amber/violet accents (`#38BDF8`, `#FBBF24`, `#A78BFA`, `#60A5FA`, `#F472B6`) | `#86B4CE` / `#D9913C` / `#B497C4` / `#E0A5B6` | Achievement, league, level-badge and mistake-category colors |
 | Gold streak flame (`#FFD700`) | `streak.fire` `#F0763D` | Gold is the brand accent now — a blazing streak read as a CTA |
 
+### Monochrome migration (supersedes the brass rows above)
+
+Brass shipped and was reviewed on device: professional, but not engaging, and it
+still left stray hue on screen. The palette is now greyscale.
+
+| Old | New | Notes |
+|---|---|---|
+| **Brass brand** (`#C8A24A` / `#E0BE6B`) | Silver (`#F2F4F6` / `#C9CDD2`) | `colors.brass.*` is now a deprecated alias onto the silver ramp, alongside `colors.indigo.*` |
+| Warm graphite surfaces (`#0F0E0C` …) | Neutral charcoal (`#08090A` …) | Steps widened — hue no longer carries surface separation |
+| Warm off-white text (`#F2EFE9` …) | Neutral greys (`#F7F8F9` …) | |
+| Mauve + rose categories (`#B497C4`, `#E0A5B6`) | Silver steps | These were introduced *by* the brass migration as category hues, and were the "purple" left on screen |
+| Slate blue accents (`#86B4CE`, `#A8C6DC`) | Silver steps | |
+| Ember streak (`#E2673C`) and amber warning (`#D9913C`) | Greyscale | Rule 7 — icon and label carry the meaning |
+| Desaturated jade / clay (`#4E9F6B` / `#C0555F`) | GitHub pair (`#3FB950` / `#F85149`) | The only two surviving hues |
+| Metal league tiers | Brightness ladder | Rank = lightness, across league, `LevelBadge` and unit tiles |
+| Seven tinted correction chips | One neutral chip | The type is already printed as text on the chip |
+| Brass wash | Silver wash + `StatBloom` halos | Emphasis by light, since there is no accent colour |
+
 **The palette is closed.** Every hex in `app/`, `components/`, `lib/` and
 `config/` is now either a theme token or one of the documented values above. Two
 deliberate exceptions:
 
 - `components/avatar/**` — skin, hair, eye and shirt swatches are user choices
   and must stay diverse. Not part of the theme.
-- `components/ui/AnimatedGalaxy.tsx` and `components/ui/ShinyText.tsx` — dead
-  code (imported nowhere), left at their old values. Delete rather than retune.
+
+(`AnimatedGalaxy` and `ShinyText` used to be listed here as dead code carrying
+untuned values. They have since been deleted, along with `StreakFireAnimation`,
+`HeroHook`, `OutOfHeartsModal`, `components/ui/StatsBar.tsx` and the whole
+`components/stats-bar/` directory — all were imported nowhere.)
 
 ---
 
@@ -510,19 +544,19 @@ When editing any existing screen:
 
 | Token | Value | Usage |
 |---|---|---|
-| `magazine.nebulaTop` | `#0F0E0C` | Base top |
-| `magazine.nebulaMid` | `#1B1A17` | Base mid |
-| `magazine.accentBlue` | `#D0B063` | Active tab gradient start, links |
-| `magazine.accentViolet` | `#B08C3B` | Active tab gradient end |
-| `magazine.accentLilac` | `#E0BE6B` | Kickers, premium accents |
-| `magazine.heartsCoral` | `#C0555F` | Hearts pill |
-| `magazine.xpGold` | `#D0B063` | XP pill |
-| `magazine.streakFlame` | `#E2673C` | Streak pill |
-| `magazine.glassBg` | `#1B1A17` | Editorial card fill — **opaque**, same as `surface.card` |
-| `magazine.glassBorder` | `rgba(245,240,230,0.13)` | Editorial card border |
+| `magazine.nebulaTop` | `#08090A` | Base top |
+| `magazine.nebulaMid` | `#141618` | Base mid |
+| `magazine.accentBlue` | `#C9CDD2` | Active tab gradient start, links |
+| `magazine.accentViolet` | `#8C9198` | Active tab gradient end |
+| `magazine.accentLilac` | `#E2E6EA` | Kickers, premium accents |
+| `magazine.heartsCoral` | `#F85149` | Hearts pill |
+| `magazine.xpGold` | `#E2E6EA` | XP pill |
+| `magazine.streakFlame` | `#F2F4F6` | Streak pill |
+| `magazine.glassBg` | `#141618` | Editorial card fill — **opaque**, same as `surface.card` |
+| `magazine.glassBorder` | `rgba(255,255,255,0.15)` | Editorial card border |
 
-The `accentBlue` / `accentViolet` / `accentLilac` names are historical — they are
-brass steps now. Every gradient stop pair in `config/gradients.ts` runs *within*
+The `accentBlue` / `accentViolet` / `accentLilac` / `xpGold` / `streakFlame`
+names are historical — they are silver steps now. Every gradient stop pair in `config/gradients.ts` runs *within*
 one hue rather than across two.
 
 ### Font Roles
@@ -643,7 +677,7 @@ carries state for VoiceOver.
 Source: *"The UX Psychology Behind Apps People Can't Stop Using"* — uxpeak (YouTube, 11:34, `2TlIg3VokY8`).
 These are **behavioral rules**, not visual tokens. They govern flow design (onboarding, paywall, review queue, upgrade prompts), not colors or spacing. Nothing here overrides §Accessibility or §Core Principles.
 
-**Status:** all six implemented. The "Fluenci surfaces" lines below record where each principle landed; surfaces marked *(backlog)* are identified but not yet built.
+**Status:** partially implemented — the "Fluenci surfaces" lines below are a mix of what shipped and what was only identified. Treat each as a claim to verify against the code, not as a record of completed work. This section previously said "all six implemented" while the footer of this same file said "not yet implemented"; neither was accurate.
 
 The structural change all six depend on: **onboarding now runs before authentication.** Answers live in `lib/pending-onboarding.ts` (AsyncStorage, 7-day TTL) until a session exists, at which point `app/(public)/onboarding.tsx` flushes them into the profile and clears the draft. The root route guard in `app/_layout.tsx` was not modified — onboarding remains its destination and simply gained a pre-auth mode.
 
@@ -671,7 +705,9 @@ Free samples can lift purchase rate dramatically; receiving something first crea
 
 **Rule:** deliver a genuinely useful partial result *before* the account or paywall gate. Then offer to save/extend it. The gate should feel like preserving value already received, not paying an entry toll.
 
-Fluenci surfaces: placement test → show CEFR level + strengths/gaps **before** signup, then "save your level"; first lesson playable anonymously; free AI chat turns before quota prompt; writing feedback shows top corrections free, full rubric on upgrade; reading passage first page free.
+Fluenci surfaces: placement test → show CEFR level + strengths/gaps **before** signup, then "save your level" (**shipped** — this is the reciprocity moment); free AI chat turns before quota prompt; writing feedback shows top corrections free, full rubric on upgrade; reading passage first page free.
+
+**Anonymous first lesson: deliberately not built, and not planned.** An earlier version of this file listed it as shipped; it never was. The decision against it (2026-08-07): every learner gets an account, because the pre-auth placement test already delivers the reciprocity payoff, while anonymous play would cost per-user rate limiting on AI endpoints, a permanent anon hole in an otherwise clean `TO authenticated` RLS posture, broken install attribution, and a second code path through `LessonRunner`. The friction actually worth removing is the ~32 taps to the first teaching moment, which is a routing and step-count problem, not an auth one.
 
 Anti-pattern to avoid: "Create an account to see your results."
 
@@ -714,4 +750,13 @@ Fluenci surfaces: paywall — anchor on annual total or on a tutor-cost comparis
 
 ---
 
-**Last updated:** 2026-08-06 (Studio Graphite + Ink & Brass: palette, flat CTA, single ambient wash, mascot restricted to moments).
+**Last updated:** 2026-08-07 (monochrome palette: black/charcoal/silver/grey, two surviving hues, silver wash + StatBloom halos).
+
+> **Known drift, stated honestly.** This document mandates typography
+> primitives, `<TactileButton>` for CTAs and `<Surface>` for screens. The code
+> currently runs ~899 raw `<Text>` against 69 primitives, 241 raw `<Pressable>`
+> against 6 `<TactileButton>`, and 55 `<GradientBackground>` against 1
+> `<Surface>`. The rules above are the target, not a description of the tree.
+> The one that carries real risk is raw `<Text>`: inline font sizes do not
+> scale with Dynamic Type, which `.claude/rules/mobile-ui.md` requires and
+> App Review checks. Migrate high-traffic screens first.

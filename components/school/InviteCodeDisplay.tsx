@@ -34,13 +34,13 @@ export default function InviteCodeDisplay({ code, active, onRegenerate }: Invite
             width: 8,
             height: 8,
             borderRadius: 4,
-            backgroundColor: active ? '#4E9F6B' : '#7A756B',
+            backgroundColor: active ? '#3FB950' : '#5C6166',
             marginRight: 6,
           }}
         />
         <Text
           style={{
-            color: active ? '#4E9F6B' : '#7A756B',
+            color: active ? '#3FB950' : '#5C6166',
             fontSize: 12,
             fontFamily: 'Nunito_500Medium',
           }}
@@ -84,16 +84,16 @@ export default function InviteCodeDisplay({ code, active, onRegenerate }: Invite
           style={{
             flexDirection: 'row',
             alignItems: 'center',
-            backgroundColor: 'rgba(200, 162, 74, 0.2)',
+            backgroundColor: 'rgba(242, 244, 246, 0.2)',
             paddingHorizontal: 16,
             paddingVertical: 10,
             borderRadius: 10,
           }}
         >
-          <Ionicons name="copy-outline" size={16} color="#E0BE6B" />
+          <Ionicons name="copy-outline" size={16} color="#C9CDD2" />
           <Text
             style={{
-              color: '#E0BE6B',
+              color: '#C9CDD2',
               fontSize: 14,
               fontFamily: 'Nunito_600SemiBold',
               marginLeft: 6,
@@ -110,16 +110,16 @@ export default function InviteCodeDisplay({ code, active, onRegenerate }: Invite
           style={{
             flexDirection: 'row',
             alignItems: 'center',
-            backgroundColor: 'rgba(200, 162, 74, 0.2)',
+            backgroundColor: 'rgba(242, 244, 246, 0.2)',
             paddingHorizontal: 16,
             paddingVertical: 10,
             borderRadius: 10,
           }}
         >
-          <Ionicons name="share-outline" size={16} color="#E0BE6B" />
+          <Ionicons name="share-outline" size={16} color="#C9CDD2" />
           <Text
             style={{
-              color: '#E0BE6B',
+              color: '#C9CDD2',
               fontSize: 14,
               fontFamily: 'Nunito_600SemiBold',
               marginLeft: 6,
@@ -143,10 +143,10 @@ export default function InviteCodeDisplay({ code, active, onRegenerate }: Invite
               borderRadius: 10,
             }}
           >
-            <Ionicons name="refresh-outline" size={16} color="#C0555F" />
+            <Ionicons name="refresh-outline" size={16} color="#F85149" />
             <Text
               style={{
-                color: '#C0555F',
+                color: '#F85149',
                 fontSize: 14,
                 fontFamily: 'Nunito_600SemiBold',
                 marginLeft: 6,

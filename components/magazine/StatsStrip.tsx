@@ -25,11 +25,28 @@ import { useAppStore } from '../../stores/useAppStore';
 import { useHearts } from '../../hooks/useHearts';
 import { useAdultMode } from '../../hooks/useAdultMode';
 import { HeartsDisplay } from '../gamification/HeartsDisplay';
+import { StatBloom } from '../ui/GlowBackground';
 import { cefrBandForProficiencyLevel } from '../../lib/cefr-proficiency';
 import { colors, spacing, typography } from '../../config/theme';
 
 function Separator() {
   return <Text style={[styles.meta, styles.separator]}>·</Text>;
+}
+
+/**
+ * A value with a soft halo behind it.
+ *
+ * The monochrome palette has no accent colour to mark "this number matters", so
+ * emphasis is carried by light instead. The bloom is declared FIRST so React
+ * Native paints it under the numeral — see StatBloom's note on paint order.
+ */
+function BloomValue({ children }: { children: React.ReactNode }) {
+  return (
+    <View style={styles.bloomWrap}>
+      <StatBloom size={54} intensity={0.16} />
+      <Text style={[styles.meta, styles.emphasis]}>{children}</Text>
+    </View>
+  );
 }
 
 export function StatsStrip() {
@@ -55,10 +72,10 @@ export function StatsStrip() {
 
   return (
     <View style={styles.row}>
-      <Text style={[styles.meta, styles.emphasis]}>{streak}</Text>
+      <BloomValue>{streak}</BloomValue>
       <Text style={styles.meta}>DAY</Text>
       <Separator />
-      <Text style={[styles.meta, styles.emphasis]}>{totalXp.toLocaleString()}</Text>
+      <BloomValue>{totalXp.toLocaleString()}</BloomValue>
       <Text style={styles.meta}>XP</Text>
       <Separator />
       <HeartsDisplay hearts={hearts} maxHearts={maxHearts} isUnlimited={isUnlimited} size={14} />
@@ -82,10 +99,16 @@ const styles = StyleSheet.create({
     color: colors.text.tertiary,
     textTransform: 'uppercase',
   },
-  /** The value itself, not its unit. */
+  /** The value itself, not its unit. Brighter than the unit label so the pair
+   *  reads as one figure with a caption rather than two words. */
   emphasis: {
     fontFamily: typography.family.monoMedium,
-    color: colors.text.secondary,
+    color: colors.text.primary,
+  },
+  /** Hosts the halo. Needs to size itself to the numeral, so no fixed width. */
+  bloomWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   separator: {
     color: colors.text.quaternary,

@@ -148,7 +148,7 @@ export function ComprehensionQuestions({ questions, onComplete, onExit }: Props)
               editable={!isRevealed}
               style={{
                 borderWidth: 2,
-                borderColor: isRevealed ? (isCorrect ? '#4E9F6B' : '#C0555F') : colors.border.default,
+                borderColor: isRevealed ? (isCorrect ? '#3FB950' : '#F85149') : colors.border.default,
                 borderRadius: 14,
                 paddingHorizontal: 16,
                 paddingVertical: 10,
@@ -194,7 +194,7 @@ export function ComprehensionQuestions({ questions, onComplete, onExit }: Props)
             onPress={handleCheck}
             disabled={!canCheck}
             style={{
-              backgroundColor: canCheck ? '#C8A24A' : '#6D5424',
+              backgroundColor: canCheck ? '#F2F4F6' : '#4E5257',
               paddingVertical: 16,
               borderRadius: 14,
               alignItems: 'center',
@@ -205,13 +205,13 @@ export function ComprehensionQuestions({ questions, onComplete, onExit }: Props)
             {/* Brass is a light fill — the label is near-black on it. When
                 disabled the fill drops to brass.800, which needs a light label
                 instead. */}
-            <Text style={{ color: canCheck ? '#14120E' : '#9C968A', fontSize: 18, fontWeight: '600' }}>Check</Text>
+            <Text style={{ color: canCheck ? '#08090A' : '#B4B9BF', fontSize: 18, fontWeight: '600' }}>Check</Text>
           </Pressable>
         ) : (
           <Pressable
             onPress={handleNext}
             style={{
-              backgroundColor: '#C8A24A',
+              backgroundColor: '#F2F4F6',
               paddingVertical: 16,
               borderRadius: 14,
               alignItems: 'center',
@@ -219,7 +219,7 @@ export function ComprehensionQuestions({ questions, onComplete, onExit }: Props)
             accessibilityRole="button"
             accessibilityLabel={currentIndex + 1 < questions.length ? 'Next question' : 'Finish'}
           >
-            <Text style={{ color: '#14120E', fontSize: 18, fontWeight: '600' }}>
+            <Text style={{ color: '#08090A', fontSize: 18, fontWeight: '600' }}>
               {currentIndex + 1 < questions.length ? 'Next' : 'Finish'}
             </Text>
           </Pressable>

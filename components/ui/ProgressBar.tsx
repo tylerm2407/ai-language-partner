@@ -22,7 +22,7 @@ export function ProgressBar({ progress, height = 8 }: ProgressBarProps) {
       style={[
         { height },
         clampedProgress > 0 ? {
-          shadowColor: '#E0BE6B',
+          shadowColor: '#C9CDD2',
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.2,
           shadowRadius: 6,

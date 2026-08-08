@@ -89,7 +89,7 @@ export function LevelUpModal({ visible, newLevel, newTier, tierChanged, onDismis
     }
   }, [visible, cardScale, cardOpacity, backdropOpacity, levelScale]);
 
-  const confettiColors = [leagueConfig.color, colors.warning.base, colors.success.light, colors.league.diamond, '#E0A5B6', colors.premium.base];
+  const confettiColors = [leagueConfig.color, colors.warning.base, colors.success.light, colors.league.diamond, '#ADB3BA', colors.premium.base];
 
   return (
     <Modal transparent visible={visible} animationType="none" onRequestClose={onDismiss}>
@@ -101,7 +101,7 @@ export function LevelUpModal({ visible, newLevel, newTier, tierChanged, onDismis
             end={GRADIENT_END}
             style={{ borderRadius: 24, padding: 1.5 }}
           >
-            <View style={{ borderRadius: 22.5, padding: 32, alignItems: 'center', backgroundColor: '#1B1A17' }}>
+            <View style={{ borderRadius: 22.5, padding: 32, alignItems: 'center', backgroundColor: '#141618' }}>
               {/* Confetti */}
               <View style={{ position: 'absolute', top: '35%', left: '50%' }}>
                 {Array.from({ length: PARTICLE_COUNT }).map((_, i) => (
