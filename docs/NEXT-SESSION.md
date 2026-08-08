@@ -1,15 +1,21 @@
 # Next session — start here
 
-Handoff covering two sessions: the differentiation programme (2026-08-05 → 08-07)
-and the positioning/UI-review session (2026-08-07).
+Handoff covering three sessions: the differentiation programme
+(2026-08-05 → 08-07), the positioning/UI-review session (2026-08-07), and the
+palette session (2026-08-07).
 Written to be read cold: you should not need the previous conversation.
 
 **Current focus: App Store launch.** Anything that does not serve v1 shipping is
 parked. Hands-free is the headline differentiator.
 
-**Tree state at handoff: clean and fully pushed** (`76eb1ef` on `master`).
+**Tree state at handoff: clean and fully pushed** (`53673a3` on `master`).
 Baseline: typecheck clean, 0 lint errors, 422 tests across 23 suites.
 `npm run check` is the gate — keep it green.
+
+**Nothing in the UI has been verified on a device.** `npm run check` proves the
+tree compiles and the logic tests pass; there are no visual or snapshot tests in
+this project, so every contrast figure in `DESIGN.md` is computed arithmetic and
+no screen has been looked at since the palette churn. See §1.4.
 
 ---
 
@@ -76,6 +82,35 @@ config/theme.ts             DESIGN.md
 If you must run two, split strictly by file and commit often. `config/theme.ts`
 and `DESIGN.md` should belong to exactly one session at a time.
 
+**Three specific ways this went wrong, so you can recognise them:**
+
+1. **Selecting files to revert by "everything dirty minus my list".** Scoping a
+   `git checkout --` that way silently includes the *other* session's
+   uncommitted work. It only survived because the other session had committed
+   minutes earlier. Enumerate the exact paths you intend to discard.
+2. **Restoring a shared doc wholesale.** `git checkout <ref> -- DESIGN.md`
+   reverted another session's unrelated corrections to it (typeface roles, the
+   anonymous-first-lesson record, the dead-code list). If you restore a file
+   that more than one workstream edits, diff the two versions first and
+   re-apply what was not yours.
+3. **A palette committed inside someone else's feature commit.** `76eb1ef`
+   bundles the monochrome palette with hands-free reconnection and dead-code
+   deletion, so `git revert` on it was not available — the palette had to be
+   restored *forward*. Keep palette changes in their own commit.
+
+### 1.4 Look at the app before touching the UI further
+
+The palette was rewritten three times in one day and reverted to where it
+started. What that churn did *not* include is anyone opening the app. Two things
+carried over from the experiments and have never been seen against indigo:
+
+- the **flat pill CTA** (the Duolingo slab is gone — `TactileButton` presses with
+  a 0.96 scale instead of a collapsing bottom edge)
+- the **mono stats row** on Home, which replaced the streak/XP/hearts chips
+
+Both were designed against a warm-gold and then a silver palette. They may or may
+not still read well under indigo. This is a five-minute look, not a project.
+
 ---
 
 ## 2. What is live
@@ -130,6 +165,53 @@ DESIGN.md §What We Retired.
 The mascot itself is still placeholder star geometry; a **dragon** is the planned
 replacement, and `components/mascot/Mascot.tsx` carries the contrast constraints
 it has to satisfy.
+
+### 2.2 If a palette ever does change again — method, and four traps
+
+Recorded because two of these were learned the expensive way.
+
+**Method.** Do not hand-map colours. Mapping old hex → new hex by eye is what put
+stray mauve and rose into the brass palette: several distinct source colours
+collapsed onto one replacement, and category hues got invented along the way.
+The reliable technique, used for the revert in `3a4bbb6`:
+
+> Strip every colour literal from both the old and the new version of a file. If
+> what remains is byte-identical, that file changed by colour alone and can be
+> restored verbatim from git. 72 of 91 files qualified. Files that fail the test
+> get positional substitution if their colour *counts* match, and hand work
+> otherwise. Then re-audit the whole tree for any value outside the palette.
+
+**Trap 1 — fill polarity.** Indigo is a *dark* fill carrying a white label.
+Brass and silver were both *light* fills carrying near-black labels. Swapping
+between the two families inverts `text.onPrimary` and silently breaks every
+hard-coded `'#fff'` sitting on a primary background. There were eight such sites.
+
+**Trap 2 — the disabled CTA.** `indigo.200` (`#C7D2FE`) is the disabled fill and
+is very light. A white label on it is **1.4:1**. `ComprehensionQuestions` and
+`WritingExercise` now use a dark indigo label on the disabled state only; the
+enabled state is untouched white-on-`indigo.600`. This is a deliberate departure
+from the pre-brass baseline, not drift.
+
+Same category: `TactileButton` `danger` uses `error.dark`, not `error.base`. The
+label is 17px bold — under the 14pt "large text" threshold — so it needs the full
+4.5:1, and `error.base` only reaches 3.8:1.
+
+**Trap 3 — the mascot eats light accents.** Every time the brand accent has been
+a light colour, `Mascot.tsx` has been painted in it, dropping the ivory eyes to
+2–3:1 and blanking the face. The file documents this; the dragon has to satisfy
+it too.
+
+**Trap 4 — PowerShell will corrupt the tree on a bulk edit.** In PS 5.1
+`Get-Content -Raw` and `Set-Content` default to the **system ANSI codepage**, not
+UTF-8. A sweep written that way turned every em-dash in 77 files into `â€”` and
+had to be fully reverted. Read and write explicitly:
+
+```powershell
+$t = [System.IO.File]::ReadAllText($path, [System.Text.Encoding]::UTF8)
+[System.IO.File]::WriteAllText($path, $t, (New-Object System.Text.UTF8Encoding($false)))
+```
+
+Then confirm with a grep for `â€` before committing.
 
 **Read `launch-readiness.html` at the repo root before doing any launch work.**
 It is the living punch list: 2 blockers left (RevenueCat production keys are
