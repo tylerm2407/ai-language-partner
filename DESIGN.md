@@ -476,6 +476,18 @@ Every PR must pass:
 | Rainbow unit-tile gradients | Six tonal one-hue pairs | Two-hue sweeps read as a consumer game |
 | Saturated semantics (`#22C55E` / `#EF4444` / `#F59E0B`) | Desaturated jade / clay / amber | A traffic light next to a gold accent |
 | White labels on primary fills | `text.onPrimary` `#14120E` | Polarity inverted — brass is a *light* fill. Fixed at 8 call sites (reading CTAs, writing submit, record button, role switcher, word tooltip) |
+| Cool greys (`#9CA3AF`, `#999`, `#64748B`, `#E2E8F0`, `#2A2F3A`, `#1E2330`, …) | Warm text scale + `surface.cardAlt` | Slate greys over warm graphite read blue |
+| Sky/amber/violet accents (`#38BDF8`, `#FBBF24`, `#A78BFA`, `#60A5FA`, `#F472B6`) | `#86B4CE` / `#D9913C` / `#B497C4` / `#E0A5B6` | Achievement, league, level-badge and mistake-category colors |
+| Gold streak flame (`#FFD700`) | `streak.fire` `#F0763D` | Gold is the brand accent now — a blazing streak read as a CTA |
+
+**The palette is closed.** Every hex in `app/`, `components/`, `lib/` and
+`config/` is now either a theme token or one of the documented values above. Two
+deliberate exceptions:
+
+- `components/avatar/**` — skin, hair, eye and shirt swatches are user choices
+  and must stay diverse. Not part of the theme.
+- `components/ui/AnimatedGalaxy.tsx` and `components/ui/ShinyText.tsx` — dead
+  code (imported nowhere), left at their old values. Delete rather than retune.
 
 ---
 

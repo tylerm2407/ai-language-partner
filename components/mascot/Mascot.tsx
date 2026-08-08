@@ -45,12 +45,19 @@ interface MascotProps {
 
 const SIZE_PX: Record<MascotSize, number> = { xs: 32, sm: 48, md: 80, lg: 128 };
 
-const STAR_FILL = colors.indigo[500];
-const STAR_STROKE = colors.indigo[700];
-const TRAIL_COLOR = colors.indigo[400];
-const EYE_COLOR = '#F2EFE9'; // near-ivory — AAA against indigo-500
+// The body fill is brass.700, not brass.500. Brass is a LIGHT accent, and the
+// ivory eyes only reach 2.1:1 on brass.500 — the old indigo.500 body gave them
+// 4.7:1. brass.700 restores that to 4.1:1 while keeping the body 3.2:1 against
+// surface.base.
+//
+// This whole component is placeholder geometry pending the dragon; treat these
+// as the contrast constraints the new artwork has to satisfy, not as a palette.
+const STAR_FILL = colors.brass[700];
+const STAR_STROKE = colors.brass[900];
+const TRAIL_COLOR = colors.brass[300];
+const EYE_COLOR = '#F2EFE9'; // near-ivory — 4.1:1 on STAR_FILL
 const PUPIL_COLOR = '#0F0E0C';
-const MOUTH_COLOR = colors.indigo[800];
+const MOUTH_COLOR = colors.brass[900];
 const SPARK_COLOR = '#EFBB7C';
 
 /**

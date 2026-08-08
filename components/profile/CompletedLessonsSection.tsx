@@ -75,7 +75,7 @@ export function CompletedLessonsSection({ userId, previewCount = 5 }: Props) {
         </View>
       ) : !completions || completions.length === 0 ? (
         <View className="bg-dark-card rounded-2xl p-5 items-center">
-          <Ionicons name="book-outline" size={28} color="#6b7280" />
+          <Ionicons name="book-outline" size={28} color="#7A756B" />
           <Text className="text-sm text-text-secondary mt-2 text-center">
             No lessons completed yet. Finish your first lesson to see it here.
           </Text>
