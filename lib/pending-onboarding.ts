@@ -15,7 +15,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type {
   AvatarConfig,
   LanguageCode,
-  MotivationReason,
   ProficiencyLevel,
 } from '../types';
 
@@ -41,7 +40,6 @@ export interface PlacementResult {
 export interface PendingOnboarding {
   version: number;
   targetLanguage: LanguageCode | null;
-  motivation: MotivationReason | null;
   idealL2Self: string | null;
   level: ProficiencyLevel | null;
   /** Null when the learner skipped the placement test. */
@@ -71,7 +69,6 @@ export type PendingOnboardingDraft = Omit<PendingOnboarding, 'version' | 'starte
 export function emptyPendingOnboarding(): PendingOnboardingDraft {
   return {
     targetLanguage: null,
-    motivation: null,
     idealL2Self: null,
     level: null,
     placement: null,

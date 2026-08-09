@@ -71,10 +71,13 @@ export type LanguageCode = 'en' | 'es' | 'fr' | 'de' | 'it' | 'pt' | 'ja' | 'ko'
 export type ProficiencyLevel = 'beginner' | 'elementary' | 'intermediate' | 'upper_intermediate' | 'advanced';
 
 /**
- * Motivation — why the learner is here. Collected in onboarding.
- * Now durably persisted to `user_profiles.motivation_reason` (migration 028).
- * The Zustand `useAppStore.motivation` slot remains as a transient hint for
- * the onboarding flow; source of truth is the profile.
+ * Motivation — why the learner is here. Persisted on
+ * `user_profiles.motivation_reason` (migration 028).
+ *
+ * Nothing writes it as of 2026-08-08: the onboarding step that collected it was
+ * removed because no code path ever read the value back. The column, this type
+ * and the `upsertProfile` mapping all remain, so reinstating the step is a UI
+ * change rather than a migration. See app/(public)/onboarding.tsx.
  */
 export type MotivationReason = 'travel' | 'family' | 'work' | 'brain' | 'curious';
 

@@ -18,6 +18,9 @@ import {
   markOnboardingComplete,
   updateOnboardingChecklist,
   updateAvatarConfig,
+  fetchCourses,
+  fetchUnits,
+  fetchLessons,
 } from '../../lib/supabase-queries';
 import { useAppStore } from '../../stores/useAppStore';
 import { Button } from '../../components/ui/Button';
@@ -41,7 +44,6 @@ import {
 import type {
   LanguageCode,
   ProficiencyLevel,
-  MotivationReason,
   AvatarConfig,
 } from '../../types';
 
@@ -72,14 +74,6 @@ const LEVELS: { value: ProficiencyLevel; label: string; description: string }[] 
   { value: 'advanced', label: 'Advanced', description: 'I\'m nearly fluent' },
 ];
 
-const MOTIVATIONS: { value: MotivationReason; label: string; description: string }[] = [
-  { value: 'travel', label: 'Travel', description: 'Order, ask directions, connect on trips' },
-  { value: 'family', label: 'Family & friends', description: 'Talk with the people who matter' },
-  { value: 'work', label: 'Work & study', description: 'Unlock career or school opportunities' },
-  { value: 'brain', label: 'Brain fitness', description: 'Keep your mind sharp' },
-  { value: 'curious', label: 'Just curious', description: 'See where the journey takes me' },
-];
-
 /**
  * The two ways Fluenci can present progress. `adultMode: true` suppresses the
  * pressure mechanics — see lib/adult-mode.ts, which is the single source of
@@ -99,9 +93,20 @@ const MODES: { value: boolean; label: string; description: string }[] = [
   },
 ];
 
+/**
+ * The 'motivation' step was removed on 2026-08-08. It asked why the learner
+ * was here and wrote the answer to `user_profiles.motivation_reason` — a
+ * column, and a Zustand slot, that nothing in the app has ever read. Its only
+ * consumer was Home's `HeroHook`, deleted as dead code. A whole step in the
+ * path to the first teaching moment cannot be justified by data no code path
+ * consumes; the `idealSelf` step immediately after it collects the L2MSS
+ * signal that the research actually rests on, and it survives.
+ *
+ * The column and the `MotivationReason` type are left in place, so restoring
+ * the step is a UI change rather than a migration.
+ */
 type Step =
   | 'language'
-  | 'motivation'
   | 'idealSelf'
   | 'level'
   | 'placement'
@@ -112,7 +117,6 @@ type Step =
 
 const ALL_STEPS: Step[] = [
   'language',
-  'motivation',
   'idealSelf',
   'level',
   'placement',
@@ -130,7 +134,6 @@ const DISPLAY_NAME_MAX_CHARS = 24;
 // adjust" rather than "fill this out". The CTA always names the current
 // selection, so a default is a visible recommendation and never a silent one.
 const DEFAULT_LANGUAGE: LanguageCode = 'es';
-const DEFAULT_MOTIVATION: MotivationReason = 'travel';
 const DEFAULT_LEVEL: ProficiencyLevel = 'beginner';
 const DEFAULT_DAILY_GOAL = 10;
 /**
@@ -145,6 +148,29 @@ const DEFAULT_ADULT_MODE = false;
 /** A band counts as a strength when the learner got most of it right. */
 const STRENGTH_THRESHOLD = 0.5;
 
+/**
+ * The first lesson of the learner's course, or null if there isn't one.
+ *
+ * Composed from the same three queries the Learn screen uses, so it resolves to
+ * the lesson the curriculum would have shown anyway. Bounded at three units:
+ * if the first units of a published course carry no lessons, that is a content
+ * problem and the learner should go to Home rather than wait on a walk.
+ */
+async function resolveFirstLessonId(targetLanguage: LanguageCode): Promise<string | null> {
+  try {
+    const [course] = await fetchCourses(targetLanguage);
+    if (!course) return null;
+    const units = await fetchUnits(course.id);
+    for (const unit of units.slice(0, 3)) {
+      const lessons = await fetchLessons(unit.id);
+      if (lessons.length > 0) return lessons[0].id;
+    }
+  } catch (err) {
+    console.error('resolveFirstLessonId failed:', err);
+  }
+  return null;
+}
+
 export default function OnboardingScreen() {
   // `authLoading` matters: useAuth resolves the session asynchronously, so
   // `user` is null on the first render even for a signed-in learner. Treating
@@ -152,7 +178,7 @@ export default function OnboardingScreen() {
   // back into the flow they just finished.
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const { loadUserData, setMotivation: storeSetMotivation } = useAppStore();
+  const { loadUserData } = useAppStore();
 
   // `hydrated` gates the first render until the local draft has been read, so
   // a resumed flow never flashes the defaults first. `flushing` covers the
@@ -170,7 +196,6 @@ export default function OnboardingScreen() {
 
   const [step, setStep] = useState<Step>('language');
   const [targetLanguage, setTargetLanguage] = useState<LanguageCode>(DEFAULT_LANGUAGE);
-  const [motivation, setMotivation] = useState<MotivationReason>(DEFAULT_MOTIVATION);
   const [idealL2Self, setIdealL2Self] = useState<string>('');
   const [level, setLevel] = useState<ProficiencyLevel>(DEFAULT_LEVEL);
   const [placement, setPlacement] = useState<PlacementResult | null>(null);
@@ -196,7 +221,6 @@ export default function OnboardingScreen() {
         targetLanguage: draft.targetLanguage ?? DEFAULT_LANGUAGE,
         level: draft.level ?? DEFAULT_LEVEL,
         dailyGoalMinutes: draft.dailyGoalMinutes ?? DEFAULT_DAILY_GOAL,
-        motivationReason: draft.motivation,
         idealL2Self: draft.idealL2Self,
         adultMode: draft.adultMode ?? DEFAULT_ADULT_MODE,
         ...(draft.displayName ? { displayName: draft.displayName } : {}),
@@ -218,24 +242,31 @@ export default function OnboardingScreen() {
       });
       await markOnboardingComplete(userId);
 
-      // Keep the chosen motivation in the store for this session. Its only
-      // reader was Home's HeroHook, which was already unimported and has now
-      // been deleted — so nothing consumes this today. Left in place because
-      // the value is cheap and motivation-aware copy is a live idea; if that
-      // does not land, drop `motivation` from useAppStore too.
-      storeSetMotivation(draft.motivation);
       await clearPendingOnboarding();
       await loadUserData(userId);
+
+      // Land the learner in their first lesson, not on Home. Home is a page of
+      // things to choose between, offered at the exact moment they have just
+      // said they want to start — the setup ends without ever reaching a
+      // teaching moment. Falls back to Home whenever the curriculum cannot be
+      // resolved, so this can never strand anyone on a blank screen.
+      //
+      // Home is pushed first and the lesson on top of it, rather than replacing
+      // straight into the lesson: `LessonRunner`'s exit is `router.back()`, and
+      // with nothing beneath it that button would do nothing.
+      const lessonId = await resolveFirstLessonId(draft.targetLanguage ?? DEFAULT_LANGUAGE);
       router.replace('/(app)');
+      if (lessonId) {
+        router.push({ pathname: '/learn/[lessonId]', params: { lessonId } } as never);
+      }
     },
-    [loadUserData, router, storeSetMotivation],
+    [loadUserData, router],
   );
 
   const applyPending = useCallback((pending: PendingOnboarding) => {
     setStartedAt(pending.startedAt);
     setCompletedAt(pending.completedAt);
     if (pending.targetLanguage) setTargetLanguage(pending.targetLanguage);
-    if (pending.motivation) setMotivation(pending.motivation);
     if (pending.idealL2Self) setIdealL2Self(pending.idealL2Self);
     if (pending.level) setLevel(pending.level);
     if (pending.placement) setPlacement(pending.placement);
@@ -303,7 +334,6 @@ export default function OnboardingScreen() {
   const draft: PendingOnboardingDraft = useMemo(
     () => ({
       targetLanguage,
-      motivation,
       idealL2Self: idealL2Self.trim() ? idealL2Self.trim() : null,
       level,
       placement,
@@ -313,7 +343,7 @@ export default function OnboardingScreen() {
       adultMode,
       completedAt,
     }),
-    [targetLanguage, motivation, idealL2Self, level, placement, displayName, avatarConfig, dailyGoal, adultMode, completedAt],
+    [targetLanguage, idealL2Self, level, placement, displayName, avatarConfig, dailyGoal, adultMode, completedAt],
   );
 
   // Mirror every answer to local storage so a backgrounded or killed app
@@ -440,45 +470,7 @@ export default function OnboardingScreen() {
             ))}
 
             <View className="mt-6">
-              <Button label={`Continue with ${languageName}`} onPress={() => setStep('motivation')} />
-            </View>
-          </>
-        )}
-
-        {step === 'motivation' && (
-          <>
-            <Text className="text-[28px] font-bold text-text-primary mb-2" accessibilityRole="header">
-              Why are you learning?
-            </Text>
-            <Text className="text-base text-text-secondary mb-6">
-              We&apos;ll tailor your experience to what matters most.
-            </Text>
-
-            {MOTIVATIONS.map((m) => (
-              <Pressable
-                key={m.value}
-                className={`p-4 rounded-2xl mb-3 ${
-                  motivation === m.value
-                    ? 'bg-primary-tint border-2 border-primary'
-                    : 'bg-dark-card border-2 border-transparent'
-                }`}
-                onPress={() => setMotivation(m.value)}
-                accessibilityRole="button"
-                accessibilityLabel={`${m.label}: ${m.description}`}
-                accessibilityState={{ selected: motivation === m.value }}
-              >
-                <Text className="text-lg font-semibold text-text-primary">{m.label}</Text>
-                <Text className="text-sm text-text-secondary mt-1">{m.description}</Text>
-              </Pressable>
-            ))}
-
-            <View className="flex-row gap-3 mt-6">
-              <View className="flex-1">
-                <Button label="Back" variant="secondary" onPress={() => setStep('language')} />
-              </View>
-              <View className="flex-1">
-                <Button label="Continue" onPress={() => setStep('idealSelf')} />
-              </View>
+              <Button label={`Continue with ${languageName}`} onPress={() => setStep('idealSelf')} />
             </View>
           </>
         )}
@@ -512,7 +504,7 @@ export default function OnboardingScreen() {
 
             <View className="flex-row gap-3 mt-2">
               <View className="flex-1">
-                <Button label="Back" variant="secondary" onPress={() => setStep('motivation')} />
+                <Button label="Back" variant="secondary" onPress={() => setStep('language')} />
               </View>
               <View className="flex-1">
                 <Button

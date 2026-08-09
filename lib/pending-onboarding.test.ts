@@ -41,7 +41,6 @@ function makeDraft(overrides: Partial<PendingOnboardingDraft> = {}): PendingOnbo
   return {
     ...emptyPendingOnboarding(),
     targetLanguage: 'es',
-    motivation: 'travel',
     level: 'elementary',
     dailyGoalMinutes: 10,
     ...overrides,
@@ -132,6 +131,9 @@ describe('forward compatibility', () => {
         version: PENDING_ONBOARDING_SCHEMA_VERSION,
         startedAt: Date.now() - 1_000,
         targetLanguage: 'es',
+        // `motivation` was dropped from the draft when the onboarding step was
+        // removed. Kept here deliberately: a draft written by a shipped build
+        // still carries it, and an unknown key must not invalidate the draft.
         motivation: 'travel',
         idealL2Self: null,
         level: 'elementary',

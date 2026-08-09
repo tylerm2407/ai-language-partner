@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../config/theme';
+import { useMotion } from '../../hooks/useMotion';
 import { ProgressBar } from '../ui/ProgressBar';
 import { Button } from '../ui/Button';
 import type { ProficiencyLevel, LanguageCode } from '../../types';
@@ -163,6 +164,16 @@ export const LEVEL_LABELS: Record<ProficiencyLevel, string> = {
 
 type PlacementAnswer = { level: ProficiencyLevel; correct: boolean };
 
+/**
+ * How long the answer stays on screen before the test moves on.
+ *
+ * Long enough for the correct/incorrect reveal to register, short enough that
+ * it does not feel like waiting. This replaces a "Next" tap on each of the
+ * first nine questions — 20 taps became 10, on the first screen a new learner
+ * ever sees.
+ */
+const AUTO_ADVANCE_MS = 250;
+
 function toBands(answers: PlacementAnswer[]): PlacementBandResult[] {
   return BAND_ORDER.map((level) => {
     const forLevel = answers.filter((a) => a.level === level);
@@ -176,13 +187,38 @@ function toBands(answers: PlacementAnswer[]): PlacementBandResult[] {
 
 export function PlacementTest({ targetLanguage, onComplete, onSkip }: PlacementTestProps) {
   const questions = PLACEMENT_QUESTIONS[targetLanguage] ?? PLACEMENT_QUESTIONS.es;
+  const { shouldReduce } = useMotion();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<PlacementAnswer[]>([]);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [showResult, setShowResult] = useState(false);
+  const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const question = questions[currentIndex];
   const progress = currentIndex / questions.length;
+  const isLastQuestion = currentIndex + 1 >= questions.length;
+
+  useEffect(() => () => {
+    if (advanceTimer.current) clearTimeout(advanceTimer.current);
+  }, []);
+
+  const goToNext = () => {
+    setCurrentIndex((i) => i + 1);
+    setSelectedOption(null);
+    setShowResult(false);
+  };
+
+  // The result screen lives in the onboarding flow, not here — it is the
+  // reciprocity moment and needs to own its own CTA.
+  const finish = () => {
+    const correctCount = answers.filter((a) => a.correct).length;
+    onComplete({
+      suggestedLevel: scoreToLevel(correctCount),
+      correctCount,
+      totalCount: questions.length,
+      bands: toBands(answers),
+    });
+  };
 
   const handleSelect = (optionIndex: number) => {
     if (selectedOption !== null) return;
@@ -192,24 +228,18 @@ export function PlacementTest({ targetLanguage, onComplete, onSkip }: PlacementT
       { level: question.level, correct: optionIndex === question.correctIndex },
     ]);
     setShowResult(true);
-  };
 
-  // The result screen lives in the onboarding flow, not here — it is the
-  // reciprocity moment and needs to own its own CTA.
-  const handleNext = () => {
-    if (currentIndex + 1 >= questions.length) {
-      const correctCount = answers.filter((a) => a.correct).length;
-      onComplete({
-        suggestedLevel: scoreToLevel(correctCount),
-        correctCount,
-        totalCount: questions.length,
-        bands: toBands(answers),
-      });
-      return;
-    }
-    setCurrentIndex((i) => i + 1);
-    setSelectedOption(null);
-    setShowResult(false);
+    // The last question keeps its explicit button: auto-advancing into the
+    // result screen would take the learner somewhere new without a tap, which
+    // is disorienting exactly where the payoff is.
+    if (isLastQuestion) return;
+
+    // Reduced motion means no unrequested screen changes, so those learners
+    // keep the manual "Next" rather than getting a zero-delay jump — a jump
+    // would also hide the correct/incorrect reveal they just earned.
+    if (shouldReduce) return;
+
+    advanceTimer.current = setTimeout(goToNext, AUTO_ADVANCE_MS);
   };
 
   return (
@@ -287,10 +317,13 @@ export function PlacementTest({ targetLanguage, onComplete, onSkip }: PlacementT
         );
       })}
 
-      {/* Next button */}
-      {showResult && (
+      {/* Only shown where the test does not advance on its own. */}
+      {showResult && (isLastQuestion || shouldReduce) && (
         <View className="mt-4">
-          <Button label={currentIndex + 1 >= questions.length ? 'See my level' : 'Next'} onPress={handleNext} />
+          <Button
+            label={isLastQuestion ? 'See my level' : 'Next'}
+            onPress={isLastQuestion ? finish : goToNext}
+          />
         </View>
       )}
     </View>
