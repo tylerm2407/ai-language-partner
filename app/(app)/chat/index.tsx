@@ -19,6 +19,7 @@ import type { ConversationMessage, Assignment, AssignmentSubmission, LanguageCod
 import { Ionicons } from '@expo/vector-icons';
 import { getOrCreateChatSession, saveChatMessage, loadChatMessages, fetchStudentAssignments, submitAssignment } from '../../../lib/supabase-queries';
 import { getTargetLanguage } from '../../../lib/language';
+import { setAudioSessionMode, playbackModeFor } from '../../../lib/audio-session';
 import {
   DEFAULT_VOICE_GENDER,
   loadVoiceGender,
@@ -324,10 +325,7 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
       const base64 = await getTextToSpeech(text, targetLanguage, user?.id, { voiceGender });
       const dataUri = `data:audio/mpeg;base64,${base64}`;
 
-      await Audio.setAudioModeAsync({
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: isHandsFree,
-      });
+      await setAudioSessionMode(playbackModeFor(isHandsFree));
       const result = await Audio.Sound.createAsync({ uri: dataUri });
       sound = result.sound;
       ttsSoundRef.current = sound;

@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import { File } from 'expo-file-system/next';
 import { colors, spacing } from '../../config/theme';
+import { setAudioSessionMode, recordingModeFor } from '../../lib/audio-session';
 import { LiveComposer } from './LiveComposer';
 import type { VoiceGender } from '../../lib/voice-preference';
 
@@ -118,11 +119,7 @@ export function ChatInput({
       const permission = await Audio.requestPermissionsAsync();
       if (!permission.granted) return;
 
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: withSilenceDetection,
-      });
+      await setAudioSessionMode(recordingModeFor(withSilenceDetection));
 
       const recordingOptions = {
         ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
@@ -179,6 +176,9 @@ export function ChatInput({
         recordingRef.current = null;
         try { await failed.stopAndUnloadAsync(); } catch { /* ignore */ }
       }
+      // Never leave the session in a recording mode after a failed start —
+      // on iOS that keeps the mic held and routes playback to the earpiece.
+      await setAudioSessionMode('idle');
     } finally {
       isStartingRef.current = false;
     }
@@ -199,11 +199,7 @@ export function ChatInput({
       await rec.stopAndUnloadAsync();
       const uri = rec.getURI();
 
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: false,
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: true,
-      });
+      await setAudioSessionMode('handsfree-play');
 
       if (uri && onVoiceMessage) {
         setIsTranscribing(true);
@@ -240,6 +236,9 @@ export function ChatInput({
       }
     } catch (err) {
       console.error('Failed to stop hands-free recording:', err);
+      // The stop threw, so the mode change above may never have run. Release
+      // the mic; the next startRecording re-enters handsfree-record.
+      await setAudioSessionMode('handsfree-play');
       onHandsFreeStateChange?.('LISTENING');
     }
     isStoppingRef.current = false;
@@ -256,9 +255,7 @@ export function ChatInput({
       await rec.stopAndUnloadAsync();
       const uri = rec.getURI();
 
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: false,
-      });
+      await setAudioSessionMode('playback');
 
       // Check minimum recording duration to avoid Whisper errors on quick taps
       const recordingDuration = Date.now() - recordingStartTimeRef.current;
@@ -294,6 +291,7 @@ export function ChatInput({
       }
     } catch (err) {
       console.error('Failed to stop recording:', err);
+      await setAudioSessionMode('idle');
     }
   };
 
@@ -322,6 +320,8 @@ export function ChatInput({
           .stopAndUnloadAsync()
           .catch(() => { /* ignore */ })
           .then(() => { /* normalize to Promise<void> */ });
+        // We were holding the mic when this unmounted — hand the session back.
+        setAudioSessionMode('idle').catch(() => { /* logged inside */ });
       }
       setIsRecording(false);
       isStoppingRef.current = false;

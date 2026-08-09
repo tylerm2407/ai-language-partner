@@ -157,6 +157,23 @@ export function currentAudioSessionMode(): AudioSessionMode {
 }
 
 /**
+ * Mode selectors for callers whose only variable is whether the session is
+ * hands-free (chat TTS playback, chat recording).
+ *
+ * These are functions rather than ternaries inlined at the call sites because
+ * there is no component-render test harness in this project: a screen's choice
+ * of mode is otherwise unassertable, and choosing the wrong one is the exact
+ * bug class this module exists to prevent.
+ */
+export function playbackModeFor(handsFree: boolean): AudioSessionMode {
+  return handsFree ? 'handsfree-play' : 'playback';
+}
+
+export function recordingModeFor(handsFree: boolean): AudioSessionMode {
+  return handsFree ? 'handsfree-record' : 'record';
+}
+
+/**
  * Return to the mode active before the last successful change. For teardown
  * and error paths, where the caller knows it is done but not what came before.
  */

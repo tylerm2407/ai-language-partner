@@ -7,11 +7,15 @@
  * must never be left enabled, and concurrent mode changes must not race.
  */
 
+import * as fs from 'fs';
+import * as path from 'path';
 import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av';
 import {
   setAudioSessionMode,
   currentAudioSessionMode,
   restorePreviousAudioSessionMode,
+  playbackModeFor,
+  recordingModeFor,
   __resetAudioSessionForTests,
   type AudioSessionMode,
 } from './audio-session';
@@ -161,6 +165,58 @@ describe('transitions', () => {
     await setAudioSessionMode('record');
     await setAudioSessionMode('playback');
     expect(currentAudioSessionMode()).toBe('playback');
+  });
+});
+
+describe('mode selectors — what the chat screens request', () => {
+  it('plays hands-free TTS in a background-capable mode and one-shot TTS in playback', () => {
+    // chat/index.tsx speakReply: a hands-free reply has to survive the screen
+    // locking; a one-shot reply must not hold the session afterwards.
+    expect(playbackModeFor(true)).toBe('handsfree-play');
+    expect(playbackModeFor(false)).toBe('playback');
+  });
+
+  it('records with silence detection in a background-capable mode', () => {
+    // ChatInput startRecording: withSilenceDetection is the hands-free loop.
+    expect(recordingModeFor(true)).toBe('handsfree-record');
+    expect(recordingModeFor(false)).toBe('record');
+  });
+
+  it('never selects a recording mode for playback', async () => {
+    for (const handsFree of [true, false]) {
+      await setAudioSessionMode('record'); // ensure a real transition
+      setAudioModeAsync.mockClear();
+      await setAudioSessionMode(playbackModeFor(handsFree));
+      expect(setAudioModeAsync.mock.calls[0][0].allowsRecordingIOS).toBe(false);
+    }
+  });
+});
+
+describe('sole ownership of setAudioModeAsync', () => {
+  // Invariant 5 in docs/NEXT-SESSION.md §6: this module is the only place that
+  // may touch the device audio session. Four call sites drifted out of it once
+  // and produced the earpiece-routing bug; a grep gate is cheaper than review
+  // discipline, and audio bugs are the category App Review rejects for.
+  const ROOT = path.join(__dirname, '..');
+  const SCANNED_DIRS = ['app', 'components', 'hooks', 'lib'];
+  const ALLOWED = [path.join('lib', 'audio-session.ts'), path.join('lib', 'audio-session.test.ts')];
+
+  function sourceFiles(dir: string): string[] {
+    const out: string[] = [];
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) out.push(...sourceFiles(full));
+      else if (/\.tsx?$/.test(entry.name)) out.push(full);
+    }
+    return out;
+  }
+
+  it('is the only module that calls it', () => {
+    const offenders = SCANNED_DIRS.flatMap((d) => sourceFiles(path.join(ROOT, d)))
+      .filter((file) => !ALLOWED.some((allowed) => file.endsWith(allowed)))
+      .filter((file) => fs.readFileSync(file, 'utf8').includes('setAudioModeAsync'));
+
+    expect(offenders.map((f) => path.relative(ROOT, f))).toEqual([]);
   });
 });
 
