@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, TextInput, Alert, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, Alert, Pressable, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../../components/ui/Button';
@@ -106,7 +106,15 @@ export default function AuthScreen() {
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-      <View className="flex-1 justify-center px-8">
+      {/* Scrolls rather than centres-and-clips: at the larger Dynamic Type
+          sizes this form (heading, subtitle, pending-progress card, two
+          inputs, CTA and two links) is taller than a small phone's screen. */}
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
+        keyboardShouldPersistTaps="handled"
+      >
+      <View className="px-8">
         <Text className="text-3xl font-bold text-text-primary mb-2" accessibilityRole="header">
           {title}
         </Text>
@@ -204,6 +212,7 @@ export default function AuthScreen() {
           )}
         </View>
       </View>
+      </ScrollView>
       </KeyboardAvoidingView>
       </SafeAreaView>
     </GradientBackground>

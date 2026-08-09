@@ -209,14 +209,14 @@ export default function SubscriptionScreen() {
             <View className="flex-row items-center gap-2 mb-2">
               <Badge variant="success" label="Current Plan" />
             </View>
-            <View className="flex-row items-baseline mb-3">
+            <View className="flex-row flex-wrap items-baseline mb-3">
               <Text className="text-2xl font-bold text-text-primary">Free</Text>
               <Text className="text-sm text-text-secondary ml-2">no card required</Text>
             </View>
             {(PLAN_FEATURES.starter ?? []).map((feature, idx) => (
               <View key={idx} className="flex-row items-center mb-2">
                 <Ionicons name="checkmark-circle" size={18} color={colors.success.light} />
-                <Text className="text-sm text-text-secondary ml-2">{feature}</Text>
+                <Text className="flex-1 text-sm text-text-secondary ml-2">{feature}</Text>
               </View>
             ))}
           </View>
@@ -297,7 +297,7 @@ export default function SubscriptionScreen() {
                   )}
                 </View>
 
-                <View className="flex-row items-baseline mb-1">
+                <View className="flex-row flex-wrap items-baseline mb-1">
                   <Text className="text-2xl font-bold text-text-primary">
                     {perMonthString ?? pkg.product.priceString}
                   </Text>
@@ -320,7 +320,7 @@ export default function SubscriptionScreen() {
                 {features.map((feature, idx) => (
                   <View key={idx} className="flex-row items-center mb-2">
                     <Ionicons name="checkmark-circle" size={18} color={colors.success.light} />
-                    <Text className="text-sm text-text-secondary ml-2">{feature}</Text>
+                    <Text className="flex-1 text-sm text-text-secondary ml-2">{feature}</Text>
                   </View>
                 ))}
 
@@ -370,7 +370,7 @@ export default function SubscriptionScreen() {
         )}
 
         {/* Legal — App Store requires terms + privacy on the paywall */}
-        <View className="flex-row justify-center gap-4 mt-4">
+        <View className="flex-row flex-wrap justify-center gap-4 mt-4">
           <Pressable onPress={() => Linking.openURL('https://fluenci.com/terms')} accessibilityRole="link">
             <Text className="text-xs text-text-tertiary underline">Terms of Use</Text>
           </Pressable>

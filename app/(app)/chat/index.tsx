@@ -602,7 +602,7 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
                     </View>
                     <View className="ml-4 flex-1">
                       <Text className="text-base font-semibold text-text-primary">{scenario.label}</Text>
-                      <Text className="text-sm text-text-secondary mt-0.5" numberOfLines={2}>
+                      <Text className="text-sm text-text-secondary mt-0.5">
                         {scenario.description}
                       </Text>
                     </View>
@@ -729,7 +729,7 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
             disabled={submitting}
             accessibilityRole="button"
             accessibilityLabel="Submit assignment"
-            className="h-9 px-3 rounded-full items-center justify-center flex-row bg-success"
+            className="min-h-9 py-1.5 px-3 rounded-full items-center justify-center flex-row bg-success"
           >
             <Ionicons name="checkmark-circle-outline" size={16} color={colors.text.onPrimary} />
             <Text className="text-xs font-semibold text-white ml-1.5">
@@ -747,7 +747,7 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
           accessibilityRole="button"
           accessibilityLabel={handsFreeActive ? 'End live voice conversation' : 'Start live voice conversation'}
           accessibilityHint="Real-time bidirectional voice conversation with AI tutor"
-          className={`h-9 rounded-full items-center justify-center flex-row ${
+          className={`min-h-9 py-1.5 rounded-full items-center justify-center flex-row ${
             handsFreeActive ? 'w-9 bg-success' : 'px-3 bg-dark-card'
           }`}
         >

@@ -1,4 +1,4 @@
-import { View, Text, Pressable, Platform, Alert } from 'react-native';
+import { View, Text, Pressable, ScrollView, Platform, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useEffect, useState, useRef } from 'react';
@@ -116,8 +116,13 @@ export default function ReviewScreen() {
         <ProgressBar progress={progress} />
       </View>
 
-      {/* Card */}
-      <View className="flex-1 items-center justify-center px-8">
+      {/* Card. Scrolls rather than centres-and-clips: with the answer shown
+          this is five stacked text blocks plus four rating buttons, which does
+          not fit a small phone at the larger Dynamic Type sizes. */}
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 }}
+      >
         <Text className="text-2xl font-bold text-text-primary text-center mb-8">
           {card?.targetText ?? 'Loading...'}
         </Text>
@@ -189,7 +194,7 @@ export default function ReviewScreen() {
             accessibilityHint="Reveals the translation"
           />
         )}
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }

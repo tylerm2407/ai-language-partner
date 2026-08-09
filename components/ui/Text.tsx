@@ -9,6 +9,26 @@
  *
  * All wrappers default color to text.primary; pass `tone="secondary"` /
  * `tone="tertiary"` / `tone="onPrimary"` / tone="accent" to override.
+ *
+ * DYNAMIC TYPE
+ * React Native's `allowFontScaling` defaults to true and nothing in this tree
+ * turns it off, so every one of these — and every raw <Text> — already grows
+ * with the iOS Larger Text slider. The problem is the other end: that slider
+ * reaches 310% at the accessibility sizes, and a container sized for 15pt body
+ * copy does not survive 46pt. What App Review's Larger Text pass actually
+ * catches is clipped and overlapping text, not text that failed to grow.
+ *
+ * So each primitive carries a ceiling rather than a switch. The caps below are
+ * headroom for readability with a stop before layout death, and a caller can
+ * raise or lower one by passing `maxFontSizeMultiplier` — it lands in `...rest`
+ * and wins over the default.
+ *
+ * Body and Caption get the most room (1.6) because they are the reading sizes
+ * and the ones a low-vision learner is actually adjusting for; they also live
+ * in flow layout that can grow. Heading (1.4) and Hero (1.3) get less: they
+ * start large, they sit in headers and celebration cards with less vertical
+ * slack, and they are already device-scaled by `useDisplayScale` on top of
+ * whatever the user's setting contributes.
  */
 
 import React from 'react';
@@ -44,6 +64,14 @@ function familyFor(weight: Weight): string {
   return typography.family[weight];
 }
 
+/** Dynamic Type ceilings — see the file header for why each is where it is. */
+const MAX_SCALE = {
+  heading: 1.4,
+  body: 1.6,
+  caption: 1.6,
+  hero: 1.3,
+} as const;
+
 // ─── Heading ─────────────────────────────────────────────────────────────
 interface HeadingProps extends TextProps {
   level?: 1 | 2 | 3;
@@ -66,6 +94,7 @@ export function Heading({ level = 1, tone = 'primary', style, children, ...rest 
   return (
     <RNText
       accessibilityRole="header"
+      maxFontSizeMultiplier={MAX_SCALE.heading}
       style={[baseStyle, style]}
       {...rest}
     >
@@ -90,7 +119,11 @@ export function Body({ size = 'md', tone = 'primary', weight, style, children, .
     color: toneColor(tone),
     fontFamily: familyFor(effectiveWeight),
   };
-  return <RNText style={[baseStyle, style]} {...rest}>{children}</RNText>;
+  return (
+    <RNText maxFontSizeMultiplier={MAX_SCALE.body} style={[baseStyle, style]} {...rest}>
+      {children}
+    </RNText>
+  );
 }
 
 // ─── Caption ─────────────────────────────────────────────────────────────
@@ -107,7 +140,11 @@ export function Caption({ tone = 'secondary', size = 'md', style, children, ...r
     color: toneColor(tone),
     fontFamily: familyFor(scale.weight),
   };
-  return <RNText style={[baseStyle, style]} {...rest}>{children}</RNText>;
+  return (
+    <RNText maxFontSizeMultiplier={MAX_SCALE.caption} style={[baseStyle, style]} {...rest}>
+      {children}
+    </RNText>
+  );
 }
 
 // ─── Hero (celebration-only display face) ────────────────────────────────
@@ -129,5 +166,9 @@ export function Hero({ tone = 'primary', style, children, ...rest }: HeroProps) 
     fontFamily: typography.family.display,
     letterSpacing: -0.8,
   };
-  return <RNText style={[baseStyle, style]} {...rest}>{children}</RNText>;
+  return (
+    <RNText maxFontSizeMultiplier={MAX_SCALE.hero} style={[baseStyle, style]} {...rest}>
+      {children}
+    </RNText>
+  );
 }

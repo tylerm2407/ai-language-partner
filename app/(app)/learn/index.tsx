@@ -258,7 +258,7 @@ export default function LearnScreen() {
           )}
 
           {/* Tab selector */}
-          <View className="flex-row gap-2 mb-2">
+          <View className="flex-row flex-wrap gap-2 mb-2">
             {TAB_CONFIG.map((tab) => {
               const isActive = activeTab === tab.key;
               return (
@@ -324,7 +324,7 @@ export default function LearnScreen() {
                       <Ionicons name="reader-outline" size={22} color={colors.league.diamond} />
                       <View className="flex-1 ml-3">
                         <Text className="text-base font-medium text-text-primary">{passage.title}</Text>
-                        <View className="flex-row items-center gap-2 mt-1">
+                        <View className="flex-row flex-wrap items-center gap-2 mt-1">
                           <Text className="text-sm text-text-secondary">{passage.wordCount} words</Text>
                           <View className={`${CEFR_COLORS[passage.cefrLevel]?.bg ?? 'bg-surface'} rounded-md px-1.5 py-0.5`}>
                             <Text className={`${CEFR_COLORS[passage.cefrLevel]?.text ?? 'text-text-secondary'} text-xs font-sans-bold`}>
@@ -360,7 +360,8 @@ export default function LearnScreen() {
                       style={{
                         flexDirection: 'row',
                         alignItems: 'center',
-                        height: 44,
+                        minHeight: 44,
+                        paddingVertical: spacing.xs,
                         paddingHorizontal: spacing.md,
                         borderRadius: radii.pill,
                         backgroundColor: isActive ? colors.action.primaryFill : colors.surface.cardAlt,
@@ -382,7 +383,7 @@ export default function LearnScreen() {
                             backgroundColor: 'rgba(255,255,255,0.25)',
                             borderRadius: 10,
                             minWidth: 20,
-                            height: 20,
+                            minHeight: 20,
                             alignItems: 'center',
                             justifyContent: 'center',
                             paddingHorizontal: 6,
@@ -507,10 +508,10 @@ export default function LearnScreen() {
                   >
                     <Ionicons name="create-outline" size={22} color={colors.premium.base} />
                     <View className="flex-1 ml-3">
-                      <Text className="text-base font-medium text-text-primary" numberOfLines={2}>
+                      <Text className="text-base font-medium text-text-primary">
                         {prompt.promptText}
                       </Text>
-                      <View className="flex-row items-center gap-2 mt-1">
+                      <View className="flex-row flex-wrap items-center gap-2 mt-1">
                         <Text className="text-sm text-text-secondary">
                           {prompt.minWords ?? '?'}-{prompt.maxWords ?? '?'} words
                         </Text>

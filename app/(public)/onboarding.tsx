@@ -767,7 +767,7 @@ export default function OnboardingScreen() {
             {DAILY_GOALS.map((goal) => (
               <Pressable
                 key={goal}
-                className={`p-4 rounded-2xl mb-3 flex-row items-center justify-between ${
+                className={`p-4 rounded-2xl mb-3 flex-row flex-wrap items-center justify-between gap-1 ${
                   dailyGoal === goal
                     ? 'bg-primary-tint border-2 border-primary'
                     : 'bg-dark-card border-2 border-transparent'

@@ -69,6 +69,9 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
+    // Wraps rather than clips: at the accessibility text sizes this row's
+    // 12pt mono runs past the screen width and the hearts fall off the end.
+    flexWrap: 'wrap',
     gap: spacing.xxs,
     marginBottom: spacing.lg,
   },
