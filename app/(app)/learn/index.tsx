@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Pressable, Alert, FlatList } from 'react-native';
+import { View, Text, ScrollView, Pressable, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useEffect, useState, useCallback } from 'react';
@@ -21,6 +21,7 @@ import { GradientBackground } from '../../../components/ui/GradientBackground';
 import { GlassSurface } from '../../../components/ui/GlassSurface';
 import { LearningPath } from '../../../components/learning-path/LearningPath';
 import { Heading, Body, Caption } from '../../../components/ui/Text';
+import { loadErrorCopy, saveErrorCopy, type ErrorCopy } from '../../../lib/error-copy';
 import { colors, spacing, radii } from '../../../config/theme';
 import type { Course, Unit, Lesson, ReadingPassage, WritingPrompt, ReadingBook, UserBookProgress } from '../../../types';
 import { Ionicons } from '@expo/vector-icons';
@@ -46,6 +47,49 @@ const CEFR_COLORS: Record<string, { bg: string; text: string }> = {
   B2: { bg: 'bg-error-bg', text: 'text-error' },
 };
 
+/**
+ * Inline failure state with a retry, used everywhere this screen loads
+ * something. Preferred over `Alert.alert('Error', …)`: the learner keeps the
+ * screen they were on, the copy says what to do next, and the retry is one tap
+ * away rather than a full re-navigation (CLAUDE.md §5).
+ */
+function InlineError({
+  copy,
+  onRetry,
+  retryLabel = 'Try again',
+}: {
+  copy: ErrorCopy;
+  onRetry: () => void;
+  retryLabel?: string;
+}) {
+  return (
+    <View style={{ paddingVertical: spacing.md, alignItems: 'center' }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'flex-start',
+          marginBottom: spacing.sm,
+          paddingHorizontal: spacing.md,
+        }}
+      >
+        <Ionicons name="alert-circle" size={16} color={colors.error.base} style={{ marginTop: 2 }} />
+        <View style={{ marginLeft: spacing.xxs, flexShrink: 1 }}>
+          <Body size="sm" weight="semibold" tone="error">{copy.title}</Body>
+          <Body size="sm" tone="tertiary">{copy.message}</Body>
+        </View>
+      </View>
+      <Pressable
+        onPress={onRetry}
+        accessibilityRole="button"
+        accessibilityLabel={retryLabel}
+        style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.md }}
+      >
+        <Body size="sm" weight="semibold" tone="accent">{retryLabel}</Body>
+      </Pressable>
+    </View>
+  );
+}
+
 type CourseTab = 'vocab' | 'reading' | 'writing';
 
 const TAB_CONFIG: { key: CourseTab; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
@@ -68,7 +112,11 @@ export default function LearnScreen() {
   const [libraryBooks, setLibraryBooks] = useState<ReadingBook[]>([]);
   const [selectedCefrTab, setSelectedCefrTab] = useState<string>('A1');
   const [loadingLibrary, setLoadingLibrary] = useState(false);
-  const [libraryError, setLibraryError] = useState<string | null>(null);
+  const [libraryError, setLibraryError] = useState<ErrorCopy | null>(null);
+  const [unitsError, setUnitsError] = useState<ErrorCopy | null>(null);
+  const [passagesError, setPassagesError] = useState<ErrorCopy | null>(null);
+  const [promptsError, setPromptsError] = useState<ErrorCopy | null>(null);
+  const [generateError, setGenerateError] = useState<ErrorCopy | null>(null);
   const [inProgressBooks, setInProgressBooks] = useState<{ book: ReadingBook; progress: UserBookProgress }[]>([]);
   const [bookProgressMap, setBookProgressMap] = useState<Map<string, UserBookProgress>>(new Map());
 
@@ -90,6 +138,7 @@ export default function LearnScreen() {
   const loadCourseContent = useCallback(async (courseId: string) => {
     if (units[courseId]) return; // already loaded
     setLoadingUnits(true);
+    setUnitsError(null);
     try {
       const courseUnits = await fetchUnits(courseId);
       const lessonResults = await Promise.all(
@@ -98,8 +147,10 @@ export default function LearnScreen() {
         )
       );
       setUnits((prev) => ({ ...prev, [courseId]: lessonResults }));
-    } catch {
-      Alert.alert('Error', 'Failed to load course content. Please try again.');
+    } catch (err) {
+      // An empty lesson path and an outage look identical to a learner, so
+      // this has to be visible rather than swallowed.
+      setUnitsError(loadErrorCopy(err, 'your lessons'));
     } finally {
       setLoadingUnits(false);
     }
@@ -111,28 +162,38 @@ export default function LearnScreen() {
     }
   }, [selectedCourseId, loadCourseContent]);
 
+  const loadPassages = useCallback(async (courseId: string) => {
+    setPassagesError(null);
+    try {
+      const passages = await fetchReadingPassagesByCourse(courseId);
+      setReadingPassages((prev) => ({ ...prev, [courseId]: passages }));
+    } catch (err) {
+      setPassagesError(loadErrorCopy(err, 'the reading passages'));
+    }
+  }, []);
+
+  const loadPrompts = useCallback(async (courseId: string) => {
+    setPromptsError(null);
+    try {
+      const prompts = await fetchWritingPromptsByCourse(courseId);
+      setWritingPrompts((prev) => ({ ...prev, [courseId]: prompts }));
+    } catch (err) {
+      setPromptsError(loadErrorCopy(err, 'the writing prompts'));
+    }
+  }, []);
+
   const selectTab = async (tab: CourseTab) => {
     setActiveTab(tab);
     if (!selectedCourseId) return;
 
     if (tab === 'reading' && !readingPassages[selectedCourseId]) {
-      try {
-        const passages = await fetchReadingPassagesByCourse(selectedCourseId);
-        setReadingPassages((prev) => ({ ...prev, [selectedCourseId]: passages }));
-      } catch {
-        Alert.alert('Error', 'Failed to load reading passages.');
-      }
+      await loadPassages(selectedCourseId);
       // Also load library books and in-progress books
       loadLibraryBooks(selectedCefrTab);
       loadInProgressBooks();
     }
     if (tab === 'writing' && !writingPrompts[selectedCourseId]) {
-      try {
-        const prompts = await fetchWritingPromptsByCourse(selectedCourseId);
-        setWritingPrompts((prev) => ({ ...prev, [selectedCourseId]: prompts }));
-      } catch {
-        Alert.alert('Error', 'Failed to load writing prompts.');
-      }
+      await loadPrompts(selectedCourseId);
     }
   };
 
@@ -155,8 +216,8 @@ export default function LearnScreen() {
         }
         setBookProgressMap(progressMap);
       }
-    } catch {
-      setLibraryError("Couldn't load the library. Check your connection and try again.");
+    } catch (err) {
+      setLibraryError(loadErrorCopy(err, 'the library'));
     } finally {
       setLoadingLibrary(false);
     }
@@ -170,8 +231,8 @@ export default function LearnScreen() {
       if (!userId) return;
       const books = await fetchInProgressBooks(userId, profile.targetLanguage);
       setInProgressBooks(books);
-    } catch {
-      setLibraryError("Couldn't load your books in progress. Check your connection and try again.");
+    } catch (err) {
+      setLibraryError(loadErrorCopy(err, 'your books in progress'));
     }
   };
 
@@ -293,12 +354,24 @@ export default function LearnScreen() {
           /* Vocab tab — Learning Path */
           loadingUnits ? (
             <LoadingScreen message="Loading lessons..." />
+          ) : unitsError ? (
+            <InlineError
+              copy={unitsError}
+              onRetry={() => { if (selectedCourseId) loadCourseContent(selectedCourseId); }}
+            />
           ) : courseUnits && selectedCourseId ? (
             <LearningPath units={courseUnits} courseId={selectedCourseId} />
           ) : null
         ) : activeTab === 'reading' ? (
           /* Reading tab */
           <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 100 }}>
+            {passagesError && (
+              <InlineError
+                copy={passagesError}
+                onRetry={() => { if (selectedCourseId) loadPassages(selectedCourseId); }}
+              />
+            )}
+
             {/* Continue Reading Section */}
             {inProgressBooks.length > 0 && (
               <View style={{ marginTop: 8 }}>
@@ -404,22 +477,7 @@ export default function LearnScreen() {
               <Body size="sm" tone="tertiary" style={{ paddingVertical: spacing.md }}>Loading library...</Body>
             ) : libraryError ? (
               /* Non-blocking library error — distinct from "no books yet" */
-              <View style={{ paddingVertical: spacing.md, alignItems: 'center' }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm, paddingHorizontal: spacing.md }}>
-                  <Ionicons name="alert-circle" size={16} color={colors.error.base} />
-                  <Body size="sm" tone="error" style={{ marginLeft: spacing.xxs, flexShrink: 1 }}>
-                    {libraryError}
-                  </Body>
-                </View>
-                <Pressable
-                  onPress={retryLibrary}
-                  accessibilityRole="button"
-                  accessibilityLabel="Retry loading library"
-                  style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.md }}
-                >
-                  <Body size="sm" weight="semibold" tone="accent">Try again</Body>
-                </Pressable>
-              </View>
+              <InlineError copy={libraryError} onRetry={retryLibrary} />
             ) : libraryBooks.length === 0 ? (
               <View style={{ paddingVertical: spacing.md, alignItems: 'center' }}>
                 <Body size="sm" tone="tertiary" style={{ marginBottom: spacing.sm }}>
@@ -429,14 +487,15 @@ export default function LearnScreen() {
                   onPress={async () => {
                     if (!profile?.targetLanguage) return;
                     setLoadingLibrary(true);
+                    setGenerateError(null);
                     try {
                       const { error } = await supabase.functions.invoke('generate-story', {
                         body: { language: profile.targetLanguage, cefrLevel: selectedCefrTab, count: 3 },
                       });
                       if (error) throw error;
                       await loadLibraryBooks(selectedCefrTab);
-                    } catch {
-                      Alert.alert('Error', 'Failed to generate stories. Please try again.');
+                    } catch (err) {
+                      setGenerateError(saveErrorCopy(err, 'new stories'));
                     } finally {
                       setLoadingLibrary(false);
                     }
@@ -457,6 +516,14 @@ export default function LearnScreen() {
                     Generate Stories
                   </Body>
                 </Pressable>
+                {/* The button above is its own retry, so this states the
+                    failure without repeating the affordance. */}
+                {generateError && (
+                  <View style={{ marginTop: spacing.sm, paddingHorizontal: spacing.md }}>
+                    <Body size="sm" weight="semibold" tone="error">{generateError.title}</Body>
+                    <Body size="sm" tone="tertiary">{generateError.message}</Body>
+                  </View>
+                )}
               </View>
             ) : (
               <FlatList
@@ -493,7 +560,12 @@ export default function LearnScreen() {
               </Pressable>
             </GlassSurface>
 
-            {!selectedCourseId ? null : !writingPrompts[selectedCourseId] ? (
+            {!selectedCourseId ? null : promptsError ? (
+              <InlineError
+                copy={promptsError}
+                onRetry={() => loadPrompts(selectedCourseId)}
+              />
+            ) : !writingPrompts[selectedCourseId] ? (
               <Text className="text-sm text-text-secondary py-4">Loading prompts...</Text>
             ) : writingPrompts[selectedCourseId].length === 0 ? (
               <Text className="text-sm text-text-secondary py-4">No writing prompts available yet.</Text>

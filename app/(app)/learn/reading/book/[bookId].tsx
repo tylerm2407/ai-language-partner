@@ -15,6 +15,7 @@ import {
 } from '../../../../../lib/supabase-queries';
 import { BookReader } from '../../../../../components/reading/BookReader';
 import { supabase } from '../../../../../lib/supabase';
+import { loadErrorCopy, saveErrorCopy, type ErrorCopy } from '../../../../../lib/error-copy';
 import type { ReadingBook, BookAnnotation, UserBookProgress, Subscription } from '../../../../../types';
 import { colors } from '../../../../../config/theme';
 
@@ -28,38 +29,41 @@ export default function BookDetailScreen() {
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isReading, setIsReading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ErrorCopy | null>(null);
   // Guards against re-awarding XP when the reader re-fires onComplete (paging
   // back and forth across the last page, narration auto-advance, etc.).
   const hasCompletedRef = useRef(false);
 
   const isUnlimitedPlan = subscription?.tier === 'vip' && subscription?.isActive;
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!bookId || !user) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      const [bookData, annData, progressData, sub] = await Promise.all([
+        fetchBookById(bookId),
+        fetchBookAnnotations(bookId),
+        fetchUserBookProgress(user.id, bookId),
+        fetchSubscription(user.id),
+      ]);
 
-    const load = async () => {
-      try {
-        const [bookData, annData, progressData, sub] = await Promise.all([
-          fetchBookById(bookId),
-          fetchBookAnnotations(bookId),
-          fetchUserBookProgress(user.id, bookId),
-          fetchSubscription(user.id),
-        ]);
-
-        setBook(bookData);
-        setAnnotations(annData);
-        setProgress(progressData[0] ?? null);
-        setSubscription(sub);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Failed to load book');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    load();
+      setBook(bookData);
+      setAnnotations(annData);
+      setProgress(progressData[0] ?? null);
+      setSubscription(sub);
+    } catch (e) {
+      // Was `setError(e.message)`, which rendered the raw Supabase/Postgres
+      // string straight into the UI. See lib/error-copy.ts.
+      setError(loadErrorCopy(e, 'this book'));
+    } finally {
+      setIsLoading(false);
+    }
   }, [bookId, user]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const handlePositionChange = useCallback(async (position: number, percent: number) => {
     if (!user || !bookId) return;
@@ -98,7 +102,11 @@ export default function BookDetailScreen() {
       .single();
 
     if (!courses) {
-      Alert.alert('Error', 'No course found for this language');
+      // Not a failure — there is genuinely nowhere to file the card yet.
+      Alert.alert(
+        "Can't save that word",
+        `There's no ${book.language.toUpperCase()} course yet, so there's nowhere to add this card. It will work once one is published.`,
+      );
       return null;
     }
 
@@ -117,7 +125,8 @@ export default function BookDetailScreen() {
       .single();
 
     if (cardError) {
-      Alert.alert('Error', 'Failed to create review card');
+      const { title, message } = saveErrorCopy(cardError, 'that word to your reviews');
+      Alert.alert(title, message);
       return null;
     }
 
@@ -156,9 +165,10 @@ export default function BookDetailScreen() {
         `You earned ${xpReward} XP for finishing "${book.title}"!`,
         [{ text: 'Continue', onPress: () => setIsReading(false) }]
       );
-    } catch {
+    } catch (err) {
       hasCompletedRef.current = false; // allow a retry if the write failed
-      Alert.alert('Error', 'Failed to save completion');
+      const { title, message } = saveErrorCopy(err, 'your progress on this book');
+      Alert.alert(title, message);
     }
   }, [user, bookId, book, progress?.completedAt]);
 
@@ -173,8 +183,24 @@ export default function BookDetailScreen() {
   if (error || !book) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.surface.raised, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-        <Text style={{ fontSize: 16, color: colors.error.light, textAlign: 'center' }}>{error ?? 'Book not found'}</Text>
-        <Pressable onPress={() => router.back()} style={{ marginTop: 16 }} accessibilityRole="button">
+        <Text style={{ fontSize: 16, fontWeight: '600', color: colors.error.light, textAlign: 'center' }}>
+          {error?.title ?? 'Book not found'}
+        </Text>
+        <Text style={{ fontSize: 15, color: colors.text.tertiary, textAlign: 'center', marginTop: 8 }}>
+          {error?.message ?? "We couldn't find this book. It may have been removed."}
+        </Text>
+        {/* A failed load is usually transient, so retry comes before leaving. */}
+        {error && (
+          <Pressable
+            onPress={load}
+            style={{ marginTop: 16, minHeight: 44, justifyContent: 'center' }}
+            accessibilityRole="button"
+            accessibilityLabel="Try loading this book again"
+          >
+            <Text style={{ fontSize: 16, fontWeight: '600', color: colors.action.accent }}>Try again</Text>
+          </Pressable>
+        )}
+        <Pressable onPress={() => router.back()} style={{ marginTop: 16, minHeight: 44, justifyContent: 'center' }} accessibilityRole="button">
           <Text style={{ fontSize: 16, color: colors.action.accent }}>Go Back</Text>
         </Pressable>
       </View>

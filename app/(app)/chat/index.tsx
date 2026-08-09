@@ -20,6 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { getOrCreateChatSession, saveChatMessage, loadChatMessages, fetchStudentAssignments, submitAssignment } from '../../../lib/supabase-queries';
 import { getTargetLanguage } from '../../../lib/language';
 import { setAudioSessionMode, playbackModeFor } from '../../../lib/audio-session';
+import { saveErrorCopy } from '../../../lib/error-copy';
 import {
   DEFAULT_VOICE_GENDER,
   loadVoiceGender,
@@ -227,7 +228,8 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
               ]);
             } catch (err) {
               console.error('Failed to submit assignment:', err);
-              Alert.alert('Error', 'Failed to submit. Please try again.');
+              const { title, message } = saveErrorCopy(err, 'your assignment');
+              Alert.alert(title, `${message}\n\nYour conversation is still here.`);
             } finally {
               setSubmitting(false);
             }
