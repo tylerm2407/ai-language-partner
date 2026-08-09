@@ -1,11 +1,19 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { MagazineGlassCard } from './MagazineGlassCard';
 import { colors, typography } from '../../config/theme';
 import { localDayKey } from '../../lib/dates';
+import type { ErrorCopy } from '../../lib/error-copy';
 import type { DailyStats } from '../../types';
 
 interface WeekInWordsProps {
   stats: DailyStats[];
+  /**
+   * Set when the week's stats failed to load. Without this the card renders
+   * 0 XP and seven empty dots, which is exactly what a real week of no
+   * practice looks like — an outage would read as the learner's own record.
+   */
+  error?: ErrorCopy | null;
+  onRetry?: () => void;
 }
 
 const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
@@ -13,7 +21,27 @@ const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 // with fontWeight, which makes Android synthesize a second bolding pass.
 const serifFont = typography.family.serif;
 
-export function WeekInWords({ stats }: WeekInWordsProps) {
+export function WeekInWords({ stats, error, onRetry }: WeekInWordsProps) {
+  if (error) {
+    return (
+      <MagazineGlassCard style={styles.card}>
+        <Text style={styles.sectionTitle}>Week in words</Text>
+        <Text style={styles.errorTitle}>{error.title}</Text>
+        <Text style={styles.errorBody}>{error.message}</Text>
+        {onRetry && (
+          <Pressable
+            onPress={onRetry}
+            accessibilityRole="button"
+            accessibilityLabel="Try loading this week's stats again"
+            style={styles.retry}
+          >
+            <Text style={styles.retryLabel}>Try again</Text>
+          </Pressable>
+        )}
+      </MagazineGlassCard>
+    );
+  }
+
   const today = new Date();
   const dayOfWeek = today.getDay();
   const mondayOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
@@ -82,6 +110,26 @@ const styles = StyleSheet.create({
   },
   content: {
     alignItems: 'center',
+  },
+  errorTitle: {
+    fontFamily: typography.family.semibold,
+    fontSize: 15,
+    color: colors.text.primary,
+  },
+  errorBody: {
+    fontFamily: typography.family.regular,
+    fontSize: 13,
+    color: colors.text.tertiary,
+    marginTop: 4,
+  },
+  retry: {
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  retryLabel: {
+    fontFamily: typography.family.semibold,
+    fontSize: 13,
+    color: colors.action.accent,
   },
   bigNumber: {
     fontFamily: serifFont,

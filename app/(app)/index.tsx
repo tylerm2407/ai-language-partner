@@ -32,6 +32,7 @@ import { MagazineDailyChallenges } from '../../components/magazine/MagazineDaily
 import { WeekInWords } from '../../components/magazine/WeekInWords';
 import { MagazineGlassCard } from '../../components/magazine/MagazineGlassCard';
 import { Heading } from '../../components/ui/Text';
+import { loadErrorCopy, type ErrorCopy } from '../../lib/error-copy';
 import { colors, typography, spacing } from '../../config/theme';
 import type { DailyStats } from '../../types';
 
@@ -43,6 +44,7 @@ export default function HomeScreen() {
   // streak/challenge/quota days from it (migration 044). One-shot per session.
   useTimezoneSync();
   const [weeklyStats, setWeeklyStats] = useState<DailyStats[]>([]);
+  const [weeklyStatsError, setWeeklyStatsError] = useState<ErrorCopy | null>(null);
   const { showStreak, showDailyChallenges } = useAdultMode();
   useLevel(); // level-up detection mirrors xpLevel/leagueTier into the store
   const { showRepairModal, brokenStreak, freezesAvailable, repairWithFreeze, dismissRepair } = useStreakProtection();
@@ -116,11 +118,14 @@ export default function HomeScreen() {
     monday.setDate(today.getDate() - mondayOffset);
     const startDate = localDayKey(monday);
     const endDate = localDayKey(today);
+    setWeeklyStatsError(null);
     try {
       const stats = await fetchStatsRange(userId, startDate, endDate);
       setWeeklyStats(stats);
-    } catch {
-      // Silently fail — chart just shows empty
+    } catch (err) {
+      // An empty week and a failed fetch render identically, so this has to be
+      // stated rather than swallowed (CLAUDE.md §5).
+      setWeeklyStatsError(loadErrorCopy(err, 'this week'));
     }
   }, []);
 
@@ -188,7 +193,11 @@ export default function HomeScreen() {
             {showDailyChallenges && <MagazineDailyChallenges dailyStats={dailyStats ?? null} />}
 
             {/* Week in words */}
-            <WeekInWords stats={weeklyStats} />
+            <WeekInWords
+              stats={weeklyStats}
+              error={weeklyStatsError}
+              onRetry={() => { if (user?.id) loadWeeklyStats(user.id); }}
+            />
 
             {/* Quick Actions */}
             <Text style={styles.sectionTitle}>Quick Actions</Text>

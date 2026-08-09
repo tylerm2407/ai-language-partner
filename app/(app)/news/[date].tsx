@@ -12,6 +12,7 @@ import { GradientBorderCard } from '../../../components/ui/GradientBorderCard';
 import { TactileButton } from '../../../components/ui/TactileButton';
 import { levelToNewsTier } from '../../../config/app';
 import { getTargetLanguage } from '../../../lib/language';
+import { loadErrorCopy, type ErrorCopy } from '../../../lib/error-copy';
 import type { DailyNewsArticle, VocabularyHighlight } from '../../../types';
 import { colors } from '../../../config/theme';
 
@@ -25,6 +26,7 @@ export default function NewsReaderScreen() {
   const [showTranslation, setShowTranslation] = useState<boolean>(false);
   const [readAt, setReadAt] = useState<string | null>(null);
   const [isMarking, setIsMarking] = useState<boolean>(false);
+  const [error, setError] = useState<ErrorCopy | null>(null);
 
   const targetLanguage = getTargetLanguage(profile);
   const tier = levelToNewsTier(profile?.level ?? 'intermediate');
@@ -34,6 +36,7 @@ export default function NewsReaderScreen() {
     // language. The skeleton stays up until the effect re-runs.
     if (!user?.id || !date || !targetLanguage) return;
     setIsLoading(true);
+    setError(null);
     try {
       const data = await fetchDailyNews(targetLanguage, tier, date);
       setArticle(data);
@@ -41,8 +44,11 @@ export default function NewsReaderScreen() {
         const existing = await fetchNewsReadStatus(user.id, data.id).catch(() => null);
         setReadAt(existing);
       }
-    } catch {
-      // Silently fail — show empty state
+    } catch (err) {
+      // "No article today" and "the fetch failed" are different facts and used
+      // to render as the same empty state, which reads as an app with no
+      // content rather than a request that needs retrying.
+      setError(loadErrorCopy(err, "today's article"));
     } finally {
       setIsLoading(false);
     }
@@ -97,6 +103,23 @@ export default function NewsReaderScreen() {
               <View className="h-4 bg-dark-card rounded w-full mb-2" />
               <View className="h-4 bg-dark-card rounded w-full mb-2" />
               <View className="h-4 bg-dark-card rounded w-5/6 mb-2" />
+            </View>
+          ) : error ? (
+            <View className="mt-8 items-center">
+              <Ionicons name="cloud-offline-outline" size={48} color={colors.text.quaternary} />
+              <Text className="text-text-primary text-base font-semibold mt-4 text-center">
+                {error.title}
+              </Text>
+              <Text className="text-text-secondary text-sm mt-2 text-center">
+                {error.message}
+              </Text>
+              <View className="mt-6 self-stretch">
+                <TactileButton
+                  label="Try again"
+                  onPress={loadArticle}
+                  accessibilityLabel="Try loading today's article again"
+                />
+              </View>
             </View>
           ) : !article ? (
             <View className="mt-8 items-center">
