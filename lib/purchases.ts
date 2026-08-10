@@ -149,6 +149,17 @@ export function isMonthlyPackage(pkg: PurchasesPackage): boolean {
   return pkg.product.identifier.toLowerCase().includes('monthly');
 }
 
+/**
+ * Whole-percent saving of an annual price against twelve months of the monthly
+ * one. Returns 0 when there is nothing honest to claim — no monthly price to
+ * compare against, or an annual price that is not actually cheaper.
+ */
+export function annualSavingsPercent(annualPrice: number, monthlyPrice: number | undefined): number {
+  if (!monthlyPrice || monthlyPrice <= 0 || annualPrice <= 0) return 0;
+  const pct = Math.round((1 - annualPrice / (monthlyPrice * 12)) * 100);
+  return pct > 0 ? pct : 0;
+}
+
 export interface PurchaseResult {
   status: 'success' | 'cancelled' | 'error';
   tier?: PlanId;

@@ -11,8 +11,8 @@ import {
   purchasePackage,
   restorePurchases,
   tierFromPackage,
-  isAnnualPackage,
   isMonthlyPackage,
+  annualSavingsPercent,
   isPurchasesAvailable,
 } from '../../../lib/purchases';
 import { PLAN_FEATURES, type PlanId } from '../../../lib/plans';
@@ -23,6 +23,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../../config/theme';
 import { GlowLayer } from '../../../components/ui/GlowBackground';
 import { TrialTimeline } from '../../../components/subscription/TrialTimeline';
+import { PlanCard } from '../../../components/subscription/PlanCard';
 import { trialDaysFromPeriod } from '../../../lib/trial-timeline';
 
 // Manage/cancel deep links (App Store requires a path to manage the sub).
@@ -265,79 +266,18 @@ export default function SubscriptionScreen() {
         ) : (
           sortedPackages.map((pkg) => {
             const tier = tierFromPackage(pkg);
-            const isCurrentPlan = tier === currentTier;
-            const isPopular = tier === 'premium';
-            const features = PLAN_FEATURES[tier] ?? [];
-
-            // Annual plans lead with their true per-month equivalent; the
-            // full amount and billing term stay visible directly beneath it.
-            const isAnnual = isAnnualPackage(pkg);
-            const perMonthString = isAnnual ? pkg.product.pricePerMonthString : null;
-            const monthlyPrice = monthlyPriceByTier[tier];
-            const savingsPct =
-              isAnnual && monthlyPrice && monthlyPrice > 0
-                ? Math.round((1 - pkg.product.price / (monthlyPrice * 12)) * 100)
-                : 0;
-
             return (
-              <View
+              <PlanCard
                 key={pkg.identifier}
-                className={`rounded-2xl p-5 mb-4 border-2 ${
-                  isCurrentPlan
-                    ? 'border-success bg-success-bg'
-                    : isPopular
-                    ? 'border-primary bg-dark-card'
-                    : 'border-dark-border bg-dark-card'
-                }`}
-              >
-                <View className="flex-row items-center gap-2 mb-2">
-                  {isCurrentPlan && <Badge variant="success" label="Current Plan" />}
-                  {isPopular && !isCurrentPlan && (
-                    <View className="bg-primary rounded-lg px-3 py-1">
-                      <Text className="text-white text-xs font-bold">MOST POPULAR</Text>
-                    </View>
-                  )}
-                </View>
-
-                <View className="flex-row flex-wrap items-baseline mb-1">
-                  <Text className="text-2xl font-bold text-text-primary">
-                    {perMonthString ?? pkg.product.priceString}
-                  </Text>
-                  <Text className="text-sm text-text-secondary ml-1">
-                    /{isAnnual && perMonthString ? 'mo' : 'month'}
-                  </Text>
-                  {savingsPct > 0 && (
-                    <View className="bg-success-bg rounded-lg px-2 py-0.5 ml-2">
-                      <Text className="text-xs font-bold text-success">SAVE {savingsPct}%</Text>
-                    </View>
-                  )}
-                </View>
-                {isAnnual && (
-                  <Text className="text-sm text-text-secondary mb-1">
-                    Billed annually at {pkg.product.priceString}
-                  </Text>
-                )}
-                <Text className="text-lg font-semibold text-text-primary mb-3">{pkg.product.title}</Text>
-
-                {features.map((feature, idx) => (
-                  <View key={idx} className="flex-row items-center mb-2">
-                    <Ionicons name="checkmark-circle" size={18} color={colors.success.light} />
-                    <Text className="flex-1 text-sm text-text-secondary ml-2">{feature}</Text>
-                  </View>
-                ))}
-
-                {!isCurrentPlan && (
-                  <View className="mt-4">
-                    <Button
-                      label="Subscribe"
-                      variant={isPopular ? 'primary' : 'secondary'}
-                      onPress={() => handlePurchase(pkg)}
-                      loading={purchasingId === pkg.identifier}
-                      disabled={purchasingId !== null || restoring}
-                    />
-                  </View>
-                )}
-              </View>
+                pkg={pkg}
+                tier={tier}
+                isCurrentPlan={tier === currentTier}
+                isPopular={tier === 'premium'}
+                savingsPct={annualSavingsPercent(pkg.product.price, monthlyPriceByTier[tier])}
+                onPurchase={() => handlePurchase(pkg)}
+                loading={purchasingId === pkg.identifier}
+                disabled={purchasingId !== null || restoring}
+              />
             );
           })
         )}

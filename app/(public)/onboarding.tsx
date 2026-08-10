@@ -254,11 +254,17 @@ export default function OnboardingScreen() {
       // Home is pushed first and the lesson on top of it, rather than replacing
       // straight into the lesson: `LessonRunner`'s exit is `router.back()`, and
       // with nothing beneath it that button would do nothing.
+      // The plans screen sits between Home and that first lesson. It cannot
+      // live in this flow: onboarding runs pre-signup, so RevenueCat would
+      // still be on an anonymous id and the purchase would never reach
+      // `subscriptions` — see the header of app/(app)/plans.tsx. It is
+      // skippable, and hands off to the lesson on skip or purchase.
       const lessonId = await resolveFirstLessonId(draft.targetLanguage ?? DEFAULT_LANGUAGE);
       router.replace('/(app)');
-      if (lessonId) {
-        router.push({ pathname: '/learn/[lessonId]', params: { lessonId } } as never);
-      }
+      router.push({
+        pathname: '/plans',
+        params: lessonId ? { lessonId } : {},
+      } as never);
     },
     [loadUserData, router],
   );

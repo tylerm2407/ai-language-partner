@@ -1,5 +1,10 @@
 import type { PurchasesPackage } from 'react-native-purchases';
-import { isAnnualPackage, isMonthlyPackage, tierFromPackage } from './purchases';
+import {
+  annualSavingsPercent,
+  isAnnualPackage,
+  isMonthlyPackage,
+  tierFromPackage,
+} from './purchases';
 
 // The native SDK is irrelevant to these helpers — they are pure functions over
 // a store product. Mocking it keeps the module importable under jest.
@@ -56,5 +61,23 @@ describe('billing term', () => {
   it('treats a product with neither term as neither', () => {
     expect(isAnnualPackage(pkg('fluenci_vip_lifetime', 'CUSTOM'))).toBe(false);
     expect(isMonthlyPackage(pkg('fluenci_vip_lifetime', 'CUSTOM'))).toBe(false);
+  });
+});
+
+describe('annualSavingsPercent', () => {
+  it('matches the live App Store Connect prices', () => {
+    expect(annualSavingsPercent(99.99, 9.99)).toBe(17);
+    expect(annualSavingsPercent(199.99, 19.99)).toBe(17);
+    expect(annualSavingsPercent(299.99, 29.99)).toBe(17);
+  });
+
+  it('claims nothing without a monthly price to compare against', () => {
+    expect(annualSavingsPercent(99.99, undefined)).toBe(0);
+    expect(annualSavingsPercent(99.99, 0)).toBe(0);
+  });
+
+  it('claims nothing when the annual price is not actually cheaper', () => {
+    expect(annualSavingsPercent(120, 9.99)).toBe(0);
+    expect(annualSavingsPercent(119.88, 9.99)).toBe(0);
   });
 });
