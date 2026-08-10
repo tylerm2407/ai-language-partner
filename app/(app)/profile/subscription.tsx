@@ -11,6 +11,8 @@ import {
   purchasePackage,
   restorePurchases,
   tierFromPackage,
+  isAnnualPackage,
+  isMonthlyPackage,
   isPurchasesAvailable,
 } from '../../../lib/purchases';
 import { PLAN_FEATURES, type PlanId } from '../../../lib/plans';
@@ -155,7 +157,7 @@ export default function SubscriptionScreen() {
   const monthlyPriceByTier = useMemo(() => {
     const byTier: Partial<Record<PlanId, number>> = {};
     for (const pkg of packages) {
-      if (pkg.packageType === 'MONTHLY') byTier[tierFromPackage(pkg)] = pkg.product.price;
+      if (isMonthlyPackage(pkg)) byTier[tierFromPackage(pkg)] = pkg.product.price;
     }
     return byTier;
   }, [packages]);
@@ -269,7 +271,7 @@ export default function SubscriptionScreen() {
 
             // Annual plans lead with their true per-month equivalent; the
             // full amount and billing term stay visible directly beneath it.
-            const isAnnual = pkg.packageType === 'ANNUAL';
+            const isAnnual = isAnnualPackage(pkg);
             const perMonthString = isAnnual ? pkg.product.pricePerMonthString : null;
             const monthlyPrice = monthlyPriceByTier[tier];
             const savingsPct =

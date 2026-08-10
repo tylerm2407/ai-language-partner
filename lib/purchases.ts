@@ -126,6 +126,29 @@ export function tierFromPackage(pkg: PurchasesPackage): PlanId {
   return 'starter';
 }
 
+/**
+ * Billing term of a package.
+ *
+ * `packageType` is only MONTHLY/ANNUAL for RevenueCat's reserved
+ * `$rc_monthly` / `$rc_annual` identifiers, and an offering has one slot for
+ * each. Six products (three tiers x two terms) therefore leave four packages
+ * on custom identifiers, arriving as CUSTOM — so the term falls back to the
+ * store product id, the same convention `tierFromPackage` relies on. Without
+ * this an annual package renders its yearly price labelled "/month".
+ */
+export function isAnnualPackage(pkg: PurchasesPackage): boolean {
+  if (pkg.packageType === 'ANNUAL') return true;
+  if (pkg.packageType === 'MONTHLY') return false;
+  const id = pkg.product.identifier.toLowerCase();
+  return id.includes('yearly') || id.includes('annual');
+}
+
+export function isMonthlyPackage(pkg: PurchasesPackage): boolean {
+  if (pkg.packageType === 'MONTHLY') return true;
+  if (pkg.packageType === 'ANNUAL') return false;
+  return pkg.product.identifier.toLowerCase().includes('monthly');
+}
+
 export interface PurchaseResult {
   status: 'success' | 'cancelled' | 'error';
   tier?: PlanId;
