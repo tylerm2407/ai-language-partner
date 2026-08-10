@@ -1,21 +1,24 @@
 # Next session — start here
 
-Handoff covering three sessions: the differentiation programme
-(2026-08-05 → 08-07), the positioning/UI-review session (2026-08-07), and the
-palette session (2026-08-07).
+Handoff covering five sessions: the differentiation programme
+(2026-08-05 → 08-07), the positioning/UI-review session (2026-08-07), the
+palette session (2026-08-07), the app-code session that closed out §3 and §4
+(2026-08-08), and the content audit (2026-08-08 → 08-09, §12).
 Written to be read cold: you should not need the previous conversation.
 
 **Current focus: App Store launch.** Anything that does not serve v1 shipping is
 parked. Hands-free is the headline differentiator.
 
-**Tree state at handoff: clean and fully pushed** (`53673a3` on `master`).
-Baseline: typecheck clean, 0 lint errors, 422 tests across 23 suites.
-`npm run check` is the gate — keep it green.
+**Tree state at handoff: clean and pushed.**
+Baseline: typecheck clean, 0 lint errors (14 warnings, all pre-existing),
+437 tests across 24 suites. `npm run check` is the gate — keep it green.
 
 **Nothing in the UI has been verified on a device.** `npm run check` proves the
 tree compiles and the logic tests pass; there are no visual or snapshot tests in
 this project, so every contrast figure in `DESIGN.md` is computed arithmetic and
-no screen has been looked at since the palette churn. See §1.4.
+no screen has been looked at since the palette churn. This got *more* true on
+2026-08-08: ten screens had layout changes and the post-signup route changed.
+See §1.4 and §1.5.
 
 ---
 
@@ -82,6 +85,14 @@ config/theme.ts             DESIGN.md
 If you must run two, split strictly by file and commit often. `config/theme.ts`
 and `DESIGN.md` should belong to exactly one session at a time.
 
+**2026-08-08 is the one time this worked.** Two sessions ran with an explicit
+split — one owned `supabase/`, `scripts/` and all SQL, the other owned app code
+— and neither touched the other's files or lost work. What made the difference
+was that the split was stated up front and *named the files*, not the topics,
+and that each side committed per task rather than at the end. `git add <dir>`
+rather than `git add -A` is the other half of it: the app session staged its own
+paths every time and never picked up the migrations sitting dirty beside them.
+
 **Three specific ways this went wrong, so you can recognise them:**
 
 1. **Selecting files to revert by "everything dirty minus my list".** Scoping a
@@ -111,6 +122,35 @@ carried over from the experiments and have never been seen against indigo:
 Both were designed against a warm-gold and then a silver palette. They may or may
 not still read well under indigo. This is a five-minute look, not a project.
 
+Since 2026-08-08 there is a second list, and it is longer. Ten screens had
+container fixes for Dynamic Type (§3.3) and the post-signup route now lands in a
+lesson (§4). None of it has been seen. The highest-value single pass is
+**Settings → Accessibility → Display & Text Size → Larger Text at maximum**,
+then walk onboarding → first lesson → Home → Learn → paywall.
+
+### 1.5 There is no way to test a screen in this repo
+
+`npm test` is jest with `jest-expo`, and every one of the 24 suites is a pure
+logic test. There is **no `@testing-library/react-native`**, no
+`react-test-renderer` usage, no snapshot tests. Nothing renders a component.
+
+This is not a gap to fill casually — it is a dependency and a CI-time decision —
+but you have to know it before you plan work, because it changes what "done"
+can mean:
+
+- Anything that lives only in a component is unverifiable. On 2026-08-08 the
+  audio-mode fix (§3.1) was given a pure seam — `playbackModeFor` /
+  `recordingModeFor` in `lib/audio-session.ts` — purely so the choice a screen
+  makes could be asserted at all. That is the pattern to copy: push the decision
+  into a module, leave the I/O in the component.
+- Where even that is not possible, prefer a **structural** test. `lib/audio-session.test.ts`
+  ends with a grep gate that reads `app/ components/ hooks/ lib/` off disk and
+  fails if anything but that module names `setAudioModeAsync`. It cost eight
+  lines and it enforces an invariant that four separate sessions had drifted
+  past.
+- The placement-test auto-advance and the new inline error states therefore
+  have **no** test coverage. That was deliberate, not an oversight.
+
 ---
 
 ## 2. What is live
@@ -124,6 +164,10 @@ not still read well under indigo. This is a five-minute look, not a project.
 | CEFR proficiency report | Live, surfaced high on Profile |
 | Listening & speaking exercises (9,504) | Live |
 | Hearts | Live as **feedback only** — they no longer gate lessons (§4) |
+| Dynamic Type caps on the four type primitives | Live (§3.3) |
+| `lib/error-copy.ts` + inline errors on 3 screens | Live (§3.2) |
+| Placement test auto-advances; signup lands in a lesson | Live, **unseen on device** (§4) |
+| Onboarding 'motivation' step | **Deleted** 2026-08-08 (§4) |
 | Niche tracks | **Parked — v2** |
 | Hands-free lock screen / CarPlay (Phase B/C) | Not started |
 | Spoken CEFR exam | Designed, not built |
@@ -225,42 +269,107 @@ any new policy.
 ## 3. Outstanding from the UI review — ranked
 
 A full read-only audit of UI, copy, gamification, credibility signals and the
-paywall was done on 2026-08-07. Items 1–4 shipped in `76eb1ef`. These did not:
+paywall was done on 2026-08-07. Items 1–4 shipped in `76eb1ef`. §3.1 and §3.2
+shipped on 2026-08-08 (`286bc24`, `638b1db`, `d797878`, `98d82f0`). What is
+left is design work, not mechanical work — see §3.5.
 
-### 3.1 Four `setAudioModeAsync` calls outside `lib/audio-session.ts`
+### 3.1 ~~Four `setAudioModeAsync` calls~~ — done, and now gated
 
-`app/(app)/chat/index.tsx:327` and `components/chat/ChatInput.tsx:121,202,259`.
-Violates invariant 5 in §6. **This is the outstanding item with real App Review
-exposure** — see §1.1 on why audio bugs are the rejection category. Migrate them
-to the `audio-session` modes.
+All four migrated to named modes. `lib/audio-session.test.ts` carries a grep
+gate that reads the tree off disk and fails if anything but that module names
+`setAudioModeAsync`, so this cannot drift back silently. Three error/teardown
+paths that were leaving the session in a recording mode were fixed at the same
+time, including one that held the mic after leaving chat.
 
-### 3.2 Error copy — 18 generic alerts, 40 "Failed to…" strings
+**Do not "simplify" `playbackModeFor` / `recordingModeFor` back into inline
+ternaries at the call sites.** They exist because nothing in this repo can
+render a component (§1.5); they are the only reason the choice is testable.
 
-`Alert.alert('Error', 'Failed to load reading passages.')` gives a user nothing
-actionable. **The pattern to copy already exists**: `lib/auth-errors.ts` maps
-errors to what-happened → why → what-next, checks network first so an offline
-failure is not misreported as bad credentials, and never echoes a raw message
-(there is a test asserting a Postgres error string cannot reach a user). The auth
-path is done; `learn/index.tsx`, `learn/reading/book/[bookId].tsx` and
-`chat/index.tsx` are not.
+### 3.2 Error copy — pattern built, three screens converted, the rest are not
 
-Also two silent-swallow catches that contradict `CLAUDE.md` §6:
-`app/(app)/index.tsx` (weekly stats) and `news/[date].tsx`. The third, in
-`useNotifications.ts`, is genuinely fine and correctly commented.
+`lib/error-copy.ts` is the data-loading sibling of `lib/auth-errors.ts`: same
+three rules (network classified first, raw message never echoed, every branch
+says what to do next), plus it reads `PostgrestError` objects, which are not
+`Error` instances — the auth-errors shape would have classified every Supabase
+query failure as unknown. `lib/error-copy.test.ts` mirrors the auth tests
+including the assertion that a Postgres string cannot reach a user.
 
-### 3.3 Design-system drift — needs a scoping decision, not a blind refactor
+Converted: `learn/index.tsx` (4 sites → inline errors with retry),
+`learn/reading/book/[bookId].tsx` (3), `chat/index.tsx` (1). Both silent-swallow
+catches are gone: Home's weekly stats and `news/[date].tsx` now state the
+failure instead of rendering a plausible empty state. `useNotifications.ts` is
+still correct and still untouched.
+
+**Still to do:** roughly 18 further `Alert.alert('Error', …)` sites across the
+teacher screens, `profile/`, `practice/` and the writing flow. The module and
+the `InlineError` component in `learn/index.tsx` are the templates.
+
+One thing that pass found, worth knowing: `book/[bookId].tsx` was rendering
+`err.message` straight into the UI. Assume there are others — grep for
+`setError(.*message` before trusting an error screen.
+
+### 3.3 Dynamic Type — the old text here was **wrong**, read this before acting
+
+The previous handoff said raw `<Text>` with inline sizes "does not scale with
+Dynamic Type". **That is false, and it nearly bought a 899-call-site refactor.**
+React Native's `allowFontScaling` defaults to true and nothing in this tree
+overrides it — verified, zero occurrences of `allowFontScaling` or
+`maxFontSizeMultiplier` anywhere before 2026-08-08. `hooks/useDisplayScale.ts`
+had it right in its own doc comment the whole time.
+
+The real defect is the opposite one: text scales and its **container does not**,
+so at the accessibility sizes (up to 310%) rows clip, collide and truncate. That
+is what App Review's Larger Text pass actually catches.
+
+What shipped:
+
+- `maxFontSizeMultiplier` on the four primitives in `components/ui/Text.tsx` —
+  Heading 1.4, Body 1.6, Caption 1.6, Hero 1.3, each overridable by a caller.
+  Body and Caption previously had no cap at all. Reasoning is in that file.
+- Container fixes on ten screens: rows that wrap instead of overflowing,
+  `height` → `minHeight` on the learn CEFR pill and its count badge, `flex-1`
+  on the paywall feature labels, one `numberOfLines` dropped, chat header
+  buttons `h-9` → `min-h-9`.
+- `auth.tsx` and `learn/review.tsx` were `justify-center` with no `ScrollView` —
+  taller than a small phone at large sizes with nowhere to overflow. Both now
+  scroll; identical at normal sizes.
+
+Nothing to fix on `profile/index.tsx`, `learn/[lessonId].tsx` or
+`practice/handsfree.tsx` — the last was already `minHeight` throughout.
+
+### 3.4 Design-system drift — still a scoping decision
 
 `DESIGN.md` mandates typography primitives, `<TactileButton>` and `<Surface>`.
 The tree runs ~899 raw `<Text>` against 69 primitives, 241 raw `<Pressable>`
-against 6, and 55 `<GradientBackground>` against 1. This is now honestly
-recorded in `DESIGN.md` rather than silently false.
+against 6, and 55 `<GradientBackground>` against 1. This is honestly recorded in
+`DESIGN.md` rather than silently false.
 
-**The part that matters for launch:** raw `<Text>` with inline sizes does not
-scale with Dynamic Type, which `.claude/rules/mobile-ui.md` requires and App
-Review checks. Two competitors took unprompted review damage for exactly this
-("text remains very small", "vastly shrunk the font with no option to adjust").
-Do not attempt 899 call sites before launch — pick the ~10 highest-traffic
-screens.
+With §3.3 understood, this is now a *consistency* problem rather than an
+accessibility one, which drops its launch priority considerably. The one real
+accessibility cost left is that a raw `<Text>` carries no `maxFontSizeMultiplier`,
+so it scales to 310% unbounded — which matters in fixed-size containers and
+nowhere else.
+
+### 3.5 Five layout calls that need a designer, not a refactor
+
+Found during the §3.3 pass and deliberately not "fixed", because each is a
+visual decision and the palette/layout is settled (§2.1):
+
+1. **Chat header row** — chevron, title, timer chip, Live Voice button and mic
+   toggle in one row. Over-subscribed at large type; the title just truncates
+   harder. Wrapping or restacking it is a design change.
+2. **`practice/handsfree.tsx` status text** — hero-size raw `<Text>` inside a
+   `flex: 1` box, so it is uncapped and will clip at the largest sizes. Strings
+   are short ("Listening…") so the risk is low, but capping it trades away
+   glanceability on the one screen built for glancing.
+3. **`learn/review.tsx` rating buttons** — four columns, two-line labels.
+   "Struggled" at 1.6× in a quarter-width column wraps to three lines. It
+   scrolls rather than clipping now, but 2×2 would read far better.
+4. **`useDisplayScale` stacks on top of Dynamic Type** for Heading and Hero, so
+   maximum effective heading growth is 1.1 × 1.4 ≈ 1.54, not 1.4. Decide whether
+   the cap should absorb the device scale.
+5. **Profile identity name** keeps `numberOfLines={1}`. Truncating a name is
+   conventional, but at 1.4× it truncates early. Left as-is on purpose.
 
 ---
 
@@ -291,14 +400,50 @@ per `004_security_and_scalability.sql:52-72`, so it would need a production RLS
 change), broken install attribution, and a second code path through
 `LessonRunner`.
 
-**The friction actually worth removing** is the ~32 taps to the first teaching
-moment. Three cheap fixes, none touching the account model:
+**The friction actually worth removing** was the ~32 taps to the first teaching
+moment. All three fixes shipped 2026-08-08 (`02fca0b`), none touching the
+account model:
 
-1. Auto-advance the placement test on selection — it needs select *then* "Next"
-   for each of 10 questions, 20 taps where 10 would do.
-2. Route straight into the first lesson after signup instead of dropping the
-   learner on Home to find something to do.
-3. Make onboarding step 2 (motivation) skippable in one tap; step 3 already is.
+1. **Placement test auto-advances** 250ms after a selection — the first nine
+   questions cost one tap instead of two. The last question keeps its explicit
+   "See my level" button, because auto-advancing into the result screen moves
+   the learner without a tap at the exact moment of the payoff. **Under
+   `useMotion().shouldReduce` the manual "Next" stays** rather than using a
+   zero-delay jump: an unrequested screen change is what that setting asks us
+   not to do, and a 0ms advance would also hide the correct/incorrect reveal
+   the learner just earned. Skip is unchanged.
+2. **Signup lands in the first lesson**, not on Home. Home is pushed underneath
+   it so `LessonRunner`'s `router.back()` exit still has somewhere to go — a
+   bare `replace` into the lesson would have trapped the learner there. An
+   unresolvable curriculum falls back to Home. `resolveFirstLessonId` composes
+   `fetchCourses` → `fetchUnits` → `fetchLessons` rather than adding a query:
+   a single-query version needs a three-level sort across embedded PostgREST
+   resources, which cannot be verified without the DB and can silently return
+   the wrong lesson.
+3. **The 'motivation' step was deleted, not made skippable.** See below.
+
+### The onboarding 'motivation' step is gone — do not reinstate it blind
+
+Verified by grep before acting: nothing reads `useAppStore.motivation`, and
+nothing reads `profile.motivationReason` either. The step wrote to a store slot
+*and* a DB column that have no consumers anywhere in the app. Making it
+skippable would have saved one tap; deleting it removed a whole step.
+
+Preserved deliberately, so reinstating is a UI change and never a migration:
+`user_profiles.motivation_reason`, the `MotivationReason` type, and the
+`upsertProfile` mapping all still exist. Removed: the step, the store slot, and
+the field on the `PendingOnboarding` draft.
+
+**The draft schema version was deliberately NOT bumped.** `isValidPending`
+checks only `version` and `startedAt` and ignores unknown keys, so drafts
+written by shipped builds still load with the now-removed `motivation` key
+present. Bumping would have discarded every in-flight draft inside the 7-day
+TTL — including learners one tap from signing up. There is a test locking this.
+
+**The open question this leaves you:** `motivation_reason` is now never written,
+so the "why are you here" signal is gone and cannot be backfilled. If you want
+it, the cheap version is one optional question *after* signup, off the critical
+path — not a step back in the funnel.
 
 ---
 
@@ -368,7 +513,10 @@ app/(app)/practice/index.tsx       the ONLY route into handsfree — do not dele
 4. **Nothing on the screen may be required to advance the session.** If it
    cannot run untouched, the feature has failed its own premise.
 5. **`lib/audio-session.ts` is the only place that may call
-   `setAudioModeAsync`.** Four calls remain — see §3.1.
+   `setAudioModeAsync`.** As of 2026-08-08 this holds — zero calls elsewhere —
+   and it is enforced by a grep gate in `lib/audio-session.test.ts` rather than
+   by review. If that test fails, do not add your file to its allow-list; add a
+   mode to `audio-session.ts` instead. See §3.1.
 
 ---
 
@@ -421,10 +569,8 @@ generation. (This interacts with §5 — the pool sizes there assume this.)
 - **Lesson length:** adding the listening/speaking content took lessons from 8.9
   to 14.8 exercises on average, max 16. `.claude/rules/learning.md` says 10–15,
   so a few lessons sit one over.
-- **`useAppStore.motivation`** is written during onboarding and now has **no
-  reader** — its only consumer was Home's `HeroHook`, deleted as dead code.
-  Commented at both sites, left in place because motivation-aware copy is a live
-  idea. Drop it from the store if that does not land.
+- ~~**`useAppStore.motivation`** has no reader~~ — **removed 2026-08-08**, along
+  with the onboarding step that wrote it. See §4.
 - **`hooks/useHandsFreeSession.ts`** was importing a non-existent `./useVoiceTurn`
   and failing typecheck for several hours on 2026-08-07. It is clean now, but the
   fix came from a parallel session — worth a read.
