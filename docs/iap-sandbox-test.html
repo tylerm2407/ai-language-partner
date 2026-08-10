@@ -1,0 +1,1018 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fluenci — Sandbox Purchase &amp; Restore Test</title>
+<style>
+/* ─── Tokens ──────────────────────────────────────────────────────────────
+   Derived from config/theme.ts so this runbook reads as part of Fluenci.
+   Committed dark: every surface is painted explicitly, so the page holds
+   regardless of the browser's theme. */
+:root {
+  --ground:      #08090F;
+  --panel:       #151921;
+  --panel-alt:   #1C212B;
+  --sunken:      #060710;
+
+  --line-faint:  rgba(255,255,255,0.06);
+  --line:        rgba(255,255,255,0.12);
+  --line-strong: rgba(255,255,255,0.22);
+
+  --ink:         #F1F5F9;
+  --ink-2:       #CBD5E1;
+  --ink-3:       #94A3B8;
+  --ink-4:       #64748B;
+
+  --indigo-fill: #4F46E5;
+  --indigo-deep: #3730A3;
+  --indigo-acc:  #818CF8;
+  --indigo-tint: rgba(99,102,241,0.14);
+  --indigo-edge: rgba(99,102,241,0.34);
+
+  --ok:      #22C55E;
+  --ok-lt:   #6EE7B7;
+  --ok-tint: rgba(34,197,94,0.13);
+  --ok-edge: rgba(34,197,94,0.32);
+
+  --warn:      #F59E0B;
+  --warn-lt:   #FCD34D;
+  --warn-tint: rgba(245,158,11,0.13);
+  --warn-edge: rgba(245,158,11,0.32);
+
+  --bad:      #EF4444;
+  --bad-lt:   #FCA5A5;
+  --bad-tint: rgba(239,68,68,0.13);
+  --bad-edge: rgba(239,68,68,0.34);
+
+  --font-display: "Bahnschrift","DIN Alternate","Segoe UI Variable Display","Segoe UI",system-ui,sans-serif;
+  --font-body:    "Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,sans-serif;
+  --font-mono:    "Cascadia Mono","Cascadia Code",Consolas,ui-monospace,SFMono-Regular,monospace;
+
+  --rail: 250px;
+  --measure: 68ch;
+}
+
+*,*::before,*::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *,*::before,*::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink-2);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Ambient indigo wash, echoing GlowBackground in the app. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(760px 520px at 12% -6%,  rgba(99,102,241,0.16), transparent 68%),
+    radial-gradient(620px 480px at 92% 4%,   rgba(124,58,237,0.11), transparent 66%);
+}
+
+a { color: var(--indigo-acc); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+
+:focus-visible { outline: 2px solid var(--indigo-acc); outline-offset: 3px; border-radius: 3px; }
+
+code, kbd { font-family: var(--font-mono); font-size: .875em; }
+
+/* ─── Shell ─────────────────────────────────────────────────────────────── */
+.shell {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: var(--rail) minmax(0,1fr);
+  gap: 48px;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 48px 32px 96px;
+  align-items: start;
+}
+
+/* ─── Rail ──────────────────────────────────────────────────────────────── */
+.rail { position: sticky; top: 32px; display: flex; flex-direction: column; gap: 20px; }
+
+.ring-wrap { display: flex; align-items: center; gap: 14px; }
+.ring { width: 58px; height: 58px; flex: none; transform: rotate(-90deg); }
+.ring circle { fill: none; stroke-width: 5; stroke-linecap: round; }
+.ring .track { stroke: var(--line); }
+.ring .fill {
+  stroke: var(--indigo-acc);
+  stroke-dasharray: 157;
+  stroke-dashoffset: 157;
+  transition: stroke-dashoffset .45s cubic-bezier(.4,0,.2,1);
+}
+.ring-label { display: flex; flex-direction: column; line-height: 1.25; }
+.ring-count { font-family: var(--font-display); font-size: 20px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+.ring-of { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-4); }
+
+.rail-nav { display: flex; flex-direction: column; gap: 1px; border-left: 1px solid var(--line-faint); }
+.rail-nav a {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 8px;
+  align-items: baseline;
+  padding: 5px 0 5px 12px;
+  margin-left: -1px;
+  border-left: 1px solid transparent;
+  color: var(--ink-3);
+  font-size: 13px;
+  line-height: 1.35;
+  text-decoration: none;
+}
+.rail-nav a:hover { color: var(--ink); border-left-color: var(--line-strong); }
+.rail-nav a.done { color: var(--ink-4); border-left-color: var(--ok); }
+.rail-nav a.done .rn { color: var(--ok); }
+.rail-nav .rn { font-family: var(--font-display); font-variant-numeric: tabular-nums; color: var(--ink-4); font-size: 12px; }
+.rail-nav .sep {
+  padding: 14px 0 5px 12px;
+  font-family: var(--font-display);
+  font-size: 10.5px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+}
+
+.reset {
+  align-self: start;
+  background: none;
+  border: 1px solid var(--line);
+  color: var(--ink-4);
+  font: inherit;
+  font-size: 12px;
+  padding: 5px 11px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.reset:hover { color: var(--ink-2); border-color: var(--line-strong); }
+
+/* ─── Masthead ──────────────────────────────────────────────────────────── */
+.eyebrow {
+  font-family: var(--font-display);
+  font-size: 11.5px;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--indigo-acc);
+  margin: 0 0 14px;
+}
+h1 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(34px, 5vw, 50px);
+  line-height: 1.04;
+  letter-spacing: -.015em;
+  color: var(--ink);
+  margin: 0 0 18px;
+  text-wrap: balance;
+}
+.standfirst { max-width: var(--measure); font-size: 17.5px; color: var(--ink-2); margin: 0 0 26px; }
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 28px;
+  padding: 14px 18px;
+  border: 1px solid var(--line-faint);
+  border-radius: 10px;
+  background: var(--panel);
+  margin-bottom: 56px;
+}
+.meta div { display: flex; flex-direction: column; gap: 2px; }
+.meta dt { font-family: var(--font-display); font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-4); }
+.meta dd { margin: 0; font-family: var(--font-mono); font-size: 13px; color: var(--ink-2); }
+
+/* ─── Sections ──────────────────────────────────────────────────────────── */
+section { margin-bottom: 64px; scroll-margin-top: 24px; }
+
+h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 25px;
+  letter-spacing: -.005em;
+  color: var(--ink);
+  margin: 0 0 8px;
+  text-wrap: balance;
+}
+.sec-note { max-width: var(--measure); color: var(--ink-3); font-size: 15px; margin: 0 0 26px; }
+
+p { max-width: var(--measure); }
+
+/* ─── Chain diagram ─────────────────────────────────────────────────────── */
+.chain-scroll { overflow-x: auto; padding-bottom: 8px; margin-bottom: 18px; }
+.chain { display: flex; align-items: stretch; gap: 0; min-width: max-content; }
+.hop {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 13px 17px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--panel);
+  min-width: 132px;
+}
+.hop b { font-family: var(--font-display); font-size: 13.5px; font-weight: 600; color: var(--ink); letter-spacing: .01em; }
+.hop span { font-size: 11.5px; color: var(--ink-4); line-height: 1.4; }
+.hop.tested { border-color: var(--ok-edge); background: linear-gradient(var(--ok-tint), var(--ok-tint)) var(--panel); }
+.hop.tested b { color: var(--ok-lt); }
+.hop.untested { border-color: var(--warn-edge); background: linear-gradient(var(--warn-tint), var(--warn-tint)) var(--panel); }
+.hop.untested b { color: var(--warn-lt); }
+.arrow { align-self: center; padding: 0 9px; color: var(--ink-4); font-size: 15px; flex: none; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: 12.5px; color: var(--ink-3); }
+.legend i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 7px; vertical-align: baseline; }
+.legend .g { background: var(--ok); }
+.legend .a { background: var(--warn); }
+.legend .n { background: var(--line-strong); }
+
+/* ─── Cards ─────────────────────────────────────────────────────────────── */
+.card {
+  border: 1px solid var(--line-faint);
+  border-radius: 12px;
+  background: var(--panel);
+  padding: 22px 24px 24px;
+  margin-bottom: 14px;
+}
+.card > *:last-child { margin-bottom: 0; }
+
+.card-head { display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: start; margin-bottom: 14px; }
+
+.step-no {
+  font-family: var(--font-display);
+  font-size: 27px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--ink-4);
+  font-variant-numeric: tabular-nums;
+  padding-top: 1px;
+  min-width: 30px;
+}
+.card.checked .step-no { color: var(--ok); }
+
+.card h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 19px;
+  line-height: 1.25;
+  color: var(--ink);
+  margin: 0;
+  letter-spacing: .005em;
+  text-wrap: balance;
+}
+.card .where {
+  display: block;
+  margin-top: 5px;
+  font-size: 11.5px;
+  letter-spacing: .05em;
+  color: var(--ink-4);
+}
+
+.tick { display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; white-space: nowrap; }
+.tick input { position: absolute; opacity: 0; width: 0; height: 0; }
+.tick .box {
+  width: 21px; height: 21px;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  transition: background .15s ease, border-color .15s ease;
+}
+.tick .box::after {
+  content: "";
+  width: 10px; height: 5.5px;
+  border-left: 2px solid var(--ground);
+  border-bottom: 2px solid var(--ground);
+  transform: rotate(-45deg) translate(1px,-1px) scale(0);
+  transition: transform .15s cubic-bezier(.4,0,.2,1);
+}
+.tick input:checked + .box { background: var(--ok); border-color: var(--ok); }
+.tick input:checked + .box::after { transform: rotate(-45deg) translate(1px,-1px) scale(1); }
+.tick input:focus-visible + .box { outline: 2px solid var(--indigo-acc); outline-offset: 3px; }
+.tick .lbl { font-family: var(--font-display); font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-4); }
+
+.card.checked { border-color: var(--ok-edge); }
+.card.checked h3 { color: var(--ink-3); }
+
+/* ─── Chips ─────────────────────────────────────────────────────────────── */
+.chip {
+  display: inline-block;
+  font-family: var(--font-display);
+  font-size: 10.5px;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.chip.device { color: var(--indigo-acc); border-color: var(--indigo-edge); background: var(--indigo-tint); }
+.chip.dash   { color: var(--warn-lt);   border-color: var(--warn-edge);   background: var(--warn-tint); }
+.chip.term   { color: var(--ok-lt);     border-color: var(--ok-edge);     background: var(--ok-tint); }
+
+/* ─── Command blocks ────────────────────────────────────────────────────── */
+.cmd { position: relative; margin: 0 0 16px; }
+.cmd pre {
+  margin: 0;
+  padding: 14px 60px 14px 16px;
+  background: var(--sunken);
+  border: 1px solid var(--line-faint);
+  border-radius: 9px;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--ink);
+  tab-size: 2;
+}
+.cmd .copy {
+  position: absolute;
+  top: 9px; right: 9px;
+  background: var(--panel-alt);
+  border: 1px solid var(--line);
+  color: var(--ink-3);
+  font-family: var(--font-display);
+  font-size: 10.5px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  padding: 4px 9px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.cmd .copy:hover { color: var(--ink); border-color: var(--line-strong); }
+.cmd .copy.ok { color: var(--ok-lt); border-color: var(--ok-edge); }
+
+/* ─── Checkpoint / callouts ─────────────────────────────────────────────── */
+.callout {
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 14px 17px;
+  margin: 0 0 16px;
+  background: var(--panel-alt);
+}
+.callout > *:last-child { margin-bottom: 0; }
+.callout .k {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 10.5px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.callout p { margin: 0 0 8px; font-size: 15px; }
+
+.callout.check { border-color: var(--ok-edge); background: linear-gradient(var(--ok-tint), var(--ok-tint)) var(--panel-alt); }
+.callout.check .k { color: var(--ok-lt); }
+.callout.check p { color: var(--ink); }
+
+.callout.warn { border-color: var(--warn-edge); background: linear-gradient(var(--warn-tint), var(--warn-tint)) var(--panel-alt); }
+.callout.warn .k { color: var(--warn-lt); }
+
+.callout.stop { border-color: var(--bad-edge); background: linear-gradient(var(--bad-tint), var(--bad-tint)) var(--panel-alt); }
+.callout.stop .k { color: var(--bad-lt); }
+
+/* ─── Tables ────────────────────────────────────────────────────────────── */
+.tbl-scroll { overflow-x: auto; margin: 0 0 16px; }
+table { border-collapse: collapse; width: 100%; min-width: 460px; font-size: 14.5px; }
+th, td { text-align: left; padding: 9px 14px 9px 0; border-bottom: 1px solid var(--line-faint); vertical-align: top; }
+th {
+  font-family: var(--font-display);
+  font-size: 10.5px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  font-weight: 600;
+  border-bottom-color: var(--line);
+}
+td code { color: var(--indigo-acc); }
+tbody tr:last-child td { border-bottom: none; }
+
+/* ─── Prereq list ───────────────────────────────────────────────────────── */
+.gate { display: flex; flex-direction: column; gap: 10px; }
+.gate .card { margin: 0; padding: 18px 22px 20px; }
+.gate .card-head { grid-template-columns: 1fr auto; }
+
+ul.plain { max-width: var(--measure); padding-left: 20px; margin: 0 0 14px; }
+ul.plain li { margin-bottom: 5px; }
+
+.hint { font-size: 14px; color: var(--ink-3); }
+
+/* ─── Footer ────────────────────────────────────────────────────────────── */
+.handoff { border-top: 1px solid var(--line); padding-top: 30px; }
+
+@media (max-width: 900px) {
+  .shell { grid-template-columns: 1fr; gap: 34px; padding: 32px 20px 72px; }
+  .rail { position: static; }
+  .rail-nav { display: none; }
+  .card-head { grid-template-columns: auto 1fr; }
+  .card-head .tick { grid-column: 2; justify-self: start; }
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ─── Rail ─────────────────────────────────────────────────────────── -->
+  <aside class="rail">
+    <div class="ring-wrap">
+      <svg class="ring" viewBox="0 0 58 58" aria-hidden="true">
+        <circle class="track" cx="29" cy="29" r="25"></circle>
+        <circle class="fill" id="ring" cx="29" cy="29" r="25"></circle>
+      </svg>
+      <span class="ring-label">
+        <span class="ring-count"><span id="done">0</span>/14</span>
+        <span class="ring-of">complete</span>
+      </span>
+    </div>
+
+    <nav class="rail-nav" aria-label="Steps">
+      <span class="sep">Before you build</span>
+      <a href="#p1" data-for="p1"><span class="rn">A</span><span>Paid Apps Agreement</span></a>
+      <a href="#p2" data-for="p2"><span class="rn">B</span><span>Products in ASC</span></a>
+      <a href="#p3" data-for="p3"><span class="rn">C</span><span>RevenueCat wiring</span></a>
+      <a href="#p4" data-for="p4"><span class="rn">D</span><span>Sandbox tester</span></a>
+      <span class="sep">The test</span>
+      <a href="#s1" data-for="s1"><span class="rn">1</span><span>Build for device</span></a>
+      <a href="#s2" data-for="s2"><span class="rn">2</span><span>Sandbox sign-in</span></a>
+      <a href="#s3" data-for="s3"><span class="rn">3</span><span>Capture user id</span></a>
+      <a href="#s4" data-for="s4"><span class="rn">4</span><span>Open paywall</span></a>
+      <a href="#s5" data-for="s5"><span class="rn">5</span><span>Buy a plan</span></a>
+      <a href="#s6" data-for="s6"><span class="rn">6</span><span>Check RC customer</span></a>
+      <a href="#s7" data-for="s7"><span class="rn">7</span><span>Webhook fired</span></a>
+      <a href="#s8" data-for="s8"><span class="rn">8</span><span>Database row</span></a>
+      <a href="#s9" data-for="s9"><span class="rn">9</span><span>Server limits</span></a>
+      <a href="#s10" data-for="s10"><span class="rn">10</span><span>Restore purchases</span></a>
+    </nav>
+
+    <button class="reset" id="reset" type="button">Clear progress</button>
+  </aside>
+
+  <!-- ─── Main ─────────────────────────────────────────────────────────── -->
+  <main>
+    <p class="eyebrow">Fluenci · Pre-submission gate</p>
+    <h1>Sandbox purchase &amp; restore test</h1>
+    <p class="standfirst">
+      The last thing to verify before App Store submission. A sandbox purchase is the only
+      check that exercises every hop from StoreKit to server-side quota enforcement — and
+      the only one that catches a purchase that unlocks the app while leaving the server
+      convinced the user never paid.
+    </p>
+
+    <dl class="meta">
+      <div><dt>Supabase project</dt><dd>ngqpsuixmumdnqbqxjxv</dd></div>
+      <div><dt>Build profile</dt><dd>preview</dd></div>
+      <div><dt>RevenueCat iOS key</dt><dd>appl_KLvWOLov…</dd></div>
+      <div><dt>Platform</dt><dd>iOS only — Android paused</dd></div>
+    </dl>
+
+    <!-- ─── What it proves ─────────────────────────────────────────────── -->
+    <section id="chain">
+      <h2>What this test proves</h2>
+      <p class="sec-note">
+        Six hops. Your webhook test lit up exactly one of them, and not the one that matters most.
+      </p>
+
+      <div class="chain-scroll">
+        <div class="chain">
+          <div class="hop"><b>StoreKit</b><span>Purchase completes on device</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="hop"><b>RevenueCat</b><span>Entitlement granted</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="hop"><b>Client UI</b><span>tierFromCustomerInfo unlocks</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="hop tested"><b>Webhook</b><span>Reachable + authorised</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="hop untested"><b>subscriptions</b><span>Row upserted — never yet exercised</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="hop"><b>Quotas</b><span>get_effective_limits agrees</span></div>
+        </div>
+      </div>
+
+      <p class="legend">
+        <span><i class="g"></i>Proven by your webhook test</span>
+        <span><i class="a"></i>Explicitly skipped by that test</span>
+        <span><i class="n"></i>Untested</span>
+      </p>
+
+      <div class="callout warn">
+        <span class="k">Why the webhook test wasn't enough</span>
+        <p>
+          <code>revenuecat-webhook/index.ts:114</code> returns <code>200</code> for
+          <code>TEST</code> events before it touches the database. A green test tells you
+          RevenueCat can reach the function and the shared secret matches. It tells you
+          nothing about whether the upsert works.
+        </p>
+      </div>
+
+      <div class="callout stop">
+        <span class="k">The failure this catches</span>
+        <p>
+          A purchase succeeds, RevenueCat grants the entitlement, and the app unlocks —
+          because the client reads RevenueCat directly. But the webhook never lands, so
+          <code>subscriptions</code> still says <code>starter</code>. The customer pays,
+          sees premium features, and immediately hits free-tier rate limits.
+          Everything looks fine from the outside.
+        </p>
+      </div>
+    </section>
+
+    <!-- ─── Prerequisites ──────────────────────────────────────────────── -->
+    <section id="prereq">
+      <h2>Before you build</h2>
+      <p class="sec-note">
+        All four must be true. Skip one and the paywall renders empty, which costs you a
+        full build cycle to discover.
+      </p>
+
+      <div class="gate">
+
+        <article class="card" id="p1" data-step="p1">
+          <div class="card-head">
+            <div>
+              <h3>Paid Apps Agreement is active</h3>
+              <span class="where">App Store Connect → Business → Agreements</span>
+            </div>
+            <label class="tick"><input type="checkbox" data-tick="p1"><span class="box"></span><span class="lbl">Done</span></label>
+          </div>
+          <p>
+            If this doesn't read <b>Active</b>, in-app purchase products never become
+            available and <code>getOfferings()</code> comes back empty. Banking and tax
+            forms must be complete too.
+          </p>
+          <p class="hint">This is the single most common reason a first sandbox test fails.</p>
+        </article>
+
+        <article class="card" id="p2" data-step="p2">
+          <div class="card-head">
+            <div>
+              <h3>All six products exist</h3>
+              <span class="where">App Store Connect → your app → Subscriptions</span>
+            </div>
+            <label class="tick"><input type="checkbox" data-tick="p2"><span class="box"></span><span class="lbl">Done</span></label>
+          </div>
+          <p>Product IDs must match <code>lib/purchases.ts:14-19</code> exactly.</p>
+          <div class="tbl-scroll">
+            <table>
+              <thead><tr><th>Product ID</th><th>Entitlement</th></tr></thead>
+              <tbody>
+                <tr><td><code>fluenci_basic_monthly</code></td><td><code>basic</code></td></tr>
+                <tr><td><code>fluenci_basic_yearly</code></td><td><code>basic</code></td></tr>
+                <tr><td><code>fluenci_premium_monthly</code></td><td><code>premium</code></td></tr>
+                <tr><td><code>fluenci_premium_yearly</code></td><td><code>premium</code></td></tr>
+                <tr><td><code>fluenci_vip_monthly</code></td><td><code>vip</code></td></tr>
+                <tr><td><code>fluenci_vip_yearly</code></td><td><code>vip</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="hint">
+            Each needs a price, a localized display name and description, and a review
+            screenshot. Status should read <b>Ready to Submit</b>.
+          </p>
+        </article>
+
+        <article class="card" id="p3" data-step="p3">
+          <div class="card-head">
+            <div>
+              <h3>RevenueCat is wired end to end</h3>
+              <span class="where">app.revenuecat.com → your project</span>
+            </div>
+            <label class="tick"><input type="checkbox" data-tick="p3"><span class="box"></span><span class="lbl">Done</span></label>
+          </div>
+          <ul class="plain">
+            <li>Products imported from App Store Connect — this uses the shared secret you set</li>
+            <li>Three entitlements exist: <code>basic</code>, <code>premium</code>, <code>vip</code> — lowercase, spelled exactly</li>
+            <li>Each product attached to its entitlement per the table above</li>
+            <li>An Offering containing those packages, marked <b>Current</b></li>
+          </ul>
+          <div class="callout warn">
+            <span class="k">Easy to miss</span>
+            <p>
+              <code>getOfferingPackages()</code> reads <code>offerings.current</code>
+              (<code>lib/purchases.ts:107</code>). With no offering marked Current the
+              paywall is empty even when every other piece is correct.
+            </p>
+          </div>
+        </article>
+
+        <article class="card" id="p4" data-step="p4">
+          <div class="card-head">
+            <div>
+              <h3>A sandbox tester account exists</h3>
+              <span class="where">App Store Connect → Users and Access → Sandbox → Test Accounts</span>
+            </div>
+            <label class="tick"><input type="checkbox" data-tick="p4"><span class="box"></span><span class="lbl">Done</span></label>
+          </div>
+          <p>
+            Use an email that has <b>never</b> been an Apple ID. A plus-alias works well —
+            <code>tcm2407+sandbox1@gmail.com</code>. Set a password and save it; you'll
+            retype it several times.
+          </p>
+          <p class="hint">
+            Ignore the verification email Apple sends. Verifying it can convert the address
+            into a real Apple ID and break the tester.
+          </p>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- ─── Steps ──────────────────────────────────────────────────────── -->
+    <section id="run">
+      <h2>Running the test</h2>
+      <p class="sec-note">
+        Order matters — each step sets up the one after it. Steps 1 to 6 happen on your
+        device and in dashboards; 7 to 9 are terminal checks I can run for you.
+      </p>
+
+      <article class="card" id="s1" data-step="s1">
+        <div class="card-head">
+          <span class="step-no">1</span>
+          <div>
+            <h3>Build for a real device</h3>
+            <span class="where"><span class="chip term">Terminal</span></span>
+          </div>
+          <label class="tick"><input type="checkbox" data-tick="s1"><span class="box"></span><span class="lbl">Done</span></label>
+        </div>
+        <p>
+          In-app purchases don't work in Expo Go or the simulator — the native StoreKit
+          module isn't there.
+        </p>
+        <div class="cmd">
+          <button class="copy" type="button">Copy</button>
+          <pre>npx eas build --profile preview --platform ios</pre>
+        </div>
+        <p>
+          The <code>preview</code> profile now carries the real <code>appl_</code> key and
+          builds Release with internal distribution. Install on your iPhone via the QR code
+          EAS returns.
+        </p>
+        <p class="hint">
+          If your device isn't registered for internal distribution yet, run
+          <code>npx eas device:create</code> first.
+        </p>
+      </article>
+
+      <article class="card" id="s2" data-step="s2">
+        <div class="card-head">
+          <span class="step-no">2</span>
+          <div>
+            <h3>Sign in to the sandbox account</h3>
+            <span class="where"><span class="chip device">On device</span></span>
+          </div>
+          <label class="tick"><input type="checkbox" data-tick="s2"><span class="box"></span><span class="lbl">Done</span></label>
+        </div>
+        <p>
+          This is separate from your real Apple ID — you do <b>not</b> sign out of your
+          normal account.
+        </p>
+        <div class="cmd">
+          <button class="copy" type="button">Copy</button>
+          <pre>Settings → App Store → (scroll to bottom) → Sandbox Account → Sign In</pre>
+        </div>
+        <p class="hint">
+          If a previous tester is already listed, sign out first. A stale sandbox account
+          silently attributes the purchase to the wrong tester.
+        </p>
+      </article>
+
+      <article class="card" id="s3" data-step="s3">
+        <div class="card-head">
+          <span class="step-no">3</span>
+          <div>
+            <h3>Sign in to Fluenci and capture your user id</h3>
+            <span class="where"><span class="chip device">On device</span> <span class="chip term">Terminal</span></span>
+          </div>
+          <label class="tick"><input type="checkbox" data-tick="s3"><span class="box"></span><span class="lbl">Done</span></label>
+        </div>
+        <p>
+          Sign in with a normal Supabase account, then pull the UUID. This is the value
+          that has to show up as <code>app_user_id</code> in RevenueCat.
+        </p>
+        <div class="cmd">
+          <button class="copy" type="button">Copy</button>
+          <pre>npx supabase db psql -c "select id, email from auth.users where email = 'YOUR_TEST_EMAIL' limit 1;"</pre>
+        </div>
+        <p class="hint">Keep that UUID somewhere handy — steps 6, 8 and 9 all need it.</p>
+      </article>
+
+      <article class="card" id="s4" data-step="s4">
+        <div class="card-head">
+          <span class="step-no">4</span>
+          <div>
+            <h3>Open the paywall</h3>
+            <span class="where"><span class="chip device">On device</span></span>
+          </div>
+          <label class="tick"><input type="checkbox" data-tick="s4"><span class="box"></span><span class="lbl">Done</span></label>
+        </div>
+        <p>Navigate to the subscription screen — <code>app/(app)/profile/subscription.tsx</code>.</p>
+        <div class="callout check">
+          <span class="k">Checkpoint</span>
+          <p>Packages render, with real prices.</p>
+        </div>
+        <div class="callout stop">
+          <span class="k">If the list is empty, stop here</span>
+          <p>
+            The problem is in the prerequisites, not your app code. Almost always either
+            the Paid Apps Agreement isn't active or no offering is marked Current.
+          </p>
+        </div>
+      </article>
+
+      <article class="card" id="s5" data-step="s5">
+        <div class="card-head">
+          <span class="step-no">5</span>
+          <div>
+            <h3>Buy a plan</h3>
+            <span class="where"><span class="chip device">On device</span></span>
+          </div>
+          <label class="tick"><input type="checkbox" data-tick="s5"><span class="box"></span><span class="lbl">Done</span></label>
+        </div>
+        <p>
+          Pick <b>VIP monthly</b> — the highest tier makes tier resolution unambiguous all
+          the way down the chain.
+        </p>
+        <div class="callout warn">
+          <span class="k">Confirm before you authenticate</span>
+          <p>
+            The confirmation sheet must say <b>[Environment: Sandbox]</b>. That's your
+            proof no real money moves. If it's missing you're on your real Apple ID —
+            cancel and redo step 2.
+          </p>
+        </div>
+        <div class="callout check">
+          <span class="k">Checkpoint</span>
+          <p>
+            The UI unlocks. That proves the client half:
+            <code>tierFromCustomerInfo()</code> read an active <code>vip</code> entitlement
+            straight from RevenueCat.
+          </p>
+        </div>
+      </article>
+
+      <article class="card" id="s6" data-step="s6">
+        <div class="card-head">
+          <span class="step-no">6</span>
+          <div>
+            <h3>Confirm RevenueCat filed it under the right user</h3>
+            <span class="where"><span class="chip dash">Dashboard</span></span>
+          </div>
+          <label class="tick"><input type="checkbox" data-tick="s6"><span class="box"></span><span class="lbl">Done</span></label>
+        </div>
+        <p>RevenueCat → Customers → open the newest customer.</p>
+        <div class="callout check">
+          <span class="k">Checkpoint</span>
+          <p>
+            Customer ID equals the Supabase UUID from step 3 — not
+            <code>$RCAnonymousID:…</code>.
+          </p>
+        </div>
+        <div class="callout stop">
+          <span class="k">If you see an anonymous ID</span>
+          <p>
+            <code>revenuecat-webhook/index.ts:108</code> drops any event whose
+            <code>app_user_id</code> isn't a valid UUID. It means
+            <code>configurePurchases()</code> ran before the user signed in — and no
+            purchase will ever reach your database. Fix this before continuing; the
+            remaining steps can't pass.
+          </p>
+        </div>
+      </article>
+
+      <article class="card" id="s7" data-step="s7">
+        <div class="card-head">
+          <span class="step-no">7</span>
+          <div>
+            <h3>Confirm the webhook fired and succeeded</h3>
+            <span class="where"><span class="chip term">Terminal</span></span>
+          </div>
+          <label class="tick"><input type="checkbox" data-tick="s7"><span class="box"></span><span class="lbl">Done</span></label>
+        </div>
+        <div class="cmd">
+          <button class="copy" type="button">Copy</button>
+          <pre>npx supabase functions logs revenuecat-webhook --project-ref ngqpsuixmumdnqbqxjxv</pre>
+        </div>
+        <div class="callout check">
+          <span class="k">Checkpoint</span>
+          <p>A <code>POST</code> returning <code>200</code>, within seconds of the purchase.</p>
+        </div>
+        <div class="tbl-scroll">
+          <table>
+            <thead><tr><th>What you see</th><th>What it means</th></tr></thead>
+            <tbody>
+              <tr><td><code>401</code></td><td>The Authorization header value in RevenueCat doesn't match the secret. Re-paste it.</td></tr>
+              <tr><td><code>500</code> · "REVENUECAT_WEBHOOK_AUTH is not set"</td><td>The fail-closed path. Shouldn't happen now that the secret is set.</td></tr>
+              <tr><td><code>500</code> · "subscriptions upsert failed"</td><td>Auth is fine, the database write broke. The real error is on that log line.</td></tr>
+              <tr><td>Nothing at all</td><td>RevenueCat never sent it. Check the webhook is enabled and the URL is correct.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="hint">
+          Webhook URL: <code>https://ngqpsuixmumdnqbqxjxv.supabase.co/functions/v1/revenuecat-webhook</code>
+        </p>
+      </article>
+
+      <article class="card" id="s8" data-step="s8">
+        <div class="card-head">
+          <span class="step-no">8</span>
+          <div>
+            <h3>Confirm the database row</h3>
+            <span class="where"><span class="chip term">Terminal</span></span>
+          </div>
+          <label class="tick"><input type="checkbox" data-tick="s8"><span class="box"></span><span class="lbl">Done</span></label>
+        </div>
+        <div class="cmd">
+          <button class="copy" type="button">Copy</button>
+          <pre>npx supabase db psql -c "select user_id, tier, is_active, subscription_status, current_period_end, cancel_at_period_end, updated_at from public.subscriptions order by updated_at desc limit 3;"</pre>
+        </div>
+        <div class="callout check">
+          <span class="k">Checkpoint</span>
+          <p>
+            A row for your UUID with <code>tier = 'vip'</code>,
+            <code>is_active = true</code>, <code>subscription_status = 'active'</code>, and
+            a <code>current_period_end</code> a few minutes out — sandbox subscriptions run
+            on a heavily accelerated clock.
+          </p>
+        </div>
+      </article>
+
+      <article class="card" id="s9" data-step="s9">
+        <div class="card-head">
+          <span class="step-no">9</span>
+          <div>
+            <h3>Confirm server-side enforcement</h3>
+            <span class="where"><span class="chip term">Terminal</span></span>
+          </div>
+          <label class="tick"><input type="checkbox" data-tick="s9"><span class="box"></span><span class="lbl">Done</span></label>
+        </div>
+        <p>
+          The step people skip, and the one that catches the paid-but-rate-limited bug.
+          <code>get_effective_limits</code> is what every quota check actually reads.
+        </p>
+        <div class="cmd">
+          <button class="copy" type="button">Copy</button>
+          <pre>npx supabase db psql -c "select public.get_effective_limits('YOUR_UUID_HERE'::uuid);"</pre>
+        </div>
+        <div class="callout check">
+          <span class="k">Checkpoint</span>
+          <p>VIP-level quotas come back, not starter ones.</p>
+        </div>
+        <div class="callout stop">
+          <span class="k">If step 8 passed but this returns starter limits</span>
+          <p>
+            The bug is inside <code>get_effective_limits</code> itself — most likely a tier
+            string it doesn't recognise. This is exactly the split-brain state the whole
+            test exists to find.
+          </p>
+        </div>
+      </article>
+
+      <article class="card" id="s10" data-step="s10">
+        <div class="card-head">
+          <span class="step-no">10</span>
+          <div>
+            <h3>Restore purchases</h3>
+            <span class="where"><span class="chip device">On device</span></span>
+          </div>
+          <label class="tick"><input type="checkbox" data-tick="s10"><span class="box"></span><span class="lbl">Done</span></label>
+        </div>
+        <p>
+          Delete the app entirely. Reinstall from the same EAS link. Sign in with the same
+          Supabase account.
+        </p>
+        <div class="callout check">
+          <span class="k">Checkpoint</span>
+          <p>
+            You start locked out. Open the subscription screen, tap <b>Restore Purchases</b>
+            (<code>subscription.tsx:105</code>), and access comes back.
+          </p>
+        </div>
+        <div class="callout warn">
+          <span class="k">Not optional</span>
+          <p>
+            Apple requires a working restore path. A missing or broken one is a documented
+            rejection under Guideline 3.1.1, and reviewers do test it.
+          </p>
+        </div>
+      </article>
+    </section>
+
+    <!-- ─── Bonus ──────────────────────────────────────────────────────── -->
+    <section id="extra">
+      <h2>Worth doing while you're set up</h2>
+      <p class="sec-note">
+        Sandbox subscriptions run on a compressed clock — a one-month subscription renews
+        roughly every five minutes and auto-cancels after six renewals. The renewal and
+        expiry paths are nearly free to test.
+      </p>
+      <div class="card">
+        <ul class="plain">
+          <li>Wait for a renewal, then check the logs for a <code>RENEWAL</code> event and confirm <code>current_period_end</code> moved forward.</li>
+          <li>Let it run to auto-cancellation and confirm an <code>EXPIRATION</code> event flips <code>tier</code> to <code>starter</code> and <code>is_active</code> to <code>false</code>.</li>
+        </ul>
+        <div class="callout warn">
+          <span class="k">Known issue you won't reproduce here</span>
+          <p>
+            <code>BILLING_ISSUE</code> sits in <code>INACTIVE_EVENTS</code>
+            (<code>index.ts:52</code>), so it revokes access immediately. In production
+            Apple fires that at the <em>start</em> of a billing problem, while the store
+            grace period may still entitle the user — so a customer whose card hiccups gets
+            downgraded while legitimately paid up. Worth fixing before launch. It does not
+            block this test.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Handoff ────────────────────────────────────────────────────── -->
+    <section class="handoff" id="handoff">
+      <h2>Where I pick up</h2>
+      <p>
+        Steps 1 to 6 are yours — device, dashboards, Apple's UI. Steps 7, 8 and 9 run
+        against the project directly, and I can do all three in one pass.
+      </p>
+      <p>
+        Once the purchase goes through, send me the Supabase UUID from step 3. I'll pull
+        the function logs, check the <code>subscriptions</code> row, and verify the
+        effective limits.
+      </p>
+    </section>
+  </main>
+</div>
+
+<script>
+(function () {
+  var KEY = 'fluenci-iap-sandbox-test';
+  var ticks = Array.prototype.slice.call(document.querySelectorAll('[data-tick]'));
+  var ring = document.getElementById('ring');
+  var doneEl = document.getElementById('done');
+  var CIRC = 2 * Math.PI * 25;
+
+  ring.style.strokeDasharray = CIRC;
+
+  function load() {
+    try { return JSON.parse(localStorage.getItem(KEY) || '{}'); }
+    catch (e) { return {}; }
+  }
+
+  var state = load();
+
+  function paint() {
+    var n = 0;
+    ticks.forEach(function (input) {
+      var id = input.getAttribute('data-tick');
+      var on = !!state[id];
+      input.checked = on;
+      if (on) n++;
+      var card = document.getElementById(id);
+      if (card) card.classList.toggle('checked', on);
+      var link = document.querySelector('.rail-nav a[data-for="' + id + '"]');
+      if (link) link.classList.toggle('done', on);
+    });
+    doneEl.textContent = n;
+    ring.style.strokeDashoffset = CIRC * (1 - n / ticks.length);
+  }
+
+  ticks.forEach(function (input) {
+    input.addEventListener('change', function () {
+      state[input.getAttribute('data-tick')] = input.checked;
+      try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+      paint();
+    });
+  });
+
+  document.getElementById('reset').addEventListener('click', function () {
+    state = {};
+    try { localStorage.removeItem(KEY); } catch (e) {}
+    paint();
+  });
+
+  document.querySelectorAll('.cmd .copy').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var text = btn.parentNode.querySelector('pre').textContent;
+      navigator.clipboard.writeText(text).then(function () {
+        btn.textContent = 'Copied';
+        btn.classList.add('ok');
+        setTimeout(function () { btn.textContent = 'Copy'; btn.classList.remove('ok'); }, 1400);
+      });
+    });
+  });
+
+  paint();
+})();
+</script>
+
+</body>
+</html>

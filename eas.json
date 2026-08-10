@@ -17,6 +17,7 @@
     },
     "preview": {
       "distribution": "internal",
+      "environment": "preview",
       "ios": {
         "buildConfiguration": "Release"
       },
@@ -24,29 +25,32 @@
         "EXPO_PUBLIC_SUPABASE_URL": "https://ngqpsuixmumdnqbqxjxv.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_lkA4HmlH-NZzBjsLmzQ-TA_FvS_aQk1",
         "EXPO_PUBLIC_APP_ENV": "preview",
-        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "appl_REPLACE_WITH_REVENUECAT_IOS_PUBLIC_KEY",
+        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "appl_KLvWOLovdOVLmzAkMwLfDNaqNOK",
         "EXPO_PUBLIC_REVENUECAT_ANDROID_KEY": "goog_REPLACE_WITH_REVENUECAT_ANDROID_PUBLIC_KEY",
-        "EXPO_PUBLIC_SENTRY_DSN": "https://145253c82b7a0fb4e8dfd2e55901eea0@o4511033096536064.ingest.us.sentry.io/4511788112478208"
+        "EXPO_PUBLIC_SENTRY_DSN": "https://9285b6c772c26a74a2646822c597cd47@o4511033096536064.ingest.us.sentry.io/4511880912633856"
       }
     },
     "production": {
       "autoIncrement": true,
+      "environment": "production",
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://ngqpsuixmumdnqbqxjxv.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_lkA4HmlH-NZzBjsLmzQ-TA_FvS_aQk1",
         "EXPO_PUBLIC_APP_ENV": "production",
-        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "appl_REPLACE_WITH_REVENUECAT_IOS_PUBLIC_KEY",
+        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "appl_KLvWOLovdOVLmzAkMwLfDNaqNOK",
         "EXPO_PUBLIC_REVENUECAT_ANDROID_KEY": "goog_REPLACE_WITH_REVENUECAT_ANDROID_PUBLIC_KEY",
-        "EXPO_PUBLIC_SENTRY_DSN": "https://145253c82b7a0fb4e8dfd2e55901eea0@o4511033096536064.ingest.us.sentry.io/4511788112478208"
+        "EXPO_PUBLIC_SENTRY_DSN": "https://9285b6c772c26a74a2646822c597cd47@o4511033096536064.ingest.us.sentry.io/4511880912633856"
       }
     }
   },
   "submit": {
     "production": {
       "ios": {
-        "appleId": "tcm2407@icloud.com",
         "ascAppId": "6761507250",
-        "appleTeamId": "3RZVA8RPRT"
+        "appleTeamId": "3RZVA8RPRT",
+        "ascApiKeyPath": "./credentials/AuthKey_7W4K8YJNHP.p8",
+        "ascApiKeyId": "7W4K8YJNHP",
+        "ascApiKeyIssuerId": "3b594660-1a78-40b9-b1ba-8f98c1ee92cf"
       },
       "android": {
         "serviceAccountKeyPath": "./google-play-service-account.json",
