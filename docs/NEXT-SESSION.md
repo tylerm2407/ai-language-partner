@@ -1,24 +1,33 @@
 # Next session — start here
 
-Handoff covering five sessions: the differentiation programme
+Handoff covering six sessions: the differentiation programme
 (2026-08-05 → 08-07), the positioning/UI-review session (2026-08-07), the
 palette session (2026-08-07), the app-code session that closed out §3 and §4
-(2026-08-08), and the content audit (2026-08-08 → 08-09, §12).
+(2026-08-08), the content audit (2026-08-08 → 08-09, §12), and the
+store/monitoring session that created the IAP products (2026-08-08 → 08-11, §5).
 Written to be read cold: you should not need the previous conversation.
 
 **Current focus: App Store launch.** Anything that does not serve v1 shipping is
 parked. Hands-free is the headline differentiator.
 
+**Blocked on Apple as of 2026-08-11:** the Paid Apps Agreement is *Pending User
+Info → processing*, quoted at up to 24h. Until it reads **Active**, StoreKit
+returns zero products, so the paywall shows "we couldn't load plans right now"
+no matter how correct everything downstream is. Nothing to fix in code — see §5
+before debugging any paywall symptom.
+
 **Tree state at handoff: clean and pushed.**
 Baseline: typecheck clean, 0 lint errors (14 warnings, all pre-existing),
-437 tests across 24 suites. `npm run check` is the gate — keep it green.
+446 tests across 25 suites. `npm run check` is the gate — keep it green.
 
 **Nothing in the UI has been verified on a device.** `npm run check` proves the
 tree compiles and the logic tests pass; there are no visual or snapshot tests in
 this project, so every contrast figure in `DESIGN.md` is computed arithmetic and
 no screen has been looked at since the palette churn. This got *more* true on
 2026-08-08: ten screens had layout changes and the post-signup route changed.
-See §1.4 and §1.5.
+See §1.4 and §1.5. It got more true again on 2026-08-11: `app/(app)/plans.tsx`
+is a brand-new screen that has never rendered on a device, and it cannot until
+the agreement in the callout above clears.
 
 ---
 
@@ -447,7 +456,62 @@ path — not a step back in the funnel.
 
 ---
 
-## 5. Pricing — specced, products not created
+## 5. Pricing — products now created and live (2026-08-11)
+
+### 5.0 What exists in App Store Connect and RevenueCat
+
+Created via the App Store Connect and RevenueCat v2 APIs, not the dashboards.
+All six are **READY_TO_SUBMIT**, priced in **175 territories**, each with a
+**7-day free trial**. Group `22298451` ("Fluenci"), app `6761507250`.
+
+| Product ID | Price | Group level |
+|---|---|---|
+| `fluenci_vip_yearly` | $299.99 | 1 |
+| `fluenci_vip_monthly` | $29.99 | 1 |
+| `fluenci_premium_yearly` | $199.99 | 2 |
+| `fluenci_premium_monthly` | $19.99 | 2 |
+| `fluenci_basic_yearly` | $99.99 | 3 |
+| `fluenci_basic_monthly` | $9.99 | 3 |
+
+Annuals are 10x monthly — two months free, 17% off, which is what the paywall's
+SAVE badge computes from live store prices.
+
+RevenueCat project `proje68552f1`, App Store app `appb3cdaeee84`
+(bundle `com.fluenci.app`, ASC API key + subscription key configured). Offering
+`default` is Current with six packages; entitlements `basic`/`premium`/`vip`
+each carry their two products.
+
+**These match today's four-tier model, NOT the Free/Plus/Pro collapse specced
+below.** Store product IDs are immutable — the collapse would need six new
+products, not renames. Decide the model before creating anything else.
+
+### 5.1 Two obligations that are easy to forget
+
+1. **The App Store review screenshot on all six products is a placeholder** — a
+   1242x2208 letterboxed shot of the Home screen, uploaded only to move the
+   products out of `MISSING_METADATA`. A reviewer seeing Home where the purchase
+   UI should be is a rejection. Replace with a real paywall screenshot before
+   submitting.
+2. **The Stripe secret key needs rotating.** A setup script matched
+   `STRIPE_SECRET_KEY` on its `sk_` prefix and sent it to RevenueCat's API as a
+   bearer token. Rejected with 401, nothing created, but it reached a third
+   party's request logs. Roll it in Stripe, then update `.env` *and* the Supabase
+   function secret of the same name.
+
+### 5.2 Three API traps, all of which cost a cycle here
+
+- **Availability before prices.** A subscription rejects prices and offers with
+  "an error occurred while processing the pricing information" until
+  `subscriptionAvailabilities` exists. The message names pricing and is wrong.
+- **Price every available territory.** 175 territories with one USA price leaves
+  the product `MISSING_METADATA` with nothing indicating which field is missing.
+  Use `/v1/subscriptionPricePoints/{id}/equalizations` to map the base point
+  across the other 174, then POST a `subscriptionPrices` each.
+- **IAP review screenshots take a narrower dimension list than App Store
+  screenshots.** 1024x1024 and a native 1170x2532 iPhone shot were both rejected
+  `IMAGE_INCORRECT_DIMENSIONS`. 1242x2208 is accepted.
+
+### 5.3 The repricing spec
 
 `docs/strategy/pricing-spec.md` is the full spec. Summary:
 
@@ -462,10 +526,13 @@ benefit that does not exist.
 **Not built:** the collapse from four quota-metered tiers to Free / Plus / Pro
 defined by capability. Blocked on two things:
 
-1. **You create the App Store Connect products first** — `fluenci_plus_annual`,
-   `fluenci_plus_monthly`, `fluenci_pro_annual`, `fluenci_pro_monthly`, one
-   subscription group, 14-day trial on the annuals only. They take review time
-   and can exist unused.
+1. **New App Store Connect products are still needed** — `fluenci_plus_annual`,
+   `fluenci_plus_monthly`, `fluenci_pro_annual`, `fluenci_pro_monthly`, 14-day
+   trial on the annuals only. The six four-tier products in §5.0 already exist
+   and cannot be renamed into these; product IDs are immutable. They can live
+   alongside in the same group and exist unused, so this is additive — but it
+   doubles the catalogue, so settle the model before creating them. The scripts
+   that created the current six are reusable; §5.2 lists the traps.
 2. **Check the voice-cost maths before committing to the pools.** Current VIP is
    30 min/day = **900 min/month** worst case, which almost certainly does not
    survive $29.99. Voice is the dominant marginal cost. The spec proposes monthly
