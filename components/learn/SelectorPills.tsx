@@ -15,6 +15,7 @@
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Body } from '../ui/Text';
+import { usePressed } from '../../hooks/usePressed';
 import { colors, radii, spacing } from '../../config/theme';
 import type { Course } from '../../types';
 
@@ -27,13 +28,15 @@ interface PillProps {
 }
 
 function Pill({ label, selected, onPress, accessibilityLabel, accessibilityRole }: PillProps) {
+  const { pressed, pressHandlers } = usePressed();
   return (
     <Pressable
       onPress={onPress}
+      {...pressHandlers}
       accessibilityRole={accessibilityRole}
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ selected }}
-      style={({ pressed }) => [
+      style={[
         styles.pill,
         selected ? styles.pillSelected : styles.pillIdle,
         pressed && styles.pillPressed,

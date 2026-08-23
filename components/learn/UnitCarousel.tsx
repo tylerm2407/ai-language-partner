@@ -22,6 +22,7 @@ import {
 } from 'react-native';
 import { Body } from '../ui/Text';
 import { Mono } from './Mono';
+import { usePressed } from '../../hooks/usePressed';
 import { colors, radii, spacing, typography } from '../../config/theme';
 import type { UnitProgress } from '../../lib/learn-progress';
 
@@ -121,17 +122,19 @@ const UnitCard = React.memo(function UnitCard({
   selected,
   onPress,
 }: UnitCardProps) {
+  const { pressed, pressHandlers } = usePressed();
   const { completedCount, totalCount, progress } = unit;
   const finished = totalCount > 0 && completedCount === totalCount;
 
   return (
     <Pressable
       onPress={onPress}
+      {...pressHandlers}
       accessibilityRole="button"
       accessibilityState={{ selected }}
       accessibilityLabel={`Unit ${unit.index + 1}, ${unit.unit.title}`}
       accessibilityValue={{ text: `${completedCount} of ${totalCount} lessons complete` }}
-      style={({ pressed }) => [
+      style={[
         styles.card,
         { width },
         selected ? styles.cardSelected : styles.cardIdle,

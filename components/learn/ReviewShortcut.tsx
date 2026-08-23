@@ -15,6 +15,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Body } from '../ui/Text';
 import { Mono } from './Mono';
+import { usePressed } from '../../hooks/usePressed';
 import { colors, radii, spacing } from '../../config/theme';
 
 interface ReviewShortcutProps {
@@ -23,14 +24,16 @@ interface ReviewShortcutProps {
 }
 
 export function ReviewShortcut({ count, onPress }: ReviewShortcutProps) {
+  const { pressed, pressHandlers } = usePressed();
   if (count <= 0) return null;
 
   return (
     <Pressable
       onPress={onPress}
+      {...pressHandlers}
       accessibilityRole="button"
       accessibilityLabel={`Review cards. ${count} ${count === 1 ? 'card' : 'cards'} due.`}
-      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+      style={[styles.row, pressed && styles.pressed]}
     >
       <View style={styles.iconWell}>
         <Ionicons name="refresh" size={18} color={colors.success.base} />

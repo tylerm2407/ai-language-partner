@@ -25,9 +25,25 @@ const TAB_ICONS: Record<string, { active: string; inactive: string }> = {
 
 const VISIBLE_TABS = ['index', 'learn', 'chat', 'profile'];
 
+/** Height of the pill itself. */
+const TAB_BAR_HEIGHT = 56;
+
+/**
+ * How much space the floating bar occupies above the bottom of the WINDOW.
+ *
+ * The bar is absolutely positioned and overlays whatever is beneath it, so any
+ * screen that pins content to the bottom has to reserve this much or the bar
+ * lands on top of it — which is exactly what happened to the lesson runner's
+ * Previous/Next row. Exported so the geometry lives in one place rather than
+ * being re-derived (and drifting) at each call site.
+ */
+export function floatingTabBarSpace(bottomInset: number): number {
+  return Math.max(bottomInset, 16) + 12 + TAB_BAR_HEIGHT;
+}
+
 export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
-  const bottomOffset = Math.max(insets.bottom, 16) + 12;
+  const bottomOffset = floatingTabBarSpace(insets.bottom) - TAB_BAR_HEIGHT;
 
   const visibleRoutes = state.routes.filter((route) => VISIBLE_TABS.includes(route.name));
 

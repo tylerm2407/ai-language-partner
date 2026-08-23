@@ -10,6 +10,7 @@
 import React from 'react';
 import TestRenderer, { type ReactTestInstance } from 'react-test-renderer';
 import { Text } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ExerciseChrome } from './ExerciseChrome';
 import { ExerciseTrack } from './ExerciseTrack';
 import { MultipleChoice } from './MultipleChoice';
@@ -44,10 +45,19 @@ jest.mock('../../hooks/useAudioPlayer', () => ({
   useAudioPlayer: () => ({ playing: false, loading: false, error: null, play: jest.fn() }),
 }));
 
+/** ExerciseChrome reads safe-area insets to clear the floating tab bar, so
+ *  every render needs a provider with deterministic metrics. */
+const METRICS = {
+  frame: { x: 0, y: 0, width: 402, height: 874 },
+  insets: { top: 59, left: 0, right: 0, bottom: 34 },
+};
+
 function render(element: React.ReactElement) {
   let renderer!: TestRenderer.ReactTestRenderer;
   TestRenderer.act(() => {
-    renderer = TestRenderer.create(element);
+    renderer = TestRenderer.create(
+      <SafeAreaProvider initialMetrics={METRICS}>{element}</SafeAreaProvider>,
+    );
   });
   return renderer;
 }

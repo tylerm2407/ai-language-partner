@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 import { View, Pressable, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { floatingTabBarSpace } from '../navigation/FloatingTabBar';
 import { HeartsDisplay } from '../gamification/HeartsDisplay';
 import { TactileButton } from '../ui/TactileButton';
 import { Body } from '../ui/Text';
@@ -70,6 +72,15 @@ export function ExerciseChrome({
   onNext,
   children,
 }: ExerciseChromeProps) {
+  const insets = useSafeAreaInsets();
+  // The lesson route lives inside the tab navigator, and FloatingTabBar is
+  // absolutely positioned over it — so a footer pinned to the bottom has to
+  // reserve the bar's space or Previous/Next render underneath it. The parent
+  // SafeAreaView already consumes insets.bottom, so subtract it back out.
+  const footerBottomInset = Math.max(
+    spacing.xl + 4,
+    floatingTabBarSpace(insets.bottom) - insets.bottom + spacing.sm,
+  );
   const answered = answeredCorrect !== null;
   const kicker = !answered
     ? null
@@ -180,7 +191,7 @@ export function ExerciseChrome({
         style={{
           paddingHorizontal: spacing.lg - 2,
           paddingTop: spacing.sm + 2,
-          paddingBottom: spacing.xl + 4,
+          paddingBottom: footerBottomInset,
           borderTopWidth: 1,
           borderTopColor: colors.border.subtle,
         }}

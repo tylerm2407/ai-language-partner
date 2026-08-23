@@ -25,6 +25,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Body } from '../ui/Text';
 import { Mono } from './Mono';
 import { DashedOutline } from './DashedOutline';
+import { usePressed } from '../../hooks/usePressed';
 import { colors, radii, spacing, typography } from '../../config/theme';
 import type { LessonRowState } from '../../lib/learn-progress';
 
@@ -53,6 +54,7 @@ function LessonRowComponent({
   estimatedMinutes,
   onPress,
 }: LessonRowProps) {
+  const { pressed, pressHandlers } = usePressed();
   const locked = state === 'locked';
   const active = state === 'active';
   const completed = state === 'completed';
@@ -81,6 +83,7 @@ function LessonRowComponent({
   return (
     <Pressable
       onPress={onPress}
+      {...pressHandlers}
       disabled={locked}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
@@ -92,7 +95,7 @@ function LessonRowComponent({
             : undefined
       }
       accessibilityState={{ disabled: locked }}
-      style={({ pressed }) => [
+      style={[
         styles.row,
         completed && styles.rowCompleted,
         active && styles.rowActive,
