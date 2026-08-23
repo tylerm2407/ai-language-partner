@@ -75,3 +75,13 @@ verify_jwt = false
 
 [functions.voice-session-end]
 verify_jwt = false
+
+# ─── lesson-session ───────────────────────────────────────────────────────
+# Redis-backed mid-lesson resume snapshots (one-day expiry). Authenticates in
+# the function body via getAuthenticatedUser (_shared/auth.ts) and derives the
+# Redis key from the verified user id, so the platform gate stays off for the
+# same reason as ai-chat. Requires the UPSTASH_REDIS_REST_URL and
+# UPSTASH_REDIS_REST_TOKEN secrets; without them it returns 503
+# REDIS_NOT_CONFIGURED and the client falls back to on-device snapshots.
+[functions.lesson-session]
+verify_jwt = false

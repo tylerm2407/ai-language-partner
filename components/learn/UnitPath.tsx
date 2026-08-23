@@ -13,8 +13,9 @@
  * lib/learn-progress.ts so the rollups are unit-testable.
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useLessonProgress } from '../../hooks/useLessonProgress';
 import { Body, Heading } from '../ui/Text';
@@ -40,7 +41,19 @@ interface UnitPathProps {
 
 export function UnitPath({ units, courseId, header }: UnitPathProps) {
   const router = useRouter();
-  const { getLessonState, getScore, loading, error, retry } = useLessonProgress(courseId);
+  const { getLessonState, getScore, loading, error, retry, refresh } = useLessonProgress(courseId);
+
+  // Re-read progress every time the Learn tab regains focus. The shared store
+  // already reflects a lesson finished on this device the moment it ends, so
+  // this is for the other cases: a lesson completed on another device, and a
+  // queued completion that has since replayed. Without it the tab, which
+  // stays mounted under the pushed lesson route, would only ever show the
+  // progress it happened to load on first render.
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+    }, [refresh]),
+  );
 
   const unitProgress = useMemo(
     () => (loading ? [] : buildUnitProgress(units, getLessonState, getScore)),

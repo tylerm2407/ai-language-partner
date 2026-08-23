@@ -1,117 +1,103 @@
-import { useState, useEffect, useCallback } from 'react';
+/**
+ * Lesson progress for a course — a view over the shared completions store.
+ *
+ * The state itself lives in stores/useLessonProgressStore so that marking a
+ * lesson complete on the lesson screen is immediately visible to the Learn
+ * tab's carousel and the home-screen tiles. See that file for why per-hook
+ * state was the bug behind "I finished a lesson and stayed in the same place".
+ *
+ * `courseId` no longer scopes the fetch (the store holds every course's
+ * completions and lesson ids are unique), it is only kept so callers read the
+ * same way as before and so the returned `completions` map can be scoped.
+ */
+import { useCallback, useEffect, useMemo } from 'react';
 import { useAuth } from './useAuth';
-import { fetchLessonCompletions, upsertLessonCompletion } from '../lib/supabase-queries';
-import { enqueue, isNetworkError } from '../lib/offline-queue';
+import { useLessonProgressStore } from '../stores/useLessonProgressStore';
 import type { LessonCompletion } from '../types';
 
 export type LessonState = 'completed' | 'active' | 'locked';
 
-interface LessonProgressState {
-  completions: Map<string, LessonCompletion>;
-  loading: boolean;
-}
-
 export function useLessonProgress(courseId?: string) {
   const { user } = useAuth();
-  const [state, setState] = useState<LessonProgressState>({
-    completions: new Map(),
-    loading: true,
-  });
-  const [error, setError] = useState<string | null>(null);
-  const [reloadKey, setReloadKey] = useState(0);
+  const userId = user?.id;
+
+  const allCompletions = useLessonProgressStore((s) => s.completions);
+  const loading = useLessonProgressStore((s) => s.loading);
+  const error = useLessonProgressStore((s) => s.error);
+  const load = useLessonProgressStore((s) => s.load);
+  const refresh = useLessonProgressStore((s) => s.refresh);
+  const markComplete = useLessonProgressStore((s) => s.markComplete);
 
   useEffect(() => {
-    if (!user?.id) return;
-    let cancelled = false;
-    setError(null);
-    // Back to loading on every identity/course change, not just the first.
-    // Without this, switching course keeps the previous course's completion
-    // map visible as settled data — every lesson of the new course misses that
-    // map, so the whole path renders locked-but-loaded and any consumer that
-    // picks a starting position off it (the unit carousel) picks unit 1 and
-    // then has no reason to move when the real data lands.
-    setState((prev) => (prev.loading ? prev : { ...prev, loading: true }));
-    fetchLessonCompletions(user.id, courseId)
-      .then((data) => {
-        if (cancelled) return;
-        const map = new Map<string, LessonCompletion>();
-        for (const c of data) {
-          map.set(c.lessonId, c);
-        }
-        setState({ completions: map, loading: false });
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setError(err instanceof Error ? err.message : 'Failed to load lesson progress');
-        setState((prev) => ({ ...prev, loading: false }));
-      });
-    return () => { cancelled = true; };
-  }, [user?.id, courseId, reloadKey]);
+    if (!userId) return;
+    load(userId);
+  }, [userId, load]);
+
+  const completions = useMemo(() => {
+    if (!courseId) return allCompletions;
+    const scoped = new Map<string, LessonCompletion>();
+    for (const [lessonId, completion] of allCompletions) {
+      if (completion.courseId === courseId) scoped.set(lessonId, completion);
+    }
+    return scoped;
+  }, [allCompletions, courseId]);
 
   const retry = useCallback(() => {
-    setState((prev) => ({ ...prev, loading: true }));
-    setReloadKey((k) => k + 1);
-  }, []);
+    if (!userId) return;
+    refresh(userId);
+  }, [userId, refresh]);
 
   const getLessonState = useCallback(
     (lessonId: string, orderedLessonIds: string[]): LessonState => {
-      if (state.completions.has(lessonId)) return 'completed';
+      // Read the unscoped map: a completion written before course_id was
+      // resolvable must still unlock the lesson that follows it.
+      if (allCompletions.has(lessonId)) return 'completed';
       const idx = orderedLessonIds.indexOf(lessonId);
       if (idx === 0) return 'active';
       // Active if previous lesson is completed
-      if (idx > 0 && state.completions.has(orderedLessonIds[idx - 1])) return 'active';
+      if (idx > 0 && allCompletions.has(orderedLessonIds[idx - 1])) return 'active';
       return 'locked';
     },
-    [state.completions]
+    [allCompletions],
   );
 
   const getScore = useCallback(
-    (lessonId: string): number | null => {
-      return state.completions.get(lessonId)?.score ?? null;
-    },
-    [state.completions]
+    (lessonId: string): number | null => allCompletions.get(lessonId)?.score ?? null,
+    [allCompletions],
   );
 
+  /**
+   * Record a finished lesson. Resolves once the completion is durable —
+   * either in Postgres or in the replay queue — and returns which of the two,
+   * so the caller can tell the learner it will sync. Rejects only if the
+   * lesson can't be identified.
+   */
   const markLessonComplete = useCallback(
-    async (lessonId: string, courseId: string, score: number, xpEarned: number, timeSpentMs: number) => {
-      if (!user?.id) return;
-      let completion: LessonCompletion;
-      try {
-        completion = await upsertLessonCompletion(user.id, lessonId, courseId, score, xpEarned, timeSpentMs);
-      } catch (err) {
-        if (!isNetworkError(err)) throw err;
-        // Network blip: queue the write for replay on reconnect and treat
-        // the lesson as locally complete. The upsert is conflict-safe on
-        // (user_id, lesson_id), so the replay is idempotent.
-        await enqueue(user.id, {
-          type: 'lesson-completion',
-          payload: { lessonId, courseId, score, xpEarned, timeSpentMs },
-        });
-        completion = {
-          id: `offline:${lessonId}`,
-          userId: user.id,
-          lessonId,
-          courseId,
-          score,
-          xpEarned,
-          timeSpentMs,
-          completedAt: new Date().toISOString(),
-        };
+    async (
+      lessonId: string,
+      courseIdForLesson: string,
+      score: number,
+      xpEarned: number,
+      timeSpentMs: number,
+    ) => {
+      if (!userId) throw new Error('Cannot record a lesson completion while signed out');
+      if (!courseIdForLesson) {
+        // course_id is NOT NULL in the table; the old call site passed '' when
+        // the lesson's course couldn't be resolved, which made Postgres reject
+        // the row with a uuid parse error that was then swallowed.
+        throw new Error(`Lesson ${lessonId} has no course; cannot record completion`);
       }
-      setState((prev) => {
-        const newMap = new Map(prev.completions);
-        newMap.set(lessonId, completion);
-        return { ...prev, completions: newMap };
-      });
+      return markComplete(userId, lessonId, courseIdForLesson, score, xpEarned, timeSpentMs);
     },
-    [user?.id]
+    [userId, markComplete],
   );
 
   return {
-    completions: state.completions,
-    loading: state.loading,
+    completions,
+    loading,
     error,
     retry,
+    refresh: retry,
     getLessonState,
     getScore,
     markLessonComplete,

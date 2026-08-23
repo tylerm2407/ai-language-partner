@@ -191,6 +191,13 @@ export interface LessonResult {
   accuracy: number;
   xpEarned: number;
   answers: { exerciseId: string; correct: boolean; answer: string }[];
+  /**
+   * Wall-clock time from when this lesson session first started — which for a
+   * resumed lesson is the ORIGINAL start, since `sessionStartedAtRef` is
+   * restored from the snapshot. Stored on the completion row, which used to
+   * be hardcoded to 0.
+   */
+  timeSpentMs: number;
 }
 
 export function LessonRunner({
@@ -496,6 +503,7 @@ export function LessonRunner({
         accuracy,
         xpEarned,
         answers: allAnswers,
+        timeSpentMs: Math.max(0, Date.now() - sessionStartedAtRef.current),
       };
 
       // Lesson finished — the resume snapshot is no longer needed.
@@ -510,13 +518,25 @@ export function LessonRunner({
     }
   };
 
-  // Explicit quit discards the resume snapshot; forced exits (e.g. out of
-  // hearts) keep it so the learner can resume once hearts regenerate.
+  /**
+   * Leaving a lesson part-way KEEPS the resume snapshot — closing a lesson is
+   * the main way people leave one, and throwing their answers away for it was
+   * the wrong default. The snapshot is written to the device and to Redis and
+   * expires one day after the lesson started; miss that window and the lesson
+   * restarts from the top.
+   *
+   * The last write happened when the current exercise was answered, so this
+   * flush exists to capture where they actually are — walking back a question
+   * and then quitting should resume at that question, not further ahead.
+   */
   const handleQuit = () => {
-    if (lessonId && userId) {
-      clearLessonSession(userId, lessonId).catch((err) =>
-        console.warn('[lesson-session] clear failed:', err),
-      );
+    if (lessonId && userId && answers.length > 0) {
+      saveLessonSession(userId, lessonId, {
+        exerciseIndex: currentIndex,
+        answers,
+        picks,
+        startedAt: sessionStartedAtRef.current,
+      }).catch((err) => console.warn('[lesson-session] quit save failed:', err));
     }
     onExit();
   };
