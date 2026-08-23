@@ -28,19 +28,59 @@ import Purchases, {
 import type { PlanId } from './plans';
 
 /**
- * Return a usable RevenueCat key, or undefined if it is missing or an
- * unreplaced `appl_REPLACE_WITH_…` / `goog_REPLACE_WITH_…` placeholder.
- * Without this, a production build with placeholder keys still passes the
- * `Boolean(key)` check, configures the SDK with a dummy key, and ships a
- * dead paywall (offerings/purchases silently fail → $0 revenue).
+ * RevenueCat public SDK key prefixes. The keys are issued per platform and are
+ * NOT interchangeable — an Android key in the iOS slot fails the same way a
+ * junk value does.
  */
-function resolveKey(key: string | undefined): string | undefined {
-  if (!key || key.includes('REPLACE_WITH')) return undefined;
-  return key;
+const KEY_PREFIX = { ios: 'appl_', android: 'goog_' } as const;
+
+export type PurchasePlatform = keyof typeof KEY_PREFIX;
+
+/**
+ * Return a usable RevenueCat key, or undefined if it cannot possibly be one.
+ *
+ * A wrong key is worse than no key: `Purchases.configure()` accepts it, every
+ * subsequent call fails with "Invalid API Key", and the paywall renders its
+ * generic "couldn't load plans" state — so a build ships with a dead paywall
+ * and $0 revenue, and the only clue is a native log line.
+ *
+ * This screens three ways that has actually happened here:
+ *   - an unreplaced `appl_REPLACE_WITH_…` placeholder;
+ *   - a value that is not a RevenueCat key at all (a `test_…` string sat in
+ *     .env and took the paywall down in development);
+ *   - a correctly-formed key pasted into the other platform's variable.
+ *
+ * A missing key is left silent — that is the legitimate Expo Go / no-IAP
+ * build case. A key that is *present but wrong* warns loudly, because that is
+ * always a misconfiguration and the failure is otherwise invisible until
+ * someone opens the paywall.
+ */
+export function resolveKey(
+  key: string | undefined,
+  platform: PurchasePlatform,
+): string | undefined {
+  const trimmed = key?.trim();
+  if (!trimmed) return undefined;
+
+  const expected = KEY_PREFIX[platform];
+  const bad =
+    trimmed.includes('REPLACE_WITH') ? 'is an unreplaced placeholder'
+    : !trimmed.startsWith(expected) ? `does not start with "${expected}"`
+    : null;
+
+  if (bad) {
+    // Never log the value itself — it is a credential, junk or not.
+    console.warn(
+      `[purchases] Ignoring the ${platform} RevenueCat key: it ${bad}. ` +
+        'In-app purchases are disabled and the paywall will show no plans.',
+    );
+    return undefined;
+  }
+  return trimmed;
 }
 
-const IOS_KEY = resolveKey(process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY);
-const ANDROID_KEY = resolveKey(process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY);
+const IOS_KEY = resolveKey(process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY, 'ios');
+const ANDROID_KEY = resolveKey(process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY, 'android');
 
 /** Paid tiers that map to RevenueCat entitlements (excludes the free 'starter'). */
 type PaidTier = Exclude<PlanId, 'starter'>;

@@ -3,6 +3,7 @@ import {
   annualSavingsPercent,
   isAnnualPackage,
   isMonthlyPackage,
+  resolveKey,
   tierFromPackage,
 } from './purchases';
 
@@ -79,5 +80,71 @@ describe('annualSavingsPercent', () => {
   it('claims nothing when the annual price is not actually cheaper', () => {
     expect(annualSavingsPercent(120, 9.99)).toBe(0);
     expect(annualSavingsPercent(119.88, 9.99)).toBe(0);
+  });
+});
+
+describe('resolveKey', () => {
+  // A wrong key is worse than no key: the SDK configures with it, every call
+  // fails "Invalid API Key", and the paywall shows its generic empty state.
+  let warn: jest.SpyInstance;
+
+  beforeEach(() => {
+    warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+  afterEach(() => {
+    warn.mockRestore();
+  });
+
+  it('accepts a correctly-prefixed key for each platform', () => {
+    expect(resolveKey('appl_KLvWOLovdOVLmzAkMwLfDNaqNOK', 'ios')).toBe(
+      'appl_KLvWOLovdOVLmzAkMwLfDNaqNOK',
+    );
+    expect(resolveKey('goog_abcdefghijklmnopqrstuvwxyz', 'android')).toBe(
+      'goog_abcdefghijklmnopqrstuvwxyz',
+    );
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('rejects a value that is not a RevenueCat key', () => {
+    // The exact shape that took the paywall down in development.
+    expect(resolveKey('test_OjnXJNDfDatFpZGJNvAgOkkNoFg', 'ios')).toBeUndefined();
+    expect(resolveKey('test_OjnXJNDfDatFpZGJNvAgOkkNoFg', 'android')).toBeUndefined();
+  });
+
+  it('rejects a key pasted into the other platform slot', () => {
+    expect(resolveKey('goog_abcdefghijklmnop', 'ios')).toBeUndefined();
+    expect(resolveKey('appl_abcdefghijklmnop', 'android')).toBeUndefined();
+  });
+
+  it('rejects an unreplaced placeholder even though it carries the right prefix', () => {
+    expect(resolveKey('appl_REPLACE_WITH_REVENUECAT_IOS_PUBLIC_KEY', 'ios')).toBeUndefined();
+    expect(resolveKey('goog_REPLACE_WITH_REVENUECAT_ANDROID_PUBLIC_KEY', 'android')).toBeUndefined();
+  });
+
+  it('treats a missing or blank key as simply absent, without warning', () => {
+    // The legitimate Expo Go / no-IAP build case — not a misconfiguration.
+    expect(resolveKey(undefined, 'ios')).toBeUndefined();
+    expect(resolveKey('', 'ios')).toBeUndefined();
+    expect(resolveKey('   ', 'ios')).toBeUndefined();
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('warns whenever a key is present but unusable, so the failure is findable', () => {
+    resolveKey('test_OjnXJNDfDatFpZGJNvAgOkkNoFg', 'ios');
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(String(warn.mock.calls[0][0])).toMatch(/ios RevenueCat key/);
+  });
+
+  it('never logs the key itself', () => {
+    const secret = 'test_OjnXJNDfDatFpZGJNvAgOkkNoFg';
+    resolveKey(secret, 'ios');
+    expect(warn.mock.calls.flat().join(' ')).not.toContain(secret);
+  });
+
+  it('tolerates surrounding whitespace from a .env line', () => {
+    expect(resolveKey('  appl_KLvWOLovdOVLmzAkMwLfDNaqNOK  ', 'ios')).toBe(
+      'appl_KLvWOLovdOVLmzAkMwLfDNaqNOK',
+    );
+    expect(warn).not.toHaveBeenCalled();
   });
 });
