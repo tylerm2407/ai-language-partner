@@ -3,6 +3,9 @@
  *
  * AsyncStorage is replaced with a simple in-memory mock (no other test in
  * the repo touches AsyncStorage yet, so there's no shared mock to reuse).
+ * The Redis tier is mocked too — `lesson-session-remote` imports the real
+ * supabase client at module scope, and these tests are about the two-tier
+ * merge rules, not the transport.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
@@ -12,7 +15,43 @@ import {
   saveLessonSession,
   loadLessonSession,
   clearLessonSession,
+  type LessonSessionSnapshot,
 } from './lesson-session-storage';
+
+/**
+ * Stand-in Redis tier. `available` mirrors "the edge function answered at
+ * all"; `store` is keyed the way the real Redis key is — by user AND lesson,
+ * with the user taken from the verified token server-side.
+ */
+const mockRemote: {
+  available: boolean;
+  store: Record<string, LessonSessionSnapshot>;
+  saves: number;
+  clears: number;
+} = { available: true, store: {}, saves: 0, clears: 0 };
+
+const remoteKey = (userId: string, lessonId: string) => `${userId}:${lessonId}`;
+
+jest.mock('./lesson-session-remote', () => ({
+  remoteSessionsAvailable: () => mockRemote.available,
+  loadRemoteLessonSession: jest.fn(async (userId: string, lessonId: string) => {
+    if (!mockRemote.available) return { snapshot: null, reached: false };
+    return { snapshot: mockRemote.store[`${userId}:${lessonId}`] ?? null, reached: true };
+  }),
+  saveRemoteLessonSession: jest.fn(
+    async (userId: string, lessonId: string, snapshot: LessonSessionSnapshot) => {
+      if (!mockRemote.available) return false;
+      mockRemote.saves += 1;
+      mockRemote.store[`${userId}:${lessonId}`] = snapshot;
+      return true;
+    },
+  ),
+  clearRemoteLessonSession: jest.fn(async (userId: string, lessonId: string) => {
+    mockRemote.clears += 1;
+    delete mockRemote.store[`${userId}:${lessonId}`];
+    return true;
+  }),
+}));
 
 jest.mock('@react-native-async-storage/async-storage', () => {
   let store: Record<string, string> = {};
@@ -51,6 +90,10 @@ function makeSnapshot(overrides: Partial<{ exerciseIndex: number; startedAt: num
 
 beforeEach(async () => {
   await AsyncStorage.clear();
+  mockRemote.available = true;
+  mockRemote.store = {};
+  mockRemote.saves = 0;
+  mockRemote.clears = 0;
 });
 
 describe('lessonSessionKey', () => {
@@ -180,5 +223,90 @@ describe('clearLessonSession', () => {
 
   it('is a no-op when nothing exists', async () => {
     await expect(clearLessonSession(USER, LESSON)).resolves.toBeUndefined();
+  });
+});
+
+
+describe('Redis tier', () => {
+  it('mirrors every save into Redis', async () => {
+    await saveLessonSession(USER, LESSON, makeSnapshot());
+    expect(mockRemote.store[remoteKey(USER, LESSON)]).toMatchObject({ exerciseIndex: 3 });
+  });
+
+  it('does not write to Redis when the lesson session has already expired', async () => {
+    await saveLessonSession(
+      USER,
+      LESSON,
+      makeSnapshot({ startedAt: Date.now() - LESSON_SESSION_TTL_MS - 1000 }),
+    );
+    expect(mockRemote.store[remoteKey(USER, LESSON)]).toBeUndefined();
+    expect(await AsyncStorage.getItem(KEY)).toBeNull();
+  });
+
+  it('resumes from Redis on a device that has no local copy', async () => {
+    // Second device: nothing in AsyncStorage, everything in Redis.
+    mockRemote.store[remoteKey(USER, LESSON)] = {
+      version: LESSON_SESSION_SCHEMA_VERSION,
+      ...makeSnapshot({ exerciseIndex: 5 }),
+      picks: { 'ex-1': 'hola' },
+    };
+    const loaded = await loadLessonSession(USER, LESSON);
+    expect(loaded?.exerciseIndex).toBe(5);
+    // ...and the device copy is seeded so the lesson works offline from here.
+    expect(await AsyncStorage.getItem(KEY)).not.toBeNull();
+  });
+
+  it('prefers whichever copy holds more answers', async () => {
+    await saveLessonSession(USER, LESSON, makeSnapshot({ exerciseIndex: 2 })); // 2 answers
+    mockRemote.store[remoteKey(USER, LESSON)] = {
+      version: LESSON_SESSION_SCHEMA_VERSION,
+      exerciseIndex: 9,
+      answers: [
+        { exerciseId: 'ex-1', correct: true, answer: 'hola' },
+        { exerciseId: 'ex-2', correct: true, answer: 'adios' },
+        { exerciseId: 'ex-3', correct: true, answer: 'gracias' },
+      ],
+      picks: {},
+      startedAt: Date.now(),
+    };
+    const loaded = await loadLessonSession(USER, LESSON);
+    expect(loaded?.answers).toHaveLength(3);
+    expect(loaded?.exerciseIndex).toBe(9);
+  });
+
+  it('falls back to the device copy when Redis cannot be reached', async () => {
+    await saveLessonSession(USER, LESSON, makeSnapshot());
+    mockRemote.available = false;
+    const loaded = await loadLessonSession(USER, LESSON);
+    expect(loaded?.exerciseIndex).toBe(3);
+  });
+
+  it('keeps a session Redis has never seen (created offline)', async () => {
+    // Saved with no reachable Redis, then loaded once Redis is back but empty:
+    // a miss there must not throw away work the learner really did.
+    mockRemote.available = false;
+    await saveLessonSession(USER, LESSON, makeSnapshot());
+    mockRemote.available = true;
+    const loaded = await loadLessonSession(USER, LESSON);
+    expect(loaded?.exerciseIndex).toBe(3);
+    // ...and it is pushed up so the next device sees it.
+    expect(mockRemote.store[remoteKey(USER, LESSON)]).toBeDefined();
+  });
+
+  it('restarts the lesson once the day is up in both tiers', async () => {
+    const stale = Date.now() - LESSON_SESSION_TTL_MS - 1000;
+    mockRemote.store[remoteKey(USER, LESSON)] = {
+      version: LESSON_SESSION_SCHEMA_VERSION,
+      ...makeSnapshot({ startedAt: stale }),
+      picks: {},
+    };
+    expect(await loadLessonSession(USER, LESSON)).toBeNull();
+  });
+
+  it('clears both tiers when the lesson is finished', async () => {
+    await saveLessonSession(USER, LESSON, makeSnapshot());
+    await clearLessonSession(USER, LESSON);
+    expect(await AsyncStorage.getItem(KEY)).toBeNull();
+    expect(mockRemote.store[remoteKey(USER, LESSON)]).toBeUndefined();
   });
 });

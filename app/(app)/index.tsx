@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../hooks/useAuth';
 import { useAppStore } from '../../stores/useAppStore';
 import { useSchoolStore } from '../../stores/useSchoolStore';
@@ -65,6 +66,15 @@ export default function HomeScreen() {
     4,
   );
   const lessonTiles = unitTiles ? unitTilesToLessonTiles(unitTiles) : null;
+
+  // "Continue learning" is a server-side rollup, so finishing a lesson on the
+  // lesson screen cannot update it in place. Re-read it whenever Home regains
+  // focus — otherwise the tiles keep pointing at the lesson just completed.
+  useFocusEffect(
+    useCallback(() => {
+      refetchTiles();
+    }, [refetchTiles]),
+  );
   const { markItem: markChecklistItem } = useOnboardingChecklist();
   const greeting = targetLanguageGreeting(getTargetLanguage(profile));
   const [showPrePermission, setShowPrePermission] = useState(false);

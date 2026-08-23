@@ -1,4 +1,5 @@
 import { ActivityIndicator, KeyboardAvoidingView, Platform, View } from 'react-native';
+import * as Sentry from '@sentry/react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
@@ -21,7 +22,7 @@ import { getTargetLanguage } from '../../../lib/language';
 import { Button } from '../../../components/ui/Button';
 import { Body } from '../../../components/ui/Text';
 import { GradientBackground } from '../../../components/ui/GradientBackground';
-import { colors } from '../../../config/theme';
+import { colors, spacing } from '../../../config/theme';
 import type { Lesson } from '../../../types';
 
 export default function LessonScreen() {
@@ -41,6 +42,8 @@ export default function LessonScreen() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [, setAchievementQueue] = useState<AchievementDefinition[]>([]);
+  // How the finished lesson was recorded — drives the sync notice below.
+  const [saveState, setSaveState] = useState<'idle' | 'saved' | 'queued' | 'failed'>('idle');
   const [showingAchievement, setShowingAchievement] = useState<AchievementDefinition | null>(null);
 
   const loadLesson = useCallback(() => {
@@ -113,27 +116,60 @@ export default function LessonScreen() {
     );
   }
 
+  /**
+   * Finishing a lesson runs four independent side effects. Completion is
+   * recorded FIRST and nothing is allowed to run ahead of it: `earnXp` used
+   * to be awaited unguarded at the top, so any throw there (or in addStats)
+   * aborted the handler and the lesson was never recorded — the learner had
+   * done the work and the path had not moved. Each step now fails on its own.
+   */
   const handleComplete = async (result: LessonResult) => {
-    if (result.xpEarned > 0) {
-      await earnXp(result.xpEarned);
+    // 1. Completion — the durable record of progress. Resolves once the row
+    //    is in Postgres or in the replay queue (see useLessonProgressStore).
+    if (lesson && user?.id) {
+      const score = result.totalExercises > 0 ? result.correctCount / result.totalExercises : 0;
+      if (!lesson.courseId) {
+        // course_id is NOT NULL; without it the row can never be written, so
+        // say so instead of failing silently on a uuid parse error.
+        console.error('[lesson] no course for lesson', lesson.id, '— completion not recorded');
+        Sentry.captureMessage('lesson completion skipped: lesson has no course', {
+          level: 'error',
+          tags: { area: 'lesson-completion' },
+          extra: { lessonId: lesson.id },
+        });
+        setSaveState('failed');
+      } else {
+        try {
+          const { persisted } = await markLessonComplete(
+            lesson.id,
+            lesson.courseId,
+            score,
+            result.xpEarned,
+            result.timeSpentMs,
+          );
+          setSaveState(persisted ? 'saved' : 'queued');
+        } catch (err) {
+          console.error('[lesson] markLessonComplete failed:', err);
+          setSaveState('failed');
+        }
+      }
     }
-    // Must not block completion recording: earnXp survives offline (queued),
-    // but if addStats threw here the lesson would never be marked complete —
-    // and replaying it would award XP twice under a fresh idempotency key.
+
+    // 2. XP. Queued offline by earnXp itself under a stable idempotency key.
+    if (result.xpEarned > 0) {
+      await earnXp(result.xpEarned).catch((err) => console.error('[lesson] earnXp failed:', err));
+    }
+
+    // 3. Daily stats — cosmetic rollup; never blocks anything above.
     await addStats({
       lessonsCompleted: 1,
       xpEarned: result.xpEarned,
     }).catch((err) => console.error('[lesson] addStats failed:', err));
 
-    // Record lesson completion
     if (lesson && user?.id) {
-      const score = result.totalExercises > 0 ? result.correctCount / result.totalExercises : 0;
-      await markLessonComplete(lesson.id, lesson.courseId ?? '', score, result.xpEarned, 0).catch(console.error);
-
-      // Mark onboarding checklist item
+      // 4. Onboarding checklist + achievements.
       markOnboardingItem('firstLesson').catch(console.error);
 
-      // Check for new achievements
       if (profile) {
         const { dailyStats } = useAppStore.getState();
         const newAchievements = await checkAndAwardAchievements(user.id, profile, dailyStats).catch(() => []);
@@ -160,6 +196,24 @@ export default function LessonScreen() {
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
+      {/* Completion sync notice. The learner is never blocked by it — the
+          completion is already in the shared progress store either way — but
+          silence would be dishonest when the row is only queued. */}
+      {saveState === 'queued' && (
+        <View style={{ backgroundColor: colors.surface.card, paddingHorizontal: spacing.md, paddingVertical: spacing.xs }}>
+          <Body size="sm" tone="secondary" style={{ textAlign: 'center' }}>
+            Progress saved on this device — it'll sync when you're back online.
+          </Body>
+        </View>
+      )}
+      {saveState === 'failed' && (
+        <View style={{ backgroundColor: colors.surface.card, paddingHorizontal: spacing.md, paddingVertical: spacing.xs }}>
+          <Body size="sm" tone="secondary" style={{ textAlign: 'center' }}>
+            We couldn't save this lesson. Please try it again.
+          </Body>
+        </View>
+      )}
+
       <LessonRunner
         exercises={
           lessonIsAlreadyOrdered(lesson.exercises)
