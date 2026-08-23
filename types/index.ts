@@ -47,6 +47,16 @@ export interface UserProfile {
   streakShieldActive: boolean;
   streakShieldUsedAt: string | null;
   avatarConfig?: AvatarConfig;
+  /**
+   * Which avatar renderer this account uses (migration 067). Accounts created
+   * before that migration are 'procedural' and keep rendering the SVG built
+   * from `avatarConfig`, so nobody's avatar changed under them.
+   */
+  avatarKind: AvatarKind;
+  /** Bundled illustration key when avatarKind is 'preset'. */
+  avatarPresetId: string | null;
+  /** Path inside the private `avatars` bucket when avatarKind is 'generated'. */
+  avatarImagePath: string | null;
   onboardingChecklist: OnboardingChecklist;
   // Dörnyei L2 Motivational Self System (research.md §11.1).
   // motivationReason persists the MotivationReason enum collected in
@@ -674,6 +684,24 @@ export interface AvatarConfig {
   accessory: string | null;
   outfit: string | null;
   background: string | null;
+}
+
+/**
+ * How a user's avatar is rendered. 'procedural' composes the SVG layers from
+ * AvatarConfig; 'preset' shows a bundled illustration; 'generated' shows the
+ * photo-derived image stored in the private `avatars` bucket.
+ */
+export type AvatarKind = 'procedural' | 'preset' | 'generated';
+
+/**
+ * A photo-to-avatar art style, as surfaced to the client. The hidden image
+ * prompt for each style lives server-side only, in
+ * `supabase/functions/_shared/avatar-styles.ts` — never ship it to the client.
+ */
+export interface AvatarStyleOption {
+  key: string;
+  label: string;
+  description: string;
 }
 
 export type AvatarExpression = 'neutral' | 'happy' | 'sad' | 'celebrating';

@@ -9,10 +9,16 @@ interface AvatarExpressionProps {
   size: number;
   expression: AvatarExpressionType;
   animated: boolean;
+  /**
+   * Rendered in place of the procedural SVG. Generated and preset avatars are
+   * images rather than SVG layers, but they get the same idle breathe and
+   * reaction animations — the motion is what makes a still portrait feel alive.
+   */
+  children?: React.ReactNode;
 }
 
 export const AvatarExpression = React.memo(
-  ({ config, size, expression, animated }: AvatarExpressionProps) => {
+  ({ config, size, expression, animated, children }: AvatarExpressionProps) => {
     const scale = useRef(new Animated.Value(1)).current;
     const rotation = useRef(new Animated.Value(0)).current;
     const { shouldReduce } = useMotion();
@@ -91,7 +97,7 @@ export const AvatarExpression = React.memo(
             : undefined,
         ]}
       >
-        <AvatarSvg config={config} size={size} />
+        {children ?? <AvatarSvg config={config} size={size} />}
       </Animated.View>
     );
   }

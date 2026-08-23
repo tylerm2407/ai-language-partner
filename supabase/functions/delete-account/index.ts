@@ -145,6 +145,40 @@ serve(async (req: Request) => {
       }
     }
 
+    // --- 3b. Purge generated avatars from storage -------------------------
+    // Storage is not covered by the auth-user cascade, so a stylised portrait
+    // of the user would outlive their account. Runs BEFORE the irreversible
+    // auth deletion so a failure can abort while the account still exists.
+    {
+      const { data: avatarObjects, error: listError } = await supabase.storage
+        .from('avatars')
+        .list(userId);
+
+      if (listError) {
+        console.error(`[delete-account] failed to list avatars for ${userId}:`, listError.message);
+        return new Response(
+          JSON.stringify({
+            error: 'Account deletion could not be completed. Nothing was deleted. Please contact support.',
+          }),
+          { status: 500, headers }
+        );
+      }
+
+      if (avatarObjects && avatarObjects.length > 0) {
+        const paths = avatarObjects.map((o) => `${userId}/${o.name}`);
+        const { error: removeError } = await supabase.storage.from('avatars').remove(paths);
+        if (removeError) {
+          console.error(`[delete-account] failed to remove avatars for ${userId}:`, removeError.message);
+          return new Response(
+            JSON.stringify({
+              error: 'Account deletion could not be completed. Nothing was deleted. Please contact support.',
+            }),
+            { status: 500, headers }
+          );
+        }
+      }
+    }
+
     // --- 4. Delete the auth user (cascades every remaining user table) ----
     const { error: deleteError } = await supabase.auth.admin.deleteUser(userId);
     if (deleteError) {

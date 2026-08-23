@@ -19,6 +19,8 @@ import { LeagueBadge } from '../../../components/gamification/LeagueBadge';
 import { AchievementGrid } from '../../../components/gamification/AchievementGrid';
 import { Avatar } from '../../../components/avatar/Avatar';
 import { AvatarCustomizer } from '../../../components/avatar/AvatarCustomizer';
+import { AvatarGeneratorSheet } from '../../../components/avatar/AvatarGeneratorSheet';
+import { useAvatarImage, invalidateAvatarImage } from '../../../hooks/useAvatarImage';
 import { FourStrandsCard } from '../../../components/stats/FourStrandsCard';
 import { useDailyStats } from '../../../hooks/useDailyStats';
 import { strandMinutesFromDailyStats } from '../../../lib/four-strands';
@@ -70,6 +72,11 @@ export default function ProfileScreen() {
   });
   const router = useRouter();
   const [customizerVisible, setCustomizerVisible] = useState(false);
+  const [generatorVisible, setGeneratorVisible] = useState(false);
+  // Only 'generated' avatars have an image; every other kind renders the SVG.
+  const generatedAvatarUri = useAvatarImage(
+    profile?.avatarKind === 'generated' ? profile.avatarImagePath : null
+  );
   const [joinModalVisible, setJoinModalVisible] = useState(false);
   const [becomeTeacherVisible, setBecomeTeacherVisible] = useState(false);
 
@@ -81,6 +88,15 @@ export default function ProfileScreen() {
   const handleJoinClass = async (code: string) => {
     await joinClassroom(code);
     if (user?.id) loadStudentSchoolData(user.id);
+  };
+
+  const handleAvatarGenerated = (path: string) => {
+    if (!profile) return;
+    // The Edge Function already wrote avatar_kind/avatar_image_path, so this
+    // mirrors that into the store rather than issuing a second write.
+    invalidateAvatarImage(path);
+    setProfile({ ...profile, avatarKind: 'generated', avatarImagePath: path });
+    setGeneratorVisible(false);
   };
 
   const handleSaveAvatar = async (config: AvatarConfig) => {
@@ -136,6 +152,7 @@ export default function ProfileScreen() {
               size="medium"
               expression="neutral"
               animated
+              imageUri={generatedAvatarUri}
             />
           </Pressable>
           <View style={styles.identityText}>
@@ -359,6 +376,19 @@ export default function ProfileScreen() {
       onClose={() => setCustomizerVisible(false)}
       initialConfig={profile?.avatarConfig ?? DEFAULT_AVATAR_CONFIG}
       onSave={handleSaveAvatar}
+      onUsePhoto={() => {
+        setCustomizerVisible(false);
+        setGeneratorVisible(true);
+      }}
+    />
+    <AvatarGeneratorSheet
+      visible={generatorVisible}
+      onClose={() => setGeneratorVisible(false)}
+      onGenerated={handleAvatarGenerated}
+      onUpgrade={() => {
+        setGeneratorVisible(false);
+        router.push('/plans');
+      }}
     />
     {SCHOOL_ENABLED && (
       <>

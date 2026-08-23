@@ -13,14 +13,19 @@ export interface PlanLimits {
   dailyVoiceMinutes: number;
   dailyWritingGrades: number;
   dailyPronunciationScores: number;
+  /** Photo-to-avatar generations per day. Paid tiers only; `starter` is 0,
+   *  which the generate-avatar function rejects before quota is consulted.
+   *  Each generation is a paid image-model call, so these stay deliberately
+   *  small — they are re-roll budgets, not a feature to sit and play with. */
+  dailyAvatarGenerations: number;
   offlineMode: boolean;
 }
 
 export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
-  starter:   { dailyTextMessages: 10, dailyVoiceMinutes: 5,  dailyWritingGrades: 1,  dailyPronunciationScores: 2, offlineMode: false },
-  basic:     { dailyTextMessages: 25, dailyVoiceMinutes: 10, dailyWritingGrades: 3,  dailyPronunciationScores: 3, offlineMode: false },
-  premium:   { dailyTextMessages: 50, dailyVoiceMinutes: 20, dailyWritingGrades: 7,  dailyPronunciationScores: 5, offlineMode: true },
-  vip:       { dailyTextMessages: 75, dailyVoiceMinutes: 30, dailyWritingGrades: 12, dailyPronunciationScores: 7, offlineMode: true },
+  starter:   { dailyTextMessages: 10, dailyVoiceMinutes: 5,  dailyWritingGrades: 1,  dailyPronunciationScores: 2, dailyAvatarGenerations: 0, offlineMode: false },
+  basic:     { dailyTextMessages: 25, dailyVoiceMinutes: 10, dailyWritingGrades: 3,  dailyPronunciationScores: 3, dailyAvatarGenerations: 2, offlineMode: false },
+  premium:   { dailyTextMessages: 50, dailyVoiceMinutes: 20, dailyWritingGrades: 7,  dailyPronunciationScores: 5, dailyAvatarGenerations: 5, offlineMode: true },
+  vip:       { dailyTextMessages: 75, dailyVoiceMinutes: 30, dailyWritingGrades: 12, dailyPronunciationScores: 7, dailyAvatarGenerations: 10, offlineMode: true },
 };
 
 export function getPlanLimits(tier: string): PlanLimits {
@@ -52,6 +57,10 @@ export async function getEffectiveLimits(userId: string, supabase: any): Promise
       dailyVoiceMinutes: typeof row.dailyVoiceMinutes === 'number' ? row.dailyVoiceMinutes : (row.daily_voice_minutes ?? PLAN_LIMITS.starter.dailyVoiceMinutes),
       dailyWritingGrades: typeof row.dailyWritingGrades === 'number' ? row.dailyWritingGrades : (row.daily_writing_grades ?? PLAN_LIMITS.starter.dailyWritingGrades),
       dailyPronunciationScores: typeof row.dailyPronunciationScores === 'number' ? row.dailyPronunciationScores : (row.daily_pronunciation_scores ?? PLAN_LIMITS.starter.dailyPronunciationScores),
+      // get_effective_limits predates avatars and does not return this key, so
+      // it always falls through to the plan default. School contract overrides
+      // intentionally do not apply to avatar generation.
+      dailyAvatarGenerations: typeof row.dailyAvatarGenerations === 'number' ? row.dailyAvatarGenerations : PLAN_LIMITS.starter.dailyAvatarGenerations,
       offlineMode: row.offlineMode === true || row.offline_mode === true || false,
     };
   } catch {

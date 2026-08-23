@@ -11,12 +11,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AvatarConfig } from '../../types';
 import { Avatar } from './Avatar';
 import { SKIN_TONES, HAIR_COLORS, EYE_COLORS } from './constants';
+import { colors, spacing } from '../../config/theme';
 
 interface AvatarCustomizerProps {
   visible: boolean;
   onClose: () => void;
   initialConfig: AvatarConfig;
   onSave: (config: AvatarConfig) => void;
+  /**
+   * Opens the photo-to-avatar flow. Optional so the customizer still works
+   * anywhere generation isn't offered (onboarding, for one — a user has no
+   * subscription yet at that point).
+   */
+  onUsePhoto?: () => void;
 }
 
 type TabKey = 'head' | 'hair' | 'eyes' | 'mouth' | 'accessories';
@@ -35,7 +42,7 @@ const EYE_STYLES: AvatarConfig['eyeStyle'][] = ['round', 'almond', 'wide', 'narr
 const MOUTH_STYLES: AvatarConfig['mouthStyle'][] = ['smile', 'neutral', 'grin', 'small'];
 
 export const AvatarCustomizer = React.memo(
-  ({ visible, onClose, initialConfig, onSave }: AvatarCustomizerProps) => {
+  ({ visible, onClose, initialConfig, onSave, onUsePhoto }: AvatarCustomizerProps) => {
     const [config, setConfig] = useState<AvatarConfig>(initialConfig);
     const [activeTab, setActiveTab] = useState<TabKey>('head');
 
@@ -185,6 +192,16 @@ export const AvatarCustomizer = React.memo(
               <View style={styles.previewCircle}>
                 <Avatar config={config} size="large" expression="neutral" animated />
               </View>
+              {onUsePhoto && (
+                <Pressable
+                  style={styles.usePhotoButton}
+                  onPress={onUsePhoto}
+                  accessibilityRole="button"
+                  accessibilityLabel="Make an avatar from a photo"
+                >
+                  <Text style={styles.usePhotoText}>Use a photo instead</Text>
+                </Pressable>
+              )}
             </View>
 
             {/* Tab Bar */}
@@ -278,6 +295,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#151921',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  usePhotoButton: {
+    marginTop: spacing.sm,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  usePhotoText: {
+    color: colors.action.accent,
+    fontWeight: '600',
   },
   tabBar: {
     flexDirection: 'row',

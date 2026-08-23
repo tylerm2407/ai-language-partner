@@ -26,6 +26,8 @@ Fluenci is designed to operate as a "school official" under FERPA's school offic
 | Learning progress (CEFR level, XP, streaks) | Educational record | Adaptive lesson delivery, teacher reporting | Duration of contract + 30 days |
 | Chat messages (text conversations) | Educational record | AI tutoring, assignment grading, teacher review | Duration of contract + 30 days |
 | Voice recordings (speaking exercises) | Educational record / Biometric | Pronunciation scoring, speaking assessment | 90 days after creation, then deleted |
+| Avatar source photo | PII / Biometric | Generating an illustrated avatar, at the user's request | **Not retained** — held in memory for the request only, never written to storage or a table |
+| Generated avatar image | PII (stylised likeness) | Profile display | Until replaced or the account is deleted |
 | Assignment submissions | Educational record | Grading, progress tracking | Duration of contract + 30 days |
 | Spaced repetition data | Educational record | Personalized review scheduling | Duration of contract + 30 days |
 | Usage analytics (screens visited, session duration) | Operational | Product improvement, engagement metrics | Aggregated after 90 days (no PII retained) |
@@ -57,6 +59,7 @@ Student data is **never** used for:
 | **Anthropic** (Claude API) | Chat messages, assignment text | AI tutoring, automated grading | Yes (API ToS) | Yes |
 | **Google** (Gemini API) | Voice audio, conversation context | Real-time voice practice | Yes (API ToS) | Yes |
 | **OpenAI** (Whisper API) | Voice audio | Speech-to-text transcription | Yes (API ToS) | Yes |
+| **OpenAI** (Image API) | Avatar photo (only when the user opts in) | Photo-to-avatar generation | Yes (API ToS) | Yes (facial image) |
 | **ElevenLabs** | Target language text only | Text-to-speech generation | Yes | No (no student identifiers sent) |
 | **Stripe** | Email, subscription tier | Payment processing | Yes (Stripe DPA) | Minimal (email + plan only) |
 

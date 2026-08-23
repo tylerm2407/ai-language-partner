@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, View } from 'react-native';
+import { Image, Pressable, View } from 'react-native';
 import {
   AvatarConfig,
   AvatarExpression as AvatarExpressionType,
@@ -14,6 +14,12 @@ interface AvatarProps {
   expression?: AvatarExpressionType;
   animated?: boolean;
   onPress?: () => void;
+  /**
+   * Resolved image for a preset or photo-generated avatar. When absent the
+   * procedural SVG built from `config` is rendered, which is what every
+   * account created before migration 067 uses.
+   */
+  imageUri?: string | null;
 }
 
 export const Avatar = React.memo(
@@ -23,6 +29,7 @@ export const Avatar = React.memo(
     expression = 'neutral',
     animated = true,
     onPress,
+    imageUri,
   }: AvatarProps) => {
     const pixelSize = AVATAR_SIZES[size];
     const minTouchTarget = 44;
@@ -34,7 +41,15 @@ export const Avatar = React.memo(
         size={pixelSize}
         expression={expression}
         animated={animated}
-      />
+      >
+        {imageUri ? (
+          <Image
+            source={{ uri: imageUri }}
+            style={{ width: pixelSize, height: pixelSize, borderRadius: pixelSize / 2 }}
+            resizeMode="cover"
+          />
+        ) : undefined}
+      </AvatarExpression>
     );
 
     if (onPress) {

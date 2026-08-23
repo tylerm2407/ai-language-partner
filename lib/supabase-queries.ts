@@ -952,6 +952,11 @@ function mapProfile(row: Record<string, unknown>): UserProfile {
     streakShieldActive: (row.streak_shield_active as boolean) ?? false,
     streakShieldUsedAt: (row.streak_shield_used_at as string) ?? null,
     avatarConfig: row.avatar_config ? (row.avatar_config as AvatarConfig) : undefined,
+    // Avatar renderer selection (migration 067). Rows written before it have
+    // no avatar_kind, so they fall back to the procedural SVG they already had.
+    avatarKind: (row.avatar_kind as UserProfile['avatarKind']) ?? 'procedural',
+    avatarPresetId: (row.avatar_preset_id as string | null) ?? null,
+    avatarImagePath: (row.avatar_image_path as string | null) ?? null,
     onboardingChecklist: parseOnboardingChecklist(row.onboarding_checklist),
     // L2 Motivational Self System (migration 028). Null-safe for legacy rows.
     motivationReason: (row.motivation_reason as UserProfile['motivationReason']) ?? null,
@@ -2144,6 +2149,42 @@ export async function updateAvatarConfig(userId: string, config: AvatarConfig): 
   const { error } = await supabase
     .from('user_profiles')
     .update({ avatar_config: config, updated_at: new Date().toISOString() })
+    .eq('user_id', userId);
+  if (error) throw error;
+}
+
+/**
+ * Resolve a generated avatar's storage path to a displayable URL.
+ *
+ * The `avatars` bucket is private (migration 067) and readable only by the
+ * owner, so this signs a short-lived URL rather than returning a public one.
+ * Returns null when the object is gone — callers fall back to the procedural
+ * avatar rather than rendering a broken image.
+ */
+export async function getAvatarImageUrl(path: string, expiresInSeconds = 3600): Promise<string | null> {
+  const { data, error } = await supabase.storage
+    .from('avatars')
+    .createSignedUrl(path, expiresInSeconds);
+  if (error) {
+    console.warn('[avatar] could not sign avatar URL:', error.message);
+    return null;
+  }
+  return data?.signedUrl ?? null;
+}
+
+/** Switch the account back to the procedural SVG avatar or a bundled preset. */
+export async function setAvatarKind(
+  userId: string,
+  kind: 'procedural' | 'preset',
+  presetId: string | null = null
+): Promise<void> {
+  const { error } = await supabase
+    .from('user_profiles')
+    .update({
+      avatar_kind: kind,
+      avatar_preset_id: presetId,
+      updated_at: new Date().toISOString(),
+    })
     .eq('user_id', userId);
   if (error) throw error;
 }

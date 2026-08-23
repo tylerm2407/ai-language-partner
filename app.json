@@ -50,6 +50,13 @@
         }
       ],
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "Fluenci uses your photo library only when you choose a picture to turn into your avatar.",
+          "cameraPermission": "Fluenci uses your camera only when you take a picture to turn into your avatar."
+        }
+      ],
+      [
         "expo-notifications",
         {
           "icon": "./assets/notification-icon.png",
