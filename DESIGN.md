@@ -109,6 +109,7 @@ brighter `indigo.400` is for text and icons, where it clears AA on dark.
 | `action.primarySlab` | `#3730A3` (indigo.800) | Tactile button bottom slab — drops one step with the fill |
 | `action.accent` | `#818CF8` (indigo.400) | Text links, small icons, spinners, progress glow (6.43:1) |
 | `action.primaryTint` | `rgba(99,102,241,0.15)` | Selected-row fills, icon-circle backgrounds |
+| `action.primaryBorder` | `rgba(99,102,241,0.55)` | Outline that pairs with `primaryTint` on a selected/active surface. Full-strength `indigo.500` here reads as a CTA outline and competes with the CTA inside the row |
 | `indigo.500` | `#6366F1` | **Borders and gradient stops only** — never a fill behind white text |
 | `indigo.200` | `#C7D2FE` | Disabled CTA fill |
 
@@ -127,7 +128,7 @@ semantic's `.light` step (`success.light`, `warning.light`, `error.light`,
 
 `streak.tint` is deliberately **orange**, not amber — a streak chip and a warning
 chip sit side by side on Home and were previously the same fill.
-| `premium` | `#A855F7` | `rgba(168,85,247,0.18)` | — | Super tier, pro moments |
+| `premium` | `#A855F7` | `rgba(168,85,247,0.18)` | `rgba(168,85,247,0.42)` | Super tier, pro moments, unit-review milestones |
 
 ### League Tiers
 
@@ -395,6 +396,45 @@ the current star is placeholder geometry.
 <ScreenHeader title="Learn" subtitle="Spanish · Beginner" onBack={router.back} />
 ```
 
+### Learn screen — unit carousel + lesson list
+
+The Vocab tab is a horizontal strip of unit cards over a flat list of the
+selected unit's lessons (`components/learn/`). Top to bottom:
+
+| Band | Treatment |
+|---|---|
+| Title | `<Hero>` — Fraunces, the same display voice as Magazine Home |
+| Course pills | `CoursePills` — selected pill spells out the course (`Spanish A1`), the rest show only their level (`A2`). Fill `action.primaryFill`, idle `surface.card` + `border.subtle`, 44pt minimum |
+| Tab pills | `TabPills` — identical pill, no icons. Vocab / Reading / Writing |
+| Eyebrow | `Mono` 12px at `tracking.eyebrow` — `8 UNITS · 48 LESSONS` left, `SWIPE →` right |
+| Unit card | 56% of window width so the next card peeks. Serif index (`01`, Fraunces 38px), title, 4px progress track + `3/6`. Selected: `action.primaryTint` + `action.primaryBorder` |
+| List header | `<Heading level={3}>` + `Mono` `38% MASTERED` |
+| Lesson rows | `LessonRow` — see below |
+
+`LessonRow` states, all four carrying real data rather than a decorative tag:
+
+| State | Fill | Glyph | Trailing |
+|---|---|---|---|
+| completed | `surface.card` | `success.base` dot | score, e.g. `94%` |
+| active | `action.primaryTint` + `action.primaryBorder` | indigo triangle | `GO` pill + `20 XP · 5 MIN` |
+| upcoming | dashed `border.default` | `text.quaternary` rhombus | `+20 XP` |
+| milestone | dashed `premium.border` | `premium.base` rhombus | `MILESTONE` |
+
+"Milestone" is the *upcoming* state of a unit's last lesson — the curriculum
+places one "Review & Test" at the end of every unit. Once it is reachable or
+finished it renders like any other row, because at that point its state is the
+news.
+
+The dashed outline is drawn in SVG (`DashedOutline`), not
+`borderStyle: 'dashed'` — Android silently falls back to a solid border as soon
+as `borderRadius` is set, and the dash is what makes an upcoming row read as
+"not yet yours".
+
+`Mono` (`components/learn/Mono.tsx`) is the one named treatment for every small
+label on this screen: JetBrains Mono at 11-12px, `tracking.eyebrow`. Small mono
+labels never use `text.quaternary` — 3.9:1 is a large-UI-only step, and these
+are 11px.
+
 ---
 
 ## Layout
@@ -436,6 +476,7 @@ Every PR must pass:
 | **Slab CTA** (`TactileButton` bottom edge) | Flat pill + 0.96 press scale | The strongest single Duolingo tell. `action.primarySlab` and `elevation.tactile` are now unused shims |
 | **Mascot in chrome** (Home + chat headers) | Moments only — see §Mascot | A permanent mascot is the Duolingo silhouette regardless of the character |
 | **Chip scoreboard** (streak / XP / hearts pills) | Mono meta row — `7 DAY · 1,240 XP` | Three saturated pills under the greeting *was* the Duolingo header |
+| **Winding lesson path** (`components/learning-path/`) | Unit carousel + lesson list — see §Learn screen | Every lesson in the course as a 64px node on one tall canvas: a learner on unit 6 scrolled past ~30 nodes to reach their next lesson, and a node has no room for a title, reward or score. The snake was also a Duolingo tell |
 
 ### Palettes that were tried and reverted
 

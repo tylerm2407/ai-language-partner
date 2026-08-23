@@ -16,29 +16,18 @@ import { useAppStore } from '../../../stores/useAppStore';
 import { supabase } from '../../../lib/supabase';
 import { LoadingScreen } from '../../../components/ui/LoadingScreen';
 import { EmptyState } from '../../../components/ui/EmptyState';
-import { Badge } from '../../../components/ui/Badge';
 import { GradientBackground } from '../../../components/ui/GradientBackground';
 import { GlassSurface } from '../../../components/ui/GlassSurface';
-import { LearningPath } from '../../../components/learning-path/LearningPath';
-import { Heading, Body, Caption } from '../../../components/ui/Text';
+import { UnitPath } from '../../../components/learn/UnitPath';
+import { CoursePills, TabPills } from '../../../components/learn/SelectorPills';
+import { ReviewShortcut } from '../../../components/learn/ReviewShortcut';
+import { Heading, Body, Caption, Hero } from '../../../components/ui/Text';
 import { loadErrorCopy, saveErrorCopy, type ErrorCopy } from '../../../lib/error-copy';
 import { colors, spacing, radii } from '../../../config/theme';
 import type { Course, Unit, Lesson, ReadingPassage, WritingPrompt, ReadingBook, UserBookProgress } from '../../../types';
 import { Ionicons } from '@expo/vector-icons';
 import { BookCard } from '../../../components/reading/BookCard';
 import { ContinueReadingSection } from '../../../components/reading/ContinueReadingSection';
-
-/** Council of Europe CEFR band names. These are the standard labels, not a
- *  difficulty ladder of our own — the whole proficiency claim rests on them
- *  matching what the framework actually says. */
-const CEFR_LABELS: Record<string, string> = {
-  A1: 'Beginner',
-  A2: 'Elementary',
-  B1: 'Intermediate',
-  B2: 'Upper intermediate',
-  C1: 'Advanced',
-  C2: 'Proficient',
-};
 
 const CEFR_COLORS: Record<string, { bg: string; text: string }> = {
   A1: { bg: 'bg-success-bg', text: 'text-success' },
@@ -92,10 +81,10 @@ function InlineError({
 
 type CourseTab = 'vocab' | 'reading' | 'writing';
 
-const TAB_CONFIG: { key: CourseTab; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { key: 'vocab', label: 'Vocab', icon: 'book-outline' },
-  { key: 'reading', label: 'Reading', icon: 'reader-outline' },
-  { key: 'writing', label: 'Writing', icon: 'create-outline' },
+const TAB_CONFIG: { key: CourseTab; label: string }[] = [
+  { key: 'vocab', label: 'Vocab' },
+  { key: 'reading', label: 'Reading' },
+  { key: 'writing', label: 'Writing' },
 ];
 
 export default function LearnScreen() {
@@ -242,6 +231,10 @@ export default function LearnScreen() {
     loadInProgressBooks();
   };
 
+  const goToReview = useCallback(() => {
+    router.push('/learn/review' as never);
+  }, [router]);
+
   const handleCefrTabChange = (level: string) => {
     setSelectedCefrTab(level);
     loadLibraryBooks(level);
@@ -256,91 +249,25 @@ export default function LearnScreen() {
   return (
     <GradientBackground>
       <SafeAreaView className="flex-1" edges={['top']}>
-        {/* Header */}
-        <View className="px-4 pt-2 pb-2">
-          <Text className="text-[28px] font-bold text-text-primary mb-4" accessibilityRole="header">
+        {/* Header — title, course level, content tab. Fixed above the
+            scrolling tab content so switching tabs never moves it. */}
+        <View style={{ paddingTop: spacing.xxs }}>
+          <Hero
+            accessibilityRole="header"
+            style={{ marginBottom: spacing.sm, marginHorizontal: spacing.md }}
+          >
             Learn
-          </Text>
+          </Hero>
 
-          {/* Review cards shortcut */}
-          {reviewCount > 0 && (
-            <GlassSurface style={{ marginBottom: 16 }}>
-              <Pressable
-                className="p-5 flex-row items-center"
-                onPress={() => router.push('/learn/review' as any)}
-                accessibilityRole="button"
-                accessibilityLabel={`Review ${reviewCount} cards due`}
-              >
-                <Ionicons name="refresh" size={24} color={colors.success.light} />
-                <View className="ml-4 flex-1">
-                  <Text className="text-base font-semibold text-text-primary">Review Cards</Text>
-                  <Text className="text-sm text-text-secondary">{reviewCount} cards due for review</Text>
-                </View>
-                <Badge variant="success" label={String(reviewCount)} />
-              </Pressable>
-            </GlassSurface>
-          )}
+          <CoursePills
+            courses={courses}
+            selectedCourseId={selectedCourseId}
+            onSelect={setSelectedCourseId}
+          />
 
-          {/* Course selector (horizontal scroll if multiple courses) */}
-          {courses.length > 1 && (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ paddingBottom: 8 }}
-              className="mb-2"
-            >
-              {courses.map((course) => {
-                const isSelected = course.id === selectedCourseId;
-                return (
-                  <Pressable
-                    key={course.id}
-                    onPress={() => setSelectedCourseId(course.id)}
-                    className={`mr-2 px-4 py-3 rounded-xl ${isSelected ? 'bg-primary' : 'bg-dark-card'}`}
-                    accessibilityRole="button"
-                    accessibilityLabel={course.title}
-                    accessibilityState={{ selected: isSelected }}
-                  >
-                    <Text
-                      className={`text-sm font-semibold ${isSelected ? 'text-white' : 'text-text-secondary'}`}
-                    >
-                      {course.title}
-                    </Text>
-                    {course.cefrLevel && (
-                      <Text
-                        className={`text-xs mt-0.5 ${isSelected ? 'text-white/70' : 'text-text-secondary'}`}
-                      >
-                        {CEFR_LABELS[course.cefrLevel] || course.cefrLevel}
-                      </Text>
-                    )}
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          )}
+          <View style={{ height: spacing.xs }} />
 
-          {/* Tab selector */}
-          <View className="flex-row flex-wrap gap-2 mb-2">
-            {TAB_CONFIG.map((tab) => {
-              const isActive = activeTab === tab.key;
-              return (
-                <Pressable
-                  key={tab.key}
-                  onPress={() => selectTab(tab.key)}
-                  className={`flex-row items-center px-3 py-2 rounded-xl ${isActive ? 'bg-primary' : 'bg-dark-card'}`}
-                  accessibilityRole="tab"
-                  accessibilityLabel={tab.label}
-                  accessibilityState={{ selected: isActive }}
-                >
-                  <Ionicons name={tab.icon} size={16} color={isActive ? colors.text.onPrimary : colors.text.tertiary} />
-                  <Text
-                    className={`text-sm font-sans-semibold ml-1.5 ${isActive ? 'text-white' : 'text-text-secondary'}`}
-                  >
-                    {tab.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+          <TabPills tabs={TAB_CONFIG} activeKey={activeTab} onSelect={selectTab} />
         </View>
 
         {/* Content area */}
@@ -351,7 +278,7 @@ export default function LearnScreen() {
             description="There are no courses for this language yet. Check back soon."
           />
         ) : activeTab === 'vocab' ? (
-          /* Vocab tab — Learning Path */
+          /* Vocab tab — unit carousel over the selected unit's lessons */
           loadingUnits ? (
             <LoadingScreen message="Loading lessons..." />
           ) : unitsError ? (
@@ -360,11 +287,16 @@ export default function LearnScreen() {
               onRetry={() => { if (selectedCourseId) loadCourseContent(selectedCourseId); }}
             />
           ) : courseUnits && selectedCourseId ? (
-            <LearningPath units={courseUnits} courseId={selectedCourseId} />
+            <UnitPath
+              units={courseUnits}
+              courseId={selectedCourseId}
+              header={<ReviewShortcut count={reviewCount} onPress={goToReview} />}
+            />
           ) : null
         ) : activeTab === 'reading' ? (
           /* Reading tab */
           <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 100 }}>
+            <ReviewShortcut count={reviewCount} onPress={goToReview} />
             {passagesError && (
               <InlineError
                 copy={passagesError}
@@ -545,6 +477,7 @@ export default function LearnScreen() {
         ) : activeTab === 'writing' ? (
           /* Writing tab */
           <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 100 }}>
+            <ReviewShortcut count={reviewCount} onPress={goToReview} />
             {/* History Link */}
             <GlassSurface style={{ marginBottom: 12 }}>
               <Pressable

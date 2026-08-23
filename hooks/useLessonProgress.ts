@@ -24,6 +24,13 @@ export function useLessonProgress(courseId?: string) {
     if (!user?.id) return;
     let cancelled = false;
     setError(null);
+    // Back to loading on every identity/course change, not just the first.
+    // Without this, switching course keeps the previous course's completion
+    // map visible as settled data — every lesson of the new course misses that
+    // map, so the whole path renders locked-but-loaded and any consumer that
+    // picks a starting position off it (the unit carousel) picks unit 1 and
+    // then has no reason to move when the real data lands.
+    setState((prev) => (prev.loading ? prev : { ...prev, loading: true }));
     fetchLessonCompletions(user.id, courseId)
       .then((data) => {
         if (cancelled) return;

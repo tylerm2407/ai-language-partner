@@ -31,6 +31,10 @@ export const colors = {
     primaryFill: '#4F46E5', // indigo.600 — white 6.4:1
     primarySlab: '#3730A3', // indigo.800 — tactile slab drops one step with the fill
     primaryTint: 'rgba(99, 102, 241, 0.15)',
+    /** Border that pairs with primaryTint on a selected/active surface —
+     *  indigo.500 at 0.55. Full-strength indigo.500 reads as a CTA outline and
+     *  competes with the actual CTA sitting inside the row. */
+    primaryBorder: 'rgba(99, 102, 241, 0.55)',
     accent: '#818CF8', // indigo.400 — text links, small icons, progress glow (6.43:1)
   },
 
@@ -109,6 +113,10 @@ export const colors = {
   premium: {
     base: '#A855F7',
     tint: 'rgba(168, 85, 247, 0.18)',
+    /** Outline for premium/milestone surfaces — matches the semantic tokens'
+     *  border step so a violet-outlined row sits at the same weight as a
+     *  success- or warning-outlined one. */
+    border: 'rgba(168, 85, 247, 0.42)',
   },
 
   /** League tier colors (kept from existing DESIGN.md) */
