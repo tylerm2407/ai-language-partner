@@ -2,6 +2,8 @@ node_modules/
 .expo/
 dist/
 credentials/
+google-play-service-account.json
+*-service-account.json
 *.jks
 *.p8
 *.p12
