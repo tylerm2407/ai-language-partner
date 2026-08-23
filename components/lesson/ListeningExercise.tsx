@@ -8,6 +8,7 @@ import { Button } from '../ui/Button';
 import { colors } from '../../config/theme';
 import { gradeAnswer } from '../../lib/grading';
 import type { GradeResult } from '../../lib/grading';
+import { isRestored, regradePick } from '../../lib/exercise-restore';
 import { useAudioPlayer } from '../../hooks/useAudioPlayer';
 import { getTextToSpeech } from '../../lib/ai';
 import type { Exercise } from '../../types';
@@ -16,24 +17,30 @@ interface ListeningExerciseProps {
   exercise: Exercise;
   onAnswer: (correct: boolean, answer: string) => void;
   showResult: boolean;
+  /** Previously recorded answer, restored by the runner on Previous. Covers
+   *  both modes — the choice path and the typed path both land in `answer`. */
+  selected?: string | null;
   userId?: string;
   language?: string;
   cefrLevel?: string;
-  onContinue?: () => void;
 }
 
 export function ListeningExercise({
   exercise,
   onAnswer,
   showResult,
+  selected = null,
   userId,
   language,
   cefrLevel,
-  onContinue,
 }: ListeningExerciseProps) {
-  const [answer, setAnswer] = useState('');
-  const [submitted, setSubmitted] = useState(false);
-  const [result, setResult] = useState<GradeResult | null>(null);
+  // Seeded from the recorded pick so Previous comes back to the answer the
+  // learner actually gave, in its graded state — see lib/exercise-restore.ts.
+  const [answer, setAnswer] = useState(selected ?? '');
+  const [submitted, setSubmitted] = useState(() => isRestored(selected));
+  const [result, setResult] = useState<GradeResult | null>(() =>
+    regradePick(exercise, selected),
+  );
   const { playing, loading, error: audioError, play } = useAudioPlayer();
   // Synthesised audio for exercises with no pre-recorded clip. Held for the
   // life of the exercise so replays don't re-hit the network.
@@ -274,7 +281,7 @@ export function ListeningExercise({
         </>
       )}
 
-      {result && onContinue && language ? (
+      {result && language ? (
         <FeedbackCard
           result={result}
           exercise={exercise}
@@ -282,7 +289,6 @@ export function ListeningExercise({
           cefrLevel={cefrLevel}
           userId={userId}
           onRetry={handleRetry}
-          onContinue={onContinue}
         />
       ) : null}
     </ExerciseCard>

@@ -8,24 +8,27 @@ import { Body, Caption } from '../ui/Text';
 import { colors, spacing, radii } from '../../config/theme';
 import { gradeAnswer } from '../../lib/grading';
 import type { GradeResult } from '../../lib/grading';
+import { isRestored, regradePick, restorePlacedTiles } from '../../lib/exercise-restore';
 import type { Exercise } from '../../types';
 
 interface Props {
   exercise: Exercise;
   onAnswer: (isCorrect: boolean, answer: string) => void;
+  /** Previously recorded answer, restored by the runner on Previous. Encoded
+   *  as the assembled sentence, which maps back onto tile indices. */
+  selected?: string | null;
   userId?: string;
   language?: string;
   cefrLevel?: string;
-  onContinue?: () => void;
 }
 
 export function SentenceConstructionExercise({
   exercise,
   onAnswer,
+  selected = null,
   userId,
   language,
   cefrLevel,
-  onContinue,
 }: Props) {
   const tiles = useMemo(() => {
     const correctTiles = (exercise.metadata?.tiles as string[]) ?? exercise.correctAnswer.split(' ');
@@ -35,9 +38,15 @@ export function SentenceConstructionExercise({
     return all.sort(() => 0.5 - Math.random());
   }, [exercise]);
 
-  const [placed, setPlaced] = useState<number[]>([]); // indices into tiles
-  const [isRevealed, setIsRevealed] = useState(false);
-  const [result, setResult] = useState<GradeResult | null>(null);
+  // Seeded from the recorded pick so Previous comes back to the sentence the
+  // learner actually built, in its graded state — see lib/exercise-restore.ts.
+  // The tile order is reshuffled on every mount, so the indices are resolved
+  // against THIS mount's `tiles`, not the ones the answer was built from.
+  const [placed, setPlaced] = useState<number[]>(() => restorePlacedTiles(tiles, selected));
+  const [isRevealed, setIsRevealed] = useState(() => isRestored(selected));
+  const [result, setResult] = useState<GradeResult | null>(() =>
+    regradePick(exercise, selected),
+  );
 
   const assembledSentence = placed.map((i) => tiles[i]).join(' ');
   const availableIndices = tiles.map((_, i) => i).filter((i) => !placed.includes(i));
@@ -163,7 +172,7 @@ export function SentenceConstructionExercise({
       )}
 
       {/* Differentiated feedback */}
-      {result && isRevealed && language && onContinue ? (
+      {result && isRevealed && language ? (
         <FeedbackCard
           result={result}
           exercise={exercise}
@@ -171,7 +180,6 @@ export function SentenceConstructionExercise({
           cefrLevel={cefrLevel}
           userId={userId}
           onRetry={handleRetry}
-          onContinue={onContinue}
         />
       ) : null}
 

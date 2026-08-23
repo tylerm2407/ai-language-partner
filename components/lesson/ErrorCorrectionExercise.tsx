@@ -8,28 +8,34 @@ import { Body, Caption } from '../ui/Text';
 import { colors, spacing, radii } from '../../config/theme';
 import { gradeAnswer } from '../../lib/grading';
 import type { GradeResult } from '../../lib/grading';
+import { isRestored, regradePick } from '../../lib/exercise-restore';
 import type { Exercise } from '../../types';
 
 interface Props {
   exercise: Exercise;
   onAnswer: (isCorrect: boolean, answer: string) => void;
+  /** Previously recorded answer, restored by the runner on Previous. */
+  selected?: string | null;
   userId?: string;
   language?: string;
   cefrLevel?: string;
-  onContinue?: () => void;
 }
 
 export function ErrorCorrectionExercise({
   exercise,
   onAnswer,
+  selected = null,
   userId,
   language,
   cefrLevel,
-  onContinue,
 }: Props) {
-  const [userInput, setUserInput] = useState('');
-  const [isRevealed, setIsRevealed] = useState(false);
-  const [result, setResult] = useState<GradeResult | null>(null);
+  // Seeded from the recorded pick so Previous comes back to the answer the
+  // learner actually gave, in its graded state — see lib/exercise-restore.ts.
+  const [userInput, setUserInput] = useState(selected ?? '');
+  const [isRevealed, setIsRevealed] = useState(() => isRestored(selected));
+  const [result, setResult] = useState<GradeResult | null>(() =>
+    regradePick(exercise, selected),
+  );
 
   const errorSentence = (exercise.metadata?.error_sentence as string) ?? exercise.prompt;
   const highlight = exercise.targetWord ?? exercise.targetGrammar;
@@ -124,7 +130,7 @@ export function ErrorCorrectionExercise({
       </View>
 
       {/* Differentiated feedback */}
-      {result && isRevealed && language && onContinue ? (
+      {result && isRevealed && language ? (
         <FeedbackCard
           result={result}
           exercise={exercise}
@@ -132,7 +138,6 @@ export function ErrorCorrectionExercise({
           cefrLevel={cefrLevel}
           userId={userId}
           onRetry={handleRetry}
-          onContinue={onContinue}
         />
       ) : null}
 

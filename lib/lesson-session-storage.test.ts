@@ -61,10 +61,48 @@ describe('lessonSessionKey', () => {
 
 describe('save / load round-trip', () => {
   it('round-trips a snapshot with the current schema version', async () => {
-    const snapshot = makeSnapshot();
+    const snapshot = { ...makeSnapshot(), picks: { 'ex-1': 'hola', 'ex-2': 'adios' } };
     await saveLessonSession(USER, LESSON, snapshot);
     const loaded = await loadLessonSession(USER, LESSON);
     expect(loaded).toEqual({ version: LESSON_SESSION_SCHEMA_VERSION, ...snapshot });
+  });
+
+  it('preserves picks that differ from the graded answer', async () => {
+    // A retry replaces the recorded answer; the pick map is what the UI
+    // restores, so the two are stored separately rather than derived.
+    const snapshot = {
+      ...makeSnapshot(),
+      picks: { 'ex-1': 'hola', 'ex-2': 'adiós' },
+    };
+    await saveLessonSession(USER, LESSON, snapshot);
+    const loaded = await loadLessonSession(USER, LESSON);
+    expect(loaded?.picks).toEqual({ 'ex-1': 'hola', 'ex-2': 'adiós' });
+  });
+
+  it('rebuilds picks for a snapshot written before the field existed', async () => {
+    // A learner mid-lesson when the exercise chrome shipped must not lose
+    // their place: every answer already carries the text they submitted, so
+    // the pick map is recoverable instead of dropping the session.
+    const legacy = makeSnapshot();
+    await saveLessonSession(USER, LESSON, legacy);
+    // Strip `picks` back out to simulate the old on-disk shape.
+    const raw = JSON.parse((await AsyncStorage.getItem(KEY)) as string);
+    delete raw.picks;
+    await AsyncStorage.setItem(KEY, JSON.stringify(raw));
+
+    const loaded = await loadLessonSession(USER, LESSON);
+    expect(loaded?.picks).toEqual({ 'ex-1': 'hola', 'ex-2': 'adios' });
+    expect(loaded?.exerciseIndex).toBe(3);
+  });
+
+  it('rebuilds an empty pick map when there are no answers yet', async () => {
+    await saveLessonSession(USER, LESSON, { ...makeSnapshot(), answers: [] });
+    const raw = JSON.parse((await AsyncStorage.getItem(KEY)) as string);
+    delete raw.picks;
+    await AsyncStorage.setItem(KEY, JSON.stringify(raw));
+
+    const loaded = await loadLessonSession(USER, LESSON);
+    expect(loaded?.picks).toEqual({});
   });
 
   it('returns null when nothing was saved', async () => {

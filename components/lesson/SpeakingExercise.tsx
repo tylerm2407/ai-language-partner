@@ -11,34 +11,50 @@ import { useAudioPlayer } from '../../hooks/useAudioPlayer';
 import { usePhonemeDrill } from '../../hooks/usePhonemeDrill';
 import { scorePronunciation } from '../../lib/ai';
 import type { GradeResult } from '../../lib/grading';
+import { parseSpeakingScore } from '../../lib/exercise-restore';
 import type { Exercise, LanguageCode } from '../../types';
 
 interface SpeakingExerciseProps {
   exercise: Exercise;
   onAnswer: (correct: boolean, answer: string) => void;
   showResult: boolean;
+  /** Previously recorded answer, restored by the runner on Previous. Encoded
+   *  as `score:NN` — see lib/exercise-restore.ts for why only the number
+   *  comes back. */
+  selected?: string | null;
   userId: string;
   targetLanguage: LanguageCode;
   cefrLevel?: string;
-  onContinue?: () => void;
 }
 
 export function SpeakingExercise({
   exercise,
   onAnswer,
   showResult,
+  selected = null,
   userId,
   targetLanguage,
   cefrLevel,
-  onContinue,
 }: SpeakingExerciseProps) {
   const { recording, audioUri, error: recorderError, startRecording, stopRecording, getBase64 } = useAudioRecorder();
   const { playing, error: playerError, play } = useAudioPlayer();
   const [scoring, setScoring] = useState(false);
+  // Seeded from the recorded pick so Previous shows the score the learner
+  // earned rather than an empty recorder. Only the number was ever stored —
+  // the spoken feedback and transcription came from the scoring service and
+  // are not reconstructable, so the restored line states the score and
+  // nothing more. `result` stays null on a restore for the same reason:
+  // FeedbackCard's phonological branch would auto-play a recast and render
+  // evaluation prose this component no longer has.
   const [scoreState, setScoreState] = useState<
     | { score: number; feedback: string; transcription?: string }
     | null
-  >(null);
+  >(() => {
+    const restoredScore = parseSpeakingScore(selected);
+    return restoredScore === null
+      ? null
+      : { score: restoredScore, feedback: `You scored ${Math.round(restoredScore)}% on this earlier.` };
+  });
   const [result, setResult] = useState<GradeResult | null>(null);
 
   // HVPT replay: when the learner asks to hear the prompt again, cycle
@@ -246,7 +262,7 @@ export function SpeakingExercise({
       )}
 
       {/* Differentiated feedback — phonological recast on failure */}
-      {result && onContinue ? (
+      {result ? (
         <FeedbackCard
           result={result}
           exercise={exercise}
@@ -254,7 +270,6 @@ export function SpeakingExercise({
           cefrLevel={cefrLevel}
           userId={userId}
           onRetry={handleRetry}
-          onContinue={onContinue}
         />
       ) : null}
     </ExerciseCard>

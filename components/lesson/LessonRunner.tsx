@@ -1,8 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, Platform } from 'react-native';
+import { View, Text, Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { ProgressBar } from '../ui/ProgressBar';
 import { Button } from '../ui/Button';
+import { ExerciseChrome } from './ExerciseChrome';
 import { MultipleChoice } from './MultipleChoice';
 import { TranslationExercise } from './TranslationExercise';
 import { FillBlankExercise } from './FillBlankExercise';
@@ -17,7 +17,6 @@ import { WordFormExercise } from './WordFormExercise';
 import { SentenceTransformExercise } from './SentenceTransformExercise';
 import { MiniDialogueExercise } from './MiniDialogueExercise';
 import { useAdultMode } from '../../hooks/useAdultMode';
-import { HeartsDisplay } from '../gamification/HeartsDisplay';
 import { CorrectSparkle } from '../animations/CorrectSparkle';
 import { WrongShake } from '../animations/WrongShake';
 import { HeartBreak } from '../animations/HeartBreak';
@@ -211,7 +210,18 @@ export function LessonRunner({
 }: LessonRunnerProps) {
   const { showHearts, showXpCelebration } = useAdultMode();
   const [currentIndex, setCurrentIndex] = useState(0);
+  // `showResult` survives only as the sparkle/shake trigger. Whether an
+  // exercise has been answered is derived from `picks` — a single boolean
+  // could not say "this one, the one you just walked back to, is answered".
   const [showResult, setShowResult] = useState(false);
+  // Keyed by exercise id, so warm-up ids (`warmup-…`) and lesson ids never
+  // collide. This is what makes Previous restore a pick, its option colours
+  // and its note.
+  const [picks, setPicks] = useState<Record<string, string>>({});
+  // Correctness per exercise id. Warm-up answers deliberately stay out of
+  // `answers` (they must not move lesson accuracy or XP), so the footer's
+  // kicker reads from here instead and works in both phases.
+  const [outcomes, setOutcomes] = useState<Record<string, boolean>>({});
   const [answers, setAnswers] = useState<{ exerciseId: string; correct: boolean; answer: string }[]>([]);
   const [completed, setCompleted] = useState(false);
   const [lastAnswerCorrect, setLastAnswerCorrect] = useState<boolean | null>(null);
@@ -279,6 +289,10 @@ export function LessonRunner({
           sessionStartedAtRef.current = snapshot.startedAt;
           setCurrentIndex(Math.min(snapshot.exerciseIndex, exercises.length - 1));
           setAnswers(snapshot.answers);
+          setPicks(snapshot.picks ?? {});
+          setOutcomes(
+            Object.fromEntries(snapshot.answers.map((a) => [a.exerciseId, a.correct])),
+          );
         }
       })
       .catch((err) => console.warn('[lesson-session] restore failed:', err))
@@ -319,16 +333,23 @@ export function LessonRunner({
     ? warmupToExercise(warmupEntries[warmupIndex])
     : null;
   const currentExercise = warmupPhase ? warmupExercise : exercises[currentIndex];
-  const progress = warmupPhase
-    ? warmupEntries.length > 0
-      ? (warmupIndex + 1) / warmupEntries.length
-      : 0
-    : exercises.length > 0
-      ? (currentIndex + 1) / exercises.length
-      : 0;
+
+  // Per-exercise answered state. `showResult` used to stand in for this, but a
+  // single boolean cannot describe an exercise you have walked back onto.
+  const currentPick = currentExercise ? picks[currentExercise.id] ?? null : null;
+  const currentCorrect = currentExercise ? outcomes[currentExercise.id] ?? null : null;
+  const isAnswered = currentPick !== null;
 
   const handleAnswer = useCallback(
     (correct: boolean, answer: string) => {
+      // Recorded for both phases before the warm-up branch returns: the
+      // footer's note row and the Next button read from these, and the
+      // warm-up needs them just as much as the lesson does.
+      if (currentExercise) {
+        const id = currentExercise.id;
+        setPicks((prev) => ({ ...prev, [id]: answer }));
+        setOutcomes((prev) => ({ ...prev, [id]: correct }));
+      }
       if (warmupPhase) {
         // Warm-up answers feed the SRS machinery but do not affect the
         // lesson accuracy/XP aggregates. Intentionally do not lose hearts
@@ -387,6 +408,9 @@ export function LessonRunner({
         saveLessonSession(userId, lessonId, {
           exerciseIndex: currentIndex + 1,
           answers: nextAnswers,
+          // Without the picks a resumed lesson would render its answered
+          // exercises blank, with Next disabled on work already done.
+          picks: { ...picks, [currentExercise.id]: answer },
           startedAt: sessionStartedAtRef.current,
         }).catch((err) => console.warn('[lesson-session] save failed:', err));
       }
@@ -413,8 +437,25 @@ export function LessonRunner({
         // feedback; the interruption was the part that cost retention.
       }
     },
-    [currentExercise, isUnlimitedHearts, onLoseHeart, warmupPhase, warmupEntries, warmupIndex, answers, currentIndex, lessonId, userId]
+    [currentExercise, isUnlimitedHearts, onLoseHeart, warmupPhase, warmupEntries, warmupIndex, answers, picks, currentIndex, lessonId, userId]
   );
+
+  /**
+   * Step back one exercise. Deliberately does NOT clear the answered state —
+   * that now lives in `picks`/`outcomes`, keyed by exercise id, so the earlier
+   * question comes back with its pick, its option colours and its note. Only
+   * the animation trigger resets, so walking backwards does not replay a
+   * sparkle or a shake.
+   */
+  const handlePrev = () => {
+    setShowResult(false);
+    setLastAnswerCorrect(null);
+    if (warmupPhase) {
+      if (warmupIndex > 0) setWarmupIndex((i) => i - 1);
+      return;
+    }
+    if (currentIndex > 0) setCurrentIndex((i) => i - 1);
+  };
 
   const handleNext = () => {
     if (warmupPhase) {
@@ -526,60 +567,60 @@ export function LessonRunner({
     );
   }
 
-  const ExerciseWrapper = lastAnswerCorrect === true ? CorrectSparkle : lastAnswerCorrect === false ? WrongShake : View;
-  const wrapperProps = lastAnswerCorrect !== null ? { trigger: showResult } : {};
-
   return (
-    <View className="flex-1 bg-dark">
-      {/* Header */}
-      <View className="px-4 pt-2 pb-4">
-        <View className="flex-row items-center justify-between mb-3">
-          <Button label="Exit" variant="danger" onPress={handleQuit} style={{ paddingHorizontal: 16, paddingVertical: 8 }} />
-          {showHearts && (
-            <HeartsDisplay hearts={hearts} maxHearts={maxHearts} isUnlimited={isUnlimitedHearts} />
-          )}
-          <Text className="text-text-secondary text-sm">
-            {warmupPhase
-              ? `Warm-up ${warmupIndex + 1} / ${warmupEntries.length}`
-              : `${currentIndex + 1} / ${exercises.length}`}
-          </Text>
-        </View>
-        {warmupPhase && (
-          <View className="mb-2">
-            <Text className="text-xs font-semibold text-primary uppercase tracking-wider">
-              Quick Review
-            </Text>
-            <Text className="text-xs text-text-secondary mt-0.5">
-              A few items due for practice before we start.
-            </Text>
-          </View>
-        )}
-        <ProgressBar progress={progress} />
-      </View>
-
-      {/* Heart Break Animation */}
-      <HeartBreak trigger={heartBreakTrigger} />
-
-      {/* Exercise */}
-      <ScrollView
-        className="flex-1 px-4"
-        contentContainerStyle={{ paddingBottom: 40 }}
-        keyboardShouldPersistTaps="handled"
+    <>
+      <ExerciseChrome
+        lessonTitle={warmupPhase ? 'Quick review' : lessonTitle}
+        currentIndex={warmupPhase ? warmupIndex : currentIndex}
+        total={warmupPhase ? warmupEntries.length : exercises.length}
+        completedCount={warmupPhase ? warmupIndex : answers.length}
+        counterLabel={
+          warmupPhase
+            ? `QUICK REVIEW ${warmupIndex + 1} / ${warmupEntries.length}`
+            : `QUESTION ${String(currentIndex + 1).padStart(2, '0')}`
+        }
+        hearts={hearts}
+        maxHearts={maxHearts}
+        isUnlimitedHearts={isUnlimitedHearts}
+        showHearts={showHearts}
+        note={currentExercise?.explanation ?? null}
+        answeredCorrect={currentCorrect}
+        correctAnswer={currentExercise?.correctAnswer ?? ''}
+        canPrev={warmupPhase ? warmupIndex > 0 : currentIndex > 0}
+        canNext={isAnswered}
+        isLast={!warmupPhase && currentIndex === exercises.length - 1}
+        onExit={handleQuit}
+        onPrev={handlePrev}
+        onNext={handleNext}
       >
-        <ExerciseWrapper {...wrapperProps}>
-          {currentExercise && renderExercise(
-            currentExercise,
-            handleAnswer,
-            showResult,
-            userId,
-            targetLanguage,
-            cefrLevel,
-            handleNext,
-          )}
-        </ExerciseWrapper>
-      </ScrollView>
+        {/* Both animation wrappers stay mounted and are driven by `trigger`.
+            Swapping the wrapper's component type per answer — what this used
+            to do — changed the element type at this position, so React tore
+            down and rebuilt the exercise underneath it. Typed exercises keep
+            their input and grade in local state and lost both the instant
+            they were graded. The key remounts the subtree when the exercise
+            genuinely changes, and only then. */}
+        <CorrectSparkle trigger={showResult && lastAnswerCorrect === true}>
+          <WrongShake trigger={showResult && lastAnswerCorrect === false}>
+            <View key={currentExercise?.id}>
+              {currentExercise &&
+                renderExercise(
+                  currentExercise,
+                  handleAnswer,
+                  isAnswered,
+                  currentPick,
+                  userId,
+                  targetLanguage,
+                  cefrLevel,
+                )}
+            </View>
+          </WrongShake>
+        </CorrectSparkle>
+      </ExerciseChrome>
 
-    </View>
+      {/* Heart Break Animation — overlays the chrome rather than sitting in it */}
+      <HeartBreak trigger={heartBreakTrigger} />
+    </>
   );
 }
 
@@ -587,19 +628,32 @@ function renderExercise(
   exercise: Exercise,
   onAnswer: (correct: boolean, answer: string) => void,
   showResult: boolean,
+  selected: string | null,
   userId: string,
   targetLanguage: LanguageCode,
   cefrLevel: string | undefined,
-  onContinue: () => void,
 ) {
-  // Shared props threaded into every exercise so the inner FeedbackCard
-  // can: (1) look up grammar rules, (2) log to correction_log, (3) fire
-  // onContinue to advance the lesson without the old global Next button.
-  const shared = { userId, language: targetLanguage, cefrLevel, onContinue };
+  // Shared props threaded into every exercise so the inner FeedbackCard can
+  // look up grammar rules and log to correction_log. `onContinue` is gone:
+  // ExerciseChrome's footer owns forward navigation now, and a Continue
+  // button inside the card would be a second, competing way to advance.
+  //
+  // `selected` is the recorded answer for THIS exercise. Every type seeds its
+  // own input state from it, so walking back with Previous returns the
+  // learner to the answer they gave rather than a blank, locked input sitting
+  // under a note that says they got it right.
+  const shared = { userId, language: targetLanguage, cefrLevel, selected };
 
   switch (exercise.type) {
     case 'multiple_choice':
-      return <MultipleChoice exercise={exercise} onAnswer={onAnswer} showResult={showResult} {...shared} />;
+      return (
+        <MultipleChoice
+          exercise={exercise}
+          onAnswer={onAnswer}
+          showResult={showResult}
+          {...shared}
+        />
+      );
     case 'translate_to_target':
     case 'translate_to_native':
       return <TranslationExercise exercise={exercise} onAnswer={onAnswer} showResult={showResult} {...shared} />;
@@ -614,10 +668,10 @@ function renderExercise(
           exercise={exercise}
           onAnswer={onAnswer}
           showResult={showResult}
+          selected={selected}
           userId={userId}
           targetLanguage={targetLanguage}
           cefrLevel={cefrLevel}
-          onContinue={onContinue}
         />
       );
     case 'free_production':
@@ -633,10 +687,10 @@ function renderExercise(
         <DictationExercise
           exercise={exercise}
           onAnswer={onAnswer}
+          selected={selected}
           userId={userId}
           targetLanguage={targetLanguage}
           cefrLevel={cefrLevel}
-          onContinue={onContinue}
         />
       );
     case 'collocation_match':

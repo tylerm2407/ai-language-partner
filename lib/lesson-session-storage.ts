@@ -21,6 +21,16 @@ export interface LessonSessionSnapshot {
   /** Index of the next exercise to show on resume. */
   exerciseIndex: number;
   answers: LessonSessionAnswer[];
+  /**
+   * The learner's raw pick per exercise id. The runner owns this so Previous
+   * can restore an answered exercise's selection, option colours and note —
+   * per-question local state could not survive going backwards.
+   *
+   * Optional on the wire: snapshots written before the exercise chrome
+   * landed have no `picks`, and `loadLessonSession` rebuilds one from
+   * `answers` rather than dropping a mid-lesson session on upgrade.
+   */
+  picks?: Record<string, string>;
   /** Epoch ms when the lesson session first started — the TTL reference. */
   startedAt: number;
 }
@@ -81,6 +91,13 @@ export async function loadLessonSession(
   if (Date.now() - parsed.startedAt > LESSON_SESSION_TTL_MS) {
     await AsyncStorage.removeItem(key);
     return null;
+  }
+
+  // Pre-chrome snapshot: every answer already carries the raw text the
+  // learner submitted, so the pick map is recoverable without asking them to
+  // redo work they had already done.
+  if (!parsed.picks) {
+    parsed.picks = Object.fromEntries(parsed.answers.map((a) => [a.exerciseId, a.answer]));
   }
 
   return parsed;

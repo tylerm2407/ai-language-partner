@@ -23,6 +23,11 @@ export const colors = {
     cardAlt: '#1C212B',
     overlay: 'rgba(6, 8, 12, 0.82)', // modal backdrops / celebration scrim
     sheet: '#1A1F29', // bottom-sheet fill
+    /** Unfilled segment of a discrete progress track — the lesson runner's
+     *  per-exercise ticks. One step above cardAlt so an empty tick still
+     *  reads as a countable segment against the raised lesson surface,
+     *  which cardAlt does not at 5px tall. */
+    track: '#242A36',
   },
 
   /** Semantic action roles. Fills must clear AA against text.onPrimary, which

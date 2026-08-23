@@ -8,12 +8,15 @@ import { Body, Caption } from '../ui/Text';
 import { colors, spacing, radii } from '../../config/theme';
 import { gradeAnswer } from '../../lib/grading';
 import type { GradeResult } from '../../lib/grading';
+import { isRestored, regradePick } from '../../lib/exercise-restore';
 import { usePhonemeDrill } from '../../hooks/usePhonemeDrill';
 import type { Exercise, LanguageCode } from '../../types';
 
 interface Props {
   exercise: Exercise;
   onAnswer: (isCorrect: boolean, answer: string) => void;
+  /** Previously recorded answer, restored by the runner on Previous. */
+  selected?: string | null;
   /** Needed so the HVPT replay path can rotate through per-language voices. */
   targetLanguage?: LanguageCode;
   /** For per-tier voice-minute metering on the TTS edge function. */
@@ -21,21 +24,24 @@ interface Props {
   /** Used by FeedbackCard to look up grammar rules. Defaults to targetLanguage. */
   language?: string;
   cefrLevel?: string;
-  onContinue?: () => void;
 }
 
 export function DictationExercise({
   exercise,
   onAnswer,
+  selected = null,
   targetLanguage,
   userId,
   language,
   cefrLevel,
-  onContinue,
 }: Props) {
-  const [userInput, setUserInput] = useState('');
-  const [isRevealed, setIsRevealed] = useState(false);
-  const [result, setResult] = useState<GradeResult | null>(null);
+  // Seeded from the recorded pick so Previous comes back to the answer the
+  // learner actually gave, in its graded state — see lib/exercise-restore.ts.
+  const [userInput, setUserInput] = useState(selected ?? '');
+  const [isRevealed, setIsRevealed] = useState(() => isRestored(selected));
+  const [result, setResult] = useState<GradeResult | null>(() =>
+    regradePick(exercise, selected),
+  );
   const [playCount, setPlayCount] = useState(0);
 
   // HVPT replay: after the first play, subsequent "replay" taps rotate
@@ -208,7 +214,7 @@ export function DictationExercise({
       </View>
 
       {/* Differentiated feedback */}
-      {result && isRevealed && effectiveLanguage && onContinue ? (
+      {result && isRevealed && effectiveLanguage ? (
         <FeedbackCard
           result={result}
           exercise={exercise}
@@ -216,7 +222,6 @@ export function DictationExercise({
           cefrLevel={cefrLevel}
           userId={userId}
           onRetry={handleRetry}
-          onContinue={onContinue}
         />
       ) : null}
 

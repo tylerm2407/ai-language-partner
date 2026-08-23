@@ -7,30 +7,36 @@ import { HighlightedText } from '../shared/HighlightedText';
 import { Button } from '../ui/Button';
 import { gradeAnswer } from '../../lib/grading';
 import type { GradeResult } from '../../lib/grading';
+import { isRestored, regradePick } from '../../lib/exercise-restore';
 import type { Exercise } from '../../types';
 
 interface WordFormExerciseProps {
   exercise: Exercise;
   onAnswer: (correct: boolean, answer: string) => void;
   showResult: boolean;
+  /** Previously recorded answer, restored by the runner on Previous. */
+  selected?: string | null;
   userId?: string;
   language?: string;
   cefrLevel?: string;
-  onContinue?: () => void;
 }
 
 export function WordFormExercise({
   exercise,
   onAnswer,
   showResult,
+  selected = null,
   userId,
   language,
   cefrLevel,
-  onContinue,
 }: WordFormExerciseProps) {
-  const [answer, setAnswer] = useState('');
-  const [submitted, setSubmitted] = useState(false);
-  const [result, setResult] = useState<GradeResult | null>(null);
+  // Seeded from the recorded pick so Previous comes back to the answer the
+  // learner actually gave, in its graded state — see lib/exercise-restore.ts.
+  const [answer, setAnswer] = useState(selected ?? '');
+  const [submitted, setSubmitted] = useState(() => isRestored(selected));
+  const [result, setResult] = useState<GradeResult | null>(() =>
+    regradePick(exercise, selected),
+  );
 
   const baseWord = (exercise.metadata?.baseWord as string) ?? '';
   const wordFamily = (exercise.metadata?.wordFamily as string[]) ?? [];
@@ -122,7 +128,7 @@ export function WordFormExercise({
         accessibilityHint="Type the correct form of the word"
       />
 
-      {result && onContinue && language ? (
+      {result && language ? (
         <FeedbackCard
           result={result}
           exercise={exercise}
@@ -130,7 +136,6 @@ export function WordFormExercise({
           cefrLevel={cefrLevel}
           userId={userId}
           onRetry={handleRetry}
-          onContinue={onContinue}
         />
       ) : null}
 

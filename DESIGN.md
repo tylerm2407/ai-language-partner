@@ -44,6 +44,7 @@ import { colors, spacing, radii, typography, motion, elevation } from '../../con
 | `surface.cardAlt` | `#1C212B` | Nested cards, input fills |
 | `surface.overlay` | `rgba(6,8,12,0.82)` | Modal/sheet backdrop, celebration scrim |
 | `surface.sheet` | `#1A1F29` | Bottom-sheet fill |
+| `surface.track` | `#242A36` | Unfilled segment of a **discrete** progress track (the lesson runner's per-exercise ticks). One step above `cardAlt` so an empty tick still reads as a countable segment on `surface.raised`, which `cardAlt` does not at 5px tall |
 
 `base` / `raised` / `sunken` are deepened toward black so the ambient glow layer
 reads as depth instead of washing out a flat fill. Card steps are unchanged —
@@ -434,6 +435,49 @@ as `borderRadius` is set, and the dash is what makes an upcoming row read as
 label on this screen: JetBrains Mono at 11-12px, `tracking.eyebrow`. Small mono
 labels never use `text.quaternary` — 3.9:1 is a large-UI-only step, and these
 are 11px.
+
+### Lesson runner — exercise chrome
+
+Every exercise type renders inside one frame (`components/lesson/ExerciseChrome.tsx`),
+so `multiple_choice` and the other 15 `ExerciseType`s differ only in their answer
+input.
+
+| Band | Treatment |
+|---|---|
+| Header | `action.accent` dot + unit title, text-only `EXIT` (extrabold 12px, `tracking.banner + 0.2`, `text.tertiary`), 1px `border.subtle` rule |
+| Track | `ExerciseTrack` — one tick per exercise, `gap: 3`, `height: 5`. Past `success.base`, current `action.accent`, future `surface.track` |
+| Meta | mono 10px `QUESTION 02` left, `HeartsDisplay size={14}` right |
+| Body | the exercise — **the only scrolling region** |
+| Footer | note row, then PREVIOUS / NEXT — **pinned** |
+
+**Layout contract.** Header, track and meta are `flex: none`; the body is
+`flex: 1; minHeight: 0` and scrolls; the footer is `flex: none`. The footer must
+never live inside the scroll area, or the note renders below the fold exactly
+when the learner needs it.
+
+**The note row** reads `exercise.explanation` and reserves `minHeight: 58` so the
+layout does not jump when an answer lands. Before answering: "Pick an answer to
+see the note." in `text.tertiary` — *not* `text.quaternary`, which is a
+large-UI-only step and this is 13px instruction copy. After: a mono kicker
+(`CORRECT — ` in `success.light`, or `ANSWER: <X> — ` in `error.light`) then the
+explanation in `text.secondary`. With no explanation the kicker renders alone —
+never an empty row.
+
+**One forward affordance.** The footer owns navigation. `FeedbackCard` no longer
+renders a Continue button and no longer auto-advances; what remains there is the
+part the footer cannot carry — the metalinguistic cue, the grammar `RuleCard`,
+the elicitation retry, the audio recast and the `correction_log` write.
+
+**Previous restores.** Answers live in the runner keyed by exercise id, not in
+per-question local state, so stepping back returns the pick, the option colours
+and the note. Each type seeds its own input from that record via
+`lib/exercise-restore.ts`; grades are recomputed rather than stored, so a
+restored answer cannot drift from what the learner first saw. Speaking is the
+one partial restore — only the score was ever recorded, so it says so instead of
+inventing the feedback that went with it.
+
+`ProgressBar` is untouched: it is still correct for reading progress, unit
+mastery and XP fills. The tick track replaces it only inside the lesson runner.
 
 ---
 

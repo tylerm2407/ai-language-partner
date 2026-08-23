@@ -5,35 +5,72 @@ import { ExerciseCard } from './ExerciseCard';
 import { FeedbackCard } from './FeedbackCard';
 import { Button } from '../ui/Button';
 import type { GradeResult } from '../../lib/grading';
+import { isRestored, splitJoinedAnswer } from '../../lib/exercise-restore';
 import type { Exercise } from '../../types';
 
 interface CollocationMatchProps {
   exercise: Exercise;
   onAnswer: (correct: boolean, answer: string) => void;
   showResult: boolean;
+  /** Previously recorded answer, restored by the runner on Previous. Encoded
+   *  as the comma-joined selection, exactly as `handleSubmit` reports it. */
+  selected?: string | null;
   userId?: string;
   language?: string;
   cefrLevel?: string;
-  onContinue?: () => void;
 }
 
 export function CollocationMatch({
   exercise,
   onAnswer,
   showResult,
+  selected = null,
   userId,
   language,
   cefrLevel,
-  onContinue,
 }: CollocationMatchProps) {
-  const [selectedWords, setSelectedWords] = useState<Set<string>>(new Set());
-  const [submitted, setSubmitted] = useState(false);
-  const [result, setResult] = useState<GradeResult | null>(null);
-
   const collocations: string[] = (exercise.metadata?.collocations as string[]) ?? [];
   const distractors: string[] = exercise.distractors ?? [];
   const allOptions = [...collocations, ...distractors];
   const targetWord = exercise.targetWord ?? exercise.prompt;
+
+  /**
+   * Grade a selection. Hoisted out of the submit handler so the same code
+   * rebuilds the result when Previous restores an earlier answer — this type
+   * synthesizes its own GradeResult rather than going through `gradeAnswer`,
+   * so there is nothing generic to re-run.
+   */
+  const gradeSelection = (selectedArr: string[]): GradeResult => {
+    const correctSet = new Set(collocations.map((c) => c.toLowerCase()));
+    const lowered = selectedArr.map((sel) => sel.toLowerCase());
+    const allCorrectSelected = collocations.every((c) => lowered.includes(c.toLowerCase()));
+    const noWrongSelected = lowered.every((sel) => correctSet.has(sel));
+    const isCorrect = allCorrectSelected && noWrongSelected;
+    const joined = selectedArr.join(', ');
+
+    // Lexical error type: a wrong collocation is a vocabulary miss (the
+    // target word itself is known).
+    return {
+      isCorrect,
+      accuracy: isCorrect ? 1 : 0,
+      feedback: isCorrect
+        ? 'Correct!'
+        : `Incorrect. The correct collocations are: ${collocations.join(', ')}`,
+      normalizedUserAnswer: joined,
+      normalizedCorrectAnswer: collocations.join(', '),
+      errorType: isCorrect ? null : 'lexical',
+    };
+  };
+
+  // Seeded from the recorded pick so Previous comes back to the selection the
+  // learner actually made, in its graded state.
+  const [selectedWords, setSelectedWords] = useState<Set<string>>(
+    () => new Set(splitJoinedAnswer(selected, ', ')),
+  );
+  const [submitted, setSubmitted] = useState(() => isRestored(selected));
+  const [result, setResult] = useState<GradeResult | null>(() =>
+    isRestored(selected) ? gradeSelection(splitJoinedAnswer(selected, ', ')) : null,
+  );
 
   const handleToggle = (word: string) => {
     if (submitted || showResult) return;
@@ -53,30 +90,10 @@ export function CollocationMatch({
     if (submitted || selectedWords.size === 0) return;
 
     const selectedArr = Array.from(selectedWords);
-    const correctSet = new Set(collocations.map((c) => c.toLowerCase()));
+    const grade = gradeSelection(selectedArr);
+    const isCorrect = grade.isCorrect;
+    const joined = grade.normalizedUserAnswer;
 
-    const allCorrectSelected = collocations.every((c) =>
-      selectedArr.map((s) => s.toLowerCase()).includes(c.toLowerCase())
-    );
-    const noWrongSelected = selectedArr.every((s) =>
-      correctSet.has(s.toLowerCase())
-    );
-
-    const isCorrect = allCorrectSelected && noWrongSelected;
-    const joined = selectedArr.join(', ');
-
-    // Synthesize a GradeResult so FeedbackCard can branch. Lexical error
-    // type: wrong collocation is a vocabulary miss (target word is known).
-    const grade: GradeResult = {
-      isCorrect,
-      accuracy: isCorrect ? 1 : 0,
-      feedback: isCorrect
-        ? 'Correct!'
-        : `Incorrect. The correct collocations are: ${collocations.join(', ')}`,
-      normalizedUserAnswer: joined,
-      normalizedCorrectAnswer: collocations.join(', '),
-      errorType: isCorrect ? null : 'lexical',
-    };
     setResult(grade);
     setSubmitted(true);
 
@@ -147,7 +164,7 @@ export function CollocationMatch({
         ))}
       </View>
 
-      {result && onContinue && language ? (
+      {result && language ? (
         <FeedbackCard
           result={result}
           exercise={exercise}
@@ -155,7 +172,6 @@ export function CollocationMatch({
           cefrLevel={cefrLevel}
           userId={userId}
           onRetry={handleRetry}
-          onContinue={onContinue}
         />
       ) : null}
 

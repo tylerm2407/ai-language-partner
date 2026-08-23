@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View, Text, TextInput, Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { ExerciseCard } from './ExerciseCard';
@@ -6,6 +6,7 @@ import { FeedbackCard } from './FeedbackCard';
 import { Button } from '../ui/Button';
 import { gradeAnswer } from '../../lib/grading';
 import type { GradeResult } from '../../lib/grading';
+import { exerciseHints, isRestored, splitJoinedAnswer } from '../../lib/exercise-restore';
 import type { Exercise } from '../../types';
 
 interface DialogueLine {
@@ -17,27 +18,42 @@ interface MiniDialogueExerciseProps {
   exercise: Exercise;
   onAnswer: (correct: boolean, answer: string) => void;
   showResult: boolean;
+  /** Previously recorded answer, restored by the runner on Previous. Encoded
+   *  as the blanks joined with ' | ', in blankIndices order. */
+  selected?: string | null;
   userId?: string;
   language?: string;
   cefrLevel?: string;
-  onContinue?: () => void;
 }
 
 export function MiniDialogueExercise({
   exercise,
   onAnswer,
   showResult,
+  selected = null,
   userId,
   language,
   cefrLevel,
-  onContinue,
 }: MiniDialogueExerciseProps) {
   const dialogue = (exercise.metadata?.dialogue as DialogueLine[]) ?? [];
   const blankIndices = (exercise.metadata?.blankIndices as number[]) ?? [];
 
-  const [answers, setAnswers] = useState<Record<number, string>>({});
-  const [submitted, setSubmitted] = useState(false);
+  // Seeded from the recorded pick so Previous comes back to the blanks the
+  // learner actually filled in. `combinedAnswer` is built in blankIndices
+  // order, so zipping it back is exact.
+  const [answers, setAnswers] = useState<Record<number, string>>(() => {
+    const parts = splitJoinedAnswer(selected, ' | ');
+    if (parts.length !== blankIndices.length) return {};
+    return Object.fromEntries(blankIndices.map((blankIdx, i) => [blankIdx, parts[i]]));
+  });
+  const [submitted, setSubmitted] = useState(() => isRestored(selected));
   const [result, setResult] = useState<GradeResult | null>(null);
+
+  // The aggregate GradeResult is rebuilt by an effect rather than a lazy
+  // initializer: it needs `acceptedPerBlank`, which is derived below this
+  // point. Runs once, because the runner remounts this component per
+  // exercise and `restoredOnce` latches.
+  const restoredOnce = useRef(false);
 
   // correctAnswer may contain pipe-separated answers for multiple blanks
   const correctAnswers = exercise.correctAnswer.split('|').map((a) => a.trim());
@@ -59,31 +75,27 @@ export function MiniDialogueExercise({
 
   const allFilled = blankIndices.every((idx) => (answers[idx] ?? '').trim().length > 0);
 
-  const handleSubmit = () => {
-    if (!allFilled || submitted) return;
-
-    // Grade each blank individually; aggregate into a single GradeResult
-    // for the FeedbackCard. The aggregate errorType is the first non-null
-    // child type — this keeps the UX coherent on a single failure card.
+  /**
+   * Grade a full set of blanks. Shared by the submit handler and the restore
+   * effect so a revisited dialogue shows exactly the feedback it showed the
+   * first time — this type aggregates per-blank grades into one result, so
+   * there is no single `gradeAnswer` call to re-run.
+   */
+  const gradeBlanks = (filled: Record<number, string>): GradeResult => {
     let allCorrect = true;
     let firstChildErrorType: GradeResult['errorType'] = null;
     const originals: string[] = [];
     const corrects: string[] = [];
 
     blankIndices.forEach((blankIdx, i) => {
-      const userAnswer = answers[blankIdx] ?? '';
+      const userAnswer = filled[blankIdx] ?? '';
       const correct = correctAnswers[i] ?? '';
       const accepted = acceptedPerBlank[i] ?? [];
       originals.push(userAnswer);
       corrects.push(correct);
 
       const grade = gradeAnswer(userAnswer, correct, accepted, {
-        exerciseHints: {
-          exerciseType: exercise.type,
-          skillType: exercise.skillType,
-          targetGrammar: exercise.targetGrammar,
-          targetWord: exercise.targetWord,
-        },
+        exerciseHints: exerciseHints(exercise),
       });
       if (!grade.isCorrect) {
         allCorrect = false;
@@ -93,7 +105,7 @@ export function MiniDialogueExercise({
       }
     });
 
-    const aggregate: GradeResult = {
+    return {
       isCorrect: allCorrect,
       accuracy: allCorrect ? 1 : 0,
       feedback: allCorrect
@@ -103,6 +115,30 @@ export function MiniDialogueExercise({
       normalizedCorrectAnswer: corrects.join(' | '),
       errorType: allCorrect ? null : firstChildErrorType,
     };
+  };
+
+  useEffect(() => {
+    if (restoredOnce.current) return;
+    restoredOnce.current = true;
+    if (!isRestored(selected)) return;
+    const parts = splitJoinedAnswer(selected, ' | ');
+    if (parts.length !== blankIndices.length) return;
+    setResult(
+      gradeBlanks(Object.fromEntries(blankIndices.map((blankIdx, i) => [blankIdx, parts[i]]))),
+    );
+    // Restores once on mount; the runner keys this component by exercise id.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleSubmit = () => {
+    if (!allFilled || submitted) return;
+
+    // Grade each blank individually; aggregate into a single GradeResult
+    // for the FeedbackCard. The aggregate errorType is the first non-null
+    // child type — this keeps the UX coherent on a single failure card.
+    const aggregate = gradeBlanks(answers);
+    const allCorrect = aggregate.isCorrect;
+
     setResult(aggregate);
     setSubmitted(true);
 
@@ -179,7 +215,7 @@ export function MiniDialogueExercise({
         })}
       </View>
 
-      {result && onContinue && language ? (
+      {result && language ? (
         <FeedbackCard
           result={result}
           exercise={exercise}
@@ -187,7 +223,6 @@ export function MiniDialogueExercise({
           cefrLevel={cefrLevel}
           userId={userId}
           onRetry={handleRetry}
-          onContinue={onContinue}
         />
       ) : null}
 

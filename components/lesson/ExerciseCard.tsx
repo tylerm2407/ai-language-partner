@@ -1,5 +1,6 @@
-import { View, Text } from 'react-native';
+import { View, Text, type TextStyle } from 'react-native';
 import type { ReactNode } from 'react';
+import { colors, minLineHeight, spacing, typography } from '../../config/theme';
 import type { ExerciseType } from '../../types';
 
 interface ExerciseCardProps {
@@ -36,20 +37,45 @@ const TYPE_LABELS: Record<ExerciseType, string> = {
   mini_dialogue: 'Complete the dialogue',
 };
 
+/**
+ * Instruction label — sentence case, 14px, text.secondary.
+ *
+ * Lives here rather than in each exercise so all 16 types share one voice;
+ * before this, a type that wanted a different prompt size simply set one.
+ */
+const LABEL_STYLE: TextStyle = {
+  fontFamily: typography.family.medium,
+  fontSize: 14,
+  lineHeight: minLineHeight(14),
+  color: colors.text.secondary,
+  marginBottom: spacing.xs,
+};
+
+/**
+ * Prompt — Nunito 22px semibold, text.primary.
+ *
+ * Deliberately NOT Fraunces: config/theme.ts reserves the display face for
+ * hero and celebration moments, and a serif question stem would compete with
+ * the target-language text inside it.
+ */
+const PROMPT_STYLE: TextStyle = {
+  fontFamily: typography.family.semibold,
+  fontSize: 22,
+  lineHeight: minLineHeight(22),
+  color: colors.text.primary,
+};
+
 export function ExerciseCard({ children, type, prompt, promptNode }: ExerciseCardProps) {
   return (
     <View className="bg-dark-card rounded-[20px] p-6 min-h-[200px] shadow-card border border-white/10">
-      <Text
-        className="text-text-secondary text-sm font-sans-medium mb-2"
-        accessibilityRole="header"
-      >
+      <Text style={LABEL_STYLE} accessibilityRole="header">
         {TYPE_LABELS[type]}
       </Text>
       {promptNode ? (
-        <View className="mb-6">{promptNode}</View>
+        <View style={{ marginBottom: spacing.lg }}>{promptNode}</View>
       ) : prompt ? (
         <Text
-          className="text-text-primary text-[22px] font-sans-semibold mb-6"
+          style={[PROMPT_STYLE, { marginBottom: spacing.lg }]}
           accessibilityRole="header"
         >
           {prompt}

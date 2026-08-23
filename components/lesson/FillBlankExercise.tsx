@@ -9,30 +9,36 @@ import { Button } from '../ui/Button';
 import { colors } from '../../config/theme';
 import { gradeAnswer } from '../../lib/grading';
 import type { GradeResult } from '../../lib/grading';
+import { isRestored, regradePick } from '../../lib/exercise-restore';
 import type { Exercise } from '../../types';
 
 interface FillBlankExerciseProps {
   exercise: Exercise;
   onAnswer: (correct: boolean, answer: string) => void;
   showResult: boolean;
+  /** Previously recorded answer, restored by the runner on Previous. */
+  selected?: string | null;
   userId?: string;
   language?: string;
   cefrLevel?: string;
-  onContinue?: () => void;
 }
 
 export function FillBlankExercise({
   exercise,
   onAnswer,
   showResult,
+  selected = null,
   userId,
   language,
   cefrLevel,
-  onContinue,
 }: FillBlankExerciseProps) {
-  const [answer, setAnswer] = useState('');
-  const [submitted, setSubmitted] = useState(false);
-  const [result, setResult] = useState<GradeResult | null>(null);
+  // Seeded from the recorded pick so Previous comes back to the answer the
+  // learner actually gave, in its graded state — see lib/exercise-restore.ts.
+  const [answer, setAnswer] = useState(selected ?? '');
+  const [submitted, setSubmitted] = useState(() => isRestored(selected));
+  const [result, setResult] = useState<GradeResult | null>(() =>
+    regradePick(exercise, selected),
+  );
 
   // Split prompt on "___" to show sentence with blank
   const parts = exercise.prompt.split('___');
@@ -118,7 +124,7 @@ export function FillBlankExercise({
         </View>
       )}
 
-      {result && onContinue && language ? (
+      {result && language ? (
         <FeedbackCard
           result={result}
           exercise={exercise}
@@ -126,7 +132,6 @@ export function FillBlankExercise({
           cefrLevel={cefrLevel}
           userId={userId}
           onRetry={handleRetry}
-          onContinue={onContinue}
         />
       ) : null}
 
