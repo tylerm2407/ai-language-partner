@@ -78,8 +78,8 @@ export function ExerciseChrome({
   // reserve the bar's space or Previous/Next render underneath it. The parent
   // SafeAreaView already consumes insets.bottom, so subtract it back out.
   const footerBottomInset = Math.max(
-    spacing.xl + 4,
-    floatingTabBarSpace(insets.bottom) - insets.bottom + spacing.sm,
+    spacing.md,
+    floatingTabBarSpace() - insets.bottom + spacing.sm,
   );
   const answered = answeredCorrect !== null;
   const kicker = !answered
@@ -192,8 +192,6 @@ export function ExerciseChrome({
           paddingHorizontal: spacing.lg - 2,
           paddingTop: spacing.sm + 2,
           paddingBottom: footerBottomInset,
-          borderTopWidth: 1,
-          borderTopColor: colors.border.subtle,
         }}
       >
         <View style={{ minHeight: NOTE_MIN_HEIGHT, paddingBottom: spacing.md }}>

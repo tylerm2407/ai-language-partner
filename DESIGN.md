@@ -448,7 +448,12 @@ input.
 | Track | `ExerciseTrack` — one tick per exercise, `gap: 3`, `height: 5`. Past `success.base`, current `action.accent`, future `surface.track` |
 | Meta | mono 10px `QUESTION 02` left, `HeartsDisplay size={14}` right |
 | Body | the exercise — **the only scrolling region** |
-| Footer | note row, then PREVIOUS / NEXT — **pinned** |
+| Footer | note row, then PREVIOUS / NEXT — **pinned**, and deliberately *unboxed*: no rule, no fill of its own. A bordered panel here read as a separate surface sitting on top of the answers |
+
+The footer also reserves `floatingTabBarSpace()` (see
+`components/navigation/FloatingTabBar.tsx`). The bar is absolutely positioned
+over every tab route, so anything pinned to the bottom of one has to clear it or
+render underneath.
 
 **Layout contract.** Header, track and meta are `flex: none`; the body is
 `flex: 1; minHeight: 0` and scrolls; the footer is `flex: none`. The footer must

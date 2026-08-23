@@ -11,7 +11,6 @@ import React from 'react';
 import { View, Pressable, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, radii } from '../../config/theme';
 import { BORDER_GRADIENT_COLORS } from '../../config/gradients';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
@@ -29,6 +28,15 @@ const VISIBLE_TABS = ['index', 'learn', 'chat', 'profile'];
 const TAB_BAR_HEIGHT = 56;
 
 /**
+ * Gap between the bottom of the pill and the bottom of the window.
+ *
+ * Deliberately small and NOT derived from the safe-area inset: the bar is
+ * meant to sit just clear of the bottom edge, and floating it above the full
+ * home-indicator inset pushed it visibly up into the content.
+ */
+const TAB_BAR_BOTTOM_GAP = 8;
+
+/**
  * How much space the floating bar occupies above the bottom of the WINDOW.
  *
  * The bar is absolutely positioned and overlays whatever is beneath it, so any
@@ -37,13 +45,12 @@ const TAB_BAR_HEIGHT = 56;
  * Previous/Next row. Exported so the geometry lives in one place rather than
  * being re-derived (and drifting) at each call site.
  */
-export function floatingTabBarSpace(bottomInset: number): number {
-  return Math.max(bottomInset, 16) + 12 + TAB_BAR_HEIGHT;
+export function floatingTabBarSpace(): number {
+  return TAB_BAR_BOTTOM_GAP + TAB_BAR_HEIGHT;
 }
 
 export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
-  const insets = useSafeAreaInsets();
-  const bottomOffset = floatingTabBarSpace(insets.bottom) - TAB_BAR_HEIGHT;
+  const bottomOffset = TAB_BAR_BOTTOM_GAP;
 
   const visibleRoutes = state.routes.filter((route) => VISIBLE_TABS.includes(route.name));
 
