@@ -584,7 +584,7 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
   if (!selectedScenario) {
     return (
       <GradientBackground>
-      <View className="flex-1">
+      <SafeAreaView className="flex-1" edges={['top']}>
         <View className="flex-1 px-4 pt-2">
           <Text className="text-[28px] font-bold text-text-primary mb-2">AI Chat</Text>
           <Text className="text-base text-text-secondary mb-6">
@@ -635,7 +635,7 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
             )}
           />
         </View>
-      </View>
+      </SafeAreaView>
       </GradientBackground>
     );
   }
