@@ -12,7 +12,11 @@ export function useDailyChallenges() {
   const { dailyStats, profile, setProfile } = useAppStore();
   const [record, setRecord] = useState<DailyChallengesRecord | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadNonce, setReloadNonce] = useState(0);
   const claimInFlight = useRef(false);
+
+  const retry = useCallback(() => setReloadNonce((n) => n + 1), []);
 
   const [today, setToday] = useState(() => localToday());
 
@@ -33,6 +37,7 @@ export function useDailyChallenges() {
 
     const load = async () => {
       setLoading(true);
+      setError(null);
       try {
         let existing = await fetchDailyChallenges(user.id, today);
         if (!existing) {
@@ -60,14 +65,18 @@ export function useDailyChallenges() {
         }
         setRecord(existing);
       } catch (err) {
+        // Surface it. Previously this swallowed into `record === null`, which
+        // renders a header, a countdown and zero rows — a silent feature
+        // outage with no retry, which CLAUDE.md §5 forbids.
         console.error('Failed to load daily challenges:', err);
+        setError(err instanceof Error ? err.message : 'Could not load your daily challenges.');
       } finally {
         setLoading(false);
       }
     };
 
     load();
-  }, [user?.id, today]);
+  }, [user?.id, today, reloadNonce]);
 
   // Update progress when daily stats change
   useEffect(() => {
@@ -87,7 +96,11 @@ export function useDailyChallenges() {
     if (JSON.stringify(updatedChallenges) !== JSON.stringify(record.challenges) || allCompleted !== record.allCompleted) {
       setRecord({ ...record, challenges: updatedChallenges, allCompleted });
 
-      // Persist to DB
+      // Persist to DB. Since migration 071 the server OWNS bonus_xp_claimed
+      // and challenge_streak — a guard trigger silently coerces whatever we
+      // send back to the stored value — so take the returned row as truth
+      // rather than discarding it. Without this, a server-derived streak
+      // carry stays invisible until a cold reload.
       if (user) {
         upsertDailyChallenges(
           user.id,
@@ -96,7 +109,11 @@ export function useDailyChallenges() {
           allCompleted,
           record.bonusXpClaimed,
           record.challengeStreak
-        ).catch(console.error);
+        )
+          .then((saved) => {
+            if (saved) setRecord(saved);
+          })
+          .catch(console.error);
       }
     }
     // `record` must be a dep: on most app opens dailyStats resolves before
@@ -135,6 +152,9 @@ export function useDailyChallenges() {
     challengeStreak: record?.challengeStreak ?? 0,
     multiplier,
     loading,
+    /** Non-null when today's challenges could not be loaded. Render a retry. */
+    error,
+    retry,
     claimBonusXp,
   };
 }
