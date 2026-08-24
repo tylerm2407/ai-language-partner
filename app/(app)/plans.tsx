@@ -1,28 +1,26 @@
 /**
- * Post-signup paywall.
+ * Post-first-lesson paywall — design 7c, hard gate.
  *
- * Deliberately NOT part of `(public)/onboarding` even though it is the last
- * beat of onboarding for the learner. That flow runs before sign-up, so
- * RevenueCat would still be on an anonymous id: `revenuecat-webhook` drops any
- * event whose `app_user_id` is not a UUID (index.ts:108) and ignores the
- * TRANSFER that a later logIn produces (index.ts:114). A purchase made there
- * would unlock the client and never reach `subscriptions`, leaving the server
- * enforcing free-tier quotas on a paying learner. Here the account exists, so
- * `configurePurchases` has already run with a real user id.
+ * Replaces the previous three-PlanCard + "Continue with Free" screen. Two
+ * changes, both product decisions, not cosmetics:
  *
- * Skippable by design: Fluenci has a real free tier, and a paywall with no way
- * past it invites a 3.1.1 rejection.
+ *   1. HARD PAYWALL. There is no free tier any more, so there is no skip. The
+ *      7-day trial is the free path. Everything the old skip protected (a
+ *      learner who cannot buy) now falls to `blocked` below — an offerings
+ *      failure must NOT strand someone in the app with no way forward.
+ *   2. Per-day pricing. Each rung leads with its daily equivalent, with the
+ *      billed amount immediately beneath it. See lib/plan-pricing.ts.
  *
- * Fires AFTER the learner's first completed lesson, not at account creation —
- * see app/(app)/learn/[lessonId].tsx. The constraint above is unchanged by
- * that move: later is still post-signup. It reached this screen from
- * onboarding with a `lessonId` to hand off to; there is no such param now,
- * because the lesson has already happened and Home sits beneath this screen.
+ * Unchanged and load-bearing: this screen runs AFTER sign-up (RevenueCat is
+ * configured with the real user id — an anonymous purchase never reaches the
+ * `subscriptions` table) and AFTER the first completed lesson, fired from
+ * app/(app)/learn/[lessonId].tsx.
  */
-import { View, Text, Pressable, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, ScrollView, Alert, ActivityIndicator, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useState, useCallback, useEffect, useMemo } from 'react';
+import { LinearGradient } from 'expo-linear-gradient';
 import type { PurchasesPackage } from 'react-native-purchases';
 import { useAuth } from '../../hooks/useAuth';
 import { useAppStore } from '../../stores/useAppStore';
@@ -37,14 +35,16 @@ import {
   isPurchasesAvailable,
 } from '../../lib/purchases';
 import { type PlanId } from '../../lib/plans';
+import { STEP_ORDER, ctaLabel, renewalLine, trialOffer } from '../../lib/plan-pricing';
 import { trackEvent } from '../../lib/analytics';
-import { PlanCard } from '../../components/subscription/PlanCard';
-import { TermToggle, type BillingTerm } from '../../components/subscription/TermToggle';
-import { colors } from '../../config/theme';
+import { PlanStepCard } from '../../components/subscription/PlanStepCard';
+import { colors, radii, spacing, typography } from '../../config/theme';
 import { GlowLayer } from '../../components/ui/GlowBackground';
+import { TERMS_URL, PRIVACY_URL } from '../../config/app';
 
-/** Richest tier first so the largest genuine figure sets the reference point. */
-const DISPLAY_TIER_ORDER: PlanId[] = ['vip', 'premium', 'basic'];
+type BillingTerm = 'monthly' | 'annual';
+
+const DEFAULT_TIER: Exclude<PlanId, 'starter'> = 'premium';
 
 export default function PlansScreen() {
   const { user } = useAuth();
@@ -53,27 +53,18 @@ export default function PlansScreen() {
 
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
   const [term, setTerm] = useState<BillingTerm>('annual');
-  const [purchasingId, setPurchasingId] = useState<string | null>(null);
+  const [tier, setTier] = useState<Exclude<PlanId, 'starter'>>(DEFAULT_TIER);
+  const [purchasing, setPurchasing] = useState(false);
   const [restoring, setRestoring] = useState(false);
 
   const currentTier = subscription?.tier ?? 'starter';
 
-  /**
-   * Leave for the first lesson. This screen sits directly on top of Home, so
-   * replacing it keeps Home beneath the lesson — `LessonRunner`'s exit is
-   * `router.back()` and would do nothing with an empty stack.
-   */
+  /** Leave the paywall. Only reachable once entitled, restored, or blocked. */
   const proceed = useCallback(() => {
-    // The paywall no longer hands off into a lesson — it now runs *after* the
-    // first one, so there is nothing to forward to. Dismissing it lands the
-    // learner on Home, which is already beneath it in the stack.
-    if (router.canGoBack()) {
-      // Home is already beneath us; going back avoids stacking a second copy.
-      router.back();
-    } else {
-      router.replace('/(app)');
-    }
+    if (router.canGoBack()) router.back();
+    else router.replace('/(app)');
   }, [router]);
 
   useEffect(() => {
@@ -83,9 +74,8 @@ export default function PlansScreen() {
         const pkgs = await getOfferingPackages();
         if (!cancelled) setPackages(pkgs);
       } catch (err) {
-        // Never trap a new learner behind a paywall that failed to load — the
-        // screen falls through to its skip path instead.
         console.error('[plans] offerings failed:', err);
+        if (!cancelled) setFailed(true);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -96,7 +86,7 @@ export default function PlansScreen() {
   }, []);
 
   useEffect(() => {
-    trackEvent('paywall_viewed', { source: 'onboarding', currentTier });
+    trackEvent('paywall_viewed', { source: 'post_first_lesson', currentTier, gate: 'hard' });
   }, [currentTier]);
 
   const monthlyPriceByTier = useMemo(() => {
@@ -107,43 +97,48 @@ export default function PlansScreen() {
     return byTier;
   }, [packages]);
 
-  const visible = useMemo(() => {
+  /** The three rungs for the selected term, cheapest first. */
+  const rungs = useMemo(() => {
     const wantAnnual = term === 'annual';
-    return packages
-      .filter((p) => (wantAnnual ? isAnnualPackage(p) : isMonthlyPackage(p)))
-      .sort(
-        (a, b) =>
-          DISPLAY_TIER_ORDER.indexOf(tierFromPackage(a)) -
-          DISPLAY_TIER_ORDER.indexOf(tierFromPackage(b)),
-      );
+    return STEP_ORDER.map((t) =>
+      packages.find(
+        (p) => tierFromPackage(p) === t && (wantAnnual ? isAnnualPackage(p) : isMonthlyPackage(p)),
+      ),
+    ).filter((p): p is PurchasesPackage => Boolean(p));
   }, [packages, term]);
 
-  /** Best annual saving on offer — drives the toggle's badge. */
   const bestSavings = useMemo(() => {
     let best = 0;
     for (const pkg of packages) {
       if (!isAnnualPackage(pkg)) continue;
-      best = Math.max(best, annualSavingsPercent(pkg.product.price, monthlyPriceByTier[tierFromPackage(pkg)]));
+      best = Math.max(
+        best,
+        annualSavingsPercent(pkg.product.price, monthlyPriceByTier[tierFromPackage(pkg)]),
+      );
     }
     return best;
   }, [packages, monthlyPriceByTier]);
 
-  const handlePurchase = async (pkg: PurchasesPackage) => {
-    if (!user) return;
-    setPurchasingId(pkg.identifier);
+  const selectedPkg = useMemo(
+    () => rungs.find((p) => tierFromPackage(p) === tier) ?? rungs[rungs.length - 1],
+    [rungs, tier],
+  );
+
+  const handlePurchase = async () => {
+    if (!user || !selectedPkg) return;
+    setPurchasing(true);
     try {
-      const result = await purchasePackage(pkg);
+      const result = await purchasePackage(selectedPkg);
       if (result.status === 'success') {
-        trackEvent('purchase_completed', { tier: result.tier ?? tierFromPackage(pkg) });
+        trackEvent('purchase_completed', { tier: result.tier ?? tierFromPackage(selectedPkg) });
         await refreshSubscription(user.id);
         setTimeout(() => user && refreshSubscription(user.id), 2500);
         proceed();
       } else if (result.status === 'error') {
         Alert.alert('Purchase failed', result.message ?? 'Please try again.');
       }
-      // 'cancelled' — silent, expected.
     } finally {
-      setPurchasingId(null);
+      setPurchasing(false);
     }
   };
 
@@ -164,78 +159,300 @@ export default function PlansScreen() {
     }
   };
 
-  const busy = purchasingId !== null || restoring;
-  const showPlans = isPurchasesAvailable() && visible.length > 0;
+  const busy = purchasing || restoring;
+  /**
+   * Nothing to sell: no IAP on this build, the offerings call failed, or the
+   * offering came back empty. A hard paywall must still let this learner
+   * through — a blank gate is a 3.1.1 rejection and, worse, a dead app.
+   */
+  const blocked = !loading && (!isPurchasesAvailable() || failed || rungs.length === 0);
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.surface.base }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface.base }}>
       <GlowLayer />
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-        <Text className="text-3xl font-bold text-text-primary mb-2">Choose your plan</Text>
-        <Text className="text-base text-text-secondary mb-6">
-          Every plan starts with 7 days free. Lessons, reviews and reading stay unlimited on
-          Fluenci Free — paid plans raise your daily AI tutor, voice and writing limits.
+      <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.md + 4, paddingBottom: spacing.lg }}>
+        {/* The advertising line is the headline — unquoted, in the display face. */}
+        <Text
+          style={{
+            fontFamily: typography.family.display,
+            fontSize: 30,
+            lineHeight: 38,
+            letterSpacing: -1,
+            color: colors.text.primary,
+            marginTop: spacing.lg + 2,
+          }}
+        >
+          Learning a language can now be done during your drive to work.
+        </Text>
+        <Text
+          style={{
+            fontFamily: typography.family.monoMedium,
+            fontSize: 10,
+            lineHeight: 14,
+            letterSpacing: 2.4,
+            color: colors.action.accent,
+            marginTop: spacing.sm,
+          }}
+        >
+          HANDS-FREE VOICE PRACTICE
         </Text>
 
         {loading ? (
-          <View className="py-12 items-center">
+          <View style={{ paddingVertical: spacing.xxl, alignItems: 'center' }}>
             <ActivityIndicator size="large" color={colors.action.accent} />
           </View>
-        ) : showPlans ? (
-          <>
-            <TermToggle term={term} onChange={setTerm} savingsPct={bestSavings} />
-            {visible.map((pkg) => {
-              const tier = tierFromPackage(pkg);
-              return (
-                <PlanCard
-                  key={pkg.identifier}
-                  pkg={pkg}
-                  tier={tier}
-                  isCurrentPlan={tier === currentTier}
-                  isPopular={tier === 'premium'}
-                  savingsPct={annualSavingsPercent(pkg.product.price, monthlyPriceByTier[tier])}
-                  onPurchase={() => handlePurchase(pkg)}
-                  loading={purchasingId === pkg.identifier}
-                  disabled={busy}
-                  ctaLabel="Start free trial"
-                />
-              );
-            })}
-          </>
-        ) : (
-          // Plans unavailable — say so plainly and let the learner get on with
-          // the lesson rather than staring at a retry that cannot help.
-          <View className="rounded-2xl p-5 mb-4 border border-dark-border bg-dark-card">
-            <Text className="text-base text-text-secondary">
-              Plans aren’t available right now. You can upgrade any time from your profile.
-            </Text>
-          </View>
-        )}
-
-        <Pressable
-          onPress={proceed}
-          disabled={busy}
-          accessibilityRole="button"
-          accessibilityLabel="Continue with the free plan"
-          className="items-center py-4 min-h-[44px]"
-        >
-          <Text className="text-base font-semibold text-text-secondary">Continue with Free</Text>
-        </Pressable>
-
-        {showPlans && (
-          <Pressable
-            onPress={handleRestore}
-            disabled={busy}
-            accessibilityRole="button"
-            accessibilityLabel="Restore purchases"
-            className="items-center py-3 min-h-[44px]"
+        ) : blocked ? (
+          <View
+            style={{
+              marginTop: spacing.lg,
+              borderRadius: radii.xl,
+              padding: spacing.md + 4,
+              backgroundColor: colors.surface.card,
+              borderWidth: 1,
+              borderColor: colors.border.default,
+            }}
           >
-            <Text className="text-sm text-text-tertiary">
-              {restoring ? 'Restoring…' : 'Restore purchases'}
+            <Text
+              style={{
+                fontFamily: typography.family.medium,
+                fontSize: 16,
+                lineHeight: 24,
+                color: colors.text.secondary,
+              }}
+            >
+              Plans aren’t available right now. Carry on learning — you can subscribe any time from
+              your profile.
             </Text>
-          </Pressable>
+            <Pressable
+              onPress={proceed}
+              accessibilityRole="button"
+              accessibilityLabel="Continue"
+              style={{ minHeight: 44, alignItems: 'center', justifyContent: 'center', marginTop: spacing.sm }}
+            >
+              <Text
+                style={{
+                  fontFamily: typography.family.bold,
+                  fontSize: 15,
+                  lineHeight: 21,
+                  color: colors.action.accent,
+                }}
+              >
+                Continue
+              </Text>
+            </Pressable>
+          </View>
+        ) : (
+          <>
+            {/* Term toggle. Annual carries the saving badge and is pre-selected:
+                annual-default paywalls see 35–45% of subscribers pick annual
+                vs 15–20% when monthly leads (RevenueCat 2025). */}
+            <View
+              style={{
+                flexDirection: 'row',
+                padding: 4,
+                borderRadius: radii.lg,
+                backgroundColor: colors.surface.card,
+                borderWidth: 1,
+                borderColor: colors.border.subtle,
+                marginTop: spacing.lg,
+              }}
+              accessibilityRole="tablist"
+            >
+              {(['monthly', 'annual'] as BillingTerm[]).map((opt) => {
+                const on = term === opt;
+                return (
+                  <Pressable
+                    key={opt}
+                    onPress={() => setTerm(opt)}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: on }}
+                    accessibilityLabel={
+                      opt === 'annual' && bestSavings > 0
+                        ? `Annual billing, save ${bestSavings} percent`
+                        : `${opt} billing`
+                    }
+                    style={{
+                      flex: 1,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 7,
+                      minHeight: 44,
+                      borderRadius: radii.md,
+                      backgroundColor: on ? colors.action.primaryFill : 'transparent',
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontFamily: typography.family.extrabold,
+                        fontSize: 13,
+                        lineHeight: 18,
+                        color: on ? colors.text.onPrimary : colors.text.tertiary,
+                      }}
+                    >
+                      {opt === 'annual' ? 'Annual' : 'Monthly'}
+                    </Text>
+                    {opt === 'annual' && bestSavings > 0 && (
+                      <View
+                        style={{
+                          paddingHorizontal: 6,
+                          paddingVertical: 2,
+                          borderRadius: radii.sm - 2,
+                          backgroundColor: on ? 'rgba(255,255,255,0.22)' : colors.success.tint,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            fontFamily: typography.family.monoMedium,
+                            fontSize: 9,
+                            lineHeight: 12,
+                            color: on ? colors.text.onPrimary : colors.success.light,
+                          }}
+                        >
+                          −{bestSavings}%
+                        </Text>
+                      </View>
+                    )}
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <View style={{ gap: spacing.xs, marginTop: spacing.sm + 2 }} accessibilityRole="radiogroup">
+              {rungs.map((pkg) => {
+                const t = tierFromPackage(pkg) as Exclude<PlanId, 'starter'>;
+                return (
+                  <PlanStepCard
+                    key={pkg.identifier}
+                    pkg={pkg}
+                    tier={t}
+                    selected={tier === t}
+                    isPopular={t === 'premium'}
+                    onSelect={() => setTier(t)}
+                    disabled={busy}
+                  />
+                );
+              })}
+            </View>
+
+            <View
+              style={{
+                marginTop: spacing.sm + 1,
+                padding: spacing.md - 2,
+                borderRadius: radii.xl,
+                backgroundColor: colors.surface.card,
+                borderWidth: 1,
+                borderColor: colors.border.subtle,
+              }}
+            >
+              <Text
+                style={{
+                  fontFamily: typography.family.serif,
+                  fontSize: 15,
+                  lineHeight: 22,
+                  color: colors.text.secondary,
+                }}
+              >
+                Learning a language has never been this easy.
+              </Text>
+            </View>
+
+            {/* CTA */}
+            <Pressable
+              onPress={handlePurchase}
+              disabled={busy || !selectedPkg}
+              accessibilityRole="button"
+              accessibilityLabel={selectedPkg ? ctaLabel(selectedPkg, tier) : 'Subscribe'}
+              style={{ marginTop: spacing.md }}
+            >
+              <LinearGradient
+                colors={[colors.action.primaryFill, colors.magazine.accentViolet]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{
+                  minHeight: 52,
+                  borderRadius: radii.xl,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  opacity: busy ? 0.6 : 1,
+                }}
+              >
+                {purchasing ? (
+                  <ActivityIndicator color={colors.text.onPrimary} />
+                ) : (
+                  <Text
+                    style={{
+                      fontFamily: typography.family.extrabold,
+                      fontSize: 16,
+                      lineHeight: 22,
+                      color: colors.text.onPrimary,
+                    }}
+                  >
+                    {selectedPkg ? ctaLabel(selectedPkg, tier) : ''}
+                  </Text>
+                )}
+              </LinearGradient>
+            </Pressable>
+
+            {/* Renewal terms, verbatim from the store product. Required in the
+                binary by App Review, and the honest thing to show. */}
+            <Text
+              style={{
+                fontFamily: typography.family.semibold,
+                fontSize: 11,
+                lineHeight: 16,
+                textAlign: 'center',
+                color: colors.text.quaternary,
+                marginTop: spacing.sm - 2,
+              }}
+            >
+              {selectedPkg ? renewalLine(selectedPkg) : ''}
+            </Text>
+
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'center',
+                gap: spacing.md - 2,
+                marginTop: spacing.sm,
+              }}
+            >
+              <Pressable
+                onPress={() => Linking.openURL(TERMS_URL)}
+                accessibilityRole="link"
+                accessibilityLabel="Terms of use"
+                style={{ minHeight: 44, justifyContent: 'center' }}
+              >
+                <Text style={legalStyle}>Terms</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => Linking.openURL(PRIVACY_URL)}
+                accessibilityRole="link"
+                accessibilityLabel="Privacy policy"
+                style={{ minHeight: 44, justifyContent: 'center' }}
+              >
+                <Text style={legalStyle}>Privacy</Text>
+              </Pressable>
+              <Pressable
+                onPress={handleRestore}
+                disabled={busy}
+                accessibilityRole="button"
+                accessibilityLabel="Restore purchases"
+                style={{ minHeight: 44, justifyContent: 'center' }}
+              >
+                <Text style={legalStyle}>{restoring ? 'Restoring…' : 'Restore purchases'}</Text>
+              </Pressable>
+            </View>
+          </>
         )}
       </ScrollView>
     </SafeAreaView>
   );
 }
+
+const legalStyle = {
+  fontFamily: typography.family.semibold,
+  fontSize: 10,
+  lineHeight: 14,
+  color: colors.text.quaternary,
+} as const;

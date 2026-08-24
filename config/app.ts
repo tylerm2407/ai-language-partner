@@ -63,3 +63,16 @@ export type NewsTier = 'easy' | 'hard';
 export function levelToNewsTier(level: ProficiencyLevel): NewsTier {
   return level === 'upper_intermediate' || level === 'advanced' ? 'hard' : 'easy';
 }
+
+// ─── Legal destinations ──────────────────────────────────────────────────
+// App Review requires functional Terms and Privacy links inside the binary
+// (Guideline 3.1.2 for any subscription surface). These are the same URLs the
+// profile screens already open; new code should import them from here rather
+// than hardcoding a sixth copy.
+//
+// WARNING: fluenci.com is currently a parking page — the domain is not under
+// our control. The links resolve, so the binary requirement is met mechanically,
+// but a reviewer following them will not find a terms or privacy document.
+// Point these at real pages before submission.
+export const TERMS_URL = 'https://fluenci.com/terms';
+export const PRIVACY_URL = 'https://fluenci.com/privacy';

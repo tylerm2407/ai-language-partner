@@ -35,19 +35,28 @@ export interface PlanDefinition {
 }
 
 export const PLANS: Record<PlanId, PlanDefinition> = {
-  // `starter` is the tier every signed-in user has before they buy anything
-  // (`subscription?.tier ?? 'starter'`), and it has no Stripe price key — it is
-  // the free plan. It used to carry a $3.79 price and the name "Starter", so a
-  // free user saw only priced cards and no indication any of this was free.
-  // That ambiguity is the mechanism behind the "nothing is free as it says"
-  // complaint that dominates negative reviews across this category.
+  // `starter` is not a plan you can use — it is the ABSENCE of one. Every
+  // signed-in user resolves to it via `subscription?.tier ?? 'starter'` until
+  // they buy, and since the 7c paywall is a hard gate there is no free AI
+  // allowance behind it. All AI quotas are therefore 0, and the router blocks
+  // `(app)` entirely for this tier (app/(app)/_layout.tsx).
+  //
+  // The zeros are the server-side half of that gate: if the client gate were
+  // ever bypassed, the edge functions must still refuse. A client that thinks
+  // the gate is closed while the server grants quota is the migration-057
+  // class of bug.
+  //
+  // Classroom students are the deliberate exception — they never buy a
+  // personal subscription, and `get_effective_limits` merges their org's
+  // contract_config with GREATEST(), so a 0 personal quota still yields the
+  // school's allowance. Do not "fix" these zeros by restoring a free tier.
   starter: {
-    name: 'Free',
+    name: 'No subscription',
     priceMonthlyUsd: 0,
-    dailyTextMessages: 10,
-    dailyVoiceMinutes: 5,
-    dailyWritingGrades: 1,
-    dailyPronunciationScores: 2,
+    dailyTextMessages: 0,
+    dailyVoiceMinutes: 0,
+    dailyWritingGrades: 0,
+    dailyPronunciationScores: 0,
     unlimitedHearts: false,
     streakShield: false,
     audiobookNarration: false,
@@ -93,20 +102,15 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
 
 /** Feature bullet points for the subscription/pricing UI. */
 export const PLAN_FEATURES: Record<PlanId, string[]> = {
-  // Lessons, reviews and reading are unlimited on every tier including free —
-  // the paid tiers buy AI capacity, not access to learning. "Unlimited hearts"
-  // is deliberately absent: hearts no longer block anything on any tier
-  // (hooks/useHearts.ts), so listing it would be selling a benefit that does
-  // not exist.
-  starter: [
-    'All lessons, reviews and reading',
-    'Your CEFR proficiency report',
-    '10 tutor messages per day',
-    '5 minutes of voice practice per day',
-    '1 writing grade per day',
-  ],
+  // "Unlimited hearts" is deliberately absent from every tier: hearts no
+  // longer block anything (hooks/useHearts.ts), so listing it would be
+  // selling a benefit that does not exist.
+  //
+  // `starter` lists nothing because it grants nothing. It renders only in the
+  // profile subscription screen, as the state a lapsed subscriber lands in.
+  starter: [],
   basic: [
-    'Everything in Free',
+    'All lessons, reviews and reading',
     '25 tutor messages per day',
     '10 minutes of voice practice per day',
     '3 writing grades per day',

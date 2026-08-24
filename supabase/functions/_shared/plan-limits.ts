@@ -22,7 +22,12 @@ export interface PlanLimits {
 }
 
 export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
-  starter:   { dailyTextMessages: 10, dailyVoiceMinutes: 5,  dailyWritingGrades: 1,  dailyPronunciationScores: 2, dailyAvatarGenerations: 0, offlineMode: false },
+  // `starter` = signed up, never subscribed. The 7c paywall is a hard gate, so
+  // there is no free AI allowance: every quota is 0 and each function refuses
+  // before spending a token. Classroom students are unaffected — their org's
+  // contract_config is merged in by get_effective_limits with GREATEST(), so a
+  // 0 personal quota still resolves to the school's allowance.
+  starter:   { dailyTextMessages: 0,  dailyVoiceMinutes: 0,  dailyWritingGrades: 0,  dailyPronunciationScores: 0, dailyAvatarGenerations: 0, offlineMode: false },
   basic:     { dailyTextMessages: 25, dailyVoiceMinutes: 10, dailyWritingGrades: 3,  dailyPronunciationScores: 3, dailyAvatarGenerations: 2, offlineMode: false },
   premium:   { dailyTextMessages: 50, dailyVoiceMinutes: 20, dailyWritingGrades: 7,  dailyPronunciationScores: 5, dailyAvatarGenerations: 5, offlineMode: true },
   vip:       { dailyTextMessages: 75, dailyVoiceMinutes: 30, dailyWritingGrades: 12, dailyPronunciationScores: 7, dailyAvatarGenerations: 10, offlineMode: true },

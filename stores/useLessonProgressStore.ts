@@ -27,6 +27,7 @@ import { create } from 'zustand';
 import * as Sentry from '@sentry/react-native';
 import { fetchLessonCompletions, upsertLessonCompletion } from '../lib/supabase-queries';
 import { enqueue, isNetworkError } from '../lib/offline-queue';
+import { useAppStore } from './useAppStore';
 import type { LessonCompletion } from '../types';
 
 export interface MarkCompleteResult {
@@ -155,6 +156,12 @@ export const useLessonProgressStore = create<LessonProgressStore>((set, get) => 
       completedAt: new Date().toISOString(),
     };
     applyLocally(optimistic);
+    // Close the hard paywall gate the moment the first lesson lands. Flipped
+    // optimistically alongside the local completion, not after the upsert:
+    // the learner has HAD their free lesson either way, and a failed write is
+    // replayed by the offline queue rather than lost. Reading it back from
+    // the server before gating would leave the gate open on a flaky network.
+    useAppStore.getState().setHasCompletedLesson(true);
 
     try {
       const completion = await upsertLessonCompletion(

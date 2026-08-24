@@ -23,7 +23,9 @@ type EventName =
   | 'recording_submitted'
   | 'paywall_viewed'
   | 'purchase_completed'
-  | 'purchase_restored';
+  | 'purchase_restored'
+  | 'plan_term_toggled'
+  | 'plan_tier_selected';
 
 type EventProperties = Record<string, string | number | boolean>;
 

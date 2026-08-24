@@ -15,7 +15,7 @@ import {
   annualSavingsPercent,
   isPurchasesAvailable,
 } from '../../../lib/purchases';
-import { PLAN_FEATURES, type PlanId } from '../../../lib/plans';
+import { type PlanId } from '../../../lib/plans';
 import { trackEvent } from '../../../lib/analytics';
 import { Button } from '../../../components/ui/Button';
 import { Badge } from '../../../components/ui/Badge';
@@ -197,31 +197,24 @@ export default function SubscriptionScreen() {
               <Text style={{ color: colors.streak.fire, fontWeight: '700' }}>
                 {profile?.streak}-day streak
               </Text>{' '}
-              has no streak shield on the free plan.
+              has no streak shield without a subscription.
             </Text>
           </View>
         )}
 
-        {/* Free plan, stated explicitly. A non-subscriber is on `starter`, but
-            the screen used to render only priced cards — so the free tier was
-            invisible and the app read as though nothing was free. Naming it,
-            marking it current, and listing what it includes is the direct
-            answer to the most common complaint in this category. */}
+        {/* `starter` is the absence of a subscription, not a free plan (7c is a
+            hard gate — see lib/plans.ts). This card used to say "Free / no card
+            required" and list an allowance; both became untrue when the free
+            tier was removed, and leaving them would be the inverse of the
+            complaint they were written to answer. It states the real state and
+            what restores access. */}
         {currentTier === 'starter' && (
-          <View className="rounded-2xl p-5 mb-4 border-2 border-success bg-success-bg">
-            <View className="flex-row items-center gap-2 mb-2">
-              <Badge variant="success" label="Current Plan" />
-            </View>
-            <View className="flex-row flex-wrap items-baseline mb-3">
-              <Text className="text-2xl font-bold text-text-primary">Free</Text>
-              <Text className="text-sm text-text-secondary ml-2">no card required</Text>
-            </View>
-            {(PLAN_FEATURES.starter ?? []).map((feature, idx) => (
-              <View key={idx} className="flex-row items-center mb-2">
-                <Ionicons name="checkmark-circle" size={18} color={colors.success.light} />
-                <Text className="flex-1 text-sm text-text-secondary ml-2">{feature}</Text>
-              </View>
-            ))}
+          <View className="rounded-2xl p-5 mb-4 border-2 border-border-subtle bg-dark-card">
+            <Text className="text-2xl font-bold text-text-primary mb-1">No subscription</Text>
+            <Text className="text-sm text-text-secondary">
+              A plan is required to keep learning. Choose one below, or restore a purchase
+              you have already made.
+            </Text>
           </View>
         )}
 

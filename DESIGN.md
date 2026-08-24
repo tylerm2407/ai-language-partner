@@ -763,7 +763,7 @@ Fluenci surfaces: paywall — anchor on annual total or on a tutor-cost comparis
 
 ---
 
-**Last updated:** 2026-08-07 (reverted to the canonical indigo palette; kept the flat CTA, the mascot-placement rule and the mono stats row).
+**Last updated:** 2026-08-24 (added §Paywall gate for the 7c hard paywall; palette and CTA rules unchanged since 2026-08-07).
 
 ---
 
@@ -775,3 +775,58 @@ Fluenci surfaces: paywall — anchor on annual total or on a tutor-cost comparis
 > The one that carries real risk is raw `<Text>`: inline font sizes do not
 > scale with Dynamic Type, which `.claude/rules/mobile-ui.md` requires and
 > App Review checks. Migrate high-traffic screens first.
+
+---
+
+## Paywall gate — where the hard paywall is enforced (design 7c)
+
+The 7c paywall is a **hard gate**: there is no free tier and no skip. The spec
+offered two places to enforce that. This is the one chosen, recorded here
+because the other is a reasonable reading and the next person will wonder.
+
+**Chosen: block at the router.** `app/(app)/_layout.tsx` returns
+`<Redirect href="/(app)/plans" />` for any learner on `starter`. Every route in
+the `(app)` group mounts under that layout, so the gate covers deep links, the
+back gesture, and tab switches in one place. The rejected alternative — keeping
+the push from `app/(app)/learn/[lessonId].tsx` and making it undismissable —
+only closes the one door it is standing in front of; anything that navigates
+into `(app)` by another path walks around it.
+
+The push from the lesson screen is deliberately **kept** anyway. It is what
+puts the ask on the learner's first real result rather than on a cold start,
+and it now runs one beat ahead of the router gate instead of being the gate.
+
+### Four exemptions, each load-bearing
+
+1. **`plans` itself** — the redirect would otherwise loop.
+2. **While `useAppStore.loading`** — `subscription` is null before it loads and
+   would read as unsubscribed. Flashing a paywall at a paying subscriber on
+   every cold start is worse than a half-second hold.
+3. **The first lesson.** The funnel is onboarding → Home → first lesson →
+   paywall. Gating on `tier` alone would redirect a new learner off Home
+   before that lesson ever happened, which deletes the reciprocity in
+   §UX Psychology Principles and undoes commit `14a8ccb`. The gate is keyed on
+   `hasCompletedLesson` (a lifetime flag from `lesson_completions`, **not**
+   `dailyStats.lessonsCompleted`, which resets nightly and would reopen the
+   gate every morning) and closes the instant the completion lands.
+4. **School students, once `SCHOOL_ENABLED`.** They are covered by an org
+   contract and never buy a personal subscription. Inert today (the flag is
+   `false`), but the server half already behaves this way:
+   `get_effective_limits` merges `contract_config` with `GREATEST()`, so the
+   zeroed personal quotas still resolve to the school's allowance.
+
+### `starter` is not a plan
+
+It is the absence of one. All AI quotas are 0 in `lib/plans.ts`,
+`supabase/functions/_shared/plan-limits.ts`, and `get_effective_limits`
+(migration 074). The zeros are the server-side half of the gate: if the client
+gate were ever bypassed, the edge functions must still refuse. Client and
+server disagreeing here is the migration-057 class of bug.
+
+### The escape hatch is not optional
+
+`blocked` in `app/(app)/plans.tsx` lets the learner through when there is
+nothing to sell — no IAP on the build, a failed offerings call, or an empty
+offering. A gate with no door is an App Review 3.1.1 rejection and a dead app
+for anyone who hits it. Covered by `app/(app)/plans.test.tsx`; do not remove it
+to make the gate "harder".

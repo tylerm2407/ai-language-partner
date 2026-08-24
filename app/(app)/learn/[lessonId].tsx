@@ -212,13 +212,41 @@ export default function LessonScreen() {
    * The push prompt already waits for a later session (app/(app)/index.tsx).
    */
   const handleExit = () => {
+    // Tear down anything presented OVER this screen before navigating.
+    //
+    // CelebrationOverlay, AchievementModal and LevelUpModal are all React
+    // Native <Modal>s, and handleComplete can leave the latter two visible at
+    // the moment Continue is tapped. A Modal that is still `visible` when the
+    // screen pops keeps its own presented view alive — the navigation happens,
+    // but the learner sees the celebration sitting there and reads it as a
+    // dead button. Closing them first is what makes the pop visible.
+    setShowingAchievement(null);
+    setAchievementQueue([]);
+    dismissLevelUp();
+
     if (earnedPaywallRef.current) {
       earnedPaywallRef.current = false;
       router.replace('/(app)');
-      router.push('/plans' as never);
+      // The hard-paywall gate in app/(app)/_layout.tsx now redirects any
+      // unsubscribed learner to /plans by itself, and <Redirect> replaces
+      // rather than pushes. Pushing here as well would stack a SECOND plans
+      // screen whose back gesture lands on the first — so push only for a
+      // learner the gate will wave through (an existing subscriber, who sees
+      // this screen as their current plan rather than as a wall).
+      const gated = (useAppStore.getState().subscription?.tier ?? 'starter') === 'starter';
+      if (!gated) router.push('/plans' as never);
       return;
     }
-    router.back();
+
+    // router.back() is a silent no-op with nothing beneath. Onboarding pushes
+    // Home before the first lesson precisely to avoid that, but a deep link, a
+    // notification tap or a cold start straight into a lesson has no such
+    // parent — and then Continue does nothing at all.
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(app)');
+    }
   };
 
   const dismissAchievement = () => {
