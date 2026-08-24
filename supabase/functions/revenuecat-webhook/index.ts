@@ -19,6 +19,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { checkAuthorization, isPlausibleUuid, verifyWebhookSignature } from './auth.ts';
+import { classifyEvent, INACTIVE_EVENTS } from './tier.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -27,30 +28,9 @@ const WEBHOOK_HMAC_SECRET = Deno.env.get('REVENUECAT_WEBHOOK_HMAC_SECRET');
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-type Tier = 'starter' | 'basic' | 'premium' | 'vip';
-const TIER_PRECEDENCE: Tier[] = ['vip', 'premium', 'basic'];
-
-/** Map a RevenueCat entitlement id or product id to our tier. */
-function resolveTier(entitlementIds: string[], productId: string | null): Tier {
-  const hay = [...entitlementIds, productId ?? ''].join(' ').toLowerCase();
-  for (const tier of TIER_PRECEDENCE) {
-    if (hay.includes(tier)) return tier;
-  }
-  return 'starter';
-}
-
-// Events that mean "the user currently has access".
-const ACTIVE_EVENTS = new Set([
-  'INITIAL_PURCHASE',
-  'RENEWAL',
-  'PRODUCT_CHANGE',
-  'UNCANCELLATION',
-  'SUBSCRIPTION_EXTENDED',
-  'NON_RENEWING_PURCHASE',
-]);
-// Events that mean "access has ended".
-const INACTIVE_EVENTS = new Set(['EXPIRATION', 'SUBSCRIPTION_PAUSED', 'BILLING_ISSUE']);
-// CANCELLATION = still active until period end (auto-renew off) → keep active, flag cancel.
+// Tier resolution and event classification live in ./tier.ts — pure and
+// unit-tested there (tier.test.ts). CANCELLATION keeps access until the
+// period end with the cancel flag set; unknown event types change nothing.
 
 serve(async (req: Request) => {
   if (req.method !== 'POST') {
@@ -110,34 +90,28 @@ serve(async (req: Request) => {
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
   }
 
-  // TRANSFER events move entitlements between users — ignore for tier sync.
-  if (type === 'TRANSFER' || type === 'TEST') {
-    return new Response(JSON.stringify({ ok: true }), { status: 200 });
-  }
-
   const entitlementIds = (event.entitlement_ids as string[]) ?? [];
   const productId = (event.product_id as string) ?? null;
   const expirationMs = event.expiration_at_ms as number | null | undefined;
   const currentPeriodEnd = expirationMs ? new Date(expirationMs).toISOString() : null;
 
-  let tier: Tier;
-  let isActive: boolean;
-  let cancelAtPeriodEnd = false;
-
-  if (INACTIVE_EVENTS.has(type)) {
-    tier = 'starter';
-    isActive = false;
-  } else if (type === 'CANCELLATION') {
-    // Auto-renew turned off but still entitled until period end.
-    tier = resolveTier(entitlementIds, productId);
-    isActive = true;
-    cancelAtPeriodEnd = true;
-  } else if (ACTIVE_EVENTS.has(type)) {
-    tier = resolveTier(entitlementIds, productId);
-    isActive = tier !== 'starter';
-  } else {
-    // Unknown event type — acknowledge without changing state.
+  // TRANSFER/TEST and any unrecognised event type: acknowledge, change nothing.
+  const decision = classifyEvent(type, entitlementIds, productId);
+  if (!decision) {
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
+  }
+  const { tier, isActive, cancelAtPeriodEnd } = decision;
+
+  // An active event that could not be resolved to a tier is a configuration
+  // mismatch between the RevenueCat dashboard and tier.ts, and it is
+  // otherwise invisible: the row just says `starter` and the delivery looks
+  // healthy. Log it loudly — this is a paying customer getting nothing.
+  if (!isActive && tier === 'starter' && !INACTIVE_EVENTS.has(type)) {
+    console.error(
+      `[revenuecat-webhook] ${type} did not resolve to a tier — check that the ` +
+        'RevenueCat entitlement ids contain basic/premium/vip. entitlements=' +
+        JSON.stringify(entitlementIds) + ' product=' + String(productId),
+    );
   }
 
   const { error } = await supabase.from('subscriptions').upsert(
