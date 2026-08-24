@@ -22,6 +22,7 @@ import { LEVEL_LABELS } from '../../components/onboarding/PlacementTest';
 import { loadPendingOnboarding, type PendingOnboarding } from '../../lib/pending-onboarding';
 import { authErrorCopy } from '../../lib/auth-errors';
 import {
+  GOOGLE_SIGN_IN_ENABLED,
   isAppleSignInAvailable,
   signInWithApple,
   signInWithGoogle,
@@ -397,10 +398,12 @@ export default function AuthScreen() {
               )}
 
               {/* ---------- Social ----------
-                  Both wired through lib/social-auth. Apple renders only where
-                  its native sheet exists, so the row collapses to Google alone
-                  on Android rather than showing a button that cannot work. */}
-              {!isForgot && (
+                  Wired through lib/social-auth. Each button renders only if
+                  its provider can actually complete: Apple where its native
+                  sheet exists, Google once GOOGLE_SIGN_IN_ENABLED is on. With
+                  neither the whole block goes, divider included — an "OR" rule
+                  with nothing beneath it is its own kind of dead affordance. */}
+              {!isForgot && (appleAvailable || GOOGLE_SIGN_IN_ENABLED) && (
                 <>
                   <View
                     style={{
@@ -456,6 +459,7 @@ export default function AuthScreen() {
                       </Text>
                     </Pressable>
                     )}
+                    {GOOGLE_SIGN_IN_ENABLED && (
                     <Pressable
                       onPress={() => runSocial('google')}
                       disabled={socialPending !== null || loading}
@@ -487,6 +491,7 @@ export default function AuthScreen() {
                         {socialPending === 'google' ? 'Signing in…' : 'Google'}
                       </Text>
                     </Pressable>
+                    )}
                   </View>
                 </>
               )}

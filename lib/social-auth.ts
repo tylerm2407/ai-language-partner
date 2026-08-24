@@ -21,14 +21,24 @@
  *
  * SERVER-SIDE PREREQUISITES — the client cannot detect these, and without them
  * the provider returns an error the moment it is used:
- *   - Supabase → Authentication → Providers → Apple: enabled, with the Services
- *     ID, Team ID, Key ID and .p8 from the Apple Developer account.
- *   - Supabase → Authentication → Providers → Google: enabled, with the OAuth
- *     client id/secret from Google Cloud.
- *   - Supabase → Authentication → URL Configuration → Redirect URLs must list
- *     `OAUTH_REDIRECT` below.
- * iOS additionally needs the `com.apple.developer.applesignin` entitlement,
- * which `app.json`'s `usesAppleSignIn` generates at prebuild.
+ *
+ *   Apple, native flow: Supabase → Authentication → Providers → Apple, with the
+ *   BUNDLE ID (`com.fluenci.app`) in Client IDs. That is all. The Services ID,
+ *   Team ID, Key ID and .p8 belong to Apple's *web* OAuth flow, which this does
+ *   not use — `signInWithIdToken` validates the token's audience against the
+ *   Client IDs list, so the secret key stays empty for native-only sign-in.
+ *   iOS also needs the `com.apple.developer.applesignin` entitlement (in
+ *   ios/Fluenci/Fluenci.entitlements, generated from app.json's
+ *   `usesAppleSignIn`) and therefore a native rebuild.
+ *
+ *   Google: an OAuth client of type **Web application** in Google Cloud — not
+ *   iOS — because the round trip goes through Supabase's hosted callback at
+ *   `https://<project-ref>.supabase.co/auth/v1/callback`, which must be listed
+ *   as an authorized redirect URI there. Its id/secret go in Supabase →
+ *   Providers → Google, and `OAUTH_REDIRECT` below must be added to Supabase →
+ *   URL Configuration → Redirect URLs, alongside the existing reset-password
+ *   entry rather than replacing it. Gated off by GOOGLE_SIGN_IN_ENABLED until
+ *   all of that exists.
  */
 
 import { Platform } from 'react-native';
@@ -40,6 +50,26 @@ import { parseAuthLink } from './auth-links';
 
 /** Where the hosted OAuth flow returns to. Must be registered in Supabase. */
 export const OAUTH_REDIRECT = Linking.createURL('auth-callback');
+
+/**
+ * Whether to offer Google sign-in.
+ *
+ * OFF until a Google Cloud OAuth client exists and is pasted into Supabase →
+ * Authentication → Providers → Google. The flow below is complete and works
+ * the moment those are in place — this gates the *button*, because a provider
+ * that is not configured server-side fails only after the learner has tapped
+ * it and watched a browser open.
+ *
+ * To enable: create a **Web application** OAuth client in Google Cloud with
+ * `https://<project-ref>.supabase.co/auth/v1/callback` as an authorized
+ * redirect URI, add its id/secret to Supabase, add OAUTH_REDIRECT above to
+ * Supabase → URL Configuration → Redirect URLs (alongside the existing
+ * reset-password entry, not replacing it), then flip this to true.
+ *
+ * Note App Store Guideline 4.8: offering Google means Sign in with Apple must
+ * be offered too. It already is, so turning this on is safe on that front.
+ */
+export const GOOGLE_SIGN_IN_ENABLED = false;
 
 /**
  * Whether the Apple button should render at all.
