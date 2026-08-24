@@ -110,33 +110,53 @@ export async function redisTtl(key: string): Promise<number> {
 /**
  * Fixed-window rate limit, counted in Redis.
  *
- * Deliberately NOT _shared/burst-limit.ts. That helper is backed by the
- * `api_cache` TABLE via the increment_rate_limit() RPC — a row-locked
- * Postgres UPDATE. For a function called once per *answered exercise*, that
- * would put a write to the primary database in front of every keystroke's
- * worth of progress, and the thing being protected here is the Redis budget
- * anyway. Counting in the same store keeps the hot path to one round trip
- * and adds no churn to Postgres.
+ * Deliberately NOT the `api_cache`-backed increment_rate_limit() RPC. That is
+ * a row-locked UPDATE on the primary database in front of every rate-limited
+ * call — for AI endpoints, one Postgres write per chat message, hint and
+ * translation, purely to decide whether to allow the request. `api_cache`
+ * carries a 2:1 dead-to-live tuple ratio at near-zero traffic, which is what
+ * a key-value cache looks like wearing a table costume. Counting here keeps
+ * the check off Postgres entirely.
  *
- * INCR creates the key at 1, so EXPIRE is set only on the first request of a
- * window; the window then rolls off on its own. Fails OPEN — a rate limiter
- * that takes the feature down with it when the cache blips is worse than the
- * abuse it prevents, and the caller's own Redis calls will fail anyway.
+ * INCR-then-EXPIRE is done as ONE Lua script rather than two commands. Two
+ * commands have a real failure mode: if the EXPIRE is lost, the counter keeps
+ * a key with no TTL, climbs past the cap, and locks that user out
+ * permanently. The script makes the pair atomic and halves the round trips.
+ *
+ * Fails OPEN — a rate limiter that takes the product down when the cache
+ * blips is worse than the abuse it prevents. Callers that can reach Postgres
+ * should prefer _shared/burst-limit.ts, which falls back rather than
+ * giving up the check entirely.
  */
+const RATE_LIMIT_SCRIPT =
+  'local c = redis.call("INCR", KEYS[1]) ' +
+  'if c == 1 then redis.call("EXPIRE", KEYS[1], ARGV[1]) end ' +
+  'return c';
+
+export interface RateLimitOutcome {
+  allowed: boolean;
+  /** false when Redis could not answer, so a caller can fall back. */
+  counted: boolean;
+}
+
 export async function redisRateLimit(
   key: string,
   maxRequests: number,
   windowSeconds: number,
-): Promise<boolean> {
+): Promise<RateLimitOutcome> {
+  if (!isRedisConfigured()) return { allowed: true, counted: false };
   try {
-    const count = await command(['INCR', key]);
-    if (typeof count !== 'number') return true;
-    if (count === 1) {
-      await command(['EXPIRE', key, Math.max(1, Math.floor(windowSeconds))]);
-    }
-    return count <= maxRequests;
+    const count = await command([
+      'EVAL',
+      RATE_LIMIT_SCRIPT,
+      1,
+      key,
+      Math.max(1, Math.floor(windowSeconds)),
+    ]);
+    if (typeof count !== 'number') return { allowed: true, counted: false };
+    return { allowed: count <= maxRequests, counted: true };
   } catch (err) {
-    console.warn('[redis] rate-limit check failed; allowing:', err);
-    return true;
+    console.warn('[redis] rate-limit check failed:', err);
+    return { allowed: true, counted: false };
   }
 }

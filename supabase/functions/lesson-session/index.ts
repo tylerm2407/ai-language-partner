@@ -29,10 +29,10 @@ import {
   isRedisConfigured,
   redisDel,
   redisGet,
-  redisRateLimit,
   redisSetEx,
   RedisUnavailableError,
 } from '../_shared/redis.ts';
+import { checkBurstLimit } from '../_shared/burst-limit.ts';
 import {
   LESSON_SESSION_TTL_MS,
   lessonSessionRedisKey,
@@ -111,9 +111,12 @@ serve(async (req: Request) => {
   }
 
   // Keyed on the verified user, so one abusive client cannot spend anyone
-  // else's budget. Fails open (see redisRateLimit).
-  const withinLimit = await redisRateLimit(
-    `ratelimit:lesson-session:${authUser.userId}`,
+  // else's budget. Null client: there is no Postgres fallback worth taking
+  // here — if Redis is down, every action below fails anyway.
+  const withinLimit = await checkBurstLimit(
+    null,
+    authUser.userId,
+    'lesson-session',
     RATE_LIMIT_MAX,
     RATE_LIMIT_WINDOW_SECONDS,
   );
