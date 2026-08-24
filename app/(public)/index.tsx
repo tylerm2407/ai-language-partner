@@ -1,28 +1,16 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { View, Text, Pressable, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { GradientBackground } from '../../components/ui/GradientBackground';
+import { RotatingGreeting } from '../../components/auth/RotatingGreeting';
 import { useMotion } from '../../hooks/useMotion';
 import { colors, typography } from '../../config/theme';
-
-const GREETINGS = [
-  { word: 'Hello', lang: 'English' },
-  { word: 'Hola', lang: 'Spanish' },
-  { word: 'Bonjour', lang: 'French' },
-  { word: 'Hallo', lang: 'German' },
-  { word: 'こんにちは', lang: 'Japanese' },
-  { word: 'Ciao', lang: 'Italian' },
-  { word: 'Olá', lang: 'Portuguese' },
-  { word: 'Привет', lang: 'Russian' },
-  { word: 'مرحبا', lang: 'Arabic' },
-];
 
 export default function WelcomeScreen() {
   const router = useRouter();
   const { shouldReduce } = useMotion();
-  const [greetingIndex, setGreetingIndex] = useState(0);
 
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const logoTranslateY = useRef(new Animated.Value(20)).current;
@@ -30,7 +18,6 @@ export default function WelcomeScreen() {
   const socialOpacity = useRef(new Animated.Value(0)).current;
   const buttonsOpacity = useRef(new Animated.Value(0)).current;
   const buttonsTranslateY = useRef(new Animated.Value(30)).current;
-  const greetingOpacity = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     if (shouldReduce) {
@@ -66,21 +53,6 @@ export default function WelcomeScreen() {
     }
   }, [shouldReduce, buttonsOpacity, buttonsTranslateY, logoOpacity, logoTranslateY, socialOpacity, subtitleOpacity]);
 
-  // Language cycling
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (shouldReduce) {
-        setGreetingIndex((prev) => (prev + 1) % GREETINGS.length);
-      } else {
-        Animated.timing(greetingOpacity, { toValue: 0, duration: 300, useNativeDriver: true }).start(() => {
-          setGreetingIndex((prev) => (prev + 1) % GREETINGS.length);
-          Animated.timing(greetingOpacity, { toValue: 1, duration: 300, useNativeDriver: true }).start();
-        });
-      }
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [shouldReduce, greetingOpacity]);
-
   return (
     <GradientBackground>
     <SafeAreaView className="flex-1">
@@ -93,11 +65,12 @@ export default function WelcomeScreen() {
           >
             Fluenci
           </Text>
-          <Animated.View style={{ opacity: greetingOpacity, height: 36, justifyContent: 'center' }}>
-            <Text className="text-xl text-text-tertiary text-center">
-              {GREETINGS[greetingIndex].word}
-            </Text>
-          </Animated.View>
+          {/* Shared with the auth hero (components/auth/RotatingGreeting) so the
+              two screens cannot drift apart. The welcome screen shows the word
+              alone; auth adds the language name beneath it. */}
+          <View style={{ height: 36, justifyContent: 'center' }}>
+            <RotatingGreeting size={20} color={colors.text.tertiary} />
+          </View>
         </Animated.View>
 
         <Animated.View style={{ opacity: subtitleOpacity }}>

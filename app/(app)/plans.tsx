@@ -12,10 +12,16 @@
  *
  * Skippable by design: Fluenci has a real free tier, and a paywall with no way
  * past it invites a 3.1.1 rejection.
+ *
+ * Fires AFTER the learner's first completed lesson, not at account creation —
+ * see app/(app)/learn/[lessonId].tsx. The constraint above is unchanged by
+ * that move: later is still post-signup. It reached this screen from
+ * onboarding with a `lessonId` to hand off to; there is no such param now,
+ * because the lesson has already happened and Home sits beneath this screen.
  */
 import { View, Text, Pressable, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import type { PurchasesPackage } from 'react-native-purchases';
 import { useAuth } from '../../hooks/useAuth';
@@ -44,7 +50,6 @@ export default function PlansScreen() {
   const { user } = useAuth();
   const { subscription, refreshSubscription } = useAppStore();
   const router = useRouter();
-  const { lessonId } = useLocalSearchParams<{ lessonId?: string }>();
 
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,15 +65,16 @@ export default function PlansScreen() {
    * `router.back()` and would do nothing with an empty stack.
    */
   const proceed = useCallback(() => {
-    if (lessonId) {
-      router.replace({ pathname: '/learn/[lessonId]', params: { lessonId } } as never);
-    } else if (router.canGoBack()) {
+    // The paywall no longer hands off into a lesson — it now runs *after* the
+    // first one, so there is nothing to forward to. Dismissing it lands the
+    // learner on Home, which is already beneath it in the stack.
+    if (router.canGoBack()) {
       // Home is already beneath us; going back avoids stacking a second copy.
       router.back();
     } else {
       router.replace('/(app)');
     }
-  }, [lessonId, router]);
+  }, [router]);
 
   useEffect(() => {
     let cancelled = false;

@@ -2,7 +2,7 @@ import { ActivityIndicator, KeyboardAvoidingView, Platform, View } from 'react-n
 import * as Sentry from '@sentry/react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import { fetchLessonWithExercises } from '../../../lib/supabase-queries';
 import { cachedFetch, readCacheKey } from '../../../lib/read-cache';
 import { orderExercisesForCognitiveLoad, lessonIsAlreadyOrdered } from '../../../lib/lesson-ordering';
@@ -13,6 +13,7 @@ import { useDailyStats } from '../../../hooks/useDailyStats';
 import { useHearts } from '../../../hooks/useHearts';
 import { useLevel } from '../../../hooks/useLevel';
 import { useLessonProgress } from '../../../hooks/useLessonProgress';
+import { useLessonProgressStore } from '../../../stores/useLessonProgressStore';
 import { useOnboardingChecklist } from '../../../hooks/useOnboardingChecklist';
 import { LessonRunner, type LessonResult } from '../../../components/lesson/LessonRunner';
 import { LevelUpModal } from '../../../components/gamification/LevelUpModal';
@@ -77,6 +78,17 @@ export default function LessonScreen() {
 
   // Also wait for the profile: grading needs the real target language, so
   // never fall back to a default while it loads.
+  /**
+   * Set when the run that just finished was the learner's FIRST completed
+   * lesson. The paywall fires off this, on celebration dismissal, rather than
+   * off a navigation param — a param survives a re-run of the same lesson and
+   * would show the paywall again to someone who has already seen it.
+   *
+   * A ref, not state: it is read once inside the exit handler and must not
+   * re-render the runner mid-celebration.
+   */
+  const earnedPaywallRef = useRef(false);
+
   if (loading || !targetLanguage) {
     return (
       <GradientBackground variant="raised">
@@ -148,6 +160,12 @@ export default function LessonScreen() {
             result.timeSpentMs,
           );
           setSaveState(persisted ? 'saved' : 'queued');
+
+          // The shared store is authoritative and already holds this lesson
+          // optimistically, so size === 1 means nothing else has ever been
+          // finished. Read after the await so the just-finished lesson counts.
+          const completedCount = useLessonProgressStore.getState().completions.size;
+          earnedPaywallRef.current = completedCount === 1 && !!profile?.onboardingCompleted;
         } catch (err) {
           console.error('[lesson] markLessonComplete failed:', err);
           setSaveState('failed');
@@ -179,6 +197,28 @@ export default function LessonScreen() {
         }
       }
     }
+  };
+
+  /**
+   * Leaving the lesson — by finishing it or by quitting.
+   *
+   * `LessonRunner` uses one callback for both, so the paywall is gated on the
+   * completion flag rather than on being called: quitting part-way must never
+   * produce a sales pitch. Replace-then-push mirrors the onboarding hand-off,
+   * so Home sits beneath the paywall and dismissing it lands there.
+   *
+   * Deliberately not sequenced against PrePermissionSheet, which also wants
+   * this beat — two modals stacked on one moment is worse than either alone.
+   * The push prompt already waits for a later session (app/(app)/index.tsx).
+   */
+  const handleExit = () => {
+    if (earnedPaywallRef.current) {
+      earnedPaywallRef.current = false;
+      router.replace('/(app)');
+      router.push('/plans' as never);
+      return;
+    }
+    router.back();
   };
 
   const dismissAchievement = () => {
@@ -226,7 +266,7 @@ export default function LessonScreen() {
         userId={user?.id ?? ''}
         targetLanguage={targetLanguage}
         onComplete={handleComplete}
-        onExit={() => router.back()}
+        onExit={handleExit}
         hearts={hearts}
         maxHearts={maxHearts}
         isUnlimitedHearts={heartsExempt}
