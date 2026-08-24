@@ -11,6 +11,13 @@
  * The hook only READS the current permission status on mount. Requesting
  * the system prompt is an explicit action via `requestPermissionsExplicit()`.
  *
+ * NOTE: no push token is fetched or stored. Every notification here is a
+ * LOCAL scheduled one, which needs no token, and nothing server-side sends
+ * remote push. Collecting a device identifier we never use is a privacy
+ * liability (App Store data disclosure + GDPR minimisation), so the token
+ * plumbing was removed. Re-add it in the same change that builds sending —
+ * not before.
+ *
  * Streak-save reminder content is bucketed by streak length:
  *   - 0–1:   gentle nudge, no loss-aversion framing (Lally 2010 fragile window)
  *   - 2–6:   "keep it going" framing
@@ -21,7 +28,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
-import { supabase } from '../lib/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Configure how notifications are displayed when the app is in the foreground
@@ -35,12 +41,7 @@ Notifications.setNotificationHandler({
   }),
 });
 
-interface UseNotificationsOptions {
-  userId?: string | undefined;
-}
-
-export function useNotifications({ userId }: UseNotificationsOptions = {}) {
-  const [pushToken, setPushToken] = useState<string | null>(null);
+export function useNotifications() {
   const [permissionStatus, setPermissionStatus] =
     useState<Notifications.PermissionStatus | null>(null);
   const notificationListener = useRef<Notifications.EventSubscription | null>(null);
@@ -52,18 +53,6 @@ export function useNotifications({ userId }: UseNotificationsOptions = {}) {
       Notifications.getPermissionsAsync()
         .then(({ status }) => {
           setPermissionStatus(status);
-          // If permission was granted in a prior session, we can safely
-          // re-fetch the push token (no system UI involved).
-          if (status === 'granted') {
-            Notifications.getExpoPushTokenAsync()
-              .then((tokenData) => {
-                setPushToken(tokenData.data);
-                if (userId) savePushToken(userId, tokenData.data);
-              })
-              .catch(() => {
-                // Token fetch can fail on simulators / missing FCM config — silent.
-              });
-          }
         })
         .catch(() => {});
     }
@@ -79,7 +68,7 @@ export function useNotifications({ userId }: UseNotificationsOptions = {}) {
       notificationListener.current?.remove();
       responseListener.current?.remove();
     };
-  }, [userId]);
+  }, []);
 
   /**
    * Explicit user-initiated permission request. Triggers the iOS system
@@ -89,20 +78,10 @@ export function useNotifications({ userId }: UseNotificationsOptions = {}) {
     if (Platform.OS === 'web') return 'denied' as Notifications.PermissionStatus;
     const { status } = await Notifications.requestPermissionsAsync();
     setPermissionStatus(status);
-    if (status === 'granted') {
-      try {
-        const tokenData = await Notifications.getExpoPushTokenAsync();
-        setPushToken(tokenData.data);
-        if (userId) await savePushToken(userId, tokenData.data);
-      } catch {
-        // Token fetch optional.
-      }
-    }
     return status;
   };
 
   return {
-    pushToken,
     permissionStatus,
     permissionGranted: permissionStatus === 'granted',
     requestPermissionsExplicit,
@@ -354,13 +333,3 @@ export async function cancelLessonExpiryReminder(lessonId: string): Promise<void
   await cancelById(lessonExpiryNotificationId(lessonId));
 }
 
-async function savePushToken(userId: string, token: string): Promise<void> {
-  try {
-    await supabase
-      .from('user_profiles')
-      .update({ push_token: token })
-      .eq('user_id', userId);
-  } catch {
-    // Silently fail — push token is nice-to-have, not critical.
-  }
-}

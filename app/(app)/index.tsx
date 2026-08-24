@@ -59,7 +59,7 @@ export default function HomeScreen() {
     getTargetLanguage(profile) ?? '',
     newsTier,
   );
-  const { permissionStatus, requestPermissionsExplicit } = useNotifications({ userId: user?.id });
+  const { permissionStatus, requestPermissionsExplicit } = useNotifications();
   const { tiles: unitTiles, loading: tilesLoading, error: tilesError, refetch: refetchTiles } = useUnitProgressTiles(
     user?.id,
     profile?.targetLanguage,

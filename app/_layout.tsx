@@ -74,7 +74,7 @@ function RootLayout() {
   // Mount notification listeners + read current permission status.
   // No system prompt is fired here — that's deferred to the
   // PrePermissionSheet post-first-lesson.
-  const { permissionGranted } = useNotifications({ userId: session?.user?.id });
+  const { permissionGranted } = useNotifications();
 
   // Re-arm the streak-save reminder whenever the inputs change
   // (streak/xp/permission). Silent no-op if permission isn't granted yet
