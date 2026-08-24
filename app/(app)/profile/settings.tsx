@@ -12,6 +12,7 @@ import { SUPPORTED_LANGUAGES, DAILY_GOALS } from '../../../config/app';
 import { supabase } from '../../../lib/supabase';
 import { getTargetLanguage } from '../../../lib/language';
 import { getReduceMotion, setReduceMotion } from '../../../lib/motion-preference';
+import { revokeAllAiConsent } from '../../../lib/ai-consent';
 import type { LanguageCode, ProficiencyLevel } from '../../../types';
 
 const LEVELS: { value: ProficiencyLevel; label: string }[] = [
@@ -25,7 +26,7 @@ const LEVELS: { value: ProficiencyLevel; label: string }[] = [
 export default function SettingsScreen() {
   const router = useRouter();
   const { profile, updateProfile } = useProfile();
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
 
   const [displayName, setDisplayName] = useState(profile?.displayName ?? '');
   // null while the profile hasn't loaded — no language is preselected and
@@ -271,6 +272,47 @@ export default function SettingsScreen() {
             <Ionicons name="document-text-outline" size={24} color={colors.premium.base} />
             <Text className="text-base font-semibold text-text-primary ml-4 flex-1">Terms of Service</Text>
             <Ionicons name="open-outline" size={18} color={colors.correctionChip.grammar.text} />
+          </Pressable>
+
+          {/* Withdrawing consent must be as easy as granting it (Apple 5.1.1(ii)),
+              so it lives here rather than behind a support request. */}
+          <Pressable
+            className="bg-dark-card rounded-2xl p-5 mb-3 flex-row items-center"
+            onPress={() => {
+              Alert.alert(
+                'Withdraw AI consent',
+                'You’ll be asked again the next time you use the AI tutor or your microphone. Nothing already saved to your account is removed — use Delete Account for that.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Withdraw',
+                    style: 'destructive',
+                    onPress: async () => {
+                      if (!user?.id) return;
+                      try {
+                        await revokeAllAiConsent(user.id);
+                        Alert.alert('Consent withdrawn', 'We’ll ask again next time.');
+                      } catch {
+                        Alert.alert(
+                          'Could not withdraw consent',
+                          'Something went wrong saving that. Please try again.',
+                        );
+                      }
+                    },
+                  },
+                ],
+              );
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Withdraw AI consent"
+          >
+            <Ionicons name="hand-left-outline" size={24} color={colors.premium.base} />
+            <View className="ml-4 flex-1">
+              <Text className="text-base font-semibold text-text-primary">Withdraw AI consent</Text>
+              <Text className="text-sm text-text-tertiary mt-0.5">
+                Stop sending messages and audio to our AI providers
+              </Text>
+            </View>
           </Pressable>
         </View>
 

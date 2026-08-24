@@ -31,6 +31,7 @@ import { SCENARIO_META, SCENARIO_ORDER, type ScenarioKey } from '../../../types/
 import { SCHOOL_ENABLED } from '../../../config/app';
 import { colors, radii, spacing } from '../../../config/theme';
 import { Body, Caption } from '../../../components/ui/Text';
+import { useAiConsent } from '../../../hooks/useAiConsent';
 import { Chip } from '../../../components/ui/Chip';
 
 /**
@@ -99,6 +100,7 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
   const { user } = useAuth();
   const { profile } = useAppStore();
   const { markItem: markOnboardingItem } = useOnboardingChecklist();
+  const { ensureConsent, consentSheet } = useAiConsent(user?.id);
   const router = useRouter();
   const params = useLocalSearchParams<{ assignmentId?: string; chatSessionId?: string }>();
   const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(null);
@@ -424,6 +426,15 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
     const candidate = typeof messageText === 'string' ? messageText : input;
     const text = candidate.trim();
     if (!text || sending) return;
+
+    // Explicit consent before anything the learner wrote reaches Anthropic
+    // (Apple 5.1.2(i)). Already-consented resolves immediately, so this is a
+    // first-message cost, not a per-message one. Declining aborts the send and
+    // leaves the draft in the composer.
+    if (!(await ensureConsent('text'))) {
+      if (handsFreeActive) setHandsFreeState('IDLE');
+      return;
+    }
 
     // Update hands-free state to AI_RESPONDING
     if (handsFreeActive) {
@@ -816,7 +827,9 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
           onListeningStarted={handleListeningStarted}
           voiceGender={voiceGender}
           onVoiceGenderChange={handleVoiceGenderChange}
+          onBeforeRecord={() => ensureConsent('voice')}
         />
+        {consentSheet}
       </KeyboardAvoidingView>
     </SafeAreaView>
     </GradientBackground>

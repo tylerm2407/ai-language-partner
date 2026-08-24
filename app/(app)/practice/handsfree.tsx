@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../hooks/useAuth';
+import { useAiConsent } from '../../../hooks/useAiConsent';
 import { useHandsFreeSession } from '../../../hooks/useHandsFreeSession';
 import { useMotion } from '../../../hooks/useMotion';
 import {
@@ -39,6 +40,7 @@ type Screen = 'disclaimer' | 'setup' | 'running';
 export default function HandsFreeScreen() {
   const router = useRouter();
   const { user } = useAuth();
+  const { ensureConsent, consentSheet } = useAiConsent(user?.id);
   const { shouldReduce } = useMotion();
 
   const [screen, setScreen] = useState<Screen | null>(null);
@@ -79,10 +81,14 @@ export default function HandsFreeScreen() {
   }, [user]);
 
   const begin = useCallback(async () => {
+    // Consent before the session, not per turn: hands-free is a continuous
+    // loop, so a mid-conversation prompt would be both hostile and useless.
+    // Declining leaves the learner on setup rather than dumping them out.
+    if (!(await ensureConsent('voice'))) return;
     if (user) await saveHandsFreeConfig(user.id, { targetDurationMs: durationMs });
     setScreen('running');
     await session.start();
-  }, [user, durationMs, session]);
+  }, [user, durationMs, session, ensureConsent]);
 
   if (screen === null) {
     return (
@@ -173,6 +179,7 @@ export default function HandsFreeScreen() {
             <Text style={styles.primaryLabel}>Start</Text>
           )}
         </Pressable>
+        {consentSheet}
       </SafeAreaView>
     );
   }

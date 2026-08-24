@@ -34,6 +34,12 @@ interface ChatInputProps {
   /** Tutor voice preference — surfaced as a switch in the hands-free composer. */
   voiceGender?: VoiceGender;
   onVoiceGenderChange?: (gender: VoiceGender) => void;
+  /**
+   * Gate run before the microphone is touched. Resolve false to abort silently
+   * — used for the third-party AI consent sheet, which must appear before the
+   * OS permission prompt rather than after it.
+   */
+  onBeforeRecord?: () => Promise<boolean>;
 }
 
 const SILENCE_THRESHOLD_DB = -35;
@@ -62,6 +68,7 @@ export function ChatInput({
   onListeningStarted,
   voiceGender,
   onVoiceGenderChange,
+  onBeforeRecord,
 }: ChatInputProps) {
   const insets = useSafeAreaInsets();
   const [isRecording, setIsRecording] = useState(false);
@@ -115,6 +122,13 @@ export function ChatInput({
           // Already stopped/unloaded — safe to ignore
         }
       }
+
+      // Third-party AI consent comes BEFORE the OS permission prompt: Google's
+      // prominent-disclosure rule requires the disclosure immediately before
+      // the request, and Apple 5.1.2(i) wants explicit permission before audio
+      // leaves the device for OpenAI. Declining stops here — text chat is
+      // unaffected, which 5.1.1(ii) requires.
+      if (onBeforeRecord && !(await onBeforeRecord())) return;
 
       const permission = await Audio.requestPermissionsAsync();
       if (!permission.granted) return;
