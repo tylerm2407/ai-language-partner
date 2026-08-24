@@ -106,3 +106,37 @@ export async function redisTtl(key: string): Promise<number> {
   const result = await command(['TTL', key]);
   return typeof result === 'number' ? result : -2;
 }
+
+/**
+ * Fixed-window rate limit, counted in Redis.
+ *
+ * Deliberately NOT _shared/burst-limit.ts. That helper is backed by the
+ * `api_cache` TABLE via the increment_rate_limit() RPC — a row-locked
+ * Postgres UPDATE. For a function called once per *answered exercise*, that
+ * would put a write to the primary database in front of every keystroke's
+ * worth of progress, and the thing being protected here is the Redis budget
+ * anyway. Counting in the same store keeps the hot path to one round trip
+ * and adds no churn to Postgres.
+ *
+ * INCR creates the key at 1, so EXPIRE is set only on the first request of a
+ * window; the window then rolls off on its own. Fails OPEN — a rate limiter
+ * that takes the feature down with it when the cache blips is worse than the
+ * abuse it prevents, and the caller's own Redis calls will fail anyway.
+ */
+export async function redisRateLimit(
+  key: string,
+  maxRequests: number,
+  windowSeconds: number,
+): Promise<boolean> {
+  try {
+    const count = await command(['INCR', key]);
+    if (typeof count !== 'number') return true;
+    if (count === 1) {
+      await command(['EXPIRE', key, Math.max(1, Math.floor(windowSeconds))]);
+    }
+    return count <= maxRequests;
+  } catch (err) {
+    console.warn('[redis] rate-limit check failed; allowing:', err);
+    return true;
+  }
+}

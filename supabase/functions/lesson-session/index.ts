@@ -29,6 +29,7 @@ import {
   isRedisConfigured,
   redisDel,
   redisGet,
+  redisRateLimit,
   redisSetEx,
   RedisUnavailableError,
 } from '../_shared/redis.ts';
@@ -41,6 +42,16 @@ import {
 } from './snapshot.ts';
 
 type Action = 'load' | 'save' | 'clear';
+
+/**
+ * Burst cap. A lesson is 10-15 exercises plus warm-up and saves once per
+ * answer, so a full lesson is ~20 calls; even a learner racing through
+ * back-to-back lessons tops out near 30/min. 90/min leaves 3x headroom while
+ * still capping a runaway client — which matters because every call past the
+ * cap is a billable Redis command on someone else's meter.
+ */
+const RATE_LIMIT_MAX = 90;
+const RATE_LIMIT_WINDOW_SECONDS = 60;
 
 interface LessonSessionRequest {
   action?: Action;
@@ -97,6 +108,17 @@ serve(async (req: Request) => {
 
   if (typeof body.userId === 'string' && body.userId !== authUser.userId) {
     return json({ error: 'Forbidden', code: 'USER_MISMATCH' }, 403);
+  }
+
+  // Keyed on the verified user, so one abusive client cannot spend anyone
+  // else's budget. Fails open (see redisRateLimit).
+  const withinLimit = await redisRateLimit(
+    `ratelimit:lesson-session:${authUser.userId}`,
+    RATE_LIMIT_MAX,
+    RATE_LIMIT_WINDOW_SECONDS,
+  );
+  if (!withinLimit) {
+    return json({ error: 'Too many requests. Please slow down.', code: 'RATE_LIMITED' }, 429);
   }
 
   const key = lessonSessionRedisKey(authUser.userId, lessonId);

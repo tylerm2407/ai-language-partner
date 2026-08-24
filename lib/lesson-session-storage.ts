@@ -64,8 +64,22 @@ export interface LessonSessionSnapshot {
   startedAt: number;
 }
 
+/** Shared prefix, so abandoned snapshots can be swept without a key registry. */
+export const LESSON_SESSION_KEY_PREFIX = 'lesson-session:';
+
 export function lessonSessionKey(userId: string, lessonId: string): string {
-  return `lesson-session:${userId}:${lessonId}`;
+  return `${LESSON_SESSION_KEY_PREFIX}${userId}:${lessonId}`;
+}
+
+export interface LessonSessionLoadResult {
+  /** null means "start this lesson from the top". */
+  snapshot: LessonSessionSnapshot | null;
+  /**
+   * true when a session existed but its day had run out. Distinct from "there
+   * was never one": the learner did real work and is about to lose it, so the
+   * UI owes them an explanation rather than silently restarting the lesson.
+   */
+  expired: boolean;
 }
 
 function isValidSnapshot(value: unknown): value is LessonSessionSnapshot {
@@ -198,7 +212,12 @@ export async function saveLessonSession(
 export async function loadLessonSession(
   userId: string,
   lessonId: string,
-): Promise<LessonSessionSnapshot | null> {
+): Promise<LessonSessionLoadResult> {
+  // readLocal drops an expired entry and returns null, so ask it separately
+  // whether one WAS there — that is the difference between "you never started
+  // this" and "your day ran out", and only the second needs explaining.
+  const expiredLocally = await hadExpiredLocalSession(userId, lessonId);
+
   const [local, remote] = await Promise.all([
     readLocal(userId, lessonId).catch((err) => {
       console.warn('[lesson-session] local read failed:', err);
@@ -211,7 +230,7 @@ export async function loadLessonSession(
   if (!winner || isSessionExpired(winner)) {
     // Nothing live anywhere: make sure a stale device copy can't come back.
     if (local) await AsyncStorage.removeItem(lessonSessionKey(userId, lessonId));
-    return null;
+    return { snapshot: null, expired: expiredLocally || Boolean(winner) || Boolean(remote.expired) };
   }
 
   const normalized = withPicks(winner);
@@ -228,24 +247,42 @@ export async function loadLessonSession(
     );
   }
 
-  return normalized;
+  return { snapshot: normalized, expired: false };
+}
+
+/**
+ * Was there a device snapshot that has aged out? Peeked BEFORE readLocal,
+ * which deletes such entries as a side effect of reading them.
+ */
+async function hadExpiredLocalSession(userId: string, lessonId: string): Promise<boolean> {
+  try {
+    const raw = await AsyncStorage.getItem(lessonSessionKey(userId, lessonId));
+    if (raw === null) return false;
+    const parsed: unknown = JSON.parse(raw);
+    return isValidSnapshot(parsed) && isSessionExpired(parsed);
+  } catch {
+    return false;
+  }
 }
 
 /** Redis read, bounded so a slow cache can't stall the start of a lesson. */
 async function fetchRemoteWithTimeout(
   userId: string,
   lessonId: string,
-): Promise<{ snapshot: LessonSessionSnapshot | null; reached: boolean }> {
-  if (!remoteSessionsAvailable()) return { snapshot: null, reached: false };
+): Promise<{ snapshot: LessonSessionSnapshot | null; reached: boolean; expired: boolean }> {
+  if (!remoteSessionsAvailable()) return { snapshot: null, reached: false, expired: false };
   let timer: ReturnType<typeof setTimeout> | undefined;
-  const timeout = new Promise<{ snapshot: null; reached: false }>((resolve) => {
-    timer = setTimeout(() => resolve({ snapshot: null, reached: false }), REMOTE_RESTORE_TIMEOUT_MS);
+  const timeout = new Promise<{ snapshot: null; reached: false; expired: false }>((resolve) => {
+    timer = setTimeout(
+      () => resolve({ snapshot: null, reached: false, expired: false }),
+      REMOTE_RESTORE_TIMEOUT_MS,
+    );
   });
   try {
     return await Promise.race([loadRemoteLessonSession(userId, lessonId), timeout]);
   } catch (err) {
     console.warn('[lesson-session] remote load failed:', err);
-    return { snapshot: null, reached: false };
+    return { snapshot: null, reached: false, expired: false };
   } finally {
     // Without this the pending timer keeps the JS runtime (and a Jest worker)
     // alive for the full timeout after the request has already answered.
@@ -261,4 +298,59 @@ export async function clearLessonSession(userId: string, lessonId: string): Prom
       console.warn('[lesson-session] remote clear failed:', err),
     );
   }
+}
+
+/**
+ * Drop device snapshots whose day has run out.
+ *
+ * Redis expires its own keys; AsyncStorage does not. Without this, a lesson
+ * started once and never reopened leaves a key behind forever, because
+ * `readLocal` only cleans up entries someone actually comes back to. Mirrors
+ * the sweep in lib/read-cache.ts (clearReadCache).
+ *
+ * Pass a userId to limit the sweep to that account; omit it to sweep every
+ * account's leftovers on this device. Best-effort and safe to call often —
+ * it only ever removes entries that are already unusable.
+ *
+ * Returns how many keys were removed.
+ */
+export async function pruneExpiredLessonSessions(userId?: string): Promise<number> {
+  let keys: readonly string[];
+  try {
+    keys = await AsyncStorage.getAllKeys();
+  } catch (err) {
+    console.warn('[lesson-session] prune failed to list keys:', err);
+    return 0;
+  }
+
+  const prefix = userId
+    ? `${LESSON_SESSION_KEY_PREFIX}${userId}:`
+    : LESSON_SESSION_KEY_PREFIX;
+  const candidates = keys.filter((key) => key.startsWith(prefix));
+  if (candidates.length === 0) return 0;
+
+  const stale: string[] = [];
+  for (const key of candidates) {
+    try {
+      const raw = await AsyncStorage.getItem(key);
+      if (raw === null) continue;
+      const parsed: unknown = JSON.parse(raw);
+      // Unparseable or foreign-version entries are dead weight too — they
+      // would be discarded on read anyway.
+      if (!isValidSnapshot(parsed) || parsed.version !== LESSON_SESSION_SCHEMA_VERSION) {
+        stale.push(key);
+      } else if (isSessionExpired(parsed)) {
+        stale.push(key);
+      }
+    } catch {
+      stale.push(key);
+    }
+  }
+
+  if (stale.length > 0) {
+    await AsyncStorage.multiRemove(stale).catch((err) =>
+      console.warn('[lesson-session] prune failed to remove keys:', err),
+    );
+  }
+  return stale.length;
 }

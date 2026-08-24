@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, Platform } from 'react-native';
+import { View, Text, Platform, Pressable } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, spacing } from '../../config/theme';
 import { Button } from '../ui/Button';
 import { ExerciseChrome } from './ExerciseChrome';
 import { MultipleChoice } from './MultipleChoice';
@@ -33,7 +35,12 @@ import {
   saveLessonSession,
   loadLessonSession,
   clearLessonSession,
+  LESSON_SESSION_TTL_MS,
 } from '../../lib/lesson-session-storage';
+import {
+  scheduleLessonExpiryReminder,
+  cancelLessonExpiryReminder,
+} from '../../hooks/useNotifications';
 import type { Exercise, LanguageCode, ReviewItem, Card } from '../../types';
 
 // ─── SRS Warm-Up (research.md §5.1 & §13.1) ──────────────────────────────
@@ -251,6 +258,8 @@ export function LessonRunner({
   const resumedRef = useRef(false);
   const restoreAttemptedRef = useRef(false);
   const [restoreChecked, setRestoreChecked] = useState(false);
+  // A previous run of this lesson aged out — surfaced once, dismissible.
+  const [sessionExpired, setSessionExpired] = useState(false);
   // Cards already introduced to SRS this session (cap accounting de-dupe).
   const srsIntroducedRef = useRef<Set<string>>(new Set());
   // Prefetched review items for this lesson's cards, keyed by cardId, so
@@ -290,7 +299,10 @@ export function LessonRunner({
       return;
     }
     loadLessonSession(userId, lessonId)
-      .then((snapshot) => {
+      .then(({ snapshot, expired }) => {
+        // The day ran out on work they actually did. Say so — restarting a
+        // half-finished lesson with no explanation reads as lost progress.
+        if (expired) setSessionExpired(true);
         if (snapshot && snapshot.answers.length > 0 && exercises.length > 0) {
           resumedRef.current = true;
           sessionStartedAtRef.current = snapshot.startedAt;
@@ -506,10 +518,14 @@ export function LessonRunner({
         timeSpentMs: Math.max(0, Date.now() - sessionStartedAtRef.current),
       };
 
-      // Lesson finished — the resume snapshot is no longer needed.
+      // Lesson finished — the resume snapshot is no longer needed, and the
+      // "your lesson is about to reset" warning would now be a lie.
       if (lessonId && userId) {
         clearLessonSession(userId, lessonId).catch((err) =>
           console.warn('[lesson-session] clear failed:', err),
+        );
+        cancelLessonExpiryReminder(lessonId).catch((err) =>
+          console.warn('[lesson-session] cancel reminder failed:', err),
         );
       }
 
@@ -537,6 +553,15 @@ export function LessonRunner({
         picks,
         startedAt: sessionStartedAtRef.current,
       }).catch((err) => console.warn('[lesson-session] quit save failed:', err));
+
+      // Walking away is the moment the countdown becomes relevant, so this is
+      // where the "finish it today" warning gets armed.
+      scheduleLessonExpiryReminder({
+        lessonId,
+        lessonTitle,
+        startedAt: sessionStartedAtRef.current,
+        ttlMs: LESSON_SESSION_TTL_MS,
+      }).catch((err) => console.warn('[lesson-session] schedule reminder failed:', err));
     }
     onExit();
   };
@@ -589,6 +614,34 @@ export function LessonRunner({
 
   return (
     <>
+      {/* Expired-session notice. The learner started this lesson, ran out of
+          time, and is now back at question one — an unexplained reset looks
+          identical to losing progress to a bug. Dismissible; never blocks. */}
+      {sessionExpired && (
+        <Pressable
+          onPress={() => setSessionExpired(false)}
+          accessibilityRole="button"
+          accessibilityLabel="Dismiss expired lesson notice"
+          style={{
+            backgroundColor: colors.surface.card,
+            paddingHorizontal: spacing.md,
+            paddingVertical: spacing.sm,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.xs,
+          }}
+        >
+          <Ionicons name="time-outline" size={18} color={colors.text.secondary} />
+          <Text
+            style={{ flex: 1, color: colors.text.secondary, fontSize: 13 }}
+            accessibilityLiveRegion="polite"
+          >
+            This lesson expired, so it's starting over. Unfinished lessons are saved for a day.
+          </Text>
+          <Ionicons name="close" size={16} color={colors.text.tertiary} />
+        </Pressable>
+      )}
+
       <ExerciseChrome
         lessonTitle={warmupPhase ? 'Quick review' : lessonTitle}
         currentIndex={warmupPhase ? warmupIndex : currentIndex}

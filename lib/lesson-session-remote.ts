@@ -81,20 +81,26 @@ async function readErrorCode(error: { context?: unknown; message?: string }): Pr
 
 /**
  * Fetch the snapshot Redis holds for this lesson.
- * Returns `{ snapshot: null, reached: false }` when Redis could not be asked —
- * the caller must then trust its local copy rather than restarting the lesson.
+ *
+ * Returns `reached: false` when Redis could not be asked — the caller must
+ * then trust its local copy rather than restarting the lesson. `expired: true`
+ * is the server telling us a session was there and its day had run out, which
+ * the UI turns into an explanation rather than a silent restart.
  */
 export async function loadRemoteLessonSession(
   userId: string,
   lessonId: string,
-): Promise<{ snapshot: LessonSessionSnapshot | null; reached: boolean }> {
-  const { data, ok } = await invoke<{ snapshot: LessonSessionSnapshot | null }>({
-    action: 'load',
-    userId,
-    lessonId,
-  });
-  if (!ok) return { snapshot: null, reached: false };
-  return { snapshot: data?.snapshot ?? null, reached: true };
+): Promise<{ snapshot: LessonSessionSnapshot | null; reached: boolean; expired: boolean }> {
+  const { data, ok } = await invoke<{
+    snapshot: LessonSessionSnapshot | null;
+    expired?: boolean;
+  }>({ action: 'load', userId, lessonId });
+  if (!ok) return { snapshot: null, reached: false, expired: false };
+  return {
+    snapshot: data?.snapshot ?? null,
+    reached: true,
+    expired: Boolean(data?.expired),
+  };
 }
 
 /** Push the snapshot to Redis. Returns whether it landed. */
