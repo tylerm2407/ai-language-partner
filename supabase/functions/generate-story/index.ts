@@ -3,7 +3,6 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsResponse, corsHeaders } from '../_shared/cors.ts';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { getPlanLimits } from '../_shared/plan-limits.ts';
-import { getUserToday } from '../_shared/user-day.ts';
 import { generateValidated } from '../_shared/validated-generate.ts';
 import type { CEFR } from '../_shared/level-checker.ts';
 
@@ -203,14 +202,20 @@ RESPOND ONLY IN VALID JSON:
 
     // One story + one text message were consumed atomically up front;
     // record any additional stories in this batch against text_messages.
-    // p_date is ignored by SQL since migration 044 (day resolved via
-    // fluenci_user_today) — passed as the user-local day for consistency.
+    //
+    // No p_date: the day is resolved server-side from the user's timezone
+    // (migration 044), and passing one used to make the call ambiguous
+    // across three overloads — PGRST203, every time (migration 076). The
+    // error was invisible because this call site discarded the result;
+    // it is checked now.
     if (bookIds.length > 1) {
-      await supabase.rpc('increment_daily_usage', {
+      const { error: usageError } = await supabase.rpc('increment_daily_usage', {
         p_user_id: authUser.userId,
-        p_date: await getUserToday(supabase, authUser.userId),
         p_text_messages: bookIds.length - 1,
       });
+      if (usageError) {
+        console.error('[generate-story] Failed to increment text_messages:', usageError.message);
+      }
     }
 
     return new Response(JSON.stringify({ bookIds }), { headers });

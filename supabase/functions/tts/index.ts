@@ -546,11 +546,16 @@ serve(async (req: Request) => {
     }
 
     // Increment voice_minutes usage after successful TTS generation.
-    // p_date is ignored by SQL since migration 044 (day resolved via
-    // fluenci_user_today) — passed for clarity/consistency only.
+    //
+    // Do NOT pass p_date. It used to be sent "for consistency" while the SQL
+    // ignored it (migration 044 resolves the day from the user's timezone),
+    // and that alone broke this call: prod carried three p_date overloads
+    // whose every later parameter defaulted, so PostgREST could not pick one
+    // and returned PGRST203 on every single synthesis. Voice minutes went
+    // unmetered and the per-plan voice quota was never enforced. Migration
+    // 076 collapsed the function to one signature, which takes no date.
     await supabase.rpc('increment_daily_usage', {
       p_user_id: authenticatedUserId,
-      p_date: userDay,
       p_text_messages: 0,
       p_voice_minutes: 1,
     }).then(({ error }) => {
