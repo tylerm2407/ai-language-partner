@@ -27,6 +27,13 @@ const STRIPE_SECRET_KEY = Deno.env.get('STRIPE_SECRET_KEY');
 // Tables holding user rows that are NOT ON DELETE CASCADE to auth.users.
 // Everything else is cleaned up by the cascade when the auth user is deleted.
 // Keep this list in sync if a new table adds a user_id without an FK.
+//
+// Verified against live pg_constraint (Aug 2026): client_events is the only
+// table carrying a user_id with no FK at all. Two other constraints are
+// non-cascading and both are handled deliberately elsewhere rather than here —
+// organizations.created_by is RESTRICT (step 2 refuses org owners with a 409),
+// and audit_log.actor_id is SET NULL (step 3c scrubs it, keeping the audit
+// entry but removing the person). Everything else cascades.
 const NON_CASCADING_TABLES = [{ table: 'client_events', column: 'user_id' }];
 
 serve(async (req: Request) => {
@@ -176,6 +183,36 @@ serve(async (req: Request) => {
             { status: 500, headers }
           );
         }
+      }
+    }
+
+    // --- 3c. Pseudonymise the audit trail ---------------------------------
+    // audit_log deliberately SURVIVES deletion — the rows are evidence a
+    // university security review expects to see retained, so migration 075
+    // makes the FK ON DELETE SET NULL rather than CASCADE.
+    //
+    // But SET NULL only drops the actor. The row also carries an ip_address,
+    // which is personal data under GDPR, so clear both explicitly here while
+    // the rows can still be found by actor_id. Doing this BEFORE the auth
+    // deletion also means the FK is already unlinked by the time deleteUser
+    // runs — the migration is the backstop, this is the actual erasure.
+    //
+    // Fails closed like every other step: an audit row still naming a deleted
+    // user is a compliance defect, not an acceptable partial success.
+    {
+      const { error: auditError } = await supabase
+        .from('audit_log')
+        .update({ actor_id: null, ip_address: null })
+        .eq('actor_id', userId);
+
+      if (auditError) {
+        console.error(`[delete-account] failed to scrub audit_log for ${userId}:`, auditError.message);
+        return new Response(
+          JSON.stringify({
+            error: 'Account deletion could not be completed. Nothing was deleted. Please contact support.',
+          }),
+          { status: 500, headers }
+        );
       }
     }
 
