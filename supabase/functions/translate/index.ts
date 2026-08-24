@@ -15,12 +15,14 @@ import { corsHeaders, corsResponse } from '../_shared/cors.ts';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { checkBurstLimit } from '../_shared/burst-limit.ts';
 import { translateWithValidation } from './translate-core.ts';
+import { cacheExpiryIso, shouldRefreshCacheEntry } from './cache-retention.ts';
 
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const TEXT_MODEL = 'claude-haiku-4-5-20251001';
 const MAX_INPUT_CHARS = 1500;
+
 
 interface TranslateRequest {
   text: string;
@@ -33,6 +35,28 @@ function json(body: unknown, status = 200): Response {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
+}
+
+/**
+ * Extend a cache entry's life when it is nearing expiry. Non-fatal: a failed
+ * refresh costs at most one future regeneration, so it must never break the
+ * translation being served right now. Policy lives in cache-retention.ts.
+ */
+async function touchCacheEntry(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  hash: string,
+  expiresAt: string | null,
+): Promise<void> {
+  if (!shouldRefreshCacheEntry(expiresAt)) return;
+
+  const { error } = await supabase
+    .from('translation_cache')
+    .update({ expires_at: cacheExpiryIso() })
+    .eq('hash', hash);
+  if (error) {
+    console.warn('[translate] cache refresh failed (non-fatal):', error.message);
+  }
 }
 
 /** Cache key: sha256 hex of (source_text, source_lang, target_lang). */
@@ -89,13 +113,14 @@ serve(async (req: Request) => {
   const hash = await cacheKey(input, sourceLanguage, targetLanguage);
   const { data: cached, error: cacheErr } = await supabase
     .from('translation_cache')
-    .select('translation')
+    .select('translation, expires_at')
     .eq('hash', hash)
     .maybeSingle();
   if (cacheErr) {
     console.warn('[translate] cache lookup failed (non-fatal):', cacheErr.message);
   }
   if (cached && typeof cached.translation === 'string') {
+    await touchCacheEntry(supabase, hash, cached.expires_at as string | null);
     return json({ translation: cached.translation });
   }
 
@@ -142,7 +167,7 @@ serve(async (req: Request) => {
   const { error: insertErr } = await supabase
     .from('translation_cache')
     .upsert(
-      { hash, translation: outcome.translation },
+      { hash, translation: outcome.translation, expires_at: cacheExpiryIso() },
       { onConflict: 'hash', ignoreDuplicates: true },
     );
   if (insertErr) {
