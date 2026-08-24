@@ -4,10 +4,12 @@ import { OfflineBanner } from '../../components/ui/OfflineBanner';
 import { View } from 'react-native';
 import { FloatingTabBar } from '../../components/navigation/FloatingTabBar';
 import { useOfflineQueueFlush } from '../../hooks/useOfflineQueueFlush';
+import { useLessonSessionSweep } from '../../hooks/useLessonSessionSweep';
 
 export default function AppLayout() {
   // Replay queued offline writes on mount / reconnect / foreground.
   useOfflineQueueFlush();
+  useLessonSessionSweep();
 
   return (
     <ErrorBoundary>

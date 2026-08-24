@@ -15,8 +15,13 @@ import {
   saveLessonSession,
   loadLessonSession,
   clearLessonSession,
+  pruneExpiredLessonSessions,
   type LessonSessionSnapshot,
 } from './lesson-session-storage';
+
+/** loadLessonSession now returns {snapshot, expired}; most cases want the snapshot. */
+const loadSnapshot = async (userId: string, lessonId: string) =>
+  (await loadLessonSession(userId, lessonId)).snapshot;
 
 /**
  * Stand-in Redis tier. `available` mirrors "the edge function answered at
@@ -35,8 +40,12 @@ const remoteKey = (userId: string, lessonId: string) => `${userId}:${lessonId}`;
 jest.mock('./lesson-session-remote', () => ({
   remoteSessionsAvailable: () => mockRemote.available,
   loadRemoteLessonSession: jest.fn(async (userId: string, lessonId: string) => {
-    if (!mockRemote.available) return { snapshot: null, reached: false };
-    return { snapshot: mockRemote.store[`${userId}:${lessonId}`] ?? null, reached: true };
+    if (!mockRemote.available) return { snapshot: null, reached: false, expired: false };
+    return {
+      snapshot: mockRemote.store[`${userId}:${lessonId}`] ?? null,
+      reached: true,
+      expired: false,
+    };
   }),
   saveRemoteLessonSession: jest.fn(
     async (userId: string, lessonId: string, snapshot: LessonSessionSnapshot) => {
@@ -64,6 +73,10 @@ jest.mock('@react-native-async-storage/async-storage', () => {
       getItem: jest.fn(async (key: string) => (key in store ? store[key] : null)),
       removeItem: jest.fn(async (key: string) => {
         delete store[key];
+      }),
+      getAllKeys: jest.fn(async () => Object.keys(store)),
+      multiRemove: jest.fn(async (keys: string[]) => {
+        for (const key of keys) delete store[key];
       }),
       clear: jest.fn(async () => {
         store = {};
@@ -106,7 +119,7 @@ describe('save / load round-trip', () => {
   it('round-trips a snapshot with the current schema version', async () => {
     const snapshot = { ...makeSnapshot(), picks: { 'ex-1': 'hola', 'ex-2': 'adios' } };
     await saveLessonSession(USER, LESSON, snapshot);
-    const loaded = await loadLessonSession(USER, LESSON);
+    const loaded = await loadSnapshot(USER, LESSON);
     expect(loaded).toEqual({ version: LESSON_SESSION_SCHEMA_VERSION, ...snapshot });
   });
 
@@ -118,7 +131,7 @@ describe('save / load round-trip', () => {
       picks: { 'ex-1': 'hola', 'ex-2': 'adiós' },
     };
     await saveLessonSession(USER, LESSON, snapshot);
-    const loaded = await loadLessonSession(USER, LESSON);
+    const loaded = await loadSnapshot(USER, LESSON);
     expect(loaded?.picks).toEqual({ 'ex-1': 'hola', 'ex-2': 'adiós' });
   });
 
@@ -133,7 +146,7 @@ describe('save / load round-trip', () => {
     delete raw.picks;
     await AsyncStorage.setItem(KEY, JSON.stringify(raw));
 
-    const loaded = await loadLessonSession(USER, LESSON);
+    const loaded = await loadSnapshot(USER, LESSON);
     expect(loaded?.picks).toEqual({ 'ex-1': 'hola', 'ex-2': 'adios' });
     expect(loaded?.exerciseIndex).toBe(3);
   });
@@ -144,25 +157,25 @@ describe('save / load round-trip', () => {
     delete raw.picks;
     await AsyncStorage.setItem(KEY, JSON.stringify(raw));
 
-    const loaded = await loadLessonSession(USER, LESSON);
+    const loaded = await loadSnapshot(USER, LESSON);
     expect(loaded?.picks).toEqual({});
   });
 
   it('returns null when nothing was saved', async () => {
-    expect(await loadLessonSession(USER, LESSON)).toBeNull();
+    expect(await loadSnapshot(USER, LESSON)).toBeNull();
   });
 
   it('does not leak snapshots across users or lessons', async () => {
     await saveLessonSession(USER, LESSON, makeSnapshot());
-    expect(await loadLessonSession('user-2', LESSON)).toBeNull();
-    expect(await loadLessonSession(USER, 'lesson-other')).toBeNull();
-    expect(await loadLessonSession(USER, LESSON)).not.toBeNull();
+    expect(await loadSnapshot('user-2', LESSON)).toBeNull();
+    expect(await loadSnapshot(USER, 'lesson-other')).toBeNull();
+    expect(await loadSnapshot(USER, LESSON)).not.toBeNull();
   });
 
   it('overwrites a previous snapshot for the same user + lesson', async () => {
     await saveLessonSession(USER, LESSON, makeSnapshot({ exerciseIndex: 1 }));
     await saveLessonSession(USER, LESSON, makeSnapshot({ exerciseIndex: 7 }));
-    const loaded = await loadLessonSession(USER, LESSON);
+    const loaded = await loadSnapshot(USER, LESSON);
     expect(loaded?.exerciseIndex).toBe(7);
   });
 });
@@ -174,7 +187,7 @@ describe('TTL', () => {
       LESSON,
       makeSnapshot({ startedAt: Date.now() - LESSON_SESSION_TTL_MS - 60_000 }),
     );
-    expect(await loadLessonSession(USER, LESSON)).toBeNull();
+    expect(await loadSnapshot(USER, LESSON)).toBeNull();
     expect(await AsyncStorage.getItem(KEY)).toBeNull(); // entry cleaned up
   });
 
@@ -184,14 +197,14 @@ describe('TTL', () => {
       LESSON,
       makeSnapshot({ startedAt: Date.now() - LESSON_SESSION_TTL_MS + 60_000 }),
     );
-    expect(await loadLessonSession(USER, LESSON)).not.toBeNull();
+    expect(await loadSnapshot(USER, LESSON)).not.toBeNull();
   });
 });
 
 describe('invalid payloads', () => {
   it('discards and removes corrupt JSON', async () => {
     await AsyncStorage.setItem(KEY, 'not-json{');
-    expect(await loadLessonSession(USER, LESSON)).toBeNull();
+    expect(await loadSnapshot(USER, LESSON)).toBeNull();
     expect(await AsyncStorage.getItem(KEY)).toBeNull();
   });
 
@@ -200,7 +213,7 @@ describe('invalid payloads', () => {
       KEY,
       JSON.stringify({ ...makeSnapshot(), version: LESSON_SESSION_SCHEMA_VERSION + 1 }),
     );
-    expect(await loadLessonSession(USER, LESSON)).toBeNull();
+    expect(await loadSnapshot(USER, LESSON)).toBeNull();
     expect(await AsyncStorage.getItem(KEY)).toBeNull();
   });
 
@@ -209,7 +222,7 @@ describe('invalid payloads', () => {
       KEY,
       JSON.stringify({ version: LESSON_SESSION_SCHEMA_VERSION, answers: 'nope' }),
     );
-    expect(await loadLessonSession(USER, LESSON)).toBeNull();
+    expect(await loadSnapshot(USER, LESSON)).toBeNull();
     expect(await AsyncStorage.getItem(KEY)).toBeNull();
   });
 });
@@ -218,7 +231,7 @@ describe('clearLessonSession', () => {
   it('removes the snapshot', async () => {
     await saveLessonSession(USER, LESSON, makeSnapshot());
     await clearLessonSession(USER, LESSON);
-    expect(await loadLessonSession(USER, LESSON)).toBeNull();
+    expect(await loadSnapshot(USER, LESSON)).toBeNull();
   });
 
   it('is a no-op when nothing exists', async () => {
@@ -250,7 +263,7 @@ describe('Redis tier', () => {
       ...makeSnapshot({ exerciseIndex: 5 }),
       picks: { 'ex-1': 'hola' },
     };
-    const loaded = await loadLessonSession(USER, LESSON);
+    const loaded = await loadSnapshot(USER, LESSON);
     expect(loaded?.exerciseIndex).toBe(5);
     // ...and the device copy is seeded so the lesson works offline from here.
     expect(await AsyncStorage.getItem(KEY)).not.toBeNull();
@@ -269,7 +282,7 @@ describe('Redis tier', () => {
       picks: {},
       startedAt: Date.now(),
     };
-    const loaded = await loadLessonSession(USER, LESSON);
+    const loaded = await loadSnapshot(USER, LESSON);
     expect(loaded?.answers).toHaveLength(3);
     expect(loaded?.exerciseIndex).toBe(9);
   });
@@ -277,7 +290,7 @@ describe('Redis tier', () => {
   it('falls back to the device copy when Redis cannot be reached', async () => {
     await saveLessonSession(USER, LESSON, makeSnapshot());
     mockRemote.available = false;
-    const loaded = await loadLessonSession(USER, LESSON);
+    const loaded = await loadSnapshot(USER, LESSON);
     expect(loaded?.exerciseIndex).toBe(3);
   });
 
@@ -287,7 +300,7 @@ describe('Redis tier', () => {
     mockRemote.available = false;
     await saveLessonSession(USER, LESSON, makeSnapshot());
     mockRemote.available = true;
-    const loaded = await loadLessonSession(USER, LESSON);
+    const loaded = await loadSnapshot(USER, LESSON);
     expect(loaded?.exerciseIndex).toBe(3);
     // ...and it is pushed up so the next device sees it.
     expect(mockRemote.store[remoteKey(USER, LESSON)]).toBeDefined();
@@ -300,7 +313,7 @@ describe('Redis tier', () => {
       ...makeSnapshot({ startedAt: stale }),
       picks: {},
     };
-    expect(await loadLessonSession(USER, LESSON)).toBeNull();
+    expect(await loadSnapshot(USER, LESSON)).toBeNull();
   });
 
   it('clears both tiers when the lesson is finished', async () => {
@@ -308,5 +321,96 @@ describe('Redis tier', () => {
     await clearLessonSession(USER, LESSON);
     expect(await AsyncStorage.getItem(KEY)).toBeNull();
     expect(mockRemote.store[remoteKey(USER, LESSON)]).toBeUndefined();
+  });
+});
+
+
+describe('expired-session signal', () => {
+  it('reports expired when a session existed but its day ran out', async () => {
+    // The learner did real work and is about to be restarted — the UI needs
+    // to be able to tell them why.
+    await saveLessonSession(
+      USER,
+      LESSON,
+      makeSnapshot({ startedAt: Date.now() - LESSON_SESSION_TTL_MS + 60_000 }),
+    );
+    // Age the stored entry past its day without touching the clock.
+    const raw = JSON.parse((await AsyncStorage.getItem(KEY)) as string);
+    raw.startedAt = Date.now() - LESSON_SESSION_TTL_MS - 60_000;
+    await AsyncStorage.setItem(KEY, JSON.stringify(raw));
+    mockRemote.store = {};
+
+    const result = await loadLessonSession(USER, LESSON);
+    expect(result.snapshot).toBeNull();
+    expect(result.expired).toBe(true);
+  });
+
+  it('does NOT report expired when the learner simply never started', async () => {
+    const result = await loadLessonSession(USER, LESSON);
+    expect(result.snapshot).toBeNull();
+    expect(result.expired).toBe(false);
+  });
+
+  it('does not report expired on a healthy resume', async () => {
+    await saveLessonSession(USER, LESSON, makeSnapshot());
+    const result = await loadLessonSession(USER, LESSON);
+    expect(result.snapshot).not.toBeNull();
+    expect(result.expired).toBe(false);
+  });
+});
+
+describe('pruneExpiredLessonSessions', () => {
+  it('removes abandoned snapshots that aged out, keeps live ones', async () => {
+    // Redis expires its own keys; AsyncStorage does not, so a lesson started
+    // once and never reopened would leak a key forever without this.
+    await saveLessonSession(USER, 'lesson-live', makeSnapshot());
+    await saveLessonSession(USER, 'lesson-stale', makeSnapshot());
+    const staleKey = lessonSessionKey(USER, 'lesson-stale');
+    const raw = JSON.parse((await AsyncStorage.getItem(staleKey)) as string);
+    raw.startedAt = Date.now() - LESSON_SESSION_TTL_MS - 60_000;
+    await AsyncStorage.setItem(staleKey, JSON.stringify(raw));
+
+    const removed = await pruneExpiredLessonSessions();
+    expect(removed).toBe(1);
+    expect(await AsyncStorage.getItem(staleKey)).toBeNull();
+    expect(await AsyncStorage.getItem(lessonSessionKey(USER, 'lesson-live'))).not.toBeNull();
+  });
+
+  it('removes corrupt and foreign-version entries too', async () => {
+    await AsyncStorage.setItem(lessonSessionKey(USER, 'corrupt'), 'not-json{');
+    await AsyncStorage.setItem(
+      lessonSessionKey(USER, 'oldschema'),
+      JSON.stringify({ ...makeSnapshot(), version: 99 }),
+    );
+    expect(await pruneExpiredLessonSessions()).toBe(2);
+  });
+
+  it('scopes to one user when given a userId', async () => {
+    const stale = (u: string, l: string) =>
+      AsyncStorage.setItem(
+        lessonSessionKey(u, l),
+        JSON.stringify({
+          version: LESSON_SESSION_SCHEMA_VERSION,
+          ...makeSnapshot({ startedAt: Date.now() - LESSON_SESSION_TTL_MS - 60_000 }),
+        }),
+      );
+    await stale(USER, 'a');
+    await stale('user-2', 'b');
+
+    expect(await pruneExpiredLessonSessions(USER)).toBe(1);
+    // The other account's leftover is untouched by a scoped sweep.
+    expect(await AsyncStorage.getItem(lessonSessionKey('user-2', 'b'))).not.toBeNull();
+  });
+
+  it('leaves unrelated AsyncStorage keys alone', async () => {
+    await AsyncStorage.setItem('offline-queue:user-1', '{"items":[]}');
+    await AsyncStorage.setItem('read-cache:units:abc', '{"v":1}');
+    await pruneExpiredLessonSessions();
+    expect(await AsyncStorage.getItem('offline-queue:user-1')).not.toBeNull();
+    expect(await AsyncStorage.getItem('read-cache:units:abc')).not.toBeNull();
+  });
+
+  it('is a no-op on an empty store', async () => {
+    expect(await pruneExpiredLessonSessions()).toBe(0);
   });
 });
