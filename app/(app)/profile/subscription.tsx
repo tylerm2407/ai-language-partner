@@ -5,7 +5,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import type { PurchasesPackage } from 'react-native-purchases';
 import { useAuth } from '../../../hooks/useAuth';
-import { useAppStore } from '../../../stores/useAppStore';
+import { useAppStore, effectiveTier } from '../../../stores/useAppStore';
 import {
   getOfferingPackages,
   purchasePackage,
@@ -14,6 +14,7 @@ import {
   isMonthlyPackage,
   annualSavingsPercent,
   isPurchasesAvailable,
+  reportPurchaseFailure,
 } from '../../../lib/purchases';
 import { type PlanId } from '../../../lib/plans';
 import { trackEvent } from '../../../lib/analytics';
@@ -42,7 +43,7 @@ const DISPLAY_TIER_ORDER: PlanId[] = ['vip', 'premium', 'basic'];
 
 export default function SubscriptionScreen() {
   const { user } = useAuth();
-  const { profile, subscription, refreshSubscription } = useAppStore();
+  const { profile, subscription, entitledTier, refreshSubscription, setEntitledTier } = useAppStore();
   const router = useRouter();
 
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);
@@ -51,7 +52,10 @@ export default function SubscriptionScreen() {
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
   const [restoring, setRestoring] = useState(false);
 
-  const currentTier = subscription?.tier ?? 'starter';
+  // Matches the paywall gate: the entitlement counts even before the webhook
+  // has written the row, so "Current Plan" doesn't read "No subscription" to
+  // someone who just paid.
+  const currentTier = effectiveTier(subscription, entitledTier);
 
   const loadOfferings = useCallback(async () => {
     setLoadingOfferings(true);
@@ -86,13 +90,17 @@ export default function SubscriptionScreen() {
     try {
       const result = await purchasePackage(pkg);
       if (result.status === 'success') {
-        trackEvent('purchase_completed', { tier: result.tier ?? tierFromPackage(pkg) });
-        // RevenueCat webhook updates the server tier within seconds; poll a
-        // couple of times so the UI reflects it without a manual refresh.
+        const tier = result.tier ?? tierFromPackage(pkg);
+        trackEvent('purchase_completed', { tier });
+        // Entitlement first — the RevenueCat webhook writes the server tier a
+        // round-trip later (and not at all if it exhausts its five retries),
+        // and the paywall gate must not hold a paying learner in the meantime.
+        setEntitledTier(tier);
         await refreshSubscription(user.id);
         setTimeout(() => user && refreshSubscription(user.id), 2500);
         Alert.alert('You’re all set!', 'Your subscription is now active. Enjoy!');
       } else if (result.status === 'error') {
+        reportPurchaseFailure('purchase', result.message, tierFromPackage(pkg), result.code);
         Alert.alert('Purchase failed', result.message ?? 'Please try again.');
       }
       // 'cancelled' — silent, expected.
@@ -107,6 +115,7 @@ export default function SubscriptionScreen() {
     try {
       const result = await restorePurchases();
       if (result.status === 'success') {
+        if (result.tier && result.tier !== 'starter') setEntitledTier(result.tier);
         await refreshSubscription(user.id);
         setTimeout(() => user && refreshSubscription(user.id), 2500);
         if (result.tier && result.tier !== 'starter') {
@@ -116,6 +125,7 @@ export default function SubscriptionScreen() {
           Alert.alert('No purchases found', 'We couldn’t find an active subscription to restore.');
         }
       } else {
+        reportPurchaseFailure('restore', result.message, undefined, result.code);
         Alert.alert('Restore failed', result.message ?? 'Please try again.');
       }
     } finally {

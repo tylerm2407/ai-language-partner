@@ -1,11 +1,43 @@
 import { create } from 'zustand';
-import type { UserProfile, DailyStats, Subscription } from '../types';
+import type { UserProfile, DailyStats, Subscription, SubscriptionTier } from '../types';
 import { fetchProfile, fetchTodayStats, fetchSubscription, fetchReviewItemCount, fetchUserRoles, fetchHasCompletedLesson } from '../lib/supabase-queries';
+
+/** Tier ladder, weakest first — index doubles as rank for `effectiveTier`. */
+const TIER_RANK: SubscriptionTier[] = ['starter', 'basic', 'premium', 'vip'];
+
+/**
+ * The tier the app should actually gate on.
+ *
+ * Two sources disagree by design, and the answer is "whichever grants more":
+ *
+ *   - `subscription.tier` is the durable server record, written only by the
+ *     revenuecat-webhook function. It is authoritative for quota enforcement
+ *     (get_effective_limits reads the same row) but it lags a purchase by a
+ *     webhook round-trip, and RevenueCat gives up after five retries.
+ *   - `entitledTier` is what the RevenueCat SDK says this device is entitled
+ *     to right now. Instant, offline-cached, and correct the moment the store
+ *     confirms — but local to the device.
+ *
+ * Taking the max means a paid learner is never locked out while the webhook is
+ * in flight or lost, and a learner whose row says `vip` is not downgraded just
+ * because the SDK hasn't finished waking up. It cannot be used to *grant*
+ * server-side quota: the edge functions read the row, not this.
+ */
+export function effectiveTier(
+  subscription: Subscription | null,
+  entitledTier: SubscriptionTier | null,
+): SubscriptionTier {
+  const a = TIER_RANK.indexOf(subscription?.tier ?? 'starter');
+  const b = TIER_RANK.indexOf(entitledTier ?? 'starter');
+  return TIER_RANK[Math.max(a === -1 ? 0 : a, b === -1 ? 0 : b)];
+}
 
 interface AppState {
   profile: UserProfile | null;
   dailyStats: DailyStats | null;
   subscription: Subscription | null;
+  /** Live RevenueCat entitlement for this device. See `effectiveTier`. */
+  entitledTier: SubscriptionTier | null;
   reviewCount: number;
   roles: string[];
   /** Lifetime flag — has this learner ever finished a lesson? Gates the hard
@@ -20,6 +52,9 @@ interface AppState {
   setProfile: (profile: UserProfile | null) => void;
   setDailyStats: (stats: DailyStats | null) => void;
   refreshSubscription: (userId: string) => Promise<void>;
+  /** Record the device's live RevenueCat entitlement (never downgrades to
+   *  `starter` silently — an expiry must come from the server row). */
+  setEntitledTier: (tier: SubscriptionTier | null) => void;
   /** Flip the paywall gate the instant a lesson completes, without a refetch. */
   setHasCompletedLesson: (value: boolean) => void;
   refreshReviewCount: (userId: string) => Promise<void>;
@@ -30,6 +65,7 @@ export const useAppStore = create<AppState>((set) => ({
   profile: null,
   dailyStats: null,
   subscription: null,
+  entitledTier: null,
   reviewCount: 0,
   roles: [],
   hasCompletedLesson: false,
@@ -75,6 +111,8 @@ export const useAppStore = create<AppState>((set) => ({
     }
   },
 
+  setEntitledTier: (tier: SubscriptionTier | null) => set({ entitledTier: tier }),
+
   refreshReviewCount: async (userId: string) => {
     try {
       const reviewCount = await fetchReviewItemCount(userId);
@@ -88,6 +126,7 @@ export const useAppStore = create<AppState>((set) => ({
     profile: null,
     dailyStats: null,
     subscription: null,
+    entitledTier: null,
     reviewCount: 0,
     roles: [],
     hasCompletedLesson: false,

@@ -1,0 +1,177 @@
+{
+  "identifier": "94E7889E-B706-5939-9627-DC2175477158",
+  "nonRenewingSubscriptions": [],
+  "products": [],
+  "settings": {
+    "_applicationInternalID": "6761507250",
+    "_developerTeamID": "3RZVA8RPRT",
+    "_failTransactionsEnabled": false,
+    "_lastSynchronizedDate": 0,
+    "_locale": "en_US",
+    "_storeKitErrors": [],
+    "_storefront": "USA"
+  },
+  "subscriptionGroups": [
+    {
+      "id": "21571371",
+      "localizations": [],
+      "name": "Fluenci",
+      "subscriptions": [
+        {
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "29.99",
+          "familyShareable": false,
+          "groupNumber": 1,
+          "internalID": "953B87D6-3E18-52EA-A7E5-33DE6602DD8A",
+          "introductoryOffer": {
+            "internalID": "AC086405-1C08-5C9E-A584-48A6AAC8FA3C",
+            "paymentMode": "free",
+            "subscriptionPeriod": "P1W"
+          },
+          "localizations": [
+            {
+              "description": "75 tutor messages, 30 minutes of voice practice, 12 writing grades a day, audiobook narration.",
+              "displayName": "VIP Monthly",
+              "locale": "en_US"
+            }
+          ],
+          "productID": "fluenci_vip_monthly",
+          "recurringSubscriptionPeriod": "P1M",
+          "referenceName": "VIP Monthly",
+          "subscriptionGroupID": "21571371",
+          "type": "RecurringSubscription"
+        },
+        {
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "239.99",
+          "familyShareable": false,
+          "groupNumber": 1,
+          "internalID": "78B0267D-4E9A-5895-A337-58386F99620E",
+          "introductoryOffer": {
+            "internalID": "6912155C-FE3D-5034-80F2-8E73476BCF93",
+            "paymentMode": "free",
+            "subscriptionPeriod": "P1W"
+          },
+          "localizations": [
+            {
+              "description": "75 tutor messages, 30 minutes of voice practice, 12 writing grades a day, audiobook narration.",
+              "displayName": "VIP Yearly",
+              "locale": "en_US"
+            }
+          ],
+          "productID": "fluenci_vip_yearly",
+          "recurringSubscriptionPeriod": "P1Y",
+          "referenceName": "VIP Yearly",
+          "subscriptionGroupID": "21571371",
+          "type": "RecurringSubscription"
+        },
+        {
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "19.99",
+          "familyShareable": false,
+          "groupNumber": 2,
+          "internalID": "CBBA4093-2E9F-5D60-AEAD-216EF93718EC",
+          "introductoryOffer": {
+            "internalID": "34A57541-D2AD-5AB9-B1BC-FFF4E916E40B",
+            "paymentMode": "free",
+            "subscriptionPeriod": "P1W"
+          },
+          "localizations": [
+            {
+              "description": "50 tutor messages, 20 minutes of voice practice, 7 writing grades a day, offline mode.",
+              "displayName": "Premium Monthly",
+              "locale": "en_US"
+            }
+          ],
+          "productID": "fluenci_premium_monthly",
+          "recurringSubscriptionPeriod": "P1M",
+          "referenceName": "Premium Monthly",
+          "subscriptionGroupID": "21571371",
+          "type": "RecurringSubscription"
+        },
+        {
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "159.99",
+          "familyShareable": false,
+          "groupNumber": 2,
+          "internalID": "641DE624-3B80-592C-86B5-EB20AB4A06DB",
+          "introductoryOffer": {
+            "internalID": "EB2039A2-B489-5EBC-B314-C56F21FB10FE",
+            "paymentMode": "free",
+            "subscriptionPeriod": "P1W"
+          },
+          "localizations": [
+            {
+              "description": "50 tutor messages, 20 minutes of voice practice, 7 writing grades a day, offline mode.",
+              "displayName": "Premium Yearly",
+              "locale": "en_US"
+            }
+          ],
+          "productID": "fluenci_premium_yearly",
+          "recurringSubscriptionPeriod": "P1Y",
+          "referenceName": "Premium Yearly",
+          "subscriptionGroupID": "21571371",
+          "type": "RecurringSubscription"
+        },
+        {
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "9.99",
+          "familyShareable": false,
+          "groupNumber": 3,
+          "internalID": "0DEC3121-0E2E-555C-BB7D-7AF74AA360CF",
+          "introductoryOffer": {
+            "internalID": "5E5F7682-7209-5BCA-A3AC-37E7394535D5",
+            "paymentMode": "free",
+            "subscriptionPeriod": "P1W"
+          },
+          "localizations": [
+            {
+              "description": "25 tutor messages, 10 minutes of voice practice and 3 writing grades a day.",
+              "displayName": "Basic Monthly",
+              "locale": "en_US"
+            }
+          ],
+          "productID": "fluenci_basic_monthly",
+          "recurringSubscriptionPeriod": "P1M",
+          "referenceName": "Basic Monthly",
+          "subscriptionGroupID": "21571371",
+          "type": "RecurringSubscription"
+        },
+        {
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "79.99",
+          "familyShareable": false,
+          "groupNumber": 3,
+          "internalID": "0084844F-DC99-5A1C-AB83-7D3AA27BEBB5",
+          "introductoryOffer": {
+            "internalID": "3F295024-7772-51DF-BA92-D00C4932AF2A",
+            "paymentMode": "free",
+            "subscriptionPeriod": "P1W"
+          },
+          "localizations": [
+            {
+              "description": "25 tutor messages, 10 minutes of voice practice and 3 writing grades a day.",
+              "displayName": "Basic Yearly",
+              "locale": "en_US"
+            }
+          ],
+          "productID": "fluenci_basic_yearly",
+          "recurringSubscriptionPeriod": "P1Y",
+          "referenceName": "Basic Yearly",
+          "subscriptionGroupID": "21571371",
+          "type": "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version": {
+    "major": 4,
+    "minor": 0
+  }
+}

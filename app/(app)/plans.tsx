@@ -33,6 +33,7 @@ import {
   isMonthlyPackage,
   annualSavingsPercent,
   isPurchasesAvailable,
+  reportPurchaseFailure,
 } from '../../lib/purchases';
 import { type PlanId } from '../../lib/plans';
 import { STEP_ORDER, ctaLabel, renewalLine, trialOffer } from '../../lib/plan-pricing';
@@ -48,7 +49,7 @@ const DEFAULT_TIER: Exclude<PlanId, 'starter'> = 'premium';
 
 export default function PlansScreen() {
   const { user } = useAuth();
-  const { subscription, refreshSubscription } = useAppStore();
+  const { subscription, refreshSubscription, setEntitledTier } = useAppStore();
   const router = useRouter();
 
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);
@@ -130,11 +131,18 @@ export default function PlansScreen() {
     try {
       const result = await purchasePackage(selectedPkg);
       if (result.status === 'success') {
-        trackEvent('purchase_completed', { tier: result.tier ?? tierFromPackage(selectedPkg) });
+        const tier = result.tier ?? tierFromPackage(selectedPkg);
+        trackEvent('purchase_completed', { tier });
+        // Open the gate on the entitlement RevenueCat just confirmed, BEFORE
+        // navigating. `proceed()` remounts app/(app)/_layout.tsx, which reads
+        // the tier and redirects straight back here if it still says
+        // `starter` — which the server row does until the webhook lands.
+        setEntitledTier(tier);
         await refreshSubscription(user.id);
         setTimeout(() => user && refreshSubscription(user.id), 2500);
         proceed();
       } else if (result.status === 'error') {
+        reportPurchaseFailure('purchase', result.message, tierFromPackage(selectedPkg), result.code);
         Alert.alert('Purchase failed', result.message ?? 'Please try again.');
       }
     } finally {
@@ -149,9 +157,13 @@ export default function PlansScreen() {
       const result = await restorePurchases();
       if (result.status === 'success' && result.tier && result.tier !== 'starter') {
         trackEvent('purchase_restored', { tier: result.tier });
+        setEntitledTier(result.tier);
         await refreshSubscription(user.id);
         proceed();
       } else {
+        if (result.status === 'error') {
+          reportPurchaseFailure('restore', result.message, undefined, result.code);
+        }
         Alert.alert('No purchases found', 'We couldn’t find an active subscription to restore.');
       }
     } finally {

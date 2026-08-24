@@ -38,10 +38,16 @@ jest.mock('../hooks/useAuth', () => ({ useAuth: () => ({ user: { id: 'u1' } }) }
 // The screen destructures the whole store; the selector form is supported too
 // so this mock keeps working if that changes.
 jest.mock('../stores/useAppStore', () => {
-  const state = { subscription: null, refreshSubscription: jest.fn() };
+  const state = {
+    subscription: null,
+    entitledTier: null,
+    refreshSubscription: jest.fn(),
+    setEntitledTier: jest.fn(),
+  };
   return {
     useAppStore: (selector?: (s: unknown) => unknown) =>
       typeof selector === 'function' ? selector(state) : state,
+    effectiveTier: () => 'starter',
   };
 });
 
@@ -56,6 +62,7 @@ jest.mock('../lib/purchases', () => ({
   isAnnualPackage: () => true,
   isMonthlyPackage: () => false,
   annualSavingsPercent: () => 0,
+  reportPurchaseFailure: jest.fn(),
 }));
 
 import PlansScreen from '../app/(app)/plans';

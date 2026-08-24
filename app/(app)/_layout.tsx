@@ -5,7 +5,7 @@ import { View } from 'react-native';
 import { FloatingTabBar } from '../../components/navigation/FloatingTabBar';
 import { useOfflineQueueFlush } from '../../hooks/useOfflineQueueFlush';
 import { useLessonSessionSweep } from '../../hooks/useLessonSessionSweep';
-import { useAppStore } from '../../stores/useAppStore';
+import { useAppStore, effectiveTier } from '../../stores/useAppStore';
 import { SCHOOL_ENABLED } from '../../config/app';
 
 export default function AppLayout() {
@@ -14,6 +14,7 @@ export default function AppLayout() {
   useLessonSessionSweep();
 
   const subscription = useAppStore((s) => s.subscription);
+  const entitledTier = useAppStore((s) => s.entitledTier);
   const loading = useAppStore((s) => s.loading);
   const roles = useAppStore((s) => s.roles);
   const hasCompletedLesson = useAppStore((s) => s.hasCompletedLesson);
@@ -47,7 +48,13 @@ export default function AppLayout() {
   // unavailable or the offering is empty, that screen lets the learner past
   // rather than trapping them — a paywall with nothing to buy and no way out
   // is a 3.1.1 rejection.
-  const tier = subscription?.tier ?? 'starter';
+  //
+  // The tier is the MAX of the server row and the device's live RevenueCat
+  // entitlement (stores/useAppStore.ts `effectiveTier`). Reading the row alone
+  // meant a learner who had just paid was redirected straight back here,
+  // because the row is written by a webhook that had not landed yet — and if
+  // RevenueCat exhausted its five retries, never would.
+  const tier = effectiveTier(subscription, entitledTier);
   const onPlans = segments[1] === 'plans';
   const schoolExempt = SCHOOL_ENABLED && (roles.includes('student') || roles.includes('teacher'));
 

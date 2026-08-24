@@ -10,7 +10,12 @@ import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 import { useSchoolStore } from '../stores/useSchoolStore';
 import { SCHOOL_ENABLED } from '../config/app';
 import { useNotifications, scheduleStreakSaveReminder } from '../hooks/useNotifications';
-import { configurePurchases, identifyPurchaser, resetPurchaser } from '../lib/purchases';
+import {
+  configurePurchases,
+  identifyPurchaser,
+  resetPurchaser,
+  addEntitlementListener,
+} from '../lib/purchases';
 import { identifyUser, resetAnalytics } from '../lib/analytics';
 import { hydrateMotionPreference } from '../lib/motion-preference';
 import { View, ActivityIndicator, AppState, Text, Pressable } from 'react-native';
@@ -42,7 +47,7 @@ Sentry.init({
 
 function RootLayout() {
   const { session, loading: authLoading } = useAuth();
-  const { profile, dailyStats, loadUserData, error: profileError } = useAppStore();
+  const { profile, dailyStats, loadUserData, setEntitledTier, error: profileError } = useAppStore();
   const { roles, activeRole, loadRoles } = useSchoolStore();
   const segments = useSegments() as string[];
   const router = useRouter();
@@ -120,6 +125,22 @@ function RootLayout() {
       Sentry.setUser(null);
     }
   }, [session?.user?.id]);
+
+  // Track the device's live RevenueCat entitlement. This is half of the paywall
+  // gate (app/(app)/_layout.tsx) — without it, a learner who has just paid is
+  // redirected back to the paywall until the revenuecat-webhook writes their
+  // `subscriptions` row, which can be seconds away or, if RevenueCat runs out
+  // of retries, never. Re-registered per user so a sign-out drops the previous
+  // account's entitlement instead of leaking it to the next one.
+  useEffect(() => {
+    const userId = session?.user?.id ?? null;
+    if (!userId) {
+      setEntitledTier(null);
+      return;
+    }
+    const unsubscribe = addEntitlementListener(setEntitledTier);
+    return unsubscribe;
+  }, [session?.user?.id, setEntitledTier]);
 
   // Load user data when session becomes available
   useEffect(() => {

@@ -19,6 +19,7 @@
  *   fluenci_vip_yearly       -> entitlement "vip"
  */
 import { Platform } from 'react-native';
+import * as Sentry from '@sentry/react-native';
 import Purchases, {
   type CustomerInfo,
   type PurchasesPackage,
@@ -204,6 +205,34 @@ export interface PurchaseResult {
   status: 'success' | 'cancelled' | 'error';
   tier?: PlanId;
   message?: string;
+  /** RevenueCat PURCHASES_ERROR_CODE, when the SDK supplied one. */
+  code?: string;
+}
+
+/**
+ * Record a failed purchase or restore.
+ *
+ * A revenue-path failure used to leave no trace anywhere: `trackEvent` is a
+ * no-op until an analytics provider is registered (lib/analytics.ts), the
+ * alert is transient, and nothing reached Sentry. The only evidence a purchase
+ * had ever failed was the learner's word for it. Anything that stops money
+ * arriving deserves a breadcrumb.
+ *
+ * Never pass the raw error object — RevenueCat error payloads can carry
+ * receipt and account identifiers.
+ */
+export function reportPurchaseFailure(
+  stage: 'purchase' | 'restore',
+  message: string | undefined,
+  tier?: PlanId,
+  code?: string,
+): void {
+  const detail = message ?? 'unknown error';
+  console.warn(`[purchases] ${stage} failed:`, detail, code ? `(${code})` : '');
+  Sentry.captureMessage(`IAP ${stage} failed: ${detail}`, {
+    level: 'error',
+    tags: { iap_stage: stage, iap_code: code ?? 'none', iap_tier: tier ?? 'unknown' },
+  });
 }
 
 /** Purchase a package. Returns a tagged result (cancellation is not an error). */
@@ -219,7 +248,11 @@ export async function purchasePackage(pkg: PurchasesPackage): Promise<PurchaseRe
     if (err.userCancelled || err.code === Purchases.PURCHASES_ERROR_CODE.PURCHASE_CANCELLED_ERROR) {
       return { status: 'cancelled' };
     }
-    return { status: 'error', message: err.message ?? 'Purchase failed. Please try again.' };
+    return {
+      status: 'error',
+      message: err.message ?? 'Purchase failed. Please try again.',
+      code: err.code,
+    };
   }
 }
 
@@ -233,8 +266,8 @@ export async function restorePurchases(): Promise<PurchaseResult> {
     const tier = tierFromCustomerInfo(customerInfo);
     return { status: 'success', tier };
   } catch (e) {
-    const err = e as { message?: string };
-    return { status: 'error', message: err.message ?? 'Could not restore purchases.' };
+    const err = e as { message?: string; code?: string };
+    return { status: 'error', message: err.message ?? 'Could not restore purchases.', code: err.code };
   }
 }
 
@@ -246,5 +279,38 @@ export async function getCurrentTier(): Promise<PlanId> {
     return tierFromCustomerInfo(info);
   } catch {
     return 'starter';
+  }
+}
+
+/**
+ * Subscribe to entitlement changes.
+ *
+ * This is what closes the window between "the store took the money" and "the
+ * `subscriptions` row says so". The row is written by the revenuecat-webhook
+ * function, which is a network round-trip away at best and, if RevenueCat
+ * exhausts its five retries, may never arrive at all. Gating solely on that
+ * row means a paying learner gets bounced back onto the paywall — so the
+ * client listens to the entitlement it already holds locally and treats the
+ * table as the durable backstop rather than the gate.
+ *
+ * Fires immediately with the cached CustomerInfo on registration, then on
+ * every purchase, restore, renewal and expiry the SDK observes.
+ *
+ * Returns an unsubscribe function; a no-op when IAP isn't available on this
+ * build (Expo Go, or a missing/rejected key).
+ */
+export function addEntitlementListener(onTier: (tier: PlanId) => void): () => void {
+  if (!configured || !isPurchasesAvailable()) return () => {};
+  try {
+    const remove = Purchases.addCustomerInfoUpdateListener((info) => {
+      onTier(tierFromCustomerInfo(info));
+    });
+    // Prime with what the SDK already has cached, so a cold start on an
+    // entitled device doesn't flash the paywall while waiting for an event.
+    getCurrentTier().then(onTier).catch(() => {});
+    return typeof remove === 'function' ? remove : () => {};
+  } catch (err) {
+    console.warn('[purchases] entitlement listener failed:', err);
+    return () => {};
   }
 }
