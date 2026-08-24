@@ -18,6 +18,13 @@ coverage/
 # Claude Code local settings
 .claude/settings.local.json
 
+# Claude tooling artifacts — machine-local state, not project config.
+# .claude/ is otherwise tracked (skills, rules), so these are named
+# individually rather than ignoring the directory.
+.claude-flow/
+.claude/proven-config.json
+.claude/.proven-config-version
+
 # Playwright MCP testing cache
 .playwright-mcp/
 
