@@ -1,20 +1,24 @@
 /**
- * Post-first-lesson paywall — design 7c, hard gate.
+ * The subscription paywall — shown once at the end of setup, and reachable
+ * afterwards from the profile.
  *
- * Replaces the previous three-PlanCard + "Continue with Free" screen. Two
- * changes, both product decisions, not cosmetics:
+ * NOT a hard gate any more. A free tier exists (lib/plans.ts `starter`), so
+ * this screen has a visible way out and the router no longer redirects
+ * unsubscribed learners here (app/(app)/_layout.tsx). What survives from the
+ * 7c design is the shape of the ask: per-day pricing, three rungs, annual
+ * pre-selected.
  *
- *   1. HARD PAYWALL. There is no free tier any more, so there is no skip. The
- *      7-day trial is the free path. Everything the old skip protected (a
- *      learner who cannot buy) now falls to `blocked` below — an offerings
- *      failure must NOT strand someone in the app with no way forward.
- *   2. Per-day pricing. Each rung leads with its daily equivalent, with the
- *      billed amount immediately beneath it. See lib/plan-pricing.ts.
+ * Two things about when it fires are load-bearing:
+ *   • AFTER sign-up. RevenueCat must be configured with the real user id — an
+ *     anonymous purchase never reaches the `subscriptions` table.
+ *   • AFTER the learner has been taught something. The trial lesson now runs
+ *     before the account exists (app/(public)/onboarding.tsx), so by the time
+ *     anyone sees this screen they have finished a lesson, earned XP, and made
+ *     an avatar. The ask lands on a real result rather than on an empty account.
  *
- * Unchanged and load-bearing: this screen runs AFTER sign-up (RevenueCat is
- * configured with the real user id — an anonymous purchase never reaches the
- * `subscriptions` table) and AFTER the first completed lesson, fired from
- * app/(app)/learn/[lessonId].tsx.
+ * `blocked` is still the review-safety escape for an offerings failure. It
+ * matters less now that every learner has a working free tier to fall back on,
+ * but a paywall with nothing to buy and no way out is still a 3.1.1 rejection.
  */
 import { View, Text, Pressable, ScrollView, Alert, ActivityIndicator, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -62,11 +66,24 @@ export default function PlansScreen() {
 
   const currentTier = subscription?.tier ?? 'starter';
 
-  /** Leave the paywall. Only reachable once entitled, restored, or blocked. */
+  /**
+   * Leave the paywall — after a purchase, a restore, an offerings failure, or
+   * a deliberate "stay on the free plan".
+   *
+   * `canGoBack` is false on the setup path: avatar-setup REPLACES into this
+   * screen rather than pushing, precisely so a learner cannot swipe back into
+   * a finished step. Falling through to Home is what makes the exit work there.
+   */
   const proceed = useCallback(() => {
     if (router.canGoBack()) router.back();
     else router.replace('/(app)');
   }, [router]);
+
+  /** Decline, and stay on the free plan. */
+  const declineToFree = useCallback(() => {
+    trackEvent('paywall_declined', { currentTier, tierShown: tier, term });
+    proceed();
+  }, [proceed, currentTier, tier, term]);
 
   useEffect(() => {
     let cancelled = false;
@@ -87,7 +104,7 @@ export default function PlansScreen() {
   }, []);
 
   useEffect(() => {
-    trackEvent('paywall_viewed', { source: 'post_first_lesson', currentTier, gate: 'hard' });
+    trackEvent('paywall_viewed', { source: 'post_signup', currentTier, gate: 'soft' });
   }, [currentTier]);
 
   const monthlyPriceByTier = useMemo(() => {
@@ -455,6 +472,45 @@ export default function PlansScreen() {
                 <Text style={legalStyle}>{restoring ? 'Restoring…' : 'Restore purchases'}</Text>
               </Pressable>
             </View>
+
+            {/* The way out. Plain, visible, and present from the first frame —
+                no timer, no fade-in. A skip that appears only after a delay is
+                the pattern App Review has rejected under 3.1.1, and a learner
+                who cannot afford a subscription is still a learner. What the
+                free plan actually includes is spelled out rather than implied,
+                so declining is an informed choice and not a dead end. */}
+            <Pressable
+              onPress={declineToFree}
+              disabled={busy}
+              accessibilityRole="button"
+              accessibilityLabel="Continue on the free plan"
+              style={{ minHeight: 44, justifyContent: 'center', marginTop: spacing.sm }}
+            >
+              <Text
+                style={{
+                  fontFamily: typography.family.bold,
+                  fontSize: 14,
+                  lineHeight: 20,
+                  textAlign: 'center',
+                  color: colors.text.secondary,
+                }}
+              >
+                Continue on the free plan
+              </Text>
+            </Pressable>
+            <Text
+              style={{
+                fontFamily: typography.family.medium,
+                fontSize: 11,
+                lineHeight: 16,
+                textAlign: 'center',
+                color: colors.text.quaternary,
+                marginTop: 2,
+              }}
+            >
+              Lessons, reviews, reading and the daily news stay free. The AI tutor and voice
+              practice don’t.
+            </Text>
           </>
         )}
       </ScrollView>

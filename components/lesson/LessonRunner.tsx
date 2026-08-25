@@ -321,6 +321,12 @@ export function LessonRunner({
   useEffect(() => {
     if (!restoreChecked || warmupFetchedRef.current) return;
     warmupFetchedRef.current = true;
+    // No account yet (the pre-auth trial lesson) — there is nothing due, and
+    // the query would run against `anon` only to be refused. Skip the wait.
+    if (!userId) {
+      setWarmupResolved(true);
+      return;
+    }
     if (resumedRef.current) {
       // Resumed mid-lesson: skip the warm-up and drop into the saved spot.
       setWarmupResolved(true);

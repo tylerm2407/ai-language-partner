@@ -195,6 +195,17 @@ export interface TTSVoiceOptions {
   /** Learner's preferred tutor voice gender. Server falls back to the
    *  language's default voices where no match exists. */
   voiceGender?: VoiceGender;
+  /**
+   * Which daily bucket pays for this synthesis.
+   *
+   * 'lesson' for listening and dictation exercises, which draw on the small
+   * lesson-audio allowance every tier including free has. Anything else —
+   * chat playback, voice practice, narration — leaves this unset and is
+   * metered against voice minutes, which the free tier has none of.
+   *
+   * The server enforces both buckets; this only chooses between them.
+   */
+  purpose?: 'lesson' | 'voice';
 }
 
 /**
@@ -225,7 +236,12 @@ export async function getTextToSpeech(
         const body = await (ctx as Response).json();
         if (body?.error) {
           errorMessage = body.error;
-          if (body.code === 'DAILY_VOICE_LIMIT_REACHED') errorCode = 'DAILY_LIMIT';
+          if (
+            body.code === 'DAILY_VOICE_LIMIT_REACHED' ||
+            body.code === 'DAILY_LESSON_AUDIO_LIMIT_REACHED'
+          ) {
+            errorCode = 'DAILY_LIMIT';
+          }
           else if (body.error.includes('not configured')) errorCode = 'NOT_CONFIGURED';
         }
       }
@@ -238,7 +254,10 @@ export async function getTextToSpeech(
 
   // Success (200) but edge function returned an application-level error in the body
   if (data?.error) {
-    if (data.code === 'DAILY_VOICE_LIMIT_REACHED') {
+    if (
+      data.code === 'DAILY_VOICE_LIMIT_REACHED' ||
+      data.code === 'DAILY_LESSON_AUDIO_LIMIT_REACHED'
+    ) {
       throw new VoiceError(data.error, 'DAILY_LIMIT');
     }
     if (data.error.includes('not configured')) {
@@ -279,7 +298,12 @@ export async function transcribeAudio(
         const body = await (ctx as Response).json();
         if (body?.error) {
           errorMessage = body.error;
-          if (body.code === 'DAILY_VOICE_LIMIT_REACHED') errorCode = 'DAILY_LIMIT';
+          if (
+            body.code === 'DAILY_VOICE_LIMIT_REACHED' ||
+            body.code === 'DAILY_LESSON_AUDIO_LIMIT_REACHED'
+          ) {
+            errorCode = 'DAILY_LIMIT';
+          }
           else if (body.error.includes('not configured')) errorCode = 'NOT_CONFIGURED';
         }
       }
@@ -291,7 +315,10 @@ export async function transcribeAudio(
   }
 
   if (data?.error) {
-    if (data.code === 'DAILY_VOICE_LIMIT_REACHED') {
+    if (
+      data.code === 'DAILY_VOICE_LIMIT_REACHED' ||
+      data.code === 'DAILY_LESSON_AUDIO_LIMIT_REACHED'
+    ) {
       throw new VoiceError(data.error, 'DAILY_LIMIT');
     }
     if (data.error.includes('not configured')) {

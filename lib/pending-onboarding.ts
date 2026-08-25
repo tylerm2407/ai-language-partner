@@ -3,10 +3,10 @@
  *
  * Onboarding runs before the user has an account (DESIGN.md §UX Psychology
  * Principles #3 Reciprocity and #4 IKEA Effect): the learner picks a language,
- * takes the placement test, sees their result, and personalises an avatar
- * before they are ever asked for an email. Those answers live here until a
- * session exists, at which point the onboarding screen flushes them into the
- * real profile and clears this entry.
+ * personalises an avatar, and PLAYS A WHOLE LESSON before they are ever asked
+ * for an email. Those answers live here until a session exists, at which point
+ * the onboarding screen flushes them into the real profile and clears this
+ * entry.
  *
  * Device-local by design. If the user never signs up, nothing is written
  * server-side and the draft simply expires.
@@ -23,18 +23,24 @@ export const PENDING_ONBOARDING_SCHEMA_VERSION = 1;
 /** Drafts older than this are discarded on load. */
 export const PENDING_ONBOARDING_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-/** Per-CEFR-band breakdown produced by the placement test. */
-export interface PlacementBandResult {
-  level: ProficiencyLevel;
-  correct: number;
-  total: number;
-}
-
-export interface PlacementResult {
-  suggestedLevel: ProficiencyLevel;
+/**
+ * What the learner did in the pre-auth trial lesson.
+ *
+ * Kept so the sign-up screen can name the actual numbers ("keep your 20 XP")
+ * rather than gesture at "your progress", and so the post-signup flush can
+ * tick the first-lesson checklist item for work that really happened.
+ *
+ * NOT a substitute for a lesson completion row. The trial lesson is bundled in
+ * the app (components/onboarding/trial-lesson.ts) and has no `lessons.id`, so
+ * there is nothing to record against — the XP is granted on flush, the
+ * completion is not.
+ */
+export interface TrialLessonResult {
+  xpEarned: number;
   correctCount: number;
   totalCount: number;
-  bands: PlacementBandResult[];
+  /** ISO timestamp the trial finished. */
+  completedAt: string;
 }
 
 export interface PendingOnboarding {
@@ -42,8 +48,8 @@ export interface PendingOnboarding {
   targetLanguage: LanguageCode | null;
   idealL2Self: string | null;
   level: ProficiencyLevel | null;
-  /** Null when the learner skipped the placement test. */
-  placement: PlacementResult | null;
+  /** Null until the learner finishes the pre-auth trial lesson. */
+  trial: TrialLessonResult | null;
   displayName: string | null;
   avatarConfig: AvatarConfig | null;
   dailyGoalMinutes: number | null;
@@ -54,7 +60,7 @@ export interface PendingOnboarding {
    * `startedAt`, so drafts written before this field existed still load with it
    * absent. Bumping PENDING_ONBOARDING_SCHEMA_VERSION for a purely additive
    * optional field would discard every in-flight draft inside the 7-day TTL —
-   * including learners who finished the placement test and are one tap from
+   * including learners who finished the trial lesson and are one tap from
    * signing up.
    */
   adultMode: boolean | null;
@@ -71,7 +77,7 @@ export function emptyPendingOnboarding(): PendingOnboardingDraft {
     targetLanguage: null,
     idealL2Self: null,
     level: null,
-    placement: null,
+    trial: null,
     displayName: null,
     avatarConfig: null,
     dailyGoalMinutes: null,

@@ -16,7 +16,7 @@ import {
   isPurchasesAvailable,
   reportPurchaseFailure,
 } from '../../../lib/purchases';
-import { type PlanId } from '../../../lib/plans';
+import { PLAN_FEATURES, type PlanId } from '../../../lib/plans';
 import { trackEvent } from '../../../lib/analytics';
 import { Button } from '../../../components/ui/Button';
 import { Badge } from '../../../components/ui/Badge';
@@ -212,18 +212,25 @@ export default function SubscriptionScreen() {
           </View>
         )}
 
-        {/* `starter` is the absence of a subscription, not a free plan (7c is a
-            hard gate — see lib/plans.ts). This card used to say "Free / no card
-            required" and list an allowance; both became untrue when the free
-            tier was removed, and leaving them would be the inverse of the
-            complaint they were written to answer. It states the real state and
-            what restores access. */}
+        {/* `starter` is the free plan — a real tier a learner can stay on
+            indefinitely, not the absence of one. This card has said both things
+            over time; what makes either version honest is naming the actual
+            boundary rather than gesturing at it, so it lists what a free
+            account gets and leaves the pitch to the rungs below. The list is
+            PLAN_FEATURES.starter, so it cannot drift from lib/plans.ts. */}
         {currentTier === 'starter' && (
           <View className="rounded-2xl p-5 mb-4 border-2 border-border-subtle bg-dark-card">
-            <Text className="text-2xl font-bold text-text-primary mb-1">No subscription</Text>
-            <Text className="text-sm text-text-secondary">
-              A plan is required to keep learning. Choose one below, or restore a purchase
-              you have already made.
+            <Text className="text-2xl font-bold text-text-primary mb-1">Free plan</Text>
+            <Text className="text-sm text-text-secondary mb-3">
+              You can keep learning on this plan for as long as you like. What it includes:
+            </Text>
+            {PLAN_FEATURES.starter.map((feature) => (
+              <Text key={feature} className="text-sm text-text-primary mb-1">
+                · {feature}
+              </Text>
+            ))}
+            <Text className="text-sm text-text-secondary mt-3">
+              The AI tutor, voice practice and writing grades need a paid plan.
             </Text>
           </View>
         )}

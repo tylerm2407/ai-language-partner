@@ -2,7 +2,12 @@
 
 export interface OnboardingChecklist {
   chooseLanguage: boolean;
-  placementTest: boolean;
+  /**
+   * `placementTest` was removed on 2026-08-24 along with the test itself —
+   * onboarding now asks the learner for their level directly. This is a jsonb
+   * column, so existing rows keep the stale key; `parseOnboardingChecklist`
+   * drops it on read and nothing writes it back.
+   */
   firstLesson: boolean;
   aiConversation: boolean;
   dailyReminder: boolean;

@@ -74,7 +74,12 @@ export function ListeningExercise({
     setSynthesizing(true);
     setSynthesisError(null);
     try {
-      const base64 = await getTextToSpeech(exercise.prompt, language!, userId);
+      const base64 = await getTextToSpeech(exercise.prompt, language!, userId, {
+        // Bills the small lesson-audio allowance rather than voice minutes, so
+        // this works on the free tier and never eats a paying learner's
+        // conversation time (supabase/functions/tts/index.ts).
+        purpose: 'lesson',
+      });
       const uri = `data:audio/mpeg;base64,${base64}`;
       setSynthesizedUri(uri);
       await play(uri);

@@ -4,11 +4,10 @@ import { useAppStore } from '../stores/useAppStore';
 import { updateOnboardingChecklist } from '../lib/supabase-queries';
 import type { OnboardingChecklist } from '../types';
 
-type ChecklistKey = 'chooseLanguage' | 'placementTest' | 'firstLesson' | 'aiConversation' | 'dailyReminder';
+type ChecklistKey = 'chooseLanguage' | 'firstLesson' | 'aiConversation' | 'dailyReminder';
 
 const CHECKLIST_ITEMS: { key: ChecklistKey; label: string; icon: string; route: string | null }[] = [
   { key: 'chooseLanguage', label: 'Choose your language', icon: 'globe-outline', route: null },
-  { key: 'placementTest', label: 'Complete placement test', icon: 'school-outline', route: null },
   { key: 'firstLesson', label: 'Finish your first lesson', icon: 'book-outline', route: '/learn' },
   { key: 'aiConversation', label: 'Try AI conversation', icon: 'chatbubbles-outline', route: '/chat' },
   { key: 'dailyReminder', label: 'Set daily reminder', icon: 'notifications-outline', route: null },

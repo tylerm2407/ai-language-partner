@@ -56,7 +56,7 @@ describe('emptyPendingOnboarding', () => {
     const draft = emptyPendingOnboarding();
     expect(draft.targetLanguage).toBeNull();
     expect(draft.level).toBeNull();
-    expect(draft.placement).toBeNull();
+    expect(draft.trial).toBeNull();
     expect(draft.completedAt).toBeNull();
   });
 });
@@ -100,22 +100,22 @@ describe('save / load round-trip', () => {
     expect((await loadPendingOnboarding())?.adultMode).toBe(true);
   });
 
-  it('round-trips the placement band breakdown', async () => {
+  it('round-trips the trial lesson result', async () => {
+    // The sign-up screen names these numbers back to the learner, so losing
+    // them turns a specific promise ("keep your 20 XP") into a vague one.
     const draft = makeDraft({
-      placement: {
-        suggestedLevel: 'intermediate',
+      trial: {
+        xpEarned: 20,
         correctCount: 6,
-        totalCount: 10,
-        bands: [
-          { level: 'beginner', correct: 2, total: 2 },
-          { level: 'advanced', correct: 0, total: 2 },
-        ],
+        totalCount: 8,
+        completedAt: '2026-08-24T12:00:00.000Z',
       },
     });
     await savePendingOnboarding(draft);
     const loaded = await loadPendingOnboarding();
-    expect(loaded?.placement?.bands).toHaveLength(2);
-    expect(loaded?.placement?.suggestedLevel).toBe('intermediate');
+    expect(loaded?.trial?.xpEarned).toBe(20);
+    expect(loaded?.trial?.correctCount).toBe(6);
+    expect(loaded?.trial?.totalCount).toBe(8);
   });
 });
 
@@ -131,9 +131,10 @@ describe('forward compatibility', () => {
         version: PENDING_ONBOARDING_SCHEMA_VERSION,
         startedAt: Date.now() - 1_000,
         targetLanguage: 'es',
-        // `motivation` was dropped from the draft when the onboarding step was
-        // removed. Kept here deliberately: a draft written by a shipped build
-        // still carries it, and an unknown key must not invalidate the draft.
+        // `motivation` and `placement` were both dropped from the draft when
+        // their onboarding steps were removed. Kept here deliberately: a draft
+        // written by a shipped build still carries them, and an unknown key
+        // must not invalidate the draft.
         motivation: 'travel',
         idealL2Self: null,
         level: 'elementary',
@@ -149,6 +150,7 @@ describe('forward compatibility', () => {
     expect(loaded).not.toBeNull();
     expect(loaded?.targetLanguage).toBe('es');
     expect(loaded?.adultMode).toBeUndefined();
+    expect(loaded?.trial).toBeUndefined();
   });
 });
 

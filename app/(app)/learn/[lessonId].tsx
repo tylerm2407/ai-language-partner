@@ -2,7 +2,7 @@ import { ActivityIndicator, KeyboardAvoidingView, Platform, View } from 'react-n
 import * as Sentry from '@sentry/react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { fetchLessonWithExercises } from '../../../lib/supabase-queries';
 import { cachedFetch, readCacheKey } from '../../../lib/read-cache';
 import { orderExercisesForCognitiveLoad, lessonIsAlreadyOrdered } from '../../../lib/lesson-ordering';
@@ -13,7 +13,6 @@ import { useDailyStats } from '../../../hooks/useDailyStats';
 import { useHearts } from '../../../hooks/useHearts';
 import { useLevel } from '../../../hooks/useLevel';
 import { useLessonProgress } from '../../../hooks/useLessonProgress';
-import { useLessonProgressStore } from '../../../stores/useLessonProgressStore';
 import { useOnboardingChecklist } from '../../../hooks/useOnboardingChecklist';
 import { LessonRunner, type LessonResult } from '../../../components/lesson/LessonRunner';
 import { LevelUpModal } from '../../../components/gamification/LevelUpModal';
@@ -78,16 +77,12 @@ export default function LessonScreen() {
 
   // Also wait for the profile: grading needs the real target language, so
   // never fall back to a default while it loads.
-  /**
-   * Set when the run that just finished was the learner's FIRST completed
-   * lesson. The paywall fires off this, on celebration dismissal, rather than
-   * off a navigation param — a param survives a re-run of the same lesson and
-   * would show the paywall again to someone who has already seen it.
-   *
-   * A ref, not state: it is read once inside the exit handler and must not
-   * re-render the runner mid-celebration.
-   */
-  const earnedPaywallRef = useRef(false);
+  //
+  // The paywall used to fire from here, on the first completed lesson. It
+  // does not any more: the first lesson happens before the account exists
+  // (app/(public)/onboarding.tsx) and the ask lands right after sign-up and
+  // the free avatar. Finishing a lesson in the app is now just finishing a
+  // lesson — no sales pitch attached to the celebration.
 
   if (loading || !targetLanguage) {
     return (
@@ -160,12 +155,6 @@ export default function LessonScreen() {
             result.timeSpentMs,
           );
           setSaveState(persisted ? 'saved' : 'queued');
-
-          // The shared store is authoritative and already holds this lesson
-          // optimistically, so size === 1 means nothing else has ever been
-          // finished. Read after the await so the just-finished lesson counts.
-          const completedCount = useLessonProgressStore.getState().completions.size;
-          earnedPaywallRef.current = completedCount === 1 && !!profile?.onboardingCompleted;
         } catch (err) {
           console.error('[lesson] markLessonComplete failed:', err);
           setSaveState('failed');
@@ -202,14 +191,9 @@ export default function LessonScreen() {
   /**
    * Leaving the lesson — by finishing it or by quitting.
    *
-   * `LessonRunner` uses one callback for both, so the paywall is gated on the
-   * completion flag rather than on being called: quitting part-way must never
-   * produce a sales pitch. Replace-then-push mirrors the onboarding hand-off,
-   * so Home sits beneath the paywall and dismissing it lands there.
-   *
-   * Deliberately not sequenced against PrePermissionSheet, which also wants
-   * this beat — two modals stacked on one moment is worse than either alone.
-   * The push prompt already waits for a later session (app/(app)/index.tsx).
+   * `LessonRunner` uses one callback for both finishing and quitting, so this
+   * has to be safe for a lesson abandoned halfway through as well as one that
+   * was completed.
    */
   const handleExit = () => {
     // Tear down anything presented OVER this screen before navigating.
@@ -224,24 +208,9 @@ export default function LessonScreen() {
     setAchievementQueue([]);
     dismissLevelUp();
 
-    if (earnedPaywallRef.current) {
-      earnedPaywallRef.current = false;
-      router.replace('/(app)');
-      // The hard-paywall gate in app/(app)/_layout.tsx now redirects any
-      // unsubscribed learner to /plans by itself, and <Redirect> replaces
-      // rather than pushes. Pushing here as well would stack a SECOND plans
-      // screen whose back gesture lands on the first — so push only for a
-      // learner the gate will wave through (an existing subscriber, who sees
-      // this screen as their current plan rather than as a wall).
-      const gated = (useAppStore.getState().subscription?.tier ?? 'starter') === 'starter';
-      if (!gated) router.push('/plans' as never);
-      return;
-    }
-
-    // router.back() is a silent no-op with nothing beneath. Onboarding pushes
-    // Home before the first lesson precisely to avoid that, but a deep link, a
-    // notification tap or a cold start straight into a lesson has no such
-    // parent — and then Continue does nothing at all.
+    // router.back() is a silent no-op with nothing beneath. A deep link, a
+    // notification tap or a cold start straight into a lesson has no parent
+    // screen — and then Continue does nothing at all.
     if (router.canGoBack()) {
       router.back();
     } else {

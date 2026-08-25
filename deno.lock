@@ -70,6 +70,7 @@
         "npm:eslint-config-expo@10.0",
         "npm:eslint@^9.39.4",
         "npm:event-target-shim@^6.0.2",
+        "npm:expo-apple-authentication@~8.0.8",
         "npm:expo-asset@~12.0.12",
         "npm:expo-av@~16.0.8",
         "npm:expo-blur@~15.0.8",

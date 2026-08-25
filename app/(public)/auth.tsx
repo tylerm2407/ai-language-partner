@@ -18,7 +18,6 @@ import { Avatar } from '../../components/avatar/Avatar';
 import { RotatingGreeting } from '../../components/auth/RotatingGreeting';
 import { AmbientGreetings } from '../../components/auth/AmbientGreetings';
 import { PasswordField } from '../../components/auth/PasswordField';
-import { LEVEL_LABELS } from '../../components/onboarding/PlacementTest';
 import { loadPendingOnboarding, type PendingOnboarding } from '../../lib/pending-onboarding';
 import { authErrorCopy } from '../../lib/auth-errors';
 import {
@@ -303,7 +302,11 @@ export default function AuthScreen() {
                       {pendingLanguage}
                     </Text>
                   ) : null}
-                  {pending?.placement ? (
+                  {/* The lesson they already finished, named in numbers. This
+                      card is the whole argument for the form beneath it: the
+                      account saves something that exists, rather than
+                      unlocking something that might. */}
+                  {pending?.trial ? (
                     <Text
                       style={{
                         fontFamily: typography.family.mono,
@@ -313,7 +316,7 @@ export default function AuthScreen() {
                         marginTop: spacing.xs,
                       }}
                     >
-                      {`${LEVEL_LABELS[pending.placement.suggestedLevel].toUpperCase()} · ${pending.placement.correctCount}/${pending.placement.totalCount} ON YOUR PLACEMENT`}
+                      {`${pending.trial.xpEarned} XP · ${pending.trial.correctCount}/${pending.trial.totalCount} IN LESSON 1`}
                     </Text>
                   ) : null}
                 </View>

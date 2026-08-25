@@ -282,6 +282,20 @@ interface TTSRequest {
   /** Learner's preferred tutor voice gender. Honoured per provider where a
    *  matching voice exists; otherwise the language's default voices are used. */
   voiceGender?: VoiceGender;
+  /**
+   * What the audio is for, which decides WHICH quota pays for it.
+   *
+   * 'lesson' — a listening/dictation exercise inside a lesson. Metered on
+   *   `lesson_tts_plays` (migration 077), which the free tier has a small
+   *   allowance of so its lessons are not silently broken.
+   * 'voice' (default) — chat playback, voice practice, narration. Metered on
+   *   `voice_minutes`, which the free tier has none of.
+   *
+   * Client-supplied and therefore NOT trusted as a claim about entitlement:
+   * it selects between two counters that are both enforced here, and the
+   * lesson allowance is the smaller one. The worst a caller can do by lying
+   * is spend the wrong small bucket. */
+  purpose?: 'lesson' | 'voice';
 }
 
 /** Storage bucket for content-addressed TTS audio (migration 038). */
@@ -401,8 +415,11 @@ serve(async (req: Request) => {
     }
     const authenticatedUserId = authUser.userId;
 
-    const { text, language, voiceIndex, voiceMode, voiceRotationKey, voiceGender: rawGender } =
+    const { text, language, voiceIndex, voiceMode, voiceRotationKey, voiceGender: rawGender, purpose: rawPurpose } =
       (await req.json()) as TTSRequest;
+    // Anything but the explicit lesson marker meters as voice — the stricter
+    // of the two buckets, so a malformed or missing value cannot widen access.
+    const isLessonAudio = rawPurpose === 'lesson';
     const voiceGender = GENDERS.includes(rawGender as VoiceGender)
       ? (rawGender as VoiceGender)
       : undefined;
@@ -484,24 +501,60 @@ serve(async (req: Request) => {
       );
     }
 
-    // ── Daily voice minute limit ──
+    // ── Daily limit ── which bucket pays depends on what the audio is for.
     const tier = await getUserTier(supabase, authenticatedUserId);
     const limits = getPlanLimits(tier);
 
-    // dailyVoiceMinutes is always a finite number — no unlimited tier exists
-    // (see _shared/plan-limits.ts), so the limit check is unconditional.
-    // User-local day key (migration 044), fetched once and reused for the
-    // usage increment after generation.
-    const userDay = await getUserToday(supabase, authenticatedUserId);
-    const used = await getVoiceMinutesUsed(supabase, authenticatedUserId, userDay);
-    if (used >= limits.dailyVoiceMinutes) {
-      return new Response(
-        JSON.stringify({
-          error: "You've reached your daily voice limit. Upgrade your plan for more.",
-          code: 'DAILY_VOICE_LIMIT_REACHED',
-        }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (isLessonAudio) {
+      // Lesson audio draws on `lesson_tts_plays`, not voice minutes, so the
+      // free tier can hear its listening exercises without being handed chat
+      // or voice-practice minutes it has not paid for.
+      //
+      // consume_daily_quota is a single atomic check-and-increment, unlike the
+      // read-then-write below: the counter moves HERE, before generation, so
+      // concurrent taps cannot all pass the check. That means a provider
+      // failure costs the learner one play from their allowance — acceptable
+      // for a 5/day bucket, and the alternative (checking now, incrementing
+      // after) is the race this RPC exists to close.
+      const { data: quotaOk, error: quotaErr } = await supabase.rpc('consume_daily_quota', {
+        p_user_id: authenticatedUserId,
+        p_counter: 'lesson_tts_plays',
+        p_limit: limits.dailyLessonTtsPlays,
+      });
+      if (quotaErr) {
+        // Fail closed. Broken quota accounting must not hand out unmetered
+        // synthesis, which costs real money per call.
+        console.error('[tts] consume_daily_quota failed:', quotaErr.message);
+        return new Response(
+          JSON.stringify({ error: 'Could not verify your daily limit. Try again shortly.' }),
+          { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      if (quotaOk !== true) {
+        return new Response(
+          JSON.stringify({
+            error: "You've used today's lesson audio. It resets tomorrow, or upgrade for more.",
+            code: 'DAILY_LESSON_AUDIO_LIMIT_REACHED',
+          }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    } else {
+      // dailyVoiceMinutes is always a finite number — no unlimited tier exists
+      // (see _shared/plan-limits.ts), so the limit check is unconditional.
+      // User-local day key (migration 044), fetched once and reused for the
+      // usage increment after generation.
+      const userDay = await getUserToday(supabase, authenticatedUserId);
+      const used = await getVoiceMinutesUsed(supabase, authenticatedUserId, userDay);
+      if (used >= limits.dailyVoiceMinutes) {
+        return new Response(
+          JSON.stringify({
+            error: "You've reached your daily voice limit. Upgrade your plan for more.",
+            code: 'DAILY_VOICE_LIMIT_REACHED',
+          }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     let audioBuffer: ArrayBuffer;
@@ -554,13 +607,19 @@ serve(async (req: Request) => {
     // and returned PGRST203 on every single synthesis. Voice minutes went
     // unmetered and the per-plan voice quota was never enforced. Migration
     // 076 collapsed the function to one signature, which takes no date.
-    await supabase.rpc('increment_daily_usage', {
-      p_user_id: authenticatedUserId,
-      p_text_messages: 0,
-      p_voice_minutes: 1,
-    }).then(({ error }) => {
-      if (error) console.error('[tts] Failed to increment voice_minutes:', error.message);
-    });
+    // Lesson audio already paid for itself above, atomically, in
+    // `lesson_tts_plays`. Incrementing voice_minutes here as well would bill
+    // one synthesis to two buckets and quietly drain a paid learner's voice
+    // allowance every time they replayed an exercise.
+    if (!isLessonAudio) {
+      await supabase.rpc('increment_daily_usage', {
+        p_user_id: authenticatedUserId,
+        p_text_messages: 0,
+        p_voice_minutes: 1,
+      }).then(({ error }) => {
+        if (error) console.error('[tts] Failed to increment voice_minutes:', error.message);
+      });
+    }
 
     return new Response(JSON.stringify({ audioBase64: base64 }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

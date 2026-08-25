@@ -3,7 +3,7 @@ import { ActivityIndicator, Text, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../../../../hooks/useAuth';
-import { useAppStore } from '../../../../stores/useAppStore';
+import { useAppStore, effectiveTier } from '../../../../stores/useAppStore';
 import { GradientBackground } from '../../../../components/ui/GradientBackground';
 import {
   fetchWritingPromptById,
@@ -23,7 +23,7 @@ export default function WritingPromptScreen() {
   const { promptId } = useLocalSearchParams<{ promptId: string }>();
   const router = useRouter();
   const { user } = useAuth();
-  const { profile } = useAppStore();
+  const { profile, subscription, entitledTier } = useAppStore();
   const [prompt, setPrompt] = useState<WritingPrompt | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isGrading, setIsGrading] = useState(false);
@@ -117,7 +117,18 @@ export default function WritingPromptScreen() {
       const msg = e instanceof Error ? e.message : 'Failed to grade writing';
       // Surface plan limits clearly instead of a raw "429: …[CODE]" string.
       if (msg.includes('DAILY_WRITING_LIMIT_REACHED')) {
-        setError("You've used all your writing grades for today. Upgrade your plan in Profile → Subscription for more.");
+        // The free tier's writing-grade quota is 0, so the server refuses with
+        // the same code it uses for a subscriber who has spent today's
+        // allowance. They are not the same situation and must not read the
+        // same: telling someone they have "used all" of an allowance they were
+        // never given is simply untrue. The writing itself is already saved
+        // either way — free writing practice works, only the AI grade doesn't.
+        const free = effectiveTier(subscription, entitledTier) === 'starter';
+        setError(
+          free
+            ? 'Your writing is saved. AI grading is part of a paid plan — see Profile → Subscription.'
+            : "You've used all your writing grades for today. Upgrade your plan in Profile → Subscription for more.",
+        );
       } else if (msg.includes('RATE_LIMITED')) {
         setError("You're submitting too quickly. Please wait a moment and try again.");
       } else {

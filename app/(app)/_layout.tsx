@@ -1,66 +1,38 @@
-import { Tabs, Redirect, useSegments } from 'expo-router';
+import { Tabs } from 'expo-router';
 import { ErrorBoundary } from '../../components/ui/ErrorBoundary';
 import { OfflineBanner } from '../../components/ui/OfflineBanner';
 import { View } from 'react-native';
 import { FloatingTabBar } from '../../components/navigation/FloatingTabBar';
 import { useOfflineQueueFlush } from '../../hooks/useOfflineQueueFlush';
 import { useLessonSessionSweep } from '../../hooks/useLessonSessionSweep';
-import { useAppStore, effectiveTier } from '../../stores/useAppStore';
-import { SCHOOL_ENABLED } from '../../config/app';
 
 export default function AppLayout() {
   // Replay queued offline writes on mount / reconnect / foreground.
   useOfflineQueueFlush();
   useLessonSessionSweep();
 
-  const subscription = useAppStore((s) => s.subscription);
-  const entitledTier = useAppStore((s) => s.entitledTier);
-  const loading = useAppStore((s) => s.loading);
-  const roles = useAppStore((s) => s.roles);
-  const hasCompletedLesson = useAppStore((s) => s.hasCompletedLesson);
-  const segments = useSegments();
 
-  // ─── Hard paywall gate (design 7c) ────────────────────────────────────
-  // The paywall is a gate, not a suggestion: an unsubscribed learner cannot
-  // reach the tabs at all. Enforcing it here rather than with a push from the
-  // lesson screen is what closes the deep-link and back-gesture holes — every
-  // route in this group mounts under this layout.
+  // ─── The paywall is no longer a gate ─────────────────────────────────
+  // A free tier exists again (lib/plans.ts `starter`), so an unsubscribed
+  // learner is a legitimate, supported user of this app rather than someone
+  // who has not paid yet. The redirect that used to live here — every route
+  // in the group bouncing to /plans once the first lesson landed — would now
+  // lock those learners out of the product they are entitled to.
   //
-  // Four deliberate exemptions:
-  //   1. `plans` itself, or the redirect would loop forever.
-  //   2. While user data is still loading, `subscription` is null and would
-  //      read as unsubscribed. Holding is correct; flashing the paywall at a
-  //      paying subscriber on every cold start is not.
-  //   3. School students, once SCHOOL_ENABLED — they are covered by an org
-  //      contract and never buy a personal subscription. Inert today
-  //      (the flag is false), but the server half already behaves this way:
-  //      get_effective_limits merges contract_config with GREATEST().
-  //   4. Learners who have not yet finished their first lesson. The approved
-  //      funnel is onboarding -> Home -> first lesson -> paywall (commit
-  //      14a8ccb moved the ask off the empty account and onto the learner's
-  //      first real result). Gating the whole group on `tier` alone would
-  //      redirect them off Home before that lesson ever happened and delete
-  //      the reciprocity the design depends on. The gate closes the instant
-  //      the completion lands (stores/useLessonProgressStore.markComplete),
-  //      so it is free exactly once.
+  // What replaced it:
+  //   • the paywall is SHOWN once, right after sign-up and the free avatar
+  //     (app/(app)/avatar-setup.tsx replaces into it), with a visible way out;
+  //   • the free tier's AI quotas are all 0 server-side (_shared/plan-limits.ts),
+  //     so nothing behind this layout can spend money on a free account;
+  //   • paid surfaces upsell in place when tapped, at the moment of want.
   //
-  // The review-safety escape lives inside plans.tsx (`blocked`): if IAP is
-  // unavailable or the offering is empty, that screen lets the learner past
-  // rather than trapping them — a paywall with nothing to buy and no way out
-  // is a 3.1.1 rejection.
+  // The server-side zeros are the part that actually holds. Deleting a client
+  // redirect cannot grant quota, which is exactly why the gate could be a
+  // product decision rather than a security one.
   //
-  // The tier is the MAX of the server row and the device's live RevenueCat
-  // entitlement (stores/useAppStore.ts `effectiveTier`). Reading the row alone
-  // meant a learner who had just paid was redirected straight back here,
-  // because the row is written by a webhook that had not landed yet — and if
-  // RevenueCat exhausted its five retries, never would.
-  const tier = effectiveTier(subscription, entitledTier);
-  const onPlans = segments[1] === 'plans';
-  const schoolExempt = SCHOOL_ENABLED && (roles.includes('student') || roles.includes('teacher'));
-
-  if (!loading && tier === 'starter' && hasCompletedLesson && !onPlans && !schoolExempt) {
-    return <Redirect href="/(app)/plans" />;
-  }
+  // `effectiveTier` and the store's `hasCompletedLesson` are still read
+  // elsewhere (the profile subscription screen, the upsell surfaces); nothing
+  // in this file needs them any more.
 
   return (
     <ErrorBoundary>
@@ -96,6 +68,7 @@ export default function AppLayout() {
               title: 'Profile',
             }}
           />
+          <Tabs.Screen name="avatar-setup" options={{ href: null }} />
           <Tabs.Screen name="news" options={{ href: null }} />
           <Tabs.Screen name="practice" options={{ href: null }} />
           <Tabs.Screen name="assignments" options={{ href: null }} />

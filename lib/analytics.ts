@@ -22,6 +22,11 @@ type EventName =
   | 'audio_played'
   | 'recording_submitted'
   | 'paywall_viewed'
+  // Declining the paywall for the free plan. Paired with `paywall_viewed` this
+  // is the free-vs-paid split for the setup funnel — without it a decline is
+  // indistinguishable from an abandon.
+  | 'paywall_declined'
+  | 'free_avatar_generated'
   | 'purchase_completed'
   | 'purchase_restored'
   | 'plan_term_toggled'

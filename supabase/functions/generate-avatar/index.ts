@@ -9,8 +9,11 @@
 // storage, not written to any table, and never logged. Only the generated
 // image survives the request. Account deletion purges that via delete-account.
 //
-// Paid tiers only, and that check happens HERE rather than in the client
-// (CLAUDE.md §1.2) — the function is directly invokable by any signed-in user.
+// Paid tiers, plus ONE lifetime free generation per account — and that check
+// happens HERE rather than in the client (CLAUDE.md §1.2), because the
+// function is directly invokable by any signed-in user. The free grant is a
+// row-level flag spent atomically by consume_free_avatar (migration 077); a
+// client cannot see it, set it, or ask twice.
 //
 // Secrets: OPENAI_KEY (required, shared with transcribe / score-pronunciation),
 //          AVATAR_IMAGE_MODEL (optional).
@@ -35,7 +38,7 @@ const IMAGE_MODEL = Deno.env.get('AVATAR_IMAGE_MODEL') ?? 'gpt-image-2';
 
 const BUCKET = 'avatars';
 
-/** Tiers allowed to generate. `starter` is free and excluded. */
+/** Tiers with an ongoing daily allowance. `starter` gets one free, once. */
 const PAID_TIERS: PlanTier[] = ['basic', 'premium', 'vip'];
 
 /**
@@ -121,17 +124,12 @@ serve(async (req: Request) => {
     .maybeSingle();
 
   const tier: PlanTier = (sub?.is_active && sub.tier ? sub.tier : 'starter') as PlanTier;
-  if (!PAID_TIERS.includes(tier)) {
-    return json(
-      {
-        error: 'Photo avatars are available on paid plans.',
-        code: 'AVATAR_REQUIRES_PLAN',
-      },
-      403
-    );
-  }
+  const isPaid = PAID_TIERS.includes(tier);
 
-  // ── Abuse and cost controls ─────────────────────────────────────────────
+  // ── Abuse control ───────────────────────────────────────────────────────
+  // Ahead of the entitlement branch on purpose: an unentitled caller hammering
+  // this endpoint still costs database work, and the free-grant path below
+  // leans on this bound to keep its check-then-generate window narrow.
   const withinBurst = await checkBurstLimit(supabase, userId, 'generate-avatar', 3, 300);
   if (!withinBurst) {
     return json(
@@ -140,26 +138,67 @@ serve(async (req: Request) => {
     );
   }
 
-  const dailyLimit = getPlanLimits(tier).dailyAvatarGenerations;
-  const { data: quotaOk, error: quotaErr } = await supabase.rpc('consume_daily_quota', {
-    p_user_id: userId,
-    p_counter: 'avatars_generated',
-    p_limit: dailyLimit,
-  });
-  if (quotaErr) {
-    // Fail closed — broken quota accounting must not hand out unmetered
-    // image generations, which cost real money per call.
-    console.error('[generate-avatar] consume_daily_quota failed:', quotaErr.message);
-    return json({ error: 'Could not verify your daily limit. Try again shortly.' }, 503);
-  }
-  if (quotaOk !== true) {
-    return json(
-      {
-        error: `You've used all ${dailyLimit} avatar generations for today.`,
-        code: 'DAILY_AVATAR_LIMIT_REACHED',
-      },
-      429
-    );
+  /**
+   * Set when this request is running on the account's one lifetime free
+   * generation, so the success path knows to spend it.
+   *
+   * The flag is claimed AFTER the image comes back, not here. Claiming it up
+   * front would burn a learner's single free avatar on our 502, on a provider
+   * timeout, or on a photo the moderator rejected — the three failures most
+   * likely to make someone try again. The cost of waiting is a window in which
+   * a caller could get two images before the flag lands; the burst limit above
+   * bounds that at three requests per five minutes, which is a far better
+   * trade than charging people for our own outages.
+   */
+  const usingFreeGrant = !isPaid;
+
+  if (isPaid) {
+    const dailyLimit = getPlanLimits(tier).dailyAvatarGenerations;
+    const { data: quotaOk, error: quotaErr } = await supabase.rpc('consume_daily_quota', {
+      p_user_id: userId,
+      p_counter: 'avatars_generated',
+      p_limit: dailyLimit,
+    });
+    if (quotaErr) {
+      // Fail closed — broken quota accounting must not hand out unmetered
+      // image generations, which cost real money per call.
+      console.error('[generate-avatar] consume_daily_quota failed:', quotaErr.message);
+      return json({ error: 'Could not verify your daily limit. Try again shortly.' }, 503);
+    }
+    if (quotaOk !== true) {
+      return json(
+        {
+          error: `You've used all ${dailyLimit} avatar generations for today.`,
+          code: 'DAILY_AVATAR_LIMIT_REACHED',
+        },
+        429
+      );
+    }
+  } else {
+    // Free tier: allowed exactly once, ever. Read the flag without spending it
+    // so a failed generation stays retryable, and refuse early when it is
+    // already gone — that is the whole point of checking before we pay a
+    // provider for an image this caller is not entitled to.
+    const { data: profile, error: profileErr } = await supabase
+      .from('user_profiles')
+      .select('free_avatar_used_at')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (profileErr) {
+      // Fail closed for the same reason as the quota branch above.
+      console.error('[generate-avatar] free-grant lookup failed:', profileErr.message);
+      return json({ error: 'Could not verify your plan. Try again shortly.' }, 503);
+    }
+    if (!profile || profile.free_avatar_used_at !== null) {
+      return json(
+        {
+          error: "You've used your free avatar. More are included with a paid plan.",
+          code: 'AVATAR_REQUIRES_PLAN',
+        },
+        403
+      );
+    }
   }
 
   // ── Generate ────────────────────────────────────────────────────────────
@@ -253,6 +292,28 @@ serve(async (req: Request) => {
     return json({ error: 'Could not save your new avatar. Please try again.' }, 500);
   }
 
+  // ── Spend the free grant ────────────────────────────────────────────────
+  // Only now, with an image generated, stored, and attached to the profile.
+  // The RPC is atomic and one-shot (migration 077), so this is what makes the
+  // second free request fail the check above.
+  //
+  // A failure here is logged, not surfaced: the learner has their avatar and
+  // must not be told otherwise. What it costs is one un-spent grant, bounded
+  // by the burst limit — the same trade as claiming it late in the first place.
+  if (usingFreeGrant) {
+    const { data: claimed, error: claimErr } = await supabase.rpc('consume_free_avatar', {
+      p_user_id: userId,
+    });
+    if (claimErr) {
+      console.error('[generate-avatar] consume_free_avatar failed:', claimErr.message);
+    } else if (claimed !== true) {
+      // Lost a race with a concurrent request inside the burst window. Both
+      // callers got an image; only one grant existed. Worth knowing about if
+      // it stops being rare.
+      console.warn('[generate-avatar] free grant already spent for', userId);
+    }
+  }
+
   // Prune superseded generations. Best-effort: a failure here costs storage,
   // not correctness, so it must not fail the request.
   try {
@@ -271,7 +332,7 @@ serve(async (req: Request) => {
     resourceType: 'avatar',
     resourceId: path,
     // Deliberately records the style and model, never the source photo.
-    metadata: { styleKey, model: IMAGE_MODEL, tier },
+    metadata: { styleKey, model: IMAGE_MODEL, tier, freeGrant: usingFreeGrant },
     ipAddress: getClientIp(req),
   });
 

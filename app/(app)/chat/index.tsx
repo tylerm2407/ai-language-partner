@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Audio } from 'expo-av';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../../../hooks/useAuth';
-import { useAppStore } from '../../../stores/useAppStore';
+import { useAppStore, effectiveTier } from '../../../stores/useAppStore';
 import { useOnboardingChecklist } from '../../../hooks/useOnboardingChecklist';
 import { sendChatMessage, getTextToSpeech, VoiceError } from '../../../lib/ai';
 import { ChatBubble } from '../../../components/chat/ChatBubble';
@@ -98,7 +98,7 @@ export default function ChatScreen() {
 
 function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
   const { user } = useAuth();
-  const { profile } = useAppStore();
+  const { profile, subscription, entitledTier, roles } = useAppStore();
   const { markItem: markOnboardingItem } = useOnboardingChecklist();
   const { ensureConsent, consentSheet } = useAiConsent(user?.id);
   const router = useRouter();
@@ -514,6 +514,10 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
       // Daily limit reached → convert into an upgrade prompt at the moment of
       // highest intent, instead of showing a confusing error bubble.
       if (detail.includes('DAILY_TEXT_LIMIT_REACHED')) {
+        // A subscriber who has spent today's allowance. A free-tier learner
+        // never gets here — the picker above turns them back before a scenario
+        // is even chosen, because "you've used all your messages" would be
+        // false for someone who was never given any.
         Alert.alert(
           'Daily limit reached',
           "You've used all your messages for today. Upgrade your plan for more daily conversations.",
@@ -587,6 +591,59 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
         <View className="flex-1 items-center justify-center">
           <Text className="text-text-secondary">Loading assignment...</Text>
         </View>
+      </GradientBackground>
+    );
+  }
+
+  // ─── Free tier: the tutor is the paid part ───────────────────────────
+  // The free plan's `dailyTextMessages` and `dailyVoiceMinutes` are both 0
+  // (lib/plans.ts), so the server would refuse the very first message. Saying
+  // so HERE, before a scenario is chosen, is the honest version: letting a
+  // learner pick a scenario, type a sentence and then be told "you've used all
+  // your messages for today" is a lie — they have used none, and never had any.
+  //
+  // This is an upsell, not a gate. The tier read is for copy; the enforcement
+  // is the server's zeros, which hold whether or not this screen renders.
+  // Classroom students skip it: their allowance comes from the org contract,
+  // not from a personal subscription.
+  const tier = effectiveTier(subscription, entitledTier);
+  const schoolExempt = SCHOOL_ENABLED && (roles.includes('student') || roles.includes('teacher'));
+  if (tier === 'starter' && !schoolExempt && !assignmentMode) {
+    return (
+      <GradientBackground>
+        <SafeAreaView className="flex-1" edges={['top']}>
+          <View className="flex-1 px-6 justify-center">
+            <View className="w-14 h-14 rounded-full bg-primary/15 items-center justify-center mb-5">
+              <Ionicons name="chatbubbles-outline" size={28} color={colors.premium.base} />
+            </View>
+            <Text className="text-[28px] font-bold text-text-primary mb-2" accessibilityRole="header">
+              The AI tutor is part of a plan
+            </Text>
+            <Text className="text-base text-text-secondary mb-6">
+              Conversations and voice practice are the parts of Fluenci that cost real money to
+              run, so they sit behind a subscription. Everything else — lessons, reviews, reading
+              and the daily news — stays free.
+            </Text>
+            <Pressable
+              className="bg-primary rounded-[14px] py-4 items-center"
+              onPress={() => router.push('/(app)/plans')}
+              accessibilityRole="button"
+              accessibilityLabel="See plans"
+              style={{ minHeight: 44, justifyContent: 'center' }}
+            >
+              <Text className="text-base font-semibold text-white">See plans</Text>
+            </Pressable>
+            <Pressable
+              className="py-3 items-center mt-1"
+              onPress={() => router.push('/(app)/learn')}
+              accessibilityRole="button"
+              accessibilityLabel="Go to lessons instead"
+              style={{ minHeight: 44, justifyContent: 'center' }}
+            >
+              <Text className="text-sm text-text-secondary">Keep learning for free</Text>
+            </Pressable>
+          </View>
+        </SafeAreaView>
       </GradientBackground>
     );
   }

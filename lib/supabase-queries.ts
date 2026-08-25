@@ -970,7 +970,6 @@ function mapProfile(row: Record<string, unknown>): UserProfile {
 
 const DEFAULT_ONBOARDING_CHECKLIST: OnboardingChecklist = {
   chooseLanguage: false,
-  placementTest: false,
   firstLesson: false,
   aiConversation: false,
   dailyReminder: false,
@@ -984,7 +983,6 @@ function parseOnboardingChecklist(raw: unknown): OnboardingChecklist {
   const obj = raw as Record<string, unknown>;
   return {
     chooseLanguage: (obj.chooseLanguage as boolean) ?? false,
-    placementTest: (obj.placementTest as boolean) ?? false,
     firstLesson: (obj.firstLesson as boolean) ?? false,
     aiConversation: (obj.aiConversation as boolean) ?? false,
     dailyReminder: (obj.dailyReminder as boolean) ?? false,

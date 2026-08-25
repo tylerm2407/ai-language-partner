@@ -1,12 +1,14 @@
 /**
- * Render tests for the hard paywall's review-safety escape.
+ * Render tests for the paywall's two ways out.
  *
- * The 7c paywall is a gate with no skip button, which makes one failure mode
- * fatal: if the store has nothing to sell — no IAP on the build, the offerings
- * call failed, or the offering came back empty — the learner is standing in
- * front of a wall with no door. That is an App Review 3.1.1 rejection and a
- * dead app for anyone who hits it in the wild, so `blocked` is load-bearing
- * and deserves a test that does not depend on the device.
+ * 1. The deliberate one. A free tier exists, so declining is a supported
+ *    choice and "Continue on the free plan" must be on screen from the first
+ *    frame — no timer, no fade-in. That is both the product decision and the
+ *    App Review 3.1.1 safe shape, and it is easy to lose in a redesign.
+ *
+ * 2. The failure one. If the store has nothing to sell — no IAP on the build,
+ *    the offerings call failed, or the offering came back empty — the learner
+ *    must still get through. `blocked` is what does that.
  *
  * eas.json still carries placeholder RevenueCat keys (LAUNCH-READINESS-AUDIT
  * P0), so "no IAP on this build" is the state that ships today.
@@ -98,6 +100,54 @@ function byLabel(renderer: TestRenderer.ReactTestRenderer, label: string) {
 beforeEach(() => {
   jest.clearAllMocks();
   mockCanGoBack.mockReturnValue(false);
+});
+
+describe('free-plan exit', () => {
+  /** One monthly rung, enough for the screen to render its selling state. */
+  const pkg = {
+    identifier: 'premium_annual',
+    product: { price: 99.99, priceString: '$99.99', title: 'Premium' },
+  };
+
+  it('offers the free plan immediately, with no delay to unlock it', async () => {
+    mockIsPurchasesAvailable.mockReturnValue(true);
+    mockGetOfferingPackages.mockResolvedValue([pkg]);
+
+    const renderer = await render();
+
+    // Present on the very first render, not after a timer: a skip that appears
+    // only after N seconds is the pattern App Review rejects, and the free tier
+    // is a real product rather than a grudging concession.
+    expect(byLabel(renderer, 'Continue on the free plan')).toBeTruthy();
+  });
+
+  it('leaves for the app when the free plan is chosen', async () => {
+    mockIsPurchasesAvailable.mockReturnValue(true);
+    mockGetOfferingPackages.mockResolvedValue([pkg]);
+
+    const renderer = await render();
+    await TestRenderer.act(async () =>
+      byLabel(renderer, 'Continue on the free plan').props.onPress(),
+    );
+
+    // canGoBack is false here, which is the setup path: avatar-setup REPLACES
+    // into the paywall, so there is nothing beneath it and back() would be a
+    // silent no-op.
+    expect(mockReplace).toHaveBeenCalledWith('/(app)');
+  });
+
+  it('says what the free plan actually costs the learner', async () => {
+    mockIsPurchasesAvailable.mockReturnValue(true);
+    mockGetOfferingPackages.mockResolvedValue([pkg]);
+
+    const renderer = await render();
+
+    // Declining has to be an informed choice, so the trade is stated next to
+    // the link rather than discovered later on a locked screen.
+    const all = texts(renderer);
+    expect(all).toMatch(/Lessons, reviews, reading and the daily news stay free/);
+    expect(all).toMatch(/AI tutor and voice practice don’t/);
+  });
 });
 
 describe('paywall review-safety escape', () => {

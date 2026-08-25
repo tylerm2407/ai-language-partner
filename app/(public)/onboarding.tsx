@@ -18,13 +18,17 @@ import {
   markOnboardingComplete,
   updateOnboardingChecklist,
   updateAvatarConfig,
-  fetchCourses,
-  fetchUnits,
-  fetchLessons,
+  incrementXpIdempotent,
 } from '../../lib/supabase-queries';
 import { useAppStore } from '../../stores/useAppStore';
 import { Button } from '../../components/ui/Button';
-import { PlacementTest, LEVEL_LABELS } from '../../components/onboarding/PlacementTest';
+import { LessonRunner, type LessonResult } from '../../components/lesson/LessonRunner';
+import {
+  trialExercisesFor,
+  hasTrialLesson,
+  TRIAL_LESSON_ID,
+  TRIAL_LESSON_XP,
+} from '../../components/onboarding/trial-lesson';
 import { GradientBackground } from '../../components/ui/GradientBackground';
 import { Avatar } from '../../components/avatar/Avatar';
 import { AvatarCustomizer } from '../../components/avatar/AvatarCustomizer';
@@ -39,7 +43,7 @@ import {
   isFlushable,
   type PendingOnboarding,
   type PendingOnboardingDraft,
-  type PlacementResult,
+  type TrialLessonResult,
 } from '../../lib/pending-onboarding';
 import type {
   LanguageCode,
@@ -109,18 +113,22 @@ type Step =
   | 'language'
   | 'idealSelf'
   | 'level'
-  | 'placement'
-  | 'result'
   | 'identity'
   | 'mode'
-  | 'goal';
+  | 'goal'
+  | 'lesson'
+  | 'save';
 
+/**
+ * Steps that show the progress header. `lesson` runs full-bleed with the
+ * runner's own progress bar — two progress indicators stacked on one screen
+ * measure different things and read as a bug — and `save` is the payoff, not
+ * another form to fill in.
+ */
 const ALL_STEPS: Step[] = [
   'language',
   'idealSelf',
   'level',
-  'placement',
-  'result',
   'identity',
   'mode',
   'goal',
@@ -145,31 +153,16 @@ const DEFAULT_DAILY_GOAL = 10;
  */
 const DEFAULT_ADULT_MODE = false;
 
-/** A band counts as a strength when the learner got most of it right. */
-const STRENGTH_THRESHOLD = 0.5;
-
 /**
- * The first lesson of the learner's course, or null if there isn't one.
- *
- * Composed from the same three queries the Learn screen uses, so it resolves to
- * the lesson the curriculum would have shown anyway. Bounded at three units:
- * if the first units of a published course carry no lessons, that is a content
- * problem and the learner should go to Home rather than wait on a walk.
+ * Hearts shown during the trial. Cosmetic only — `isUnlimitedHearts` is set,
+ * so none is ever spent. The row is drawn because hiding it would make the
+ * real lesson chrome a surprise the first time the learner meets it.
  */
-async function resolveFirstLessonId(targetLanguage: LanguageCode): Promise<string | null> {
-  try {
-    const [course] = await fetchCourses(targetLanguage);
-    if (!course) return null;
-    const units = await fetchUnits(course.id);
-    for (const unit of units.slice(0, 3)) {
-      const lessons = await fetchLessons(unit.id);
-      if (lessons.length > 0) return lessons[0].id;
-    }
-  } catch (err) {
-    console.error('resolveFirstLessonId failed:', err);
-  }
-  return null;
-}
+const TRIAL_MAX_HEARTS = 5;
+
+/** The trial spends no hearts, so losing one can never be reached. */
+const noopLoseHeart = async () => {};
+
 
 export default function OnboardingScreen() {
   // `authLoading` matters: useAuth resolves the session asynchronously, so
@@ -198,7 +191,7 @@ export default function OnboardingScreen() {
   const [targetLanguage, setTargetLanguage] = useState<LanguageCode>(DEFAULT_LANGUAGE);
   const [idealL2Self, setIdealL2Self] = useState<string>('');
   const [level, setLevel] = useState<ProficiencyLevel>(DEFAULT_LEVEL);
-  const [placement, setPlacement] = useState<PlacementResult | null>(null);
+  const [trial, setTrial] = useState<TrialLessonResult | null>(null);
   const [displayName, setDisplayName] = useState<string>('');
   const [avatarConfig, setAvatarConfig] = useState<AvatarConfig>(DEFAULT_AVATAR_CONFIG);
   const [customizerOpen, setCustomizerOpen] = useState(false);
@@ -232,8 +225,11 @@ export default function OnboardingScreen() {
 
       await updateOnboardingChecklist(userId, {
         chooseLanguage: true,
-        placementTest: !!draft.placement,
-        firstLesson: false,
+        // The trial lesson happened before this account existed, so nothing
+        // server-side recorded it. Ticking it here is the honest reading: the
+        // learner HAS finished a lesson, and re-asking them to "complete your
+        // first lesson" would deny work they just did.
+        firstLesson: !!draft.trial,
         aiConversation: false,
         dailyReminder: false,
         collapsed: false,
@@ -242,29 +238,34 @@ export default function OnboardingScreen() {
       });
       await markOnboardingComplete(userId);
 
+      // The XP the learner earned in the pre-auth trial. The sign-up screen
+      // promised it by name, so it has to land — but it must not block the
+      // flush: a failure here costs the learner a number, while a throw would
+      // cost them the whole profile write and strand them back in onboarding.
+      //
+      // Keyed on the trial's completion timestamp, which is stable across
+      // retries of the same draft, so the idempotency guard (migration 046)
+      // makes a re-run of this flush a no-op rather than a second award.
+      if (draft.trial && draft.trial.xpEarned > 0) {
+        await incrementXpIdempotent(
+          draft.trial.xpEarned,
+          `trial-lesson:${draft.trial.completedAt}`,
+        ).catch((err) => console.error('[onboarding] trial XP award failed:', err));
+      }
+
       await clearPendingOnboarding();
       await loadUserData(userId);
 
-      // Land the learner in their first lesson, not on Home. Home is a page of
-      // things to choose between, offered at the exact moment they have just
-      // said they want to start — the setup ends without ever reaching a
-      // teaching moment. Falls back to Home whenever the curriculum cannot be
-      // resolved, so this can never strand anyone on a blank screen.
+      // The teaching moment already happened — the trial lesson runs before
+      // sign-up now, which is what lets the sign-up be sold as saving progress
+      // rather than as a toll gate. What is left after the flush is the one
+      // free photo avatar, and then the paywall.
       //
-      // Home is pushed first and the lesson on top of it, rather than replacing
-      // straight into the lesson: `LessonRunner`'s exit is `router.back()`, and
-      // with nothing beneath it that button would do nothing.
-      // The paywall used to sit here, between Home and the first lesson. It
-      // now fires one beat later — after the lesson and its celebration — so
-      // the ask lands on the learner's first real result instead of on an
-      // account they have not used yet. See app/(app)/learn/[lessonId].tsx.
-      // It stays post-signup either way, which is what the RevenueCat
-      // constraint in app/(app)/plans.tsx actually requires.
-      const lessonId = await resolveFirstLessonId(draft.targetLanguage ?? DEFAULT_LANGUAGE);
+      // Home is replaced in first so the avatar screen has something beneath
+      // it: its skip is `router.back()`, and with an empty stack that button
+      // would do nothing at all.
       router.replace('/(app)');
-      if (lessonId) {
-        router.push({ pathname: '/learn/[lessonId]', params: { lessonId } } as never);
-      }
+      router.push('/avatar-setup' as never);
     },
     [loadUserData, router],
   );
@@ -275,7 +276,7 @@ export default function OnboardingScreen() {
     if (pending.targetLanguage) setTargetLanguage(pending.targetLanguage);
     if (pending.idealL2Self) setIdealL2Self(pending.idealL2Self);
     if (pending.level) setLevel(pending.level);
-    if (pending.placement) setPlacement(pending.placement);
+    if (pending.trial) setTrial(pending.trial);
     if (pending.displayName) setDisplayName(pending.displayName);
     if (pending.avatarConfig) setAvatarConfig(pending.avatarConfig);
     if (pending.dailyGoalMinutes) setDailyGoal(pending.dailyGoalMinutes);
@@ -321,7 +322,7 @@ export default function OnboardingScreen() {
             'Your answers are still here. Please try again.',
           );
           applyPending(pending);
-          setStep('goal');
+          setStep('save');
           setFlushing(false);
           setHydrated(true);
           return;
@@ -342,14 +343,14 @@ export default function OnboardingScreen() {
       targetLanguage,
       idealL2Self: idealL2Self.trim() ? idealL2Self.trim() : null,
       level,
-      placement,
+      trial,
       displayName: displayName.trim() ? displayName.trim() : null,
       avatarConfig,
       dailyGoalMinutes: dailyGoal,
       adultMode,
       completedAt,
     }),
-    [targetLanguage, idealL2Self, level, placement, displayName, avatarConfig, dailyGoal, adultMode, completedAt],
+    [targetLanguage, idealL2Self, level, trial, displayName, avatarConfig, dailyGoal, adultMode, completedAt],
   );
 
   // Mirror every answer to local storage so a backgrounded or killed app
@@ -388,19 +389,35 @@ export default function OnboardingScreen() {
     }
   };
 
+  /**
+   * The trial exercises, resolved once. Recomputing them on every render would
+   * hand LessonRunner a new array identity each time, which re-fires its
+   * prefetch and restore effects mid-lesson.
+   */
+  const trialExercises = useMemo(() => trialExercisesFor(targetLanguage), [targetLanguage]);
+  const trialAvailable = hasTrialLesson(targetLanguage);
+
+  /**
+   * Record the trial result, then move to the sign-up ask. The result rides
+   * into the account on the pending draft: nothing about this run exists
+   * server-side, because there is no account to attach it to yet.
+   *
+   * XP is taken from the runner rather than from TRIAL_LESSON_XP so the number
+   * on the next screen is the one the celebration just showed.
+   */
+  const handleTrialComplete = useCallback(async (result: LessonResult) => {
+    setTrial({
+      xpEarned: result.xpEarned,
+      correctCount: result.correctCount,
+      totalCount: result.totalExercises,
+      completedAt: new Date().toISOString(),
+    });
+  }, []);
+
   const stepIndex = ALL_STEPS.indexOf(step);
   // Goal gradient (DESIGN.md §UX Psychology Principles #2): the learner is
   // credited for the step they're on, so this never reads 0%.
   const progressPct = Math.round(((stepIndex + 1) / ALL_STEPS.length) * 100);
-
-  const strengths = useMemo(
-    () => (placement?.bands ?? []).filter((b) => b.correct / b.total >= STRENGTH_THRESHOLD),
-    [placement],
-  );
-  const focusAreas = useMemo(
-    () => (placement?.bands ?? []).filter((b) => b.correct / b.total < STRENGTH_THRESHOLD),
-    [placement],
-  );
 
   if (!hydrated || flushing) {
     return (
@@ -410,6 +427,49 @@ export default function OnboardingScreen() {
           {flushing && (
             <Text className="text-base text-text-secondary mt-4">Setting up your course…</Text>
           )}
+        </SafeAreaView>
+      </GradientBackground>
+    );
+  }
+
+  /**
+   * The trial lesson runs OUTSIDE the form chrome: full-bleed, with the
+   * runner's own progress bar and no onboarding step header. Two progress
+   * indicators on one screen measure different things and read as a bug.
+   *
+   * `userId` is deliberately empty. Every persistence path in LessonRunner —
+   * the resume snapshot, the SRS warm-up, review-item writes — is guarded on
+   * it, so the run touches neither the network nor storage. Nothing here is
+   * lost by not being saved: the result the learner cares about is the XP and
+   * the score, and those ride into the account on the pending draft.
+   */
+  if (step === 'lesson') {
+    return (
+      <GradientBackground variant="raised">
+        <SafeAreaView className="flex-1">
+          <KeyboardAvoidingView
+            className="flex-1"
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          >
+            <LessonRunner
+              exercises={trialExercises}
+              lessonId={TRIAL_LESSON_ID}
+              lessonTitle={`${languageName} · Lesson 1`}
+              xpReward={TRIAL_LESSON_XP}
+              userId=""
+              targetLanguage={targetLanguage}
+              onComplete={handleTrialComplete}
+              onExit={() => setStep('save')}
+              hearts={TRIAL_MAX_HEARTS}
+              maxHearts={TRIAL_MAX_HEARTS}
+              // Nobody fails their way out of the first lesson they ever see.
+              // A heart-out here ends the flow before the learner has been
+              // asked for anything, which is the one outcome this whole
+              // sequence exists to avoid.
+              isUnlimitedHearts
+              onLoseHeart={noopLoseHeart}
+            />
+          </KeyboardAvoidingView>
         </SafeAreaView>
       </GradientBackground>
     );
@@ -528,7 +588,8 @@ export default function OnboardingScreen() {
               What&apos;s your level?
             </Text>
             <Text className="text-base text-text-secondary mb-6">
-              Not sure? Leave it — the next step measures it for you.
+              Pick whichever is closest. Nothing here is a test, and you can change it any
+              time from your profile.
             </Text>
 
             {LEVELS.map((l) => (
@@ -554,95 +615,9 @@ export default function OnboardingScreen() {
                 <Button label="Back" variant="secondary" onPress={() => setStep('idealSelf')} />
               </View>
               <View className="flex-1">
-                <Button label="Continue" onPress={() => setStep('placement')} />
+                <Button label="Continue" onPress={() => setStep('identity')} />
               </View>
             </View>
-          </>
-        )}
-
-        {step === 'placement' && (
-          <>
-            <Text className="text-[28px] font-bold text-text-primary mb-2" accessibilityRole="header">
-              Quick Placement Test
-            </Text>
-            <Text className="text-base text-text-secondary mb-6">
-              Ten questions. You&apos;ll get your {languageName} level at the end — free, no account
-              needed.
-            </Text>
-            <PlacementTest
-              targetLanguage={targetLanguage}
-              onComplete={(result) => {
-                setPlacement(result);
-                setLevel(result.suggestedLevel);
-                setStep('result');
-              }}
-              onSkip={() => setStep('identity')}
-            />
-          </>
-        )}
-
-        {/*
-          Reciprocity (DESIGN.md §UX Psychology Principles #3): the learner
-          receives a real, useful assessment here — before any account exists.
-          The sign-up later reads as saving something they already own.
-        */}
-        {step === 'result' && placement && (
-          <>
-            <Text className="text-[28px] font-bold text-text-primary mb-2" accessibilityRole="header">
-              Your {languageName} level
-            </Text>
-            <Text className="text-base text-text-secondary mb-6">
-              Based on the {placement.totalCount} questions you just answered.
-            </Text>
-
-            <View className="bg-dark-card rounded-2xl p-5 mb-4 border-2 border-primary items-center">
-              <Text className="text-[32px] font-bold text-primary mb-1">
-                {LEVEL_LABELS[placement.suggestedLevel]}
-              </Text>
-              <Text className="text-base text-text-secondary">
-                {placement.correctCount} of {placement.totalCount} correct
-              </Text>
-            </View>
-
-            {strengths.length > 0 && (
-              <View className="bg-dark-card rounded-2xl p-4 mb-3">
-                <Text className="text-sm font-bold text-success mb-3">WHAT YOU ALREADY HAVE</Text>
-                {strengths.map((band) => (
-                  <View key={band.level} className="flex-row justify-between mb-2">
-                    <Text className="text-base text-text-primary">{LEVEL_LABELS[band.level]}</Text>
-                    <Text className="text-base text-text-secondary">
-                      {band.correct}/{band.total}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            )}
-
-            {focusAreas.length > 0 && (
-              <View className="bg-dark-card rounded-2xl p-4 mb-3">
-                <Text className="text-sm font-bold text-warning mb-3">WHERE WE&apos;LL START</Text>
-                {focusAreas.map((band) => (
-                  <View key={band.level} className="flex-row justify-between mb-2">
-                    <Text className="text-base text-text-primary">{LEVEL_LABELS[band.level]}</Text>
-                    <Text className="text-base text-text-secondary">
-                      {band.correct}/{band.total}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            )}
-
-            <View className="mt-4">
-              <Button label="Continue" onPress={() => setStep('identity')} />
-            </View>
-            <Pressable
-              onPress={() => setStep('placement')}
-              className="py-3 items-center mt-1"
-              accessibilityRole="button"
-              accessibilityLabel="Retake the placement test"
-            >
-              <Text className="text-sm text-text-secondary">Retake the test</Text>
-            </Pressable>
           </>
         )}
 
@@ -689,7 +664,7 @@ export default function OnboardingScreen() {
                 <Button
                   label="Back"
                   variant="secondary"
-                  onPress={() => setStep(placement ? 'result' : 'placement')}
+                  onPress={() => setStep('level')}
                 />
               </View>
               <View className="flex-1">
@@ -794,14 +769,75 @@ export default function OnboardingScreen() {
                 <Button label="Back" variant="secondary" onPress={() => setStep('mode')} />
               </View>
               <View className="flex-1">
+                {/* No bundled trial for this language yet — skip to the ask
+                    rather than teach the wrong one (components/onboarding/
+                    trial-lesson.ts). */}
                 <Button
-                  label={user ? 'Start learning' : 'Save my progress'}
-                  onPress={handleFinish}
-                  loading={saving}
-                  disabled={saving}
+                  label={trialAvailable ? 'Start my first lesson' : 'Continue'}
+                  onPress={() => setStep(trialAvailable ? 'lesson' : 'save')}
                 />
               </View>
             </View>
+          </>
+        )}
+
+        {/*
+          Reciprocity (DESIGN.md §UX Psychology Principles #3) and the IKEA
+          effect (#4): the learner has already been taught something and has
+          already earned XP, before an email was ever asked for. The ask is
+          therefore to keep what they have, not to unlock what they might get.
+          The numbers below are the point of the screen — say them plainly.
+        */}
+        {step === 'save' && (
+          <>
+            <Text className="text-[28px] font-bold text-text-primary mb-2" accessibilityRole="header">
+              {trial ? 'Nice work.' : 'Ready when you are.'}
+            </Text>
+            <Text className="text-base text-text-secondary mb-6">
+              {trial
+                ? `That was your first ${languageName} lesson. Create an account to keep it — otherwise it disappears when you close the app.`
+                : `Create an account to save your ${languageName} setup and pick up where you left off.`}
+            </Text>
+
+            {trial && (
+              <View className="bg-dark-card rounded-2xl p-5 mb-4 border-2 border-primary">
+                <View className="flex-row justify-between items-center mb-3">
+                  <Text className="text-base text-text-secondary">XP earned</Text>
+                  <Text className="text-[28px] font-bold text-primary">+{trial.xpEarned}</Text>
+                </View>
+                <View className="flex-row justify-between items-center">
+                  <Text className="text-base text-text-secondary">Correct</Text>
+                  <Text className="text-lg font-semibold text-text-primary">
+                    {trial.correctCount} of {trial.totalCount}
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            <View className="bg-dark-card rounded-2xl p-4 mb-6">
+              <Text className="text-sm font-bold text-success mb-3">SIGNING UP SAVES</Text>
+              <Text className="text-base text-text-primary mb-1">
+                · Your {trial ? `${trial.xpEarned} XP and this lesson` : 'progress'}
+              </Text>
+              <Text className="text-base text-text-primary mb-1">· Your {languageName} course and level</Text>
+              <Text className="text-base text-text-primary">· Your streak, from today</Text>
+            </View>
+
+            <Button
+              label={user ? 'Start learning' : 'Save my progress'}
+              onPress={handleFinish}
+              loading={saving}
+              disabled={saving}
+            />
+            <Pressable
+              onPress={() => setStep('goal')}
+              className="py-3 items-center mt-1"
+              style={{ minHeight: 44, justifyContent: 'center' }}
+              accessibilityRole="button"
+              accessibilityLabel="Go back and change your setup"
+            >
+              <Text className="text-sm text-text-secondary">Change my setup</Text>
+            </Pressable>
           </>
         )}
       </ScrollView>
