@@ -261,11 +261,19 @@ export default function OnboardingScreen() {
       // rather than as a toll gate. What is left after the flush is the one
       // free photo avatar, and then the paywall.
       //
-      // Home is replaced in first so the avatar screen has something beneath
-      // it: its skip is `router.back()`, and with an empty stack that button
-      // would do nothing at all.
-      router.replace('/(app)');
-      router.push('/avatar-setup' as never);
+      // ONE navigation, not two. This used to be `replace('/(app)')` followed
+      // immediately by `push('/avatar-setup')`, which is two dispatches in the
+      // same tick where the first one remounts the whole (app) layout — the
+      // push could land on a navigator that was still mounting and be dropped,
+      // sending the learner straight to Home and skipping the avatar entirely.
+      //
+      // The two-step existed so the avatar screen had "something beneath it"
+      // for a `router.back()` skip. That reason is stale: avatar-setup's skip
+      // is `router.replace('/(app)/plans')`, not `back()`, so it needs nothing
+      // underneath. The whole chain is replaces — avatar-setup replaces into
+      // plans, plans replaces into Home — which is also what keeps a finished
+      // setup step off the back stack.
+      router.replace('/(app)/avatar-setup');
     },
     [loadUserData, router],
   );
