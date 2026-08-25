@@ -57,9 +57,17 @@ export interface GeneratedAvatar {
 }
 
 /**
- * Styles offered in the picker. Labels only — the image prompts live
- * server-side in `supabase/functions/_shared/avatar-styles.ts` and must never
- * be shipped in the bundle (CLAUDE.md §6).
+ * Fallback styles for the picker, used only when the catalogue cannot be
+ * fetched (offline, or the function is down). Labels only — the image prompts
+ * live server-side in `supabase/functions/_shared/avatar-styles.ts` and must
+ * never be shipped in the bundle (CLAUDE.md §6).
+ *
+ * This list is deliberately NOT the source of truth. It used to be, and that
+ * made every new style a two-place edit where forgetting the second place
+ * failed silently: the server would happily render a style the picker never
+ * offered. `fetchAvatarStyles()` asks the server instead, and
+ * lib/avatar-styles-sync.test.ts asserts every key here still exists there so
+ * the fallback cannot rot into offering a style that no longer renders.
  */
 export const AVATAR_STYLE_OPTIONS: AvatarStyleOption[] = [
   {
@@ -68,6 +76,44 @@ export const AVATAR_STYLE_OPTIONS: AvatarStyleOption[] = [
     description: 'Bold cel-shaded anime with clean linework and saturated colour.',
   },
 ];
+
+/**
+ * The style catalogue, straight from the server.
+ *
+ * Falls back to AVATAR_STYLE_OPTIONS rather than throwing: a learner who is
+ * offline, or hitting a wobbling function, should still see a picker they can
+ * use. Generation itself re-validates the key server-side, so a stale fallback
+ * entry fails loudly at generate time rather than rendering something wrong.
+ */
+export async function fetchAvatarStyles(): Promise<AvatarStyleOption[]> {
+  try {
+    const { data, error } = await supabase.functions.invoke('generate-avatar', {
+      body: { action: 'styles' },
+    });
+    if (error) throw error;
+    const styles = (data as { styles?: unknown })?.styles;
+    if (!Array.isArray(styles) || styles.length === 0) return AVATAR_STYLE_OPTIONS;
+    // Rebuild each entry from the three safe fields rather than passing the
+    // server object through. listAvatarStyles() already strips the prompt, so
+    // this is defence in depth — but it is the difference between a
+    // server-side regression being invisible and it being unable to reach the
+    // UI at all (CLAUDE.md §6: never expose model prompts).
+    const valid = styles
+      .filter(
+        (s): s is AvatarStyleOption =>
+          !!s && typeof s.key === 'string' && typeof s.label === 'string',
+      )
+      .map(({ key, label, description }) => ({
+        key,
+        label,
+        description: typeof description === 'string' ? description : '',
+      }));
+    return valid.length > 0 ? valid : AVATAR_STYLE_OPTIONS;
+  } catch (err) {
+    console.warn('[avatar] style catalogue fetch failed, using fallback:', err);
+    return AVATAR_STYLE_OPTIONS;
+  }
+}
 
 /** A photo chosen by the user, already downscaled and encoded. */
 export interface PreparedPhoto {

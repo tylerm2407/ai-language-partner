@@ -1,4 +1,10 @@
-import { AvatarGenerationError, AVATAR_STYLE_OPTIONS, generateAvatar } from './avatar-generation';
+import {
+  AvatarGenerationError,
+  AVATAR_STYLE_OPTIONS,
+  fetchAvatarStyles,
+  generateAvatar,
+} from './avatar-generation';
+import { AVATAR_STYLES } from '../supabase/functions/_shared/avatar-styles';
 import type { PreparedPhoto } from './avatar-generation';
 
 // Native pickers are irrelevant to these tests — only the invoke path is under
@@ -117,6 +123,59 @@ describe('AVATAR_STYLE_OPTIONS', () => {
   it('carries labels only — image prompts stay server-side (CLAUDE.md §6)', () => {
     for (const option of AVATAR_STYLE_OPTIONS) {
       expect(Object.keys(option).sort()).toEqual(['description', 'key', 'label']);
+    }
+  });
+});
+
+describe('fetchAvatarStyles', () => {
+  it('returns the catalogue the server sends', async () => {
+    const serverStyles = [
+      { key: 'anime_pop', label: 'Anime Pop', description: 'a' },
+      { key: 'watercolour', label: 'Watercolour', description: 'b' },
+    ];
+    mockInvoke.mockResolvedValue({ data: { styles: serverStyles }, error: null });
+
+    await expect(fetchAvatarStyles()).resolves.toEqual(serverStyles);
+    // The picker must ask for the catalogue, not a generation.
+    expect(mockInvoke).toHaveBeenCalledWith('generate-avatar', { body: { action: 'styles' } });
+  });
+
+  it('falls back rather than throwing when the function errors', async () => {
+    // A learner who is offline still gets a usable picker; generation itself
+    // re-validates the key server-side, so a stale key fails loudly there.
+    mockInvoke.mockResolvedValue({ data: null, error: new Error('offline') });
+
+    await expect(fetchAvatarStyles()).resolves.toEqual(AVATAR_STYLE_OPTIONS);
+  });
+
+  it('falls back on an empty or malformed catalogue', async () => {
+    mockInvoke.mockResolvedValue({ data: { styles: [] }, error: null });
+    await expect(fetchAvatarStyles()).resolves.toEqual(AVATAR_STYLE_OPTIONS);
+
+    mockInvoke.mockResolvedValue({ data: { styles: [{ nope: true }] }, error: null });
+    await expect(fetchAvatarStyles()).resolves.toEqual(AVATAR_STYLE_OPTIONS);
+  });
+
+  it('never lets a server prompt reach the client', async () => {
+    // Belt and braces: listAvatarStyles strips prompts, but if that ever
+    // regressed the picker would happily render one into the UI.
+    mockInvoke.mockResolvedValue({
+      data: { styles: [{ key: 'k', label: 'L', description: 'd', prompt: 'SECRET' }] },
+      error: null,
+    });
+    const listed = await fetchAvatarStyles();
+    expect(JSON.stringify(listed)).not.toContain('SECRET');
+  });
+});
+
+describe('offline fallback stays in sync with the server catalogue', () => {
+  it('offers no style the server cannot render', () => {
+    // The fallback is only reached when the catalogue fetch fails, which is
+    // exactly when nobody is watching. A key removed or renamed server-side
+    // would leave it offering a style that fails INVALID_STYLE at generate
+    // time — long after the learner has taken the photo.
+    for (const option of AVATAR_STYLE_OPTIONS) {
+      expect(Object.keys(AVATAR_STYLES)).toContain(option.key);
     }
   });
 });

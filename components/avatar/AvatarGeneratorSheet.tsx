@@ -8,11 +8,13 @@ import {
   AVATAR_STYLE_OPTIONS,
   AvatarGenerationError,
   capturePhoto,
+  fetchAvatarStyles,
   generateAvatar,
   pickFile,
   pickPhoto,
   type PreparedPhoto,
 } from '../../lib/avatar-generation';
+import type { AvatarStyleOption } from '../../types';
 
 interface AvatarGeneratorSheetProps {
   visible: boolean;
@@ -36,6 +38,7 @@ type Step = 'consent' | 'compose' | 'working';
 export const AvatarGeneratorSheet = React.memo(
   ({ visible, onClose, onGenerated, onUpgrade }: AvatarGeneratorSheetProps) => {
     const [step, setStep] = useState<Step>('consent');
+    const [styleOptions, setStyleOptions] = useState<AvatarStyleOption[]>(AVATAR_STYLE_OPTIONS);
     const [styleKey, setStyleKey] = useState(AVATAR_STYLE_OPTIONS[0]?.key ?? '');
     const [photo, setPhoto] = useState<PreparedPhoto | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -54,6 +57,28 @@ export const AvatarGeneratorSheet = React.memo(
         setNeedsUpgrade(false);
         setStyleKey(AVATAR_STYLE_OPTIONS[0]?.key ?? '');
       }
+    }, [visible]);
+
+    // Pull the catalogue while the learner is reading the consent copy, so the
+    // style list is already populated by the time they reach it. Fetched on
+    // open rather than once at mount: a style added server-side then shows up
+    // on the next open instead of requiring an app restart.
+    useEffect(() => {
+      if (!visible) return;
+      let cancelled = false;
+      fetchAvatarStyles().then((list) => {
+        if (cancelled) return;
+        setStyleOptions(list);
+        // Keep the current pick if the server still offers it; otherwise fall
+        // to the first available style rather than leaving a dead key that
+        // would fail INVALID_STYLE at generate time.
+        setStyleKey((current) =>
+          list.some((s) => s.key === current) ? current : (list[0]?.key ?? ''),
+        );
+      });
+      return () => {
+        cancelled = true;
+      };
     }, [visible]);
 
     const choose = useCallback(async (source: 'camera' | 'library' | 'file') => {
@@ -144,8 +169,13 @@ export const AvatarGeneratorSheet = React.memo(
 
           {step === 'compose' && (
             <>
-              <Body style={styles.title}>Choose a style</Body>
-              {AVATAR_STYLE_OPTIONS.map((option) => {
+              {/* With a single style there is no choice to make, so the
+                  heading and the lone card would be furniture. The picker
+                  appears the moment a second style exists server-side. */}
+              <Body style={styles.title}>
+                {styleOptions.length > 1 ? 'Choose a style' : 'Make an avatar from a photo'}
+              </Body>
+              {styleOptions.length > 1 && styleOptions.map((option) => {
                 const selected = option.key === styleKey;
                 return (
                   <Pressable

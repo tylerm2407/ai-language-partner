@@ -26,7 +26,7 @@ import { corsHeaders, corsResponse } from '../_shared/cors.ts';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { checkBurstLimit } from '../_shared/burst-limit.ts';
 import { getPlanLimits, type PlanTier } from '../_shared/plan-limits.ts';
-import { getAvatarStyle } from '../_shared/avatar-styles.ts';
+import { getAvatarStyle, listAvatarStyles } from '../_shared/avatar-styles.ts';
 import { logAudit, getClientIp } from '../_shared/audit.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -69,6 +69,8 @@ function base64ToBytes(b64: string): Uint8Array {
 }
 
 interface GenerateAvatarRequest {
+  /** 'styles' lists the catalogue and returns; absent means "generate". */
+  action?: unknown;
   styleKey?: unknown;
   imageBase64?: unknown;
   mimeType?: unknown;
@@ -94,6 +96,24 @@ serve(async (req: Request) => {
     body = await req.json();
   } catch {
     return json({ error: 'Request body must be JSON.' }, 400);
+  }
+
+  // ── Style catalogue ─────────────────────────────────────────────────────
+  // The picker asks the server what styles exist rather than shipping its own
+  // copy. Adding a style to _shared/avatar-styles.ts then reaches every
+  // installed client without an app release — and, more importantly, without
+  // the client list silently drifting out of date and hiding a style that the
+  // server would happily render.
+  //
+  // Only labels and descriptions cross the wire. The prompts are the product's
+  // art direction and never leave the server (CLAUDE.md §6) — listAvatarStyles
+  // strips them, and avatar-styles.test.ts asserts that it does.
+  //
+  // Behind auth deliberately: this returns nothing sensitive, but an
+  // unauthenticated branch here would be a free, uncounted endpoint on a
+  // function that otherwise costs money to call.
+  if (body.action === 'styles') {
+    return json({ styles: listAvatarStyles() }, 200);
   }
 
   const styleKey = typeof body.styleKey === 'string' ? body.styleKey : '';
