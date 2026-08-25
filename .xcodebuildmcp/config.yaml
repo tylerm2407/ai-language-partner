@@ -1,0 +1,29 @@
+# XcodeBuildMCP — workspace configuration.
+#
+# Why this file exists: without it the server runs its default workflow set,
+# which is simulator-only. That loads the tools that LOOK at a simulator
+# (screenshot, snapshot_ui, record_sim_video) but none of the ones that TOUCH
+# it, so an agent can see the app and not drive it. `ui-automation` is what
+# adds tap / swipe / type_text / hardware buttons.
+#
+# Restart Claude Code after editing — workflows are resolved when the MCP
+# server starts, not per request.
+schemaVersion: 1
+
+enabledWorkflows:
+  - simulator
+  - ui-automation
+
+sessionDefaults:
+  # The workspace, NOT Fluenci.xcodeproj. This is an Expo prebuild with
+  # CocoaPods, so the Pods targets only resolve through the workspace; the two
+  # keys are mutually exclusive, and picking the project here would fail to
+  # link at build time.
+  workspacePath: "./ios/Fluenci.xcworkspace"
+  scheme: "Fluenci"
+
+  # `simulatorName` rather than `simulatorId` on purpose: the schema calls the
+  # name the "machine-portable" selector and re-resolves it to a local UDID on
+  # each machine. A hardcoded UDID would be meaningless on anyone else's Mac —
+  # and this file is committed.
+  simulatorName: "iPhone 17 Pro"
