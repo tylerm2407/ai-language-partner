@@ -1,0 +1,302 @@
+[
+  {
+    "presetId": "s01-anime_pop",
+    "subjectId": "s01",
+    "style": "anime_pop",
+    "file": "s01-anime_pop.png"
+  },
+  {
+    "presetId": "s02-retro_cartoon",
+    "subjectId": "s02",
+    "style": "retro_cartoon",
+    "file": "s02-retro_cartoon.png"
+  },
+  {
+    "presetId": "s03-comic_graphic",
+    "subjectId": "s03",
+    "style": "comic_graphic",
+    "file": "s03-comic_graphic.png"
+  },
+  {
+    "presetId": "s04-cinematic_3d",
+    "subjectId": "s04",
+    "style": "cinematic_3d",
+    "file": "s04-cinematic_3d.png"
+  },
+  {
+    "presetId": "s05-cinematic_realistic",
+    "subjectId": "s05",
+    "style": "cinematic_realistic",
+    "file": "s05-cinematic_realistic.png"
+  },
+  {
+    "presetId": "s06-anime_pop",
+    "subjectId": "s06",
+    "style": "anime_pop",
+    "file": "s06-anime_pop.png"
+  },
+  {
+    "presetId": "s07-retro_cartoon",
+    "subjectId": "s07",
+    "style": "retro_cartoon",
+    "file": "s07-retro_cartoon.png"
+  },
+  {
+    "presetId": "s08-comic_graphic",
+    "subjectId": "s08",
+    "style": "comic_graphic",
+    "file": "s08-comic_graphic.png"
+  },
+  {
+    "presetId": "s09-cinematic_3d",
+    "subjectId": "s09",
+    "style": "cinematic_3d",
+    "file": "s09-cinematic_3d.png"
+  },
+  {
+    "presetId": "s10-cinematic_realistic",
+    "subjectId": "s10",
+    "style": "cinematic_realistic",
+    "file": "s10-cinematic_realistic.png"
+  },
+  {
+    "presetId": "s11-anime_pop",
+    "subjectId": "s11",
+    "style": "anime_pop",
+    "file": "s11-anime_pop.png"
+  },
+  {
+    "presetId": "s12-retro_cartoon",
+    "subjectId": "s12",
+    "style": "retro_cartoon",
+    "file": "s12-retro_cartoon.png"
+  },
+  {
+    "presetId": "s13-comic_graphic",
+    "subjectId": "s13",
+    "style": "comic_graphic",
+    "file": "s13-comic_graphic.png"
+  },
+  {
+    "presetId": "s14-cinematic_3d",
+    "subjectId": "s14",
+    "style": "cinematic_3d",
+    "file": "s14-cinematic_3d.png"
+  },
+  {
+    "presetId": "s15-cinematic_realistic",
+    "subjectId": "s15",
+    "style": "cinematic_realistic",
+    "file": "s15-cinematic_realistic.png"
+  },
+  {
+    "presetId": "s16-anime_pop",
+    "subjectId": "s16",
+    "style": "anime_pop",
+    "file": "s16-anime_pop.png"
+  },
+  {
+    "presetId": "s17-retro_cartoon",
+    "subjectId": "s17",
+    "style": "retro_cartoon",
+    "file": "s17-retro_cartoon.png"
+  },
+  {
+    "presetId": "s18-comic_graphic",
+    "subjectId": "s18",
+    "style": "comic_graphic",
+    "file": "s18-comic_graphic.png"
+  },
+  {
+    "presetId": "s19-cinematic_3d",
+    "subjectId": "s19",
+    "style": "cinematic_3d",
+    "file": "s19-cinematic_3d.png"
+  },
+  {
+    "presetId": "s20-cinematic_realistic",
+    "subjectId": "s20",
+    "style": "cinematic_realistic",
+    "file": "s20-cinematic_realistic.png"
+  },
+  {
+    "presetId": "s21-anime_pop",
+    "subjectId": "s21",
+    "style": "anime_pop",
+    "file": "s21-anime_pop.png"
+  },
+  {
+    "presetId": "s22-retro_cartoon",
+    "subjectId": "s22",
+    "style": "retro_cartoon",
+    "file": "s22-retro_cartoon.png"
+  },
+  {
+    "presetId": "s23-comic_graphic",
+    "subjectId": "s23",
+    "style": "comic_graphic",
+    "file": "s23-comic_graphic.png"
+  },
+  {
+    "presetId": "s24-cinematic_3d",
+    "subjectId": "s24",
+    "style": "cinematic_3d",
+    "file": "s24-cinematic_3d.png"
+  },
+  {
+    "presetId": "s25-cinematic_realistic",
+    "subjectId": "s25",
+    "style": "cinematic_realistic",
+    "file": "s25-cinematic_realistic.png"
+  },
+  {
+    "presetId": "s26-anime_pop",
+    "subjectId": "s26",
+    "style": "anime_pop",
+    "file": "s26-anime_pop.png"
+  },
+  {
+    "presetId": "s27-retro_cartoon",
+    "subjectId": "s27",
+    "style": "retro_cartoon",
+    "file": "s27-retro_cartoon.png"
+  },
+  {
+    "presetId": "s28-comic_graphic",
+    "subjectId": "s28",
+    "style": "comic_graphic",
+    "file": "s28-comic_graphic.png"
+  },
+  {
+    "presetId": "s29-cinematic_3d",
+    "subjectId": "s29",
+    "style": "cinematic_3d",
+    "file": "s29-cinematic_3d.png"
+  },
+  {
+    "presetId": "s30-cinematic_realistic",
+    "subjectId": "s30",
+    "style": "cinematic_realistic",
+    "file": "s30-cinematic_realistic.png"
+  },
+  {
+    "presetId": "s31-anime_pop",
+    "subjectId": "s31",
+    "style": "anime_pop",
+    "file": "s31-anime_pop.png"
+  },
+  {
+    "presetId": "s32-retro_cartoon",
+    "subjectId": "s32",
+    "style": "retro_cartoon",
+    "file": "s32-retro_cartoon.png"
+  },
+  {
+    "presetId": "s33-comic_graphic",
+    "subjectId": "s33",
+    "style": "comic_graphic",
+    "file": "s33-comic_graphic.png"
+  },
+  {
+    "presetId": "s34-cinematic_3d",
+    "subjectId": "s34",
+    "style": "cinematic_3d",
+    "file": "s34-cinematic_3d.png"
+  },
+  {
+    "presetId": "s35-cinematic_realistic",
+    "subjectId": "s35",
+    "style": "cinematic_realistic",
+    "file": "s35-cinematic_realistic.png"
+  },
+  {
+    "presetId": "s36-anime_pop",
+    "subjectId": "s36",
+    "style": "anime_pop",
+    "file": "s36-anime_pop.png"
+  },
+  {
+    "presetId": "s37-retro_cartoon",
+    "subjectId": "s37",
+    "style": "retro_cartoon",
+    "file": "s37-retro_cartoon.png"
+  },
+  {
+    "presetId": "s38-comic_graphic",
+    "subjectId": "s38",
+    "style": "comic_graphic",
+    "file": "s38-comic_graphic.png"
+  },
+  {
+    "presetId": "s39-cinematic_3d",
+    "subjectId": "s39",
+    "style": "cinematic_3d",
+    "file": "s39-cinematic_3d.png"
+  },
+  {
+    "presetId": "s40-cinematic_realistic",
+    "subjectId": "s40",
+    "style": "cinematic_realistic",
+    "file": "s40-cinematic_realistic.png"
+  },
+  {
+    "presetId": "s41-anime_pop",
+    "subjectId": "s41",
+    "style": "anime_pop",
+    "file": "s41-anime_pop.png"
+  },
+  {
+    "presetId": "s42-retro_cartoon",
+    "subjectId": "s42",
+    "style": "retro_cartoon",
+    "file": "s42-retro_cartoon.png"
+  },
+  {
+    "presetId": "s43-comic_graphic",
+    "subjectId": "s43",
+    "style": "comic_graphic",
+    "file": "s43-comic_graphic.png"
+  },
+  {
+    "presetId": "s44-cinematic_3d",
+    "subjectId": "s44",
+    "style": "cinematic_3d",
+    "file": "s44-cinematic_3d.png"
+  },
+  {
+    "presetId": "s45-cinematic_realistic",
+    "subjectId": "s45",
+    "style": "cinematic_realistic",
+    "file": "s45-cinematic_realistic.png"
+  },
+  {
+    "presetId": "s46-anime_pop",
+    "subjectId": "s46",
+    "style": "anime_pop",
+    "file": "s46-anime_pop.png"
+  },
+  {
+    "presetId": "s47-retro_cartoon",
+    "subjectId": "s47",
+    "style": "retro_cartoon",
+    "file": "s47-retro_cartoon.png"
+  },
+  {
+    "presetId": "s48-comic_graphic",
+    "subjectId": "s48",
+    "style": "comic_graphic",
+    "file": "s48-comic_graphic.png"
+  },
+  {
+    "presetId": "s49-cinematic_3d",
+    "subjectId": "s49",
+    "style": "cinematic_3d",
+    "file": "s49-cinematic_3d.png"
+  },
+  {
+    "presetId": "s50-cinematic_realistic",
+    "subjectId": "s50",
+    "style": "cinematic_realistic",
+    "file": "s50-cinematic_realistic.png"
+  }
+]
