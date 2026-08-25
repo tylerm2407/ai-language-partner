@@ -1,19 +1,45 @@
 // ─── Onboarding Checklist ────────────────────────────────────────
 
+/** The four steps that carry persisted state. Order is display order. */
+export type OnboardingStepKey =
+  | 'chooseLanguage'
+  | 'firstLesson'
+  | 'aiConversation'
+  | 'dailyReminder';
+
 export interface OnboardingChecklist {
   chooseLanguage: boolean;
   /**
    * `placementTest` was removed on 2026-08-24 along with the test itself —
    * onboarding now asks the learner for their level directly. This is a jsonb
    * column, so existing rows keep the stale key; `parseOnboardingChecklist`
-   * drops it on read and nothing writes it back.
+   * drops it on read and nothing writes it back. `collapsed` went the same way
+   * on 2026-08-25 when the sheet stopped having a collapsed state.
    */
   firstLesson: boolean;
   aiConversation: boolean;
   dailyReminder: boolean;
-  collapsed: boolean;
+  /**
+   * Steps the learner resolved by opting out rather than by doing them.
+   * A skipped step counts toward resolution but is never rendered as done —
+   * the checklist must not claim work that didn't happen.
+   *
+   * This is what makes the checklist finishable at all for two real
+   * populations: free-tier learners, for whom `aiConversation` is
+   * uncompletable (`_shared/plan-limits.ts` zeroes `dailyTextMessages`), and
+   * anyone who denies the notification permission.
+   */
+  skipped: OnboardingStepKey[];
   dismissed: boolean;
+  /** Stamped once, when every step first became done-or-skipped. */
   completedAt: string | null;
+  /**
+   * Stamped once the completion was acknowledged — confetti shown and the +50
+   * XP awarded, or silently back-filled for a learner who finished the steps
+   * before this field existed. Belt-and-braces alongside `dismissed`: even if
+   * the dismiss write is lost, a celebrated checklist never comes back.
+   */
+  celebratedAt: string | null;
 }
 
 // ─── User & Profile ─────────────────────────────────────────────
@@ -51,11 +77,11 @@ export interface UserProfile {
   // Streak shield
   streakShieldActive: boolean;
   streakShieldUsedAt: string | null;
-  avatarConfig?: AvatarConfig;
   /**
    * Which avatar renderer this account uses (migration 067). Accounts created
-   * before that migration are 'procedural' and keep rendering the SVG built
-   * from `avatarConfig`, so nobody's avatar changed under them.
+   * before that migration still read 'procedural' — the SVG renderer they
+   * named is gone, and those rows render the initials placeholder in
+   * components/avatar/Avatar.tsx until the learner picks a preset.
    */
   avatarKind: AvatarKind;
   /** Bundled illustration key when avatarKind is 'preset'. */
@@ -610,10 +636,32 @@ export interface LessonCompletion {
 
 // ─── Daily News ───────────────────────────────────────────────
 
+/** Render state of an article's narration (migration 079).
+ *
+ *  `null` is not "unknown" — it means the row predates the podcast feature
+ *  and will never be narrated. The column deliberately has no DEFAULT so
+ *  the back catalogue stays out of the render queue. */
+export type NewsAudioStatus = 'pending' | 'generating' | 'ready' | 'failed' | null;
+
+/** A playable narration, as returned by the `news-audio` edge function.
+ *
+ *  `url` is short-lived and signed against a PRIVATE bucket — treat it as a
+ *  ticket, not an address. Do not persist it, and refetch rather than
+ *  caching it past `expiresInSeconds`. */
+export interface NewsAudio {
+  status: 'ready';
+  url: string;
+  durationMs: number | null;
+  expiresInSeconds: number;
+}
+
 export interface DailyNewsArticle {
   id: string;
   date: string;
   language: string;
+  /** 'easy' (A1–B1) or 'hard' (B2–C1). The column has existed since
+   *  migration 020b; this type simply never carried it. */
+  tier: string;
   cefrLevel: string;
   title: string;
   titleTranslation: string | null;
@@ -624,6 +672,12 @@ export interface DailyNewsArticle {
   sourceTopic: string | null;
   imageUrl: string | null;
   createdAt: string;
+  /** Whether a narration exists yet. The audio itself is fetched separately
+   *  (`fetchNewsAudio`) and behind an explicit tap. */
+  audioStatus: NewsAudioStatus;
+  /** Measured from the rendered MP3, so it can be shown ("LISTEN · 2:14")
+   *  before a single byte of audio is fetched. */
+  audioDurationMs: number | null;
 }
 
 export interface VocabularyHighlight {
@@ -678,24 +732,13 @@ export interface BookAnnotation {
 
 // ─── Avatar System ──────────────────────────────────────────────
 
-export interface AvatarConfig {
-  headShape: 'round' | 'oval' | 'square';
-  skinTone: string;
-  hairStyle: 'short' | 'medium' | 'long' | 'buzz' | 'curly' | 'ponytail' | 'none';
-  hairColor: string;
-  eyeStyle: 'round' | 'almond' | 'wide' | 'narrow';
-  eyeColor: string;
-  mouthStyle: 'smile' | 'neutral' | 'grin' | 'small';
-  accessory: string | null;
-  outfit: string | null;
-  background: string | null;
-}
-
 /**
- * How a user's avatar is rendered. 'procedural' composes the SVG layers from
- * AvatarConfig; 'preset' shows a bundled illustration; 'generated' shows the
+ * How a user's avatar is rendered. 'preset' shows a tile from the premade
+ * library (avatar_presets, migration 081); 'generated' shows the
  * photo-derived image stored in the private `avatars` bucket.
  */
+// 'procedural' is retained ONLY because pre-077 rows still carry it. Nothing
+// renders it any more — see Avatar.tsx. Do not use it for new writes.
 export type AvatarKind = 'procedural' | 'preset' | 'generated';
 
 /**
@@ -709,7 +752,6 @@ export interface AvatarStyleOption {
   description: string;
 }
 
-export type AvatarExpression = 'neutral' | 'happy' | 'sad' | 'celebrating';
 export type AvatarSize = 'small' | 'medium' | 'large';
 
 export interface AvatarAccessory {

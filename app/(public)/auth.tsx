@@ -15,6 +15,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../../components/ui/Button';
 import { GradientBackground } from '../../components/ui/GradientBackground';
 import { Avatar } from '../../components/avatar/Avatar';
+import { presetUrlFromId } from '../../lib/avatar-presets';
 import { RotatingGreeting } from '../../components/auth/RotatingGreeting';
 import { AmbientGreetings } from '../../components/auth/AmbientGreetings';
 import { PasswordField } from '../../components/auth/PasswordField';
@@ -277,7 +278,11 @@ export default function AuthScreen() {
                   gap: spacing.md,
                 }}
               >
-                <Avatar config={pending?.avatarConfig ?? undefined} size="medium" expression="happy" />
+                <Avatar
+                  size="medium"
+                  imageUri={pending?.avatarPresetId ? presetUrlFromId(pending.avatarPresetId) : null}
+                  displayName={pending?.displayName}
+                />
                 <View style={{ flex: 1 }}>
                   {pending?.displayName ? (
                     <Text

@@ -140,7 +140,7 @@ describe('forward compatibility', () => {
         level: 'elementary',
         placement: null,
         displayName: null,
-        avatarConfig: null,
+        avatarPresetId: null,
         dailyGoalMinutes: 10,
         completedAt: null,
       }),

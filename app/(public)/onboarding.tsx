@@ -17,7 +17,7 @@ import {
   upsertProfile,
   markOnboardingComplete,
   updateOnboardingChecklist,
-  updateAvatarConfig,
+  setAvatarKind,
   incrementXpIdempotent,
 } from '../../lib/supabase-queries';
 import { useAppStore } from '../../stores/useAppStore';
@@ -31,8 +31,8 @@ import {
 } from '../../components/onboarding/trial-lesson';
 import { GradientBackground } from '../../components/ui/GradientBackground';
 import { Avatar } from '../../components/avatar/Avatar';
-import { AvatarCustomizer } from '../../components/avatar/AvatarCustomizer';
-import { DEFAULT_AVATAR_CONFIG } from '../../components/avatar/constants';
+import { presetUrlFromId, type AvatarPreset } from '../../lib/avatar-presets';
+import { AvatarPresetPicker } from '../../components/avatar/AvatarPresetPicker';
 import { colors } from '../../config/theme';
 import { SUPPORTED_LANGUAGES, DAILY_GOALS } from '../../config/app';
 import { authErrorCopy } from '../../lib/auth-errors';
@@ -48,7 +48,6 @@ import {
 import type {
   LanguageCode,
   ProficiencyLevel,
-  AvatarConfig,
 } from '../../types';
 
 // Dörnyei L2MSS: the learner's vision of themselves as a competent L2 user
@@ -193,7 +192,7 @@ export default function OnboardingScreen() {
   const [level, setLevel] = useState<ProficiencyLevel>(DEFAULT_LEVEL);
   const [trial, setTrial] = useState<TrialLessonResult | null>(null);
   const [displayName, setDisplayName] = useState<string>('');
-  const [avatarConfig, setAvatarConfig] = useState<AvatarConfig>(DEFAULT_AVATAR_CONFIG);
+  const [avatarPresetId, setAvatarPresetId] = useState<string | null>(null);
   const [customizerOpen, setCustomizerOpen] = useState(false);
   const [dailyGoal, setDailyGoal] = useState<number>(DEFAULT_DAILY_GOAL);
   const [adultMode, setAdultMode] = useState<boolean>(DEFAULT_ADULT_MODE);
@@ -219,8 +218,8 @@ export default function OnboardingScreen() {
         ...(draft.displayName ? { displayName: draft.displayName } : {}),
       });
 
-      if (draft.avatarConfig) {
-        await updateAvatarConfig(userId, draft.avatarConfig);
+      if (draft.avatarPresetId) {
+        await setAvatarKind(userId, 'preset', draft.avatarPresetId);
       }
 
       await updateOnboardingChecklist(userId, {
@@ -232,9 +231,10 @@ export default function OnboardingScreen() {
         firstLesson: !!draft.trial,
         aiConversation: false,
         dailyReminder: false,
-        collapsed: false,
+        skipped: [],
         dismissed: false,
         completedAt: null,
+        celebratedAt: null,
       });
       await markOnboardingComplete(userId);
 
@@ -286,7 +286,7 @@ export default function OnboardingScreen() {
     if (pending.level) setLevel(pending.level);
     if (pending.trial) setTrial(pending.trial);
     if (pending.displayName) setDisplayName(pending.displayName);
-    if (pending.avatarConfig) setAvatarConfig(pending.avatarConfig);
+    if (pending.avatarPresetId) setAvatarPresetId(pending.avatarPresetId);
     if (pending.dailyGoalMinutes) setDailyGoal(pending.dailyGoalMinutes);
     // Explicit typeof check, not truthiness: every other field here is a
     // nullable object or string where `if (x)` is safe, but for a boolean that
@@ -353,12 +353,12 @@ export default function OnboardingScreen() {
       level,
       trial,
       displayName: displayName.trim() ? displayName.trim() : null,
-      avatarConfig,
+      avatarPresetId,
       dailyGoalMinutes: dailyGoal,
       adultMode,
       completedAt,
     }),
-    [targetLanguage, idealL2Self, level, trial, displayName, avatarConfig, dailyGoal, adultMode, completedAt],
+    [targetLanguage, idealL2Self, level, trial, displayName, avatarPresetId, dailyGoal, adultMode, completedAt],
   );
 
   // Mirror every answer to local storage so a backgrounded or killed app
@@ -644,14 +644,20 @@ export default function OnboardingScreen() {
             </Text>
 
             <View className="items-center mb-6">
-              <Avatar config={avatarConfig} size="large" expression="happy" />
+              <Avatar
+                size="large"
+                imageUri={avatarPresetId ? presetUrlFromId(avatarPresetId) : null}
+                displayName={displayName}
+              />
               <Pressable
                 onPress={() => setCustomizerOpen(true)}
                 className="mt-4 px-5 py-3 rounded-[14px] bg-dark-card-alt"
                 accessibilityRole="button"
-                accessibilityLabel="Customize your avatar"
+                accessibilityLabel="Choose your avatar"
               >
-                <Text className="text-base font-semibold text-primary">Customize avatar</Text>
+                <Text className="text-base font-semibold text-primary">
+                  {avatarPresetId ? 'Change avatar' : 'Choose avatar'}
+                </Text>
               </Pressable>
             </View>
 
@@ -680,12 +686,18 @@ export default function OnboardingScreen() {
               </View>
             </View>
 
-            <AvatarCustomizer
+            {/* Pre-auth, deliberately. The preset catalogue is anon-readable
+                (migration 082) precisely so this step keeps its avatar — the
+                IKEA effect above depends on the learner building something
+                before the sign-up gate, not after it. The choice rides in the
+                local draft and is flushed by writeProfile once a session
+                exists; nothing is written server-side here. */}
+            <AvatarPresetPicker
               visible={customizerOpen}
-              initialConfig={avatarConfig}
+              selectedId={avatarPresetId}
               onClose={() => setCustomizerOpen(false)}
-              onSave={(config) => {
-                setAvatarConfig(config);
+              onSelect={(preset: AvatarPreset) => {
+                setAvatarPresetId(preset.id);
                 setCustomizerOpen(false);
               }}
             />

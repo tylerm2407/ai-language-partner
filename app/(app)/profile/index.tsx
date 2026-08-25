@@ -18,19 +18,18 @@ import { LevelBadge } from '../../../components/stats/LevelBadge';
 import { LeagueBadge } from '../../../components/gamification/LeagueBadge';
 import { AchievementGrid } from '../../../components/gamification/AchievementGrid';
 import { Avatar } from '../../../components/avatar/Avatar';
-import { AvatarCustomizer } from '../../../components/avatar/AvatarCustomizer';
+import { AvatarPresetPicker } from '../../../components/avatar/AvatarPresetPicker';
 import { AvatarGeneratorSheet } from '../../../components/avatar/AvatarGeneratorSheet';
 import { useAvatarImage, invalidateAvatarImage } from '../../../hooks/useAvatarImage';
 import { FourStrandsCard } from '../../../components/stats/FourStrandsCard';
 import { useDailyStats } from '../../../hooks/useDailyStats';
 import { strandMinutesFromDailyStats } from '../../../lib/four-strands';
 import { CompletedLessonsSection } from '../../../components/profile/CompletedLessonsSection';
-import { DEFAULT_AVATAR_CONFIG } from '../../../components/avatar/constants';
-import { updateAvatarConfig, joinClassroom } from '../../../lib/supabase-queries';
+import { setAvatarKind, joinClassroom } from '../../../lib/supabase-queries';
+import { presetUrlFromId, type AvatarPreset } from '../../../lib/avatar-presets';
 import JoinClassModal from '../../../components/school/JoinClassModal';
 import RoleSwitcher from '../../../components/school/RoleSwitcher';
 import { BecomeTeacherSheet } from '../../../components/school/BecomeTeacherSheet';
-import type { AvatarConfig } from '../../../types';
 
 const LEVEL_LABELS: Record<string, string> = {
   beginner: 'Beginner',
@@ -73,10 +72,17 @@ export default function ProfileScreen() {
   const router = useRouter();
   const [customizerVisible, setCustomizerVisible] = useState(false);
   const [generatorVisible, setGeneratorVisible] = useState(false);
-  // Only 'generated' avatars have an image; every other kind renders the SVG.
-  const generatedAvatarUri = useAvatarImage(
+  // A generated avatar is private and needs a signed URL; a preset is public
+  // artwork whose URL is derived from its id, so only the first costs a round
+  // trip. Anything else (including legacy 'procedural' rows) falls through to
+  // the initials placeholder inside Avatar.
+  const signedAvatarUri = useAvatarImage(
     profile?.avatarKind === 'generated' ? profile.avatarImagePath : null
   );
+  const avatarUri =
+    profile?.avatarKind === 'preset' && profile.avatarPresetId
+      ? presetUrlFromId(profile.avatarPresetId)
+      : signedAvatarUri;
   const [joinModalVisible, setJoinModalVisible] = useState(false);
   const [becomeTeacherVisible, setBecomeTeacherVisible] = useState(false);
 
@@ -99,12 +105,15 @@ export default function ProfileScreen() {
     setGeneratorVisible(false);
   };
 
-  const handleSaveAvatar = async (config: AvatarConfig) => {
+  const handleSelectPreset = async (preset: AvatarPreset) => {
     if (!user || !profile) return;
+    // Optimistic: the grid closes and the ring updates immediately. A failed
+    // write leaves the local state ahead of the server for this session only —
+    // the next profile load corrects it, and the cost is re-picking.
+    setProfile({ ...profile, avatarKind: 'preset', avatarPresetId: preset.id });
+    setCustomizerVisible(false);
     try {
-      await updateAvatarConfig(user.id, config);
-      setProfile({ ...profile, avatarConfig: config });
-      setCustomizerVisible(false);
+      await setAvatarKind(user.id, 'preset', preset.id);
     } catch (err) {
       console.error('Failed to save avatar:', err);
     }
@@ -143,17 +152,11 @@ export default function ProfileScreen() {
         <View style={styles.identityRow}>
           <Pressable
             onPress={() => setCustomizerVisible(true)}
-            accessibilityLabel="Customize avatar"
+            accessibilityLabel="Change avatar"
             accessibilityRole="button"
             style={styles.avatarRing}
           >
-            <Avatar
-              config={profile?.avatarConfig ?? undefined}
-              size="medium"
-              expression="neutral"
-              animated
-              imageUri={generatedAvatarUri}
-            />
+            <Avatar size="medium" imageUri={avatarUri} displayName={profile?.displayName} />
           </Pressable>
           <View style={styles.identityText}>
             <Heading level={3} numberOfLines={1}>
@@ -371,11 +374,11 @@ export default function ProfileScreen() {
         </Pressable>
       </ScrollView>
     </SafeAreaView>
-    <AvatarCustomizer
+    <AvatarPresetPicker
       visible={customizerVisible}
       onClose={() => setCustomizerVisible(false)}
-      initialConfig={profile?.avatarConfig ?? DEFAULT_AVATAR_CONFIG}
-      onSave={handleSaveAvatar}
+      selectedId={profile?.avatarPresetId}
+      onSelect={handleSelectPreset}
       onUsePhoto={() => {
         setCustomizerVisible(false);
         setGeneratorVisible(true);

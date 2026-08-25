@@ -30,7 +30,8 @@ type EventName =
   | 'purchase_completed'
   | 'purchase_restored'
   | 'plan_term_toggled'
-  | 'plan_tier_selected';
+  | 'plan_tier_selected'
+  | 'avatar_preset_selected';
 
 type EventProperties = Record<string, string | number | boolean>;
 

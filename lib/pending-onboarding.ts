@@ -13,7 +13,6 @@
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type {
-  AvatarConfig,
   LanguageCode,
   ProficiencyLevel,
 } from '../types';
@@ -51,7 +50,8 @@ export interface PendingOnboarding {
   /** Null until the learner finishes the pre-auth trial lesson. */
   trial: TrialLessonResult | null;
   displayName: string | null;
-  avatarConfig: AvatarConfig | null;
+  /** Chosen preset id from the premade library, or null if skipped. */
+  avatarPresetId: string | null;
   dailyGoalMinutes: number | null;
   /**
    * Adult mode vs gamified, chosen in onboarding. Null = not yet answered.
@@ -79,7 +79,7 @@ export function emptyPendingOnboarding(): PendingOnboardingDraft {
     level: null,
     trial: null,
     displayName: null,
-    avatarConfig: null,
+    avatarPresetId: null,
     dailyGoalMinutes: null,
     adultMode: null,
     completedAt: null,

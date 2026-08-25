@@ -20,11 +20,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAppStore } from '../../stores/useAppStore';
 import { AvatarGeneratorSheet } from '../../components/avatar/AvatarGeneratorSheet';
-import { AvatarCustomizer } from '../../components/avatar/AvatarCustomizer';
+import { AvatarPresetPicker } from '../../components/avatar/AvatarPresetPicker';
 import { Avatar } from '../../components/avatar/Avatar';
-import { updateAvatarConfig } from '../../lib/supabase-queries';
+import { setAvatarKind } from '../../lib/supabase-queries';
+import { presetUrlFromId, type AvatarPreset } from '../../lib/avatar-presets';
 import { useAvatarImage, invalidateAvatarImage } from '../../hooks/useAvatarImage';
-import { DEFAULT_AVATAR_CONFIG } from '../../components/avatar/constants';
 import { GradientBackground } from '../../components/ui/GradientBackground';
 import { Button } from '../../components/ui/Button';
 import { colors, spacing, typography } from '../../config/theme';
@@ -34,12 +34,19 @@ export default function AvatarSetupScreen() {
   const router = useRouter();
   const { profile, setProfile, loading } = useAppStore();
   const [generatorVisible, setGeneratorVisible] = useState(false);
-  const [customizerVisible, setCustomizerVisible] = useState(false);
-  const [justGenerated, setJustGenerated] = useState(false);
+  const [pickerVisible, setPickerVisible] = useState(false);
+  const [justChose, setJustChose] = useState(false);
 
-  const imageUri = useAvatarImage(
+  // A generated avatar lives in the PRIVATE bucket and needs a signed URL; a
+  // preset is public artwork whose URL is derived from its id. Only the first
+  // costs a round trip, so the hook is asked only about that case.
+  const signedUri = useAvatarImage(
     profile?.avatarKind === 'generated' ? profile.avatarImagePath : null,
   );
+  const imageUri =
+    profile?.avatarKind === 'preset' && profile.avatarPresetId
+      ? presetUrlFromId(profile.avatarPresetId)
+      : signedUri;
 
   /**
    * Leave for the paywall. `replace`, not `push`: this screen is a one-time
@@ -51,20 +58,22 @@ export default function AvatarSetupScreen() {
   }, [router]);
 
   /**
-   * Save a hand-built avatar. Unlike the photo path there is no entitlement to
-   * spend and no model call — the config is just profile data, so it writes
-   * directly. Failing here must not strand the learner on a setup screen, so
-   * the local state is updated either way and the error only costs a retry.
+   * Pick a premade avatar. No entitlement to spend and no model call — this is
+   * stock artwork, so it is free, unlimited, and available before the learner
+   * has been asked for anything. The local state updates first so the choice
+   * lands instantly; a failed write costs a retry, not the screen.
    */
-  const handleCustomized = useCallback(
-    async (config: Parameters<typeof updateAvatarConfig>[1]) => {
-      setCustomizerVisible(false);
+  const handlePreset = useCallback(
+    async (preset: AvatarPreset) => {
+      setPickerVisible(false);
       if (!profile) return;
-      setProfile({ ...profile, avatarConfig: config, avatarKind: 'procedural' });
+      setProfile({ ...profile, avatarKind: 'preset', avatarPresetId: preset.id });
+      setJustChose(true);
+      trackEvent('avatar_preset_selected', { presetId: preset.id, source: 'onboarding' });
       try {
-        await updateAvatarConfig(profile.userId, config);
+        await setAvatarKind(profile.userId, 'preset', preset.id);
       } catch (err) {
-        console.error('[avatar-setup] saving the built avatar failed:', err);
+        console.error('[avatar-setup] saving the chosen avatar failed:', err);
       }
     },
     [profile, setProfile],
@@ -78,7 +87,7 @@ export default function AvatarSetupScreen() {
       invalidateAvatarImage(path);
       if (profile) setProfile({ ...profile, avatarKind: 'generated', avatarImagePath: path });
       setGeneratorVisible(false);
-      setJustGenerated(true);
+      setJustChose(true);
       trackEvent('free_avatar_generated', { source: 'onboarding' });
     },
     [profile, setProfile],
@@ -111,40 +120,34 @@ export default function AvatarSetupScreen() {
             }}
             accessibilityRole="header"
           >
-            {justGenerated ? 'That’s you.' : 'One free avatar, on us.'}
+            {justChose ? 'That’s you.' : 'Pick your avatar.'}
           </Text>
           <Text className="text-base text-text-secondary mt-2 mb-8">
-            {justGenerated
+            {justChose
               ? 'It’s saved to your profile. You can change it any time from Profile → Avatar.'
-              : 'Turn a photo of yourself into an illustrated avatar. Every account gets one free — after that it’s part of a paid plan.'}
+              : 'Choose one of ours — free, and there are fifty. Or turn a photo of yourself into an illustrated avatar; every account gets one of those free.'}
           </Text>
 
           <View className="items-center mb-10">
-            <Avatar
-              config={profile.avatarConfig ?? DEFAULT_AVATAR_CONFIG}
-              size="large"
-              expression="happy"
-              imageUri={imageUri}
-            />
+            <Avatar size="large" imageUri={imageUri} displayName={profile.displayName} />
           </View>
 
-          {justGenerated ? (
+          {justChose ? (
             <Button label="Continue" onPress={proceed} />
           ) : (
             <>
-              <Button label="Use a photo" onPress={() => setGeneratorVisible(true)} />
-              {/* The other half of the avatar. Without this the only choices
-                  here were "spend your one free generation" or "skip", and a
-                  learner who wanted to hand-build a look had nowhere to do it
-                  until they found Profile → Avatar later. */}
+              {/* The library leads. It is free, unlimited and instant, where
+                  the photo path spends a once-per-account entitlement — so the
+                  cheap choice is the default one and the costly one is opt-in. */}
+              <Button label="Choose an avatar" onPress={() => setPickerVisible(true)} />
               <Pressable
-                onPress={() => setCustomizerVisible(true)}
+                onPress={() => setGeneratorVisible(true)}
                 className="py-3 items-center mt-2"
                 style={{ minHeight: 44, justifyContent: 'center' }}
                 accessibilityRole="button"
-                accessibilityLabel="Build an avatar instead"
+                accessibilityLabel="Make an avatar from a photo instead"
               >
-                <Text className="text-base font-semibold text-primary">Build one instead</Text>
+                <Text className="text-base font-semibold text-primary">Use a photo instead</Text>
               </Pressable>
               <Pressable
                 onPress={proceed}
@@ -159,23 +162,23 @@ export default function AvatarSetupScreen() {
                 className="text-xs text-text-quaternary text-center"
                 style={{ marginTop: spacing.xs }}
               >
-                Skipping keeps your free avatar — you can use it later from your profile.
+                You can change this any time from your profile.
               </Text>
             </>
           )}
         </View>
       </SafeAreaView>
 
-      {/* `onUsePhoto` is what puts the camera inside the builder: a learner who
-          opens the customizer and then decides they would rather use a photo
-          does not have to back out and find the other button. */}
-      <AvatarCustomizer
-        visible={customizerVisible}
-        initialConfig={profile.avatarConfig ?? DEFAULT_AVATAR_CONFIG}
-        onClose={() => setCustomizerVisible(false)}
-        onSave={handleCustomized}
+      {/* `onUsePhoto` routes out of the grid without backing out of it: a
+          learner who browses fifty faces and decides none of them is them
+          should reach the camera from where they already are. */}
+      <AvatarPresetPicker
+        visible={pickerVisible}
+        selectedId={profile.avatarPresetId}
+        onClose={() => setPickerVisible(false)}
+        onSelect={handlePreset}
         onUsePhoto={() => {
-          setCustomizerVisible(false);
+          setPickerVisible(false);
           setGeneratorVisible(true);
         }}
       />

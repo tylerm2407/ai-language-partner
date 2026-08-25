@@ -7,9 +7,11 @@ import type {
   ReadingEvidenceItem,
   WritingEvidenceItem,
 } from './cefr-proficiency';
+import { ONBOARDING_STEP_KEYS } from './onboarding-checklist';
 import type {
   UserProfile,
   OnboardingChecklist,
+  OnboardingStepKey,
   Course,
   Unit,
   Lesson,
@@ -33,11 +35,12 @@ import type {
   WritingSubmission,
   WritingFeedback,
   DailyNewsArticle,
+  NewsAudio,
+  NewsAudioStatus,
   LessonCompletion,
   ReadingBook,
   UserBookProgress,
   BookAnnotation,
-  AvatarConfig,
   AvatarAccessory,
   ContentSource,
   GrammarRule,
@@ -176,6 +179,25 @@ export async function updateOnboardingChecklist(
     .eq('user_id', userId);
 
   if (error) throw error;
+}
+
+/**
+ * Has this learner ever sent a message to the AI tutor?
+ *
+ * Two things make this an RPC rather than a client query. `chat_messages` has
+ * no `user_id` — ownership is only reachable by joining `chat_sessions` — and
+ * more importantly a *session* existing is a false signal: `app/(app)/chat`
+ * persists the assistant's greeting the moment a scenario is opened, before
+ * the learner has typed anything. The only honest signal is at least one row
+ * with `role = 'user'`.
+ *
+ * `has_ai_conversation()` is SECURITY INVOKER (migration 078), so the caller's
+ * RLS still applies and this adds no new read surface.
+ */
+export async function fetchHasAiConversation(): Promise<boolean> {
+  const { data, error } = await supabase.rpc('has_ai_conversation');
+  if (error) throw error;
+  return data === true;
 }
 
 // ─── Courses, Units, Lessons ────────────────────────────────────
@@ -951,9 +973,9 @@ function mapProfile(row: Record<string, unknown>): UserProfile {
     // Streak shield
     streakShieldActive: (row.streak_shield_active as boolean) ?? false,
     streakShieldUsedAt: (row.streak_shield_used_at as string) ?? null,
-    avatarConfig: row.avatar_config ? (row.avatar_config as AvatarConfig) : undefined,
     // Avatar renderer selection (migration 067). Rows written before it have
-    // no avatar_kind, so they fall back to the procedural SVG they already had.
+    // no avatar_kind. Nothing renders 'procedural' now, so those rows show
+    // the initials placeholder until the learner picks from the library.
     avatarKind: (row.avatar_kind as UserProfile['avatarKind']) ?? 'procedural',
     avatarPresetId: (row.avatar_preset_id as string | null) ?? null,
     avatarImagePath: (row.avatar_image_path as string | null) ?? null,
@@ -968,27 +990,39 @@ function mapProfile(row: Record<string, unknown>): UserProfile {
   };
 }
 
-const DEFAULT_ONBOARDING_CHECKLIST: OnboardingChecklist = {
+export const DEFAULT_ONBOARDING_CHECKLIST: OnboardingChecklist = {
   chooseLanguage: false,
   firstLesson: false,
   aiConversation: false,
   dailyReminder: false,
-  collapsed: false,
+  skipped: [],
   dismissed: false,
   completedAt: null,
+  celebratedAt: null,
 };
 
+function parseSkippedSteps(raw: unknown): OnboardingStepKey[] {
+  if (!Array.isArray(raw)) return [];
+  const present = new Set(raw.filter((v): v is string => typeof v === 'string'));
+  return ONBOARDING_STEP_KEYS.filter((key) => present.has(key));
+}
+
 function parseOnboardingChecklist(raw: unknown): OnboardingChecklist {
-  if (!raw || typeof raw !== 'object') return { ...DEFAULT_ONBOARDING_CHECKLIST };
+  if (!raw || typeof raw !== 'object') return { ...DEFAULT_ONBOARDING_CHECKLIST, skipped: [] };
   const obj = raw as Record<string, unknown>;
   return {
-    chooseLanguage: (obj.chooseLanguage as boolean) ?? false,
-    firstLesson: (obj.firstLesson as boolean) ?? false,
-    aiConversation: (obj.aiConversation as boolean) ?? false,
-    dailyReminder: (obj.dailyReminder as boolean) ?? false,
-    collapsed: (obj.collapsed as boolean) ?? false,
-    dismissed: (obj.dismissed as boolean) ?? false,
-    completedAt: (obj.completedAt as string) ?? null,
+    chooseLanguage: obj.chooseLanguage === true,
+    firstLesson: obj.firstLesson === true,
+    aiConversation: obj.aiConversation === true,
+    dailyReminder: obj.dailyReminder === true,
+    // Validated, not cast. This is a jsonb column that a client wrote, so the
+    // array can legitimately contain a key from a future or a deleted step;
+    // filtering to the keys this build knows about keeps the rest of the
+    // module from having to defend against a string that means nothing here.
+    skipped: parseSkippedSteps(obj.skipped),
+    dismissed: obj.dismissed === true,
+    completedAt: typeof obj.completedAt === 'string' ? obj.completedAt : null,
+    celebratedAt: typeof obj.celebratedAt === 'string' ? obj.celebratedAt : null,
   };
 }
 
@@ -1844,6 +1878,71 @@ export async function fetchNewsReadStatus(
   return data?.read_at ?? null;
 }
 
+/**
+ * Fetch a playable URL for an article's narration.
+ *
+ * Returns `null` when the audio is still rendering (HTTP 202) — a state, not
+ * a failure. The caller should re-poll once after a short backoff rather
+ * than showing an error, because the usual cause is simply being the first
+ * person to ask for an article the cron has not reached yet.
+ *
+ * MUST stay behind an explicit user tap. Never call this from a bare
+ * `useEffect` on article load: egress is unmetered and playback carries no
+ * quota counter (cost is fixed at generation), so a render loop here has
+ * nothing but the server's burst limit standing in front of it.
+ *
+ * The returned `url` is signed and short-lived. Treat it as a ticket — play
+ * it, do not store it, and refetch rather than reusing it later.
+ */
+export async function fetchNewsAudio(articleId: string): Promise<NewsAudio | null> {
+  // Same stale-session refresh as markNewsAsRead: a cached expired session
+  // surfaces as `FunctionsFetchError: Failed to send a request to the Edge
+  // Function`, which reads to the user as "the network is broken" when in
+  // fact only the token is.
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (!sessionData.session) {
+    const { data: refreshed, error: refreshErr } = await supabase.auth.refreshSession();
+    if (refreshErr || !refreshed.session) {
+      throw new Error('You need to be signed in to listen to the news.');
+    }
+  }
+
+  const { data, error } = await supabase.functions.invoke('news-audio', {
+    body: { articleId },
+  });
+
+  if (error) {
+    let message = error.message ?? 'Failed to load the audio';
+    if (error.context instanceof Response) {
+      // The 202 "still generating" answer arrives here rather than in
+      // `data`, because the SDK treats any non-2xx-looking status as an
+      // error. It is not one.
+      if (error.context.status === 202) return null;
+      try {
+        const body = await error.context.json();
+        if (body?.error) message = body.error;
+      } catch {
+        // non-JSON body — keep SDK default
+      }
+    } else if (error.name === 'FunctionsFetchError') {
+      message = 'Could not reach the audio service. Check your connection and try again.';
+    }
+    throw new Error(message);
+  }
+
+  if (data?.status === 'generating') return null;
+  if (!data?.url) {
+    throw new Error('The audio service did not return anything playable.');
+  }
+
+  return {
+    status: 'ready',
+    url: data.url as string,
+    durationMs: typeof data.durationMs === 'number' ? data.durationMs : null,
+    expiresInSeconds: typeof data.expiresInSeconds === 'number' ? data.expiresInSeconds : 1800,
+  };
+}
+
 // ─── Reading Mappers ────────────────────────────────────────────
 
 function mapReadingPassage(row: Record<string, unknown>): ReadingPassage {
@@ -2149,6 +2248,7 @@ function mapDailyNewsArticle(row: Record<string, unknown>): DailyNewsArticle {
     id: row.id as string,
     date: row.date as string,
     language: row.language as string,
+    tier: (row.tier as string) ?? 'easy',
     cefrLevel: (row.cefr_level as string) ?? 'B1',
     title: row.title as string,
     titleTranslation: (row.title_translation as string) ?? null,
@@ -2159,18 +2259,23 @@ function mapDailyNewsArticle(row: Record<string, unknown>): DailyNewsArticle {
     sourceTopic: (row.source_topic as string) ?? null,
     imageUrl: (row.image_url as string) ?? null,
     createdAt: row.created_at as string,
+    // Validated against the known set rather than cast: `audio_status` is a
+    // CHECK-constrained column today, but a mapper that casts whatever
+    // arrives is how an unexpected value reaches a switch statement in the
+    // player and renders nothing at all.
+    audioStatus: NEWS_AUDIO_STATUSES.includes(row.audio_status as string)
+      ? (row.audio_status as NewsAudioStatus)
+      : null,
+    audioDurationMs: typeof row.audio_duration_ms === 'number' ? row.audio_duration_ms : null,
   };
 }
 
+/** The states `audio_status` may hold (migration 079). NULL — a row that
+ *  predates the podcast feature — is deliberately absent: it maps to null. */
+const NEWS_AUDIO_STATUSES = ['pending', 'generating', 'ready', 'failed'];
+
 // ─── Avatar ─────────────────────────────────────────────────────
 
-export async function updateAvatarConfig(userId: string, config: AvatarConfig): Promise<void> {
-  const { error } = await supabase
-    .from('user_profiles')
-    .update({ avatar_config: config, updated_at: new Date().toISOString() })
-    .eq('user_id', userId);
-  if (error) throw error;
-}
 
 /**
  * Resolve a generated avatar's storage path to a displayable URL.
