@@ -101,7 +101,14 @@ export function Sheet({
         <View style={styles.grabberWrapper}>
           <View style={styles.grabber} />
         </View>
-        <View style={styles.content}>{children}</View>
+        {/* A pinned height is only useful if the content can actually fill it.
+            Without this, a caller that passes `height` gets a tall sheet with
+            its children collapsed to their intrinsic size at the top — which
+            is what happened to the avatar grid. Applied ONLY when the height
+            is pinned, so auto-height sheets keep hugging their content. */}
+        <View style={[styles.content, height !== 'auto' && styles.contentFilled]}>
+          {children}
+        </View>
       </Animated.View>
     </Modal>
   );
@@ -137,5 +144,9 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: spacing.lg,
+  },
+  /** Only with a pinned `height` — lets children lay out against the full sheet. */
+  contentFilled: {
+    flex: 1,
   },
 });
