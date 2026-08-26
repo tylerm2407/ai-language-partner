@@ -11,11 +11,17 @@
  * (bottom: 100) to match the ScrollView paddingBottom in index.tsx.
  *
  * Visibility is decided entirely by persisted state — `dismissed` or
- * `celebratedAt` — never by a timer or a heuristic. The previous version's
- * auto-dismiss could not fire at all: it wrote `xpAwarded` inside an effect
- * that listed `xpAwarded` as a dependency, so the re-render's cleanup cleared
- * both of its timers before either ran. Deterministic, not a race — which is
- * why the rocket never went away. See `celebratingRef` below.
+ * `celebratedAt` — never by a timer or a heuristic. A timer only ever holds
+ * the already-retired FAB on screen a moment longer so the confetti has
+ * somewhere to play; it can never keep the checklist alive.
+ *
+ * That separation is the scar tissue from two rounds of the same bug. The
+ * first version wrote `xpAwarded` inside an effect that listed `xpAwarded` as a
+ * dependency, so the re-render's cleanup cleared both of its timers before
+ * either ran. The second still wrote the retirement from inside a 2.5s timer,
+ * which any dependency flip — including `useMotion`'s async Reduce Motion read
+ * — cancelled for good. Both times the rocket never went away. See the
+ * celebration effect below.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -146,6 +152,12 @@ export function OnboardingChecklistFab({ bottomOffset = 100 }: OnboardingCheckli
 
   const [open, setOpen] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  /**
+   * Keeps the FAB mounted for the confetti burst after the checklist has
+   * already been persisted as retired. Visual only — see the celebration
+   * effect below for why the write does not wait for it.
+   */
+  const [retiring, setRetiring] = useState(false);
 
   // Pulse the FAB subtly while it has pending items — draws the eye
   // without being noisy. Gated off once all items are complete, and off
@@ -184,14 +196,26 @@ export function OnboardingChecklistFab({ bottomOffset = 100 }: OnboardingCheckli
   });
 
   /**
-   * The celebration: +50 XP, confetti, then retire.
+   * The celebration: +50 XP, retire, then confetti.
    *
-   * Two things here are load-bearing and easy to undo by accident.
+   * That order is the whole point, and it is the fix for the second time this
+   * component failed to retire. The previous version wrote `markCelebrated`
+   * from inside a 2500ms `setTimeout` owned by an effect keyed on
+   * `[celebrationPending, isFocused, shouldReduce]`. Any of those flipping
+   * inside the confetti window ran the cleanup, and `celebratingRef` — already
+   * set — blocked the re-run, so the write was cancelled for the rest of the
+   * session. `shouldReduce` flips on its own: `useMotion` starts at `false` and
+   * resolves `AccessibilityInfo.isReduceMotionEnabled()` after mount. Leaving
+   * Home inside 2.5s did it too. The observable end state was a profile row
+   * with `completedAt` stamped, `celebratedAt` null and `dismissed` false —
+   * i.e. a rocket reading 5/5 that came back on every launch.
    *
-   * `celebratingRef` is a ref rather than state so that the once-only guard can
-   * never appear in the dependency array. The previous version used state, so
-   * setting the guard re-ran the effect, and the cleanup cleared both timers
-   * before either fired — the checklist could not dismiss itself, ever.
+   * So the persisted retirement happens immediately, synchronously with the
+   * decision to celebrate, and the confetti is pure decoration on top of an
+   * already-finished transaction. Cancelling it costs nothing.
+   *
+   * `celebratingRef` is still a ref rather than state so the once-only guard
+   * can never appear in a dependency array.
    *
    * The XP goes through `incrementXpIdempotent` under a fixed key rather than
    * through `earnXp`, which mints a random key per call. With a random key the
@@ -218,26 +242,49 @@ export function OnboardingChecklistFab({ bottomOffset = 100 }: OnboardingCheckli
       });
     });
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-    if (!shouldReduce) setShowConfetti(true);
 
+    markCelebrated().catch((err) => {
+      // The ref stays set, so this does not retry within the session. It does
+      // not need to: `completedAt` is persisted, so the next launch finds the
+      // celebration still pending and tries again — and the XP key means that
+      // retry cannot pay twice.
+      Sentry.captureException(err, {
+        tags: { area: 'onboarding-checklist', op: 'mark-celebrated' },
+      });
+    });
+
+    // `markCelebrated` has already flipped `isVisible` to false, so the render
+    // gate below keeps the FAB alive on `retiring` alone for the length of the
+    // burst. Reduce Motion skips straight to gone.
+    if (shouldReduce) {
+      setOpen(false);
+      return;
+    }
+    setShowConfetti(true);
+    setRetiring(true);
+    // No cleanup: there is no timer here to cancel, and nothing left to undo.
+    // `shouldReduce` is read at run time rather than listed as a dependency —
+    // it is decoration, and re-running this effect is what broke it before.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [celebrationPending, isFocused]);
+
+  /**
+   * Take the confetti back down.
+   *
+   * Keyed on `retiring` alone — a boolean that only ever goes false→true→false
+   * — so an unrelated re-render cannot restart or cancel it. If the component
+   * unmounts mid-burst the timer dies with it and the checklist is still
+   * retired, because that write landed before the burst began.
+   */
+  useEffect(() => {
+    if (!retiring) return;
     const timer = setTimeout(() => {
       setShowConfetti(false);
+      setRetiring(false);
       setOpen(false);
-      markCelebrated().catch((err) => {
-        // The ref stays set, so this does not retry within the session. It does
-        // not need to: `completedAt` is persisted, so the next launch finds the
-        // celebration still pending and tries again — and the XP key means that
-        // retry cannot pay twice.
-        Sentry.captureException(err, {
-          tags: { area: 'onboarding-checklist', op: 'mark-celebrated' },
-        });
-      });
-    }, shouldReduce ? 0 : CELEBRATION_MS);
+    }, CELEBRATION_MS);
     return () => clearTimeout(timer);
-    // Primitives only. Anything derived from `profile` would re-run this on
-    // every unrelated store write and cancel the timer mid-celebration.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [celebrationPending, isFocused, shouldReduce]);
+  }, [retiring]);
 
   const handleItemPress = useCallback(
     async (row: OnboardingRow) => {
@@ -319,7 +366,7 @@ export function OnboardingChecklistFab({ bottomOffset = 100 }: OnboardingCheckli
     await dismiss().catch(() => {});
   }, [dismiss]);
 
-  if (!isVisible) return null;
+  if (!isVisible && !retiring) return null;
 
   return (
     <>

@@ -183,6 +183,33 @@ it('a setProfile mid-celebration does not cancel markCelebrated', async () => {
   expect(written.dismissed).toBe(true);
 });
 
+/**
+ * The retirement must not depend on a timer surviving anything.
+ *
+ * The shipped-and-broken version wrote `markCelebrated` from inside a 2500ms
+ * `setTimeout` owned by an effect keyed on `[celebrationPending, isFocused,
+ * shouldReduce]`. `shouldReduce` flips by itself — `useMotion` starts at false
+ * and resolves `AccessibilityInfo.isReduceMotionEnabled()` after mount — so the
+ * cleanup ran, `celebratingRef` blocked the re-run, and the write was cancelled
+ * for the whole session. Real profile rows were left with `completedAt`
+ * stamped, `celebratedAt` null and `dismissed` false: a rocket reading 5/5 that
+ * came back on every launch.
+ *
+ * Asserting before any timer runs is what pins it. Under the old code this
+ * expectation is unreachable no matter what the mocks do.
+ */
+it('persists the retirement immediately, without waiting on any timer', () => {
+  useAppStore.setState({ profile: profileWith(RESOLVED) });
+  render();
+
+  expect(mockUpdate).toHaveBeenCalledTimes(1);
+  const written = mockUpdate.mock.calls[0][1] as OnboardingChecklist;
+  expect(written.celebratedAt).not.toBeNull();
+  expect(written.dismissed).toBe(true);
+  // And the store is already retired, so a re-mount cannot bring it back.
+  expect(useAppStore.getState().profile!.onboardingChecklist.dismissed).toBe(true);
+});
+
 it('does not celebrate a checklist the learner hid before finishing it', () => {
   useAppStore.setState({ profile: profileWith({ ...RESOLVED, dismissed: true }) });
   render();
