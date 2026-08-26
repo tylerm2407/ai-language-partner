@@ -15,6 +15,7 @@ import { getTargetLanguage } from '../../../lib/language';
 import { loadErrorCopy, type ErrorCopy } from '../../../lib/error-copy';
 import type { DailyNewsArticle, VocabularyHighlight } from '../../../types';
 import { colors } from '../../../config/theme';
+import { ArticleAudioPlayer } from '../../../components/news/ArticleAudioPlayer';
 
 export default function NewsReaderScreen() {
   const { date } = useLocalSearchParams<{ date: string }>();
@@ -147,6 +148,10 @@ export default function NewsReaderScreen() {
               <Text className="text-sm text-primary mb-6">
                 {article.summary}
               </Text>
+
+              {/* Listen. Sits between the summary and the body because that is
+                  where a reader decides whether to read this or hear it. */}
+              <ArticleAudioPlayer article={article} />
 
               {/* Content */}
               <Text className="text-base text-text-primary leading-7 mb-6">

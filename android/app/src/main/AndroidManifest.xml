@@ -5,6 +5,13 @@
   <uses-permission android:name="android.permission.RECORD_AUDIO"/>
   <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
   <uses-permission android:name="android.permission.VIBRATE"/>
+  <!-- Background news-article playback (react-native-track-player).
+       iOS has declared UIBackgroundModes:[audio] since launch, but Android had
+       no foreground service at all, so playback died the moment the app left
+       the foreground on Android 14+. FOREGROUND_SERVICE_MEDIA_PLAYBACK is the
+       typed permission Android 14 requires alongside the generic one. -->
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
   <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
   <queries>
     <intent>
@@ -34,5 +41,17 @@
         <data android:scheme="exp+fluenci"/>
       </intent-filter>
     </activity>
+    <!-- react-native-track-player's playback service. Without this declaration
+         Android has nowhere to host playback once the activity is backgrounded,
+         which is why background listening was iOS-only before now. The
+         foregroundServiceType must match the typed permission above. -->
+    <service
+      android:name="com.doublesymmetry.trackplayer.service.MusicService"
+      android:foregroundServiceType="mediaPlayback"
+      android:exported="false">
+      <intent-filter>
+        <action android:name="androidx.media3.session.MediaSessionService"/>
+      </intent-filter>
+    </service>
   </application>
 </manifest>

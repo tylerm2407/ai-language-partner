@@ -85,3 +85,22 @@ verify_jwt = false
 # REDIS_NOT_CONFIGURED and the client falls back to on-device snapshots.
 [functions.lesson-session]
 verify_jwt = false
+
+# ─── news-audio ───────────────────────────────────────────────────────────
+# User-facing. Hands back a short-lived signed URL for a daily article's
+# narration. Authenticates in the function body via getAuthenticatedUser
+# (_shared/auth.ts), same as ai-chat and daily-news, so the platform gate
+# stays off. That auth check is the ONLY thing gating access — the
+# `news-audio` bucket has no storage.objects policies, so this function's
+# service-role client is the only way to mint a playable URL.
+[functions.news-audio]
+verify_jwt = false
+
+# ─── daily-news-audio-cron ────────────────────────────────────────────────
+# Service-role, pg_cron-triggered renderer (migration 079, '20 9,10 * * *').
+# Same reasoning as daily-news-cron: the caller is authenticated by a
+# constant-time comparison against the Vault-held cron secret inside the
+# function body, NOT by the platform JWT gate. Must stay verify_jwt = false
+# or the cron's Vault-sourced bearer is rejected before the handler runs.
+[functions.daily-news-audio-cron]
+verify_jwt = false
