@@ -1,4 +1,7 @@
 node_modules/
+# ...and as a bare path, so a SYMLINK named node_modules cannot slip through the
+# way it did in 77f2cf5 (a self-referential link that broke every install).
+node_modules
 .expo/
 dist/
 credentials/
