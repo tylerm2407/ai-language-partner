@@ -75,7 +75,7 @@ export default function HomeScreen() {
       refetchTiles();
     }, [refetchTiles]),
   );
-  const { markItem: markChecklistItem } = useOnboardingChecklist();
+  const { markItem: markChecklistItem, skipItem: skipChecklistItem } = useOnboardingChecklist();
   const greeting = targetLanguageGreeting(getTargetLanguage(profile));
   const [showPrePermission, setShowPrePermission] = useState(false);
 
@@ -91,14 +91,23 @@ export default function HomeScreen() {
     if (!firstLesson || dailyReminder) return;
     if (permissionStatus === 'undetermined') {
       setShowPrePermission(true);
-    } else {
+    } else if (permissionStatus === 'granted') {
       markChecklistItem('dailyReminder').catch(() => {});
+    } else {
+      // Denied at the OS level. Ticking it here used to be how we stopped
+      // re-nagging, but that made the checklist claim a reminder the learner
+      // will never get. Skipping resolves the step just as well and is true.
+      skipChecklistItem('dailyReminder').catch(() => {});
     }
-  }, [profile?.onboardingChecklist, permissionStatus, showPrePermission, markChecklistItem]);
+  }, [profile?.onboardingChecklist, permissionStatus, showPrePermission, markChecklistItem, skipChecklistItem]);
 
   const handleEnableReminders = async () => {
+    // Captured outside the try so the `finally` can resolve the checklist
+    // without asking the OS a second time. It stays null if the request itself
+    // threw, which the skip branch below treats as "not granted".
+    let status: string | null = null;
     try {
-      const status = await requestPermissionsExplicit();
+      status = await requestPermissionsExplicit();
       // The streak-save reminder is the guilt notification adult mode exists to
       // remove, so it is not scheduled while the mode is on.
       if (status === 'granted' && profile && showStreak) {
@@ -110,13 +119,21 @@ export default function HomeScreen() {
         });
       }
     } finally {
-      await markChecklistItem('dailyReminder').catch(() => {});
+      // Either way the step is resolved, but which way matters: granted is
+      // done, anything else is skipped, so the row reads honestly rather than
+      // claiming a reminder the learner will never receive.
+      await (status === 'granted'
+        ? markChecklistItem('dailyReminder')
+        : skipChecklistItem('dailyReminder')
+      ).catch(() => {});
       setShowPrePermission(false);
     }
   };
 
   const handleDismissPrePermission = async () => {
-    await markChecklistItem('dailyReminder').catch(() => {});
+    // The learner declined our own pre-permission sheet, so the OS was never
+    // asked. That is a skip, not a completion.
+    await skipChecklistItem('dailyReminder').catch(() => {});
     setShowPrePermission(false);
   };
 

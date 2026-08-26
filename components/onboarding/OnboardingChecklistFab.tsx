@@ -10,13 +10,12 @@
  * Positioning: absolute, bottom-right, lifted above the tab bar
  * (bottom: 100) to match the ScrollView paddingBottom in index.tsx.
  *
- * Auto-hides when:
- *   - isVisible is false (dismissed or all-complete)
- *   - allComplete is true (brief confetti then fade)
- *
- * Keeps all the existing onboarding-checklist behaviour: XP reward on
- * 100%, confetti, notification-permission request for dailyReminder,
- * route-navigation per item.
+ * Visibility is decided entirely by persisted state — `dismissed` or
+ * `celebratedAt` — never by a timer or a heuristic. The previous version's
+ * auto-dismiss could not fire at all: it wrote `xpAwarded` inside an effect
+ * that listed `xpAwarded` as a dependency, so the re-render's cleanup cleared
+ * both of its timers before either ran. Deterministic, not a race — which is
+ * why the rocket never went away. See `celebratingRef` below.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -26,19 +25,30 @@ import {
   Pressable,
   Animated,
   Alert,
+  Linking,
   Platform,
   StyleSheet,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
 import * as Haptics from 'expo-haptics';
 import Svg, { Circle as SvgCircle } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
+import * as Sentry from '@sentry/react-native';
 import { Sheet } from '../ui/Sheet';
 import { Heading, Body, Caption } from '../ui/Text';
-import { useOnboardingChecklist } from '../../hooks/useOnboardingChecklist';
-import { useProfile } from '../../hooks/useProfile';
+import {
+  useOnboardingChecklist,
+  type OnboardingRow,
+} from '../../hooks/useOnboardingChecklist';
 import { useMotion } from '../../hooks/useMotion';
+import { useAppStore, effectiveTier } from '../../stores/useAppStore';
+import { incrementXpIdempotent } from '../../lib/supabase-queries';
+import {
+  ONBOARDING_COMPLETE_XP,
+  ONBOARDING_COMPLETE_XP_KEY,
+} from '../../lib/onboarding-checklist';
 import { colors, radii, spacing } from '../../config/theme';
 
 const FAB_SIZE = 60;
@@ -50,6 +60,9 @@ const AnimatedCircle = Animated.createAnimatedComponent(SvgCircle);
 
 const CONFETTI_COLORS = ['#FBBF24', '#34D399', '#38BDF8', '#A855F7', '#F472B6', '#60A5FA'];
 const PARTICLE_COUNT = 12;
+
+/** How long the confetti stays up before the checklist retires itself. */
+const CELEBRATION_MS = 2500;
 
 function ConfettiParticle({ index }: { index: number }) {
   const translateX = useRef(new Animated.Value(0)).current;
@@ -110,20 +123,28 @@ interface OnboardingChecklistFabProps {
 
 export function OnboardingChecklistFab({ bottomOffset = 100 }: OnboardingChecklistFabProps) {
   const router = useRouter();
-  const { earnXp } = useProfile();
   const {
     isVisible,
     items,
     completedCount,
     totalCount,
-    allComplete,
+    isResolved,
+    celebrationPending,
     progress,
     markItem,
+    skipItem,
+    markCelebrated,
     dismiss,
   } = useOnboardingChecklist();
 
+  // The AI tutor is uncompletable on the free tier — `_shared/plan-limits.ts`
+  // sets `starter.dailyTextMessages = 0` — so for those learners that step has
+  // to be resolvable some other way or the checklist can never retire.
+  const subscription = useAppStore((s) => s.subscription);
+  const entitledTier = useAppStore((s) => s.entitledTier);
+  const isFreeTier = effectiveTier(subscription, entitledTier) === 'starter';
+
   const [open, setOpen] = useState(false);
-  const [xpAwarded, setXpAwarded] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
 
   // Pulse the FAB subtly while it has pending items — draws the eye
@@ -133,7 +154,7 @@ export function OnboardingChecklistFab({ bottomOffset = 100 }: OnboardingCheckli
   const { shouldReduce } = useMotion();
   const pulse = useRef(new Animated.Value(1)).current;
   useEffect(() => {
-    if (!isVisible || allComplete || shouldReduce) return;
+    if (!isVisible || isResolved || shouldReduce) return;
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulse, { toValue: 1.08, duration: 900, useNativeDriver: true }),
@@ -145,7 +166,7 @@ export function OnboardingChecklistFab({ bottomOffset = 100 }: OnboardingCheckli
       loop.stop();
       pulse.setValue(1);
     };
-  }, [isVisible, allComplete, shouldReduce, pulse]);
+  }, [isVisible, isResolved, shouldReduce, pulse]);
 
   // Animate the progress ring as `progress` advances
   const progressAnim = useRef(new Animated.Value(progress)).current;
@@ -162,56 +183,128 @@ export function OnboardingChecklistFab({ bottomOffset = 100 }: OnboardingCheckli
     outputRange: [RING_CIRCUMFERENCE, 0],
   });
 
-  // All-complete side effects: +50 XP, confetti, auto-dismiss after a beat
+  /**
+   * The celebration: +50 XP, confetti, then retire.
+   *
+   * Two things here are load-bearing and easy to undo by accident.
+   *
+   * `celebratingRef` is a ref rather than state so that the once-only guard can
+   * never appear in the dependency array. The previous version used state, so
+   * setting the guard re-ran the effect, and the cleanup cleared both timers
+   * before either fired — the checklist could not dismiss itself, ever.
+   *
+   * The XP goes through `incrementXpIdempotent` under a fixed key rather than
+   * through `earnXp`, which mints a random key per call. With a random key the
+   * `client_events` de-dupe protected nothing, and since the dismiss never
+   * landed, every app launch re-ran this and paid out another 50 XP. The stable
+   * key makes the server the guard: a second award is impossible even if every
+   * client-side flag write fails.
+   *
+   * `isFocused` matters because the bottom tabs keep Home mounted while it is
+   * hidden, so without it the confetti plays behind whatever screen the learner
+   * is actually looking at. `completedAt` is already persisted by the time we
+   * get here, so deferring to the next Home visit loses nothing — not even
+   * across an app kill.
+   */
+  const isFocused = useIsFocused();
+  const celebratingRef = useRef(false);
   useEffect(() => {
-    if (!isVisible) return;
-    if (!allComplete || xpAwarded) return;
+    if (!celebrationPending || !isFocused || celebratingRef.current) return;
+    celebratingRef.current = true;
 
-    setXpAwarded(true);
-    setShowConfetti(true);
-    earnXp(50).catch(() => {});
+    incrementXpIdempotent(ONBOARDING_COMPLETE_XP, ONBOARDING_COMPLETE_XP_KEY).catch((err) => {
+      Sentry.captureException(err, {
+        tags: { area: 'onboarding-checklist', op: 'complete-xp' },
+      });
+    });
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    if (!shouldReduce) setShowConfetti(true);
 
-    const closeConfetti = setTimeout(() => setShowConfetti(false), 2500);
-    const autoDismiss = setTimeout(() => {
-      dismiss().catch(() => {});
+    const timer = setTimeout(() => {
+      setShowConfetti(false);
       setOpen(false);
-    }, 3200);
-    return () => {
-      clearTimeout(closeConfetti);
-      clearTimeout(autoDismiss);
-    };
-  }, [allComplete, xpAwarded, isVisible, earnXp, dismiss]);
+      markCelebrated().catch((err) => {
+        // The ref stays set, so this does not retry within the session. It does
+        // not need to: `completedAt` is persisted, so the next launch finds the
+        // celebration still pending and tries again — and the XP key means that
+        // retry cannot pay twice.
+        Sentry.captureException(err, {
+          tags: { area: 'onboarding-checklist', op: 'mark-celebrated' },
+        });
+      });
+    }, shouldReduce ? 0 : CELEBRATION_MS);
+    return () => clearTimeout(timer);
+    // Primitives only. Anything derived from `profile` would re-run this on
+    // every unrelated store write and cancel the timer mid-celebration.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [celebrationPending, isFocused, shouldReduce]);
 
   const handleItemPress = useCallback(
-    async (key: string, route: string | null) => {
+    async (row: OnboardingRow) => {
       // Haptic feedback on item tap
       Haptics.selectionAsync().catch(() => {});
 
-      if (key === 'dailyReminder') {
+      if (row.stepKey === 'dailyReminder') {
         try {
           const { status } = await Notifications.requestPermissionsAsync();
           if (status === 'granted') {
+            // Reconciliation would derive this on the next launch, but the
+            // learner just tapped a thing and expects the tick now.
             await markItem('dailyReminder');
-          } else {
-            Alert.alert(
-              'Notifications Disabled',
-              'Enable notifications in your device settings to set daily reminders.',
-              [{ text: 'OK' }],
-            );
+            return;
           }
-        } catch {
-          Alert.alert('Error', 'Could not request notification permissions.');
+        } catch (err) {
+          Sentry.captureException(err, {
+            tags: { area: 'onboarding-checklist', op: 'request-notifications' },
+          });
+          Alert.alert('Something went wrong', 'We could not ask for notification permission just now.');
+          return;
         }
+        // Denied. The OS will not ask again, so an "enable it in Settings"
+        // message with an OK button is a dead end — the step becomes
+        // permanently un-tickable and the checklist never resolves. Offer the
+        // two things that actually move: go turn it on, or say no properly.
+        Alert.alert(
+          'Reminders are off',
+          'iOS only asks once. You can turn reminders on in Settings, or skip this step — it will stop asking either way.',
+          [
+            { text: 'Not now', style: 'cancel' },
+            { text: 'Skip this step', onPress: () => { skipItem('dailyReminder').catch(() => {}); } },
+            { text: 'Open Settings', onPress: () => { Linking.openSettings().catch(() => {}); } },
+          ],
+        );
         return;
       }
 
-      if (route) {
+      if (row.stepKey === 'aiConversation' && isFreeTier) {
+        // The free tier's chat quota is zero server-side, so sending them to
+        // /chat is sending them to a paywall they cannot pass. Offer the
+        // upgrade at the moment of want, and an honest way out if the answer
+        // is no — otherwise this step alone keeps the rocket on screen forever.
+        Alert.alert(
+          'AI conversation is a paid feature',
+          'Practising with the AI tutor needs a paid plan. You can see what is included, or skip this step.',
+          [
+            { text: 'Not now', style: 'cancel' },
+            { text: 'Skip this step', onPress: () => { skipItem('aiConversation').catch(() => {}); } },
+            {
+              text: 'See plans',
+              onPress: () => {
+                setOpen(false);
+                router.push('/plans');
+              },
+            },
+          ],
+        );
+        return;
+      }
+
+      if (row.route) {
         setOpen(false); // close the sheet before navigating
-        router.push(route as any);
+        router.push(row.route as never);
       }
     },
-    [markItem, router],
+    [markItem, skipItem, isFreeTier, router],
   );
 
   const handleOpen = useCallback(() => {
@@ -321,7 +414,7 @@ export function OnboardingChecklistFab({ bottomOffset = 100 }: OnboardingCheckli
           {/* Progress summary */}
           <Body tone="secondary" size="sm" style={{ marginBottom: spacing.sm }}>
             {completedCount} of {totalCount} complete
-            {allComplete ? ' — nice work!' : ''}
+            {isResolved ? ' — nice work!' : ''}
           </Body>
 
           {/* Progress bar */}
@@ -336,47 +429,67 @@ export function OnboardingChecklistFab({ bottomOffset = 100 }: OnboardingCheckli
 
           {/* Items */}
           <View style={{ marginTop: spacing.sm }}>
-            {items.map((item) => (
-              <Pressable
-                key={item.key}
-                style={styles.itemRow}
-                onPress={() => !item.completed && handleItemPress(item.key, item.route)}
-                disabled={item.completed}
-                accessibilityRole="button"
-                accessibilityLabel={`${item.label}${item.completed ? ', completed' : ''}`}
-                accessibilityState={{ checked: item.completed, disabled: item.completed }}
-              >
-                <View
-                  style={[
-                    styles.checkCircle,
-                    item.completed
-                      ? { backgroundColor: colors.success.base, borderColor: 'transparent' }
-                      : { borderColor: colors.text.tertiary },
-                  ]}
+            {items.map((item) => {
+              const done = item.state === 'done';
+              const skipped = item.state === 'skipped';
+              // A skipped row is still tappable: skipping resolves the
+              // checklist, it does not close the door on doing the thing.
+              const interactive = !done && item.stepKey !== null;
+              return (
+                <Pressable
+                  key={item.key}
+                  style={styles.itemRow}
+                  onPress={() => interactive && handleItemPress(item)}
+                  disabled={!interactive}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    `${item.label}` +
+                    (done ? ', completed' : skipped ? ', skipped' : '')
+                  }
+                  // `checked` is false for a skipped row on purpose — the row
+                  // must never claim work that didn't happen, to VoiceOver
+                  // least of all.
+                  accessibilityState={{ checked: done, disabled: !interactive }}
                 >
-                  {item.completed && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}
-                </View>
-                <Ionicons
-                  name={item.icon as any}
-                  size={18}
-                  color={item.completed ? colors.success.base : colors.text.tertiary}
-                  style={{ marginRight: spacing.xs }}
-                />
-                <Text
-                  style={[
-                    styles.itemLabel,
-                    item.completed
-                      ? { color: colors.success.light, textDecorationLine: 'line-through' }
-                      : { color: colors.text.primary },
-                  ]}
-                >
-                  {item.label}
-                </Text>
-                {!item.completed && item.route && (
-                  <Ionicons name="chevron-forward" size={16} color={colors.text.tertiary} />
-                )}
-              </Pressable>
-            ))}
+                  <View
+                    style={[
+                      styles.checkCircle,
+                      done
+                        ? { backgroundColor: colors.success.base, borderColor: 'transparent' }
+                        : { borderColor: colors.text.tertiary },
+                    ]}
+                  >
+                    {done && <Ionicons name="checkmark" size={14} color={colors.text.onSuccess} />}
+                    {/* A dash, not a tick: resolved, not achieved. The glyph is
+                        the non-colour signal DESIGN.md requires alongside the
+                        muted tone and the "Skipped" caption. */}
+                    {skipped && <Ionicons name="remove" size={14} color={colors.text.tertiary} />}
+                  </View>
+                  <Ionicons
+                    name={item.icon as never}
+                    size={18}
+                    color={done ? colors.success.base : colors.text.tertiary}
+                    style={{ marginRight: spacing.xs }}
+                  />
+                  <Text
+                    style={[
+                      styles.itemLabel,
+                      done
+                        ? { color: colors.success.light, textDecorationLine: 'line-through' }
+                        : skipped
+                          ? { color: colors.text.quaternary }
+                          : { color: colors.text.primary },
+                    ]}
+                  >
+                    {item.label}
+                  </Text>
+                  {skipped && <Caption tone="tertiary" style={styles.skippedCaption}>Skipped</Caption>}
+                  {interactive && !skipped && item.route && (
+                    <Ionicons name="chevron-forward" size={16} color={colors.text.tertiary} />
+                  )}
+                </Pressable>
+              );
+            })}
           </View>
         </View>
       </Sheet>
@@ -453,7 +566,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: spacing.sm,
+    // 20 (icon) + 12 + 12 clears the 44pt Apple HIG minimum for the whole row,
+    // which is the touch target here — the checkbox is decoration.
+    minHeight: 44,
     gap: spacing.xxs,
+  },
+  skippedCaption: {
+    marginLeft: spacing.xs,
   },
   checkCircle: {
     width: 24,

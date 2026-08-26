@@ -22,10 +22,12 @@ jest.mock('../lib/supabase-queries', () => ({
   fetchReviewItemCount: jest.fn(),
   fetchUserRoles: jest.fn(),
   fetchHasCompletedLesson: jest.fn(),
+  fetchHasAiConversation: jest.fn(),
 }));
 
-import { effectiveTier } from './useAppStore';
-import type { Subscription, SubscriptionTier } from '../types';
+import * as queries from '../lib/supabase-queries';
+import { effectiveTier, useAppStore } from './useAppStore';
+import type { Subscription, SubscriptionTier, UserProfile } from '../types';
 
 function row(tier: SubscriptionTier): Subscription {
   return {
@@ -75,5 +77,62 @@ describe('effectiveTier', () => {
     // one — an unknown value is not evidence of entitlement.
     expect(effectiveTier(row('legacy_pro' as SubscriptionTier), null)).toBe('starter');
     expect(effectiveTier(row('vip'), 'legacy_pro' as SubscriptionTier)).toBe('vip');
+  });
+});
+
+/**
+ * The onboarding reconciler needs to tell "no lesson" from "the read failed",
+ * while the paywall needs a boolean that fails OPEN. Both come off the same
+ * fetch, so the split between `hasCompletedLessonSignal` and
+ * `hasCompletedLesson` is exactly the kind of thing a later tidy-up collapses.
+ */
+describe('loadUserData signals', () => {
+  const profile = { userId: 'u1', targetLanguage: 'es' } as unknown as UserProfile;
+
+  beforeEach(() => {
+    jest.mocked(queries.fetchProfile).mockResolvedValue(profile);
+    jest.mocked(queries.fetchTodayStats).mockResolvedValue(null);
+    jest.mocked(queries.fetchSubscription).mockResolvedValue(null);
+    jest.mocked(queries.fetchReviewItemCount).mockResolvedValue(0);
+    jest.mocked(queries.fetchUserRoles).mockResolvedValue([]);
+    useAppStore.getState().reset();
+  });
+
+  it('keeps the raw signal and the fail-open boolean apart when the read fails', async () => {
+    jest.mocked(queries.fetchHasCompletedLesson).mockRejectedValue(new Error('offline'));
+    jest.mocked(queries.fetchHasAiConversation).mockRejectedValue(new Error('offline'));
+
+    await useAppStore.getState().loadUserData('u1');
+
+    const s = useAppStore.getState();
+    expect(s.hasCompletedLessonSignal).toBeNull();
+    expect(s.hasAiConversationSignal).toBeNull();
+    // Fail OPEN — a transient error must not lock the learner out.
+    expect(s.hasCompletedLesson).toBe(false);
+  });
+
+  it('passes a successful read through to both', async () => {
+    jest.mocked(queries.fetchHasCompletedLesson).mockResolvedValue(true);
+    jest.mocked(queries.fetchHasAiConversation).mockResolvedValue(true);
+
+    await useAppStore.getState().loadUserData('u1');
+
+    const s = useAppStore.getState();
+    expect(s.hasCompletedLessonSignal).toBe(true);
+    expect(s.hasCompletedLesson).toBe(true);
+    expect(s.hasAiConversationSignal).toBe(true);
+  });
+
+  it('reset clears the signals and the once-per-session reconciliation flag', () => {
+    useAppStore.setState({
+      hasCompletedLessonSignal: true,
+      hasAiConversationSignal: true,
+      reconciledUserId: 'u1',
+    });
+    useAppStore.getState().reset();
+    const s = useAppStore.getState();
+    expect(s.hasCompletedLessonSignal).toBeNull();
+    expect(s.hasAiConversationSignal).toBeNull();
+    expect(s.reconciledUserId).toBeNull();
   });
 });

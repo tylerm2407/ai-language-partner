@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { UserProfile, DailyStats, Subscription, SubscriptionTier } from '../types';
-import { fetchProfile, fetchTodayStats, fetchSubscription, fetchReviewItemCount, fetchUserRoles, fetchHasCompletedLesson } from '../lib/supabase-queries';
+import { fetchProfile, fetchTodayStats, fetchSubscription, fetchReviewItemCount, fetchUserRoles, fetchHasCompletedLesson, fetchHasAiConversation } from '../lib/supabase-queries';
 
 /** Tier ladder, weakest first — index doubles as rank for `effectiveTier`. */
 const TIER_RANK: SubscriptionTier[] = ['starter', 'basic', 'premium', 'vip'];
@@ -45,6 +45,18 @@ interface AppState {
    *  free and closes afterwards. Deliberately NOT dailyStats.lessonsCompleted,
    *  which resets every night and would reopen the gate each morning. */
   hasCompletedLesson: boolean;
+  /** Raw signals for the onboarding reconciliation pass (hooks/
+   *  useOnboardingReconciliation.ts). `null` = the read failed, which the
+   *  reconciler treats as "unknown" and therefore as "change nothing".
+   *
+   *  They ride along in `loadUserData`'s existing Promise.all, so
+   *  reconciliation costs no extra round trip. `hasCompletedLessonSignal` is
+   *  deliberately separate from `hasCompletedLesson` above: the paywall wants
+   *  a fail-OPEN boolean, the reconciler wants to know the read failed. */
+  hasCompletedLessonSignal: boolean | null;
+  hasAiConversationSignal: boolean | null;
+  /** The user whose checklist has already been reconciled this app session. */
+  reconciledUserId: string | null;
   loading: boolean;
   error: string | null;
 
@@ -57,6 +69,8 @@ interface AppState {
   setEntitledTier: (tier: SubscriptionTier | null) => void;
   /** Flip the paywall gate the instant a lesson completes, without a refetch. */
   setHasCompletedLesson: (value: boolean) => void;
+  /** Record that the onboarding checklist has been reconciled for this user. */
+  setReconciled: (userId: string) => void;
   refreshReviewCount: (userId: string) => Promise<void>;
   reset: () => void;
 }
@@ -69,6 +83,9 @@ export const useAppStore = create<AppState>((set) => ({
   reviewCount: 0,
   roles: [],
   hasCompletedLesson: false,
+  hasCompletedLessonSignal: null,
+  hasAiConversationSignal: null,
+  reconciledUserId: null,
   loading: true,
   error: null,
 
@@ -78,18 +95,32 @@ export const useAppStore = create<AppState>((set) => ({
       const profile = await fetchProfile(userId);
 
       // Non-critical fetches — don't let them block profile loading
-      const [dailyStats, subscription, reviewCount, roles, hasCompletedLesson] = await Promise.all([
+      const [dailyStats, subscription, reviewCount, roles, hasCompletedLessonSignal, hasAiConversationSignal] = await Promise.all([
         fetchTodayStats(userId).catch(() => null),
         fetchSubscription(userId).catch(() => null),
         fetchReviewItemCount(userId).catch(() => 0),
         fetchUserRoles(userId).catch(() => [] as string[]),
-        // Fail OPEN: if this read fails we treat the learner as still owed
-        // their first lesson rather than locking them out of the app on a
-        // transient error. The server-side quota zeros still hold the line.
-        fetchHasCompletedLesson(userId).catch(() => false),
+        // `null` on failure so the onboarding reconciler can tell "no lesson"
+        // from "we don't know" and leave the checklist alone. The paywall gate
+        // below still coerces to false — see `hasCompletedLesson`.
+        fetchHasCompletedLesson(userId).catch(() => null),
+        fetchHasAiConversation().catch(() => null),
       ]);
 
-      set({ profile, dailyStats, subscription, reviewCount, roles, hasCompletedLesson, loading: false });
+      set({
+        profile,
+        dailyStats,
+        subscription,
+        reviewCount,
+        roles,
+        // Fail OPEN: if the read failed we treat the learner as still owed
+        // their first lesson rather than locking them out of the app on a
+        // transient error. The server-side quota zeros still hold the line.
+        hasCompletedLesson: hasCompletedLessonSignal ?? false,
+        hasCompletedLessonSignal,
+        hasAiConversationSignal,
+        loading: false,
+      });
     } catch (err) {
       // Only reaches here if fetchProfile itself fails
       const message = err instanceof Error ? err.message : 'Failed to load user data';
@@ -100,6 +131,7 @@ export const useAppStore = create<AppState>((set) => ({
 
   setProfile: (profile) => set({ profile }),
   setHasCompletedLesson: (hasCompletedLesson) => set({ hasCompletedLesson }),
+  setReconciled: (reconciledUserId) => set({ reconciledUserId }),
   setDailyStats: (dailyStats) => set({ dailyStats }),
 
   refreshSubscription: async (userId: string) => {
@@ -130,6 +162,9 @@ export const useAppStore = create<AppState>((set) => ({
     reviewCount: 0,
     roles: [],
     hasCompletedLesson: false,
+    hasCompletedLessonSignal: null,
+    hasAiConversationSignal: null,
+    reconciledUserId: null,
     loading: true,
     error: null,
   }),
