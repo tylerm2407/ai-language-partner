@@ -11,7 +11,15 @@
  * through setAvatarKind and nothing else.
  */
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Dimensions,
+  FlatList,
+  Image,
+  Pressable,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { Sheet } from '../ui/Sheet';
 import { Body, Caption } from '../ui/Text';
 import { colors, radii, spacing } from '../../config/theme';
@@ -74,7 +82,7 @@ export const AvatarPresetPicker = React.memo(
     );
 
     return (
-      <Sheet visible={visible} onDismiss={onClose} dismissOnBackdrop>
+      <Sheet visible={visible} onDismiss={onClose} dismissOnBackdrop height={SHEET_HEIGHT}>
         <View style={styles.container}>
           <Body style={styles.title}>Choose your avatar</Body>
 
@@ -98,6 +106,10 @@ export const AvatarPresetPicker = React.memo(
               renderItem={renderTile}
               numColumns={COLUMNS}
               columnWrapperStyle={styles.row}
+              // `style` bounds the scroll viewport; contentContainerStyle only
+              // pads what is inside it. Without the former the list grows to fit
+              // all fifty tiles and stops scrolling.
+              style={styles.gridList}
               contentContainerStyle={styles.grid}
               showsVerticalScrollIndicator={false}
               // The grid is a fixed 50 tiles of known size, so windowing can be
@@ -107,19 +119,25 @@ export const AvatarPresetPicker = React.memo(
             />
           )}
 
-          {onUsePhoto && (
-            <Pressable
-              onPress={onUsePhoto}
-              accessibilityRole="button"
-              accessibilityLabel="Make an avatar from a photo instead"
-              style={styles.footerAction}
-            >
-              <Body style={styles.link}>Use a photo instead</Body>
+          {/* Pinned below the grid rather than after it. The grid owns all the
+              space left over (flex: 1) and scrolls inside it, so these two stay
+              put at the bottom the way a photo picker's actions do — they never
+              scroll away and never get pushed off-screen by fifty tiles. */}
+          <View style={styles.footer}>
+            {onUsePhoto && (
+              <Pressable
+                onPress={onUsePhoto}
+                accessibilityRole="button"
+                accessibilityLabel="Make an avatar from a photo instead"
+                style={styles.footerAction}
+              >
+                <Body style={styles.link}>Use a photo instead</Body>
+              </Pressable>
+            )}
+            <Pressable onPress={onClose} accessibilityRole="button" style={styles.footerAction}>
+              <Body style={styles.secondaryText}>Cancel</Body>
             </Pressable>
-          )}
-          <Pressable onPress={onClose} accessibilityRole="button" style={styles.footerAction}>
-            <Body style={styles.secondaryText}>Cancel</Body>
-          </Pressable>
+          </View>
         </View>
       </Sheet>
     );
@@ -128,15 +146,34 @@ export const AvatarPresetPicker = React.memo(
 
 AvatarPresetPicker.displayName = 'AvatarPresetPicker';
 
-const TILE = 96;
+/**
+ * Tile size is derived from the viewport rather than fixed, so three columns
+ * fill the row on every device instead of leaving a ragged gutter on wide
+ * screens and overflowing on narrow ones. The subtractions are the sheet's own
+ * horizontal padding (spacing.lg either side) plus the gaps between columns.
+ */
+const SCREEN = Dimensions.get('window');
+const GUTTER = spacing.sm;
+const TILE = Math.floor((SCREEN.width - spacing.lg * 2 - GUTTER * (COLUMNS - 1)) / COLUMNS);
+
+/**
+ * 85% of the viewport. A real pixel value, not a percentage: `maxHeight: '85%'`
+ * resolves against a parent with no definite height inside the sheet, so it was
+ * silently ignored and the grid collapsed to a sliver at the top.
+ */
+const SHEET_HEIGHT = Math.round(SCREEN.height * 0.85);
 
 const styles = StyleSheet.create({
-  container: { padding: spacing.lg, maxHeight: '85%' },
+  // flex: 1 so the grid can claim the space the pinned sheet height provides.
+  container: { flex: 1, paddingTop: spacing.xs },
   title: { fontSize: 20, fontWeight: '700', color: colors.text.primary, marginBottom: spacing.sm },
-  state: { paddingVertical: spacing.xxl, alignItems: 'center', gap: spacing.sm },
+  // The loading and error states sit where the grid would, not above it, so the
+  // sheet does not resize as it settles.
+  state: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
   errorText: { color: colors.text.secondary, textAlign: 'center' },
-  grid: { paddingBottom: spacing.sm },
-  row: { gap: spacing.sm, marginBottom: spacing.sm },
+  gridList: { flex: 1 },
+  grid: { paddingBottom: spacing.md },
+  row: { gap: GUTTER, marginBottom: GUTTER },
   tile: {
     width: TILE,
     height: TILE,
@@ -148,6 +185,11 @@ const styles = StyleSheet.create({
   },
   tileSelected: { borderColor: colors.action.accent },
   tileImage: { width: '100%', height: '100%' },
+  footer: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border.subtle,
+    paddingTop: spacing.xs,
+  },
   footerAction: {
     minHeight: 44,
     alignItems: 'center',
