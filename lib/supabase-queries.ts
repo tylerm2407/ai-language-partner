@@ -1361,25 +1361,39 @@ export interface LessonCompletionWithTitle extends LessonCompletion {
   lessonTitle: string;
 }
 
+export interface CompletedLessonsPage {
+  /** The most recent completions, newest first, capped at the requested limit. */
+  rows: LessonCompletionWithTitle[];
+  /**
+   * How many completions the learner has in TOTAL, not how many are on this
+   * page. The profile's collapsed vault row states this number, so a learner
+   * with 200 lessons behind them is told 200 even though only `limit` rows
+   * were fetched to fill the list.
+   */
+  total: number;
+}
+
 /**
- * Fetch the user's recent lesson completions joined with the lesson title
- * from the `lessons` table. Powers the Profile > Completed Lessons section.
- * Ordered newest-first.
+ * Fetch the user's recent lesson completions with their lesson titles.
+ * Powers the Profile > Completed Lessons vault. Ordered newest-first.
  */
 export async function fetchCompletedLessonsWithTitles(
   userId: string,
   limit = 25,
-): Promise<LessonCompletionWithTitle[]> {
-  const { data, error } = await supabase
+): Promise<CompletedLessonsPage> {
+  // `count: 'exact'` rides along on the same request — PostgREST answers with
+  // the full match count in Content-Range regardless of the limit.
+  const { data, error, count } = await supabase
     .from('lesson_completions')
-    .select('*')
+    .select('*', { count: 'exact' })
     .eq('user_id', userId)
     .order('completed_at', { ascending: false })
     .limit(limit);
   if (error) throw error;
 
   const completions = (data ?? []).map(mapLessonCompletion);
-  if (completions.length === 0) return [];
+  const total = count ?? completions.length;
+  if (completions.length === 0) return { rows: [], total: 0 };
 
   // Titles come from a SECOND query, not a PostgREST embed.
   //
@@ -1401,10 +1415,13 @@ export async function fetchCompletedLessonsWithTitles(
   const titleById = new Map<string, string>(
     (lessonRows ?? []).map((row: { id: string; title: string }) => [row.id, row.title]),
   );
-  return completions.map((c) => ({
-    ...c,
-    lessonTitle: titleById.get(c.lessonId) ?? 'Untitled lesson',
-  }));
+  return {
+    rows: completions.map((c) => ({
+      ...c,
+      lessonTitle: titleById.get(c.lessonId) ?? 'Untitled lesson',
+    })),
+    total,
+  };
 }
 
 function mapLessonCompletion(row: Record<string, unknown>): LessonCompletion {
