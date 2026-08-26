@@ -27,10 +27,26 @@ import {
   fetchDueReviewItemsWithCards,
   fetchReviewItemsByCardIds,
   upsertReviewItem,
-  tryConsumeNewCardSlot,
 } from '../../lib/supabase-queries';
-import { calculateNextReview, createNewReviewItem } from '../../lib/srs';
+import { calculateNextReview } from '../../lib/srs';
 import { enqueue, isNetworkError } from '../../lib/offline-queue';
+import {
+  recordLessonSrsResult,
+  warmupToExercise,
+  WARMUP_MAX_ITEMS,
+  WARMUP_FETCH_TIMEOUT_MS,
+} from '../../lib/lesson-srs';
+import {
+  canSkip,
+  isLocked,
+  isResolved,
+  maxAttempts,
+  nextStatus,
+  type AttemptStatus,
+  type AttemptStatusMap,
+} from '../../lib/lesson-attempts';
+import { summarizeLesson } from '../../lib/lesson-scoring';
+import { useLessonAudioPrewarm } from '../../hooks/useLessonAudioPrewarm';
 import {
   saveLessonSession,
   loadLessonSession,
@@ -42,133 +58,6 @@ import {
   cancelLessonExpiryReminder,
 } from '../../hooks/useNotifications';
 import type { Exercise, LanguageCode, ReviewItem, Card } from '../../types';
-
-// ─── SRS Warm-Up (research.md §5.1 & §13.1) ──────────────────────────────
-// Retrieval practice ~50% higher long-term retention than re-study. Starting
-// every lesson with 3-5 due SRS items primes the learner and closes the gap
-// where review activity and lesson activity were separate surfaces.
-const WARMUP_MAX_ITEMS = 5;
-const WARMUP_FETCH_TIMEOUT_MS = 1500;
-
-function warmupToExercise(entry: { item: ReviewItem; card: Card }): Exercise {
-  const { card } = entry;
-  return {
-    id: `warmup-${entry.item.id}`,
-    lessonId: 'warmup',
-    type: 'translate_to_target',
-    orderIndex: 0,
-    prompt: card.nativeText,
-    promptAudioUrl: null,
-    correctAnswer: card.targetText,
-    acceptedAnswers: [card.targetText],
-    options: null,
-    hintText: card.exampleSentence ?? null,
-    cardId: card.id,
-    skillType: card.skillType,
-    subskill: card.subskill,
-    targetWord: card.targetText,
-    explanation: card.exampleSentenceTranslation ?? undefined,
-  };
-}
-
-/**
- * Feed a main-lesson exercise result into spaced repetition
- * (.claude/rules/learning.md — "Failed items get added to the review queue
- * immediately"). Uses the same rating convention as the warm-up
- * (4 = pass, 2 = fail) so SM-2 state stays coherent across both paths.
- *
- * `existingItems` is the prefetched map of the user's review items for this
- * lesson's cards (see the prefetch effect). Cards with prior history grade
- * from their REAL accumulated SM-2 state (interval/ease factor continue),
- * and are not new — so they skip the daily new-card cap and its counter.
- * If the prefetch failed (`null`) or the card has no row, we fall back to a
- * fresh SM-2 baseline via upsertReviewItem's (user_id, card_id) conflict
- * target — exact for first-seen cards, the common case inside a lesson.
- * Each upsert result is written back into the map so repeat exercises on
- * the same card within one session chain state instead of re-baselining.
- *
- * The daily new-card cap is enforced with tryConsumeNewCardSlot — one
- * atomic check-and-consume RPC (silent skip when the cap is hit), same as
- * saveCorrectionAsCard / addCardFromAnnotation. `introducedThisSession`
- * de-dupes cap accounting when the same card backs multiple exercises or
- * an exercise is retried.
- */
-async function recordLessonSrsResult(
-  userId: string,
-  cardId: string,
-  correct: boolean,
-  introducedThisSession: Set<string>,
-  existingItems: Map<string, ReviewItem> | null,
-): Promise<void> {
-  const rating = correct ? 4 : 2;
-
-  const existing = existingItems?.get(cardId);
-  if (existing) {
-    // Known card: continue accumulated SM-2 state. Not new, so no cap
-    // slot is consumed.
-    const next = calculateNextReview(existing, rating);
-    const payload = {
-      id: existing.id,
-      userId,
-      cardId,
-      ...next,
-      lastReviewedAt: new Date().toISOString(),
-    };
-    try {
-      const saved = await upsertReviewItem(payload);
-      existingItems?.set(cardId, saved);
-    } catch (err) {
-      if (!isNetworkError(err)) throw err;
-      // Network blip: queue the exact failed payload for replay on
-      // reconnect, and chain in-session state from the locally computed
-      // result so repeat exercises on this card keep advancing SM-2.
-      console.warn('[lesson-srs] offline; queueing review upsert for card', cardId);
-      await enqueue(userId, { type: 'review-upsert', payload });
-      existingItems?.set(cardId, payload);
-    }
-    return;
-  }
-
-  if (!introducedThisSession.has(cardId)) {
-    let slotConsumed: boolean;
-    try {
-      slotConsumed = await tryConsumeNewCardSlot();
-    } catch (err) {
-      if (!isNetworkError(err)) throw err;
-      // Offline: the atomic cap RPC can't run, so a brand-new card can't be
-      // introduced safely. Skip SRS for it — the card is introduced the
-      // next time it's answered online.
-      console.warn('[lesson-srs] offline; skipping new-card SRS for card', cardId);
-      return;
-    }
-    if (!slotConsumed) {
-      console.warn('[lesson-srs] daily new-card cap reached; skipping card', cardId);
-      return;
-    }
-    // Mark before the upsert: the slot is already consumed, so a retry of
-    // the same card must not consume a second one.
-    introducedThisSession.add(cardId);
-  }
-  const next = calculateNextReview({ id: '', ...createNewReviewItem(userId, cardId) }, rating);
-  const payload = {
-    userId,
-    cardId,
-    ...next,
-    lastReviewedAt: new Date().toISOString(),
-  };
-  try {
-    const saved = await upsertReviewItem(payload);
-    existingItems?.set(cardId, saved);
-  } catch (err) {
-    if (!isNetworkError(err)) throw err;
-    // The cap slot was already consumed (this session), so the upsert must
-    // not be lost: queue it for replay. The map is deliberately NOT updated
-    // here — the payload has no row id yet, and a repeat exercise simply
-    // re-baselines and enqueues again (FIFO replay: last write wins).
-    console.warn('[lesson-srs] offline; queueing review upsert for card', cardId);
-    await enqueue(userId, { type: 'review-upsert', payload });
-  }
-}
 
 interface LessonRunnerProps {
   exercises: Exercise[];
@@ -195,8 +84,26 @@ interface LessonRunnerProps {
 export interface LessonResult {
   totalExercises: number;
   correctCount: number;
+  /**
+   * Exercises the learner skipped. They cost no heart, left their SRS card
+   * untouched so they come back, and are OUT of the accuracy denominator —
+   * `accuracy` divides by `scoredCount`, not by `totalExercises`.
+   */
+  skippedCount: number;
+  /** totalExercises - skippedCount. */
+  scoredCount: number;
+  /**
+   * Already skip-aware. Consumers must use this rather than recomputing from
+   * correctCount/totalExercises — that recomputation is how the runner and the
+   * completion row disagreed about a learner's score in the first place.
+   */
   accuracy: number;
   xpEarned: number;
+  /**
+   * One entry per RESOLVED, non-skipped exercise, so this can legitimately be
+   * shorter than `totalExercises`. A second-attempt-correct is recorded here
+   * as `correct: false` — it taught, it did not score.
+   */
   answers: { exerciseId: string; correct: boolean; answer: string }[];
   /**
    * Wall-clock time from when this lesson session first started — which for a
@@ -232,10 +139,18 @@ export function LessonRunner({
   // collide. This is what makes Previous restore a pick, its option colours
   // and its note.
   const [picks, setPicks] = useState<Record<string, string>>({});
-  // Correctness per exercise id. Warm-up answers deliberately stay out of
-  // `answers` (they must not move lesson accuracy or XP), so the footer's
-  // kicker reads from here instead and works in both phases.
-  const [outcomes, setOutcomes] = useState<Record<string, boolean>>({});
+  // Where each exercise stands: unanswered, retrying, correct, recovered,
+  // wrong or skipped. Replaces a plain correct/incorrect boolean, which could
+  // not express "a second attempt is open" or "this one does not count".
+  // Warm-up answers deliberately stay out of `answers` (they must not move
+  // lesson accuracy or XP), so the footer's kicker reads from here instead and
+  // works in both phases.
+  const [statuses, setStatuses] = useState<AttemptStatusMap>({});
+  // Attempts spent per exercise. Mirrored in a ref because handleAnswer reads
+  // it synchronously: two taps inside one React batch would otherwise both see
+  // zero attempts and both count as the first.
+  const [attempts, setAttempts] = useState<Record<string, number>>({});
+  const attemptsRef = useRef<Record<string, number>>({});
   const [answers, setAnswers] = useState<{ exerciseId: string; correct: boolean; answer: string }[]>([]);
   const [completed, setCompleted] = useState(false);
   const [lastAnswerCorrect, setLastAnswerCorrect] = useState<boolean | null>(null);
@@ -303,15 +218,36 @@ export function LessonRunner({
         // The day ran out on work they actually did. Say so — restarting a
         // half-finished lesson with no explanation reads as lost progress.
         if (expired) setSessionExpired(true);
-        if (snapshot && snapshot.answers.length > 0 && exercises.length > 0) {
+        // A snapshot with no answers can still hold real progress — a learner
+        // who skipped their way to question five has resolved five exercises
+        // and must not be sent back to question one.
+        const hasProgress =
+          !!snapshot &&
+          (snapshot.answers.length > 0 || Object.keys(snapshot.statuses ?? {}).length > 0);
+        if (snapshot && hasProgress && exercises.length > 0) {
           resumedRef.current = true;
           sessionStartedAtRef.current = snapshot.startedAt;
           setCurrentIndex(Math.min(snapshot.exerciseIndex, exercises.length - 1));
           setAnswers(snapshot.answers);
           setPicks(snapshot.picks ?? {});
-          setOutcomes(
-            Object.fromEntries(snapshot.answers.map((a) => [a.exerciseId, a.correct])),
+          // Prefer the persisted statuses. Deriving them from `answers` alone
+          // cannot distinguish a recovered answer from a plain wrong one, and
+          // has no way at all to express a skip — the fallback is only for
+          // snapshots written before statuses were recorded.
+          setStatuses(
+            snapshot.statuses ??
+              Object.fromEntries(
+                snapshot.answers.map((a) => [a.exerciseId, a.correct ? 'correct' : 'wrong']),
+              ),
           );
+          // Every restored exercise is already resolved, so it has spent its
+          // attempts — a resumed lesson must not hand back a second try on a
+          // question that is already graded.
+          const spent = Object.fromEntries(
+            snapshot.answers.map((a) => [a.exerciseId, 2] as const),
+          );
+          attemptsRef.current = spent;
+          setAttempts(spent);
         }
       })
       .catch((err) => console.warn('[lesson-session] restore failed:', err))
@@ -361,20 +297,62 @@ export function LessonRunner({
 
   // Per-exercise answered state. `showResult` used to stand in for this, but a
   // single boolean cannot describe an exercise you have walked back onto.
-  const currentPick = currentExercise ? picks[currentExercise.id] ?? null : null;
-  const currentCorrect = currentExercise ? outcomes[currentExercise.id] ?? null : null;
-  const isAnswered = currentPick !== null;
+  const currentStatus: AttemptStatus = currentExercise
+    ? statuses[currentExercise.id] ?? 'unanswered'
+    : 'unanswered';
+  const locked = isLocked(currentStatus);
+  const resolved = isResolved(currentStatus);
+  const isRetrying = currentStatus === 'retrying';
+  const currentAttempts = currentExercise ? attempts[currentExercise.id] ?? 0 : 0;
+  // Null while retrying, so the exercise remounts blank for the second attempt
+  // rather than coming back pre-filled with the answer that was just refused.
+  const currentPick =
+    currentExercise && !isRetrying ? picks[currentExercise.id] ?? null : null;
+  /**
+   * What the footer's note row is told. `retrying` maps to null so the reveal
+   * branch — which keys off this being non-null — stays shut until the second
+   * attempt is actually spent.
+   */
+  const currentCorrect: boolean | null = isRetrying
+    ? null
+    : resolved && currentStatus !== 'skipped'
+      ? currentStatus === 'correct' || currentStatus === 'recovered'
+      : null;
+  const canSkipCurrent = currentExercise ? canSkip(currentExercise, warmupPhase) : false;
+  const exerciseIds = exercises.map((e) => e.id);
+  // The progress ticks track exercises the runner is DONE with, which now
+  // includes skipped ones — counting `answers` would leave the track stuck.
+  const resolvedCount = exerciseIds.filter((id) => isResolved(statuses[id] ?? 'unanswered')).length;
+
+  // Warm the next listening clip while the learner works on this one.
+  useLessonAudioPrewarm({
+    exercises,
+    currentIndex,
+    language: targetLanguage,
+    userId: userId || undefined,
+    enabled: !warmupPhase && !completed,
+  });
 
   const handleAnswer = useCallback(
     (correct: boolean, answer: string) => {
+      if (!currentExercise) return;
+      const id = currentExercise.id;
+      // Read from the ref, not from state: two taps landing in one React batch
+      // would both see the state value and both count as the first attempt.
+      const attemptsBefore = attemptsRef.current[id] ?? 0;
+      const status = nextStatus(
+        correct,
+        attemptsBefore,
+        maxAttempts(currentExercise.type, warmupPhase),
+      );
+
       // Recorded for both phases before the warm-up branch returns: the
       // footer's note row and the Next button read from these, and the
       // warm-up needs them just as much as the lesson does.
-      if (currentExercise) {
-        const id = currentExercise.id;
-        setPicks((prev) => ({ ...prev, [id]: answer }));
-        setOutcomes((prev) => ({ ...prev, [id]: correct }));
-      }
+      attemptsRef.current = { ...attemptsRef.current, [id]: attemptsBefore + 1 };
+      setAttempts(attemptsRef.current);
+      setPicks((prev) => ({ ...prev, [id]: answer }));
+      setStatuses((prev) => ({ ...prev, [id]: status }));
       if (warmupPhase) {
         // Warm-up answers feed the SRS machinery but do not affect the
         // lesson accuracy/XP aggregates. Intentionally do not lose hearts
@@ -383,6 +361,8 @@ export function LessonRunner({
         setLastAnswerCorrect(correct);
         const entry = warmupEntries[warmupIndex];
         if (entry) {
+          // Warm-up items get one attempt (maxAttempts returns 1 for them), so
+          // the outcome here is only ever pass or fail — no `recovered` case.
           const rating = correct ? 4 : 2;
           const next = calculateNextReview(entry.item, rating);
           const payload = {
@@ -414,17 +394,25 @@ export function LessonRunner({
         }
         return;
       }
-      if (!currentExercise) return;
-      // De-dupe by exerciseId: a "Try again" retry re-invokes this handler for
-      // the same exercise, so replace any prior entry instead of appending —
-      // otherwise answers.length exceeds exercises.length and accuracy/XP inflate.
-      const nextAnswers = [
-        ...answers.filter((a) => a.exerciseId !== currentExercise.id),
-        { exerciseId: currentExercise.id, correct, answer },
-      ];
-      setAnswers(nextAnswers);
       setShowResult(true);
       setLastAnswerCorrect(correct);
+
+      // A second attempt is open. Nothing is scored, nothing is written to
+      // SRS, no heart moves, and — the whole point — nothing is revealed.
+      if (status === 'retrying') return;
+
+      // De-dupe by exerciseId: the second attempt re-invokes this handler for
+      // the same exercise, so replace any prior entry instead of appending —
+      // otherwise answers.length exceeds exercises.length and accuracy/XP inflate.
+      //
+      // `recovered` is recorded as correct: false. Getting there on the second
+      // try is worth teaching and worth a gentler SRS rating, but it is not
+      // worth a point, which is exactly what makes the second try honest.
+      const nextAnswers = [
+        ...answers.filter((a) => a.exerciseId !== id),
+        { exerciseId: id, correct: status === 'correct', answer },
+      ];
+      setAnswers(nextAnswers);
 
       // Persist a resume snapshot after every answer so an interrupted
       // lesson picks up where it left off. Fire-and-forget — never blocks
@@ -435,7 +423,11 @@ export function LessonRunner({
           answers: nextAnswers,
           // Without the picks a resumed lesson would render its answered
           // exercises blank, with Next disabled on work already done.
-          picks: { ...picks, [currentExercise.id]: answer },
+          picks: { ...picks, [id]: answer },
+          // Without the statuses a resumed lesson would re-grade a recovered
+          // pick as plain correct, and a skipped exercise would come back as
+          // unanswered — silently moving the score on resume.
+          statuses: { ...statuses, [id]: status },
           startedAt: sessionStartedAtRef.current,
         }).catch((err) => console.warn('[lesson-session] save failed:', err));
       }
@@ -447,13 +439,17 @@ export function LessonRunner({
         recordLessonSrsResult(
           userId,
           currentExercise.cardId,
-          correct,
+          status === 'correct' ? 'correct' : status === 'recovered' ? 'recovered' : 'wrong',
           srsIntroducedRef.current,
           existingReviewItemsRef.current,
         ).catch((err) => console.warn('[lesson-srs] SRS update failed:', err));
       }
 
-      if (!correct && !isUnlimitedHearts) {
+      // One heart per exercise, and only on a FINAL failure. The retry is a
+      // genuine second chance, so a learner who fixes their own mistake keeps
+      // the heart — which is also what stops the retry from feeling like a
+      // trap that charges you twice for one question.
+      if (status === 'wrong' && !isUnlimitedHearts) {
         onLoseHeart?.();
         setHeartBreakTrigger(true);
         setTimeout(() => setHeartBreakTrigger(false), 1200);
@@ -462,12 +458,61 @@ export function LessonRunner({
         // feedback; the interruption was the part that cost retention.
       }
     },
-    [currentExercise, isUnlimitedHearts, onLoseHeart, warmupPhase, warmupEntries, warmupIndex, answers, picks, currentIndex, lessonId, userId]
+    [currentExercise, isUnlimitedHearts, onLoseHeart, warmupPhase, warmupEntries, warmupIndex, answers, picks, statuses, currentIndex, lessonId, userId]
   );
 
   /**
+   * Give up on the current exercise and see the answer.
+   *
+   * Without this a learner who has simply gone blank on a typed exercise is
+   * stuck: Next is disabled until the exercise resolves, and every typed
+   * component refuses to submit an empty string. Resolving as `wrong` is the
+   * honest outcome — they did not get it — and it costs the same single heart
+   * a second wrong answer would have.
+   */
+  const handleGiveUp = useCallback(() => {
+    if (!currentExercise) return;
+    const id = currentExercise.id;
+    setStatuses((prev) => ({ ...prev, [id]: 'wrong' }));
+    setShowResult(true);
+    setLastAnswerCorrect(false);
+
+    const nextAnswers = [
+      ...answers.filter((a) => a.exerciseId !== id),
+      { exerciseId: id, correct: false, answer: picks[id] ?? '' },
+    ];
+    setAnswers(nextAnswers);
+
+    if (lessonId && userId) {
+      saveLessonSession(userId, lessonId, {
+        exerciseIndex: currentIndex + 1,
+        answers: nextAnswers,
+        picks,
+        statuses: { ...statuses, [id]: 'wrong' as AttemptStatus },
+        startedAt: sessionStartedAtRef.current,
+      }).catch((err) => console.warn('[lesson-session] save failed:', err));
+    }
+
+    if (currentExercise.cardId) {
+      recordLessonSrsResult(
+        userId,
+        currentExercise.cardId,
+        'wrong',
+        srsIntroducedRef.current,
+        existingReviewItemsRef.current,
+      ).catch((err) => console.warn('[lesson-srs] SRS update failed:', err));
+    }
+
+    if (!isUnlimitedHearts) {
+      onLoseHeart?.();
+      setHeartBreakTrigger(true);
+      setTimeout(() => setHeartBreakTrigger(false), 1200);
+    }
+  }, [currentExercise, answers, picks, statuses, lessonId, userId, currentIndex, isUnlimitedHearts, onLoseHeart]);
+
+  /**
    * Step back one exercise. Deliberately does NOT clear the answered state —
-   * that now lives in `picks`/`outcomes`, keyed by exercise id, so the earlier
+   * that now lives in `picks`/`statuses`, keyed by exercise id, so the earlier
    * question comes back with its pick, its option colours and its note. Only
    * the animation trigger resets, so walking backwards does not replay a
    * sparkle or a shake.
@@ -481,6 +526,35 @@ export function LessonRunner({
     }
     if (currentIndex > 0) setCurrentIndex((i) => i - 1);
   };
+
+  /**
+   * Skip an audio-dependent exercise.
+   *
+   * Neutral in every direction: out of the accuracy denominator, no heart, and
+   * no SRS write at all, so the card stays due and the question comes back.
+   * The learner's headphones being dead is not evidence about their Spanish.
+   *
+   * Note it does NOT lock the exercise — walking back to it with Previous
+   * gives a real, full attempt, because by then the headphones may be working.
+   */
+  const handleSkip = useCallback(() => {
+    if (!currentExercise) return;
+    const id = currentExercise.id;
+    const nextStatuses: AttemptStatusMap = { ...statuses, [id]: 'skipped' };
+    setStatuses(nextStatuses);
+    setShowResult(false);
+    setLastAnswerCorrect(null);
+
+    if (lessonId && userId) {
+      saveLessonSession(userId, lessonId, {
+        exerciseIndex: currentIndex + 1,
+        answers,
+        picks,
+        statuses: nextStatuses,
+        startedAt: sessionStartedAtRef.current,
+      }).catch((err) => console.warn('[lesson-session] save failed:', err));
+    }
+  }, [currentExercise, statuses, answers, picks, lessonId, userId, currentIndex]);
 
   const handleNext = () => {
     if (warmupPhase) {
@@ -501,25 +575,26 @@ export function LessonRunner({
       setShowResult(false);
       setLastAnswerCorrect(null);
     } else {
-      // Lesson complete
+      // Lesson complete. One summarizeLesson call — the runner, the overlay
+      // and the completion row all read the same numbers.
       const allAnswers = [...answers];
-      const correctCount = allAnswers.filter((a) => a.correct).length;
-      const accuracy = exercises.length > 0 ? correctCount / exercises.length : 0;
-      const xpEarned = Math.round(xpReward * accuracy);
+      const summary = summarizeLesson(statuses, exerciseIds, xpReward);
 
       // Perfect run gets a Heavy "thump" that lands just before the overlay's
       // Success haptic on mount — creates a signature double-thump only when
       // every exercise was correct. Imperfect runs rely on the overlay's own
       // Success haptic (no double-fire).
-      if (Platform.OS !== 'web' && correctCount === exercises.length) {
+      if (Platform.OS !== 'web' && summary.perfect) {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
       }
 
       const result: LessonResult = {
-        totalExercises: exercises.length,
-        correctCount,
-        accuracy,
-        xpEarned,
+        totalExercises: summary.totalExercises,
+        correctCount: summary.correctCount,
+        skippedCount: summary.skippedCount,
+        scoredCount: summary.scoredCount,
+        accuracy: summary.accuracy,
+        xpEarned: summary.xpEarned,
         answers: allAnswers,
         timeSpentMs: Math.max(0, Date.now() - sessionStartedAtRef.current),
       };
@@ -551,12 +626,30 @@ export function LessonRunner({
    * flush exists to capture where they actually are — walking back a question
    * and then quitting should resume at that question, not further ahead.
    */
+  /**
+   * Skip is a navigation verb: one that leaves you staring at the same
+   * question reads as broken. Mark it, then move on. Walking back with
+   * Previous is how you see the SKIPPED note.
+   */
+  // Not memoised: handleNext is rebuilt every render by design (it closes over
+  // the whole completion path), so a useCallback here would be recreated every
+  // render anyway and only add the illusion of stability.
+  const handleSkipAndAdvance = () => {
+    handleSkip();
+    handleNext();
+  };
+
   const handleQuit = () => {
-    if (lessonId && userId && answers.length > 0) {
+    // `answers.length > 0` is no longer the same as "did any work": a learner
+    // can resolve exercises purely by skipping them, and that is still progress
+    // worth resuming to.
+    const didWork = answers.length > 0 || resolvedCount > 0;
+    if (lessonId && userId && didWork) {
       saveLessonSession(userId, lessonId, {
         exerciseIndex: currentIndex,
         answers,
         picks,
+        statuses,
         startedAt: sessionStartedAtRef.current,
       }).catch((err) => console.warn('[lesson-session] quit save failed:', err));
 
@@ -592,13 +685,14 @@ export function LessonRunner({
   }
 
   if (completed) {
-    const correctCount = answers.filter((a) => a.correct).length;
-    const accuracy = exercises.length > 0 ? correctCount / exercises.length : 0;
-    const xpEarned = Math.round(xpReward * accuracy);
-    const perfect = correctCount === exercises.length && exercises.length > 0;
-    const strong = accuracy >= 0.8;
-    const title = perfect ? 'Flawless!' : strong ? 'Nailed it!' : 'Lesson complete';
+    // Same summarizeLesson the result payload used — the overlay used to
+    // recompute this and could disagree with the score that was recorded.
+    const summary = summarizeLesson(statuses, exerciseIds, xpReward);
+    const strong = summary.accuracy >= 0.8;
+    const title = summary.perfect ? 'Flawless!' : strong ? 'Nailed it!' : 'Lesson complete';
     const mood = strong ? 'lessonComplete' : 'correct';
+    const skippedSuffix = summary.skippedCount > 0 ? ` · ${summary.skippedCount} skipped` : '';
+    const scoreLine = `${summary.correctCount}/${summary.scoredCount} correct${skippedSuffix}`;
 
     return (
       <View style={{ flex: 1 }}>
@@ -607,9 +701,7 @@ export function LessonRunner({
           mood={mood}
           title={title}
           subtitle={
-            showXpCelebration
-              ? `+${xpEarned} XP · ${correctCount}/${exercises.length} correct`
-              : `${correctCount}/${exercises.length} correct`
+            showXpCelebration ? `+${summary.xpEarned} XP · ${scoreLine}` : scoreLine
           }
           ctaLabel="Continue"
           onDismiss={onExit}
@@ -652,7 +744,7 @@ export function LessonRunner({
         lessonTitle={warmupPhase ? 'Quick review' : lessonTitle}
         currentIndex={warmupPhase ? warmupIndex : currentIndex}
         total={warmupPhase ? warmupEntries.length : exercises.length}
-        completedCount={warmupPhase ? warmupIndex : answers.length}
+        completedCount={warmupPhase ? warmupIndex : resolvedCount}
         counterLabel={
           warmupPhase
             ? `QUICK REVIEW ${warmupIndex + 1} / ${warmupEntries.length}`
@@ -664,9 +756,13 @@ export function LessonRunner({
         showHearts={showHearts}
         note={currentExercise?.explanation ?? null}
         answeredCorrect={currentCorrect}
+        recovered={currentStatus === 'recovered'}
+        skipped={currentStatus === 'skipped'}
+        retry={isRetrying ? { onGiveUp: handleGiveUp } : null}
+        onSkip={canSkipCurrent && !resolved && !isRetrying ? handleSkipAndAdvance : null}
         correctAnswer={currentExercise?.correctAnswer ?? ''}
         canPrev={warmupPhase ? warmupIndex > 0 : currentIndex > 0}
-        canNext={isAnswered}
+        canNext={resolved}
         isLast={!warmupPhase && currentIndex === exercises.length - 1}
         onExit={handleQuit}
         onPrev={handlePrev}
@@ -681,12 +777,17 @@ export function LessonRunner({
             genuinely changes, and only then. */}
         <CorrectSparkle trigger={showResult && lastAnswerCorrect === true}>
           <WrongShake trigger={showResult && lastAnswerCorrect === false}>
-            <View key={currentExercise?.id}>
+            {/* The attempt count is part of the key on purpose. Bumping it
+                remounts the exercise, which re-runs every component's lazy
+                useState initialiser against a null pick — so all fourteen of
+                them come back blank for a second attempt without a single
+                line of per-component retry code. */}
+            <View key={currentExercise ? `${currentExercise.id}#${currentAttempts}` : undefined}>
               {currentExercise &&
                 renderExercise(
                   currentExercise,
                   handleAnswer,
-                  isAnswered,
+                  locked,
                   currentPick,
                   userId,
                   targetLanguage,
@@ -756,16 +857,17 @@ function renderExercise(
     case 'free_production':
       return <TranslationExercise exercise={exercise} onAnswer={onAnswer} showResult={showResult} {...shared} />;
     case 'cloze_deletion':
-      return <ClozeExercise exercise={exercise} onAnswer={onAnswer} {...shared} />;
+      return <ClozeExercise exercise={exercise} onAnswer={onAnswer} showResult={showResult} {...shared} />;
     case 'sentence_construction':
-      return <SentenceConstructionExercise exercise={exercise} onAnswer={onAnswer} {...shared} />;
+      return <SentenceConstructionExercise exercise={exercise} onAnswer={onAnswer} showResult={showResult} {...shared} />;
     case 'error_correction':
-      return <ErrorCorrectionExercise exercise={exercise} onAnswer={onAnswer} {...shared} />;
+      return <ErrorCorrectionExercise exercise={exercise} onAnswer={onAnswer} showResult={showResult} {...shared} />;
     case 'dictation':
       return (
         <DictationExercise
           exercise={exercise}
           onAnswer={onAnswer}
+          showResult={showResult}
           selected={selected}
           userId={userId}
           targetLanguage={targetLanguage}

@@ -14,6 +14,11 @@ import type { Exercise } from '../../types';
 interface Props {
   exercise: Exercise;
   onAnswer: (isCorrect: boolean, answer: string) => void;
+  /**
+   * The runner has resolved this exercise — render read-only, and let the
+   * FeedbackCard reveal the answer. False while a second attempt is open.
+   */
+  showResult: boolean;
   /** Previously recorded answer, restored by the runner on Previous. Encoded
    *  as the assembled sentence, which maps back onto tile indices. */
   selected?: string | null;
@@ -25,6 +30,7 @@ interface Props {
 export function SentenceConstructionExercise({
   exercise,
   onAnswer,
+  showResult,
   selected = null,
   userId,
   language,
@@ -43,7 +49,13 @@ export function SentenceConstructionExercise({
   // The tile order is reshuffled on every mount, so the indices are resolved
   // against THIS mount's `tiles`, not the ones the answer was built from.
   const [placed, setPlaced] = useState<number[]>(() => restorePlacedTiles(tiles, selected));
-  const [isRevealed, setIsRevealed] = useState(() => isRestored(selected));
+  const [localRevealed, setLocalRevealed] = useState(() => isRestored(selected));
+  /**
+   * Locked = this exercise's own reveal, OR the runner saying it is resolved
+   * (walked back onto, or out of attempts). The runner's word has to be able
+   * to lock it too, or a second attempt could not be handed back.
+   */
+  const isRevealed = localRevealed || showResult;
   const [result, setResult] = useState<GradeResult | null>(() =>
     regradePick(exercise, selected),
   );
@@ -77,7 +89,7 @@ export function SentenceConstructionExercise({
       },
     );
     setResult(grade);
-    setIsRevealed(true);
+    setLocalRevealed(true);
 
     if (grade.isCorrect) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -87,11 +99,6 @@ export function SentenceConstructionExercise({
     onAnswer(grade.isCorrect, assembledSentence);
   };
 
-  const handleRetry = () => {
-    setPlaced([]);
-    setIsRevealed(false);
-    setResult(null);
-  };
 
   const isCorrect = result?.isCorrect ?? false;
 
@@ -179,7 +186,7 @@ export function SentenceConstructionExercise({
           language={language}
           cefrLevel={cefrLevel}
           userId={userId}
-          onRetry={handleRetry}
+          revealAnswer={showResult}
         />
       ) : null}
 

@@ -237,6 +237,14 @@ serve(async (req: Request) => {
         content_translation: article.contentTranslation ?? null,
         vocabulary_highlights: article.vocabularyHighlights ?? [],
         source_topic: article.sourceTopic ?? null,
+        // Enlist the row in the podcast render queue. Set here, on the
+        // insert, rather than as a column DEFAULT — a default would have
+        // swept all 2,262 pre-existing rows into the queue too (migration
+        // 079). Synthesis itself is daily-news-audio-cron's job, 20 minutes
+        // behind this one: inlining it would add minutes to a run that
+        // already takes 90–120s, and would let a fish.audio outage stop the
+        // articles themselves.
+        audio_status: 'pending',
       };
 
       const { error: insertErr } = await supabase

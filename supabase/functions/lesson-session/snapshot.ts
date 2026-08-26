@@ -23,11 +23,35 @@ export interface LessonSessionAnswer {
   answer: string;
 }
 
+/**
+ * Where one exercise stands. Mirrors AttemptStatus in lib/lesson-attempts.ts
+ * on the client — kept as a literal list here because this module is the trust
+ * boundary and must not accept a status it does not recognise.
+ */
+export type AttemptStatus =
+  | 'unanswered'
+  | 'retrying'
+  | 'correct'
+  | 'recovered'
+  | 'wrong'
+  | 'skipped';
+
+const ATTEMPT_STATUSES: readonly string[] = [
+  'unanswered', 'retrying', 'correct', 'recovered', 'wrong', 'skipped',
+];
+
 export interface LessonSessionSnapshot {
   version: number;
   exerciseIndex: number;
   answers: LessonSessionAnswer[];
   picks: Record<string, string>;
+  /**
+   * Per-exercise status. Optional on the wire, and deliberately NOT a schema
+   * version bump: this module rejects a foreign version outright, so bumping
+   * would delete every in-flight lesson on upgrade. An older client simply
+   * sends no statuses and gets none back.
+   */
+  statuses: Record<string, AttemptStatus>;
   /** Epoch ms when the lesson session first started — the TTL reference. */
   startedAt: number;
 }
@@ -92,11 +116,28 @@ export function parseSnapshot(value: unknown): LessonSessionSnapshot | null {
     }
   }
 
+  const statuses: Record<string, AttemptStatus> = {};
+  if (v.statuses !== undefined) {
+    if (typeof v.statuses !== 'object' || v.statuses === null || Array.isArray(v.statuses)) {
+      return null;
+    }
+    const entries = Object.entries(v.statuses as Record<string, unknown>);
+    if (entries.length > MAX_SNAPSHOT_ANSWERS) return null;
+    for (const [exerciseId, status] of entries) {
+      // A status this server does not know is DROPPED, not rejected. A newer
+      // client that adds a seventh status must not be able to wipe a learner's
+      // in-flight lesson just by mentioning it.
+      if (typeof status !== 'string' || !ATTEMPT_STATUSES.includes(status)) continue;
+      statuses[exerciseId.slice(0, MAX_EXERCISE_ID_CHARS)] = status as AttemptStatus;
+    }
+  }
+
   return {
     version: LESSON_SESSION_SCHEMA_VERSION,
     exerciseIndex: Math.floor(v.exerciseIndex),
     answers,
     picks,
+    statuses,
     startedAt: Math.floor(v.startedAt),
   };
 }

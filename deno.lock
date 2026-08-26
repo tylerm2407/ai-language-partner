@@ -104,6 +104,7 @@
         "npm:react-native-safe-area-context@5.6",
         "npm:react-native-screens@4.16",
         "npm:react-native-svg@15.12.1",
+        "npm:react-native-track-player@^4.1.2",
         "npm:react-native-url-polyfill@2",
         "npm:react-native-web@0.21",
         "npm:react-native-worklets@~0.5.2",

@@ -88,6 +88,16 @@ function buttonByLabel(renderer: TestRenderer.ReactTestRenderer, label: string) 
   return hostNodes(renderer, (node) => node.props?.accessibilityLabel === label)[0];
 }
 
+/** The composite Pressable carries onPress; the host View it renders carries
+ *  only the resolved responder handlers, which cannot be invoked bare. */
+function pressableByLabel(renderer: TestRenderer.ReactTestRenderer, label: string) {
+  return renderer.root.findAll(
+    (n: ReactTestInstance) =>
+      typeof n.type !== 'string' && n.props?.accessibilityLabel === label,
+    { deep: true },
+  )[0];
+}
+
 const chromeProps = {
   lessonTitle: 'Greetings & Basics',
   currentIndex: 1,
@@ -178,6 +188,69 @@ describe('ExerciseChrome', () => {
     expect(count(without)).toBe(0);
   });
 });
+
+  describe('second chance and skip', () => {
+    it('hides everything about the answer while a second attempt is open', () => {
+      const r = render(
+        <ExerciseChrome {...chromeProps} retry={{ onGiveUp: () => {} }} answeredCorrect={null} />,
+      );
+      const rendered = text(r);
+      expect(rendered).toContain('NOT QUITE — ');
+      expect(rendered).toContain('One more try');
+      // Neither the answer nor the explanation may leak before the retry is spent.
+      expect(rendered).not.toContain('WATER');
+      expect(rendered).not.toContain('el agua fría');
+      expect(rendered).not.toContain('CORRECT — ');
+    });
+
+    it('keeps Next disabled until the second attempt resolves', () => {
+      const r = render(
+        <ExerciseChrome {...chromeProps} retry={{ onGiveUp: () => {} }} canNext={false} />,
+      );
+      expect(buttonByLabel(r, 'Next').props.accessibilityState.disabled).toBe(true);
+    });
+
+    it('offers a way out for a learner who has simply gone blank', () => {
+      const onGiveUp = jest.fn();
+      const r = render(<ExerciseChrome {...chromeProps} retry={{ onGiveUp }} />);
+      // Without this a typed exercise is a dead end: Next is disabled until the
+      // exercise resolves, and every typed component refuses an empty answer.
+      expect(buttonByLabel(r, 'Show the answer and move on')).toBeDefined();
+      TestRenderer.act(() => {
+        pressableByLabel(r, 'Show the answer and move on').props.onPress();
+      });
+      expect(onGiveUp).toHaveBeenCalledTimes(1);
+    });
+
+    it('says a second-try answer did not count', () => {
+      const r = render(<ExerciseChrome {...chromeProps} canNext answeredCorrect recovered />);
+      const rendered = text(r);
+      expect(rendered).toContain('SECOND TRY — ');
+      expect(rendered).toContain("doesn't count toward your score");
+      expect(rendered).not.toContain('CORRECT — ');
+    });
+
+    it('marks a skipped question without revealing the answer', () => {
+      const r = render(<ExerciseChrome {...chromeProps} canNext skipped />);
+      const rendered = text(r);
+      expect(rendered).toContain('SKIPPED — ');
+      expect(rendered).toContain("won't count");
+      // Skip must not become a free way to see the answer.
+      expect(rendered).not.toContain('WATER');
+    });
+
+    it('shows no skip affordance unless the exercise type offers one', () => {
+      const r = render(<ExerciseChrome {...chromeProps} />);
+      expect(buttonByLabel(r, 'Skip this question without scoring it')).toBeUndefined();
+    });
+
+    it('offers skip with an unambiguous label when one is supplied', () => {
+      const r = render(<ExerciseChrome {...chromeProps} onSkip={() => {}} />);
+      const button = buttonByLabel(r, 'Skip this question without scoring it');
+      expect(button).toBeDefined();
+      expect(button.props.accessibilityRole).toBe('button');
+    });
+  });
 
 describe('ExerciseTrack', () => {
   const ticks = (r: TestRenderer.ReactTestRenderer) =>
@@ -367,6 +440,7 @@ describe('restoring an answered exercise', () => {
       <SentenceConstructionExercise
         exercise={construction}
         selected="el agua está fría"
+        showResult
         onAnswer={() => {}}
       />,
     );

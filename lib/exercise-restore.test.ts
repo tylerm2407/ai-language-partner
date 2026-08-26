@@ -5,6 +5,8 @@ import {
   regradePick,
   restorePlacedTiles,
   splitJoinedAnswer,
+  speakingWasCorrect,
+  SPEAKING_PASS_SCORE,
 } from './exercise-restore';
 import type { Exercise } from '../types';
 
@@ -122,5 +124,20 @@ describe('parseSpeakingScore', () => {
     expect(parseSpeakingScore('el agua')).toBeNull();
     expect(parseSpeakingScore('score:')).toBeNull();
     expect(parseSpeakingScore('score:abc')).toBeNull();
+  });
+});
+
+describe('speakingWasCorrect', () => {
+  it('recomputes pass/fail from the stored score rather than storing a verdict', () => {
+    expect(speakingWasCorrect(`score:${SPEAKING_PASS_SCORE - 1}`)).toBe(false);
+    expect(speakingWasCorrect(`score:${SPEAKING_PASS_SCORE}`)).toBe(true);
+    expect(speakingWasCorrect(`score:${SPEAKING_PASS_SCORE + 1}`)).toBe(true);
+  });
+
+  it('returns null when there is nothing to restore', () => {
+    expect(speakingWasCorrect(null)).toBeNull();
+    expect(speakingWasCorrect(undefined)).toBeNull();
+    expect(speakingWasCorrect('el agua')).toBeNull();
+    expect(speakingWasCorrect('score:abc')).toBeNull();
   });
 });

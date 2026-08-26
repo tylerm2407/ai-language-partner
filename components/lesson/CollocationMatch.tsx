@@ -108,11 +108,6 @@ export function CollocationMatch({
     onAnswer(isCorrect, joined);
   };
 
-  const handleRetry = () => {
-    setSelectedWords(new Set());
-    setSubmitted(false);
-    setResult(null);
-  };
 
   const getOptionStyle = (word: string) => {
     const isSelected = selectedWords.has(word);
@@ -171,7 +166,7 @@ export function CollocationMatch({
           language={language}
           cefrLevel={cefrLevel}
           userId={userId}
-          onRetry={handleRetry}
+          revealAnswer={showResult}
         />
       ) : null}
 

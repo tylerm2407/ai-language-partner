@@ -22,6 +22,7 @@
  * restores it on mount, and clears it on lesson completion or explicit quit.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { AttemptStatus } from './lesson-attempts';
 import {
   clearRemoteLessonSession,
   loadRemoteLessonSession,
@@ -60,6 +61,21 @@ export interface LessonSessionSnapshot {
    * `answers` rather than dropping a mid-lesson session on upgrade.
    */
   picks?: Record<string, string>;
+  /**
+   * Where each exercise stands — see lib/lesson-attempts.ts.
+   *
+   * Needed because `answers` cannot express two of the six states: a
+   * second-attempt-correct is stored there as `correct: false` and would come
+   * back re-graded as a plain wrong answer, and a skipped exercise has no
+   * `answers` entry at all so it would come back unanswered and silently move
+   * the score on resume.
+   *
+   * Optional, and deliberately NOT a schema-version bump: both this module and
+   * the edge function REJECT a foreign version, so bumping would delete every
+   * learner's in-flight lesson on upgrade. An old server drops this field
+   * harmlessly and an old client ignores it.
+   */
+  statuses?: Record<string, AttemptStatus>;
   /** Epoch ms when the lesson session first started — the TTL reference. */
   startedAt: number;
 }

@@ -5,11 +5,16 @@ import { View } from 'react-native';
 import { FloatingTabBar } from '../../components/navigation/FloatingTabBar';
 import { useOfflineQueueFlush } from '../../hooks/useOfflineQueueFlush';
 import { useLessonSessionSweep } from '../../hooks/useLessonSessionSweep';
+import { useOnboardingReconciliation } from '../../hooks/useOnboardingReconciliation';
 
 export default function AppLayout() {
   // Replay queued offline writes on mount / reconnect / foreground.
   useOfflineQueueFlush();
   useLessonSessionSweep();
+  // Reconcile the onboarding checklist against what the learner actually did.
+  // Lives here rather than in the FAB because the FAB only exists on Home, and
+  // someone who finishes a lesson and never opens Home still finished it.
+  useOnboardingReconciliation();
 
 
   // ─── The paywall is no longer a gate ─────────────────────────────────

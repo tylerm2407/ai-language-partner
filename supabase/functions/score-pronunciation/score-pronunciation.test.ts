@@ -81,3 +81,21 @@ Deno.test('total miss: score 0 still reports per-word errors (init regression)',
   assertEquals(result.matchedVariant, null);
   assert(result.feedback.startsWith('Needs improvement'));
 });
+
+Deno.test('the passing 60-74 band does not read like a failure', () => {
+  // The learner is shown a plain "Sounded right" at >= 60, so prose in this
+  // band that sounds like a fail contradicts the label above it. Supporting
+  // detail may vary; the verdict may not.
+  // Three of five words right, two unrecognisable => 3/5 = 60, the bottom of
+  // the passing band and the worst case the label still calls a pass.
+  const result = calculatePronunciationScore(
+    'uno dos tres zzzzzzz yyyyyyy',
+    'uno dos tres cuatro cinco',
+    [],
+  );
+  if (result.score < 60 || result.score >= 75) {
+    throw new Error(`fixture landed at ${result.score}, outside the 60-74 band`);
+  }
+  assert(!/decent|keep practicing|needs improvement/i.test(result.feedback),
+    `passing-band feedback reads like a failure: "${result.feedback}"`);
+});

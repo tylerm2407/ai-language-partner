@@ -39,15 +39,31 @@ export type AudioSessionMode =
   /** Hands-free playback: survives backgrounding on iOS, ducks for nav prompts. */
   | 'handsfree-play'
   /** Hands-free recording: survives backgrounding on iOS. */
-  | 'handsfree-record';
+  | 'handsfree-record'
+  /**
+   * A news article is being narrated by react-native-track-player.
+   *
+   * This mode is DELEGATED: expo-av must not hold the session while RNTP has
+   * it. RNTP configures the native session itself (AVAudioSession on iOS, a
+   * media-playback foreground service on Android), and two owners racing over
+   * one device resource is the exact class of bug this module was written to
+   * end — so entering this mode deliberately releases expo-av to `idle`
+   * settings and then leaves it alone. See enterNewsPlaybackSession below.
+   */
+  | 'news-play';
 
 /**
- * Background audio is iOS-only for now. `UIBackgroundModes: ["audio"]` is
- * declared in app.json, but the Android manifest has no FOREGROUND_SERVICE /
- * FOREGROUND_SERVICE_MEDIA_PLAYBACK permission and no media service, so
+ * Background audio through EXPO-AV is iOS-only. `UIBackgroundModes: ["audio"]`
+ * is declared, but expo-av has no Android foreground service of its own, so
  * `staysActiveInBackground` on Android 14+ does not reliably survive
  * backgrounding. Claiming otherwise here would just move the failure somewhere
- * harder to find. Android background arrives with the media-service work.
+ * harder to find.
+ *
+ * This does NOT apply to the `news-play` mode. That path runs on
+ * react-native-track-player, which ships a real media-playback foreground
+ * service (declared in AndroidManifest.xml), so news narration backgrounds
+ * correctly on both platforms. The two facts are separate on purpose: this
+ * constant is about what expo-av can promise, not about the app.
  */
 const BACKGROUND_CAPABLE = Platform.OS === 'ios';
 
@@ -116,6 +132,27 @@ const MODES: Record<AudioSessionMode, AudioMode> = {
     shouldDuckAndroid: false,
     playThroughEarpieceAndroid: false,
   },
+
+  /**
+   * Delegated to react-native-track-player.
+   *
+   * These are expo-av's STAND-DOWN settings, not the settings the narration
+   * plays under — RNTP sets those natively. expo-av is told to hold nothing
+   * and mix with whatever else is happening, so that when RNTP takes the
+   * session there is no second claimant to fight with. `allowsRecordingIOS`
+   * false in particular matters: leaving PlayAndRecord set here would route
+   * RNTP's output to the earpiece, which is the original bug in this file's
+   * header wearing a different hat.
+   */
+  'news-play': {
+    allowsRecordingIOS: false,
+    playsInSilentModeIOS: true,
+    staysActiveInBackground: false,
+    interruptionModeIOS: InterruptionModeIOS.MixWithOthers,
+    interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
+    shouldDuckAndroid: true,
+    playThroughEarpieceAndroid: false,
+  },
 };
 
 let currentMode: AudioSessionMode = 'idle';
@@ -179,6 +216,31 @@ export function recordingModeFor(handsFree: boolean): AudioSessionMode {
  */
 export async function restorePreviousAudioSessionMode(): Promise<void> {
   await setAudioSessionMode(previousMode);
+}
+
+/**
+ * Hand the device audio session to react-native-track-player.
+ *
+ * Call this before RNTP starts playing, and `releaseNewsPlaybackSession()`
+ * when it stops. The two exist so the handoff is a named, greppable event
+ * rather than an implicit consequence of whichever screen happened to mount:
+ * an article player left holding the session is how the next lesson ends up
+ * playing out of the earpiece.
+ */
+export async function enterNewsPlaybackSession(): Promise<void> {
+  await setAudioSessionMode('news-play');
+}
+
+/**
+ * Take the session back from react-native-track-player.
+ *
+ * Returns to `idle` rather than to the previous mode: the screen that was
+ * playing is gone, and whatever comes next (a lesson, a chat reply) sets the
+ * mode it needs on its own way in. Restoring a stale mode here would reassert
+ * a claim nobody currently wants.
+ */
+export async function releaseNewsPlaybackSession(): Promise<void> {
+  await setAudioSessionMode('idle');
 }
 
 /**

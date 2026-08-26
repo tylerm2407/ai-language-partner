@@ -10,13 +10,18 @@
  * Positioning: absolute, bottom-right, lifted above the tab bar
  * (bottom: 100) to match the ScrollView paddingBottom in index.tsx.
  *
- * Auto-hides when:
- *   - isVisible is false (dismissed or all-complete)
- *   - allComplete is true (brief confetti then fade)
+ * Visibility is decided entirely by persisted state — `dismissed` or
+ * `celebratedAt` — never by a timer or a heuristic. A timer only ever holds
+ * the already-retired FAB on screen a moment longer so the confetti has
+ * somewhere to play; it can never keep the checklist alive.
  *
- * Keeps all the existing onboarding-checklist behaviour: XP reward on
- * 100%, confetti, notification-permission request for dailyReminder,
- * route-navigation per item.
+ * That separation is the scar tissue from two rounds of the same bug. The
+ * first version wrote `xpAwarded` inside an effect that listed `xpAwarded` as a
+ * dependency, so the re-render's cleanup cleared both of its timers before
+ * either ran. The second still wrote the retirement from inside a 2.5s timer,
+ * which any dependency flip — including `useMotion`'s async Reduce Motion read
+ * — cancelled for good. Both times the rocket never went away. See the
+ * celebration effect below.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -26,19 +31,30 @@ import {
   Pressable,
   Animated,
   Alert,
+  Linking,
   Platform,
   StyleSheet,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
 import * as Haptics from 'expo-haptics';
 import Svg, { Circle as SvgCircle } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
+import * as Sentry from '@sentry/react-native';
 import { Sheet } from '../ui/Sheet';
 import { Heading, Body, Caption } from '../ui/Text';
-import { useOnboardingChecklist } from '../../hooks/useOnboardingChecklist';
-import { useProfile } from '../../hooks/useProfile';
+import {
+  useOnboardingChecklist,
+  type OnboardingRow,
+} from '../../hooks/useOnboardingChecklist';
 import { useMotion } from '../../hooks/useMotion';
+import { useAppStore, effectiveTier } from '../../stores/useAppStore';
+import { incrementXpIdempotent } from '../../lib/supabase-queries';
+import {
+  ONBOARDING_COMPLETE_XP,
+  ONBOARDING_COMPLETE_XP_KEY,
+} from '../../lib/onboarding-checklist';
 import { colors, radii, spacing } from '../../config/theme';
 
 const FAB_SIZE = 60;
@@ -50,6 +66,9 @@ const AnimatedCircle = Animated.createAnimatedComponent(SvgCircle);
 
 const CONFETTI_COLORS = ['#FBBF24', '#34D399', '#38BDF8', '#A855F7', '#F472B6', '#60A5FA'];
 const PARTICLE_COUNT = 12;
+
+/** How long the confetti stays up before the checklist retires itself. */
+const CELEBRATION_MS = 2500;
 
 function ConfettiParticle({ index }: { index: number }) {
   const translateX = useRef(new Animated.Value(0)).current;
@@ -110,21 +129,35 @@ interface OnboardingChecklistFabProps {
 
 export function OnboardingChecklistFab({ bottomOffset = 100 }: OnboardingChecklistFabProps) {
   const router = useRouter();
-  const { earnXp } = useProfile();
   const {
     isVisible,
     items,
     completedCount,
     totalCount,
-    allComplete,
+    isResolved,
+    celebrationPending,
     progress,
     markItem,
+    skipItem,
+    markCelebrated,
     dismiss,
   } = useOnboardingChecklist();
 
+  // The AI tutor is uncompletable on the free tier — `_shared/plan-limits.ts`
+  // sets `starter.dailyTextMessages = 0` — so for those learners that step has
+  // to be resolvable some other way or the checklist can never retire.
+  const subscription = useAppStore((s) => s.subscription);
+  const entitledTier = useAppStore((s) => s.entitledTier);
+  const isFreeTier = effectiveTier(subscription, entitledTier) === 'starter';
+
   const [open, setOpen] = useState(false);
-  const [xpAwarded, setXpAwarded] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  /**
+   * Keeps the FAB mounted for the confetti burst after the checklist has
+   * already been persisted as retired. Visual only — see the celebration
+   * effect below for why the write does not wait for it.
+   */
+  const [retiring, setRetiring] = useState(false);
 
   // Pulse the FAB subtly while it has pending items — draws the eye
   // without being noisy. Gated off once all items are complete, and off
@@ -133,7 +166,7 @@ export function OnboardingChecklistFab({ bottomOffset = 100 }: OnboardingCheckli
   const { shouldReduce } = useMotion();
   const pulse = useRef(new Animated.Value(1)).current;
   useEffect(() => {
-    if (!isVisible || allComplete || shouldReduce) return;
+    if (!isVisible || isResolved || shouldReduce) return;
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulse, { toValue: 1.08, duration: 900, useNativeDriver: true }),
@@ -145,7 +178,7 @@ export function OnboardingChecklistFab({ bottomOffset = 100 }: OnboardingCheckli
       loop.stop();
       pulse.setValue(1);
     };
-  }, [isVisible, allComplete, shouldReduce, pulse]);
+  }, [isVisible, isResolved, shouldReduce, pulse]);
 
   // Animate the progress ring as `progress` advances
   const progressAnim = useRef(new Animated.Value(progress)).current;
@@ -162,56 +195,163 @@ export function OnboardingChecklistFab({ bottomOffset = 100 }: OnboardingCheckli
     outputRange: [RING_CIRCUMFERENCE, 0],
   });
 
-  // All-complete side effects: +50 XP, confetti, auto-dismiss after a beat
+  /**
+   * The celebration: +50 XP, retire, then confetti.
+   *
+   * That order is the whole point, and it is the fix for the second time this
+   * component failed to retire. The previous version wrote `markCelebrated`
+   * from inside a 2500ms `setTimeout` owned by an effect keyed on
+   * `[celebrationPending, isFocused, shouldReduce]`. Any of those flipping
+   * inside the confetti window ran the cleanup, and `celebratingRef` — already
+   * set — blocked the re-run, so the write was cancelled for the rest of the
+   * session. `shouldReduce` flips on its own: `useMotion` starts at `false` and
+   * resolves `AccessibilityInfo.isReduceMotionEnabled()` after mount. Leaving
+   * Home inside 2.5s did it too. The observable end state was a profile row
+   * with `completedAt` stamped, `celebratedAt` null and `dismissed` false —
+   * i.e. a rocket reading 5/5 that came back on every launch.
+   *
+   * So the persisted retirement happens immediately, synchronously with the
+   * decision to celebrate, and the confetti is pure decoration on top of an
+   * already-finished transaction. Cancelling it costs nothing.
+   *
+   * `celebratingRef` is still a ref rather than state so the once-only guard
+   * can never appear in a dependency array.
+   *
+   * The XP goes through `incrementXpIdempotent` under a fixed key rather than
+   * through `earnXp`, which mints a random key per call. With a random key the
+   * `client_events` de-dupe protected nothing, and since the dismiss never
+   * landed, every app launch re-ran this and paid out another 50 XP. The stable
+   * key makes the server the guard: a second award is impossible even if every
+   * client-side flag write fails.
+   *
+   * `isFocused` matters because the bottom tabs keep Home mounted while it is
+   * hidden, so without it the confetti plays behind whatever screen the learner
+   * is actually looking at. `completedAt` is already persisted by the time we
+   * get here, so deferring to the next Home visit loses nothing — not even
+   * across an app kill.
+   */
+  const isFocused = useIsFocused();
+  const celebratingRef = useRef(false);
   useEffect(() => {
-    if (!isVisible) return;
-    if (!allComplete || xpAwarded) return;
+    if (!celebrationPending || !isFocused || celebratingRef.current) return;
+    celebratingRef.current = true;
 
-    setXpAwarded(true);
-    setShowConfetti(true);
-    earnXp(50).catch(() => {});
+    incrementXpIdempotent(ONBOARDING_COMPLETE_XP, ONBOARDING_COMPLETE_XP_KEY).catch((err) => {
+      Sentry.captureException(err, {
+        tags: { area: 'onboarding-checklist', op: 'complete-xp' },
+      });
+    });
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
 
-    const closeConfetti = setTimeout(() => setShowConfetti(false), 2500);
-    const autoDismiss = setTimeout(() => {
-      dismiss().catch(() => {});
+    markCelebrated().catch((err) => {
+      // The ref stays set, so this does not retry within the session. It does
+      // not need to: `completedAt` is persisted, so the next launch finds the
+      // celebration still pending and tries again — and the XP key means that
+      // retry cannot pay twice.
+      Sentry.captureException(err, {
+        tags: { area: 'onboarding-checklist', op: 'mark-celebrated' },
+      });
+    });
+
+    // `markCelebrated` has already flipped `isVisible` to false, so the render
+    // gate below keeps the FAB alive on `retiring` alone for the length of the
+    // burst. Reduce Motion skips straight to gone.
+    if (shouldReduce) {
       setOpen(false);
-    }, 3200);
-    return () => {
-      clearTimeout(closeConfetti);
-      clearTimeout(autoDismiss);
-    };
-  }, [allComplete, xpAwarded, isVisible, earnXp, dismiss]);
+      return;
+    }
+    setShowConfetti(true);
+    setRetiring(true);
+    // No cleanup: there is no timer here to cancel, and nothing left to undo.
+    // `shouldReduce` is read at run time rather than listed as a dependency —
+    // it is decoration, and re-running this effect is what broke it before.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [celebrationPending, isFocused]);
+
+  /**
+   * Take the confetti back down.
+   *
+   * Keyed on `retiring` alone — a boolean that only ever goes false→true→false
+   * — so an unrelated re-render cannot restart or cancel it. If the component
+   * unmounts mid-burst the timer dies with it and the checklist is still
+   * retired, because that write landed before the burst began.
+   */
+  useEffect(() => {
+    if (!retiring) return;
+    const timer = setTimeout(() => {
+      setShowConfetti(false);
+      setRetiring(false);
+      setOpen(false);
+    }, CELEBRATION_MS);
+    return () => clearTimeout(timer);
+  }, [retiring]);
 
   const handleItemPress = useCallback(
-    async (key: string, route: string | null) => {
+    async (row: OnboardingRow) => {
       // Haptic feedback on item tap
       Haptics.selectionAsync().catch(() => {});
 
-      if (key === 'dailyReminder') {
+      if (row.stepKey === 'dailyReminder') {
         try {
           const { status } = await Notifications.requestPermissionsAsync();
           if (status === 'granted') {
+            // Reconciliation would derive this on the next launch, but the
+            // learner just tapped a thing and expects the tick now.
             await markItem('dailyReminder');
-          } else {
-            Alert.alert(
-              'Notifications Disabled',
-              'Enable notifications in your device settings to set daily reminders.',
-              [{ text: 'OK' }],
-            );
+            return;
           }
-        } catch {
-          Alert.alert('Error', 'Could not request notification permissions.');
+        } catch (err) {
+          Sentry.captureException(err, {
+            tags: { area: 'onboarding-checklist', op: 'request-notifications' },
+          });
+          Alert.alert('Something went wrong', 'We could not ask for notification permission just now.');
+          return;
         }
+        // Denied. The OS will not ask again, so an "enable it in Settings"
+        // message with an OK button is a dead end — the step becomes
+        // permanently un-tickable and the checklist never resolves. Offer the
+        // two things that actually move: go turn it on, or say no properly.
+        Alert.alert(
+          'Reminders are off',
+          'iOS only asks once. You can turn reminders on in Settings, or skip this step — it will stop asking either way.',
+          [
+            { text: 'Not now', style: 'cancel' },
+            { text: 'Skip this step', onPress: () => { skipItem('dailyReminder').catch(() => {}); } },
+            { text: 'Open Settings', onPress: () => { Linking.openSettings().catch(() => {}); } },
+          ],
+        );
         return;
       }
 
-      if (route) {
+      if (row.stepKey === 'aiConversation' && isFreeTier) {
+        // The free tier's chat quota is zero server-side, so sending them to
+        // /chat is sending them to a paywall they cannot pass. Offer the
+        // upgrade at the moment of want, and an honest way out if the answer
+        // is no — otherwise this step alone keeps the rocket on screen forever.
+        Alert.alert(
+          'AI conversation is a paid feature',
+          'Practising with the AI tutor needs a paid plan. You can see what is included, or skip this step.',
+          [
+            { text: 'Not now', style: 'cancel' },
+            { text: 'Skip this step', onPress: () => { skipItem('aiConversation').catch(() => {}); } },
+            {
+              text: 'See plans',
+              onPress: () => {
+                setOpen(false);
+                router.push('/plans');
+              },
+            },
+          ],
+        );
+        return;
+      }
+
+      if (row.route) {
         setOpen(false); // close the sheet before navigating
-        router.push(route as any);
+        router.push(row.route as never);
       }
     },
-    [markItem, router],
+    [markItem, skipItem, isFreeTier, router],
   );
 
   const handleOpen = useCallback(() => {
@@ -226,7 +366,7 @@ export function OnboardingChecklistFab({ bottomOffset = 100 }: OnboardingCheckli
     await dismiss().catch(() => {});
   }, [dismiss]);
 
-  if (!isVisible) return null;
+  if (!isVisible && !retiring) return null;
 
   return (
     <>
@@ -321,7 +461,7 @@ export function OnboardingChecklistFab({ bottomOffset = 100 }: OnboardingCheckli
           {/* Progress summary */}
           <Body tone="secondary" size="sm" style={{ marginBottom: spacing.sm }}>
             {completedCount} of {totalCount} complete
-            {allComplete ? ' — nice work!' : ''}
+            {isResolved ? ' — nice work!' : ''}
           </Body>
 
           {/* Progress bar */}
@@ -336,47 +476,67 @@ export function OnboardingChecklistFab({ bottomOffset = 100 }: OnboardingCheckli
 
           {/* Items */}
           <View style={{ marginTop: spacing.sm }}>
-            {items.map((item) => (
-              <Pressable
-                key={item.key}
-                style={styles.itemRow}
-                onPress={() => !item.completed && handleItemPress(item.key, item.route)}
-                disabled={item.completed}
-                accessibilityRole="button"
-                accessibilityLabel={`${item.label}${item.completed ? ', completed' : ''}`}
-                accessibilityState={{ checked: item.completed, disabled: item.completed }}
-              >
-                <View
-                  style={[
-                    styles.checkCircle,
-                    item.completed
-                      ? { backgroundColor: colors.success.base, borderColor: 'transparent' }
-                      : { borderColor: colors.text.tertiary },
-                  ]}
+            {items.map((item) => {
+              const done = item.state === 'done';
+              const skipped = item.state === 'skipped';
+              // A skipped row is still tappable: skipping resolves the
+              // checklist, it does not close the door on doing the thing.
+              const interactive = !done && item.stepKey !== null;
+              return (
+                <Pressable
+                  key={item.key}
+                  style={styles.itemRow}
+                  onPress={() => interactive && handleItemPress(item)}
+                  disabled={!interactive}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    `${item.label}` +
+                    (done ? ', completed' : skipped ? ', skipped' : '')
+                  }
+                  // `checked` is false for a skipped row on purpose — the row
+                  // must never claim work that didn't happen, to VoiceOver
+                  // least of all.
+                  accessibilityState={{ checked: done, disabled: !interactive }}
                 >
-                  {item.completed && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}
-                </View>
-                <Ionicons
-                  name={item.icon as any}
-                  size={18}
-                  color={item.completed ? colors.success.base : colors.text.tertiary}
-                  style={{ marginRight: spacing.xs }}
-                />
-                <Text
-                  style={[
-                    styles.itemLabel,
-                    item.completed
-                      ? { color: colors.success.light, textDecorationLine: 'line-through' }
-                      : { color: colors.text.primary },
-                  ]}
-                >
-                  {item.label}
-                </Text>
-                {!item.completed && item.route && (
-                  <Ionicons name="chevron-forward" size={16} color={colors.text.tertiary} />
-                )}
-              </Pressable>
-            ))}
+                  <View
+                    style={[
+                      styles.checkCircle,
+                      done
+                        ? { backgroundColor: colors.success.base, borderColor: 'transparent' }
+                        : { borderColor: colors.text.tertiary },
+                    ]}
+                  >
+                    {done && <Ionicons name="checkmark" size={14} color={colors.text.onSuccess} />}
+                    {/* A dash, not a tick: resolved, not achieved. The glyph is
+                        the non-colour signal DESIGN.md requires alongside the
+                        muted tone and the "Skipped" caption. */}
+                    {skipped && <Ionicons name="remove" size={14} color={colors.text.tertiary} />}
+                  </View>
+                  <Ionicons
+                    name={item.icon as never}
+                    size={18}
+                    color={done ? colors.success.base : colors.text.tertiary}
+                    style={{ marginRight: spacing.xs }}
+                  />
+                  <Text
+                    style={[
+                      styles.itemLabel,
+                      done
+                        ? { color: colors.success.light, textDecorationLine: 'line-through' }
+                        : skipped
+                          ? { color: colors.text.quaternary }
+                          : { color: colors.text.primary },
+                    ]}
+                  >
+                    {item.label}
+                  </Text>
+                  {skipped && <Caption tone="tertiary" style={styles.skippedCaption}>Skipped</Caption>}
+                  {interactive && !skipped && item.route && (
+                    <Ionicons name="chevron-forward" size={16} color={colors.text.tertiary} />
+                  )}
+                </Pressable>
+              );
+            })}
           </View>
         </View>
       </Sheet>
@@ -453,7 +613,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: spacing.sm,
+    // 20 (icon) + 12 + 12 clears the 44pt Apple HIG minimum for the whole row,
+    // which is the touch target here — the checkbox is decoration.
+    minHeight: 44,
     gap: spacing.xxs,
+  },
+  skippedCaption: {
+    marginLeft: spacing.xs,
   },
   checkCircle: {
     width: 24,

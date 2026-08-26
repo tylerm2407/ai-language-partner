@@ -2,11 +2,17 @@
  * CompletedLessonsSection — Profile page list of lessons the learner has
  * finished, newest first. Pulls from lesson_completions joined with lesson
  * titles. Empty state when the learner hasn't completed any yet.
+ *
+ * Re-reads on focus, not just on mount. The profile tab stays mounted once the
+ * learner has visited it, so a mount-only fetch meant finishing a lesson and
+ * coming back here showed the pre-lesson answer — the same staleness UnitPath
+ * fixed for the Learn path.
  */
 
-import { useEffect, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import {
   fetchCompletedLessonsWithTitles,
@@ -46,28 +52,43 @@ export function CompletedLessonsSection({ userId, previewCount = 5 }: Props) {
   const router = useRouter();
   const [completions, setCompletions] = useState<LessonCompletionWithTitle[] | null>(null);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
+  /** Revalidation is silent once there is a list to show — raising the spinner
+   *  on every focus would blank it each time the learner came back. */
+  const hasLoadedOnce = useRef(false);
 
-  useEffect(() => {
-    if (!userId) {
-      setLoading(false);
-      return;
-    }
-    let cancelled = false;
-    fetchCompletedLessonsWithTitles(userId, 25)
-      .then((rows) => {
-        if (!cancelled) setCompletions(rows);
-      })
-      .catch(() => {
-        if (!cancelled) setCompletions([]);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [userId]);
+  useFocusEffect(
+    useCallback(() => {
+      if (!userId) {
+        setLoading(false);
+        return;
+      }
+      let cancelled = false;
+      if (!hasLoadedOnce.current) setLoading(true);
+      fetchCompletedLessonsWithTitles(userId, 25)
+        .then((rows) => {
+          if (cancelled) return;
+          hasLoadedOnce.current = true;
+          setCompletions(rows);
+          setFailed(false);
+        })
+        .catch((err) => {
+          // A failed read is NOT an empty history. Swallowing it into [] is
+          // exactly how a broken query read as "you have completed nothing".
+          if (cancelled) return;
+          console.error('[profile] failed to load completed lessons:', err);
+          setFailed(true);
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+      return () => {
+        cancelled = true;
+      };
+    }, [userId, retryKey]),
+  );
 
   return (
     <View className="mb-6">
@@ -76,6 +97,21 @@ export function CompletedLessonsSection({ userId, previewCount = 5 }: Props) {
       {loading ? (
         <View className="bg-dark-card rounded-2xl p-5 items-center">
           <ActivityIndicator size="small" color="#A855F7" />
+        </View>
+      ) : failed && !completions ? (
+        <View className="bg-dark-card rounded-2xl p-5 items-center">
+          <Ionicons name="cloud-offline-outline" size={28} color="#6b7280" />
+          <Text className="text-sm text-text-secondary mt-2 text-center">
+            Couldn't load your completed lessons.
+          </Text>
+          <Pressable
+            onPress={() => setRetryKey((k) => k + 1)}
+            className="mt-3 px-4 py-2"
+            accessibilityRole="button"
+            accessibilityLabel="Retry loading completed lessons"
+          >
+            <Text className="text-sm font-semibold text-primary">Try again</Text>
+          </Pressable>
         </View>
       ) : !completions || completions.length === 0 ? (
         <View className="bg-dark-card rounded-2xl p-5 items-center">

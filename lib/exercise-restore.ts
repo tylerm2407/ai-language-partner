@@ -115,3 +115,23 @@ export function parseSpeakingScore(selected: string | null | undefined): number 
   const score = Number(match[1]);
   return Number.isFinite(score) ? score : null;
 }
+
+/**
+ * The pass mark the scoring service itself applies
+ * (supabase/functions/score-pronunciation/index.ts). It lives here so the
+ * restore path and the live path cannot drift apart: the pick stores the
+ * number, and pass/fail is recomputed from it — the same "re-grade, don't
+ * store the grade" rule the rest of this module follows.
+ */
+export const SPEAKING_PASS_SCORE = 60;
+
+/**
+ * Did a restored speaking answer pass? `null` when there is nothing to
+ * restore. The learner never sees the number (speaking is reported as a plain
+ * correct/incorrect), but the number is still what gets stored, because it is
+ * the raw observation rather than a verdict.
+ */
+export function speakingWasCorrect(selected: string | null | undefined): boolean | null {
+  const score = parseSpeakingScore(selected);
+  return score === null ? null : score >= SPEAKING_PASS_SCORE;
+}

@@ -1,17 +1,29 @@
 import { useCallback, useMemo } from 'react';
+import * as Sentry from '@sentry/react-native';
 import { useAuth } from './useAuth';
 import { useAppStore } from '../stores/useAppStore';
 import { updateOnboardingChecklist } from '../lib/supabase-queries';
-import type { OnboardingChecklist } from '../types';
+import {
+  ONBOARDING_STEP_KEYS,
+  checklistEquals,
+  checklistProgress,
+  isChecklistResolved,
+  withCompletedAt,
+  withSkipped,
+} from '../lib/onboarding-checklist';
+import type { OnboardingChecklist, OnboardingStepKey } from '../types';
 
-type ChecklistKey = 'chooseLanguage' | 'firstLesson' | 'aiConversation' | 'dailyReminder';
+export type OnboardingRowState = 'done' | 'todo' | 'skipped';
 
-const CHECKLIST_ITEMS: { key: ChecklistKey; label: string; icon: string; route: string | null }[] = [
-  { key: 'chooseLanguage', label: 'Choose your language', icon: 'globe-outline', route: null },
-  { key: 'firstLesson', label: 'Finish your first lesson', icon: 'book-outline', route: '/learn' },
-  { key: 'aiConversation', label: 'Try AI conversation', icon: 'chatbubbles-outline', route: '/chat' },
-  { key: 'dailyReminder', label: 'Set daily reminder', icon: 'notifications-outline', route: null },
-];
+export interface OnboardingRow {
+  key: string;
+  label: string;
+  icon: string;
+  route: string | null;
+  state: OnboardingRowState;
+  /** Rows without a step key are display-only and carry no persisted state. */
+  stepKey: OnboardingStepKey | null;
+}
 
 /**
  * Goal gradient (DESIGN.md §UX Psychology Principles #2): the checklist never
@@ -23,112 +35,169 @@ const GRANTED_ITEMS: { key: string; label: string; icon: string }[] = [
   { key: 'accountCreated', label: 'Create your account', icon: 'person-add-outline' },
 ];
 
+const STEP_ITEMS: { key: OnboardingStepKey; label: string; icon: string; route: string | null }[] = [
+  // `chooseLanguage` has no route and is already true for anyone who can reach
+  // Home — onboarding writes it before the account exists. It is listed for
+  // the same goal-gradient reason as the granted rows above, and the FAB never
+  // makes it tappable.
+  { key: 'chooseLanguage', label: 'Choose your language', icon: 'globe-outline', route: null },
+  { key: 'firstLesson', label: 'Finish your first lesson', icon: 'book-outline', route: '/learn' },
+  { key: 'aiConversation', label: 'Try AI conversation', icon: 'chatbubbles-outline', route: '/chat' },
+  // Not "Set daily reminder" — the app schedules a streak-save reminder at a
+  // time it picks, so the old label promised a control that doesn't exist.
+  { key: 'dailyReminder', label: 'Turn on practice reminders', icon: 'notifications-outline', route: null },
+];
+
+/**
+ * The onboarding checklist, as the UI sees it.
+ *
+ * Three copies of this hook are mounted at once (Home, the lesson screen, the
+ * chat screen), which is what made the previous implementation lossy: every
+ * mutator closed over the `profile` captured at its own render, so a `markItem`
+ * from the lesson screen rebuilt the whole checklist from a snapshot that
+ * predated the chat screen's write, and the failure path did
+ * `setProfile(profile)` with that same stale snapshot — reverting unrelated XP
+ * and streak updates along with it.
+ *
+ * The fix is that `mutate` reads `useAppStore.getState()` at call time and, on
+ * failure, restores only the checklist field onto whatever profile is current.
+ * Its dependency list is `[user]`, which also removes the second mechanism that
+ * was cancelling the FAB's celebration timers on every profile write.
+ */
 export function useOnboardingChecklist() {
   const { user } = useAuth();
-  const { profile, setProfile } = useAppStore();
+  const checklist = useAppStore((s) => s.profile?.onboardingChecklist ?? null);
 
-  const checklist = profile?.onboardingChecklist ?? null;
+  const ready = checklist !== null;
 
-  // Auto-detect chooseLanguage from profile
-  const effectiveChecklist = useMemo((): OnboardingChecklist | null => {
-    if (!checklist) return null;
-    return {
-      ...checklist,
-      chooseLanguage: checklist.chooseLanguage || !!profile?.targetLanguage,
-    };
-  }, [checklist, profile?.targetLanguage]);
+  /**
+   * Apply a pure transform to the live checklist and persist it.
+   *
+   * Re-throws so callers can decide: the FAB's celebration must not mark
+   * itself celebrated if the write failed, while a fire-and-forget `markItem`
+   * from a lesson screen is happy to `.catch(console.error)` — reconciliation
+   * will pick the tick up on the next launch either way.
+   */
+  const mutate = useCallback(
+    async (transform: (current: OnboardingChecklist) => OnboardingChecklist) => {
+      if (!user) return;
+      const { profile, setProfile } = useAppStore.getState();
+      if (!profile) return;
 
-  // Auto-dismiss for existing users who already have activity
-  const shouldAutoDismiss = useMemo(() => {
-    if (!profile || !effectiveChecklist) return false;
-    if (effectiveChecklist.dismissed) return false;
-    // If user has XP but all items are false (except auto-detected ones), they're an existing user
-    return profile.totalXp > 0 &&
-      !effectiveChecklist.firstLesson &&
-      !effectiveChecklist.aiConversation &&
-      !effectiveChecklist.dailyReminder;
-  }, [profile, effectiveChecklist]);
+      const current = profile.onboardingChecklist;
+      const next = withCompletedAt(transform(current), () => new Date().toISOString());
+      if (checklistEquals(current, next)) return;
 
-  const isVisible = useMemo(() => {
-    if (!effectiveChecklist) return false;
-    if (effectiveChecklist.dismissed) return false;
-    if (shouldAutoDismiss) return false;
-    return true;
-  }, [effectiveChecklist, shouldAutoDismiss]);
+      setProfile({ ...profile, onboardingChecklist: next });
+      try {
+        await updateOnboardingChecklist(user.id, next);
+      } catch (err) {
+        const latest = useAppStore.getState().profile;
+        if (latest) {
+          useAppStore.getState().setProfile({ ...latest, onboardingChecklist: current });
+        }
+        Sentry.captureException(err, { tags: { area: 'onboarding-checklist' } });
+        throw err;
+      }
+    },
+    [user],
+  );
 
-  const completedCount = useMemo(() => {
-    if (!effectiveChecklist) return 0;
-    return (
-      GRANTED_ITEMS.length +
-      CHECKLIST_ITEMS.filter((item) => effectiveChecklist[item.key]).length
-    );
-  }, [effectiveChecklist]);
+  const markItem = useCallback(
+    (key: OnboardingStepKey) => mutate((c) => (c[key] ? c : { ...c, [key]: true })),
+    [mutate],
+  );
 
-  const totalCount = GRANTED_ITEMS.length + CHECKLIST_ITEMS.length;
+  const skipItem = useCallback(
+    (key: OnboardingStepKey) => mutate((c) => withSkipped(c, key)),
+    [mutate],
+  );
 
-  const allComplete = completedCount === totalCount;
+  /** Acknowledge the completion — confetti shown, XP awarded, retire the FAB. */
+  const markCelebrated = useCallback(
+    () =>
+      mutate((c) =>
+        c.celebratedAt !== null
+          ? c
+          : { ...c, celebratedAt: new Date().toISOString(), dismissed: true },
+      ),
+    [mutate],
+  );
+
+  const dismiss = useCallback(
+    () => mutate((c) => (c.dismissed ? c : { ...c, dismissed: true })),
+    [mutate],
+  );
+
+  const isResolved = checklist !== null && isChecklistResolved(checklist);
+
+  /**
+   * No timers and no heuristics. `celebratedAt` is the belt to `dismissed`'s
+   * braces: even if the dismiss write is lost, a celebrated checklist never
+   * comes back.
+   */
+  const isVisible = ready && !checklist.dismissed && checklist.celebratedAt === null;
+
+  /**
+   * There is a completion the learner has not been shown yet.
+   *
+   * `!dismissed` is part of the condition, not an oversight: someone who tapped
+   * Hide asked for this thing to go away, and ambushing them with confetti when
+   * the last step happens to tick is not a reward. The XP is only ever paid
+   * alongside the celebration, so it is not owed either.
+   */
+  const celebrationPending =
+    ready &&
+    !checklist.dismissed &&
+    checklist.completedAt !== null &&
+    checklist.celebratedAt === null;
+
+  const { resolved: completedCount, total: totalCount } = useMemo(
+    () =>
+      checklist
+        ? checklistProgress(checklist, GRANTED_ITEMS.length)
+        : { resolved: 0, total: GRANTED_ITEMS.length + ONBOARDING_STEP_KEYS.length },
+    [checklist],
+  );
 
   const progress = totalCount > 0 ? completedCount / totalCount : 0;
 
-  const collapsed = effectiveChecklist?.collapsed ?? false;
-
-  const persistChecklist = useCallback(async (updated: OnboardingChecklist) => {
-    if (!user || !profile) return;
-    // Optimistic update
-    setProfile({ ...profile, onboardingChecklist: updated });
-    try {
-      await updateOnboardingChecklist(user.id, updated);
-    } catch (err) {
-      console.error('Failed to persist onboarding checklist:', err);
-      // Revert on failure
-      setProfile(profile);
-    }
-  }, [user, profile, setProfile]);
-
-  const markItem = useCallback(async (key: ChecklistKey) => {
-    if (!effectiveChecklist || effectiveChecklist[key]) return;
-    const updated: OnboardingChecklist = { ...effectiveChecklist, [key]: true };
-
-    // Check if all actionable items are now complete. Compare against the
-    // persisted items only — the granted items carry no state and would
-    // otherwise make this count unreachable.
-    const newCompletedCount = CHECKLIST_ITEMS.filter((item) => updated[item.key]).length;
-    if (newCompletedCount === CHECKLIST_ITEMS.length) {
-      updated.completedAt = new Date().toISOString();
-    }
-
-    await persistChecklist(updated);
-  }, [effectiveChecklist, persistChecklist]);
-
-  const toggleCollapsed = useCallback(async () => {
-    if (!effectiveChecklist) return;
-    await persistChecklist({ ...effectiveChecklist, collapsed: !effectiveChecklist.collapsed });
-  }, [effectiveChecklist, persistChecklist]);
-
-  const dismiss = useCallback(async () => {
-    if (!effectiveChecklist) return;
-    await persistChecklist({ ...effectiveChecklist, dismissed: true });
-  }, [effectiveChecklist, persistChecklist]);
-
-  const items: { key: string; label: string; icon: string; route: string | null; completed: boolean }[] = [
-    ...GRANTED_ITEMS.map((item) => ({ ...item, route: null, completed: true })),
-    ...CHECKLIST_ITEMS.map((item) => ({
-      ...item,
-      completed: effectiveChecklist?.[item.key] ?? false,
-    })),
-  ];
+  const items = useMemo<OnboardingRow[]>(
+    () => [
+      ...GRANTED_ITEMS.map((item) => ({
+        ...item,
+        route: null,
+        state: 'done' as const,
+        stepKey: null,
+      })),
+      ...STEP_ITEMS.map((item) => ({
+        ...item,
+        stepKey: item.key,
+        state: !checklist
+          ? ('todo' as const)
+          : checklist[item.key]
+            ? ('done' as const)
+            : checklist.skipped.includes(item.key)
+              ? ('skipped' as const)
+              : ('todo' as const),
+      })),
+    ],
+    [checklist],
+  );
 
   return {
+    ready,
     isVisible,
     items,
-    checklist: effectiveChecklist,
+    checklist,
     completedCount,
     totalCount,
-    allComplete,
     progress,
-    collapsed,
+    isResolved,
+    celebrationPending,
     markItem,
-    toggleCollapsed,
+    skipItem,
+    markCelebrated,
     dismiss,
   };
 }

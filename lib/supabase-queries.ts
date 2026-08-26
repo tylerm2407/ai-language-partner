@@ -1337,16 +1337,39 @@ export async function fetchCompletedLessonsWithTitles(
 ): Promise<LessonCompletionWithTitle[]> {
   const { data, error } = await supabase
     .from('lesson_completions')
-    .select('*, lessons(title)')
+    .select('*')
     .eq('user_id', userId)
     .order('completed_at', { ascending: false })
     .limit(limit);
   if (error) throw error;
-  return (data ?? []).map((row: Record<string, unknown>) => {
-    const base = mapLessonCompletion(row);
-    const joined = row.lessons as { title?: string } | null;
-    return { ...base, lessonTitle: joined?.title ?? 'Untitled lesson' };
-  });
+
+  const completions = (data ?? []).map(mapLessonCompletion);
+  if (completions.length === 0) return [];
+
+  // Titles come from a SECOND query, not a PostgREST embed.
+  //
+  // `lesson_completions` has no foreign key to `lessons` — a completion is a
+  // permanent record of work the learner actually did, and is deliberately not
+  // tied to the lifetime of a curriculum row. PostgREST infers embeds from
+  // foreign keys only, so `select('*, lessons(title)')` did not degrade to a
+  // missing title: it failed the whole request with PGRST200, and the profile
+  // told every learner they had completed nothing.
+  //
+  // `limit` bounds the id list, so this is one `in` over at most `limit` ids.
+  const lessonIds = [...new Set(completions.map((c) => c.lessonId))];
+  const { data: lessonRows, error: lessonsError } = await supabase
+    .from('lessons')
+    .select('id, title')
+    .in('id', lessonIds);
+  if (lessonsError) throw lessonsError;
+
+  const titleById = new Map<string, string>(
+    (lessonRows ?? []).map((row: { id: string; title: string }) => [row.id, row.title]),
+  );
+  return completions.map((c) => ({
+    ...c,
+    lessonTitle: titleById.get(c.lessonId) ?? 'Untitled lesson',
+  }));
 }
 
 function mapLessonCompletion(row: Record<string, unknown>): LessonCompletion {

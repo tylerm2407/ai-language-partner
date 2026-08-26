@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { View, Text, TextInput, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -39,8 +39,6 @@ export function TranslationExercise({
   const [result, setResult] = useState<GradeResult | null>(() =>
     regradePick(exercise, selected),
   );
-  const startTime = useRef(Date.now());
-
   const handleSubmit = () => {
     if (!answer.trim() || submitted) return;
 
@@ -64,13 +62,6 @@ export function TranslationExercise({
     }
 
     onAnswer(grade.isCorrect, answer);
-  };
-
-  const handleRetry = () => {
-    setAnswer('');
-    setSubmitted(false);
-    setResult(null);
-    startTime.current = Date.now();
   };
 
   const getBorderClass = () => {
@@ -122,7 +113,7 @@ export function TranslationExercise({
           language={language}
           cefrLevel={cefrLevel}
           userId={userId}
-          onRetry={handleRetry}
+          revealAnswer={showResult}
         />
       ) : null}
 

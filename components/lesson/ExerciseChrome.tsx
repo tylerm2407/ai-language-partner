@@ -6,6 +6,7 @@ import { HeartsDisplay } from '../gamification/HeartsDisplay';
 import { TactileButton } from '../ui/TactileButton';
 import { Body } from '../ui/Text';
 import { ExerciseTrack } from './ExerciseTrack';
+import { ExerciseNote, type ExerciseNoteState } from './ExerciseNote';
 import { colors, spacing, typography } from '../../config/theme';
 
 interface ExerciseChromeProps {
@@ -21,8 +22,25 @@ interface ExerciseChromeProps {
   showHearts: boolean;
   /** exercise.explanation, or null when the exercise has none. */
   note: string | null;
-  /** null before the learner answers. */
+  /**
+   * null before the learner answers — and also while a second attempt is
+   * open, which is what keeps the reveal below shut until it is spent.
+   */
   answeredCorrect: boolean | null;
+  /**
+   * A second attempt is open. Takes precedence over every other note state:
+   * nothing about the answer may be shown while this is set.
+   *
+   * Additive and optional, like the three below, so the whole existing prop
+   * contract — and every test that uses it — is unchanged.
+   */
+  retry?: { onGiveUp: () => void } | null;
+  /** `answeredCorrect` is true, but it took a second attempt, so it did not score. */
+  recovered?: boolean;
+  /** Neutral outcome. Not scored, and the answer is NOT revealed. */
+  skipped?: boolean;
+  /** Skip affordance. Omit entirely to hide it — most types never offer one. */
+  onSkip?: (() => void) | null;
   /** Correct answer, shown in the note kicker after a wrong pick. */
   correctAnswer: string;
   canPrev: boolean;
@@ -35,8 +53,12 @@ interface ExerciseChromeProps {
   children: ReactNode;
 }
 
-/** Reserved so the layout does not jump when the note appears. */
-const NOTE_MIN_HEIGHT = 58;
+/** Reserved so the layout does not jump when the note appears.
+ *
+ *  Sized for the tallest state — the retry row, which is a kicker line plus a
+ *  44pt "Show answer" target. The old 58 fitted a kicker and two lines of body
+ *  and would have made the footer jump every time a second attempt opened. */
+const NOTE_MIN_HEIGHT = 92;
 
 /**
  * ExerciseChrome — the shared frame every exercise type renders inside:
@@ -63,6 +85,10 @@ export function ExerciseChrome({
   showHearts,
   note,
   answeredCorrect,
+  retry = null,
+  recovered = false,
+  skipped = false,
+  onSkip = null,
   correctAnswer,
   canPrev,
   canNext,
@@ -82,11 +108,20 @@ export function ExerciseChrome({
     floatingTabBarSpace() - insets.bottom + spacing.sm,
   );
   const answered = answeredCorrect !== null;
-  const kicker = !answered
-    ? null
-    : answeredCorrect
-      ? 'CORRECT — '
-      : `ANSWER: ${correctAnswer.toUpperCase()} — `;
+  // Precedence: retry > skipped > recovered > answered > placeholder. The
+  // first two are states in which the answer must stay hidden, so they have to
+  // win over anything that would reveal it.
+  const noteState: ExerciseNoteState = retry
+    ? { kind: 'retrying', onGiveUp: retry.onGiveUp }
+    : skipped
+      ? { kind: 'skipped' }
+      : !answered
+        ? { kind: 'unanswered' }
+        : answeredCorrect
+          ? recovered
+            ? { kind: 'recovered', note }
+            : { kind: 'correct', note }
+          : { kind: 'wrong', note, correctAnswer };
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface.raised }}>
@@ -194,36 +229,44 @@ export function ExerciseChrome({
           paddingBottom: footerBottomInset,
         }}
       >
-        <View style={{ minHeight: NOTE_MIN_HEIGHT, paddingBottom: spacing.md }}>
-          {answered ? (
-            <Body
-              size="sm"
-              accessibilityLiveRegion="polite"
-              style={{ color: colors.text.secondary, fontSize: 13, lineHeight: 19 }}
+        <View
+          style={{
+            minHeight: NOTE_MIN_HEIGHT,
+            paddingBottom: spacing.md,
+            flexDirection: 'row',
+            alignItems: 'flex-start',
+            gap: spacing.sm,
+          }}
+        >
+          <View style={{ flex: 1 }}>
+            <ExerciseNote state={noteState} />
+          </View>
+
+          {/* Skip. Styled like the header's text-only EXIT rather than given a
+              third footer button: three buttons across a 375pt screen is three
+              cramped targets, and this is deliberately the quiet option. */}
+          {onSkip ? (
+            <Pressable
+              onPress={onSkip}
+              hitSlop={12}
+              style={{ minHeight: 44, justifyContent: 'center' }}
+              accessibilityRole="button"
+              accessibilityLabel="Skip this question without scoring it"
             >
               <Body
                 size="sm"
                 style={{
                   fontFamily: typography.family.mono,
-                  fontSize: 10,
-                  letterSpacing: typography.tracking.eyebrow,
-                  color: answeredCorrect ? colors.success.light : colors.error.light,
+                  fontSize: 12,
+                  fontWeight: '800',
+                  letterSpacing: typography.tracking.banner + 0.2,
+                  color: colors.text.tertiary,
                 }}
               >
-                {kicker}
+                SKIP
               </Body>
-              {note ?? ''}
-            </Body>
-          ) : (
-            // text.tertiary, not text.quaternary: this is instruction copy at
-            // 13px, and quaternary (3.9:1) is a large-UI-only step.
-            <Body
-              size="sm"
-              style={{ color: colors.text.tertiary, fontSize: 13, lineHeight: 19 }}
-            >
-              Pick an answer to see the note.
-            </Body>
-          )}
+            </Pressable>
+          ) : null}
         </View>
 
         <View style={{ flexDirection: 'row', gap: spacing.sm }}>

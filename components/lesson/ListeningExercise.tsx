@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { View, Text, TextInput, Pressable, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -10,7 +10,8 @@ import { gradeAnswer } from '../../lib/grading';
 import type { GradeResult } from '../../lib/grading';
 import { isRestored, regradePick } from '../../lib/exercise-restore';
 import { useAudioPlayer } from '../../hooks/useAudioPlayer';
-import { getTextToSpeech } from '../../lib/ai';
+import { VoiceError } from '../../lib/ai';
+import { getLessonAudioUri, LESSON_SLOW_RATE } from '../../lib/lesson-audio';
 import type { Exercise } from '../../types';
 
 interface ListeningExerciseProps {
@@ -42,11 +43,16 @@ export function ListeningExercise({
     regradePick(exercise, selected),
   );
   const { playing, loading, error: audioError, play } = useAudioPlayer();
-  // Synthesised audio for exercises with no pre-recorded clip. Held for the
-  // life of the exercise so replays don't re-hit the network.
-  const [synthesizedUri, setSynthesizedUri] = useState<string | null>(null);
   const [synthesizing, setSynthesizing] = useState(false);
   const [synthesisError, setSynthesisError] = useState<string | null>(null);
+  // The "slower" affordance is offered only once the learner has heard the
+  // clip at normal speed — before that it is noise, and it is a real request
+  // that costs a separate synthesis and a separate allowance unit.
+  const [hasPlayed, setHasPlayed] = useState(false);
+  // A quota refusal is terminal for the session, so stop offering the button
+  // that would just refuse again.
+  const quotaExhaustedRef = useRef(false);
+  const [quotaExhausted, setQuotaExhausted] = useState(false);
 
   const isChoiceType = exercise.type === 'listening_choice' && exercise.options;
 
@@ -56,34 +62,35 @@ export function ListeningExercise({
   // listening_choice it is the sentence they pick a translation of.
   const canSynthesize = !exercise.promptAudioUrl && !!language && !!exercise.prompt;
 
-  const handlePlayAudio = async () => {
-    if (exercise.promptAudioUrl) {
+  const handlePlayAudio = async (rate?: number) => {
+    if (exercise.promptAudioUrl && rate === undefined) {
       play(exercise.promptAudioUrl);
-      return;
-    }
-    if (synthesizedUri) {
-      play(synthesizedUri);
+      setHasPlayed(true);
       return;
     }
     if (!canSynthesize) return;
 
     // No content pack ships pre-recorded audio, so listening exercises are
-    // voiced on demand. The TTS function is content-addressed server-side, so
-    // the first learner to hear a given sentence pays for it and every
-    // subsequent play — for them and for everyone else — is a cache hit.
+    // voiced on demand. getLessonAudioUri checks the on-device cache first, so
+    // a replay costs nothing and works offline; a miss goes to the TTS function,
+    // which is content-addressed server-side, so the first learner to hear a
+    // given word pays for it and everyone after gets a cache hit.
     setSynthesizing(true);
     setSynthesisError(null);
     try {
-      const base64 = await getTextToSpeech(exercise.prompt, language!, userId, {
-        // Bills the small lesson-audio allowance rather than voice minutes, so
-        // this works on the free tier and never eats a paying learner's
-        // conversation time (supabase/functions/tts/index.ts).
-        purpose: 'lesson',
+      const uri = await getLessonAudioUri({
+        text: exercise.prompt,
+        language: language!,
+        userId,
+        rate,
       });
-      const uri = `data:audio/mpeg;base64,${base64}`;
-      setSynthesizedUri(uri);
       await play(uri);
+      setHasPlayed(true);
     } catch (err) {
+      if (err instanceof VoiceError && err.code === 'DAILY_LIMIT') {
+        quotaExhaustedRef.current = true;
+        setQuotaExhausted(true);
+      }
       setSynthesisError(
         err instanceof Error ? err.message : 'Could not load the audio for this exercise',
       );
@@ -142,11 +149,6 @@ export function ListeningExercise({
     onAnswer(grade.isCorrect, answer);
   };
 
-  const handleRetry = () => {
-    setAnswer('');
-    setSubmitted(false);
-    setResult(null);
-  };
 
   const getOptionStyle = (option: string) => {
     if (!submitted && !showResult) {
@@ -170,7 +172,7 @@ export function ListeningExercise({
       {/* Audio play button */}
       <Pressable
         className="bg-primary w-20 h-20 rounded-full items-center justify-center self-center mb-6"
-        onPress={handlePlayAudio}
+        onPress={() => handlePlayAudio()}
         disabled={playing || loading || synthesizing || (!exercise.promptAudioUrl && !canSynthesize)}
         accessibilityRole="button"
         accessibilityLabel={
@@ -183,6 +185,23 @@ export function ListeningExercise({
           color="white"
         />
       </Pressable>
+
+      {/* Play it again, slower. Offered only after a normal-speed play, and
+          withdrawn once the lesson-audio allowance is spent — a button that
+          can only refuse is worse than no button. */}
+      {hasPlayed && canSynthesize && !quotaExhausted && (
+        <Pressable
+          className="flex-row items-center self-center mb-6 px-4 rounded-[12px] bg-dark-card-alt"
+          style={{ minHeight: 44 }}
+          onPress={() => handlePlayAudio(LESSON_SLOW_RATE)}
+          disabled={playing || loading || synthesizing}
+          accessibilityRole="button"
+          accessibilityLabel="Play the audio again, slower"
+        >
+          <Ionicons name="play-outline" size={18} color={colors.indigo[400]} />
+          <Text className="text-text-secondary text-sm ml-2">Slower</Text>
+        </Pressable>
+      )}
 
       {!exercise.promptAudioUrl && !canSynthesize && (
         <Text className="text-text-tertiary text-sm text-center mb-4">
@@ -293,7 +312,7 @@ export function ListeningExercise({
           language={language}
           cefrLevel={cefrLevel}
           userId={userId}
-          onRetry={handleRetry}
+          revealAnswer={showResult}
         />
       ) : null}
     </ExerciseCard>
