@@ -231,10 +231,9 @@ export default function OnboardingScreen() {
         firstLesson: !!draft.trial,
         aiConversation: false,
         dailyReminder: false,
-        skipped: [],
+        collapsed: false,
         dismissed: false,
         completedAt: null,
-        celebratedAt: null,
       });
       await markOnboardingComplete(userId);
 
@@ -687,11 +686,10 @@ export default function OnboardingScreen() {
             </View>
 
             {/* Pre-auth, deliberately. The preset catalogue is anon-readable
-                (migration 082) precisely so this step keeps its avatar — the
-                IKEA effect above depends on the learner building something
-                before the sign-up gate, not after it. The choice rides in the
-                local draft and is flushed by writeProfile once a session
-                exists; nothing is written server-side here. */}
+                (migration 082) so this step keeps its avatar — the IKEA effect
+                depends on the learner building something before the sign-up
+                gate, not after it. The choice rides in the local draft and is
+                flushed by writeProfile once a session exists. */}
             <AvatarPresetPicker
               visible={customizerOpen}
               selectedId={avatarPresetId}
