@@ -20,7 +20,6 @@
 export type AvatarStyleKey =
   | 'anime_pop'
   | 'retro_cartoon'
-  | 'clay_stopmotion'
   | 'comic_graphic'
   | 'cinematic_3d'
   | 'cinematic_realistic';
@@ -98,38 +97,6 @@ Transform the environment into a whimsical cartoon world made from simplified pr
 The composition should feel energetic and humorous, like a freeze-frame from an animated comedy series. Use dynamic posing, slight squash-and-stretch, expressive asymmetry, and a strong silhouette. The finished image should feel friendly, nostalgic, colorful, highly stylized, and unmistakably hand-animated rather than realistic or cinematic.
 
 Avoid photorealistic skin, realistic lighting, complex rendering, detailed surface textures, or realistic proportions. Remove any visible logos, source labels, watermarks, captions, or text unless specifically requested.
-
-${FRAMING}
-
-${IDENTITY}`,
-  },
-
-  clay_stopmotion: {
-    label: 'Clay Stop-Motion',
-    description: 'Handcrafted clay character with sculpted imperfections and soft studio light.',
-    // STYLE paragraph is the user-authored prompt, kept verbatim.
-    //
-    // NOTE (authoring rule 2): asks for a miniature set with staged foreground
-    // and background objects, plus "subtle depth of field". Both fight FRAMING
-    // at 32px — a defocused background is noise at that size. See the note on
-    // retro_cartoon; trim the environment paragraph here first if reference
-    // output crowds the face.
-    prompt: `STYLE
-Transform the uploaded subject into a handcrafted stop-motion clay animation character while preserving the subject's recognizable facial structure, hairstyle, accessories, clothing cues, expression, pose, and overall personality.
-
-Rebuild the subject using sculpted clay-like forms with charmingly exaggerated proportions. Slightly enlarge the head, simplify the nose, mouth, cheeks, ears, hands, and body, and create expressive eyes and eyebrows capable of strong emotional expression. Preserve enough distinguishing features that the subject remains immediately recognizable.
-
-Use visible handcrafted imperfections throughout the design. Include subtle fingerprints, tiny dents, uneven surfaces, softly sculpted edges, slightly asymmetrical facial features, and small variations that make the character feel physically handmade rather than digitally perfect.
-
-Hair should appear as individually sculpted clay clumps or shaped pieces rather than realistic strands. Facial hair should be suggested through tiny textured clay marks or stylized sculpted patches. Glasses and accessories should look like miniature handcrafted props.
-
-Use soft studio lighting inspired by practical miniature film sets. Include warm key lighting, gentle bounce light, soft shadows, and subtle depth of field. Materials should have a matte clay surface with only mild highlights.
-
-Transform the environment into a handcrafted miniature set built from clay, painted cardboard, felt, wood, paper, or other tactile materials. Simplify architecture and props into charming miniature forms with slightly oversized objects and playful perspective.
-
-The composition should feel like a frame from a premium stop-motion comedy film. Use expressive posing, slight asymmetry, whimsical scale relationships, and carefully staged foreground and background objects.
-
-The overall mood should be playful, charming, tactile, quirky, comedic, and handcrafted. Avoid photorealistic skin, realistic hair strands, perfect digital surfaces, glossy CGI rendering, flat vector artwork, source labels, logos, watermarks, or unwanted text.
 
 ${FRAMING}
 
