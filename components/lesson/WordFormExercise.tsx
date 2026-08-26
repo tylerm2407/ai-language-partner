@@ -70,11 +70,6 @@ export function WordFormExercise({
     onAnswer(grade.isCorrect, answer);
   };
 
-  const handleRetry = () => {
-    setAnswer('');
-    setSubmitted(false);
-    setResult(null);
-  };
 
   const getBorderClass = () => {
     if (!submitted) return 'border-input-border';
@@ -135,7 +130,7 @@ export function WordFormExercise({
           language={language}
           cefrLevel={cefrLevel}
           userId={userId}
-          onRetry={handleRetry}
+          revealAnswer={showResult}
         />
       ) : null}
 

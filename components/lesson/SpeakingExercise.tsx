@@ -11,7 +11,7 @@ import { useAudioPlayer } from '../../hooks/useAudioPlayer';
 import { usePhonemeDrill } from '../../hooks/usePhonemeDrill';
 import { scorePronunciation } from '../../lib/ai';
 import type { GradeResult } from '../../lib/grading';
-import { parseSpeakingScore } from '../../lib/exercise-restore';
+import { speakingWasCorrect, SPEAKING_PASS_SCORE } from '../../lib/exercise-restore';
 import type { Exercise, LanguageCode } from '../../types';
 
 interface SpeakingExerciseProps {
@@ -39,21 +39,32 @@ export function SpeakingExercise({
   const { recording, audioUri, error: recorderError, startRecording, stopRecording, getBase64 } = useAudioRecorder();
   const { playing, error: playerError, play } = useAudioPlayer();
   const [scoring, setScoring] = useState(false);
-  // Seeded from the recorded pick so Previous shows the score the learner
+  // Seeded from the recorded pick so Previous shows the outcome the learner
   // earned rather than an empty recorder. Only the number was ever stored —
   // the spoken feedback and transcription came from the scoring service and
-  // are not reconstructable, so the restored line states the score and
+  // are not reconstructable, so the restored line states the outcome and
   // nothing more. `result` stays null on a restore for the same reason:
   // FeedbackCard's phonological branch would auto-play a recast and render
   // evaluation prose this component no longer has.
+  //
+  // The learner is shown correct/incorrect, never a percentage: a pronunciation
+  // number invites them to chase 100% on a metric that is a word-level string
+  // comparison over a Whisper transcript, not a phonetician's judgement. The
+  // number still exists — it decides `correct`, it picks the phoneme errors,
+  // and it is what gets stored — it just is not a thing to grade yourself on.
   const [scoreState, setScoreState] = useState<
-    | { score: number; feedback: string; transcription?: string }
+    | { correct: boolean; feedback: string; transcription?: string }
     | null
   >(() => {
-    const restoredScore = parseSpeakingScore(selected);
-    return restoredScore === null
+    const wasCorrect = speakingWasCorrect(selected);
+    return wasCorrect === null
       ? null
-      : { score: restoredScore, feedback: `You scored ${Math.round(restoredScore)}% on this earlier.` };
+      : {
+          correct: wasCorrect,
+          feedback: wasCorrect
+            ? 'You said this one right earlier.'
+            : "This one wasn't right earlier.",
+        };
   });
   const [result, setResult] = useState<GradeResult | null>(null);
 
@@ -82,7 +93,7 @@ export function SpeakingExercise({
     try {
       const base64 = await getBase64();
       if (!base64) {
-        setScoreState({ score: 0, feedback: 'Could not process audio.' });
+        setScoreState({ correct: false, feedback: 'Could not process audio.' });
         return;
       }
 
@@ -95,18 +106,22 @@ export function SpeakingExercise({
         targetWord: exercise.targetWord,
       });
 
+      // Trust the service's own verdict rather than re-deriving the threshold
+      // here — two copies of `>= 60` is exactly how a client and a server drift.
+      const isCorrect = pronounciation.isCorrect ?? pronounciation.score >= SPEAKING_PASS_SCORE;
+
       setScoreState({
-        score: pronounciation.score,
+        correct: isCorrect,
         feedback: pronounciation.feedback,
         transcription: pronounciation.transcription,
       });
-
-      const isCorrect = pronounciation.score >= 60;
       // Synthesize a GradeResult so FeedbackCard can show the phonological
       // recast branch on failure. Speaking is the only exercise type that
       // maps to 'phonological' (see classifyError in lib/grading.ts).
       const grade: GradeResult = {
         isCorrect,
+        // Kept as the raw number even though nothing renders it: GradeResult
+        // demands one, and the score is the honest value to put there.
         accuracy: pronounciation.score / 100,
         feedback: pronounciation.feedback,
         normalizedUserAnswer: pronounciation.transcription ?? '',
@@ -125,23 +140,12 @@ export function SpeakingExercise({
 
       onAnswer(isCorrect, `score:${pronounciation.score}`);
     } catch {
-      setScoreState({ score: 0, feedback: 'Scoring failed. Please try again.' });
+      setScoreState({ correct: false, feedback: 'Scoring failed. Please try again.' });
     } finally {
       setScoring(false);
     }
   };
 
-  const handleRetry = () => {
-    setScoreState(null);
-    setResult(null);
-  };
-
-  const getScoreColor = () => {
-    if (!scoreState) return {};
-    if (scoreState.score >= 80) return { bg: 'bg-success-bg', text: 'text-success' };
-    if (scoreState.score >= 60) return { bg: 'bg-warning-bg', text: 'text-warning' };
-    return { bg: 'bg-error-bg', text: 'text-error' };
-  };
 
   const highlight = exercise.targetWord ?? exercise.targetGrammar;
   const promptNode = (
@@ -236,23 +240,30 @@ export function SpeakingExercise({
         </View>
       )}
 
-      {/* Score display */}
+      {/* Outcome — correct or not, never a percentage. The icon and the label
+          carry the verdict together, so the colour is never the only signal. */}
       {scoreState && (
         <View className="items-center">
-          <View className={`w-[100px] h-[100px] rounded-full items-center justify-center ${getScoreColor().bg}`}>
-            <Text className={`text-[32px] font-bold ${getScoreColor().text}`}>
-              {scoreState.score}%
-            </Text>
-          </View>
-          <View className="flex-row items-center mt-3">
+          <View
+            className={`w-14 h-14 rounded-full items-center justify-center ${
+              scoreState.correct ? 'bg-success-bg' : 'bg-error-bg'
+            }`}
+          >
             <Ionicons
-              name={scoreState.score >= 60 ? 'checkmark-circle' : 'close-circle'}
-              size={20}
-              color={scoreState.score >= 60 ? colors.success.base : colors.error.base}
-              style={{ marginRight: 6 }}
+              name={scoreState.correct ? 'checkmark-circle' : 'close-circle'}
+              size={28}
+              color={scoreState.correct ? colors.success.base : colors.error.base}
             />
-            <Text className="text-text-primary text-base text-center">{scoreState.feedback}</Text>
           </View>
+          <Text
+            className="text-text-primary text-lg font-sans-semibold mt-2"
+            accessibilityRole="header"
+          >
+            {scoreState.correct ? 'Sounded right' : 'Not quite'}
+          </Text>
+          <Text className="text-text-secondary text-base text-center mt-1">
+            {scoreState.feedback}
+          </Text>
           {scoreState.transcription && (
             <Text className="text-text-tertiary text-xs mt-2 text-center italic">
               Heard: "{scoreState.transcription}"
@@ -269,7 +280,7 @@ export function SpeakingExercise({
           language={targetLanguage}
           cefrLevel={cefrLevel}
           userId={userId}
-          onRetry={handleRetry}
+          revealAnswer={showResult}
         />
       ) : null}
     </ExerciseCard>

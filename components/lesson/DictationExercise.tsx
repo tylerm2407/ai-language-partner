@@ -15,6 +15,11 @@ import type { Exercise, LanguageCode } from '../../types';
 interface Props {
   exercise: Exercise;
   onAnswer: (isCorrect: boolean, answer: string) => void;
+  /**
+   * The runner has resolved this exercise — render read-only, and let the
+   * FeedbackCard reveal the answer. False while a second attempt is open.
+   */
+  showResult: boolean;
   /** Previously recorded answer, restored by the runner on Previous. */
   selected?: string | null;
   /** Needed so the HVPT replay path can rotate through per-language voices. */
@@ -29,6 +34,7 @@ interface Props {
 export function DictationExercise({
   exercise,
   onAnswer,
+  showResult,
   selected = null,
   targetLanguage,
   userId,
@@ -38,7 +44,13 @@ export function DictationExercise({
   // Seeded from the recorded pick so Previous comes back to the answer the
   // learner actually gave, in its graded state — see lib/exercise-restore.ts.
   const [userInput, setUserInput] = useState(selected ?? '');
-  const [isRevealed, setIsRevealed] = useState(() => isRestored(selected));
+  const [localRevealed, setLocalRevealed] = useState(() => isRestored(selected));
+  /**
+   * Locked = this exercise's own reveal, OR the runner saying it is resolved
+   * (walked back onto, or out of attempts). The runner's word has to be able
+   * to lock it too, or a second attempt could not be handed back.
+   */
+  const isRevealed = localRevealed || showResult;
   const [result, setResult] = useState<GradeResult | null>(() =>
     regradePick(exercise, selected),
   );
@@ -63,7 +75,7 @@ export function DictationExercise({
       },
     });
     setResult(grade);
-    setIsRevealed(true);
+    setLocalRevealed(true);
 
     if (grade.isCorrect) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -73,11 +85,6 @@ export function DictationExercise({
     onAnswer(grade.isCorrect, userInput);
   };
 
-  const handleRetry = () => {
-    setUserInput('');
-    setIsRevealed(false);
-    setResult(null);
-  };
 
   const effectiveLanguage = language ?? targetLanguage;
   const isCorrect = result?.isCorrect ?? false;
@@ -221,7 +228,7 @@ export function DictationExercise({
           language={effectiveLanguage}
           cefrLevel={cefrLevel}
           userId={userId}
-          onRetry={handleRetry}
+          revealAnswer={showResult}
         />
       ) : null}
 

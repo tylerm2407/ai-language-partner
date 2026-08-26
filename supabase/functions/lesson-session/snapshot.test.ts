@@ -7,7 +7,7 @@
  *
  * Run with: npm run test:functions
  */
-import { assertEquals, assertNotEquals } from 'https://deno.land/std@0.208.0/assert/mod.ts';
+import { assert, assertEquals, assertNotEquals } from 'https://deno.land/std@0.208.0/assert/mod.ts';
 import {
   LESSON_SESSION_SCHEMA_VERSION,
   LESSON_SESSION_TTL_MS,
@@ -91,4 +91,56 @@ Deno.test('parseSnapshot bounds what can be stored', () => {
     validSnapshot({ answers: [{ exerciseId: 'ex-1', correct: true, answer: long }] }),
   );
   assertEquals(parsed?.answers[0].answer.length, MAX_ANSWER_TEXT_CHARS);
+});
+
+// ─── statuses ────────────────────────────────────────────────────────
+// `answers` carries a plain boolean, so it cannot say "right on the second
+// try" and has no row at all for a skip. Without these persisted, a resumed
+// lesson would re-grade a recovered answer as correct and hand a skipped
+// question back as unanswered — silently moving the learner's score.
+
+function base(extra: Record<string, unknown> = {}) {
+  return {
+    version: 1,
+    exerciseIndex: 2,
+    answers: [{ exerciseId: 'ex1', correct: false, answer: 'leche' }],
+    picks: { ex1: 'leche' },
+    startedAt: Date.now() - 1000,
+    ...extra,
+  };
+}
+
+Deno.test('parseSnapshot round-trips per-exercise statuses', () => {
+  const parsed = parseSnapshot(
+    base({ statuses: { ex1: 'recovered', ex2: 'skipped', ex3: 'wrong' } }),
+  );
+  assert(parsed !== null);
+  assertEquals(parsed!.statuses, { ex1: 'recovered', ex2: 'skipped', ex3: 'wrong' });
+});
+
+Deno.test('parseSnapshot defaults statuses to empty for an older client', () => {
+  const parsed = parseSnapshot(base());
+  assert(parsed !== null);
+  assertEquals(parsed!.statuses, {});
+});
+
+Deno.test('parseSnapshot DROPS an unknown status rather than rejecting the session', () => {
+  // A newer client adding a seventh status must not be able to wipe a
+  // learner's in-flight lesson just by mentioning it.
+  const parsed = parseSnapshot(
+    base({ statuses: { ex1: 'correct', ex2: 'teleported', ex3: 42 } }),
+  );
+  assert(parsed !== null);
+  assertEquals(parsed!.statuses, { ex1: 'correct' });
+});
+
+Deno.test('parseSnapshot rejects a statuses map that is not an object', () => {
+  assertEquals(parseSnapshot(base({ statuses: ['correct'] })), null);
+  assertEquals(parseSnapshot(base({ statuses: 'correct' })), null);
+});
+
+Deno.test('parseSnapshot bounds how many statuses can be parked in Redis', () => {
+  const statuses: Record<string, string> = {};
+  for (let i = 0; i < MAX_SNAPSHOT_ANSWERS + 1; i++) statuses[`ex${i}`] = 'correct';
+  assertEquals(parseSnapshot(base({ statuses })), null);
 });

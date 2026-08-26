@@ -22,7 +22,11 @@
 
 import { Directory, File, Paths } from 'expo-file-system';
 
-export const TTS_CACHE_SCHEMA_VERSION = 1;
+// Bumped 1 -> 2 when lesson synthesis moved off the latency model: the version
+// is part of the cache DIRECTORY name, so a bump is a single directory delete
+// and every stale clip rendered with the old parameters goes with it. Hands-free
+// re-warms its own clips on next use, which is why this is safe to bump.
+export const TTS_CACHE_SCHEMA_VERSION = 2;
 export const TTS_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 /** Soft ceiling. Eviction runs at session start, not per item. */
 export const TTS_CACHE_MAX_BYTES = 40 * 1024 * 1024;

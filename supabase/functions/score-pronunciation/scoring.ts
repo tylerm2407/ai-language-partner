@@ -69,7 +69,10 @@ export function calculatePronunciationScore(
   let feedback: string;
   if (score >= 90) feedback = 'Excellent pronunciation!';
   else if (score >= 75) feedback = 'Good job! A few sounds need work.';
-  else if (score >= 60) feedback = 'Decent attempt. Keep practicing the highlighted words.';
+  // A score in [60, 75) is a PASS (see index.ts), and the learner is shown a
+  // plain "Sounded right". Prose that reads like a failure under a pass label
+  // is the one thing this band must not do.
+  else if (score >= 60) feedback = 'That works. A couple of sounds could be crisper.';
   else feedback = 'Needs improvement. Try listening to the audio again and repeat slowly.';
 
   return { score, feedback, phonemeErrors, matchedVariant };

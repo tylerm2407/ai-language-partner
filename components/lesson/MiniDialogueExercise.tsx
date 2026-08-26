@@ -154,11 +154,6 @@ export function MiniDialogueExercise({
     onAnswer(allCorrect, combinedAnswer);
   };
 
-  const handleRetry = () => {
-    setAnswers({});
-    setSubmitted(false);
-    setResult(null);
-  };
 
   const getBorderClass = (blankIndex: number) => {
     if (!submitted) return 'border-input-border';
@@ -222,7 +217,7 @@ export function MiniDialogueExercise({
           language={language}
           cefrLevel={cefrLevel}
           userId={userId}
-          onRetry={handleRetry}
+          revealAnswer={showResult}
         />
       ) : null}
 

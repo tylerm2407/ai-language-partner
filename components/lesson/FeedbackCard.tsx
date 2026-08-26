@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import * as Speech from 'expo-speech';
 import { useAudioPlayer } from '../../hooks/useAudioPlayer';
@@ -13,26 +13,42 @@ interface FeedbackCardProps {
   language: string;
   cefrLevel?: string;
   userId?: string;
-  /** Optional — only shown for incorrect grammar/lexical errors. */
-  onRetry?: () => void;
+  /**
+   * May the correct answer be shown yet?
+   *
+   * The runner owns this: it is false while a second attempt is open, and it
+   * gates EVERY branch below, not just the grammar one. The correct answer
+   * leaks from four places in this file — the grammar reveal, the phonological
+   * recast (where for a speaking exercise the audio IS the answer), the
+   * spelling correction, and the generic fallback string — and a second chance
+   * where one of the four quietly tells you the answer is not a second chance.
+   */
+  revealAnswer: boolean;
 }
 
 /**
  * Error-type-differentiated feedback card (Lyster & Ranta — research.md §10).
  *
  *  correct       -> green success card.
- *  grammar/lexical -> metalinguistic cue + RuleCard + Try Again (elicitation).
- *                     Correct answer hidden until a second failure.
+ *  grammar/lexical -> metalinguistic cue + RuleCard.
  *  phonological  -> recast: auto-play the correct audio, invite repeat.
- *  spelling      -> inline strike-through + green corrected form; auto-advance.
+ *  spelling      -> inline strike-through + green corrected form.
  *  null/unknown  -> fall back to the generic "Incorrect. The correct answer
  *                   is: ..." pattern the codebase uses today.
  *
+ * Every one of those branches is gated on `revealAnswer`, so while a second
+ * attempt is open the card says what KIND of mistake it was without saying
+ * what the answer is.
+ *
  * This card no longer advances the lesson and no longer renders a Continue
  * button: ExerciseChrome's pinned footer owns forward navigation, and two
- * forward affordances on one screen is one too many. What is left here is the
- * part the footer cannot carry — the metalinguistic cue, the grammar RuleCard,
- * the elicitation retry, the audio recast, and the correction_log write.
+ * forward affordances on one screen is one too many. It also no longer owns a
+ * "Try again" button — the runner gives every exercise a second attempt now,
+ * so the old card-local retry (which only ever fired for grammar and lexical
+ * errors, and which could not actually unlock the input on ten of the fourteen
+ * exercise types) would have been a second, competing retry mechanism. What is
+ * left here is the part the footer cannot carry — the metalinguistic cue, the
+ * grammar RuleCard, the audio recast, and the correction_log write.
  *
  * The correct branch renders nothing at all, because the footer note already
  * says CORRECT and shows the same `exercise.explanation`.
@@ -43,10 +59,9 @@ export function FeedbackCard({
   language,
   cefrLevel,
   userId,
-  onRetry,
+  revealAnswer,
 }: FeedbackCardProps) {
   const { play } = useAudioPlayer();
-  const [retryCount, setRetryCount] = useState(0);
   const logged = useRef(false);
   const audioPlayed = useRef(false);
 
@@ -85,6 +100,9 @@ export function FeedbackCard({
     if (audioPlayed.current) return;
     if (result.isCorrect) return;
     if (result.errorType !== 'phonological') return;
+    // For a speaking exercise the recast IS the answer, spoken aloud. Playing
+    // it before the second attempt is spent would hand the answer over.
+    if (!revealAnswer) return;
     audioPlayed.current = true;
 
     if (exercise.promptAudioUrl) {
@@ -96,7 +114,7 @@ export function FeedbackCard({
         // noop
       }
     }
-  }, [result, exercise, language, play]);
+  }, [result, exercise, language, play, revealAnswer]);
 
   // The spelling branch used to auto-advance after a 1.5s dwell. It no longer
   // does: advancing is the footer's Next button, and auto-advancing would pull
@@ -115,8 +133,6 @@ export function FeedbackCard({
       errorType === 'grammar'
         ? 'Check the grammar — think about the form.'
         : 'Check the word choice — something else fits better.';
-    const revealAnswer = retryCount >= 1; // show correct after first retry
-
     return (
       <View className="mt-3 p-4 rounded-[14px] bg-warning-bg border border-warning/30">
         <Text className="text-warning text-sm font-sans-semibold mb-1">
@@ -142,32 +158,24 @@ export function FeedbackCard({
           />
         ) : null}
 
-        {/* Try again is elicitation, not navigation — it re-opens the input
-            rather than moving on, so it survives the footer taking over
-            forward movement. */}
-        {onRetry && !revealAnswer ? (
-          <View className="flex-row mt-3">
-            <Pressable
-              onPress={() => {
-                setRetryCount((c) => c + 1);
-                onRetry();
-              }}
-              className="flex-1 bg-primary py-3 rounded-[12px] items-center"
-              accessibilityRole="button"
-              accessibilityLabel="Try again"
-            >
-              <Text className="text-white text-base font-sans-semibold">
-                Try again
-              </Text>
-            </Pressable>
-          </View>
-        ) : null}
       </View>
     );
   }
 
   // ─── Phonological: recast via audio ────────────────────────────
   if (errorType === 'phonological') {
+    // Before the reveal: name the problem, play nothing, show nothing. The
+    // learner still gets a second attempt at hearing it themselves.
+    if (!revealAnswer) {
+      return (
+        <View className="mt-3 p-4 rounded-[14px] bg-error-bg border border-error/30">
+          <Text className="text-error text-sm font-sans-semibold mb-1">Not quite</Text>
+          <Text className="text-text-primary text-[15px]">
+            Try saying it once more.
+          </Text>
+        </View>
+      );
+    }
     return (
       <View className="mt-3 p-4 rounded-[14px] bg-error-bg border border-error/30">
         <Text className="text-error text-sm font-sans-semibold mb-1">
@@ -203,6 +211,18 @@ export function FeedbackCard({
   // ─── Spelling: inline strike-through + green correction ────────
   if (errorType === 'spelling') {
     const userText = result.normalizedUserAnswer || '';
+    // Before the reveal: show what they wrote struck through, so they can see
+    // it is a typo, without handing over the spelling that fixes it.
+    if (!revealAnswer) {
+      return (
+        <View className="mt-3 p-4 rounded-[14px] bg-dark-card-alt border border-white/10">
+          <Text className="text-text-secondary text-sm font-sans-medium mb-2">
+            Close — check your spelling
+          </Text>
+          <Text className="text-error text-base line-through">{userText}</Text>
+        </View>
+      );
+    }
     return (
       <View className="mt-3 p-4 rounded-[14px] bg-dark-card-alt border border-white/10">
         <Text className="text-text-secondary text-sm font-sans-medium mb-2">
@@ -221,10 +241,15 @@ export function FeedbackCard({
   }
 
   // ─── null / unknown: legacy generic ──────────────────────────
+  // The generic fallback string embeds the correct answer, so before the
+  // reveal it is dropped entirely rather than shown — result.feedback from the
+  // grader can itself contain the expected answer.
   return (
     <View className="mt-3 p-3 rounded-[14px] bg-error-bg">
       <Text className="text-error text-sm font-sans-medium mb-2">
-        {result.feedback || `Incorrect. The correct answer is: ${exercise.correctAnswer}`}
+        {revealAnswer
+          ? result.feedback || `Incorrect. The correct answer is: ${exercise.correctAnswer}`
+          : 'Not quite — give it one more try.'}
       </Text>
     </View>
   );

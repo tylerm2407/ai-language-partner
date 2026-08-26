@@ -7,6 +7,12 @@
 // That opt-in-per-language shape is deliberate: this app teaches pronunciation,
 // so a voice ships only after someone has listened to it in that language.
 //
+// Synthesis parameters depend on what the audio is FOR, not just who asked:
+// chat keeps the fast expressive settings it has always used, while lesson
+// audio (a single word, prefetched, nobody waiting) buys fidelity with the
+// latency it does not need. See ./synthesis.ts — including why the lesson
+// cache path is versioned and the chat one must never move.
+//
 // Secrets: ELEVENLABS_KEY (required), FISH_KEY + FISH_VOICE_MAP (optional).
 // FISH_VOICE_MAP is JSON: {"es":["<reference_id>", ...], "fr":[...]}
 //
@@ -19,6 +25,14 @@ import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { checkBurstLimit } from '../_shared/burst-limit.ts';
 import { getPlanLimits } from '../_shared/plan-limits.ts';
 import { getUserToday } from '../_shared/user-day.ts';
+import {
+  asCitationForm,
+  cachePathFor,
+  clampRate,
+  DEFAULT_RATE,
+  ELEVEN_PROFILES,
+  type SpeechPurpose,
+} from './synthesis.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -296,6 +310,18 @@ interface TTSRequest {
    * lesson allowance is the smaller one. The worst a caller can do by lying
    * is spend the wrong small bucket. */
   purpose?: 'lesson' | 'voice';
+  /**
+   * Playback rate for LESSON audio only, clamped server-side to [0.7, 1.0].
+   *
+   * This is the "play it slower" affordance, not a global speed control: a
+   * learner who could not catch a word asks to hear it again, slower. Chat
+   * ignores it — a tutor who slows down mid-conversation reads as broken.
+   *
+   * Client-supplied and clamped, so it widens the request but not the trust
+   * surface: it selects a synthesis parameter and a cache namespace, both of
+   * which are bounded here.
+   */
+  rate?: number;
 }
 
 /** Storage bucket for content-addressed TTS audio (migration 038). */
@@ -304,8 +330,27 @@ const TTS_BUCKET = 'tts-cache';
 /** Cost control: longest legitimate inputs are chat replies / story paragraphs. */
 const MAX_TTS_CHARS = 2000;
 
-/** Generate speech with ElevenLabs. Throws on a non-2xx response. */
-async function generateWithElevenLabs(voiceId: string, text: string): Promise<ArrayBuffer> {
+/** Generate speech with ElevenLabs. Throws on a non-2xx response.
+ *
+ *  The synthesis profile comes from `purpose` (see ./synthesis.ts): chat keeps
+ *  the fast, expressive settings it has always used, while lesson audio buys
+ *  fidelity with the latency it does not need. */
+async function generateWithElevenLabs(
+  voiceId: string,
+  text: string,
+  purpose: SpeechPurpose,
+  rate: number,
+): Promise<ArrayBuffer> {
+  const profile = ELEVEN_PROFILES[purpose];
+  const { model_id, ...voiceSettings } = profile;
+  // Only send `speed` when it actually differs — not every model accepts the
+  // field, and a rate the learner did not ask for is not worth a 422.
+  const effectiveSpeed = purpose === 'lesson' ? rate * (profile.speed ?? 1) : undefined;
+  const voice_settings =
+    effectiveSpeed !== undefined && effectiveSpeed !== 1
+      ? { ...voiceSettings, speed: Number(effectiveSpeed.toFixed(2)) }
+      : (({ speed: _drop, ...rest }) => rest)(voiceSettings);
+
   const response = await fetch(
     `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream`,
     {
@@ -314,15 +359,7 @@ async function generateWithElevenLabs(voiceId: string, text: string): Promise<Ar
         'Content-Type': 'application/json',
         'xi-api-key': ELEVENLABS_API_KEY!,
       },
-      body: JSON.stringify({
-        text,
-        model_id: 'eleven_flash_v2_5',
-        voice_settings: {
-          stability: 0.5,
-          similarity_boost: 0.75,
-          style: 0.3,
-        },
-      }),
+      body: JSON.stringify({ text, model_id, voice_settings }),
     }
   );
 
@@ -333,7 +370,11 @@ async function generateWithElevenLabs(voiceId: string, text: string): Promise<Ar
 }
 
 /** Generate speech with fish.audio. Throws on a non-2xx response. */
-async function generateWithFish(referenceId: string, text: string): Promise<ArrayBuffer> {
+async function generateWithFish(
+  referenceId: string,
+  text: string,
+  purpose: SpeechPurpose,
+): Promise<ArrayBuffer> {
   const response = await fetch('https://api.fish.audio/v1/tts', {
     method: 'POST',
     headers: {
@@ -345,8 +386,10 @@ async function generateWithFish(referenceId: string, text: string): Promise<Arra
       text,
       reference_id: referenceId,
       format: 'mp3',
-      // Conversational turnaround matters more here than maximum fidelity.
-      latency: 'balanced',
+      // Chat streams, so conversational turnaround matters more than maximum
+      // fidelity. A lesson clip is prefetched and nobody is waiting on it, so
+      // there the trade inverts completely.
+      latency: purpose === 'lesson' ? 'normal' : 'balanced',
     }),
   });
 
@@ -415,11 +458,14 @@ serve(async (req: Request) => {
     }
     const authenticatedUserId = authUser.userId;
 
-    const { text, language, voiceIndex, voiceMode, voiceRotationKey, voiceGender: rawGender, purpose: rawPurpose } =
+    const { text, language, voiceIndex, voiceMode, voiceRotationKey, voiceGender: rawGender, purpose: rawPurpose, rate: rawRate } =
       (await req.json()) as TTSRequest;
     // Anything but the explicit lesson marker meters as voice — the stricter
     // of the two buckets, so a malformed or missing value cannot widen access.
     const isLessonAudio = rawPurpose === 'lesson';
+    const purpose: SpeechPurpose = isLessonAudio ? 'lesson' : 'voice';
+    // Rate is a lesson affordance; chat always renders at the canonical speed.
+    const rate = isLessonAudio ? clampRate(rawRate) : DEFAULT_RATE;
     const voiceGender = GENDERS.includes(rawGender as VoiceGender)
       ? (rawGender as VoiceGender)
       : undefined;
@@ -449,7 +495,11 @@ serve(async (req: Request) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    const cleanText = text.replace(/\*\*/g, '').trim();
+    const stripped = text.replace(/\*\*/g, '').trim();
+    // A lesson prompt is usually one bare word, which has no prosodic target
+    // without terminal punctuation. Applied BEFORE hashing, so the cache is
+    // keyed on what was actually sent to the provider.
+    const cleanText = isLessonAudio ? asCitationForm(stripped) : stripped;
     const voiceOpts = { voiceIndex, voiceMode, voiceRotationKey };
 
     // fish only handles languages it has vetted voices for, and only in the
@@ -476,7 +526,10 @@ serve(async (req: Request) => {
      *  existing tts-cache bucket stays warm across this change. */
     const cacheKeyFor = async (p: TTSProvider, v: string) => {
       const key = p === 'fish' ? `fish|${v}|${language}|${cleanText}` : `${v}|${language}|${cleanText}`;
-      return `${await sha256Hex(key)}.mp3`;
+      // The hash deliberately still carries no model and no voice settings —
+      // changing it would orphan every object in the bucket. Parameter changes
+      // are versioned by the PATH instead; see cachePathFor in ./synthesis.ts.
+      return cachePathFor({ hash: await sha256Hex(key), purpose, rate });
     };
     const readCache = async (path: string): Promise<ArrayBuffer | null> => {
       const { data } = await supabase.storage.from(TTS_BUCKET).download(path);
@@ -560,7 +613,7 @@ serve(async (req: Request) => {
     let audioBuffer: ArrayBuffer;
     if (provider === 'fish') {
       try {
-        audioBuffer = await generateWithFish(voiceId, cleanText);
+        audioBuffer = await generateWithFish(voiceId, cleanText, purpose);
       } catch (fishError) {
         // Voice is a core surface — a fish outage must not silence the tutor.
         console.error('[tts] fish.audio failed, falling back to ElevenLabs:', fishError);
@@ -582,10 +635,10 @@ serve(async (req: Request) => {
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
-        audioBuffer = await generateWithElevenLabs(fallbackVoiceId, cleanText);
+        audioBuffer = await generateWithElevenLabs(fallbackVoiceId, cleanText, purpose, rate);
       }
     } else {
-      audioBuffer = await generateWithElevenLabs(voiceId, cleanText);
+      audioBuffer = await generateWithElevenLabs(voiceId, cleanText, purpose, rate);
     }
 
     const base64 = bufferToBase64(audioBuffer);

@@ -68,11 +68,6 @@ export function FillBlankExercise({
     onAnswer(grade.isCorrect, answer);
   };
 
-  const handleRetry = () => {
-    setAnswer('');
-    setSubmitted(false);
-    setResult(null);
-  };
 
   const getBorderClass = () => {
     if (!submitted) return 'border-input-border';
@@ -131,7 +126,7 @@ export function FillBlankExercise({
           language={language}
           cefrLevel={cefrLevel}
           userId={userId}
-          onRetry={handleRetry}
+          revealAnswer={showResult}
         />
       ) : null}
 

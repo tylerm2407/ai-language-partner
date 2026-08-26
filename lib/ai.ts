@@ -206,6 +206,16 @@ export interface TTSVoiceOptions {
    * The server enforces both buckets; this only chooses between them.
    */
   purpose?: 'lesson' | 'voice';
+  /**
+   * Playback rate for lesson audio, clamped server-side to [0.7, 1.0].
+   *
+   * This backs "play it again, slower" — a learner who could not catch a word.
+   * It is not a global speed control and is ignored for anything but lesson
+   * audio. Note that a non-default rate is a separate cache entry both on the
+   * device and in the bucket, so it is a separate synthesis and a separate
+   * lesson-audio allowance unit: only send it when the learner asked.
+   */
+  rate?: number;
 }
 
 /**

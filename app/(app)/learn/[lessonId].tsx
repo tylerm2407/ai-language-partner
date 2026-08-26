@@ -134,7 +134,11 @@ export default function LessonScreen() {
     // 1. Completion — the durable record of progress. Resolves once the row
     //    is in Postgres or in the replay queue (see useLessonProgressStore).
     if (lesson && user?.id) {
-      const score = result.totalExercises > 0 ? result.correctCount / result.totalExercises : 0;
+      // The runner already computed this, skip-aware: a question the learner
+      // could not hear is out of the denominator rather than counted wrong.
+      // Recomputing it here from correctCount/totalExercises is exactly how
+      // the recorded score and the score the learner was shown drifted apart.
+      const score = result.accuracy;
       if (!lesson.courseId) {
         // course_id is NOT NULL; without it the row can never be written, so
         // say so instead of failing silently on a uuid parse error.
