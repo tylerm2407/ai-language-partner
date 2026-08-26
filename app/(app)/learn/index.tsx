@@ -13,6 +13,7 @@ import {
   fetchUserBookProgress,
 } from '../../../lib/supabase-queries';
 import { useAppStore } from '../../../stores/useAppStore';
+import { useReviewCountSync } from '../../../hooks/useReviewCountSync';
 import { supabase } from '../../../lib/supabase';
 import { LoadingScreen } from '../../../components/ui/LoadingScreen';
 import { EmptyState } from '../../../components/ui/EmptyState';
@@ -90,6 +91,9 @@ const TAB_CONFIG: { key: CourseTab; label: string }[] = [
 export default function LearnScreen() {
   const router = useRouter();
   const { reviewCount, profile } = useAppStore();
+  // The review screen and the lesson warm-up both clear cards without this
+  // screen knowing, so re-read the due count whenever it comes back into view.
+  useReviewCountSync();
   const [courses, setCourses] = useState<Course[]>([]);
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
   const [units, setUnits] = useState<Record<string, { unit: Unit; lessons: Lesson[] }[]>>({});

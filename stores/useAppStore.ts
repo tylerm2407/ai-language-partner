@@ -2,6 +2,13 @@ import { create } from 'zustand';
 import type { UserProfile, DailyStats, Subscription, SubscriptionTier } from '../types';
 import { fetchProfile, fetchTodayStats, fetchSubscription, fetchReviewItemCount, fetchUserRoles, fetchHasCompletedLesson, fetchHasAiConversation } from '../lib/supabase-queries';
 
+/**
+ * In-flight review-count refreshes, keyed by user. Module scope rather than
+ * store state on purpose: it is plumbing, not something any screen renders,
+ * and putting it in the store would re-render every subscriber twice per call.
+ */
+const reviewCountInFlight = new Map<string, Promise<void>>();
+
 /** Tier ladder, weakest first — index doubles as rank for `effectiveTier`. */
 const TIER_RANK: SubscriptionTier[] = ['starter', 'basic', 'premium', 'vip'];
 
@@ -146,12 +153,28 @@ export const useAppStore = create<AppState>((set) => ({
   setEntitledTier: (tier: SubscriptionTier | null) => set({ entitledTier: tier }),
 
   refreshReviewCount: async (userId: string) => {
-    try {
-      const reviewCount = await fetchReviewItemCount(userId);
-      set({ reviewCount });
-    } catch (err) {
-      console.error('refreshReviewCount error:', err);
-    }
+    // Single-flight per user. This is called on every focus of Home and the
+    // learn page as well as after each review submit, so tab-flicking would
+    // otherwise fire a burst of identical count queries whose replies can also
+    // land out of order — the older one winning and re-showing a cleared badge.
+    const inFlight = reviewCountInFlight.get(userId);
+    if (inFlight) return inFlight;
+
+    const pending = (async () => {
+      try {
+        const reviewCount = await fetchReviewItemCount(userId);
+        set({ reviewCount });
+      } catch (err) {
+        // Keep the previous count: a stale badge beats one that claims "all
+        // caught up" because the network blipped.
+        console.error('refreshReviewCount error:', err);
+      } finally {
+        reviewCountInFlight.delete(userId);
+      }
+    })();
+
+    reviewCountInFlight.set(userId, pending);
+    return pending;
   },
 
   reset: () => set({

@@ -136,3 +136,60 @@ describe('loadUserData signals', () => {
     expect(s.reconciledUserId).toBeNull();
   });
 });
+
+/**
+ * The due-card badge is store state that four different paths can invalidate:
+ * a review submit, the lesson warm-up's direct SRS upsert, an offline-queue
+ * replay, and simply the clock. Home and the learn page therefore re-read it
+ * on focus (`hooks/useReviewCountSync`), which puts a refresh on every tab
+ * switch — so the refresh has to be single-flight, or a burst of identical
+ * count queries can resolve out of order and the older reply re-shows a badge
+ * the learner just cleared.
+ */
+describe('refreshReviewCount', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    useAppStore.getState().reset();
+  });
+
+  it('writes the fetched count into the store', async () => {
+    jest.mocked(queries.fetchReviewItemCount).mockResolvedValue(3);
+    await useAppStore.getState().refreshReviewCount('u1');
+    expect(useAppStore.getState().reviewCount).toBe(3);
+  });
+
+  it('collapses concurrent refreshes for the same user into one query', async () => {
+    jest.mocked(queries.fetchReviewItemCount).mockResolvedValue(0);
+    const { refreshReviewCount } = useAppStore.getState();
+
+    await Promise.all([
+      refreshReviewCount('u1'),
+      refreshReviewCount('u1'),
+      refreshReviewCount('u1'),
+    ]);
+
+    expect(queries.fetchReviewItemCount).toHaveBeenCalledTimes(1);
+    expect(useAppStore.getState().reviewCount).toBe(0);
+  });
+
+  it('releases the slot so a later refresh still sees new cards', async () => {
+    jest.mocked(queries.fetchReviewItemCount).mockResolvedValue(0);
+    await useAppStore.getState().refreshReviewCount('u1');
+    jest.mocked(queries.fetchReviewItemCount).mockResolvedValue(2);
+    await useAppStore.getState().refreshReviewCount('u1');
+    expect(useAppStore.getState().reviewCount).toBe(2);
+  });
+
+  it('keeps the previous count when the read fails', async () => {
+    jest.mocked(queries.fetchReviewItemCount).mockResolvedValue(4);
+    await useAppStore.getState().refreshReviewCount('u1');
+
+    jest.mocked(queries.fetchReviewItemCount).mockRejectedValue(new Error('offline'));
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    await useAppStore.getState().refreshReviewCount('u1');
+    spy.mockRestore();
+
+    // Not zero: "all caught up" is a claim, and a network blip is not evidence.
+    expect(useAppStore.getState().reviewCount).toBe(4);
+  });
+});

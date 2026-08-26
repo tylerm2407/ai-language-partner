@@ -20,6 +20,7 @@ import { useStreakProtection } from '../../hooks/useStreakProtection';
 import { useDailyNews } from '../../hooks/useDailyNews';
 import { useNotifications, scheduleStreakSaveReminder } from '../../hooks/useNotifications';
 import { useOnboardingChecklist } from '../../hooks/useOnboardingChecklist';
+import { useReviewCountSync } from '../../hooks/useReviewCountSync';
 import { StreakRepairModal } from '../../components/gamification/StreakRepairModal';
 import { PrePermissionSheet } from '../../components/gamification/PrePermissionSheet';
 import { OnboardingChecklistFab } from '../../components/onboarding/OnboardingChecklistFab';
@@ -41,6 +42,9 @@ export default function HomeScreen() {
   const { user } = useAuth();
   const router = useRouter();
   const { profile, dailyStats, reviewCount, loadUserData } = useAppStore();
+  // Same reason as the learn page: the "N cards due" quick action is store
+  // state that other screens change behind Home's back.
+  useReviewCountSync();
   // Keep user_profiles.timezone tracking the device — the server derives
   // streak/challenge/quota days from it (migration 044). One-shot per session.
   useTimezoneSync();
