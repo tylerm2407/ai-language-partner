@@ -47,6 +47,36 @@ function isEdgeFunctionCall(url: string): boolean {
 }
 
 /**
+ * `/auth/v1/...` — the token endpoints themselves.
+ *
+ * These return 401 as a NORMAL part of their contract (a refresh with a spent
+ * token, a sign-in with a wrong password), so they must never be read as
+ * evidence that the session has died.
+ */
+function isAuthCall(url: string): boolean {
+  return url.includes('/auth/v1/');
+}
+
+/**
+ * Notified when a data or function call is rejected as unauthorised.
+ *
+ * There was no global handler for a mid-session token revocation, so each
+ * screen rendered whatever its own error path produced: one revoked refresh
+ * token surfaced as "No courses yet" on one tab, a raw `401:` bubble in chat,
+ * and "We couldn't grade your writing" on another — three different lies about
+ * the same fact, none of which tells the learner to just sign in again.
+ *
+ * A callback rather than a direct import, because `hooks/useAuth` imports this
+ * module; wiring it the other way round would be a cycle.
+ */
+type UnauthorizedHandler = () => void;
+let onUnauthorized: UnauthorizedHandler | null = null;
+
+export function setUnauthorizedHandler(handler: UnauthorizedHandler | null): void {
+  onUnauthorized = handler;
+}
+
+/**
  * `fetch` with a deadline.
  *
  * Aborting produces an `AbortError`, which `isNetworkError` in
@@ -69,9 +99,19 @@ const fetchWithTimeout: typeof fetch = (input, init) => {
     else callerSignal.addEventListener('abort', () => controller.abort(), { once: true });
   }
 
-  return fetch(input, { ...init, signal: controller.signal }).finally(() => {
-    clearTimeout(timer);
-  });
+  return fetch(input, { ...init, signal: controller.signal })
+    .then((response) => {
+      // A 401 from a DATA or FUNCTION call means this session is no longer
+      // accepted. Auth endpoints are excluded — 401 is part of their contract.
+      // The handler verifies before acting; this only raises the question.
+      if (response.status === 401 && !isAuthCall(url)) {
+        onUnauthorized?.();
+      }
+      return response;
+    })
+    .finally(() => {
+      clearTimeout(timer);
+    });
 };
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {

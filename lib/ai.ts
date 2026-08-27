@@ -11,6 +11,59 @@ import type { VoiceGender } from './voice-preference';
 // All AI calls go through Supabase Edge Functions.
 // The AI API key lives in Edge Function secrets, never on the client.
 
+/**
+ * Invoke an edge function, retrying once on a transient failure.
+ *
+ * `validated-generate` retries the MODEL server-side, but nothing retried the
+ * hop between the device and the edge — so a 502 from the platform, a dropped
+ * connection, or a request aborted by the client timeout surfaced to the
+ * learner as a hard failure on a request that would very likely have succeeded
+ * a second later. On mobile that hop is the least reliable part of the chain.
+ *
+ * Retried: network-shaped errors and 5xx. NOT retried: 4xx — a quota refusal, a
+ * safety rejection or a bad request will refuse identically the second time,
+ * and retrying a paid call that the server already declined just spends the
+ * learner's allowance twice.
+ *
+ * One retry, with jitter. More would sit behind a spinner longer than anyone
+ * will wait, and these calls already carry a 60s ceiling.
+ */
+async function invokeWithRetry<
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mirrors
+  // FunctionsClient.invoke<T = any>. Narrowing the default here would retype
+  // all eight call sites, and this change is meant to add a retry, nothing else.
+  T = any,
+>(
+  fn: string,
+  options: Parameters<typeof supabase.functions.invoke>[1],
+): Promise<Awaited<ReturnType<typeof supabase.functions.invoke<T>>>> {
+  const attempt = () => supabase.functions.invoke<T>(fn, options);
+
+  const first = await attempt();
+  if (!first.error || !isRetriableInvokeError(first.error)) return first;
+
+  // 150-450ms. Enough to clear a transient blip without being felt as a stall.
+  await new Promise((resolve) => setTimeout(resolve, 150 + Math.random() * 300));
+  return attempt();
+}
+
+function isRetriableInvokeError(error: unknown): boolean {
+  const status = (error as { context?: { status?: number } })?.context?.status;
+  if (typeof status === 'number') return status >= 500;
+
+  // No status at all means the request never reached the edge: a network drop,
+  // or the client-side timeout aborting it.
+  const name = (error as { name?: string })?.name ?? '';
+  const message = String((error as { message?: string })?.message ?? '').toLowerCase();
+  if (name === 'AbortError' || name === 'TimeoutError') return true;
+  return (
+    message.includes('network') ||
+    message.includes('failed to fetch') ||
+    message.includes('load failed') ||
+    message.includes('fetch failed')
+  );
+}
+
 export class VoiceError extends Error {
   code: 'DAILY_LIMIT' | 'NOT_CONFIGURED' | 'NETWORK' | 'UNKNOWN';
   constructor(message: string, code: VoiceError['code'] = 'UNKNOWN') {
@@ -80,7 +133,7 @@ export interface PronunciationScoreResponse {
  * or a 401 when the user's JWT isn't forwarded).
  */
 export async function sendChatMessage(request: AIChatRequest): Promise<AIChatResponse> {
-  const { data, error } = await supabase.functions.invoke('ai-chat', {
+  const { data, error } = await invokeWithRetry('ai-chat', {
     body: request,
   });
 
@@ -121,7 +174,7 @@ export async function sendChatMessage(request: AIChatRequest): Promise<AIChatRes
 export async function scorePronunciation(
   request: PronunciationScoreRequest
 ): Promise<PronunciationScoreResponse> {
-  const { data, error } = await supabase.functions.invoke('score-pronunciation', {
+  const { data, error } = await invokeWithRetry('score-pronunciation', {
     body: request,
   });
 
@@ -137,7 +190,7 @@ export async function getHint(
   exerciseType: string,
   targetLanguage: LanguageCode
 ): Promise<{ hint: string }> {
-  const { data, error } = await supabase.functions.invoke('get-hint', {
+  const { data, error } = await invokeWithRetry('get-hint', {
     body: { cardId, exerciseType, targetLanguage },
   });
 
@@ -156,7 +209,7 @@ export async function translateText(
   sourceLanguage: string,
   targetLanguage: string
 ): Promise<string> {
-  const { data, error } = await supabase.functions.invoke('translate', {
+  const { data, error } = await invokeWithRetry('translate', {
     body: { text, sourceLanguage, targetLanguage },
   });
 
@@ -228,7 +281,7 @@ export async function getTextToSpeech(
   userId?: string,
   voiceOptions?: TTSVoiceOptions
 ): Promise<string> {
-  const { data, error } = await supabase.functions.invoke('tts', {
+  const { data, error } = await invokeWithRetry('tts', {
     body: { text, language, userId, ...(voiceOptions ?? {}) },
   });
 
@@ -294,7 +347,7 @@ export async function transcribeAudio(
   audioBase64: string,
   language: string
 ): Promise<Transcription> {
-  const { data, error } = await supabase.functions.invoke('transcribe', {
+  const { data, error } = await invokeWithRetry('transcribe', {
     body: { audioBase64, language },
   });
 
@@ -359,7 +412,7 @@ export interface GenerateContentRequest {
  * via the generate-content edge function.
  */
 export async function generateContent(request: GenerateContentRequest): Promise<unknown> {
-  const { data, error } = await supabase.functions.invoke('generate-content', {
+  const { data, error } = await invokeWithRetry('generate-content', {
     body: request,
   });
   if (error) throw new Error(`Content generation error: ${error.message}`);
@@ -377,7 +430,7 @@ export async function analyzeConversationTurn(
   targetLanguage: string,
   level: string
 ): Promise<{ correction: string | null; vocabularyHighlights: string[] }> {
-  const { data, error } = await supabase.functions.invoke('analyze-turn', {
+  const { data, error } = await invokeWithRetry('analyze-turn', {
     body: { userMessage, aiReply, targetLanguage, level },
   });
 

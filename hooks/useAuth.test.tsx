@@ -18,12 +18,16 @@ import TestRenderer from 'react-test-renderer';
 const mockGetSession = jest.fn();
 const mockOnAuthStateChange = jest.fn();
 const mockUnsubscribe = jest.fn();
+const mockRefreshSession = jest.fn();
+const mockSetUnauthorizedHandler = jest.fn();
 
 jest.mock('../lib/supabase', () => ({
+  setUnauthorizedHandler: (...args: unknown[]) => mockSetUnauthorizedHandler(...args),
   supabase: {
     auth: {
       getSession: (...args: unknown[]) => mockGetSession(...args),
       onAuthStateChange: (...args: unknown[]) => mockOnAuthStateChange(...args),
+      refreshSession: (...args: unknown[]) => mockRefreshSession(...args),
       signOut: jest.fn().mockResolvedValue({ error: null }),
     },
   },
@@ -89,6 +93,7 @@ beforeEach(() => {
   __resetAuthStoreForTests();
   mockGetSession.mockResolvedValue({ data: { session: null } });
   mockOnAuthStateChange.mockReturnValue({ data: { subscription: { unsubscribe: mockUnsubscribe } } });
+  mockRefreshSession.mockResolvedValue({ data: { session: { user: { id: 'u1' } } }, error: null });
 });
 
 describe('useAuth shares one subscription', () => {
@@ -167,5 +172,29 @@ describe('session teardown', () => {
     await expect(tearDownSession()).resolves.toBeUndefined();
     expect(useAppStore.getState().profile).toBeNull();
     expect(clearTtsCache).toHaveBeenCalled();
+  });
+});
+
+describe('unauthorized handling', () => {
+  /** Grab the handler the store registered with the fetch wrapper. */
+  function registeredHandler(): () => void {
+    renderConsumers(1);
+    const call = mockSetUnauthorizedHandler.mock.calls.at(-1);
+    if (!call) throw new Error('no unauthorized handler was registered');
+    return call[0] as () => void;
+  }
+
+  it('registers a handler with the fetch layer', () => {
+    expect(registeredHandler()).toBeInstanceOf(Function);
+  });
+
+  it('does nothing when there is no session to tear down', async () => {
+    const handler = registeredHandler();
+    await TestRenderer.act(async () => {
+      handler();
+      await Promise.resolve();
+    });
+    // Signed out already — a 401 here is expected, not evidence of anything.
+    expect(mockRefreshSession).not.toHaveBeenCalled();
   });
 });

@@ -1,5 +1,5 @@
 import { useCallback, useSyncExternalStore } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, setUnauthorizedHandler } from '../lib/supabase';
 import { RESET_PASSWORD_REDIRECT } from '../lib/auth-links';
 import { clearReadCache } from '../lib/read-cache';
 import { clearTtsCache } from '../lib/tts-cache';
@@ -72,6 +72,44 @@ function start(): void {
   // fired in between.
   supabase.auth.onAuthStateChange((_event, session) => {
     publish({ session, loading: false });
+  });
+
+  setUnauthorizedHandler(handleUnauthorized);
+}
+
+/** Set while a rejection is being investigated, so a burst produces one check. */
+let verifyingSession: Promise<void> | null = null;
+
+/**
+ * A data call came back 401.
+ *
+ * Deliberately does NOT sign out on sight. A single 401 can be a race — a
+ * request that left just before a refresh landed — and ejecting a learner
+ * mid-lesson on a transient error is worse than the error. So it tries a
+ * refresh first and only tears down when that fails, which is the difference
+ * between "this token is stale" and "this session is gone".
+ *
+ * Single-flighted: a screen with six queries in flight produces six 401s and
+ * must still only ask once.
+ */
+function handleUnauthorized(): void {
+  if (verifyingSession) return;
+  if (!snapshot.session) return; // already signed out; nothing to tear down
+
+  verifyingSession = (async () => {
+    try {
+      const { data, error } = await supabase.auth.refreshSession();
+      if (!error && data.session) return; // transient — the session is fine
+    } catch {
+      // fall through to sign-out
+    }
+
+    console.warn('[auth] session rejected by the server; signing out');
+    await supabase.auth.signOut().catch(() => { /* already gone */ });
+    await tearDownSession();
+    publish({ session: null, loading: false });
+  })().finally(() => {
+    verifyingSession = null;
   });
 }
 

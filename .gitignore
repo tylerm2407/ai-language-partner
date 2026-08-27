@@ -25,6 +25,10 @@ coverage/
 # .claude/ is otherwise tracked (skills, rules), so these are named
 # individually rather than ignoring the directory.
 .claude-flow/
+# Agent worktrees. These are full git worktrees created INSIDE the repo, so
+# without this a `git add -A` commits three copies of the tree — and jest and
+# eslint traverse them as if they were source.
+.claude/worktrees/
 .claude/proven-config.json
 .claude/.proven-config-version
 
