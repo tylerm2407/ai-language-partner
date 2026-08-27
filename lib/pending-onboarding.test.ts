@@ -9,6 +9,7 @@ import {
   PENDING_ONBOARDING_KEY,
   PENDING_ONBOARDING_SCHEMA_VERSION,
   PENDING_ONBOARDING_TTL_MS,
+  PENDING_ONBOARDING_COMPLETED_TTL_MS,
   emptyPendingOnboarding,
   savePendingOnboarding,
   loadPendingOnboarding,
@@ -164,6 +165,60 @@ describe('TTL', () => {
   it('keeps drafts inside the TTL', async () => {
     await savePendingOnboarding(makeDraft(), Date.now() - PENDING_ONBOARDING_TTL_MS + 60_000);
     expect(await loadPendingOnboarding()).not.toBeNull();
+  });
+});
+
+/**
+ * The shared-device guard. A completed draft is the fully populated one and
+ * the one `isFlushable` lets the onboarding screen write into whichever
+ * account is signed in when it is next read, so it gets a much shorter life
+ * than an in-progress draft.
+ */
+describe('completed-draft claim window', () => {
+  const completedAgo = (ms: number) =>
+    makeDraft({ completedAt: new Date(Date.now() - ms).toISOString() });
+
+  it('keeps a completed draft inside the claim window', async () => {
+    await savePendingOnboarding(completedAgo(PENDING_ONBOARDING_COMPLETED_TTL_MS - 60_000));
+    expect(await loadPendingOnboarding()).not.toBeNull();
+  });
+
+  it('discards and removes a completed draft past the claim window', async () => {
+    await savePendingOnboarding(completedAgo(PENDING_ONBOARDING_COMPLETED_TTL_MS + 60_000));
+    expect(await loadPendingOnboarding()).toBeNull();
+    expect(await AsyncStorage.getItem(PENDING_ONBOARDING_KEY)).toBeNull();
+  });
+
+  it('expires a completed draft long before the in-progress TTL would', async () => {
+    // The leak this closes: learner A abandons the sign-up screen, learner B
+    // picks the device up a day later. Under the 7-day TTL alone, B saw A's
+    // display name and free-text goal — or had them flushed into B's profile.
+    const aDayAgo = 24 * 60 * 60 * 1000;
+    expect(aDayAgo).toBeLessThan(PENDING_ONBOARDING_TTL_MS);
+
+    await savePendingOnboarding(completedAgo(aDayAgo), Date.now() - aDayAgo);
+    expect(await loadPendingOnboarding()).toBeNull();
+  });
+
+  it('leaves an in-progress draft on the long TTL', async () => {
+    // Same age, but never completed: still a legitimate resume, so it stays.
+    const aDayAgo = 24 * 60 * 60 * 1000;
+    await savePendingOnboarding(makeDraft({ completedAt: null }), Date.now() - aDayAgo);
+    expect(await loadPendingOnboarding()).not.toBeNull();
+  });
+
+  it('treats an unreadable completedAt stamp as expired', async () => {
+    // A stamp we cannot parse is a stamp we cannot bound.
+    await AsyncStorage.setItem(
+      PENDING_ONBOARDING_KEY,
+      JSON.stringify({
+        ...makeDraft({ completedAt: 'sometime last tuesday' }),
+        version: PENDING_ONBOARDING_SCHEMA_VERSION,
+        startedAt: Date.now(),
+      }),
+    );
+    expect(await loadPendingOnboarding()).toBeNull();
+    expect(await AsyncStorage.getItem(PENDING_ONBOARDING_KEY)).toBeNull();
   });
 });
 
