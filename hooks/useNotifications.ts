@@ -129,6 +129,18 @@ async function cancelLegacyScheduledOnce(): Promise<void> {
   }
 }
 
+/**
+ * Cancel every scheduled notification for this device.
+ *
+ * Used on sign-out. The daily practice reminder embeds the learner's own
+ * `idealL2Self` text, so leaving it scheduled means the next person to use the
+ * device gets someone else's personal statement on their lock screen.
+ */
+export async function cancelAllScheduledNotifications(): Promise<void> {
+  if (Platform.OS === 'web') return;
+  await Notifications.cancelAllScheduledNotificationsAsync();
+}
+
 /** Cancel one notification by id. Absent ids are not an error. */
 async function cancelById(identifier: string): Promise<void> {
   try {

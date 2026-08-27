@@ -30,6 +30,17 @@ export function invalidateAvatarImage(path: string): void {
   cache.delete(path);
 }
 
+/**
+ * Drop every cached signed URL.
+ *
+ * Module-level and therefore not user-scoped: without this, signing out and
+ * into a different account on the same device leaves the previous learner's
+ * avatar URLs resolvable until they expire.
+ */
+export function clearAvatarImageCache(): void {
+  cache.clear();
+}
+
 export function useAvatarImage(path: string | null | undefined): string | null {
   const [uri, setUri] = useState<string | null>(() => {
     if (!path) return null;

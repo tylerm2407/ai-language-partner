@@ -2,6 +2,14 @@ import { useCallback, useSyncExternalStore } from 'react';
 import { supabase } from '../lib/supabase';
 import { RESET_PASSWORD_REDIRECT } from '../lib/auth-links';
 import { clearReadCache } from '../lib/read-cache';
+import { clearTtsCache } from '../lib/tts-cache';
+import { clearPendingOnboarding } from '../lib/pending-onboarding';
+import { clearAvatarImageCache } from './useAvatarImage';
+import { cancelAllScheduledNotifications } from './useNotifications';
+import { useAppStore } from '../stores/useAppStore';
+import { useLessonProgressStore } from '../stores/useLessonProgressStore';
+import { useSchoolStore } from '../stores/useSchoolStore';
+import { useAnimationStore } from '../stores/useAnimationStore';
 import type { Session } from '@supabase/supabase-js';
 
 /**
@@ -111,10 +119,7 @@ export function useAuth() {
   const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
-    // Shared-device hygiene: drop all cached content (review queue and
-    // progress tiles are user-scoped; wiping shared course content too is
-    // harmless and simpler). Best-effort — never block sign-out.
-    await clearReadCache().catch(() => {});
+    await tearDownSession();
   }, []);
 
   return {
@@ -127,6 +132,44 @@ export function useAuth() {
     updatePassword,
     signOut,
   };
+}
+
+/**
+ * Everything that has to go when a session ends.
+ *
+ * Sign-out used to call `supabase.auth.signOut()` and clear the read cache, and
+ * nothing else — so on a shared device the next account inherited a surprising
+ * amount:
+ *
+ *   - the previous learner's DAILY practice reminder kept firing, and its body
+ *     embeds their free-text `idealL2Self` goal, so someone else's personal
+ *     statement about themselves appeared on the lock screen;
+ *   - all four zustand stores survived, so user B saw A's completed-lesson
+ *     ticks and A's queued celebration fired at B;
+ *   - the TTS cache, the avatar signed-URL map, and the pending-onboarding
+ *     draft (target language, display name, personal goal) all persisted.
+ *
+ * Every step is best-effort and independent: a failure in one must not leave
+ * the rest of the previous session in place.
+ */
+export async function tearDownSession(): Promise<void> {
+  // Notifications first — this is the one with someone else's words in it.
+  await cancelAllScheduledNotifications().catch((err) =>
+    console.warn('[auth] failed to cancel notifications on sign-out:', err),
+  );
+
+  try {
+    useAppStore.getState().reset();
+    useLessonProgressStore.getState().reset();
+    useSchoolStore.getState().reset();
+    useAnimationStore.getState().clear();
+    clearTtsCache();
+    clearAvatarImageCache();
+  } catch (err) {
+    console.warn('[auth] store teardown failed on sign-out:', err);
+  }
+
+  await Promise.allSettled([clearReadCache(), clearPendingOnboarding()]);
 }
 
 /**

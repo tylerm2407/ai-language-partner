@@ -29,9 +29,40 @@ jest.mock('../lib/supabase', () => ({
   },
 }));
 jest.mock('../lib/auth-links', () => ({ RESET_PASSWORD_REDIRECT: 'x://reset' }));
+// `signOut` now tears the whole session down, which pulls in storage-backed
+// caches and the notification scheduler. None of that is what these tests are
+// about — they only assert how many subscriptions the hook opens.
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  __esModule: true,
+  default: {
+    setItem: jest.fn(async () => {}),
+    getItem: jest.fn(async () => null),
+    removeItem: jest.fn(async () => {}),
+    getAllKeys: jest.fn(async () => []),
+    multiRemove: jest.fn(async () => {}),
+  },
+}));
+jest.mock('expo-notifications', () => ({
+  cancelAllScheduledNotificationsAsync: jest.fn(async () => {}),
+  cancelScheduledNotificationAsync: jest.fn(async () => {}),
+  scheduleNotificationAsync: jest.fn(async () => {}),
+  getPermissionsAsync: jest.fn(async () => ({ status: 'granted' })),
+  setNotificationHandler: jest.fn(),
+  SchedulableTriggerInputTypes: { DAILY: 'daily' },
+}));
+jest.mock('../lib/tts-cache', () => ({ clearTtsCache: jest.fn() }));
+jest.mock('../lib/pending-onboarding', () => ({
+  clearPendingOnboarding: jest.fn(async () => {}),
+}));
 jest.mock('../lib/read-cache', () => ({ clearReadCache: jest.fn().mockResolvedValue(undefined) }));
 
-import { useAuth, __resetAuthStoreForTests } from './useAuth';
+import { useAuth, tearDownSession, __resetAuthStoreForTests } from './useAuth';
+import * as Notifications from 'expo-notifications';
+import { clearTtsCache } from '../lib/tts-cache';
+import { clearPendingOnboarding } from '../lib/pending-onboarding';
+import { useAppStore } from '../stores/useAppStore';
+import { useLessonProgressStore } from '../stores/useLessonProgressStore';
+import { useSchoolStore } from '../stores/useSchoolStore';
 
 /** A consumer that does nothing but call the hook, like most real ones. */
 function Consumer() {
@@ -96,5 +127,45 @@ describe('useAuth shares one subscription', () => {
     // Nothing has rendered in this test yet.
     expect(mockGetSession).not.toHaveBeenCalled();
     expect(mockOnAuthStateChange).not.toHaveBeenCalled();
+  });
+});
+
+describe('session teardown', () => {
+  it('cancels every scheduled notification', async () => {
+    // The daily reminder embeds the learner's own free-text goal, so leaving it
+    // scheduled puts one person's private statement on the next person's lock
+    // screen. This is the single most important line of the teardown.
+    await tearDownSession();
+    expect(Notifications.cancelAllScheduledNotificationsAsync).toHaveBeenCalledTimes(1);
+  });
+
+  it('resets every store, so the next account starts empty', async () => {
+    useAppStore.setState({ profile: { displayName: 'Previous learner' } as never });
+    useSchoolStore.setState({ classrooms: [{ id: 'c1' }] as never });
+
+    await tearDownSession();
+
+    expect(useAppStore.getState().profile).toBeNull();
+    expect(useSchoolStore.getState().classrooms).toEqual([]);
+    expect(useLessonProgressStore.getState()).toBeDefined();
+  });
+
+  it('clears the device-level caches', async () => {
+    await tearDownSession();
+    expect(clearTtsCache).toHaveBeenCalled();
+    expect(clearPendingOnboarding).toHaveBeenCalled();
+  });
+
+  it('still tears the rest down when cancelling notifications fails', async () => {
+    // Each step is independent on purpose — one failure must not strand the
+    // previous session's data on the device.
+    (Notifications.cancelAllScheduledNotificationsAsync as jest.Mock).mockRejectedValueOnce(
+      new Error('no permission'),
+    );
+    useAppStore.setState({ profile: { displayName: 'Previous learner' } as never });
+
+    await expect(tearDownSession()).resolves.toBeUndefined();
+    expect(useAppStore.getState().profile).toBeNull();
+    expect(clearTtsCache).toHaveBeenCalled();
   });
 });
