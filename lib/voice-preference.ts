@@ -9,6 +9,22 @@
  * record, so it doesn't belong in the shared profile table. The server treats
  * it as a hint — if a language has no vetted voice in the chosen gender, TTS
  * falls back to that language's default rather than refusing to speak.
+ *
+ * Deliberately NOT user-scoped, unlike the hands-free config next door. This
+ * was reviewed as part of the shared-device leak that scoped down
+ * `pending-onboarding`, and the conclusion is that it does not belong in that
+ * category: the stored value is one bit from a closed two-value enum. It
+ * carries no text the previous learner wrote, names nobody, and reveals
+ * nothing about them beyond a taste in synthetic timbre — so a second learner
+ * inheriting it is a preference mismatch, not a disclosure. It behaves like
+ * volume or playback speed, which are device settings everywhere else too.
+ *
+ * The cost of leaving it device-wide is bounded and self-correcting: the
+ * control lives on the chat screen where the voice is actually heard, so a
+ * learner who dislikes the inherited voice fixes it in one tap, in the same
+ * place they noticed it. Scoping it per user would instead cost every learner
+ * their choice each time they moved between their own devices, for no privacy
+ * gain.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 

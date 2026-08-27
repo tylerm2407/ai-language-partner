@@ -10,6 +10,11 @@
  *
  * Device-local by design. If the user never signs up, nothing is written
  * server-side and the draft simply expires.
+ *
+ * There is no user id to scope this key on — that is the whole point, the
+ * draft predates the account. So the only defence against one learner's draft
+ * reaching another learner on a shared device is how long it survives
+ * unclaimed, which is why there are two TTLs below rather than one.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type {
@@ -19,8 +24,33 @@ import type {
 
 export const PENDING_ONBOARDING_KEY = 'pending-onboarding';
 export const PENDING_ONBOARDING_SCHEMA_VERSION = 1;
-/** Drafts older than this are discarded on load. */
+/** In-progress drafts older than this are discarded on load. */
 export const PENDING_ONBOARDING_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * How long a draft stays claimable AFTER `completedAt` is stamped.
+ *
+ * A completed draft is the dangerous one. It is the fully populated one —
+ * display name, the free-text `idealL2Self` goal, level, trial XP — and it is
+ * the one `isFlushable` lets the onboarding screen write into whatever account
+ * happens to be signed in when it is next read. On a shared device (the
+ * university pilots put several learners on one iPad) seven days of that means
+ * learner A abandons the sign-up screen, learner B opens the app and either
+ * sees A's name and personal goal prefilled, or — if B signs into an account
+ * whose profile is still incomplete — has A's answers silently written into
+ * their profile.
+ *
+ * Its legitimate remaining life is one round trip: type an email, possibly
+ * bounce out to a confirmation link, come back. An hour covers that with room
+ * to spare and cuts the exposure window from 168 hours to 1. The in-progress
+ * TTL above stays at seven days because that draft is a resume convenience
+ * with no account waiting to receive it.
+ *
+ * Deliberately NOT a PENDING_ONBOARDING_SCHEMA_VERSION bump: `completedAt`
+ * already exists on the stored shape, so nothing about the blob layout
+ * changed and bumping would throw away every in-flight draft for no reason.
+ */
+export const PENDING_ONBOARDING_COMPLETED_TTL_MS = 60 * 60 * 1000;
 
 /**
  * What the learner did in the pre-auth trial lesson.
@@ -132,6 +162,21 @@ export async function loadPendingOnboarding(): Promise<PendingOnboarding | null>
   if (Date.now() - parsed.startedAt > PENDING_ONBOARDING_TTL_MS) {
     await AsyncStorage.removeItem(PENDING_ONBOARDING_KEY);
     return null;
+  }
+
+  // A completed draft gets the much shorter claim window. An unparseable
+  // `completedAt` is treated as expired rather than ignored: a stamp we cannot
+  // read is a stamp we cannot bound, and an unbounded completed draft is
+  // exactly the one that must not survive.
+  if (parsed.completedAt !== null && parsed.completedAt !== undefined) {
+    const completedMs = Date.parse(String(parsed.completedAt));
+    if (
+      !Number.isFinite(completedMs) ||
+      Date.now() - completedMs > PENDING_ONBOARDING_COMPLETED_TTL_MS
+    ) {
+      await AsyncStorage.removeItem(PENDING_ONBOARDING_KEY);
+      return null;
+    }
   }
 
   return parsed;
