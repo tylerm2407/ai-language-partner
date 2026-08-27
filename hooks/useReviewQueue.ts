@@ -104,19 +104,40 @@ export function useReviewQueue() {
     // and in lifts; losing one because the tunnel arrived mid-tap is a silent
     // data loss the learner cannot detect or repair. Non-network errors still
     // propagate — a schema or permission failure must surface.
-    try {
-      await upsertReviewItem(itemPayload);
-    } catch (err) {
-      if (!isNetworkError(err)) throw err;
-      await enqueue(user.id, { type: 'review-upsert', payload: itemPayload });
+    //
+    // The two writes go out TOGETHER. They were serial, which cost a full round
+    // trip of dead time between every card — about 22s across a 50-card
+    // session, all of it while the learner is waiting to see the next card.
+    // They are independent and separately idempotent (the item upsert conflicts
+    // on (user_id, card_id); the log dedupes on client_log_id), so neither
+    // depends on the other having landed.
+    const [itemResult, logResult] = await Promise.allSettled([
+      upsertReviewItem(itemPayload),
+      insertReviewLogIdempotent(logPayload),
+    ]);
+
+    // A non-network failure still has to surface, and it must do so AFTER both
+    // queue attempts — otherwise throwing on the first would skip queueing the
+    // second and lose it.
+    let fatal: unknown = null;
+
+    if (itemResult.status === 'rejected') {
+      if (isNetworkError(itemResult.reason)) {
+        await enqueue(user.id, { type: 'review-upsert', payload: itemPayload });
+      } else {
+        fatal = itemResult.reason;
+      }
     }
 
-    try {
-      await insertReviewLogIdempotent(logPayload);
-    } catch (err) {
-      if (!isNetworkError(err)) throw err;
-      await enqueue(user.id, { type: 'review-log', payload: logPayload });
+    if (logResult.status === 'rejected') {
+      if (isNetworkError(logResult.reason)) {
+        await enqueue(user.id, { type: 'review-log', payload: logPayload });
+      } else {
+        fatal ??= logResult.reason;
+      }
     }
+
+    if (fatal) throw fatal;
 
     // Best-effort: a failed count refresh must not make a saved review look
     // like a failed one.

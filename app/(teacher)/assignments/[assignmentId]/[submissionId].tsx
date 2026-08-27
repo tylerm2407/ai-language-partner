@@ -19,7 +19,7 @@ import { GlassSurface } from '../../../../components/ui/GlassSurface';
 import { GradientButton } from '../../../../components/ui/GradientButton';
 import StatusBadge from '../../../../components/school/StatusBadge';
 import TranscriptViewer from '../../../../components/school/TranscriptViewer';
-import { fetchSubmissionDetail, fetchSubmissionTranscript, fetchClassroomAssignments, gradeSubmission } from '../../../../lib/supabase-queries';
+import { fetchSubmissionDetail, fetchSubmissionTranscript, fetchAssignmentById, gradeSubmission } from '../../../../lib/supabase-queries';
 import { useSchoolStore } from '../../../../stores/useSchoolStore';
 import type { Assignment, AssignmentSubmission, ConversationMessage } from '../../../../types';
 import { InlineError } from '../../../../components/ui/InlineError';
@@ -85,16 +85,11 @@ export default function GradingScreen() {
           const messages = await fetchSubmissionTranscript(sub.chatSessionId);
           setTranscript(messages);
         }
-        // Resolve the assignment (source of the target language) from the
-        // teacher's classrooms — same lookup as the submissions list screen.
-        const { classrooms } = useSchoolStore.getState();
-        for (const classroom of classrooms) {
-          const assignments = await fetchClassroomAssignments(classroom.id);
-          const found = assignments.find((a) => a.id === assignmentId);
-          if (found) {
-            setAssignment(found);
-            break;
-          }
+        // Resolve the assignment (source of the target language) by id. This
+        // used to walk every classroom in a serial loop to find a row whose id
+        // was already in hand.
+        if (assignmentId) {
+          setAssignment(await fetchAssignmentById(assignmentId));
         }
       } catch (err) {
         // Otherwise a failed load renders as an empty transcript, which a

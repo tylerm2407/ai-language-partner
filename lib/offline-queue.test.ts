@@ -359,8 +359,11 @@ describe('TTL', () => {
     expect(mockIncrementXp).toHaveBeenCalledTimes(1);
     expect(mockIncrementXp).toHaveBeenCalledWith(20, 'xp:fresh:12345678');
     expect(errorSpy).toHaveBeenCalled();
-    expect(Sentry.addBreadcrumb).toHaveBeenCalledWith(
-      expect.objectContaining({ category: 'offline-queue', level: 'error' }),
+    // captureMessage, not addBreadcrumb: a breadcrumb only rides along with a
+    // later event, so a silent data loss that crashes nothing is never sent.
+    expect(Sentry.captureMessage).toHaveBeenCalledWith(
+      expect.stringContaining('expired'),
+      'error',
     );
   });
 });

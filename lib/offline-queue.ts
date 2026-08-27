@@ -246,11 +246,11 @@ async function loadQueue(userId: string): Promise<OfflineQueueItem[]> {
     parsed = JSON.parse(raw);
   } catch {
     console.error('[offline-queue] corrupt queue payload; discarding');
-    Sentry.addBreadcrumb({
-      category: 'offline-queue',
-      message: 'corrupt queue payload discarded',
-      level: 'error',
-    });
+    // captureMessage, not addBreadcrumb. A breadcrumb is only attached to a
+    // LATER event, so if nothing else crashes it is never sent — and losing a
+    // learner's queued XP and reviews is exactly the kind of thing that goes
+    // unreported because it does not crash anything.
+    Sentry.captureMessage('offline-queue: corrupt payload discarded', 'error');
     await AsyncStorage.removeItem(key);
     return [];
   }
@@ -263,11 +263,7 @@ async function loadQueue(userId: string): Promise<OfflineQueueItem[]> {
     !Array.isArray(envelope.items)
   ) {
     console.error('[offline-queue] unknown queue schema version; discarding');
-    Sentry.addBreadcrumb({
-      category: 'offline-queue',
-      message: 'queue with unknown schema version discarded',
-      level: 'error',
-    });
+    Sentry.captureMessage('offline-queue: unknown schema version discarded', 'error');
     await AsyncStorage.removeItem(key);
     return [];
   }
@@ -278,11 +274,7 @@ async function loadQueue(userId: string): Promise<OfflineQueueItem[]> {
   const expired = structurallyValid.length - fresh.length;
   if (expired > 0) {
     console.error(`[offline-queue] dropped ${expired} queued item(s) older than 7 days`);
-    Sentry.addBreadcrumb({
-      category: 'offline-queue',
-      message: `dropped ${expired} expired queue item(s)`,
-      level: 'error',
-    });
+    Sentry.captureMessage(`offline-queue: dropped ${expired} expired item(s)`, 'error');
   }
   if (fresh.length !== envelope.items.length) {
     await saveQueue(userId, fresh);
@@ -333,11 +325,10 @@ export async function enqueue(userId: string, input: OfflineQueueInput): Promise
         dropped?.type,
         dropped?.id,
       );
-      Sentry.addBreadcrumb({
-        category: 'offline-queue',
-        message: `queue full; dropped oldest ${dropped?.type ?? 'unknown'} item`,
-        level: 'warning',
-      });
+      Sentry.captureMessage(
+        `offline-queue: full, dropped oldest ${dropped?.type ?? 'unknown'} item`,
+        'warning',
+      );
     }
     return next;
   });

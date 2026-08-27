@@ -2920,6 +2920,17 @@ export async function fetchTeacherClassrooms(userId: string): Promise<Classroom[
   return (data ?? []).map(mapClassroom);
 }
 
+/**
+ * Ceiling on a single classroom roster read.
+ *
+ * A university lecture cohort is routinely 200-300, so this is deliberately
+ * above any real classroom rather than a page size — the roster UI does not
+ * paginate. It exists because CLAUDE.md requires a bound on every
+ * user-growable read, and because an unbounded roster is the query that first
+ * hurts when a pilot actually lands.
+ */
+export const CLASSROOM_ROSTER_LIMIT = 500;
+
 export async function fetchClassroomStudents(
   classroomId: string
 ): Promise<{ id: string; studentId: string; displayName: string; enrolledAt: string }[]> {
@@ -2927,7 +2938,9 @@ export async function fetchClassroomStudents(
     .from('classroom_enrollments')
     .select('id, student_id, enrolled_at, user_profiles!inner(display_name)')
     .eq('classroom_id', classroomId)
-    .is('dropped_at', null);
+    .is('dropped_at', null)
+    .order('enrolled_at', { ascending: true })
+    .limit(CLASSROOM_ROSTER_LIMIT);
 
   if (error) throw error;
   return (data ?? []).map((row: Record<string, unknown>) => ({
@@ -2962,12 +2975,38 @@ export async function fetchTeacherOrganization(userId: string): Promise<Organiza
   return mapOrganization(data.organizations as unknown as Record<string, unknown>);
 }
 
+/**
+ * One assignment by id.
+ *
+ * Two screens used to find an assignment by walking every classroom the
+ * teacher owns and calling `fetchClassroomAssignments` on each, in a SERIAL
+ * loop, until the id turned up — up to eight sequential round trips to open one
+ * row whose primary key was already in hand.
+ *
+ * RLS already restricts assignments to the teacher who owns them (and to
+ * enrolled students), so fetching by id directly grants nothing extra.
+ * `maybeSingle` so a missing or invisible id is `null` rather than an error.
+ */
+export async function fetchAssignmentById(assignmentId: string): Promise<Assignment | null> {
+  const { data, error } = await supabase
+    .from('assignments')
+    .select('*')
+    .eq('id', assignmentId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data ? mapAssignment(data) : null;
+}
+
 export async function fetchClassroomAssignments(classroomId: string): Promise<Assignment[]> {
   const { data, error } = await supabase
     .from('assignments')
     .select('*')
     .eq('classroom_id', classroomId)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    // A classroom accumulates assignments across a term; the UI shows a list,
+    // not an archive.
+    .limit(200);
 
   if (error) throw error;
   return (data ?? []).map(mapAssignment);
@@ -2977,7 +3016,10 @@ export async function fetchAssignmentSubmissions(assignmentId: string): Promise<
   const { data, error } = await supabase
     .from('assignment_submissions')
     .select('*, user_profiles!inner(display_name)')
-    .eq('assignment_id', assignmentId);
+    .eq('assignment_id', assignmentId)
+    .order('submitted_at', { ascending: false, nullsFirst: false })
+    // One row per enrolled student, so this is bounded by the roster.
+    .limit(CLASSROOM_ROSTER_LIMIT);
 
   if (error) throw error;
   return (data ?? []).map(mapSubmission);

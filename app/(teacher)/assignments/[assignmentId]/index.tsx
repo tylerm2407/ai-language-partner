@@ -13,7 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { GradientBackground } from '../../../../components/ui/GradientBackground';
 import { GlassSurface } from '../../../../components/ui/GlassSurface';
 import StatusBadge from '../../../../components/school/StatusBadge';
-import { fetchClassroomAssignments, fetchAssignmentSubmissions } from '../../../../lib/supabase-queries';
+import { fetchAssignmentById, fetchAssignmentSubmissions } from '../../../../lib/supabase-queries';
 import { useSchoolStore } from '../../../../stores/useSchoolStore';
 import type { Assignment, AssignmentSubmission } from '../../../../types';
 import { InlineError } from '../../../../components/ui/InlineError';
@@ -49,17 +49,16 @@ export default function SubmissionsListScreen() {
       setLoading(true);
       setError(null);
       try {
-        const { classrooms } = useSchoolStore.getState();
-        for (const classroom of classrooms) {
-          const assignments = await fetchClassroomAssignments(classroom.id);
-          const found = assignments.find((a) => a.id === assignmentId);
-          if (found) {
-            setAssignment(found);
-            break;
-          }
-        }
         if (assignmentId) {
-          const subs = await fetchAssignmentSubmissions(assignmentId);
+          // One query by primary key, and it runs alongside the submissions
+          // fetch. This used to walk every classroom the teacher owns, calling
+          // fetchClassroomAssignments on each in a serial loop, to find a row
+          // whose id was already in hand — up to eight sequential round trips.
+          const [found, subs] = await Promise.all([
+            fetchAssignmentById(assignmentId),
+            fetchAssignmentSubmissions(assignmentId),
+          ]);
+          setAssignment(found);
           setSubmissions(subs);
         }
       } catch (err) {
