@@ -193,3 +193,48 @@ describe('refreshReviewCount', () => {
     expect(useAppStore.getState().reviewCount).toBe(4);
   });
 });
+
+describe('patchProfile', () => {
+  const base = {
+    id: 'p1', userId: 'u1', displayName: 'A', totalXp: 100, xpLevel: 2,
+    avatarKind: 'preset', avatarPresetId: 'old',
+  } as never;
+
+  it('merges into the CURRENT profile, not a captured snapshot', () => {
+    // The bug it exists for: `setProfile({ ...profile, x })` spreads the profile
+    // from the render that created the callback. Two updates touching different
+    // fields in the same tick clobber each other, and the loser visibly
+    // reverts on screen.
+    useAppStore.setState({ profile: base });
+
+    // Simulate a stale closure captured before either write.
+    const stale = useAppStore.getState().profile!;
+
+    useAppStore.getState().patchProfile({ totalXp: 150 });
+    useAppStore.getState().patchProfile({ avatarPresetId: 'new' });
+
+    const after = useAppStore.getState().profile!;
+    expect(after.totalXp).toBe(150);
+    expect(after.avatarPresetId).toBe('new');
+
+    // The old shape would have produced this — the second write reverting the
+    // first, because both spread the same pre-write snapshot.
+    const whatTheSpreadWouldGive = { ...stale, avatarPresetId: 'new' };
+    expect(whatTheSpreadWouldGive.totalXp).toBe(100);
+    expect(after.totalXp).not.toBe(whatTheSpreadWouldGive.totalXp);
+  });
+
+  it('leaves untouched fields alone', () => {
+    useAppStore.setState({ profile: base });
+    useAppStore.getState().patchProfile({ totalXp: 200 });
+    const after = useAppStore.getState().profile!;
+    expect(after.displayName).toBe('A');
+    expect(after.xpLevel).toBe(2);
+  });
+
+  it('is a no-op with no profile loaded — a partial cannot construct one', () => {
+    useAppStore.setState({ profile: null });
+    useAppStore.getState().patchProfile({ totalXp: 999 });
+    expect(useAppStore.getState().profile).toBeNull();
+  });
+});

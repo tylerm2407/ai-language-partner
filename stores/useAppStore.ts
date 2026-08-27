@@ -69,6 +69,18 @@ interface AppState {
 
   loadUserData: (userId: string) => Promise<void>;
   setProfile: (profile: UserProfile | null) => void;
+  /**
+   * Merge fields into the CURRENT profile.
+   *
+   * Prefer this to `setProfile({ ...profile, x })`. That spread captures the
+   * profile from the render that created the callback, so two updates that
+   * touch different fields in the same tick clobber each other: earn XP and
+   * change your avatar together and one of them silently loses, visibly
+   * reverting on screen. `patchProfile` reads the latest state at call time.
+   *
+   * No-ops when no profile is loaded — a partial cannot construct one.
+   */
+  patchProfile: (patch: Partial<UserProfile>) => void;
   setDailyStats: (stats: DailyStats | null) => void;
   refreshSubscription: (userId: string) => Promise<void>;
   /** Record the device's live RevenueCat entitlement (never downgrades to
@@ -82,7 +94,7 @@ interface AppState {
   reset: () => void;
 }
 
-export const useAppStore = create<AppState>((set) => ({
+export const useAppStore = create<AppState>((set, get) => ({
   profile: null,
   dailyStats: null,
   subscription: null,
@@ -104,7 +116,11 @@ export const useAppStore = create<AppState>((set) => ({
       // Non-critical fetches — don't let them block profile loading
       const [dailyStats, subscription, reviewCount, roles, hasCompletedLessonSignal, hasAiConversationSignal] = await Promise.all([
         fetchTodayStats(userId).catch(() => null),
-        fetchSubscription(userId).catch(() => null),
+        // `undefined`, not `null`: null is a real answer meaning "no
+        // subscription", and collapsing a failed read into it silently downgrades
+        // a paying learner to the free tier for the whole session. See the set()
+        // below, which preserves the last known row instead.
+        fetchSubscription(userId).catch(() => undefined),
         fetchReviewItemCount(userId).catch(() => 0),
         fetchUserRoles(userId).catch(() => [] as string[]),
         // `null` on failure so the onboarding reconciler can tell "no lesson"
@@ -117,7 +133,10 @@ export const useAppStore = create<AppState>((set) => ({
       set({
         profile,
         dailyStats,
-        subscription,
+        // Keep whatever we last knew when the read failed. Every paid surface
+        // reads the tier, so a transient failure otherwise upsells a subscriber
+        // who has already paid.
+        subscription: subscription === undefined ? get().subscription : subscription,
         reviewCount,
         roles,
         // Fail OPEN: if the read failed we treat the learner as still owed
@@ -137,6 +156,12 @@ export const useAppStore = create<AppState>((set) => ({
   },
 
   setProfile: (profile) => set({ profile }),
+
+  patchProfile: (patch) => {
+    const current = get().profile;
+    if (!current) return;
+    set({ profile: { ...current, ...patch } });
+  },
   setHasCompletedLesson: (hasCompletedLesson) => set({ hasCompletedLesson }),
   setReconciled: (reconciledUserId) => set({ reconciledUserId }),
   setDailyStats: (dailyStats) => set({ dailyStats }),
@@ -146,6 +171,8 @@ export const useAppStore = create<AppState>((set) => ({
       const subscription = await fetchSubscription(userId);
       set({ subscription });
     } catch (err) {
+      // Deliberately does NOT clear `subscription`. A refresh that could not
+      // reach the server has learned nothing about what the learner owns.
       console.error('refreshSubscription error:', err);
     }
   },

@@ -81,20 +81,20 @@ export function useOnboardingChecklist() {
   const mutate = useCallback(
     async (transform: (current: OnboardingChecklist) => OnboardingChecklist) => {
       if (!user) return;
-      const { profile, setProfile } = useAppStore.getState();
+      const { profile, patchProfile } = useAppStore.getState();
       if (!profile) return;
 
       const current = profile.onboardingChecklist;
       const next = withCompletedAt(transform(current), () => new Date().toISOString());
       if (checklistEquals(current, next)) return;
 
-      setProfile({ ...profile, onboardingChecklist: next });
+      patchProfile({ onboardingChecklist: next });
       try {
         await updateOnboardingChecklist(user.id, next);
       } catch (err) {
         const latest = useAppStore.getState().profile;
         if (latest) {
-          useAppStore.getState().setProfile({ ...latest, onboardingChecklist: current });
+          useAppStore.getState().patchProfile({ onboardingChecklist: current });
         }
         Sentry.captureException(err, { tags: { area: 'onboarding-checklist' } });
         throw err;

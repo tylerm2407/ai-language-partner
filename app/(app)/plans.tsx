@@ -188,10 +188,15 @@ export default function PlansScreen() {
         setEntitledTier(result.tier);
         await refreshSubscription(user.id);
         proceed();
+      } else if (result.status === 'error') {
+        // A restore that could not reach the store has NOT established that the
+        // learner owns nothing. Telling a subscriber "No purchases found" after
+        // a network failure is a different — and wrong — claim, and it is the
+        // one they will act on. `profile/subscription.tsx` already separates
+        // these two; the two screens contradicted each other.
+        reportPurchaseFailure('restore', result.message, undefined, result.code);
+        Alert.alert('Restore failed', result.message ?? 'Please check your connection and try again.');
       } else {
-        if (result.status === 'error') {
-          reportPurchaseFailure('restore', result.message, undefined, result.code);
-        }
         Alert.alert('No purchases found', 'We couldn’t find an active subscription to restore.');
       }
     } finally {

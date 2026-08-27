@@ -9,7 +9,7 @@ import type { DailyChallenge, DailyChallengesRecord, DailyStats } from '../types
 
 export function useDailyChallenges() {
   const { user } = useAuth();
-  const { dailyStats, profile, setProfile } = useAppStore();
+  const { dailyStats, profile, patchProfile } = useAppStore();
   const [record, setRecord] = useState<DailyChallengesRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -119,13 +119,13 @@ export function useDailyChallenges() {
       setRecord({ ...record, bonusXpClaimed: true });
       // Guard against a null/zero RPC row: never replace displayed XP with 0.
       if (profile && totalXp > 0) {
-        setProfile({ ...profile, totalXp });
+        patchProfile({ totalXp });
       }
       return bonusXp;
     } finally {
       claimInFlight.current = false;
     }
-  }, [user, record, profile, setProfile]);
+  }, [user, record, profile, patchProfile]);
 
   return {
     challenges: record?.challenges ?? [],

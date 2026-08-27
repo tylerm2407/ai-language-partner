@@ -34,7 +34,7 @@ function invalidateTimezoneSync(): void {
  */
 export function useTimezoneSync() {
   const { user } = useAuth();
-  const { profile, setProfile } = useAppStore();
+  const { profile, setProfile, patchProfile } = useAppStore();
 
   // Re-check when the app comes back to the foreground. A learner who flies
   // somewhere does not relaunch the app on landing, and every server-side
@@ -80,7 +80,7 @@ export function useTimezoneSync() {
 
 export function useProfile() {
   const { user } = useAuth();
-  const { profile, setProfile, loading } = useAppStore();
+  const { profile, setProfile, patchProfile, loading } = useAppStore();
 
   const updateProfile = useCallback(async (
     updates: Partial<Pick<UserProfile, 'displayName' | 'nativeLanguage' | 'targetLanguage' | 'level' | 'dailyGoalMinutes' | 'timezone' | 'adultMode'>>
@@ -109,10 +109,10 @@ export function useProfile() {
       // already been paid — a replayed lesson — the server grants nothing and
       // returns the unchanged total, and adding `xp` here anyway would show
       // XP the learner does not have until the next cold load contradicts it.
-      setProfile({
-        ...profile,
-        totalXp: serverTotal ?? profile.totalXp + xp,
-      });
+      // patchProfile, not a spread of the render-time `profile`: a heart or
+      // avatar write landing in the same tick would otherwise be clobbered by
+      // this stale snapshot and visibly revert.
+      patchProfile({ totalXp: serverTotal ?? profile.totalXp + xp });
       return;
     } catch (err) {
       if (!isNetworkError(err)) throw err;
@@ -121,7 +121,7 @@ export function useProfile() {
       // the server catches up when the queue flushes.
       await enqueue(user.id, { type: 'xp-award', payload: { amount: xp }, key });
     }
-    setProfile({ ...profile, totalXp: profile.totalXp + xp });
+    patchProfile({ totalXp: profile.totalXp + xp });
   }, [user, profile, setProfile]);
 
   return { profile, loading, updateProfile, earnXp };

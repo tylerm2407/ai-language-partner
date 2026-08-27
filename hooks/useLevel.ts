@@ -19,7 +19,7 @@ interface LevelState {
 
 export function useLevel() {
   const { user } = useAuth();
-  const { profile, setProfile } = useAppStore();
+  const { profile, patchProfile } = useAppStore();
   const [levelState, setLevelState] = useState<LevelState>({
     level: 1, tier: 'bronze', xpInLevel: 0, xpToNextLevel: 100, progress: 0,
   });
@@ -70,9 +70,9 @@ export function useLevel() {
     // xp_level/league_tier are derived server-side by increment_xp
     // (migration 036) — only mirror the change into local state.
     if (user && (level !== profile.xpLevel || tier !== profile.leagueTier)) {
-      setProfile({ ...profile, xpLevel: level, leagueTier: tier });
+      patchProfile({ xpLevel: level, leagueTier: tier });
     }
-  }, [profile?.totalXp, user?.id, profile?.xpLevel, profile?.leagueTier]);
+  }, [profile?.totalXp, user?.id, profile?.xpLevel, profile?.leagueTier, patchProfile]);
 
   const dismissLevelUp = useCallback(() => {
     setLevelUpInfo(null);

@@ -65,7 +65,7 @@ export function useOnboardingReconciliation() {
       // the permission prompt above can take an arbitrarily long time, and
       // anything the learner did meanwhile (an XP award, a checklist tick)
       // must not be reverted by writing back a stale profile.
-      const { profile, hasCompletedLessonSignal, hasAiConversationSignal, setProfile } =
+      const { profile, hasCompletedLessonSignal, hasAiConversationSignal, patchProfile } =
         useAppStore.getState();
       if (!profile) return;
 
@@ -98,7 +98,7 @@ export function useOnboardingReconciliation() {
 
       if (checklistEquals(stored, next)) return;
 
-      setProfile({ ...profile, onboardingChecklist: next });
+      patchProfile({ onboardingChecklist: next });
       try {
         await updateOnboardingChecklist(userId, next);
       } catch (err) {
@@ -107,7 +107,7 @@ export function useOnboardingReconciliation() {
         // that landed while this was in flight.
         const latest = useAppStore.getState().profile;
         if (latest) {
-          useAppStore.getState().setProfile({ ...latest, onboardingChecklist: stored });
+          useAppStore.getState().patchProfile({ onboardingChecklist: stored });
         }
         Sentry.captureException(err, {
           tags: { area: 'onboarding-checklist', op: 'reconcile' },
