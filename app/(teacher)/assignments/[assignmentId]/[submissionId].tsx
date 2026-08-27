@@ -21,6 +21,8 @@ import TranscriptViewer from '../../../../components/school/TranscriptViewer';
 import { fetchSubmissionDetail, fetchSubmissionTranscript, fetchClassroomAssignments, gradeSubmission } from '../../../../lib/supabase-queries';
 import { useSchoolStore } from '../../../../stores/useSchoolStore';
 import type { Assignment, AssignmentSubmission, ConversationMessage } from '../../../../types';
+import { InlineError } from '../../../../components/ui/InlineError';
+import { loadErrorCopy, type ErrorCopy } from '../../../../lib/error-copy';
 
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return '—';
@@ -62,6 +64,8 @@ export default function GradingScreen() {
     submissionId: string;
   }>();
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<ErrorCopy | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [submission, setSubmission] = useState<AssignmentSubmission | null>(null);
   const [assignment, setAssignment] = useState<Assignment | null>(null);
   const [transcript, setTranscript] = useState<ConversationMessage[]>([]);
@@ -92,13 +96,16 @@ export default function GradingScreen() {
           }
         }
       } catch (err) {
+        // Otherwise a failed load renders as an empty transcript, which a
+        // teacher would reasonably read as the student having written nothing.
         console.error('Failed to load submission:', err);
+        setLoadError(loadErrorCopy(err, 'this submission'));
       } finally {
         setLoading(false);
       }
     };
     loadSubmission();
-  }, [assignmentId, submissionId]);
+  }, [assignmentId, submissionId, reloadKey]);
 
   const aiFeedback = submission?.aiFeedback ?? null;
 
@@ -123,6 +130,16 @@ export default function GradingScreen() {
       <GradientBackground>
         <SafeAreaView className="flex-1 justify-center items-center">
           <ActivityIndicator color="#818CF8" size="large" />
+        </SafeAreaView>
+      </GradientBackground>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <GradientBackground>
+        <SafeAreaView className="flex-1 justify-center">
+          <InlineError copy={loadError} onRetry={() => setReloadKey((k) => k + 1)} />
         </SafeAreaView>
       </GradientBackground>
     );

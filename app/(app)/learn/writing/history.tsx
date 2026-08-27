@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -8,20 +8,35 @@ import { fetchAllUserWritingSubmissions } from '../../../../lib/supabase-queries
 import type { WritingSubmissionWithPrompt } from '../../../../lib/supabase-queries';
 import { GradientBackground } from '../../../../components/ui/GradientBackground';
 import { colors } from '../../../../config/theme';
+import { InlineError } from '../../../../components/ui/InlineError';
+import { loadErrorCopy, type ErrorCopy } from '../../../../lib/error-copy';
 
 export default function WritingHistoryScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const [submissions, setSubmissions] = useState<WritingSubmissionWithPrompt[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<ErrorCopy | null>(null);
+
+  // The catch used to be `() => {}`, so an outage rendered "No writing
+  // submissions yet" — telling a learner their work is gone (CLAUDE.md §5).
+  const load = useCallback(async () => {
+    if (!user) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      setSubmissions(await fetchAllUserWritingSubmissions(user.id));
+    } catch (err) {
+      console.error('Failed to load writing history:', err);
+      setError(loadErrorCopy(err, 'your writing history'));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user]);
 
   useEffect(() => {
-    if (!user) return;
-    fetchAllUserWritingSubmissions(user.id)
-      .then(setSubmissions)
-      .catch(() => {})
-      .finally(() => setIsLoading(false));
-  }, [user]);
+    load();
+  }, [load]);
 
   // Group by prompt
   const groupedByPrompt = submissions.reduce<Record<string, WritingSubmissionWithPrompt[]>>((acc, sub) => {
@@ -61,7 +76,9 @@ export default function WritingHistoryScreen() {
         </Text>
       </View>
 
-      {promptEntries.length === 0 ? (
+      {error ? (
+        <InlineError copy={error} onRetry={load} />
+      ) : promptEntries.length === 0 ? (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
           <Ionicons name="create-outline" size={48} color="#D1D5DB" />
           <Text style={{ fontSize: 16, color: '#9CA3AF', marginTop: 12, textAlign: 'center' }}>

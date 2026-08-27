@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +9,8 @@ import { GradientBackground } from '../../../components/ui/GradientBackground';
 import { GlassSurface } from '../../../components/ui/GlassSurface';
 import { GradientButton } from '../../../components/ui/GradientButton';
 import StatusBadge from '../../../components/school/StatusBadge';
+import { InlineError } from '../../../components/ui/InlineError';
+import { loadErrorCopy, type ErrorCopy } from '../../../lib/error-copy';
 import RubricDisplay from '../../../components/school/RubricDisplay';
 import type { Assignment, AssignmentSubmission, SubmissionStatus } from '../../../types';
 
@@ -55,16 +57,21 @@ export default function AssignmentDetailScreen() {
   const [assignment, setAssignment] = useState<(Assignment & { submission?: AssignmentSubmission }) | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [starting, setStarting] = useState(false);
+  const [error, setError] = useState<ErrorCopy | null>(null);
 
   const loadAssignment = useCallback(async () => {
     if (!user?.id || !assignmentId) return;
     setIsLoading(true);
+    setError(null);
     try {
       const all = await fetchStudentAssignments(user.id);
       const found = all.find((a) => a.id === assignmentId);
       setAssignment(found ?? null);
     } catch (err) {
+      // "Assignment not found." and "we couldn't reach the server" are
+      // different facts, and only one of them is worth retrying.
       console.error('Failed to load assignment:', err);
+      setError(loadErrorCopy(err, 'this assignment'));
     } finally {
       setIsLoading(false);
     }
@@ -86,7 +93,14 @@ export default function AssignmentDetailScreen() {
         params: { assignmentId, chatSessionId },
       } as any);
     } catch (err) {
+      // The button used to spin, stop, and leave the screen unchanged — the
+      // natural response to which is to tap it again.
       console.error('Failed to start assignment:', err);
+      Alert.alert(
+        "Couldn't start this assignment",
+        'Please check your connection and try again.',
+        [{ text: 'OK' }],
+      );
     } finally {
       setStarting(false);
     }
@@ -108,6 +122,28 @@ export default function AssignmentDetailScreen() {
       <GradientBackground>
         <SafeAreaView className="flex-1 items-center justify-center">
           <ActivityIndicator size="large" color="#818CF8" />
+        </SafeAreaView>
+      </GradientBackground>
+    );
+  }
+
+  if (error) {
+    return (
+      <GradientBackground>
+        <SafeAreaView className="flex-1">
+          <View className="flex-row items-center px-4 py-3">
+            <Pressable
+              onPress={() => router.back()}
+              hitSlop={8}
+              className="w-10 h-10 items-center justify-center rounded-full bg-dark-card"
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+            >
+              <Ionicons name="arrow-back" size={22} color="#E2E8F0" />
+            </Pressable>
+            <Text className="text-lg font-semibold text-text-primary ml-3">Assignment</Text>
+          </View>
+          <InlineError copy={error} onRetry={loadAssignment} />
         </SafeAreaView>
       </GradientBackground>
     );

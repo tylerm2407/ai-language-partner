@@ -10,6 +10,8 @@ import { useSchoolStore } from '../../../stores/useSchoolStore';
 import { useAuth } from '../../../hooks/useAuth';
 import { fetchClassroomAssignments } from '../../../lib/supabase-queries';
 import type { Assignment } from '../../../types';
+import { InlineError } from '../../../components/ui/InlineError';
+import { loadErrorCopy, type ErrorCopy } from '../../../lib/error-copy';
 
 export default function AssignmentsListScreen() {
   const router = useRouter();
@@ -17,19 +19,34 @@ export default function AssignmentsListScreen() {
   const { loadTeacherData } = useSchoolStore();
   const [loading, setLoading] = useState(true);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [error, setError] = useState<ErrorCopy | null>(null);
+  // One classroom failing used to be swallowed by `.catch(() => [])`, so the
+  // screen rendered a partial list that looked complete. Tracked separately
+  // from a total failure: a partial result is still worth showing.
+  const [partial, setPartial] = useState(false);
 
   const load = useCallback(async () => {
     if (!user?.id) return;
     setLoading(true);
+    setError(null);
+    setPartial(false);
     try {
       await loadTeacherData(user.id);
       const currentClassrooms = useSchoolStore.getState().classrooms;
-      const allAssignmentArrays = await Promise.all(
-        currentClassrooms.map((c) => fetchClassroomAssignments(c.id).catch(() => []))
+      const settled = await Promise.allSettled(
+        currentClassrooms.map((c) => fetchClassroomAssignments(c.id)),
       );
-      setAssignments(allAssignmentArrays.flat());
+      const failures = settled.filter((r) => r.status === 'rejected');
+      if (failures.length > 0) {
+        console.error('Failed to load assignments for some classrooms:', failures);
+        setPartial(true);
+      }
+      setAssignments(
+        settled.flatMap((r) => (r.status === 'fulfilled' ? r.value : [])),
+      );
     } catch (err) {
       console.error('Failed to load assignments:', err);
+      setError(loadErrorCopy(err, 'your assignments'));
     } finally {
       setLoading(false);
     }
@@ -68,8 +85,15 @@ export default function AssignmentsListScreen() {
             accessibilityHint="Navigate to create a new assignment"
           />
 
+          {partial && !loading && !error ? (
+            <Text className="text-sm text-warning mb-2">
+              Some classes couldn&apos;t be loaded. Pull to try again.
+            </Text>
+          ) : null}
           {loading ? (
             <ActivityIndicator color="#818CF8" size="large" style={{ marginTop: 32 }} />
+          ) : error ? (
+            <InlineError copy={error} onRetry={load} />
           ) : assignments.length === 0 ? (
             <View className="flex-1 justify-center items-center" style={{ paddingBottom: 80 }}>
               <Ionicons name="document-text-outline" size={56} color="#64748B" />

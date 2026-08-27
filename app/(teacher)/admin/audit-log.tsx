@@ -8,6 +8,8 @@ import { GlassSurface } from '../../../components/ui/GlassSurface';
 import { useSchoolStore } from '../../../stores/useSchoolStore';
 import { fetchAuditLogs } from '../../../lib/supabase-queries';
 import { colors } from '../../../config/theme';
+import { InlineError } from '../../../components/ui/InlineError';
+import { loadErrorCopy, type ErrorCopy } from '../../../lib/error-copy';
 
 interface AuditEntry {
   id: string;
@@ -42,16 +44,21 @@ export default function AuditLogScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<string>('All');
+  const [error, setError] = useState<ErrorCopy | null>(null);
 
   const load = useCallback(async () => {
     if (!organization?.id) return;
+    setError(null);
     try {
       const opts: { action?: string; limit?: number } = { limit: 100 };
       if (filter !== 'All') opts.action = filter;
       const logs = await fetchAuditLogs(organization.id, opts);
       setEntries(logs);
     } catch (err) {
+      // An empty audit log and an unreachable one are very different claims to
+      // make to an administrator.
       console.error('Failed to load audit logs:', err);
+      setError(loadErrorCopy(err, 'the audit log'));
     }
   }, [organization?.id, filter]);
 
@@ -118,6 +125,8 @@ export default function AuditLogScreen() {
 
           {loading ? (
             <ActivityIndicator color="#818CF8" size="large" style={{ marginTop: 32 }} />
+          ) : error ? (
+            <InlineError copy={error} onRetry={load} />
           ) : (
             <FlatList
               data={entries}

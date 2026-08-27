@@ -158,7 +158,13 @@ export default function HomeScreen() {
     if (user?.id) {
       loadUserData(user.id);
       loadWeeklyStats(user.id);
-      if (schoolEnabled) loadStudentSchoolData(user.id);
+      // School data is supplementary on this screen — a failure must not take
+      // the home tab down, but the store now throws so it has to be caught.
+      if (schoolEnabled) {
+        loadStudentSchoolData(user.id).catch((err) =>
+          console.error('[home] school data load failed:', err),
+        );
+      }
     }
   }, [user?.id, loadUserData, loadWeeklyStats, loadStudentSchoolData, schoolEnabled]);
 

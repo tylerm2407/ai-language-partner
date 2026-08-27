@@ -39,6 +39,12 @@ export const useSchoolStore = create<SchoolState>((set, get) => ({
     return roles;
   },
 
+  // Both loaders RETHROW. They used to swallow into a console.error and
+  // resolve normally, so every caller's `try/catch` was dead code and the
+  // screens rendered "No classes yet" on an outage — the store was quietly
+  // deciding that a failure and an empty account look the same. The loading
+  // flag is still cleared first so a caller that ignores the throw is not left
+  // on a spinner.
   loadTeacherData: async (userId) => {
     set({ loading: true });
     try {
@@ -50,6 +56,7 @@ export const useSchoolStore = create<SchoolState>((set, get) => ({
     } catch (err) {
       console.error('loadTeacherData error:', err);
       set({ loading: false });
+      throw err;
     }
   },
 
@@ -68,6 +75,7 @@ export const useSchoolStore = create<SchoolState>((set, get) => ({
     } catch (err) {
       console.error('loadStudentSchoolData error:', err);
       set({ loading: false });
+      throw err;
     }
   },
 

@@ -15,6 +15,8 @@ import StatusBadge from '../../../../components/school/StatusBadge';
 import { fetchClassroomAssignments, fetchAssignmentSubmissions } from '../../../../lib/supabase-queries';
 import { useSchoolStore } from '../../../../stores/useSchoolStore';
 import type { Assignment, AssignmentSubmission } from '../../../../types';
+import { InlineError } from '../../../../components/ui/InlineError';
+import { loadErrorCopy, type ErrorCopy } from '../../../../lib/error-copy';
 
 const MODE_LABEL: Record<string, string> = {
   text: 'Text',
@@ -35,12 +37,15 @@ export default function SubmissionsListScreen() {
   const router = useRouter();
   const { assignmentId } = useLocalSearchParams<{ assignmentId: string }>();
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<ErrorCopy | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [assignment, setAssignment] = useState<Assignment | null>(null);
   const [submissions, setSubmissions] = useState<AssignmentSubmission[]>([]);
 
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
+      setError(null);
       try {
         const { classrooms } = useSchoolStore.getState();
         for (const classroom of classrooms) {
@@ -56,13 +61,16 @@ export default function SubmissionsListScreen() {
           setSubmissions(subs);
         }
       } catch (err) {
+        // Otherwise an outage renders the assignment as having no submissions,
+        // which a teacher reads as "nobody has done the work".
         console.error('Failed to load assignment detail:', err);
+        setError(loadErrorCopy(err, 'this assignment'));
       } finally {
         setLoading(false);
       }
     };
     loadData();
-  }, [assignmentId]);
+  }, [assignmentId, reloadKey]);
 
   const totalSubmissions = submissions.length;
   const completed = submissions.filter(
@@ -83,6 +91,16 @@ export default function SubmissionsListScreen() {
       <GradientBackground>
         <SafeAreaView className="flex-1 justify-center items-center">
           <ActivityIndicator color="#818CF8" size="large" />
+        </SafeAreaView>
+      </GradientBackground>
+    );
+  }
+
+  if (error) {
+    return (
+      <GradientBackground>
+        <SafeAreaView className="flex-1 justify-center">
+          <InlineError copy={error} onRetry={() => setReloadKey((k) => k + 1)} />
         </SafeAreaView>
       </GradientBackground>
     );

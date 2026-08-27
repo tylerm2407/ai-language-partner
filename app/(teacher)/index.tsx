@@ -70,7 +70,9 @@ export default function TeacherDashboardScreen() {
 
   useEffect(() => {
     if (user?.id && !initialLoaded) {
-      loadTeacherData(user.id).finally(() => setInitialLoaded(true));
+      loadTeacherData(user.id)
+        .catch((err) => console.error('[teacher] dashboard load failed:', err))
+        .finally(() => setInitialLoaded(true));
     }
   }, [user?.id, initialLoaded, loadTeacherData]);
 

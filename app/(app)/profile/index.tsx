@@ -88,12 +88,20 @@ export default function ProfileScreen() {
 
   // Load student school data on mount (only when school features enabled)
   useEffect(() => {
-    if (SCHOOL_ENABLED && user?.id) loadStudentSchoolData(user.id);
+    if (SCHOOL_ENABLED && user?.id) {
+      loadStudentSchoolData(user.id).catch((err) =>
+        console.error('[profile] school data load failed:', err),
+      );
+    }
   }, [user?.id, loadStudentSchoolData]);
 
   const handleJoinClass = async (code: string) => {
     await joinClassroom(code);
-    if (user?.id) loadStudentSchoolData(user.id);
+    if (user?.id) {
+      loadStudentSchoolData(user.id).catch((err) =>
+        console.error('[profile] school data refresh failed:', err),
+      );
+    }
   };
 
   const handleAvatarGenerated = (path: string) => {

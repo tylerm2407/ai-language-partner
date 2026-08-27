@@ -9,20 +9,27 @@ import ClassCard from '../../../components/school/ClassCard';
 import { useSchoolStore } from '../../../stores/useSchoolStore';
 import { useAuth } from '../../../hooks/useAuth';
 import type { Classroom } from '../../../types';
+import { InlineError } from '../../../components/ui/InlineError';
+import { loadErrorCopy, type ErrorCopy } from '../../../lib/error-copy';
 
 export default function ClassListScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { classrooms, loadTeacherData } = useSchoolStore();
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<ErrorCopy | null>(null);
 
   const load = useCallback(async () => {
     if (!user?.id) return;
     setLoading(true);
+    setError(null);
     try {
       await loadTeacherData(user.id);
     } catch (err) {
+      // Without this the screen said "No classes yet" during an outage — a
+      // pilot coordinator's first impression being that their data is gone.
       console.error('Failed to load classes:', err);
+      setError(loadErrorCopy(err, 'your classes'));
     } finally {
       setLoading(false);
     }
@@ -64,6 +71,8 @@ export default function ClassListScreen() {
 
           {loading ? (
             <ActivityIndicator color="#818CF8" size="large" style={{ marginTop: 32 }} />
+          ) : error ? (
+            <InlineError copy={error} onRetry={load} />
           ) : classrooms.length === 0 ? (
             <View className="flex-1 justify-center items-center" style={{ paddingBottom: 80 }}>
               <Ionicons name="school-outline" size={56} color="#64748B" />

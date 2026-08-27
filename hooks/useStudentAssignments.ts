@@ -16,6 +16,8 @@ export function useStudentAssignments(userId: string | undefined) {
 
   const refresh = useCallback(async () => {
     if (!userId) return;
+    // Rethrown by the store since it stopped swallowing failures; callers of
+    // `refresh` decide what to show.
     await useSchoolStore.getState().loadStudentSchoolData(userId);
   }, [userId]);
 
