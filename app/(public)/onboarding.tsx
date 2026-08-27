@@ -304,7 +304,10 @@ export default function OnboardingScreen() {
       }
       if (cancelled) return;
 
-      if (user && isFlushable(pending) && pending && !flushedRef.current) {
+      // isFlushable now also requires the draft to have been claimed by THIS
+      // account at sign-in — a draft left behind by someone else on a shared
+      // device must not be written into this profile.
+      if (user && isFlushable(pending, user.id) && pending && !flushedRef.current) {
         flushedRef.current = true;
         setFlushing(true);
         try {

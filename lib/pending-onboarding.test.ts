@@ -15,6 +15,7 @@ import {
   loadPendingOnboarding,
   clearPendingOnboarding,
   isFlushable,
+  claimPendingOnboarding,
   type PendingOnboarding,
   type PendingOnboardingDraft,
 } from './pending-onboarding';
@@ -262,28 +263,80 @@ describe('clearPendingOnboarding', () => {
 });
 
 describe('isFlushable', () => {
+  const USER = 'user-a';
   const base = (overrides: Partial<PendingOnboarding> = {}): PendingOnboarding => ({
     version: PENDING_ONBOARDING_SCHEMA_VERSION,
     startedAt: Date.now(),
     ...makeDraft(),
     completedAt: '2026-07-27T00:00:00.000Z',
+    claimedByUserId: USER,
     ...overrides,
   });
 
   it('is true for a finished draft that has language and level', () => {
-    expect(isFlushable(base())).toBe(true);
+    expect(isFlushable(base(), USER)).toBe(true);
   });
 
   it('is false when the flow never reached auth', () => {
-    expect(isFlushable(base({ completedAt: null }))).toBe(false);
+    expect(isFlushable(base({ completedAt: null }), USER)).toBe(false);
   });
 
   it('is false when a required profile field is missing', () => {
-    expect(isFlushable(base({ targetLanguage: null }))).toBe(false);
-    expect(isFlushable(base({ level: null }))).toBe(false);
+    expect(isFlushable(base({ targetLanguage: null }), USER)).toBe(false);
+    expect(isFlushable(base({ level: null }), USER)).toBe(false);
   });
 
   it('is false for no draft at all', () => {
-    expect(isFlushable(null)).toBe(false);
+    expect(isFlushable(null, USER)).toBe(false);
+  });
+
+  // The shared-device case this guard exists for: learner A abandons the
+  // sign-up screen, learner B signs in on the same iPad within the hour.
+  it('refuses to flush a draft claimed by a different account', () => {
+    expect(isFlushable(base({ claimedByUserId: 'user-a' }), 'user-b')).toBe(false);
+  });
+
+  it('refuses to flush a draft nobody claimed', () => {
+    expect(isFlushable(base({ claimedByUserId: null }), USER)).toBe(false);
+    // A draft written before the field existed loads without it. Unclaimed is
+    // the safe reading: the learner re-enters answers, rather than inheriting
+    // someone else's.
+    expect(isFlushable(base({ claimedByUserId: undefined }), USER)).toBe(false);
+  });
+});
+
+describe('claimPendingOnboarding', () => {
+  it('stamps an unclaimed draft with the account that just signed in', async () => {
+    await savePendingOnboarding({ ...makeDraft(), completedAt: new Date().toISOString() });
+    await claimPendingOnboarding('user-a');
+
+    const loaded = await loadPendingOnboarding();
+    expect(loaded?.claimedByUserId).toBe('user-a');
+    expect(isFlushable(loaded, 'user-a')).toBe(true);
+  });
+
+  it('deletes a draft belonging to someone else rather than re-stamping it', async () => {
+    await savePendingOnboarding({ ...makeDraft(), completedAt: new Date().toISOString() });
+    await claimPendingOnboarding('user-a');
+
+    // B now signs in on the same device.
+    await claimPendingOnboarding('user-b');
+
+    // A's answers are gone entirely — not handed to B.
+    expect(await loadPendingOnboarding()).toBeNull();
+  });
+
+  it('is a no-op when there is no draft', async () => {
+    await claimPendingOnboarding('user-a');
+    expect(await loadPendingOnboarding()).toBeNull();
+  });
+
+  it('lets the same account re-claim its own draft', async () => {
+    await savePendingOnboarding({ ...makeDraft(), completedAt: new Date().toISOString() });
+    await claimPendingOnboarding('user-a');
+    await claimPendingOnboarding('user-a');
+
+    const loaded = await loadPendingOnboarding();
+    expect(loaded?.claimedByUserId).toBe('user-a');
   });
 });

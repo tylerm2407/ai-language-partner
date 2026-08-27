@@ -19,7 +19,12 @@ import { presetUrlFromId } from '../../lib/avatar-presets';
 import { RotatingGreeting } from '../../components/auth/RotatingGreeting';
 import { AmbientGreetings } from '../../components/auth/AmbientGreetings';
 import { PasswordField } from '../../components/auth/PasswordField';
-import { loadPendingOnboarding, type PendingOnboarding } from '../../lib/pending-onboarding';
+import { supabase } from '../../lib/supabase';
+import {
+  loadPendingOnboarding,
+  claimPendingOnboarding,
+  type PendingOnboarding,
+} from '../../lib/pending-onboarding';
 import { authErrorCopy } from '../../lib/auth-errors';
 import {
   GOOGLE_SIGN_IN_ENABLED,
@@ -100,12 +105,35 @@ export default function AuthScreen() {
    * `authErrorCopy` the email path uses, so a disabled provider or a network
    * drop reads the same way everywhere on this screen.
    */
+  /**
+   * Bind any pre-auth draft on this device to the account that just signed in.
+   *
+   * Every auth path on this screen goes through here. Without it, a draft
+   * abandoned at the sign-up screen stays claimable by whoever signs in next
+   * on the same device — and the onboarding screen would write that person's
+   * display name and free-text goal into the new account's profile.
+   *
+   * Deliberately swallowed: the learner is authenticated at this point and
+   * must get into the app. A failure leaves the draft unclaimed, which means
+   * it will not flush — losing answers, never leaking them.
+   */
+  const claimDraft = async () => {
+    try {
+      const { data } = await supabase.auth.getSession();
+      const userId = data.session?.user?.id;
+      if (userId) await claimPendingOnboarding(userId);
+    } catch (err) {
+      console.warn('[auth] could not claim onboarding draft:', err);
+    }
+  };
+
   const runSocial = async (provider: 'apple' | 'google') => {
     if (socialPending || loading) return;
     setSocialPending(provider);
     try {
       if (provider === 'apple') await signInWithApple();
       else await signInWithGoogle();
+      await claimDraft();
     } catch (err: unknown) {
       if (err instanceof SocialAuthCancelled) return;
       const { title, message } = authErrorCopy(err);
@@ -151,6 +179,7 @@ export default function AuthScreen() {
     try {
       if (isSignIn) await signInWithEmail(email.trim(), password);
       else await signUpWithEmail(email.trim(), password);
+      await claimDraft();
     } catch (err: unknown) {
       const { title, message } = authErrorCopy(err);
       Alert.alert(title, message);

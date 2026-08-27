@@ -98,6 +98,20 @@ export interface PendingOnboarding {
   startedAt: number;
   /** ISO timestamp set when the pre-auth flow finished and auth was reached. */
   completedAt: string | null;
+  /**
+   * The account this draft was claimed by, stamped the moment auth succeeded
+   * on the device that authored it. Null means nobody has claimed it yet.
+   *
+   * The TTLs above shrink the window in which a stray draft can be picked up;
+   * this closes what is left of it. Both A and B are "onboarding incomplete"
+   * accounts, so no check on the *profile* can tell them apart — the only
+   * thing that distinguishes A's draft from B's is which sign-in it followed.
+   *
+   * Optional on the stored shape (not a schema bump): a draft written before
+   * this field existed simply loads with it absent, and an absent claim is
+   * treated as unclaimed, which is the safe direction.
+   */
+  claimedByUserId?: string | null;
 }
 
 export type PendingOnboardingDraft = Omit<PendingOnboarding, 'version' | 'startedAt'>;
@@ -113,6 +127,7 @@ export function emptyPendingOnboarding(): PendingOnboardingDraft {
     dailyGoalMinutes: null,
     adultMode: null,
     completedAt: null,
+    claimedByUserId: null,
   };
 }
 
@@ -187,9 +202,43 @@ export async function clearPendingOnboarding(): Promise<void> {
 }
 
 /**
- * A draft is only flushable once the learner reached the auth screen with the
- * two fields the profile cannot be written without.
+ * Bind the stored draft to the account that just signed in on this device.
+ *
+ * Called from the auth screen immediately after any of the four auth paths
+ * succeed. A draft that is already claimed by a DIFFERENT account is not
+ * re-stamped — it is deleted, because it belongs to someone who walked away
+ * from this device and must not follow the next person into their profile.
+ *
+ * Best-effort by design: this runs on the sign-in happy path, and a storage
+ * failure here must not block the learner from getting into the app. An
+ * unclaimed draft simply will not flush, which is the safe failure.
  */
-export function isFlushable(pending: PendingOnboarding | null): boolean {
-  return !!pending?.completedAt && !!pending.targetLanguage && !!pending.level;
+export async function claimPendingOnboarding(userId: string): Promise<void> {
+  const pending = await loadPendingOnboarding();
+  if (!pending) return;
+
+  if (pending.claimedByUserId && pending.claimedByUserId !== userId) {
+    await clearPendingOnboarding();
+    return;
+  }
+
+  await AsyncStorage.setItem(
+    PENDING_ONBOARDING_KEY,
+    JSON.stringify({ ...pending, claimedByUserId: userId }),
+  );
+}
+
+/**
+ * A draft is only flushable once the learner reached the auth screen with the
+ * two fields the profile cannot be written without — AND the account asking to
+ * flush it is the one that claimed it.
+ *
+ * `userId` is required rather than optional on purpose. This function decides
+ * whether one person's display name and free-text personal goal get written
+ * into another person's profile, and an overload that silently skips the
+ * ownership check is exactly the call site that would get written by mistake.
+ */
+export function isFlushable(pending: PendingOnboarding | null, userId: string): boolean {
+  if (!pending?.completedAt || !pending.targetLanguage || !pending.level) return false;
+  return pending.claimedByUserId === userId;
 }
