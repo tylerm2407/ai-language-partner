@@ -60,8 +60,8 @@ export default function ProfileScreen() {
   const { enrolledClasses, loadStudentSchoolData, roles, activeRole, setActiveRole } = useSchoolStore();
   // useLevel() is also a side effect — it mirrors level-ups into the store.
   // Only `tier` is read here; the numeric level moved into <LevelBadge/>.
-  const { tier } = useLevel();
-  const { showStreak, showLeague, showXpCelebration } = useAdultMode();
+  const { tier, level } = useLevel();
+  const { showLeague, showXpCelebration } = useAdultMode();
   const { dailyStats } = useDailyStats();
   const strandTotals = strandMinutesFromDailyStats({
     listeningMinutes: dailyStats?.listeningMinutes,
@@ -177,35 +177,31 @@ export default function ProfileScreen() {
           <LevelBadge level={profile?.level ?? 'beginner'} />
         </View>
 
-        {/* Three stat cards. The deck's third card is a words-learned count,
-            which the profile doesn't track — best streak is the closest real
-            metric, same shape.
+        {/* Two stat cards. There were three while a day-streak and a best-streak
+            counted as metrics; neither exists now, and padding the row back to
+            three with a number the profile does not actually track would be
+            inventing a scoreboard.
 
             Adult mode drops the grid entirely: every value in it is a game
             point. What replaces it is the proficiency report below, which
             answers the question these numbers only imply. */}
-        {showStreak && showXpCelebration && (
+        {showXpCelebration && (
           <View style={styles.statGrid}>
-            <StatCard
-              icon={<Ionicons name="flame" size={16} color={colors.streak.fire} />}
-              value={String(profile?.streak ?? 0)}
-              label="Day streak"
-            />
             <StatCard
               icon={<Ionicons name="star" size={16} color={colors.warning.base} />}
               value={(profile?.totalXp ?? 0).toLocaleString()}
               label="Total XP"
             />
             <StatCard
-              icon={<Ionicons name="trophy" size={16} color={colors.action.accent} />}
-              value={String(profile?.longestStreak ?? 0)}
-              label="Best streak"
+              icon={<Ionicons name="trending-up" size={16} color={colors.action.accent} />}
+              value={String(level)}
+              label="Level"
             />
           </View>
         )}
 
         {/* Proficiency report — the evidence-backed answer to "what level am I
-            actually at?", which is the question a streak count never answers.
+            actually at?", which is the question a point total never answers.
             It sits directly under the level ladder, above achievements and
             completed lessons, because it is the most credible artifact on this
             screen and it used to be the last thing a learner would ever find.

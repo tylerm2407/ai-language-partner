@@ -7,7 +7,7 @@ interface HeartsDisplayProps {
   maxHearts: number;
   isUnlimited: boolean;
   /** Glyph size. 18 is the standard; the Home stats row uses 16 to sit level
-   *  with the streak/XP chips beside it. */
+   *  with the XP chip beside it. */
   size?: number;
 }
 

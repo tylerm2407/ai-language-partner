@@ -107,13 +107,13 @@ export const colors = {
     tint: 'rgba(245, 158, 11, 0.15)',
     border: 'rgba(245, 158, 11, 0.35)',
   },
-  streak: {
+  flame: {
     base: '#F59E0B',
     fire: '#F97316',
-    /** Orange-based so a streak chip never reads as a warning chip — the two
+    /** Orange-based so a flame accent never reads as a warning chip — the two
      *  sat side by side on Home in identical amber. */
     tint: 'rgba(249, 115, 22, 0.15)',
-    light: '#FDBA74', // streak chip label on dark
+    light: '#FDBA74', // flame label on dark
   },
   premium: {
     base: '#A855F7',
@@ -148,7 +148,7 @@ export const colors = {
     accentLilac: '#A855F7',
     heartsCoral: '#FF6B6B',
     xpGold: '#FFB547',
-    streakFlame: '#FF8A3D',
+    flame: '#FF8A3D',
     // Opaque under Dark Glow — the editorial voice is carried by type
     // (Fraunces + mono), not by a differently-tinted card.
     glassBg: '#151921',

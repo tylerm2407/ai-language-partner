@@ -61,9 +61,6 @@ export interface UserProfile {
   targetLanguage: LanguageCode;
   level: ProficiencyLevel;
   dailyGoalMinutes: number;
-  streak: number;
-  longestStreak: number;
-  streakFreezes: number;
   totalXp: number;
   timezone: string;
   onboardingCompleted: boolean;
@@ -74,9 +71,6 @@ export interface UserProfile {
   // XP levels & leagues
   xpLevel: number;
   leagueTier: LeagueTier;
-  // Streak shield
-  streakShieldActive: boolean;
-  streakShieldUsedAt: string | null;
   /**
    * Which avatar renderer this account uses (migration 067). Accounts created
    * before that migration still read 'procedural' — the SVG renderer they
@@ -98,7 +92,7 @@ export interface UserProfile {
   idealL2Self: string | null;
   /**
    * Adult mode (migration 052) — suppresses the pressure mechanics: hearts
-   * gating, streak guilt, league standings and XP celebration. Underlying
+   * gating, league standings and XP celebration. Underlying
    * values keep accruing server-side so turning the mode off restores the
    * learner's history rather than revealing a reset account.
    */
@@ -515,12 +509,7 @@ export interface DailyChallengesRecord {
   challenges: DailyChallenge[];
   allCompleted: boolean;
   bonusXpClaimed: boolean;
-  challengeStreak: number;
 }
-
-// ─── Streak Events ─────────────────────────────────────────────
-
-export type StreakEventType = 'streak_broken' | 'streak_repaired' | 'shield_activated' | 'shield_used' | 'freeze_used';
 
 // ─── Reading ──────────────────────────────────────────────────
 
@@ -759,7 +748,7 @@ export interface AvatarAccessory {
   name: string;
   category: string;
   svgData: string;
-  unlockType: 'free' | 'level' | 'achievement' | 'streak' | 'purchase';
+  unlockType: 'free' | 'level' | 'achievement' | 'purchase';
   unlockRequirement: Record<string, unknown>;
 }
 
@@ -783,7 +772,6 @@ export interface SchoolContractConfig {
   dailyWritingGrades: number;
   dailyPronunciationScores: number;
   unlimitedHearts: boolean;
-  streakShield: boolean;
   audiobookNarration: boolean;
   offlineMode?: boolean;
   allowed_email_domains?: string[];

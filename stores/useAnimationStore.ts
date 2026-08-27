@@ -4,7 +4,6 @@ export type AnimationEvent =
   | { type: 'xp_earned'; xp: number }
   | { type: 'level_up'; level: number; tier: string; tierChanged: boolean }
   | { type: 'achievement'; achievementId: string }
-  | { type: 'streak_milestone'; streak: number }
   | { type: 'challenge_complete'; challengeId: string };
 
 interface AnimationState {

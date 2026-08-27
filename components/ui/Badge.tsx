@@ -1,6 +1,6 @@
 import { View, Text } from 'react-native';
 
-type BadgeVariant = 'primary' | 'success' | 'warning' | 'streak';
+type BadgeVariant = 'primary' | 'success' | 'warning';
 
 interface BadgeProps {
   label: string;
@@ -11,7 +11,6 @@ const variantClasses: Record<BadgeVariant, { bg: string; text: string }> = {
   primary: { bg: 'bg-primary-tint', text: 'text-primary' },
   success: { bg: 'bg-success-bg', text: 'text-success' },
   warning: { bg: 'bg-warning-bg', text: 'text-warning' },
-  streak: { bg: 'bg-warning-bg', text: 'text-streak' },
 };
 
 export function Badge({ label, variant = 'primary' }: BadgeProps) {

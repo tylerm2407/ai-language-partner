@@ -14,7 +14,6 @@ type EventName =
   | 'card_reviewed'
   | 'practice_started'
   | 'practice_ended'
-  | 'streak_updated'
   | 'subscription_started'
   | 'subscription_cancelled'
   | 'onboarding_completed'

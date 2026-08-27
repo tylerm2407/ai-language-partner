@@ -17,7 +17,7 @@ interface MagazineDailyChallengesProps {
 const serifFont = typography.family.serif;
 
 export function MagazineDailyChallenges({ dailyStats }: MagazineDailyChallengesProps) {
-  const { challenges, allCompleted, bonusXpClaimed, multiplier, claimBonusXp } = useDailyChallenges();
+  const { challenges, allCompleted, bonusXpClaimed, claimBonusXp } = useDailyChallenges();
   const [claiming, setClaiming] = useState(false);
 
   const handleClaimBonus = async () => {
@@ -81,12 +81,12 @@ export function MagazineDailyChallenges({ dailyStats }: MagazineDailyChallengesP
         <View style={styles.bonusSection}>
           {bonusXpClaimed ? (
             <Text style={styles.bonusClaimed}>
-              +{Math.round(50 * multiplier)} Bonus XP claimed
+              +50 Bonus XP claimed
             </Text>
           ) : (
             <Pressable onPress={handleClaimBonus} disabled={claiming} style={{ opacity: claiming ? 0.6 : 1 }}>
               <Text style={styles.bonusClaim}>
-                Claim +{Math.round(50 * multiplier)} Bonus XP
+                Claim +50 Bonus XP
               </Text>
             </Pressable>
           )}

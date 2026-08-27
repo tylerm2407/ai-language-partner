@@ -1,7 +1,6 @@
 /**
  * Enhanced daily challenge system.
  * Pool of challenge templates, 3 randomly picked per day.
- * Challenge streaks earn XP multipliers.
  *
  * EVERY template here must have a statKey the app actually writes. Four
  * templates were removed in Aug 2026 — practice_minutes, practice_minutes_20,
@@ -52,16 +51,6 @@ export function pickDailyChallenges(userId: string, dateStr: string): ChallengeT
     return ha - hb;
   });
   return shuffled.slice(0, 3);
-}
-
-/**
- * Get challenge streak XP multiplier.
- * 3-day streak = 1.5x, 7-day = 2x, else 1x.
- */
-export function getChallengeMultiplier(streak: number): number {
-  if (streak >= 7) return 2;
-  if (streak >= 3) return 1.5;
-  return 1;
 }
 
 function hashCode(str: string): number {

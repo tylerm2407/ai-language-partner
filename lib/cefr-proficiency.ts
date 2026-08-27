@@ -3,7 +3,7 @@
  *
  * The product claim this supports: Fluenci can tell an adult learner what
  * level they are actually at, backed by the work they've done — as opposed to
- * a streak count, which says nothing about proficiency.
+ * a point total, which says nothing about proficiency.
  *
  * Credibility rules baked into this module. Do not relax them without a very
  * good reason; the entire value of the report is that it is not inflated:

@@ -19,7 +19,6 @@ export interface SchoolContractConfig {
   // it. Students fall through to their plan's value, which is generous enough
   // that a contract override has never been needed.
   unlimitedHearts: boolean;
-  streakShield: boolean;
   audiobookNarration: boolean;
   offlineMode?: boolean;
   allowed_email_domains?: string[];
@@ -39,7 +38,6 @@ export interface PlanDefinition {
    */
   dailyLessonTtsPlays: number;
   unlimitedHearts: boolean;
-  streakShield: boolean;
   audiobookNarration: boolean;
   offlineMode: boolean;
 }
@@ -85,7 +83,6 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     dailyPronunciationScores: 0,
     dailyLessonTtsPlays: 5,
     unlimitedHearts: false,
-    streakShield: false,
     audiobookNarration: false,
     offlineMode: false,
   },
@@ -98,7 +95,6 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     dailyPronunciationScores: 3,
     dailyLessonTtsPlays: 50,
     unlimitedHearts: true,
-    streakShield: true,
     audiobookNarration: false,
     offlineMode: false,
   },
@@ -111,7 +107,6 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     dailyPronunciationScores: 5,
     dailyLessonTtsPlays: 100,
     unlimitedHearts: true,
-    streakShield: true,
     audiobookNarration: false,
     offlineMode: true,
   },
@@ -124,7 +119,6 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     dailyPronunciationScores: 7,
     dailyLessonTtsPlays: 200,
     unlimitedHearts: true,
-    streakShield: true,
     audiobookNarration: true,
     offlineMode: true,
   },
@@ -144,7 +138,7 @@ export const PLAN_FEATURES: Record<PlanId, string[]> = {
   starter: [
     'All lessons, reviews and reading',
     'Daily news in your language',
-    'Streaks, XP and leagues',
+    'XP and leagues',
     'One photo avatar, free',
   ],
   basic: [
@@ -152,7 +146,6 @@ export const PLAN_FEATURES: Record<PlanId, string[]> = {
     '25 tutor messages per day',
     '10 minutes of voice practice per day',
     '3 writing grades per day',
-    'Streak shield protection',
   ],
   premium: [
     'Everything in Basic',

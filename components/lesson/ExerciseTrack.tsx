@@ -9,7 +9,7 @@ interface ExerciseTrackProps {
   /**
    * How many exercises have been answered. Ticks for answered-wrong
    * exercises stay green rather than turning red — the note row carries the
-   * correction, and a red streak in the header reads as punishment.
+   * correction, and a red run in the header reads as punishment.
    * Defaults to `currentIndex` when the caller has no answer count.
    */
   completedCount?: number;

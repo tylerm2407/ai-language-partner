@@ -4,7 +4,7 @@ import { useAuth } from './useAuth';
 import { useAppStore } from '../stores/useAppStore';
 import { fetchDailyChallenges, upsertDailyChallenges, claimDailyChallengeBonus } from '../lib/supabase-queries';
 import { localToday, localDayKey } from '../lib/dates';
-import { pickDailyChallenges, getChallengeMultiplier } from '../lib/challenges';
+import { pickDailyChallenges } from '../lib/challenges';
 import type { DailyChallenge, DailyChallengesRecord, DailyStats } from '../types';
 
 export function useDailyChallenges() {
@@ -41,19 +41,6 @@ export function useDailyChallenges() {
       try {
         let existing = await fetchDailyChallenges(user.id, today);
         if (!existing) {
-          // Carry the challenge streak across days — it continues only if
-          // yesterday's bonus was claimed, otherwise it resets to 0. Without
-          // this, every new day's row started at 0 and the streak multiplier
-          // could never grow past 1x.
-          let carriedStreak = 0;
-          try {
-            const y = new Date();
-            y.setDate(y.getDate() - 1);
-            const yesterday = await fetchDailyChallenges(user.id, localDayKey(y));
-            if (yesterday?.bonusXpClaimed) carriedStreak = yesterday.challengeStreak;
-          } catch (err) {
-            console.error('Failed to read yesterday\'s challenges:', err);
-          }
           // Generate new challenges for today
           const templates = pickDailyChallenges(user.id, today);
           const challenges: DailyChallenge[] = templates.map((t) => ({
@@ -61,7 +48,7 @@ export function useDailyChallenges() {
             current: 0,
             completed: false,
           }));
-          existing = await upsertDailyChallenges(user.id, today, challenges, false, false, carriedStreak);
+          existing = await upsertDailyChallenges(user.id, today, challenges, false, false);
         }
         setRecord(existing);
       } catch (err) {
@@ -96,19 +83,16 @@ export function useDailyChallenges() {
     if (JSON.stringify(updatedChallenges) !== JSON.stringify(record.challenges) || allCompleted !== record.allCompleted) {
       setRecord({ ...record, challenges: updatedChallenges, allCompleted });
 
-      // Persist to DB. Since migration 071 the server OWNS bonus_xp_claimed
-      // and challenge_streak — a guard trigger silently coerces whatever we
-      // send back to the stored value — so take the returned row as truth
-      // rather than discarding it. Without this, a server-derived streak
-      // carry stays invisible until a cold reload.
+      // Persist to DB. Since migration 071 the server OWNS bonus_xp_claimed —
+      // a guard trigger silently coerces whatever we send back to the stored
+      // value — so take the returned row as truth rather than discarding it.
       if (user) {
         upsertDailyChallenges(
           user.id,
           today,
           updatedChallenges,
           allCompleted,
-          record.bonusXpClaimed,
-          record.challengeStreak
+          record.bonusXpClaimed
         )
           .then((saved) => {
             if (saved) setRecord(saved);
@@ -122,19 +106,17 @@ export function useDailyChallenges() {
     // the setRecord → re-run cycle from looping.
   }, [dailyStats, record]);
 
-  const multiplier = getChallengeMultiplier(record?.challengeStreak ?? 0);
-
   const claimBonusXp = useCallback(async () => {
     if (!user || !record || record.bonusXpClaimed || !record.allCompleted) return 0;
     if (claimInFlight.current) return 0;
     claimInFlight.current = true;
 
     try {
-      // Server-authoritative: the RPC validates completion + double-claim,
-      // computes the streak multiplier, and grants the XP atomically
-      // (migration 043). On failure it throws — local state stays unclaimed.
+      // Server-authoritative: the RPC validates completion + double-claim and
+      // grants the XP atomically (migration 043). On failure it throws —
+      // local state stays unclaimed.
       const { bonusXp, totalXp } = await claimDailyChallengeBonus();
-      setRecord({ ...record, bonusXpClaimed: true, challengeStreak: record.challengeStreak + 1 });
+      setRecord({ ...record, bonusXpClaimed: true });
       // Guard against a null/zero RPC row: never replace displayed XP with 0.
       if (profile && totalXp > 0) {
         setProfile({ ...profile, totalXp });
@@ -149,8 +131,6 @@ export function useDailyChallenges() {
     challenges: record?.challenges ?? [],
     allCompleted: record?.allCompleted ?? false,
     bonusXpClaimed: record?.bonusXpClaimed ?? false,
-    challengeStreak: record?.challengeStreak ?? 0,
-    multiplier,
     loading,
     /** Non-null when today's challenges could not be loaded. Render a retry. */
     error,

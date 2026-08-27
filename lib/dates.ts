@@ -1,7 +1,7 @@
 /**
  * Device-local calendar-day helpers.
  *
- * Day keys for daily_stats / daily_challenges / streak logic must be the
+ * Day keys for daily_stats / daily_challenges must be the
  * DEVICE-local date, not UTC — `new Date().toISOString().split('T')[0]`
  * records a 9 PM New York practice against tomorrow. The server mirrors
  * this with public.fluenci_user_today() (migration 044), which resolves

@@ -5,7 +5,6 @@
  * single reusable modal. Designed for:
  *   - correct answer reveal (mood="correct")
  *   - lesson complete (mood="lessonComplete")
- *   - streak milestone (mood="streakMilestone")
  *   - level up (mood="levelUp")
  *
  * Haptic + confetti scale with mood intensity. All motion honors
@@ -29,7 +28,7 @@ import { Mascot, type MascotState } from '../mascot/Mascot';
 import { Body, Hero } from './Text';
 import { TactileButton } from './TactileButton';
 
-type Mood = 'correct' | 'lessonComplete' | 'streakMilestone' | 'levelUp';
+type Mood = 'correct' | 'lessonComplete' | 'levelUp';
 
 interface CelebrationOverlayProps {
   visible: boolean;
@@ -47,7 +46,6 @@ const MOOD_CONFIG: Record<
 > = {
   correct: { mascot: 'happy', particles: 10, haptic: Haptics.NotificationFeedbackType.Success },
   lessonComplete: { mascot: 'cheering', particles: 25, haptic: Haptics.NotificationFeedbackType.Success },
-  streakMilestone: { mascot: 'cheering', particles: 40, haptic: Haptics.NotificationFeedbackType.Success },
   levelUp: { mascot: 'cheering', particles: 40, haptic: Haptics.NotificationFeedbackType.Success },
 };
 

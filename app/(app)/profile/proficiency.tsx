@@ -73,7 +73,7 @@ function bandStatusLabel(status: BandBreakdown['status']): string {
  * behind it.
  *
  * The screen shows the working, not just the verdict. That is the entire
- * point: a number a learner cannot interrogate is a streak counter with extra
+ * point: a number a learner cannot interrogate is a vanity metric with extra
  * steps. Every claim here traces back to something they did.
  */
 export default function ProficiencyScreen() {

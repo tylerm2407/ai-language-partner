@@ -33,13 +33,13 @@ export function PrePermissionSheet({
       <View style={{ alignItems: 'center', paddingTop: spacing.sm }}>
         <Mascot state="happy" size="md" style={{ marginBottom: spacing.md }} />
         <Heading level={2} style={{ textAlign: 'center' }}>
-          Protect your streak
+          One reminder a day
         </Heading>
         <Body
           tone="secondary"
           style={{ textAlign: 'center', marginTop: spacing.xs, maxWidth: 320 }}
         >
-          Lumi will only tap you when your streak is about to break. One nudge a day, max — no spam.
+Lumi will tap you once in the evening if you haven't practised yet. One nudge a day, max — no spam, and nothing to lose if you skip it.
         </Body>
 
         <View style={{ alignSelf: 'stretch', marginTop: spacing.lg }}>

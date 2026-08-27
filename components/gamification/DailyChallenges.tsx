@@ -13,7 +13,7 @@ interface DailyChallengesProps {
 }
 
 export function DailyChallenges({ dailyStats }: DailyChallengesProps) {
-  const { challenges, allCompleted, bonusXpClaimed, multiplier, claimBonusXp } = useDailyChallenges();
+  const { challenges, allCompleted, bonusXpClaimed, claimBonusXp } = useDailyChallenges();
   const [claiming, setClaiming] = useState(false);
 
   const completedCount = challenges.filter((c) => c.completed).length;
@@ -107,8 +107,8 @@ export function DailyChallenges({ dailyStats }: DailyChallengesProps) {
           {bonusXpClaimed ? (
             <View className="flex-row items-center justify-center gap-2">
               <Ionicons name="star" size={18} color="#FBBF24" />
-              <Text className="text-sm font-semibold text-streak">
-                All challenges complete! +{Math.round(50 * multiplier)} Bonus XP claimed
+              <Text className="text-sm font-semibold text-flame">
+                All challenges complete! +50 Bonus XP claimed
               </Text>
               <Ionicons name="star" size={18} color="#FBBF24" />
             </View>
@@ -120,8 +120,8 @@ export function DailyChallenges({ dailyStats }: DailyChallengesProps) {
             >
               <View className="flex-row items-center justify-center gap-2">
                 <Ionicons name="star" size={18} color="#FBBF24" />
-                <Text className="text-sm font-semibold text-streak">
-                  Claim +{Math.round(50 * multiplier)} Bonus XP
+                <Text className="text-sm font-semibold text-flame">
+                  Claim +50 Bonus XP
                 </Text>
                 <Ionicons name="star" size={18} color="#FBBF24" />
               </View>

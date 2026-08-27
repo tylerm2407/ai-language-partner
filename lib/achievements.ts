@@ -5,10 +5,6 @@ import type { UserProfile, DailyStats } from '../types';
 
 export type AchievementType =
   | 'first_lesson'
-  | 'streak_3'
-  | 'streak_7'
-  | 'streak_30'
-  | 'streak_100'
   | 'xp_100'
   | 'xp_500'
   | 'xp_1000'
@@ -49,34 +45,6 @@ export const ACHIEVEMENTS: Record<AchievementType, AchievementDefinition> = {
     description: 'Complete your first lesson',
     icon: 'book',
     color: '#38BDF8',
-  },
-  streak_3: {
-    type: 'streak_3',
-    title: 'Getting Started',
-    description: 'Reach a 3-day streak',
-    icon: 'flame',
-    color: '#FBBF24',
-  },
-  streak_7: {
-    type: 'streak_7',
-    title: 'Week Warrior',
-    description: 'Reach a 7-day streak',
-    icon: 'flame',
-    color: '#F97316',
-  },
-  streak_30: {
-    type: 'streak_30',
-    title: 'Monthly Master',
-    description: 'Reach a 30-day streak',
-    icon: 'flame',
-    color: '#EF4444',
-  },
-  streak_100: {
-    type: 'streak_100',
-    title: 'Unstoppable',
-    description: 'Reach a 100-day streak',
-    icon: 'flame',
-    color: '#DC2626',
   },
   xp_100: {
     type: 'xp_100',
@@ -196,22 +164,6 @@ const ACHIEVEMENT_CONDITIONS: AchievementCondition[] = [
   {
     type: 'first_lesson',
     check: (_profile, stats) => (stats?.lessonsCompleted ?? 0) >= 1,
-  },
-  {
-    type: 'streak_3',
-    check: (profile) => profile.streak >= 3,
-  },
-  {
-    type: 'streak_7',
-    check: (profile) => profile.streak >= 7,
-  },
-  {
-    type: 'streak_30',
-    check: (profile) => profile.streak >= 30,
-  },
-  {
-    type: 'streak_100',
-    check: (profile) => profile.streak >= 100,
   },
   {
     type: 'xp_100',

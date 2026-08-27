@@ -43,7 +43,7 @@ const STEP_ITEMS: { key: OnboardingStepKey; label: string; icon: string; route: 
   { key: 'chooseLanguage', label: 'Choose your language', icon: 'globe-outline', route: null },
   { key: 'firstLesson', label: 'Finish your first lesson', icon: 'book-outline', route: '/learn' },
   { key: 'aiConversation', label: 'Try AI conversation', icon: 'chatbubbles-outline', route: '/chat' },
-  // Not "Set daily reminder" — the app schedules a streak-save reminder at a
+  // Not "Set daily reminder" — the app schedules a daily practice reminder at a
   // time it picks, so the old label promised a control that doesn't exist.
   { key: 'dailyReminder', label: 'Turn on practice reminders', icon: 'notifications-outline', route: null },
 ];
@@ -57,7 +57,7 @@ const STEP_ITEMS: { key: OnboardingStepKey; label: string; icon: string; route: 
  * from the lesson screen rebuilt the whole checklist from a snapshot that
  * predated the chat screen's write, and the failure path did
  * `setProfile(profile)` with that same stale snapshot — reverting unrelated XP
- * and streak updates along with it.
+ * and daily-stat updates along with it.
  *
  * The fix is that `mutate` reads `useAppStore.getState()` at call time and, on
  * failure, restores only the checklist field onto whatever profile is current.

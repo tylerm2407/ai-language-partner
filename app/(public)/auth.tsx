@@ -229,7 +229,7 @@ export default function AuthScreen() {
                     marginTop: spacing.xs + 2,
                   }}
                 >
-                  Your streak is where you left it.
+                  Your progress is where you left it.
                 </Text>
               </View>
             )}

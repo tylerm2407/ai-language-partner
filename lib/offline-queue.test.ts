@@ -16,6 +16,7 @@ import {
   flush,
   isNetworkError,
   makeXpKey,
+  lessonXpKey,
   offlineQueueKey,
   newClientLogId,
   type OfflineQueueInput,
@@ -173,6 +174,32 @@ describe('makeXpKey', () => {
     expect(a.startsWith('xp:lesson-1:')).toBe(true);
     expect(a.length).toBeGreaterThanOrEqual(8);
     expect(a.length).toBeLessThanOrEqual(128);
+  });
+});
+
+describe('lessonXpKey', () => {
+  // The bug this pins: while the lesson award used makeXpKey('earn'), every
+  // replay of a finished lesson minted a fresh random key, so the server's
+  // (user_id, event_key) de-dupe matched nothing and paid full XP again —
+  // and increment_xp_idempotent derives xp_level and league_tier in the same
+  // statement, so the league standings were mintable with it.
+  it('is stable for the same lesson, so a replay cannot pay twice', () => {
+    expect(lessonXpKey('abc')).toBe(lessonXpKey('abc'));
+  });
+
+  it('is distinct per lesson', () => {
+    expect(lessonXpKey('lesson-a')).not.toBe(lessonXpKey('lesson-b'));
+  });
+
+  it('stays inside the server key bounds (8-128) for a uuid', () => {
+    const k = lessonXpKey('123e4567-e89b-12d3-a456-426614174000');
+    expect(k.length).toBeGreaterThanOrEqual(8);
+    expect(k.length).toBeLessThanOrEqual(128);
+  });
+
+  it('never collides with an ad-hoc makeXpKey award', () => {
+    expect(lessonXpKey('x').startsWith('xp:lesson:v1:')).toBe(true);
+    expect(makeXpKey('x').startsWith('xp:lesson:v1:')).toBe(false);
   });
 });
 

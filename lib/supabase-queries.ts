@@ -27,7 +27,6 @@ import type {
   ReviewRating,
   DailyChallengesRecord,
   LeagueTier,
-  StreakEventType,
   ReadingPassage,
   ReadingAnnotation,
   ReadingQuestion,
@@ -114,19 +113,6 @@ export async function upsertProfile(
 }
 
 /**
- * Server-derived streak update. The RPC derives the streak from daily_stats
- * activity (max +1 per calendar day, idempotent) — clients cannot set streak
- * values directly (blocked by the gamification guard trigger, migration 036).
- */
-export async function updateStreak(): Promise<{ streak: number; longestStreak: number } | null> {
-  const { data, error } = await supabase.rpc('update_streak');
-  if (error) throw error;
-  const row = Array.isArray(data) ? data[0] : data;
-  if (!row) return null;
-  return { streak: row.streak as number, longestStreak: row.longest_streak as number };
-}
-
-/**
  * XP is server-authoritative: increment_xp validates the caller, caps the
  * per-call amount, and derives xp_level/league_tier in the same statement.
  */
@@ -145,14 +131,20 @@ export async function addXp(userId: string, xp: number): Promise<void> {
  * in client_events and replays of the same key are no-ops. Used by
  * earnXp and offline-queue replays so a lost-response retry can never
  * double-award.
+ *
+ * Returns the learner's authoritative total XP *after* the call. On a replay
+ * the server grants nothing and returns the unchanged total, which is what
+ * makes it safe for the caller to render this instead of adding the amount
+ * locally — otherwise a refused award still shows up as XP until next launch.
  */
-export async function incrementXpIdempotent(amount: number, key: string): Promise<void> {
-  if (amount <= 0) return;
-  const { error } = await supabase.rpc('increment_xp_idempotent', {
+export async function incrementXpIdempotent(amount: number, key: string): Promise<number | null> {
+  if (amount <= 0) return null;
+  const { data, error } = await supabase.rpc('increment_xp_idempotent', {
     p_amount: Math.min(Math.round(amount), 500),
     p_key: key,
   });
   if (error) throw error;
+  return typeof data === 'number' ? data : null;
 }
 
 export async function markOnboardingComplete(userId: string): Promise<void> {
@@ -661,10 +653,6 @@ export async function upsertDailyStats(
 
   if (error) throw error;
 
-  // Streak is server-derived from daily_stats activity (migration 036).
-  // Non-fatal: stats are already saved; the streak catches up next call.
-  await supabase.rpc('update_streak');
-
   return mapDailyStats(data as Record<string, unknown>);
 }
 
@@ -957,9 +945,6 @@ function mapProfile(row: Record<string, unknown>): UserProfile {
     targetLanguage: row.target_language as UserProfile['targetLanguage'],
     level: row.level as UserProfile['level'],
     dailyGoalMinutes: row.daily_goal_minutes as number,
-    streak: row.streak as number,
-    longestStreak: row.longest_streak as number,
-    streakFreezes: row.streak_freezes as number,
     totalXp: row.total_xp as number,
     timezone: row.timezone as string,
     onboardingCompleted: (row.onboarding_completed as boolean) ?? false,
@@ -970,9 +955,6 @@ function mapProfile(row: Record<string, unknown>): UserProfile {
     // XP levels & leagues
     xpLevel: (row.xp_level as number) ?? 1,
     leagueTier: (row.league_tier as UserProfile['leagueTier']) ?? 'bronze',
-    // Streak shield
-    streakShieldActive: (row.streak_shield_active as boolean) ?? false,
-    streakShieldUsedAt: (row.streak_shield_used_at as string) ?? null,
     // Avatar renderer selection (migration 067). Rows written before it have
     // no avatar_kind. Nothing renders 'procedural' now, so those rows show
     // the initials placeholder until the learner picks from the library.
@@ -1492,8 +1474,7 @@ export async function upsertDailyChallenges(
   date: string,
   challenges: unknown[],
   allCompleted: boolean,
-  bonusXpClaimed: boolean,
-  challengeStreak: number
+  bonusXpClaimed: boolean
 ): Promise<DailyChallengesRecord> {
   const { data, error } = await supabase
     .from('daily_challenges')
@@ -1503,7 +1484,6 @@ export async function upsertDailyChallenges(
       challenges,
       all_completed: allCompleted,
       bonus_xp_claimed: bonusXpClaimed,
-      challenge_streak: challengeStreak,
     }, { onConflict: 'user_id,date' })
     .select()
     .single();
@@ -1514,7 +1494,7 @@ export async function upsertDailyChallenges(
 
 /**
  * Atomically claim today's daily-challenge bonus XP server-side. The RPC
- * validates completion + double-claim, computes the streak multiplier, and
+ * validates completion + double-claim and
  * grants the XP (migration 043) — clients cannot write XP directly.
  */
 export async function claimDailyChallengeBonus(): Promise<{ bonusXp: number; totalXp: number }> {
@@ -1532,63 +1512,8 @@ function mapDailyChallengesRecord(row: Record<string, unknown>): DailyChallenges
     challenges: row.challenges as DailyChallengesRecord['challenges'],
     allCompleted: (row.all_completed as boolean) ?? false,
     bonusXpClaimed: (row.bonus_xp_claimed as boolean) ?? false,
-    challengeStreak: (row.challenge_streak as number) ?? 0,
   };
 }
-
-// ─── Streak Protection (server-authoritative — migration 036) ──
-
-/**
- * Atomically consume one streak freeze, restore the streak to the user's
- * longest, and log the streak event — all in one RPC.
- */
-export async function repairStreakWithFreeze(): Promise<{
-  streak: number;
-  longestStreak: number;
-  streakFreezes: number;
-} | null> {
-  const { data, error } = await supabase.rpc('repair_streak_with_freeze');
-  if (error) throw error;
-  const row = Array.isArray(data) ? data[0] : data;
-  if (!row) return null;
-  return {
-    streak: row.streak as number,
-    longestStreak: row.longest_streak as number,
-    streakFreezes: row.streak_freezes as number,
-  };
-}
-
-/**
- * Atomically apply the paid-plan streak shield (tier verified server-side),
- * restore the streak, and log the streak event.
- */
-export async function repairStreakWithShield(): Promise<{
-  streak: number;
-  longestStreak: number;
-} | null> {
-  const { data, error } = await supabase.rpc('repair_streak_with_shield');
-  if (error) throw error;
-  const row = Array.isArray(data) ? data[0] : data;
-  if (!row) return null;
-  return { streak: row.streak as number, longestStreak: row.longest_streak as number };
-}
-
-export async function logStreakEvent(
-  userId: string,
-  eventType: StreakEventType,
-  streakAtTime: number
-): Promise<void> {
-  const { error } = await supabase
-    .from('streak_events')
-    .insert({
-      user_id: userId,
-      event_type: eventType,
-      streak_at_time: streakAtTime,
-    });
-
-  if (error) throw error;
-}
-
 
 // ─── Reading ──────────────────────────────────────────────────
 
@@ -2849,7 +2774,6 @@ function mapOrganization(row: Record<string, unknown>): Organization {
       dailyWritingGrades: 0,
       dailyPronunciationScores: 0,
       unlimitedHearts: false,
-      streakShield: false,
       audiobookNarration: false,
     },
     contractStart: (row.contract_start as string) ?? null,

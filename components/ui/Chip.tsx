@@ -2,7 +2,7 @@
  * Chip — small pill with optional left icon + colored fill.
  *
  * Used for error-type tags (grammar/vocab/etc.), severity labels, league
- * tiers, streak badges, and scenario filters.
+ * tiers, and scenario filters.
  */
 
 import React from 'react';
@@ -17,7 +17,7 @@ type Variant =
   | 'error'
   | 'warning'
   | 'premium'
-  | 'streak';
+;
 
 interface ChipProps {
   label: string;
@@ -36,7 +36,6 @@ const VARIANT_STYLES: Record<Variant, { bg: string; text: string }> = {
   error: { bg: colors.error.tint, text: colors.error.light },
   warning: { bg: colors.warning.tint, text: colors.warning.light },
   premium: { bg: colors.premium.tint, text: colors.premium.base },
-  streak: { bg: colors.streak.tint, text: colors.streak.light },
 };
 
 export function Chip({ label, variant = 'neutral', leftIcon, onPress, customColors, style }: ChipProps) {

@@ -18,6 +18,7 @@ import { LessonRunner, type LessonResult } from '../../../components/lesson/Less
 import { LevelUpModal } from '../../../components/gamification/LevelUpModal';
 import { AchievementModal } from '../../../components/gamification/AchievementModal';
 import { checkAndAwardAchievements, type AchievementDefinition } from '../../../lib/achievements';
+import { lessonXpKey } from '../../../lib/offline-queue';
 import { getTargetLanguage } from '../../../lib/language';
 import { Button } from '../../../components/ui/Button';
 import { Body } from '../../../components/ui/Text';
@@ -166,9 +167,12 @@ export default function LessonScreen() {
       }
     }
 
-    // 2. XP. Queued offline by earnXp itself under a stable idempotency key.
-    if (result.xpEarned > 0) {
-      await earnXp(result.xpEarned).catch((err) => console.error('[lesson] earnXp failed:', err));
+    // 2. XP, keyed to the lesson so a replay never pays twice. Queued offline
+    //    by earnXp itself under that same key.
+    if (result.xpEarned > 0 && lesson) {
+      await earnXp(result.xpEarned, lessonXpKey(lesson.id)).catch((err) =>
+        console.error('[lesson] earnXp failed:', err),
+      );
     }
 
     // 3. Daily stats — cosmetic rollup; never blocks anything above.

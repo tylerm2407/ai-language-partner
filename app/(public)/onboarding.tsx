@@ -86,13 +86,13 @@ const MODES: { value: boolean; label: string; description: string }[] = [
   {
     value: false,
     label: 'Gamified',
-    description: 'Streaks, hearts, XP and leagues. The nudges that keep most people coming back.',
+    description: 'Hearts, XP and leagues. The nudges that keep most people coming back.',
   },
   {
     value: true,
     label: 'Adult mode',
     description:
-      'For people who want to learn, not keep a streak alive. No hearts, no leagues, no XP — your progress is a CEFR level, backed by the work you’ve actually done.',
+      'For people who want to learn, not collect points. No hearts, no leagues, no XP — your progress is a CEFR level, backed by the work you’ve actually done.',
   },
 ];
 
@@ -840,7 +840,7 @@ export default function OnboardingScreen() {
                 · Your {trial ? `${trial.xpEarned} XP and this lesson` : 'progress'}
               </Text>
               <Text className="text-base text-text-primary mb-1">· Your {languageName} course and level</Text>
-              <Text className="text-base text-text-primary">· Your streak, from today</Text>
+              <Text className="text-base text-text-primary">· Your progress, from today</Text>
             </View>
 
             <Button

@@ -194,24 +194,6 @@ export default function SubscriptionScreen() {
           tutor conversation, voice practice and writing feedback.
         </Text>
 
-        {/*
-          Loss aversion (DESIGN.md §UX Psychology Principles #5) held to the
-          ethical guardrails in that section: a real, already-owned streak, a
-          true statement about the free tier, and no countdown or guilt copy.
-        */}
-        {currentTier === 'starter' && (profile?.streak ?? 0) > 0 && (
-          <View className="rounded-2xl p-4 mb-6 bg-dark-card flex-row items-center">
-            <Ionicons name="flame" size={20} color={colors.streak.fire} />
-            <Text className="flex-1 text-sm text-text-secondary ml-3">
-              Your{' '}
-              <Text style={{ color: colors.streak.fire, fontWeight: '700' }}>
-                {profile?.streak}-day streak
-              </Text>{' '}
-              has no streak shield without a subscription.
-            </Text>
-          </View>
-        )}
-
         {/* `starter` is the free plan — a real tier a learner can stay on
             indefinitely, not the absence of one. This card has said both things
             over time; what makes either version honest is naming the actual

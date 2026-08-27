@@ -2,7 +2,7 @@
  * Tests for the lesson-expiry reminder and the identifier-scoped cancelling
  * it depends on.
  *
- * The thing most worth pinning here is that scheduling the daily streak
+ * The thing most worth pinning here is that scheduling the daily practice
  * reminder no longer wipes every other scheduled notification. It used to end
  * with cancelAllScheduledNotificationsAsync(), which was harmless while it was
  * the only scheduler and would have silently deleted every expiry warning the
@@ -12,11 +12,11 @@ import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   LESSON_EXPIRY_WARNING_LEAD_MS,
-  NOTIFICATION_ID_STREAK_SAVE,
+  NOTIFICATION_ID_DAILY_PRACTICE,
   cancelLessonExpiryReminder,
   lessonExpiryNotificationId,
   scheduleLessonExpiryReminder,
-  scheduleStreakSaveReminder,
+  scheduleDailyPracticeReminder,
 } from './useNotifications';
 
 const TTL_MS = 24 * 60 * 60 * 1000;
@@ -111,24 +111,27 @@ describe('scheduleLessonExpiryReminder', () => {
   });
 });
 
-describe('streak reminder no longer wipes other notifications', () => {
+describe('daily practice reminder no longer wipes other notifications', () => {
   it('cancels only its own identifier', async () => {
     await AsyncStorage.setItem('notifications:legacy-cancelled:v1', '1'); // migration already done
-    await scheduleStreakSaveReminder({ streak: 3, xpEarnedToday: 0 });
+    await scheduleDailyPracticeReminder({ xpEarnedToday: 0 });
 
-    expect(mockCancelOne).toHaveBeenCalledWith(NOTIFICATION_ID_STREAK_SAVE);
+    expect(mockCancelOne).toHaveBeenCalledWith(NOTIFICATION_ID_DAILY_PRACTICE);
+    // The streak-era reminder must still be retired by its original id, or
+    // upgrading installs keep firing it forever.
+    expect(mockCancelOne).toHaveBeenCalledWith('streak-save-reminder');
     expect(mockCancelOne).not.toHaveBeenCalledWith(lessonExpiryNotificationId(LESSON));
     expect(mockCancelAll).not.toHaveBeenCalled();
-    expect(mockSchedule.mock.calls[0][0].identifier).toBe(NOTIFICATION_ID_STREAK_SAVE);
+    expect(mockSchedule.mock.calls[0][0].identifier).toBe(NOTIFICATION_ID_DAILY_PRACTICE);
   });
 
   it('runs the blanket legacy cancel exactly once per install', async () => {
     // Upgrading installs hold reminders under auto-generated ids that can't be
     // cancelled by name; they get one sweep, and never another.
-    await scheduleStreakSaveReminder({ streak: 1, xpEarnedToday: 0 });
+    await scheduleDailyPracticeReminder({ xpEarnedToday: 0 });
     expect(mockCancelAll).toHaveBeenCalledTimes(1);
 
-    await scheduleStreakSaveReminder({ streak: 2, xpEarnedToday: 0 });
+    await scheduleDailyPracticeReminder({ xpEarnedToday: 0 });
     await scheduleLessonExpiryReminder({
       lessonId: LESSON, lessonTitle: 'x', startedAt: startedSoWarningFiresAt(14), ttlMs: TTL_MS,
     });

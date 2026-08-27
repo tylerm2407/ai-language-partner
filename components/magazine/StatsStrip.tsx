@@ -1,8 +1,8 @@
 /**
- * StatsStrip — the streak / XP / hearts row under the Home greeting.
+ * StatsStrip — the XP / hearts row under the Home greeting.
  *
- * Was: three Chips with Ionicons (streak in orange, XP in amber) plus hearts.
- * Now: one mono meta row — `7 DAY · 1,240 XP` — reading as a dateline rather
+ * Was: three Chips with Ionicons (XP in amber) plus hearts.
+ * Now: one mono meta row — `1,240 XP` — reading as a dateline rather
  * than as a scoreboard.
  *
  * Three saturated pills stacked directly under the greeting was the Duolingo
@@ -34,15 +34,14 @@ function Separator() {
 export function StatsStrip() {
   const profile = useAppStore((s) => s.profile);
   const { hearts, maxHearts, isUnlimited } = useHearts();
-  const { showStreak, showHearts, showXpCelebration } = useAdultMode();
+  const { showHearts, showXpCelebration } = useAdultMode();
 
-  const streak = profile?.streak ?? 0;
   const totalXp = profile?.totalXp ?? 0;
 
-  // Adult mode replaces the streak/XP/hearts row with a single competence
+  // Adult mode replaces the XP/hearts row with a single competence
   // label. The point of the mode is that progress is measured in what you can
   // do, not in points earned — so this row states the level rather than a score.
-  if (!showStreak && !showHearts && !showXpCelebration) {
+  if (!showHearts && !showXpCelebration) {
     const band = cefrBandForProficiencyLevel(profile?.level ?? 'beginner');
     return (
       <View style={styles.row}>
@@ -54,9 +53,6 @@ export function StatsStrip() {
 
   return (
     <View style={styles.row}>
-      <Text style={[styles.meta, styles.emphasis]}>{streak}</Text>
-      <Text style={styles.meta}>DAY</Text>
-      <Separator />
       <Text style={[styles.meta, styles.emphasis]}>{totalXp.toLocaleString()}</Text>
       <Text style={styles.meta}>XP</Text>
       <Separator />

@@ -18,11 +18,11 @@
  * plumbing was removed. Re-add it in the same change that builds sending —
  * not before.
  *
- * Streak-save reminder content is bucketed by streak length:
- *   - 0–1:   gentle nudge, no loss-aversion framing (Lally 2010 fragile window)
- *   - 2–6:   "keep it going" framing
- *   - 7+:    streak-at-risk framing (loss aversion now load-bearing)
- *   - 30+:   streak-at-risk + humor so long-streak users don't feel guilted
+ * The daily reminder carries NO streak or loss-aversion framing. Fluenci does
+ * not track streaks, and "you're about to lose something" is precisely the
+ * mechanic that decision is meant to avoid. The reminder's only personal hook
+ * is the learner's Ideal L2 Self — a reason to practice, never a penalty for
+ * not having.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -85,7 +85,7 @@ export function useNotifications() {
     permissionStatus,
     permissionGranted: permissionStatus === 'granted',
     requestPermissionsExplicit,
-    scheduleStreakSaveReminder,
+    scheduleDailyPracticeReminder,
   };
 }
 
@@ -95,11 +95,18 @@ export function useNotifications() {
  * Stable notification identifiers.
  *
  * These exist because scheduling used to end with
- * `cancelAllScheduledNotificationsAsync()` — fine while the daily streak
- * reminder was the only scheduled notification, but it silently destroys any
- * other one. Naming each notification lets a scheduler replace only its own.
+ * `cancelAllScheduledNotificationsAsync()` — fine while the daily reminder was
+ * the only scheduled notification, but it silently destroys any other one.
+ * Naming each notification lets a scheduler replace only its own.
  */
-export const NOTIFICATION_ID_STREAK_SAVE = 'streak-save-reminder';
+export const NOTIFICATION_ID_DAILY_PRACTICE = 'daily-practice-reminder';
+
+/**
+ * The id this reminder shipped under while streaks existed. Installs upgrading
+ * across that change still have one scheduled under the old name, and it can
+ * only be cancelled by its original id — so keep cancelling it.
+ */
+const LEGACY_ID_STREAK_SAVE = 'streak-save-reminder';
 export function lessonExpiryNotificationId(lessonId: string): string {
   return `lesson-expiry:${lessonId}`;
 }
@@ -131,8 +138,7 @@ async function cancelById(identifier: string): Promise<void> {
   }
 }
 
-interface ScheduleStreakSaveReminderParams {
-  streak: number;
+interface ScheduleDailyPracticeReminderParams {
   xpEarnedToday: number;
   /** Local hour (0-23). Clamped to [18, 22] — evening-only, before quiet hours. */
   preferredHour?: number;
@@ -155,80 +161,35 @@ function idealSelfFragment(idealL2Self: string, maxLen = 60): string {
   return `${cut.slice(0, lastSpace > 20 ? lastSpace : maxLen).trimEnd()}…`;
 }
 
-function streakSaveContent(
-  streak: number,
+function dailyPracticeContent(
   idealL2Self?: string | null,
 ): { title: string; body: string } {
   const hasVision = typeof idealL2Self === 'string' && idealL2Self.trim().length > 0;
-  const visionBody = hasVision
-    ? `The you who will ${idealSelfFragment(idealL2Self as string)} — don't lose today.`
-    : null;
 
-  // Research-backed milestones (research.md §12): 30 days = meaningful
-  // milestone, 66 days = habit is automatic (Lally et al.), 100 days = rare
-  // territory. Celebrate these, then fall through to normal streak copy.
-  if (streak === 100) {
+  if (hasVision) {
     return {
-      title: '100 days 🎉 You are officially that person',
-      body: hasVision
-        ? `Still on track to ${idealSelfFragment(idealL2Self as string)}. Keep going.`
-        : "100 straight days. That's who you are now.",
-    };
-  }
-  if (streak === 66) {
-    return {
-      title: '66 days — your habit is automatic',
-      body: hasVision
-        ? `Every day of the last 66 got you closer to ${idealSelfFragment(idealL2Self as string)}.`
-        : "Science says habits lock in around day 66. You're locked in.",
-    };
-  }
-  if (streak === 30) {
-    return {
-      title: '30-day streak 🔥 Major milestone',
-      body: hasVision
-        ? `One month closer to ${idealSelfFragment(idealL2Self as string)}.`
-        : 'You just crossed the hardest threshold. Keep the streak.',
-    };
-  }
-
-  if (streak >= 30) {
-    return {
-      title: `Your ${streak}-day streak is on the line 🔥`,
-      body: visionBody ?? "Lumi's watching. Two minutes saves it.",
-    };
-  }
-  if (streak >= 7) {
-    return {
-      title: `Your ${streak}-day streak is on the line 🔥`,
-      body: visionBody ?? 'Two minutes saves it. Tap to practice.',
-    };
-  }
-  if (streak >= 2) {
-    return {
-      title: `Day ${streak} — keep it going 🔥`,
-      body: visionBody ?? 'A quick lesson locks in your streak.',
+      title: "Time for today's practice",
+      body: `A few minutes toward being the you who will ${idealSelfFragment(idealL2Self as string)}.`,
     };
   }
   return {
     title: "Time for today's practice",
-    body: visionBody ?? '5 minutes keeps the habit going.',
+    body: '5 minutes is enough to keep moving.',
   };
 }
 
 /**
- * Schedule a DAILY reminder tuned to the learner's streak bucket. Idempotent:
- * cancels all prior scheduled notifications first. Silent no-op when:
+ * Schedule the DAILY practice reminder. Idempotent: replaces only its own
+ * notification. Silent no-op when:
  *   - Platform is web
  *   - Permission not granted
  *   - User already earned XP today (no reason to nag)
  */
-export async function scheduleStreakSaveReminder({
-  streak,
+export async function scheduleDailyPracticeReminder({
   xpEarnedToday,
   preferredHour = 21,
   idealL2Self,
-}: ScheduleStreakSaveReminderParams): Promise<void> {
+}: ScheduleDailyPracticeReminderParams): Promise<void> {
   if (Platform.OS === 'web') return;
 
   const { status } = await Notifications.getPermissionsAsync();
@@ -237,15 +198,17 @@ export async function scheduleStreakSaveReminder({
   await cancelLegacyScheduledOnce();
   // Replace only THIS reminder. A blanket cancel here would wipe pending
   // lesson-expiry warnings every time the home screen re-scheduled.
-  await cancelById(NOTIFICATION_ID_STREAK_SAVE);
+  await cancelById(NOTIFICATION_ID_DAILY_PRACTICE);
+  // Retire the streak-era reminder still scheduled on upgrading installs.
+  await cancelById(LEGACY_ID_STREAK_SAVE);
 
   if (xpEarnedToday > 0) return;
 
   const hour = Math.max(18, Math.min(preferredHour, 22));
-  const { title, body } = streakSaveContent(streak, idealL2Self);
+  const { title, body } = dailyPracticeContent(idealL2Self);
 
   await Notifications.scheduleNotificationAsync({
-    identifier: NOTIFICATION_ID_STREAK_SAVE,
+    identifier: NOTIFICATION_ID_DAILY_PRACTICE,
     content: {
       title,
       body,

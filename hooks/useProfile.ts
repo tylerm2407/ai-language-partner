@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { useAppStore } from '../stores/useAppStore';
-import { upsertProfile, incrementXpIdempotent, updateStreak } from '../lib/supabase-queries';
+import { upsertProfile, incrementXpIdempotent } from '../lib/supabase-queries';
 import { enqueue, isNetworkError, makeXpKey } from '../lib/offline-queue';
 import type { UserProfile } from '../types';
 
@@ -12,7 +12,7 @@ let timezoneSyncedForUser: string | null = null;
 /**
  * One-shot sync of user_profiles.timezone to the device timezone.
  *
- * The server derives "today" for streaks / daily challenges / quotas from
+ * The server derives "today" for daily challenges / quotas from
  * this column (public.fluenci_user_today, migration 044), and the client
  * keys daily_stats / daily_challenges by the device-local date
  * (lib/dates.ts localToday) — so the profile column must track where the
@@ -57,13 +57,29 @@ export function useProfile() {
     return updated;
   }, [user, setProfile]);
 
-  const earnXp = useCallback(async (xp: number) => {
+  /**
+   * Award XP.
+   *
+   * `idempotencyKey` is what decides how often this award can ever be paid.
+   * Pass a deterministic one (see `lessonXpKey`) when the award belongs to a
+   * specific thing that must pay at most once; omit it for a genuinely
+   * one-off award, which then gets a random key and is protected only against
+   * a lost-response retry of that same call.
+   */
+  const earnXp = useCallback(async (xp: number, idempotencyKey?: string) => {
     if (!user || !profile) return;
-    // Idempotent award: the key is generated per call, so a replay of this
-    // exact award (offline queue, lost-response retry) can never double-award.
-    const key = makeXpKey('earn');
+    const key = idempotencyKey ?? makeXpKey('earn');
     try {
-      await incrementXpIdempotent(xp, key);
+      const serverTotal = await incrementXpIdempotent(xp, key);
+      // Prefer the server's total over adding locally. When this key has
+      // already been paid — a replayed lesson — the server grants nothing and
+      // returns the unchanged total, and adding `xp` here anyway would show
+      // XP the learner does not have until the next cold load contradicts it.
+      setProfile({
+        ...profile,
+        totalXp: serverTotal ?? profile.totalXp + xp,
+      });
+      return;
     } catch (err) {
       if (!isNetworkError(err)) throw err;
       // Network blip: queue the award for replay on reconnect (same key)
@@ -74,14 +90,5 @@ export function useProfile() {
     setProfile({ ...profile, totalXp: profile.totalXp + xp });
   }, [user, profile, setProfile]);
 
-  /** Server-derived streak refresh (max +1/day, based on daily_stats activity). */
-  const refreshStreak = useCallback(async () => {
-    if (!user || !profile) return;
-    const result = await updateStreak();
-    if (result) {
-      setProfile({ ...profile, streak: result.streak, longestStreak: result.longestStreak });
-    }
-  }, [user, profile, setProfile]);
-
-  return { profile, loading, updateProfile, earnXp, refreshStreak };
+  return { profile, loading, updateProfile, earnXp };
 }

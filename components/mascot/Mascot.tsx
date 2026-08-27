@@ -226,7 +226,7 @@ export function Mascot({
 
 /** Convenience helper: pick a mascot state from a common lesson outcome. */
 export function mascotForOutcome(
-  outcome: 'correct' | 'wrong' | 'complete' | 'streakLost',
+  outcome: 'correct' | 'wrong' | 'complete',
 ): MascotState {
   switch (outcome) {
     case 'correct':
@@ -235,8 +235,6 @@ export function mascotForOutcome(
       return 'thinking';
     case 'complete':
       return 'cheering';
-    case 'streakLost':
-      return 'sad';
     default:
       return 'idle';
   }

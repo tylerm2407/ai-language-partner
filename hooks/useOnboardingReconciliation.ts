@@ -103,7 +103,7 @@ export function useOnboardingReconciliation() {
         await updateOnboardingChecklist(userId, next);
       } catch (err) {
         // Restore only the checklist field, onto the LATEST profile — writing
-        // back the whole snapshot would undo unrelated XP or streak updates
+        // back the whole snapshot would undo unrelated XP updates
         // that landed while this was in flight.
         const latest = useAppStore.getState().profile;
         if (latest) {

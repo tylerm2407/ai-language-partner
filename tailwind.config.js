@@ -43,7 +43,7 @@ module.exports = {
           DEFAULT: "#FBBF24",
           bg: "#26210F",
         },
-        streak: "#FBBF24",
+        flame: "#FBBF24",
         surface: {
           DEFAULT: "#151921",
           alt: "#1C212B",

@@ -14,7 +14,7 @@
  *
  * Only server-owned *content* reads belong here (courses, units, lessons,
  * exercises, review queue, progress tiles). Never cache gamification values
- * (hearts / XP / streak) — those are server-truth and owned elsewhere.
+ * (hearts / XP) — those are server-truth and owned elsewhere.
  *
  * Entries expire after READ_CACHE_TTL_MS (hard expiry — expired entries are
  * treated as absent and removed). Bump READ_CACHE_SCHEMA_VERSION whenever

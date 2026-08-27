@@ -192,7 +192,7 @@ export default function SettingsScreen() {
           accessibilityRole="switch"
           accessibilityState={{ checked: adultMode }}
           accessibilityLabel="Adult mode"
-          accessibilityHint="Turns off hearts, streaks, leagues and XP celebration"
+          accessibilityHint="Turns off hearts, leagues and XP celebration"
         >
           <Ionicons
             name={adultMode ? 'checkmark-circle' : 'ellipse-outline'}
@@ -204,7 +204,7 @@ export default function SettingsScreen() {
               Turn off game mechanics
             </Text>
             <Text className="text-sm text-text-secondary mt-0.5">
-              No hearts, no streaks, no leagues, no XP. Progress is shown as your CEFR level.
+              No hearts, no leagues, no XP. Progress is shown as your CEFR level.
               Nothing is lost — your history is kept if you switch back.
             </Text>
           </View>
@@ -334,7 +334,7 @@ export default function SettingsScreen() {
                     onPress: () => {
                       Alert.alert(
                         'Are you absolutely sure?',
-                        'All your progress, streaks, and subscription will be lost forever.',
+                        'All your progress and subscription will be lost forever.',
                         [
                           { text: 'Cancel', style: 'cancel' },
                           {

@@ -75,7 +75,7 @@ export const CAPACITY: Record<Exclude<PlanId, 'starter'>, { fill: number; label:
  * strings are wrong. Keep them in the same commit.
  */
 export const STEP_ADDS: Record<Exclude<PlanId, 'starter'>, string> = {
-  basic: '25 messages · 10 min voice · 3 grades a day · streak shield',
+  basic: '25 messages · 10 min voice · 3 grades a day',
   premium: 'Adds 25 messages, 10 more voice minutes, offline mode',
   vip: 'Adds 25 messages, 10 more voice minutes, audiobook narration',
 };

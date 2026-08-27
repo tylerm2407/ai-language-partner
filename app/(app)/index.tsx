@@ -16,12 +16,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { GradientBackground } from '../../components/ui/GradientBackground';
 import { useAdultMode } from '../../hooks/useAdultMode';
 import { useLevel } from '../../hooks/useLevel';
-import { useStreakProtection } from '../../hooks/useStreakProtection';
 import { useDailyNews } from '../../hooks/useDailyNews';
-import { useNotifications, scheduleStreakSaveReminder } from '../../hooks/useNotifications';
+import { useNotifications, scheduleDailyPracticeReminder } from '../../hooks/useNotifications';
 import { useOnboardingChecklist } from '../../hooks/useOnboardingChecklist';
 import { useReviewCountSync } from '../../hooks/useReviewCountSync';
-import { StreakRepairModal } from '../../components/gamification/StreakRepairModal';
 import { PrePermissionSheet } from '../../components/gamification/PrePermissionSheet';
 import { OnboardingChecklistFab } from '../../components/onboarding/OnboardingChecklistFab';
 import { DateLabel } from '../../components/magazine/DateLabel';
@@ -46,13 +44,12 @@ export default function HomeScreen() {
   // state that other screens change behind Home's back.
   useReviewCountSync();
   // Keep user_profiles.timezone tracking the device — the server derives
-  // streak/challenge/quota days from it (migration 044). One-shot per session.
+  // challenge/quota days from it (migration 044). One-shot per session.
   useTimezoneSync();
   const [weeklyStats, setWeeklyStats] = useState<DailyStats[]>([]);
   const [weeklyStatsError, setWeeklyStatsError] = useState<ErrorCopy | null>(null);
-  const { showStreak, showDailyChallenges } = useAdultMode();
+  const { showDailyChallenges } = useAdultMode();
   useLevel(); // level-up detection mirrors xpLevel/leagueTier into the store
-  const { showRepairModal, brokenStreak, freezesAvailable, repairWithFreeze, dismissRepair } = useStreakProtection();
   const { loadStudentSchoolData } = useSchoolStore();
   const schoolEnabled = SCHOOL_ENABLED;
   const newsTier = levelToNewsTier(profile?.level ?? 'intermediate');
@@ -112,11 +109,8 @@ export default function HomeScreen() {
     let status: string | null = null;
     try {
       status = await requestPermissionsExplicit();
-      // The streak-save reminder is the guilt notification adult mode exists to
-      // remove, so it is not scheduled while the mode is on.
-      if (status === 'granted' && profile && showStreak) {
-        await scheduleStreakSaveReminder({
-          streak: profile.streak ?? 0,
+      if (status === 'granted' && profile) {
+        await scheduleDailyPracticeReminder({
           xpEarnedToday: dailyStats?.xpEarned ?? 0,
           preferredHour: 21,
           idealL2Self: profile.idealL2Self ?? null,
@@ -184,7 +178,7 @@ export default function HomeScreen() {
                 chrome on purpose: a permanent mascot in the header is the
                 Duolingo silhouette regardless of what the character looks like.
                 The dragon now appears only at moments — celebration, level-up,
-                streak-at-risk, empty states — where it lands as an event. */}
+                empty states — where it lands as an event. */}
             <View style={styles.headerRow}>
               <View style={styles.headerText}>
                 <DateLabel />
@@ -316,16 +310,6 @@ export default function HomeScreen() {
             )}
           </SafeAreaView>
         </ScrollView>
-
-        {/* Streak Repair Modal — the streak still runs server-side in adult
-            mode, but never interrupts the learner to mourn a broken one. */}
-        <StreakRepairModal
-          visible={showStreak && showRepairModal}
-          brokenStreak={brokenStreak}
-          freezesAvailable={freezesAvailable}
-          onRepair={repairWithFreeze}
-          onDismiss={dismissRepair}
-        />
 
         {/* Pre-permission sheet — shown once, post-first-lesson, before the
             iOS system notification prompt. Lifts opt-in ~2-3× vs cold-firing. */}

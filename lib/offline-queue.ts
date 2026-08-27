@@ -114,6 +114,32 @@ export function makeXpKey(context: string): string {
 }
 
 /**
+ * Idempotency key for the XP a lesson pays out — deterministic, so a lesson
+ * pays at most once per learner no matter how many times it is completed.
+ *
+ * Replaying a finished lesson is a supported affordance (a completed row's
+ * accessibility hint literally offers "Opens this lesson again for practice"),
+ * and while this key was `makeXpKey('earn')` every replay minted a fresh
+ * random key, so `client_events`' `(user_id, event_key)` primary key de-duped
+ * nothing and the full XP was granted again on every pass. Because
+ * `increment_xp_idempotent` derives `xp_level` and `league_tier` in the same
+ * statement, that made the league standings mintable too.
+ *
+ * Same fix, and the same reasoning, as `ONBOARDING_COMPLETE_XP_KEY` — a stable
+ * key makes the server the guard rather than any client-side flag.
+ *
+ * Practice replays still run, still score, and still record an attempt; they
+ * just do not pay twice. Bump the `v1` only to deliberately re-grant every
+ * lesson's XP to everyone.
+ *
+ * Length: migration 046 rejects keys outside 8..128 chars. `xp:lesson:v1:` is
+ * 13, plus a 36-char uuid — comfortably inside.
+ */
+export function lessonXpKey(lessonId: string): string {
+  return `xp:lesson:v1:${lessonId}`.slice(0, 128);
+}
+
+/**
  * Heuristic: is this a network-ish failure (worth queueing for replay)?
  *
  * Matches fetch TypeErrors ('Network request failed' on RN, 'Failed to

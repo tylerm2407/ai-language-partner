@@ -14,7 +14,7 @@
  * supabase/migrations/071_challenge_claim_server_owned.sql to match, and apply
  * it. This test fails loudly until you do.
  */
-import { pickDailyChallenges, getChallengeMultiplier } from './challenges';
+import { pickDailyChallenges } from './challenges';
 
 /**
  * The authority-carrying half of each pool entry, exactly as it appears in
@@ -122,27 +122,5 @@ describe('pickDailyChallenges', () => {
     for (const [, v] of allTemplates()) {
       expect(v.target).toBeGreaterThan(0);
     }
-  });
-});
-
-describe('getChallengeMultiplier', () => {
-  // Must match the CASE in claim_daily_challenge_bonus().
-  it.each([
-    [0, 1],
-    [2, 1],
-    [3, 1.5],
-    [6, 1.5],
-    [7, 2],
-    [30, 2],
-  ])('streak %i → %fx', (streak, expected) => {
-    expect(getChallengeMultiplier(streak)).toBe(expected);
-  });
-
-  it('caps the bonus at 100 XP, matching the server', () => {
-    // The SQL is LEAST(round(50 * multiplier), 200). The 200 is a ceiling the
-    // 2.0x tier never reaches — the real maximum is 100. Worth pinning so
-    // nobody "fixes" the client to promise 200.
-    const maxBonus = Math.min(Math.round(50 * getChallengeMultiplier(999)), 200);
-    expect(maxBonus).toBe(100);
   });
 });

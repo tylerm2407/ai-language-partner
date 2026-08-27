@@ -9,7 +9,7 @@ import { useAppStore } from '../stores/useAppStore';
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 import { useSchoolStore } from '../stores/useSchoolStore';
 import { SCHOOL_ENABLED } from '../config/app';
-import { useNotifications, scheduleStreakSaveReminder } from '../hooks/useNotifications';
+import { useNotifications, scheduleDailyPracticeReminder } from '../hooks/useNotifications';
 import {
   configurePurchases,
   identifyPurchaser,
@@ -81,13 +81,12 @@ function RootLayout() {
   // PrePermissionSheet post-first-lesson.
   const { permissionGranted } = useNotifications();
 
-  // Re-arm the streak-save reminder whenever the inputs change
-  // (streak/xp/permission). Silent no-op if permission isn't granted yet
+  // Re-arm the daily practice reminder whenever the inputs change
+  // (xp/permission). Silent no-op if permission isn't granted yet
   // or if XP was already earned today.
   useEffect(() => {
     if (!profile || !permissionGranted) return;
-    scheduleStreakSaveReminder({
-      streak: profile.streak ?? 0,
+    scheduleDailyPracticeReminder({
       xpEarnedToday: dailyStats?.xpEarned ?? 0,
       preferredHour: 21,
       idealL2Self: profile.idealL2Self ?? null,
@@ -99,8 +98,7 @@ function RootLayout() {
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'background' && profile && permissionGranted) {
-        scheduleStreakSaveReminder({
-          streak: profile.streak ?? 0,
+        scheduleDailyPracticeReminder({
           xpEarnedToday: dailyStats?.xpEarned ?? 0,
           preferredHour: 21,
           idealL2Self: profile.idealL2Self ?? null,
