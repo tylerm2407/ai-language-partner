@@ -23,7 +23,6 @@ import { HANDSFREE_VAD } from '../lib/vad';
 import { HANDSFREE_DEFAULTS } from '../config/app';
 import {
   createHandsFreeSession,
-  drainCommits,
   elapsedMs,
   handsFreeReduce,
   prefetchWindow,
@@ -377,10 +376,25 @@ export function useHandsFreeSession(
 
   // ── Commit drain ───────────────────────────────────────────────────────
 
+  /** Re-entry guard: the effect re-runs as soon as the reducer clears. */
+  const drainingRef = useRef(false);
+
   useEffect(() => {
     if (state.outbox.length === 0) return;
-    const { state: drained, commits } = drainCommits(state);
-    void drained; // the reducer state is authoritative; we only need the list
+    if (drainingRef.current) return;
+    drainingRef.current = true;
+
+    const commits = [...state.outbox];
+    // Clear BEFORE writing, not after. The write path below has its own
+    // durability (it enqueues on network failure), so a commit does not need to
+    // stay in the outbox to survive — whereas leaving it there while the effect
+    // is keyed on the outbox is what caused every commit to be replayed on
+    // every subsequent answer.
+    dispatch({
+      type: 'COMMITS_DRAINED',
+      now: Date.now(),
+      commitIds: commits.map((c) => c.commitId),
+    });
 
     void (async () => {
       for (const commit of commits) {
@@ -434,10 +448,15 @@ export function useHandsFreeSession(
           await enqueue(user.id, { type: 'review-log', payload: logPayload });
         }
       }
-    })().catch((err) => console.warn('[handsfree] commit drain failed:', err));
-    // Draining is keyed on the outbox contents only.
+    })()
+      .catch((err) => console.warn('[handsfree] commit drain failed:', err))
+      .finally(() => {
+        drainingRef.current = false;
+      });
+    // Keyed on the LENGTH, not the array: the reducer clears the outbox, so
+    // keying on identity would re-enter immediately on the resulting state.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.outbox]);
+  }, [state.outbox.length]);
 
   // ── Lifecycle ──────────────────────────────────────────────────────────
 

@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Sentry from '@sentry/react-native';
 import {
   OFFLINE_QUEUE_MAX_ATTEMPTS,
+  OFFLINE_QUEUE_MAX_NON_NETWORK_ATTEMPTS,
   OFFLINE_QUEUE_MAX_ITEMS,
   OFFLINE_QUEUE_SCHEMA_VERSION,
   OFFLINE_QUEUE_TTL_MS,
@@ -265,20 +266,46 @@ describe('single-flight', () => {
 });
 
 describe('failure handling', () => {
-  it('a failing item stops the flush, increments attempts, and preserves the xp key', async () => {
+  it('skips a failing item rather than blocking what is behind it', async () => {
+    // The flush used to STOP on the first failure. Because completions are
+    // queued on 4xx as well as network errors, one permanently-invalid row at
+    // the head froze every later XP award and review write — and `attempts`
+    // increments once per flush TRIGGER, so clearing it took ten
+    // mount/reconnect cycles, i.e. days.
     mockIncrementXp.mockRejectedValue(networkError());
     await enqueue(USER, xpInput('xp:lesson-9:zzzz9999'));
     await enqueue(USER, completionInput());
 
     await flush(USER);
 
-    // Second item never attempted; first item's attempts persisted.
-    expect(mockUpsertCompletion).not.toHaveBeenCalled();
+    // The item behind the failure still ran.
+    expect(mockUpsertCompletion).toHaveBeenCalledTimes(1);
+
+    // The failure is retained for a later trigger, with its key intact so the
+    // retry cannot double-award.
     const items = await storedItems();
-    expect(items).toHaveLength(2);
+    expect(items).toHaveLength(1);
     expect(items[0].attempts).toBe(1);
-    expect(items[0].key).toBe('xp:lesson-9:zzzz9999'); // retries reuse the same key
-    expect(items[1].attempts).toBe(0);
+    expect(items[0].key).toBe('xp:lesson-9:zzzz9999');
+  });
+
+  it('dead-letters a non-network failure after two attempts, not ten', async () => {
+    // A 4xx does not fix itself. Retrying it to the network budget only delays
+    // the point at which the queue behind it drains.
+    mockIncrementXp.mockRejectedValue(new Error('invalid XP amount (1-500)'));
+    await enqueue(USER, xpInput());
+
+    await flush(USER);
+    expect(await storedItems()).toHaveLength(1);
+
+    await flush(USER);
+
+    expect(mockIncrementXp).toHaveBeenCalledTimes(OFFLINE_QUEUE_MAX_NON_NETWORK_ATTEMPTS);
+    expect(Sentry.captureMessage).toHaveBeenCalledWith(
+      expect.stringContaining('dead-letter'),
+      'error',
+    );
+    expect(await AsyncStorage.getItem(KEY)).toBeNull();
   });
 
   it('dead-letters an item after OFFLINE_QUEUE_MAX_ATTEMPTS failures and continues', async () => {

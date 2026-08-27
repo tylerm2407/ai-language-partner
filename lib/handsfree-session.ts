@@ -177,6 +177,16 @@ export type HandsFreeEvent =
   | { type: 'PAUSE'; now: number; reason: PauseReason }
   | { type: 'RESUME'; now: number }
   | { type: 'TICK'; now: number }
+  /**
+   * The host has taken ownership of these pending commits and is writing them.
+   *
+   * Without this the outbox only ever grew: nothing cleared it, so the effect
+   * keyed on it replayed every commit made so far. A 30-card session issued
+   * 1+2+...+30 = 465 upserts instead of 30, and in a tunnel the duplicates
+   * filled the 200-item offline queue and evicted genuinely distinct earlier
+   * items oldest-first — real data loss, reported only as a breadcrumb.
+   */
+  | { type: 'COMMITS_DRAINED'; now: number; commitIds: string[] }
   | { type: 'QUEUE_APPENDED'; now: number; items: HandsFreeQueueItem[] }
   | { type: 'END'; now: number; reason: EndReason }
   | { type: 'STEP_FAILED'; now: number; stage: 'tts' | 'stt' | 'grade'; recoverable: boolean };
@@ -345,6 +355,18 @@ export function handsFreeReduce(
   state: HandsFreeSessionState,
   event: HandsFreeEvent,
 ): HandsFreeSessionState {
+  // Clearing the outbox is bookkeeping, not a session transition, so it is
+  // handled ABOVE the ended-guard: the last drain of a session happens after
+  // END and would otherwise never clear.
+  //
+  // Filtered by id rather than emptied wholesale, so a commit that arrived
+  // while the async writer was running is not silently dropped.
+  if (event.type === 'COMMITS_DRAINED') {
+    const taken = new Set(event.commitIds);
+    const remaining = state.outbox.filter((c) => !taken.has(c.commitId));
+    return remaining.length === state.outbox.length ? state : { ...state, outbox: remaining };
+  }
+
   // A finished session is inert. Late audio callbacks arrive routinely.
   if (state.phase === 'ended') return state;
 

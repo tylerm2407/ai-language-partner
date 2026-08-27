@@ -18,11 +18,20 @@
  *                         so a lost-response retry can never double-award.
  *
  * flush() replays sequentially in FIFO order: success removes the item; a
- * failure increments `attempts` and stops the flush (retried on the next
- * trigger — reconnect / foreground / mount, see hooks/useOfflineQueueFlush.ts);
- * an item that has failed OFFLINE_QUEUE_MAX_ATTEMPTS times is dead-lettered
- * (dropped + Sentry captureMessage). Items older than 7 days are dropped on
- * load; the queue is capped at 200 items (oldest dropped, logged).
+ * failure increments `attempts` and SKIPS that item for the rest of the run,
+ * continuing with what is behind it. It used to stop the whole flush on the
+ * first failure, so one unreplayable row held every later XP award and review
+ * write hostage — and because `attempts` increments once per flush TRIGGER
+ * rather than per item, clearing a poisoned head took ten mount/reconnect
+ * cycles, i.e. days. Completions queue on 4xx as well as network errors
+ * (useLessonProgressStore), so a permanently-invalid row at the head is not
+ * hypothetical.
+ *
+ * A network-shaped failure gets OFFLINE_QUEUE_MAX_ATTEMPTS; anything else gets
+ * OFFLINE_QUEUE_MAX_NON_NETWORK_ATTEMPTS, because a 4xx will not fix itself.
+ * Exhausting either dead-letters the item (dropped + Sentry captureMessage).
+ * Items older than 7 days are dropped on load; the queue is capped at 200
+ * items (oldest dropped, logged).
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Sentry from '@sentry/react-native';
@@ -39,6 +48,14 @@ export const OFFLINE_QUEUE_SCHEMA_VERSION = 1;
 export const OFFLINE_QUEUE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 export const OFFLINE_QUEUE_MAX_ITEMS = 200;
 export const OFFLINE_QUEUE_MAX_ATTEMPTS = 10;
+
+/**
+ * Attempts allowed for an item whose failure is NOT network-shaped.
+ *
+ * A 4xx does not fix itself, and retrying it ten times only delays the point at
+ * which the queue behind it drains. Two is enough to rule out a fluke.
+ */
+export const OFFLINE_QUEUE_MAX_NON_NETWORK_ATTEMPTS = 2;
 
 export type ReviewUpsertPayload = Omit<ReviewItem, 'id'> & { id?: string };
 
@@ -378,8 +395,8 @@ const flushInFlight = new Set<string>();
 
 /**
  * Replay the queue sequentially in FIFO order. Never throws for per-item
- * failures: a failing item stops the flush (retried on the next trigger)
- * and is dead-lettered after OFFLINE_QUEUE_MAX_ATTEMPTS failures.
+ * failures: a failing item is skipped for the rest of this run and retried on
+ * the next trigger, and is dead-lettered once it exhausts its attempt budget.
  *
  * Returns the number of items completed (executed or staleness-skipped) so
  * callers can invalidate stale cached reads only when server state changed.
@@ -388,19 +405,33 @@ export async function flush(userId: string): Promise<number> {
   if (!userId || flushInFlight.has(userId)) return 0;
   flushInFlight.add(userId);
   let processed = 0;
+  /**
+   * Items that failed during THIS run.
+   *
+   * Skipping rather than stopping is what keeps one unreplayable row from
+   * blocking everything behind it. Deliberately an in-run set rather than a
+   * persisted per-item cooldown: a cooldown needs a new field on the stored
+   * envelope, and bumping OFFLINE_QUEUE_SCHEMA_VERSION discards every queued
+   * item — which is the data loss this is trying to prevent. A genuine offline
+   * period simply fails every item once and stops.
+   */
+  const failedThisRun = new Set<string>();
   try {
     // Reload the head each iteration so items enqueued mid-flush are seen
     // and every removal is a fresh read-modify-write under the lock.
     for (;;) {
       const items = await withQueueLock(userId, () => loadQueue(userId));
-      const item = items[0];
+      const item = items.find((it) => !failedThisRun.has(it.id));
       if (!item) return processed;
 
       try {
         await executeItem(userId, item);
       } catch (err) {
         const attempts = item.attempts + 1;
-        if (attempts >= OFFLINE_QUEUE_MAX_ATTEMPTS) {
+        const limit = isNetworkError(err)
+          ? OFFLINE_QUEUE_MAX_ATTEMPTS
+          : OFFLINE_QUEUE_MAX_NON_NETWORK_ATTEMPTS;
+        if (attempts >= limit) {
           console.error(
             `[offline-queue] dead-letter: dropping ${item.type} ${item.id} after ${attempts} attempts:`,
             err,
@@ -415,7 +446,8 @@ export async function flush(userId: string): Promise<number> {
         await mutateQueue(userId, (current) =>
           current.map((it) => (it.id === item.id ? { ...it, attempts } : it)),
         );
-        return processed; // stop the flush; retry on the next trigger
+        failedThisRun.add(item.id);
+        continue; // skip it and keep draining what is behind it
       }
 
       // Success or staleness skip — either way the item is done.

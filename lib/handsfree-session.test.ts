@@ -188,6 +188,42 @@ describe('scoring', () => {
     const second = drainCommits(first.state);
     expect(second.commits).toHaveLength(0);
   });
+
+  it('COMMITS_DRAINED clears only the commits it names', () => {
+    // The host clears BEFORE writing, so a commit that lands while the async
+    // writer is running must survive the clear.
+    let s = toListening(start(3));
+    s = apply(s, [answer(T0 + 1000, { commitId: 'c1' }), { type: 'STEP_DONE', now: T0 + 1500 }]);
+    const inFlight = ['c1'];
+    expect(s.outbox).toHaveLength(1);
+
+    // A second answer lands while the writer for the first is still running.
+    s = toListening(s, T0 + 1500);
+    s = handsFreeReduce(s, answer(T0 + 2000, { commitId: 'c2' }));
+    expect(s.outbox).toHaveLength(2);
+
+    s = handsFreeReduce(s, { type: 'COMMITS_DRAINED', now: T0 + 2500, commitIds: inFlight });
+    expect(s.outbox).toHaveLength(1);
+    expect(s.outbox[0].commitId).toBe('c2');
+  });
+
+  it('COMMITS_DRAINED still clears after the session has ended', () => {
+    // THE regression this guards: the outbox was never cleared at all, so the
+    // effect keyed on it replayed every commit so far — 465 writes across a
+    // 30-card session instead of 30. The final drain happens after END, so
+    // this event has to be handled above the ended-guard.
+    let s = toListening(start(2));
+    s = handsFreeReduce(s, answer(T0 + 1000));
+    const ids = s.outbox.map((c) => c.commitId);
+    expect(ids.length).toBeGreaterThan(0);
+
+    s = handsFreeReduce(s, { type: 'END', now: T0 + 5000, reason: 'user_ended' });
+    expect(s.phase).toBe('ended');
+    expect(s.outbox).toHaveLength(ids.length);
+
+    s = handsFreeReduce(s, { type: 'COMMITS_DRAINED', now: T0 + 6000, commitIds: ids });
+    expect(s.outbox).toHaveLength(0);
+  });
 });
 
 describe('retries never corrupt the schedule', () => {
