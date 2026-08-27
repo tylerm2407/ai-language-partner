@@ -235,6 +235,37 @@ export async function fetchLessons(unitId: string): Promise<Lesson[]> {
   return (data ?? []).map((row) => mapLesson(row, []));
 }
 
+/**
+ * Lessons for many units in ONE query, grouped by unit id.
+ *
+ * The Learn tab used to `Promise.all` a `fetchLessons` per unit — eight
+ * round trips for an eight-unit course, on the tab a learner opens most. The
+ * batched shape already existed for the progress tiles
+ * (`fetchUnitProgressTiles`); it just was not used here.
+ *
+ * Returns a Map so callers keep O(1) lookup, and every requested unit gets an
+ * entry — an absent unit is an empty array, not a missing key.
+ */
+export async function fetchLessonsForUnits(unitIds: string[]): Promise<Map<string, Lesson[]>> {
+  const grouped = new Map<string, Lesson[]>();
+  for (const id of unitIds) grouped.set(id, []);
+  if (unitIds.length === 0) return grouped;
+
+  const { data, error } = await supabase
+    .from('lessons')
+    .select('*')
+    .in('unit_id', unitIds)
+    .order('order_index', { ascending: true });
+
+  if (error) throw error;
+
+  for (const row of data ?? []) {
+    const unitId = (row as Record<string, unknown>).unit_id as string;
+    grouped.get(unitId)?.push(mapLesson(row, []));
+  }
+  return grouped;
+}
+
 export async function fetchLessonWithExercises(lessonId: string): Promise<Lesson | null> {
   const { data: lessonData, error: lessonError } = await supabase
     .from('lessons')
@@ -2081,7 +2112,15 @@ export async function fetchInProgressBooks(
 ): Promise<{ book: ReadingBook; progress: UserBookProgress }[]> {
   const { data, error } = await supabase
     .from('user_book_progress')
-    .select('*, reading_books!inner(*)')
+    // Columns named explicitly, exactly as fetchBooksByLanguageAndLevel does.
+    // `reading_books!inner(*)` pulled `content` too — averaging 235 kB per book
+    // and peaking at 3.5 MB — so opening the reading tab downloaded roughly
+    // 2.3 MB of JSON-escaped book text, and up to ~35 MB, to render a cover, a
+    // title and a progress bar. `mapReadingBook` already defaults `content` to
+    // '', so no caller changes.
+    .select(
+      '*, reading_books!inner(id, title, author, description, language, cefr_level, word_count, image_url, tags, source, source_id, chapter_breaks, is_published, created_at)',
+    )
     .eq('user_id', userId)
     .gt('percent_complete', 0)
     .is('completed_at', null)
@@ -2630,15 +2669,28 @@ export async function saveChatMessage(
 /** Load chat messages for a session. Legacy string corrections and new
  *  JSON-stringified CorrectionDetail objects are both handled — the client's
  *  normalizeCorrection() is called at the render layer. */
+/** Most recent messages kept for a conversation. See loadChatMessages. */
+export const CHAT_HISTORY_LIMIT = 100;
+
 export async function loadChatMessages(sessionId: string): Promise<ConversationMessage[]> {
+  // Bounded, and newest-first so the limit takes the RECENT end of the
+  // conversation rather than the oldest hundred.
+  //
+  // `getOrCreateChatSession` reuses the newest session per (user, scenario,
+  // language) forever, so a single scenario accumulates without limit — this
+  // was the one live user-growable read in the file with no `.limit()`, which
+  // CLAUDE.md requires. The model context is already capped at 24 messages;
+  // only the fetch and the render were unbounded.
   const { data, error } = await supabase
     .from('chat_messages')
     .select('*')
     .eq('session_id', sessionId)
-    .order('created_at', { ascending: true });
+    .order('created_at', { ascending: false })
+    .limit(CHAT_HISTORY_LIMIT);
 
   if (error) throw error;
-  return (data ?? []).map((row: Record<string, unknown>) => ({
+  // Restore chronological order for rendering.
+  return (data ?? []).reverse().map((row: Record<string, unknown>) => ({
     id: row.id as string,
     role: row.role as 'user' | 'assistant' | 'system',
     content: row.content as string,

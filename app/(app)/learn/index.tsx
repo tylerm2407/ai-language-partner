@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback } from 'react';
 import {
   fetchCourses,
   fetchUnits,
-  fetchLessons,
+  fetchLessonsForUnits,
   fetchReadingPassagesByCourse,
   fetchWritingPromptsByCourse,
   fetchBooksByLanguageAndLevel,
@@ -93,11 +93,12 @@ export default function LearnScreen() {
     setUnitsError(null);
     try {
       const courseUnits = await fetchUnits(courseId);
-      const lessonResults = await Promise.all(
-        courseUnits.map((unit) =>
-          fetchLessons(unit.id).then((ls) => ({ unit, lessons: ls }))
-        )
-      );
+      // One query for every unit's lessons, not one per unit.
+      const byUnit = await fetchLessonsForUnits(courseUnits.map((u) => u.id));
+      const lessonResults = courseUnits.map((unit) => ({
+        unit,
+        lessons: byUnit.get(unit.id) ?? [],
+      }));
       setUnits((prev) => ({ ...prev, [courseId]: lessonResults }));
     } catch (err) {
       // An empty lesson path and an outage look identical to a learner, so

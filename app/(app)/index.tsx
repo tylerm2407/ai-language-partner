@@ -39,7 +39,7 @@ import type { DailyStats } from '../../types';
 export default function HomeScreen() {
   const { user } = useAuth();
   const router = useRouter();
-  const { profile, dailyStats, reviewCount, loadUserData } = useAppStore();
+  const { profile, dailyStats, reviewCount } = useAppStore();
   // Same reason as the learn page: the "N cards due" quick action is store
   // state that other screens change behind Home's back.
   useReviewCountSync();
@@ -156,7 +156,13 @@ export default function HomeScreen() {
 
   useEffect(() => {
     if (user?.id) {
-      loadUserData(user.id);
+      // `loadUserData` is deliberately NOT called here. The root layout loads
+      // it and gates rendering on `dataLoaded`, so by the time Home mounts it
+      // has already run — calling it again doubled the cold-start payload
+      // (12-14 queries where 6-7 suffice) and fired a second whole-store
+      // `set()`. On a slow link the duplicate could also land after a user
+      // action and silently revert it. The "Continue learning" tiles stay
+      // fresh through the focus effect above.
       loadWeeklyStats(user.id);
       // School data is supplementary on this screen — a failure must not take
       // the home tab down, but the store now throws so it has to be caught.
@@ -166,7 +172,7 @@ export default function HomeScreen() {
         );
       }
     }
-  }, [user?.id, loadUserData, loadWeeklyStats, loadStudentSchoolData, schoolEnabled]);
+  }, [user?.id, loadWeeklyStats, loadStudentSchoolData, schoolEnabled]);
 
   return (
     <GradientBackground>
