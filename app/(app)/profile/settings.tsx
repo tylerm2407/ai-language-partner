@@ -12,6 +12,7 @@ import { SUPPORTED_LANGUAGES, DAILY_GOALS } from '../../../config/app';
 import { supabase } from '../../../lib/supabase';
 import { getTargetLanguage } from '../../../lib/language';
 import { getReduceMotion, setReduceMotion } from '../../../lib/motion-preference';
+import { getHapticsEnabled, setHapticsEnabled, haptic } from '../../../lib/haptics';
 import { revokeAllAiConsent } from '../../../lib/ai-consent';
 import type { LanguageCode, ProficiencyLevel } from '../../../types';
 
@@ -43,6 +44,19 @@ export default function SettingsScreen() {
   // *because* something on screen is bothering them right now; making them find
   // "Save Changes" first would be the wrong response to that.
   const [reduceMotion, setReduceMotionState] = useState(getReduceMotion);
+
+  // Device-local for the same reasons as reduce motion, and a separate switch
+  // from it on purpose: someone who turns motion off to stop the screen moving
+  // has said nothing about whether they want the phone to buzz.
+  const [hapticsOn, setHapticsOnState] = useState(getHapticsEnabled);
+  const toggleHaptics = () => {
+    const next = !hapticsOn;
+    setHapticsOnState(next);
+    setHapticsEnabled(next).catch(() => {});
+    // Turning them on demonstrates what was just enabled. Turning them off
+    // cannot answer back, which is the correct silence.
+    if (next) haptic('confirm');
+  };
   const toggleReduceMotion = () => {
     const next = !reduceMotion;
     setReduceMotionState(next);
@@ -217,7 +231,7 @@ export default function SettingsScreen() {
           Motion
         </Text>
         <Pressable
-          className={`p-4 rounded-2xl mb-8 flex-row items-center ${
+          className={`p-4 rounded-2xl mb-6 flex-row items-center ${
             reduceMotion ? 'bg-primary-tint border-2 border-primary' : 'bg-dark-card border-2 border-transparent'
           }`}
           onPress={toggleReduceMotion}
@@ -238,6 +252,41 @@ export default function SettingsScreen() {
             <Text className="text-sm text-text-secondary mt-0.5">
               Stops looping and celebratory animation. Applies straight away, and
               follows your device&apos;s Reduce Motion setting as well.
+            </Text>
+          </View>
+        </Pressable>
+
+        {/* Haptics — deliberately its own control rather than something folded
+            into Reduce motion. Vibration is a distinct sense with distinct
+            reasons to want it off: tactile sensitivity, a quiet lecture hall, a
+            phone resting on a hard desk. There is no OS-wide switch we can
+            read for it the way `useMotion` reads Reduce Motion, so this is the
+            only mechanism the learner has. */}
+        <Text className="text-sm font-semibold text-text-secondary mb-2 uppercase tracking-wide">
+          Haptics
+        </Text>
+        <Pressable
+          className={`p-4 rounded-2xl mb-8 flex-row items-center ${
+            hapticsOn ? 'bg-primary-tint border-2 border-primary' : 'bg-dark-card border-2 border-transparent'
+          }`}
+          onPress={toggleHaptics}
+          accessibilityRole="switch"
+          accessibilityState={{ checked: hapticsOn }}
+          accessibilityLabel="Vibration"
+          accessibilityHint="Turns off every vibration the app produces"
+        >
+          <Ionicons
+            name={hapticsOn ? 'checkmark-circle' : 'ellipse-outline'}
+            size={24}
+            color={hapticsOn ? colors.action.accent : colors.text.tertiary}
+          />
+          <View className="ml-3 flex-1">
+            <Text className="text-base font-semibold text-text-primary">
+              Vibration
+            </Text>
+            <Text className="text-sm text-text-secondary mt-0.5">
+              Buzzes on answers, button presses and when you finish something.
+              Turning this off silences all of them. Applies straight away.
             </Text>
           </View>
         </Pressable>

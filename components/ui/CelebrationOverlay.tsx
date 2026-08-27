@@ -21,7 +21,7 @@ import {
   type ViewStyle,
   Pressable,
 } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import { haptic, type HapticIntent } from '../../lib/haptics';
 import { colors, motion, spacing } from '../../config/theme';
 import { useMotion } from '../../hooks/useMotion';
 import { Mascot, type MascotState } from '../mascot/Mascot';
@@ -40,13 +40,22 @@ interface CelebrationOverlayProps {
   onDismiss?: () => void;
 }
 
+/**
+ * `hapticIntent` rather than `haptic` because the imported function is called
+ * `haptic` — a field of the same name reads as a call at every use site.
+ *
+ * The `levelUp` row is currently unreachable: this overlay has one caller
+ * (LessonRunner), which only ever passes 'lessonComplete' or 'correct', and a
+ * real level-up goes through LevelUpModal instead. Left in place rather than
+ * deleted so that the mood stays correct if anything ever does route here.
+ */
 const MOOD_CONFIG: Record<
   Mood,
-  { mascot: MascotState; particles: number; haptic: Haptics.NotificationFeedbackType | null }
+  { mascot: MascotState; particles: number; hapticIntent: HapticIntent | null }
 > = {
-  correct: { mascot: 'happy', particles: 10, haptic: Haptics.NotificationFeedbackType.Success },
-  lessonComplete: { mascot: 'cheering', particles: 25, haptic: Haptics.NotificationFeedbackType.Success },
-  levelUp: { mascot: 'cheering', particles: 40, haptic: Haptics.NotificationFeedbackType.Success },
+  correct: { mascot: 'happy', particles: 10, hapticIntent: 'correct' },
+  lessonComplete: { mascot: 'cheering', particles: 25, hapticIntent: 'complete' },
+  levelUp: { mascot: 'cheering', particles: 40, hapticIntent: 'levelUp' },
 };
 
 const PARTICLE_COLORS = [
@@ -142,8 +151,8 @@ export function CelebrationOverlay({
       return;
     }
 
-    if (config.haptic) {
-      Haptics.notificationAsync(config.haptic).catch(() => {});
+    if (config.hapticIntent) {
+      haptic(config.hapticIntent);
     }
 
     if (shouldReduce) {
@@ -170,7 +179,7 @@ export function CelebrationOverlay({
       const t = setTimeout(onDismiss, 1200);
       return () => clearTimeout(t);
     }
-  }, [visible, shouldReduce, duration, config.haptic, ctaLabel, onDismiss, scale, overlayOpacity]);
+  }, [visible, shouldReduce, duration, config.hapticIntent, ctaLabel, onDismiss, scale, overlayOpacity]);
 
   return (
     <Modal

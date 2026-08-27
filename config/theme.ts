@@ -324,15 +324,19 @@ export const elevation = {
   },
 } as const;
 
-// ─── Haptics map ──────────────────────────────────────────────────────────
-/** Named intents → expo-haptics calls (resolved at call sites). */
-export const haptics = {
-  tap: 'selection', // Haptics.selectionAsync()
-  correct: 'success', // Haptics.notificationAsync(Success)
-  incorrect: 'error', // Haptics.notificationAsync(Error)
-  buttonPress: 'light', // Haptics.impactAsync(Light)
-  milestone: 'heavy', // Haptics.impactAsync(Heavy)
-} as const;
+// ─── Haptics ──────────────────────────────────────────────────────────────
+// Haptics live in lib/haptics.ts, not here.
+//
+// This file used to carry a `haptics` map of intent names to strings like
+// 'selection' and 'heavy', described as "resolved at call sites". Nothing ever
+// read it — every call site imported expo-haptics and picked its own call — so
+// it documented an intention rather than a behaviour, and drifted from what the
+// app actually did. The real table is EFFECTS in lib/haptics.ts, where naming
+// an intent also produces it.
+//
+// It is deliberately not part of `theme`: a theme is what the interface looks
+// like, and a vibration is not something a caller composes into a style. It
+// also carries a user preference, which the design tokens do not.
 
-export const theme = { colors, spacing, radii, typography, motion, elevation, haptics };
+export const theme = { colors, spacing, radii, typography, motion, elevation };
 export type Theme = typeof theme;

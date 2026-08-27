@@ -68,15 +68,21 @@ export function DailyChallenges({ dailyStats }: DailyChallengesProps) {
                   marginRight: 10,
                 }}
               >
-                {isComplete ? (
-                  <ChallengeCompletePop trigger={true} />
-                ) : (
+                {!isComplete && (
                   <Ionicons
                     name={challenge.icon as any}
                     size={14}
                     color={challenge.color}
                   />
                 )}
+                {/* Rendered unconditionally, and passed the real flag rather
+                    than a hardcoded `true`, so it stays mounted across the
+                    moment the challenge is finished. Swapping it in only once
+                    complete meant it could never see the transition — every
+                    appearance looked identical to it, whether the learner had
+                    just earned it or opened the screen on yesterday's. It
+                    renders nothing while `trigger` is false. */}
+                <ChallengeCompletePop trigger={isComplete} />
               </View>
               <Text
                 className={`flex-1 text-sm ${

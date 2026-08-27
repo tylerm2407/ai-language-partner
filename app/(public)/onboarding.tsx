@@ -32,6 +32,7 @@ import {
 import { GradientBackground } from '../../components/ui/GradientBackground';
 import { Avatar } from '../../components/avatar/Avatar';
 import { presetUrlFromId, type AvatarPreset } from '../../lib/avatar-presets';
+import { haptic } from '../../lib/haptics';
 import { AvatarPresetPicker } from '../../components/avatar/AvatarPresetPicker';
 import { colors } from '../../config/theme';
 import { SUPPORTED_LANGUAGES, DAILY_GOALS } from '../../config/app';
@@ -377,6 +378,10 @@ export default function OnboardingScreen() {
       if (user) {
         // Already signed in (account existed but onboarding never completed).
         await writeProfile(user.id, draft);
+        // Fired on the successful write rather than on the tap. The Finish
+        // control is a <Button>, so the tap has already ticked; this is the
+        // setup being accepted, and it must not fire on the error path below.
+        haptic('complete');
         return;
       }
       // Pre-auth: park the answers and send them to sign-up. The root route
@@ -385,6 +390,7 @@ export default function OnboardingScreen() {
       const stamp = new Date().toISOString();
       setCompletedAt(stamp);
       await savePendingOnboarding({ ...draft, completedAt: stamp }, startedAt);
+      haptic('complete');
       router.replace('/(public)/auth');
     } catch (err: unknown) {
       console.error('handleFinish error:', err);
@@ -533,7 +539,10 @@ export default function OnboardingScreen() {
                     ? 'bg-primary-tint border-2 border-primary'
                     : 'bg-dark-card border-2 border-transparent'
                 }`}
-                onPress={() => setTargetLanguage(lang.code as LanguageCode)}
+                onPress={() => {
+                  haptic('select');
+                  setTargetLanguage(lang.code as LanguageCode);
+                }}
                 accessibilityRole="button"
                 accessibilityLabel={lang.name}
                 accessibilityState={{ selected: targetLanguage === lang.code }}
@@ -608,7 +617,10 @@ export default function OnboardingScreen() {
                     ? 'bg-primary-tint border-2 border-primary'
                     : 'bg-dark-card border-2 border-transparent'
                 }`}
-                onPress={() => setLevel(l.value)}
+                onPress={() => {
+                  haptic('select');
+                  setLevel(l.value);
+                }}
                 accessibilityRole="button"
                 accessibilityLabel={`${l.label}: ${l.description}`}
                 accessibilityState={{ selected: level === l.value }}
@@ -650,7 +662,10 @@ export default function OnboardingScreen() {
                 displayName={displayName}
               />
               <Pressable
-                onPress={() => setCustomizerOpen(true)}
+                onPress={() => {
+                  haptic('select');
+                  setCustomizerOpen(true);
+                }}
                 className="mt-4 px-5 py-3 rounded-[14px] bg-dark-card-alt"
                 accessibilityRole="button"
                 accessibilityLabel="Choose your avatar"
@@ -722,7 +737,10 @@ export default function OnboardingScreen() {
                     ? 'bg-primary-tint border-2 border-primary'
                     : 'bg-dark-card border-2 border-transparent'
                 }`}
-                onPress={() => setAdultMode(m.value)}
+                onPress={() => {
+                  haptic('select');
+                  setAdultMode(m.value);
+                }}
                 accessibilityRole="button"
                 accessibilityLabel={`${m.label}: ${m.description}`}
                 accessibilityState={{ selected: adultMode === m.value }}
@@ -765,7 +783,10 @@ export default function OnboardingScreen() {
                     ? 'bg-primary-tint border-2 border-primary'
                     : 'bg-dark-card border-2 border-transparent'
                 }`}
-                onPress={() => setDailyGoal(goal)}
+                onPress={() => {
+                  haptic('select');
+                  setDailyGoal(goal);
+                }}
                 accessibilityRole="button"
                 accessibilityLabel={`${goal} minutes per day`}
                 accessibilityState={{ selected: dailyGoal === goal }}
@@ -850,7 +871,10 @@ export default function OnboardingScreen() {
               disabled={saving}
             />
             <Pressable
-              onPress={() => setStep('goal')}
+              onPress={() => {
+                haptic('buttonPress');
+                setStep('goal');
+              }}
               className="py-3 items-center mt-1"
               style={{ minHeight: 44, justifyContent: 'center' }}
               accessibilityRole="button"
