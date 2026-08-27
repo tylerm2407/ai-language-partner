@@ -25,6 +25,15 @@
  * have they durably retained? Durable retention is SM-2 graduation, which by
  * definition means the item survived spaced recall over weeks.
  *
+ * That question is asked only of material old enough to answer it. Retention is
+ * measured over MATURE items — see `isMature` — never over everything seen, and
+ * a band needs a minimum number of them before it is judged at all. Two rules
+ * follow, and both are load-bearing: meeting new material cannot move the
+ * reported level, and a level is never published off a handful of cards. A
+ * number that FALLS when the learner studies is worse than one that is merely
+ * inflated; it tells them the work made them worse, which is both untrue and
+ * the exact opposite of what this report is for.
+ *
  * This module is pure: no React, no network, no Date.now(). `now` is injected
  * so every branch is deterministically testable.
  */
@@ -85,6 +94,22 @@ export type Confidence = 'none' | 'low' | 'medium' | 'high';
 
 /** Minimum CEFR-tagged items seen in a band before we will judge that band. */
 export const MIN_ITEMS_PER_BAND = 20;
+
+/**
+ * Minimum *mature* items in a band before we will judge that band.
+ *
+ * `MIN_ITEMS_PER_BAND` counts exposure; this counts settled evidence. They are
+ * different questions and a band needs to clear both. Forty A2 cards started
+ * last week is ample exposure and says nothing yet about retention, because
+ * none of them have been asked for again after a real gap — see `isMature`.
+ *
+ * Ten, because at `MASTERY_RATE` one item is then worth at most ten percentage
+ * points of the rate. Below that a band's verdict swings on a single card:
+ * with three mature items one lapse takes the learner from 100% to 67%, and a
+ * level that flickers on one card is not a level. Ten is also half the exposure
+ * floor, so the two thresholds stay in a readable relationship if either moves.
+ */
+export const MIN_MATURE_ITEMS_PER_BAND = 10;
 
 /** Retention rate at which a band counts as mastered. */
 export const MASTERY_RATE = 0.8;
@@ -152,9 +177,16 @@ export interface ProficiencyEvidence {
 
 export interface BandBreakdown {
   band: CefrBand;
+  /** Every CEFR-tagged item in this band the learner has encountered. */
   seen: number;
+  /**
+   * Of those, the ones settled enough to be evidence either way — the
+   * denominator of `retentionRate`. Always `<= seen`, and always `>= retained`.
+   * See `isMature`.
+   */
+  mature: number;
   retained: number;
-  /** 0–1. Zero when nothing seen. */
+  /** 0–1, over `mature` and NOT over `seen`. Zero when nothing is mature yet. */
   retentionRate: number;
   status: BandStatus;
 }
@@ -206,6 +238,48 @@ export function isRetained(item: VocabEvidenceItem): boolean {
   return item.repetitions >= 3 && item.interval >= 21;
 }
 
+/**
+ * An item is *mature* once it has produced evidence either way — once the
+ * learner has been asked for it again after a real gap and we know something
+ * about whether it stuck.
+ *
+ * This is the denominator of every retention rate in the report, and getting it
+ * wrong in the obvious way (denominator = everything seen) is what made the
+ * reported level FALL when the learner studied. Starting five new A2 cards adds
+ * five to `seen` and nothing to `retained` for the ~three weeks SM-2 takes to
+ * graduate them, so the rate dropped the moment the learner met new material
+ * and recovered only slowly. A learner who did exactly what the app asked was
+ * told they had got worse — worse than an inflated number, because it punishes
+ * the behaviour the whole product is trying to produce.
+ *
+ * `interval < 21 && repetitions < 3` is `isRetained`'s graduation fallback,
+ * negated: an item is immature only while it is short of BOTH. Either alone is
+ * enough to count it. Three survived recalls is real evidence even if the
+ * interval is still short (a low-ease card can sit at repetitions 6, interval
+ * 17 for a long time), and a 21-day interval is real evidence however reached.
+ *
+ * Two statuses are decided by status rather than by those numbers:
+ *
+ *  - `graduated` is mature by definition, and `isRetained` already trusts the
+ *    status over the interval/repetition fields for rows written before those
+ *    were maintained. If the two disagreed here, a retained item could fall out
+ *    of its own denominator and the rate could exceed 1.
+ *  - `leech` is mature AND not retained, which is the entire point of the
+ *    clause. SM-2 resets a failed card to `repetitions: 0, interval: 1`, so a
+ *    card the learner has forgotten eight times is numerically identical to one
+ *    they met yesterday. Without this, chronic failure would quietly leave the
+ *    denominator and push the rate UP — inflation, which is the failure this
+ *    module exists to avoid.
+ *
+ * A single lapse does still drop an item out of the denominator until it climbs
+ * back. That is deliberate: one bad evening is not evidence of the learner's
+ * level, and a card that keeps lapsing arrives here as a leech.
+ */
+export function isMature(item: VocabEvidenceItem): boolean {
+  if (item.status === 'graduated' || item.status === 'leech') return true;
+  return !(item.interval < 21 && item.repetitions < 3);
+}
+
 function bandIndex(band: CefrBand): number {
   return CEFR_LADDER.indexOf(band);
 }
@@ -221,10 +295,15 @@ function nextBand(band: CefrBand): CefrBand | null {
  * Retention per CEFR band across everything the learner has been exposed to.
  * Items with no usable CEFR tag are skipped rather than bucketed into a
  * default band — guessing here would silently corrupt the whole report.
+ *
+ * Exposure and retention are counted separately and never mixed: `seen` is
+ * everything met, `mature` is the subset that has had time to prove itself, and
+ * the rate is measured strictly over `mature`. That separation is what makes
+ * the reported level immune to new material (see `isMature`).
  */
 export function analyzeBands(items: VocabEvidenceItem[]): BandBreakdown[] {
-  const counts = new Map<CefrBand, { seen: number; retained: number }>();
-  CEFR_LADDER.forEach((band) => counts.set(band, { seen: 0, retained: 0 }));
+  const counts = new Map<CefrBand, { seen: number; mature: number; retained: number }>();
+  CEFR_LADDER.forEach((band) => counts.set(band, { seen: 0, mature: 0, retained: 0 }));
 
   for (const item of items) {
     const band = normalizeBand(item.cefrLevel);
@@ -232,15 +311,24 @@ export function analyzeBands(items: VocabEvidenceItem[]): BandBreakdown[] {
     const bucket = counts.get(band);
     if (!bucket) continue;
     bucket.seen += 1;
+    // An immature item is exposure and nothing else: absent from BOTH sides of
+    // the ratio, so meeting new material moves the rate by exactly zero rather
+    // than dragging it down for three weeks. Every retained item is mature by
+    // construction, so `retained <= mature` holds and the rate cannot exceed 1.
+    if (!isMature(item)) continue;
+    bucket.mature += 1;
     if (isRetained(item)) bucket.retained += 1;
   }
 
   return CEFR_LADDER.map((band) => {
-    const { seen, retained } = counts.get(band) ?? { seen: 0, retained: 0 };
-    const retentionRate = seen > 0 ? retained / seen : 0;
+    const { seen, mature, retained } = counts.get(band) ?? { seen: 0, mature: 0, retained: 0 };
+    const retentionRate = mature > 0 ? retained / mature : 0;
 
     let status: BandStatus;
-    if (seen < MIN_ITEMS_PER_BAND) {
+    // Two independent ways to have too little to say: not enough of the band
+    // met at all, or not enough of what was met has settled. A rate computed
+    // over three mature cards is arithmetic, not an assessment.
+    if (seen < MIN_ITEMS_PER_BAND || mature < MIN_MATURE_ITEMS_PER_BAND) {
       status = 'insufficient';
     } else if (retentionRate >= MASTERY_RATE) {
       status = 'mastered';
@@ -250,8 +338,39 @@ export function analyzeBands(items: VocabEvidenceItem[]): BandBreakdown[] {
       status = 'weak';
     }
 
-    return { band, seen, retained, retentionRate, status };
+    return { band, seen, mature, retained, retentionRate, status };
   });
+}
+
+/**
+ * The highest band reached without skipping one: walk up from the bottom of the
+ * ladder and stop at the first band that does not qualify.
+ *
+ * Every skill shares this, deliberately. Contiguity is a claim about what a
+ * level *means* — that a level you cannot demonstrate at the rungs beneath it
+ * is not a level you hold — and that claim does not vary by skill. It used to
+ * live only inside `vocabularyLevel`, so three C1 texts printed "Reading: C1"
+ * on the profile screen (and, being the only assessed skill, made the whole
+ * report C1) while three C1 decks correctly printed nothing. One policy, one
+ * implementation, or the two drift again.
+ *
+ * A band with no evidence at all does not qualify and therefore stops the walk.
+ * That is the same treatment `analyzeBands` already gives an empty vocabulary
+ * band — `insufficient`, which breaks the walk — and it is the conservative
+ * reading: we have not been shown the lower rung, so we do not grant the
+ * higher one.
+ *
+ * Callers pass the bands in ladder order, each already judged.
+ */
+function highestContiguousBand(
+  judged: { band: CefrBand; qualifies: boolean }[]
+): CefrBand | null {
+  let level: CefrBand | null = null;
+  for (const entry of judged) {
+    if (!entry.qualifies) break;
+    level = entry.band;
+  }
+  return level;
 }
 
 /**
@@ -263,15 +382,11 @@ export function analyzeBands(items: VocabEvidenceItem[]): BandBreakdown[] {
  * examiner would effectively do.
  */
 export function vocabularyLevel(bands: BandBreakdown[]): CefrBand | null {
-  let level: CefrBand | null = null;
-  for (const band of bands) {
-    if (band.status === 'mastered') {
-      level = band.band;
-    } else {
-      break;
-    }
-  }
-  return level;
+  // Walked in the caller's order rather than over CEFR_LADDER, so a caller that
+  // hands us a partial ladder still gets the old answer.
+  return highestContiguousBand(
+    bands.map((b) => ({ band: b.band, qualifies: b.status === 'mastered' }))
+  );
 }
 
 // ─── Per-skill assessment ───────────────────────────────────────
@@ -286,7 +401,10 @@ function assessVocabulary(bands: BandBreakdown[]): SkillAssessment {
       skill: 'vocabulary',
       level,
       status: 'assessed',
-      detail: `Retained ${at?.retained ?? 0} of ${at?.seen ?? 0} ${level} items in long-term review.`,
+      // Counted against mature items, not against everything seen, so the
+      // sentence matches the number that decided the level — and so it does not
+      // read worse the day after the learner starts a new deck.
+      detail: `Retained ${at?.retained ?? 0} of ${at?.mature ?? 0} ${level} items in long-term review.`,
       evidenceCount,
     };
   }
@@ -298,8 +416,28 @@ function assessVocabulary(bands: BandBreakdown[]): SkillAssessment {
       level: null,
       status: 'insufficient_data',
       detail:
-        `Working through ${inProgress.band}: ${inProgress.retained} of ${inProgress.seen} items retained. ` +
+        `Working through ${inProgress.band}: ${inProgress.retained} of ${inProgress.mature} items retained. ` +
         `${Math.round(MASTERY_RATE * 100)}% retention confirms the level.`,
+      evidenceCount,
+    };
+  }
+
+  // Plenty of words met, none of them old enough to count yet. Telling this
+  // learner to "review at least 20 words" would be both false and useless —
+  // they have done that; what they need is for time to pass on the ones they
+  // have. Saying so is the difference between a report that explains itself and
+  // one that looks broken.
+  const settling = bands.find(
+    (b) => b.seen >= MIN_ITEMS_PER_BAND && b.mature < MIN_MATURE_ITEMS_PER_BAND
+  );
+  if (settling) {
+    return {
+      skill: 'vocabulary',
+      level: null,
+      status: 'insufficient_data',
+      detail:
+        `${settling.seen} ${settling.band} words started, ${settling.mature} of them settled into long-term review. ` +
+        `${MIN_MATURE_ITEMS_PER_BAND} are needed before ${settling.band} can be judged — keep reviewing.`,
       evidenceCount,
     };
   }
@@ -314,10 +452,16 @@ function assessVocabulary(bands: BandBreakdown[]): SkillAssessment {
 }
 
 /**
- * Reading level = highest band with enough completed pieces understood at or
- * above the comprehension pass mark. Pieces without comprehension questions
- * count as completed but cannot demonstrate understanding, so they are
- * excluded from the pass tally.
+ * Reading level = highest band, *without skipping a band*, with enough
+ * completed pieces understood at or above the comprehension pass mark. Pieces
+ * without comprehension questions count as completed but cannot demonstrate
+ * understanding, so they are excluded from the pass tally.
+ *
+ * The contiguity requirement is `highestContiguousBand`, the same walk
+ * vocabulary uses. Before it was applied here, this loop assigned `level` on
+ * every qualifying band and never stopped, so the HIGHEST qualifying band won
+ * no matter what sat below it: three C1 articles, which the library will happily
+ * serve to a curious B1 learner, printed "Reading: C1" on the profile screen.
  */
 function assessReading(items: ReadingEvidenceItem[]): SkillAssessment {
   const completed = items.filter((i) => i.completed);
@@ -332,13 +476,12 @@ function assessReading(items: ReadingEvidenceItem[]): SkillAssessment {
     perBand.set(band, bucket);
   }
 
-  let level: CefrBand | null = null;
-  for (const band of CEFR_LADDER) {
-    const bucket = perBand.get(band);
-    if (bucket && bucket.passed >= MIN_READING_ITEMS) {
-      level = band;
-    }
-  }
+  const level = highestContiguousBand(
+    CEFR_LADDER.map((band) => ({
+      band,
+      qualifies: (perBand.get(band)?.passed ?? 0) >= MIN_READING_ITEMS,
+    }))
+  );
 
   if (level) {
     const bucket = perBand.get(level);
@@ -355,14 +498,22 @@ function assessReading(items: ReadingEvidenceItem[]): SkillAssessment {
     skill: 'reading',
     level: null,
     status: 'insufficient_data',
-    detail: `Finish ${MIN_READING_ITEMS} texts at one level with comprehension questions to be assessed.`,
+    detail: `Finish ${MIN_READING_ITEMS} texts with comprehension questions at each level from A1 up to be assessed.`,
     evidenceCount: completed.length,
   };
 }
 
 /**
- * Writing level = highest band with enough graded submissions averaging at or
- * above the pass score. Ungraded submissions are ignored entirely.
+ * Writing level = highest band, *without skipping a band*, with enough graded
+ * submissions averaging at or above the pass score. Ungraded submissions are
+ * ignored entirely.
+ *
+ * Same contiguity fix as reading, and the same reason: the old loop kept the
+ * highest qualifying band regardless of the ones below it, so three good B2
+ * pieces read "Writing: B2" with nothing at A1, A2 or B1 to support it.
+ * Production evidence is exactly where a skipped band is least defensible —
+ * writing three passable B2 paragraphs on a familiar topic is not the same
+ * claim as being able to write at B2.
  */
 function assessWriting(items: WritingEvidenceItem[]): SkillAssessment {
   const graded = items.filter((i) => i.overallScore !== null);
@@ -376,19 +527,22 @@ function assessWriting(items: WritingEvidenceItem[]): SkillAssessment {
     perBand.set(band, scores);
   }
 
-  let level: CefrBand | null = null;
-  let levelMean = 0;
-  for (const band of CEFR_LADDER) {
-    const scores = perBand.get(band);
-    if (!scores || scores.length < MIN_WRITING_ITEMS) continue;
-    const mean = scores.reduce((a, b) => a + b, 0) / scores.length;
-    if (mean >= WRITING_PASS_SCORE) {
-      level = band;
-      levelMean = mean;
-    }
+  // Mean per band first, so the walk below is a pure yes/no per rung.
+  const means = new Map<CefrBand, number>();
+  for (const [band, scores] of perBand) {
+    if (scores.length < MIN_WRITING_ITEMS) continue;
+    means.set(band, scores.reduce((a, b) => a + b, 0) / scores.length);
   }
 
+  const level = highestContiguousBand(
+    CEFR_LADDER.map((band) => {
+      const mean = means.get(band);
+      return { band, qualifies: mean !== undefined && mean >= WRITING_PASS_SCORE };
+    })
+  );
+
   if (level) {
+    const levelMean = means.get(level) ?? 0;
     return {
       skill: 'writing',
       level,
@@ -402,7 +556,7 @@ function assessWriting(items: WritingEvidenceItem[]): SkillAssessment {
     skill: 'writing',
     level: null,
     status: 'insufficient_data',
-    detail: `Submit ${MIN_WRITING_ITEMS} graded pieces at one level to be assessed.`,
+    detail: `Submit ${MIN_WRITING_ITEMS} graded pieces at each level from A1 up to be assessed.`,
     evidenceCount: graded.length,
   };
 }
@@ -520,11 +674,27 @@ export function nextLevelRequirement(
     };
   }
 
-  const needed = Math.ceil(targetBand.seen * MASTERY_RATE) - targetBand.retained;
+  // Enough of the band met, not enough of it settled. The fix for this state is
+  // time spent on cards the learner already has; starting more new ones does
+  // nothing for it, so the requirement must not imply otherwise.
+  if (targetBand.mature < MIN_MATURE_ITEMS_PER_BAND) {
+    const shortfall = MIN_MATURE_ITEMS_PER_BAND - targetBand.mature;
+    return {
+      nextLevel: target,
+      requirement: `Keep reviewing your ${target} words — ${shortfall} more must reach long-term intervals (${targetBand.mature}/${MIN_MATURE_ITEMS_PER_BAND} so far).`,
+    };
+  }
+
+  // Against mature, matching the rate that actually gates the band. This is a
+  // floor rather than an exact figure: an item the learner retains from here
+  // adds to both sides of the ratio, so the last few can take slightly more
+  // than the count suggests. Understating the work left would be the worse
+  // error, and the number moves with every review anyway.
+  const needed = Math.ceil(targetBand.mature * MASTERY_RATE) - targetBand.retained;
   if (needed > 0) {
     return {
       nextLevel: target,
-      requirement: `Retain ${needed} more ${target} item${needed === 1 ? '' : 's'} in long-term review (${targetBand.retained}/${targetBand.seen} so far).`,
+      requirement: `Retain ${needed} more ${target} item${needed === 1 ? '' : 's'} in long-term review (${targetBand.retained}/${targetBand.mature} so far).`,
     };
   }
 
