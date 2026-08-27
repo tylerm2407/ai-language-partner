@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useSafeBack } from '../../../hooks/useSafeBack';
 import { Ionicons } from '@expo/vector-icons';
 import { GradientBackground } from '../../../components/ui/GradientBackground';
 import { GlassSurface } from '../../../components/ui/GlassSurface';
@@ -122,6 +123,7 @@ const LEVELS: { value: ProficiencyLevel; label: string }[] = [
 
 export default function CreateAssignmentScreen() {
   const router = useRouter();
+  const goBack = useSafeBack('/(teacher)');
   const { classrooms } = useSchoolStore();
 
   // Form state
@@ -209,7 +211,7 @@ export default function CreateAssignmentScreen() {
     const assignment = await publish(values);
     if (assignment) {
       Alert.alert('Published', 'Assignment has been published.', [
-        { text: 'OK', onPress: () => router.back() },
+        { text: 'OK', onPress: () => goBack() },
       ]);
     }
     // On failure the hook sets `error`, rendered inline below with a retry.
@@ -225,7 +227,7 @@ export default function CreateAssignmentScreen() {
     const assignment = await saveDraft(values);
     if (assignment) {
       Alert.alert('Saved', 'Draft saved.', [
-        { text: 'OK', onPress: () => router.back() },
+        { text: 'OK', onPress: () => goBack() },
       ]);
     }
   };
@@ -245,7 +247,7 @@ export default function CreateAssignmentScreen() {
         >
           {/* Back + Header */}
           <Pressable
-            onPress={() => router.back()}
+            onPress={() => goBack()}
             accessibilityRole="button"
             accessibilityLabel="Go back"
             className="flex-row items-center mb-4"

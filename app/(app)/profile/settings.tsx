@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { View, Text, Pressable, ScrollView, TextInput, Alert, Linking, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useSafeBack } from '../../../hooks/useSafeBack';
 import { Ionicons } from '@expo/vector-icons';
 import { useProfile } from '../../../hooks/useProfile';
 import { useAuth } from '../../../hooks/useAuth';
@@ -26,6 +27,7 @@ const LEVELS: { value: ProficiencyLevel; label: string }[] = [
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const goBack = useSafeBack('/(app)');
   const { profile, updateProfile } = useProfile();
   const { signOut, user } = useAuth();
 
@@ -81,7 +83,7 @@ export default function SettingsScreen() {
         dailyGoalMinutes: dailyGoal,
         adultMode,
       });
-      router.back();
+      goBack();
     } catch {
       Alert.alert('Error', 'Failed to save settings. Please try again.');
     } finally {
@@ -94,7 +96,7 @@ export default function SettingsScreen() {
     <SafeAreaView className="flex-1">
       {/* Header */}
       <View className="flex-row items-center px-4 py-3 border-b border-dark-border">
-        <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Go back">
+        <Pressable onPress={() => goBack()} accessibilityRole="button" accessibilityLabel="Go back">
           <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
         </Pressable>
         <Text className="text-lg font-semibold text-text-primary ml-3">Settings</Text>

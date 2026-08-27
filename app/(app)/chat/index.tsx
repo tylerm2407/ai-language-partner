@@ -3,6 +3,7 @@ import { View, Text, Pressable, FlatList, KeyboardAvoidingView, Platform, Alert 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Audio } from 'expo-av';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useSafeBack } from '../../../hooks/useSafeBack';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAppStore, effectiveTier } from '../../../stores/useAppStore';
 import { useOnboardingChecklist } from '../../../hooks/useOnboardingChecklist';
@@ -99,6 +100,7 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
   const { markItem: markOnboardingItem } = useOnboardingChecklist();
   const { ensureConsent, consentSheet } = useAiConsent(user?.id);
   const router = useRouter();
+  const goBack = useSafeBack('/(app)');
   const params = useLocalSearchParams<{ assignmentId?: string; chatSessionId?: string }>();
   const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(null);
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
@@ -223,7 +225,7 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
             try {
               await submitAssignment(currentAssignment.id);
               Alert.alert('Submitted!', 'Your assignment has been submitted successfully.', [
-                { text: 'OK', onPress: () => router.back() },
+                { text: 'OK', onPress: () => goBack() },
               ]);
             } catch (err) {
               console.error('Failed to submit assignment:', err);
@@ -249,14 +251,14 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
             text: 'Leave',
             onPress: () => {
               assignmentTimer.pause();
-              router.back();
+              goBack();
             },
           },
         ]
       );
     } else {
       assignmentTimer.pause();
-      router.back();
+      goBack();
     }
   };
 

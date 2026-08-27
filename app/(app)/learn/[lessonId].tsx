@@ -19,6 +19,7 @@ import { AchievementModal } from '../../../components/gamification/AchievementMo
 import { checkAndAwardAchievements, type AchievementDefinition } from '../../../lib/achievements';
 import { lessonXpKey } from '../../../lib/offline-queue';
 import { getTargetLanguage } from '../../../lib/language';
+import { useSafeBack } from '../../../hooks/useSafeBack';
 import { Button } from '../../../components/ui/Button';
 import { Body } from '../../../components/ui/Text';
 import { GradientBackground } from '../../../components/ui/GradientBackground';
@@ -28,6 +29,7 @@ import type { Lesson } from '../../../types';
 export default function LessonScreen() {
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
   const router = useRouter();
+  const goBack = useSafeBack('/(app)');
   const { user } = useAuth();
   const { profile } = useAppStore();
   const { earnXp } = useProfile();
@@ -120,7 +122,7 @@ export default function LessonScreen() {
         </Body>
         <Button label="Try Again" variant="primary" onPress={loadLesson} />
         <View style={{ marginTop: 12 }}>
-          <Button label="Go Back" variant="secondary" onPress={() => router.back()} />
+          <Button label="Go Back" variant="secondary" onPress={goBack} />
         </View>
       </SafeAreaView>
       </GradientBackground>
@@ -132,7 +134,7 @@ export default function LessonScreen() {
       <GradientBackground variant="raised">
       <SafeAreaView className="flex-1 items-center justify-center px-8">
         <Body size="lg" tone="secondary" style={{ marginBottom: 16 }}>Lesson not found</Body>
-        <Button label="Go Back" variant="secondary" onPress={() => router.back()} />
+        <Button label="Go Back" variant="secondary" onPress={goBack} />
       </SafeAreaView>
       </GradientBackground>
     );

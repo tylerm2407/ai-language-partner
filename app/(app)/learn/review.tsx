@@ -1,6 +1,7 @@
 import { View, Text, Pressable, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useSafeBack } from '../../../hooks/useSafeBack';
 import { useEffect, useState, useRef } from 'react';
 import { haptic } from '../../../lib/haptics';
 import { useReviewQueue } from '../../../hooks/useReviewQueue';
@@ -15,6 +16,7 @@ import { colors } from '../../../config/theme';
 
 export default function ReviewScreen() {
   const router = useRouter();
+  const goBack = useSafeBack('/(app)');
   const { items, cards, loading, loadQueue, submitReview } = useReviewQueue();
   const { addStats } = useDailyStats();
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -79,7 +81,7 @@ export default function ReviewScreen() {
           title="All caught up!"
           description="No cards due for review. Keep learning to add more cards."
           actionLabel="Back to Learn"
-          onAction={() => router.back()}
+          onAction={() => goBack()}
         />
       </SafeAreaView>
     );
@@ -100,7 +102,7 @@ export default function ReviewScreen() {
         <Text className="text-base text-text-secondary mb-8">
           You reviewed {reviewed} cards.
         </Text>
-        <Button label="Done" onPress={() => router.back()} />
+        <Button label="Done" onPress={() => goBack()} />
       </SafeAreaView>
     );
   }
@@ -114,7 +116,7 @@ export default function ReviewScreen() {
       {/* Header */}
       <View className="px-4 pt-2 pb-4">
         <View className="flex-row items-center justify-between mb-3">
-          <Button label="Exit" variant="danger" onPress={() => router.back()} style={{ paddingHorizontal: 16, paddingVertical: 8 }} />
+          <Button label="Exit" variant="danger" onPress={() => goBack()} style={{ paddingHorizontal: 16, paddingVertical: 8 }} />
           <Text className="text-text-secondary text-sm">
             {currentIndex + 1} / {items.length}
           </Text>

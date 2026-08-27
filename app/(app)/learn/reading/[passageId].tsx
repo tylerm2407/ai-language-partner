@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { View, ActivityIndicator, Text, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useSafeBack } from '../../../../hooks/useSafeBack';
 import { useReadingPassage } from '../../../../hooks/useReadingPassage';
 import { ReadingPassageViewer } from '../../../../components/reading/ReadingPassageViewer';
 import { ComprehensionQuestions } from '../../../../components/reading/ComprehensionQuestions';
@@ -12,6 +13,7 @@ import { GlowLayer } from '../../../../components/ui/GlowBackground';
 export default function ReadingPassageScreen() {
   const { passageId } = useLocalSearchParams<{ passageId: string }>();
   const router = useRouter();
+  const goBack = useSafeBack('/(app)');
   const {
     passage,
     annotations,
@@ -43,7 +45,7 @@ export default function ReadingPassageScreen() {
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface.base, justifyContent: 'center', alignItems: 'center' }}>
         <GlowLayer drift={false} />
         <Text style={{ fontSize: 16, color: colors.text.quaternary }}>{error ?? 'Passage not found.'}</Text>
-        <Pressable onPress={() => router.back()} style={{ marginTop: 16 }} accessibilityRole="button">
+        <Pressable onPress={() => goBack()} style={{ marginTop: 16 }} accessibilityRole="button">
           <Text style={{ fontSize: 16, color: colors.action.accent }}>Go Back</Text>
         </Pressable>
       </SafeAreaView>
@@ -76,7 +78,7 @@ export default function ReadingPassageScreen() {
           <Pressable
             onPress={() => {
               haptic('buttonPress');
-              router.back();
+              goBack();
             }}
             style={{
               backgroundColor: colors.action.primaryFill, paddingHorizontal: 48, paddingVertical: 16, borderRadius: 14,
@@ -105,7 +107,7 @@ export default function ReadingPassageScreen() {
           haptic('complete');
           setPhase('complete');
         }}
-        onExit={() => router.back()}
+        onExit={() => goBack()}
       />
     );
   }
@@ -132,9 +134,9 @@ export default function ReadingPassageScreen() {
         // 'complete' screen — it just pops back. The learner still finished
         // something, and this is the only acknowledgement they get.
         haptic('complete');
-        router.back();
+        goBack();
       }}
-      onExit={() => router.back()}
+      onExit={() => goBack()}
     />
   );
 }

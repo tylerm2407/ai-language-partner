@@ -1,6 +1,7 @@
 import { View, Text, Pressable, ScrollView, Alert, ActivityIndicator, Linking, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useSafeBack } from '../../../hooks/useSafeBack';
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import type { PurchasesPackage } from 'react-native-purchases';
@@ -45,6 +46,7 @@ export default function SubscriptionScreen() {
   const { user } = useAuth();
   const { profile, subscription, entitledTier, refreshSubscription, setEntitledTier } = useAppStore();
   const router = useRouter();
+  const goBack = useSafeBack('/(app)');
 
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);
   const [loadingOfferings, setLoadingOfferings] = useState(true);
@@ -177,7 +179,7 @@ export default function SubscriptionScreen() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.surface.base }}>
       <GlowLayer />
       <View className="flex-row items-center px-4 py-3 border-b border-dark-border">
-        <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Go back">
+        <Pressable onPress={() => goBack()} accessibilityRole="button" accessibilityLabel="Go back">
           <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
         </Pressable>
         <Text className="text-lg font-semibold text-text-primary ml-3">Subscription</Text>

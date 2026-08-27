@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useSafeBack } from '../../../hooks/useSafeBack';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../hooks/useAuth';
 import { fetchStudentAssignments, startAssignment } from '../../../lib/supabase-queries';
@@ -53,6 +54,7 @@ function formatDate(dateStr: string | null): string {
 export default function AssignmentDetailScreen() {
   const { assignmentId } = useLocalSearchParams<{ assignmentId: string }>();
   const router = useRouter();
+  const goBack = useSafeBack('/(app)');
   const { user } = useAuth();
   const [assignment, setAssignment] = useState<(Assignment & { submission?: AssignmentSubmission }) | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -133,7 +135,7 @@ export default function AssignmentDetailScreen() {
         <SafeAreaView className="flex-1">
           <View className="flex-row items-center px-4 py-3">
             <Pressable
-              onPress={() => router.back()}
+              onPress={() => goBack()}
               hitSlop={8}
               className="w-10 h-10 items-center justify-center rounded-full bg-dark-card"
               accessibilityRole="button"
@@ -155,7 +157,7 @@ export default function AssignmentDetailScreen() {
         <SafeAreaView className="flex-1">
           <View className="flex-row items-center px-4 py-3">
             <Pressable
-              onPress={() => router.back()}
+              onPress={() => goBack()}
               hitSlop={8}
               className="w-10 h-10 items-center justify-center rounded-full bg-dark-card"
               accessibilityRole="button"
@@ -179,7 +181,7 @@ export default function AssignmentDetailScreen() {
         {/* Header */}
         <View className="flex-row items-center px-4 py-3">
           <Pressable
-            onPress={() => router.back()}
+            onPress={() => goBack()}
             hitSlop={8}
             className="w-10 h-10 items-center justify-center rounded-full bg-dark-card"
             accessibilityRole="button"

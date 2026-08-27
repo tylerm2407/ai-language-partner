@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { View, Text, TextInput, FlatList, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useSafeBack } from '../../../../hooks/useSafeBack';
 import { Ionicons } from '@expo/vector-icons';
 import { GradientBackground } from '../../../../components/ui/GradientBackground';
 import { GlassSurface } from '../../../../components/ui/GlassSurface';
@@ -18,6 +19,7 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function BulkEnrollScreen() {
   const router = useRouter();
+  const goBack = useSafeBack('/(teacher)');
   const { classId } = useLocalSearchParams<{ classId: string }>();
   const [emailText, setEmailText] = useState('');
   const [enrolling, setEnrolling] = useState(false);
@@ -84,7 +86,7 @@ export default function BulkEnrollScreen() {
         >
         <View className="flex-1 px-4 pt-2">
           <Pressable
-            onPress={() => router.back()}
+            onPress={() => goBack()}
             accessibilityRole="button"
             accessibilityLabel="Go back"
             className="flex-row items-center mb-4 min-h-11 -ml-1 pl-1"

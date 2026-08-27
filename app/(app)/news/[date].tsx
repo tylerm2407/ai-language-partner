@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useSafeBack } from '../../../hooks/useSafeBack';
 import { Ionicons } from '@expo/vector-icons';
 import { haptic } from '../../../lib/haptics';
 import { useAuth } from '../../../hooks/useAuth';
@@ -20,6 +21,7 @@ import { ArticleAudioPlayer } from '../../../components/news/ArticleAudioPlayer'
 export default function NewsReaderScreen() {
   const { date } = useLocalSearchParams<{ date: string }>();
   const router = useRouter();
+  const goBack = useSafeBack('/(app)');
   const { user } = useAuth();
   const { profile } = useAppStore();
   const [article, setArticle] = useState<DailyNewsArticle | null>(null);
@@ -79,7 +81,7 @@ export default function NewsReaderScreen() {
         {/* Header */}
         <View className="flex-row items-center px-4 py-3">
           <Pressable
-            onPress={() => router.back()}
+            onPress={() => goBack()}
             hitSlop={8}
             className="w-10 h-10 items-center justify-center rounded-full bg-dark-card"
             accessibilityRole="button"

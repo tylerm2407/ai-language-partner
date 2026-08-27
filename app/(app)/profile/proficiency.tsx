@@ -1,6 +1,7 @@
 import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useSafeBack } from '../../../hooks/useSafeBack';
 import { Ionicons } from '@expo/vector-icons';
 import { useProficiencyReport } from '../../../hooks/useProficiencyReport';
 import { ScreenHeader } from '../../../components/ui/ScreenHeader';
@@ -78,6 +79,7 @@ function bandStatusLabel(status: BandBreakdown['status']): string {
  */
 export default function ProficiencyScreen() {
   const router = useRouter();
+  const goBack = useSafeBack('/(app)');
   const { report, isLoading, error, refresh } = useProficiencyReport();
 
   return (
@@ -86,7 +88,7 @@ export default function ProficiencyScreen() {
         <ScreenHeader
           title="Proficiency Report"
           subtitle="Estimated from your practice history"
-          onBack={() => router.back()}
+          onBack={() => goBack()}
         />
 
         {isLoading && (

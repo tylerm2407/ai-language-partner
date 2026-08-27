@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useSafeBack } from '../../../hooks/useSafeBack';
 import { Ionicons } from '@expo/vector-icons';
 import { GradientBackground } from '../../../components/ui/GradientBackground';
 import { GlassSurface } from '../../../components/ui/GlassSurface';
@@ -32,6 +33,7 @@ const LEVELS: { value: ProficiencyLevel; label: string }[] = [
 
 export default function CreateClassScreen() {
   const router = useRouter();
+  const goBack = useSafeBack('/(teacher)');
   const { user } = useAuth();
   const { createClass, loading, error } = useClassManagement(user?.id);
   const [name, setName] = useState('');
@@ -73,7 +75,7 @@ export default function CreateClassScreen() {
         >
           {/* Back button + header */}
           <Pressable
-            onPress={() => router.back()}
+            onPress={() => goBack()}
             accessibilityRole="button"
             accessibilityLabel="Go back"
             className="flex-row items-center mb-4"
@@ -297,7 +299,7 @@ export default function CreateClassScreen() {
         animationType="fade"
         onRequestClose={() => {
           setInviteCode(null);
-          router.back();
+          goBack();
         }}
       >
         <View
@@ -345,7 +347,7 @@ export default function CreateClassScreen() {
               label="Done"
               onPress={() => {
                 setInviteCode(null);
-                router.back();
+                goBack();
               }}
               accessibilityHint="Close and go back to classes"
             />

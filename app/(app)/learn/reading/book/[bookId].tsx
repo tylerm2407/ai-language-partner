@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, Pressable, ActivityIndicator, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useSafeBack } from '../../../../../hooks/useSafeBack';
 import { Ionicons } from '@expo/vector-icons';
 import * as Sentry from '@sentry/react-native';
 import { useAuth } from '../../../../../hooks/useAuth';
@@ -24,6 +25,7 @@ import { colors } from '../../../../../config/theme';
 export default function BookDetailScreen() {
   const { bookId } = useLocalSearchParams<{ bookId: string }>();
   const router = useRouter();
+  const goBack = useSafeBack('/(app)');
   const { user } = useAuth();
   const [book, setBook] = useState<ReadingBook | null>(null);
   const [annotations, setAnnotations] = useState<BookAnnotation[]>([]);
@@ -211,7 +213,7 @@ export default function BookDetailScreen() {
             <Text style={{ fontSize: 16, fontWeight: '600', color: colors.action.accent }}>Try again</Text>
           </Pressable>
         )}
-        <Pressable onPress={() => router.back()} style={{ marginTop: 16, minHeight: 44, justifyContent: 'center' }} accessibilityRole="button">
+        <Pressable onPress={() => goBack()} style={{ marginTop: 16, minHeight: 44, justifyContent: 'center' }} accessibilityRole="button">
           <Text style={{ fontSize: 16, color: colors.action.accent }}>Go Back</Text>
         </Pressable>
       </View>
@@ -244,7 +246,7 @@ export default function BookDetailScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface.raised }} edges={['top']}>
       {/* Header */}
       <View style={{ paddingHorizontal: 16, paddingTop: 8, flexDirection: 'row', alignItems: 'center' }}>
-        <Pressable onPress={() => router.back()} hitSlop={8} style={{ padding: 8 }} accessibilityRole="button" accessibilityLabel="Go back">
+        <Pressable onPress={() => goBack()} hitSlop={8} style={{ padding: 8 }} accessibilityRole="button" accessibilityLabel="Go back">
           <Ionicons name="arrow-back" size={24} color="#666" />
         </Pressable>
       </View>

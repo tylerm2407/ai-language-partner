@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useSafeBack } from '../../../../hooks/useSafeBack';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../../hooks/useAuth';
 import { fetchAllUserWritingSubmissions } from '../../../../lib/supabase-queries';
@@ -13,6 +14,7 @@ import { loadErrorCopy, type ErrorCopy } from '../../../../lib/error-copy';
 
 export default function WritingHistoryScreen() {
   const router = useRouter();
+  const goBack = useSafeBack('/(app)');
   const { user } = useAuth();
   const [submissions, setSubmissions] = useState<WritingSubmissionWithPrompt[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -68,7 +70,7 @@ export default function WritingHistoryScreen() {
     <SafeAreaView style={{ flex: 1 }}>
       {/* Header */}
       <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12, flexDirection: 'row', alignItems: 'center' }}>
-        <Pressable onPress={() => router.back()} hitSlop={8} style={{ padding: 8 }} accessibilityRole="button" accessibilityLabel="Go back">
+        <Pressable onPress={() => goBack()} hitSlop={8} style={{ padding: 8 }} accessibilityRole="button" accessibilityLabel="Go back">
           <Ionicons name="arrow-back" size={24} color="#9CA3AF" />
         </Pressable>
         <Text style={{ fontSize: 24, fontWeight: '700', color: '#FFFFFF', marginLeft: 8 }} accessibilityRole="header">

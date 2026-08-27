@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { View, Text, FlatList, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useSafeBack } from '../../../hooks/useSafeBack';
 import { Ionicons } from '@expo/vector-icons';
 import { GradientBackground } from '../../../components/ui/GradientBackground';
 import { GlassSurface } from '../../../components/ui/GlassSurface';
@@ -39,6 +40,7 @@ const ACTION_COLORS: Record<string, string> = {
 
 export default function AuditLogScreen() {
   const router = useRouter();
+  const goBack = useSafeBack('/(teacher)');
   const { organization } = useSchoolStore();
   const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,7 +80,7 @@ export default function AuditLogScreen() {
       <SafeAreaView className="flex-1" edges={['top']}>
         <View className="flex-1 px-4 pt-2">
           <Pressable
-            onPress={() => router.back()}
+            onPress={() => goBack()}
             accessibilityRole="button"
             accessibilityLabel="Go back"
             className="flex-row items-center mb-4"

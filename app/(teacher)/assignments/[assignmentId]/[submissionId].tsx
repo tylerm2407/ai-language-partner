@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useSafeBack } from '../../../../hooks/useSafeBack';
 import { Ionicons } from '@expo/vector-icons';
 import { GradientBackground } from '../../../../components/ui/GradientBackground';
 import { GlassSurface } from '../../../../components/ui/GlassSurface';
@@ -59,6 +60,7 @@ function RubricRow({ label, score }: { label: string; score: number }) {
 
 export default function GradingScreen() {
   const router = useRouter();
+  const goBack = useSafeBack('/(teacher)');
   const { assignmentId, submissionId } = useLocalSearchParams<{
     assignmentId: string;
     submissionId: string;
@@ -115,7 +117,7 @@ export default function GradingScreen() {
       const score = scoreOverride ? parseInt(scoreOverride, 10) : (aiFeedback?.totalScore ?? 0);
       await gradeSubmission(submissionId!, score, comments);
       Alert.alert('Saved', 'Feedback submitted.', [
-        { text: 'OK', onPress: () => router.back() },
+        { text: 'OK', onPress: () => goBack() },
       ]);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to save';
@@ -160,7 +162,7 @@ export default function GradingScreen() {
         >
           {/* Back + Header */}
           <Pressable
-            onPress={() => router.back()}
+            onPress={() => goBack()}
             accessibilityRole="button"
             accessibilityLabel="Go back"
             className="flex-row items-center mb-4"

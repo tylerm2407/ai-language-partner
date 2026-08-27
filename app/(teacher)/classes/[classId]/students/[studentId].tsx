@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useSafeBack } from '../../../../../hooks/useSafeBack';
 import { Ionicons } from '@expo/vector-icons';
 import { GradientBackground } from '../../../../../components/ui/GradientBackground';
 import { GlassSurface } from '../../../../../components/ui/GlassSurface';
@@ -36,6 +37,7 @@ interface SubmissionRow {
 
 export default function StudentProgressScreen() {
   const router = useRouter();
+  const goBack = useSafeBack('/(teacher)');
   const { classId, studentId } = useLocalSearchParams<{
     classId: string;
     studentId: string;
@@ -119,7 +121,7 @@ export default function StudentProgressScreen() {
         >
           {/* Back button */}
           <Pressable
-            onPress={() => router.back()}
+            onPress={() => goBack()}
             accessibilityRole="button"
             accessibilityLabel="Go back"
             className="flex-row items-center mb-4"

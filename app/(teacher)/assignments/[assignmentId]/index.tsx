@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useSafeBack } from '../../../../hooks/useSafeBack';
 import { Ionicons } from '@expo/vector-icons';
 import { GradientBackground } from '../../../../components/ui/GradientBackground';
 import { GlassSurface } from '../../../../components/ui/GlassSurface';
@@ -35,6 +36,7 @@ function formatDate(dateStr: string | null): string {
 
 export default function SubmissionsListScreen() {
   const router = useRouter();
+  const goBack = useSafeBack('/(teacher)');
   const { assignmentId } = useLocalSearchParams<{ assignmentId: string }>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ErrorCopy | null>(null);
@@ -112,7 +114,7 @@ export default function SubmissionsListScreen() {
         <View className="flex-1 px-4 pt-2">
           {/* Back + Header */}
           <Pressable
-            onPress={() => router.back()}
+            onPress={() => goBack()}
             accessibilityRole="button"
             accessibilityLabel="Go back"
             className="flex-row items-center mb-4"

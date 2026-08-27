@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { View, Text, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useSafeBack } from '../../../hooks/useSafeBack';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAiConsent } from '../../../hooks/useAiConsent';
@@ -39,6 +40,7 @@ type Screen = 'disclaimer' | 'setup' | 'running';
 
 export default function HandsFreeScreen() {
   const router = useRouter();
+  const goBack = useSafeBack('/(app)');
   const { user } = useAuth();
   const { ensureConsent, consentSheet } = useAiConsent(user?.id);
   const { shouldReduce } = useMotion();
@@ -49,7 +51,7 @@ export default function HandsFreeScreen() {
   const handleEnded = useCallback(() => {
     // Returning automatically means the learner never has to find the screen
     // again to get out of it.
-    router.back();
+    goBack();
   }, [router]);
 
   const session = useHandsFreeSession({

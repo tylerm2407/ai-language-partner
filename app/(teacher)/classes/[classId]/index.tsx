@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useSafeBack } from '../../../../hooks/useSafeBack';
 import * as Clipboard from 'expo-clipboard';
 import { haptic } from '../../../../lib/haptics';
 import { Ionicons } from '@expo/vector-icons';
@@ -33,6 +34,7 @@ type Tab = 'students' | 'assignments';
 
 export default function ClassDetailScreen() {
   const router = useRouter();
+  const goBack = useSafeBack('/(teacher)');
   const { classId } = useLocalSearchParams<{ classId: string }>();
   const { classrooms } = useSchoolStore();
   const [tab, setTab] = useState<Tab>('students');
@@ -166,7 +168,7 @@ export default function ClassDetailScreen() {
         <View className="flex-1 px-4 pt-2">
           {/* Back + Header */}
           <Pressable
-            onPress={() => router.back()}
+            onPress={() => goBack()}
             accessibilityRole="button"
             accessibilityLabel="Go back"
             className="flex-row items-center mb-4 min-h-11 -ml-1 pl-1"

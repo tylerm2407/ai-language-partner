@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { View, Text, TextInput, Alert, ActivityIndicator, ScrollView, KeyboardAvoidingView, Platform, Pressable, Share } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useSafeBack } from '../../../hooks/useSafeBack';
 import * as Clipboard from 'expo-clipboard';
 import { haptic } from '../../../lib/haptics';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,6 +14,7 @@ import { callSchoolAdminAction } from '../../../lib/supabase-queries';
 
 export default function DataManagementScreen() {
   const router = useRouter();
+  const goBack = useSafeBack('/(teacher)');
   const { organization } = useSchoolStore();
   const [exporting, setExporting] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -80,7 +82,7 @@ export default function DataManagementScreen() {
                 confirmationToken: `CONFIRM-DELETE-${organization.id}`,
               });
               Alert.alert('Deletion Complete', `All data has been purged.\n\nSummary:\n- ${result.summary?.messages ?? 0} messages\n- ${result.summary?.sessions ?? 0} sessions\n- ${result.summary?.submissions ?? 0} submissions\n- ${result.summary?.assignments ?? 0} assignments`, [
-                { text: 'OK', onPress: () => router.back() },
+                { text: 'OK', onPress: () => goBack() },
               ]);
             } catch (err) {
               const message = err instanceof Error ? err.message : 'Deletion failed';
@@ -108,7 +110,7 @@ export default function DataManagementScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <Pressable
-            onPress={() => router.back()}
+            onPress={() => goBack()}
             accessibilityRole="button"
             accessibilityLabel="Go back"
             className="flex-row items-center mb-4"

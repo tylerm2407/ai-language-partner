@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { ActivityIndicator, Text, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useSafeBack } from '../../../../hooks/useSafeBack';
 import { useAuth } from '../../../../hooks/useAuth';
 import { useAppStore, effectiveTier } from '../../../../stores/useAppStore';
 import { GradientBackground } from '../../../../components/ui/GradientBackground';
@@ -23,6 +24,7 @@ import { colors } from '../../../../config/theme';
 export default function WritingPromptScreen() {
   const { promptId } = useLocalSearchParams<{ promptId: string }>();
   const router = useRouter();
+  const goBack = useSafeBack('/(app)');
   const { user } = useAuth();
   const { profile, subscription, entitledTier } = useAppStore();
   const [prompt, setPrompt] = useState<WritingPrompt | null>(null);
@@ -188,7 +190,7 @@ export default function WritingPromptScreen() {
       <GradientBackground variant="raised">
         <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
           <Text style={{ fontSize: 16, color: colors.error.base, textAlign: 'center' }}>{error}</Text>
-          <Pressable onPress={() => router.back()} style={{ marginTop: 16 }} accessibilityRole="button">
+          <Pressable onPress={() => goBack()} style={{ marginTop: 16 }} accessibilityRole="button">
             <Text style={{ fontSize: 16, color: colors.action.accent }}>Go Back</Text>
           </Pressable>
         </SafeAreaView>
@@ -204,7 +206,7 @@ export default function WritingPromptScreen() {
         attemptNumber={attemptNumber}
         maxAttempts={prompt.maxAttempts}
         onTryAgain={handleTryAgain}
-        onContinue={() => router.back()}
+        onContinue={() => goBack()}
       />
     );
   }
@@ -225,7 +227,7 @@ export default function WritingPromptScreen() {
       isGrading={isGrading}
       attemptNumber={attemptNumber}
       onSubmit={handleSubmit}
-      onExit={() => router.back()}
+      onExit={() => goBack()}
     />
   );
 }
