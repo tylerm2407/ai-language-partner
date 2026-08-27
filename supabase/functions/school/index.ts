@@ -9,6 +9,7 @@ import { corsHeaders, corsResponse } from '../_shared/cors.ts';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { isValidUUID } from '../_shared/validation.ts';
 import { logAudit, getClientIp } from '../_shared/audit.ts';
+import { PROVIDER_TIMEOUT_MS, providerFetch } from '../_shared/provider-fetch.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -29,6 +30,22 @@ function jsonResponse(body: Record<string, unknown>, status = 200): Response {
 
 function errorResponse(message: string, status = 400): Response {
   return jsonResponse({ error: message }, status);
+}
+
+/**
+ * A failed database call, reported without the database's own words.
+ *
+ * A PostgREST error message names tables, columns, constraints and RLS
+ * policies — it is a schema disclosure with a 500 attached (CLAUDE.md §6), and
+ * teachers cannot act on it anyway. The operation name tells the caller which
+ * step failed; the driver's text goes to the logs, where it is actually useful.
+ */
+function dbErrorResponse(operation: string, error: { message?: string }): Response {
+  console.error(`[school] ${operation} failed:`, error?.message ?? error);
+  return jsonResponse(
+    { error: `Failed to ${operation}. Please try again.`, code: 'DB_ERROR' },
+    500,
+  );
 }
 
 serve(async (req: Request) => {
@@ -75,7 +92,7 @@ serve(async (req: Request) => {
     }
   } catch (err) {
     console.error('[school] Error:', err);
-    return errorResponse(err.message ?? 'Internal server error', 500);
+    return errorResponse('Internal server error', 500);
   }
 });
 
@@ -160,7 +177,7 @@ async function createClassroom(supabase: any, userId: string, body: SchoolReques
 
   // Generate invite code via RPC
   const { data: inviteCode, error: codeErr } = await supabase.rpc('generate_invite_code');
-  if (codeErr) return errorResponse(`Failed to generate invite code: ${codeErr.message}`, 500);
+  if (codeErr) return dbErrorResponse('generate invite code', codeErr);
 
   const { data: classroom, error } = await supabase
     .from('classrooms')
@@ -176,7 +193,7 @@ async function createClassroom(supabase: any, userId: string, body: SchoolReques
     .select()
     .single();
 
-  if (error) return errorResponse(`Failed to create classroom: ${error.message}`, 500);
+  if (error) return dbErrorResponse('create classroom', error);
 
   logAudit(supabase, {
     actorId: userId, actorRole: 'teacher', organizationId: organizationId as string,
@@ -238,7 +255,7 @@ async function joinClassroom(supabase: any, userId: string, email: string, body:
       .eq('id', existing[0].id)
       .select()
       .single();
-    if (reErr) return errorResponse(`Failed to re-enroll: ${reErr.message}`, 500);
+    if (reErr) return dbErrorResponse('re-enroll', reErr);
     enrollment = updated;
   } else {
     const { data: created, error: enrollErr } = await supabase
@@ -249,7 +266,7 @@ async function joinClassroom(supabase: any, userId: string, email: string, body:
       })
       .select()
       .single();
-    if (enrollErr) return errorResponse(`Failed to enroll: ${enrollErr.message}`, 500);
+    if (enrollErr) return dbErrorResponse('enroll', enrollErr);
     enrollment = created;
   }
 
@@ -300,7 +317,7 @@ async function leaveClassroom(supabase: any, userId: string, body: SchoolRequest
     .eq('classroom_id', classroomId)
     .is('dropped_at', null);
 
-  if (error) return errorResponse(`Failed to leave classroom: ${error.message}`, 500);
+  if (error) return dbErrorResponse('leave classroom', error);
 
   logAudit(supabase, {
     actorId: userId, actorRole: 'student',
@@ -352,7 +369,7 @@ async function createAssignment(supabase: any, userId: string, body: SchoolReque
     .select()
     .single();
 
-  if (error) return errorResponse(`Failed to create assignment: ${error.message}`, 500);
+  if (error) return dbErrorResponse('create assignment', error);
 
   // Get org ID for audit
   const { data: cls } = await supabase.from('classrooms').select('organization_id').eq('id', classroomId).single();
@@ -413,7 +430,7 @@ async function startAssignment(supabase: any, userId: string, body: SchoolReques
     .select('id')
     .single();
 
-  if (csErr) return errorResponse(`Failed to create chat session: ${csErr.message}`, 500);
+  if (csErr) return dbErrorResponse('create chat session', csErr);
 
   // Create or update submission
   const now = new Date().toISOString();
@@ -429,7 +446,7 @@ async function startAssignment(supabase: any, userId: string, body: SchoolReques
     .select()
     .single();
 
-  if (subErr) return errorResponse(`Failed to create submission: ${subErr.message}`, 500);
+  if (subErr) return dbErrorResponse('create submission', subErr);
 
   return jsonResponse({ submission, chatSessionId: chatSession.id });
 }
@@ -499,7 +516,7 @@ async function submitAssignment(supabase: any, userId: string, body: SchoolReque
     .select()
     .single();
 
-  if (updateErr) return errorResponse(`Failed to submit: ${updateErr.message}`, 500);
+  if (updateErr) return dbErrorResponse('submit', updateErr);
 
   // Audit log for submission
   const { data: asgn } = await supabase.from('assignments').select('classroom_id, classrooms!inner(organization_id)').eq('id', assignmentId).single();
@@ -541,7 +558,7 @@ async function gradeAssignment(supabase: any, userId: string, body: SchoolReques
     .select()
     .single();
 
-  if (error) return errorResponse(`Failed to grade: ${error.message}`, 500);
+  if (error) return dbErrorResponse('grade', error);
 
   // Audit log for grading
   const { data: gradedAsgn } = await supabase.from('assignments').select('classroom_id, classrooms!inner(organization_id)').eq('id', submission.assignment_id).single();
@@ -572,7 +589,7 @@ async function archiveClassroom(supabase: any, userId: string, body: SchoolReque
     .select()
     .single();
 
-  if (error) return errorResponse(`Failed to archive classroom: ${error.message}`, 500);
+  if (error) return dbErrorResponse('archive classroom', error);
 
   logAudit(supabase, {
     actorId: userId, actorRole: 'teacher', organizationId: classroom.organization_id,
@@ -593,7 +610,7 @@ async function regenerateInviteCode(supabase: any, userId: string, body: SchoolR
   if (!isTeacher) return errorResponse('Must be teacher of this classroom', 403);
 
   const { data: inviteCode, error: codeErr } = await supabase.rpc('generate_invite_code');
-  if (codeErr) return errorResponse(`Failed to generate invite code: ${codeErr.message}`, 500);
+  if (codeErr) return dbErrorResponse('generate invite code', codeErr);
 
   const { data: classroom, error } = await supabase
     .from('classrooms')
@@ -602,7 +619,7 @@ async function regenerateInviteCode(supabase: any, userId: string, body: SchoolR
     .select()
     .single();
 
-  if (error) return errorResponse(`Failed to update invite code: ${error.message}`, 500);
+  if (error) return dbErrorResponse('update invite code', error);
 
   logAudit(supabase, {
     actorId: userId, actorRole: 'teacher', organizationId: classroom.organization_id,
@@ -633,7 +650,7 @@ async function removeStudent(supabase: any, userId: string, body: SchoolRequest,
     .is('dropped_at', null)
     .select('id');
 
-  if (error) return errorResponse(`Failed to remove student: ${error.message}`, 500);
+  if (error) return dbErrorResponse('remove student', error);
   if (!dropped || dropped.length === 0) {
     return errorResponse('Student is not actively enrolled in this classroom', 404);
   }
@@ -711,19 +728,23 @@ Return JSON:
 }`;
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
+    const response = await providerFetch(
+      'https://api.anthropic.com/v1/messages',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: GRADING_MODEL,
+          max_tokens: 600,
+          messages: [{ role: 'user', content: gradingPrompt }],
+        }),
       },
-      body: JSON.stringify({
-        model: GRADING_MODEL,
-        max_tokens: 600,
-        messages: [{ role: 'user', content: gradingPrompt }],
-      }),
-    });
+      { provider: 'anthropic', timeoutMs: PROVIDER_TIMEOUT_MS.text },
+    );
 
     if (!response.ok) {
       console.error('[school] AI grading API error:', response.status, await response.text());

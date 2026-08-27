@@ -12,6 +12,7 @@ import { corsHeaders, corsResponse } from '../_shared/cors.ts';
 import { checkBurstLimit } from '../_shared/burst-limit.ts';
 import { MAX_AUDIO_BASE64_SIZE } from '../_shared/validation.ts';
 import { validateContentSafety } from '../_shared/content-safety.ts';
+import { PROVIDER_TIMEOUT_MS, providerFetch } from '../_shared/provider-fetch.ts';
 import { calculatePronunciationScore } from './scoring.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -194,13 +195,17 @@ async function transcribeAudio(audioBase64: string, language: string): Promise<s
     formData.append('language', language);
   }
 
-  const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${OPENAI_API_KEY}`,
+  const response = await providerFetch(
+    'https://api.openai.com/v1/audio/transcriptions',
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+      },
+      body: formData,
     },
-    body: formData,
-  });
+    { provider: 'openai-whisper', timeoutMs: PROVIDER_TIMEOUT_MS.transcription },
+  );
 
   if (!response.ok) {
     const errorText = await response.text();

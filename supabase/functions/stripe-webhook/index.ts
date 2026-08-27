@@ -17,6 +17,22 @@ const stripe = new Stripe(STRIPE_SECRET_KEY, {
   httpClient: Stripe.createFetchHttpClient(),
 });
 
+// Signature verification runs through a crypto provider, and the SYNCHRONOUS
+// `constructEvent` can only use a synchronous one — which means Node's `crypto`
+// module. Deno reaches that through a compatibility shim rather than natively,
+// so the verification this endpoint's entire security rests on depends on that
+// shim continuing to behave. If it stops, `constructEvent` throws before it
+// compares anything, the catch below answers 400, and Stripe reads that as a
+// rejected delivery: it retries for three days and gives up. A customer pays
+// and is never provisioned, with nothing in the app to show for it.
+//
+// SubtleCryptoProvider is the WebCrypto-backed provider — first-class in Deno,
+// no shim — and WebCrypto's digest is async, so it is reachable only via
+// `constructEventAsync`. This is the combination Stripe documents for Deno.
+// The provider is passed explicitly rather than left to auto-detection, so the
+// choice is visible here rather than depending on what the SDK guesses.
+const cryptoProvider = Stripe.createSubtleCryptoProvider();
+
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 serve(async (req: Request) => {
@@ -27,7 +43,13 @@ serve(async (req: Request) => {
 
   try {
     const body = await req.text();
-    const event = stripe.webhooks.constructEvent(body, signature, STRIPE_WEBHOOK_SECRET);
+    const event = await stripe.webhooks.constructEventAsync(
+      body,
+      signature,
+      STRIPE_WEBHOOK_SECRET,
+      undefined,
+      cryptoProvider,
+    );
 
     switch (event.type) {
       case 'checkout.session.completed': {
@@ -62,8 +84,15 @@ serve(async (req: Request) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Webhook error:', error.message);
-    return new Response(`Webhook Error: ${error.message}`, { status: 400 });
+    // The message names price ids, customer ids and — on a signature failure —
+    // what we expected to see. Stripe only needs the status code to decide
+    // whether to retry, so that is all it gets (CLAUDE.md §6).
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('[stripe-webhook] error:', message);
+    return new Response(JSON.stringify({ error: 'webhook_error' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 });
 
