@@ -8,7 +8,7 @@ import { Button } from '../ui/Button';
 import { gradeAnswer } from '../../lib/grading';
 import type { GradeResult } from '../../lib/grading';
 import { isRestored, regradePick } from '../../lib/exercise-restore';
-import type { Exercise } from '../../types';
+import type { Exercise, LanguageCode } from '../../types';
 
 interface WordFormExerciseProps {
   exercise: Exercise;
@@ -54,6 +54,7 @@ export function WordFormExercise({
         skillType: exercise.skillType,
         targetGrammar: exercise.targetGrammar,
         targetWord: exercise.targetWord,
+        language: language as LanguageCode | undefined,
       },
     });
     setResult(grade);

@@ -3,7 +3,8 @@
  * Handles exact match, fuzzy match (typo tolerance), and accent normalization.
  */
 
-import type { FeedbackErrorType, ExerciseType, SkillType, ReviewRating } from '../types';
+import type { FeedbackErrorType, ExerciseType, SkillType, ReviewRating, LanguageCode } from '../types';
+import { isConfusablePair } from './confusable-pairs';
 
 export interface GradeResult {
   isCorrect: boolean;
@@ -23,11 +24,22 @@ export interface GradeResult {
  * Hints that let the classifier pick an error type. All fields optional so
  * legacy callers can omit them (errorType will stay `null`).
  */
+/**
+ * Share of the EXPECTED answer that may differ and still count as a typo.
+ * See the tolerance block in `gradeAnswer` for why this is proportional.
+ */
+export const TYPO_TOLERANCE_RATIO = 0.3;
+
 export interface ExerciseHints {
   targetGrammar?: string;
   targetWord?: string;
   skillType?: SkillType;
   exerciseType?: ExerciseType;
+  /**
+   * Target language, used to reject known confusable pairs. Optional: without
+   * it the confusable check is skipped rather than guessed at.
+   */
+  language?: LanguageCode;
 }
 
 /**
@@ -239,10 +251,50 @@ export function gradeAnswer(
     { similarity: 0, distance: Infinity, accepted: '' }
   );
 
-  // Allow typos: distance <= 2 for short words, proportional for longer
-  const maxAllowedDistance = normalized.length <= 4 ? 1 : 2;
+  /**
+   * Typo tolerance, measured against the EXPECTED answer.
+   *
+   * It used to be `normalized.length <= 4 ? 1 : 2` — keyed off the length of
+   * the LEARNER'S answer, and as a flat edit count rather than a proportion.
+   * Expected "no", typed "yo": the learner's answer is two characters, so the
+   * budget was 1, and a single substitution turning one real word into a
+   * DIFFERENT real word was graded "Correct! (Minor typo)", rated 4, and pushed
+   * out to a longer SM-2 interval. The system taught the wrong meaning and then
+   * reinforced it on a schedule.
+   *
+   * Proportional fixes that without punishing genuine typos in longer words,
+   * because one edit is most of a two-letter word and very little of a
+   * seven-letter one:
+   *
+   *   "no"      -> floor(2 * 0.3) = 0   exact only; "yo" is rejected
+   *   "café"    -> floor(4 * 0.3) = 1   "cafee" still accepted
+   *   "receive" -> floor(7 * 0.3) = 2   "recieve" still accepted
+   *
+   * Capped at 2 so a long sentence does not accumulate a large budget.
+   * `gradeSpeechTranscription` always measured proportionally; only the typed
+   * path did not.
+   */
+  const expectedForTolerance = bestMatch.accepted || normalizedCorrect;
+  const maxAllowedDistance = Math.min(
+    2,
+    Math.floor(expectedForTolerance.length * TYPO_TOLERANCE_RATIO),
+  );
 
-  if (bestMatch.distance <= maxAllowedDistance) {
+  /**
+   * Length alone cannot separate a typo from a different word of the same
+   * shape: "gato"/"rato", "casa"/"caza", "hombre"/"hambre" are all one edit
+   * apart. `isConfusablePair` enumerates exactly those, per language — it
+   * existed and was never called, so every pair it lists was being accepted as
+   * a minor typo and then reinforced by SRS.
+   *
+   * Gated on a language hint: callers that do not supply one keep the previous
+   * behaviour rather than silently getting a different grade.
+   */
+  const confusable =
+    hints?.language !== undefined &&
+    isConfusablePair(normalized, expectedForTolerance, hints.language);
+
+  if (!confusable && bestMatch.distance <= maxAllowedDistance) {
     return {
       isCorrect: true,
       accuracy: bestMatch.similarity,

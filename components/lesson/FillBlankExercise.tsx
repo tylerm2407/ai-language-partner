@@ -10,7 +10,7 @@ import { colors } from '../../config/theme';
 import { gradeAnswer } from '../../lib/grading';
 import type { GradeResult } from '../../lib/grading';
 import { isRestored, regradePick } from '../../lib/exercise-restore';
-import type { Exercise } from '../../types';
+import type { Exercise, LanguageCode } from '../../types';
 
 interface FillBlankExerciseProps {
   exercise: Exercise;
@@ -52,6 +52,7 @@ export function FillBlankExercise({
         skillType: exercise.skillType,
         targetGrammar: exercise.targetGrammar,
         targetWord: exercise.targetWord,
+        language: language as LanguageCode | undefined,
       },
     });
     setResult(grade);

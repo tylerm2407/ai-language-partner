@@ -72,6 +72,7 @@ export function DictationExercise({
         skillType: exercise.skillType,
         targetGrammar: exercise.targetGrammar,
         targetWord: exercise.targetWord,
+        language: language as LanguageCode | undefined,
       },
     });
     setResult(grade);

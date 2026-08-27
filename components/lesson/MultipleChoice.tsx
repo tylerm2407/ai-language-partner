@@ -5,7 +5,7 @@ import { HighlightedText } from '../shared/HighlightedText';
 import { gradeAnswer } from '../../lib/grading';
 import { logExerciseCorrection } from '../../lib/supabase-queries';
 import { colors, radii, spacing, typography } from '../../config/theme';
-import type { Exercise, FeedbackErrorType } from '../../types';
+import type { Exercise, FeedbackErrorType, LanguageCode } from '../../types';
 
 interface MultipleChoiceProps {
   exercise: Exercise;
@@ -52,6 +52,7 @@ export function MultipleChoice({
         skillType: exercise.skillType,
         targetGrammar: exercise.targetGrammar,
         targetWord: exercise.targetWord,
+        language: language as LanguageCode | undefined,
       },
     });
     haptic(grade.isCorrect ? 'correct' : 'incorrect');

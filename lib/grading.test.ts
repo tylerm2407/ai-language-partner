@@ -363,3 +363,56 @@ describe('gradeSpeechTranscription', () => {
     expect(short.score).toBeLessThan(long.score);
   });
 });
+
+describe('typo tolerance is measured against the expected answer', () => {
+  it('rejects a one-edit substitution that produces a different short word', () => {
+    // THE regression. The budget used to key off the LEARNER'S answer length:
+    // "yo" is two characters, so one edit was allowed, and a substitution
+    // turning one real word into a different real word was graded
+    // "Correct! (Minor typo)", rated 4, and pushed out to a longer SM-2
+    // interval — teaching the wrong meaning and then reinforcing it.
+    const result = gradeAnswer('yo', 'no', []);
+    expect(result.isCorrect).toBe(false);
+  });
+
+  it('still forgives a genuine typo in a longer word', () => {
+    // One edit is most of a two-letter word and very little of a seven-letter
+    // one, which is the whole reason the threshold is proportional.
+    expect(gradeAnswer('recieve', 'receive', []).isCorrect).toBe(true);
+    expect(gradeAnswer('cafee', 'café', []).isCorrect).toBe(true);
+  });
+
+  it('does not hand a long sentence a large typo budget', () => {
+    const expected = 'me gustaria reservar una mesa para dos personas';
+    // Four edits in a 46-character sentence is under any proportional ratio,
+    // but the cap keeps it at 2.
+    const fourEdits = 'me gustaria reservar una mesa para dos persxxxs';
+    expect(gradeAnswer(fourEdits, expected, []).isCorrect).toBe(false);
+  });
+});
+
+describe('confusable pairs are not typos', () => {
+  it('rejects a listed confusable pair when the language is known', () => {
+    // `isConfusablePair` existed and was never called, so every pair it
+    // enumerates was accepted as a minor typo and then reinforced by SRS.
+    const result = gradeAnswer('rato', 'gato', [], {
+      exerciseHints: { language: 'es' },
+    });
+    expect(result.isCorrect).toBe(false);
+  });
+
+  it('rejects a longer confusable pair that length alone cannot catch', () => {
+    // "hombre"/"hambre" is one edit in a six-letter word — well inside the
+    // proportional budget, and a completely different meaning.
+    const result = gradeAnswer('hambre', 'hombre', [], {
+      exerciseHints: { language: 'es' },
+    });
+    expect(result.isCorrect).toBe(false);
+  });
+
+  it('leaves grading unchanged when no language hint is supplied', () => {
+    // Callers that do not pass a language keep the previous behaviour rather
+    // than silently getting a different grade.
+    expect(gradeAnswer('hambre', 'hombre', []).isCorrect).toBe(true);
+  });
+});

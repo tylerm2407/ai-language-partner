@@ -12,7 +12,7 @@ import { isRestored, regradePick } from '../../lib/exercise-restore';
 import { useAudioPlayer } from '../../hooks/useAudioPlayer';
 import { VoiceError } from '../../lib/ai';
 import { getLessonAudioUri, LESSON_SLOW_RATE } from '../../lib/lesson-audio';
-import type { Exercise } from '../../types';
+import type { Exercise, LanguageCode } from '../../types';
 
 interface ListeningExerciseProps {
   exercise: Exercise;
@@ -107,6 +107,7 @@ export function ListeningExercise({
         skillType: exercise.skillType,
         targetGrammar: exercise.targetGrammar,
         targetWord: exercise.targetWord,
+        language: language as LanguageCode | undefined,
       },
     });
     setAnswer(option);
@@ -127,6 +128,7 @@ export function ListeningExercise({
         skillType: exercise.skillType,
         targetGrammar: exercise.targetGrammar,
         targetWord: exercise.targetWord,
+        language: language as LanguageCode | undefined,
       },
     });
     setResult(grade);
