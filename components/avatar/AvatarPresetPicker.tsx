@@ -64,17 +64,23 @@ export const AvatarPresetPicker = React.memo(
     }, [visible, load]);
 
     const renderTile = useCallback(
-      ({ item }: { item: AvatarPreset }) => {
+      ({ item, index }: { item: AvatarPreset; index: number }) => {
         const selected = item.id === selectedId;
         return (
           <Pressable
             onPress={() => onSelect(item)}
             accessibilityRole="button"
             accessibilityState={{ selected }}
-            accessibilityLabel={`Avatar ${item.id}`}
+            accessibilityLabel={`Avatar option ${index + 1}`}
             style={[styles.tile, selected && styles.tileSelected]}
           >
-            <Image source={{ uri: item.url }} style={styles.tileImage} resizeMode="cover" />
+            <Image
+              source={{ uri: item.url }}
+              style={styles.tileImage}
+              resizeMode="cover"
+              accessibilityElementsHidden
+              importantForAccessibility="no"
+            />
           </Pressable>
         );
       },

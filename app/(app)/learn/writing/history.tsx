@@ -53,7 +53,7 @@ export default function WritingHistoryScreen() {
     <SafeAreaView style={{ flex: 1 }}>
       {/* Header */}
       <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12, flexDirection: 'row', alignItems: 'center' }}>
-        <Pressable onPress={() => router.back()} style={{ padding: 8 }} accessibilityRole="button" accessibilityLabel="Go back">
+        <Pressable onPress={() => router.back()} hitSlop={8} style={{ padding: 8 }} accessibilityRole="button" accessibilityLabel="Go back">
           <Ionicons name="arrow-back" size={24} color="#9CA3AF" />
         </Pressable>
         <Text style={{ fontSize: 24, fontWeight: '700', color: '#FFFFFF', marginLeft: 8 }} accessibilityRole="header">

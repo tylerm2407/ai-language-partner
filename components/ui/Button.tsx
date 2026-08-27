@@ -20,7 +20,11 @@ const variantClasses: Record<ButtonVariant, { container: string; text: string; d
   primary: {
     container: 'bg-primary py-4 px-12 rounded-[14px] items-center',
     text: 'text-white text-lg font-sans-semibold',
-    disabledContainer: 'bg-primary-light py-4 px-12 rounded-[14px] items-center',
+    // Dimmed, not recoloured. `primary-light` (#818CF8) is BRIGHTER and more
+    // saturated than the enabled `primary` (#4F46E5), so the disabled state read
+    // as the more prominent one, with white on it at 2.87:1 — under the 3:1
+    // non-text minimum. The gradient path below already dims rather than swaps.
+    disabledContainer: 'bg-primary py-4 px-12 rounded-[14px] items-center opacity-60',
   },
   secondary: {
     container: 'bg-dark-card-alt py-4 px-12 rounded-[14px] items-center',

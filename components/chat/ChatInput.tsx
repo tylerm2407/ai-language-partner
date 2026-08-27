@@ -446,7 +446,7 @@ export function ChatInput({
         accessibilityHint="Type a message to send"
       />
       <Pressable
-        className={`w-11 h-11 rounded-[22px] items-center justify-center ${value.trim() ? 'bg-primary' : 'bg-primary-light'}`}
+        className={`w-11 h-11 rounded-[22px] items-center justify-center bg-primary ${value.trim() ? '' : 'opacity-60'}`}
         onPress={() => onSend()}
         disabled={!value.trim() || sending}
         accessibilityRole="button"

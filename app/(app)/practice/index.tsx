@@ -312,8 +312,8 @@ export default function PracticeScreen() {
             <Pressable
               onPress={handleSend}
               disabled={!input.trim() || isSending}
-              className={`w-11 h-11 rounded-[22px] justify-center items-center ${
-                input.trim() && !isSending ? 'bg-primary' : 'bg-primary-light'
+              className={`w-11 h-11 rounded-[22px] justify-center items-center bg-primary ${
+                input.trim() && !isSending ? '' : 'opacity-60'
               }`}
               accessibilityRole="button"
               accessibilityLabel="Send message"

@@ -194,9 +194,20 @@ export const AvatarGeneratorSheet = React.memo(
 
               <View style={styles.photoRow}>
                 {photo ? (
-                  <Image source={{ uri: photo.uri }} style={styles.preview} resizeMode="cover" />
+                  <Image
+                    source={{ uri: photo.uri }}
+                    style={styles.preview}
+                    resizeMode="cover"
+                    accessible
+                    accessibilityRole="image"
+                    accessibilityLabel="Selected photo"
+                  />
                 ) : (
-                  <View style={[styles.preview, styles.previewEmpty]}>
+                  <View
+                    style={[styles.preview, styles.previewEmpty]}
+                    accessible
+                    accessibilityLabel="No photo selected"
+                  >
                     <Ionicons name="person-outline" size={32} color={colors.text.quaternary} />
                   </View>
                 )}

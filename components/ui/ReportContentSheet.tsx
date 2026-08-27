@@ -9,7 +9,15 @@
  */
 
 import React, { useState } from 'react';
-import { View, Pressable, TextInput, StyleSheet, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Pressable,
+  TextInput,
+  StyleSheet,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import { Sheet } from './Sheet';
 import { Heading, Body, Caption } from './Text';
 import { colors, radii, spacing, typography } from '../../config/theme';
@@ -103,66 +111,77 @@ export function ReportContentSheet({
 
   return (
     <Sheet visible={visible} onDismiss={handleDismiss}>
-      <View style={styles.body}>
-        <Heading level={2}>Report this response</Heading>
-        <Body tone="secondary" style={styles.para}>
-          Tell us what was wrong with it. Reports help us make the AI tutor safer.
-        </Body>
+      {/* This is the AI-safety report form and its comment field sits at the
+          bottom of the sheet, under the keyboard. Scoped to this sheet rather
+          than added inside `Sheet` itself: seven other sheets have no input and
+          a KAV in the shared component would change all of them.
+          No `flex: 1` — the sheet is auto-height, and a flex-1 KAV inside an
+          auto-height parent collapses to zero. */}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={0}
+      >
+        <View style={styles.body}>
+          <Heading level={2}>Report this response</Heading>
+          <Body tone="secondary" style={styles.para}>
+            Tell us what was wrong with it. Reports help us make the AI tutor safer.
+          </Body>
 
-        <View style={styles.reasons}>
-          {REASONS.map((r) => {
-            const selected = reason === r.key;
-            return (
-              <Pressable
-                key={r.key}
-                onPress={() => setReason(r.key)}
-                style={[styles.reason, selected && styles.reasonSelected]}
-                accessibilityRole="radio"
-                accessibilityState={{ selected }}
-                accessibilityLabel={r.label}
-              >
-                <Body tone={selected ? 'accent' : 'primary'} weight={selected ? 'semibold' : 'regular'}>
-                  {r.label}
-                </Body>
-              </Pressable>
-            );
-          })}
+          <View style={styles.reasons}>
+            {REASONS.map((r) => {
+              const selected = reason === r.key;
+              return (
+                <Pressable
+                  key={r.key}
+                  onPress={() => setReason(r.key)}
+                  style={[styles.reason, selected && styles.reasonSelected]}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected }}
+                  accessibilityLabel={r.label}
+                >
+                  <Body tone={selected ? 'accent' : 'primary'} weight={selected ? 'semibold' : 'regular'}>
+                    {r.label}
+                  </Body>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <TextInput
+            value={comment}
+            onChangeText={setComment}
+            placeholder="Add detail (optional)"
+            placeholderTextColor={colors.text.tertiary}
+            style={styles.input}
+            multiline
+            maxLength={1000}
+            accessibilityLabel="Additional detail about this report"
+          />
+
+          {error ? (
+            <Caption tone="error" style={styles.error}>{error}</Caption>
+          ) : null}
+
+          <Pressable
+            onPress={handleSubmit}
+            disabled={!reason || submitting}
+            style={[styles.primaryBtn, (!reason || submitting) && styles.primaryBtnDisabled]}
+            accessibilityRole="button"
+            accessibilityLabel="Send report"
+            accessibilityState={{ disabled: !reason || submitting }}
+          >
+            {submitting ? (
+              <ActivityIndicator color={colors.text.onPrimary} />
+            ) : (
+              <Body weight="semibold" tone="onPrimary">Send report</Body>
+            )}
+          </Pressable>
+
+          <Pressable onPress={handleDismiss} style={styles.cancelBtn} accessibilityRole="button">
+            <Body tone="secondary">Cancel</Body>
+          </Pressable>
         </View>
-
-        <TextInput
-          value={comment}
-          onChangeText={setComment}
-          placeholder="Add detail (optional)"
-          placeholderTextColor={colors.text.tertiary}
-          style={styles.input}
-          multiline
-          maxLength={1000}
-          accessibilityLabel="Additional detail about this report"
-        />
-
-        {error ? (
-          <Caption tone="error" style={styles.error}>{error}</Caption>
-        ) : null}
-
-        <Pressable
-          onPress={handleSubmit}
-          disabled={!reason || submitting}
-          style={[styles.primaryBtn, (!reason || submitting) && styles.primaryBtnDisabled]}
-          accessibilityRole="button"
-          accessibilityLabel="Send report"
-          accessibilityState={{ disabled: !reason || submitting }}
-        >
-          {submitting ? (
-            <ActivityIndicator color={colors.text.onPrimary} />
-          ) : (
-            <Body weight="semibold" tone="onPrimary">Send report</Body>
-          )}
-        </Pressable>
-
-        <Pressable onPress={handleDismiss} style={styles.cancelBtn} accessibilityRole="button">
-          <Body tone="secondary">Cancel</Body>
-        </Pressable>
-      </View>
+      </KeyboardAvoidingView>
     </Sheet>
   );
 }

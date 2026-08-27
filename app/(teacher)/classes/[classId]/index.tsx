@@ -169,7 +169,7 @@ export default function ClassDetailScreen() {
             onPress={() => router.back()}
             accessibilityRole="button"
             accessibilityLabel="Go back"
-            className="flex-row items-center mb-4"
+            className="flex-row items-center mb-4 min-h-11 -ml-1 pl-1"
           >
             <Ionicons name="chevron-back" size={24} color="#818CF8" />
             <Text

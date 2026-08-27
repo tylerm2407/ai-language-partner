@@ -233,7 +233,7 @@ export default function BookDetailScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface.raised }} edges={['top']}>
       {/* Header */}
       <View style={{ paddingHorizontal: 16, paddingTop: 8, flexDirection: 'row', alignItems: 'center' }}>
-        <Pressable onPress={() => router.back()} style={{ padding: 8 }} accessibilityRole="button" accessibilityLabel="Go back">
+        <Pressable onPress={() => router.back()} hitSlop={8} style={{ padding: 8 }} accessibilityRole="button" accessibilityLabel="Go back">
           <Ionicons name="arrow-back" size={24} color="#666" />
         </Pressable>
       </View>

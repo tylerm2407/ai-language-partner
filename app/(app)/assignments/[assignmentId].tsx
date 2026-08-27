@@ -120,6 +120,7 @@ export default function AssignmentDetailScreen() {
           <View className="flex-row items-center px-4 py-3">
             <Pressable
               onPress={() => router.back()}
+              hitSlop={8}
               className="w-10 h-10 items-center justify-center rounded-full bg-dark-card"
               accessibilityRole="button"
               accessibilityLabel="Go back"
@@ -143,6 +144,7 @@ export default function AssignmentDetailScreen() {
         <View className="flex-row items-center px-4 py-3">
           <Pressable
             onPress={() => router.back()}
+            hitSlop={8}
             className="w-10 h-10 items-center justify-center rounded-full bg-dark-card"
             accessibilityRole="button"
             accessibilityLabel="Go back"

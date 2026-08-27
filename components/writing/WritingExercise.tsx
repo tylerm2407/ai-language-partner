@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 import { View, Text, TextInput, Pressable, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { WritingPrompt } from '../../types';
@@ -89,8 +90,19 @@ export function WritingExercise({ prompt, isGrading, attemptNumber = 1, onSubmit
         {/* Header */}
         <View style={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: 12 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Pressable onPress={onExit} style={{ padding: 8, marginRight: 8 }} accessibilityRole="button" accessibilityLabel="Exit">
-              <Text style={{ fontSize: 24, color: '#9CA3AF' }}>x</Text>
+            {/* Was a lowercase "x" glyph in `padding: 8` — about 29x40pt, and a
+                lowercase x is not a close affordance anyone recognises. Now a
+                real 44pt icon target. The colour is left off-token on purpose:
+                this whole file is unthemed, and fixing that belongs to the
+                design pass, not to a touch-target fix. */}
+            <Pressable
+              onPress={onExit}
+              hitSlop={8}
+              style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginRight: 4 }}
+              accessibilityRole="button"
+              accessibilityLabel="Exit writing practice"
+            >
+              <Ionicons name="close" size={24} color="#9CA3AF" />
             </Pressable>
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 14, fontWeight: '600', color: '#818CF8' }}>Writing Practice</Text>

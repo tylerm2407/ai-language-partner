@@ -80,7 +80,7 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
             style={styles.tabButton}
             accessibilityRole="tab"
             accessibilityState={{ selected: isFocused }}
-            accessibilityLabel={route.name === 'index' ? 'Home' : route.name}
+            accessibilityLabel={descriptors[route.key]?.options.title ?? route.name}
           >
             {isFocused ? (
               <LinearGradient

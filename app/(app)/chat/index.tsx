@@ -834,6 +834,7 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
         {!handsFreeActive && (
           <Pressable
             onPress={toggleVoiceMode}
+            hitSlop={4}
             accessibilityRole="button"
             accessibilityLabel={voiceMode ? 'Switch to text mode' : 'Switch to voice mode'}
             className={`w-9 h-9 rounded-full items-center justify-center ${voiceMode ? 'bg-primary' : 'bg-dark-card'}`}

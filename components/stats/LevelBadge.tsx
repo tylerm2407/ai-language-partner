@@ -2,6 +2,7 @@ import { View, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { GradientBorderCard } from '../ui/GradientBorderCard';
+import { Body, Caption } from '../ui/Text';
 import { GRADIENT_COLORS, GRADIENT_START, GRADIENT_END } from '../../config/gradients';
 import type { ProficiencyLevel } from '../../types';
 
@@ -28,13 +29,21 @@ export function LevelBadge({ level }: LevelBadgeProps) {
 
   return (
     <GradientBorderCard innerStyle={{ padding: 20 }}>
-      <View className="flex-row items-center justify-between mb-3">
-        <Text className="text-base font-sans-semibold text-text-primary">Your Level</Text>
-        <View className="flex-row items-center" style={{ backgroundColor: config.bg, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
+      {/* Both sides were raw react-native <Text> with no flex bound and no
+          numberOfLines, so at iOS's 310% text size "Upper Intermediate" pushed
+          the badge straight out of the card. The themed primitives carry the
+          Dynamic Type ceilings; flex-1/flexShrink give the row somewhere to
+          give. */}
+      <View className="flex-row items-center justify-between mb-3" style={{ gap: 8 }}>
+        <Body weight="semibold" numberOfLines={1} style={{ flex: 1 }}>Your Level</Body>
+        <View
+          className="flex-row items-center"
+          style={{ flexShrink: 1, backgroundColor: config.bg, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}
+        >
           <Ionicons name="trophy" size={14} color={config.color} />
-          <Text style={{ color: config.color, fontFamily: 'Nunito_700Bold', fontSize: 13, marginLeft: 4 }}>
+          <Caption numberOfLines={1} style={{ color: config.color, fontFamily: 'Nunito_700Bold', marginLeft: 4, flexShrink: 1 }}>
             {config.label}
-          </Text>
+          </Caption>
         </View>
       </View>
 
