@@ -29,6 +29,16 @@ export interface PlanLimits {
    *  Each generation is a paid image-model call, so these stay deliberately
    *  small — they are re-roll budgets, not a feature to sit and play with. */
   dailyAvatarGenerations: number;
+  /**
+   * Previously-unseen SRS cards a learner may introduce per day.
+   *
+   * This is the free tier's real boundary since migration 084 — it replaced
+   * hearts, which metered mistakes and blocked nothing. Enforced in Postgres by
+   * `try_consume_new_card_slot`, which reads it from `get_effective_limits`
+   * rather than taking it from the caller. Review of already-learned material
+   * is uncapped on every tier.
+   */
+  dailyNewCards: number;
   offlineMode: boolean;
 }
 
@@ -50,10 +60,10 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
   // Classroom students are unaffected — their org's contract_config is merged
   // in by get_effective_limits with GREATEST(), so a 0 personal quota still
   // resolves to the school's allowance.
-  starter:   { dailyTextMessages: 0,  dailyVoiceMinutes: 0,  dailyWritingGrades: 0,  dailyPronunciationScores: 0, dailyLessonTtsPlays: 5,   dailyAvatarGenerations: 0, offlineMode: false },
-  basic:     { dailyTextMessages: 25, dailyVoiceMinutes: 10, dailyWritingGrades: 3,  dailyPronunciationScores: 3, dailyLessonTtsPlays: 50,  dailyAvatarGenerations: 2, offlineMode: false },
-  premium:   { dailyTextMessages: 50, dailyVoiceMinutes: 20, dailyWritingGrades: 7,  dailyPronunciationScores: 5, dailyLessonTtsPlays: 100, dailyAvatarGenerations: 5, offlineMode: true },
-  vip:       { dailyTextMessages: 75, dailyVoiceMinutes: 30, dailyWritingGrades: 12, dailyPronunciationScores: 7, dailyLessonTtsPlays: 200, dailyAvatarGenerations: 10, offlineMode: true },
+  starter:   { dailyTextMessages: 0,  dailyVoiceMinutes: 0,  dailyWritingGrades: 0,  dailyPronunciationScores: 0, dailyLessonTtsPlays: 5,   dailyAvatarGenerations: 0, dailyNewCards: 5,    offlineMode: false },
+  basic:     { dailyTextMessages: 25, dailyVoiceMinutes: 10, dailyWritingGrades: 3,  dailyPronunciationScores: 3, dailyLessonTtsPlays: 50,  dailyAvatarGenerations: 2, dailyNewCards: 20,   offlineMode: false },
+  premium:   { dailyTextMessages: 50, dailyVoiceMinutes: 20, dailyWritingGrades: 7,  dailyPronunciationScores: 5, dailyLessonTtsPlays: 100, dailyAvatarGenerations: 5, dailyNewCards: 9999, offlineMode: true },
+  vip:       { dailyTextMessages: 75, dailyVoiceMinutes: 30, dailyWritingGrades: 12, dailyPronunciationScores: 7, dailyLessonTtsPlays: 200, dailyAvatarGenerations: 10, dailyNewCards: 9999, offlineMode: true },
 };
 
 export function getPlanLimits(tier: string): PlanLimits {

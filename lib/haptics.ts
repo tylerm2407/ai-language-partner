@@ -86,17 +86,6 @@ export type HapticIntent =
    * never be tuned together even though both are an Error notification now.
    */
   | 'failure'
-  // ── Medium: a consequence. Distinct from the verdict that caused it. ──
-  /**
-   * A heart went.
-   *
-   * Deliberately NOT another Error notification. A heart is only ever lost
-   * immediately after a wrong answer, and the wrong answer has already fired
-   * `incorrect` — two Error buzzes in a row read as one stuttering error, not
-   * as two different facts. A Medium impact lands as weight instead: the
-   * verdict, then the cost.
-   */
-  | 'heartLost'
   // ── Heavy: an event. Rare by construction. ──
   /** Level up. */
   | 'levelUp'
@@ -124,8 +113,6 @@ const EFFECTS: Record<HapticIntent, () => Promise<void>> = {
   warning: () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning),
   confirm: () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success),
   failure: () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error),
-
-  heartLost: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium),
 
   levelUp: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy),
   milestone: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy),

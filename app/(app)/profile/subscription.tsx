@@ -185,10 +185,10 @@ export default function SubscriptionScreen() {
 
       <ScrollView className="flex-1 px-4 pt-6" contentContainerStyle={{ paddingBottom: 40 }}>
         <Text className="text-2xl font-bold text-text-primary mb-2">Choose Your Plan</Text>
-        {/* Says what a paid plan actually buys. The previous line led with
-            "unlimited hearts", which stopped being true when hearts stopped
-            gating lessons — and it framed the product as selling relief from
-            its own friction rather than selling more practice. */}
+        {/* Says what a paid plan actually buys. An earlier line led with
+            "unlimited hearts" — a mechanic that has since been removed
+            outright, because framing the product as selling relief from its own
+            friction is the trap this tier list exists to avoid. */}
         <Text className="text-base text-text-secondary mb-6">
           Lessons, reviews and reading are free, always. Paid plans add daily
           tutor conversation, voice practice and writing feedback.

@@ -142,17 +142,14 @@ describe('haptic()', () => {
 });
 
 describe('intent hierarchy', () => {
-  it('keeps a heart loss distinct from the wrong answer that caused it', () => {
-    // Two Error notifications back to back read as one stuttering error rather
-    // than as two facts, so the cost is weight and the verdict is a
-    // notification.
+  it('fires a single Error notification for a wrong answer', () => {
+    // One verdict, one buzz. Two Error notifications back to back read as one
+    // stuttering error rather than as two facts — which is why nothing else
+    // fires alongside `incorrect`.
     haptic('incorrect');
+    expect(Haptics.notificationAsync).toHaveBeenCalledTimes(1);
     expect(Haptics.notificationAsync).toHaveBeenCalledWith('error');
-
-    jest.clearAllMocks();
-    haptic('heartLost');
-    expect(Haptics.notificationAsync).not.toHaveBeenCalled();
-    expect(Haptics.impactAsync).toHaveBeenCalledWith('medium');
+    expect(Haptics.impactAsync).not.toHaveBeenCalled();
   });
 
   it('reserves Heavy for rare events and Light for acknowledgement', () => {

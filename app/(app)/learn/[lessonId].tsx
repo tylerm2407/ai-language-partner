@@ -10,7 +10,6 @@ import { useAuth } from '../../../hooks/useAuth';
 import { useAppStore } from '../../../stores/useAppStore';
 import { useProfile } from '../../../hooks/useProfile';
 import { useDailyStats } from '../../../hooks/useDailyStats';
-import { useHearts } from '../../../hooks/useHearts';
 import { useLevel } from '../../../hooks/useLevel';
 import { useLessonProgress } from '../../../hooks/useLessonProgress';
 import { useOnboardingChecklist } from '../../../hooks/useOnboardingChecklist';
@@ -33,9 +32,6 @@ export default function LessonScreen() {
   const { profile } = useAppStore();
   const { earnXp } = useProfile();
   const { addStats } = useDailyStats();
-  // heartsExempt (not isUnlimited) so adult mode also skips heart spending —
-  // in adult mode a wrong answer must never end the lesson.
-  const { hearts, maxHearts, heartsExempt, loseHeart } = useHearts();
   const { levelUpInfo, dismissLevelUp } = useLevel();
   const { markLessonComplete } = useLessonProgress();
   const { markItem: markOnboardingItem } = useOnboardingChecklist();
@@ -70,9 +66,6 @@ export default function LessonScreen() {
   useEffect(() => {
     loadLesson();
   }, [loadLesson]);
-
-  // There is no pre-lesson hearts check. Opening a lesson is never blocked —
-  // see hooks/useHearts.ts for the reasoning.
 
   const targetLanguage = getTargetLanguage(profile);
 
@@ -272,10 +265,6 @@ export default function LessonScreen() {
         targetLanguage={targetLanguage}
         onComplete={handleComplete}
         onExit={handleExit}
-        hearts={hearts}
-        maxHearts={maxHearts}
-        isUnlimitedHearts={heartsExempt}
-        onLoseHeart={loseHeart}
       />
       </KeyboardAvoidingView>
 

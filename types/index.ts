@@ -64,10 +64,6 @@ export interface UserProfile {
   totalXp: number;
   timezone: string;
   onboardingCompleted: boolean;
-  // Hearts system
-  hearts: number;
-  maxHearts: number;
-  lastHeartLostAt: string | null;
   // XP levels & leagues
   xpLevel: number;
   leagueTier: LeagueTier;
@@ -91,8 +87,8 @@ export interface UserProfile {
   motivationReason: MotivationReason | null;
   idealL2Self: string | null;
   /**
-   * Adult mode (migration 052) — suppresses the pressure mechanics: hearts
-   * gating, league standings and XP celebration. Underlying
+   * Adult mode (migration 052) — suppresses the pressure mechanics: league
+   * standings and XP celebration. Underlying
    * values keep accruing server-side so turning the mode off restores the
    * learner's history rather than revealing a reset account.
    */
@@ -771,7 +767,7 @@ export interface SchoolContractConfig {
   dailyTextMessages: number;
   dailyWritingGrades: number;
   dailyPronunciationScores: number;
-  unlimitedHearts: boolean;
+  dailyNewCards: number;
   audiobookNarration: boolean;
   offlineMode?: boolean;
   allowed_email_domains?: string[];

@@ -90,19 +90,28 @@ const RATING_BY_OUTCOME: Record<LessonSrsOutcome, ReviewRating> = {
  * Each upsert result is written back into the map so repeat exercises on
  * the same card within one session chain state instead of re-baselining.
  *
- * The daily new-card cap is enforced with tryConsumeNewCardSlot — one
- * atomic check-and-consume RPC (silent skip when the cap is hit), same as
- * saveCorrectionAsCard / addCardFromAnnotation. `introducedThisSession`
- * de-dupes cap accounting when the same card backs multiple exercises or
- * an exercise is retried.
+ * The daily new-card cap is enforced with tryConsumeNewCardSlot — one atomic
+ * check-and-consume RPC, same as saveCorrectionAsCard / addCardFromAnnotation.
+ * `introducedThisSession` de-dupes cap accounting when the same card backs
+ * multiple exercises or an exercise is retried.
+ *
+ * Returns WHY nothing was written when nothing was. This used to be a bare
+ * `void` with a console.warn on the cap path, which was survivable while the
+ * cap was 20/day for everyone and nobody reached it. It is not survivable now
+ * that the cap is what the free tier is metered on: a learner would quietly
+ * stop accumulating review material with no way to find out. The caller is
+ * expected to surface 'cap-reached'.
  */
+export type LessonSrsWriteResult =
+  | { status: 'written' }
+  | { status: 'skipped'; reason: 'cap-reached' | 'offline' };
 export async function recordLessonSrsResult(
   userId: string,
   cardId: string,
   outcome: LessonSrsOutcome,
   introducedThisSession: Set<string>,
   existingItems: Map<string, ReviewItem> | null,
-): Promise<void> {
+): Promise<LessonSrsWriteResult> {
   const rating = RATING_BY_OUTCOME[outcome];
 
   const existing = existingItems?.get(cardId);
@@ -129,7 +138,7 @@ export async function recordLessonSrsResult(
       await enqueue(userId, { type: 'review-upsert', payload });
       existingItems?.set(cardId, payload);
     }
-    return;
+    return { status: 'written' };
   }
 
   if (!introducedThisSession.has(cardId)) {
@@ -142,11 +151,10 @@ export async function recordLessonSrsResult(
       // introduced safely. Skip SRS for it — the card is introduced the
       // next time it's answered online.
       console.warn('[lesson-srs] offline; skipping new-card SRS for card', cardId);
-      return;
+      return { status: 'skipped', reason: 'offline' };
     }
     if (!slotConsumed) {
-      console.warn('[lesson-srs] daily new-card cap reached; skipping card', cardId);
-      return;
+      return { status: 'skipped', reason: 'cap-reached' };
     }
     // Mark before the upsert: the slot is already consumed, so a retry of
     // the same card must not consume a second one.
@@ -171,4 +179,5 @@ export async function recordLessonSrsResult(
     console.warn('[lesson-srs] offline; queueing review upsert for card', cardId);
     await enqueue(userId, { type: 'review-upsert', payload });
   }
+  return { status: 'written' };
 }

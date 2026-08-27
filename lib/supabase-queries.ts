@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { SRS_DEFAULTS } from '../config/app';
+import { PLANS } from './plans';
 import { localToday } from './dates';
 import type {
   ProficiencyEvidence,
@@ -667,11 +668,28 @@ export async function upsertDailyStats(
  * consumed; callers should only introduce the new card when it did.
  */
 export async function tryConsumeNewCardSlot(): Promise<boolean> {
-  const { data, error } = await supabase.rpc('try_consume_new_card_slot', {
-    p_cap: SRS_DEFAULTS.newCardsPerDay,
-  });
+  // No cap argument. It used to take one, which meant the number deciding what
+  // a free plan is worth was asserted by the client — a patched build could
+  // hand itself the maximum. The RPC now reads it from get_effective_limits.
+  const { data, error } = await supabase.rpc('try_consume_new_card_slot');
   if (error) throw error;
   return data === true;
+}
+
+/**
+ * Today's new-card usage against the learner's cap, without consuming a slot.
+ *
+ * Read-only companion to `tryConsumeNewCardSlot`, for showing "3 of 5 today"
+ * before the learner runs into the limit rather than after.
+ */
+export async function fetchNewCardAllowance(): Promise<{ used: number; cap: number }> {
+  const { data, error } = await supabase.rpc('new_card_allowance');
+  if (error) throw error;
+  const row = Array.isArray(data) ? data[0] : data;
+  return {
+    used: (row?.used as number) ?? 0,
+    cap: (row?.cap as number) ?? PLANS.starter.dailyNewCards,
+  };
 }
 
 export async function fetchStatsRange(userId: string, startDate: string, endDate: string): Promise<DailyStats[]> {
@@ -948,10 +966,6 @@ function mapProfile(row: Record<string, unknown>): UserProfile {
     totalXp: row.total_xp as number,
     timezone: row.timezone as string,
     onboardingCompleted: (row.onboarding_completed as boolean) ?? false,
-    // Hearts
-    hearts: (row.hearts as number) ?? 5,
-    maxHearts: (row.max_hearts as number) ?? 5,
-    lastHeartLostAt: (row.last_heart_lost_at as string) ?? null,
     // XP levels & leagues
     xpLevel: (row.xp_level as number) ?? 1,
     leagueTier: (row.league_tier as UserProfile['leagueTier']) ?? 'bronze',
@@ -1419,38 +1433,6 @@ function mapLessonCompletion(row: Record<string, unknown>): LessonCompletion {
   };
 }
 
-// ─── Hearts (server-authoritative — migration 036) ──────────────
-
-export interface HeartsRow {
-  hearts: number;
-  maxHearts: number;
-  lastHeartLostAt: string | null;
-}
-
-function mapHeartsRow(data: unknown): HeartsRow | null {
-  const row = Array.isArray(data) ? data[0] : data;
-  if (!row) return null;
-  const r = row as Record<string, unknown>;
-  return {
-    hearts: r.hearts as number,
-    maxHearts: r.max_hearts as number,
-    lastHeartLostAt: (r.last_heart_lost_at as string | null) ?? null,
-  };
-}
-
-/** Spend one heart (applies pending 4h regen first). */
-export async function spendHeart(): Promise<HeartsRow | null> {
-  const { data, error } = await supabase.rpc('spend_heart');
-  if (error) throw error;
-  return mapHeartsRow(data);
-}
-
-/** Apply pending heart regen server-side and return the canonical state. */
-export async function syncHearts(): Promise<HeartsRow | null> {
-  const { data, error } = await supabase.rpc('sync_hearts');
-  if (error) throw error;
-  return mapHeartsRow(data);
-}
 
 // ─── Daily Challenges ────────────────────────────────────────────
 
@@ -1626,10 +1608,16 @@ export async function addCardFromAnnotation(
   annotation: ReadingAnnotation,
   courseId: string
 ): Promise<ReviewItem> {
-  // Enforce the 20-new-cards/day cap before introducing a new card
-  // (research.md §5.2) — atomic check-and-consume, migration 044.
+  // Enforce the learner's daily new-card cap before introducing a new card
+  // (research.md §5.2) — atomic check-and-consume, migration 044, with the cap
+  // derived server-side from their tier since migration 084.
   if (!(await tryConsumeNewCardSlot())) {
-    throw new NewCardsCapReachedError(SRS_DEFAULTS.newCardsPerDay);
+    // Read the real cap so the message names the learner's actual limit
+    // rather than the shipped default.
+    const { cap } = await fetchNewCardAllowance().catch(() => ({
+      cap: PLANS.starter.dailyNewCards,
+    }));
+    throw new NewCardsCapReachedError(cap);
   }
 
   // If annotation already links to a card, use it; otherwise create one
@@ -2773,7 +2761,7 @@ function mapOrganization(row: Record<string, unknown>): Organization {
       dailyTextMessages: 0,
       dailyWritingGrades: 0,
       dailyPronunciationScores: 0,
-      unlimitedHearts: false,
+      dailyNewCards: 0,
       audiobookNarration: false,
     },
     contractStart: (row.contract_start as string) ?? null,

@@ -87,13 +87,13 @@ const MODES: { value: boolean; label: string; description: string }[] = [
   {
     value: false,
     label: 'Gamified',
-    description: 'Hearts, XP and leagues. The nudges that keep most people coming back.',
+    description: 'XP and leagues. The nudges that keep most people coming back.',
   },
   {
     value: true,
     label: 'Adult mode',
     description:
-      'For people who want to learn, not collect points. No hearts, no leagues, no XP — your progress is a CEFR level, backed by the work you’ve actually done.',
+      'For people who want to learn, not collect points. No leagues, no XP — your progress is a CEFR level, backed by the work you’ve actually done.',
   },
 ];
 
@@ -152,16 +152,6 @@ const DEFAULT_DAILY_GOAL = 10;
  * hide them. The positioning is carried by the copy, not by a pre-ticked box.
  */
 const DEFAULT_ADULT_MODE = false;
-
-/**
- * Hearts shown during the trial. Cosmetic only — `isUnlimitedHearts` is set,
- * so none is ever spent. The row is drawn because hiding it would make the
- * real lesson chrome a surprise the first time the learner meets it.
- */
-const TRIAL_MAX_HEARTS = 5;
-
-/** The trial spends no hearts, so losing one can never be reached. */
-const noopLoseHeart = async () => {};
 
 
 export default function OnboardingScreen() {
@@ -474,14 +464,6 @@ export default function OnboardingScreen() {
               targetLanguage={targetLanguage}
               onComplete={handleTrialComplete}
               onExit={() => setStep('save')}
-              hearts={TRIAL_MAX_HEARTS}
-              maxHearts={TRIAL_MAX_HEARTS}
-              // Nobody fails their way out of the first lesson they ever see.
-              // A heart-out here ends the flow before the learner has been
-              // asked for anything, which is the one outcome this whole
-              // sequence exists to avoid.
-              isUnlimitedHearts
-              onLoseHeart={noopLoseHeart}
             />
           </KeyboardAvoidingView>
         </SafeAreaView>

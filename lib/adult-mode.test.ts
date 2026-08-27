@@ -17,8 +17,6 @@ describe('gamificationVisibility', () => {
     const v = gamificationVisibility(false);
     expect(v).toEqual<GamificationVisibility>({
       adultMode: false,
-      showHearts: true,
-      heartsGateLessons: true,
       showLeague: true,
       showXpCelebration: true,
       showDailyChallenges: true,
@@ -29,20 +27,18 @@ describe('gamificationVisibility', () => {
     const v = gamificationVisibility(true);
     expect(v).toEqual<GamificationVisibility>({
       adultMode: true,
-      showHearts: false,
-      heartsGateLessons: false,
       showLeague: false,
       showXpCelebration: false,
       showDailyChallenges: false,
     });
   });
 
-  it('never lets hearts block a lesson in adult mode — the core promise', () => {
-    expect(gamificationVisibility(true).heartsGateLessons).toBe(false);
+  it('suppresses XP celebration in adult mode — the core promise', () => {
+    expect(gamificationVisibility(true).showXpCelebration).toBe(false);
   });
 
   it('defaults to the full gamified experience before the profile loads', () => {
     expect(DEFAULT_GAMIFICATION_VISIBILITY.adultMode).toBe(false);
-    expect(DEFAULT_GAMIFICATION_VISIBILITY.showHearts).toBe(true);
+    expect(DEFAULT_GAMIFICATION_VISIBILITY.showXpCelebration).toBe(true);
   });
 });

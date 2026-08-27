@@ -21,7 +21,6 @@ import { MiniDialogueExercise } from './MiniDialogueExercise';
 import { useAdultMode } from '../../hooks/useAdultMode';
 import { CorrectSparkle } from '../animations/CorrectSparkle';
 import { WrongShake } from '../animations/WrongShake';
-import { HeartBreak } from '../animations/HeartBreak';
 import { CelebrationOverlay } from '../ui/CelebrationOverlay';
 import {
   fetchDueReviewItemsWithCards,
@@ -74,18 +73,13 @@ interface LessonRunnerProps {
   cefrLevel?: string;
   onComplete: (results: LessonResult) => void;
   onExit: () => void;
-  // Hearts integration
-  hearts?: number;
-  maxHearts?: number;
-  isUnlimitedHearts?: boolean;
-  onLoseHeart?: () => void;
 }
 
 export interface LessonResult {
   totalExercises: number;
   correctCount: number;
   /**
-   * Exercises the learner skipped. They cost no heart, left their SRS card
+   * Exercises the learner skipped. They left their SRS card
    * untouched so they come back, and are OUT of the accuracy denominator —
    * `accuracy` divides by `scoredCount`, not by `totalExercises`.
    */
@@ -124,12 +118,8 @@ export function LessonRunner({
   cefrLevel,
   onComplete,
   onExit,
-  hearts = 5,
-  maxHearts = 5,
-  isUnlimitedHearts = false,
-  onLoseHeart,
 }: LessonRunnerProps) {
-  const { showHearts, showXpCelebration } = useAdultMode();
+  const { showXpCelebration } = useAdultMode();
   const [currentIndex, setCurrentIndex] = useState(0);
   // `showResult` survives only as the sparkle/shake trigger. Whether an
   // exercise has been answered is derived from `picks` — a single boolean
@@ -154,7 +144,6 @@ export function LessonRunner({
   const [answers, setAnswers] = useState<{ exerciseId: string; correct: boolean; answer: string }[]>([]);
   const [completed, setCompleted] = useState(false);
   const [lastAnswerCorrect, setLastAnswerCorrect] = useState<boolean | null>(null);
-  const [heartBreakTrigger, setHeartBreakTrigger] = useState(false);
 
   // SRS warm-up state. `warmupResolved` gates the lesson: true once the
   // warm-up either loaded (with items or zero) or the fetch timed out.
@@ -175,6 +164,17 @@ export function LessonRunner({
   const [restoreChecked, setRestoreChecked] = useState(false);
   // A previous run of this lesson aged out — surfaced once, dismissible.
   const [sessionExpired, setSessionExpired] = useState(false);
+  /**
+   * The learner has spent today's new-card allowance, so a card in this lesson
+   * was answered but not scheduled for review.
+   *
+   * This has to be visible. It was a bare console.warn while the cap was 20/day
+   * and effectively unreachable; now that the cap is what meters the free tier,
+   * an invisible skip means a learner quietly stops accumulating review
+   * material and cannot tell why. The lesson still runs to the end — the limit
+   * is on taking on NEW material, never on practising.
+   */
+  const [newCardCapReached, setNewCardCapReached] = useState(false);
   // Cards already introduced to SRS this session (cap accounting de-dupe).
   const srsIntroducedRef = useRef<Set<string>>(new Set());
   // Prefetched review items for this lesson's cards, keyed by cardId, so
@@ -355,7 +355,7 @@ export function LessonRunner({
       setStatuses((prev) => ({ ...prev, [id]: status }));
       if (warmupPhase) {
         // Warm-up answers feed the SRS machinery but do not affect the
-        // lesson accuracy/XP aggregates. Intentionally do not lose hearts
+        // lesson accuracy/XP aggregates. Intentionally do not penalise
         // on warm-up misses (different pedagogy).
         setShowResult(true);
         setLastAnswerCorrect(correct);
@@ -398,7 +398,7 @@ export function LessonRunner({
       setLastAnswerCorrect(correct);
 
       // A second attempt is open. Nothing is scored, nothing is written to
-      // SRS, no heart moves, and — the whole point — nothing is revealed.
+      // SRS moves, and — the whole point — nothing is revealed.
       if (status === 'retrying') return;
 
       // De-dupe by exerciseId: the second attempt re-invokes this handler for
@@ -442,23 +442,21 @@ export function LessonRunner({
           status === 'correct' ? 'correct' : status === 'recovered' ? 'recovered' : 'wrong',
           srsIntroducedRef.current,
           existingReviewItemsRef.current,
-        ).catch((err) => console.warn('[lesson-srs] SRS update failed:', err));
+        )
+          .then((r) => {
+            if (r.status === 'skipped' && r.reason === 'cap-reached') {
+              setNewCardCapReached(true);
+            }
+          })
+          .catch((err) => console.warn('[lesson-srs] SRS update failed:', err));
       }
 
-      // One heart per exercise, and only on a FINAL failure. The retry is a
-      // genuine second chance, so a learner who fixes their own mistake keeps
-      // the heart — which is also what stops the retry from feeling like a
-      // trap that charges you twice for one question.
-      if (status === 'wrong' && !isUnlimitedHearts) {
-        onLoseHeart?.();
-        setHeartBreakTrigger(true);
-        setTimeout(() => setHeartBreakTrigger(false), 1200);
-        // Reaching zero no longer ends the lesson — see hooks/useHearts.ts for
-        // why. The counter keeps reading 0 until it regenerates, which is the
-        // feedback; the interruption was the part that cost retention.
-      }
+      // Being wrong costs nothing. There is no per-exercise currency: free
+      // usage is metered by the daily new-card cap, which limits how fast new
+      // material is taken on rather than penalising mistakes on material the
+      // learner already has.
     },
-    [currentExercise, isUnlimitedHearts, onLoseHeart, warmupPhase, warmupEntries, warmupIndex, answers, picks, statuses, currentIndex, lessonId, userId]
+    [currentExercise, warmupPhase, warmupEntries, warmupIndex, answers, picks, statuses, currentIndex, lessonId, userId]
   );
 
   /**
@@ -467,7 +465,7 @@ export function LessonRunner({
    * Without this a learner who has simply gone blank on a typed exercise is
    * stuck: Next is disabled until the exercise resolves, and every typed
    * component refuses to submit an empty string. Resolving as `wrong` is the
-   * honest outcome — they did not get it — and it costs the same single heart
+   * honest outcome — they did not get it —
    * a second wrong answer would have.
    */
   const handleGiveUp = useCallback(() => {
@@ -500,15 +498,15 @@ export function LessonRunner({
         'wrong',
         srsIntroducedRef.current,
         existingReviewItemsRef.current,
-      ).catch((err) => console.warn('[lesson-srs] SRS update failed:', err));
+      )
+        .then((r) => {
+          if (r.status === 'skipped' && r.reason === 'cap-reached') {
+            setNewCardCapReached(true);
+          }
+        })
+        .catch((err) => console.warn('[lesson-srs] SRS update failed:', err));
     }
-
-    if (!isUnlimitedHearts) {
-      onLoseHeart?.();
-      setHeartBreakTrigger(true);
-      setTimeout(() => setHeartBreakTrigger(false), 1200);
-    }
-  }, [currentExercise, answers, picks, statuses, lessonId, userId, currentIndex, isUnlimitedHearts, onLoseHeart]);
+  }, [currentExercise, answers, picks, statuses, lessonId, userId, currentIndex]);
 
   /**
    * Step back one exercise. Deliberately does NOT clear the answered state —
@@ -530,7 +528,7 @@ export function LessonRunner({
   /**
    * Skip an audio-dependent exercise.
    *
-   * Neutral in every direction: out of the accuracy denominator, no heart, and
+   * Neutral in every direction: out of the accuracy denominator and
    * no SRS write at all, so the card stays due and the question comes back.
    * The learner's headphones being dead is not evidence about their Spanish.
    *
@@ -740,6 +738,36 @@ export function LessonRunner({
         </Pressable>
       )}
 
+      {/* New-card allowance spent. Deliberately NOT a blocker and NOT an
+          error: the lesson finishes normally, the answers still score, and the
+          only consequence is that a new word waits until tomorrow. Reviews are
+          never capped on any tier, which is the part worth saying out loud. */}
+      {newCardCapReached && (
+        <Pressable
+          onPress={() => setNewCardCapReached(false)}
+          accessibilityRole="button"
+          accessibilityLabel="Dismiss daily new-word limit notice"
+          style={{
+            backgroundColor: colors.surface.card,
+            paddingHorizontal: spacing.md,
+            paddingVertical: spacing.sm,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.xs,
+          }}
+        >
+          <Ionicons name="school-outline" size={18} color={colors.text.secondary} />
+          <Text
+            style={{ flex: 1, color: colors.text.secondary, fontSize: 13 }}
+            accessibilityLiveRegion="polite"
+          >
+            That&apos;s today&apos;s new words. Keep going — this lesson still counts, and
+            reviewing what you know is always unlimited.
+          </Text>
+          <Ionicons name="close" size={16} color={colors.text.tertiary} />
+        </Pressable>
+      )}
+
       <ExerciseChrome
         lessonTitle={warmupPhase ? 'Quick review' : lessonTitle}
         currentIndex={warmupPhase ? warmupIndex : currentIndex}
@@ -750,10 +778,6 @@ export function LessonRunner({
             ? `QUICK REVIEW ${warmupIndex + 1} / ${warmupEntries.length}`
             : `QUESTION ${String(currentIndex + 1).padStart(2, '0')}`
         }
-        hearts={hearts}
-        maxHearts={maxHearts}
-        isUnlimitedHearts={isUnlimitedHearts}
-        showHearts={showHearts}
         note={currentExercise?.explanation ?? null}
         answeredCorrect={currentCorrect}
         recovered={currentStatus === 'recovered'}
@@ -798,8 +822,6 @@ export function LessonRunner({
         </CorrectSparkle>
       </ExerciseChrome>
 
-      {/* Heart Break Animation — overlays the chrome rather than sitting in it */}
-      <HeartBreak trigger={heartBreakTrigger} />
     </>
   );
 }

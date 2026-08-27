@@ -4,9 +4,8 @@
  * Fluenci's positioning is adults who want to actually speak a language. The
  * single most-cited complaint about the category leader is that the game
  * mechanics have taken over the learning: daily point totals with no
- * conversational ability. Adult mode is the product answer — no hearts
- * blocking you mid-lesson, no league standings, no XP
- * confetti. Progress is expressed as CEFR competence instead (see
+ * conversational ability. Adult mode is the product answer — no league
+ * standings, no XP confetti. Progress is expressed as CEFR competence instead (see
  * `lib/cefr-proficiency.ts`).
  *
  * This module is the single source of truth for what the mode suppresses.
@@ -15,17 +14,13 @@
  * drifting across a dozen screens.
  *
  * What adult mode does NOT do: stop the underlying values accruing. XP
- * and hearts continue to be tracked server-side while the mode is on.
+ * continues to be tracked server-side while the mode is on.
  * Hiding is reversible; discarding a learner's history is not.
  */
 
 export interface GamificationVisibility {
   /** Whether adult mode is active. Prefer the specific flags below. */
   adultMode: boolean;
-  /** Show the hearts meter in headers and stat bars. */
-  showHearts: boolean;
-  /** Hearts can block a lesson when exhausted. */
-  heartsGateLessons: boolean;
   /** Show league tier and standings. */
   showLeague: boolean;
   /** Play XP popups and celebration overlays on success. */
@@ -42,8 +37,6 @@ export interface GamificationVisibility {
 export function gamificationVisibility(adultMode: boolean): GamificationVisibility {
   return {
     adultMode,
-    showHearts: !adultMode,
-    heartsGateLessons: !adultMode,
     showLeague: !adultMode,
     showXpCelebration: !adultMode,
     showDailyChallenges: !adultMode,

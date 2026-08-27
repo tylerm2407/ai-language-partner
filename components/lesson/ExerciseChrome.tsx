@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import { View, Pressable, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { floatingTabBarSpace } from '../navigation/FloatingTabBar';
-import { HeartsDisplay } from '../gamification/HeartsDisplay';
 import { TactileButton } from '../ui/TactileButton';
 import { Body } from '../ui/Text';
 import { ExerciseTrack } from './ExerciseTrack';
@@ -16,10 +15,6 @@ interface ExerciseChromeProps {
   completedCount?: number;
   /** Eyebrow above the prompt — "QUESTION 02", or "QUICK REVIEW 1 / 5". */
   counterLabel: string;
-  hearts: number;
-  maxHearts: number;
-  isUnlimitedHearts: boolean;
-  showHearts: boolean;
   /** exercise.explanation, or null when the exercise has none. */
   note: string | null;
   /**
@@ -62,7 +57,7 @@ const NOTE_MIN_HEIGHT = 92;
 
 /**
  * ExerciseChrome — the shared frame every exercise type renders inside:
- * header, tick track, hearts row, scrolling exercise body, and a PINNED
+ * header, tick track, counter row, scrolling exercise body, and a PINNED
  * footer holding the note row and Previous/Next.
  *
  * Layout contract (do not change without re-checking on a small device):
@@ -79,10 +74,6 @@ export function ExerciseChrome({
   total,
   completedCount,
   counterLabel,
-  hearts,
-  maxHearts,
-  isUnlimitedHearts,
-  showHearts,
   note,
   answeredCorrect,
   retry = null,
@@ -197,14 +188,6 @@ export function ExerciseChrome({
           >
             {counterLabel}
           </Body>
-          {showHearts && (
-            <HeartsDisplay
-              hearts={hearts}
-              maxHearts={maxHearts}
-              isUnlimited={isUnlimitedHearts}
-              size={14}
-            />
-          )}
         </View>
       </View>
 

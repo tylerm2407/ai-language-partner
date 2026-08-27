@@ -1,5 +1,5 @@
 /**
- * StatsStrip — the XP / hearts row under the Home greeting.
+ * StatsStrip — the XP row under the Home greeting.
  *
  * Was: three Chips with Ionicons (XP in amber) plus hearts.
  * Now: one mono meta row — `1,240 XP` — reading as a dateline rather
@@ -11,19 +11,15 @@
  * progress) but they are set in the same mono voice as DateLabel, one type step
  * down, and the indigo accent is reserved for the CTA further down the screen.
  *
- * Hearts keep their glyph row: hearts are a spendable resource and the count
- * has to be readable at a glance, which a mono numeral does not do as well as
- * five filled/empty shapes.
- *
- * Render conditions are unchanged — this is a restyle, not a behaviour change.
+ * Hearts used to sit here as a glyph row. They are gone with the mechanic —
+ * free usage is metered by the daily new-card cap instead, which is surfaced
+ * where it applies (inside a lesson) rather than as ambient chrome.
  */
 
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../../stores/useAppStore';
-import { useHearts } from '../../hooks/useHearts';
 import { useAdultMode } from '../../hooks/useAdultMode';
-import { HeartsDisplay } from '../gamification/HeartsDisplay';
 import { cefrBandForProficiencyLevel } from '../../lib/cefr-proficiency';
 import { colors, spacing, typography } from '../../config/theme';
 
@@ -33,15 +29,14 @@ function Separator() {
 
 export function StatsStrip() {
   const profile = useAppStore((s) => s.profile);
-  const { hearts, maxHearts, isUnlimited } = useHearts();
-  const { showHearts, showXpCelebration } = useAdultMode();
+  const { showXpCelebration } = useAdultMode();
 
   const totalXp = profile?.totalXp ?? 0;
 
-  // Adult mode replaces the XP/hearts row with a single competence
-  // label. The point of the mode is that progress is measured in what you can
-  // do, not in points earned — so this row states the level rather than a score.
-  if (!showHearts && !showXpCelebration) {
+  // Adult mode replaces the XP row with a single competence label. The point
+  // of the mode is that progress is measured in what you can do, not in points
+  // earned — so this row states the level rather than a score.
+  if (!showXpCelebration) {
     const band = cefrBandForProficiencyLevel(profile?.level ?? 'beginner');
     return (
       <View style={styles.row}>
@@ -55,8 +50,6 @@ export function StatsStrip() {
     <View style={styles.row}>
       <Text style={[styles.meta, styles.emphasis]}>{totalXp.toLocaleString()}</Text>
       <Text style={styles.meta}>XP</Text>
-      <Separator />
-      <HeartsDisplay hearts={hearts} maxHearts={maxHearts} isUnlimited={isUnlimited} size={14} />
     </View>
   );
 }
@@ -66,7 +59,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     // Wraps rather than clips: at the accessibility text sizes this row's
-    // 12pt mono runs past the screen width and the hearts fall off the end.
+    // 12pt mono runs past the screen width and the row clips.
     flexWrap: 'wrap',
     gap: spacing.xxs,
     marginBottom: spacing.lg,

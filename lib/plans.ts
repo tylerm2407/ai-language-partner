@@ -9,6 +9,24 @@
 
 export type PlanId = 'starter' | 'basic' | 'premium' | 'vip';
 
+/**
+ * `dailyNewCards` value that means "no ceiling".
+ *
+ * A sentinel rather than `null` or `-1` because `get_effective_limits` merges a
+ * classroom's contract against the personal plan with `GREATEST()`, and both of
+ * those would lose that comparison against any real number — a school student
+ * on an unlimited personal plan would silently inherit the school's smaller
+ * cap. A large int is the only representation that survives the merge.
+ *
+ * 9999 is unreachable in practice: the curriculum is finite and nobody
+ * introduces four figures of new vocabulary in a day.
+ */
+export const UNLIMITED_NEW_CARDS = 9999;
+
+export function isUnlimitedNewCards(cap: number): boolean {
+  return cap >= UNLIMITED_NEW_CARDS;
+}
+
 export interface SchoolContractConfig {
   dailyVoiceMinutes: number;
   dailyTextMessages: number;
@@ -18,7 +36,7 @@ export interface SchoolContractConfig {
   // that counter and does not return it, so a school contract cannot override
   // it. Students fall through to their plan's value, which is generous enough
   // that a contract override has never been needed.
-  unlimitedHearts: boolean;
+  dailyNewCards: number;
   audiobookNarration: boolean;
   offlineMode?: boolean;
   allowed_email_domains?: string[];
@@ -37,7 +55,7 @@ export interface PlanDefinition {
    * without being handed chat or voice-practice minutes.
    */
   dailyLessonTtsPlays: number;
-  unlimitedHearts: boolean;
+  dailyNewCards: number;
   audiobookNarration: boolean;
   offlineMode: boolean;
 }
@@ -82,7 +100,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     dailyWritingGrades: 0,
     dailyPronunciationScores: 0,
     dailyLessonTtsPlays: 5,
-    unlimitedHearts: false,
+    dailyNewCards: 5,
     audiobookNarration: false,
     offlineMode: false,
   },
@@ -94,7 +112,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     dailyWritingGrades: 3,
     dailyPronunciationScores: 3,
     dailyLessonTtsPlays: 50,
-    unlimitedHearts: true,
+    dailyNewCards: 20,
     audiobookNarration: false,
     offlineMode: false,
   },
@@ -106,7 +124,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     dailyWritingGrades: 7,
     dailyPronunciationScores: 5,
     dailyLessonTtsPlays: 100,
-    unlimitedHearts: true,
+    dailyNewCards: UNLIMITED_NEW_CARDS,
     audiobookNarration: false,
     offlineMode: true,
   },
@@ -118,7 +136,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     dailyWritingGrades: 12,
     dailyPronunciationScores: 7,
     dailyLessonTtsPlays: 200,
-    unlimitedHearts: true,
+    dailyNewCards: UNLIMITED_NEW_CARDS,
     audiobookNarration: true,
     offlineMode: true,
   },
@@ -126,9 +144,9 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
 
 /** Feature bullet points for the subscription/pricing UI. */
 export const PLAN_FEATURES: Record<PlanId, string[]> = {
-  // "Unlimited hearts" is deliberately absent from every tier: hearts no
-  // longer block anything (hooks/useHearts.ts), so listing it would be
-  // selling a benefit that does not exist.
+  // Free usage is metered by `dailyNewCards`, not by a per-mistake currency.
+  // That is the line worth selling: being wrong is always free, and every
+  // review of material already learned is unlimited on every tier.
   //
   // `starter` lists what a free account actually gets, so declining the
   // paywall is an informed choice rather than a leap. Everything here is
@@ -136,19 +154,21 @@ export const PLAN_FEATURES: Record<PlanId, string[]> = {
   // voice practice and writing grades are the things that aren't, and they are
   // the reason the paid rungs exist.
   starter: [
-    'All lessons, reviews and reading',
-    'Daily news in your language',
-    'XP and leagues',
+    '5 new words a day',
+    'Unlimited review — always',
+    'All lessons, reading and daily news',
     'One photo avatar, free',
   ],
   basic: [
-    'All lessons, reviews and reading',
+    '20 new words a day',
+    'Unlimited review — always',
     '25 tutor messages per day',
     '10 minutes of voice practice per day',
     '3 writing grades per day',
   ],
   premium: [
     'Everything in Basic',
+    'Unlimited new words',
     '50 tutor messages per day',
     '20 minutes of voice practice per day',
     '7 writing grades per day',

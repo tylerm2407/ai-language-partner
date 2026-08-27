@@ -133,12 +133,6 @@ export const colors = {
     diamond: '#38BDF8',
   },
 
-  /** Heart colors (gamification) */
-  heart: {
-    filled: '#EF4444',
-    empty: '#64748B',
-  },
-
   /** Magazine / editorial palette */
   magazine: {
     nebulaTop: '#0a0520',
@@ -146,7 +140,6 @@ export const colors = {
     accentBlue: '#4F8EF7',
     accentViolet: '#7C3AED',
     accentLilac: '#A855F7',
-    heartsCoral: '#FF6B6B',
     xpGold: '#FFB547',
     flame: '#FF8A3D',
     // Opaque under Dark Glow — the editorial voice is carried by type

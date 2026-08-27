@@ -59,7 +59,6 @@ jest.mock('../../components/animations/CorrectSparkle', () => ({
 jest.mock('../../components/animations/WrongShake', () => ({
   WrongShake: ({ children }: { children: React.ReactNode }) => children,
 }));
-jest.mock('../../components/animations/HeartBreak', () => ({ HeartBreak: () => null }));
 jest.mock('../../components/ui/CelebrationOverlay', () => ({ CelebrationOverlay: () => null }));
 jest.mock('@react-native-async-storage/async-storage', () => ({
   __esModule: true,
@@ -101,7 +100,7 @@ jest.mock('../../hooks/useAudioPlayer', () => ({
   useAudioPlayer: () => ({ playing: false, loading: false, error: null, play: jest.fn() }),
 }));
 jest.mock('../../hooks/useAdultMode', () => ({
-  useAdultMode: () => ({ showHearts: true, showXpCelebration: true, heartsGateLessons: true }),
+  useAdultMode: () => ({ showXpCelebration: true }),
 }));
 jest.mock('../../hooks/useLessonAudioPrewarm', () => ({
   useLessonAudioPrewarm: jest.fn(),
@@ -160,7 +159,7 @@ function pressLabel(renderer: TestRenderer.ReactTestRenderer, label: string) {
   });
 }
 
-function runner(onComplete: (r: LessonResult) => void, onLoseHeart = jest.fn()) {
+function runner(onComplete: (r: LessonResult) => void) {
   return render(
     <LessonRunner
       exercises={[exercise('ex1')]}
@@ -171,7 +170,6 @@ function runner(onComplete: (r: LessonResult) => void, onLoseHeart = jest.fn()) 
       targetLanguage="es"
       onComplete={onComplete}
       onExit={() => {}}
-      onLoseHeart={onLoseHeart}
     />,
   );
 }
@@ -189,19 +187,11 @@ describe('second chance in a real lesson', () => {
     expect(rendered).not.toContain('ANSWER: WATER');
   });
 
-  it('does not spend a heart on the first wrong answer', () => {
-    const onLoseHeart = jest.fn();
-    const r = runner(jest.fn(), onLoseHeart);
+  it('reveals the answer only after both attempts are spent', () => {
+    const r = runner(jest.fn());
     pressLabel(r, 'Option B: milk');
-    expect(onLoseHeart).not.toHaveBeenCalled();
-  });
-
-  it('spends exactly one heart when both attempts fail', () => {
-    const onLoseHeart = jest.fn();
-    const r = runner(jest.fn(), onLoseHeart);
+    expect(text(r)).not.toContain('ANSWER: WATER');
     pressLabel(r, 'Option B: milk');
-    pressLabel(r, 'Option B: milk');
-    expect(onLoseHeart).toHaveBeenCalledTimes(1);
     expect(text(r)).toContain('ANSWER: WATER');
   });
 
@@ -228,8 +218,7 @@ describe('second chance in a real lesson', () => {
 
   it('scores a first-time correct answer normally', () => {
     const onComplete = jest.fn();
-    const onLoseHeart = jest.fn();
-    const r = runner(onComplete, onLoseHeart);
+    const r = runner(onComplete);
 
     pressLabel(r, 'Option A: water');
     expect(text(r)).toContain('CORRECT — ');
@@ -239,6 +228,5 @@ describe('second chance in a real lesson', () => {
     expect(result.correctCount).toBe(1);
     expect(result.accuracy).toBe(1);
     expect(result.skippedCount).toBe(0);
-    expect(onLoseHeart).not.toHaveBeenCalled();
   });
 });

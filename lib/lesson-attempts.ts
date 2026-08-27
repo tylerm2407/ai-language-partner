@@ -17,7 +17,7 @@ export type AttemptStatus =
   | 'correct'    // right first time — the only status that scores
   | 'recovered'  // right on the second attempt — does not score, SRS rating 3
   | 'wrong'      // out of attempts, or gave up and asked to see the answer
-  | 'skipped';   // neutral: no score, no heart, no SRS write
+  | 'skipped';   // neutral: no score, no SRS write
 
 export type AttemptStatusMap = Record<string, AttemptStatus>;
 

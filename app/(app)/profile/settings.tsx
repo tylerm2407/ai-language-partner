@@ -206,7 +206,7 @@ export default function SettingsScreen() {
           accessibilityRole="switch"
           accessibilityState={{ checked: adultMode }}
           accessibilityLabel="Adult mode"
-          accessibilityHint="Turns off hearts, leagues and XP celebration"
+          accessibilityHint="Turns off leagues and XP celebration"
         >
           <Ionicons
             name={adultMode ? 'checkmark-circle' : 'ellipse-outline'}
@@ -218,7 +218,7 @@ export default function SettingsScreen() {
               Turn off game mechanics
             </Text>
             <Text className="text-sm text-text-secondary mt-0.5">
-              No hearts, no leagues, no XP. Progress is shown as your CEFR level.
+              No leagues, no XP. Progress is shown as your CEFR level.
               Nothing is lost — your history is kept if you switch back.
             </Text>
           </View>

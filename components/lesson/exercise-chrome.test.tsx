@@ -104,10 +104,6 @@ const chromeProps = {
   total: 6,
   completedCount: 1,
   counterLabel: 'QUESTION 02',
-  hearts: 4,
-  maxHearts: 5,
-  isUnlimitedHearts: false,
-  showHearts: true,
   note: 'Agua is feminine but takes "el" in the singular — el agua fría.',
   answeredCorrect: null as boolean | null,
   correctAnswer: 'water',
@@ -179,14 +175,6 @@ describe('ExerciseChrome', () => {
     expect(text(r)).toContain('Greetings & Basics');
   });
 
-  it('hides hearts when the adult-mode preference is off', () => {
-    const withHearts = render(<ExerciseChrome {...chromeProps} />);
-    const without = render(<ExerciseChrome {...chromeProps} showHearts={false} />);
-    const count = (r: TestRenderer.ReactTestRenderer) =>
-      hostNodes(r, (n) => String(n.type) === 'Ionicons').length;
-    expect(count(withHearts)).toBeGreaterThan(0);
-    expect(count(without)).toBe(0);
-  });
 });
 
   describe('second chance and skip', () => {

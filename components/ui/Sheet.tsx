@@ -3,7 +3,7 @@
  *
  * Slides up from the bottom safe area. Dismissible via backdrop tap,
  * swipe-down, or an explicit close button. Used for correct/incorrect
- * feedback, out-of-hearts prompts, achievement reveals, join-class,
+ * feedback, new-card limit prompts, achievement reveals, join-class,
  * avatar-customizer, settings, etc.
  *
  * Animation honors useMotion; reduced-motion collapses to a dissolve.

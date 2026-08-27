@@ -35,6 +35,12 @@ export const HANDSFREE_DEFAULTS = {
 export const SRS_DEFAULTS = {
   initialEaseFactor: 2.5,
   minimumEaseFactor: 1.3,
+  /**
+   * Fallback only. The enforced cap is per-tier (`PLANS[*].dailyNewCards`) and
+   * is derived SERVER-side inside `try_consume_new_card_slot` — the client
+   * cannot assert it. This value is what the UI shows before the real
+   * allowance has loaded.
+   */
   newCardsPerDay: 20,
 } as const;
 
