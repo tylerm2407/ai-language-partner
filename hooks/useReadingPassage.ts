@@ -6,7 +6,9 @@ import {
   fetchReadingQuestions,
   upsertReadingProgress,
   addCardFromAnnotation,
+  NewCardsCapReachedError,
 } from '../lib/supabase-queries';
+import { saveErrorCopy } from '../lib/error-copy';
 import type { ReadingPassage, ReadingAnnotation, ReadingQuestion, ReviewItem } from '../types';
 
 interface UseReadingPassageReturn {
@@ -86,7 +88,19 @@ export function useReadingPassage(passageId: string | null): UseReadingPassageRe
     if (!user) return null;
     try {
       return await addCardFromAnnotation(user.id, annotation, courseId);
-    } catch {
+    } catch (err) {
+      // This used to be a bare `catch { return null }`. Every failure looked
+      // identical to success from the UI, which is how the missing INSERT
+      // policy (migration 088) stayed hidden: the tap did nothing, silently.
+      if (err instanceof NewCardsCapReachedError) {
+        Alert.alert(
+          "That's all your new words for today",
+          `You've started ${err.cap} new words today. This one will still be here tomorrow — reviewing what you've already started is always unlimited.`,
+        );
+        return null;
+      }
+      const { title, message } = saveErrorCopy(err, 'that word to your reviews');
+      Alert.alert(title, message);
       return null;
     }
   }, [user]);

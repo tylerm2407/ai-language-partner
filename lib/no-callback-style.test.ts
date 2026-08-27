@@ -25,11 +25,16 @@ const ROOT = resolve(__dirname, '..');
 function sourceFiles(): string[] {
   // Tracked files only: node_modules and build output are irrelevant, and
   // git already knows what belongs to the project.
-  const out = execSync('git ls-files "app/**/*.tsx" "components/**/*.tsx" "hooks/**/*.tsx"', {
+  //
+  // Directories, not globs: `git ls-files "hooks/**/*.tsx"` matches NOTHING and
+  // `"app/**/*.tsx"` silently drops the root `app/_layout.tsx`, because git's
+  // `**` wants an intervening directory. Filtering extensions here scans every
+  // file instead of quietly skipping some and still reporting green.
+  const out = execSync('git ls-files app components hooks', {
     cwd: ROOT,
     encoding: 'utf8',
   });
-  return out.split('\n').filter(Boolean);
+  return out.split('\n').filter(Boolean).filter((f) => f.endsWith('.tsx'));
 }
 
 describe('no callback-form style props', () => {

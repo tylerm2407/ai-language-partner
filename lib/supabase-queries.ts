@@ -1631,10 +1631,25 @@ export class NewCardsCapReachedError extends Error {
   }
 }
 
+/**
+ * The fields a learner-authored card is built from. `ReadingAnnotation`
+ * (passages) and `BookAnnotation` (books) both satisfy this structurally, so
+ * both surfaces can share one code path — and therefore one new-card cap.
+ */
+export interface AnnotationCardSource {
+  wordOrPhrase: string;
+  translation: string;
+  audioUrl: string | null;
+  partOfSpeech: string | null;
+  /** Reuse an existing card when the annotation already links to one. */
+  cardId?: string | null;
+}
+
 export async function addCardFromAnnotation(
   userId: string,
-  annotation: ReadingAnnotation,
-  courseId: string
+  annotation: AnnotationCardSource,
+  courseId: string,
+  tags: string[] = ['reading']
 ): Promise<ReviewItem> {
   // Enforce the learner's daily new-card cap before introducing a new card
   // (research.md §5.2) — atomic check-and-consume, migration 044, with the cap
@@ -1655,12 +1670,15 @@ export async function addCardFromAnnotation(
     const { data: card, error: cardError } = await supabase
       .from('cards')
       .insert({
+        // Stamps the learner as owner. Required: the INSERT policy added in
+        // migration 088 checks it, and without it the write is refused.
+        user_id: userId,
         course_id: courseId,
         native_text: annotation.translation,
         target_text: annotation.wordOrPhrase,
         audio_url: annotation.audioUrl,
         part_of_speech: annotation.partOfSpeech,
-        tags: ['reading'],
+        tags,
       })
       .select()
       .single();
@@ -2702,8 +2720,12 @@ export async function loadChatMessages(sessionId: string): Promise<ConversationM
 
 /** Save a correction as an SRS card so the user can review it later.
  *  Uses the corrected phrase as target_text and the explanation/shortLabel
- *  as native_text. Creates both the card and a fresh review_item. Safe to
- *  call with a NULL courseId (card column is nullable). */
+ *  as native_text. Creates both the card and a fresh review_item.
+ *
+ *  The card is filed with no course: a learner can be corrected in a language
+ *  we publish no course for. `cards.course_id` was NOT NULL until migration
+ *  088 — which is one of the two reasons this function had never once
+ *  succeeded (the other being the missing INSERT policy). */
 export async function saveCorrectionAsCard(params: {
   userId: string;
   targetLanguage: string;
@@ -2729,6 +2751,8 @@ export async function saveCorrectionAsCard(params: {
   const { data: card, error: cardErr } = await supabase
     .from('cards')
     .insert({
+      // Required by the INSERT policy (migration 088).
+      user_id: userId,
       course_id: null,
       unit_id: null,
       native_text: nativeText,

@@ -11,7 +11,8 @@ import {
   fetchBookAnnotations,
   fetchUserBookProgress,
   upsertBookProgress,
-  upsertReviewItem,
+  addCardFromAnnotation,
+  NewCardsCapReachedError,
   incrementXpIdempotent,
   fetchSubscription,
 } from '../../../../../lib/supabase-queries';
@@ -120,36 +121,24 @@ export default function BookDetailScreen() {
       return null;
     }
 
-    // Create a card from the book annotation
-    const { data: card, error: cardError } = await supabase
-      .from('cards')
-      .insert({
-        course_id: courses.id,
-        native_text: annotation.translation,
-        target_text: annotation.wordOrPhrase,
-        audio_url: annotation.audioUrl,
-        part_of_speech: annotation.partOfSpeech,
-        tags: ['reading', 'book'],
-      })
-      .select()
-      .single();
-
-    if (cardError) {
-      const { title, message } = saveErrorCopy(cardError, 'that word to your reviews');
+    // Books used to build the card and review item inline here, which meant
+    // the daily new-card cap was enforced on passages but not on books — and
+    // since migration 084 that cap IS the free-tier limit, so the book reader
+    // was an unmetered way around it. One shared path, one cap.
+    try {
+      return await addCardFromAnnotation(user.id, annotation, courses.id, ['reading', 'book']);
+    } catch (err) {
+      if (err instanceof NewCardsCapReachedError) {
+        Alert.alert(
+          "That's all your new words for today",
+          `You've started ${err.cap} new words today. This one will still be here tomorrow — reviewing what you've already started is always unlimited.`,
+        );
+        return null;
+      }
+      const { title, message } = saveErrorCopy(err, 'that word to your reviews');
       Alert.alert(title, message);
       return null;
     }
-
-    return upsertReviewItem({
-      userId: user.id,
-      cardId: card.id,
-      easeFactor: 2.5,
-      interval: 0,
-      repetitions: 0,
-      nextDue: new Date().toISOString(),
-      lastReviewedAt: null,
-      status: 'new',
-    });
   }, [user, book]);
 
   const handleComplete = useCallback(async () => {
