@@ -15,6 +15,9 @@ import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { checkBurstLimit } from '../_shared/burst-limit.ts';
 import { MAX_AUDIO_BASE64_SIZE } from '../_shared/validation.ts';
 import { toLanguageCode } from '../_shared/language.ts';
+import { getPlanLimits } from '../_shared/plan-limits.ts';
+import { getUserToday } from '../_shared/user-day.ts';
+import { PROVIDER_TIMEOUT_MS, providerFetch } from '../_shared/provider-fetch.ts';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -80,6 +83,45 @@ serve(async (req: Request) => {
       );
     }
 
+    // Daily cap. voice-session-end's header has claimed since the voice-proxy
+    // removal that transcribe gates on DAILY_VOICE_LIMIT_REACHED; it never
+    // did. Until now the burst limiter was the only thing between a signed-in
+    // account and unbounded Whisper spend — and burst-limit.ts fails OPEN when
+    // Redis cannot answer and there is nothing to fall back to, so "only" was
+    // doing a lot of work.
+    //
+    // voice_minutes is the counter, not one of consume_daily_quota's fixed
+    // set: none of those describe seconds of audio, and Whisper bills by the
+    // second. Charging real duration after the call (below) is what makes this
+    // check converge instead of reading a number this path never moves.
+    const { data: sub } = await supabase
+      .from('subscriptions')
+      .select('tier, is_active')
+      .eq('user_id', authUser.userId)
+      .single();
+    const limits = getPlanLimits(sub?.is_active && sub.tier ? sub.tier : 'starter');
+
+    // Day key must match what increment_daily_usage writes (user-local
+    // midnight rollover, migration 044) — not UTC.
+    const userDay = await getUserToday(supabase, authUser.userId);
+    const { data: usageRow } = await supabase
+      .from('daily_usage')
+      .select('voice_minutes')
+      .eq('user_id', authUser.userId)
+      .eq('date', userDay)
+      .single();
+
+    const usedVoiceMinutes = parseFloat(usageRow?.voice_minutes as string) || 0;
+    if (usedVoiceMinutes >= limits.dailyVoiceMinutes) {
+      return new Response(
+        JSON.stringify({
+          error: "You've reached your daily voice limit. Upgrade your plan for more.",
+          code: 'DAILY_VOICE_LIMIT_REACHED',
+        }),
+        { status: 429, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Decode base64 to binary
     const binaryString = atob(audioBase64);
     const bytes = new Uint8Array(binaryString.length);
@@ -95,13 +137,17 @@ serve(async (req: Request) => {
     // verbose_json is the only response format that reports detected language.
     formData.append('response_format', 'verbose_json');
 
-    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+    const response = await providerFetch(
+      'https://api.openai.com/v1/audio/transcriptions',
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        },
+        body: formData,
       },
-      body: formData,
-    });
+      { provider: 'openai-whisper', timeoutMs: PROVIDER_TIMEOUT_MS.transcription },
+    );
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -109,6 +155,23 @@ serve(async (req: Request) => {
     }
 
     const data = await response.json();
+
+    // Charge what was actually transcribed. verbose_json reports the audio's
+    // duration in seconds, which is exactly what OpenAI bills on — so a normal
+    // ten-second turn costs ~0.17 of a minute and is invisible, while a caller
+    // pushing the 10MB cap spends most of a day's allowance in one request.
+    // Best-effort: the learner already has their transcript, so a metering
+    // failure is logged, not surfaced.
+    const durationSeconds = typeof data.duration === 'number' ? data.duration : 0;
+    if (durationSeconds > 0) {
+      const { error: usageErr } = await supabase.rpc('increment_daily_usage', {
+        p_user_id: authUser.userId,
+        p_voice_minutes: durationSeconds / 60,
+      });
+      if (usageErr) {
+        console.error('[transcribe] failed to increment voice_minutes:', usageErr.message);
+      }
+    }
 
     return new Response(
       JSON.stringify({
@@ -120,9 +183,17 @@ serve(async (req: Request) => {
       }),
       { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
     );
-  } catch (error) {
+  } catch (error: unknown) {
+    // Never echo this outward: it carries the Whisper response body, which
+    // quotes request parameters back (CLAUDE.md §6). Detail to the logs, a
+    // stable code to the caller.
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('[transcribe] unhandled error:', message);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({
+        error: 'Transcription is temporarily unavailable. Please try again.',
+        code: 'TRANSCRIPTION_FAILED',
+      }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }

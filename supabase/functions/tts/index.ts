@@ -25,6 +25,7 @@ import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { checkBurstLimit } from '../_shared/burst-limit.ts';
 import { getPlanLimits } from '../_shared/plan-limits.ts';
 import { getUserToday } from '../_shared/user-day.ts';
+import { PROVIDER_TIMEOUT_MS, providerFetch } from '../_shared/provider-fetch.ts';
 import {
   asCitationForm,
   cachePathFor,
@@ -351,7 +352,7 @@ async function generateWithElevenLabs(
       ? { ...voiceSettings, speed: Number(effectiveSpeed.toFixed(2)) }
       : (({ speed: _drop, ...rest }) => rest)(voiceSettings);
 
-  const response = await fetch(
+  const response = await providerFetch(
     `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream`,
     {
       method: 'POST',
@@ -360,7 +361,8 @@ async function generateWithElevenLabs(
         'xi-api-key': ELEVENLABS_API_KEY!,
       },
       body: JSON.stringify({ text, model_id, voice_settings }),
-    }
+    },
+    { provider: 'elevenlabs', timeoutMs: PROVIDER_TIMEOUT_MS.speech },
   );
 
   if (!response.ok) {
@@ -375,23 +377,27 @@ async function generateWithFish(
   text: string,
   purpose: SpeechPurpose,
 ): Promise<ArrayBuffer> {
-  const response = await fetch('https://api.fish.audio/v1/tts', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${FISH_API_KEY!}`,
-      'model': 's2-pro',
+  const response = await providerFetch(
+    'https://api.fish.audio/v1/tts',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${FISH_API_KEY!}`,
+        'model': 's2-pro',
+      },
+      body: JSON.stringify({
+        text,
+        reference_id: referenceId,
+        format: 'mp3',
+        // Chat streams, so conversational turnaround matters more than maximum
+        // fidelity. A lesson clip is prefetched and nobody is waiting on it, so
+        // there the trade inverts completely.
+        latency: purpose === 'lesson' ? 'normal' : 'balanced',
+      }),
     },
-    body: JSON.stringify({
-      text,
-      reference_id: referenceId,
-      format: 'mp3',
-      // Chat streams, so conversational turnaround matters more than maximum
-      // fidelity. A lesson clip is prefetched and nobody is waiting on it, so
-      // there the trade inverts completely.
-      latency: purpose === 'lesson' ? 'normal' : 'balanced',
-    }),
-  });
+    { provider: 'fish.audio', timeoutMs: PROVIDER_TIMEOUT_MS.speech },
+  );
 
   if (!response.ok) {
     throw new Error(`fish.audio API error: ${response.status} - ${await response.text()}`);

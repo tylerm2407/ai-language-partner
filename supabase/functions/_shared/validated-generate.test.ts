@@ -56,6 +56,56 @@ Deno.test('retry that succeeds stops the loop early', async () => {
   assertEquals(res.text, 'recovered clean output');
 });
 
+Deno.test('provider failure retries, then uses the pre-authored fallback', async () => {
+  let attempts = 0;
+  let fallbackCalls = 0;
+  const res = await generateValidated({
+    fn: 'test',
+    generate: (_n) => { attempts++; return Promise.reject(new Error('anthropic did not respond within 30000ms')); },
+    fallback: () => { fallbackCalls++; return Promise.resolve('a clean fallback message'); },
+    language: 'en',
+    safetyRetries: 2,
+  });
+  assertEquals(res.usedFallback, true);
+  assertEquals(res.fallbackReason, 'provider');
+  assertEquals(attempts, 3);
+  assertEquals(fallbackCalls, 1);
+  assertEquals(res.text, 'a clean fallback message');
+});
+
+Deno.test('a provider failure that recovers on retry never reaches the fallback', async () => {
+  let attempts = 0;
+  let fallbackCalls = 0;
+  const res = await generateValidated({
+    fn: 'test',
+    generate: (n) => {
+      attempts++;
+      if (n === 1) return Promise.reject(new Error('503 upstream'));
+      return Promise.resolve('recovered clean output');
+    },
+    fallback: () => { fallbackCalls++; return Promise.resolve('unused fallback'); },
+    language: 'en',
+    safetyRetries: 2,
+  });
+  assertEquals(res.usedFallback, false);
+  assertEquals(res.fallbackReason, undefined);
+  assertEquals(attempts, 2);
+  assertEquals(fallbackCalls, 0);
+  assertEquals(res.text, 'recovered clean output');
+});
+
+Deno.test('a safety-exhausted fallback is still attributed to safety', async () => {
+  const res = await generateValidated({
+    fn: 'test',
+    generate: (_n) => Promise.resolve('this is fucking broken'),
+    fallback: () => Promise.resolve('a clean fallback message'),
+    language: 'en',
+    safetyRetries: 2,
+  });
+  assertEquals(res.usedFallback, true);
+  assertEquals(res.fallbackReason, 'safety');
+});
+
 Deno.test('level validation is attached when targetLevel provided', async () => {
   const res = await generateValidated({
     fn: 'test',

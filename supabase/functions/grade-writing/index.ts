@@ -9,6 +9,7 @@ import { corsResponse, corsHeaders } from '../_shared/cors.ts';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { getPlanLimits } from '../_shared/plan-limits.ts';
 import { isValidUUID, isValidCefrLevel, isValidLanguage, sanitizeText } from '../_shared/validation.ts';
+import { PROVIDER_TIMEOUT_MS, providerFetch } from '../_shared/provider-fetch.ts';
 import { gradeWithValidation, shouldRefundQuota } from './grading.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -123,20 +124,24 @@ serve(async (req: Request) => {
     // honest fallback). See grading.ts. Never fabricates scores: on
     // unrecoverable failure the response carries graded: false and zeros.
     const feedback = await gradeWithValidation(async () => {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01',
+      const response = await providerFetch(
+        'https://api.anthropic.com/v1/messages',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': ANTHROPIC_API_KEY,
+            'anthropic-version': '2023-06-01',
+          },
+          body: JSON.stringify({
+            model: TEXT_MODEL,
+            max_tokens: 1500,
+            system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
+            messages: [{ role: 'user', content: sanitizeText(submissionText, 5000) }],
+          }),
         },
-        body: JSON.stringify({
-          model: TEXT_MODEL,
-          max_tokens: 1500,
-          system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
-          messages: [{ role: 'user', content: sanitizeText(submissionText, 5000) }],
-        }),
-      });
+        { provider: 'anthropic', timeoutMs: PROVIDER_TIMEOUT_MS.textLong },
+      );
 
       if (!response.ok) {
         const errorText = await response.text();

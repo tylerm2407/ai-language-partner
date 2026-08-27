@@ -86,6 +86,24 @@ verify_jwt = false
 [functions.lesson-session]
 verify_jwt = false
 
+# ─── analyze-turn ─────────────────────────────────────────────────────────
+# Deployed verify_jwt = false since 2026 (confirmed against the live function
+# list) but never recorded here, so the next `functions deploy` would have
+# flipped the platform gate back ON and started rejecting this project's user
+# tokens — the exact regression the header warns about. The function body
+# authenticates via getAuthenticatedUser (_shared/auth.ts), then burst-limits
+# and consumes text_messages quota before any model call.
+[functions.analyze-turn]
+verify_jwt = false
+
+# ─── create-checkout ──────────────────────────────────────────────────────
+# Also deployed verify_jwt = false and also unrecorded. It mints Stripe
+# Checkout sessions against the CALLER's verified user id, so the auth it
+# depends on is its own bearer check, not the gate — but a silent flip to
+# true would take subscription purchase down entirely.
+[functions.create-checkout]
+verify_jwt = false
+
 # ─── news-audio ───────────────────────────────────────────────────────────
 # User-facing. Hands back a short-lived signed URL for a daily article's
 # narration. Authenticates in the function body via getAuthenticatedUser

@@ -27,6 +27,7 @@ import {
   splitForSynthesis,
 } from './script.ts';
 import { parseMp3DurationMs } from './mp3-duration.ts';
+import { PROVIDER_TIMEOUT_MS, providerFetch } from '../_shared/provider-fetch.ts';
 import {
   ELEVEN_NEWS_VOICES,
   DEFAULT_ELEVEN_VOICE,
@@ -105,24 +106,28 @@ export class NewsAudioError extends Error {
 }
 
 async function synthesizeWithFish(referenceId: string, text: string): Promise<ArrayBuffer> {
-  const response = await fetch('https://api.fish.audio/v1/tts', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${FISH_API_KEY!}`,
-      'model': 's2-pro',
+  const response = await providerFetch(
+    'https://api.fish.audio/v1/tts',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${FISH_API_KEY!}`,
+        'model': 's2-pro',
+      },
+      body: JSON.stringify({
+        text,
+        reference_id: referenceId,
+        format: 'mp3',
+        // 'normal', not the 'balanced' chat uses. Nobody is waiting on a
+        // pre-rendered narration, so there is no reason to trade fidelity for
+        // turnaround — and prosody drift over a long read is exactly what the
+        // faster setting costs.
+        latency: 'normal',
+      }),
     },
-    body: JSON.stringify({
-      text,
-      reference_id: referenceId,
-      format: 'mp3',
-      // 'normal', not the 'balanced' chat uses. Nobody is waiting on a
-      // pre-rendered narration, so there is no reason to trade fidelity for
-      // turnaround — and prosody drift over a long read is exactly what the
-      // faster setting costs.
-      latency: 'normal',
-    }),
-  });
+    { provider: 'fish.audio', timeoutMs: PROVIDER_TIMEOUT_MS.narration },
+  );
   if (!response.ok) {
     throw new Error(`fish.audio API error: ${response.status} - ${await response.text()}`);
   }
@@ -131,7 +136,7 @@ async function synthesizeWithFish(referenceId: string, text: string): Promise<Ar
 
 async function synthesizeWithElevenLabs(voiceId: string, text: string): Promise<ArrayBuffer> {
   const { model_id, ...voice_settings } = ELEVEN_NEWS_PROFILE;
-  const response = await fetch(
+  const response = await providerFetch(
     `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream`,
     {
       method: 'POST',
@@ -141,6 +146,7 @@ async function synthesizeWithElevenLabs(voiceId: string, text: string): Promise<
       },
       body: JSON.stringify({ text, model_id, voice_settings }),
     },
+    { provider: 'elevenlabs', timeoutMs: PROVIDER_TIMEOUT_MS.narration },
   );
   if (!response.ok) {
     throw new Error(`ElevenLabs API error: ${response.status} - ${await response.text()}`);

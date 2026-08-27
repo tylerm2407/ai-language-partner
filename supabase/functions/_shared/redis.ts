@@ -96,6 +96,22 @@ export async function redisSetEx(key: string, value: string, ttlSeconds: number)
   await command(['SET', key, value, 'EX', ttl]);
 }
 
+/**
+ * SET key value EX ttlSeconds NX — claim a key only if nobody holds it.
+ *
+ * Returns whether THIS caller made the claim. Used for at-most-once handling
+ * of an event that may be delivered more than once (see revenuecat-webhook).
+ * The claim is a short-cut, never a correctness guarantee: it can be lost to
+ * an eviction or a cold cache, so callers must still be idempotent on their
+ * own. That is why it returns a boolean rather than throwing.
+ */
+export async function redisSetNx(key: string, value: string, ttlSeconds: number): Promise<boolean> {
+  const ttl = Math.max(1, Math.floor(ttlSeconds));
+  const result = await command(['SET', key, value, 'EX', ttl, 'NX']);
+  // Upstash returns "OK" on a successful claim and null when the key exists.
+  return result === 'OK';
+}
+
 /** DEL key. Deleting an absent key is a no-op, not an error. */
 export async function redisDel(key: string): Promise<void> {
   await command(['DEL', key]);

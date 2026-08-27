@@ -29,6 +29,20 @@ function errorResponse(message: string, status = 400): Response {
   return jsonResponse({ error: message }, status);
 }
 
+/**
+ * A failed database call, reported without the database's own words. Same
+ * reasoning as school/index.ts: a PostgREST message names tables, columns and
+ * constraints, which is schema disclosure with a 500 attached (CLAUDE.md §6).
+ * The detail goes to the logs, where it is actually actionable.
+ */
+function dbErrorResponse(operation: string, error: { message?: string }): Response {
+  console.error(`[school-admin] ${operation} failed:`, error?.message ?? error);
+  return jsonResponse(
+    { error: `Failed to ${operation}. Please try again.`, code: 'DB_ERROR' },
+    500,
+  );
+}
+
 async function isAdmin(supabase: any, userId: string): Promise<boolean> {
   // Check env-based admin list
   if (ADMIN_USER_IDS.includes(userId)) return true;
@@ -79,7 +93,7 @@ serve(async (req: Request) => {
     }
   } catch (err) {
     console.error('[school-admin] Error:', err);
-    return errorResponse(err.message ?? 'Internal server error', 500);
+    return errorResponse('Internal server error', 500);
   }
 });
 
@@ -106,7 +120,7 @@ async function createOrganization(supabase: any, userId: string, body: AdminRequ
     .select()
     .single();
 
-  if (error) return errorResponse(`Failed to create organization: ${error.message}`, 500);
+  if (error) return dbErrorResponse('create organization', error);
 
   logAudit(supabase, {
     actorId: userId, actorRole: 'school_admin', organizationId: org.id,
@@ -137,7 +151,7 @@ async function updateContract(supabase: any, userId: string, body: AdminRequest,
     .select()
     .single();
 
-  if (error) return errorResponse(`Failed to update contract: ${error.message}`, 500);
+  if (error) return dbErrorResponse('update contract', error);
 
   logAudit(supabase, {
     actorId: userId, actorRole: 'school_admin', organizationId,
@@ -160,7 +174,7 @@ async function addTeacher(supabase: any, adminUserId: string, body: AdminRequest
   const { data: teacherUserId, error: lookupErr } = await supabase.rpc('get_user_id_by_email', {
     p_email: String(userEmail).trim().toLowerCase(),
   });
-  if (lookupErr) return errorResponse(`Failed to look up user: ${lookupErr.message}`, 500);
+  if (lookupErr) return dbErrorResponse('look up user', lookupErr);
   if (!teacherUserId) return errorResponse(`No user found with email: ${userEmail}`, 404);
 
   // Upsert teacher role in user_roles
@@ -216,7 +230,7 @@ async function deactivateOrganization(supabase: any, userId: string, body: Admin
     .select()
     .single();
 
-  if (error) return errorResponse(`Failed to deactivate organization: ${error.message}`, 500);
+  if (error) return dbErrorResponse('deactivate organization', error);
 
   logAudit(supabase, {
     actorId: userId, actorRole: 'school_admin', organizationId,

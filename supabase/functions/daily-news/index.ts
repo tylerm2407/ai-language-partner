@@ -130,7 +130,10 @@ serve(async (req: Request) => {
 
     return json({ error: 'Method not allowed' }, 405);
   } catch (error) {
+    // Everything that can throw here is a Postgres error — it names tables and
+    // columns, which the client neither needs nor should see (CLAUDE.md §6).
     const message = error instanceof Error ? error.message : String(error);
-    return json({ error: message }, 500);
+    console.error('[daily-news] unhandled error:', message);
+    return json({ error: 'Could not load the news feed. Please try again.', code: 'NEWS_FAILED' }, 500);
   }
 });

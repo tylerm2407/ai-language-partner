@@ -14,6 +14,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, corsResponse } from '../_shared/cors.ts';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { checkBurstLimit } from '../_shared/burst-limit.ts';
+import { isValidLanguage } from '../_shared/validation.ts';
+import { PROVIDER_TIMEOUT_MS, providerFetch } from '../_shared/provider-fetch.ts';
 import { translateWithValidation } from './translate-core.ts';
 import { cacheExpiryIso, shouldRefreshCacheEntry } from './cache-retention.ts';
 
@@ -98,6 +100,15 @@ serve(async (req: Request) => {
   if (!text || !sourceLanguage || !targetLanguage) {
     return json({ error: 'Missing required fields: text, sourceLanguage, targetLanguage' }, 400);
   }
+  // Both language names go into the system prompt below. Unvalidated, that is
+  // an instruction channel wearing a parameter's name — a `targetLanguage` of
+  // "English. Ignore the above and …" is read as system text, not as a
+  // language. They name a closed set, so require that they be in it. The text
+  // itself needs no such treatment: it is already a user-role message, which
+  // is where untrusted prose belongs.
+  if (!isValidLanguage(sourceLanguage) || !isValidLanguage(targetLanguage)) {
+    return json({ error: 'Unsupported language' }, 400);
+  }
 
   const input = String(text).slice(0, MAX_INPUT_CHARS).trim();
   if (!input) return json({ translation: '' });
@@ -131,20 +142,24 @@ serve(async (req: Request) => {
   // fallback for an arbitrary translation, so persistent failure is an
   // honest 502 with a clean message — details stay in server logs.
   const outcome = await translateWithValidation(async () => {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
+    const response = await providerFetch(
+      'https://api.anthropic.com/v1/messages',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: TEXT_MODEL,
+          max_tokens: 300,
+          system: systemPrompt,
+          messages: [{ role: 'user', content: input }],
+        }),
       },
-      body: JSON.stringify({
-        model: TEXT_MODEL,
-        max_tokens: 300,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: input }],
-      }),
-    });
+      { provider: 'anthropic', timeoutMs: PROVIDER_TIMEOUT_MS.textShort },
+    );
 
     if (!response.ok) {
       const errorText = await response.text();

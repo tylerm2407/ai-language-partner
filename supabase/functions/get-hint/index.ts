@@ -8,6 +8,7 @@ import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { generateValidated } from '../_shared/validated-generate.ts';
 import { checkBurstLimit } from '../_shared/burst-limit.ts';
 import { isValidExerciseType, isValidLanguage, isValidUUID } from '../_shared/validation.ts';
+import { PROVIDER_TIMEOUT_MS, providerFetch } from '../_shared/provider-fetch.ts';
 import type { CEFR } from '../_shared/level-checker.ts';
 
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
@@ -113,9 +114,13 @@ serve(async (req: Request) => {
       { headers: { 'Content-Type': 'application/json' } }
     );
   } catch (error: unknown) {
+    // Reachable only from the pre-generation path (auth, cache read, card
+    // fetch), so the message is a Postgres error — schema detail the client
+    // must not see. CLAUDE.md §6.
     const message = error instanceof Error ? error.message : String(error);
+    console.error('[get-hint] unhandled error:', message);
     return new Response(
-      JSON.stringify({ error: message }),
+      JSON.stringify({ error: 'Could not load a hint. Please try again.', code: 'HINT_FAILED' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
@@ -158,20 +163,24 @@ async function generateAIHint(
       language: targetLanguage,
       safetyRetries: 2,
       generate: async () => {
-        const response = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': ANTHROPIC_API_KEY,
-            'anthropic-version': '2023-06-01',
+        const response = await providerFetch(
+          'https://api.anthropic.com/v1/messages',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': ANTHROPIC_API_KEY,
+              'anthropic-version': '2023-06-01',
+            },
+            body: JSON.stringify({
+              model: TEXT_MODEL,
+              max_tokens: 80,
+              system: systemPrompt,
+              messages: [{ role: 'user', content: userMessage }],
+            }),
           },
-          body: JSON.stringify({
-            model: TEXT_MODEL,
-            max_tokens: 80,
-            system: systemPrompt,
-            messages: [{ role: 'user', content: userMessage }],
-          }),
-        });
+          { provider: 'anthropic', timeoutMs: PROVIDER_TIMEOUT_MS.textShort },
+        );
         if (!response.ok) {
           throw new Error(`Claude API error: ${response.status}`);
         }

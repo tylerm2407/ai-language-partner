@@ -106,8 +106,12 @@ serve(async (req: Request) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
+    // Stripe error messages carry account, price and customer identifiers.
+    // The caller gets a code; the detail stays in the logs (CLAUDE.md §6).
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('[create-checkout] unhandled error:', message);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: 'Could not start checkout. Please try again.', code: 'CHECKOUT_FAILED' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
