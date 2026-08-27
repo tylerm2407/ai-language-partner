@@ -82,6 +82,42 @@ export function getLeagueTier(level: number): LeagueTier {
   return 'bronze';
 }
 
+export interface LevelUpInfo {
+  newLevel: number;
+  newTier: LeagueTier;
+  tierChanged: boolean;
+}
+
+/**
+ * Did the learner just level up?
+ *
+ * `previousLevel` is null when nothing has been observed yet — a freshly
+ * mounted screen, or the first render after a different account signs in.
+ * That case is NOT a level-up, and getting it wrong is the whole reason this
+ * is a named function instead of an inline comparison.
+ *
+ * The bug it exists to prevent: the caller used to seed its "previous level"
+ * to the literal `1` on every mount, so every learner above level 1 was
+ * detected as having just levelled up — every single time the screen mounted.
+ * Opening a lesson fired a full-screen "LEVEL UP!" card over the first
+ * question, and dismissing it did nothing, because the next mount re-derived
+ * exactly the same false positive. Null means "no baseline", never "level 1".
+ */
+export function detectLevelUp(
+  previousLevel: number | null,
+  nextLevel: number,
+): LevelUpInfo | null {
+  if (previousLevel === null) return null;
+  if (nextLevel <= previousLevel) return null;
+
+  const nextTier = getLeagueTier(nextLevel);
+  return {
+    newLevel: nextLevel,
+    newTier: nextTier,
+    tierChanged: nextTier !== getLeagueTier(previousLevel),
+  };
+}
+
 /**
  * XP threshold for a specific level.
  */
