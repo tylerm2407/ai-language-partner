@@ -143,6 +143,15 @@ export function LessonRunner({
   const attemptsRef = useRef<Record<string, number>>({});
   const [answers, setAnswers] = useState<{ exerciseId: string; correct: boolean; answer: string }[]>([]);
   const [completed, setCompleted] = useState(false);
+  /**
+   * Double-tap guard for the Finish button.
+   *
+   * `completed` is state, so two taps dispatched in the same React batch both
+   * read `false` and both run the completion path — two `onComplete` calls,
+   * which means the lesson is recorded twice and, before the XP key became
+   * deterministic, paid twice. A ref is checked synchronously.
+   */
+  const completingRef = useRef(false);
   const [lastAnswerCorrect, setLastAnswerCorrect] = useState<boolean | null>(null);
 
   // SRS warm-up state. `warmupResolved` gates the lesson: true once the
@@ -592,6 +601,9 @@ export function LessonRunner({
       setShowResult(false);
       setLastAnswerCorrect(null);
     } else {
+      if (completingRef.current) return;
+      completingRef.current = true;
+
       // Lesson complete. One summarizeLesson call — the runner, the overlay
       // and the completion row all read the same numbers.
       const allAnswers = [...answers];

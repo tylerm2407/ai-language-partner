@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { View, Text, Platform } from 'react-native';
-import * as Network from 'expo-network';
+import NetInfo from '@react-native-community/netinfo';
 
 export function OfflineBanner() {
   const [isOffline, setIsOffline] = useState(false);
@@ -8,20 +8,19 @@ export function OfflineBanner() {
   useEffect(() => {
     if (Platform.OS === 'web') return;
 
-    let mounted = true;
-
-    const checkConnection = async () => {
-      const state = await Network.getNetworkStateAsync();
-      if (mounted) setIsOffline(!state.isConnected);
-    };
-
-    checkConnection();
-    const interval = setInterval(checkConnection, 5000);
-
-    return () => {
-      mounted = false;
-      clearInterval(interval);
-    };
+    // Event-driven rather than polled. The previous implementation called an
+    // async probe without awaiting it, on a 5s interval, for the whole app
+    // lifetime — so a rejected `getNetworkStateAsync()` was an unhandled
+    // rejection every five seconds AND left `isOffline` false, hiding the
+    // banner at exactly the moment it exists to appear.
+    //
+    // NetInfo is already a direct dependency and is used this way in
+    // `useOfflineQueueFlush`.
+    return NetInfo.addEventListener((state) => {
+      // `=== false`, not `!state.isConnected`: NetInfo reports `null` for
+      // "unknown", and an unknown state must not be announced as offline.
+      setIsOffline(state.isConnected === false);
+    });
   }, []);
 
   if (!isOffline) return null;

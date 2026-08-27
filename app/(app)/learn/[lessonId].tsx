@@ -186,7 +186,16 @@ export default function LessonScreen() {
 
       if (profile) {
         const { dailyStats } = useAppStore.getState();
-        const newAchievements = await checkAndAwardAchievements(user.id, profile, dailyStats).catch(() => []);
+        // `.catch(() => [])` was swallowing this entirely — not even logged —
+        // so an achievement the learner earned could silently never appear and
+        // nothing anywhere would say why.
+        const newAchievements = await checkAndAwardAchievements(user.id, profile, dailyStats).catch(
+          (err) => {
+            console.error('[lesson] achievement check failed:', err);
+            Sentry.captureException(err, { tags: { area: 'achievements' } });
+            return [];
+          },
+        );
         if (newAchievements.length > 0) {
           setAchievementQueue(newAchievements);
           setShowingAchievement(newAchievements[0]);

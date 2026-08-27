@@ -1,6 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import * as Sentry from '@sentry/react-native';
+import * as Updates from 'expo-updates';
 
 interface Props {
   children: ReactNode;
@@ -31,6 +32,26 @@ export class ErrorBoundary extends Component<Props, State> {
     this.setState({ hasError: false, error: null });
   };
 
+  /**
+   * Last resort for a DETERMINISTIC render error.
+   *
+   * "Try Again" only clears the error state and re-renders the same children
+   * with the same props, so anything that throws every time lands straight back
+   * here. This boundary wraps all four route groups — including the one around
+   * the tab tree — so when that happens the tab bar is gone too and there is no
+   * way out of the app but a force-quit.
+   *
+   * A reload rebuilds from the entry point, which is the only thing that
+   * actually escapes.
+   */
+  handleReload = () => {
+    Updates.reloadAsync().catch(() => {
+      // Dev client, or reload unavailable in this build — clearing the error
+      // is all that is left, and is what the button did before.
+      this.setState({ hasError: false, error: null });
+    });
+  };
+
   render() {
     if (this.state.hasError) {
       if (this.props.fallback) return this.props.fallback;
@@ -48,6 +69,14 @@ export class ErrorBoundary extends Component<Props, State> {
             accessibilityLabel="Try again"
           >
             <Text className="text-white text-lg font-semibold">Try Again</Text>
+          </Pressable>
+          <Pressable
+            className="py-4 px-12"
+            onPress={this.handleReload}
+            accessibilityRole="button"
+            accessibilityLabel="Restart the app"
+          >
+            <Text className="text-text-secondary text-base font-semibold">Restart the app</Text>
           </Pressable>
         </View>
       );

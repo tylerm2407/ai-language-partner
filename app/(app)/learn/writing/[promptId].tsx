@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ActivityIndicator, Text, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -10,12 +10,13 @@ import {
   submitWriting,
   updateWritingFeedback,
   fetchWritingSubmissionsByPrompt,
-  addXp,
+  incrementXpIdempotent,
 } from '../../../../lib/supabase-queries';
 import { WritingExercise } from '../../../../components/writing/WritingExercise';
 import { WritingFeedbackView } from '../../../../components/writing/WritingFeedbackView';
 import { supabase } from '../../../../lib/supabase';
 import { getTargetLanguage } from '../../../../lib/language';
+import { writingXpKey } from '../../../../lib/offline-queue';
 import type { WritingPrompt, WritingFeedback, WritingSubmission } from '../../../../types';
 import { colors } from '../../../../config/theme';
 
@@ -27,6 +28,8 @@ export default function WritingPromptScreen() {
   const [prompt, setPrompt] = useState<WritingPrompt | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isGrading, setIsGrading] = useState(false);
+  /** Closes the same-React-batch double-tap window that `isGrading` cannot. */
+  const submittingRef = useRef(false);
   const [feedback, setFeedback] = useState<WritingFeedback | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [attemptNumber, setAttemptNumber] = useState(1);
@@ -66,11 +69,18 @@ export default function WritingPromptScreen() {
   }, [promptId, user]);
 
   const handleSubmit = async (text: string, wordCount: number, timeSpentMs: number) => {
+    // A ref, not the `isGrading` state: two taps dispatched in the same React
+    // batch both read the pre-update value, and this handler had no guard at
+    // all. Two taps meant two submissions, two paid Claude grading calls, and
+    // two XP awards. Same pattern as `claimInFlight` in useDailyChallenges.
+    if (submittingRef.current) return;
+
     // Grading must use the user's real target language — if the profile
     // hasn't loaded yet, don't grade in a defaulted language.
     const targetLanguage = getTargetLanguage(profile);
     if (!user || !prompt || !targetLanguage) return;
 
+    submittingRef.current = true;
     try {
       setIsGrading(true);
 
@@ -112,7 +122,9 @@ export default function WritingPromptScreen() {
       const xpMap: Record<string, number> = { A1: 5, A2: 10, B1: 15, B2: 20, C1: 25, C2: 30 };
       const baseXp = xpMap[prompt.cefrLevel] ?? 10;
       const bonusXp = Math.round(overallScore * 15);
-      await addXp(user.id, baseXp + bonusXp);
+      // Keyed on the submission: a retried grade of the same piece of work must
+      // not pay twice. `addXp` went through the non-idempotent `increment_xp`.
+      await incrementXpIdempotent(baseXp + bonusXp, writingXpKey(submission.id));
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Failed to grade writing';
       // Surface plan limits clearly instead of a raw "429: …[CODE]" string.
@@ -135,6 +147,7 @@ export default function WritingPromptScreen() {
         setError('We couldn’t grade your writing. Please try again — your submission was saved.');
       }
     } finally {
+      submittingRef.current = false;
       setIsGrading(false);
     }
   };

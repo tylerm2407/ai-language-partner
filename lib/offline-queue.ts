@@ -140,6 +140,26 @@ export function lessonXpKey(lessonId: string): string {
 }
 
 /**
+ * Idempotency key for the XP a finished book pays out. One payout per book,
+ * ever — re-reading is practice, not a second reward.
+ */
+export function bookXpKey(bookId: string): string {
+  return `xp:book:v1:${bookId}`.slice(0, 128);
+}
+
+/**
+ * Idempotency key for the XP a graded writing submission pays out.
+ *
+ * Keyed on the SUBMISSION, not the prompt: each attempt at a prompt is a
+ * distinct piece of work and is meant to pay, but a retried grade of the same
+ * submission is not. Both of these went through the non-idempotent
+ * `increment_xp`, so a retry paid twice.
+ */
+export function writingXpKey(submissionId: string): string {
+  return `xp:writing:v1:${submissionId}`.slice(0, 128);
+}
+
+/**
  * Heuristic: is this a network-ish failure (worth queueing for replay)?
  *
  * Matches fetch TypeErrors ('Network request failed' on RN, 'Failed to

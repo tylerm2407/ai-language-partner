@@ -107,15 +107,20 @@ export default function ProfileScreen() {
 
   const handleSelectPreset = async (preset: AvatarPreset) => {
     if (!user || !profile) return;
-    // Optimistic: the grid closes and the ring updates immediately. A failed
-    // write leaves the local state ahead of the server for this session only —
-    // the next profile load corrects it, and the cost is re-picking.
+    // Optimistic: the grid closes and the ring updates immediately.
+    const previous = profile;
     setProfile({ ...profile, avatarKind: 'preset', avatarPresetId: preset.id });
     setCustomizerVisible(false);
     try {
       await setAvatarKind(user.id, 'preset', preset.id);
     } catch (err) {
+      // Roll back rather than leaving local state ahead of the server. The
+      // previous behaviour showed the new avatar for the rest of the session
+      // and then silently reverted on the next cold start, which reads as the
+      // app losing the choice for no reason.
       console.error('Failed to save avatar:', err);
+      setProfile(previous);
+      Alert.alert('Could not save avatar', 'Your avatar was not changed. Please try again.');
     }
   };
 

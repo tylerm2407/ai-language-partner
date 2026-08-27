@@ -23,7 +23,7 @@
 import { View, Text, Pressable, ScrollView, Alert, ActivityIndicator, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { PurchasesPackage } from 'react-native-purchases';
 import { useAuth } from '../../hooks/useAuth';
@@ -63,6 +63,10 @@ export default function PlansScreen() {
   const [tier, setTier] = useState<Exclude<PlanId, 'starter'>>(DEFAULT_TIER);
   const [purchasing, setPurchasing] = useState(false);
   const [restoring, setRestoring] = useState(false);
+  // Refs, not the state above: state cannot close a same-React-batch double
+  // tap, and both of these start a payment flow.
+  const purchaseInFlight = useRef(false);
+  const restoreInFlight = useRef(false);
 
   const currentTier = subscription?.tier ?? 'starter';
 
@@ -144,6 +148,10 @@ export default function PlansScreen() {
 
   const handlePurchase = async () => {
     if (!user || !selectedPkg) return;
+    // The button is already disabled on `purchasing`, but state cannot close
+    // the same-batch window — and this one starts a payment.
+    if (purchaseInFlight.current) return;
+    purchaseInFlight.current = true;
     setPurchasing(true);
     try {
       const result = await purchasePackage(selectedPkg);
@@ -163,12 +171,15 @@ export default function PlansScreen() {
         Alert.alert('Purchase failed', result.message ?? 'Please try again.');
       }
     } finally {
+      purchaseInFlight.current = false;
       setPurchasing(false);
     }
   };
 
   const handleRestore = async () => {
     if (!user) return;
+    if (restoreInFlight.current) return;
+    restoreInFlight.current = true;
     setRestoring(true);
     try {
       const result = await restorePurchases();
@@ -184,6 +195,7 @@ export default function PlansScreen() {
         Alert.alert('No purchases found', 'We couldn’t find an active subscription to restore.');
       }
     } finally {
+      restoreInFlight.current = false;
       setRestoring(false);
     }
   };

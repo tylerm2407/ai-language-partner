@@ -3,6 +3,7 @@ import { View, Text, Pressable, ActivityIndicator, Alert, Image } from 'react-na
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as Sentry from '@sentry/react-native';
 import { useAuth } from '../../../../../hooks/useAuth';
 import {
   fetchBookById,
@@ -10,12 +11,13 @@ import {
   fetchUserBookProgress,
   upsertBookProgress,
   upsertReviewItem,
-  addXp,
+  incrementXpIdempotent,
   fetchSubscription,
 } from '../../../../../lib/supabase-queries';
 import { BookReader } from '../../../../../components/reading/BookReader';
 import { supabase } from '../../../../../lib/supabase';
 import { loadErrorCopy, saveErrorCopy, type ErrorCopy } from '../../../../../lib/error-copy';
+import { bookXpKey } from '../../../../../lib/offline-queue';
 import type { ReadingBook, BookAnnotation, UserBookProgress, Subscription } from '../../../../../types';
 import { colors } from '../../../../../config/theme';
 
@@ -73,8 +75,12 @@ export default function BookDetailScreen() {
         percentComplete: percent,
       });
       setProgress(updated);
-    } catch {
-      // Silent fail for position saves
+    } catch (err) {
+      // Not silent. Losing this is losing the learner's place in a book, which
+      // they discover by reopening it at chapter one. Non-fatal — reading
+      // continues — but it must be reportable.
+      console.warn('[book] position save failed:', err);
+      Sentry.captureException(err, { tags: { area: 'book-position-save' } });
     }
   }, [user, bookId]);
 
@@ -84,8 +90,10 @@ export default function BookDetailScreen() {
       await upsertBookProgress(user.id, bookId, {
         wordsLookedUp: (progress.wordsLookedUp ?? 0) + 1,
       });
-    } catch {
-      // Silent fail
+    } catch (err) {
+      // Cosmetic counter, but a swallowed catch here hid a broken write path
+      // that also carries the position save above.
+      console.warn('[book] word-lookup counter failed:', err);
     }
   }, [user, bookId, progress]);
 
@@ -158,7 +166,10 @@ export default function BookDetailScreen() {
 
       // Award XP: wordCount / 10, capped at 500
       const xpReward = Math.min(500, Math.round(book.wordCount / 10));
-      await addXp(user.id, xpReward);
+      // One payout per book, ever. `hasCompletedRef` only guards this session,
+      // so re-opening a finished book in a later session paid again through the
+      // non-idempotent `increment_xp`.
+      await incrementXpIdempotent(xpReward, bookXpKey(bookId));
 
       Alert.alert(
         'Book Completed!',

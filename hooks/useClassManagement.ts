@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useSchoolStore } from '../stores/useSchoolStore';
 import {
   createClassroom,
@@ -11,6 +11,9 @@ export function useClassManagement(userId: string | undefined) {
   const { classrooms, organization } = useSchoolStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  /** Closes the same-batch double-tap window that `loading` cannot. */
+  const creatingRef = useRef(false);
 
   const refreshClasses = useCallback(async () => {
     if (!userId) return;
@@ -34,6 +37,12 @@ export function useClassManagement(userId: string | undefined) {
         setError('No organization found');
         return null;
       }
+      // A ref, not `loading`: two taps in one React batch both read the
+      // pre-update state, and this creates a real row — the result was two
+      // classrooms from one intent. Guarded in the hook rather than the screen
+      // so every caller of createClass is covered.
+      if (creatingRef.current) return null;
+      creatingRef.current = true;
       setLoading(true);
       setError(null);
       try {
@@ -50,6 +59,7 @@ export function useClassManagement(userId: string | undefined) {
         console.error('createClass error:', err);
         return null;
       } finally {
+        creatingRef.current = false;
         setLoading(false);
       }
     },
