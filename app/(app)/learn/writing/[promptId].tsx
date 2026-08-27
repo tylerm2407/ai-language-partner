@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { ActivityIndicator, Text, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useSafeBack } from '../../../../hooks/useSafeBack';
 import { useAuth } from '../../../../hooks/useAuth';
 import { useAppStore, effectiveTier } from '../../../../stores/useAppStore';
@@ -23,7 +23,6 @@ import { colors } from '../../../../config/theme';
 
 export default function WritingPromptScreen() {
   const { promptId } = useLocalSearchParams<{ promptId: string }>();
-  const router = useRouter();
   const goBack = useSafeBack('/(app)');
   const { user } = useAuth();
   const { profile, subscription, entitledTier } = useAppStore();

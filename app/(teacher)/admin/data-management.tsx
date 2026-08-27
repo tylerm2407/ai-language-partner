@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, Text, TextInput, Alert, ActivityIndicator, ScrollView, KeyboardAvoidingView, Platform, Pressable, Share } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+
 import { useSafeBack } from '../../../hooks/useSafeBack';
 import * as Clipboard from 'expo-clipboard';
 import { haptic } from '../../../lib/haptics';
@@ -13,7 +13,6 @@ import { useSchoolStore } from '../../../stores/useSchoolStore';
 import { callSchoolAdminAction } from '../../../lib/supabase-queries';
 
 export default function DataManagementScreen() {
-  const router = useRouter();
   const goBack = useSafeBack('/(teacher)');
   const { organization } = useSchoolStore();
   const [exporting, setExporting] = useState(false);

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, FlatList, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+
 import { useSafeBack } from '../../../hooks/useSafeBack';
 import { Ionicons } from '@expo/vector-icons';
 import { GradientBackground } from '../../../components/ui/GradientBackground';
@@ -39,7 +39,6 @@ const ACTION_COLORS: Record<string, string> = {
 };
 
 export default function AuditLogScreen() {
-  const router = useRouter();
   const goBack = useSafeBack('/(teacher)');
   const { organization } = useSchoolStore();
   const [entries, setEntries] = useState<AuditEntry[]>([]);

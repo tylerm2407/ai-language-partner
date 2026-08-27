@@ -6,6 +6,7 @@ import { FloatingTabBar } from '../../components/navigation/FloatingTabBar';
 import { useOfflineQueueFlush } from '../../hooks/useOfflineQueueFlush';
 import { useLessonSessionSweep } from '../../hooks/useLessonSessionSweep';
 import { useOnboardingReconciliation } from '../../hooks/useOnboardingReconciliation';
+import { useTimezoneSync } from '../../hooks/useProfile';
 
 export default function AppLayout() {
   // Replay queued offline writes on mount / reconnect / foreground.
@@ -15,6 +16,11 @@ export default function AppLayout() {
   // Lives here rather than in the FAB because the FAB only exists on Home, and
   // someone who finishes a lesson and never opens Home still finished it.
   useOnboardingReconciliation();
+  // Keep the profile's timezone tracking the device. Mounted here rather than
+  // on Home: every server-side "today" (quotas, daily challenges, the new-card
+  // cap) is derived from that column, and a learner who deep-links into a
+  // lesson or a notification never opens Home at all.
+  useTimezoneSync();
 
 
   // ─── The paywall is no longer a gate ─────────────────────────────────

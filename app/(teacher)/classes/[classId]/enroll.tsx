@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { View, Text, TextInput, FlatList, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useSafeBack } from '../../../../hooks/useSafeBack';
 import { Ionicons } from '@expo/vector-icons';
 import { GradientBackground } from '../../../../components/ui/GradientBackground';
@@ -18,7 +18,6 @@ interface EnrollResult {
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function BulkEnrollScreen() {
-  const router = useRouter();
   const goBack = useSafeBack('/(teacher)');
   const { classId } = useLocalSearchParams<{ classId: string }>();
   const [emailText, setEmailText] = useState('');

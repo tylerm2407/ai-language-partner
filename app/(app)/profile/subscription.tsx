@@ -1,6 +1,6 @@
 import { View, Text, Pressable, ScrollView, Alert, ActivityIndicator, Linking, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+
 import { useSafeBack } from '../../../hooks/useSafeBack';
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
@@ -45,7 +45,6 @@ const DISPLAY_TIER_ORDER: PlanId[] = ['vip', 'premium', 'basic'];
 export default function SubscriptionScreen() {
   const { user } = useAuth();
   const { profile, subscription, entitledTier, refreshSubscription, setEntitledTier } = useAppStore();
-  const router = useRouter();
   const goBack = useSafeBack('/(app)');
 
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);

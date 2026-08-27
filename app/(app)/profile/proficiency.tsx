@@ -1,6 +1,6 @@
 import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+
 import { useSafeBack } from '../../../hooks/useSafeBack';
 import { Ionicons } from '@expo/vector-icons';
 import { useProficiencyReport } from '../../../hooks/useProficiencyReport';
@@ -78,7 +78,6 @@ function bandStatusLabel(status: BandBreakdown['status']): string {
  * steps. Every claim here traces back to something they did.
  */
 export default function ProficiencyScreen() {
-  const router = useRouter();
   const goBack = useSafeBack('/(app)');
   const { report, isLoading, error, refresh } = useProficiencyReport();
 

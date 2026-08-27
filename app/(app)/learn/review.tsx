@@ -1,6 +1,6 @@
 import { View, Text, Pressable, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+
 import { useSafeBack } from '../../../hooks/useSafeBack';
 import { useEffect, useState, useRef } from 'react';
 import { haptic } from '../../../lib/haptics';
@@ -15,7 +15,6 @@ import { GlowLayer } from '../../../components/ui/GlowBackground';
 import { colors } from '../../../config/theme';
 
 export default function ReviewScreen() {
-  const router = useRouter();
   const goBack = useSafeBack('/(app)');
   const { items, cards, loading, loadQueue, submitReview } = useReviewQueue();
   const { addStats } = useDailyStats();

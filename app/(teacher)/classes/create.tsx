@@ -11,7 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+
 import { useSafeBack } from '../../../hooks/useSafeBack';
 import { Ionicons } from '@expo/vector-icons';
 import { GradientBackground } from '../../../components/ui/GradientBackground';
@@ -32,7 +32,6 @@ const LEVELS: { value: ProficiencyLevel; label: string }[] = [
 ];
 
 export default function CreateClassScreen() {
-  const router = useRouter();
   const goBack = useSafeBack('/(teacher)');
   const { user } = useAuth();
   const { createClass, loading, error } = useClassManagement(user?.id);

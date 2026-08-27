@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useSafeBack } from '../../../hooks/useSafeBack';
 import { Ionicons } from '@expo/vector-icons';
 import { haptic } from '../../../lib/haptics';
@@ -20,7 +20,6 @@ import { ArticleAudioPlayer } from '../../../components/news/ArticleAudioPlayer'
 
 export default function NewsReaderScreen() {
   const { date } = useLocalSearchParams<{ date: string }>();
-  const router = useRouter();
   const goBack = useSafeBack('/(app)');
   const { user } = useAuth();
   const { profile } = useAppStore();

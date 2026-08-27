@@ -1,16 +1,29 @@
 import { useCallback, useEffect } from 'react';
+import { AppState } from 'react-native';
 import { useAuth } from './useAuth';
 import { useAppStore } from '../stores/useAppStore';
 import { upsertProfile, incrementXpIdempotent } from '../lib/supabase-queries';
 import { enqueue, isNetworkError, makeXpKey } from '../lib/offline-queue';
 import type { UserProfile } from '../types';
 
-// Module-level guard: the timezone sync runs at most once per user per app
-// session, no matter how often the consuming screen remounts.
-let timezoneSyncedForUser: string | null = null;
+/**
+ * Which (user, timezone) pair has been written this session.
+ *
+ * Keyed on the RESOLVED TIMEZONE as well as the user, not just the user. The
+ * old guard was the user id alone, set BEFORE the write was known to have
+ * succeeded — so a failed write marked the sync done and it never retried, and
+ * a learner who travelled kept the timezone they signed up in for the rest of
+ * the session.
+ */
+let timezoneSyncedFor: string | null = null;
+
+/** Let the next check run again — used when the app returns to the foreground. */
+function invalidateTimezoneSync(): void {
+  timezoneSyncedFor = null;
+}
 
 /**
- * One-shot sync of user_profiles.timezone to the device timezone.
+ * Keep user_profiles.timezone tracking the device.
  *
  * The server derives "today" for daily challenges / quotas from
  * this column (public.fluenci_user_today, migration 044), and the client
@@ -23,9 +36,19 @@ export function useTimezoneSync() {
   const { user } = useAuth();
   const { profile, setProfile } = useAppStore();
 
+  // Re-check when the app comes back to the foreground. A learner who flies
+  // somewhere does not relaunch the app on landing, and every server-side
+  // "today" — quotas, daily challenges, the new-card cap — is derived from this
+  // column.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') invalidateTimezoneSync();
+    });
+    return () => sub.remove();
+  }, []);
+
   useEffect(() => {
     if (!user || !profile) return;
-    if (timezoneSyncedForUser === user.id) return;
 
     let deviceTz: string | undefined;
     try {
@@ -35,11 +58,22 @@ export function useTimezoneSync() {
     }
     if (!deviceTz) return; // Intl unavailable — skip the sync entirely
 
-    timezoneSyncedForUser = user.id;
-    if (deviceTz === profile.timezone) return;
+    const attempt = `${user.id}:${deviceTz}`;
+    if (timezoneSyncedFor === attempt) return;
+
+    // Already correct on the server — nothing to write, and it counts as synced.
+    if (deviceTz === profile.timezone) {
+      timezoneSyncedFor = attempt;
+      return;
+    }
 
     upsertProfile(user.id, { timezone: deviceTz })
-      .then((updated) => setProfile(updated))
+      .then((updated) => {
+        // Marked ONLY on success. Setting this up front meant one failed write
+        // disabled the sync for the whole session.
+        timezoneSyncedFor = attempt;
+        setProfile(updated);
+      })
       .catch((err) => console.warn('[tz-sync] failed to update profile timezone:', err));
   }, [user, profile, setProfile]);
 }

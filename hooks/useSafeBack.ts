@@ -30,8 +30,8 @@ export function useSafeBack(fallback: string = '/(app)') {
       router.back();
       return;
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- expo-router's
-    // typed-routes generic rejects a runtime string; the value is ours, not user input.
-    router.replace(fallback as any);
+    // Cast: expo-router's typed-routes generic rejects a runtime string. The
+    // value is ours (a literal passed by the caller), never user input.
+    router.replace(fallback as Parameters<typeof router.replace>[0]);
   }, [router, fallback]);
 }

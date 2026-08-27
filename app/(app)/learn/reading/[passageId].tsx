@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { View, ActivityIndicator, Text, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useSafeBack } from '../../../../hooks/useSafeBack';
 import { useReadingPassage } from '../../../../hooks/useReadingPassage';
 import { ReadingPassageViewer } from '../../../../components/reading/ReadingPassageViewer';
@@ -12,7 +12,6 @@ import { GlowLayer } from '../../../../components/ui/GlowBackground';
 
 export default function ReadingPassageScreen() {
   const { passageId } = useLocalSearchParams<{ passageId: string }>();
-  const router = useRouter();
   const goBack = useSafeBack('/(app)');
   const {
     passage,

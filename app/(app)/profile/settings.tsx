@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, Text, Pressable, ScrollView, TextInput, Alert, Linking, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+
 import { useSafeBack } from '../../../hooks/useSafeBack';
 import { Ionicons } from '@expo/vector-icons';
 import { useProfile } from '../../../hooks/useProfile';
@@ -26,7 +26,6 @@ const LEVELS: { value: ProficiencyLevel; label: string }[] = [
 ];
 
 export default function SettingsScreen() {
-  const router = useRouter();
   const goBack = useSafeBack('/(app)');
   const { profile, updateProfile } = useProfile();
   const { signOut, user } = useAuth();
