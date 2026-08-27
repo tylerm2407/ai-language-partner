@@ -231,118 +231,71 @@ export async function checkAndAwardAchievements(
     }
   }
 
-  // Check reading/writing achievements (DB query based)
-  const rwChecks: { type: AchievementType; query: () => Promise<boolean> }[] = [
-    // `cards_50` / `cards_100` say "Review 50 flashcards", which every learner
-    // reads as a lifetime total. They used to check `dailyStats.cardsReviewed`
-    // — TODAY's count — so 40 reviews a day for a month earned neither, and
-    // `cards_100` additionally required a hundred-card day that the new-card
-    // cap makes very unlikely. Counted over `review_logs` instead, which is the
-    // same shape as the reading/writing checks below.
-    {
-      type: 'cards_50',
-      query: async () => {
-        const { count } = await supabase
-          .from('review_logs')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', userId);
-        return (count ?? 0) >= 50;
-      },
-    },
-    {
-      type: 'cards_100',
-      query: async () => {
-        const { count } = await supabase
-          .from('review_logs')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', userId);
-        return (count ?? 0) >= 100;
-      },
-    },
-    {
-      type: 'first_story',
-      query: async () => {
-        const { count } = await supabase
-          .from('user_book_progress')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', userId)
-          .not('completed_at', 'is', null);
-        return (count ?? 0) >= 1;
-      },
-    },
-    {
-      type: 'bookworm_5',
-      query: async () => {
-        const { count } = await supabase
-          .from('user_book_progress')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', userId)
-          .not('completed_at', 'is', null);
-        return (count ?? 0) >= 5;
-      },
-    },
-    {
-      type: 'bookworm_25',
-      query: async () => {
-        const { count } = await supabase
-          .from('user_book_progress')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', userId)
-          .not('completed_at', 'is', null);
-        return (count ?? 0) >= 25;
-      },
-    },
-    {
-      type: 'first_essay',
-      query: async () => {
-        const { count } = await supabase
-          .from('user_writing_submissions')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', userId);
-        return (count ?? 0) >= 1;
-      },
-    },
-    {
-      type: 'writer_10',
-      query: async () => {
-        const { count } = await supabase
-          .from('user_writing_submissions')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', userId);
-        return (count ?? 0) >= 10;
-      },
-    },
-    {
-      type: 'perfect_essay',
-      query: async () => {
-        const { count } = await supabase
-          .from('user_writing_submissions')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', userId)
-          .gte('overall_score', 0.9);
-        return (count ?? 0) >= 1;
-      },
-    },
+  // Query-backed achievements.
+  //
+  // These used to be a list of eight independent `query()` closures awaited in
+  // a SERIAL loop, each with its own count round trip, plus a serial INSERT per
+  // award — roughly 900ms at exactly the moment the learner is waiting on the
+  // reward animation. There are only FOUR distinct counts behind those eight
+  // thresholds, so they run once each, in parallel, and the awards go in as one
+  // insert.
+  // `head: true` returns the count in a header with no row body.
+  const [books, essays, perfect, reviews] = await Promise.all([
+    supabase
+      .from('user_book_progress')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .not('completed_at', 'is', null),
+    supabase
+      .from('user_writing_submissions')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId),
+    supabase
+      .from('user_writing_submissions')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .gte('overall_score', 0.9),
+    supabase
+      .from('review_logs')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId),
+  ]);
+
+  const booksFinished = books.count ?? 0;
+  const essaysWritten = essays.count ?? 0;
+  const perfectEssays = perfect.count ?? 0;
+  const cardsReviewed = reviews.count ?? 0;
+
+  const thresholds: { type: AchievementType; earned: boolean }[] = [
+    { type: 'first_story', earned: booksFinished >= 1 },
+    { type: 'bookworm_5', earned: booksFinished >= 5 },
+    { type: 'bookworm_25', earned: booksFinished >= 25 },
+    { type: 'first_essay', earned: essaysWritten >= 1 },
+    { type: 'writer_10', earned: essaysWritten >= 10 },
+    { type: 'perfect_essay', earned: perfectEssays >= 1 },
+    // Lifetime, not today's — the copy says "Review 50 flashcards", and these
+    // used to read `dailyStats.cardsReviewed`, so 40 a day for a month earned
+    // neither.
+    { type: 'cards_50', earned: cardsReviewed >= 50 },
+    { type: 'cards_100', earned: cardsReviewed >= 100 },
   ];
 
-  for (const check of rwChecks) {
-    if (earnedTypes.has(check.type)) continue;
+  const toAward = thresholds
+    .filter((t) => t.earned && !earnedTypes.has(t.type))
+    .map((t) => t.type);
 
-    try {
-      const earned = await check.query();
-      if (!earned) continue;
+  if (toAward.length > 0) {
+    const earnedAt = new Date().toISOString();
+    const { error: insertError } = await supabase.from('achievements').insert(
+      toAward.map((type) => ({ user_id: userId, type, earned_at: earnedAt })),
+    );
 
-      const { error: insertError } = await supabase.from('achievements').insert({
-        user_id: userId,
-        type: check.type,
-        earned_at: new Date().toISOString(),
-      });
-
-      if (!insertError) {
-        newlyEarned.push(ACHIEVEMENTS[check.type]);
-      }
-    } catch {
-      // Skip failed checks silently
+    if (insertError) {
+      // Was `catch { /* Skip failed checks silently */ }`. An achievement the
+      // learner earned and was never given is worth knowing about.
+      console.error('[achievements] failed to award:', insertError);
+    } else {
+      for (const type of toAward) newlyEarned.push(ACHIEVEMENTS[type]);
     }
   }
 

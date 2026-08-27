@@ -2,7 +2,7 @@ import { ActivityIndicator, KeyboardAvoidingView, Platform, View } from 'react-n
 import * as Sentry from '@sentry/react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { fetchLessonWithExercises } from '../../../lib/supabase-queries';
 import { cachedFetch, readCacheKey } from '../../../lib/read-cache';
 import { orderExercisesForCognitiveLoad, lessonIsAlreadyOrdered } from '../../../lib/lesson-ordering';
@@ -68,6 +68,27 @@ export default function LessonScreen() {
   }, [loadLesson]);
 
   const targetLanguage = getTargetLanguage(profile);
+
+  /**
+   * Ordered once per lesson, not once per render.
+   *
+   * This ternary used to sit inline in the JSX, and
+   * `orderExercisesForCognitiveLoad` returns a NEW array every call — so
+   * `LessonRunner` received a fresh `exercises` identity on every render. That
+   * array is a dependency of three effects inside the runner (SRS prefetch,
+   * session restore, audio prewarm); today they survive only because each
+   * carries its own module-scoped ref guard. That is a load-bearing accident:
+   * relax any one of those guards and the restore effect resets `currentIndex`
+   * mid-lesson.
+   *
+   * Declared above the early returns below — hooks cannot be conditional.
+   */
+  const orderedExercises = useMemo(() => {
+    if (!lesson) return [];
+    return lessonIsAlreadyOrdered(lesson.exercises)
+      ? lesson.exercises
+      : orderExercisesForCognitiveLoad(lesson.exercises);
+  }, [lesson]);
 
   // Also wait for the profile: grading needs the real target language, so
   // never fall back to a default while it loads.
@@ -268,11 +289,7 @@ export default function LessonScreen() {
       )}
 
       <LessonRunner
-        exercises={
-          lessonIsAlreadyOrdered(lesson.exercises)
-            ? lesson.exercises
-            : orderExercisesForCognitiveLoad(lesson.exercises)
-        }
+        exercises={orderedExercises}
         lessonId={lesson.id}
         lessonTitle={lesson.title}
         xpReward={lesson.xpReward}

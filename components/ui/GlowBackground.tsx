@@ -14,6 +14,12 @@
  *   - Drift is three offset 9/12/15s translate+scale loops. It gates on
  *     `useMotion().shouldReduce`: with Reduce Motion on, blobs render at their
  *     rest position and never animate.
+ *   - It ALSO gates on focus. React Navigation keeps visited tabs mounted, so
+ *     without that gate a learner who had touched Home, Learn, Chat and
+ *     Profile left twelve infinite loops running — driving twelve scaled and
+ *     translated GPU layers of which at most three were ever visible, for the
+ *     rest of the session. Reduce Motion was the only thing that could stop
+ *     them.
  *   - `pointerEvents="none"` throughout — this layer never eats a touch.
  */
 
@@ -26,8 +32,10 @@ import Animated, {
   withRepeat,
   withSequence,
   withTiming,
+  cancelAnimation,
   Easing,
 } from 'react-native-reanimated';
+import { useIsFocused } from '@react-navigation/native';
 import { colors } from '../../config/theme';
 import { useMotion } from '../../hooks/useMotion';
 
@@ -98,6 +106,10 @@ function Blob({ spec, animate, index }: { spec: BlobSpec; animate: boolean; inde
 
   useEffect(() => {
     if (!animate) {
+      // `cancelAnimation` first: assigning to a shared value does not stop an
+      // in-flight `withRepeat`, so without this the loop kept running and
+      // fought the assignment every frame.
+      cancelAnimation(progress);
       progress.value = 0;
       return;
     }
@@ -112,6 +124,10 @@ function Blob({ spec, animate, index }: { spec: BlobSpec; animate: boolean; inde
       -1,
       false,
     );
+
+    return () => {
+      cancelAnimation(progress);
+    };
   }, [animate, progress, spec.durationMs]);
 
   const animatedStyle = useAnimatedStyle(() => {
@@ -171,7 +187,10 @@ function Blob({ spec, animate, index }: { spec: BlobSpec; animate: boolean; inde
  */
 export function GlowLayer({ drift = true }: { drift?: boolean }) {
   const { shouldReduce } = useMotion();
-  const animate = drift && !shouldReduce;
+  // Only the screen the learner is actually looking at animates. Backgrounded
+  // tabs stay mounted and would otherwise keep their loops running forever.
+  const isFocused = useIsFocused();
+  const animate = drift && !shouldReduce && isFocused;
 
   return (
     <View pointerEvents="none" style={styles.glowLayer}>
