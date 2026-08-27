@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useReadingPassage } from '../../../../hooks/useReadingPassage';
 import { ReadingPassageViewer } from '../../../../components/reading/ReadingPassageViewer';
 import { ComprehensionQuestions } from '../../../../components/reading/ComprehensionQuestions';
+import { haptic } from '../../../../lib/haptics';
 import { colors } from '../../../../config/theme';
 import { GlowLayer } from '../../../../components/ui/GlowBackground';
 
@@ -73,7 +74,10 @@ export default function ReadingPassageScreen() {
           <Text style={{ fontSize: 14, color: colors.text.tertiary, marginBottom: 32 }}>Comprehension Score</Text>
 
           <Pressable
-            onPress={() => router.back()}
+            onPress={() => {
+              haptic('buttonPress');
+              router.back();
+            }}
             style={{
               backgroundColor: colors.action.primaryFill, paddingHorizontal: 48, paddingVertical: 16, borderRadius: 14,
             }}
@@ -94,6 +98,11 @@ export default function ReadingPassageScreen() {
         onComplete={async (comprehensionScore) => {
           setScore(comprehensionScore);
           await completeReading(comprehensionScore);
+          // Fired here rather than in an effect on the 'complete' phase because
+          // this is a handler on a real tap — no mount/remount to guard against.
+          // The last question's own verdict buzz came from a separate gesture
+          // (Check), so the two do not stack.
+          haptic('complete');
           setPhase('complete');
         }}
         onExit={() => router.back()}
@@ -119,6 +128,10 @@ export default function ReadingPassageScreen() {
         if (finishingRef.current) return;
         finishingRef.current = true;
         await completeReading(1);
+        // A passage with no comprehension questions never reaches the
+        // 'complete' screen — it just pops back. The learner still finished
+        // something, and this is the only acknowledgement they get.
+        haptic('complete');
         router.back();
       }}
       onExit={() => router.back()}

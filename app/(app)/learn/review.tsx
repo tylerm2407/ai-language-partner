@@ -1,8 +1,8 @@
-import { View, Text, Pressable, ScrollView, Platform, Alert } from 'react-native';
+import { View, Text, Pressable, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useEffect, useState, useRef } from 'react';
-import * as Haptics from 'expo-haptics';
+import { haptic } from '../../../lib/haptics';
 import { useReviewQueue } from '../../../hooks/useReviewQueue';
 import { useDailyStats } from '../../../hooks/useDailyStats';
 import { ProgressBar } from '../../../components/ui/ProgressBar';
@@ -32,6 +32,17 @@ export default function ReviewScreen() {
     cardStartTime.current = Date.now();
   }, [currentIndex]);
 
+  const isComplete = !loading && items.length > 0 && currentIndex >= items.length;
+
+  // Finishing the queue is the accomplishment, and until now it was the one
+  // silent step in the session: every individual card buzzed on rating, then
+  // the last one dropped the learner onto "Review Complete!" with no feedback
+  // at all. Declared up here rather than beside the completion branch because
+  // that branch sits after two early returns, and a hook cannot go there.
+  useEffect(() => {
+    if (isComplete) haptic('complete');
+  }, [isComplete]);
+
   const handleRate = async (rating: ReviewRating) => {
     if (submitting) return; // Prevent double-tap
     setSubmitting(true);
@@ -40,11 +51,7 @@ export default function ReviewScreen() {
     const card = cards[item.cardId];
     const responseTimeMs = Date.now() - cardStartTime.current;
 
-    if (Platform.OS !== 'web') {
-      void (rating >= 3
-        ? Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-        : Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error));
-    }
+    haptic(rating >= 3 ? 'correct' : 'incorrect');
 
     try {
       await submitReview(item, rating, card?.targetText ?? '', responseTimeMs);
@@ -78,7 +85,6 @@ export default function ReviewScreen() {
     );
   }
 
-  const isComplete = currentIndex >= items.length;
   const progress = items.length > 0 ? currentIndex / items.length : 0;
 
   if (isComplete) {

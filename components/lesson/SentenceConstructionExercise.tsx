@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { View, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
+import { haptic } from '../../lib/haptics';
 import { FeedbackCard } from './FeedbackCard';
 import { HighlightedText } from '../shared/HighlightedText';
 import { Body, Caption } from '../ui/Text';
@@ -65,12 +65,12 @@ export function SentenceConstructionExercise({
   const highlight = exercise.targetWord ?? exercise.targetGrammar;
 
   const handleTapAvailable = (index: number) => {
-    Haptics.selectionAsync();
+    haptic('select');
     setPlaced((prev) => [...prev, index]);
   };
 
   const handleTapPlaced = (placedIndex: number) => {
-    Haptics.selectionAsync();
+    haptic('select');
     setPlaced((prev) => prev.filter((_, i) => i !== placedIndex));
   };
 
@@ -91,11 +91,7 @@ export function SentenceConstructionExercise({
     setResult(grade);
     setLocalRevealed(true);
 
-    if (grade.isCorrect) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } else {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    }
+    haptic(grade.isCorrect ? 'correct' : 'incorrect');
     onAnswer(grade.isCorrect, assembledSentence);
   };
 

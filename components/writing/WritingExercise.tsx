@@ -3,6 +3,7 @@ import { View, Text, TextInput, Pressable, ScrollView, KeyboardAvoidingView, Pla
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { WritingPrompt } from '../../types';
 import { GradientBackground } from '../ui/GradientBackground';
+import { haptic } from '../../lib/haptics';
 
 interface Props {
   prompt: WritingPrompt;
@@ -57,6 +58,11 @@ export function WritingExercise({ prompt, isGrading, attemptNumber = 1, onSubmit
   const canSubmit = isScaffoldComplete() && meetsMinWords && !exceedsMaxWords && !isGrading;
 
   const handleSubmit = () => {
+    // Submit is a bare Pressable rather than the shared <Button>, so it was the
+    // one primary action in the app with no press feedback of any kind — and it
+    // is followed by a grading spinner, which makes a missed tap look like the
+    // app hanging rather than like nothing having happened.
+    haptic('buttonPress');
     const timeSpentMs = Date.now() - startTimeRef.current;
     onSubmit(combinedText.trim(), wordCount, timeSpentMs);
   };

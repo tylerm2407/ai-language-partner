@@ -9,7 +9,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
-import * as Haptics from 'expo-haptics';
+import { haptic } from '../../../../lib/haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { GradientBackground } from '../../../../components/ui/GradientBackground';
 import { GlassSurface } from '../../../../components/ui/GlassSurface';
@@ -81,7 +81,7 @@ export default function ClassDetailScreen() {
   const handleCopyInviteCode = useCallback(async () => {
     if (!classroom?.inviteCode) return;
     await Clipboard.setStringAsync(classroom.inviteCode);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    haptic('confirm');
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }, [classroom?.inviteCode]);

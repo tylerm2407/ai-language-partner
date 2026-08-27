@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { haptic } from '../../lib/haptics';
 
 interface HeartBreakProps {
   trigger: boolean;
@@ -38,6 +39,16 @@ export function HeartBreak({ trigger }: HeartBreakProps) {
         Animated.delay(600),
         Animated.timing(opacity, { toValue: 0, duration: 400, useNativeDriver: true }),
       ]).start();
+
+      // Timed to the split, not to the mount.
+      //
+      // The exercise has already fired `incorrect` at the moment the answer was
+      // judged. Buzzing again right now would land on top of it and read as one
+      // long error rather than two events. Waiting the 400ms until the heart
+      // actually tears in half puts the vibration on the thing the learner is
+      // looking at, and gives the pair a rhythm — verdict, then cost.
+      const splitBuzz = setTimeout(() => haptic('heartLost'), 400);
+      return () => clearTimeout(splitBuzz);
     }
   }, [trigger, leftX, rightX, opacity, scale]);
 

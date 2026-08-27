@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { View, Text, Pressable, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
+import { haptic } from '../../lib/haptics';
 import { ExerciseCard } from './ExerciseCard';
 import { FeedbackCard } from './FeedbackCard';
 import { HighlightedText } from '../shared/HighlightedText';
@@ -80,9 +80,7 @@ export function SpeakingExercise({
       await stopRecording();
     } else {
       await startRecording();
-      if (Platform.OS !== 'web') {
-        Haptics.selectionAsync();
-      }
+      haptic('select');
     }
   };
 
@@ -130,13 +128,7 @@ export function SpeakingExercise({
       };
       setResult(grade);
 
-      if (Platform.OS !== 'web') {
-        if (isCorrect) {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        } else {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        }
-      }
+      haptic(isCorrect ? 'correct' : 'incorrect');
 
       onAnswer(isCorrect, `score:${pronounciation.score}`);
     } catch {

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import { Pressable, Text, ActivityIndicator, Platform } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import { Pressable, Text, ActivityIndicator } from 'react-native';
+import { haptic } from '../../lib/haptics';
 import { useAudioPlayer } from '../../hooks/useAudioPlayer';
 import { colors } from '../../config/theme';
 
@@ -19,9 +19,7 @@ export function AudioPlayButton({ audioUrl, size = 48 }: AudioPlayButtonProps) {
   // Playback failure feedback — error haptic; the button flips to an
   // alert state ("!") and pressing it again retries.
   useEffect(() => {
-    if (error && Platform.OS !== 'web') {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    }
+    if (error) haptic('failure');
   }, [error]);
 
   const handlePress = async () => {

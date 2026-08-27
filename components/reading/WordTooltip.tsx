@@ -1,5 +1,5 @@
 import { View, Text, Pressable } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import { haptic } from '../../lib/haptics';
 import { AudioPlayButton } from '../audio/AudioPlayButton';
 import type { ReadingAnnotation, ReviewItem } from '../../types';
 import { colors } from '../../config/theme';
@@ -14,7 +14,7 @@ export function WordTooltip({ annotation, onAddToReview, onDismiss }: Props) {
   const handleAddToReview = async () => {
     const result = await onAddToReview();
     if (result) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      haptic('confirm');
     }
     onDismiss();
   };

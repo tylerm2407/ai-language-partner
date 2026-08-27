@@ -25,20 +25,11 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  View,
-  Text,
-  Pressable,
-  Animated,
-  Alert,
-  Linking,
-  Platform,
-  StyleSheet,
-} from 'react-native';
+import { View, Text, Pressable, Animated, Alert, Linking, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
-import * as Haptics from 'expo-haptics';
+import { haptic } from '../../lib/haptics';
 import Svg, { Circle as SvgCircle } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import * as Sentry from '@sentry/react-native';
@@ -241,7 +232,7 @@ export function OnboardingChecklistFab({ bottomOffset = 100 }: OnboardingCheckli
         tags: { area: 'onboarding-checklist', op: 'complete-xp' },
       });
     });
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    haptic('complete');
 
     markCelebrated().catch((err) => {
       // The ref stays set, so this does not retry within the session. It does
@@ -289,7 +280,7 @@ export function OnboardingChecklistFab({ bottomOffset = 100 }: OnboardingCheckli
   const handleItemPress = useCallback(
     async (row: OnboardingRow) => {
       // Haptic feedback on item tap
-      Haptics.selectionAsync().catch(() => {});
+      haptic('select');
 
       if (row.stepKey === 'dailyReminder') {
         try {
@@ -355,9 +346,7 @@ export function OnboardingChecklistFab({ bottomOffset = 100 }: OnboardingCheckli
   );
 
   const handleOpen = useCallback(() => {
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    }
+    haptic('buttonPress');
     setOpen(true);
   }, []);
 

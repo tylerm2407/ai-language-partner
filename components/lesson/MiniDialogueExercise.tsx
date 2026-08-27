@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { View, Text, TextInput, Platform } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import { View, Text, TextInput } from 'react-native';
+import { haptic } from '../../lib/haptics';
 import { ExerciseCard } from './ExerciseCard';
 import { FeedbackCard } from './FeedbackCard';
 import { Button } from '../ui/Button';
@@ -142,13 +142,7 @@ export function MiniDialogueExercise({
     setResult(aggregate);
     setSubmitted(true);
 
-    if (Platform.OS !== 'web') {
-      if (allCorrect) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      } else {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      }
-    }
+    haptic(allCorrect ? 'correct' : 'incorrect');
 
     const combinedAnswer = blankIndices.map((idx) => answers[idx] ?? '').join(' | ');
     onAnswer(allCorrect, combinedAnswer);

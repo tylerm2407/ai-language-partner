@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Platform } from 'react-native';
+import { View, Text, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
+import { haptic } from '../../lib/haptics';
 import { ExerciseCard } from './ExerciseCard';
 import { FeedbackCard } from './FeedbackCard';
 import { HighlightedText } from '../shared/HighlightedText';
@@ -53,13 +53,7 @@ export function TranslationExercise({
     setResult(grade);
     setSubmitted(true);
 
-    if (Platform.OS !== 'web') {
-      if (grade.isCorrect) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      } else {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      }
-    }
+    haptic(grade.isCorrect ? 'correct' : 'incorrect');
 
     onAnswer(grade.isCorrect, answer);
   };

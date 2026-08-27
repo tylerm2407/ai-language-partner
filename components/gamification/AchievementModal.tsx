@@ -3,6 +3,7 @@ import { View, Text, Pressable, Modal, Dimensions, Animated, Easing } from 'reac
 import { LinearGradient } from 'expo-linear-gradient';
 import { GRADIENT_COLORS, GRADIENT_START, GRADIENT_END } from '../../config/gradients';
 import { Ionicons } from '@expo/vector-icons';
+import { haptic } from '../../lib/haptics';
 import type { AchievementDefinition } from '../../lib/achievements';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -93,6 +94,12 @@ export function AchievementModal({ achievement, visible, onDismiss }: {
         Animated.delay(200),
         Animated.spring(iconScale, { toValue: 1, speed: 30, bounciness: 10, useNativeDriver: true }),
       ]).start();
+
+      // `achievement` is in the dependency list, so a queue of several unlocked
+      // at once re-runs this on every advance and each one gets its own buzz.
+      // That is the intent: finishing a lesson that unlocks three achievements
+      // should feel like three things happening, not one long modal.
+      haptic('achievement');
     } else {
       Animated.parallel([
         Animated.timing(backdropOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
@@ -189,7 +196,10 @@ export function AchievementModal({ achievement, visible, onDismiss }: {
           <Pressable
             className="w-full rounded-2xl py-4 items-center"
             style={{ backgroundColor: achievement.color }}
-            onPress={onDismiss}
+            onPress={() => {
+              haptic('buttonPress');
+              onDismiss();
+            }}
             accessibilityRole="button"
             accessibilityLabel="Dismiss achievement"
           >

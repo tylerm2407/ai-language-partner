@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { View, Text, Pressable, Platform } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import { View, Text, Pressable } from 'react-native';
+import { haptic } from '../../lib/haptics';
 import { ExerciseCard } from './ExerciseCard';
 import { FeedbackCard } from './FeedbackCard';
 import { Button } from '../ui/Button';
@@ -97,13 +97,7 @@ export function CollocationMatch({
     setResult(grade);
     setSubmitted(true);
 
-    if (Platform.OS !== 'web') {
-      if (isCorrect) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      } else {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      }
-    }
+    haptic(isCorrect ? 'correct' : 'incorrect');
 
     onAnswer(isCorrect, joined);
   };

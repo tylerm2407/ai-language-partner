@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { View, Text, Pressable, TextInput, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import * as Haptics from 'expo-haptics';
+import { haptic } from '../../lib/haptics';
 import { ProgressBar } from '../ui/ProgressBar';
 import { gradeAnswer } from '../../lib/grading';
 import type { ReadingQuestion } from '../../types';
@@ -35,9 +35,9 @@ export function ComprehensionQuestions({ questions, onComplete, onExit }: Props)
 
     if (grade.isCorrect) {
       setCorrectCount((prev) => prev + 1);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      haptic('correct');
     } else {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      haptic('incorrect');
     }
   }, [question, textAnswer, selectedOption]);
 

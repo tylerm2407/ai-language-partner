@@ -14,7 +14,7 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import * as Haptics from 'expo-haptics';
+import { haptic } from '../../lib/haptics';
 import { GLASS_HIGHLIGHT } from '../../config/gradients';
 import { colors } from '../../config/theme';
 import type { ReactNode } from 'react';
@@ -117,7 +117,7 @@ export function GlassCard({
 
   const fireOnPress = () => {
     onPress?.();
-    Haptics.selectionAsync();
+    haptic('select');
   };
 
   const tap = Gesture.Tap()

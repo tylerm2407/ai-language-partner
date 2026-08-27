@@ -3,7 +3,7 @@ import { View, Text, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
+import { haptic } from '../../../lib/haptics';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAppStore } from '../../../stores/useAppStore';
 import { fetchDailyNews, fetchNewsReadStatus, markNewsAsRead } from '../../../lib/supabase-queries';
@@ -65,7 +65,7 @@ export default function NewsReaderScreen() {
     try {
       const stamp = await markNewsAsRead(article.id);
       setReadAt(stamp);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      haptic('complete');
     } catch {
       // Non-fatal — button returns to enabled state
     } finally {

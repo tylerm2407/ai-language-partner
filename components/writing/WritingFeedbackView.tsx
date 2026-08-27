@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ProgressBar } from '../ui/ProgressBar';
 import { Ionicons } from '@expo/vector-icons';
 import type { WritingFeedback } from '../../types';
 import { GradientBackground } from '../ui/GradientBackground';
+import { haptic } from '../../lib/haptics';
 import { ReportContentSheet } from '../ui/ReportContentSheet';
 import { colors, radii, spacing } from '../../config/theme';
 
@@ -28,6 +29,19 @@ export function WritingFeedbackView({ feedback, previousScore, attemptNumber = 1
 
   const [reportOpen, setReportOpen] = useState(false);
   const canRetry = attemptNumber < maxAttempts;
+
+  // The grade arriving is the moment worth feeling. Writing is the longest
+  // single task in the app — minutes of typing, then a spinner — and it ended
+  // in silence, which is exactly where a learner puts the phone down and misses
+  // the result.
+  //
+  // Tiered to match the score circle right below it, so the buzz and the colour
+  // say the same thing: green is a Success, amber a Warning, red an Error. A
+  // flat Success on every grade would tell the learner their worst attempt felt
+  // identical to their best.
+  useEffect(() => {
+    haptic(overallScore >= 80 ? 'complete' : overallScore >= 60 ? 'warning' : 'incorrect');
+  }, [overallScore]);
   const improvementDelta = previousScore != null ? overallScore - Math.round(previousScore * 100) : null;
 
   return (
@@ -185,7 +199,10 @@ export function WritingFeedbackView({ feedback, previousScore, attemptNumber = 1
       <View style={{ padding: spacing.xl, flexDirection: 'row', gap: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border.default }}>
         {canRetry && (
           <Pressable
-            onPress={onTryAgain}
+            onPress={() => {
+              haptic('buttonPress');
+              onTryAgain();
+            }}
             style={{
               flex: 1, backgroundColor: colors.surface.card, paddingVertical: spacing.md, borderRadius: radii.lg, alignItems: 'center',
             }}
@@ -196,7 +213,10 @@ export function WritingFeedbackView({ feedback, previousScore, attemptNumber = 1
           </Pressable>
         )}
         <Pressable
-          onPress={onContinue}
+          onPress={() => {
+            haptic('buttonPress');
+            onContinue();
+          }}
           style={{
             flex: 1, backgroundColor: colors.action.primaryFill, paddingVertical: spacing.md, borderRadius: radii.lg, alignItems: 'center',
           }}

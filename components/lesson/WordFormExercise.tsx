@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Platform } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import { View, Text, TextInput } from 'react-native';
+import { haptic } from '../../lib/haptics';
 import { ExerciseCard } from './ExerciseCard';
 import { FeedbackCard } from './FeedbackCard';
 import { HighlightedText } from '../shared/HighlightedText';
@@ -59,13 +59,7 @@ export function WordFormExercise({
     setResult(grade);
     setSubmitted(true);
 
-    if (Platform.OS !== 'web') {
-      if (grade.isCorrect) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      } else {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      }
-    }
+    haptic(grade.isCorrect ? 'correct' : 'incorrect');
 
     onAnswer(grade.isCorrect, answer);
   };

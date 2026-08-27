@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { GRADIENT_COLORS, GRADIENT_START, GRADIENT_END } from '../../config/gradients';
 import { Ionicons } from '@expo/vector-icons';
 import { getLeagueConfig } from '../../lib/levels';
+import { haptic } from '../../lib/haptics';
 import { colors } from '../../config/theme';
 import type { LeagueTier } from '../../lib/levels';
 
@@ -86,8 +87,20 @@ export function LevelUpModal({ visible, newLevel, newTier, tierChanged, onDismis
         Animated.delay(200),
         Animated.spring(levelScale, { toValue: 1, speed: 20, bounciness: 12, useNativeDriver: true }),
       ]).start();
+
+      // The buzz rides the animation rather than the mount: one Heavy thump as
+      // the card springs in, and for a league promotion a second one timed to
+      // the level number landing 200ms later. A promotion is rarer than a level
+      // and should not feel identical to it — the double-thump is what makes
+      // the difference legible through the pocket, without a new sound or a
+      // longer animation.
+      haptic('levelUp');
+      if (tierChanged) {
+        const promotionThump = setTimeout(() => haptic('milestone'), 200);
+        return () => clearTimeout(promotionThump);
+      }
     }
-  }, [visible, cardScale, cardOpacity, backdropOpacity, levelScale]);
+  }, [visible, tierChanged, cardScale, cardOpacity, backdropOpacity, levelScale]);
 
   const confettiColors = [leagueConfig.color, colors.warning.base, colors.success.light, colors.league.diamond, '#F472B6', colors.premium.base];
 
@@ -148,7 +161,10 @@ export function LevelUpModal({ visible, newLevel, newTier, tierChanged, onDismis
 
               <Pressable
                 style={{ width: '100%', borderRadius: 14, overflow: 'hidden' }}
-                onPress={onDismiss}
+                onPress={() => {
+                  haptic('buttonPress');
+                  onDismiss();
+                }}
                 accessibilityRole="button"
                 accessibilityLabel="Continue"
               >

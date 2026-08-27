@@ -1,7 +1,7 @@
 import { useRef } from 'react';
-import { Pressable, Text, ActivityIndicator, Animated, type ViewStyle, Platform } from 'react-native';
+import { Pressable, Text, ActivityIndicator, Animated, type ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as Haptics from 'expo-haptics';
+import { haptic } from '../../lib/haptics';
 import { GRADIENT_COLORS, GRADIENT_START, GRADIENT_END } from '../../config/gradients';
 
 type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'text';
@@ -52,9 +52,7 @@ export function Button({ label, variant = 'primary', onPress, disabled, loading,
   };
 
   const handlePress = () => {
-    if (Platform.OS !== 'web') {
-      Haptics.selectionAsync();
-    }
+    haptic('select');
     onPress();
   };
 

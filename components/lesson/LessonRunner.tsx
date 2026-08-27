@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, Platform, Pressable } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import { View, Text, Pressable } from 'react-native';
+import { haptic } from '../../lib/haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing } from '../../config/theme';
 import { Button } from '../ui/Button';
@@ -584,8 +584,8 @@ export function LessonRunner({
       // Success haptic on mount — creates a signature double-thump only when
       // every exercise was correct. Imperfect runs rely on the overlay's own
       // Success haptic (no double-fire).
-      if (Platform.OS !== 'web' && summary.perfect) {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
+      if (summary.perfect) {
+        haptic('milestone');
       }
 
       const result: LessonResult = {

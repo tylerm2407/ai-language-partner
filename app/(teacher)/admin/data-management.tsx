@@ -3,7 +3,7 @@ import { View, Text, TextInput, Alert, ActivityIndicator, ScrollView, KeyboardAv
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
-import * as Haptics from 'expo-haptics';
+import { haptic } from '../../../lib/haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { GradientBackground } from '../../../components/ui/GradientBackground';
 import { GlassSurface } from '../../../components/ui/GlassSurface';
@@ -43,7 +43,7 @@ export default function DataManagementScreen() {
   const handleCopyExport = async () => {
     if (!exportResult) return;
     await Clipboard.setStringAsync(JSON.stringify(exportResult, null, 2));
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    haptic('confirm');
     setCopiedExport(true);
     setTimeout(() => setCopiedExport(false), 2000);
   };

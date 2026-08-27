@@ -21,7 +21,7 @@
 
 import React, { useRef } from 'react';
 import { Pressable, Animated, View, type ViewStyle, StyleSheet } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import { haptic } from '../../lib/haptics';
 import { colors, radii, spacing, typography } from '../../config/theme';
 import { useMotion } from '../../hooks/useMotion';
 import { Body } from './Text';
@@ -105,8 +105,9 @@ export function TactileButton({
         useNativeDriver: true,
       }).start();
     }
-    // Light haptic always (does not depend on motion pref)
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    // Light haptic always (does not depend on the motion preference — they
+    // are separate switches, see lib/haptics.ts).
+    haptic('buttonPress');
   };
 
   const handlePressOut = () => {

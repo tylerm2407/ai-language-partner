@@ -1,5 +1,5 @@
-import { View, Text, Pressable, Platform } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import { View, Text, Pressable } from 'react-native';
+import { haptic } from '../../lib/haptics';
 import { ExerciseCard } from './ExerciseCard';
 import { HighlightedText } from '../shared/HighlightedText';
 import { gradeAnswer } from '../../lib/grading';
@@ -54,13 +54,7 @@ export function MultipleChoice({
         targetWord: exercise.targetWord,
       },
     });
-    if (Platform.OS !== 'web') {
-      Haptics.notificationAsync(
-        grade.isCorrect
-          ? Haptics.NotificationFeedbackType.Success
-          : Haptics.NotificationFeedbackType.Error,
-      ).catch(() => {});
-    }
+    haptic(grade.isCorrect ? 'correct' : 'incorrect');
 
     // This type used to log its correction from inside FeedbackCard's mount
     // effect. The card is gone — the footer note replaced it — so the log

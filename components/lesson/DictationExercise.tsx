@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, Text, TextInput, Pressable, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
+import { haptic } from '../../lib/haptics';
 import { AudioPlayButton } from '../audio/AudioPlayButton';
 import { FeedbackCard } from './FeedbackCard';
 import { Body, Caption } from '../ui/Text';
@@ -77,11 +77,7 @@ export function DictationExercise({
     setResult(grade);
     setLocalRevealed(true);
 
-    if (grade.isCorrect) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } else {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    }
+    haptic(grade.isCorrect ? 'correct' : 'incorrect');
     onAnswer(grade.isCorrect, userInput);
   };
 

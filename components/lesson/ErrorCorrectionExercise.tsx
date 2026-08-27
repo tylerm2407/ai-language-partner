@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, TextInput, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
+import { haptic } from '../../lib/haptics';
 import { FeedbackCard } from './FeedbackCard';
 import { HighlightedText } from '../shared/HighlightedText';
 import { Body, Caption } from '../ui/Text';
@@ -66,11 +66,7 @@ export function ErrorCorrectionExercise({
     setResult(grade);
     setLocalRevealed(true);
 
-    if (grade.isCorrect) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } else {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    }
+    haptic(grade.isCorrect ? 'correct' : 'incorrect');
     onAnswer(grade.isCorrect, userInput);
   };
 
