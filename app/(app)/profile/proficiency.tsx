@@ -245,10 +245,20 @@ export default function ProficiencyScreen() {
                     }}
                   />
                 </View>
+                {/* Denominator is `mature`, not `seen`, because that is what
+                    the bar above is drawn from. Labelling it "34 of 50" under
+                    an 85% bar is just a wrong readout — the 16 unscored items
+                    are still-settling new cards, which are deliberately kept
+                    out of the rate so that starting new material cannot make
+                    the learner's level appear to drop. */}
                 <Text className="text-sm text-text-tertiary mt-2">
                   {band.seen === 0
                     ? 'No items studied yet'
-                    : `${band.retained} of ${band.seen} items retained`}
+                    : band.mature === 0
+                      ? `${band.seen} ${band.seen === 1 ? 'item' : 'items'} started — too new to score yet`
+                      : `${band.retained} of ${band.mature} retained${
+                          band.seen > band.mature ? ` · ${band.seen - band.mature} still settling` : ''
+                        }`}
                 </Text>
               </View>
             ))}
