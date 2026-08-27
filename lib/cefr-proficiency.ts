@@ -45,15 +45,30 @@ export const CEFR_LADDER: CefrBand[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
  * surfaces that need a competence label without paying for a full report.
  */
 export function cefrBandForProficiencyLevel(level: ProficiencyLevel): CefrBand {
-  const map: Record<ProficiencyLevel, CefrBand> = {
-    beginner: 'A1',
-    elementary: 'A2',
-    intermediate: 'B1',
-    upper_intermediate: 'B2',
-    advanced: 'C1',
-  };
-  return map[level] ?? 'A1';
+  return CEFR_BAND_BY_LEVEL[level] ?? 'A1';
 }
+
+/**
+ * The ProficiencyLevel -> CEFR ladder. THE client-side copy.
+ *
+ * There were four independent copies of this table (here, `supabase-queries`'s
+ * `allowedCefrLevelsFor`, the chat header, and `_shared/cefr.ts`). They agreed,
+ * which is exactly what made it dangerous: this mapping gates which content a
+ * learner is shown, the proficiency report, the chat header, and the level
+ * every server prompt is written for. Editing three of four produces B2 reading
+ * material with a B1 tutor, and nothing fails.
+ *
+ * The fourth copy lives in the Deno edge runtime and cannot import this module;
+ * `lib/cefr-ladder.test.ts` asserts the two stay identical.
+ */
+export const CEFR_BAND_BY_LEVEL: Record<ProficiencyLevel, CefrBand> = {
+  beginner: 'A1',
+  elementary: 'A2',
+  intermediate: 'B1',
+  upper_intermediate: 'B2',
+  advanced: 'C1',
+};
+
 
 export type SkillKey = 'vocabulary' | 'reading' | 'writing' | 'listening' | 'speaking';
 

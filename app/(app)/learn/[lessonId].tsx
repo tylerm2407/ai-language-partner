@@ -169,9 +169,15 @@ export default function LessonScreen() {
     }
 
     // 3. Daily stats — cosmetic rollup; never blocks anything above.
+    // `accuracy` is set-if-provided rather than additive (see upsertDailyStats),
+    // so this records the accuracy of the lesson just finished. Omitting it left
+    // the column at 0 for everyone, which made `perfect_lesson` — checked as
+    // `accuracy >= 1` — unreachable by any user, ever. The value was already
+    // sitting in `result`.
     await addStats({
       lessonsCompleted: 1,
       xpEarned: result.xpEarned,
+      accuracy: result.accuracy,
     }).catch((err) => console.error('[lesson] addStats failed:', err));
 
     if (lesson && user?.id) {

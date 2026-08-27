@@ -12,7 +12,23 @@ export function calculateNextReview(
   let { easeFactor, interval, repetitions } = item;
 
   if (rating < 3) {
-    // Failed: reset to learning
+    // Failed: reset to learning.
+    //
+    // The ease factor is deliberately NOT touched here. SuperMemo 2 step 4
+    // ("start repetitions for the item from the beginning WITHOUT changing the
+    // E-Factor") and .claude/rules/learning.md both say so, and this used to
+    // run the EF update unconditionally, below the branch.
+    //
+    // What that cost: lesson-srs rates every wrong in-lesson answer a 2, and a
+    // rating of 2 subtracts 0.32 from EF — so four misses drove any card from
+    // 2.5 to the 1.3 floor and left it there, since a perfect answer only adds
+    // 0.1 back. Intervals for a card the learner had since mastered then grew
+    // 21 -> 27 -> 36 instead of 21 -> 53 -> 131, roughly tripling its review
+    // load forever.
+    //
+    // Failing is still by far the more expensive outcome: it forfeits the whole
+    // interval progression (30 days -> 1) and the repetition count. EF is the
+    // long-run difficulty estimate, and SM-2 does not double-punish it.
     repetitions = 0;
     interval = 1;
   } else {
@@ -26,15 +42,22 @@ export function calculateNextReview(
     } else {
       interval = Math.round(interval * easeFactor);
     }
+
+    // Update ease factor — passing grades only.
+    easeFactor = easeFactor + (0.1 - (5 - rating) * (0.08 + (5 - rating) * 0.02));
+    easeFactor = Math.max(SRS_DEFAULTS.minimumEaseFactor, easeFactor);
   }
 
-  // Update ease factor
-  easeFactor = easeFactor + (0.1 - (5 - rating) * (0.08 + (5 - rating) * 0.02));
-  easeFactor = Math.max(SRS_DEFAULTS.minimumEaseFactor, easeFactor);
-
-  // Calculate next due date
+  // Calculate next due date.
+  //
+  // Normalised to the start of the local day. `setDate` alone preserves the
+  // current time, so a card reviewed at 21:30 on Monday was not due until 21:30
+  // on Tuesday — a learner who studies in the morning but ever reviews in the
+  // evening pushed every card a full day out and kept them permanently ~10h
+  // "not yet due", which starves the warm-up queue.
   const nextDue = new Date();
   nextDue.setDate(nextDue.getDate() + interval);
+  nextDue.setHours(0, 0, 0, 0);
 
   // Determine status
   let status: ReviewItem['status'];

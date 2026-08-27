@@ -45,7 +45,16 @@ describe('SM-2 consequences of the recovered rating', () => {
     expect(calculateNextReview(seasoned, 2).repetitions).toBe(0);
   });
 
-  it('costs less ease factor to recover than to fail outright', () => {
+  it('costs far less to recover than to fail outright', () => {
+    // This used to compare ease factors alone and assert that failing cost MORE
+    // ease than recovering. That was only true because the EF penalty ran
+    // unconditionally, outside the pass branch — the deviation from SM-2 step 4
+    // and from .claude/rules/learning.md that pinned repeatedly-missed cards at
+    // the 1.3 floor forever.
+    //
+    // EF was always the wrong thing to measure. A lapse forfeits the entire
+    // interval progression, which is the real punishment and is an order of
+    // magnitude larger than any ease adjustment.
     const seasoned: ReviewItem = {
       ...freshItem(),
       id: 'r1',
@@ -54,10 +63,22 @@ describe('SM-2 consequences of the recovered rating', () => {
       easeFactor: 2.5,
     };
 
-    const recovered = calculateNextReview(seasoned, 3).easeFactor;
-    const failed = calculateNextReview(seasoned, 2).easeFactor;
-    expect(recovered).toBeGreaterThan(failed);
-    // ...and still less than holding steady on a clean answer.
-    expect(recovered).toBeLessThan(calculateNextReview(seasoned, 4).easeFactor);
+    const recovered = calculateNextReview(seasoned, 3);
+    const failed = calculateNextReview(seasoned, 2);
+
+    // Recovering keeps — and extends — the schedule.
+    expect(recovered.interval).toBeGreaterThan(seasoned.interval);
+    expect(recovered.repetitions).toBe(5);
+
+    // Failing forfeits it.
+    expect(failed.interval).toBe(1);
+    expect(failed.repetitions).toBe(0);
+    expect(recovered.interval).toBeGreaterThan(failed.interval);
+
+    // A lapse leaves the long-run difficulty estimate alone (SM-2 step 4).
+    expect(failed.easeFactor).toBe(seasoned.easeFactor);
+
+    // A passing grade below 4 still nudges it down.
+    expect(recovered.easeFactor).toBeLessThan(seasoned.easeFactor);
   });
 });

@@ -7,6 +7,7 @@ import { useAuth } from '../../../hooks/useAuth';
 import { useAppStore, effectiveTier } from '../../../stores/useAppStore';
 import { useOnboardingChecklist } from '../../../hooks/useOnboardingChecklist';
 import { sendChatMessage, getTextToSpeech, VoiceError } from '../../../lib/ai';
+import { CEFR_BAND_BY_LEVEL } from '../../../lib/cefr-proficiency';
 import { ChatBubble } from '../../../components/chat/ChatBubble';
 import { ChatInput } from '../../../components/chat/ChatInput';
 import type { HandsFreeState } from '../../../components/chat/ChatInput';
@@ -39,13 +40,9 @@ import { Chip } from '../../../components/ui/Chip';
  * Spanish and the target language varies — the bare CEFR code is international,
  * so the row reads "Live · A2" instead of localising the noun 12 ways.
  */
-const CEFR_FOR_LEVEL: Record<ProficiencyLevel, string> = {
-  beginner: 'A1',
-  elementary: 'A2',
-  intermediate: 'B1',
-  upper_intermediate: 'B2',
-  advanced: 'C1',
-};
+// Was a fourth private copy of the ladder; now derived. See
+// CEFR_BAND_BY_LEVEL in lib/cefr-proficiency.ts.
+const CEFR_FOR_LEVEL: Record<ProficiencyLevel, string> = CEFR_BAND_BY_LEVEL;
 
 /**
  * Scenario metadata (label/icon/description) is imported from

@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { SRS_DEFAULTS } from '../config/app';
 import { PLANS } from './plans';
+import { CEFR_BAND_BY_LEVEL, CEFR_LADDER } from './cefr-proficiency';
 import { localToday } from './dates';
 import type {
   ProficiencyEvidence,
@@ -1505,16 +1506,12 @@ function mapDailyChallengesRecord(row: Record<string, unknown>): DailyChallenges
  * surfaces so learners don't get flooded with C1 text at A2. research.md §1.1.
  */
 export function allowedCefrLevelsFor(level: UserProfile['level'] | undefined): string[] {
-  const ladder = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
-  const map: Record<UserProfile['level'], number> = {
-    beginner: 0,
-    elementary: 1,
-    intermediate: 2,
-    upper_intermediate: 3,
-    advanced: 4,
-  };
+  // Derived from the shared ladder rather than a private copy of it — see
+  // CEFR_BAND_BY_LEVEL for why four copies of this table was a latent bug.
+  const ladder = [...CEFR_LADDER];
   if (!level) return ladder; // unknown level → don't filter
-  const idx = map[level] ?? 2;
+  const idx = ladder.indexOf(CEFR_BAND_BY_LEVEL[level]);
+  if (idx < 0) return ladder;
   // Learner's level + 1 sub-level (i+1). Include everything at/below too
   // so they can re-visit easier content when they want.
   return ladder.slice(0, Math.min(ladder.length, idx + 2));

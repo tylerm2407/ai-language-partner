@@ -186,14 +186,6 @@ const ACHIEVEMENT_CONDITIONS: AchievementCondition[] = [
     check: (_profile, stats) => (stats?.accuracy ?? 0) >= 1 && (stats?.lessonsCompleted ?? 0) >= 1,
   },
   {
-    type: 'cards_50',
-    check: (_profile, stats) => (stats?.cardsReviewed ?? 0) >= 50,
-  },
-  {
-    type: 'cards_100',
-    check: (_profile, stats) => (stats?.cardsReviewed ?? 0) >= 100,
-  },
-  {
     type: 'first_review',
     check: (_profile, stats) => (stats?.cardsReviewed ?? 0) >= 1,
   },
@@ -241,6 +233,32 @@ export async function checkAndAwardAchievements(
 
   // Check reading/writing achievements (DB query based)
   const rwChecks: { type: AchievementType; query: () => Promise<boolean> }[] = [
+    // `cards_50` / `cards_100` say "Review 50 flashcards", which every learner
+    // reads as a lifetime total. They used to check `dailyStats.cardsReviewed`
+    // — TODAY's count — so 40 reviews a day for a month earned neither, and
+    // `cards_100` additionally required a hundred-card day that the new-card
+    // cap makes very unlikely. Counted over `review_logs` instead, which is the
+    // same shape as the reading/writing checks below.
+    {
+      type: 'cards_50',
+      query: async () => {
+        const { count } = await supabase
+          .from('review_logs')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId);
+        return (count ?? 0) >= 50;
+      },
+    },
+    {
+      type: 'cards_100',
+      query: async () => {
+        const { count } = await supabase
+          .from('review_logs')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId);
+        return (count ?? 0) >= 100;
+      },
+    },
     {
       type: 'first_story',
       query: async () => {

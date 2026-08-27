@@ -535,8 +535,8 @@ export function LessonRunner({
    * Note it does NOT lock the exercise — walking back to it with Previous
    * gives a real, full attempt, because by then the headphones may be working.
    */
-  const handleSkip = useCallback(() => {
-    if (!currentExercise) return;
+  const handleSkip = useCallback((): AttemptStatusMap | null => {
+    if (!currentExercise) return null;
     const id = currentExercise.id;
     const nextStatuses: AttemptStatusMap = { ...statuses, [id]: 'skipped' };
     setStatuses(nextStatuses);
@@ -552,9 +552,28 @@ export function LessonRunner({
         startedAt: sessionStartedAtRef.current,
       }).catch((err) => console.warn('[lesson-session] save failed:', err));
     }
+    // Returned so a caller that advances in the same tick can summarise from
+    // the post-skip map rather than the queued-but-unapplied state.
+    return nextStatuses;
   }, [currentExercise, statuses, answers, picks, lessonId, userId, currentIndex]);
 
-  const handleNext = () => {
+  /**
+   * `statusesOverride` exists for `handleSkipAndAdvance`, which skips and
+   * advances in one tick. `setStatuses` is queued, so completing on the LAST
+   * exercise summarised the pre-skip map: `lesson_completions.score` recorded
+   * 11/12 as a miss while the celebration overlay — which recomputes after the
+   * flush — printed "11/11 correct · 1 skipped". That score also feeds the
+   * unit's "% MASTERED" figure.
+   *
+   * A functional `setStatuses` would not have fixed it; the read happens here,
+   * not in the setter.
+   *
+   * Note the arity-0 wrapper at the `onNext` prop below: TactileButton forwards
+   * its press event to `onPress`, so passing this function directly would land
+   * a GestureResponderEvent in `statusesOverride`.
+   */
+  const handleNext = (statusesOverride?: AttemptStatusMap) => {
+    const effectiveStatuses = statusesOverride ?? statuses;
     if (warmupPhase) {
       if (warmupIndex < warmupEntries.length - 1) {
         setWarmupIndex((i) => i + 1);
@@ -576,7 +595,7 @@ export function LessonRunner({
       // Lesson complete. One summarizeLesson call — the runner, the overlay
       // and the completion row all read the same numbers.
       const allAnswers = [...answers];
-      const summary = summarizeLesson(statuses, exerciseIds, xpReward);
+      const summary = summarizeLesson(effectiveStatuses, exerciseIds, xpReward);
 
       // Perfect run gets a Heavy "thump" that lands just before the overlay's
       // Success haptic on mount — creates a signature double-thump only when
@@ -633,8 +652,8 @@ export function LessonRunner({
   // the whole completion path), so a useCallback here would be recreated every
   // render anyway and only add the illusion of stability.
   const handleSkipAndAdvance = () => {
-    handleSkip();
-    handleNext();
+    const skipped = handleSkip();
+    handleNext(skipped ?? undefined);
   };
 
   const handleQuit = () => {
@@ -790,7 +809,7 @@ export function LessonRunner({
         isLast={!warmupPhase && currentIndex === exercises.length - 1}
         onExit={handleQuit}
         onPrev={handlePrev}
-        onNext={handleNext}
+        onNext={() => handleNext()}
       >
         {/* Both animation wrappers stay mounted and are driven by `trigger`.
             Swapping the wrapper's component type per answer — what this used
