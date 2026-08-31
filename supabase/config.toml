@@ -122,3 +122,25 @@ verify_jwt = false
 # or the cron's Vault-sourced bearer is rejected before the handler runs.
 [functions.daily-news-audio-cron]
 verify_jwt = false
+
+# ─── get-hint / generate-content / score-pronunciation ────────────────────
+# These three deploy with the platform JWT gate ON, and always have. They are
+# recorded here anyway: without an entry the CLI applies its own default, and
+# the fact that the default currently matches production is coincidence, not
+# intent. The analyze-turn and create-checkout entries above exist because
+# exactly that coincidence ran the other way and would have flipped a live
+# function on the next deploy.
+#
+# All three authenticate again inside the function body (getAuthenticatedUser
+# for get-hint and score-pronunciation, an explicit auth.getUser for
+# generate-content), so the gate is defence in depth rather than the only
+# check. Do not set these to false: unlike ai-chat, nothing here needs the
+# gate off, and turning it off would remove a layer for no gain.
+[functions.get-hint]
+verify_jwt = true
+
+[functions.generate-content]
+verify_jwt = true
+
+[functions.score-pronunciation]
+verify_jwt = true
