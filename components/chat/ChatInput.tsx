@@ -442,6 +442,18 @@ export function ChatInput({
         value={value}
         onChangeText={onChangeText}
         multiline
+        // The learner is typing the language they are LEARNING, on a keyboard
+        // set to the language they already speak. iOS then "corrects" their
+        // attempt into English: typing "Quisiera el menu" produces "Whiskers
+        // el menu", which is then sent to the tutor and corrected as the
+        // learner's own error. They get marked wrong for a word they spelled
+        // right, and the correction teaches them nothing.
+        //
+        // Autocorrect has to be off for the same reason a spellchecker is off
+        // in a spelling test: the input IS the thing being assessed.
+        autoCorrect={false}
+        spellCheck={false}
+        autoCapitalize="sentences"
         accessibilityLabel="Message input"
         accessibilityHint="Type a message to send"
       />

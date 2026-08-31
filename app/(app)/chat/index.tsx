@@ -457,7 +457,11 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
     setMessages(newMessages);
     setInput('');
     setSending(true);
-    persistMessage(userMsg);
+    // NOT persisted yet. This used to save here, so a turn the server refused
+    // (over quota, rate limited) was still written to chat_messages: the
+    // learner reloaded into their own message with no reply, forever, and it
+    // was re-sent as history on the next successful turn — paying tokens to
+    // replay a message the model never saw. It is persisted on success below.
 
     // Scroll to bottom to show typing indicator
     setTimeout(() => flatListRef.current?.scrollToEnd(), 100);
@@ -500,6 +504,10 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
         timestamp: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, assistantMsg]);
+      // The learner's turn is saved here, not at send time, so history only
+      // ever contains turns that actually happened. Order matters: the user
+      // message must land before the reply.
+      persistMessage(userMsg);
       persistMessage(assistantMsg);
 
       // Mark onboarding checklist item on first successful chat
@@ -517,6 +525,16 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
 
       // Daily limit reached → convert into an upgrade prompt at the moment of
       // highest intent, instead of showing a confusing error bubble.
+      // These two mean the turn never reached the model. Take the message
+      // back out of the transcript and hand the learner their text again —
+      // leaving it on screen claims something was sent that was not.
+      const undeliverable =
+        detail.includes('DAILY_TEXT_LIMIT_REACHED') || detail.includes('RATE_LIMITED');
+      if (undeliverable) {
+        setMessages((prev) => prev.filter((m) => m.id !== userMsg.id));
+        setInput(text);
+      }
+
       if (detail.includes('DAILY_TEXT_LIMIT_REACHED')) {
         // A subscriber who has spent today's allowance. A free-tier learner
         // never gets here — the picker above turns them back before a scenario
@@ -533,6 +551,9 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
       } else if (detail.includes('RATE_LIMITED')) {
         Alert.alert('Slow down a moment', 'You’re sending messages very quickly. Please try again in a few seconds.');
       } else {
+        // A real attempt that failed downstream: the turn stays on screen, so
+        // it has to reach history too, or a reload silently drops it.
+        persistMessage(userMsg);
         setMessages((prev) => [...prev, {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
