@@ -230,7 +230,12 @@ serve(async (req: Request) => {
   form.append('image', new Blob([photoBytes], { type: mimeType }), 'source.png');
   form.append('prompt', style.prompt);
   form.append('size', '1024x1024');
-  form.append('quality', 'high');
+  // 'medium', not 'high'. Verified 2026-08-31: gpt-image-2 at 1024x1024 is
+  // ~$0.211/image at high and ~$0.053 at medium — 4x — for a 1024px avatar
+  // shown at roughly 100pt on a phone. At the old VIP cap of 10/day this one
+  // setting was ~$63/month of cost against a $29.99 plan, the most expensive
+  // thing in the app by a wide margin.
+  form.append('quality', 'medium');
   form.append('n', '1');
   form.append('output_format', 'png');
   // `auto` is the stricter setting. This ships to students, so we keep the

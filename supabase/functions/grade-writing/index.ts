@@ -135,7 +135,8 @@ serve(async (req: Request) => {
           },
           body: JSON.stringify({
             model: TEXT_MODEL,
-            max_tokens: 1500,
+            // Feedback on a short learner text does not need 1500 tokens.
+            max_tokens: 900,
             system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
             messages: [{ role: 'user', content: sanitizeText(submissionText, 5000) }],
           }),

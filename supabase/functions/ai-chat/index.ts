@@ -32,7 +32,12 @@ import {
 
 // Caps on untrusted request input. A single turn well over this is not a
 // learner practising — it is cost abuse or a prompt-injection payload.
-const MAX_MESSAGE_CHARS = 2000;
+// 400, not 2000. This is one turn of a spoken conversation from a learner who
+// is by definition not fluent — A2 learners do not write 2000-character
+// messages. The old cap was pure tail risk: it multiplied by the 24-turn
+// window into ~13k input tokens re-sent on EVERY turn, which was the single
+// largest cost in the app after image generation.
+const MAX_MESSAGE_CHARS = 400;
 const MAX_TOPIC_CHARS = 200;
 const MAX_MESSAGES = 100;
 // Assignment context is teacher-authored (trusted-ish) but still bounded.
@@ -330,7 +335,11 @@ serve(async (req: Request) => {
             },
             body: JSON.stringify({
               model: TEXT_MODEL,
-              max_tokens: 600,
+              // The prompt asks for "1-3 sentences" plus a correction object;
+              // that lands near 250 tokens. 400 leaves headroom without paying
+              // for a ceiling nothing reaches — output is $5/MTok against $1
+              // for input, so this cap costs more than the whole prompt does.
+              max_tokens: 400,
               // The scenario prompt is the cached prefix. Everything after it is
               // appended uncached, deliberately: the code-switch note changes
               // turn to turn, and the learner profile is unique per user. Put
@@ -438,7 +447,11 @@ serve(async (req: Request) => {
 function windowMessages(
   messages: { role: string; content: string }[]
 ): { role: string; content: string }[] {
-  const MAX_TURNS = 24;
+  // 12, not 24. Every turn in this window is re-sent uncached on every
+  // request, so the window is a direct multiplier on input cost for the whole
+  // conversation. Twelve turns is still a long exchange for a practice
+  // session, and the summary note below covers what falls out.
+  const MAX_TURNS = 12;
   if (messages.length <= MAX_TURNS) return messages;
   const older = messages.slice(0, messages.length - MAX_TURNS);
   const recent = messages.slice(messages.length - MAX_TURNS);

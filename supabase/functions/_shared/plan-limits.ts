@@ -58,7 +58,18 @@ export interface PlanLimits {
   offlineMode: boolean;
 }
 
-export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
+export // Avatar and lesson-TTS caps were cut 2026-08-31 after costing the whole
+// system against vendor prices. Two findings drove it:
+//   * gpt-image-2 at 1024x1024 is ~$0.211/image on 'high'. Ten a day is ~$63
+//     a month of cost on a $29.99 plan, for a profile picture. Quality is now
+//     'medium' (~$0.053) and the caps are per-day counts a human would
+//     actually use — you do not regenerate an avatar ten times a day.
+//   * fish.audio bills $15 per 1M UTF-8 BYTES, and Japanese/Chinese/Korean
+//     run ~3 bytes per character, so CJK synthesis costs ~3x Spanish for the
+//     same sentence. The old 200/day cap was priced as if every learner were
+//     Spanish.
+// These caps bound the tail; they are far above what a normal learner reaches.
+const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
   // `starter` = the free plan: signed up, never subscribed, and fully entitled
   // to everything that costs nothing per learner. Every per-call AI quota is 0
   // and each function refuses before spending a token — these zeros ARE the
@@ -77,9 +88,9 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
   // in by get_effective_limits with GREATEST(), so a 0 personal quota still
   // resolves to the school's allowance.
   starter:   { dailyTextMessages: 0,  dailyVoiceMinutes: 0,  dailyWritingGrades: 0,  dailyPronunciationScores: 0, dailyLessonTtsPlays: 5,   dailyAvatarGenerations: 0, dailyNewCards: 5,    dailyHints: 5,    offlineMode: false },
-  basic:     { dailyTextMessages: 25, dailyVoiceMinutes: 10, dailyWritingGrades: 3,  dailyPronunciationScores: 3, dailyLessonTtsPlays: 50,  dailyAvatarGenerations: 2, dailyNewCards: 20,   dailyHints: 30,   offlineMode: false },
-  premium:   { dailyTextMessages: 50, dailyVoiceMinutes: 20, dailyWritingGrades: 7,  dailyPronunciationScores: 5, dailyLessonTtsPlays: 100, dailyAvatarGenerations: 5, dailyNewCards: 9999, dailyHints: 75,   offlineMode: true },
-  vip:       { dailyTextMessages: 75, dailyVoiceMinutes: 30, dailyWritingGrades: 12, dailyPronunciationScores: 7, dailyLessonTtsPlays: 200, dailyAvatarGenerations: 10, dailyNewCards: 9999, dailyHints: 9999, offlineMode: true },
+  basic:     { dailyTextMessages: 25, dailyVoiceMinutes: 10, dailyWritingGrades: 3,  dailyPronunciationScores: 3, dailyLessonTtsPlays: 25,  dailyAvatarGenerations: 1, dailyNewCards: 20,   dailyHints: 30,   offlineMode: false },
+  premium:   { dailyTextMessages: 50, dailyVoiceMinutes: 20, dailyWritingGrades: 7,  dailyPronunciationScores: 5, dailyLessonTtsPlays: 50, dailyAvatarGenerations: 1, dailyNewCards: 9999, dailyHints: 75,   offlineMode: true },
+  vip:       { dailyTextMessages: 75, dailyVoiceMinutes: 30, dailyWritingGrades: 12, dailyPronunciationScores: 7, dailyLessonTtsPlays: 80, dailyAvatarGenerations: 2, dailyNewCards: 9999, dailyHints: 9999, offlineMode: true },
 };
 
 export function getPlanLimits(tier: string): PlanLimits {

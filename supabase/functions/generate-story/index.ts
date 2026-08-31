@@ -156,7 +156,8 @@ RESPOND ONLY IN VALID JSON:
               },
               body: JSON.stringify({
                 model: TEXT_MODEL,
-                max_tokens: 2000,
+                // A graded-reader story, not a novella.
+                max_tokens: 1200,
                 system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
                 messages: [{
                   role: 'user',
