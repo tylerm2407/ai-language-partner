@@ -64,8 +64,6 @@ const IDEAL_SELF_PLACEHOLDER: Partial<Record<LanguageCode, string>> = {
   ja: 'Watching anime without subtitles.',
   ko: 'Singing K-pop and understanding every line.',
   zh: 'Haggling at a Beijing street market.',
-  ar: 'Reading Arabic poetry the way it was written.',
-  hi: 'Watching Bollywood films without subtitles.',
   ru: 'Reading a Tolstoy short story in the original.',
   en: 'Giving a confident talk at work in English.',
 };

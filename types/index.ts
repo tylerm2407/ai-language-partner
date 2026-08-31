@@ -90,7 +90,21 @@ export interface UserProfile {
   updatedAt: string;
 }
 
-export type LanguageCode = 'en' | 'es' | 'fr' | 'de' | 'it' | 'pt' | 'ja' | 'ko' | 'zh' | 'ar' | 'hi' | 'ru';
+/**
+ * A language Fluenci actually supports.
+ *
+ * This list is the nine target languages in `SUPPORTED_LANGUAGES` (what the
+ * onboarding picker offers) plus `en` as a native language. It deliberately
+ * matches `VALID_LANGUAGES` in `supabase/functions/_shared/validation.ts`:
+ * when the two disagree, the client can name a language the edge will reject.
+ *
+ * It used to include 'ar' and 'hi', which no picker ever offered and the edge
+ * validator always refused — dead surface that invited code to handle
+ * languages the product does not teach. Widening this type means adding the
+ * language to the picker, the edge allow-list, and the greeting/placeholder
+ * maps in the same change, not just here.
+ */
+export type LanguageCode = 'en' | 'es' | 'fr' | 'de' | 'it' | 'pt' | 'ja' | 'ko' | 'zh' | 'ru';
 
 export type ProficiencyLevel = 'beginner' | 'elementary' | 'intermediate' | 'upper_intermediate' | 'advanced';
 

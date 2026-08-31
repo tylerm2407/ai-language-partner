@@ -35,8 +35,6 @@ const GREETINGS: Record<LanguageCode, readonly [string, string, string]> = {
   ko: ['좋은 아침', '안녕하세요', '좋은 저녁'],
   zh: ['早上好', '下午好', '晚上好'],
   ru: ['Доброе утро', 'Добрый день', 'Добрый вечер'],
-  ar: ['صباح الخير', 'مساء الخير', 'مساء الخير'],
-  hi: ['सुप्रभात', 'नमस्ते', 'शुभ संध्या'],
   en: ['Good morning', 'Good afternoon', 'Good evening'],
 };
 
