@@ -103,9 +103,6 @@ jest.mock('../../hooks/useNotifications', () => ({
 jest.mock('../../hooks/useAudioPlayer', () => ({
   useAudioPlayer: () => ({ playing: false, loading: false, error: null, play: jest.fn() }),
 }));
-jest.mock('../../hooks/useAdultMode', () => ({
-  useAdultMode: () => ({ showXpCelebration: true }),
-}));
 jest.mock('../../hooks/useLessonAudioPrewarm', () => ({
   useLessonAudioPrewarm: jest.fn(),
 }));

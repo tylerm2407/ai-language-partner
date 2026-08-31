@@ -1,16 +1,8 @@
 import { View, Text, Pressable, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { ReadingBook, UserBookProgress } from '../../types';
+import { cefrBandColors, cefrAccessibilityLabel } from '../../lib/cefr-labels';
 import { colors } from '../../config/theme';
-
-const CEFR_BADGE_COLORS: Record<string, { bg: string; text: string }> = {
-  A1: { bg: colors.success.tint, text: colors.success.light },
-  A2: { bg: colors.action.primaryTint, text: colors.action.accent },
-  B1: { bg: colors.warning.tint, text: colors.warning.light },
-  B2: { bg: colors.error.tint, text: colors.error.light },
-  C1: { bg: colors.action.primaryTint, text: colors.action.accent },
-  C2: { bg: colors.error.tint, text: colors.error.light },
-};
 
 interface BookCardProps {
   book: ReadingBook;
@@ -19,7 +11,7 @@ interface BookCardProps {
 }
 
 export function BookCard({ book, progress, onPress }: BookCardProps) {
-  const cefrColor = CEFR_BADGE_COLORS[book.cefrLevel] ?? { bg: colors.surface.cardAlt, text: colors.text.tertiary };
+  const cefrColor = cefrBandColors(book.cefrLevel);
   const isCompleted = !!progress?.completedAt;
   const hasProgress = progress && progress.percentComplete > 0;
   const percent = progress?.percentComplete ?? 0;
@@ -28,7 +20,9 @@ export function BookCard({ book, progress, onPress }: BookCardProps) {
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${book.title}${isCompleted ? ', completed' : ''}`}
+      // The badge inside is a two-letter code in a 6pt-padded chip; there is no
+      // room for the can-do line, so the whole card carries it instead.
+      accessibilityLabel={`${book.title}${isCompleted ? ', completed' : ''}. ${book.wordCount} words. ${cefrAccessibilityLabel(book.cefrLevel)}`}
       style={{
         flex: 1,
         backgroundColor: colors.surface.card,

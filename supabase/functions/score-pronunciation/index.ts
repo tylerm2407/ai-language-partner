@@ -10,7 +10,12 @@ import { getPlanLimits } from '../_shared/plan-limits.ts';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { corsHeaders, corsResponse } from '../_shared/cors.ts';
 import { checkBurstLimit } from '../_shared/burst-limit.ts';
-import { MAX_AUDIO_BASE64_SIZE } from '../_shared/validation.ts';
+import {
+  MAX_AUDIO_BASE64_SIZE,
+  isValidPronunciationSource,
+  isValidUUID,
+  sanitizeText,
+} from '../_shared/validation.ts';
 import { validateContentSafety } from '../_shared/content-safety.ts';
 import { PROVIDER_TIMEOUT_MS, providerFetch } from '../_shared/provider-fetch.ts';
 import { calculatePronunciationScore } from './scoring.ts';
@@ -38,7 +43,14 @@ interface ScoreRequest {
   acceptedVariants?: string[];
   targetWord?: string;
   targetGrammar?: string;
+  /** Where the attempt came from; defaults to 'practice' (migration 089). */
+  source?: string;
+  /** Card the attempt was against. Absent for read-aloud and free practice. */
+  cardId?: string;
 }
+
+/** Cap on the text persisted per attempt, so one row cannot grow unbounded. */
+const MAX_STORED_TEXT = 2000;
 
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -65,6 +77,8 @@ serve(async (req: Request) => {
       acceptedVariants,
       targetWord,
       targetGrammar,
+      source,
+      cardId,
     } = (await req.json()) as ScoreRequest;
 
     if (!audioBase64 || !expectedText) {
@@ -73,6 +87,23 @@ serve(async (req: Request) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Provenance of the attempt (migration 089). Validated here, before any
+    // quota is consumed, so a bad value costs the learner nothing. Unset means
+    // free practice, which is the honest default for an unlabelled attempt.
+    if (source !== undefined && !isValidPronunciationSource(source)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid source.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    if (cardId !== undefined && !isValidUUID(cardId)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid cardId.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const attemptSource = source ?? 'practice';
 
     // Cost/abuse guard: cap audio size and burst rate before Whisper.
     if (audioBase64.length > MAX_AUDIO_BASE64_SIZE) {
@@ -148,13 +179,55 @@ serve(async (req: Request) => {
 
     // Quota already consumed atomically before transcription.
 
+    const isCorrect = score.score >= 60;
+
+    // Step 5: keep the attempt (migration 089). Before this, the score was
+    // computed and thrown away, which is why the CEFR report could only ever
+    // show speaking as `not_assessed`.
+    //
+    // Non-fatal, exactly like ai-chat's correction_log write: a learner who
+    // recorded audio and waited for Whisper gets their score even if the
+    // insert fails. The write is service-role — there is no client INSERT
+    // policy on the table, by design.
+    //
+    // What is stored is the *safe* transcription, not the raw one: if the
+    // safety pipeline rejected what Whisper heard, we do not tell the learner
+    // and we do not keep it either. The score, computed from the raw text
+    // above, is unaffected.
+    try {
+      const { error: persistErr } = await supabase.from('pronunciation_scores').insert({
+        user_id: authenticatedUserId,
+        // Bounded rather than rejected: `language` is already accepted as free
+        // text by the Whisper call above and changing that is out of scope here.
+        target_language: sanitizeText(language ?? '', 32),
+        expected_text: sanitizeText(expectedText, MAX_STORED_TEXT),
+        transcription: sanitizeText(safeTranscription, MAX_STORED_TEXT),
+        score: score.score,
+        is_correct: isCorrect,
+        phoneme_errors: safePhonemeErrors,
+        source: attemptSource,
+        card_id: cardId ?? null,
+      });
+      if (persistErr) {
+        console.warn(
+          '[score-pronunciation] pronunciation_scores write failed (non-fatal):',
+          persistErr.message
+        );
+      }
+    } catch (persistErr) {
+      console.warn(
+        '[score-pronunciation] pronunciation_scores write threw (non-fatal):',
+        persistErr
+      );
+    }
+
     return new Response(
       JSON.stringify({
         score: score.score,
         feedback: score.feedback,
         phonemeErrors: safePhonemeErrors,
         transcription: safeTranscription,
-        isCorrect: score.score >= 60,
+        isCorrect,
         matchedVariant: score.matchedVariant,
         targetPresent,
       }),

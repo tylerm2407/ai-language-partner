@@ -30,13 +30,7 @@ import type { Course, Unit, Lesson, ReadingPassage, WritingPrompt, ReadingBook, 
 import { Ionicons } from '@expo/vector-icons';
 import { BookCard } from '../../../components/reading/BookCard';
 import { ContinueReadingSection } from '../../../components/reading/ContinueReadingSection';
-
-const CEFR_COLORS: Record<string, { bg: string; text: string }> = {
-  A1: { bg: 'bg-success-bg', text: 'text-success' },
-  A2: { bg: 'bg-primary-tint', text: 'text-primary' },
-  B1: { bg: 'bg-warning-bg', text: 'text-warning' },
-  B2: { bg: 'bg-error-bg', text: 'text-error' },
-};
+import { cefrBandColors, cefrCanDo, cefrAccessibilityLabel } from '../../../lib/cefr-labels';
 
 
 type CourseTab = 'vocab' | 'reading' | 'writing';
@@ -288,15 +282,23 @@ export default function LearnScreen() {
                       className="p-4 flex-row items-center"
                       onPress={() => router.push(`/learn/reading/${passage.id}` as any)}
                       accessibilityRole="button"
-                      accessibilityLabel={passage.title}
+                      // The row's badge is code-only for width; VoiceOver gets
+                      // the level's meaning from the row itself.
+                      accessibilityLabel={`${passage.title}. ${passage.wordCount} words. ${cefrAccessibilityLabel(passage.cefrLevel)}`}
                     >
                       <Ionicons name="reader-outline" size={22} color={colors.league.diamond} />
                       <View className="flex-1 ml-3">
                         <Text className="text-base font-medium text-text-primary">{passage.title}</Text>
                         <View className="flex-row flex-wrap items-center gap-2 mt-1">
                           <Text className="text-sm text-text-secondary">{passage.wordCount} words</Text>
-                          <View className={`${CEFR_COLORS[passage.cefrLevel]?.bg ?? 'bg-surface'} rounded-md px-1.5 py-0.5`}>
-                            <Text className={`${CEFR_COLORS[passage.cefrLevel]?.text ?? 'text-text-secondary'} text-xs font-sans-bold`}>
+                          <View
+                            className="rounded-md px-1.5 py-0.5"
+                            style={{ backgroundColor: cefrBandColors(passage.cefrLevel).bg }}
+                          >
+                            <Text
+                              className="text-xs font-sans-bold"
+                              style={{ color: cefrBandColors(passage.cefrLevel).text }}
+                            >
                               {passage.cefrLevel}
                             </Text>
                           </View>
@@ -325,6 +327,7 @@ export default function LearnScreen() {
                       key={level}
                       onPress={() => handleCefrTabChange(level)}
                       accessibilityRole="tab"
+                      accessibilityLabel={cefrAccessibilityLabel(level)}
                       accessibilityState={{ selected: isActive }}
                       style={{
                         flexDirection: 'row',
@@ -368,6 +371,13 @@ export default function LearnScreen() {
                 })}
               </View>
             </ScrollView>
+
+            {/* Six letter codes in a row explain nothing on their own, and the
+                pills are too narrow to carry a sentence each. This states the
+                selected one, so the row is readable rather than decoded. */}
+            <Body size="sm" tone="tertiary" style={{ marginBottom: spacing.sm }}>
+              {cefrCanDo(selectedCefrTab)}
+            </Body>
 
             {loadingLibrary ? (
               <Body size="sm" tone="tertiary" style={{ paddingVertical: spacing.md }}>Loading library...</Body>
@@ -473,7 +483,7 @@ export default function LearnScreen() {
                     className="p-4 flex-row items-center"
                     onPress={() => router.push(`/learn/writing/${prompt.id}` as any)}
                     accessibilityRole="button"
-                    accessibilityLabel={prompt.promptText}
+                    accessibilityLabel={`${prompt.promptText}. ${cefrAccessibilityLabel(prompt.cefrLevel)}`}
                   >
                     <Ionicons name="create-outline" size={22} color={colors.premium.base} />
                     <View className="flex-1 ml-3">
@@ -484,8 +494,14 @@ export default function LearnScreen() {
                         <Text className="text-sm text-text-secondary">
                           {prompt.minWords ?? '?'}-{prompt.maxWords ?? '?'} words
                         </Text>
-                        <View className={`${CEFR_COLORS[prompt.cefrLevel]?.bg ?? 'bg-surface'} rounded-md px-1.5 py-0.5`}>
-                          <Text className={`${CEFR_COLORS[prompt.cefrLevel]?.text ?? 'text-text-secondary'} text-xs font-sans-bold`}>
+                        <View
+                          className="rounded-md px-1.5 py-0.5"
+                          style={{ backgroundColor: cefrBandColors(prompt.cefrLevel).bg }}
+                        >
+                          <Text
+                            className="text-xs font-sans-bold"
+                            style={{ color: cefrBandColors(prompt.cefrLevel).text }}
+                          >
                             {prompt.cefrLevel}
                           </Text>
                         </View>

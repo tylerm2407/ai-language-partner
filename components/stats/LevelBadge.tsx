@@ -1,22 +1,22 @@
-import { View, Text } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { GradientBorderCard } from '../ui/GradientBorderCard';
 import { Body, Caption } from '../ui/Text';
-import { GRADIENT_COLORS, GRADIENT_START, GRADIENT_END } from '../../config/gradients';
+import { cefrBandForProficiencyLevel } from '../../lib/cefr-proficiency';
+import { cefrLabel, cefrAccessibilityLabel } from '../../lib/cefr-labels';
 import type { ProficiencyLevel } from '../../types';
 
-const LEVEL_CONFIG: Record<ProficiencyLevel, { label: string; color: string; bg: string; order: number }> = {
+const LEVEL_CONFIG: Record<ProficiencyLevel, { label: string; color: string; bg: string }> = {
   // Proficiency maps to BRIGHTNESS — beginner is the dimmest label and advanced
   // the brightest, so the ladder is legible without five competing hues. The
   // green that briefly landed on `beginner` here was wrong twice over: it is
   // the lowest rank wearing the most emphatic colour, and green is reserved for
   // correct answers (config/theme.ts §Semantic).
-  beginner: { label: 'Beginner', color: '#34D399', bg: '#0D261A', order: 0 },
-  elementary: { label: 'Elementary', color: '#60A5FA', bg: '#1A2340', order: 1 },
-  intermediate: { label: 'Intermediate', color: '#38BDF8', bg: '#0C1A2E', order: 2 },
-  upper_intermediate: { label: 'Upper Intermediate', color: '#A78BFA', bg: '#251A35', order: 3 },
-  advanced: { label: 'Advanced', color: '#FBBF24', bg: '#26210F', order: 4 },
+  beginner: { label: 'Beginner', color: '#34D399', bg: '#0D261A' },
+  elementary: { label: 'Elementary', color: '#60A5FA', bg: '#1A2340' },
+  intermediate: { label: 'Intermediate', color: '#38BDF8', bg: '#0C1A2E' },
+  upper_intermediate: { label: 'Upper Intermediate', color: '#A78BFA', bg: '#251A35' },
+  advanced: { label: 'Advanced', color: '#FBBF24', bg: '#26210F' },
 };
 
 interface LevelBadgeProps {
@@ -25,7 +25,7 @@ interface LevelBadgeProps {
 
 export function LevelBadge({ level }: LevelBadgeProps) {
   const config = LEVEL_CONFIG[level];
-  const progress = (config.order + 1) / 5;
+  const band = cefrBandForProficiencyLevel(level);
 
   return (
     <GradientBorderCard innerStyle={{ padding: 20 }}>
@@ -47,22 +47,14 @@ export function LevelBadge({ level }: LevelBadgeProps) {
         </View>
       </View>
 
-      {/* Progress toward next level — gradient fill */}
-      <View className="h-2 bg-dark-card-alt rounded-full overflow-hidden">
-        <View style={{ width: `${progress * 100}%`, height: '100%', borderRadius: 999 }}>
-          <LinearGradient
-            colors={[...GRADIENT_COLORS]}
-            start={GRADIENT_START}
-            end={GRADIENT_END}
-            style={{ flex: 1, borderRadius: 999 }}
-          />
-        </View>
-      </View>
-      <Text className="text-xs text-text-tertiary mt-1 font-sans">
-        {config.order < 4
-          ? `Next: ${LEVEL_CONFIG[Object.keys(LEVEL_CONFIG)[config.order + 1] as ProficiencyLevel].label}`
-          : 'Highest level reached!'}
-      </Text>
+      {/* Was a gradient progress bar filled to (order + 1) / 5 — a constant per
+          level that moved only when the learner re-declared their own level in
+          settings. A bar that never fills from practice is a promise the app
+          does not keep, so the space now says what the level means instead.
+          Actual evidenced progress lives in the Proficiency Report. */}
+      <Body size="sm" tone="secondary" accessibilityLabel={cefrAccessibilityLabel(band)}>
+        {cefrLabel(band)}
+      </Body>
     </GradientBorderCard>
   );
 }

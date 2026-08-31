@@ -83,17 +83,6 @@ export interface PendingOnboarding {
   /** Chosen preset id from the premade library, or null if skipped. */
   avatarPresetId: string | null;
   dailyGoalMinutes: number | null;
-  /**
-   * Adult mode vs gamified, chosen in onboarding. Null = not yet answered.
-   *
-   * Deliberately NOT versioned-out: `isValidPending` checks only `version` and
-   * `startedAt`, so drafts written before this field existed still load with it
-   * absent. Bumping PENDING_ONBOARDING_SCHEMA_VERSION for a purely additive
-   * optional field would discard every in-flight draft inside the 7-day TTL —
-   * including learners who finished the trial lesson and are one tap from
-   * signing up.
-   */
-  adultMode: boolean | null;
   /** Epoch ms the draft was first created — the TTL reference. */
   startedAt: number;
   /** ISO timestamp set when the pre-auth flow finished and auth was reached. */
@@ -125,7 +114,6 @@ export function emptyPendingOnboarding(): PendingOnboardingDraft {
     displayName: null,
     avatarPresetId: null,
     dailyGoalMinutes: null,
-    adultMode: null,
     completedAt: null,
     claimedByUserId: null,
   };

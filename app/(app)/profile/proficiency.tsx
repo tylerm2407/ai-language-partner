@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useProficiencyReport } from '../../../hooks/useProficiencyReport';
 import { ScreenHeader } from '../../../components/ui/ScreenHeader';
 import { GradientBackground } from '../../../components/ui/GradientBackground';
+import { cefrCanDo, cefrAccessibilityLabel } from '../../../lib/cefr-labels';
 import { colors } from '../../../config/theme';
 import type {
   BandBreakdown,
@@ -127,13 +128,23 @@ export default function ProficiencyScreen() {
                 style={{ fontSize: 56, lineHeight: 64 }}
                 accessibilityLabel={
                   report.overallLevel
-                    ? `Estimated CEFR level ${report.overallLevel}`
+                    ? `Estimated level. ${cefrAccessibilityLabel(report.overallLevel)}`
                     : 'Not yet assessed'
                 }
               >
                 {report.overallLevel ?? '—'}
               </Text>
-              {!report.overallLevel && (
+              {report.overallLevel ? (
+                /* A 56pt "B1" on its own is the single largest thing on this
+                   screen and the least informative. This is what it claims. */
+                <Text
+                  className="text-base text-text-secondary text-center mb-1"
+                  accessibilityElementsHidden
+                  importantForAccessibility="no"
+                >
+                  {cefrCanDo(report.overallLevel)}
+                </Text>
+              ) : (
                 <Text className="text-base font-semibold text-text-primary mb-1">
                   Not yet assessed
                 </Text>
@@ -172,9 +183,25 @@ export default function ProficiencyScreen() {
             {/* Next step */}
             {report.nextLevelRequirement && (
               <View className="bg-primary-tint border border-primary rounded-2xl p-5 mb-6">
-                <Text className="text-sm font-semibold text-text-secondary uppercase tracking-wide mb-1">
+                <Text
+                  className="text-sm font-semibold text-text-secondary uppercase tracking-wide mb-1"
+                  accessibilityLabel={
+                    report.nextLevel
+                      ? `To reach ${cefrAccessibilityLabel(report.nextLevel)}`
+                      : 'Next step'
+                  }
+                >
                   {report.nextLevel ? `To reach ${report.nextLevel}` : 'Next step'}
                 </Text>
+                {report.nextLevel ? (
+                  <Text
+                    className="text-sm text-text-secondary mb-2"
+                    accessibilityElementsHidden
+                    importantForAccessibility="no"
+                  >
+                    {cefrCanDo(report.nextLevel)}
+                  </Text>
+                ) : null}
                 <Text className="text-base font-semibold text-text-primary">
                   {report.nextLevelRequirement}
                 </Text>
@@ -204,10 +231,28 @@ export default function ProficiencyScreen() {
                       style={{
                         color: skill.level ? colors.success.base : colors.text.quaternary,
                       }}
+                      accessibilityLabel={
+                        skill.level
+                          ? cefrAccessibilityLabel(skill.level)
+                          : skill.status === 'not_assessed'
+                            ? 'Not scored'
+                            : 'Not yet assessed'
+                      }
                     >
                       {skill.level ?? (skill.status === 'not_assessed' ? 'Not scored' : '—')}
                     </Text>
                   </View>
+                  {/* The code on the right is the verdict; this is what it means.
+                      `detail` below is the evidence for it. */}
+                  {skill.level ? (
+                    <Text
+                      className="text-sm text-text-secondary mt-1"
+                      accessibilityElementsHidden
+                      importantForAccessibility="no"
+                    >
+                      {cefrCanDo(skill.level)}
+                    </Text>
+                  ) : null}
                   <Text className="text-sm text-text-secondary mt-1">{skill.detail}</Text>
                 </View>
               </View>
@@ -223,8 +268,25 @@ export default function ProficiencyScreen() {
             </Text>
             {report.bands.map((band) => (
               <View key={band.band} className="bg-dark-card rounded-2xl p-4 mb-2">
-                <View className="flex-row items-center justify-between mb-2">
-                  <Text className="text-base font-bold text-text-primary">{band.band}</Text>
+                <View className="flex-row items-start justify-between mb-2" style={{ gap: 12 }}>
+                  <View className="flex-1">
+                    <Text
+                      className="text-base font-bold text-text-primary"
+                      accessibilityLabel={cefrAccessibilityLabel(band.band)}
+                    >
+                      {band.band}
+                    </Text>
+                    <Text
+                      className="text-sm text-text-tertiary mt-0.5"
+                      accessibilityElementsHidden
+                      importantForAccessibility="no"
+                    >
+                      {cefrCanDo(band.band)}
+                    </Text>
+                  </View>
+                  {/* Status is a word, not just the bar's colour — the bar below
+                      repeats it as length and hue, neither of which is a cue on
+                      its own. */}
                   <Text className="text-sm font-semibold" style={{ color: bandStatusColor(band.status) }}>
                     {bandStatusLabel(band.status)}
                   </Text>

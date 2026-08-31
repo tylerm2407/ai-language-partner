@@ -1,5 +1,6 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { MagazineGlassCard } from './MagazineGlassCard';
+import { cefrLabel, cefrAccessibilityLabel } from '../../lib/cefr-labels';
 import { colors, typography } from '../../config/theme';
 import type { DailyNewsArticle } from '../../types';
 
@@ -8,9 +9,10 @@ interface NewsHeroCardProps {
   isLoading: boolean;
   error: string | null;
   hasRead: boolean;
-  /** Bare CEFR code (A1–C2). Not a localized noun: the target language varies,
-   *  so "Nivel"/"Niveau"/"Livello" would mean 9 translations of a word the code
-   *  already carries. See DESIGN.md §Live AI Chat. */
+  /** CEFR code (A1–C2). Rendered through `cefrLabel`, never bare: the code says
+   *  nothing on its own, and it is not a localizable noun either — the target
+   *  language varies, so "Nivel"/"Niveau"/"Livello" would be 9 translations of
+   *  a word the can-do line already replaces. */
   level: string;
   onPress: () => void;
 }
@@ -49,15 +51,23 @@ export function NewsHeroCard({ article, isLoading, error, hasRead, level, onPres
 
   // Article exists
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel="Today's News">
+    // Pressable collapses its children for VoiceOver, so the level has to be on
+    // the container or it is never announced at all.
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`Today's News. ${article.title}. ${cefrAccessibilityLabel(level)}`}
+    >
       <MagazineGlassCard style={styles.card}>
-        <Text style={styles.kicker}>
-          TODAY'S READ {'·'} {level.toUpperCase()}
-        </Text>
+        <Text style={styles.kicker}>TODAY'S READ</Text>
         <Text style={styles.headline}>{article.title}</Text>
         {article.summary ? (
           <Text style={styles.lede} numberOfLines={2}>{article.summary}</Text>
         ) : null}
+        {/* The level moved out of the kicker. Uppercased at 2pt tracking, "A2"
+            was indistinguishable from the section label around it, and it said
+            nothing anyway — this states what the article is pitched at. */}
+        <Text style={styles.levelNote}>{cefrLabel(level)}</Text>
         <Text style={styles.meta}>
           3 MIN READ {'·'} {hasRead ? 'READ ✓' : 'READ →'}
         </Text>
@@ -91,6 +101,15 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.65)',
     lineHeight: 18,
     marginBottom: 12,
+  },
+  /** Sentence case on purpose: the mono meta row below is uppercase, and two
+   *  uppercase rows under a serif headline read as a receipt. */
+  levelNote: {
+    fontFamily: typography.family.regular,
+    fontSize: 12,
+    color: colors.text.tertiary,
+    lineHeight: 17,
+    marginBottom: 8,
   },
   meta: {
     fontFamily: typography.family.mono,

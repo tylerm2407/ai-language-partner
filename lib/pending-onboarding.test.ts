@@ -89,19 +89,6 @@ describe('save / load round-trip', () => {
     expect(second?.level).toBe('advanced');
   });
 
-  it('round-trips an explicit false adultMode without collapsing it to null', async () => {
-    // Guards the truthiness trap in onboarding's applyPending: a learner who
-    // deliberately picks Gamified must not have that read back as "unanswered"
-    // and silently re-defaulted.
-    await savePendingOnboarding(makeDraft({ adultMode: false }));
-    expect((await loadPendingOnboarding())?.adultMode).toBe(false);
-  });
-
-  it('round-trips an explicit true adultMode', async () => {
-    await savePendingOnboarding(makeDraft({ adultMode: true }));
-    expect((await loadPendingOnboarding())?.adultMode).toBe(true);
-  });
-
   it('round-trips the trial lesson result', async () => {
     // The sign-up screen names these numbers back to the learner, so losing
     // them turns a specific promise ("keep your 20 XP") into a vague one.
@@ -122,22 +109,23 @@ describe('save / load round-trip', () => {
 });
 
 describe('forward compatibility', () => {
-  it('loads a draft written before the adultMode field existed', async () => {
-    // The schema version was deliberately NOT bumped when adultMode was added,
+  it('loads a draft carrying fields that no longer exist', async () => {
+    // The schema version is deliberately not bumped when a field comes or goes,
     // so drafts from shipped builds must still parse rather than being wiped
-    // mid-signup. Written as a literal because makeDraft() now always includes
-    // the field.
+    // mid-signup. Written as a literal because makeDraft() only ever produces
+    // the current shape.
     await AsyncStorage.setItem(
       PENDING_ONBOARDING_KEY,
       JSON.stringify({
         version: PENDING_ONBOARDING_SCHEMA_VERSION,
         startedAt: Date.now() - 1_000,
         targetLanguage: 'es',
-        // `motivation` and `placement` were both dropped from the draft when
-        // their onboarding steps were removed. Kept here deliberately: a draft
-        // written by a shipped build still carries them, and an unknown key
-        // must not invalidate the draft.
+        // `motivation`, `placement` and `adultMode` were all dropped from the
+        // draft when their onboarding steps were removed. Kept here
+        // deliberately: a draft written by a shipped build still carries them,
+        // and an unknown key must not invalidate the draft.
         motivation: 'travel',
+        adultMode: true,
         idealL2Self: null,
         level: 'elementary',
         placement: null,
@@ -151,7 +139,6 @@ describe('forward compatibility', () => {
     const loaded = await loadPendingOnboarding();
     expect(loaded).not.toBeNull();
     expect(loaded?.targetLanguage).toBe('es');
-    expect(loaded?.adultMode).toBeUndefined();
     expect(loaded?.trial).toBeUndefined();
   });
 });

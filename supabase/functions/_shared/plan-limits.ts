@@ -39,6 +39,22 @@ export interface PlanLimits {
    * is uncapped on every tier.
    */
   dailyNewCards: number;
+  /**
+   * Hints served by `get-hint` per day, metered on `daily_usage.hints_generated`
+   * (migration 090).
+   *
+   * Free users are deliberately still served: their hints are generic, so they
+   * come back from `hint_cache` and cost essentially nothing. Entitled learners
+   * get a hint shaped by their own recent mistakes, which cannot be written to a
+   * cache keyed on (card_id, exercise_type) without handing one learner's
+   * profile to every other learner on that card — so those calls skip the cache
+   * and are live every time. This meter exists for that path.
+   *
+   * `vip` is 9999, the same unlimited sentinel `dailyNewCards` uses. Do not
+   * introduce a second shape for "no limit"; every comparison site would have
+   * to learn it.
+   */
+  dailyHints: number;
   offlineMode: boolean;
 }
 
@@ -60,10 +76,10 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
   // Classroom students are unaffected — their org's contract_config is merged
   // in by get_effective_limits with GREATEST(), so a 0 personal quota still
   // resolves to the school's allowance.
-  starter:   { dailyTextMessages: 0,  dailyVoiceMinutes: 0,  dailyWritingGrades: 0,  dailyPronunciationScores: 0, dailyLessonTtsPlays: 5,   dailyAvatarGenerations: 0, dailyNewCards: 5,    offlineMode: false },
-  basic:     { dailyTextMessages: 25, dailyVoiceMinutes: 10, dailyWritingGrades: 3,  dailyPronunciationScores: 3, dailyLessonTtsPlays: 50,  dailyAvatarGenerations: 2, dailyNewCards: 20,   offlineMode: false },
-  premium:   { dailyTextMessages: 50, dailyVoiceMinutes: 20, dailyWritingGrades: 7,  dailyPronunciationScores: 5, dailyLessonTtsPlays: 100, dailyAvatarGenerations: 5, dailyNewCards: 9999, offlineMode: true },
-  vip:       { dailyTextMessages: 75, dailyVoiceMinutes: 30, dailyWritingGrades: 12, dailyPronunciationScores: 7, dailyLessonTtsPlays: 200, dailyAvatarGenerations: 10, dailyNewCards: 9999, offlineMode: true },
+  starter:   { dailyTextMessages: 0,  dailyVoiceMinutes: 0,  dailyWritingGrades: 0,  dailyPronunciationScores: 0, dailyLessonTtsPlays: 5,   dailyAvatarGenerations: 0, dailyNewCards: 5,    dailyHints: 5,    offlineMode: false },
+  basic:     { dailyTextMessages: 25, dailyVoiceMinutes: 10, dailyWritingGrades: 3,  dailyPronunciationScores: 3, dailyLessonTtsPlays: 50,  dailyAvatarGenerations: 2, dailyNewCards: 20,   dailyHints: 30,   offlineMode: false },
+  premium:   { dailyTextMessages: 50, dailyVoiceMinutes: 20, dailyWritingGrades: 7,  dailyPronunciationScores: 5, dailyLessonTtsPlays: 100, dailyAvatarGenerations: 5, dailyNewCards: 9999, dailyHints: 75,   offlineMode: true },
+  vip:       { dailyTextMessages: 75, dailyVoiceMinutes: 30, dailyWritingGrades: 12, dailyPronunciationScores: 7, dailyLessonTtsPlays: 200, dailyAvatarGenerations: 10, dailyNewCards: 9999, dailyHints: 9999, offlineMode: true },
 };
 
 export function getPlanLimits(tier: string): PlanLimits {
@@ -95,18 +111,24 @@ export async function getEffectiveLimits(userId: string, supabase: any): Promise
       dailyVoiceMinutes: typeof row.dailyVoiceMinutes === 'number' ? row.dailyVoiceMinutes : (row.daily_voice_minutes ?? PLAN_LIMITS.starter.dailyVoiceMinutes),
       dailyWritingGrades: typeof row.dailyWritingGrades === 'number' ? row.dailyWritingGrades : (row.daily_writing_grades ?? PLAN_LIMITS.starter.dailyWritingGrades),
       dailyPronunciationScores: typeof row.dailyPronunciationScores === 'number' ? row.dailyPronunciationScores : (row.daily_pronunciation_scores ?? PLAN_LIMITS.starter.dailyPronunciationScores),
-      // get_effective_limits predates both of these keys and does not return
-      // them, so each falls through to a plan default. School contract
-      // overrides intentionally do not apply to either.
+      // get_effective_limits predates these two keys and does not return them,
+      // so each falls through to a plan default. School contract overrides
+      // intentionally do not apply to either.
       //
       // Both fall back to `starter`. This function has no tier to fall back
-      // to — it exists precisely because the RPC is the thing that knows one —
-      // and the only caller (ai-chat) reads neither key, so a low default here
-      // cannot under-serve anyone today. The tts function does its own tier
-      // lookup and calls getPlanLimits directly rather than coming through
-      // here; if that ever changes, pass the tier in rather than guessing it.
+      // to — it exists precisely because the RPC is the thing that knows one.
+      // The tts function does its own tier lookup and calls getPlanLimits
+      // directly rather than coming through here; if that ever changes, pass
+      // the tier in rather than guessing it.
       dailyLessonTtsPlays: typeof row.dailyLessonTtsPlays === 'number' ? row.dailyLessonTtsPlays : PLAN_LIMITS.starter.dailyLessonTtsPlays,
       dailyAvatarGenerations: typeof row.dailyAvatarGenerations === 'number' ? row.dailyAvatarGenerations : PLAN_LIMITS.starter.dailyAvatarGenerations,
+      // These two the RPC does return — `dailyNewCards` since migration 084 and
+      // `dailyHints` since 090 — school override included. `dailyNewCards` was
+      // simply missing from this object, which `tsc` never caught because
+      // supabase/functions is excluded from the app tsconfig; `deno check` has
+      // been reporting it.
+      dailyNewCards: typeof row.dailyNewCards === 'number' ? row.dailyNewCards : PLAN_LIMITS.starter.dailyNewCards,
+      dailyHints: typeof row.dailyHints === 'number' ? row.dailyHints : PLAN_LIMITS.starter.dailyHints,
       offlineMode: row.offlineMode === true || row.offline_mode === true || false,
     };
   } catch {

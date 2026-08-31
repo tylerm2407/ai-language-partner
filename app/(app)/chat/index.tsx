@@ -9,6 +9,7 @@ import { useAppStore, effectiveTier } from '../../../stores/useAppStore';
 import { useOnboardingChecklist } from '../../../hooks/useOnboardingChecklist';
 import { sendChatMessage, getTextToSpeech, VoiceError } from '../../../lib/ai';
 import { CEFR_BAND_BY_LEVEL } from '../../../lib/cefr-proficiency';
+import { cefrLabel, cefrAccessibilityLabel } from '../../../lib/cefr-labels';
 import { ChatBubble } from '../../../components/chat/ChatBubble';
 import { ChatInput } from '../../../components/chat/ChatInput';
 import type { HandsFreeState } from '../../../components/chat/ChatInput';
@@ -37,9 +38,13 @@ import { useAiConsent } from '../../../hooks/useAiConsent';
 import { Chip } from '../../../components/ui/Chip';
 
 /**
- * CEFR code for the header status row. The deck reads "Nivel A2", but "Nivel" is
- * Spanish and the target language varies — the bare CEFR code is international,
- * so the row reads "Live · A2" instead of localising the noun 12 ways.
+ * The level line in the header status row.
+ *
+ * It used to read "Live · A2" and stop there — the argument being that the code
+ * is international where "Nivel"/"Niveau"/"Livello" would need localising 12
+ * ways. True, and beside the point: "A2" is not international, it is unknown.
+ * The can-do line carries the meaning in one language-neutral clause, so the
+ * row states what the tutor is pitching at rather than a code for it.
  */
 // Was a fourth private copy of the ladder; now derived. See
 // CEFR_BAND_BY_LEVEL in lib/cefr-proficiency.ts.
@@ -778,9 +783,15 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
                 }}
               />
             )}
-            <Caption size="sm">
+            <Caption
+              size="sm"
+              numberOfLines={2}
+              accessibilityLabel={`${handsFreeActive ? 'Live. ' : ''}${cefrAccessibilityLabel(
+                CEFR_FOR_LEVEL[level]
+              )}`}
+            >
               {handsFreeActive ? 'Live · ' : ''}
-              {CEFR_FOR_LEVEL[level]}
+              {cefrLabel(CEFR_FOR_LEVEL[level])}
             </Caption>
           </View>
         </View>

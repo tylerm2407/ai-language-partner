@@ -129,7 +129,7 @@ function LessonRowComponent({
         </Body>
         {active && (
           <Mono size={11} color={colors.text.tertiary} style={styles.activeMeta}>
-            {`${xpReward} XP · ${estimatedMinutes} MIN`}
+            {`${estimatedMinutes} MIN`}
           </Mono>
         )}
       </View>
@@ -215,11 +215,9 @@ function TrailingSlot({
     );
   }
 
-  return (
-    <Mono size={11} color={colors.text.tertiary}>
-      {`+${xpReward} XP`}
-    </Mono>
-  );
+  // Nothing to advertise here any more: XP is a server-side ledger, not a
+  // number the learner is playing for.
+  return null;
 }
 
 // ─── Accessibility copy ───────────────────────────────────────────────────
@@ -241,9 +239,9 @@ function buildLabel({
   if (state === 'completed') {
     parts.push(score === null ? 'completed' : `completed, scored ${Math.round(score * 100)} percent`);
   } else if (state === 'active') {
-    parts.push('next up', `${xpReward} XP`, `${estimatedMinutes} minutes`);
+    parts.push('next up', `${estimatedMinutes} minutes`);
   } else {
-    parts.push('locked', `${xpReward} XP`);
+    parts.push('locked');
   }
 
   if (isMilestone) parts.push('unit review');

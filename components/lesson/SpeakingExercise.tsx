@@ -102,6 +102,12 @@ export function SpeakingExercise({
         language: targetLanguage,
         acceptedVariants: exercise.acceptedSpeechVariants,
         targetWord: exercise.targetWord,
+        // Both are what make the attempt count toward the speaking level: the
+        // card carries the CEFR band, and `lesson` distinguishes a graded
+        // attempt from free practice. Without them the row still lands, but
+        // untagged, and the proficiency report has to ignore it.
+        source: 'lesson',
+        cardId: exercise.cardId ?? undefined,
       });
 
       // Trust the service's own verdict rather than re-deriving the threshold

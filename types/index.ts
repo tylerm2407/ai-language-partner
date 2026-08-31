@@ -86,14 +86,7 @@ export interface UserProfile {
   // for accounts created before migration 028.
   motivationReason: MotivationReason | null;
   idealL2Self: string | null;
-  /**
-   * Adult mode (migration 052) — suppresses the pressure mechanics: league
-   * standings and XP celebration. Underlying
-   * values keep accruing server-side so turning the mode off restores the
-   * learner's history rather than revealing a reset account.
-   */
-  adultMode: boolean;
-  createdAt: string;
+    createdAt: string;
   updatedAt: string;
 }
 
@@ -330,6 +323,43 @@ export interface DailyStats {
   accuracy: number; // 0-1
 }
 
+// ─── Pronunciation Scores ───────────────────────────────────────
+
+/**
+ * Where a scored spoken attempt came from. Mirrors the CHECK constraint on
+ * `public.pronunciation_scores.source` (migration 089) and
+ * `VALID_PRONUNCIATION_SOURCES` in `supabase/functions/_shared/validation.ts`.
+ */
+export type PronunciationSource = 'lesson' | 'checkpoint' | 'read_aloud' | 'practice';
+
+/**
+ * One scored spoken attempt (migration 089).
+ *
+ * Written by the `score-pronunciation` edge function with the service role —
+ * there is no client INSERT policy, because this feeds the proficiency report
+ * and a future leaderboard. Clients may read their own rows.
+ *
+ * `expectedText` and `transcription` are stored together on purpose: the pair
+ * is a per-learner pronunciation error corpus, which is worth as much as the
+ * score itself.
+ */
+export interface PronunciationScoreRow {
+  id: string;
+  userId: string;
+  targetLanguage: string;
+  expectedText: string;
+  /** Whisper's transcript; null when it could not be stored. */
+  transcription: string | null;
+  /** 0–100, as stored. */
+  score: number;
+  isCorrect: boolean;
+  phonemeErrors: string[] | null;
+  source: PronunciationSource;
+  /** Null for read-aloud and free practice, which are not tied to a card. */
+  cardId: string | null;
+  createdAt: string;
+}
+
 // ─── AI Practice ────────────────────────────────────────────────
 
 export type CorrectionErrorType =
@@ -492,7 +522,6 @@ export interface DailyChallenge {
   color: string;
   target: number;
   unit: string;
-  xpReward: number;
   statKey: string;
   current: number;
   completed: boolean;

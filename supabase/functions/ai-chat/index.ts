@@ -22,6 +22,7 @@ import { generateValidated } from '../_shared/validated-generate.ts';
 import { proficiencyToCefr } from '../_shared/cefr.ts';
 import { checkBurstLimit } from '../_shared/burst-limit.ts';
 import { PROVIDER_TIMEOUT_MS, providerFetch } from '../_shared/provider-fetch.ts';
+import { fetchLearnerContext, serializeLearnerContext } from '../_shared/learner-context.ts';
 import {
   isValidLanguage,
   isValidProficiencyLevel,
@@ -278,6 +279,30 @@ serve(async (req: Request) => {
       );
     }
 
+    // Per-learner context is a paid feature (basic and up). The entitlement is
+    // the one already resolved above — no second tier lookup. `starter` has
+    // dailyTextMessages = 0, so `consume_daily_quota` has already turned every
+    // un-entitled caller away by the time execution reaches here; the explicit
+    // check keeps that reasoning visible rather than implied, and it is what
+    // correctly *includes* a free-tier classroom student whose org contract
+    // grants them a text allowance via get_effective_limits.
+    //
+    // fetchLearnerContext never throws and never blocks: on any failure it
+    // returns null and this turn generates exactly as it did before.
+    const learnerContext =
+      limits.dailyTextMessages > 0
+        ? await fetchLearnerContext(supabase, {
+            userId: authenticatedUserId,
+            targetLanguage,
+          })
+        : null;
+    const learnerBlock = serializeLearnerContext(learnerContext);
+    // The steer sits OUTSIDE the <LEARNER_PROFILE> fence: instructions to the
+    // model are ours, everything inside the fence is data about the learner.
+    const learnerNote = learnerBlock
+      ? `${learnerBlock}\nUse this to decide what to correct, what to recast, and which examples to reach for. Never read it back to the learner or mention that you have it.`
+      : null;
+
     const systemPrompt = buildSystemPrompt(targetLanguage, level, topic, scenarioKey, safeNativeLanguage);
     const codeSwitchNote = buildCodeSwitchNote(safeSpokenLanguage, targetLanguage);
 
@@ -302,11 +327,15 @@ serve(async (req: Request) => {
             body: JSON.stringify({
               model: TEXT_MODEL,
               max_tokens: 600,
-              // The scenario prompt is the cached prefix; the code-switch note is
-              // appended uncached because it changes turn to turn and would
-              // otherwise invalidate the cache on every switch.
+              // The scenario prompt is the cached prefix. Everything after it is
+              // appended uncached, deliberately: the code-switch note changes
+              // turn to turn, and the learner profile is unique per user. Put
+              // either one inside the cached block and the prefix stops being
+              // shared — every learner misses the cache on every turn, forever.
+              // The code-switch note goes last because it is about *this* turn.
               system: [
                 { type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } },
+                ...(learnerNote ? [{ type: 'text', text: learnerNote }] : []),
                 ...(codeSwitchNote ? [{ type: 'text', text: codeSwitchNote }] : []),
               ],
               messages: windowMessages(messages).map((m) => ({

@@ -1,11 +1,13 @@
 # CLAUDE.md — Fluenci (Language Learning App)
 
 ## 1. Project Overview
-Fluenci is an AI-powered language-learning app: lessons, SM-2 spaced repetition, AI chat/voice tutoring, graded reading and writing, gamification (XP, hearts, streaks), and a B2B school system (organizations → classrooms → assignments) targeting university pilots. Pre-launch; App Store submission is the current goal.
+Fluenci is an AI-powered language-learning app: lessons, SM-2 spaced repetition, AI chat/voice tutoring, graded reading and writing, measured CEFR proficiency, and a B2B school system (organizations → classrooms → assignments) targeting university pilots. Pre-launch; App Store submission is the current goal.
+
+Progress is expressed as **measured proficiency, not points**. XP still accrues server-side as an idempotent ledger that offline replay and achievements depend on, but it is not shown to users anywhere. Hearts and streaks were removed outright (§3). What a learner sees is their CEFR level, always paired with a plain-language can-do statement via `lib/cefr-labels.ts` — a bare `B1` must never render on its own.
 
 The most important constraints:
 1. Every AI interaction passes through the content-safety + CEFR level-check pipeline (`supabase/functions/_shared/validated-generate.ts`).
-2. The client is untrusted — anything with economic or competitive meaning (XP, hearts, streaks, quotas, subscription tier) is written server-side (guarded RPC or service-role edge function), never by direct client table writes.
+2. The client is untrusted — anything with economic or competitive meaning (XP, quotas, subscription tier, proficiency evidence) is written server-side (guarded RPC or service-role edge function), never by direct client table writes.
 3. All AI API keys live in Supabase Edge Function secrets — never in the client.
 
 ## 2. Commands
@@ -25,7 +27,8 @@ Edge functions deploy via `npx supabase functions deploy <name>` or the Supabase
 - Mobile UI (safe areas, accessibility, gestures, performance): `.claude/rules/mobile-ui.md`.
 - New DB queries go through `lib/supabase-queries.ts` in the matching domain section; user-growable tables always query with `.limit()` or `.range()`.
 - Edge functions: always authenticate via `_shared/auth.ts`, validate input via `_shared/validation.ts`, generate AI content via `_shared/validated-generate.ts`, cap tokens and input length.
-- Never write gamification columns (`total_xp`, `xp_level`, `hearts`, `max_hearts`, `last_heart_lost_at`, `streak`, `longest_streak`, `streak_freezes`, `league_tier`, `streak_shield_*`) by direct table update — a DB trigger blocks it. Use the RPCs: `increment_xp`, `increment_xp_idempotent`, `spend_heart`, `sync_hearts`, `update_streak`, `repair_streak_with_freeze`, `repair_streak_with_shield`. (Verified against live `pg_proc` — `use_streak_freeze`, `set_streak_shield` and `sync_level` do not exist and never did.)
+- Never write server-owned columns (`total_xp`, `xp_level`, `league_tier`, `free_avatar_used_at`) by direct table update — the `fluenci_guard_gamification` trigger on `user_profiles` blocks it. Use the RPCs: `increment_xp_idempotent` (what everything current uses), `increment_xp` (legacy). Any new server-owned metric column must be added to that trigger, or the client can write it.
+- **Hearts and streaks no longer exist.** Migration 083 dropped `update_streak`, `repair_streak_with_freeze`, `repair_streak_with_shield`, the `streak_events` table and every `streak*` column; migration 084 dropped `spend_heart`, `sync_hearts` and the `hearts`/`max_hearts`/`last_heart_lost_at` columns. Both headers explain why: neither mechanic ever actually did anything, and metering mistakes is backwards in an SRS app. The free tier's real boundary is now `dailyNewCards` (5), enforced by `try_consume_new_card_slot()`. Do not reintroduce either concept.
 
 ## 4. Database — READ BEFORE TOUCHING
 - The production Supabase project is `ngqpsuixmumdnqbqxjxv`. Never run `supabase db reset` or `db push` against it.
@@ -43,7 +46,7 @@ Edge functions deploy via `npx supabase functions deploy <name>` or the Supabase
   - `(select auth.uid())` — bare `auth.uid()` is re-evaluated per row (it parses the JWT claims JSON each time) and can stop the planner using a `user_id` index as an index qual. The `select` wrapper makes it a once-per-query InitPlan.
   - **`FOR ALL` needs an explicit `WITH CHECK`.** Without one, Postgres reuses the `USING` expression as the write check — and `USING (auth.uid() = user_id)` stays true while you rewrite any *other* column of your own row. That is exactly how the subscription tier self-grant in migration 057 happened. Prefer a `FOR SELECT` policy plus service-role writes.
   - Client-writable is the exception, not the default: anything with economic meaning (tier, quotas, XP) is written by a guarded RPC or a service-role edge function (§1.2).
-- **Postgres is not the only store.** Ephemeral, self-expiring state lives in Redis (Upstash REST, `us-east-1`), reached only through edge functions via `supabase/functions/_shared/redis.ts`; secrets are `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`. Currently: mid-lesson resume snapshots (`lesson-session` function, 24h from lesson start) and burst rate-limit counters (`_shared/burst-limit.ts`, which falls back to the `increment_rate_limit` RPC when Redis can't answer). The rule for what goes there: **only state you would be willing to lose.** Anything with economic or learning meaning — completions, XP, hearts, streaks, SRS — stays in Postgres, permanently. Every Redis key gets a TTL.
+- **Postgres is not the only store.** Ephemeral, self-expiring state lives in Redis (Upstash REST, `us-east-1`), reached only through edge functions via `supabase/functions/_shared/redis.ts`; secrets are `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`. Currently: mid-lesson resume snapshots (`lesson-session` function, 24h from lesson start) and burst rate-limit counters (`_shared/burst-limit.ts`, which falls back to the `increment_rate_limit` RPC when Redis can't answer). The rule for what goes there: **only state you would be willing to lose.** Anything with economic or learning meaning — completions, XP, SRS, pronunciation scores — stays in Postgres, permanently. Every Redis key gets a TTL.
 - `translation_cache` has a 90-day retention window refreshed on use (migration 068); `cleanup_expired_cache()` sweeps it and `api_cache` nightly at 04:17 UTC (migration 069). `hint_cache` is deliberately unbounded-but-finite — it is keyed on (card_id, exercise_type), so the curriculum caps it.
 - Service-role-only tables (`api_cache`, `hint_cache`, `translation_cache`, `client_events`) have RLS enabled with **no policies at all** — service_role bypasses RLS, so that is deny-all to clients and is the intended state. The advisor reports it as INFO `rls_enabled_no_policy`; accept it, don't "fix" it by adding a permissive policy.
 

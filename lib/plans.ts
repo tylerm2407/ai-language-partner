@@ -27,6 +27,18 @@ export function isUnlimitedNewCards(cap: number): boolean {
   return cap >= UNLIMITED_NEW_CARDS;
 }
 
+/**
+ * `dailyHints` value that means "no ceiling" (vip). Deliberately the same
+ * sentinel and the same magnitude as `UNLIMITED_NEW_CARDS`, for the same
+ * reason: `get_effective_limits` merges the school contract with `GREATEST()`,
+ * which `null` or `-1` would lose.
+ */
+export const UNLIMITED_HINTS = UNLIMITED_NEW_CARDS;
+
+export function isUnlimitedHints(cap: number): boolean {
+  return cap >= UNLIMITED_HINTS;
+}
+
 export interface SchoolContractConfig {
   dailyVoiceMinutes: number;
   dailyTextMessages: number;
@@ -37,6 +49,7 @@ export interface SchoolContractConfig {
   // it. Students fall through to their plan's value, which is generous enough
   // that a contract override has never been needed.
   dailyNewCards: number;
+  dailyHints: number;
   audiobookNarration: boolean;
   offlineMode?: boolean;
   allowed_email_domains?: string[];
@@ -56,6 +69,17 @@ export interface PlanDefinition {
    */
   dailyLessonTtsPlays: number;
   dailyNewCards: number;
+  /**
+   * Hints per day from the get-hint button, metered on
+   * `daily_usage.hints_generated` (migration 090).
+   *
+   * Free users keep a real allowance rather than none: their hints are generic
+   * and come back from `hint_cache`, so they cost almost nothing, and someone
+   * stuck mid-exercise is the worst person to turn away. Paid tiers get a
+   * hint shaped by their own recent mistakes, which cannot be cached per-card
+   * and so is a live call every time.
+   */
+  dailyHints: number;
   audiobookNarration: boolean;
   offlineMode: boolean;
 }
@@ -101,6 +125,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     dailyPronunciationScores: 0,
     dailyLessonTtsPlays: 5,
     dailyNewCards: 5,
+    dailyHints: 5,
     audiobookNarration: false,
     offlineMode: false,
   },
@@ -113,6 +138,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     dailyPronunciationScores: 3,
     dailyLessonTtsPlays: 50,
     dailyNewCards: 20,
+    dailyHints: 30,
     audiobookNarration: false,
     offlineMode: false,
   },
@@ -125,6 +151,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     dailyPronunciationScores: 5,
     dailyLessonTtsPlays: 100,
     dailyNewCards: UNLIMITED_NEW_CARDS,
+    dailyHints: 75,
     audiobookNarration: false,
     offlineMode: true,
   },
@@ -137,6 +164,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     dailyPronunciationScores: 7,
     dailyLessonTtsPlays: 200,
     dailyNewCards: UNLIMITED_NEW_CARDS,
+    dailyHints: UNLIMITED_HINTS,
     audiobookNarration: true,
     offlineMode: true,
   },
@@ -193,6 +221,7 @@ export function getPlanLimits(planId: PlanId | string): {
   dailyWritingGrades: number;
   dailyPronunciationScores: number;
   dailyLessonTtsPlays: number;
+  dailyHints: number;
 } {
   const plan = PLANS[planId as PlanId] ?? PLANS.starter;
   return {
@@ -201,6 +230,7 @@ export function getPlanLimits(planId: PlanId | string): {
     dailyWritingGrades: plan.dailyWritingGrades,
     dailyPronunciationScores: plan.dailyPronunciationScores,
     dailyLessonTtsPlays: plan.dailyLessonTtsPlays,
+    dailyHints: plan.dailyHints,
   };
 }
 

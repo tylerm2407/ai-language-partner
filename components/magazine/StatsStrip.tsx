@@ -1,15 +1,18 @@
 /**
- * StatsStrip — the XP row under the Home greeting.
+ * StatsStrip — the progress line under the Home greeting.
  *
- * Was: three Chips with Ionicons (XP in amber) plus hearts.
- * Now: one mono meta row — `1,240 XP` — reading as a dateline rather
- * than as a scoreboard.
+ * Was: three saturated Chips (XP in amber, hearts, streak). Then: one mono meta
+ * row reading `1,240 XP`. Now: the learner's level and what it means.
  *
- * Three saturated pills stacked directly under the greeting was the Duolingo
- * header, and it was also spending the loudest color on the screen on numbers
- * the learner is not being asked to act on. The numbers stay (they are real
- * progress) but they are set in the same mono voice as DateLabel, one type step
- * down, and the indigo accent is reserved for the CTA further down the screen.
+ * The point total is gone from view — not from the ledger, which still accrues
+ * server-side and still backs achievements and offline replay. It went because
+ * a number the learner is not being asked to act on was spending the top of
+ * Home on a scoreboard, and because "1,240 XP" answers a question nobody asked.
+ * "A2 · Handle short, routine exchanges on familiar topics" answers the one
+ * they did.
+ *
+ * This used to be the adult-mode branch only. Adults are not the only people
+ * who would rather know what they can do, so it is now what everyone sees.
  *
  * Hearts used to sit here as a glyph row. They are gone with the mechanic —
  * free usage is metered by the daily new-card cap instead, which is surfaced
@@ -19,42 +22,38 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../../stores/useAppStore';
-import { useAdultMode } from '../../hooks/useAdultMode';
 import { cefrBandForProficiencyLevel } from '../../lib/cefr-proficiency';
+import { cefrCanDo, cefrAccessibilityLabel } from '../../lib/cefr-labels';
 import { colors, spacing, typography } from '../../config/theme';
-
-function Separator() {
-  return <Text style={[styles.meta, styles.separator]}>·</Text>;
-}
 
 export function StatsStrip() {
   const profile = useAppStore((s) => s.profile);
-  const { showXpCelebration } = useAdultMode();
-
-  const totalXp = profile?.totalXp ?? 0;
-
-  // Adult mode replaces the XP row with a single competence label. The point
-  // of the mode is that progress is measured in what you can do, not in points
-  // earned — so this row states the level rather than a score.
-  if (!showXpCelebration) {
-    const band = cefrBandForProficiencyLevel(profile?.level ?? 'beginner');
-    return (
-      <View style={styles.row}>
-        <Ionicons name="ribbon-outline" size={13} color={colors.action.accent} />
-        <Text style={[styles.meta, styles.emphasis]}>LEVEL {band}</Text>
-      </View>
-    );
-  }
+  const band = cefrBandForProficiencyLevel(profile?.level ?? 'beginner');
 
   return (
-    <View style={styles.row}>
-      <Text style={[styles.meta, styles.emphasis]}>{totalXp.toLocaleString()}</Text>
-      <Text style={styles.meta}>XP</Text>
+    <View style={styles.block}>
+      <View style={styles.row}>
+        <Ionicons name="ribbon-outline" size={13} color={colors.action.accent} />
+        {/* The code is the eyebrow; the sentence below is the substance. Read as
+            one utterance by VoiceOver so the two are never separated. */}
+        <Text
+          style={[styles.meta, styles.emphasis]}
+          accessibilityLabel={cefrAccessibilityLabel(band)}
+        >
+          LEVEL {band}
+        </Text>
+      </View>
+      <Text style={styles.canDo} accessibilityElementsHidden importantForAccessibility="no">
+        {cefrCanDo(band)}
+      </Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  block: {
+    marginBottom: spacing.lg,
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -62,7 +61,6 @@ const styles = StyleSheet.create({
     // 12pt mono runs past the screen width and the row clips.
     flexWrap: 'wrap',
     gap: spacing.xxs,
-    marginBottom: spacing.lg,
   },
   /** Mono meta voice, matching DateLabel. lineHeight is deliberately left to
    *  the face's natural line box — see config/theme.ts §leading. */
@@ -79,8 +77,12 @@ const styles = StyleSheet.create({
     fontFamily: typography.family.monoMedium,
     color: colors.text.primary,
   },
-  separator: {
-    color: colors.text.quaternary,
-    marginHorizontal: spacing.xxs,
+  /** Sentence case, body face — the eyebrow above is the only mono here. Set in
+   *  the same tertiary as the eyebrow so the pair reads as one block. */
+  canDo: {
+    fontFamily: typography.family.regular,
+    fontSize: 13,
+    color: colors.text.tertiary,
+    marginTop: spacing.xxs,
   },
 });

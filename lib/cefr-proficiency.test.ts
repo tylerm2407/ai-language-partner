@@ -21,10 +21,13 @@ import {
   MIN_ITEMS_PER_BAND,
   MIN_MATURE_ITEMS_PER_BAND,
   MIN_READING_ITEMS,
+  MIN_SPEAKING_ITEMS,
   MIN_WRITING_ITEMS,
+  SPEAKING_PASS_SCORE,
   type ProficiencyEvidence,
   type ReadingEvidenceItem,
   type SkillAssessment,
+  type SpeakingEvidenceItem,
   type VocabEvidenceItem,
   type WritingEvidenceItem,
 } from './cefr-proficiency';
@@ -80,11 +83,17 @@ function writing(band: string, count: number): WritingEvidenceItem[] {
   }));
 }
 
+/** Build `count` scored spoken attempts in a band, each at `score` (0–1). */
+function speak(band: string | null, count: number, score: number): SpeakingEvidenceItem[] {
+  return Array.from({ length: count }, () => ({ cefrLevel: band, score }));
+}
+
 function emptyEvidence(): ProficiencyEvidence {
   return {
     vocabulary: [],
     reading: [],
     writing: [],
+    speaking: [],
     listeningMinutes: 0,
     speakingMinutes: 0,
     activeDays: 0,
@@ -471,7 +480,7 @@ describe('buildProficiencyReport', () => {
     expect(report.nextLevel).toBe('B1');
   });
 
-  it('never reports speaking or listening as an assessed level', () => {
+  it('never turns practice minutes alone into an assessed speaking or listening level', () => {
     const report = buildProficiencyReport(
       {
         ...emptyEvidence(),
@@ -656,6 +665,136 @@ describe('buildProficiencyReport', () => {
     expect(after.overallLevel).toBe('B1');
     expect(after.nextLevel).toBe(before.nextLevel);
     expect(after.nextLevelRequirement).toBe(before.nextLevelRequirement);
+  });
+
+  it('reports speaking as not_assessed when no attempt has ever been scored', () => {
+    const report = buildProficiencyReport(
+      { ...emptyEvidence(), speakingMinutes: 90, totalReviews: 600, activeDays: 40 },
+      NOW
+    );
+    const speaking = report.skills.find((s) => s.skill === 'speaking');
+    expect(speaking?.status).toBe('not_assessed');
+    expect(speaking?.level).toBeNull();
+    expect(speaking?.evidenceCount).toBe(0);
+  });
+
+  it('reports speaking as insufficient_data below the minimum attempt count', () => {
+    const report = buildProficiencyReport(
+      {
+        ...emptyEvidence(),
+        speaking: speak('A2', MIN_SPEAKING_ITEMS - 1, 0.95),
+        totalReviews: 600,
+        activeDays: 40,
+      },
+      NOW
+    );
+    const speaking = report.skills.find((s) => s.skill === 'speaking');
+    // Measured, but not yet enough to judge — distinct from never measured.
+    expect(speaking?.status).toBe('insufficient_data');
+    expect(speaking?.level).toBeNull();
+    expect(speaking?.evidenceCount).toBe(MIN_SPEAKING_ITEMS - 1);
+  });
+
+  it('assesses speaking once enough attempts average above the pass score', () => {
+    const report = buildProficiencyReport(
+      {
+        ...emptyEvidence(),
+        speaking: [
+          ...speak('A1', MIN_SPEAKING_ITEMS, 0.85),
+          ...speak('A2', MIN_SPEAKING_ITEMS, 0.85),
+          ...speak('B1', MIN_SPEAKING_ITEMS, 0.85),
+        ],
+        totalReviews: 600,
+        activeDays: 40,
+      },
+      NOW
+    );
+    const speaking = report.skills.find((s) => s.skill === 'speaking');
+    expect(speaking?.status).toBe('assessed');
+    expect(speaking?.level).toBe('B1');
+  });
+
+  it('does not report a speaking level that skips a band', () => {
+    // Ten strong C1 attempts and nothing below. Reading and writing both refuse
+    // to grant a rung they have not been shown; speaking is held to the same bar.
+    const report = buildProficiencyReport(
+      {
+        ...emptyEvidence(),
+        speaking: speak('C1', MIN_SPEAKING_ITEMS, 0.95),
+        totalReviews: 600,
+        activeDays: 40,
+      },
+      NOW
+    );
+    const speaking = report.skills.find((s) => s.skill === 'speaking');
+    expect(speaking?.status).toBe('insufficient_data');
+    expect(speaking?.level).toBeNull();
+  });
+
+  it('averages failures in — cherry-picked good attempts do not carry a band', () => {
+    const half = MIN_SPEAKING_ITEMS;
+    const report = buildProficiencyReport(
+      {
+        ...emptyEvidence(),
+        // Mean is 0.5, below the pass score, despite ten attempts at 95%.
+        speaking: [...speak('B1', half, 0.95), ...speak('B1', half, 0.05)],
+        totalReviews: 600,
+        activeDays: 40,
+      },
+      NOW
+    );
+    expect(SPEAKING_PASS_SCORE).toBeGreaterThan(0.5);
+    expect(report.skills.find((s) => s.skill === 'speaking')?.status).toBe('insufficient_data');
+  });
+
+  it('ignores untagged attempts when picking a speaking level', () => {
+    const report = buildProficiencyReport(
+      {
+        ...emptyEvidence(),
+        speaking: speak(null, MIN_SPEAKING_ITEMS * 3, 1),
+        totalReviews: 600,
+        activeDays: 40,
+      },
+      NOW
+    );
+    const speaking = report.skills.find((s) => s.skill === 'speaking');
+    expect(speaking?.status).toBe('insufficient_data');
+    expect(speaking?.level).toBeNull();
+  });
+
+  it('lets weak speaking drag the overall level down', () => {
+    // Reading has to earn B2 rung by rung: `highestContiguousBand` stops the
+    // walk at the first band with no evidence, so B2 texts alone assess as
+    // insufficient and there would be no strong skill for speaking to drag.
+    const strongReading = [
+      ...reading('A1', MIN_READING_ITEMS),
+      ...reading('A2', MIN_READING_ITEMS),
+      ...reading('B1', MIN_READING_ITEMS),
+      ...reading('B2', MIN_READING_ITEMS),
+    ];
+
+    const withoutSpeaking = buildProficiencyReport(
+      { ...emptyEvidence(), reading: strongReading, totalReviews: 600, activeDays: 40 },
+      NOW
+    );
+    expect(withoutSpeaking.overallLevel).toBe('B2');
+
+    const withSpeaking = buildProficiencyReport(
+      {
+        ...emptyEvidence(),
+        reading: strongReading,
+        speaking: [
+          ...speak('A1', MIN_SPEAKING_ITEMS, 0.9),
+          ...speak('A2', MIN_SPEAKING_ITEMS, 0.9),
+        ],
+        totalReviews: 600,
+        activeDays: 40,
+      },
+      NOW
+    );
+    // Reading is unchanged at B2; the floor across skills is now speaking's A2.
+    expect(withSpeaking.skills.find((s) => s.skill === 'reading')?.level).toBe('B2');
+    expect(withSpeaking.overallLevel).toBe('A2');
   });
 
   it('always returns exactly the five skill rows the UI expects', () => {

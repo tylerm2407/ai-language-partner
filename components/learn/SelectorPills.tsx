@@ -10,12 +10,19 @@
  * inside this row — every course here is for the learner's target language —
  * so repeating it four times spends width on nothing, but dropping it entirely
  * would leave the screen without ever naming what is being learned.
+ *
+ * A 56pt pill cannot carry a can-do sentence, so the codes stay bare here and
+ * the meaning is carried twice instead: VoiceOver gets it from every pill's
+ * label, and the caption under the row states it for the selected course. A row
+ * of letter codes with nothing explaining them is exactly what this pass exists
+ * to remove.
  */
 
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { Body } from '../ui/Text';
+import { Body, Caption } from '../ui/Text';
 import { usePressed } from '../../hooks/usePressed';
+import { cefrCanDo, cefrAccessibilityLabel } from '../../lib/cefr-labels';
 import { colors, radii, spacing } from '../../config/theme';
 import type { Course } from '../../types';
 
@@ -65,26 +72,37 @@ interface CoursePillsProps {
 export function CoursePills({ courses, selectedCourseId, onSelect }: CoursePillsProps) {
   if (courses.length === 0) return null;
 
+  const selectedCourse = courses.find((c) => c.id === selectedCourseId);
+  const canDo = cefrCanDo(selectedCourse?.cefrLevel);
+
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.courseRow}
-    >
-      {courses.map((course) => {
-        const selected = course.id === selectedCourseId;
-        return (
-          <Pill
-            key={course.id}
-            label={selected ? course.title : course.cefrLevel}
-            selected={selected}
-            onPress={() => onSelect(course.id)}
-            accessibilityLabel={course.title}
-            accessibilityRole="button"
-          />
-        );
-      })}
-    </ScrollView>
+    <View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.courseRow}
+      >
+        {courses.map((course) => {
+          const selected = course.id === selectedCourseId;
+          return (
+            <Pill
+              key={course.id}
+              label={selected ? course.title : course.cefrLevel}
+              selected={selected}
+              onPress={() => onSelect(course.id)}
+              accessibilityLabel={`${course.title}. ${cefrAccessibilityLabel(course.cefrLevel)}`}
+              accessibilityRole="button"
+            />
+          );
+        })}
+      </ScrollView>
+
+      {canDo ? (
+        <Caption size="sm" tone="tertiary" style={styles.courseCaption}>
+          {canDo}
+        </Caption>
+      ) : null}
+    </View>
   );
 }
 
@@ -120,6 +138,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.xs,
     paddingHorizontal: spacing.md,
+  },
+  /** Aligns with the scrolling row's first pill rather than the screen edge. */
+  courseCaption: {
+    paddingHorizontal: spacing.md,
+    marginTop: spacing.xs,
   },
   tabRow: {
     flexDirection: 'row',

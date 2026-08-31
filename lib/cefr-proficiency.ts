@@ -10,10 +10,12 @@
  *
  *  1. We NEVER report a level we cannot evidence. Thin data yields
  *     `insufficient_data`, not an optimistic guess.
- *  2. We NEVER report a skill we do not measure. Speaking has no persisted
- *     scores today (pronunciation results are counted for quota purposes but
- *     the scores themselves are not stored), so speaking is reported as
- *     `not_assessed` until a spoken assessment exists.
+ *  2. We NEVER report a skill we do not measure. Listening is still exposure
+ *     only — we record how long audio played, not whether it was understood —
+ *     so it stays `not_assessed`. Speaking became measurable with migration
+ *     089: `score-pronunciation` now persists a row per scored attempt, so a
+ *     learner with enough scored attempts at a band gets a real speaking
+ *     level. A learner with none is still `not_assessed`, not zero.
  *  3. The report is an *estimate from practice history*, not a certification.
  *     Any UI rendering this must say so.
  *
@@ -129,6 +131,30 @@ export const MIN_WRITING_ITEMS = 3;
 /** Mean submission score at which writing in a band counts as solid. */
 export const WRITING_PASS_SCORE = 0.7;
 
+/**
+ * Minimum scored spoken attempts in a band before it informs the speaking
+ * level.
+ *
+ * Higher than reading's and writing's 3 on purpose. A reading piece or a
+ * graded submission is a substantial artefact; a pronunciation attempt is one
+ * utterance of a few seconds, scored against a Whisper transcript that is
+ * itself noisy (mic, room, accent). Three of those are not evidence of a
+ * level. Ten still sits well inside a couple of days of practice at the paid
+ * daily quota, and it is the same instinct that puts vocabulary — the other
+ * small-grained signal — at 20 items per band.
+ */
+export const MIN_SPEAKING_ITEMS = 10;
+
+/**
+ * Mean pronunciation score at which speaking in a band counts as solid.
+ *
+ * Deliberately the same bar as reading and writing: one pass mark across the
+ * three scored strands, and comfortably above the 60 that `score-pronunciation`
+ * itself calls "correct" — clearing this band means the learner is past merely
+ * intelligible, not scraping it.
+ */
+export const SPEAKING_PASS_SCORE = 0.7;
+
 /** Evidence volume required for each confidence tier. */
 export const CONFIDENCE_TIERS = {
   high: { reviews: 500, activeDays: 30 },
@@ -161,10 +187,27 @@ export interface WritingEvidenceItem {
   wordCount: number;
 }
 
+export interface SpeakingEvidenceItem {
+  /**
+   * CEFR level tag of the card the attempt was against. Null for read-aloud
+   * and free practice, which are not tied to a card — those attempts are real
+   * practice but cannot evidence a *level*, so they are ignored here exactly
+   * as an untagged reading piece is.
+   */
+  cefrLevel: string | null;
+  /**
+   * 0–1 pronunciation score. Stored 0–100 in `pronunciation_scores`; the query
+   * layer normalises so this matches the reading and writing scales.
+   */
+  score: number;
+}
+
 export interface ProficiencyEvidence {
   vocabulary: VocabEvidenceItem[];
   reading: ReadingEvidenceItem[];
   writing: WritingEvidenceItem[];
+  /** Scored spoken attempts (migration 089). */
+  speaking: SpeakingEvidenceItem[];
   listeningMinutes: number;
   speakingMinutes: number;
   /** Distinct days with recorded activity. */
@@ -580,20 +623,75 @@ function assessListening(minutes: number): SkillAssessment {
 }
 
 /**
- * Speaking is deliberately unassessed. Pronunciation attempts are counted for
- * quota but their scores are not persisted, so there is nothing to grade from.
- * A spoken assessment lands with the voice work; until then this stays honest.
+ * Speaking level = highest band with enough scored attempts averaging at or
+ * above the pass score. Shaped like writing rather than reading on purpose:
+ * the mean is taken over *every* attempt in the band, failures included, so a
+ * learner cannot reach a level by producing ten good attempts among fifty bad
+ * ones. Attempts with no CEFR tag (free practice, read-aloud) are ignored.
+ *
+ * With no scored attempts at all we say `not_assessed` rather than
+ * `insufficient_data`: the difference is "we have never measured this" versus
+ * "we have measured it and it is not yet enough", and the learner deserves to
+ * be told which. `minutes` is exposure from daily_stats and is only ever used
+ * to phrase that first case — it can never produce a level on its own.
  */
-function assessSpeaking(minutes: number): SkillAssessment {
+function assessSpeaking(items: SpeakingEvidenceItem[], minutes: number): SkillAssessment {
+  if (items.length === 0) {
+    return {
+      skill: 'speaking',
+      level: null,
+      status: 'not_assessed',
+      detail:
+        minutes > 0
+          ? `${Math.round(minutes)} minutes of speaking practice logged, but no scored attempts yet.`
+          : 'No speaking practice logged yet.',
+      evidenceCount: 0,
+    };
+  }
+
+  const perBand = new Map<CefrBand, number[]>();
+  for (const item of items) {
+    const band = normalizeBand(item.cefrLevel);
+    if (!band) continue;
+    const scores = perBand.get(band) ?? [];
+    scores.push(item.score);
+    perBand.set(band, scores);
+  }
+
+  // Mean per band first, so the walk below is a pure yes/no per rung.
+  const means = new Map<CefrBand, number>();
+  for (const [band, scores] of perBand) {
+    if (scores.length < MIN_SPEAKING_ITEMS) continue;
+    means.set(band, scores.reduce((a, b) => a + b, 0) / scores.length);
+  }
+
+  // Same walk as reading and writing. Skipping unevidenced rungs would let ten
+  // C1 attempts print "Speaking: C1" off no lower evidence at all — the exact
+  // failure `highestContiguousBand` exists to stop.
+  const level = highestContiguousBand(
+    CEFR_LADDER.map((band) => {
+      const mean = means.get(band);
+      return { band, qualifies: mean !== undefined && mean >= SPEAKING_PASS_SCORE };
+    })
+  );
+
+  if (level) {
+    const levelMean = means.get(level) ?? 0;
+    return {
+      skill: 'speaking',
+      level,
+      status: 'assessed',
+      detail: `Averaged ${Math.round(levelMean * 100)}% pronunciation across ${perBand.get(level)?.length ?? 0} scored ${level} attempts.`,
+      evidenceCount: items.length,
+    };
+  }
+
   return {
     skill: 'speaking',
     level: null,
-    status: 'not_assessed',
-    detail:
-      minutes > 0
-        ? `${Math.round(minutes)} minutes of speaking practice logged. A spoken assessment is coming.`
-        : 'No speaking practice logged yet.',
-    evidenceCount: Math.round(minutes),
+    status: 'insufficient_data',
+    detail: `Record ${MIN_SPEAKING_ITEMS} scored attempts at each level from A1 up to be assessed on speaking.`,
+    evidenceCount: items.length,
   };
 }
 
@@ -723,7 +821,7 @@ export function buildProficiencyReport(
     assessReading(evidence.reading),
     assessWriting(evidence.writing),
     assessListening(evidence.listeningMinutes),
-    assessSpeaking(evidence.speakingMinutes),
+    assessSpeaking(evidence.speaking, evidence.speakingMinutes),
   ];
 
   const confidence = assessConfidence(evidence.totalReviews, evidence.activeDays);

@@ -197,7 +197,9 @@ export function ExerciseChrome({
         contentContainerStyle={{
           paddingHorizontal: spacing.lg - 2,
           paddingTop: spacing.lg + 6,
-          paddingBottom: spacing.lg,
+          // Clears the footer's top rule when the exercise is scrolled to the
+          // end, so the card never sits flush against the note row.
+          paddingBottom: spacing.xl,
         }}
         keyboardShouldPersistTaps="handled"
       >
@@ -208,8 +210,13 @@ export function ExerciseChrome({
       <View
         style={{
           paddingHorizontal: spacing.lg - 2,
-          paddingTop: spacing.sm + 2,
+          paddingTop: spacing.md,
           paddingBottom: footerBottomInset,
+          // The exercise body scrolls under this footer, so a tall exercise is
+          // clipped at its edge. Without a rule the note reads as the last line
+          // inside the question card rather than a separate region.
+          borderTopWidth: 1,
+          borderTopColor: colors.border.subtle,
         }}
       >
         <View
@@ -217,7 +224,10 @@ export function ExerciseChrome({
             minHeight: NOTE_MIN_HEIGHT,
             paddingBottom: spacing.md,
             flexDirection: 'row',
-            alignItems: 'flex-start',
+            // Centred, not top-aligned: the one-line placeholder used to pin
+            // itself to the top of the reserved block, hard against the
+            // clipped card above, while ~60pt of the reserve sat empty below.
+            alignItems: 'center',
             gap: spacing.sm,
           }}
         >

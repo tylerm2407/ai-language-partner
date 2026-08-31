@@ -79,42 +79,24 @@ const LEVELS: { value: ProficiencyLevel; label: string; description: string }[] 
 ];
 
 /**
- * The two ways Fluenci can present progress. `adultMode: true` suppresses the
- * pressure mechanics — see lib/adult-mode.ts, which is the single source of
- * truth for what that actually hides.
- */
-const MODES: { value: boolean; label: string; description: string }[] = [
-  {
-    value: false,
-    label: 'Gamified',
-    description: 'XP and leagues. The nudges that keep most people coming back.',
-  },
-  {
-    value: true,
-    label: 'Adult mode',
-    description:
-      'For people who want to learn, not collect points. No leagues, no XP — your progress is a CEFR level, backed by the work you’ve actually done.',
-  },
-];
-
-/**
- * The 'motivation' step was removed on 2026-08-08. It asked why the learner
- * was here and wrote the answer to `user_profiles.motivation_reason` — a
- * column, and a Zustand slot, that nothing in the app has ever read. Its only
- * consumer was Home's `HeroHook`, deleted as dead code. A whole step in the
- * path to the first teaching moment cannot be justified by data no code path
- * consumes; the `idealSelf` step immediately after it collects the L2MSS
- * signal that the research actually rests on, and it survives.
+ * Two steps have been removed from this flow, both deliberately.
  *
- * The column and the `MotivationReason` type are left in place, so restoring
- * the step is a UI change rather than a migration.
+ * `motivation` (2026-08-08) asked why the learner was here and wrote
+ * `user_profiles.motivation_reason`. `idealSelf` asks a sharper version of the
+ * same question and is the signal the research actually rests on, so the weaker
+ * one went. The column and the `MotivationReason` type are left in place.
+ *
+ * `mode` (2026-08-28) asked the learner to choose between a gamified and an
+ * adult presentation. There is only one presentation now — XP, leagues and
+ * celebration-as-reward are gone from the product — so the question described a
+ * choice that no longer exists. `user_profiles.adult_mode` is dropped in
+ * migration 091; unlike `motivation_reason` there is nothing left to restore.
  */
 type Step =
   | 'language'
   | 'idealSelf'
   | 'level'
   | 'identity'
-  | 'mode'
   | 'goal'
   | 'lesson'
   | 'save';
@@ -130,7 +112,6 @@ const ALL_STEPS: Step[] = [
   'idealSelf',
   'level',
   'identity',
-  'mode',
   'goal',
 ];
 
@@ -144,14 +125,6 @@ const DISPLAY_NAME_MAX_CHARS = 24;
 const DEFAULT_LANGUAGE: LanguageCode = 'es';
 const DEFAULT_LEVEL: ProficiencyLevel = 'beginner';
 const DEFAULT_DAILY_GOAL = 10;
-/**
- * Gamified is pre-selected because it is the only value that agrees with the
- * DB default (`user_profiles.adult_mode` DEFAULT false), with
- * DEFAULT_GAMIFICATION_VISIBILITY, and with useAdultMode's pre-profile-load
- * fallback. Defaulting the other way would show mechanics for a frame and then
- * hide them. The positioning is carried by the copy, not by a pre-ticked box.
- */
-const DEFAULT_ADULT_MODE = false;
 
 
 export default function OnboardingScreen() {
@@ -186,7 +159,6 @@ export default function OnboardingScreen() {
   const [avatarPresetId, setAvatarPresetId] = useState<string | null>(null);
   const [customizerOpen, setCustomizerOpen] = useState(false);
   const [dailyGoal, setDailyGoal] = useState<number>(DEFAULT_DAILY_GOAL);
-  const [adultMode, setAdultMode] = useState<boolean>(DEFAULT_ADULT_MODE);
   const [saving, setSaving] = useState(false);
 
   const languageName =
@@ -205,7 +177,6 @@ export default function OnboardingScreen() {
         level: draft.level ?? DEFAULT_LEVEL,
         dailyGoalMinutes: draft.dailyGoalMinutes ?? DEFAULT_DAILY_GOAL,
         idealL2Self: draft.idealL2Self,
-        adultMode: draft.adultMode ?? DEFAULT_ADULT_MODE,
         ...(draft.displayName ? { displayName: draft.displayName } : {}),
       });
 
@@ -283,7 +254,6 @@ export default function OnboardingScreen() {
     // nullable object or string where `if (x)` is safe, but for a boolean that
     // idiom silently discards a deliberate `false` (Gamified) and resurrects
     // the default. Same value, different meaning — "unanswered" vs "chose it".
-    if (typeof pending.adultMode === 'boolean') setAdultMode(pending.adultMode);
   }, []);
 
   // Mount: read the local draft. If the learner has just signed up and the
@@ -349,10 +319,9 @@ export default function OnboardingScreen() {
       displayName: displayName.trim() ? displayName.trim() : null,
       avatarPresetId,
       dailyGoalMinutes: dailyGoal,
-      adultMode,
       completedAt,
     }),
-    [targetLanguage, idealL2Self, level, trial, displayName, avatarPresetId, dailyGoal, adultMode, completedAt],
+    [targetLanguage, idealL2Self, level, trial, displayName, avatarPresetId, dailyGoal, completedAt],
   );
 
   // Mirror every answer to local storage so a backgrounded or killed app
@@ -589,9 +558,14 @@ export default function OnboardingScreen() {
             <Text className="text-[28px] font-bold text-text-primary mb-2" accessibilityRole="header">
               What&apos;s your level?
             </Text>
+            {/* The acronym used to be introduced on the removed mode step, and
+                this is now the first and only place a new user meets it — so it
+                defines itself here or nowhere. */}
             <Text className="text-base text-text-secondary mb-6">
               Pick whichever is closest. Nothing here is a test, and you can change it any
-              time from your profile.
+              time. From here on your progress is shown as a CEFR level — the A1 to C2
+              scale — stated as what you can actually do, and backed by the work you&apos;ve
+              done.
             </Text>
 
             {LEVELS.map((l) => (
@@ -682,7 +656,7 @@ export default function OnboardingScreen() {
                 />
               </View>
               <View className="flex-1">
-                <Button label="Continue" onPress={() => setStep('mode')} />
+                <Button label="Continue" onPress={() => setStep('goal')} />
               </View>
             </View>
 
@@ -704,60 +678,13 @@ export default function OnboardingScreen() {
           </>
         )}
 
-        {step === 'mode' && (
-          <>
-            <Text className="text-[28px] font-bold text-text-primary mb-2" accessibilityRole="header">
-              How should Fluenci push you?
-            </Text>
-            <Text className="text-base text-text-secondary mb-6">
-              Same lessons either way. This changes what the app shows you — and you can switch
-              whenever you like.
-            </Text>
-
-            {MODES.map((m) => (
-              <Pressable
-                key={m.label}
-                className={`p-4 rounded-2xl mb-3 ${
-                  adultMode === m.value
-                    ? 'bg-primary-tint border-2 border-primary'
-                    : 'bg-dark-card border-2 border-transparent'
-                }`}
-                onPress={() => {
-                  haptic('select');
-                  setAdultMode(m.value);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={`${m.label}: ${m.description}`}
-                accessibilityState={{ selected: adultMode === m.value }}
-              >
-                <Text className="text-lg font-semibold text-text-primary">{m.label}</Text>
-                <Text className="text-sm text-text-secondary mt-1">{m.description}</Text>
-              </Pressable>
-            ))}
-
-            <View className="flex-row gap-3 mt-6">
-              <View className="flex-1">
-                <Button label="Back" variant="secondary" onPress={() => setStep('identity')} />
-              </View>
-              <View className="flex-1">
-                <Button
-                  label={`Continue with ${adultMode ? 'Adult mode' : 'Gamified'}`}
-                  onPress={() => setStep('goal')}
-                />
-              </View>
-            </View>
-          </>
-        )}
-
         {step === 'goal' && (
           <>
             <Text className="text-[28px] font-bold text-text-primary mb-2" accessibilityRole="header">
-              {adultMode ? 'How much time do you have?' : 'Set your daily goal'}
+              How much time do you have?
             </Text>
             <Text className="text-base text-text-secondary mb-6">
-              {adultMode
-                ? 'This sets the length of your daily session. Nothing breaks if you skip a day.'
-                : 'Ten minutes a day is what most learners pick. You can change it later.'}
+              This sets the length of your daily session. Nothing breaks if you skip a day.
             </Text>
 
             {DAILY_GOALS.map((goal) => (
@@ -777,22 +704,16 @@ export default function OnboardingScreen() {
                 accessibilityState={{ selected: dailyGoal === goal }}
               >
                 <Text className="text-lg font-semibold text-text-primary">{goal} minutes</Text>
-                {/* Labels describe the commitment, not the learner. The scale
-                    used to end at "Insane", which dares the user into a budget
-                    they will miss — and a missed daily goal is the first step
-                    out of the habit. Adult mode drops them entirely: a time
+                {/* No commitment labels. The scale used to end at "Insane",
+                    which dares the learner into a budget they will miss, and a
+                    missed daily goal is the first step out of the habit. A time
                     budget is a practical choice, not a measure of seriousness. */}
-                {!adultMode && goal === 5 && <Text className="text-sm text-text-secondary">A few minutes</Text>}
-                {!adultMode && goal === 10 && <Text className="text-sm text-text-secondary">Most popular</Text>}
-                {!adultMode && goal === 15 && <Text className="text-sm text-text-secondary">Steady</Text>}
-                {!adultMode && goal === 20 && <Text className="text-sm text-text-secondary">Committed</Text>}
-                {!adultMode && goal === 30 && <Text className="text-sm text-text-secondary">Intensive</Text>}
               </Pressable>
             ))}
 
             <View className="flex-row gap-3 mt-6">
               <View className="flex-1">
-                <Button label="Back" variant="secondary" onPress={() => setStep('mode')} />
+                <Button label="Back" variant="secondary" onPress={() => setStep('identity')} />
               </View>
               <View className="flex-1">
                 {/* No bundled trial for this language yet — skip to the ask

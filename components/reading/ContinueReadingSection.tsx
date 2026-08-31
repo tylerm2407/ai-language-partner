@@ -1,16 +1,8 @@
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { ReadingBook, UserBookProgress } from '../../types';
+import { cefrBandColors, cefrAccessibilityLabel } from '../../lib/cefr-labels';
 import { colors } from '../../config/theme';
-
-const CEFR_BADGE_COLORS: Record<string, { bg: string; text: string }> = {
-  A1: { bg: colors.success.tint, text: colors.success.light },
-  A2: { bg: colors.action.primaryTint, text: colors.action.accent },
-  B1: { bg: colors.warning.tint, text: colors.warning.light },
-  B2: { bg: colors.error.tint, text: colors.error.light },
-  C1: { bg: colors.action.primaryTint, text: colors.action.accent },
-  C2: { bg: colors.error.tint, text: colors.error.light },
-};
 
 interface InProgressBook {
   book: ReadingBook;
@@ -40,7 +32,7 @@ export function ContinueReadingSection({ books, onPress }: ContinueReadingSectio
         contentContainerStyle={{ gap: 12 }}
       >
         {books.map(({ book, progress }) => {
-          const cefrColor = CEFR_BADGE_COLORS[book.cefrLevel] ?? { bg: colors.surface.cardAlt, text: colors.text.tertiary };
+          const cefrColor = cefrBandColors(book.cefrLevel);
           const percent = Math.round(progress.percentComplete);
 
           return (
@@ -48,7 +40,8 @@ export function ContinueReadingSection({ books, onPress }: ContinueReadingSectio
               key={book.id}
               onPress={() => onPress(book.id)}
               accessibilityRole="button"
-              accessibilityLabel={`Continue reading ${book.title}, ${percent}% complete`}
+              // The 200pt card shows the code alone; the label carries its meaning.
+              accessibilityLabel={`Continue reading ${book.title}, ${percent}% complete. ${cefrAccessibilityLabel(book.cefrLevel)}`}
               style={{
                 width: 200,
                 backgroundColor: colors.surface.card,

@@ -7,15 +7,12 @@ import { useAppStore } from '../../../stores/useAppStore';
 import { useSchoolStore } from '../../../stores/useSchoolStore';
 import { SCHOOL_ENABLED, SUPPORTED_LANGUAGES } from '../../../config/app';
 import { useLevel } from '../../../hooks/useLevel';
-import { useAdultMode } from '../../../hooks/useAdultMode';
 import { Ionicons } from '@expo/vector-icons';
 import { GradientBackground } from '../../../components/ui/GradientBackground';
 import { colors, radii, spacing, typography } from '../../../config/theme';
-import { Heading, Body, Caption } from '../../../components/ui/Text';
+import { Heading } from '../../../components/ui/Text';
 import { Chip } from '../../../components/ui/Chip';
-import { Card } from '../../../components/ui/Card';
 import { LevelBadge } from '../../../components/stats/LevelBadge';
-import { LeagueBadge } from '../../../components/gamification/LeagueBadge';
 import { AchievementGrid } from '../../../components/gamification/AchievementGrid';
 import { Avatar } from '../../../components/avatar/Avatar';
 import { AvatarPresetPicker } from '../../../components/avatar/AvatarPresetPicker';
@@ -39,29 +36,14 @@ const LEVEL_LABELS: Record<string, string> = {
   advanced: 'Advanced',
 };
 
-/** One of the three stat tiles under the level ladder. */
-function StatCard({ icon, value, label }: { icon: React.ReactNode; value: string; label: string }) {
-  return (
-    <Card style={styles.statCard} variant="standard">
-      <View style={styles.statIcon}>{icon}</View>
-      <Body size="lg" weight="extrabold" style={styles.statValue}>
-        {value}
-      </Body>
-      <Caption size="sm" tone="tertiary" style={styles.statLabel}>
-        {label}
-      </Caption>
-    </Card>
-  );
-}
-
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const { profile, subscription, setProfile } = useAppStore();
   const { enrolledClasses, loadStudentSchoolData, roles, activeRole, setActiveRole } = useSchoolStore();
-  // useLevel() is also a side effect — it mirrors level-ups into the store.
-  // Only `tier` is read here; the numeric level moved into <LevelBadge/>.
-  const { tier, level } = useLevel();
-  const { showLeague, showXpCelebration } = useAdultMode();
+  // Called for its side effect only — it mirrors level-ups into the store, and
+  // the ledger keeps accruing whether or not anything renders it. Nothing on
+  // this screen shows the number any more.
+  useLevel();
   const { dailyStats } = useDailyStats();
   const strandTotals = strandMinutesFromDailyStats({
     listeningMinutes: dailyStats?.listeningMinutes,
@@ -180,7 +162,6 @@ export default function ProfileScreen() {
             </Text>
             <View style={styles.identityChips}>
               {languageLabel ? <Chip variant="premium" label={languageLabel.toUpperCase()} /> : null}
-              {showLeague && <LeagueBadge tier={tier} />}
             </View>
           </View>
         </View>
@@ -190,36 +171,18 @@ export default function ProfileScreen() {
           <LevelBadge level={profile?.level ?? 'beginner'} />
         </View>
 
-        {/* Two stat cards. There were three while a day-streak and a best-streak
-            counted as metrics; neither exists now, and padding the row back to
-            three with a number the profile does not actually track would be
-            inventing a scoreboard.
-
-            Adult mode drops the grid entirely: every value in it is a game
-            point. What replaces it is the proficiency report below, which
-            answers the question these numbers only imply. */}
-        {showXpCelebration && (
-          <View style={styles.statGrid}>
-            <StatCard
-              icon={<Ionicons name="star" size={16} color={colors.warning.base} />}
-              value={(profile?.totalXp ?? 0).toLocaleString()}
-              label="Total XP"
-            />
-            <StatCard
-              icon={<Ionicons name="trending-up" size={16} color={colors.action.accent} />}
-              value={String(level)}
-              label="Level"
-            />
-          </View>
-        )}
+        {/* The Total XP / numeric Level tiles used to sit here, behind an adult
+            mode check. They are gone for everyone: both are point totals that
+            describe how much the app was used, not what the learner can do, and
+            the proficiency report below answers the question they only implied.
+            Both values still accrue server-side — achievements and offline
+            replay depend on the XP ledger. */}
 
         {/* Proficiency report — the evidence-backed answer to "what level am I
             actually at?", which is the question a point total never answers.
             It sits directly under the level ladder, above achievements and
             completed lessons, because it is the most credible artifact on this
-            screen and it used to be the last thing a learner would ever find.
-            Adult mode has nothing above it at all, so it becomes the first
-            thing on the profile — which is the whole point of that mode. */}
+            screen and it used to be the last thing a learner would ever find. */}
         <Pressable
           className="rounded-2xl p-5 mb-4 flex-row items-center"
           style={{
@@ -230,7 +193,7 @@ export default function ProfileScreen() {
           onPress={() => router.push('/profile/proficiency' as any)}
           accessibilityRole="button"
           accessibilityLabel="View your proficiency report"
-          accessibilityHint="Shows your estimated CEFR level per skill and the evidence behind it"
+          accessibilityHint="Shows your estimated level per skill, what it means, and the evidence behind it"
         >
           <Ionicons name="ribbon-outline" size={24} color={colors.premium.base} />
           <View className="ml-4 flex-1">
@@ -479,27 +442,5 @@ const styles = StyleSheet.create({
   },
   blockSpacing: {
     marginBottom: spacing.md,
-  },
-  statGrid: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-    marginBottom: spacing.md,
-  },
-  statCard: {
-    flex: 1,
-    padding: spacing.sm,
-    alignItems: 'center',
-  },
-  statIcon: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.xxs,
-  },
-  statValue: {
-    letterSpacing: -0.4,
-    fontVariant: ['tabular-nums'],
-  },
-  statLabel: {
-    textAlign: 'center',
   },
 });

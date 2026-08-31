@@ -4,6 +4,7 @@ import type {
   CorrectionDetail,
   LanguageCode,
   ProficiencyLevel,
+  PronunciationSource,
 } from '../types';
 import type { ScenarioKey } from '../types/scenarios';
 import type { VoiceGender } from './voice-preference';
@@ -110,6 +111,14 @@ export interface PronunciationScoreRequest {
   acceptedVariants?: string[];
   targetWord?: string;
   targetGrammar?: string;
+  /** Where the attempt came from. The proficiency report needs to tell a
+   *  graded lesson attempt apart from idle practice; the server defaults to
+   *  `practice` when this is absent. */
+  source?: PronunciationSource;
+  /** The SRS card being spoken, when there is one. Without it the attempt
+   *  carries no CEFR band, so it can never contribute to the speaking level —
+   *  see `assessSpeaking` in lib/cefr-proficiency.ts. */
+  cardId?: string;
 }
 
 export interface PronunciationScoreResponse {

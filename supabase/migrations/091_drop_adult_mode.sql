@@ -1,0 +1,33 @@
+-- 091 — Drop adult mode. There is only one mode now.
+--
+-- `adult_mode` existed because the app shipped two presentations of the same
+-- lessons: a gamified one built on XP, leagues and celebration overlays, and an
+-- "adult" one that suppressed them. Migration 052 added the column; onboarding
+-- asked every new learner to choose between the two.
+--
+-- The product no longer has two presentations. Streaks went in 083, hearts in
+-- 084, and XP, numeric levels and leagues are no longer rendered anywhere —
+-- progress is a measured CEFR level, stated as what the learner can do. That
+-- leaves `adult_mode` describing a choice between one thing and the same thing,
+-- and an onboarding step asking a question with no answer that changes
+-- anything.
+--
+-- So: the column goes, the onboarding step goes, the settings toggle goes, and
+-- `lib/adult-mode.ts` / `hooks/useAdultMode.ts` are deleted.
+--
+-- WHY DROP RATHER THAN LEAVE IT DEFAULTED
+--
+-- A retained column reads as meaningful to the next person, and this repo has a
+-- run of migration headers written to correct exactly that mistake —
+-- `motivation_reason` is still sitting in this table doing nothing, and 083's
+-- header records a streak feature that every profile had at zero while
+-- everyone assumed it worked. There is nothing to restore here: with no second
+-- presentation to switch back to, a preserved preference could never be read
+-- again. Dropping it is the honest record.
+--
+-- Nothing else references the column: no policy, no trigger (the
+-- `fluenci_guard_gamification` trigger guards total_xp, xp_level, league_tier
+-- and free_avatar_used_at only), no function, no index, and no view.
+
+ALTER TABLE public.user_profiles
+  DROP COLUMN IF EXISTS adult_mode;

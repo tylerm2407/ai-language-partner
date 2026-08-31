@@ -13,7 +13,6 @@ import { getTargetLanguage, targetLanguageGreeting } from '../../lib/language';
 import { cefrBandForProficiencyLevel } from '../../lib/cefr-proficiency';
 import { Ionicons } from '@expo/vector-icons';
 import { GradientBackground } from '../../components/ui/GradientBackground';
-import { useAdultMode } from '../../hooks/useAdultMode';
 import { useLevel } from '../../hooks/useLevel';
 import { useDailyNews } from '../../hooks/useDailyNews';
 import { useNotifications, scheduleDailyPracticeReminder } from '../../hooks/useNotifications';
@@ -46,7 +45,6 @@ export default function HomeScreen() {
   // challenge/quota days from it (migration 044). One-shot per session.
   const [weeklyStats, setWeeklyStats] = useState<DailyStats[]>([]);
   const [weeklyStatsError, setWeeklyStatsError] = useState<ErrorCopy | null>(null);
-  const { showDailyChallenges } = useAdultMode();
   useLevel(); // level-up detection mirrors xpLevel/leagueTier into the store
   const { loadStudentSchoolData } = useSchoolStore();
   const schoolEnabled = SCHOOL_ENABLED;
@@ -224,8 +222,8 @@ export default function HomeScreen() {
             {/* Continue learning — 2-column tiles pulled from user's real curriculum */}
             <LessonTileGrid tiles={lessonTiles} loading={tilesLoading} error={tilesError} onRetry={refetchTiles} />
 
-            {/* Daily challenges — a pressure mechanic, so adult mode drops it */}
-            {showDailyChallenges && <MagazineDailyChallenges dailyStats={dailyStats ?? null} />}
+            {/* Daily challenges */}
+            <MagazineDailyChallenges dailyStats={dailyStats ?? null} />
 
             {/* Week in words */}
             <WeekInWords

@@ -15,6 +15,8 @@ import { getTargetLanguage } from '../../../lib/language';
 import { getReduceMotion, setReduceMotion } from '../../../lib/motion-preference';
 import { getHapticsEnabled, setHapticsEnabled, haptic } from '../../../lib/haptics';
 import { revokeAllAiConsent } from '../../../lib/ai-consent';
+import { cefrBandForProficiencyLevel } from '../../../lib/cefr-proficiency';
+import { cefrCanDo } from '../../../lib/cefr-labels';
 import type { LanguageCode, ProficiencyLevel } from '../../../types';
 
 const LEVELS: { value: ProficiencyLevel; label: string }[] = [
@@ -24,6 +26,13 @@ const LEVELS: { value: ProficiencyLevel; label: string }[] = [
   { value: 'upper_intermediate', label: 'Upper Intermediate' },
   { value: 'advanced', label: 'Advanced' },
 ];
+
+/** What each option actually commits the learner to, in the same words the rest
+ *  of the app uses for a level. "Upper Intermediate" is a name, not a claim —
+ *  this is the claim, and it is what the content difficulty is keyed on. */
+function levelCanDo(level: ProficiencyLevel): string {
+  return cefrCanDo(cefrBandForProficiencyLevel(level));
+}
 
 export default function SettingsScreen() {
   const goBack = useSafeBack('/(app)');
@@ -36,7 +45,6 @@ export default function SettingsScreen() {
   const [targetLanguage, setTargetLanguage] = useState<LanguageCode | null>(getTargetLanguage(profile));
   const [level, setLevel] = useState<ProficiencyLevel>(profile?.level ?? 'beginner');
   const [dailyGoal, setDailyGoal] = useState(profile?.dailyGoalMinutes ?? 10);
-  const [adultMode, setAdultMode] = useState(profile?.adultMode ?? false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -68,8 +76,7 @@ export default function SettingsScreen() {
     displayName !== (profile?.displayName ?? '') ||
     targetLanguage !== getTargetLanguage(profile) ||
     level !== profile?.level ||
-    dailyGoal !== profile?.dailyGoalMinutes ||
-    adultMode !== (profile?.adultMode ?? false);
+    dailyGoal !== profile?.dailyGoalMinutes;
 
   const handleSave = async () => {
     setSaving(true);
@@ -80,7 +87,6 @@ export default function SettingsScreen() {
         ...(targetLanguage ? { targetLanguage } : {}),
         level,
         dailyGoalMinutes: dailyGoal,
-        adultMode,
       });
       goBack();
     } catch {
@@ -159,9 +165,11 @@ export default function SettingsScreen() {
               }`}
               onPress={() => setLevel(l.value)}
               accessibilityRole="button"
+              accessibilityLabel={`${l.label}. ${levelCanDo(l.value)}`}
               accessibilityState={{ selected: level === l.value }}
             >
               <Text className="text-base font-semibold text-text-primary">{l.label}</Text>
+              <Text className="text-sm text-text-secondary mt-0.5 pr-8">{levelCanDo(l.value)}</Text>
               {level === l.value && (
                 <Ionicons name="checkmark-circle" size={20} color={colors.league.diamond} style={{ position: 'absolute', right: 16, top: 16 }} />
               )}
@@ -193,37 +201,6 @@ export default function SettingsScreen() {
             </Pressable>
           ))}
         </View>
-
-        {/* Adult mode — the gamification opt-out. Framed by what it removes,
-            because that is the reason an adult learner turns it on. */}
-        <Text className="text-sm font-semibold text-text-secondary mb-2 uppercase tracking-wide">
-          Adult Mode
-        </Text>
-        <Pressable
-          className={`p-4 rounded-2xl mb-8 flex-row items-center ${
-            adultMode ? 'bg-primary-tint border-2 border-primary' : 'bg-dark-card border-2 border-transparent'
-          }`}
-          onPress={() => setAdultMode((v) => !v)}
-          accessibilityRole="switch"
-          accessibilityState={{ checked: adultMode }}
-          accessibilityLabel="Adult mode"
-          accessibilityHint="Turns off leagues and XP celebration"
-        >
-          <Ionicons
-            name={adultMode ? 'checkmark-circle' : 'ellipse-outline'}
-            size={24}
-            color={adultMode ? colors.action.accent : colors.text.tertiary}
-          />
-          <View className="ml-3 flex-1">
-            <Text className="text-base font-semibold text-text-primary">
-              Turn off game mechanics
-            </Text>
-            <Text className="text-sm text-text-secondary mt-0.5">
-              No leagues, no XP. Progress is shown as your CEFR level.
-              Nothing is lost — your history is kept if you switch back.
-            </Text>
-          </View>
-        </Pressable>
 
         {/* Motion — WCAG 2.2 SC 2.2.2 (Level A) asks for a mechanism to stop
             auto-starting motion. The OS Reduce Motion switch is honored too;

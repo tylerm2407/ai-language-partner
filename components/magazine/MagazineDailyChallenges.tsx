@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, Alert } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MagazineGlassCard } from './MagazineGlassCard';
 import { ProgressBar } from '../ui/ProgressBar';
@@ -17,20 +16,7 @@ interface MagazineDailyChallengesProps {
 const serifFont = typography.family.serif;
 
 export function MagazineDailyChallenges({ dailyStats }: MagazineDailyChallengesProps) {
-  const { challenges, allCompleted, bonusXpClaimed, claimBonusXp } = useDailyChallenges();
-  const [claiming, setClaiming] = useState(false);
-
-  const handleClaimBonus = async () => {
-    setClaiming(true);
-    try {
-      await claimBonusXp();
-    } catch (err) {
-      console.error('Failed to claim bonus XP:', err);
-      Alert.alert('Claim failed', 'Could not claim your bonus XP. Please try again.');
-    } finally {
-      setClaiming(false);
-    }
-  };
+  const { challenges, allCompleted } = useDailyChallenges();
 
   return (
     <MagazineGlassCard style={styles.card}>
@@ -69,27 +55,16 @@ export function MagazineDailyChallenges({ dailyStats }: MagazineDailyChallengesP
                 </View>
               </View>
             </View>
-            <View style={styles.xpPill}>
-              <Text style={styles.xpText}>+{c.xpReward}</Text>
-            </View>
           </View>
         );
       })}
 
-      {/* Bonus XP Claim */}
+      {/* Finishing all three is worth saying out loud. There is nothing to
+          claim: the reward for practising is the practice, and points are not
+          something this product shows a learner any more. */}
       {allCompleted && (
         <View style={styles.bonusSection}>
-          {bonusXpClaimed ? (
-            <Text style={styles.bonusClaimed}>
-              +50 Bonus XP claimed
-            </Text>
-          ) : (
-            <Pressable onPress={handleClaimBonus} disabled={claiming} style={{ opacity: claiming ? 0.6 : 1 }}>
-              <Text style={styles.bonusClaim}>
-                Claim +50 Bonus XP
-              </Text>
-            </Pressable>
-          )}
+          <Text style={styles.bonusClaimed}>All three done today</Text>
         </View>
       )}
     </MagazineGlassCard>

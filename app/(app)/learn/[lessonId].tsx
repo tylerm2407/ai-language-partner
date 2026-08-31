@@ -14,7 +14,6 @@ import { useLevel } from '../../../hooks/useLevel';
 import { useLessonProgress } from '../../../hooks/useLessonProgress';
 import { useOnboardingChecklist } from '../../../hooks/useOnboardingChecklist';
 import { LessonRunner, type LessonResult } from '../../../components/lesson/LessonRunner';
-import { LevelUpModal } from '../../../components/gamification/LevelUpModal';
 import { AchievementModal } from '../../../components/gamification/AchievementModal';
 import { checkAndAwardAchievements, type AchievementDefinition } from '../../../lib/achievements';
 import { lessonXpKey } from '../../../lib/offline-queue';
@@ -34,7 +33,7 @@ export default function LessonScreen() {
   const { profile } = useAppStore();
   const { earnXp } = useProfile();
   const { addStats } = useDailyStats();
-  const { levelUpInfo, dismissLevelUp } = useLevel();
+  const { dismissLevelUp } = useLevel();
   const { markLessonComplete } = useLessonProgress();
   const { markItem: markOnboardingItem } = useOnboardingChecklist();
   const [lesson, setLesson] = useState<Lesson | null>(null);
@@ -237,14 +236,16 @@ export default function LessonScreen() {
   const handleExit = () => {
     // Tear down anything presented OVER this screen before navigating.
     //
-    // CelebrationOverlay, AchievementModal and LevelUpModal are all React
-    // Native <Modal>s, and handleComplete can leave the latter two visible at
-    // the moment Continue is tapped. A Modal that is still `visible` when the
-    // screen pops keeps its own presented view alive — the navigation happens,
-    // but the learner sees the celebration sitting there and reads it as a
-    // dead button. Closing them first is what makes the pop visible.
+    // CelebrationOverlay and AchievementModal are React Native <Modal>s, and
+    // handleComplete can leave the achievement one visible at the moment
+    // Continue is tapped. A Modal that is still `visible` when the screen pops
+    // keeps its own presented view alive — the navigation happens, but the
+    // learner sees the celebration sitting there and reads it as a dead button.
+    // Closing it first is what makes the pop visible.
     setShowingAchievement(null);
     setAchievementQueue([]);
+    // Nothing renders the level-up any more, but the pending record still has to
+    // be cleared or useLevel replays it against the next lesson's state.
     dismissLevelUp();
 
     // router.back() is a silent no-op with nothing beneath. A deep link, a
@@ -302,16 +303,10 @@ export default function LessonScreen() {
       />
       </KeyboardAvoidingView>
 
-      {/* Level Up Modal */}
-      {levelUpInfo && (
-        <LevelUpModal
-          visible={!!levelUpInfo}
-          newLevel={levelUpInfo.newLevel}
-          newTier={levelUpInfo.newTier}
-          tierChanged={levelUpInfo.tierChanged}
-          onDismiss={dismissLevelUp}
-        />
-      )}
+      {/* The LevelUpModal used to fire here. The numeric level it celebrated is
+          no longer shown anywhere, so a full-screen modal announcing it was
+          celebrating a number the learner cannot go and look at. XP still
+          accrues and still drives achievements — those keep their modal. */}
 
       {/* Achievement Celebration */}
       <AchievementModal

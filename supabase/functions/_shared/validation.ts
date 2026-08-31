@@ -47,6 +47,23 @@ export function isValidExerciseType(value: string): boolean {
   return VALID_EXERCISE_TYPES.includes(value as typeof VALID_EXERCISE_TYPES[number]);
 }
 
+/**
+ * Where a scored pronunciation attempt came from. Mirrors the CHECK constraint
+ * on `public.pronunciation_scores.source` (migration 089) and
+ * `PronunciationSource` in types/index.ts. An unvalidated value would be
+ * rejected by Postgres and silently cost the learner the record of an attempt
+ * they have already paid quota for.
+ */
+export const VALID_PRONUNCIATION_SOURCES = [
+  'lesson', 'checkpoint', 'read_aloud', 'practice',
+] as const;
+
+export function isValidPronunciationSource(value: string): boolean {
+  return VALID_PRONUNCIATION_SOURCES.includes(
+    value as typeof VALID_PRONUNCIATION_SOURCES[number]
+  );
+}
+
 /** Limit string length to prevent prompt injection payloads. */
 export function sanitizeText(text: string, maxLength: number): string {
   return text.slice(0, maxLength).trim();

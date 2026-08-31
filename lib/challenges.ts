@@ -25,18 +25,16 @@ export interface ChallengeTemplate {
   color: string;
   target: number;
   unit: string;
-  xpReward: number;
   /** The key in DailyStats to track progress against */
   statKey: 'lessonsCompleted' | 'cardsReviewed' | 'minutesPracticed' | 'speakingMinutes' | 'listeningMinutes' | 'xpEarned' | 'cardsLearned';
 }
 
 const CHALLENGE_POOL: ChallengeTemplate[] = [
-  { type: 'complete_lessons', title: 'Complete 2 lessons', icon: 'book', color: '#38BDF8', target: 2, unit: 'lessons', xpReward: 30, statKey: 'lessonsCompleted' },
-  { type: 'complete_lessons_3', title: 'Complete 3 lessons', icon: 'book', color: '#38BDF8', target: 3, unit: 'lessons', xpReward: 50, statKey: 'lessonsCompleted' },
-  { type: 'review_cards', title: 'Review 10 cards', icon: 'layers', color: '#A855F7', target: 10, unit: 'cards', xpReward: 25, statKey: 'cardsReviewed' },
-  { type: 'review_cards_20', title: 'Review 20 cards', icon: 'layers', color: '#A855F7', target: 20, unit: 'cards', xpReward: 40, statKey: 'cardsReviewed' },
-  { type: 'xp_target', title: 'Earn 100 XP', icon: 'star', color: '#F59E0B', target: 100, unit: 'XP', xpReward: 25, statKey: 'xpEarned' },
-  { type: 'learn_new_cards', title: 'Learn 5 new cards', icon: 'add-circle', color: '#60A5FA', target: 5, unit: 'cards', xpReward: 35, statKey: 'cardsLearned' },
+  { type: 'complete_lessons', title: 'Complete 2 lessons', icon: 'book', color: '#38BDF8', target: 2, unit: 'lessons', statKey: 'lessonsCompleted' },
+  { type: 'complete_lessons_3', title: 'Complete 3 lessons', icon: 'book', color: '#38BDF8', target: 3, unit: 'lessons', statKey: 'lessonsCompleted' },
+  { type: 'review_cards', title: 'Review 10 cards', icon: 'layers', color: '#A855F7', target: 10, unit: 'cards', statKey: 'cardsReviewed' },
+  { type: 'review_cards_20', title: 'Review 20 cards', icon: 'layers', color: '#A855F7', target: 20, unit: 'cards', statKey: 'cardsReviewed' },
+  { type: 'learn_new_cards', title: 'Learn 5 new cards', icon: 'add-circle', color: '#60A5FA', target: 5, unit: 'cards', statKey: 'cardsLearned' },
 ];
 
 /**

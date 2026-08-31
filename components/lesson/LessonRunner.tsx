@@ -18,7 +18,6 @@ import { CollocationMatch } from './CollocationMatch';
 import { WordFormExercise } from './WordFormExercise';
 import { SentenceTransformExercise } from './SentenceTransformExercise';
 import { MiniDialogueExercise } from './MiniDialogueExercise';
-import { useAdultMode } from '../../hooks/useAdultMode';
 import { CorrectSparkle } from '../animations/CorrectSparkle';
 import { WrongShake } from '../animations/WrongShake';
 import { CelebrationOverlay } from '../ui/CelebrationOverlay';
@@ -119,7 +118,6 @@ export function LessonRunner({
   onComplete,
   onExit,
 }: LessonRunnerProps) {
-  const { showXpCelebration } = useAdultMode();
   const [currentIndex, setCurrentIndex] = useState(0);
   // `showResult` survives only as the sparkle/shake trigger. Whether an
   // exercise has been answered is derived from `picks` — a single boolean
@@ -729,9 +727,9 @@ export function LessonRunner({
           visible
           mood={mood}
           title={title}
-          subtitle={
-            showXpCelebration ? `+${summary.xpEarned} XP · ${scoreLine}` : scoreLine
-          }
+          // XP is a server-side ledger now, not something the learner sees, so
+          // the summary reports what they got right rather than a point total.
+          subtitle={scoreLine}
           ctaLabel="Continue"
           onDismiss={onExit}
         />

@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { WritingPrompt } from '../../types';
 import { GradientBackground } from '../ui/GradientBackground';
 import { haptic } from '../../lib/haptics';
+import { cefrAccessibilityLabel, cefrCanDo } from '../../lib/cefr-labels';
 
 interface Props {
   prompt: WritingPrompt;
@@ -106,9 +107,17 @@ export function WritingExercise({ prompt, isGrading, attemptNumber = 1, onSubmit
             </Pressable>
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 14, fontWeight: '600', color: '#818CF8' }}>Writing Practice</Text>
-              <Text style={{ fontSize: 13, color: '#999' }}>
+              <Text
+                style={{ fontSize: 13, color: '#999' }}
+                accessibilityLabel={`${cefrAccessibilityLabel(prompt.cefrLevel)} ${scaffoldType !== 'free' ? scaffoldType.replace('_', ' ') : prompt.promptType}.${attemptNumber > 1 ? ` Attempt ${attemptNumber}.` : ''}`}
+              >
                 {prompt.cefrLevel} | {scaffoldType !== 'free' ? scaffoldType.replace('_', ' ') : prompt.promptType}
                 {attemptNumber > 1 ? ` | Attempt ${attemptNumber}` : ''}
+              </Text>
+              {/* The header is too tight for the full label, so the code carries
+                  its meaning on the line below rather than standing alone. */}
+              <Text style={{ fontSize: 12, color: '#777' }} accessibilityElementsHidden importantForAccessibility="no">
+                {cefrCanDo(prompt.cefrLevel)}
               </Text>
             </View>
           </View>

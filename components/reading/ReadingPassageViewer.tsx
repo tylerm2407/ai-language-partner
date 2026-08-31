@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AudioPlayButton } from '../audio/AudioPlayButton';
 import { WordTooltip } from './WordTooltip';
 import type { ReadingPassage, ReadingAnnotation, ReviewItem } from '../../types';
+import { cefrCanDo, cefrAccessibilityLabel } from '../../lib/cefr-labels';
 import { colors } from '../../config/theme';
 
 interface Props {
@@ -99,7 +100,25 @@ export function ReadingPassageViewer({
           {/* Pre-existing: this carried no color at all, so it rendered in RN's
               default black on the dark header. */}
           <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text.primary }} numberOfLines={1}>{passage.title}</Text>
-          <Text style={{ fontSize: 13, color: colors.text.tertiary }}>{passage.wordCount} words | {passage.cefrLevel}</Text>
+          {/* The meta line used to end at "| B1" and stop. The code stays — it is
+              what the library and the badges are keyed on — but the line under it
+              is what tells the reader why this passage is the right one. */}
+          <Text
+            style={{ fontSize: 13, color: colors.text.tertiary }}
+            accessibilityLabel={`${passage.wordCount} words. ${cefrAccessibilityLabel(passage.cefrLevel)}`}
+          >
+            {passage.wordCount} words {'·'} {passage.cefrLevel}
+          </Text>
+          {cefrCanDo(passage.cefrLevel) ? (
+            <Text
+              style={{ fontSize: 12, color: colors.text.tertiary, marginTop: 2 }}
+              numberOfLines={2}
+              accessibilityElementsHidden
+              importantForAccessibility="no"
+            >
+              {cefrCanDo(passage.cefrLevel)}
+            </Text>
+          ) : null}
         </View>
         {passage.audioUrl && (
           <AudioPlayButton audioUrl={passage.audioUrl} size={40} />

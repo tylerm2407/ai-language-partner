@@ -93,15 +93,20 @@ describe('LessonRow', () => {
     const r = render(<LessonRow {...baseRowProps} state="active" />);
     const rendered = text(r);
     expect(rendered).toContain('GO');
-    expect(rendered).toContain('20 XP · 5 MIN');
-    expect(labels(r)[0]).toBe('Lesson 3, Los números 1–20, next up, 20 XP, 5 minutes');
+    // Time, not points. XP is a server-side ledger the learner never sees, so
+    // the row advertises the only cost that is real to them.
+    expect(rendered).toContain('5 MIN');
+    expect(rendered).not.toContain('XP');
+    expect(labels(r)[0]).toBe('Lesson 3, Los números 1–20, next up, 5 minutes');
   });
 
-  it('shows the reward on a locked lesson and blocks the tap', () => {
+  it('offers no reward on a locked lesson and blocks the tap', () => {
     const onPress = jest.fn();
     const r = render(<LessonRow {...baseRowProps} state="locked" onPress={onPress} />);
 
-    expect(text(r)).toContain('+20 XP');
+    // A locked row used to dangle "+20 XP" as the reason to come back. There is
+    // no points economy to dangle any more.
+    expect(text(r)).not.toContain('XP');
 
     const row = hostNodes(r, (node) => node.props?.accessibilityState?.disabled === true);
     expect(row.length).toBeGreaterThan(0);
@@ -215,8 +220,22 @@ describe('CoursePills', () => {
     expect(rendered).toContain('Spanish A1');
     expect(rendered).toContain('A2');
     expect(rendered).not.toContain('Spanish A2');
-    // The abbreviated pills still announce their full course name.
-    expect(labels(r)).toEqual(['Spanish A1', 'Spanish A2', 'Spanish B1']);
+    // The abbreviated pills still announce their full course name — and, since
+    // a 56pt pill cannot show a can-do line, what the level means as well.
+    expect(labels(r)).toEqual([
+      'Spanish A1. Level A1. Handle simple, everyday phrases and introductions.',
+      'Spanish A2. Level A2. Handle short, routine exchanges on familiar topics.',
+      'Spanish B1. Level B1. Handle most situations while travelling, and describe experiences.',
+    ]);
+  });
+
+  it('captions the row with the selected course\'s can-do line', () => {
+    const courses = [course('a1', 'Spanish A1', 'A1'), course('b2', 'Spanish B2', 'B2')];
+    const r = render(
+      <CoursePills courses={courses} selectedCourseId="b2" onSelect={() => {}} />,
+    );
+    // Without this the row is six letter codes and nothing explaining them.
+    expect(text(r)).toContain('Discuss familiar and abstract topics with growing confidence');
   });
 
   it('renders nothing when there are no courses', () => {

@@ -26,7 +26,6 @@ const SQL_POOL: Record<string, { target: number; statKey: string }> = {
   complete_lessons_3: { target: 3, statKey: 'lessonsCompleted' },
   review_cards: { target: 10, statKey: 'cardsReviewed' },
   review_cards_20: { target: 20, statKey: 'cardsReviewed' },
-  xp_target: { target: 100, statKey: 'xpEarned' },
   learn_new_cards: { target: 5, statKey: 'cardsLearned' },
 };
 

@@ -20,6 +20,7 @@ import { BookReader } from '../../../../../components/reading/BookReader';
 import { supabase } from '../../../../../lib/supabase';
 import { loadErrorCopy, saveErrorCopy, type ErrorCopy } from '../../../../../lib/error-copy';
 import { bookXpKey } from '../../../../../lib/offline-queue';
+import { cefrBandColors, cefrCanDo, cefrAccessibilityLabel } from '../../../../../lib/cefr-labels';
 import type { ReadingBook, BookAnnotation, UserBookProgress, Subscription } from '../../../../../types';
 import { colors } from '../../../../../config/theme';
 
@@ -162,9 +163,11 @@ export default function BookDetailScreen() {
       // non-idempotent `increment_xp`.
       await incrementXpIdempotent(xpReward, bookXpKey(bookId));
 
+      // The XP above still accrues, but it is a server-side ledger the learner
+      // never sees — so the congratulation names the thing they actually did.
       Alert.alert(
-        'Book Completed!',
-        `You earned ${xpReward} XP for finishing "${book.title}"!`,
+        'Book finished',
+        `You read all ${book.wordCount.toLocaleString()} words of "${book.title}".`,
         [{ text: 'Continue', onPress: () => setIsReading(false) }]
       );
     } catch (err) {
@@ -254,15 +257,33 @@ export default function BookDetailScreen() {
           </View>
         )}
 
-        {/* CEFR Badge */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-          <View style={{ backgroundColor: colors.action.primaryTint, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
-            <Text style={{ fontSize: 14, color: colors.action.accent, fontWeight: '600' }}>{book.cefrLevel}</Text>
+        {/* CEFR Badge. The badge is keyed to the band rather than always indigo,
+            so it matches the same book's chip in the library grid. */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+          <View style={{ backgroundColor: cefrBandColors(book.cefrLevel).bg, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
+            <Text
+              style={{ fontSize: 14, color: cefrBandColors(book.cefrLevel).text, fontWeight: '600' }}
+              accessibilityLabel={cefrAccessibilityLabel(book.cefrLevel)}
+            >
+              {book.cefrLevel}
+            </Text>
           </View>
           <View style={{ backgroundColor: colors.surface.cardAlt, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, marginLeft: 8 }}>
             <Text style={{ fontSize: 13, color: colors.text.tertiary }}>{book.source === 'ai_generated' ? 'AI Story' : book.source === 'gutenberg' ? 'Classic' : 'Wikisource'}</Text>
           </View>
         </View>
+
+        {/* This screen is where a learner decides whether a book is for them, so
+            it spells the band out rather than making them decode the chip. */}
+        {cefrCanDo(book.cefrLevel) ? (
+          <Text
+            style={{ fontSize: 13, color: colors.text.tertiary, marginBottom: 12 }}
+            accessibilityElementsHidden
+            importantForAccessibility="no"
+          >
+            {cefrCanDo(book.cefrLevel)}
+          </Text>
+        ) : null}
 
         {/* Title & Author */}
         <Text style={{ fontSize: 28, fontWeight: '700', color: colors.text.primary, marginBottom: 4 }}>{book.title}</Text>
