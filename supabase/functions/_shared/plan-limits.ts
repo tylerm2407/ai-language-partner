@@ -58,7 +58,7 @@ export interface PlanLimits {
   offlineMode: boolean;
 }
 
-export // Avatar and lesson-TTS caps were cut 2026-08-31 after costing the whole
+// Avatar and lesson-TTS caps were cut 2026-08-31 after costing the whole
 // system against vendor prices. Two findings drove it:
 //   * gpt-image-2 at 1024x1024 is ~$0.211/image on 'high'. Ten a day is ~$63
 //     a month of cost on a $29.99 plan, for a profile picture. Quality is now
@@ -69,7 +69,7 @@ export // Avatar and lesson-TTS caps were cut 2026-08-31 after costing the whole
 //     same sentence. The old 200/day cap was priced as if every learner were
 //     Spanish.
 // These caps bound the tail; they are far above what a normal learner reaches.
-const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
+export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
   // `starter` = the free plan: signed up, never subscribed, and fully entitled
   // to everything that costs nothing per learner. Every per-call AI quota is 0
   // and each function refuses before spending a token — these zeros ARE the
