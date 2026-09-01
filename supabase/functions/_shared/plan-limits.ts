@@ -14,6 +14,13 @@ export interface PlanLimits {
   dailyWritingGrades: number;
   dailyPronunciationScores: number;
   /**
+   * Word/phrase translations per day (migration 093). Charged on cache MISS
+   * only — a cache hit costs nothing to serve, so billing it would penalise
+   * re-reading a passage while ignoring the long-tail text that actually
+   * spends money.
+   */
+  dailyTranslations: number;
+  /**
    * Lesson-exercise TTS syntheses per day, metered on
    * `daily_usage.lesson_tts_plays` (migration 077).
    *
@@ -87,10 +94,10 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
   // Classroom students are unaffected — their org's contract_config is merged
   // in by get_effective_limits with GREATEST(), so a 0 personal quota still
   // resolves to the school's allowance.
-  starter:   { dailyTextMessages: 0,  dailyVoiceMinutes: 0,  dailyWritingGrades: 0,  dailyPronunciationScores: 0, dailyLessonTtsPlays: 5,   dailyAvatarGenerations: 0, dailyNewCards: 5,    dailyHints: 5,    offlineMode: false },
-  basic:     { dailyTextMessages: 25, dailyVoiceMinutes: 10, dailyWritingGrades: 3,  dailyPronunciationScores: 3, dailyLessonTtsPlays: 25,  dailyAvatarGenerations: 1, dailyNewCards: 20,   dailyHints: 30,   offlineMode: false },
-  premium:   { dailyTextMessages: 50, dailyVoiceMinutes: 20, dailyWritingGrades: 7,  dailyPronunciationScores: 5, dailyLessonTtsPlays: 50, dailyAvatarGenerations: 1, dailyNewCards: 9999, dailyHints: 75,   offlineMode: true },
-  vip:       { dailyTextMessages: 75, dailyVoiceMinutes: 30, dailyWritingGrades: 12, dailyPronunciationScores: 7, dailyLessonTtsPlays: 80, dailyAvatarGenerations: 2, dailyNewCards: 9999, dailyHints: 9999, offlineMode: true },
+  starter:   { dailyTextMessages: 0,  dailyVoiceMinutes: 0,  dailyTranslations: 10,  dailyWritingGrades: 0,  dailyPronunciationScores: 0, dailyLessonTtsPlays: 5,   dailyAvatarGenerations: 0, dailyNewCards: 5,    dailyHints: 5,    offlineMode: false },
+  basic:     { dailyTextMessages: 25, dailyVoiceMinutes: 6,  dailyTranslations: 30, dailyWritingGrades: 3,  dailyPronunciationScores: 3, dailyLessonTtsPlays: 25,  dailyAvatarGenerations: 1, dailyNewCards: 20,   dailyHints: 30,   offlineMode: false },
+  premium:   { dailyTextMessages: 50, dailyVoiceMinutes: 12, dailyTranslations: 60, dailyWritingGrades: 7,  dailyPronunciationScores: 5, dailyLessonTtsPlays: 50, dailyAvatarGenerations: 1, dailyNewCards: 9999, dailyHints: 75,   offlineMode: true },
+  vip:       { dailyTextMessages: 75, dailyVoiceMinutes: 18, dailyTranslations: 90, dailyWritingGrades: 12, dailyPronunciationScores: 7, dailyLessonTtsPlays: 80, dailyAvatarGenerations: 2, dailyNewCards: 9999, dailyHints: 9999, offlineMode: true },
 };
 
 export function getPlanLimits(tier: string): PlanLimits {
@@ -122,6 +129,11 @@ export async function getEffectiveLimits(userId: string, supabase: any): Promise
       dailyVoiceMinutes: typeof row.dailyVoiceMinutes === 'number' ? row.dailyVoiceMinutes : (row.daily_voice_minutes ?? PLAN_LIMITS.starter.dailyVoiceMinutes),
       dailyWritingGrades: typeof row.dailyWritingGrades === 'number' ? row.dailyWritingGrades : (row.daily_writing_grades ?? PLAN_LIMITS.starter.dailyWritingGrades),
       dailyPronunciationScores: typeof row.dailyPronunciationScores === 'number' ? row.dailyPronunciationScores : (row.daily_pronunciation_scores ?? PLAN_LIMITS.starter.dailyPronunciationScores),
+      // Added by migration 093, so the RPC DOES return it — but fall back to
+      // the starter value rather than a plan default if an older deployment
+      // of the function is still live. Under-serving a limit is recoverable;
+      // handing out an unmetered paid call is not.
+      dailyTranslations: typeof row.dailyTranslations === 'number' ? row.dailyTranslations : PLAN_LIMITS.starter.dailyTranslations,
       // get_effective_limits predates these two keys and does not return them,
       // so each falls through to a plan default. School contract overrides
       // intentionally do not apply to either.

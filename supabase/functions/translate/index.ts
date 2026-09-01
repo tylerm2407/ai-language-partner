@@ -14,6 +14,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, corsResponse } from '../_shared/cors.ts';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { checkBurstLimit } from '../_shared/burst-limit.ts';
+import { getEffectiveLimits } from '../_shared/plan-limits.ts';
 import { isValidLanguage } from '../_shared/validation.ts';
 import { PROVIDER_TIMEOUT_MS, providerFetch } from '../_shared/provider-fetch.ts';
 import { translateWithValidation } from './translate-core.ts';
@@ -133,6 +134,38 @@ serve(async (req: Request) => {
   if (cached && typeof cached.translation === 'string') {
     await touchCacheEntry(supabase, hash, cached.expires_at as string | null);
     return json({ translation: cached.translation });
+  }
+
+  // ── Daily ceiling ──────────────────────────────────────────────────────
+  // Charged HERE, after the cache is known to have missed, because this is
+  // the first line that leads to a paid call. Metering cache hits instead
+  // would bill a learner for re-opening a passage they already read, which
+  // costs nothing to serve, while doing nothing about the case that actually
+  // spends money: long-tail text the cache cannot absorb.
+  //
+  // Until migration 093 this function had no daily ceiling at all — the only
+  // paid path in the app without one. The 30/60s burst limit still allowed
+  // ~43,000 calls a day from one account.
+  const limits = await getEffectiveLimits(authUser.userId, supabase);
+  const { data: allowed, error: quotaErr } = await supabase.rpc('consume_daily_quota', {
+    p_user_id: authUser.userId,
+    p_counter: 'translations',
+    p_limit: limits.dailyTranslations,
+  });
+  if (quotaErr) {
+    // Fail CLOSED. This is the guard on a paid call, and an outage in the
+    // meter is not a reason to hand out unmetered generation.
+    console.error('[translate] consume_daily_quota failed:', quotaErr.message);
+    return json({ error: 'Translation is temporarily unavailable.', code: 'QUOTA_UNAVAILABLE' }, 503);
+  }
+  if (!allowed) {
+    return json(
+      {
+        error: "That's all your translations for today.",
+        code: 'DAILY_TRANSLATION_LIMIT_REACHED',
+      },
+      429,
+    );
   }
 
   const systemPrompt = `You translate a short conversational message from ${sourceLanguage} into ${targetLanguage}. Return ONLY the translation — no quotes, no preamble, no explanation, no "Here is the translation:" lead-in. Preserve tone, punctuation, and emoji. If the input already appears to be in ${targetLanguage}, return it unchanged. Do not add commentary.`;
