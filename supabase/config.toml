@@ -28,9 +28,19 @@ verify_jwt = false
 verify_jwt = false
 
 # ─── translate ────────────────────────────────────────────────────────────
-# On-demand translation for ChatBubble Translate button. Auth enforced by the
-# function body via getAuthenticatedUser (_shared/auth.ts).
+# On-demand translation for the ChatBubble Translate button and for tap-a-word
+# lookup in the reader. Auth enforced by the function body via
+# getAuthenticatedUser (_shared/auth.ts).
 [functions.translate]
+verify_jwt = false
+
+# ─── explain-passage ──────────────────────────────────────────────────────
+# Plain-language explanation of one paragraph in the reader. Same posture as
+# translate: auth enforced by the function body via getAuthenticatedUser
+# (_shared/auth.ts), so the platform gate stays off. An entry here is not
+# optional — without one the CLI would deploy it with verify_jwt = true and
+# the reader's Explain button would 401 against this project's access tokens.
+[functions.explain-passage]
 verify_jwt = false
 
 # ─── daily-news ───────────────────────────────────────────────────────────

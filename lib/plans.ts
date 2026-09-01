@@ -39,6 +39,14 @@ export function isUnlimitedHints(cap: number): boolean {
   return cap >= UNLIMITED_HINTS;
 }
 
+/** `dailyWordLookups` value that means "no ceiling" (vip). Same sentinel and
+ *  same reason as the two above. */
+export const UNLIMITED_WORD_LOOKUPS = UNLIMITED_NEW_CARDS;
+
+export function isUnlimitedWordLookups(cap: number): boolean {
+  return cap >= UNLIMITED_WORD_LOOKUPS;
+}
+
 export interface SchoolContractConfig {
   dailyVoiceMinutes: number;
   dailyTextMessages: number;
@@ -50,6 +58,10 @@ export interface SchoolContractConfig {
   // that a contract override has never been needed.
   dailyNewCards: number;
   dailyHints: number;
+  // No `dailyTranslations` / `dailyWordLookups` here for the same reason as
+  // `dailyLessonTtsPlays` above — get_effective_limits does merge them, but no
+  // contract_config has ever carried either key, so the COALESCE in migrations
+  // 093/094 resolves them to 0 and the personal plan's value wins.
   audiobookNarration: boolean;
   offlineMode?: boolean;
   allowed_email_domains?: string[];
@@ -80,6 +92,19 @@ export interface PlanDefinition {
    * and so is a live call every time.
    */
   dailyHints: number;
+  /** Chat Translate-button translations per day (migration 093), charged on
+   *  cache miss only. */
+  dailyTranslations: number;
+  /**
+   * Single-word lookups in the reader per day (migration 094), charged on
+   * cache miss only.
+   *
+   * Far larger than `dailyTranslations` because one lookup is one word rather
+   * than up to 1500 characters, and because reading a book is the main thing a
+   * free account can do at length. A word the corpus has already been asked
+   * about comes back from a cache shared by every learner and costs nothing.
+   */
+  dailyWordLookups: number;
   audiobookNarration: boolean;
   offlineMode: boolean;
 }
@@ -126,6 +151,8 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     dailyLessonTtsPlays: 5,
     dailyNewCards: 5,
     dailyHints: 5,
+    dailyTranslations: 10,
+    dailyWordLookups: 60,
     audiobookNarration: false,
     offlineMode: false,
   },
@@ -133,12 +160,14 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     name: 'Basic',
     priceMonthlyUsd: 9.99,
     dailyTextMessages: 25,
-    dailyVoiceMinutes: 10,
+    dailyVoiceMinutes: 6,
     dailyWritingGrades: 3,
     dailyPronunciationScores: 3,
     dailyLessonTtsPlays: 25,
     dailyNewCards: 20,
     dailyHints: 30,
+    dailyTranslations: 30,
+    dailyWordLookups: 300,
     audiobookNarration: false,
     offlineMode: false,
   },
@@ -146,12 +175,14 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     name: 'Premium',
     priceMonthlyUsd: 19.99,
     dailyTextMessages: 50,
-    dailyVoiceMinutes: 20,
+    dailyVoiceMinutes: 12,
     dailyWritingGrades: 7,
     dailyPronunciationScores: 5,
     dailyLessonTtsPlays: 50,
     dailyNewCards: UNLIMITED_NEW_CARDS,
     dailyHints: 75,
+    dailyTranslations: 60,
+    dailyWordLookups: 600,
     audiobookNarration: false,
     offlineMode: true,
   },
@@ -159,12 +190,14 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     name: 'VIP',
     priceMonthlyUsd: 29.99,
     dailyTextMessages: 75,
-    dailyVoiceMinutes: 30,
+    dailyVoiceMinutes: 18,
     dailyWritingGrades: 12,
     dailyPronunciationScores: 7,
     dailyLessonTtsPlays: 80,
     dailyNewCards: UNLIMITED_NEW_CARDS,
     dailyHints: UNLIMITED_HINTS,
+    dailyTranslations: 90,
+    dailyWordLookups: UNLIMITED_WORD_LOOKUPS,
     audiobookNarration: true,
     offlineMode: true,
   },
@@ -222,6 +255,8 @@ export function getPlanLimits(planId: PlanId | string): {
   dailyPronunciationScores: number;
   dailyLessonTtsPlays: number;
   dailyHints: number;
+  dailyTranslations: number;
+  dailyWordLookups: number;
 } {
   const plan = PLANS[planId as PlanId] ?? PLANS.starter;
   return {
@@ -231,6 +266,8 @@ export function getPlanLimits(planId: PlanId | string): {
     dailyPronunciationScores: plan.dailyPronunciationScores,
     dailyLessonTtsPlays: plan.dailyLessonTtsPlays,
     dailyHints: plan.dailyHints,
+    dailyTranslations: plan.dailyTranslations,
+    dailyWordLookups: plan.dailyWordLookups,
   };
 }
 

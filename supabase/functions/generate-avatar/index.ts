@@ -230,12 +230,21 @@ serve(async (req: Request) => {
   form.append('image', new Blob([photoBytes], { type: mimeType }), 'source.png');
   form.append('prompt', style.prompt);
   form.append('size', '1024x1024');
-  // 'medium', not 'high'. Verified 2026-08-31: gpt-image-2 at 1024x1024 is
-  // ~$0.211/image at high and ~$0.053 at medium — 4x — for a 1024px avatar
-  // shown at roughly 100pt on a phone. At the old VIP cap of 10/day this one
-  // setting was ~$63/month of cost against a $29.99 plan, the most expensive
-  // thing in the app by a wide margin.
-  form.append('quality', 'medium');
+  // 'high', deliberately, paired with a hard 1/day cap.
+  //
+  // This is a considered reversal of the 2026-08-31 cut to 'medium'. That
+  // change optimised the wrong variable: it made every avatar cheaper but
+  // left the door open to several a day, which is backwards for what this
+  // feature actually is. Nobody wants four mediocre portraits; they want one
+  // good one. Quality is the product here, quantity is the cost.
+  //
+  // The price is real and worth stating plainly: ~$0.211 per image at 1024px
+  // 'high' against ~$0.053 at 'medium' (verified 2026-08-31). At one a day
+  // that is ~$6.33/month of worst-case cost, which on the $9.99 basic tier is
+  // most of the net revenue — so the 1/day cap is not a nicety, it is the
+  // only thing making this affordable. Do not raise the cap without
+  // re-pricing the tier.
+  form.append('quality', 'high');
   form.append('n', '1');
   form.append('output_format', 'png');
   // `auto` is the stricter setting. This ships to students, so we keep the

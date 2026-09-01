@@ -1,6 +1,13 @@
 -- Seed Content: Reading Passages & Writing Prompts for Spanish A1, A2, B2
 -- B1 content already exists in seed.sql
 -- Run after seed.sql: npx supabase db push
+--
+-- The reading_annotations inserts that used to sit under each passage are gone
+-- with the table (migration 094). They were the only rows anyone ever wrote to
+-- it, they were never applied to production, and hand-authoring a start_index
+-- per word does not scale past a seed file — which is why the 10,231 imported
+-- Gutenberg books had none at all. Words are looked up when they are tapped
+-- now, so a passage needs no annotations to be readable.
 
 -- ============================================================
 -- SPANISH A1 — Reading Passages (simple sentences, 20-50 words)
@@ -9,26 +16,12 @@
 INSERT INTO reading_passages (id, course_id, cefr_level, title, content, content_translation, word_count, is_published) VALUES
 ('seed-read-a1-001', 'aabbccdd-1111-0000-0000-000000000000', 'A1', 'Mi familia', 'Hola. Me llamo Carlos. Tengo una familia pequeña. Mi mamá se llama Ana. Mi papá se llama Pedro. Tengo un hermano. Se llama Luis. Vivimos en una casa grande. Tenemos un perro.', 'Hello. My name is Carlos. I have a small family. My mom is named Ana. My dad is named Pedro. I have a brother. His name is Luis. We live in a big house. We have a dog.', 40, true);
 
-INSERT INTO reading_annotations (id, passage_id, word_or_phrase, translation, start_index, end_index, part_of_speech) VALUES
-('seed-ann-a1-001-1', 'seed-read-a1-001', 'familia', 'family', 38, 45, 'noun'),
-('seed-ann-a1-001-2', 'seed-read-a1-001', 'pequeña', 'small', 46, 53, 'adjective'),
-('seed-ann-a1-001-3', 'seed-read-a1-001', 'hermano', 'brother', 114, 121, 'noun'),
-('seed-ann-a1-001-4', 'seed-read-a1-001', 'casa', 'house', 148, 152, 'noun'),
-('seed-ann-a1-001-5', 'seed-read-a1-001', 'perro', 'dog', 168, 173, 'noun');
-
 INSERT INTO reading_questions (id, passage_id, order_index, question_text, question_type, correct_answer, accepted_answers, options) VALUES
 ('seed-rq-a1-001-1', 'seed-read-a1-001', 0, 'What is the boy''s name?', 'multiple_choice', 'Carlos', '{}', '{"Carlos","Luis","Pedro","Ana"}'),
 ('seed-rq-a1-001-2', 'seed-read-a1-001', 1, 'Does Carlos have a dog?', 'true_false', 'True', '{}', '{"True","False"}');
 
 INSERT INTO reading_passages (id, course_id, cefr_level, title, content, content_translation, word_count, is_published) VALUES
 ('seed-read-a1-002', 'aabbccdd-1111-0000-0000-000000000000', 'A1', 'En la tienda', 'Voy a la tienda. Necesito leche, pan y fruta. La leche cuesta dos euros. El pan cuesta un euro. Las manzanas cuestan tres euros. Pago con dinero. La señora dice: Gracias.', 'I go to the store. I need milk, bread and fruit. The milk costs two euros. The bread costs one euro. The apples cost three euros. I pay with money. The lady says: Thank you.', 35, true);
-
-INSERT INTO reading_annotations (id, passage_id, word_or_phrase, translation, start_index, end_index, part_of_speech) VALUES
-('seed-ann-a1-002-1', 'seed-read-a1-002', 'tienda', 'store', 10, 16, 'noun'),
-('seed-ann-a1-002-2', 'seed-read-a1-002', 'leche', 'milk', 27, 32, 'noun'),
-('seed-ann-a1-002-3', 'seed-read-a1-002', 'pan', 'bread', 34, 37, 'noun'),
-('seed-ann-a1-002-4', 'seed-read-a1-002', 'cuesta', 'costs', 52, 58, 'verb'),
-('seed-ann-a1-002-5', 'seed-read-a1-002', 'dinero', 'money', 132, 138, 'noun');
 
 INSERT INTO reading_questions (id, passage_id, order_index, question_text, question_type, correct_answer, accepted_answers, options) VALUES
 ('seed-rq-a1-002-1', 'seed-read-a1-002', 0, 'How much does the milk cost?', 'multiple_choice', 'Two euros', '{}', '{"One euro","Two euros","Three euros","Five euros"}'),
@@ -70,13 +63,6 @@ INSERT INTO writing_prompts (id, course_id, cefr_level, prompt_text, prompt_type
 
 INSERT INTO reading_passages (id, course_id, cefr_level, title, content, content_translation, word_count, is_published) VALUES
 ('seed-read-a2-001', 'aabbccdd-1111-0000-0000-a20000000000', 'A2', 'Un fin de semana perfecto', 'El sábado pasado tuve un fin de semana perfecto. Me desperté tarde, a las diez de la mañana. Desayuné huevos con tostadas y jugo de naranja. Después, fui al centro comercial con mis amigos. Compramos ropa nueva y comimos pizza en un restaurante italiano. Por la noche, vimos una película de comedia en el cine. El domingo descansé en casa y leí un libro interesante. Fue un fin de semana muy divertido.', 'Last Saturday I had a perfect weekend. I woke up late, at ten in the morning. I had eggs with toast and orange juice for breakfast. Then I went to the mall with my friends. We bought new clothes and ate pizza at an Italian restaurant. In the evening, we watched a comedy movie at the cinema. On Sunday I rested at home and read an interesting book. It was a very fun weekend.', 80, true);
-
-INSERT INTO reading_annotations (id, passage_id, word_or_phrase, translation, start_index, end_index, part_of_speech) VALUES
-('seed-ann-a2-001-1', 'seed-read-a2-001', 'fin de semana', 'weekend', 30, 43, 'noun'),
-('seed-ann-a2-001-2', 'seed-read-a2-001', 'desperté', 'woke up', 58, 66, 'verb'),
-('seed-ann-a2-001-3', 'seed-read-a2-001', 'centro comercial', 'mall', 158, 174, 'noun'),
-('seed-ann-a2-001-4', 'seed-read-a2-001', 'película', 'movie', 290, 298, 'noun'),
-('seed-ann-a2-001-5', 'seed-read-a2-001', 'divertido', 'fun', 397, 406, 'adjective');
 
 INSERT INTO reading_questions (id, passage_id, order_index, question_text, question_type, correct_answer, accepted_answers, options) VALUES
 ('seed-rq-a2-001-1', 'seed-read-a2-001', 0, 'What time did the person wake up on Saturday?', 'multiple_choice', 'Ten in the morning', '{}', '{"Seven","Eight","Ten in the morning","Noon"}'),

@@ -1,9 +1,11 @@
 import { useState, useRef } from 'react';
 import { View, ActivityIndicator, Text, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeBack } from '../../../../hooks/useSafeBack';
+import { useProfile } from '../../../../hooks/useProfile';
 import { useReadingPassage } from '../../../../hooks/useReadingPassage';
+import { useWordLookup } from '../../../../hooks/useWordLookup';
 import { ReadingPassageViewer } from '../../../../components/reading/ReadingPassageViewer';
 import { ComprehensionQuestions } from '../../../../components/reading/ComprehensionQuestions';
 import { haptic } from '../../../../lib/haptics';
@@ -13,18 +15,24 @@ import { GlowLayer } from '../../../../components/ui/GlowBackground';
 export default function ReadingPassageScreen() {
   const { passageId } = useLocalSearchParams<{ passageId: string }>();
   const goBack = useSafeBack('/(app)');
+  const router = useRouter();
+  const { profile } = useProfile();
   const {
     passage,
-    annotations,
     questions,
     isLoading,
     error,
-    selectedAnnotation,
-    selectWord,
-    dismissTooltip,
     addToReview,
     completeReading,
   } = useReadingPassage(passageId ?? null);
+
+  // Passages carry no annotations of their own — `reading_annotations` was
+  // dropped in migration 094 — so every word here is looked up on demand.
+  const help = useWordLookup({
+    sourceLanguage: profile?.targetLanguage ?? 'en',
+    targetLanguage: profile?.nativeLanguage ?? 'en',
+    cefrLevel: passage?.cefrLevel ?? 'A1',
+  });
 
   const [phase, setPhase] = useState<'reading' | 'questions' | 'complete'>('reading');
   const [score, setScore] = useState(0);
@@ -98,7 +106,7 @@ export default function ReadingPassageScreen() {
         questions={questions}
         onComplete={async (comprehensionScore) => {
           setScore(comprehensionScore);
-          await completeReading(comprehensionScore);
+          await completeReading(comprehensionScore, help.lookupCount);
           // Fired here rather than in an effect on the 'complete' phase because
           // this is a handler on a real tap — no mount/remount to guard against.
           // The last question's own verdict buzz came from a separate gesture
@@ -114,11 +122,19 @@ export default function ReadingPassageScreen() {
   return (
     <ReadingPassageViewer
       passage={passage}
-      annotations={annotations}
-      selectedAnnotation={selectedAnnotation}
-      onSelectWord={selectWord}
-      onDismissTooltip={dismissTooltip}
-      onAddToReview={(annotation) => addToReview(annotation, passage.courseId)}
+      selectedRef={help.selectedRef}
+      lookup={help.state}
+      explanation={help.explanation}
+      onWordPress={help.onWordPress}
+      onExplain={(paragraph) => help.explain(paragraph.index, paragraph.text)}
+      onRetryLookup={help.retry}
+      onDismissHelp={help.dismiss}
+      onAddToReview={() =>
+        help.cardSource
+          ? addToReview(help.cardSource, passage.courseId)
+          : Promise.resolve(null)
+      }
+      onUpgrade={() => router.push('/(app)/profile/subscription')}
       onContinue={async () => {
         if (questions.length > 0) {
           setPhase('questions');
@@ -128,7 +144,7 @@ export default function ReadingPassageScreen() {
         // navigating so it isn't cancelled on unmount; guard double-taps.
         if (finishingRef.current) return;
         finishingRef.current = true;
-        await completeReading(1);
+        await completeReading(1, help.lookupCount);
         // A passage with no comprehension questions never reaches the
         // 'complete' screen — it just pops back. The learner still finished
         // something, and this is the only acknowledgement they get.

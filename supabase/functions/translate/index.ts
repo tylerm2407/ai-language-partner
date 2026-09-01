@@ -1,6 +1,8 @@
 // Supabase Edge Function: Translate
-// Cheap on-demand translation of short conversational messages via Claude
-// Haiku. Used by the AI Chat "Translate" button in ChatBubble.tsx.
+// Cheap on-demand translation of short text via Claude Haiku. Two callers:
+// the AI Chat "Translate" button in ChatBubble.tsx, and tap-a-word lookup in
+// the reader (which passes purpose: 'word_lookup' and is charged against a
+// separate, much larger daily counter — see resolveQuotaCounter).
 //
 // Auth: deployed with verify_jwt: false. Authentication is performed by the
 // function body via _shared/auth.ts getAuthenticatedUser(), which calls
@@ -17,8 +19,8 @@ import { checkBurstLimit } from '../_shared/burst-limit.ts';
 import { getEffectiveLimits } from '../_shared/plan-limits.ts';
 import { isValidLanguage } from '../_shared/validation.ts';
 import { PROVIDER_TIMEOUT_MS, providerFetch } from '../_shared/provider-fetch.ts';
-import { translateWithValidation } from './translate-core.ts';
-import { cacheExpiryIso, shouldRefreshCacheEntry } from './cache-retention.ts';
+import { resolveQuotaCounter, translateWithValidation } from './translate-core.ts';
+import { cacheExpiryIso, shouldRefreshCacheEntry } from '../_shared/cache-retention.ts';
 
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -31,6 +33,12 @@ interface TranslateRequest {
   text: string;
   sourceLanguage: string;
   targetLanguage: string;
+  /**
+   * 'word_lookup' asks to be billed against `word_lookups` rather than
+   * `translations`. The claim is checked, not trusted: resolveQuotaCounter
+   * refuses anything that is not a single token.
+   */
+  purpose?: 'word_lookup';
 }
 
 function json(body: unknown, status = 200): Response {
@@ -97,7 +105,7 @@ serve(async (req: Request) => {
     return json({ error: 'Invalid JSON body' }, 400);
   }
 
-  const { text, sourceLanguage, targetLanguage } = body;
+  const { text, sourceLanguage, targetLanguage, purpose } = body;
   if (!text || !sourceLanguage || !targetLanguage) {
     return json({ error: 'Missing required fields: text, sourceLanguage, targetLanguage' }, 400);
   }
@@ -118,6 +126,22 @@ serve(async (req: Request) => {
   if (sourceLanguage === targetLanguage) {
     return json({ translation: input });
   }
+
+  // Which counter, and how big, depends on what was asked for. A reading
+  // lookup is one word and is billed to the far larger `word_lookups`
+  // allowance (migration 094); anything else is a chat-sized translation.
+  // The claim is verified against the input, never taken on trust.
+  const decision = resolveQuotaCounter(input, purpose);
+  if (!decision.ok) {
+    return json(
+      {
+        error: 'Word lookup accepts a single word.',
+        code: decision.code,
+      },
+      400,
+    );
+  }
+  const counter = decision.counter;
 
   // DB-backed cache: identical (text, source, target) requests skip the
   // Haiku call entirely. Lookup failure is non-fatal — fall through to
@@ -149,8 +173,8 @@ serve(async (req: Request) => {
   const limits = await getEffectiveLimits(authUser.userId, supabase);
   const { data: allowed, error: quotaErr } = await supabase.rpc('consume_daily_quota', {
     p_user_id: authUser.userId,
-    p_counter: 'translations',
-    p_limit: limits.dailyTranslations,
+    p_counter: counter,
+    p_limit: counter === 'word_lookups' ? limits.dailyWordLookups : limits.dailyTranslations,
   });
   if (quotaErr) {
     // Fail CLOSED. This is the guard on a paid call, and an outage in the
@@ -160,14 +184,24 @@ serve(async (req: Request) => {
   }
   if (!allowed) {
     return json(
-      {
-        error: "That's all your translations for today.",
-        code: 'DAILY_TRANSLATION_LIMIT_REACHED',
-      },
+      counter === 'word_lookups'
+        ? {
+            error: "That's all your word lookups for today.",
+            code: 'DAILY_WORD_LOOKUP_LIMIT_REACHED',
+          }
+        : {
+            error: "That's all your translations for today.",
+            code: 'DAILY_TRANSLATION_LIMIT_REACHED',
+          },
       429,
     );
   }
 
+  // ONE prompt for both callers, deliberately. The cache key is
+  // (source, target, text) and says nothing about who asked, so a reading
+  // lookup and a chat translation of the same word share a row — if they were
+  // generated from different prompts, which of the two you got would depend on
+  // who happened to ask first. A single word is a fine input to this prompt.
   const systemPrompt = `You translate a short conversational message from ${sourceLanguage} into ${targetLanguage}. Return ONLY the translation — no quotes, no preamble, no explanation, no "Here is the translation:" lead-in. Preserve tone, punctuation, and emoji. If the input already appears to be in ${targetLanguage}, return it unchanged. Do not add commentary.`;
 
   // One retry on transient API failure; output is safety-validated
@@ -214,7 +248,7 @@ serve(async (req: Request) => {
     // counter self-clears at the learner's next local midnight either way.
     const { error: refundErr } = await supabase.rpc('refund_daily_quota', {
       p_user_id: authUser.userId,
-      p_counter: 'translations',
+      p_counter: counter,
     });
     if (refundErr) {
       console.error('[translate] refund_daily_quota failed:', refundErr.message);

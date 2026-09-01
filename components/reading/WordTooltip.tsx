@@ -1,16 +1,55 @@
-import { View, Text, Pressable } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { haptic } from '../../lib/haptics';
 import { AudioPlayButton } from '../audio/AudioPlayButton';
-import type { ReadingAnnotation, ReviewItem } from '../../types';
-import { colors } from '../../config/theme';
+import type { ReviewItem, WordLookup } from '../../types';
+import { colors, radii, spacing } from '../../config/theme';
+
+/**
+ * What the reader currently knows about the tapped word.
+ *
+ * Lookups used to be preloaded annotations, so this panel never needed a
+ * loading or a failed state. They are fetched on demand now, so it does — and
+ * "out of lookups for today" is a distinct state from "that didn't work",
+ * because one of them is worth a retry button and the other is not.
+ */
+export type WordLookupState =
+  | { status: 'loading'; word: string }
+  | { status: 'ready'; lookup: WordLookup }
+  | { status: 'quota'; word: string }
+  | { status: 'error'; word: string };
 
 interface Props {
-  annotation: ReadingAnnotation;
+  state: WordLookupState;
   onAddToReview: () => Promise<ReviewItem | null>;
+  onRetry: () => void;
   onDismiss: () => void;
+  /** Shown under the quota message. Omitted where there is nothing to sell. */
+  onUpgrade?: () => void;
 }
 
-export function WordTooltip({ annotation, onAddToReview, onDismiss }: Props) {
+const cardStyle = {
+  backgroundColor: colors.surface.card,
+  borderRadius: radii.lg,
+  padding: spacing.md,
+  marginTop: spacing.sm,
+  borderWidth: 1,
+  borderColor: colors.border.default,
+} as const;
+
+// 44pt minimum touch target (Apple HIG).
+const buttonBase = {
+  flex: 1,
+  paddingVertical: spacing.sm,
+  minHeight: 44,
+  borderRadius: radii.md,
+  alignItems: 'center',
+  justifyContent: 'center',
+} as const;
+
+const secondaryButton = { ...buttonBase, backgroundColor: colors.surface.cardAlt } as const;
+const primaryButton = { ...buttonBase, backgroundColor: colors.action.primaryFill } as const;
+
+export function WordTooltip({ state, onAddToReview, onRetry, onDismiss, onUpgrade }: Props) {
   const handleAddToReview = async () => {
     const result = await onAddToReview();
     if (result) {
@@ -19,60 +58,95 @@ export function WordTooltip({ annotation, onAddToReview, onDismiss }: Props) {
     onDismiss();
   };
 
+  const word = state.status === 'ready' ? state.lookup.word : state.word;
+
   return (
-    <View style={{
-      backgroundColor: colors.surface.card,
-      borderRadius: 14,
-      padding: 16,
-      marginTop: 12,
-      borderWidth: 1,
-      borderColor: colors.border.default,
-    }}>
-      {/* Word & Translation */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+    <View style={cardStyle}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs }}>
         <View style={{ flex: 1 }}>
           <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text.primary }}>
-            {annotation.wordOrPhrase}
+            {word}
           </Text>
-          <Text style={{ fontSize: 16, color: colors.text.tertiary, marginTop: 2 }}>
-            {annotation.translation}
-          </Text>
-          {annotation.partOfSpeech && (
-            <Text style={{ fontSize: 13, color: colors.text.tertiary, fontStyle: 'italic', marginTop: 2 }}>
-              {annotation.partOfSpeech}
+
+          {state.status === 'loading' && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.xxs }}>
+              <ActivityIndicator size="small" color={colors.text.tertiary} />
+              <Text style={{ fontSize: 15, color: colors.text.tertiary, marginLeft: spacing.xs }}>
+                Looking it up…
+              </Text>
+            </View>
+          )}
+
+          {state.status === 'ready' && (
+            <>
+              <Text style={{ fontSize: 16, color: colors.text.tertiary, marginTop: 2 }}>
+                {state.lookup.translation}
+              </Text>
+              {state.lookup.partOfSpeech && (
+                <Text style={{ fontSize: 13, color: colors.text.tertiary, fontStyle: 'italic', marginTop: 2 }}>
+                  {state.lookup.partOfSpeech}
+                </Text>
+              )}
+            </>
+          )}
+
+          {state.status === 'quota' && (
+            <Text style={{ fontSize: 15, color: colors.text.tertiary, marginTop: 4 }}>
+              That&apos;s all your word lookups for today. They reset overnight.
+            </Text>
+          )}
+
+          {state.status === 'error' && (
+            <Text style={{ fontSize: 15, color: colors.text.tertiary, marginTop: 4 }}>
+              Couldn&apos;t look that up.
             </Text>
           )}
         </View>
-        {annotation.audioUrl && (
-          <AudioPlayButton audioUrl={annotation.audioUrl} size={44} />
+
+        {state.status === 'ready' && state.lookup.audioUrl && (
+          <AudioPlayButton audioUrl={state.lookup.audioUrl} size={44} />
         )}
       </View>
 
-      {/* Actions */}
-      <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
-        <Pressable
-          onPress={handleAddToReview}
-          style={{
-            flex: 1,
-            backgroundColor: '#4F46E5',
-            paddingVertical: 10,
-            borderRadius: 10,
-            alignItems: 'center',
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Add to review queue"
-        >
-          <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>Add to Review</Text>
-        </Pressable>
+      <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs }}>
+        {state.status === 'ready' && (
+          <Pressable
+            onPress={handleAddToReview}
+            style={primaryButton}
+            accessibilityRole="button"
+            accessibilityLabel="Add to review queue"
+          >
+            <Text style={{ color: colors.text.onPrimary, fontSize: 14, fontWeight: '600' }}>Add to Review</Text>
+          </Pressable>
+        )}
+
+        {state.status === 'error' && (
+          <Pressable
+            onPress={onRetry}
+            style={primaryButton}
+            accessibilityRole="button"
+            accessibilityLabel="Try the lookup again"
+          >
+            <Text style={{ color: colors.text.onPrimary, fontSize: 14, fontWeight: '600' }}>Try Again</Text>
+          </Pressable>
+        )}
+
+        {/* No retry on the quota state: it will not succeed again today, and
+            offering the button would be a lie the learner pays attention to. */}
+        {state.status === 'quota' && onUpgrade && (
+          <Pressable
+            onPress={onUpgrade}
+            style={primaryButton}
+            accessibilityRole="button"
+            accessibilityLabel="See plans"
+          >
+            <Text style={{ color: colors.text.onPrimary, fontSize: 14, fontWeight: '600' }}>See Plans</Text>
+          </Pressable>
+        )}
+
         <Pressable
           onPress={onDismiss}
-          style={{
-            flex: 1,
-            backgroundColor: colors.surface.cardAlt,
-            paddingVertical: 10,
-            borderRadius: 10,
-            alignItems: 'center',
-          }}
+          style={secondaryButton}
           accessibilityRole="button"
           accessibilityLabel="Dismiss"
         >

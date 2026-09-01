@@ -569,16 +569,28 @@ export interface ReadingPassage {
   createdAt: string;
 }
 
-export interface ReadingAnnotation {
-  id: string;
-  passageId: string;
-  wordOrPhrase: string;
+/**
+ * One word's meaning, however it was obtained.
+ *
+ * Replaces the old `ReadingAnnotation`, which described a row of the
+ * `reading_annotations` table — a table that had 0 rows in production and no
+ * writer anywhere in the repo, and was dropped in migration 094. Help in the
+ * reader is now on demand: a word is looked up when it is tapped, from
+ * `book_annotations` if the book happens to have one and from the `translate`
+ * function otherwise, which is what makes the 10,231 imported Gutenberg books
+ * readable at all.
+ *
+ * Structurally satisfies `AnnotationCardSource`, so it can be handed straight
+ * to `addCardFromAnnotation` and become an SRS card.
+ */
+export interface WordLookup {
+  /** The normalised form — punctuation stripped, lowercased. */
+  word: string;
   translation: string;
-  startIndex: number;
-  endIndex: number;
-  cardId: string | null;
-  audioUrl: string | null;
+  /** Only ever set on an annotation; a live translation does not return one. */
   partOfSpeech: string | null;
+  audioUrl: string | null;
+  source: 'annotation' | 'translated';
 }
 
 export interface ReadingQuestion {

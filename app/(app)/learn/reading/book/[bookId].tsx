@@ -6,8 +6,11 @@ import { useSafeBack } from '../../../../../hooks/useSafeBack';
 import { Ionicons } from '@expo/vector-icons';
 import * as Sentry from '@sentry/react-native';
 import { useAuth } from '../../../../../hooks/useAuth';
+import { useProfile } from '../../../../../hooks/useProfile';
+import { useWordLookup } from '../../../../../hooks/useWordLookup';
 import {
-  fetchBookById,
+  fetchBookMeta,
+  fetchBookContent,
   fetchBookAnnotations,
   fetchUserBookProgress,
   upsertBookProgress,
@@ -15,8 +18,10 @@ import {
   NewCardsCapReachedError,
   incrementXpIdempotent,
   fetchSubscription,
+  type AnnotationCardSource,
 } from '../../../../../lib/supabase-queries';
 import { BookReader } from '../../../../../components/reading/BookReader';
+import { getCached, readCacheKey, setCached } from '../../../../../lib/read-cache';
 import { supabase } from '../../../../../lib/supabase';
 import { loadErrorCopy, saveErrorCopy, type ErrorCopy } from '../../../../../lib/error-copy';
 import { bookXpKey } from '../../../../../lib/offline-queue';
@@ -29,7 +34,10 @@ export default function BookDetailScreen() {
   const router = useRouter();
   const goBack = useSafeBack('/(app)');
   const { user } = useAuth();
+  const { profile } = useProfile();
   const [book, setBook] = useState<ReadingBook | null>(null);
+  const [content, setContent] = useState<string | null>(null);
+  const [isLoadingContent, setIsLoadingContent] = useState(false);
   const [annotations, setAnnotations] = useState<BookAnnotation[]>([]);
   const [progress, setProgress] = useState<UserBookProgress | null>(null);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
@@ -47,8 +55,11 @@ export default function BookDetailScreen() {
     setIsLoading(true);
     setError(null);
     try {
+      // Metadata only. `content` is fetched behind the Read button below —
+      // it averages 211 kB and reaches 1.8 MB, and making the cover screen
+      // wait on the whole book was the slowest thing in the reader.
       const [bookData, annData, progressData, sub] = await Promise.all([
-        fetchBookById(bookId),
+        fetchBookMeta(bookId),
         fetchBookAnnotations(bookId),
         fetchUserBookProgress(user.id, bookId),
         fetchSubscription(user.id),
@@ -71,6 +82,56 @@ export default function BookDetailScreen() {
     load();
   }, [load]);
 
+  /**
+   * Fetch the book's text, from the device cache when possible.
+   *
+   * Published books are immutable, so a cache hit needs no revalidation —
+   * which is why this uses getCached/setCached rather than `cachedFetch`,
+   * whose whole job is to re-run the fetcher every time.
+   */
+  const loadContent = useCallback(async (): Promise<string | null> => {
+    if (!bookId) return null;
+    const key = readCacheKey('book-content', bookId);
+    const cached = await getCached<string>(key);
+    if (cached) return cached;
+
+    const fetched = await fetchBookContent(bookId);
+    if (fetched) await setCached(key, fetched);
+    return fetched;
+  }, [bookId]);
+
+  const startReading = useCallback(async () => {
+    if (content !== null) {
+      setIsReading(true);
+      return;
+    }
+    setIsLoadingContent(true);
+    try {
+      const text = await loadContent();
+      if (text === null) {
+        setError(loadErrorCopy(new Error('missing content'), 'this book'));
+        return;
+      }
+      setContent(text);
+      setIsReading(true);
+    } catch (e) {
+      setError(loadErrorCopy(e, 'this book'));
+    } finally {
+      setIsLoadingContent(false);
+    }
+  }, [content, loadContent]);
+
+  // Every word in the book is tappable; `book_annotations` is a free first
+  // hit where it exists (28 of 10,375 books) and the `translate` function
+  // answers for the rest.
+  const help = useWordLookup({
+    sourceLanguage: book?.language ?? profile?.targetLanguage ?? 'en',
+    targetLanguage: profile?.nativeLanguage ?? 'en',
+    cefrLevel: book?.cefrLevel ?? 'A1',
+    annotations,
+    bookId: bookId ?? undefined,
+  });
+
   const handlePositionChange = useCallback(async (position: number, percent: number) => {
     if (!user || !bookId) return;
     try {
@@ -88,20 +149,7 @@ export default function BookDetailScreen() {
     }
   }, [user, bookId]);
 
-  const handleWordLookup = useCallback(async () => {
-    if (!user || !bookId || !progress) return;
-    try {
-      await upsertBookProgress(user.id, bookId, {
-        wordsLookedUp: (progress.wordsLookedUp ?? 0) + 1,
-      });
-    } catch (err) {
-      // Cosmetic counter, but a swallowed catch here hid a broken write path
-      // that also carries the position save above.
-      console.warn('[book] word-lookup counter failed:', err);
-    }
-  }, [user, bookId, progress]);
-
-  const handleAddToReview = useCallback(async (annotation: BookAnnotation) => {
+  const handleAddToReview = useCallback(async (source: AnnotationCardSource) => {
     if (!user || !book) return null;
 
     // Find the user's active course for this language to associate the card
@@ -127,7 +175,7 @@ export default function BookDetailScreen() {
     // since migration 084 that cap IS the free-tier limit, so the book reader
     // was an unmetered way around it. One shared path, one cap.
     try {
-      return await addCardFromAnnotation(user.id, annotation, courses.id, ['reading', 'book']);
+      return await addCardFromAnnotation(user.id, source, courses.id, ['reading', 'book']);
     } catch (err) {
       if (err instanceof NewCardsCapReachedError) {
         Alert.alert(
@@ -141,6 +189,27 @@ export default function BookDetailScreen() {
       return null;
     }
   }, [user, book]);
+
+  /**
+   * Persist how many words were looked up this session.
+   *
+   * Written on exit rather than per tap: the reader now makes EVERY word
+   * tappable, so a per-tap write would be a row update per word. The count
+   * comes from the lookup hook, which is the only thing that knows a tap
+   * resolved rather than being a stray press on punctuation.
+   */
+  const saveLookupCount = useCallback(async () => {
+    if (!user || !bookId || help.lookupCount === 0) return;
+    try {
+      await upsertBookProgress(user.id, bookId, {
+        wordsLookedUp: (progress?.wordsLookedUp ?? 0) + help.lookupCount,
+      });
+    } catch (err) {
+      // Cosmetic counter, but a swallowed catch here hid a broken write path
+      // that also carries the position save above.
+      console.warn('[book] word-lookup counter failed:', err);
+    }
+  }, [user, bookId, progress?.wordsLookedUp, help.lookupCount]);
 
   const handleComplete = useCallback(async () => {
     if (!user || !bookId || !book) return;
@@ -217,14 +286,26 @@ export default function BookDetailScreen() {
     return (
       <BookReader
         book={book}
-        annotations={annotations}
+        content={content ?? ''}
         initialPosition={progress?.currentPosition ?? 0}
         isUnlimitedPlan={isUnlimitedPlan}
         onPositionChange={handlePositionChange}
-        onWordLookup={handleWordLookup}
-        onAddToReview={handleAddToReview}
+        selectedRef={help.selectedRef}
+        lookup={help.state}
+        explanation={help.explanation}
+        onWordPress={help.onWordPress}
+        onExplain={(paragraph) => help.explain(paragraph.index, paragraph.text)}
+        onRetryLookup={help.retry}
+        onDismissHelp={help.dismiss}
+        onAddToReview={() =>
+          help.cardSource ? handleAddToReview(help.cardSource) : Promise.resolve(null)
+        }
+        onUpgrade={() => router.push('/(app)/profile/subscription')}
         onComplete={handleComplete}
-        onExit={() => setIsReading(false)}
+        onExit={() => {
+          void saveLookupCount();
+          setIsReading(false);
+        }}
       />
     );
   }
@@ -366,15 +447,30 @@ export default function BookDetailScreen() {
 
       {/* CTA Button */}
       <View style={{ padding: 20, paddingBottom: 100, borderTopWidth: 1, borderTopColor: colors.border.default }}>
+        {/* The book's text is fetched here, not with the cover — so this is
+            the one button in the app that can legitimately sit spinning for a
+            moment on a long novel. */}
         <Pressable
-          onPress={() => setIsReading(true)}
-          style={{ backgroundColor: '#4F46E5', paddingVertical: 16, borderRadius: 14, alignItems: 'center' }}
+          onPress={() => void startReading()}
+          disabled={isLoadingContent}
+          style={{
+            backgroundColor: colors.action.primaryFill,
+            paddingVertical: 16,
+            borderRadius: 14,
+            alignItems: 'center',
+            opacity: isLoadingContent ? 0.7 : 1,
+          }}
           accessibilityRole="button"
+          accessibilityState={{ disabled: isLoadingContent, busy: isLoadingContent }}
           accessibilityLabel={isStarted ? 'Continue reading' : 'Start reading'}
         >
-          <Text style={{ color: '#fff', fontSize: 18, fontWeight: '600' }}>
-            {isCompleted ? 'Read Again' : isStarted ? 'Continue Reading' : 'Start Reading'}
-          </Text>
+          {isLoadingContent ? (
+            <ActivityIndicator size="small" color={colors.text.onPrimary} />
+          ) : (
+            <Text style={{ color: colors.text.onPrimary, fontSize: 18, fontWeight: '600' }}>
+              {isCompleted ? 'Read Again' : isStarted ? 'Continue Reading' : 'Start Reading'}
+            </Text>
+          )}
         </Pressable>
       </View>
     </SafeAreaView>

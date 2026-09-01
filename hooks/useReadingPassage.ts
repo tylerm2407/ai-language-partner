@@ -2,38 +2,41 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { Alert } from 'react-native';
 import { useAuth } from './useAuth';
 import {
-  fetchPassageWithAnnotations,
+  fetchPassage,
   fetchReadingQuestions,
   upsertReadingProgress,
   addCardFromAnnotation,
   NewCardsCapReachedError,
+  type AnnotationCardSource,
 } from '../lib/supabase-queries';
 import { saveErrorCopy } from '../lib/error-copy';
-import type { ReadingPassage, ReadingAnnotation, ReadingQuestion, ReviewItem } from '../types';
+import type { ReadingPassage, ReadingQuestion, ReviewItem } from '../types';
 
+/**
+ * Passage loading and progress.
+ *
+ * No longer carries annotations: `reading_annotations` had 0 rows and no
+ * writer, so `selectedAnnotation` was permanently null and no word in any
+ * passage was ever tappable. Migration 094 dropped the table. Word lookup and
+ * its tooltip state now live in useWordLookup, which the viewer owns —
+ * `wordsLookedUp` is passed back in from there so this hook keeps owning the
+ * progress row it always did.
+ */
 interface UseReadingPassageReturn {
   passage: ReadingPassage | null;
-  annotations: ReadingAnnotation[];
   questions: ReadingQuestion[];
   isLoading: boolean;
   error: string | null;
-  selectedAnnotation: ReadingAnnotation | null;
-  wordsLookedUp: number;
-  selectWord: (annotation: ReadingAnnotation) => void;
-  dismissTooltip: () => void;
-  addToReview: (annotation: ReadingAnnotation, courseId: string) => Promise<ReviewItem | null>;
-  completeReading: (comprehensionScore: number) => Promise<void>;
+  addToReview: (source: AnnotationCardSource, courseId: string) => Promise<ReviewItem | null>;
+  completeReading: (comprehensionScore: number, wordsLookedUp: number) => Promise<void>;
 }
 
 export function useReadingPassage(passageId: string | null): UseReadingPassageReturn {
   const { user } = useAuth();
   const [passage, setPassage] = useState<ReadingPassage | null>(null);
-  const [annotations, setAnnotations] = useState<ReadingAnnotation[]>([]);
   const [questions, setQuestions] = useState<ReadingQuestion[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedAnnotation, setSelectedAnnotation] = useState<ReadingAnnotation | null>(null);
-  const [wordsLookedUp, setWordsLookedUp] = useState(0);
   const startTimeRef = useRef(Date.now());
 
   useEffect(() => {
@@ -51,16 +54,13 @@ export function useReadingPassage(passageId: string | null): UseReadingPassageRe
         startTimeRef.current = Date.now();
 
         const [passageData, questionsData] = await Promise.all([
-          fetchPassageWithAnnotations(passageId!),
+          fetchPassage(passageId!),
           fetchReadingQuestions(passageId!),
         ]);
 
         if (cancelled) return;
 
-        if (passageData) {
-          setPassage(passageData.passage);
-          setAnnotations(passageData.annotations);
-        }
+        if (passageData) setPassage(passageData);
         setQuestions(questionsData);
       } catch (e) {
         if (!cancelled) {
@@ -75,19 +75,10 @@ export function useReadingPassage(passageId: string | null): UseReadingPassageRe
     return () => { cancelled = true; };
   }, [passageId]);
 
-  const selectWord = useCallback((annotation: ReadingAnnotation) => {
-    setSelectedAnnotation(annotation);
-    setWordsLookedUp((prev) => prev + 1);
-  }, []);
-
-  const dismissTooltip = useCallback(() => {
-    setSelectedAnnotation(null);
-  }, []);
-
-  const addToReview = useCallback(async (annotation: ReadingAnnotation, courseId: string): Promise<ReviewItem | null> => {
+  const addToReview = useCallback(async (source: AnnotationCardSource, courseId: string): Promise<ReviewItem | null> => {
     if (!user) return null;
     try {
-      return await addCardFromAnnotation(user.id, annotation, courseId);
+      return await addCardFromAnnotation(user.id, source, courseId);
     } catch (err) {
       // This used to be a bare `catch { return null }`. Every failure looked
       // identical to success from the UI, which is how the missing INSERT
@@ -105,7 +96,7 @@ export function useReadingPassage(passageId: string | null): UseReadingPassageRe
     }
   }, [user]);
 
-  const completeReading = useCallback(async (comprehensionScore: number) => {
+  const completeReading = useCallback(async (comprehensionScore: number, wordsLookedUp: number) => {
     if (!user || !passageId) return;
     const timeSpentMs = Date.now() - startTimeRef.current;
     try {
@@ -119,18 +110,13 @@ export function useReadingPassage(passageId: string | null): UseReadingPassageRe
       console.error('Failed to save reading progress:', err);
       Alert.alert('Save Error', 'Your reading progress could not be saved. Please try again.');
     }
-  }, [user, passageId, wordsLookedUp]);
+  }, [user, passageId]);
 
   return {
     passage,
-    annotations,
     questions,
     isLoading,
     error,
-    selectedAnnotation,
-    wordsLookedUp,
-    selectWord,
-    dismissTooltip,
     addToReview,
     completeReading,
   };

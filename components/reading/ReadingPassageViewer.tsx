@@ -1,94 +1,52 @@
-import { useCallback, type ReactElement } from 'react';
+import { useMemo } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AudioPlayButton } from '../audio/AudioPlayButton';
-import { WordTooltip } from './WordTooltip';
-import type { ReadingPassage, ReadingAnnotation, ReviewItem } from '../../types';
+import { ReadingHelp } from './ReadingHelp';
+import { TappableText, type SelectedRef } from './TappableText';
+import type { ExplanationState } from '../../hooks/useWordLookup';
+import type { WordLookupState } from './WordTooltip';
+import { splitParagraphs, type Paragraph } from '../../lib/reading-text';
+import type { ReadingPassage, ReviewItem } from '../../types';
 import { cefrCanDo, cefrAccessibilityLabel } from '../../lib/cefr-labels';
 import { colors } from '../../config/theme';
 
+const PASSAGE_FONT_SIZE = 16;
+
 interface Props {
   passage: ReadingPassage;
-  annotations: ReadingAnnotation[];
-  selectedAnnotation: ReadingAnnotation | null;
-  onSelectWord: (annotation: ReadingAnnotation) => void;
-  onDismissTooltip: () => void;
-  onAddToReview: (annotation: ReadingAnnotation) => Promise<ReviewItem | null>;
+  /** Word-lookup and explanation state, from useWordLookup. */
+  selectedRef: SelectedRef | null;
+  lookup: WordLookupState | null;
+  explanation: ExplanationState | null;
+  onWordPress: (raw: string, ref: SelectedRef) => void;
+  onExplain: (paragraph: Paragraph) => void;
+  onRetryLookup: () => void;
+  onDismissHelp: () => void;
+  onAddToReview: () => Promise<ReviewItem | null>;
+  onUpgrade?: () => void;
   onContinue: () => void;
   onExit: () => void;
 }
 
 export function ReadingPassageViewer({
   passage,
-  annotations,
-  selectedAnnotation,
-  onSelectWord,
-  onDismissTooltip,
+  selectedRef,
+  lookup,
+  explanation,
+  onWordPress,
+  onExplain,
+  onRetryLookup,
+  onDismissHelp,
   onAddToReview,
+  onUpgrade,
   onContinue,
   onExit,
 }: Props) {
-  const renderAnnotatedText = useCallback(() => {
-    const { content } = passage;
-    if (annotations.length === 0) {
-      return <Text style={{ fontSize: 16, lineHeight: 26, color: colors.text.primary }}>{content}</Text>;
-    }
-
-    const segments: ReactElement[] = [];
-    let lastIndex = 0;
-
-    // Sort annotations by start_index
-    const sorted = [...annotations].sort((a, b) => a.startIndex - b.startIndex);
-
-    sorted.forEach((annotation, i) => {
-      // Plain text before this annotation
-      if (annotation.startIndex > lastIndex) {
-        segments.push(
-          <Text key={`plain-${i}`} style={{ fontSize: 16, lineHeight: 26, color: colors.text.primary }}>
-            {content.slice(lastIndex, annotation.startIndex)}
-          </Text>
-        );
-      }
-
-      // Annotated word
-      const isSelected = selectedAnnotation?.id === annotation.id;
-      segments.push(
-        <Text
-          key={`ann-${annotation.id}`}
-          onPress={() => onSelectWord(annotation)}
-          style={{
-            fontSize: 16,
-            lineHeight: 26,
-            // Unselected annotated words are body copy on a dark card. This was
-            // `#111` — a leftover from when the reading surface was a light
-            // island, and near-black on `surface.card` is invisible.
-            color: isSelected ? colors.action.primaryFill : colors.text.primary,
-            textDecorationLine: 'underline',
-            textDecorationColor: 'rgba(99, 102, 241, 0.3)',
-            fontWeight: isSelected ? '600' : '400',
-          }}
-          accessibilityRole="button"
-          accessibilityLabel={`Tap to translate: ${annotation.wordOrPhrase}`}
-        >
-          {content.slice(annotation.startIndex, annotation.endIndex)}
-        </Text>
-      );
-
-      lastIndex = annotation.endIndex;
-    });
-
-    // Remaining plain text
-    if (lastIndex < content.length) {
-      segments.push(
-        <Text key="plain-end" style={{ fontSize: 16, lineHeight: 26, color: colors.text.primary }}>
-          {content.slice(lastIndex)}
-        </Text>
-      );
-    }
-
-    return <Text>{segments}</Text>;
-  }, [passage, annotations, selectedAnnotation, onSelectWord]);
-
+  // A passage is short enough to render in one scroll, so it needs paragraphs
+  // but not pagination. Splitting still matters: it is what gives a span the
+  // stable identity the shared explanation cache is keyed on.
+  const paragraphs = useMemo(() => splitParagraphs(passage.content), [passage.content]);
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface.raised }}>
       {/* Header */}
@@ -130,24 +88,29 @@ export function ReadingPassageViewer({
         contentContainerStyle={{ padding: 20, paddingBottom: 120 }}
         keyboardShouldPersistTaps="handled"
       >
-        <Pressable onPress={onDismissTooltip} style={{ minHeight: 200 }}>
-          <View style={{
-            backgroundColor: colors.surface.card,
-            borderRadius: 16,
-            padding: 20,
-          }}>
-            {renderAnnotatedText()}
-          </View>
-        </Pressable>
-
-        {/* Tooltip */}
-        {selectedAnnotation && (
-          <WordTooltip
-            annotation={selectedAnnotation}
-            onAddToReview={() => onAddToReview(selectedAnnotation)}
-            onDismiss={onDismissTooltip}
+        <View style={{
+          backgroundColor: colors.surface.card,
+          borderRadius: 16,
+          padding: 20,
+          minHeight: 200,
+        }}>
+          <TappableText
+            paragraphs={paragraphs}
+            fontSize={PASSAGE_FONT_SIZE}
+            selectedRef={selectedRef}
+            onWordPress={onWordPress}
+            onExplain={onExplain}
           />
-        )}
+        </View>
+
+        <ReadingHelp
+          lookup={lookup}
+          explanation={explanation}
+          onAddToReview={onAddToReview}
+          onRetryLookup={onRetryLookup}
+          onDismiss={onDismissHelp}
+          onUpgrade={onUpgrade}
+        />
 
         {/* Source Attribution */}
         {passage.sourceAttribution && (

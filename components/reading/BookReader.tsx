@@ -3,17 +3,38 @@ import { View, Text, Pressable, ScrollView } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { usePageNarrator } from '../../hooks/usePageNarrator';
+import { ReadingHelp } from './ReadingHelp';
+import { TappableText, type SelectedRef } from './TappableText';
+import type { ExplanationState } from '../../hooks/useWordLookup';
+import type { WordLookupState } from './WordTooltip';
+import {
+  pageForOffset,
+  paginateParagraphs,
+  splitParagraphs,
+  type Paragraph,
+} from '../../lib/reading-text';
 import { colors, radii, spacing } from '../../config/theme';
-import type { ReadingBook, BookAnnotation, ReviewItem } from '../../types';
+import type { ReadingBook, ReviewItem } from '../../types';
 
 interface Props {
   book: ReadingBook;
-  annotations: BookAnnotation[];
+  /** The book's text. Fetched separately from its metadata — `content`
+   *  averages 211 kB and reaches 1.8 MB, so the cover screen does not wait
+   *  on it. */
+  content: string;
   initialPosition: number;
   isUnlimitedPlan?: boolean;
   onPositionChange: (position: number, percent: number) => void;
-  onWordLookup: () => void;
-  onAddToReview: (annotation: BookAnnotation) => Promise<ReviewItem | null>;
+  /** Word-lookup and explanation state, from useWordLookup. */
+  selectedRef: SelectedRef | null;
+  lookup: WordLookupState | null;
+  explanation: ExplanationState | null;
+  onWordPress: (raw: string, ref: SelectedRef) => void;
+  onExplain: (paragraph: Paragraph) => void;
+  onRetryLookup: () => void;
+  onDismissHelp: () => void;
+  onAddToReview: () => Promise<ReviewItem | null>;
+  onUpgrade?: () => void;
   onComplete: () => void;
   onExit: () => void;
 }
@@ -23,18 +44,24 @@ const CHARS_PER_PAGE_BASE = 1200; // at default font size
 
 export function BookReader({
   book,
-  annotations,
+  content,
   initialPosition,
   isUnlimitedPlan = false,
   onPositionChange,
-  onWordLookup,
+  selectedRef,
+  lookup,
+  explanation,
+  onWordPress,
+  onExplain,
+  onRetryLookup,
+  onDismissHelp,
   onAddToReview,
+  onUpgrade,
   onComplete,
   onExit,
 }: Props) {
   const [fontSizeIndex, setFontSizeIndex] = useState(1); // default 16px
   const [currentPage, setCurrentPage] = useState(0);
-  const [selectedAnnotation, setSelectedAnnotation] = useState<BookAnnotation | null>(null);
   const [showFontControls, setShowFontControls] = useState(false);
   const [autoAdvance] = useState(true);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -46,89 +73,62 @@ export function BookReader({
   // Scale chars per page based on font size
   const charsPerPage = Math.round(CHARS_PER_PAGE_BASE * (16 / fontSize));
 
-  // Split content into pages
-  const pages = useMemo(() => {
-    const content = book.content;
-    const result: string[] = [];
-    let start = 0;
+  // Paragraphs are computed ONCE for the book and do not depend on font size.
+  // That is what gives a paragraph a stable identity, which the shared
+  // explanation cache is keyed on — the old character slicing moved every
+  // boundary when the learner changed the font size, so the same paragraph
+  // hashed differently at 14pt and at 20pt and the cache would never hit.
+  const paragraphs = useMemo(() => splitParagraphs(content), [content]);
 
-    while (start < content.length) {
-      let end = start + charsPerPage;
-
-      // Don't cut words — find the last space before the limit
-      if (end < content.length) {
-        const lastSpace = content.lastIndexOf(' ', end);
-        if (lastSpace > start) {
-          end = lastSpace + 1;
-        }
-      } else {
-        end = content.length;
-      }
-
-      result.push(content.slice(start, end));
-      start = end;
-    }
-
-    return result;
-  }, [book.content, charsPerPage]);
+  // Pages are runs of whole paragraphs. Only the packing depends on font size.
+  const pages = useMemo(
+    () => paginateParagraphs(paragraphs, charsPerPage),
+    [paragraphs, charsPerPage],
+  );
 
   const totalPages = pages.length;
 
-  // Set initial page from saved position
+  // Set initial page from the saved character offset. Resolved by lookup
+  // rather than by dividing — page boundaries are no longer a fixed width, and
+  // an offset that no longer exists lands on the last page rather than a blank
+  // screen.
   useEffect(() => {
-    if (initialPosition > 0 && book.content.length > 0) {
-      const page = Math.floor(initialPosition / charsPerPage);
-      setCurrentPage(Math.min(page, totalPages - 1));
+    if (initialPosition > 0 && pages.length > 0) {
+      setCurrentPage(pageForOffset(pages, initialPosition));
     }
-  }, [initialPosition, charsPerPage, totalPages, book.content.length]);
+  }, [initialPosition, pages]);
 
-  // Debounced position save
+  // Debounced position save. The saved value is the offset of the page's first
+  // paragraph, so it stays comparable with what was stored before this change
+  // and survives a font-size change — which used to move the reader.
   const savePosition = useCallback((page: number) => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
-      const position = page * charsPerPage;
+      const position = pages[page]?.offset ?? 0;
       const percent = Math.min(100, ((page + 1) / totalPages) * 100);
       onPositionChange(position, percent);
     }, 500);
-  }, [charsPerPage, totalPages, onPositionChange]);
+  }, [pages, totalPages, onPositionChange]);
 
   const goToPage = useCallback((page: number) => {
     narrator.stop();
     const newPage = Math.max(0, Math.min(page, totalPages - 1));
     setCurrentPage(newPage);
-    setSelectedAnnotation(null);
+    onDismissHelp();
     savePosition(newPage);
 
     // Check completion
     if (newPage === totalPages - 1) {
       onComplete();
     }
-  }, [totalPages, savePosition, onComplete, narrator]);
+  }, [totalPages, savePosition, onComplete, narrator, onDismissHelp]);
 
-  // Build annotation lookup for current page text
-  const annotationMap = useMemo(() => {
-    const map = new Map<string, BookAnnotation>();
-    for (const ann of annotations) {
-      map.set(ann.wordOrPhrase.toLowerCase(), ann);
-    }
-    return map;
-  }, [annotations]);
-
-  const handleWordPress = useCallback((phrase: string) => {
-    const cleaned = phrase.replace(/[.,!?;:"""''()]/g, '').toLowerCase();
-    const ann = annotationMap.get(cleaned);
-    if (ann) {
-      setSelectedAnnotation(ann);
-      onWordLookup();
-    }
-  }, [annotationMap, onWordLookup]);
-
-  const handleAddToReview = useCallback(async (ann: BookAnnotation) => {
-    // Adapt BookAnnotation to the ReadingAnnotation-like shape expected by WordTooltip
-    return onAddToReview(ann);
-  }, [onAddToReview]);
-
-  const currentPageText = pages[currentPage] ?? '';
+  const currentPageParagraphs = pages[currentPage]?.paragraphs ?? EMPTY_PARAGRAPHS;
+  // Narration reads the page aloud, so it wants the text, not the structure.
+  const currentPageText = useMemo(
+    () => currentPageParagraphs.map((p) => p.text).join('\n\n'),
+    [currentPageParagraphs],
+  );
   const progressPercent = totalPages > 0 ? ((currentPage + 1) / totalPages) * 100 : 0;
 
   // Track whether we should auto-play the next page after navigation
@@ -146,7 +146,7 @@ export function BookReader({
           shouldAutoPlayRef.current = true;
           const nextPage = currentPage + 1;
           setCurrentPage(nextPage);
-          setSelectedAnnotation(null);
+          onDismissHelp();
           savePosition(nextPage);
           if (nextPage === totalPages - 1) {
             onComplete();
@@ -154,18 +154,18 @@ export function BookReader({
         }
       });
     }
-  }, [narrator, currentPageText, book.language, autoAdvance, currentPage, totalPages, savePosition, onComplete]);
+  }, [narrator, currentPageText, book.language, autoAdvance, currentPage, totalPages, savePosition, onComplete, onDismissHelp]);
 
   // Auto-play after page change from narration auto-advance
   useEffect(() => {
     if (shouldAutoPlayRef.current && pages[currentPage]) {
       shouldAutoPlayRef.current = false;
-      narrator.speak(pages[currentPage], book.language, () => {
+      narrator.speak(currentPageText, book.language, () => {
         if (autoAdvance && currentPage < totalPages - 1) {
           shouldAutoPlayRef.current = true;
           const nextPage = currentPage + 1;
           setCurrentPage(nextPage);
-          setSelectedAnnotation(null);
+          onDismissHelp();
           savePosition(nextPage);
           if (nextPage === totalPages - 1) {
             onComplete();
@@ -265,22 +265,22 @@ export function BookReader({
         contentContainerStyle={{ padding: spacing.xl, paddingBottom: spacing.xl }}
         keyboardShouldPersistTaps="handled"
       >
-        <Pressable onPress={() => setSelectedAnnotation(null)}>
-          <Text style={{ fontSize, lineHeight: fontSize * 1.7, color: colors.text.primary }}>
-            {renderAnnotatedWords(currentPageText, annotationMap, selectedAnnotation, handleWordPress, fontSize)}
-          </Text>
-        </Pressable>
+        <TappableText
+          paragraphs={currentPageParagraphs}
+          fontSize={fontSize}
+          selectedRef={selectedRef}
+          onWordPress={onWordPress}
+          onExplain={onExplain}
+        />
 
-        {/* Word Tooltip */}
-        {selectedAnnotation && (
-          <View style={{ marginTop: 12 }}>
-            <BookWordTooltip
-              annotation={selectedAnnotation}
-              onAddToReview={() => handleAddToReview(selectedAnnotation)}
-              onDismiss={() => setSelectedAnnotation(null)}
-            />
-          </View>
-        )}
+        <ReadingHelp
+          lookup={lookup}
+          explanation={explanation}
+          onAddToReview={onAddToReview}
+          onRetryLookup={onRetryLookup}
+          onDismiss={onDismissHelp}
+          onUpgrade={onUpgrade}
+        />
       </ScrollView>
 
       {/* Page Navigation — always visible at bottom */}
@@ -321,169 +321,5 @@ export function BookReader({
   );
 }
 
-// Render words with tap-to-translate for annotated words and phrases
-function renderAnnotatedWords(
-  text: string,
-  annotationMap: Map<string, BookAnnotation>,
-  selectedAnnotation: BookAnnotation | null,
-  onPress: (phrase: string) => void,
-  fontSize: number,
-): React.JSX.Element[] {
-  const tokens = text.split(/(\s+)/);
-  const result: React.JSX.Element[] = [];
-
-  // Determine the max phrase length (in words) from annotation keys
-  const maxPhraseWords = Math.max(
-    1,
-    ...Array.from(annotationMap.keys()).map((k) => k.split(/\s+/).length),
-  );
-
-  let i = 0;
-  while (i < tokens.length) {
-    const token = tokens[i];
-
-    // Whitespace tokens pass through as-is
-    if (/^\s+$/.test(token)) {
-      result.push(<Text key={i}>{token}</Text>);
-      i++;
-      continue;
-    }
-
-    // Try matching phrases from longest to shortest
-    let matched = false;
-    for (let phraseLen = maxPhraseWords; phraseLen >= 2; phraseLen--) {
-      // Collect the next `phraseLen` word tokens (skipping whitespace)
-      const wordTokens: { index: number; raw: string }[] = [];
-      let j = i;
-      while (wordTokens.length < phraseLen && j < tokens.length) {
-        if (!/^\s+$/.test(tokens[j])) {
-          wordTokens.push({ index: j, raw: tokens[j] });
-        }
-        j++;
-      }
-
-      if (wordTokens.length < phraseLen) continue;
-
-      const phrase = wordTokens
-        .map((wt) => wt.raw.replace(/[.,!?;:"""''()]/g, '').toLowerCase())
-        .join(' ');
-
-      if (annotationMap.has(phrase)) {
-        const lastIndex = wordTokens[wordTokens.length - 1].index;
-        const matchedText = tokens.slice(i, lastIndex + 1).join('');
-        const isSelected = selectedAnnotation?.wordOrPhrase.toLowerCase() === phrase;
-
-        result.push(
-          <Text
-            key={`ann-${i}`}
-            onPress={() => onPress(matchedText)}
-            style={{
-              fontSize,
-              lineHeight: fontSize * 1.7,
-              color: isSelected ? colors.indigo[400] : colors.text.primary,
-              textDecorationLine: 'underline',
-              textDecorationColor: 'rgba(99, 102, 241, 0.3)',
-              fontWeight: isSelected ? '600' : '400',
-            }}
-            accessibilityRole="button"
-            accessibilityLabel={`Translate: ${matchedText.trim()}`}
-          >
-            {matchedText}
-          </Text>,
-        );
-
-        i = lastIndex + 1;
-        matched = true;
-        break;
-      }
-    }
-
-    if (!matched) {
-      // Single-word annotation check
-      const cleaned = token.replace(/[.,!?;:"""''()]/g, '').toLowerCase();
-      const hasAnnotation = annotationMap.has(cleaned);
-      const isSelected = selectedAnnotation?.wordOrPhrase.toLowerCase() === cleaned;
-
-      if (hasAnnotation) {
-        result.push(
-          <Text
-            key={`ann-${i}`}
-            onPress={() => onPress(token)}
-            style={{
-              fontSize,
-              lineHeight: fontSize * 1.7,
-              color: isSelected ? colors.indigo[400] : colors.text.primary,
-              textDecorationLine: 'underline',
-              textDecorationColor: 'rgba(99, 102, 241, 0.3)',
-              fontWeight: isSelected ? '600' : '400',
-            }}
-            accessibilityRole="button"
-            accessibilityLabel={`Translate: ${token}`}
-          >
-            {token}
-          </Text>,
-        );
-      } else {
-        result.push(<Text key={`word-${i}`}>{token}</Text>);
-      }
-      i++;
-    }
-  }
-
-  return result;
-}
-
-// Simplified tooltip for book annotations
-function BookWordTooltip({
-  annotation,
-  onAddToReview,
-  onDismiss,
-}: {
-  annotation: BookAnnotation;
-  onAddToReview: () => Promise<ReviewItem | null>;
-  onDismiss: () => void;
-}) {
-  const handleAdd = async () => {
-    await onAddToReview();
-    onDismiss();
-  };
-
-  return (
-    <View style={{
-      backgroundColor: colors.surface.card, borderRadius: radii.lg, padding: spacing.md,
-      borderWidth: 1, borderColor: colors.border.default,
-    }}>
-      <View style={{ marginBottom: spacing.xs }}>
-        <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text.primary }}>
-          {annotation.wordOrPhrase}
-        </Text>
-        <Text style={{ fontSize: 16, color: colors.text.secondary, marginTop: 2 }}>
-          {annotation.translation}
-        </Text>
-        {annotation.partOfSpeech && (
-          <Text style={{ fontSize: 13, color: colors.text.tertiary, fontStyle: 'italic', marginTop: 2 }}>
-            {annotation.partOfSpeech}
-          </Text>
-        )}
-      </View>
-      <View style={{ flexDirection: 'row', gap: 10, marginTop: spacing.xs }}>
-        <Pressable
-          onPress={handleAdd}
-          style={{ flex: 1, backgroundColor: colors.action.primaryFill, paddingVertical: 10, borderRadius: radii.md, alignItems: 'center' }}
-          accessibilityRole="button"
-          accessibilityLabel="Add to review queue"
-        >
-          <Text style={{ color: colors.text.onPrimary, fontSize: 14, fontWeight: '600' }}>Add to Review</Text>
-        </Pressable>
-        <Pressable
-          onPress={onDismiss}
-          style={{ flex: 1, backgroundColor: colors.surface.cardAlt, paddingVertical: 10, borderRadius: radii.md, alignItems: 'center' }}
-          accessibilityRole="button"
-          accessibilityLabel="Dismiss"
-        >
-          <Text style={{ color: colors.text.secondary, fontSize: 14, fontWeight: '600' }}>Dismiss</Text>
-        </Pressable>
-      </View>
-    </View>
-  );
-}
+/** Stable empty array so an out-of-range page does not remount TappableText. */
+const EMPTY_PARAGRAPHS: Paragraph[] = [];

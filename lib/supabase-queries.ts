@@ -31,7 +31,6 @@ import type {
   DailyChallengesRecord,
   LeagueTier,
   ReadingPassage,
-  ReadingAnnotation,
   ReadingQuestion,
   WritingPrompt,
   WritingSubmission,
@@ -1596,30 +1595,24 @@ export async function fetchReadingPassagesByCourse(
   return (data ?? []).map(mapReadingPassage);
 }
 
-export async function fetchPassageWithAnnotations(
-  passageId: string
-): Promise<{ passage: ReadingPassage; annotations: ReadingAnnotation[] } | null> {
-  const { data: passageData, error: passageError } = await supabase
+/**
+ * One reading passage.
+ *
+ * Was `fetchPassageWithAnnotations`, which also read `reading_annotations` to
+ * decide which words the viewer would make tappable. That table had 0 rows in
+ * production and no writer anywhere in the repo, so the answer was always
+ * "none" — every passage rendered untappable. Migration 094 dropped the table;
+ * words are now looked up on demand when they are tapped (lib/word-lookup.ts).
+ */
+export async function fetchPassage(passageId: string): Promise<ReadingPassage | null> {
+  const { data, error } = await supabase
     .from('reading_passages')
     .select('*')
     .eq('id', passageId)
     .single();
 
-  if (passageError) throw passageError;
-  if (!passageData) return null;
-
-  const { data: annotationData, error: annotationError } = await supabase
-    .from('reading_annotations')
-    .select('*')
-    .eq('passage_id', passageId)
-    .order('start_index', { ascending: true });
-
-  if (annotationError) throw annotationError;
-
-  return {
-    passage: mapReadingPassage(passageData),
-    annotations: (annotationData ?? []).map(mapReadingAnnotation),
-  };
+  if (error) throw error;
+  return data ? mapReadingPassage(data) : null;
 }
 
 export async function fetchReadingQuestions(passageId: string): Promise<ReadingQuestion[]> {
@@ -1660,9 +1653,10 @@ export class NewCardsCapReachedError extends Error {
 }
 
 /**
- * The fields a learner-authored card is built from. `ReadingAnnotation`
- * (passages) and `BookAnnotation` (books) both satisfy this structurally, so
- * both surfaces can share one code path — and therefore one new-card cap.
+ * The fields a learner-authored card is built from. `BookAnnotation` satisfies
+ * this structurally, and `cardSourceFromLookup` in lib/word-lookup.ts adapts a
+ * `WordLookup` to it — so books, passages and live translations all share one
+ * code path, and therefore one new-card cap.
  */
 export interface AnnotationCardSource {
   wordOrPhrase: string;
@@ -1991,20 +1985,6 @@ function mapReadingPassage(row: Record<string, unknown>): ReadingPassage {
   };
 }
 
-function mapReadingAnnotation(row: Record<string, unknown>): ReadingAnnotation {
-  return {
-    id: row.id as string,
-    passageId: row.passage_id as string,
-    wordOrPhrase: row.word_or_phrase as string,
-    translation: row.translation as string,
-    startIndex: row.start_index as number,
-    endIndex: row.end_index as number,
-    cardId: (row.card_id as string) ?? null,
-    audioUrl: (row.audio_url as string) ?? null,
-    partOfSpeech: (row.part_of_speech as string) ?? null,
-  };
-}
-
 function mapReadingQuestion(row: Record<string, unknown>): ReadingQuestion {
   return {
     id: row.id as string,
@@ -2081,15 +2061,43 @@ export async function fetchBooksByLanguageAndLevel(
   return (data ?? []).map(mapReadingBook);
 }
 
-export async function fetchBookById(bookId: string): Promise<ReadingBook | null> {
+/**
+ * Everything about a book EXCEPT its text.
+ *
+ * `content` averages 211 kB across the library and reaches 1.8 MB on a long
+ * novel — it is 2191 MB of the 2227 MB database. Selecting it here made the
+ * cover screen wait on the whole book before it could draw anything, so the
+ * two are fetched separately and the text loads behind the Read button.
+ * Columns are named explicitly, exactly as fetchBooksByLanguageAndLevel does.
+ */
+export async function fetchBookMeta(bookId: string): Promise<ReadingBook | null> {
   const { data, error } = await supabase
     .from('reading_books')
-    .select('*')
+    .select(
+      'id, title, author, description, language, cefr_level, word_count, image_url, tags, source, source_id, chapter_breaks, is_published, created_at'
+    )
     .eq('id', bookId)
     .single();
 
   if (error && error.code !== 'PGRST116') throw error;
   return data ? mapReadingBook(data) : null;
+}
+
+/**
+ * A book's text.
+ *
+ * Published books are immutable, so the caller caches this on the device
+ * (readCacheKey('book-content', bookId)) and a hit needs no revalidation.
+ */
+export async function fetchBookContent(bookId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('reading_books')
+    .select('content')
+    .eq('id', bookId)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw error;
+  return data ? ((data.content as string) ?? '') : null;
 }
 
 export async function fetchBookAnnotations(bookId: string): Promise<BookAnnotation[]> {

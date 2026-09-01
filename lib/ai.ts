@@ -208,27 +208,56 @@ export async function getHint(
 }
 
 /**
- * Translate a short conversational message from one language into another
- * via the `translate` Edge Function (Claude Haiku server-side). Used by the
- * Translate button in ChatBubble. Failures throw with the real server
- * message (extracted from error.context) so the UI can surface useful text.
+ * A `translate` failure that still carries the server's machine-readable code.
+ *
+ * The message is unchanged from what this function has always thrown, so
+ * existing callers that read `.message` keep working. The code is what lets
+ * the reader tell "you are out of lookups for today" — a settled state, worth
+ * saying plainly and worth not retrying — from "the network died", which is
+ * worth a retry button.
+ */
+export class TranslateError extends Error {
+  readonly code?: string;
+
+  constructor(message: string, code?: string) {
+    super(message);
+    this.name = 'TranslateError';
+    this.code = code;
+  }
+}
+
+/**
+ * Translate short text from one language into another via the `translate`
+ * Edge Function (Claude Haiku server-side).
+ *
+ * Two callers: the Translate button in ChatBubble, and tap-a-word lookup in
+ * the reader. The reader passes `purpose: 'word_lookup'`, which asks the
+ * server to bill the much larger `word_lookups` allowance instead of
+ * `translations` — a claim the server verifies against the input rather than
+ * trusting, so passing it for a phrase is a 400, not a silent rebill.
+ *
+ * Failures throw a TranslateError carrying the real server message (extracted
+ * from error.context) so the UI can surface useful text.
  */
 export async function translateText(
   text: string,
   sourceLanguage: string,
-  targetLanguage: string
+  targetLanguage: string,
+  purpose?: 'word_lookup'
 ): Promise<string> {
   const { data, error } = await invokeWithRetry('translate', {
-    body: { text, sourceLanguage, targetLanguage },
+    body: { text, sourceLanguage, targetLanguage, ...(purpose ? { purpose } : {}) },
   });
 
   if (error) {
     let detail = error.message;
+    let code: string | undefined;
     try {
       const ctx = (error as Record<string, unknown>).context;
       if (ctx && typeof (ctx as Response).json === 'function') {
         const body = await (ctx as Response).json();
         if (body?.error) detail = body.error;
+        if (typeof body?.code === 'string') code = body.code;
         // `reason` distinguishes a provider failure from our own safety check
         // rejecting the output. Both surface as the same 502 and the same
         // sentence to the learner, so without carrying it here a persistent
@@ -239,11 +268,60 @@ export async function translateText(
     } catch {
       // Body wasn't JSON — fall through with the generic message.
     }
-    throw new Error(`Translation failed: ${detail}`);
+    throw new TranslateError(`Translation failed: ${detail}`, code);
   }
 
-  if (data?.error) throw new Error(`Translation failed: ${data.error}`);
+  if (data?.error) throw new TranslateError(`Translation failed: ${data.error}`);
   return (data as { translation: string }).translation;
+}
+
+/** Server response for one paragraph explanation. */
+export interface PassageExplanation {
+  explanation: string;
+  /** True when it came from the shared cache — no quota was spent. */
+  cached: boolean;
+}
+
+/**
+ * Explain one paragraph of a book or passage in the learner's native language,
+ * via the `explain-passage` Edge Function.
+ *
+ * Metered against the daily text-message allowance, and cached across every
+ * learner on a hash of (language, native language, level, normalised span) —
+ * Gutenberg text is identical for everyone, so most of these are free to
+ * serve. Errors carry the server code, same as translateText.
+ */
+export async function explainPassage(
+  text: string,
+  language: string,
+  nativeLanguage: string,
+  cefrLevel: string,
+  bookId?: string
+): Promise<PassageExplanation> {
+  const { data, error } = await invokeWithRetry('explain-passage', {
+    body: { text, language, nativeLanguage, cefrLevel, ...(bookId ? { bookId } : {}) },
+  });
+
+  if (error) {
+    let detail = error.message;
+    let code: string | undefined;
+    try {
+      const ctx = (error as Record<string, unknown>).context;
+      if (ctx && typeof (ctx as Response).json === 'function') {
+        const body = await (ctx as Response).json();
+        if (body?.error) detail = body.error;
+        if (typeof body?.code === 'string') code = body.code;
+        if (body?.reason) detail = `${detail} [${body.reason}]`;
+      }
+    } catch {
+      // Body wasn't JSON — fall through with the generic message.
+    }
+    throw new TranslateError(`Explanation failed: ${detail}`, code);
+  }
+
+  if (data?.error) throw new TranslateError(`Explanation failed: ${data.error}`);
+  const row = data as PassageExplanation;
+  return { explanation: row.explanation, cached: row.cached === true };
 }
 
 /** Voice selection mode for the TTS edge function. See
