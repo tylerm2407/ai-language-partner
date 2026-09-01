@@ -204,8 +204,31 @@ serve(async (req: Request) => {
   }, targetLanguage);
 
   if (!outcome.ok) {
+    // Give the quota back. It was consumed before the paid call — the only
+    // way to bound spend — but a quota is a charge for a delivered thing, and
+    // nothing was delivered. Without this a learner loses an allowance every
+    // time the provider has a bad minute, and the client retries, so they
+    // lose two.
+    //
+    // Best-effort: a failed refund must not turn a 502 into a 500. The
+    // counter self-clears at the learner's next local midnight either way.
+    const { error: refundErr } = await supabase.rpc('refund_daily_quota', {
+      p_user_id: authUser.userId,
+      p_counter: 'translations',
+    });
+    if (refundErr) {
+      console.error('[translate] refund_daily_quota failed:', refundErr.message);
+    }
+
     return json(
-      { error: 'Translation is temporarily unavailable. Please try again.', code: 'TRANSLATION_UNAVAILABLE' },
+      {
+        error: 'Translation is temporarily unavailable. Please try again.',
+        code: 'TRANSLATION_UNAVAILABLE',
+        // Which half failed: the provider call, or our own safety check on
+        // its output. Coarse by design — it names no model, prompt or vendor
+        // error, and without it a 502 here is undiagnosable from outside.
+        reason: outcome.reason,
+      },
       502,
     );
   }

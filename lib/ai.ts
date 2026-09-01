@@ -229,6 +229,12 @@ export async function translateText(
       if (ctx && typeof (ctx as Response).json === 'function') {
         const body = await (ctx as Response).json();
         if (body?.error) detail = body.error;
+        // `reason` distinguishes a provider failure from our own safety check
+        // rejecting the output. Both surface as the same 502 and the same
+        // sentence to the learner, so without carrying it here a persistent
+        // translate failure is undiagnosable from the client — which is
+        // exactly the state this function was found in.
+        if (body?.reason) detail = `${detail} [${body.reason}]`;
       }
     } catch {
       // Body wasn't JSON — fall through with the generic message.
