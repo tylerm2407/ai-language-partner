@@ -21,6 +21,24 @@ export interface PlanLimits {
    */
   dailyTranslations: number;
   /**
+   * Single-word lookups from the reader per day (migration 094), metered on
+   * `daily_usage.word_lookups`. Charged on cache MISS only, like
+   * `dailyTranslations`.
+   *
+   * Deliberately a separate, far larger counter. `dailyTranslations` is sized
+   * for the chat Translate button, where one call carries up to 1500
+   * characters; a reading lookup is one word, roughly a fiftieth of the
+   * tokens, and a learner meeting a new page taps far more than ten times.
+   * The `translate` function only charges this counter for input it accepted
+   * as a single token, so the cheaper meter cannot be used to translate a
+   * paragraph. Both paths share one `translation_cache`, so a hit is free
+   * either way and each warms the other.
+   *
+   * `vip` is 9999, the same unlimited sentinel `dailyNewCards` and
+   * `dailyHints` use.
+   */
+  dailyWordLookups: number;
+  /**
    * Lesson-exercise TTS syntheses per day, metered on
    * `daily_usage.lesson_tts_plays` (migration 077).
    *
@@ -98,10 +116,10 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
   // Classroom students are unaffected — their org's contract_config is merged
   // in by get_effective_limits with GREATEST(), so a 0 personal quota still
   // resolves to the school's allowance.
-  starter:   { dailyTextMessages: 0,  dailyVoiceMinutes: 0,  dailyTranslations: 10,  dailyWritingGrades: 0,  dailyPronunciationScores: 0, dailyLessonTtsPlays: 5,   dailyAvatarGenerations: 0, dailyNewCards: 5,    dailyHints: 5,    offlineMode: false },
-  basic:     { dailyTextMessages: 25, dailyVoiceMinutes: 6,  dailyTranslations: 30, dailyWritingGrades: 3,  dailyPronunciationScores: 3, dailyLessonTtsPlays: 25,  dailyAvatarGenerations: 1, dailyNewCards: 20,   dailyHints: 30,   offlineMode: false },
-  premium:   { dailyTextMessages: 50, dailyVoiceMinutes: 12, dailyTranslations: 60, dailyWritingGrades: 7,  dailyPronunciationScores: 5, dailyLessonTtsPlays: 50, dailyAvatarGenerations: 1, dailyNewCards: 9999, dailyHints: 75,   offlineMode: true },
-  vip:       { dailyTextMessages: 75, dailyVoiceMinutes: 18, dailyTranslations: 90, dailyWritingGrades: 12, dailyPronunciationScores: 7, dailyLessonTtsPlays: 80, dailyAvatarGenerations: 1, dailyNewCards: 9999, dailyHints: 9999, offlineMode: true },
+  starter:   { dailyTextMessages: 0,  dailyVoiceMinutes: 0,  dailyTranslations: 10, dailyWordLookups: 60,  dailyWritingGrades: 0,  dailyPronunciationScores: 0, dailyLessonTtsPlays: 5,   dailyAvatarGenerations: 0, dailyNewCards: 5,    dailyHints: 5,    offlineMode: false },
+  basic:     { dailyTextMessages: 25, dailyVoiceMinutes: 6,  dailyTranslations: 30, dailyWordLookups: 300, dailyWritingGrades: 3,  dailyPronunciationScores: 3, dailyLessonTtsPlays: 25,  dailyAvatarGenerations: 1, dailyNewCards: 20,   dailyHints: 30,   offlineMode: false },
+  premium:   { dailyTextMessages: 50, dailyVoiceMinutes: 12, dailyTranslations: 60, dailyWordLookups: 600, dailyWritingGrades: 7,  dailyPronunciationScores: 5, dailyLessonTtsPlays: 50, dailyAvatarGenerations: 1, dailyNewCards: 9999, dailyHints: 75,   offlineMode: true },
+  vip:       { dailyTextMessages: 75, dailyVoiceMinutes: 18, dailyTranslations: 90, dailyWordLookups: 9999, dailyWritingGrades: 12, dailyPronunciationScores: 7, dailyLessonTtsPlays: 80, dailyAvatarGenerations: 1, dailyNewCards: 9999, dailyHints: 9999, offlineMode: true },
 };
 
 export function getPlanLimits(tier: string): PlanLimits {
@@ -138,6 +156,8 @@ export async function getEffectiveLimits(userId: string, supabase: any): Promise
       // of the function is still live. Under-serving a limit is recoverable;
       // handing out an unmetered paid call is not.
       dailyTranslations: typeof row.dailyTranslations === 'number' ? row.dailyTranslations : PLAN_LIMITS.starter.dailyTranslations,
+      // Added by migration 094, same reasoning as dailyTranslations above.
+      dailyWordLookups: typeof row.dailyWordLookups === 'number' ? row.dailyWordLookups : PLAN_LIMITS.starter.dailyWordLookups,
       // get_effective_limits predates these two keys and does not return them,
       // so each falls through to a plan default. School contract overrides
       // intentionally do not apply to either.
