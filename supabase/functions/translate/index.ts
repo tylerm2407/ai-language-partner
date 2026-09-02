@@ -21,6 +21,7 @@ import { isValidLanguage } from '../_shared/validation.ts';
 import { PROVIDER_TIMEOUT_MS, providerFetch } from '../_shared/provider-fetch.ts';
 import { resolveQuotaCounter, translateWithValidation } from './translate-core.ts';
 import { cacheExpiryIso, shouldRefreshCacheEntry } from '../_shared/cache-retention.ts';
+import { cacheKey } from './cache-key.ts';
 
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -68,17 +69,6 @@ async function touchCacheEntry(
   if (error) {
     console.warn('[translate] cache refresh failed (non-fatal):', error.message);
   }
-}
-
-/** Cache key: sha256 hex of (source_text, source_lang, target_lang). */
-async function cacheKey(text: string, sourceLang: string, targetLang: string): Promise<string> {
-  const digest = await crypto.subtle.digest(
-    'SHA-256',
-    new TextEncoder().encode(JSON.stringify([sourceLang, targetLang, text])),
-  );
-  return Array.from(new Uint8Array(digest))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
 }
 
 serve(async (req: Request) => {

@@ -32,7 +32,9 @@ import {
   clampRate,
   DEFAULT_RATE,
   ELEVEN_PROFILES,
+  sha256Hex,
   type SpeechPurpose,
+  ttsContentKey,
 } from './synthesis.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -405,13 +407,6 @@ async function generateWithFish(
   return await response.arrayBuffer();
 }
 
-async function sha256Hex(input: string): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
-  return Array.from(new Uint8Array(digest))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-
 function bufferToBase64(buffer: ArrayBuffer): string {
   const uint8 = new Uint8Array(buffer);
   const CHUNK = 8192;
@@ -531,10 +526,12 @@ serve(async (req: Request) => {
      *  ElevenLabs deliberately keeps the original un-namespaced key so the
      *  existing tts-cache bucket stays warm across this change. */
     const cacheKeyFor = async (p: TTSProvider, v: string) => {
-      const key = p === 'fish' ? `fish|${v}|${language}|${cleanText}` : `${v}|${language}|${cleanText}`;
+      // The composition and the hash both live in ./synthesis.ts so the
+      // cache-warming script can import them rather than reimplement them.
       // The hash deliberately still carries no model and no voice settings —
       // changing it would orphan every object in the bucket. Parameter changes
       // are versioned by the PATH instead; see cachePathFor in ./synthesis.ts.
+      const key = ttsContentKey({ provider: p, voiceId: v, language, text: cleanText });
       return cachePathFor({ hash: await sha256Hex(key), purpose, rate });
     };
     const readCache = async (path: string): Promise<ArrayBuffer | null> => {
