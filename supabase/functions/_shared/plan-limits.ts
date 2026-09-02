@@ -58,7 +58,11 @@ export interface PlanLimits {
    *  which the generate-avatar function rejects before quota is consulted.
    *  Each generation is a paid image-model call, so these stay deliberately
    *  small — they are re-roll budgets, not a feature to sit and play with. */
-  dailyAvatarGenerations: number;
+  /**
+   * Avatar generations per MONTH (migration 105), not per day. At ~$0.211 an
+   * image a daily cap priced a behaviour nobody has; see generate-avatar.
+   */
+  monthlyAvatarGenerations: number;
   /**
    * Previously-unseen SRS cards a learner may introduce per day.
    *
@@ -131,7 +135,7 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
   //
   // Two exceptions, both deliberate:
   //   • `dailyLessonTtsPlays` — lesson audio, so free lessons work at all.
-  //   • `dailyAvatarGenerations` stays 0, but generate-avatar grants one
+  //   • `monthlyAvatarGenerations` stays 0, but generate-avatar grants one
   //     LIFETIME free generation via consume_free_avatar (migration 077),
   //     which is a different thing from a daily allowance and is checked
   //     before this quota is ever consulted.
@@ -139,10 +143,10 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
   // Classroom students are unaffected — their org's contract_config is merged
   // in by get_effective_limits with GREATEST(), so a 0 personal quota still
   // resolves to the school's allowance.
-  starter:   { dailyTextMessages: 0,  dailyVoiceMinutes: 0,  dailyTranslations: 10, dailyWordLookups: 60,  dailyWritingGrades: 0,  dailyPronunciationScores: 0, dailyLessonTtsPlays: 5,   dailyAvatarGenerations: 0, dailyNewCards: 5,    dailyHints: 5,   dailyGoalTracks: 1, dailyAudiobookChapters: 0, dailyChatCards: 3,    offlineMode: false },
-  basic:     { dailyTextMessages: 25, dailyVoiceMinutes: 6,  dailyTranslations: 30, dailyWordLookups: 300, dailyWritingGrades: 3,  dailyPronunciationScores: 3, dailyLessonTtsPlays: 25,  dailyAvatarGenerations: 1, dailyNewCards: 20,   dailyHints: 30,  dailyGoalTracks: 2, dailyAudiobookChapters: 0, dailyChatCards: 15,   offlineMode: false },
-  premium:   { dailyTextMessages: 50, dailyVoiceMinutes: 12, dailyTranslations: 60, dailyWordLookups: 600, dailyWritingGrades: 7,  dailyPronunciationScores: 5, dailyLessonTtsPlays: 50, dailyAvatarGenerations: 1, dailyNewCards: 9999, dailyHints: 75,  dailyGoalTracks: 3, dailyAudiobookChapters: 3, dailyChatCards: 30,   offlineMode: true },
-  vip:       { dailyTextMessages: 75, dailyVoiceMinutes: 18, dailyTranslations: 90, dailyWordLookups: 800, dailyWritingGrades: 12, dailyPronunciationScores: 7, dailyLessonTtsPlays: 80, dailyAvatarGenerations: 1, dailyNewCards: 9999, dailyHints: 150, dailyGoalTracks: 3, dailyAudiobookChapters: 5, dailyChatCards: 50, offlineMode: true },
+  starter:   { dailyTextMessages: 0,  dailyVoiceMinutes: 0,  dailyTranslations: 10, dailyWordLookups: 60,  dailyWritingGrades: 0,  dailyPronunciationScores: 0, dailyLessonTtsPlays: 5,   monthlyAvatarGenerations: 0, dailyNewCards: 5,    dailyHints: 5,   dailyGoalTracks: 1, dailyAudiobookChapters: 0, dailyChatCards: 3,    offlineMode: false },
+  basic:     { dailyTextMessages: 20, dailyVoiceMinutes: 6,  dailyTranslations: 30, dailyWordLookups: 300, dailyWritingGrades: 3,  dailyPronunciationScores: 3, dailyLessonTtsPlays: 25,  monthlyAvatarGenerations: 3, dailyNewCards: 20,   dailyHints: 30,  dailyGoalTracks: 1, dailyAudiobookChapters: 0, dailyChatCards: 15,   offlineMode: false },
+  premium:   { dailyTextMessages: 50, dailyVoiceMinutes: 12, dailyTranslations: 60, dailyWordLookups: 600, dailyWritingGrades: 7,  dailyPronunciationScores: 5, dailyLessonTtsPlays: 50, monthlyAvatarGenerations: 3, dailyNewCards: 9999, dailyHints: 75,  dailyGoalTracks: 1, dailyAudiobookChapters: 3, dailyChatCards: 30,   offlineMode: true },
+  vip:       { dailyTextMessages: 75, dailyVoiceMinutes: 18, dailyTranslations: 90, dailyWordLookups: 800, dailyWritingGrades: 12, dailyPronunciationScores: 7, dailyLessonTtsPlays: 80, monthlyAvatarGenerations: 3, dailyNewCards: 9999, dailyHints: 150, dailyGoalTracks: 1, dailyAudiobookChapters: 5, dailyChatCards: 50, offlineMode: true },
 };
 
 export function getPlanLimits(tier: string): PlanLimits {
@@ -204,7 +208,7 @@ export async function getEffectiveLimits(
       // the free tier otherwise. `tts` does its own tier lookup and now
       // passes it in, which is what this note used to ask for.
       dailyLessonTtsPlays: typeof row.dailyLessonTtsPlays === 'number' ? row.dailyLessonTtsPlays : base.dailyLessonTtsPlays,
-      dailyAvatarGenerations: typeof row.dailyAvatarGenerations === 'number' ? row.dailyAvatarGenerations : base.dailyAvatarGenerations,
+      monthlyAvatarGenerations: typeof row.monthlyAvatarGenerations === 'number' ? row.monthlyAvatarGenerations : base.monthlyAvatarGenerations,
       // These two the RPC does return — `dailyNewCards` since migration 084 and
       // `dailyHints` since 090 — school override included. `dailyNewCards` was
       // simply missing from this object, which `tsc` never caught because

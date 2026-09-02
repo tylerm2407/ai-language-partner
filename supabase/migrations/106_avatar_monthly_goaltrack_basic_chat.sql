@@ -1,0 +1,22 @@
+-- 106 — Tier values after the cost pass.
+--
+-- Three changes, all from costing every feature against vendor prices:
+--   * avatars: dailyAvatarGenerations -> monthlyAvatarGenerations 3 (see 105)
+--   * goal tracks: 3/day -> 1/day. It is an onboarding artifact; three a day
+--     priced a behaviour that does not exist.
+--   * basic chat: 25 -> 20/day. Basic is structurally the tight tier at $9.99
+--     ($8.39 net), and this is the smallest cut that reaches the margin floor.
+--     The alternative was raising basic to $10.99, which is a pricing decision
+--     rather than an engineering one and stays open.
+--
+-- Applied to production 2026-09-02. The full get_effective_limits body is in
+-- the database; the per-tier values it now returns are:
+--   vip:     voice 18, chat 75, writing 12, pronun 7, hints 150, translations 90,
+--            lookups 800, chatCards 50, goalTracks 1, audiobook 5, avatars 3/mo
+--   premium: voice 12, chat 50, writing 7,  pronun 5, hints 75,  translations 60,
+--            lookups 600, chatCards 30, goalTracks 1, audiobook 3, avatars 3/mo
+--   basic:   voice 6,  chat 20, writing 3,  pronun 3, hints 30,  translations 30,
+--            lookups 300, chatCards 15, goalTracks 1, audiobook 0, avatars 3/mo
+--   free:    voice 0,  chat 0,  writing 0,  pronun 0, hints 5,   translations 10,
+--            lookups 60,  chatCards 3,  goalTracks 1, audiobook 0, avatars 0
+--            (plus one lifetime avatar grant, handled in generate-avatar)

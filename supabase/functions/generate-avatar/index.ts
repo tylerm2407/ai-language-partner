@@ -173,23 +173,28 @@ serve(async (req: Request) => {
   const usingFreeGrant = !isPaid;
 
   if (isPaid) {
-    const dailyLimit = getPlanLimits(tier).dailyAvatarGenerations;
-    const { data: quotaOk, error: quotaErr } = await supabase.rpc('consume_daily_quota', {
+    // MONTHLY, not daily (migration 105). A daily cap was the wrong shape for
+    // this feature: at ~$0.211 an image, 1/day is ~$6.33/user/month — 75% of
+    // net revenue on basic — to serve a behaviour nobody has. Someone setting
+    // up a profile wants two or three attempts in one sitting and then nothing
+    // for months. 3/month serves that better AND costs ten times less.
+    const monthlyLimit = getPlanLimits(tier).monthlyAvatarGenerations;
+    const { data: quotaOk, error: quotaErr } = await supabase.rpc('consume_monthly_quota', {
       p_user_id: userId,
       p_counter: 'avatars_generated',
-      p_limit: dailyLimit,
+      p_limit: monthlyLimit,
     });
     if (quotaErr) {
       // Fail closed — broken quota accounting must not hand out unmetered
       // image generations, which cost real money per call.
-      console.error('[generate-avatar] consume_daily_quota failed:', quotaErr.message);
-      return json({ error: 'Could not verify your daily limit. Try again shortly.' }, 503);
+      console.error('[generate-avatar] consume_monthly_quota failed:', quotaErr.message);
+      return json({ error: 'Could not verify your limit. Try again shortly.' }, 503);
     }
     if (quotaOk !== true) {
       return json(
         {
-          error: `You've used all ${dailyLimit} avatar generations for today.`,
-          code: 'DAILY_AVATAR_LIMIT_REACHED',
+          error: `You've used all ${monthlyLimit} avatar generations for this month.`,
+          code: 'MONTHLY_AVATAR_LIMIT_REACHED',
         },
         429
       );

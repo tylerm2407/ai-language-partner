@@ -254,7 +254,11 @@ async function handleSeed(supabase: Db, body: Record<string, unknown>): Promise<
           },
           body: JSON.stringify({
             model: TEXT_MODEL,
-            max_tokens: 8000,
+            // 3000, not 8000. A checkpoint is a progress summary the learner reads in a
+            // sitting, and output runs $5/MTok against $1 for input — so this ceiling
+            // cost more than everything fed into it. 8000 tokens is ~6,000 words of
+            // report nobody asked for.
+            max_tokens: 3000,
             system: buildSeedPrompt(language, band),
             messages: [{ role: 'user', content: `Generate the ${language} ${band} item pool.` }],
           }),
