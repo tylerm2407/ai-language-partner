@@ -97,17 +97,6 @@ verify_jwt = false
 [functions.revenuecat-webhook]
 verify_jwt = false
 
-# ─── voice-session-token / voice-session-end ──────────────────────────────
-# Both authenticate in the function body via getAuthenticatedUser
-# (_shared/auth.ts), same as ai-chat, so the platform gate stays off. Without
-# these entries the CLI would default them back to verify_jwt = true on the
-# next deploy and silently start rejecting this project's user tokens.
-[functions.voice-session-token]
-verify_jwt = false
-
-[functions.voice-session-end]
-verify_jwt = false
-
 # ─── lesson-session ───────────────────────────────────────────────────────
 # Redis-backed mid-lesson resume snapshots (one-day expiry). Authenticates in
 # the function body via getAuthenticatedUser (_shared/auth.ts) and derives the
@@ -118,18 +107,8 @@ verify_jwt = false
 [functions.lesson-session]
 verify_jwt = false
 
-# ─── analyze-turn ─────────────────────────────────────────────────────────
-# Deployed verify_jwt = false since 2026 (confirmed against the live function
-# list) but never recorded here, so the next `functions deploy` would have
-# flipped the platform gate back ON and started rejecting this project's user
-# tokens — the exact regression the header warns about. The function body
-# authenticates via getAuthenticatedUser (_shared/auth.ts), then burst-limits
-# and consumes text_messages quota before any model call.
-[functions.analyze-turn]
-verify_jwt = false
-
 # ─── create-checkout ──────────────────────────────────────────────────────
-# Also deployed verify_jwt = false and also unrecorded. It mints Stripe
+# Deployed verify_jwt = false and, until this entry, unrecorded. It mints Stripe
 # Checkout sessions against the CALLER's verified user id, so the auth it
 # depends on is its own bearer check, not the gate — but a silent flip to
 # true would take subscription purchase down entirely.
@@ -159,9 +138,9 @@ verify_jwt = false
 # These three deploy with the platform JWT gate ON, and always have. They are
 # recorded here anyway: without an entry the CLI applies its own default, and
 # the fact that the default currently matches production is coincidence, not
-# intent. The analyze-turn and create-checkout entries above exist because
-# exactly that coincidence ran the other way and would have flipped a live
-# function on the next deploy.
+# intent. The create-checkout entry above exists because exactly that
+# coincidence ran the other way and would have flipped a live function on the
+# next deploy.
 #
 # All three authenticate again inside the function body (getAuthenticatedUser
 # for get-hint and score-pronunciation, an explicit auth.getUser for

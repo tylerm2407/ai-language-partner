@@ -12,6 +12,7 @@ import {
   assessConfidence,
   buildProficiencyReport,
   cefrBandForProficiencyLevel,
+  combineConversationScore,
   isMature,
   isRetained,
   normalizeBand,
@@ -806,5 +807,101 @@ describe('buildProficiencyReport', () => {
       'listening',
       'speaking',
     ]);
+  });
+});
+
+describe('combineConversationScore', () => {
+  // Mirrors combinedScore in supabase/functions/_shared/turn-accuracy.ts.
+  // The two are duplicated across the edge/app boundary, so this test is also
+  // the thing that catches them drifting apart.
+
+  it('weighs being understood equally with being right', () => {
+    expect(combineConversationScore(1, 0.6)).toBeCloseTo(0.8, 5);
+    expect(combineConversationScore(0.6, 1)).toBeCloseTo(0.8, 5);
+  });
+
+  it('lets accuracy carry the turn when nothing was heard from the recogniser', () => {
+    // A missing intelligibility is an older transcribe deployment reporting
+    // nothing, not a learner who could not be understood. Discarding the turn
+    // would lose real evidence.
+    expect(combineConversationScore(0.9, null)).toBe(0.9);
+    expect(combineConversationScore(0.9, Number.NaN)).toBe(0.9);
+  });
+
+  it('is monotonic in both inputs', () => {
+    expect(combineConversationScore(0.9, 0.5)).toBeGreaterThan(combineConversationScore(0.4, 0.5));
+    expect(combineConversationScore(0.5, 0.9)).toBeGreaterThan(combineConversationScore(0.5, 0.4));
+  });
+
+  it('a perfect turn is 1 and a failed one is 0', () => {
+    expect(combineConversationScore(1, 1)).toBe(1);
+    expect(combineConversationScore(0, 0)).toBe(0);
+  });
+});
+
+describe('conversation as proficiency evidence', () => {
+  // Conversation turns arrive already shaped as SpeakingEvidenceItem /
+  // WritingEvidenceItem, so they flow through the existing assessments. These
+  // pin the two properties that matter: a conversation CAN move a level, and
+  // typed turns cannot move the *speaking* one.
+
+  const conversationTurns = (band: string, count: number, score: number): SpeakingEvidenceItem[] =>
+    Array.from({ length: count }, () => ({ cefrLevel: band, score }));
+
+  it('spoken turns alone can evidence a speaking level', () => {
+    const evidence: ProficiencyEvidence = {
+      vocabulary: [],
+      reading: [],
+      writing: [],
+      speaking: [
+        ...conversationTurns('A1', MIN_SPEAKING_ITEMS, 0.85),
+        ...conversationTurns('A2', MIN_SPEAKING_ITEMS, 0.8),
+      ],
+      listeningMinutes: 0,
+      speakingMinutes: 30,
+      activeDays: 12,
+      totalReviews: 200,
+    };
+    const report = buildProficiencyReport(evidence, NOW);
+    const speaking = report.skills.find((s) => s.skill === 'speaking')!;
+    expect(speaking.status).toBe('assessed');
+    expect(speaking.level).toBe('A2');
+  });
+
+  it('turns below the pass mark do not grant a level', () => {
+    const evidence: ProficiencyEvidence = {
+      vocabulary: [],
+      reading: [],
+      writing: [],
+      speaking: conversationTurns('A1', MIN_SPEAKING_ITEMS, SPEAKING_PASS_SCORE - 0.05),
+      listeningMinutes: 0,
+      speakingMinutes: 30,
+      activeDays: 12,
+      totalReviews: 200,
+    };
+    const report = buildProficiencyReport(evidence, NOW);
+    expect(report.skills.find((s) => s.skill === 'speaking')!.level).toBeNull();
+  });
+
+  it('typed turns are writing evidence and never touch speaking', () => {
+    const typed: WritingEvidenceItem[] = Array.from({ length: MIN_WRITING_ITEMS }, () => ({
+      cefrLevel: 'A1',
+      overallScore: 0.9,
+      wordCount: 20,
+    }));
+    const evidence: ProficiencyEvidence = {
+      vocabulary: [],
+      reading: [],
+      writing: typed,
+      speaking: [],
+      listeningMinutes: 0,
+      speakingMinutes: 0,
+      activeDays: 12,
+      totalReviews: 200,
+    };
+    const report = buildProficiencyReport(evidence, NOW);
+    expect(report.skills.find((s) => s.skill === 'writing')!.level).toBe('A1');
+    // Never "assessed" off typing — a keyboard and time to think is not speech.
+    expect(report.skills.find((s) => s.skill === 'speaking')!.status).toBe('not_assessed');
   });
 });

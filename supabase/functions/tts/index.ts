@@ -313,6 +313,16 @@ interface TTSRequest {
    * is spend the wrong small bucket. */
   purpose?: 'lesson' | 'voice';
   /**
+   * Return a short-lived signed URL instead of inlining the audio as base64.
+   *
+   * Opt-in so that a build predating this field keeps getting exactly what it
+   * got before. Worth having: base64 cannot play until the last byte has
+   * arrived and been decoded, so the learner waits for the whole reply to
+   * transfer before hearing the first syllable of it. A URL streams, and on a
+   * cache hit it means the bytes never pass through this function at all.
+   */
+  preferUrl?: boolean;
+  /**
    * Playback rate for LESSON audio only, clamped server-side to [0.7, 1.0].
    *
    * This is the "play it slower" affordance, not a global speed control: a
@@ -470,7 +480,7 @@ serve(async (req: Request) => {
     }
     const authenticatedUserId = authUser.userId;
 
-    const { text, language, voiceIndex, voiceMode, voiceRotationKey, voiceGender: rawGender, purpose: rawPurpose, rate: rawRate } =
+    const { text, language, voiceIndex, voiceMode, voiceRotationKey, voiceGender: rawGender, purpose: rawPurpose, rate: rawRate, preferUrl } =
       (await req.json()) as TTSRequest;
     // Anything but the explicit lesson marker meters as voice — the stricter
     // of the two buckets, so a malformed or missing value cannot widen access.
@@ -543,6 +553,26 @@ serve(async (req: Request) => {
       // are versioned by the PATH instead; see cachePathFor in ./synthesis.ts.
       return cachePathFor({ hash: await sha256Hex(key), purpose, rate });
     };
+    /**
+     * A short-lived signed URL for a cached object.
+     *
+     * The bucket is private and stays private — it is content-addressed and
+     * shared across every learner, so a public bucket would let anyone
+     * enumerate what the tutor has ever said. Five minutes is far longer than
+     * the gap between this response and playback starting, and short enough
+     * that a leaked URL is worth nothing.
+     */
+    const signedUrlFor = async (path: string): Promise<string | null> => {
+      const { data, error } = await supabase.storage
+        .from(TTS_BUCKET)
+        .createSignedUrl(path, 300);
+      if (error) {
+        console.warn('[tts] could not sign cache url:', error.message);
+        return null;
+      }
+      return data?.signedUrl ?? null;
+    };
+
     const readCache = async (path: string): Promise<ArrayBuffer | null> => {
       const { data } = await supabase.storage.from(TTS_BUCKET).download(path);
       return data ? await data.arrayBuffer() : null;
@@ -550,6 +580,18 @@ serve(async (req: Request) => {
 
     // ── Cache lookup ── hits cost nothing, so they bypass quota and burst limits.
     let cachePath = await cacheKeyFor(provider, voiceId);
+    if (preferUrl) {
+      // Sign first and skip the download entirely: on a hit the audio never
+      // needs to enter this function's memory, let alone be base64-expanded
+      // and shipped through it a second time.
+      const hitUrl = await signedUrlFor(cachePath);
+      if (hitUrl) {
+        return new Response(JSON.stringify({ audioUrl: hitUrl, cached: true }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      // Signing failed — fall through to the byte path rather than resynthesising.
+    }
     const cached = await readCache(cachePath);
     if (cached) {
       return new Response(JSON.stringify({ audioBase64: bufferToBase64(cached), cached: true }), {
@@ -731,6 +773,21 @@ serve(async (req: Request) => {
       }).then(({ error }) => {
         if (error) console.error('[tts] Failed to increment voice_minutes:', error.message);
       });
+    }
+
+    // Freshly synthesised. The upload above just put it in the bucket, so a
+    // URL is available now — and the client can start playing while the rest
+    // of the file is still arriving, instead of waiting for a base64 blob to
+    // transfer whole and then be decoded.
+    if (preferUrl) {
+      const freshUrl = await signedUrlFor(cachePath);
+      if (freshUrl) {
+        return new Response(JSON.stringify({ audioUrl: freshUrl }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      // Signing failed after a successful synthesis. Fall back to the bytes we
+      // already hold rather than making the learner wait for nothing.
     }
 
     return new Response(JSON.stringify({ audioBase64: base64 }), {

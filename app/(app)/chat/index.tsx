@@ -7,7 +7,7 @@ import { useSafeBack } from '../../../hooks/useSafeBack';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAppStore, effectiveTier } from '../../../stores/useAppStore';
 import { useOnboardingChecklist } from '../../../hooks/useOnboardingChecklist';
-import { sendChatMessage, getTextToSpeech, VoiceError } from '../../../lib/ai';
+import { sendChatMessage, getSpeechUri, VoiceError } from '../../../lib/ai';
 import { showLimitAlert } from '../../../lib/limit-messaging';
 import { CEFR_BAND_BY_LEVEL } from '../../../lib/cefr-proficiency';
 import { cefrLabel, cefrAccessibilityLabel } from '../../../lib/cefr-labels';
@@ -318,6 +318,24 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
     sound.unloadAsync().catch(() => {});
   }, []);
 
+  /**
+   * Barge-in: stop the tutor and hand the turn straight back.
+   *
+   * The mic cannot simply stay open through playback — expo-av has no echo
+   * cancellation, so it would hear the tutor and interrupt itself, and
+   * lib/audio-session.ts records what mixing record and play has already cost
+   * this app on iOS. A tap does the same job safely: the learner who has heard
+   * enough stops waiting, which is most of what barge-in is actually for.
+   *
+   * The playback-finished handler is detached by `stopSpeaking`, so the loop's
+   * normal pivot cannot also fire and open a second microphone.
+   */
+  const interruptAndListen = useCallback(() => {
+    stopSpeaking();
+    setHandsFreeState('LISTENING');
+    setShouldStartListening(true);
+  }, [stopSpeaking]);
+
   // Auto-play TTS for assistant messages in voice mode. In hands-free this is
   // the pivot of the loop: playback finishing is what re-opens the mic, so every
   // exit path from here must either set TTS_PLAYING → shouldStartListening or
@@ -335,11 +353,16 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
         setHandsFreeState('TTS_PLAYING');
       }
 
-      const base64 = await getTextToSpeech(text, targetLanguage, user?.id, { voiceGender });
-      const dataUri = `data:audio/mpeg;base64,${base64}`;
+      // A playable URI, not bytes. A signed URL starts playing while the rest
+      // of the file is still arriving; the base64 data URI it replaced could
+      // not make a sound until the whole reply had transferred and been
+      // decoded. `getSpeechUri` still returns a data: URI when the server
+      // cannot sign one, so this path degrades to the old behaviour rather
+      // than failing.
+      const uri = await getSpeechUri(text, targetLanguage, user?.id, { voiceGender });
 
       await setAudioSessionMode(playbackModeFor(isHandsFree));
-      const result = await Audio.Sound.createAsync({ uri: dataUri });
+      const result = await Audio.Sound.createAsync({ uri });
       sound = result.sound;
       ttsSoundRef.current = sound;
       await sound.playAsync();
@@ -960,6 +983,8 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
           voiceGender={voiceGender}
           onVoiceGenderChange={handleVoiceGenderChange}
           onBeforeRecord={() => ensureConsent('voice')}
+          onInterruptPlayback={interruptAndListen}
+          cefrLevel={CEFR_FOR_LEVEL[level]}
         />
         {consentSheet}
       </KeyboardAvoidingView>

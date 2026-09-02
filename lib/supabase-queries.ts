@@ -31,7 +31,6 @@ import type {
   HandsFreeSessionRow,
   DailyStats,
   DailyUsage,
-  PracticeSession,
   Subscription,
   ReviewRating,
   DailyChallengesRecord,
@@ -955,44 +954,7 @@ export async function fetchProficiencyEvidence(
 
 // ─── Practice Sessions ──────────────────────────────────────────
 
-export async function createPracticeSession(
-  userId: string,
-  topic: string,
-  targetLanguage: string,
-  level: string
-): Promise<PracticeSession> {
-  const { data, error } = await supabase
-    .from('practice_sessions')
-    .insert({
-      user_id: userId,
-      topic,
-      target_language: targetLanguage,
-      level,
-      messages: [],
-    })
-    .select()
-    .single();
 
-  if (error) throw error;
-  return mapPracticeSession(data);
-}
-
-export async function updatePracticeSession(
-  sessionId: string,
-  updates: { messages?: unknown[]; durationMinutes?: number; endedAt?: string }
-): Promise<void> {
-  const payload: Record<string, unknown> = {};
-  if (updates.messages !== undefined) payload.messages = updates.messages;
-  if (updates.durationMinutes !== undefined) payload.duration_minutes = updates.durationMinutes;
-  if (updates.endedAt !== undefined) payload.ended_at = updates.endedAt;
-
-  const { error } = await supabase
-    .from('practice_sessions')
-    .update(payload)
-    .eq('id', sessionId);
-
-  if (error) throw error;
-}
 
 // ─── Daily Usage (quota tracking) ────────────────────────────────
 
@@ -1280,19 +1242,6 @@ function mapReviewLog(row: Record<string, unknown>): ReviewLog {
   };
 }
 
-function mapPracticeSession(row: Record<string, unknown>): PracticeSession {
-  return {
-    id: row.id as string,
-    userId: row.user_id as string,
-    topic: row.topic as string,
-    targetLanguage: row.target_language as PracticeSession['targetLanguage'],
-    level: row.level as PracticeSession['level'],
-    messages: row.messages as PracticeSession['messages'],
-    durationMinutes: row.duration_minutes as number,
-    startedAt: row.started_at as string,
-    endedAt: row.ended_at as string | null,
-  };
-}
 
 function mapSubscription(row: Record<string, unknown>): Subscription {
   return {

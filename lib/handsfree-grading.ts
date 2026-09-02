@@ -29,12 +29,11 @@ import type { ReviewRating } from '../types';
 /**
  * Signals from the transcription provider.
  *
- * Every field is nullable because the transcribe function does not surface
- * them yet — it requests Whisper's `verbose_json` and then discards
- * `no_speech_prob` and `avg_logprob`. Until that is extended, confidence
- * degrades to a neutral value rather than failing every turn closed. That
- * ordering is deliberate: shipping the gate before the signal would make
- * hands-free unusable, and shipping the signal without the gate would waste it.
+ * `transcribe` now surfaces both — it always asked Whisper for `verbose_json`
+ * and used to discard the `segments[]` these are folded out of. They stay
+ * nullable because an older deployment of that function returns neither, and
+ * a null must keep degrading to a neutral value rather than failing the turn
+ * closed.
  */
 export interface SttConfidenceSignal {
   /** Whisper's probability the clip is silence. 0–1, higher is worse. */
@@ -52,17 +51,47 @@ export const NEUTRAL_CONFIDENCE = 0.75;
 /**
  * Below this, the answer is re-asked rather than graded.
  *
- * A GUESS until real Whisper distributions from a moving car are logged.
- * It sits below NEUTRAL_CONFIDENCE so that missing signals never trip it —
- * today the gate is effectively inert, and turns on by itself once transcribe
- * starts returning the fields.
+ * Sits below NEUTRAL_CONFIDENCE so that missing signals never trip it.
  */
 export const HANDSFREE_MIN_CONFIDENCE = 0.55;
 
+/**
+ * Below this, a spoken conversation turn is re-asked rather than sent.
+ *
+ * Same signal and the same number as the hands-free gate, named separately
+ * because the two answer different questions and may need to diverge. Grading
+ * asks "may this write to the SM-2 schedule"; conversation asks "may this be
+ * sent to the tutor". The costs are comparable — a garbled turn earns a
+ * non-sequitur reply and, worse, a grammar correction aimed at a word the
+ * learner never said. That last one is a named complaint about a competitor
+ * and is exactly what this gate exists to prevent.
+ */
+export const CHAT_MIN_CONFIDENCE = 0.55;
+
 /** avg_logprob at or above this is treated as fully confident. */
 const LOGPROB_CEILING = -0.1;
-/** avg_logprob at or below this is treated as no confidence at all. */
-const LOGPROB_FLOOR = -1.0;
+
+/**
+ * avg_logprob at or below this is treated as no confidence at all.
+ *
+ * Widened from -1.0 when `transcribe` began returning real values and this
+ * gate stopped being inert. The old floor put the refusal threshold at
+ * avg_logprob ≈ -0.505, which is inside the range accented second-language
+ * speech normally occupies — Whisper scores a clear but non-native utterance
+ * well below a native one, and this app's users are non-native by
+ * definition. Every learner with a strong accent would have been told the app
+ * could not hear them, on turns it had transcribed correctly.
+ *
+ * At -1.6 the refusal threshold lands near -0.78, which is a turn that is
+ * genuinely mangled rather than merely accented.
+ *
+ * Still an estimate, not a measurement: it is reasoned from published Whisper
+ * behaviour, not from our own logged distributions. Revisit once real turns
+ * have been recorded — deliberately erring toward grading an imperfect turn
+ * rather than refusing a good one, because a spurious "I didn't catch that"
+ * is the failure learners abandon an app over.
+ */
+const LOGPROB_FLOOR = -1.6;
 
 function clamp01(n: number): number {
   return Math.min(1, Math.max(0, n));

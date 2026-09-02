@@ -7,6 +7,19 @@
  */
 import { getScenario } from '../_shared/scenarios.ts';
 
+
+/**
+ * Does this level's correction policy ask the learner to self-correct?
+ *
+ * The dialogue controller needs this to know whether OUR last turn left a
+ * repair outstanding — at beginner and elementary the tutor recasts and moves
+ * on, so there is nothing for the learner to attempt and nothing to follow up.
+ * Kept here, beside the policy table it reads, so the two cannot drift.
+ */
+export function usesPromptFirstCorrection(level: string): boolean {
+  return level === 'intermediate' || level === 'upper_intermediate' || level === 'advanced';
+}
+
 export function buildSystemPrompt(
   targetLanguage: string,
   level: string,
@@ -26,6 +39,47 @@ export function buildSystemPrompt(
       'Speak as a native would. Use idioms, colloquialisms, and complex structures. Challenge the student with nuanced vocabulary.',
   };
   const levelGuide = levelDescriptions[level] ?? levelDescriptions.beginner;
+
+  // How the tutor responds to an error, by level.
+  //
+  // Corrective-feedback research puts these three moves in a clear order.
+  // Lyster & Saito (2010), 15 classroom studies, N=827: PROMPTS — elicitation,
+  // clarification requests, metalinguistic clues, anything that withholds the
+  // correct form and makes the learner produce it — measure d=1.14. RECASTS,
+  // where the tutor silently reformulates and moves on, measure d=0.70. Li's
+  // separate 34-study meta-analysis puts explicit correction at d=0.81 against
+  // recasts at 0.70.
+  //
+  // Recasts are the weakest of the three, and they are what every product in
+  // this category ships, because they are the conversationally polite move and
+  // an instruction-tuned model reaches for them by reflex. This prompt used to
+  // ask for them at every level too.
+  //
+  // Gated by level rather than switched on outright: a prompt only works if
+  // the learner has a repair available to attempt. Withholding the answer from
+  // someone with fifty words of the language does not push them, it strands
+  // them mid-sentence — and the affective cost of that at beginner level is
+  // exactly the speaking anxiety the product exists to lower. So beginners
+  // keep the recast, and the push starts where there is something to push.
+  const correctionPolicies: Record<string, string> = {
+    beginner:
+      '- If the student makes an error, naturally recast (rephrase correctly) in your reply instead of lecturing. Do not ask them to fix it themselves — at this level, hearing it right is the lesson. Only flag it in the correction field if it is significant.',
+    elementary:
+      '- If the student makes an error, naturally recast (rephrase correctly) in your reply instead of lecturing. Do not ask them to fix it themselves. Only flag it in the correction field if it is significant.',
+    intermediate:
+      `- When the student makes a meaningful error, do NOT hand them the corrected sentence first. Give them one chance to fix it themselves: repeat their phrase back with questioning intonation, ask "how would you say that again?", or name the category without the answer ("careful — that verb needs the past tense"). This is the single highest-value move you make; a correction the student produces is worth far more than one they are given.
+- If their next turn repairs it, react warmly to the repair and carry on. If it does not, recast normally and move on — never push a third time, and never let this stall the conversation.
+- Small slips that do not obscure meaning are not worth interrupting for. Recast those in passing.`,
+    upper_intermediate:
+      `- When the student makes a meaningful error, do NOT hand them the corrected sentence first. Give them one chance to fix it themselves: repeat their phrase back with questioning intonation, ask "how would you say that again?", or name the category without the answer ("careful — that verb needs the past tense"). A correction the student produces is worth far more than one they are given.
+- If their next turn repairs it, react warmly to the repair and carry on. If it does not, recast normally and move on — never push a third time.
+- Small slips that do not obscure meaning are not worth interrupting for. Recast those in passing.`,
+    advanced:
+      `- When the student makes a meaningful error, do NOT hand them the corrected sentence first. Give them one chance to fix it themselves — an elicitation, a questioning repetition, or a metalinguistic clue that names the rule without applying it.
+- If their next turn does not repair it, state the rule plainly and briefly, then continue. At this level the student can use an explicit explanation, and vagueness wastes their time.
+- Small slips that do not obscure meaning are not worth interrupting for. Recast those in passing.`,
+  };
+  const correctionPolicy = correctionPolicies[level] ?? correctionPolicies.beginner;
 
   // Scenarios are OUR content, chosen by key from a fixed table — not caller
   // text — so they belong in the cached system prompt. The learner-supplied
@@ -59,8 +113,8 @@ CONVERSATION STYLE:
 - If the student writes in English, reply in ${targetLanguage} and give them a starter phrase to try.
 - Keep responses concise (1-3 sentences for your reply)
 - Ask exactly ONE follow-up question per turn to keep the conversation flowing
-- If the student makes an error, naturally recast (rephrase correctly) in your reply instead of lecturing. Only flag it in the correction field if it's significant.
-- When you introduce new or important vocabulary, include those words in the vocabularyHighlights array
+${correctionPolicy}
+- When you introduce new or important vocabulary, include those words in the vocabularyHighlights array, each with its ${nativeLanguage} translation
 
 NEGOTIATION OF MEANING (Long 1996 — critical for acquisition):
 - When the student's message is AMBIGUOUS or too malformed to understand, do NOT silently paper over it with your best guess. Instead, ask a clarification question: "Sorry — did you mean X or Y?", "What do you mean by ___?", or a confirmation check like "So you're saying ___?".
@@ -85,8 +139,15 @@ You MUST respond with valid JSON in this exact structure:
     "severity": "one of: minor | moderate | critical",
     "example": "Optional extra example sentence in ${targetLanguage} illustrating the correct pattern. Use null if not useful."
   },
-  "vocabularyHighlights": ["word1", "word2"]
+  "vocabularyHighlights": [
+    { "word": "The word or short phrase in ${targetLanguage}.", "translation": "Its meaning in ${nativeLanguage}." }
+  ]
 }
+
+VOCABULARY RULES:
+- Only list words you actually used in this reply and that are genuinely new or worth keeping. Two per turn is plenty; an empty array is the right answer most turns.
+- Every entry needs both fields. A word without its translation cannot be studied later, so omit the entry entirely rather than guessing.
+- Give the dictionary form (infinitive, singular) unless the inflected form is the thing worth learning.
 
 CORRECTION RULES:
 - Only produce a correction object when there is a meaningful error worth flagging. For perfect or near-perfect input, set correction to null.

@@ -203,9 +203,15 @@ export function useHandsFreeSession(
           return;
         }
 
+        // Whisper's own confidence, now that `transcribe` returns it. These
+        // were hardcoded null, which made sttConfidence return NEUTRAL for
+        // every turn and left the low-confidence gate below inert — a
+        // misheard answer went straight into the SM-2 schedule. They stay
+        // nullable: an older deployment of the function reports neither, and
+        // null still means "no signal", not "no confidence".
         const confidence = sttConfidence({
-          noSpeechProb: null,
-          avgLogprob: null,
+          noSpeechProb: transcription.noSpeechProb,
+          avgLogprob: transcription.avgLogprob,
           transcript: transcription.text,
           speechDurationMs: result.durationMs,
         });

@@ -8,6 +8,7 @@
 
 import {
   CHAT_VAD,
+  chatVadForLevel,
   HANDSFREE_VAD,
   createVadState,
   feedVadSample,
@@ -209,5 +210,54 @@ describe('chat profile', () => {
     const { decision, stoppedAtMs } = runTurn(CHAT_VAD, (t) => (t < 400 ? -60 : -15), 60_000);
     expect(decision.kind).toBe('stop');
     expect(stoppedAtMs).toBe(CHAT_VAD.maxListenMs);
+  });
+});
+
+describe('chatVadForLevel', () => {
+  // The rule this defends: patience falls as fluency rises, and an unknown
+  // level is treated as a beginner. Cutting a learner off mid-sentence is the
+  // single most-cited complaint about the best-funded rival in this market, so
+  // every ambiguity here resolves toward waiting longer.
+
+  it('is more patient the lower the level', () => {
+    const silence = (band: string) => chatVadForLevel(band).silenceMs;
+    expect(silence('A1')).toBeGreaterThan(silence('A2'));
+    expect(silence('A2')).toBeGreaterThan(silence('B1'));
+    expect(silence('B1')).toBeGreaterThan(silence('B2'));
+    expect(silence('B2')).toBeGreaterThan(silence('C1'));
+  });
+
+  it('gives a beginner longer to finish a sentence', () => {
+    expect(chatVadForLevel('A1').maxListenMs).toBeGreaterThan(chatVadForLevel('C1').maxListenMs);
+  });
+
+  it('never gets less patient than a generic native-tuned endpointer', () => {
+    // ~500ms is the usual voice-agent default, and it is tuned for natives.
+    for (const band of ['A1', 'A2', 'B1', 'B2', 'C1', 'C2']) {
+      expect(chatVadForLevel(band).silenceMs).toBeGreaterThan(1000);
+    }
+  });
+
+  it('treats an unknown or missing level as a beginner, not as advanced', () => {
+    const a1 = chatVadForLevel('A1');
+    for (const unknown of [null, undefined, '', '   ', 'fluent', 'Z9']) {
+      expect(chatVadForLevel(unknown).silenceMs).toBe(a1.silenceMs);
+    }
+  });
+
+  it('accepts the levels the app actually stores, however they are cased', () => {
+    expect(chatVadForLevel('b1').silenceMs).toBe(chatVadForLevel('B1').silenceMs);
+    // cefrLabel() renders "B1 · can-do statement"; take the band off the front.
+    expect(chatVadForLevel('B1 · Can hold a simple conversation').silenceMs).toBe(
+      chatVadForLevel('B1').silenceMs,
+    );
+  });
+
+  it('keeps the rest of the chat tuning intact', () => {
+    const cfg = chatVadForLevel('B1');
+    expect(cfg.speechMarginDb).toBe(CHAT_VAD.speechMarginDb);
+    expect(cfg.minThresholdDb).toBe(CHAT_VAD.minThresholdDb);
+    expect(cfg.maxThresholdDb).toBe(CHAT_VAD.maxThresholdDb);
+    expect(cfg.calibrationMs).toBe(CHAT_VAD.calibrationMs);
   });
 });

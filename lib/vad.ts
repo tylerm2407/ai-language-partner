@@ -74,6 +74,49 @@ export const CHAT_VAD: VadConfig = {
   minSpeechMs: 250,
 };
 
+/**
+ * Chat endpointing tuned to how long this learner needs to get a sentence out.
+ *
+ * A second-language speaker pauses mid-utterance far more than a native one —
+ * reaching for a word, re-planning a clause, self-correcting — and the lower
+ * their level the longer those pauses run. Generic voice-agent VAD is tuned
+ * for natives at around 500ms of silence, and the single most-cited complaint
+ * about the best-funded AI conversation product in this market is that it cuts
+ * people off and gives them no time to think.
+ *
+ * So patience is a function of level, not a constant: generous at A1 where
+ * every clause is assembled deliberately, tightening toward B2/C1 where a long
+ * gap really does mean "your turn". Erring long is much cheaper than erring
+ * short — waiting an extra second costs a beat of dead air, while cutting a
+ * learner off mid-sentence sends a truncated turn to the tutor and teaches
+ * them the app cannot hear them.
+ *
+ * `maxListenMs` scales with it for the same reason: a beginner composing a
+ * sentence out loud legitimately takes longer than an advanced speaker saying
+ * one.
+ */
+const CHAT_VAD_BY_BAND: Record<string, { silenceMs: number; maxListenMs: number; noSpeechTimeoutMs: number }> = {
+  A1: { silenceMs: 2200, maxListenMs: 45000, noSpeechTimeoutMs: 20000 },
+  A2: { silenceMs: 2000, maxListenMs: 40000, noSpeechTimeoutMs: 18000 },
+  B1: { silenceMs: 1700, maxListenMs: 35000, noSpeechTimeoutMs: 16000 },
+  B2: { silenceMs: 1500, maxListenMs: 30000, noSpeechTimeoutMs: 15000 },
+  C1: { silenceMs: 1300, maxListenMs: 30000, noSpeechTimeoutMs: 14000 },
+  C2: { silenceMs: 1300, maxListenMs: 30000, noSpeechTimeoutMs: 14000 },
+};
+
+/**
+ * A chat VAD config for a learner at `cefrLevel`.
+ *
+ * Unknown or missing levels get the A1 settings — the most patient. Guessing
+ * wrong toward patience wastes a moment; guessing wrong toward haste truncates
+ * someone mid-sentence.
+ */
+export function chatVadForLevel(cefrLevel: string | null | undefined): VadConfig {
+  const band = (cefrLevel ?? '').trim().toUpperCase().slice(0, 2);
+  const tuning = CHAT_VAD_BY_BAND[band] ?? CHAT_VAD_BY_BAND.A1;
+  return { ...CHAT_VAD, ...tuning };
+}
+
 export type VadStopReason =
   | 'silence_after_speech'
   | 'max_window'

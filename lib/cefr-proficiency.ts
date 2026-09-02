@@ -189,17 +189,48 @@ export interface WritingEvidenceItem {
 
 export interface SpeakingEvidenceItem {
   /**
-   * CEFR level tag of the card the attempt was against. Null for read-aloud
-   * and free practice, which are not tied to a card — those attempts are real
-   * practice but cannot evidence a *level*, so they are ignored here exactly
-   * as an untagged reading piece is.
+   * CEFR level tag of the attempt. For a scored card this is the card's tag;
+   * null for read-aloud and free practice, which are real practice but cannot
+   * evidence a *level*, so they are ignored here exactly as an untagged
+   * reading piece is. Conversation turns always carry the level the
+   * conversation was held at.
    */
   cefrLevel: string | null;
   /**
-   * 0–1 pronunciation score. Stored 0–100 in `pronunciation_scores`; the query
-   * layer normalises so this matches the reading and writing scales.
+   * 0–1. Two sources feed this, deliberately on the same scale:
+   *
+   *  - `pronunciation_scores`, a scored attempt against a known target,
+   *    stored 0–100 and normalised by the query layer.
+   *  - `conversation_evidence`, a spoken turn scored on how accurate the
+   *    language was and how well it came across (see combineConversationScore).
+   *
+   * They measure different things and are pooled on purpose: both are
+   * evidence of the same can-do statement, and a learner who only ever holds
+   * conversations should still be assessed on speaking.
    */
   score: number;
+}
+
+/**
+ * Collapse one conversation turn's stored components into a single 0–1 score.
+ *
+ * Mirrors `combinedScore` in supabase/functions/_shared/turn-accuracy.ts. The
+ * two exist separately because an edge function and the app bundle cannot
+ * share a module, and the rule is duplicated rather than the score being
+ * stored pre-combined — the raw components are kept in the table precisely so
+ * the weighting can be re-tuned later without losing the evidence.
+ *
+ * Speaking is half accuracy and half intelligibility: a grammatically perfect
+ * sentence nobody can follow has not achieved the can-do statement. Where the
+ * recogniser reported nothing, accuracy carries the turn alone rather than the
+ * turn being discarded.
+ */
+export function combineConversationScore(
+  accuracy: number,
+  intelligibility: number | null,
+): number {
+  if (intelligibility === null || !Number.isFinite(intelligibility)) return accuracy;
+  return 0.5 * accuracy + 0.5 * intelligibility;
 }
 
 export interface ProficiencyEvidence {
@@ -681,7 +712,10 @@ function assessSpeaking(items: SpeakingEvidenceItem[], minutes: number): SkillAs
       skill: 'speaking',
       level,
       status: 'assessed',
-      detail: `Averaged ${Math.round(levelMean * 100)}% pronunciation across ${perBand.get(level)?.length ?? 0} scored ${level} attempts.`,
+      // Not "pronunciation": conversation turns contribute how accurate the
+      // language was and how well it came across, alongside scored
+      // pronunciation attempts. Naming one source would misdescribe the other.
+      detail: `Averaged ${Math.round(levelMean * 100)}% across ${perBand.get(level)?.length ?? 0} scored ${level} attempts.`,
       evidenceCount: items.length,
     };
   }

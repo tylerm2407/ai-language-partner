@@ -488,18 +488,6 @@ export function normalizeCorrection(
   return { shortLabel, explanation, original, corrected, errorType, severity, example, repetitionCount };
 }
 
-export interface PracticeSession {
-  id: string;
-  userId: string;
-  topic: string;
-  targetLanguage: LanguageCode;
-  level: ProficiencyLevel;
-  messages: ConversationMessage[];
-  durationMinutes: number;
-  startedAt: string;
-  endedAt: string | null;
-}
-
 // ─── Subscription ───────────────────────────────────────────────
 
 export type SubscriptionTier = 'starter' | 'basic' | 'premium' | 'vip';

@@ -30,9 +30,16 @@ export interface ScenarioPromptContext {
   level: string;
 }
 
+/**
+ * Server-side scenario: the hidden prompt, and nothing else.
+ *
+ * `label` and `description` used to live here too, duplicated verbatim from
+ * `types/scenarios.ts`. Nothing on this side ever read them — the client
+ * renders the picker, the server only resolves a key to a prompt — so they
+ * were two strings per scenario that could silently drift from the ones
+ * actually shown to learners. The client copy is now the only copy.
+ */
 export interface Scenario {
-  label: string;
-  description: string;
   buildPrompt(ctx: ScenarioPromptContext): string;
 }
 
@@ -412,48 +419,30 @@ Never reveal you are an AI. Stay in character as a language-exchange friend. Res
 
 export const SCENARIOS: Record<ScenarioKey, Scenario> = {
   restaurant: {
-    label: 'Ordering at a Restaurant',
-    description: 'Practice ordering food, asking about menu items, expressing preferences and allergies.',
     buildPrompt: restaurantPrompt,
   },
   job_interview: {
-    label: 'Job Interview Practice',
-    description: 'Introduce yourself, answer common interview questions, discuss experience.',
     buildPrompt: jobInterviewPrompt,
   },
   directions: {
-    label: 'Asking for Directions',
-    description: 'Navigate to a destination, understand landmarks, give and receive directions.',
     buildPrompt: directionsPrompt,
   },
   shopping: {
-    label: 'Shopping',
-    description: 'Ask about sizes, colors, prices, and make purchases.',
     buildPrompt: shoppingPrompt,
   },
   making_friends: {
-    label: 'Making Friends',
-    description: 'Talk about hobbies, interests, and make plans together.',
     buildPrompt: makingFriendsPrompt,
   },
   doctor: {
-    label: 'Doctor / Pharmacy Visit',
-    description: 'Describe symptoms, understand medical advice, buy medication.',
     buildPrompt: doctorPrompt,
   },
   phone_call: {
-    label: 'Phone Call',
-    description: 'Book appointments, make reservations, handle phone etiquette.',
     buildPrompt: phoneCallPrompt,
   },
   airport_hotel: {
-    label: 'Airport / Hotel',
-    description: 'Check in, ask about amenities, handle travel situations.',
     buildPrompt: airportHotelPrompt,
   },
   free_chat: {
-    label: 'Free Chat',
-    description: 'Open conversation on any topic you choose.',
     buildPrompt: freeChatPrompt,
   },
 };

@@ -26,7 +26,7 @@ import {
   MAX_NEWS_TOTAL_CHARS,
   splitForSynthesis,
 } from './script.ts';
-import { parseMp3DurationMs } from './mp3-duration.ts';
+import { parseMp3DurationMs } from '../_shared/mp3-duration.ts';
 import { PROVIDER_TIMEOUT_MS, providerFetch } from '../_shared/provider-fetch.ts';
 import {
   ELEVEN_NEWS_VOICES,

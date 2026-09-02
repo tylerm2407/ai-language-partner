@@ -214,6 +214,14 @@ export async function getEffectiveLimits(
       dailyHints: typeof row.dailyHints === 'number' ? row.dailyHints : base.dailyHints,
       // Added by migration 095, same reasoning as dailyTranslations above.
       dailyChatCards: typeof row.dailyChatCards === 'number' ? row.dailyChatCards : base.dailyChatCards,
+      // Added to PlanLimits after this mapper was written. `get_effective_limits`
+      // does not return either key, so both fall through to the tier floor —
+      // the same treatment dailyLessonTtsPlays gets, and for the same reason.
+      dailyGoalTracks: typeof row.dailyGoalTracks === 'number' ? row.dailyGoalTracks : base.dailyGoalTracks,
+      dailyAudiobookChapters:
+        typeof row.dailyAudiobookChapters === 'number'
+          ? row.dailyAudiobookChapters
+          : base.dailyAudiobookChapters,
       offlineMode: row.offlineMode === true || row.offline_mode === true || false,
     };
   } catch {

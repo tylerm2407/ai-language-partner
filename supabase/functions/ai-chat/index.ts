@@ -17,8 +17,10 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, corsResponse } from '../_shared/cors.ts';
 import { getEffectiveLimits } from '../_shared/plan-limits.ts';
+import { combinedScore, scoreTurn } from '../_shared/turn-accuracy.ts';
 import { getScenario } from '../_shared/scenarios.ts';
-import { buildSystemPrompt, buildTopicTurn } from './prompt.ts';
+import { buildSystemPrompt, buildTopicTurn, usesPromptFirstCorrection } from './prompt.ts';
+import { actInstruction, selectDialogueAct } from './dialogue-act.ts';
 import { generateValidated } from '../_shared/validated-generate.ts';
 import { proficiencyToCefr } from '../_shared/cefr.ts';
 import { checkBurstLimit } from '../_shared/burst-limit.ts';
@@ -77,6 +79,28 @@ interface ChatRequest {
   /** Language the learner actually spoke, when it differs from targetLanguage.
    *  Set by the voice loop from Whisper's detection. */
   spokenLanguage?: string;
+  /** Whether this turn was spoken or typed. Decides which skill the turn
+   *  becomes evidence for: a spoken turn is evidence about speaking, a typed
+   *  one about written production. Defaults to 'writing' — the conservative
+   *  guess, since a typed turn is never scored on intelligibility. */
+  modality?: 'speaking' | 'writing';
+  /** The speech recogniser's confidence in this turn, 0-1, from
+   *  `sttConfidence` on the client. Voice turns only.
+   *
+   *  Client-supplied and therefore untrusted, so it is clamped and can only
+   *  ever move this learner's own displayed proficiency — there is no league,
+   *  no leaderboard and no economic value attached to a CEFR level (XP and
+   *  leagues are hidden by design). It is not worth a second Whisper call to
+   *  re-derive server-side. */
+  recognizerConfidence?: number;
+  /** Did our previous turn ask the learner to fix something themselves? The
+   *  server decides this and returns it as `requestedRepair`; the client just
+   *  carries it back. It bounds the push to a single attempt — see
+   *  ./dialogue-act.ts. */
+  previousTurnRequestedRepair?: boolean;
+  /** The conversation is ending (an assignment's time is up, or the learner is
+   *  wrapping up), so the tutor should close rather than open a new thread. */
+  isClosing?: boolean;
 }
 
 /**
@@ -182,6 +206,10 @@ serve(async (req: Request) => {
       assignmentId,
       chatSessionId,
       spokenLanguage,
+      modality,
+      recognizerConfidence,
+      previousTurnRequestedRepair,
+      isClosing,
     } = (await req.json()) as ChatRequest;
     const nativeLanguage = rawNativeLanguage || 'en';
 
@@ -315,6 +343,26 @@ serve(async (req: Request) => {
     const topicTurn = scenarioKey && getScenario(scenarioKey) ? null : buildTopicTurn(topic);
     const codeSwitchNote = buildCodeSwitchNote(safeSpokenLanguage, targetLanguage);
 
+    // ── Dialogue act ───────────────────────────────────────────────────
+    //
+    // The stance for this turn, chosen in code rather than left to the model
+    // to infer from one paragraph among thirty. See ./dialogue-act.ts for why
+    // — briefly: a policy expressed as code can be bounded and tested, and the
+    // category's most-cited complaint (every AI turn ends in a question) is
+    // what happens when it is not.
+    //
+    // The learner's own turns only; the tutor's replies are not evidence about
+    // how engaged the learner is.
+    const learnerTurns = messages.filter((m) => m.role === 'user').map((m) => m.content);
+    const dialogueAct = selectDialogueAct({
+      turnIndex: Math.max(0, learnerTurns.length - 1),
+      learnerText: learnerTurns[learnerTurns.length - 1] ?? '',
+      recentLearnerTurns: learnerTurns.slice(0, -1).reverse(),
+      previousTurnRequestedRepair: previousTurnRequestedRepair === true,
+      isClosing: isClosing === true,
+    });
+    const actNote = actInstruction(dialogueAct, targetLanguage);
+
     const cefrLevel = proficiencyToCefr(level);
     const fallbackReply = FALLBACK_REPLIES[targetLanguage] ?? FALLBACK_REPLIES.en;
 
@@ -355,6 +403,12 @@ serve(async (req: Request) => {
               system: [
                 { type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } },
                 ...(learnerNote ? [{ type: 'text', text: learnerNote }] : []),
+                // The dialogue act belongs out here for the same reason as the
+                // other two: it changes every turn, and inside the cached block
+                // it would make the shared prefix unshareable. It sits before
+                // the code-switch note because that note is the narrower
+                // instruction — it should be the last thing read.
+                ...(actNote ? [{ type: 'text', text: actNote }] : []),
                 ...(codeSwitchNote ? [{ type: 'text', text: codeSwitchNote }] : []),
               ],
               messages: [
@@ -422,11 +476,58 @@ serve(async (req: Request) => {
       }
     }
 
+    // ── What this turn leaves behind ───────────────────────────────────
+    //
+    // Both writes are non-fatal and deliberately last: the learner has their
+    // reply, and neither a missed card nor a missed data point is worth
+    // failing a conversation over.
+    // A repair is outstanding only when there was something to repair AND the
+    // level's policy is to make the learner fix it. At beginner and elementary
+    // the tutor recasts and moves on, so there is no attempt coming.
+    const requestedRepair =
+      enrichedCorrection !== null && usesPromptFirstCorrection(level) && dialogueAct !== 'follow_repair';
+
+    const learnerTurn = messages[messages.length - 1]?.content ?? '';
+    const turnModality = modality === 'speaking' ? 'speaking' : 'writing';
+
+    await recordConversationEvidence(supabase, {
+      userId: authenticatedUserId,
+      targetLanguage,
+      cefrLevel,
+      modality: turnModality,
+      text: learnerTurn,
+      correction,
+      recognizerConfidence,
+    });
+
+    const savedWords = await saveChatVocabulary(supabase, {
+      userId: authenticatedUserId,
+      targetLanguage,
+      cefrLevel,
+      words: vocabularyHighlights,
+      limit: limits.dailyChatCards,
+    });
+
     return new Response(
       JSON.stringify({
         reply,
         correction: enrichedCorrection,
         vocabularyHighlights,
+        /** Which of the highlighted words actually became review cards. The
+         *  UI marks these so the learner knows the word is coming back. */
+        savedWords,
+        /** Did this turn ask the learner to fix something themselves? The
+         *  client carries it back on the next turn so the controller can
+         *  react to their attempt and, crucially, not ask a second time.
+         *
+         *  Server-decided rather than client-inferred: whether a correction
+         *  becomes an elicitation or a recast is the level policy's call
+         *  (see usesPromptFirstCorrection), and the client should not have to
+         *  know that rule to participate in it. */
+        requestedRepair,
+        /** The stance this turn was generated with. Returned for observability
+         *  — nothing in the client branches on it. */
+        dialogueAct,
         audioUrl: null,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -504,10 +605,55 @@ function normalizeCorrection(raw: unknown): CorrectionDetail | null {
   return { shortLabel, explanation, original, corrected, errorType, severity, example };
 }
 
+/**
+ * One word the tutor chose to teach, with its meaning.
+ *
+ * The model used to be asked for a bare `string[]`, which was fine while the
+ * array was only ever rendered bold and thrown away. A card needs both halves:
+ * `cards.native_text` is NOT NULL, and a "card" whose front and back are the
+ * same foreign word teaches nothing.
+ */
+interface VocabHighlight {
+  word: string;
+  translation: string;
+}
+
+/** Longer than this is a sentence the model has mislabelled as vocabulary,
+ *  not a word worth a card. */
+const MAX_VOCAB_CHARS = 60;
+
+/**
+ * Accept both the object shape and the legacy bare strings.
+ *
+ * A model does not always follow a changed contract on the first turn, and a
+ * cached system prompt means older phrasing can persist briefly. A bare
+ * string still renders as a highlight; it simply cannot become a card, which
+ * `saveChatVocabulary` enforces by requiring a translation.
+ */
+function normalizeVocabulary(raw: unknown): VocabHighlight[] {
+  if (!Array.isArray(raw)) return [];
+  const out: VocabHighlight[] = [];
+  for (const entry of raw.slice(0, 8)) {
+    if (typeof entry === 'string') {
+      const word = entry.trim();
+      if (word && word.length <= MAX_VOCAB_CHARS) out.push({ word, translation: '' });
+      continue;
+    }
+    if (entry && typeof entry === 'object') {
+      const word = String((entry as Record<string, unknown>).word ?? '').trim();
+      const translation = String((entry as Record<string, unknown>).translation ?? '').trim();
+      if (word && word.length <= MAX_VOCAB_CHARS) {
+        out.push({ word, translation: translation.slice(0, 200) });
+      }
+    }
+  }
+  return out;
+}
+
 function parseAIResponse(text: string): {
   reply: string;
   correction: CorrectionDetail | null;
-  vocabularyHighlights: string[];
+  vocabularyHighlights: VocabHighlight[];
 } {
   const cleaned = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
   try {
@@ -515,7 +661,7 @@ function parseAIResponse(text: string): {
     return {
       reply: parsed.reply ?? text,
       correction: normalizeCorrection(parsed.correction),
-      vocabularyHighlights: parsed.vocabularyHighlights ?? [],
+      vocabularyHighlights: normalizeVocabulary(parsed.vocabularyHighlights),
     };
   } catch {
     const firstBrace = cleaned.indexOf('{');
@@ -526,7 +672,7 @@ function parseAIResponse(text: string): {
         return {
           reply: parsed.reply ?? text,
           correction: normalizeCorrection(parsed.correction),
-          vocabularyHighlights: parsed.vocabularyHighlights ?? [],
+          vocabularyHighlights: normalizeVocabulary(parsed.vocabularyHighlights),
         };
       } catch {
         // fall through
@@ -541,4 +687,180 @@ function parseAIResponse(text: string): {
     const correction = text.substring(index + correctionMarker.length).trim();
     return { reply, correction: normalizeCorrection(correction), vocabularyHighlights: [] };
   }
+}
+
+// ─── What a conversation leaves behind ──────────────────────────────────
+//
+// Both helpers are best-effort by construction. The learner already has their
+// reply by the time either runs, so every failure path here logs and returns
+// rather than throwing — a lost card or a lost data point must never cost
+// someone their conversation.
+
+interface EvidenceInput {
+  userId: string;
+  targetLanguage: string;
+  cefrLevel: string;
+  modality: 'speaking' | 'writing';
+  text: string;
+  correction: CorrectionDetail | null;
+  recognizerConfidence?: number;
+}
+
+/**
+ * Record this turn as proficiency evidence, if it is any.
+ *
+ * `scoreTurn` returns null for turns that should not count — too short to be
+ * a language sample, or spoken and not clearly heard. That refusal is the
+ * point: a wrong data point in a measured CEFR level is worse than a missing
+ * one, because the learner reads the level and acts on it.
+ */
+// deno-lint-ignore no-explicit-any
+async function recordConversationEvidence(supabase: any, input: EvidenceInput): Promise<void> {
+  try {
+    const score = scoreTurn({
+      modality: input.modality,
+      text: input.text,
+      correction: input.correction,
+      recognizerConfidence: input.recognizerConfidence ?? null,
+    });
+    if (!score) return;
+
+    await supabase.from('conversation_evidence').insert({
+      user_id: input.userId,
+      target_language: input.targetLanguage,
+      cefr_level: input.cefrLevel,
+      modality: input.modality,
+      intelligibility: score.intelligibility,
+      accuracy: score.accuracy,
+      word_count: score.wordCount,
+    });
+  } catch (err) {
+    console.warn('[ai-chat] conversation_evidence write failed (non-fatal):', err);
+  }
+}
+
+interface VocabSaveInput {
+  userId: string;
+  targetLanguage: string;
+  cefrLevel: string;
+  words: VocabHighlight[];
+  limit: number;
+}
+
+/**
+ * Turn the words the tutor just taught into review cards.
+ *
+ * This closes a loop whose other half already existed: `learner-context.ts`
+ * has always pulled struggling cards back into the tutor's prompt, so the
+ * moment these words become cards the tutor starts reusing tomorrow what it
+ * introduced today, with no further work.
+ *
+ * Order matters here. Dedupe first because it is free and a repeat word must
+ * not cost a slot; charge second, because `consume_daily_quota` is the atomic
+ * check-and-increment and charging after the insert would let concurrent
+ * turns both pass; refund on any failure after the charge, which is precisely
+ * why `chat_cards` was added to the refund whitelist in migration 095.
+ *
+ * Returns the words that actually became cards, so the UI can tell the
+ * learner which ones are coming back.
+ */
+// deno-lint-ignore no-explicit-any
+async function saveChatVocabulary(supabase: any, input: VocabSaveInput): Promise<string[]> {
+  const saved: string[] = [];
+  // A tutor turn offering more than this is not teaching vocabulary, it is
+  // listing it — and each entry costs a quota slot and two round trips.
+  const candidates = input.words.filter((w) => w.word && w.translation).slice(0, 3);
+  if (candidates.length === 0 || input.limit <= 0) return saved;
+
+  for (const { word, translation } of candidates) {
+    try {
+      // Already studying it? Nothing to do, and nothing to charge. Without
+      // this a tutor that says "la cuenta" across ten sessions would build
+      // ten cards, each with its own independent SM-2 schedule.
+      const { data: existing } = await supabase
+        .from('cards')
+        .select('id')
+        .eq('user_id', input.userId)
+        .eq('language', input.targetLanguage)
+        .ilike('target_text', word)
+        .limit(1);
+      if (Array.isArray(existing) && existing.length > 0) continue;
+
+      const { data: allowed, error: quotaErr } = await supabase.rpc('consume_daily_quota', {
+        p_user_id: input.userId,
+        p_counter: 'chat_cards',
+        p_limit: input.limit,
+        p_amount: 1,
+      });
+      // Fail closed on a broken counter, and stop trying for this turn — the
+      // next word would hit the same error.
+      if (quotaErr) {
+        console.warn('[ai-chat] chat_cards quota check failed:', quotaErr.message);
+        break;
+      }
+      if (allowed !== true) break; // day's allowance spent
+
+      const { data: card, error: cardErr } = await supabase
+        .from('cards')
+        .insert({
+          user_id: input.userId,
+          course_id: null,
+          unit_id: null,
+          native_text: translation,
+          target_text: word,
+          language: input.targetLanguage,
+          // Tagged with the level the conversation was held at. Without this
+          // the card is invisible to `analyzeBands`, which skips items with a
+          // null cefr_level — the card would exist, be reviewed, and still
+          // never count toward the learner's own measured vocabulary.
+          cefr_level: input.cefrLevel,
+          skill_type: 'vocabulary',
+          source_type: 'manual',
+          tags: ['chat', 'vocabulary'],
+        })
+        .select('id')
+        .single();
+
+      if (cardErr || !card) {
+        await supabase.rpc('refund_daily_quota', {
+          p_user_id: input.userId,
+          p_counter: 'chat_cards',
+          p_amount: 1,
+        });
+        console.warn('[ai-chat] chat card insert failed:', cardErr?.message);
+        continue;
+      }
+
+      const { error: reviewErr } = await supabase.from('review_items').upsert(
+        {
+          user_id: input.userId,
+          card_id: card.id,
+          ease_factor: 2.5,
+          interval: 0,
+          repetitions: 0,
+          next_due: new Date().toISOString(),
+          last_reviewed_at: null,
+          status: 'new',
+        },
+        { onConflict: 'user_id,card_id' },
+      );
+      if (reviewErr) {
+        // The card exists but is not scheduled, so it is not a review card and
+        // should not have been charged for.
+        await supabase.rpc('refund_daily_quota', {
+          p_user_id: input.userId,
+          p_counter: 'chat_cards',
+          p_amount: 1,
+        });
+        console.warn('[ai-chat] chat card review_item failed:', reviewErr.message);
+        continue;
+      }
+
+      saved.push(word);
+    } catch (err) {
+      console.warn('[ai-chat] chat vocabulary save failed (non-fatal):', err);
+    }
+  }
+
+  return saved;
 }

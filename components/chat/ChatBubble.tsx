@@ -20,6 +20,10 @@ interface ChatBubbleProps {
   message: ConversationMessage;
   targetLanguage?: string;
   userId?: string;
+  /** CEFR band the conversation is being held at. Files a saved correction in
+   *  a band so it counts toward measured vocabulary — a card with a null
+   *  `cefr_level` is skipped by `analyzeBands` and never counts at all. */
+  cefrLevel?: string | null;
   /** User's native language from profile; target of Translate button. Defaults to 'en'. */
   nativeLanguage?: string;
   /** Learner's tutor voice preference, so replaying a line matches the voice
@@ -87,7 +91,7 @@ async function cacheSound(id: string, sound: Audio.Sound): Promise<void> {
 // that one tap per message is plenty; subsequent toggles are instant.
 const translationCache = new Map<string, string>();
 
-export function ChatBubble({ message, targetLanguage, userId, nativeLanguage, voiceGender }: ChatBubbleProps) {
+export function ChatBubble({ message, targetLanguage, userId, nativeLanguage, cefrLevel, voiceGender }: ChatBubbleProps) {
   const isUser = message.role === 'user';
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -309,6 +313,7 @@ export function ChatBubble({ message, targetLanguage, userId, nativeLanguage, vo
           targetLanguage={targetLanguage ?? 'en'}
           nativeLanguage={nativeLanguage ?? 'en'}
           userId={userId}
+          cefrLevel={cefrLevel}
           voiceGender={voiceGender}
         />
       )}
@@ -363,6 +368,9 @@ interface CorrectionBannerProps {
   targetLanguage: string;
   nativeLanguage: string;
   userId?: string;
+  /** CEFR band the conversation is at; files a saved correction in a band so
+   *  it counts toward measured vocabulary. */
+  cefrLevel?: string | null;
   /** Matches the corrected-line playback to the learner's chosen tutor voice. */
   voiceGender?: VoiceGender;
 }
@@ -374,6 +382,7 @@ export function CorrectionBanner({
   targetLanguage,
   nativeLanguage,
   userId,
+  cefrLevel,
   voiceGender,
 }: CorrectionBannerProps) {
   const severityStyle = SEVERITY_STYLES[correction.severity];
@@ -421,6 +430,7 @@ export function CorrectionBanner({
         corrected: correction.corrected,
         shortLabel: correction.shortLabel,
         explanation: correction.explanation,
+        cefrLevel,
       });
       setSaveState('saved');
     } catch (err) {

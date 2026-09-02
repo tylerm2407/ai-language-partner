@@ -97,6 +97,13 @@ export interface AIChatRequest {
   /** `sttConfidence` for a spoken turn, 0-1. Lets the server judge whether
    *  the turn is clear enough to measure, and score how well it came across. */
   recognizerConfidence?: number;
+  /** Echoed back from the previous response's `requestedRepair`. The server
+   *  decides it; the client only carries it. It is what stops the tutor
+   *  asking a learner to fix the same thing twice. */
+  previousTurnRequestedRepair?: boolean;
+  /** The conversation is ending, so the tutor should close rather than open a
+   *  new thread. */
+  isClosing?: boolean;
 }
 
 /** A word the tutor introduced, with its meaning. */
@@ -118,6 +125,12 @@ export interface AIChatResponse {
   /** Of those, the ones that actually became review cards — deduped against
    *  what the learner already studies and capped by `dailyChatCards`. */
   savedWords?: string[];
+  /** Did this turn ask the learner to fix something themselves? Send it back
+   *  as `previousTurnRequestedRepair` on the next turn. */
+  requestedRepair?: boolean;
+  /** Which conversational stance the turn was generated with. Observability
+   *  only — nothing branches on it. */
+  dialogueAct?: string;
 }
 
 /**
@@ -648,6 +661,82 @@ export async function getTextToSpeech(
   return data.audioBase64 as string;
 }
 
+/**
+ * A URI the audio player can play, without caring how it got here.
+ *
+ * `getTextToSpeech` hands back base64, which the caller then wraps in a
+ * `data:` URI. That cannot start playing until the last byte has transferred
+ * and been decoded, so the learner waits for the entire reply to arrive before
+ * hearing the first syllable of it — and base64 inflates the transfer by a
+ * third on the way. A signed URL streams instead, and on a cache hit the audio
+ * never passes through the edge function at all.
+ *
+ * Use this for anything the learner is waiting on in real time. The base64
+ * function stays for callers that want the bytes themselves — `lesson-audio`
+ * writes them to a local file for offline replay, which a URL cannot do.
+ *
+ * Falls back to a data: URI whenever the server did not return a URL, so an
+ * older deployment of `tts` behaves exactly as it did before.
+ */
+export async function getSpeechUri(
+  text: string,
+  language: string,
+  userId?: string,
+  voiceOptions?: TTSVoiceOptions
+): Promise<string> {
+  const { data, error } = await invokeWithRetry('tts', {
+    // preferUrl last: this function's whole purpose is the URL, so no caller
+    // option should be able to spread over it.
+    body: { text, language, userId, ...(voiceOptions ?? {}), preferUrl: true },
+  });
+
+  if (error) {
+    // Same unwrapping as getTextToSpeech: a non-2xx puts the real body on
+    // error.context, and the quota codes have to survive it to reach the UI.
+    let errorMessage = error.message;
+    let errorCode: VoiceError['code'] = 'NETWORK';
+    try {
+      const ctx = (error as Record<string, unknown>).context;
+      if (ctx && typeof (ctx as Response).json === 'function') {
+        const body = await (ctx as Response).json();
+        if (body?.error) {
+          errorMessage = body.error;
+          if (
+            body.code === 'DAILY_VOICE_LIMIT_REACHED' ||
+            body.code === 'DAILY_LESSON_AUDIO_LIMIT_REACHED'
+          ) {
+            errorCode = 'DAILY_LIMIT';
+          } else if (body.error.includes('not configured')) {
+            errorCode = 'NOT_CONFIGURED';
+          }
+        }
+      }
+    } catch {
+      // fall through with the generic message
+    }
+    throw new VoiceError(errorMessage, errorCode);
+  }
+
+  if (data?.error) {
+    if (
+      data.code === 'DAILY_VOICE_LIMIT_REACHED' ||
+      data.code === 'DAILY_LESSON_AUDIO_LIMIT_REACHED'
+    ) {
+      throw new VoiceError(data.error, 'DAILY_LIMIT');
+    }
+    if (data.error.includes('not configured')) {
+      throw new VoiceError(data.error, 'NOT_CONFIGURED');
+    }
+    throw new VoiceError(data.error);
+  }
+
+  if (typeof data?.audioUrl === 'string' && data.audioUrl) return data.audioUrl;
+  if (typeof data?.audioBase64 === 'string' && data.audioBase64) {
+    return `data:audio/mpeg;base64,${data.audioBase64}`;
+  }
+  throw new VoiceError('No audio returned.');
+}
+
 export interface Transcription {
   text: string;
   /** Language Whisper actually heard, which may not be `language` — learners
@@ -763,24 +852,3 @@ export async function generateContent(request: GenerateContentRequest): Promise<
   return data;
 }
 
-/**
- * Analyze a voice conversation turn to extract corrections and vocabulary.
- * Currently unused: the cascade voice loop gets corrections inline from
- * `sendChatMessage`. Kept for richer post-turn analysis of spoken input.
- */
-export async function analyzeConversationTurn(
-  userMessage: string,
-  aiReply: string,
-  targetLanguage: string,
-  level: string
-): Promise<{ correction: string | null; vocabularyHighlights: string[] }> {
-  const { data, error } = await invokeWithRetry('analyze-turn', {
-    body: { userMessage, aiReply, targetLanguage, level },
-  });
-
-  if (error) {
-    console.error('Analyze turn error:', error);
-    return { correction: null, vocabularyHighlights: [] };
-  }
-  return data as { correction: string | null; vocabularyHighlights: string[] };
-}

@@ -272,10 +272,12 @@ export default function HomeScreen() {
             </MagazineGlassCard>
 
             {/* Hands-free. This is the only entry point into the eyes-free
-                session: the Practice tab is `href: null` in the tab layout and
-                is absent from FloatingTabBar's VISIBLE_TABS, so nothing else
-                in the app can reach `/practice`. Removing this link makes the
-                feature unreachable rather than merely hidden. */}
+                session, and now the only route into the `/practice` group at
+                all: the tab is `href: null` in the tab layout, absent from
+                FloatingTabBar's VISIBLE_TABS, and the group's index screen was
+                deleted when the second chat surface was retired into `/chat`.
+                Removing this link makes the feature unreachable rather than
+                merely hidden. */}
             {HANDSFREE_ENABLED && (
               <MagazineGlassCard style={styles.quickAction}>
                 <Pressable

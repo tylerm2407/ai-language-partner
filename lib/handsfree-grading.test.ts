@@ -66,8 +66,20 @@ describe('sttConfidence', () => {
     const at = (lp: number) =>
       sttConfidence({ noSpeechProb: null, avgLogprob: lp, transcript: 'x', speechDurationMs: 500 });
     expect(at(-0.1)).toBeCloseTo(1, 2);
-    expect(at(-1.0)).toBeCloseTo(0, 2);
+    expect(at(-1.6)).toBeCloseTo(0, 2);
     expect(at(-0.5)).toBeGreaterThan(at(-0.8));
+  });
+
+  it('still grades accented speech, which is the normal case here', () => {
+    // Whisper scores a clear but non-native utterance well below a native
+    // one, and every user of this app is non-native. A learner with a strong
+    // accent must not be told the app could not hear them on a turn it
+    // transcribed correctly — that is the failure people abandon an app over.
+    const at = (lp: number) =>
+      sttConfidence({ noSpeechProb: 0.02, avgLogprob: lp, transcript: 'hola', speechDurationMs: 900 });
+    expect(at(-0.3)).toBeGreaterThan(HANDSFREE_MIN_CONFIDENCE); // clear L2
+    expect(at(-0.6)).toBeGreaterThan(HANDSFREE_MIN_CONFIDENCE); // heavily accented
+    expect(at(-1.1)).toBeLessThan(HANDSFREE_MIN_CONFIDENCE); // genuinely mangled
   });
 
   it('takes the weakest signal when two disagree', () => {

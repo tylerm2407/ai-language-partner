@@ -15,9 +15,10 @@ import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { checkBurstLimit } from '../_shared/burst-limit.ts';
 import { MAX_AUDIO_BASE64_SIZE } from '../_shared/validation.ts';
 import { toLanguageCode } from '../_shared/language.ts';
-import { getPlanLimits } from '../_shared/plan-limits.ts';
+import { getEffectiveLimits } from '../_shared/plan-limits.ts';
 import { getUserToday } from '../_shared/user-day.ts';
 import { PROVIDER_TIMEOUT_MS, providerFetch } from '../_shared/provider-fetch.ts';
+import { summarizeSegments } from './confidence.ts';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -99,7 +100,12 @@ serve(async (req: Request) => {
       .select('tier, is_active')
       .eq('user_id', authUser.userId)
       .single();
-    const limits = getPlanLimits(sub?.is_active && sub.tier ? sub.tier : 'starter');
+    // Effective, not personal: the other half of a spoken turn (`tts`) honours
+    // the school's dailyVoiceMinutes override, and both halves bill the same
+    // counter, so reading a different limit here would gate a classroom
+    // learner's microphone against a cap their playback never applied.
+    const tier = sub?.is_active && sub.tier ? sub.tier : 'starter';
+    const limits = await getEffectiveLimits(authUser.userId, supabase, tier);
 
     // Day key must match what increment_daily_usage writes (user-local
     // midnight rollover, migration 044) — not UTC.
@@ -134,7 +140,10 @@ serve(async (req: Request) => {
     const audioBlob = new Blob([bytes], { type: 'audio/m4a' });
     formData.append('file', audioBlob, 'audio.m4a');
     formData.append('model', 'whisper-1');
-    // verbose_json is the only response format that reports detected language.
+    // verbose_json is the only response format that reports detected language,
+    // and the only one carrying `segments[]` with the per-segment
+    // `avg_logprob` / `no_speech_prob` that ./confidence.ts folds into the
+    // confidence the caller gates on.
     formData.append('response_format', 'verbose_json');
 
     const response = await providerFetch(
@@ -173,6 +182,13 @@ serve(async (req: Request) => {
       }
     }
 
+    // Whisper's own read on whether it heard the learner. Returned, not just
+    // logged: `lib/handsfree-grading.ts` has a calibrated `sttConfidence()`
+    // that consumes exactly these two numbers, and until now received null
+    // for both on every turn — so its gate against grading a misheard answer
+    // has never fired. Null stays a legal value and still means "no signal".
+    const { avgLogprob, noSpeechProb } = summarizeSegments(data.segments);
+
     return new Response(
       JSON.stringify({
         text: data.text ?? '',
@@ -180,6 +196,9 @@ serve(async (req: Request) => {
         // Unrecognised names fall back to the caller's hint rather than null so
         // downstream code always has something to key on.
         language: toLanguageCode(data.language) ?? language ?? null,
+        avgLogprob,
+        noSpeechProb,
+        durationSeconds: durationSeconds > 0 ? durationSeconds : null,
       }),
       { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
     );

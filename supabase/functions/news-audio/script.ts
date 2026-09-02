@@ -161,44 +161,8 @@ export function didSplit(chunks: string[]): boolean {
   return chunks.length > 1;
 }
 
-/** Characters per second of narration, by script.
- *
- *  Two rates because the character is not a constant unit of speech: a CJK
- *  character is a whole syllable (often a whole morpheme), while a Latin or
- *  Cyrillic character is a fraction of one. Reading a Japanese article and a
- *  Spanish article at the same characters-per-second would put the estimate
- *  out by a factor of three.
- *
- *  These are estimates used only to populate `audio_duration_ms` when the
- *  real MP3 header cannot be parsed — the player prefers the measured value.
- */
-const CJK_CHARS_PER_SECOND = 4.5;
-const LATIN_CHARS_PER_SECOND = 14;
-
-/** CJK ideographs, kana, and Hangul — the scripts where one character is
- *  roughly one syllable. */
-const CJK_RANGE =
-  /[぀-ヿ㐀-䶿一-鿿豈-﫿가-힯]/;
-
-/**
- * Estimate spoken duration in milliseconds.
- *
- * Mixed-script text is handled by counting each class separately rather
- * than picking one rate for the whole string, so a Japanese article quoting
- * an English company name does not skew.
- *
- * This is a fallback, not a measurement: `parseMp3DurationMs` reads the real
- * value out of the rendered file, and callers should prefer it. Returns 0
- * for empty input.
- */
-export function estimateDurationMs(script: string): number {
-  let cjk = 0;
-  let other = 0;
-  for (const char of script) {
-    if (/\s/.test(char)) continue;
-    if (CJK_RANGE.test(char)) cjk += 1;
-    else other += 1;
-  }
-  const seconds = cjk / CJK_CHARS_PER_SECOND + other / LATIN_CHARS_PER_SECOND;
-  return Math.round(seconds * 1000);
-}
+/** Re-exported from its new home so this module's existing importers and
+ *  tests keep one import site. The estimator moved to `_shared/` when `tts`
+ *  needed it to meter voice minutes — it was never news-specific, it just
+ *  happened to be written here first. */
+export { estimateDurationMs } from '../_shared/mp3-duration.ts';

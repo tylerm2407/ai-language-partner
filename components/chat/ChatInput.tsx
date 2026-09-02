@@ -6,8 +6,11 @@ import { Audio } from 'expo-av';
 import { File } from 'expo-file-system/next';
 import { colors, spacing } from '../../config/theme';
 import { setAudioSessionMode, recordingModeFor } from '../../lib/audio-session';
+import { chatVadForLevel, createVadState, feedVadSample, type VadState } from '../../lib/vad';
 import { LiveComposer } from './LiveComposer';
 import type { VoiceGender } from '../../lib/voice-preference';
+import { CHAT_MIN_CONFIDENCE, sttConfidence } from '../../lib/handsfree-grading';
+import type { Transcription } from '../../lib/ai';
 
 export type HandsFreeState = 'IDLE' | 'CONNECTING' | 'LISTENING' | 'PROCESSING' | 'AI_RESPONDING' | 'TTS_PLAYING';
 
@@ -18,8 +21,14 @@ interface ChatInputProps {
   sending: boolean;
   voiceMode?: boolean;
   /** `spokenLanguage` is what Whisper detected, which may differ from the
-   *  target language when the learner code-switches. */
-  onVoiceMessage?: (text: string, spokenLanguage: string | null) => void;
+   *  target language when the learner code-switches. `confidence` is
+   *  `sttConfidence` for the turn, 0-1 — the server uses it to decide whether
+   *  the turn is clear enough to measure and how well it came across. */
+  onVoiceMessage?: (
+    text: string,
+    spokenLanguage: string | null,
+    turn: { confidence: number; durationSeconds: number },
+  ) => void;
   targetLanguage?: string;
   /** When true, enables continuous hands-free conversation loop. */
   handsFreeMode?: boolean;
@@ -40,10 +49,31 @@ interface ChatInputProps {
    * OS permission prompt rather than after it.
    */
   onBeforeRecord?: () => Promise<boolean>;
+  /**
+   * Cut the tutor off mid-sentence and hand the turn straight back.
+   *
+   * The microphone is closed while the tutor is speaking — expo-av gives no
+   * echo cancellation, so a live mic during playback would hear the tutor and
+   * interrupt itself, and lib/audio-session.ts documents what mixing record and
+   * play has cost this app before. A tap is the safe form of barge-in: the
+   * learner gets to stop a reply they have already understood without waiting
+   * it out, which is the thing that actually makes a conversation feel like one.
+   */
+  onInterruptPlayback?: () => void;
+  /** The learner's CEFR band. Sets how long the endpointer waits before
+   *  deciding a turn is over — a beginner assembling a clause pauses far
+   *  longer than an advanced speaker. See `chatVadForLevel`. */
+  cefrLevel?: string | null;
 }
 
-const SILENCE_THRESHOLD_DB = -35;
-const SILENCE_DURATION_MS = 1500;
+// Endpointing now comes from lib/vad.ts, which calibrates a noise floor from
+// the first fraction of a second and thresholds against THAT, rather than
+// against a fixed level. The constants this replaced were
+// `SILENCE_THRESHOLD_DB = -35` and `SILENCE_DURATION_MS = 1500`, and they had
+// two failure modes: in a car or a cafe the ambient level sits permanently
+// above -35 dB, so the silence timer was cleared on every sample and the turn
+// never ended; and there was no maximum listen window to catch it. The wait
+// itself is now a function of the learner's level — see chatVadForLevel.
 const METERING_INTERVAL_MS = 200;
 
 /** Read an audio file as base64 string. */
@@ -51,6 +81,25 @@ async function readAudioAsBase64(uri: string): Promise<string> {
   const file = new File(uri);
   const base64 = await file.base64();
   return base64;
+}
+
+/**
+ * Did Whisper actually hear the learner?
+ *
+ * A turn below the floor is re-asked instead of sent. Guessing is the worse
+ * failure: the tutor answers a sentence the learner never said, and the
+ * correction banner then explains a "mistake" invented by the recognizer.
+ * Whisper reports no confidence at all on some payloads, in which case
+ * `sttConfidence` returns a neutral value and the turn goes through — the
+ * behaviour before the signal existed.
+ */
+function turnConfidence(transcribed: Transcription, speechDurationMs: number): number {
+  return sttConfidence({
+    noSpeechProb: transcribed.noSpeechProb,
+    avgLogprob: transcribed.avgLogprob,
+    transcript: transcribed.text,
+    speechDurationMs,
+  });
 }
 
 export function ChatInput({
@@ -69,6 +118,8 @@ export function ChatInput({
   voiceGender,
   onVoiceGenderChange,
   onBeforeRecord,
+  onInterruptPlayback,
+  cefrLevel,
 }: ChatInputProps) {
   const insets = useSafeAreaInsets();
   const [isRecording, setIsRecording] = useState(false);
@@ -80,9 +131,9 @@ export function ChatInput({
   const recordingRef = useRef<Audio.Recording | null>(null);
   const recordingStartTimeRef = useRef<number>(0);
 
-  // Hands-free silence detection state
-  const hasDetectedSpeechRef = useRef(false);
-  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Hands-free endpointing state. One VAD state machine per turn, created at
+  // the moment recording starts and discarded when it stops.
+  const vadStateRef = useRef<VadState | null>(null);
   const isStoppingRef = useRef(false);
 
   // Serialize recording lifecycle: prevents concurrent starts (the two
@@ -92,11 +143,11 @@ export function ChatInput({
   const isStartingRef = useRef(false);
   const unloadPromiseRef = useRef<Promise<void> | null>(null);
 
-  const clearSilenceTimer = useCallback(() => {
-    if (silenceTimerRef.current) {
-      clearTimeout(silenceTimerRef.current);
-      silenceTimerRef.current = null;
-    }
+  /** Discard this turn's endpointer. Cheap, and idempotent — a stale VAD state
+   *  left alive would keep judging samples from the next turn against the last
+   *  turn's noise floor. */
+  const clearVadState = useCallback(() => {
+    vadStateRef.current = null;
   }, []);
 
   /** Start recording with optional metering for silence detection. */
@@ -144,8 +195,7 @@ export function ChatInput({
       recordingRef.current = recording;
       recordingStartTimeRef.current = Date.now();
       setIsRecording(true);
-      hasDetectedSpeechRef.current = false;
-      clearSilenceTimer();
+      clearVadState();
 
       // Always set up metering display
       recording.setProgressUpdateInterval(METERING_INTERVAL_MS);
@@ -161,23 +211,34 @@ export function ChatInput({
 
       if (withSilenceDetection) {
         onHandsFreeStateChange?.('LISTENING');
+        // One shared endpointer, driven by elapsed time rather than a timer.
+        // `feedVadSample` owns the whole decision — calibrate a noise floor,
+        // threshold against it, and report why the turn ended — and it is the
+        // same tested state machine the hands-free review session runs.
+        vadStateRef.current = createVadState(chatVadForLevel(cefrLevel));
+        const startedAt = Date.now();
         recording.setOnRecordingStatusUpdate((status) => {
           if (!status.isRecording || isStoppingRef.current) return;
           const metering = status.metering ?? -160;
-          const normalized = Math.max(0, Math.min(1, (metering + 60) / 60));
-          setMeterLevel(normalized);
+          setMeterLevel(Math.max(0, Math.min(1, (metering + 60) / 60)));
 
-          if (metering > SILENCE_THRESHOLD_DB) {
-            // Speech detected
-            hasDetectedSpeechRef.current = true;
-            clearSilenceTimer();
-          } else if (hasDetectedSpeechRef.current) {
-            // Silence after speech -- start the silence countdown
-            if (!silenceTimerRef.current) {
-              silenceTimerRef.current = setTimeout(() => {
-                stopHandsFreeRecording();
-              }, SILENCE_DURATION_MS);
-            }
+          const vad = vadStateRef.current;
+          if (!vad) return;
+          // The state is immutable — the next one must be stored, or every
+          // sample would be judged against a state that never advanced past
+          // calibration.
+          const { state: nextVad, decision } = feedVadSample(
+            vad,
+            Date.now() - startedAt,
+            metering,
+          );
+          vadStateRef.current = nextVad;
+          if (decision.kind === 'stop') {
+            // `no_speech` and `too_short` mean nothing worth sending was
+            // captured. stopHandsFreeRecording already treats an empty or
+            // unclear transcript as "listen again", so both funnel through the
+            // same path rather than needing their own.
+            stopHandsFreeRecording();
           }
         });
       }
@@ -202,7 +263,7 @@ export function ChatInput({
   const stopHandsFreeRecording = async () => {
     if (isStoppingRef.current || !recordingRef.current) return;
     isStoppingRef.current = true;
-    clearSilenceTimer();
+    clearVadState();
 
     try {
       setIsRecording(false);
@@ -221,10 +282,17 @@ export function ChatInput({
           const base64Audio = await readAudioAsBase64(uri);
           const { transcribeAudio } = await import('../../lib/ai');
           const transcribed = await transcribeAudio(base64Audio, targetLanguage);
-          if (transcribed.text.trim()) {
-            onVoiceMessage(transcribed.text.trim(), transcribed.language);
+          const durationMs = (transcribed.durationSeconds ?? 0) * 1000;
+          const confidence = turnConfidence(transcribed, durationMs);
+          if (transcribed.text.trim() && confidence >= CHAT_MIN_CONFIDENCE) {
+            onVoiceMessage(transcribed.text.trim(), transcribed.language, {
+              confidence,
+              durationSeconds: transcribed.durationSeconds ?? 0,
+            });
           } else {
-            // No speech detected, restart listening
+            // Nothing heard, or nothing heard *clearly*. Both restart the loop
+            // rather than sending: a low-confidence turn reaching the tutor
+            // produces a reply to a sentence the learner never said.
             onHandsFreeStateChange?.('LISTENING');
             isStoppingRef.current = false;
             startRecording(true);
@@ -285,8 +353,22 @@ export function ChatInput({
           const base64Audio = await readAudioAsBase64(uri);
           const { transcribeAudio } = await import('../../lib/ai');
           const transcribed = await transcribeAudio(base64Audio, targetLanguage);
-          if (transcribed.text.trim()) {
-            onVoiceMessage(transcribed.text.trim(), transcribed.language);
+          const durationMs = (transcribed.durationSeconds ?? 0) * 1000;
+          const confidence = turnConfidence(transcribed, durationMs);
+          if (!transcribed.text.trim()) {
+            setTooShortMessage("I didn't catch that — try again?");
+            setTimeout(() => setTooShortMessage(null), 2500);
+          } else if (confidence < CHAT_MIN_CONFIDENCE) {
+            // Heard something, but not well enough to answer. Saying so beats
+            // sending it: the alternative is a tutor reply to a misheard
+            // sentence, plus a grammar correction for a word never spoken.
+            setTooShortMessage("I didn't quite catch that — once more?");
+            setTimeout(() => setTooShortMessage(null), 2500);
+          } else {
+            onVoiceMessage(transcribed.text.trim(), transcribed.language, {
+              confidence,
+              durationSeconds: transcribed.durationSeconds ?? 0,
+            });
           }
         } catch (err) {
           console.error('Transcription failed:', err);
@@ -325,7 +407,7 @@ export function ChatInput({
     // Always tear down on unmount / deps change — a leaked native Recording
     // will block the next createAsync with "Only one Recording...".
     return () => {
-      clearSilenceTimer();
+      clearVadState();
       if (recordingRef.current) {
         const toUnload: Audio.Recording = recordingRef.current;
         recordingRef.current = null;
@@ -350,7 +432,7 @@ export function ChatInput({
         case 'LISTENING': return isRecording ? 'Listening...' : 'Starting...';
         case 'PROCESSING': return 'Transcribing...';
         case 'AI_RESPONDING': return 'Thinking...';
-        case 'TTS_PLAYING': return 'Speaking...';
+        case 'TTS_PLAYING': return onInterruptPlayback ? 'Speaking… tap to jump in' : 'Speaking...';
         default: return 'Starting...';
       }
     })();
@@ -380,7 +462,18 @@ export function ChatInput({
               : 'ellipsis-horizontal'
         }
         micColor={handsFreeState === 'LISTENING' ? colors.success.base : colors.action.primaryFill}
-        micAccessibilityLabel={`Live voice: ${statusText}`}
+        micAccessibilityLabel={
+          handsFreeState === 'TTS_PLAYING' && onInterruptPlayback
+            ? 'Tap to interrupt and speak'
+            : `Live voice: ${statusText}`
+        }
+        // Only while the tutor is speaking. In every other state the loop owns
+        // the mic, and a tap would race it.
+        onMicPress={
+          handsFreeState === 'TTS_PLAYING' && onInterruptPlayback
+            ? onInterruptPlayback
+            : undefined
+        }
         statusText={statusText}
         statusColor={statusColor}
         errorMessage={errorMessage}
