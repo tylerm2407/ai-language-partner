@@ -198,3 +198,31 @@ Deno.test('the act is chosen from the learner\'s turns, not the tutor\'s', () =>
     'learner turns should be filtered before act selection',
   );
 });
+
+Deno.test('the turn governors stay out of the cached block too', () => {
+  // Floor share and pushed output both vary turn to turn — floor share by the
+  // running word ratio, push by the learner's recent scores. Either one inside
+  // the cached prefix would make it unshareable, the same way the act would.
+  const system = INDEX_SRC.slice(INDEX_SRC.indexOf('system: ['));
+  const block = system.slice(0, system.indexOf('],'));
+  const cachedAt = block.indexOf('cache_control');
+  for (const note of ['floorNote', 'stretchNote']) {
+    assert(block.includes(note), `${note} should be a system block`);
+    assert(block.indexOf(note) > cachedAt, `${note} must come after the cached entry`);
+  }
+  // Exactly one breakpoint, still.
+  assertEquals(block.split('cache_control').length - 1, 1);
+});
+
+Deno.test('a broken push signal holds rather than pushes', () => {
+  // Pushing a struggling learner compounds the failure and raises the exact
+  // speaking anxiety the product exists to lower, so every failure path here
+  // has to fall to `hold`.
+  const fn = INDEX_SRC.slice(INDEX_SRC.indexOf('async function fetchPushSignal'));
+  const body = fn.slice(0, fn.indexOf('\n}\n'));
+  assertEquals(
+    body.split('recentAccuracy: null').length - 1,
+    2,
+    'both the empty-result and the catch path should return a null signal',
+  );
+});

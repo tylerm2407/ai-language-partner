@@ -21,6 +21,7 @@ import { combinedScore, scoreTurn } from '../_shared/turn-accuracy.ts';
 import { getScenario } from '../_shared/scenarios.ts';
 import { buildSystemPrompt, buildTopicTurn, usesPromptFirstCorrection } from './prompt.ts';
 import { actInstruction, selectDialogueAct } from './dialogue-act.ts';
+import { floorShareNote, pushNote, selectPushStance } from './turn-policy.ts';
 import { generateValidated } from '../_shared/validated-generate.ts';
 import { proficiencyToCefr } from '../_shared/cefr.ts';
 import { checkBurstLimit } from '../_shared/burst-limit.ts';
@@ -49,6 +50,11 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
 const TEXT_MODEL = 'claude-haiku-4-5-20251001';
+
+/** Recent scored turns the push governor averages over. Wide enough to be a
+ *  pattern rather than a streak, narrow enough that last month's form does not
+ *  argue for stretching someone who is struggling today. */
+const PUSH_SIGNAL_WINDOW = 30;
 
 // Per-language fallback copy for when regenerate retries exhaust safety
 // checks. Keeps the conversation alive without exposing bad output.
@@ -363,7 +369,27 @@ serve(async (req: Request) => {
     });
     const actNote = actInstruction(dialogueAct, targetLanguage);
 
+    // Needed by the push governor below as well as by the safety pipeline, so
+    // it is resolved before either.
     const cefrLevel = proficiencyToCefr(level);
+
+    // ── Governors ──────────────────────────────────────────────────────
+    //
+    // How much room the learner gets, and how hard they are pushed. Both are
+    // null on most turns by design — they are governors, not a house style,
+    // and a note that fires every turn is just a longer system prompt.
+    //
+    // Floor share costs nothing: it is arithmetic over the history already in
+    // hand. The push signal costs one indexed read, and only for learners who
+    // have a level to be measured against.
+    const floorNote = floorShareNote(messages);
+    const pushStance = selectPushStance(await fetchPushSignal(supabase, {
+      userId: authenticatedUserId,
+      targetLanguage,
+      cefrLevel,
+    }));
+    const stretchNote = pushNote(pushStance, targetLanguage);
+
     const fallbackReply = FALLBACK_REPLIES[targetLanguage] ?? FALLBACK_REPLIES.en;
 
     const { text: rawText, usedFallback } = await generateValidated({
@@ -409,6 +435,10 @@ serve(async (req: Request) => {
                 // the code-switch note because that note is the narrower
                 // instruction — it should be the last thing read.
                 ...(actNote ? [{ type: 'text', text: actNote }] : []),
+                // Both governors ride out here for the same reason as the act:
+                // they change turn to turn and would poison the shared prefix.
+                ...(floorNote ? [{ type: 'text', text: floorNote }] : []),
+                ...(stretchNote ? [{ type: 'text', text: stretchNote }] : []),
                 ...(codeSwitchNote ? [{ type: 'text', text: codeSwitchNote }] : []),
               ],
               messages: [
@@ -863,4 +893,58 @@ async function saveChatVocabulary(supabase: any, input: VocabSaveInput): Promise
   }
 
   return saved;
+}
+
+/**
+ * How well the learner has been doing lately at the level they are on.
+ *
+ * Feeds the push governor: a learner comfortably clear of the pass mark is
+ * being under-served by their current level, and the only way to know that is
+ * to look at what they have actually produced.
+ *
+ * Scoped to the current band on purpose. Pooling every level would let strong
+ * A1 turns argue for stretching a learner who has since moved to B1 and is
+ * struggling there — the question is "are they coasting *here*", not "have
+ * they ever done well".
+ *
+ * Fails soft to a null signal, which `selectPushStance` reads as `hold`. A
+ * broken read must never push a struggling learner.
+ */
+// deno-lint-ignore no-explicit-any
+async function fetchPushSignal(
+  supabase: any,
+  opts: { userId: string; targetLanguage: string; cefrLevel: string },
+): Promise<{ recentAccuracy: number | null; sampleSize: number }> {
+  try {
+    const { data, error } = await supabase
+      .from('conversation_evidence')
+      .select('accuracy, intelligibility')
+      .eq('user_id', opts.userId)
+      .eq('target_language', opts.targetLanguage)
+      .eq('cefr_level', opts.cefrLevel)
+      .order('created_at', { ascending: false })
+      // Recent, not lifetime: a learner who was coasting a month ago and is
+      // struggling today should be held, not pushed.
+      .limit(PUSH_SIGNAL_WINDOW);
+
+    if (error || !Array.isArray(data) || data.length === 0) {
+      return { recentAccuracy: null, sampleSize: 0 };
+    }
+
+    let total = 0;
+    for (const row of data) {
+      const accuracy = Number(row.accuracy ?? 0);
+      const intelligibility =
+        row.intelligibility === null || row.intelligibility === undefined
+          ? null
+          : Number(row.intelligibility);
+      // The same combination the proficiency report uses, so "coasting" here
+      // means the same thing the learner sees on their own level.
+      total += intelligibility === null ? accuracy : 0.5 * accuracy + 0.5 * intelligibility;
+    }
+    return { recentAccuracy: total / data.length, sampleSize: data.length };
+  } catch (err) {
+    console.warn('[ai-chat] push signal lookup failed (non-fatal):', err);
+    return { recentAccuracy: null, sampleSize: 0 };
+  }
 }
