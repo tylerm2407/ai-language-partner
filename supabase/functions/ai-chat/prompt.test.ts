@@ -67,3 +67,55 @@ Deno.test('no topic means no extra turn at all', () => {
   // Whitespace-only would otherwise inject an empty fence and burn a turn.
   assertEquals(buildTopicTurn('   \n  '), null);
 });
+
+Deno.test('the system prompt asks for a native-language gloss in the JSON contract', () => {
+  // The gloss is what removes the second paid round trip to `translate`. If it
+  // ever falls out of the RESPONSE FORMAT block the model stops emitting it,
+  // parse.ts quietly returns null, and the client silently goes back to paying
+  // for a translate call on every tap — a regression with no visible symptom.
+  const prompt = buildSystemPrompt('Spanish', 'beginner', undefined, 'en');
+  assert(prompt.includes('"gloss"'), 'gloss must be in the RESPONSE FORMAT block');
+  assert(prompt.includes('GLOSS RULES'), 'gloss must have explicit rules, not just a schema slot');
+  // It has to be in the learner's native language, like the correction
+  // explanation already is — a gloss in the target language explains nothing.
+  const rulesAt = prompt.indexOf('GLOSS RULES:');
+  assert(rulesAt !== -1, 'the GLOSS RULES section header must be present');
+  const glossRules = prompt.slice(rulesAt);
+  assert(glossRules.includes('en'), 'the gloss must be pinned to nativeLanguage');
+  // And it must stay short. This is the token budget, stated to the model.
+  assert(/25 words/.test(glossRules), 'the length budget must be stated to the model');
+});
+
+Deno.test('the gloss instruction follows nativeLanguage, not the target language', () => {
+  const toEnglish = buildSystemPrompt('Spanish', 'beginner', undefined, 'en');
+  const toJapanese = buildSystemPrompt('Spanish', 'beginner', undefined, 'ja');
+  assert(toEnglish !== toJapanese, 'nativeLanguage must reach the gloss instruction');
+  const rulesAt = toJapanese.indexOf('GLOSS RULES:');
+  assert(rulesAt !== -1, 'the GLOSS RULES section header must be present');
+  // Bounded to the gloss section itself — CORRECTION RULES below it also names
+  // nativeLanguage, so an unbounded search would pass with no gloss rules at all.
+  const glossRules = toJapanese.slice(rulesAt, toJapanese.indexOf('Always respond with this'));
+  assert(glossRules.includes('ja'), 'the gloss rules must name the learner’s native language');
+  // …and the English learner's copy of the same section must differ, which is
+  // what proves the code is interpolating nativeLanguage rather than a constant.
+  const englishRules = toEnglish.slice(
+    toEnglish.indexOf('GLOSS RULES:'),
+    toEnglish.indexOf('Always respond with this'),
+  );
+  assert(englishRules !== glossRules, 'the gloss section must vary with nativeLanguage');
+});
+
+Deno.test('adding the gloss did not put learner text back into the cached prefix', () => {
+  // The regression guard for the whole prompt-cache story. The system prompt
+  // carries the cache_control breakpoint, so its text IS the cache key: it must
+  // stay byte-identical for every learner sharing a (targetLanguage, level,
+  // scenario, nativeLanguage) tuple, whatever they typed. buildSystemPrompt
+  // takes no parameter that can carry caller text, and this asserts the
+  // consequence rather than trusting the signature.
+  const first = buildSystemPrompt('Spanish', 'intermediate', undefined, 'en');
+  const second = buildSystemPrompt('Spanish', 'intermediate', undefined, 'en');
+  assertEquals(first, second);
+  assert(!first.includes(INJECTION));
+  // Nothing the learner controls has a route into this string.
+  assert(!first.includes('<<<TOPIC'));
+});

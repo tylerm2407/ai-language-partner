@@ -19,6 +19,10 @@ import { corsHeaders, corsResponse } from '../_shared/cors.ts';
 import { getEffectiveLimits } from '../_shared/plan-limits.ts';
 import { getScenario } from '../_shared/scenarios.ts';
 import { buildSystemPrompt, buildTopicTurn } from './prompt.ts';
+import {
+  parseAIResponse,
+  type CorrectionDetail,
+} from './parse.ts';
 import { generateValidated } from '../_shared/validated-generate.ts';
 import { proficiencyToCefr } from '../_shared/cefr.ts';
 import { checkBurstLimit } from '../_shared/burst-limit.ts';
@@ -91,21 +95,6 @@ interface ChatRequest {
 function buildCodeSwitchNote(spokenLanguage: string | undefined, targetLanguage: string): string | null {
   if (!spokenLanguage || spokenLanguage === targetLanguage) return null;
   return `The learner just spoke in ${spokenLanguage}, not ${targetLanguage}. They have probably hit a gap in what they can express. Acknowledge briefly in ${spokenLanguage} if that helps them, answer what they actually asked, give them the ${targetLanguage} phrasing they were reaching for, and continue the conversation in ${targetLanguage}. Do not scold them for switching and do not ignore what they said.`;
-}
-
-type CorrectionErrorType =
-  | 'grammar' | 'vocabulary' | 'spelling' | 'word_order' | 'tense' | 'gender' | 'other';
-type CorrectionSeverity = 'minor' | 'moderate' | 'critical';
-
-interface CorrectionDetail {
-  shortLabel: string;
-  explanation: string;
-  original: string;
-  corrected: string;
-  errorType: CorrectionErrorType;
-  severity: CorrectionSeverity;
-  example?: string | null;
-  repetitionCount?: number;
 }
 
 // ─── Auth helper ──────────────────────────────────────────────────────────
@@ -336,10 +325,19 @@ serve(async (req: Request) => {
             body: JSON.stringify({
               model: TEXT_MODEL,
               // The prompt asks for "1-3 sentences" plus a correction object;
-              // that lands near 250 tokens. 400 leaves headroom without paying
+              // that lands near 250 tokens. 400 left headroom without paying
               // for a ceiling nothing reaches — output is $5/MTok against $1
               // for input, so this cap costs more than the whole prompt does.
-              max_tokens: 400,
+              //
+              // 500, not 400: the response now also carries `gloss`, one short
+              // native-language sentence (~25 words, budget ~100 tokens). That
+              // ~100 tokens of output REPLACES a whole second paid round trip
+              // to the `translate` function — its own system prompt, its own
+              // input, its own output — every time a learner taps Translate.
+              // Do not raise this further to "be safe": a truncated response
+              // is unparseable JSON, so headroom here is not free insurance,
+              // and the ceiling is what an abusive turn costs us.
+              max_tokens: 500,
               // The scenario prompt is the cached prefix. Everything after it is
               // appended uncached, deliberately: the code-switch note changes
               // turn to turn, and the learner profile is unique per user. Put
@@ -382,8 +380,11 @@ serve(async (req: Request) => {
 
     // When the safety fallback fires, we skip parsing (no [CORRECTION] block)
     // and deliver a clean reply with no correction metadata.
-    const { reply, correction, vocabularyHighlights } = usedFallback
-      ? { reply: rawText, correction: null, vocabularyHighlights: [] }
+    // The fallback reply is pre-authored target-language copy, so it has no
+    // gloss — the client falls back to the `translate` function for it, which
+    // is the same path every message took before this field existed.
+    const { reply, correction, vocabularyHighlights, gloss } = usedFallback
+      ? { reply: rawText, correction: null, vocabularyHighlights: [], gloss: null }
       : parseAIResponse(rawText);
 
     // Quota already consumed atomically before the LLM call.
@@ -427,6 +428,9 @@ serve(async (req: Request) => {
         reply,
         correction: enrichedCorrection,
         vocabularyHighlights,
+        // Null is a supported value, not an omission: the client treats a
+        // missing gloss as "translate on demand" rather than as an error.
+        gloss,
         audioUrl: null,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -460,85 +464,4 @@ function windowMessages(
     content: `[Context: This is an ongoing conversation. There were ${older.length} earlier messages covering the same topic. Continue naturally from here.]`,
   };
   return [summaryNote, ...recent];
-}
-
-
-function normalizeCorrection(raw: unknown): CorrectionDetail | null {
-  if (raw == null) return null;
-  // Legacy / fallback: AI sometimes emits a plain string in the correction
-  // field despite the schema instructions.
-  if (typeof raw === 'string') {
-    const trimmed = raw.trim();
-    if (!trimmed) return null;
-    return {
-      shortLabel: trimmed.slice(0, 60),
-      explanation: trimmed,
-      original: '',
-      corrected: '',
-      errorType: 'other',
-      severity: 'moderate',
-      example: null,
-    };
-  }
-  const obj = raw as Record<string, unknown>;
-  const explanation = typeof obj.explanation === 'string' ? obj.explanation : '';
-  const shortLabel =
-    typeof obj.shortLabel === 'string' && obj.shortLabel.trim()
-      ? obj.shortLabel.slice(0, 80)
-      : explanation.slice(0, 80) || 'Correction';
-  const original = typeof obj.original === 'string' ? obj.original : '';
-  const corrected = typeof obj.corrected === 'string' ? obj.corrected : '';
-  const errorTypeRaw = obj.errorType;
-  const errorType: CorrectionErrorType =
-    typeof errorTypeRaw === 'string' &&
-    ['grammar','vocabulary','spelling','word_order','tense','gender','other'].includes(errorTypeRaw)
-      ? (errorTypeRaw as CorrectionErrorType)
-      : 'other';
-  const severityRaw = obj.severity;
-  const severity: CorrectionSeverity =
-    typeof severityRaw === 'string' && ['minor','moderate','critical'].includes(severityRaw)
-      ? (severityRaw as CorrectionSeverity)
-      : 'moderate';
-  const example = obj.example == null || obj.example === '' ? null : String(obj.example);
-  if (!explanation && !original && !corrected) return null;
-  return { shortLabel, explanation, original, corrected, errorType, severity, example };
-}
-
-function parseAIResponse(text: string): {
-  reply: string;
-  correction: CorrectionDetail | null;
-  vocabularyHighlights: string[];
-} {
-  const cleaned = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
-  try {
-    const parsed = JSON.parse(cleaned);
-    return {
-      reply: parsed.reply ?? text,
-      correction: normalizeCorrection(parsed.correction),
-      vocabularyHighlights: parsed.vocabularyHighlights ?? [],
-    };
-  } catch {
-    const firstBrace = cleaned.indexOf('{');
-    const lastBrace = cleaned.lastIndexOf('}');
-    if (firstBrace !== -1 && lastBrace > firstBrace) {
-      try {
-        const parsed = JSON.parse(cleaned.substring(firstBrace, lastBrace + 1));
-        return {
-          reply: parsed.reply ?? text,
-          correction: normalizeCorrection(parsed.correction),
-          vocabularyHighlights: parsed.vocabularyHighlights ?? [],
-        };
-      } catch {
-        // fall through
-      }
-    }
-    const correctionMarker = '[CORRECTION]:';
-    const index = text.indexOf(correctionMarker);
-    if (index === -1) {
-      return { reply: text.trim(), correction: null, vocabularyHighlights: [] };
-    }
-    const reply = text.substring(0, index).trim();
-    const correction = text.substring(index + correctionMarker.length).trim();
-    return { reply, correction: normalizeCorrection(correction), vocabularyHighlights: [] };
-  }
 }
