@@ -771,6 +771,44 @@ export interface BookAnnotation {
 }
 
 /**
+ * One completed checkpoint: the four-strand measure the learner's band and
+ * their cohort board are both anchored on.
+ *
+ * A null strand score means that strand was not answered, and is deliberately
+ * distinct from a zero — a learner who could not record on a noisy train has
+ * not demonstrated they cannot speak.
+ */
+export interface Checkpoint {
+  id: string;
+  language: string;
+  band: string;
+  kind: 'placement' | 'monthly';
+  completedAt: string;
+  listeningScore: number | null;
+  readingScore: number | null;
+  speakingScore: number | null;
+  writingScore: number | null;
+  composite: number | null;
+}
+
+/**
+ * One row of the weekly cohort board.
+ *
+ * `displayName` is null unless that member opted out of pseudonymity — the
+ * alias is what everyone else sees by default, and there is no user id here at
+ * all.
+ */
+export interface LeaderboardRow {
+  rank: number;
+  alias: string;
+  displayName: string | null;
+  isSelf: boolean;
+  retainedCards: number;
+  accuracyDelta: number;
+  reviews: number;
+}
+
+/**
  * A lesson inside a generated goal track.
  *
  * `generationState` is what separates a lesson that can be opened from a shell

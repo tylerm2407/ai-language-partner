@@ -384,6 +384,120 @@ async function goalTrackError(error: unknown, prefix: string): Promise<Translate
   return new TranslateError(`${prefix}: ${detail}`, code);
 }
 
+/** One strand of a checkpoint, as served to the client — no answer key. */
+export interface CheckpointItem {
+  id: string;
+  strand: 'listening' | 'reading' | 'speaking' | 'writing';
+  prompt: string;
+  options: string[] | null;
+  /** Signed URL, listening items only. Expires. */
+  audioUrl?: string | null;
+}
+
+export interface CheckpointStart {
+  checkpointId: string;
+  band: string;
+  kind: 'placement' | 'monthly';
+  items: CheckpointItem[];
+}
+
+export interface CheckpointResult {
+  composite: number | null;
+  band: string;
+  movedFrom: string;
+  scores: {
+    listening: number | null;
+    reading: number | null;
+    speaking: number | null;
+    writing: number | null;
+  };
+}
+
+/**
+ * Open a checkpoint: the ~5 minute, four-strand measure of where the learner
+ * actually is.
+ *
+ * Quota-exempt on every tier including free — spend is bounded by cadence (one
+ * placement plus one a month), and a learner who ran out of chat still needs to
+ * be able to find out how they are doing.
+ */
+export async function startCheckpoint(
+  language: string,
+  band: string,
+  kind: 'placement' | 'monthly'
+): Promise<CheckpointStart> {
+  const { data, error } = await invokeWithRetry('checkpoint', {
+    body: { action: 'start', language, band, kind },
+  });
+  if (error) throw await goalTrackError(error, 'Could not start the checkpoint');
+  if (data?.error) throw new TranslateError(`Could not start the checkpoint: ${data.error}`);
+  return data as CheckpointStart;
+}
+
+/**
+ * Submit answers. Grading happens server-side and the scores are never sent
+ * from here — a client-supplied score would be a self-assigned leaderboard
+ * rank. The speaking strand is read back from `pronunciation_scores`, which
+ * `score-pronunciation` writes under the service role.
+ */
+export async function submitCheckpoint(
+  checkpointId: string,
+  answers: Record<string, string>
+): Promise<CheckpointResult> {
+  const { data, error } = await invokeWithRetry('checkpoint', {
+    body: { action: 'submit', checkpointId, answers },
+  });
+  if (error) throw await goalTrackError(error, 'Could not save your checkpoint');
+  if (data?.error) throw new TranslateError(`Could not save your checkpoint: ${data.error}`);
+  return data as CheckpointResult;
+}
+
+/** One narratable segment of a book. */
+export interface AudiobookSegment {
+  index: number;
+  charStart: number;
+  charEnd: number;
+  status: 'pending' | 'generating' | 'ready' | 'failed';
+  durationMs: number | null;
+  /** Signed URL when ready. Expires, so re-list rather than caching it. */
+  url: string | null;
+}
+
+/**
+ * The segment map for a book.
+ *
+ * Segments are fixed-size windows ending on a sentence, not chapters:
+ * `chapter_breaks` is populated on under 4% of the library. Premium and up.
+ */
+export async function listAudiobook(bookId: string): Promise<AudiobookSegment[]> {
+  const { data, error } = await invokeWithRetry('audiobook', {
+    body: { action: 'list', bookId },
+  });
+  if (error) throw await goalTrackError(error, 'Could not load the narration');
+  if (data?.error) throw new TranslateError(`Could not load the narration: ${data.error}`);
+  return ((data?.segments ?? []) as AudiobookSegment[]);
+}
+
+/**
+ * Play one segment, rendering it if nobody has yet.
+ *
+ * Returns null while another listener is rendering the same segment — the
+ * caller should show "preparing" and retry, not an error. Narration is shared,
+ * so this only ever costs the first listener.
+ */
+export async function playAudiobookSegment(
+  bookId: string,
+  segmentIndex: number
+): Promise<{ url: string | null; rendered: boolean } | null> {
+  const { data, error } = await invokeWithRetry('audiobook', {
+    body: { action: 'play', bookId, segmentIndex },
+  });
+  if (error) throw await goalTrackError(error, 'Could not play that section');
+  if (data?.error) throw new TranslateError(`Could not play that section: ${data.error}`);
+  if (data?.status === 'generating') return null;
+  return { url: (data?.url as string) ?? null, rendered: data?.rendered === true };
+}
+
 /** Server response for one paragraph explanation. */
 export interface PassageExplanation {
   explanation: string;

@@ -105,6 +105,15 @@ export interface PlanDefinition {
    * about comes back from a cache shared by every learner and costs nothing.
    */
   dailyWordLookups: number;
+  /**
+   * Review cards per day created from vocabulary a conversation introduced.
+   *
+   * Separate from `dailyNewCards` deliberately — see the note on the edge-side
+   * mirror in supabase/functions/_shared/plan-limits.ts. These cards arrive
+   * without the learner asking for them, so the cap limits how much
+   * unrequested review one chatty session can add to tomorrow.
+   */
+  dailyChatCards: number;
   audiobookNarration: boolean;
   offlineMode: boolean;
 }
@@ -153,6 +162,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     dailyHints: 5,
     dailyTranslations: 10,
     dailyWordLookups: 60,
+    dailyChatCards: 3,
     audiobookNarration: false,
     offlineMode: false,
   },
@@ -168,6 +178,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     dailyHints: 30,
     dailyTranslations: 30,
     dailyWordLookups: 300,
+    dailyChatCards: 15,
     audiobookNarration: false,
     offlineMode: false,
   },
@@ -183,7 +194,8 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     dailyHints: 75,
     dailyTranslations: 60,
     dailyWordLookups: 600,
-    audiobookNarration: false,
+    dailyChatCards: 30,
+    audiobookNarration: true,
     offlineMode: true,
   },
   vip: {
@@ -198,6 +210,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     dailyHints: UNLIMITED_HINTS,
     dailyTranslations: 90,
     dailyWordLookups: UNLIMITED_WORD_LOOKUPS,
+    dailyChatCards: 50,
     audiobookNarration: true,
     offlineMode: true,
   },
@@ -257,6 +270,7 @@ export function getPlanLimits(planId: PlanId | string): {
   dailyHints: number;
   dailyTranslations: number;
   dailyWordLookups: number;
+  dailyChatCards: number;
 } {
   const plan = PLANS[planId as PlanId] ?? PLANS.starter;
   return {
@@ -268,6 +282,7 @@ export function getPlanLimits(planId: PlanId | string): {
     dailyHints: plan.dailyHints,
     dailyTranslations: plan.dailyTranslations,
     dailyWordLookups: plan.dailyWordLookups,
+    dailyChatCards: plan.dailyChatCards,
   };
 }
 

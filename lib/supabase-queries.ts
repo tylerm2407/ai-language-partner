@@ -15,6 +15,8 @@ import type {
 } from './cefr-proficiency';
 import { ONBOARDING_STEP_KEYS } from './onboarding-checklist';
 import type {
+  Checkpoint,
+  LeaderboardRow,
   GoalTrack,
   UserProfile,
   OnboardingChecklist,
@@ -2116,6 +2118,60 @@ function mapWritingSubmission(row: Record<string, unknown>): WritingSubmission {
     attemptNumber: (row.attempt_number as number) ?? 1,
     submittedAt: row.submitted_at as string,
   };
+}
+
+// ─── Checkpoints & Cohorts ──────────────────────────────────────
+
+/** The learner's most recent completed checkpoint for a language. */
+export async function fetchLatestCheckpoint(
+  userId: string,
+  language: string
+): Promise<Checkpoint | null> {
+  const { data, error } = await supabase
+    .from('checkpoints')
+    .select('id, language, band, kind, completed_at, listening_score, reading_score, speaking_score, writing_score, composite')
+    .eq('user_id', userId)
+    .eq('language', language)
+    .not('completed_at', 'is', null)
+    .order('completed_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+  return {
+    id: data.id as string,
+    language: data.language as string,
+    band: data.band as string,
+    kind: data.kind as Checkpoint['kind'],
+    completedAt: data.completed_at as string,
+    listeningScore: (data.listening_score as number) ?? null,
+    readingScore: (data.reading_score as number) ?? null,
+    speakingScore: (data.speaking_score as number) ?? null,
+    writingScore: (data.writing_score as number) ?? null,
+    composite: (data.composite as number) ?? null,
+  };
+}
+
+/**
+ * The learner's weekly cohort board.
+ *
+ * Ranked on retention gain, tie-broken by accuracy trend — your level picks
+ * the board, your improvement ranks you on it. Members are pseudonymous unless
+ * they have opted in; the RPC never returns a user id.
+ */
+export async function fetchCohortLeaderboard(): Promise<LeaderboardRow[]> {
+  const { data, error } = await supabase.rpc('cohort_leaderboard', {});
+  if (error) throw error;
+  return ((data ?? []) as Record<string, unknown>[]).map((r, index) => ({
+    rank: index + 1,
+    alias: r.alias as string,
+    displayName: (r.display_name as string) ?? null,
+    isSelf: r.is_self === true,
+    retainedCards: (r.retained_cards as number) ?? 0,
+    accuracyDelta: (r.accuracy_delta as number) ?? 0,
+    reviews: (r.reviews as number) ?? 0,
+  }));
 }
 
 // ─── Goal Tracks ────────────────────────────────────────────────

@@ -34,6 +34,20 @@ verify_jwt = false
 [functions.translate]
 verify_jwt = false
 
+# ─── checkpoint ───────────────────────────────────────────────────────────
+# The placement/monthly assessment. Auth is enforced by the function body via
+# getAuthenticatedUser (_shared/auth.ts) for learner actions, and by a
+# service-role bearer compare for the `seed` action — the same split
+# daily-news-cron uses. Must stay false or both paths 401 at the gate.
+[functions.checkpoint]
+verify_jwt = false
+
+# ─── audiobook ────────────────────────────────────────────────────────────
+# Narrates a book segment by segment. Auth enforced by the function body via
+# getAuthenticatedUser (_shared/auth.ts), entitlement by get_effective_limits.
+[functions.audiobook]
+verify_jwt = false
+
 # ─── generate-goal-track ──────────────────────────────────────────────────
 # Builds a learner's goal track and materialises its lessons. Same posture as
 # translate: auth enforced by the function body via getAuthenticatedUser
