@@ -29,6 +29,17 @@ interface ChatBubbleProps {
   /** Learner's tutor voice preference, so replaying a line matches the voice
    *  that first spoke it instead of reverting to the default. */
   voiceGender?: VoiceGender;
+  /**
+   * Native-language gloss of this reply, returned by ai-chat in the same call
+   * that produced the reply itself.
+   *
+   * When it is here, Translate is a pure toggle — no network, no second paid
+   * model call to translate text we generated a moment ago. When it is absent
+   * (a user message, a reloaded transcript, the safety fallback reply) the
+   * button falls back to the `translate` function as before. Assistant
+   * messages only; a learner's own words were never ours to pre-gloss.
+   */
+  gloss?: string | null;
 }
 
 /** Render message content with **bold** words highlighted as vocabulary. */
@@ -91,7 +102,7 @@ async function cacheSound(id: string, sound: Audio.Sound): Promise<void> {
 // that one tap per message is plenty; subsequent toggles are instant.
 const translationCache = new Map<string, string>();
 
-export function ChatBubble({ message, targetLanguage, userId, nativeLanguage, cefrLevel, voiceGender }: ChatBubbleProps) {
+export function ChatBubble({ message, targetLanguage, userId, nativeLanguage, cefrLevel, voiceGender, gloss }: ChatBubbleProps) {
   const isUser = message.role === 'user';
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -111,12 +122,22 @@ export function ChatBubble({ message, targetLanguage, userId, nativeLanguage, ce
   const [translationError, setTranslationError] = useState<string | null>(null);
   // Reporting offensive AI output — required by Google Play's generative-AI policy.
   const [reportOpen, setReportOpen] = useState(false);
-  const translation = translationCache.get(message.id) ?? null;
+  // The gloss came back with the reply, so it outranks the on-demand cache:
+  // it is the same meaning, already paid for, and already through the
+  // content-safety pipeline that every ai-chat completion passes.
+  const translation = gloss ?? translationCache.get(message.id) ?? null;
 
   const handleTranslate = async () => {
     // Toggle off if already showing
     if (showTranslation) {
       setShowTranslation(false);
+      return;
+    }
+    // Pre-generated gloss — reveal it, no network call at all. This is the
+    // whole point: translating our OWN output used to cost a second round trip
+    // per tap, on text the model had just written.
+    if (gloss) {
+      setShowTranslation(true);
       return;
     }
     // Cached — instant open
@@ -289,8 +310,9 @@ export function ChatBubble({ message, targetLanguage, userId, nativeLanguage, ce
       </View>
 
       {/* Translation sits OUTSIDE the bubble as a caption, per the deck. It stays
-          opt-in rather than always-on as the deck draws it — auto-translating
-          every AI turn would bill a translate call per message. */}
+          opt-in rather than always-on as the deck draws it: the gloss is free
+          once the reply exists, but a message without one still bills a
+          translate call, and showing it unasked would bill every turn. */}
       {!isUser && showTranslation && translation && (
         <Text
           className="text-[13px] mt-1 ml-1"

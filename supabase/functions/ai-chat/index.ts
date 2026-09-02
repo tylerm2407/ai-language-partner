@@ -20,6 +20,10 @@ import { getEffectiveLimits } from '../_shared/plan-limits.ts';
 import { combinedScore, scoreTurn } from '../_shared/turn-accuracy.ts';
 import { getScenario } from '../_shared/scenarios.ts';
 import { buildSystemPrompt, buildTopicTurn, usesPromptFirstCorrection } from './prompt.ts';
+// parseAIResponse/normalizeCorrection/normalizeVocabulary moved to parse.ts so
+// they can be tested: index.ts calls serve() at module scope, so importing it
+// from a test would stand up an HTTP listener.
+import { parseAIResponse, type VocabHighlight } from './parse.ts';
 import { actInstruction, selectDialogueAct } from './dialogue-act.ts';
 import { floorShareNote, pushNote, selectPushStance } from './turn-policy.ts';
 import { generateValidated } from '../_shared/validated-generate.ts';
@@ -413,7 +417,7 @@ serve(async (req: Request) => {
               // that lands near 250 tokens. 400 leaves headroom without paying
               // for a ceiling nothing reaches — output is $5/MTok against $1
               // for input, so this cap costs more than the whole prompt does.
-              max_tokens: 400,
+              max_tokens: 500,
               // The scenario prompt is the cached prefix. Everything after it is
               // appended uncached, deliberately: the code-switch note changes
               // turn to turn, and the learner profile is unique per user. Put
@@ -466,8 +470,11 @@ serve(async (req: Request) => {
 
     // When the safety fallback fires, we skip parsing (no [CORRECTION] block)
     // and deliver a clean reply with no correction metadata.
-    const { reply, correction, vocabularyHighlights } = usedFallback
-      ? { reply: rawText, correction: null, vocabularyHighlights: [] }
+    const { reply, correction, vocabularyHighlights, gloss } = usedFallback
+      // The safety fallback is pre-authored text, not a model completion, so
+      // there is no gloss to carry. Null, not omitted: the client reads null
+      // as "translate on demand", which is exactly the old behaviour.
+      ? { reply: rawText, correction: null, vocabularyHighlights: [], gloss: null }
       : parseAIResponse(rawText);
 
     // Quota already consumed atomically before the LLM call.
@@ -546,6 +553,9 @@ serve(async (req: Request) => {
         /** Which of the highlighted words actually became review cards. The
          *  UI marks these so the learner knows the word is coming back. */
         savedWords,
+        // Null is a supported value, not an omission: the client treats a
+        // missing gloss as "translate on demand" rather than as an error.
+        gloss,
         /** Did this turn ask the learner to fix something themselves? The
          *  client carries it back on the next turn so the controller can
          *  react to their attempt and, crucially, not ask a second time.
@@ -594,46 +604,6 @@ function windowMessages(
 }
 
 
-function normalizeCorrection(raw: unknown): CorrectionDetail | null {
-  if (raw == null) return null;
-  // Legacy / fallback: AI sometimes emits a plain string in the correction
-  // field despite the schema instructions.
-  if (typeof raw === 'string') {
-    const trimmed = raw.trim();
-    if (!trimmed) return null;
-    return {
-      shortLabel: trimmed.slice(0, 60),
-      explanation: trimmed,
-      original: '',
-      corrected: '',
-      errorType: 'other',
-      severity: 'moderate',
-      example: null,
-    };
-  }
-  const obj = raw as Record<string, unknown>;
-  const explanation = typeof obj.explanation === 'string' ? obj.explanation : '';
-  const shortLabel =
-    typeof obj.shortLabel === 'string' && obj.shortLabel.trim()
-      ? obj.shortLabel.slice(0, 80)
-      : explanation.slice(0, 80) || 'Correction';
-  const original = typeof obj.original === 'string' ? obj.original : '';
-  const corrected = typeof obj.corrected === 'string' ? obj.corrected : '';
-  const errorTypeRaw = obj.errorType;
-  const errorType: CorrectionErrorType =
-    typeof errorTypeRaw === 'string' &&
-    ['grammar','vocabulary','spelling','word_order','tense','gender','other'].includes(errorTypeRaw)
-      ? (errorTypeRaw as CorrectionErrorType)
-      : 'other';
-  const severityRaw = obj.severity;
-  const severity: CorrectionSeverity =
-    typeof severityRaw === 'string' && ['minor','moderate','critical'].includes(severityRaw)
-      ? (severityRaw as CorrectionSeverity)
-      : 'moderate';
-  const example = obj.example == null || obj.example === '' ? null : String(obj.example);
-  if (!explanation && !original && !corrected) return null;
-  return { shortLabel, explanation, original, corrected, errorType, severity, example };
-}
 
 /**
  * One word the tutor chose to teach, with its meaning.
@@ -643,14 +613,9 @@ function normalizeCorrection(raw: unknown): CorrectionDetail | null {
  * `cards.native_text` is NOT NULL, and a "card" whose front and back are the
  * same foreign word teaches nothing.
  */
-interface VocabHighlight {
-  word: string;
-  translation: string;
-}
 
 /** Longer than this is a sentence the model has mislabelled as vocabulary,
  *  not a word worth a card. */
-const MAX_VOCAB_CHARS = 60;
 
 /**
  * Accept both the object shape and the legacy bare strings.
@@ -660,64 +625,7 @@ const MAX_VOCAB_CHARS = 60;
  * string still renders as a highlight; it simply cannot become a card, which
  * `saveChatVocabulary` enforces by requiring a translation.
  */
-function normalizeVocabulary(raw: unknown): VocabHighlight[] {
-  if (!Array.isArray(raw)) return [];
-  const out: VocabHighlight[] = [];
-  for (const entry of raw.slice(0, 8)) {
-    if (typeof entry === 'string') {
-      const word = entry.trim();
-      if (word && word.length <= MAX_VOCAB_CHARS) out.push({ word, translation: '' });
-      continue;
-    }
-    if (entry && typeof entry === 'object') {
-      const word = String((entry as Record<string, unknown>).word ?? '').trim();
-      const translation = String((entry as Record<string, unknown>).translation ?? '').trim();
-      if (word && word.length <= MAX_VOCAB_CHARS) {
-        out.push({ word, translation: translation.slice(0, 200) });
-      }
-    }
-  }
-  return out;
-}
 
-function parseAIResponse(text: string): {
-  reply: string;
-  correction: CorrectionDetail | null;
-  vocabularyHighlights: VocabHighlight[];
-} {
-  const cleaned = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
-  try {
-    const parsed = JSON.parse(cleaned);
-    return {
-      reply: parsed.reply ?? text,
-      correction: normalizeCorrection(parsed.correction),
-      vocabularyHighlights: normalizeVocabulary(parsed.vocabularyHighlights),
-    };
-  } catch {
-    const firstBrace = cleaned.indexOf('{');
-    const lastBrace = cleaned.lastIndexOf('}');
-    if (firstBrace !== -1 && lastBrace > firstBrace) {
-      try {
-        const parsed = JSON.parse(cleaned.substring(firstBrace, lastBrace + 1));
-        return {
-          reply: parsed.reply ?? text,
-          correction: normalizeCorrection(parsed.correction),
-          vocabularyHighlights: normalizeVocabulary(parsed.vocabularyHighlights),
-        };
-      } catch {
-        // fall through
-      }
-    }
-    const correctionMarker = '[CORRECTION]:';
-    const index = text.indexOf(correctionMarker);
-    if (index === -1) {
-      return { reply: text.trim(), correction: null, vocabularyHighlights: [] };
-    }
-    const reply = text.substring(0, index).trim();
-    const correction = text.substring(index + correctionMarker.length).trim();
-    return { reply, correction: normalizeCorrection(correction), vocabularyHighlights: [] };
-  }
-}
 
 // ─── What a conversation leaves behind ──────────────────────────────────
 //

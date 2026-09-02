@@ -141,7 +141,8 @@ You MUST respond with valid JSON in this exact structure:
   },
   "vocabularyHighlights": [
     { "word": "The word or short phrase in ${targetLanguage}.", "translation": "Its meaning in ${nativeLanguage}." }
-  ]
+  ],
+  "gloss": "A short rendering of your \\"reply\\" above in ${nativeLanguage}, so the learner can check they understood. See GLOSS RULES."
 }
 
 VOCABULARY RULES:
@@ -156,6 +157,14 @@ CORRECTION RULES:
 - severity: minor = small typo/slip, moderate = noticeable error, critical = meaning-breaking.
 - errorType: pick the single best category.
 - example: a different short sentence showing the correct pattern, in ${targetLanguage}. Or null.
+
+GLOSS RULES:
+- gloss is what your "reply" means, written in ${nativeLanguage}. It exists so a learner who did not follow you can check themselves without leaving the conversation.
+- ALWAYS include it, on every turn, even when correction is null.
+- Convey MEANING, not a word-for-word transliteration. If your reply asks a question, the gloss asks the same question.
+- Keep it to ONE short sentence, at most 25 words. It is a comprehension aid, not a second essay — never explain, never add anything you did not already say, never coach.
+- Gloss the reply only. Do not gloss the correction fields; those are already in ${nativeLanguage}.
+- If ${nativeLanguage} and ${targetLanguage} are the same language, still fill the field — just restate the reply plainly.
 
 Always respond with this JSON structure.`;
 }

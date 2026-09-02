@@ -122,6 +122,20 @@ export interface AIChatResponse {
   /** Words the tutor chose to teach this turn. Older server deployments
    *  return bare strings; `normalizeChatVocabulary` accepts both. */
   vocabularyHighlights?: (ChatVocabHighlight | string)[];
+  /**
+   * Native-language gloss of `reply`, generated in the SAME ai-chat call.
+   *
+   * This is what the Translate button shows on an assistant reply. It costs
+   * ~100 output tokens folded into a call we were already paying for, instead
+   * of a whole second round trip to the `translate` function for text WE just
+   * generated — which is what tapping Translate used to do.
+   *
+   * Optional and nullable on purpose. The safety fallback reply has no gloss,
+   * reloaded history has none (it is not persisted), and an older deployment
+   * returns none. In every one of those cases the client falls back to
+   * `translateText`, exactly as it behaved before this field existed.
+   */
+  gloss?: string | null;
   /** Of those, the ones that actually became review cards — deduped against
    *  what the learner already studies and capped by `dailyChatCards`. */
   savedWords?: string[];

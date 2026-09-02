@@ -37,6 +37,7 @@ import { colors, radii, spacing } from '../../../config/theme';
 import { Body, Caption } from '../../../components/ui/Text';
 import { useAiConsent } from '../../../hooks/useAiConsent';
 import { Chip } from '../../../components/ui/Chip';
+import { useScreenView } from '../../../hooks/useScreenView';
 
 /**
  * The level line in the header status row.
@@ -82,6 +83,7 @@ const SCENARIOS: Scenario[] = SCENARIO_ORDER.map((key) => {
 });
 
 export default function ChatScreen() {
+  useScreenView('chat');
   const { profile } = useAppStore();
   const targetLanguage = getTargetLanguage(profile);
 
@@ -110,6 +112,16 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
   const params = useLocalSearchParams<{ assignmentId?: string; chatSessionId?: string }>();
   const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(null);
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
+  /**
+   * Native-language glosses of assistant replies, keyed by message id.
+   *
+   * Held here rather than on ConversationMessage because it is deliberately
+   * NOT persisted: `chat_messages` stores what was said, and a gloss is a
+   * display aid we get free with the turn that produced it. A reloaded
+   * transcript therefore has none, and ChatBubble falls back to the `translate`
+   * function for those — the same path every message took before.
+   */
+  const [glosses, setGlosses] = useState<Record<string, string>>({});
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [voiceMode, setVoiceMode] = useState(false);
@@ -553,6 +565,13 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
         timestamp: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, assistantMsg]);
+      // Only when the server actually sent one. An older deployment, or the
+      // safety fallback reply, returns null — and a null here is what routes
+      // Translate back through the `translate` function.
+      const gloss = response.gloss;
+      if (gloss) {
+        setGlosses((prev) => ({ ...prev, [assistantMsg.id]: gloss }));
+      }
       // The learner's turn is saved here, not at send time, so history only
       // ever contains turns that actually happened. Order matters: the user
       // message must land before the reply.
@@ -962,6 +981,7 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
               cefrLevel={CEFR_FOR_LEVEL[level]}
               nativeLanguage={profile?.nativeLanguage}
               voiceGender={voiceGender}
+              gloss={glosses[item.id]}
             />
           )}
           ListFooterComponent={sending ? <TypingIndicator /> : null}
