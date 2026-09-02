@@ -175,7 +175,17 @@ export default function BookDetailScreen() {
     // since migration 084 that cap IS the free-tier limit, so the book reader
     // was an unmetered way around it. One shared path, one cap.
     try {
-      return await addCardFromAnnotation(user.id, source, courses.id, ['reading', 'book']);
+      // The book's band and language file the card so it counts toward
+      // measured vocabulary, and let the duplicate check find a word the
+      // learner already saved from chat or another book.
+      return await addCardFromAnnotation(
+        user.id,
+        source,
+        courses.id,
+        ['reading', 'book'],
+        book.cefrLevel,
+        book.language,
+      );
     } catch (err) {
       if (err instanceof NewCardsCapReachedError) {
         Alert.alert(

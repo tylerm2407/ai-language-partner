@@ -6,6 +6,7 @@ import {
   paginateParagraphs,
   splitParagraphs,
   tokenize,
+  wordTokens,
 } from './reading-text';
 
 // Imported Gutenberg text is CRLF, hard wrapped at ~70 chars inside a
@@ -200,5 +201,38 @@ describe('normalizeWord', () => {
   it('punctuation alone normalises to nothing', () => {
     expect(normalizeWord('—')).toBe('');
     expect(normalizeWord('...')).toBe('');
+  });
+});
+
+describe('wordTokens', () => {
+  it('returns normalised word forms and drops whitespace and bare punctuation', () => {
+    expect(wordTokens('Il y avait — une fois, un Roi.')).toEqual([
+      'il', 'y', 'avait', 'une', 'fois', 'un', 'roi',
+    ]);
+  });
+
+  it('keeps repeats, because coverage is measured on running words', () => {
+    // Type coverage would say "le" is one word; token coverage says it is
+    // three of the five words on the page, which is what readability means.
+    expect(wordTokens('le roi et le fils et le chien')).toHaveLength(8);
+  });
+
+  it('agrees with normalizeWord on every token it emits', () => {
+    // The load-bearing invariant: the corpus build, the ranking and the
+    // reader's tap handler must produce the same string for the same word, or
+    // the intersection silently empties.
+    const text = "L'homme, sans-culotte ; « Étoile » qu'est-ce ?";
+    for (const token of wordTokens(text)) {
+      expect(normalizeWord(token)).toBe(token);
+    }
+  });
+
+  it('handles CRLF-wrapped Gutenberg text', () => {
+    expect(wordTokens('un roi\r\nqui régnait')).toEqual(['un', 'roi', 'qui', 'régnait']);
+  });
+
+  it('empty text yields no tokens', () => {
+    expect(wordTokens('')).toEqual([]);
+    expect(wordTokens('   —  ...  ')).toEqual([]);
   });
 });

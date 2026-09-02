@@ -131,7 +131,7 @@ export default function ReadingPassageScreen() {
       onDismissHelp={help.dismiss}
       onAddToReview={() =>
         help.cardSource
-          ? addToReview(help.cardSource, passage.courseId)
+          ? addToReview(help.cardSource, passage.courseId, profile?.targetLanguage ?? null)
           : Promise.resolve(null)
       }
       onUpgrade={() => router.push('/(app)/profile/subscription')}

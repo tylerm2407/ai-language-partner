@@ -1,8 +1,11 @@
 import { supabase } from './supabase';
 import { SRS_DEFAULTS } from '../config/app';
 import { PLANS } from './plans';
-import { CEFR_BAND_BY_LEVEL, CEFR_LADDER } from './cefr-proficiency';
+import { CEFR_BAND_BY_LEVEL, CEFR_LADDER,
+  combineConversationScore,
+} from './cefr-proficiency';
 import { localToday } from './dates';
+import { wordTokens } from './reading-text';
 import type {
   ProficiencyEvidence,
   VocabEvidenceItem,
@@ -753,6 +756,11 @@ const PROFICIENCY_WRITING_LIMIT = 500;
  */
 const PROFICIENCY_SPEAKING_LIMIT = 500;
 /** ~2 years of daily rows; also the active-day count for confidence scoring. */
+/** Conversation turns considered. Larger than the other evidence caps
+ *  because a turn is a much smaller unit than a passage or a submission — a
+ *  single session can produce dozens. */
+const PROFICIENCY_CONVERSATION_LIMIT = 1000;
+
 const PROFICIENCY_STATS_DAY_LIMIT = 730;
 
 /**
@@ -781,8 +789,15 @@ function nestedCefrLevel(embedded: unknown): string | null {
 export async function fetchProficiencyEvidence(
   userId: string
 ): Promise<ProficiencyEvidence> {
-  const [vocabRes, readingRes, writingRes, speakingRes, statsRes, reviewCountRes] =
-    await Promise.all([
+  const [
+    vocabRes,
+    readingRes,
+    writingRes,
+    speakingRes,
+    statsRes,
+    reviewCountRes,
+    conversationRes,
+  ] = await Promise.all([
       // Every review item with its card's CEFR tag. Inner join drops orphaned
       // items, matching fetchDueReviewItemsWithCards.
       supabase
@@ -825,6 +840,19 @@ export async function fetchProficiencyEvidence(
         .from('review_logs')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', userId),
+
+      // Scored conversation turns (migration 095). This is what finally lets
+      // chat and voice move the measured level — before it, the most
+      // expensive feature in the app contributed no evidence at all.
+      //
+      // Rows carry their components rather than a combined score, so the
+      // weighting stays re-tunable; `combineConversationScore` folds them.
+      supabase
+        .from('conversation_evidence')
+        .select('modality, cefr_level, accuracy, intelligibility, word_count')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(PROFICIENCY_CONVERSATION_LIMIT),
     ]);
 
   if (vocabRes.error) throw vocabRes.error;
@@ -833,6 +861,7 @@ export async function fetchProficiencyEvidence(
   if (speakingRes.error) throw speakingRes.error;
   if (statsRes.error) throw statsRes.error;
   if (reviewCountRes.error) throw reviewCountRes.error;
+  if (conversationRes.error) throw conversationRes.error;
 
   const vocabulary: VocabEvidenceItem[] = (vocabRes.data ?? []).map(
     (row: Record<string, unknown>) => ({
@@ -867,6 +896,31 @@ export async function fetchProficiencyEvidence(
       score: ((row.score as number) ?? 0) / 100,
     })
   );
+
+  // Conversation turns join the skill they are evidence for. A spoken turn is
+  // speaking evidence; a typed one is written-production evidence and joins
+  // the writing pool. They are kept apart because composing a sentence with a
+  // keyboard and time to think is a materially easier task than saying it out
+  // loud — pooling them would let a learner type their way to a speaking level.
+  const conversationRows = (conversationRes.data ?? []) as Record<string, unknown>[];
+  for (const row of conversationRows) {
+    const score = combineConversationScore(
+      Number(row.accuracy ?? 0),
+      row.intelligibility === null || row.intelligibility === undefined
+        ? null
+        : Number(row.intelligibility),
+    );
+    const cefrLevel = (row.cefr_level as string | null) ?? null;
+    if (row.modality === 'speaking') {
+      speaking.push({ cefrLevel, score });
+    } else {
+      writing.push({
+        cefrLevel,
+        overallScore: score,
+        wordCount: Number(row.word_count ?? 0),
+      });
+    }
+  }
 
   const statRows = (statsRes.data ?? []) as Record<string, unknown>[];
   const listeningMinutes = statRows.reduce(
@@ -1671,7 +1725,16 @@ export async function addCardFromAnnotation(
   userId: string,
   annotation: AnnotationCardSource,
   courseId: string,
-  tags: string[] = ['reading']
+  tags: string[] = ['reading'],
+  /** CEFR band to file the card under — see the note on saveCorrectionAsCard.
+   *  Without it the card never counts toward measured vocabulary. */
+  cefrLevel?: string | null,
+  /** Target language of the word. This path never set `cards.language`, which
+   *  is why a reading card could not be deduplicated against a chat card for
+   *  the same word — they were filed in different languages, one of them
+   *  null. Optional so existing callers keep compiling; dedupe only runs when
+   *  it is supplied. */
+  language?: string | null
 ): Promise<ReviewItem> {
   // Enforce the learner's daily new-card cap before introducing a new card
   // (research.md §5.2) — atomic check-and-consume, migration 044, with the cap
@@ -1688,6 +1751,12 @@ export async function addCardFromAnnotation(
   // If annotation already links to a card, use it; otherwise create one
   let cardId = annotation.cardId;
 
+  // Already studying this word? Reuse the card rather than filing a second one
+  // with its own independent SM-2 schedule.
+  if (!cardId && language) {
+    cardId = await findExistingLearnerCard(userId, language, annotation.wordOrPhrase);
+  }
+
   if (!cardId) {
     const { data: card, error: cardError } = await supabase
       .from('cards')
@@ -1700,6 +1769,13 @@ export async function addCardFromAnnotation(
         target_text: annotation.wordOrPhrase,
         audio_url: annotation.audioUrl,
         part_of_speech: annotation.partOfSpeech,
+        language: language ?? null,
+        cefr_level: cefrLevel ?? null,
+        // Tokenized here rather than in SQL so the coverage ranking
+        // (migration 096) intersects against terms produced by the SAME
+        // tokenizer the corpus build used. A Postgres approximation of
+        // wordTokens() would drift and empty the intersection silently.
+        search_terms: [...new Set(wordTokens(annotation.wordOrPhrase))],
         tags,
       })
       .select()
@@ -2070,6 +2146,64 @@ export async function fetchBooksByLanguageAndLevel(
  * two are fetched separately and the text loads behind the Read button.
  * Columns are named explicitly, exactly as fetchBooksByLanguageAndLevel does.
  */
+/**
+ * The library ordered by how much of each book the learner can already read.
+ *
+ * `rank_books_by_coverage` (migration 096) does the work in Postgres against
+ * the precomputed `book_vocab` profiles — the corpus is 2191 MB and cannot be
+ * tokenized at query time. It returns ids and scores only, so the book rows
+ * are fetched separately with `content` excluded and re-ordered to match.
+ *
+ * `knownShare` is the share of the book's running words the learner has
+ * retained; it is 0 for everyone until they graduate cards out of learning,
+ * which is why the RPC falls through to `commonShare` and the shelf still
+ * ranks sensibly on day one.
+ */
+export interface RankedBook {
+  book: ReadingBook;
+  /** Share of running words the learner has retained. 0..1 */
+  knownShare: number;
+  /** Share of running words in the language's 1,000 most frequent forms. 0..1 */
+  commonShare: number;
+}
+
+export async function fetchBooksRankedByCoverage(
+  language: string,
+  limit = 40
+): Promise<RankedBook[]> {
+  const { data: ranked, error } = await supabase.rpc('rank_books_by_coverage', {
+    p_language: language,
+    p_limit: limit,
+  });
+  if (error) throw error;
+
+  const rows = (ranked ?? []) as {
+    book_id: string;
+    known_share: number;
+    common_share: number;
+  }[];
+  if (rows.length === 0) return [];
+
+  const { data: books, error: booksError } = await supabase
+    .from('reading_books')
+    .select(
+      'id, title, author, description, language, cefr_level, word_count, image_url, tags, source, source_id, chapter_breaks, is_published, created_at'
+    )
+    .in('id', rows.map((r) => r.book_id));
+  if (booksError) throw booksError;
+
+  // `.in()` does not preserve the ranking, and the ranking is the entire point.
+  const byId = new Map((books ?? []).map((b) => [b.id as string, mapReadingBook(b)]));
+  return rows
+    .map((r) => {
+      const book = byId.get(r.book_id);
+      return book
+        ? { book, knownShare: r.known_share ?? 0, commonShare: r.common_share ?? 0 }
+        : null;
+    })
+    .filter((r): r is RankedBook => r !== null);
+}
+
 export async function fetchBookMeta(bookId: string): Promise<ReadingBook | null> {
   const { data, error } = await supabase
     .from('reading_books')
@@ -2754,6 +2888,40 @@ export async function loadChatMessages(sessionId: string): Promise<ConversationM
   }));
 }
 
+/**
+ * Is this learner already studying this exact text in this language?
+ *
+ * There is no content dedupe in this schema: every save inserts a fresh
+ * `cards` row, and the UNIQUE(user_id, card_id) on `review_items` never fires
+ * because the card is new each time. Saving the same word twice therefore
+ * produces two cards with two independent SM-2 schedules, and the learner
+ * reviews one word forever on two clocks.
+ *
+ * Backed by idx_cards_user_language_text (migration 095). Fails open — a
+ * duplicate is a much smaller problem than a save that silently does nothing
+ * because the lookup errored.
+ */
+async function findExistingLearnerCard(
+  userId: string,
+  language: string,
+  targetText: string
+): Promise<string | null> {
+  const trimmed = targetText.trim();
+  if (!trimmed) return null;
+  const { data, error } = await supabase
+    .from('cards')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('language', language)
+    .ilike('target_text', trimmed)
+    .limit(1);
+  if (error) {
+    console.warn('[cards] duplicate check failed, inserting anyway:', error.message);
+    return null;
+  }
+  return data && data.length > 0 ? (data[0].id as string) : null;
+}
+
 /** Save a correction as an SRS card so the user can review it later.
  *  Uses the corrected phrase as target_text and the explanation/shortLabel
  *  as native_text. Creates both the card and a fresh review_item.
@@ -2769,9 +2937,20 @@ export async function saveCorrectionAsCard(params: {
   corrected: string;
   shortLabel: string;
   explanation: string;
+  /** CEFR band to file the card under. Without it the card is invisible to
+   *  `analyzeBands`, which skips items with a null `cefr_level` — the card
+   *  would exist, be reviewed, and still never count toward the learner's own
+   *  measured vocabulary. Optional so existing callers keep compiling, but
+   *  every caller should pass it. */
+  cefrLevel?: string | null;
 }): Promise<{ cardId: string } | null> {
-  const { userId, targetLanguage, original, corrected, shortLabel, explanation } = params;
+  const { userId, targetLanguage, original, corrected, shortLabel, explanation, cefrLevel } =
+    params;
   if (!corrected.trim()) return null;
+
+  // Already saved this exact correction — nothing to do, and no slot to spend.
+  const existing = await findExistingLearnerCard(userId, targetLanguage, corrected);
+  if (existing) return { cardId: existing };
 
   // Enforce the 20-new-cards/day cap — atomic check-and-consume
   // (migration 044). Return null (silent skip) rather than throwing —
@@ -2799,6 +2978,9 @@ export async function saveCorrectionAsCard(params: {
       part_of_speech: null,
       tags: ['correction', 'chat'],
       language: targetLanguage,
+      // Files the card in a band so it counts toward measured vocabulary.
+      cefr_level: cefrLevel ?? null,
+      skill_type: 'grammar',
       source_type: 'manual',
     })
     .select('id')

@@ -9,12 +9,14 @@ import {
   fetchReadingPassagesByCourse,
   fetchWritingPromptsByCourse,
   fetchBooksByLanguageAndLevel,
+  fetchBooksRankedByCoverage,
   fetchInProgressBooks,
   fetchUserBookProgress,
 } from '../../../lib/supabase-queries';
 import { useAppStore } from '../../../stores/useAppStore';
 import { useReviewCountSync } from '../../../hooks/useReviewCountSync';
 import { supabase } from '../../../lib/supabase';
+import { cachedFetch, readCacheKey } from '../../../lib/read-cache';
 import { LoadingScreen } from '../../../components/ui/LoadingScreen';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { GradientBackground } from '../../../components/ui/GradientBackground';
@@ -41,6 +43,15 @@ const TAB_CONFIG: { key: CourseTab; label: string }[] = [
   { key: 'writing', label: 'Writing' },
 ];
 
+/**
+ * The default library shelf: ordered by how much of each book the learner can
+ * already read, rather than by when it was imported.
+ *
+ * Not a CEFR band, so it sits outside the ['A1'..'C2'] list and is compared by
+ * identity everywhere a band would be.
+ */
+const FOR_YOU_TAB = 'for-you';
+
 export default function LearnScreen() {
   const router = useRouter();
   const { reviewCount, profile } = useAppStore();
@@ -56,8 +67,14 @@ export default function LearnScreen() {
   const [readingPassages, setReadingPassages] = useState<Record<string, ReadingPassage[]>>({});
   const [writingPrompts, setWritingPrompts] = useState<Record<string, WritingPrompt[]>>({});
   const [libraryBooks, setLibraryBooks] = useState<ReadingBook[]>([]);
-  const [selectedCefrTab, setSelectedCefrTab] = useState<string>('A1');
+  // 'for-you' is the default shelf: the library is 10,375 books, most of them
+  // unreadable for most learners, so ordering by how much of each one they can
+  // already read is the thing that makes it a shelf rather than a pile. The
+  // CEFR pills stay for browsing by band.
+  const [selectedCefrTab, setSelectedCefrTab] = useState<string>(FOR_YOU_TAB);
   const [loadingLibrary, setLoadingLibrary] = useState(false);
+  /** True when 'For you' had nothing to rank and fell back to the A1 shelf. */
+  const [rankedUnavailable, setRankedUnavailable] = useState(false);
   const [libraryError, setLibraryError] = useState<ErrorCopy | null>(null);
   const [unitsError, setUnitsError] = useState<ErrorCopy | null>(null);
   const [passagesError, setPassagesError] = useState<ErrorCopy | null>(null);
@@ -149,12 +166,42 @@ export default function LearnScreen() {
     setLoadingLibrary(true);
     setLibraryError(null);
     try {
-      const books = await fetchBooksByLanguageAndLevel(profile.targetLanguage, cefrLevel);
-      setLibraryBooks(books);
-
-      // Fetch progress for all books
       const { data: session } = await supabase.auth.getSession();
       const userId = session?.session?.user?.id;
+
+      // The ranked shelf comes back already ordered by coverage; the CEFR
+      // shelves keep the existing newest-first ordering within a band.
+      //
+      // Stale-while-revalidate on the ranked one: the ordering is a pure
+      // function of the learner's retained words, which change a handful of
+      // times a day at most, so the previous order paints immediately and the
+      // refresh lands behind it. It is also the slower query — the intersection
+      // runs across every book in the language once a learner actually has
+      // retained words.
+      let books: ReadingBook[];
+      if (cefrLevel === FOR_YOU_TAB) {
+        const { data } = await cachedFetch<ReadingBook[]>(
+          readCacheKey('books-ranked', userId ?? 'anon', profile.targetLanguage),
+          async () =>
+            (await fetchBooksRankedByCoverage(profile.targetLanguage!)).map((r) => r.book),
+          { onCached: (cached) => { setLibraryBooks(cached); setLoadingLibrary(false); } },
+        );
+        // Empty means the language has no vocabulary profiles — Chinese,
+        // Japanese and Korean have none by design (whitespace tokenization
+        // cannot segment them), and a language mid-rebuild has none yet. Fall
+        // back to the level shelf rather than showing a learner an empty
+        // library and letting them conclude there are no books.
+        books =
+          data.length > 0
+            ? data
+            : await fetchBooksByLanguageAndLevel(profile.targetLanguage, 'A1');
+        setRankedUnavailable(data.length === 0);
+      } else {
+        books = await fetchBooksByLanguageAndLevel(profile.targetLanguage, cefrLevel);
+        setRankedUnavailable(false);
+      }
+      setLibraryBooks(books);
+
       if (userId) {
         const allProgress = await fetchUserBookProgress(userId);
         const progressMap = new Map<string, UserBookProgress>();
@@ -316,18 +363,31 @@ export default function LearnScreen() {
               Library
             </Heading>
 
-            {/* CEFR Level Sub-tabs — pill style */}
+            {selectedCefrTab === FOR_YOU_TAB && (
+              <Caption size="sm" tone="tertiary" style={{ marginBottom: spacing.xs }}>
+                {rankedUnavailable
+                  ? 'Ranking is not available for this language yet — showing the A1 shelf.'
+                  : 'Ordered by how many of the words you already know.'}
+              </Caption>
+            )}
+
+            {/* Shelf pills — 'For you' first, then the CEFR bands */}
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: spacing.sm + 2 }}>
               <View style={{ flexDirection: 'row', gap: spacing.xs }}>
-                {['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].map((level) => {
+                {[FOR_YOU_TAB, 'A1', 'A2', 'B1', 'B2', 'C1', 'C2'].map((level) => {
                   const isActive = selectedCefrTab === level;
                   const count = isActive ? libraryBooks.length : null;
+                  const isForYou = level === FOR_YOU_TAB;
                   return (
                     <Pressable
                       key={level}
                       onPress={() => handleCefrTabChange(level)}
                       accessibilityRole="tab"
-                      accessibilityLabel={cefrAccessibilityLabel(level)}
+                      accessibilityLabel={
+                        isForYou
+                          ? 'Books ordered by how much of them you can already read'
+                          : cefrAccessibilityLabel(level)
+                      }
                       accessibilityState={{ selected: isActive }}
                       style={{
                         flexDirection: 'row',
@@ -346,7 +406,7 @@ export default function LearnScreen() {
                           color: isActive ? colors.text.onPrimary : colors.text.tertiary,
                         }}
                       >
-                        {level}
+                        {isForYou ? 'For you' : level}
                       </Body>
                       {isActive && count !== null && count > 0 && (
                         <View

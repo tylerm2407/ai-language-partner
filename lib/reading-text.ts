@@ -194,3 +194,24 @@ export function normalizeWord(raw: string): string {
     .replace(/[^\p{L}\p{N}]+$/u, '')
     .toLowerCase();
 }
+
+/**
+ * Every distinct word form in a stretch of text, normalised.
+ *
+ * Deliberately built from the same `tokenize` + `normalizeWord` the reader
+ * uses, and exported for the corpus vocabulary build (scripts/build-book-vocab.ts)
+ * and the coverage ranking. Those three MUST agree: the terms stored per book
+ * are matched against the learner's known words by exact string, so a
+ * tokenizer that differs by one rule — keeping a trailing apostrophe, say —
+ * silently drops the intersection to near zero and the ranking degrades to
+ * noise without erroring.
+ */
+export function wordTokens(text: string): string[] {
+  const out: string[] = [];
+  for (const token of tokenize(text)) {
+    if (token.isSpace) continue;
+    const word = normalizeWord(token.raw);
+    if (word) out.push(word);
+  }
+  return out;
+}

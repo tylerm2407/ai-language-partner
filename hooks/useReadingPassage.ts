@@ -27,7 +27,11 @@ interface UseReadingPassageReturn {
   questions: ReadingQuestion[];
   isLoading: boolean;
   error: string | null;
-  addToReview: (source: AnnotationCardSource, courseId: string) => Promise<ReviewItem | null>;
+  addToReview: (
+    source: AnnotationCardSource,
+    courseId: string,
+    language?: string | null,
+  ) => Promise<ReviewItem | null>;
   completeReading: (comprehensionScore: number, wordsLookedUp: number) => Promise<void>;
 }
 
@@ -75,10 +79,33 @@ export function useReadingPassage(passageId: string | null): UseReadingPassageRe
     return () => { cancelled = true; };
   }, [passageId]);
 
-  const addToReview = useCallback(async (source: AnnotationCardSource, courseId: string): Promise<ReviewItem | null> => {
+  const addToReview = useCallback(async (
+    source: AnnotationCardSource,
+    courseId: string,
+    /** The learner's target language, from their profile. */
+    language?: string | null,
+  ): Promise<ReviewItem | null> => {
     if (!user) return null;
     try {
-      return await addCardFromAnnotation(user.id, source, courseId);
+      // The passage's band files the card so it counts toward measured
+      // vocabulary.
+      //
+      // The language is now passed in rather than left null. `ReadingPassage`
+      // still does not carry one — the caller supplies the learner's target
+      // language, which is not a guess: a passage reached from their own
+      // course is in the language they are studying. Leaving it null was the
+      // safer default while nothing read the column, but the coverage ranking
+      // (migration 096) matches a learner's cards on `language`, so a
+      // null-language card is one that never counts toward the shelf ordering
+      // for the very language it was learned in.
+      return await addCardFromAnnotation(
+        user.id,
+        source,
+        courseId,
+        ['reading'],
+        passage?.cefrLevel,
+        language ?? null,
+      );
     } catch (err) {
       // This used to be a bare `catch { return null }`. Every failure looked
       // identical to success from the UI, which is how the missing INSERT
@@ -94,7 +121,7 @@ export function useReadingPassage(passageId: string | null): UseReadingPassageRe
       Alert.alert(title, message);
       return null;
     }
-  }, [user]);
+  }, [user, passage]);
 
   const completeReading = useCallback(async (comprehensionScore: number, wordsLookedUp: number) => {
     if (!user || !passageId) return;
