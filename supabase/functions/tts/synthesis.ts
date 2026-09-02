@@ -125,3 +125,43 @@ export function cachePathFor(opts: {
   const rateSegment = rate === DEFAULT_RATE ? '' : `r${String(Math.round(rate * 100)).padStart(3, '0')}/`;
   return `lesson/v${LESSON_PROFILE_VERSION}/${rateSegment}${hash}.mp3`;
 }
+
+/**
+ * The content-addressed part of a tts-cache key, before `cachePathFor` turns
+ * it into a path.
+ *
+ * Lives here rather than staying inline in index.ts because it is the other
+ * half of the same decision this file's header describes: `cachePathFor` says
+ * WHERE a rendering goes, and this says WHICH rendering it is. Splitting them
+ * across a module boundary that only one of them can cross is how a warming
+ * script ends up with its own copy of the key — and a key that differs by one
+ * byte writes objects nothing will ever look for, silently and forever, with
+ * no error anywhere to say so.
+ *
+ * The composition is byte-for-byte what index.ts has always built, and must
+ * stay that way: ElevenLabs keeps the original un-namespaced form so every
+ * object already in the bucket stays reachable, and fish gets its own `fish|`
+ * prefix so the two providers' renderings of one line never collide. The hash
+ * carries no model and no voice settings — parameter changes are versioned by
+ * the PATH instead (see LESSON_PROFILE_VERSION).
+ */
+export function ttsContentKey(opts: {
+  provider: 'elevenlabs' | 'fish';
+  voiceId: string;
+  language: string;
+  /** Exactly the text sent to the provider — citation form already applied. */
+  text: string;
+}): string {
+  const { provider, voiceId, language, text } = opts;
+  return provider === 'fish'
+    ? `fish|${voiceId}|${language}|${text}`
+    : `${voiceId}|${language}|${text}`;
+}
+
+/** sha256 hex of a string. Object names in the bucket are these digests. */
+export async function sha256Hex(input: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
