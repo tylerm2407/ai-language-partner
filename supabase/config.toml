@@ -34,6 +34,14 @@ verify_jwt = false
 [functions.translate]
 verify_jwt = false
 
+# ─── generate-goal-track ──────────────────────────────────────────────────
+# Builds a learner's goal track and materialises its lessons. Same posture as
+# translate: auth enforced by the function body via getAuthenticatedUser
+# (_shared/auth.ts), so the platform gate stays off. Without an entry here the
+# CLI would deploy it with verify_jwt = true and every call would 401.
+[functions.generate-goal-track]
+verify_jwt = false
+
 # ─── explain-passage ──────────────────────────────────────────────────────
 # Plain-language explanation of one paragraph in the reader. Same posture as
 # translate: auth enforced by the function body via getAuthenticatedUser

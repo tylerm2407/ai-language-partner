@@ -15,6 +15,7 @@ import type {
 } from './cefr-proficiency';
 import { ONBOARDING_STEP_KEYS } from './onboarding-checklist';
 import type {
+  GoalTrack,
   UserProfile,
   OnboardingChecklist,
   OnboardingStepKey,
@@ -203,6 +204,11 @@ export async function fetchCourses(targetLanguage?: string): Promise<Course[]> {
     .from('courses')
     .select('*')
     .eq('is_published', true)
+    // Goal tracks are courses too (migration 099), but they belong to the one
+    // learner whose goal produced them and are reached through
+    // `user_goal_tracks`. Without this every learner would see every other
+    // learner's generated track in their course list.
+    .is('goal_key', null)
     .order('cefr_level', { ascending: true })
     .order('created_at', { ascending: true });
 
@@ -2109,6 +2115,71 @@ function mapWritingSubmission(row: Record<string, unknown>): WritingSubmission {
     timeSpentMs: (row.time_spent_ms as number) ?? 0,
     attemptNumber: (row.attempt_number as number) ?? 1,
     submittedAt: row.submitted_at as string,
+  };
+}
+
+// ─── Goal Tracks ────────────────────────────────────────────────
+
+/**
+ * The learner's generated goal track, or null if they have none yet.
+ *
+ * Three tables in one round trip: their enrolment, the shared course it points
+ * at, and that course's single unit with its lessons. The lessons carry
+ * `generation_state`, so the caller can tell a lesson that is ready to open
+ * from a shell that still needs building.
+ */
+export async function fetchGoalTrack(userId: string): Promise<GoalTrack | null> {
+  const { data, error } = await supabase
+    .from('user_goal_tracks')
+    .select(
+      'goal_key, scenarios, course_id, courses!inner(id, title, description, units(id, order_index, lessons(id, title, description, order_index, generation_state)))'
+    )
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+
+  const course = data.courses as unknown as {
+    id: string;
+    title: string;
+    description: string;
+    units: {
+      id: string;
+      order_index: number;
+      lessons: {
+        id: string;
+        title: string;
+        description: string;
+        order_index: number;
+        generation_state: string | null;
+      }[];
+    }[];
+  };
+
+  // A goal track has exactly one unit (migration 099), but sort rather than
+  // assume — a future "extended on completion" track may add a second.
+  const units = [...(course.units ?? [])].sort((a, b) => a.order_index - b.order_index);
+  const lessons = units
+    .flatMap((u) => u.lessons ?? [])
+    .sort((a, b) => a.order_index - b.order_index)
+    .map((l) => ({
+      id: l.id,
+      title: l.title,
+      description: l.description,
+      orderIndex: l.order_index,
+      generationState: (l.generation_state as GoalTrack['lessons'][number]['generationState']) ?? null,
+    }));
+
+  return {
+    courseId: course.id,
+    goalKey: data.goal_key as string,
+    title: course.title,
+    description: course.description,
+    scenarios: (data.scenarios as string[]) ?? [],
+    lessons,
   };
 }
 

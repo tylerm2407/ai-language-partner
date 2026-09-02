@@ -91,6 +91,18 @@ export interface AIChatRequest {
   /** Set only when the learner spoke a language other than `targetLanguage`,
    *  so the tutor can acknowledge the switch and steer back. */
   spokenLanguage?: string;
+  /** Whether this turn was spoken or typed. Decides which skill it becomes
+   *  evidence for — speaking, or written production. Defaults to writing. */
+  modality?: 'speaking' | 'writing';
+  /** `sttConfidence` for a spoken turn, 0-1. Lets the server judge whether
+   *  the turn is clear enough to measure, and score how well it came across. */
+  recognizerConfidence?: number;
+}
+
+/** A word the tutor introduced, with its meaning. */
+export interface ChatVocabHighlight {
+  word: string;
+  translation: string;
 }
 
 export interface AIChatResponse {
@@ -100,7 +112,33 @@ export interface AIChatResponse {
    *  both shapes via `normalizeCorrection()`. */
   correction: CorrectionDetail | string | null;
   audioUrl: string | null;
-  vocabularyHighlights?: string[];
+  /** Words the tutor chose to teach this turn. Older server deployments
+   *  return bare strings; `normalizeChatVocabulary` accepts both. */
+  vocabularyHighlights?: (ChatVocabHighlight | string)[];
+  /** Of those, the ones that actually became review cards — deduped against
+   *  what the learner already studies and capped by `dailyChatCards`. */
+  savedWords?: string[];
+}
+
+/**
+ * Coerce either highlight shape into the object form.
+ *
+ * The server changed this contract when the words started becoming cards, and
+ * a cached system prompt means the older bare-string shape can still arrive
+ * for a while. A string has no translation, so it renders but cannot be
+ * studied — which is exactly what the server already enforces.
+ */
+export function normalizeChatVocabulary(
+  raw: (ChatVocabHighlight | string)[] | undefined,
+): ChatVocabHighlight[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((entry) =>
+      typeof entry === 'string'
+        ? { word: entry.trim(), translation: '' }
+        : { word: (entry?.word ?? '').trim(), translation: (entry?.translation ?? '').trim() },
+    )
+    .filter((entry) => entry.word.length > 0);
 }
 
 export interface PronunciationScoreRequest {
@@ -275,6 +313,77 @@ export async function translateText(
   return (data as { translation: string }).translation;
 }
 
+/**
+ * A learner's goal track: the shared course generated for their onboarding
+ * "picture a moment you'd love to have in this language" answer.
+ */
+export interface GoalTrackResult {
+  courseId: string;
+  goalKey: string;
+  /** False when an existing track was reused — the common and free case. */
+  generated: boolean;
+}
+
+/**
+ * Find or build the goal track for the signed-in learner.
+ *
+ * The server reads their stored `ideal_l2_self` rather than trusting text from
+ * here, maps it onto a closed vocabulary, and reuses an existing track whenever
+ * one is close enough. Paid feature: a free account gets 403 UPGRADE_REQUIRED.
+ */
+export async function resolveGoalTrack(
+  language: string,
+  nativeLanguage: string,
+  cefrLevel: string
+): Promise<GoalTrackResult> {
+  const { data, error } = await invokeWithRetry('generate-goal-track', {
+    body: { action: 'resolve', language, nativeLanguage, cefrLevel },
+  });
+  if (error) throw await goalTrackError(error, 'Building your track failed');
+  if (data?.error) throw new TranslateError(`Building your track failed: ${data.error}`);
+  return data as GoalTrackResult;
+}
+
+/**
+ * Make sure a goal-track lesson has exercises before the runner opens it.
+ *
+ * Lessons are created as shells and filled in on first open — six lessons of
+ * exercises is more model time than one request has, and most learners never
+ * reach lesson six. The work is shared: whoever opens a lesson first pays for
+ * it, everyone after them does not.
+ *
+ * Returns false when another learner is generating the same lesson right now,
+ * which the caller should surface as "one moment" rather than an error.
+ */
+export async function materializeGoalLesson(
+  lessonId: string,
+  nativeLanguage: string
+): Promise<boolean> {
+  const { data, error } = await invokeWithRetry('generate-goal-track', {
+    body: { action: 'lesson', lessonId, nativeLanguage },
+  });
+  if (error) throw await goalTrackError(error, 'Building this lesson failed');
+  if (data?.error) throw new TranslateError(`Building this lesson failed: ${data.error}`);
+  return data?.ready === true;
+}
+
+/** Unwrap the server's message and code the way translateText does. */
+async function goalTrackError(error: unknown, prefix: string): Promise<TranslateError> {
+  let detail = (error as { message?: string })?.message ?? 'unknown';
+  let code: string | undefined;
+  try {
+    const ctx = (error as Record<string, unknown>).context;
+    if (ctx && typeof (ctx as Response).json === 'function') {
+      const body = await (ctx as Response).json();
+      if (body?.error) detail = body.error;
+      if (typeof body?.code === 'string') code = body.code;
+    }
+  } catch {
+    // Body wasn't JSON — fall through with the generic message.
+  }
+  return new TranslateError(`${prefix}: ${detail}`, code);
+}
+
 /** Server response for one paragraph explanation. */
 export interface PassageExplanation {
   explanation: string;
@@ -430,6 +539,17 @@ export interface Transcription {
   /** Language Whisper actually heard, which may not be `language` — learners
    *  code-switch. Null when detection failed and no hint was supplied. */
   language: string | null;
+  /** Mean token log-probability over the turn, duration-weighted. Roughly
+   *  -0.1 is fully confident and -1.0 is not confident at all; feed it to
+   *  `sttConfidence` in lib/handsfree-grading.ts rather than thresholding it
+   *  here. Null when the provider reported no per-segment confidence. */
+  avgLogprob: number | null;
+  /** Probability the audio was not speech at all, duration-weighted. Null
+   *  when unreported. */
+  noSpeechProb: number | null;
+  /** Length of the audio Whisper measured, in seconds. Null when unreported.
+   *  This is what the turn was billed on. */
+  durationSeconds: number | null;
 }
 
 /**
@@ -483,8 +603,25 @@ export async function transcribeAudio(
     throw new VoiceError(data.error);
   }
 
-  const result = data as { text: string; language?: string | null };
-  return { text: result.text, language: result.language ?? null };
+  // Every confidence field is optional on the wire and defaults to null. An
+  // older deployment of the `transcribe` function returns only text and
+  // language, and a null reads downstream as "no signal" rather than as low
+  // confidence — so a stale function degrades to the previous behaviour
+  // instead of silently failing every turn shut.
+  const result = data as {
+    text: string;
+    language?: string | null;
+    avgLogprob?: number | null;
+    noSpeechProb?: number | null;
+    durationSeconds?: number | null;
+  };
+  return {
+    text: result.text,
+    language: result.language ?? null,
+    avgLogprob: result.avgLogprob ?? null,
+    noSpeechProb: result.noSpeechProb ?? null,
+    durationSeconds: result.durationSeconds ?? null,
+  };
 }
 
 // ─── Content Generation ─────────────────────────────────────────

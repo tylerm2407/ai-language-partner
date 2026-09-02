@@ -10,6 +10,7 @@ import {
   fetchWritingPromptsByCourse,
   fetchBooksByLanguageAndLevel,
   fetchBooksRankedByCoverage,
+  fetchGoalTrack,
   fetchInProgressBooks,
   fetchUserBookProgress,
 } from '../../../lib/supabase-queries';
@@ -17,6 +18,8 @@ import { useAppStore } from '../../../stores/useAppStore';
 import { useReviewCountSync } from '../../../hooks/useReviewCountSync';
 import { supabase } from '../../../lib/supabase';
 import { cachedFetch, readCacheKey } from '../../../lib/read-cache';
+import { GoalTrackCard, GoalTrackPrompt } from '../../../components/learn/GoalTrackCard';
+import { materializeGoalLesson, resolveGoalTrack } from '../../../lib/ai';
 import { LoadingScreen } from '../../../components/ui/LoadingScreen';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { GradientBackground } from '../../../components/ui/GradientBackground';
@@ -28,7 +31,7 @@ import { Heading, Body, Caption, Hero } from '../../../components/ui/Text';
 import { InlineError } from '../../../components/ui/InlineError';
 import { loadErrorCopy, saveErrorCopy, type ErrorCopy } from '../../../lib/error-copy';
 import { colors, spacing, radii } from '../../../config/theme';
-import type { Course, Unit, Lesson, ReadingPassage, WritingPrompt, ReadingBook, UserBookProgress } from '../../../types';
+import type { Course, Unit, Lesson, ReadingPassage, WritingPrompt, ReadingBook, UserBookProgress, GoalTrack } from '../../../types';
 import { Ionicons } from '@expo/vector-icons';
 import { BookCard } from '../../../components/reading/BookCard';
 import { ContinueReadingSection } from '../../../components/reading/ContinueReadingSection';
@@ -75,6 +78,9 @@ export default function LearnScreen() {
   const [loadingLibrary, setLoadingLibrary] = useState(false);
   /** True when 'For you' had nothing to rank and fell back to the A1 shelf. */
   const [rankedUnavailable, setRankedUnavailable] = useState(false);
+  const [goalTrack, setGoalTrack] = useState<GoalTrack | null>(null);
+  const [buildingTrack, setBuildingTrack] = useState(false);
+  const [goalTrackError, setGoalTrackError] = useState<string | null>(null);
   const [libraryError, setLibraryError] = useState<ErrorCopy | null>(null);
   const [unitsError, setUnitsError] = useState<ErrorCopy | null>(null);
   const [passagesError, setPassagesError] = useState<ErrorCopy | null>(null);
@@ -236,6 +242,50 @@ export default function LearnScreen() {
     loadInProgressBooks();
   };
 
+  const loadGoalTrack = useCallback(async () => {
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const userId = session?.session?.user?.id;
+      if (!userId) return;
+      setGoalTrack(await fetchGoalTrack(userId));
+    } catch (err) {
+      // Non-fatal: the goal track is an addition to Learn, not Learn itself.
+      // A failure here must not take the lesson path down with it.
+      console.warn('[learn] goal track load failed:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadGoalTrack();
+  }, [loadGoalTrack]);
+
+  const handleBuildTrack = useCallback(async () => {
+    if (!profile?.targetLanguage || buildingTrack) return;
+    setBuildingTrack(true);
+    setGoalTrackError(null);
+    try {
+      await resolveGoalTrack(
+        profile.targetLanguage,
+        profile.nativeLanguage ?? 'en',
+        profile.level ?? 'A1',
+      );
+      await loadGoalTrack();
+    } catch (err) {
+      const code = (err as { code?: string })?.code;
+      setGoalTrackError(
+        code === 'UPGRADE_REQUIRED'
+          ? 'Goal lessons are part of a paid plan.'
+          : code === 'UNMAPPABLE_GOAL'
+            ? "We couldn't turn that goal into lessons. Try describing the moment more concretely in Settings."
+            : // Everything else, GOAL_TRACK_UNAVAILABLE included, is ours to
+              // own. Never send a learner off rewriting a goal that was fine.
+              "That didn't work on our side. Please try again in a moment.",
+      );
+    } finally {
+      setBuildingTrack(false);
+    }
+  }, [profile?.targetLanguage, profile?.nativeLanguage, profile?.level, buildingTrack, loadGoalTrack]);
+
   const goToReview = useCallback(() => {
     router.push('/learn/review' as never);
   }, [router]);
@@ -295,7 +345,27 @@ export default function LearnScreen() {
             <UnitPath
               units={courseUnits}
               courseId={selectedCourseId}
-              header={<ReviewShortcut count={reviewCount} onPress={goToReview} />}
+              header={
+                <>
+                  <ReviewShortcut count={reviewCount} onPress={goToReview} />
+                  {goalTrack ? (
+                    <GoalTrackCard
+                      track={goalTrack}
+                      onOpenLesson={(lessonId) =>
+                        materializeGoalLesson(lessonId, profile?.nativeLanguage ?? 'en')
+                      }
+                      onNavigate={(lessonId) => router.push(`/learn/${lessonId}` as never)}
+                    />
+                  ) : profile?.idealL2Self ? (
+                    <GoalTrackPrompt
+                      goalText={profile.idealL2Self}
+                      isBuilding={buildingTrack}
+                      error={goalTrackError}
+                      onBuild={handleBuildTrack}
+                    />
+                  ) : null}
+                </>
+              }
             />
           ) : null
         ) : activeTab === 'reading' ? (

@@ -770,6 +770,38 @@ export interface BookAnnotation {
   audioUrl: string | null;
 }
 
+/**
+ * A lesson inside a generated goal track.
+ *
+ * `generationState` is what separates a lesson that can be opened from a shell
+ * that still needs its exercises built. Hand-authored lessons carry null and
+ * are always ready.
+ */
+export type LessonGenerationState = 'pending' | 'generating' | 'ready';
+
+/**
+ * The learner's goal track: a shared, generated course built from their
+ * onboarding "picture a moment" answer (migration 099).
+ *
+ * Shared is the point — two learners who want the same thing get the same
+ * course, and the second one costs nothing to serve.
+ */
+export interface GoalTrack {
+  courseId: string;
+  goalKey: string;
+  title: string;
+  description: string;
+  /** The learner's own ranked situations, in their order of importance. */
+  scenarios: string[];
+  lessons: {
+    id: string;
+    title: string;
+    description: string;
+    orderIndex: number;
+    generationState: LessonGenerationState | null;
+  }[];
+}
+
 // ─── Avatar System ──────────────────────────────────────────────
 
 /**
