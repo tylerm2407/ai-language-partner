@@ -5,6 +5,7 @@ import { CEFR_BAND_BY_LEVEL, CEFR_LADDER,
   combineConversationScore,
 } from './cefr-proficiency';
 import { localToday } from './dates';
+import { trackRefusal } from './analytics';
 import { wordTokens } from './reading-text';
 import type {
   ProficiencyEvidence,
@@ -1702,6 +1703,10 @@ export async function addCardFromAnnotation(
     const { cap } = await fetchNewCardAllowance().catch(() => ({
       cap: PLANS.starter.dailyNewCards,
     }));
+    // The free tier's actual boundary (CLAUDE.md §3). Whether a learner who
+    // hits this comes back — or upgrades — is the single most useful number
+    // for pricing, and it was reported nowhere.
+    trackRefusal('NEW_CARDS_CAP_REACHED', { count: cap });
     throw new NewCardsCapReachedError(cap);
   }
 

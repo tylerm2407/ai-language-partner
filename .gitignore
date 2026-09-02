@@ -46,3 +46,6 @@ supabase/functions/.env
 
 expo-env.d.ts
 # @end expo-cli
+# Backups of the secrets file. A stray copy here is a full credential
+# dump sitting where `git add -A` can reach it.
+.env.bak*

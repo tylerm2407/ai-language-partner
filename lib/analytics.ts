@@ -111,6 +111,14 @@ export interface EventProperties {
   /** Which avatar preset was chosen, from the shared premade library
    *  (`avatar_presets`). A catalogue id, not a generated photo. */
   presetId?: string;
+  /** Which tier the paywall was PRESENTING when the learner acted on it.
+   *  Distinct from `currentTier`, which is what they already had. */
+  tierShown?: string;
+  /** Billing term shown: 'monthly' | 'yearly'. */
+  term?: string;
+  /** How hard the paywall was: 'soft' | 'hard'. A soft gate that is declined
+   *  and a hard gate that blocks are different events for the same screen. */
+  gate?: string;
 }
 
 /**

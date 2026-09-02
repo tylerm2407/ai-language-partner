@@ -20,6 +20,7 @@ import { supabase } from '../../../lib/supabase';
 import { cachedFetch, readCacheKey } from '../../../lib/read-cache';
 import { GoalTrackCard, GoalTrackPrompt } from '../../../components/learn/GoalTrackCard';
 import { materializeGoalLesson, resolveGoalTrack } from '../../../lib/ai';
+import { trackEvent, trackRefusal } from '../../../lib/analytics';
 import { LoadingScreen } from '../../../components/ui/LoadingScreen';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { GradientBackground } from '../../../components/ui/GradientBackground';
@@ -270,8 +271,20 @@ export default function LearnScreen() {
         profile.level ?? 'A1',
       );
       await loadGoalTrack();
+      trackEvent('goal_track_requested', {
+        ok: true,
+        language: profile.targetLanguage,
+        band: profile.level ?? undefined,
+      });
     } catch (err) {
       const code = (err as { code?: string })?.code;
+      // UPGRADE_REQUIRED here is a paywall view with intent behind it — the
+      // learner asked for the feature by name. Worth separating from a paywall
+      // someone merely scrolled past.
+      trackRefusal(code ?? 'GOAL_TRACK_FAILED', {
+        screen: 'learn',
+        language: profile.targetLanguage,
+      });
       setGoalTrackError(
         code === 'UPGRADE_REQUIRED'
           ? 'Goal lessons are part of a paid plan.'
@@ -351,9 +364,13 @@ export default function LearnScreen() {
                   {goalTrack ? (
                     <GoalTrackCard
                       track={goalTrack}
-                      onOpenLesson={(lessonId) =>
-                        materializeGoalLesson(lessonId, profile?.nativeLanguage ?? 'en')
-                      }
+                      onOpenLesson={(lessonId) => {
+                        trackEvent('goal_track_lesson_opened', {
+                          contentId: lessonId,
+                          language: profile?.targetLanguage,
+                        });
+                        return materializeGoalLesson(lessonId, profile?.nativeLanguage ?? 'en');
+                      }}
                       onNavigate={(lessonId) => router.push(`/learn/${lessonId}` as never)}
                     />
                   ) : profile?.idealL2Self ? (
@@ -572,7 +589,14 @@ export default function LearnScreen() {
                   <BookCard
                     book={item}
                     progress={bookProgressMap.get(item.id) ?? null}
-                    onPress={() => router.push(`/learn/reading/book/${item.id}` as any)}
+                    onPress={() => {
+                      trackEvent('reading_book_opened', {
+                        contentId: item.id,
+                        language: item.language,
+                        band: item.cefrLevel,
+                      });
+                      router.push(`/learn/reading/book/${item.id}` as any);
+                    }}
                   />
                 )}
               />

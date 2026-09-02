@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { explainPassage, translateText } from '../lib/ai';
+import { trackEvent, trackRefusal } from '../lib/analytics';
 import { getCached, setCached } from '../lib/read-cache';
 import {
   annotationMap,
@@ -72,6 +73,10 @@ export function useWordLookup({
       const result = await lookupWord({ raw, sourceLanguage, targetLanguage }, deps);
       if (result.ok) {
         setState({ status: 'ready', lookup: result.lookup });
+        trackEvent('reading_word_looked_up', {
+          language: sourceLanguage,
+          source: result.lookup.source,
+        });
         // Counted for `user_book_progress.words_looked_up`, which is the only
         // measure of how much the reader is actually being used.
         setLookupCount((n) => n + 1);
@@ -79,6 +84,13 @@ export function useWordLookup({
       }
       if (result.reason === 'quota') {
         setLookupsExhausted(true);
+        // The wall a reader hits most often, and the one most likely to end a
+        // session. Until now it was surfaced to the learner and to nobody else.
+        trackRefusal('DAILY_WORD_LOOKUP_LIMIT_REACHED', {
+          screen: 'book',
+          language: sourceLanguage,
+          quota: 'word_lookups',
+        });
         setState({ status: 'quota', word: raw });
         return;
       }
@@ -145,9 +157,19 @@ export function useWordLookup({
           bookId,
         );
         setExplanation({ paragraphIndex, status: 'ready', text: result.explanation });
+        trackEvent('reading_passage_explained', {
+          language: sourceLanguage,
+          contentId: bookId,
+          source: result.cached ? 'cache' : 'generated',
+        });
       } catch (err) {
         if (isQuotaError(err) || (err as { code?: string })?.code === 'DAILY_MESSAGE_LIMIT_REACHED') {
           setExplanationsExhausted(true);
+          trackRefusal('DAILY_MESSAGE_LIMIT_REACHED', {
+            screen: 'book',
+            language: sourceLanguage,
+            quota: 'text_messages',
+          });
           setExplanation({ paragraphIndex, status: 'quota' });
           return;
         }

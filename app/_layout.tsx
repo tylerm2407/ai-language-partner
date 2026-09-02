@@ -17,6 +17,7 @@ import {
   addEntitlementListener,
 } from '../lib/purchases';
 import { identifyUser, resetAnalytics } from '../lib/analytics';
+import { startAnalytics } from '../lib/analytics-posthog';
 import { hydrateMotionPreference } from '../lib/motion-preference';
 import { View, ActivityIndicator, AppState, Text, Pressable } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -107,6 +108,13 @@ function RootLayout() {
     });
     return () => sub.remove();
   }, [profile, dailyStats?.xpEarned, permissionGranted]);
+
+  // Register the analytics provider once, before anything tries to track.
+  // No-ops without EXPO_PUBLIC_POSTHOG_KEY, which is the normal state for a
+  // developer build.
+  useEffect(() => {
+    startAnalytics();
+  }, []);
 
   // Tie purchases, analytics, and crash reports to the signed-in user.
   // Idempotent; analytics/IAP no-op until a provider/keys are configured.
