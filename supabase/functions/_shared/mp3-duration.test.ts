@@ -1,6 +1,6 @@
 // Deno tests for ./mp3-duration.ts.
 //
-// Run with: `deno test supabase/functions/news-audio/mp3-duration.test.ts`
+// Run with: `deno test supabase/functions/_shared/mp3-duration.test.ts`
 //
 // Every case here is a synthetic file built byte by byte, so the tests state
 // exactly what the parser is being asked to understand — and, just as
