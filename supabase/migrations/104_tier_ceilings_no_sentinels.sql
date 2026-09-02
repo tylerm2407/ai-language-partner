@@ -1,0 +1,20 @@
+-- 104 — Every paid ceiling is a real number.
+--
+-- `dailyNewCards` keeps 9999 because it is SRS bookkeeping and costs nothing.
+-- Every other ceiling buys a paid API call, and "unlimited" on a metered
+-- feature is not a generous plan, it is an unbounded bill: vip's old
+-- `dailyHints: 9999` was ~$210/month of exposure and `dailyWordLookups: 9999`
+-- ~$81/month, neither of which any real learner would reach — which is
+-- exactly why nobody noticed.
+--
+-- Also exposes dailyGoalTracks and dailyAudiobookChapters (migration 103) so
+-- the two newly-metered functions have a limit to read.
+--
+-- Applied to production 2026-09-02; this file mirrors what was applied.
+-- The full body lives in the applied version; see `get_effective_limits` in
+-- the database for the authoritative copy.
+-- Per-tier values as applied:
+--   vip:     voice 18, text 75, writing 12, pronun 7, hints 150, translations 90, lookups 800, chatCards 50, goalTracks 3, audiobook 5
+--   premium: voice 12, text 50, writing 7,  pronun 5, hints 75,  translations 60, lookups 600, chatCards 30, goalTracks 3, audiobook 3
+--   basic:   voice 6,  text 25, writing 3,  pronun 3, hints 30,  translations 30, lookups 300, chatCards 15, goalTracks 2, audiobook 0
+--   free:    voice 0,  text 0,  writing 0,  pronun 0, hints 5,   translations 10, lookups 60,  chatCards 3,  goalTracks 1, audiobook 0

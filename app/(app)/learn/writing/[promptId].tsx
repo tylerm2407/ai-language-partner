@@ -18,6 +18,7 @@ import { WritingFeedbackView } from '../../../../components/writing/WritingFeedb
 import { supabase } from '../../../../lib/supabase';
 import { getTargetLanguage } from '../../../../lib/language';
 import { writingXpKey } from '../../../../lib/offline-queue';
+import { limitCopy } from '../../../../lib/limit-messaging';
 import type { WritingPrompt, WritingFeedback, WritingSubmission } from '../../../../types';
 import { colors } from '../../../../config/theme';
 
@@ -136,11 +137,14 @@ export default function WritingPromptScreen() {
         // same: telling someone they have "used all" of an allowance they were
         // never given is simply untrue. The writing itself is already saved
         // either way — free writing practice works, only the AI grade doesn't.
-        const free = effectiveTier(subscription, entitledTier) === 'starter';
+        const tier = effectiveTier(subscription, entitledTier);
         setError(
-          free
+          tier === 'starter'
             ? 'Your writing is saved. AI grading is part of a paid plan — see Profile → Subscription.'
-            : "You've used all your writing grades for today. Upgrade your plan in Profile → Subscription for more.",
+            // Paid tiers: limitCopy decides upsell vs reset time, so a vip
+            // subscriber is told when their grades come back rather than
+            // being sold the plan they are already on.
+            : limitCopy('writing feedback', tier).message,
         );
       } else if (msg.includes('RATE_LIMITED')) {
         setError("You're submitting too quickly. Please wait a moment and try again.");

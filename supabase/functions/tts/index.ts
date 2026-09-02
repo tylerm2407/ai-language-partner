@@ -23,9 +23,10 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, corsResponse } from '../_shared/cors.ts';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { checkBurstLimit } from '../_shared/burst-limit.ts';
-import { getPlanLimits } from '../_shared/plan-limits.ts';
+import { getEffectiveLimits } from '../_shared/plan-limits.ts';
 import { getUserToday } from '../_shared/user-day.ts';
 import { PROVIDER_TIMEOUT_MS, providerFetch } from '../_shared/provider-fetch.ts';
+import { estimateDurationMs, parseMp3DurationMs } from '../_shared/mp3-duration.ts';
 import {
   asCitationForm,
   cachePathFor,
@@ -445,7 +446,12 @@ async function getVoiceMinutesUsed(supabase: any, userId: string, date: string):
     .eq('date', date)
     .single();
 
-  return data?.voice_minutes ?? 0;
+  // `daily_usage.voice_minutes` is NUMERIC, and PostgREST serialises NUMERIC
+  // as a JSON *string* to preserve arbitrary precision. Comparing that string
+  // against a number works by coercion today, but only by luck: `'10' >= 6`
+  // is true while `'10' + 0.2` is `'100.2'`. Parse it once, here, so no
+  // caller has to know. `transcribe` already does this.
+  return parseFloat(data?.voice_minutes as string) || 0;
 }
 
 serve(async (req: Request) => {
@@ -561,8 +567,15 @@ serve(async (req: Request) => {
     }
 
     // ── Daily limit ── which bucket pays depends on what the audio is for.
+    //
+    // Through getEffectiveLimits, not getPlanLimits, so a classroom learner
+    // gets their school's `dailyVoiceMinutes` override — this function used
+    // to read the personal tier only, so org contracts silently did not
+    // apply to voice at all. The tier is passed in because the RPC does not
+    // return `dailyLessonTtsPlays`; without it every paid learner's lesson
+    // audio would fall back to the free tier's 5 plays.
     const tier = await getUserTier(supabase, authenticatedUserId);
-    const limits = getPlanLimits(tier);
+    const limits = await getEffectiveLimits(authenticatedUserId, supabase, tier);
 
     if (isLessonAudio) {
       // Lesson audio draws on `lesson_tts_plays`, not voice minutes, so the
@@ -575,10 +588,27 @@ serve(async (req: Request) => {
       // failure costs the learner one play from their allowance — acceptable
       // for a 5/day bucket, and the alternative (checking now, incrementing
       // after) is the race this RPC exists to close.
+      // Charged by SIZE, not by call. fish bills per UTF-8 BYTE, and this
+      // endpoint takes client-supplied text up to MAX_TTS_CHARS — so metering
+      // calls let one request cost 200x another. At 2000 chars of CJK (three
+      // bytes a character) a single play is ~$0.09, and at the old flat rate
+      // a VIP's 80 plays came to ~$216/month from one account. The counter was
+      // sized for one-word lesson prompts; the input cap allowed essays.
+      //
+      // One unit per 250 bytes, rounded up, minimum one. A normal lesson
+      // prompt is a word or a short sentence and still costs exactly one unit,
+      // so nothing changes for a real learner — the caps keep meaning roughly
+      // "plays per day". What changes is that the ceiling is now a ceiling on
+      // SPEND: 80 units can never buy more than 20,000 bytes, ~$0.30.
+      const TTS_BYTES_PER_UNIT = 250;
+      const synthesisBytes = new TextEncoder().encode(cleanText).length;
+      const ttsUnits = Math.max(1, Math.ceil(synthesisBytes / TTS_BYTES_PER_UNIT));
+
       const { data: quotaOk, error: quotaErr } = await supabase.rpc('consume_daily_quota', {
         p_user_id: authenticatedUserId,
         p_counter: 'lesson_tts_plays',
         p_limit: limits.dailyLessonTtsPlays,
+        p_amount: ttsUnits,
       });
       if (quotaErr) {
         // Fail closed. Broken quota accounting must not hand out unmetered
@@ -601,8 +631,16 @@ serve(async (req: Request) => {
     } else {
       // dailyVoiceMinutes is always a finite number — no unlimited tier exists
       // (see _shared/plan-limits.ts), so the limit check is unconditional.
-      // User-local day key (migration 044), fetched once and reused for the
-      // usage increment after generation.
+      // User-local day key (migration 044). Used only to read today's total —
+      // the increment after generation must NOT pass a date (see below).
+      //
+      // This gate is read-then-write, so it is racy by construction: two
+      // concurrent syntheses both read the same total and both pass. It
+      // cannot be made atomic with `consume_daily_quota`, whose `p_amount`
+      // is `integer` and whose whitelist deliberately excludes the fractional
+      // `voice_minutes`. Worst-case overage is bounded by the number of
+      // in-flight requests times one reply, which is not worth a second
+      // metering primitive.
       const userDay = await getUserToday(supabase, authenticatedUserId);
       const used = await getVoiceMinutesUsed(supabase, authenticatedUserId, userDay);
       if (used >= limits.dailyVoiceMinutes) {
@@ -670,11 +708,26 @@ serve(async (req: Request) => {
     // `lesson_tts_plays`. Incrementing voice_minutes here as well would bill
     // one synthesis to two buckets and quietly drain a paid learner's voice
     // allowance every time they replayed an exercise.
+    //
+    // Charge the audio we actually produced. This used to be a flat `1` —
+    // one whole voice minute per synthesis, however short the clip — while
+    // `transcribe` charged real Whisper seconds into the same column. The
+    // two halves of one spoken turn were billing the same counter in
+    // incompatible units, so a `basic` learner's 6 daily "voice minutes"
+    // bought six spoken replies, not six minutes of conversation, and the
+    // tutor then went silent with no explanation. `voice_minutes` is NUMERIC
+    // and has always accepted fractions; only this call site was rounding.
+    //
+    // Measure the rendered MP3 and fall back to the character estimate when
+    // the bytes cannot be read, exactly as news-audio does. Undercharging on
+    // an unparseable file is the right way to fail: the learner keeps
+    // talking, and the daily cap still converges.
     if (!isLessonAudio) {
+      const durationMs = parseMp3DurationMs(audioBuffer) ?? estimateDurationMs(cleanText);
       await supabase.rpc('increment_daily_usage', {
         p_user_id: authenticatedUserId,
         p_text_messages: 0,
-        p_voice_minutes: 1,
+        p_voice_minutes: durationMs / 60_000,
       }).then(({ error }) => {
         if (error) console.error('[tts] Failed to increment voice_minutes:', error.message);
       });

@@ -8,6 +8,7 @@ import { useAuth } from '../../../hooks/useAuth';
 import { useAppStore, effectiveTier } from '../../../stores/useAppStore';
 import { useOnboardingChecklist } from '../../../hooks/useOnboardingChecklist';
 import { sendChatMessage, getTextToSpeech, VoiceError } from '../../../lib/ai';
+import { showLimitAlert } from '../../../lib/limit-messaging';
 import { CEFR_BAND_BY_LEVEL } from '../../../lib/cefr-proficiency';
 import { cefrLabel, cefrAccessibilityLabel } from '../../../lib/cefr-labels';
 import { ChatBubble } from '../../../components/chat/ChatBubble';
@@ -20,7 +21,7 @@ import AssignmentTimer from '../../../components/school/AssignmentTimer';
 import { useAssignmentTimer } from '../../../hooks/useAssignmentTimer';
 import type { ConversationMessage, Assignment, AssignmentSubmission, LanguageCode, ProficiencyLevel } from '../../../types';
 import { Ionicons } from '@expo/vector-icons';
-import { getOrCreateChatSession, saveChatMessage, loadChatMessages, fetchStudentAssignments, submitAssignment } from '../../../lib/supabase-queries';
+import { getOrCreateChatSession, saveChatMessage, loadChatMessages, fetchStudentAssignments, submitAssignment, upsertDailyStats } from '../../../lib/supabase-queries';
 import { getTargetLanguage } from '../../../lib/language';
 import { setAudioSessionMode, playbackModeFor } from '../../../lib/audio-session';
 import { saveErrorCopy } from '../../../lib/error-copy';
@@ -139,6 +140,10 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
   }, [handsFreeActive, startTimer]);
 
   const chatSessionIdRef = useRef<string | null>(null);
+  /** Did the tutor's last turn ask the learner to fix something themselves?
+   *  A ref rather than state: nothing renders from it, and it must be current
+   *  when the next send fires rather than after a re-render. */
+  const repairOutstandingRef = useRef(false);
   // Track the current ElevenLabs TTS sound for cleanup on error/unmount
   const ttsSoundRef = useRef<Audio.Sound | null>(null);
 
@@ -386,6 +391,10 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
 
   const startChat = (scenario: Scenario, liveVoice = false) => {
     setSelectedScenario(scenario);
+    // A new conversation inherits nothing. Carrying a repair flag across
+    // scenarios would have the tutor react to an attempt the learner made in
+    // a different conversation, possibly days ago.
+    repairOutstandingRef.current = false;
 
     // Greeting string is UI only — the real Claude system prompt comes from
     // the server-side scenario module keyed by scenario.key.
@@ -425,7 +434,11 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
     }
   };
 
-  const handleSend = async (messageText?: string, spokenLanguage?: string | null) => {
+  const handleSend = async (
+    messageText?: string,
+    spokenLanguage?: string | null,
+    voiceTurn?: { confidence: number; durationSeconds: number },
+  ) => {
     // Guard against non-string callers (e.g. Pressable's GestureResponderEvent).
     const candidate = typeof messageText === 'string' ? messageText : input;
     const text = candidate.trim();
@@ -493,7 +506,20 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
         // needs to know that a switch happened, not that nothing happened.
         spokenLanguage:
           spokenLanguage && spokenLanguage !== targetLanguage ? spokenLanguage : undefined,
+        // A spoken turn is evidence about speaking; a typed one about written
+        // production. The server keeps them apart — composing a sentence with
+        // a keyboard and time to think is an easier task than saying it, and
+        // pooling them would let a learner type their way to a speaking level.
+        modality: voiceTurn ? 'speaking' : 'writing',
+        recognizerConfidence: voiceTurn?.confidence,
+        // Carried, not computed. Whether the last turn left a repair
+        // outstanding is the server's call — it depends on the level's
+        // correction policy — and this is how the tutor knows to react to the
+        // learner's attempt instead of asking them to try again.
+        previousTurnRequestedRepair: repairOutstandingRef.current,
       });
+
+      repairOutstandingRef.current = response.requestedRepair === true;
 
       const assistantMsg: ConversationMessage = {
         id: (Date.now() + 1).toString(),
@@ -537,16 +563,18 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
 
       if (detail.includes('DAILY_TEXT_LIMIT_REACHED')) {
         // A subscriber who has spent today's allowance. A free-tier learner
-        // never gets here — the picker above turns them back before a scenario
-        // is even chosen, because "you've used all your messages" would be
-        // false for someone who was never given any.
-        Alert.alert(
-          'Daily limit reached',
-          "You've used all your messages for today. Upgrade your plan for more daily conversations.",
-          [
-            { text: 'Not now', style: 'cancel' },
-            { text: 'See plans', onPress: () => router.push('/(app)/profile/subscription') },
-          ]
+        // never gets here — the picker turns them back before a scenario is
+        // chosen, because "you've used all your messages" would be false for
+        // someone who was never given any.
+        //
+        // Below the top tier this is an upgrade prompt; on it, the honest
+        // reset time instead. See lib/limit-messaging.ts — the rule lives
+        // there so it cannot drift between features.
+        // effectiveTier, not subscription.tier: a school-entitled learner can
+        // be effectively vip with no subscription row, and upselling them
+        // would be wrong.
+        showLimitAlert('messages', effectiveTier(subscription, entitledTier), () =>
+          router.push('/(app)/profile/subscription'),
         );
       } else if (detail.includes('RATE_LIMITED')) {
         Alert.alert('Slow down a moment', 'You’re sending messages very quickly. Please try again in a few seconds.');
@@ -572,8 +600,21 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
     }
   };
 
-  const handleVoiceMessage = async (text: string, spokenLanguage: string | null) => {
-    await handleSend(text, spokenLanguage);
+  const handleVoiceMessage = async (
+    text: string,
+    spokenLanguage: string | null,
+    turn: { confidence: number; durationSeconds: number },
+  ) => {
+    // Log the speech itself, separately from the turn's score.
+    // `daily_stats.speaking_minutes` feeds assessSpeaking and the four-strands
+    // balance on the profile, and nothing in the app has ever written it — so
+    // both have read a permanent zero since they shipped.
+    if (turn.durationSeconds > 0) {
+      upsertDailyStats(user?.id ?? '', { speakingMinutes: turn.durationSeconds / 60 }).catch(
+        (err) => console.warn('[chat] speaking_minutes write failed (non-fatal):', err),
+      );
+    }
+    await handleSend(text, spokenLanguage, turn);
   };
 
   const toggleVoiceMode = () => {
@@ -781,6 +822,7 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
             setHandsFreeState('IDLE');
             setShouldStartListening(false);
             chatSessionIdRef.current = null;
+            repairOutstandingRef.current = false;
           }}
           accessibilityRole="button"
           accessibilityLabel="Go back"
@@ -894,6 +936,7 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
               message={item}
               targetLanguage={targetLanguage}
               userId={user?.id}
+              cefrLevel={CEFR_FOR_LEVEL[level]}
               nativeLanguage={profile?.nativeLanguage}
               voiceGender={voiceGender}
             />
