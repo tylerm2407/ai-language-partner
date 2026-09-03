@@ -103,3 +103,39 @@ describe('the refusal helper', () => {
     setAnalyticsProvider(null);
   });
 });
+
+describe('the learning loop is instrumented as a funnel', () => {
+  it('every loop event has a counterpart, so a drop-off is measurable', () => {
+    // A started event with no finished event (or vice versa) cannot answer
+    // "how many people who begin actually finish", which is the entire point.
+    const source = readFileSync(resolve(ROOT, 'lib/analytics.ts'), 'utf8');
+    for (const pair of [
+      ['lesson_started', 'lesson_completed'],
+      ['lesson_started', 'lesson_abandoned'],
+      ['review_started', 'review_completed'],
+      ['onboarding_step_viewed', 'onboarding_completed'],
+    ]) {
+      for (const event of pair) {
+        expect(source).toContain(`'${event}'`);
+      }
+    }
+  });
+
+  it('review is measured per session, not per card', () => {
+    // `review_logs` already stores every review with was_correct and a
+    // timestamp. Emitting a per-card event would pay twice — in volume and
+    // eventually in money — for data already in Postgres and queryable there.
+    const screen = readFileSync(resolve(ROOT, 'app/(app)/learn/review.tsx'), 'utf8');
+    expect(screen).toContain("trackEvent('review_started'");
+    expect(screen).toContain("trackEvent('review_completed'");
+    expect(screen).not.toContain("trackEvent('card_reviewed'");
+  });
+
+  it('a completed lesson is not also reported as abandoned', () => {
+    // handleExit runs for BOTH finishing and quitting, so the completion flag
+    // is what keeps "this lesson loses people" from being pure noise.
+    const screen = readFileSync(resolve(ROOT, 'app/(app)/learn/[lessonId].tsx'), 'utf8');
+    expect(screen).toMatch(/completedRef\.current = true/);
+    expect(screen).toMatch(/if \(!completedRef\.current/);
+  });
+});

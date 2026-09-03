@@ -2,7 +2,7 @@ import { ActivityIndicator, KeyboardAvoidingView, Platform, View } from 'react-n
 import * as Sentry from '@sentry/react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { fetchLessonWithExercises } from '../../../lib/supabase-queries';
 import { cachedFetch, readCacheKey } from '../../../lib/read-cache';
 import { orderExercisesForCognitiveLoad, lessonIsAlreadyOrdered } from '../../../lib/lesson-ordering';
@@ -25,6 +25,7 @@ import { GradientBackground } from '../../../components/ui/GradientBackground';
 import { colors, spacing } from '../../../config/theme';
 import type { Lesson } from '../../../types';
 import { useScreenView } from '../../../hooks/useScreenView';
+import { trackEvent } from '../../../lib/analytics';
 
 export default function LessonScreen() {
   useScreenView('lesson');
@@ -71,6 +72,25 @@ export default function LessonScreen() {
   }, [loadLesson]);
 
   const targetLanguage = getTargetLanguage(profile);
+
+  /**
+   * Whether this lesson was finished, and when it began.
+   *
+   * `handleExit` is called for BOTH finishing and quitting, so without this
+   * flag every completed lesson would also be reported as abandoned — turning
+   * the one number that says "this lesson loses people" into noise.
+   */
+  const completedRef = useRef(false);
+  const startedAtRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!lesson || startedAtRef.current !== null) return;
+    startedAtRef.current = Date.now();
+    trackEvent('lesson_started', {
+      contentId: lesson.id,
+      language: targetLanguage ?? undefined,
+    });
+  }, [lesson, targetLanguage]);
 
   /**
    * Ordered once per lesson, not once per render.
@@ -149,6 +169,18 @@ export default function LessonScreen() {
    * done the work and the path had not moved. Each step now fails on its own.
    */
   const handleComplete = async (result: LessonResult) => {
+    completedRef.current = true;
+    trackEvent('lesson_completed', {
+      contentId: lesson?.id,
+      language: targetLanguage ?? undefined,
+      // The runner's skip-aware accuracy, NOT correctCount/totalExercises:
+      // a question the learner could not hear is out of the denominator, and
+      // recomputing it here is exactly how the recorded score and the score
+      // they were shown drifted apart once already.
+      score: result.accuracy,
+      count: result.totalExercises,
+    });
+
     // 1. Completion — the durable record of progress. Resolves once the row
     //    is in Postgres or in the replay queue (see useLessonProgressStore).
     if (lesson && user?.id) {
@@ -236,6 +268,19 @@ export default function LessonScreen() {
    * was completed.
    */
   const handleExit = () => {
+    if (!completedRef.current && startedAtRef.current !== null) {
+      // Elapsed seconds rather than the exercise index: LessonRunner keeps
+      // `currentIndex` private, and threading a progress callback through a
+      // 945-line component for one number is not worth the churn. Time is a
+      // serviceable proxy for how far they got, and "which lessons get
+      // abandoned" — the question that matters — needs only the lesson id.
+      trackEvent('lesson_abandoned', {
+        contentId: lesson?.id,
+        language: targetLanguage ?? undefined,
+        count: Math.round((Date.now() - startedAtRef.current) / 1000),
+      });
+    }
+
     // Tear down anything presented OVER this screen before navigating.
     //
     // CelebrationOverlay and AchievementModal are React Native <Modal>s, and

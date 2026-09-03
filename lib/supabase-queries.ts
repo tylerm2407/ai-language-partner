@@ -5,7 +5,7 @@ import { CEFR_BAND_BY_LEVEL, CEFR_LADDER,
   combineConversationScore,
 } from './cefr-proficiency';
 import { localToday } from './dates';
-import { trackRefusal } from './analytics';
+import { trackEvent, trackRefusal } from './analytics';
 import { wordTokens } from './reading-text';
 import type {
   ProficiencyEvidence,
@@ -1757,6 +1757,13 @@ export async function addCardFromAnnotation(
     lastReviewedAt: null,
     status: 'new',
   });
+
+  // After the writes, not on the tap: a save refused by the daily cap or lost
+  // to a failed insert must not count as a saved card. This is the join
+  // between reading and the SRS loop — whether words looked up while reading
+  // actually become review material is the question the reading feature has to
+  // answer.
+  trackEvent('card_saved', { language: language ?? undefined, band: cefrLevel ?? undefined });
 
   return reviewItem;
 }

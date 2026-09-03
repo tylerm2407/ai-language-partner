@@ -23,6 +23,10 @@
 type EventName =
   | 'lesson_started'
   | 'lesson_completed'
+  /** Left a lesson without finishing it. The retention counterpart to
+   *  `lesson_completed`: a lesson nobody finishes is a content problem, and
+   *  without this it is indistinguishable from one nobody starts. */
+  | 'lesson_abandoned'
   | 'review_started'
   | 'review_completed'
   | 'card_reviewed'
@@ -61,6 +65,8 @@ type EventName =
   | 'checkpoint_started'
   | 'checkpoint_completed'
   | 'chat_message_sent'
+  /** A learner saved a word from reading into their SRS deck. */
+  | 'card_saved'
 
   // ── The wall: every place the product says no. The churn events.
   | 'quota_exhausted'

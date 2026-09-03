@@ -14,6 +14,7 @@ import type { ReviewRating } from '../../../types';
 import { GlowLayer } from '../../../components/ui/GlowBackground';
 import { colors } from '../../../config/theme';
 import { useScreenView } from '../../../hooks/useScreenView';
+import { trackEvent } from '../../../lib/analytics';
 
 export default function ReviewScreen() {
   useScreenView('review');
@@ -45,6 +46,29 @@ export default function ReviewScreen() {
   useEffect(() => {
     if (isComplete) haptic('complete');
   }, [isComplete]);
+
+  /**
+   * The session, not the cards.
+   *
+   * Deliberately NOT one event per card. `review_logs` already stores every
+   * review with `was_correct` and a timestamp, so per-card events would pay a
+   * second time — in event volume, and eventually in money — for data already
+   * in Postgres and queryable there. What analytics adds is the SESSION shape:
+   * did they start one, and did they finish it.
+   */
+  const sessionStartedRef = useRef(false);
+  useEffect(() => {
+    if (loading || items.length === 0 || sessionStartedRef.current) return;
+    sessionStartedRef.current = true;
+    trackEvent('review_started', { count: items.length });
+  }, [loading, items.length]);
+
+  const completedRef = useRef(false);
+  useEffect(() => {
+    if (!isComplete || completedRef.current) return;
+    completedRef.current = true;
+    trackEvent('review_completed', { count: reviewed });
+  }, [isComplete, reviewed]);
 
   const handleRate = async (rating: ReviewRating) => {
     if (submitting) return; // Prevent double-tap
