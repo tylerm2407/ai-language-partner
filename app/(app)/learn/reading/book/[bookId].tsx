@@ -28,8 +28,10 @@ import { bookXpKey } from '../../../../../lib/offline-queue';
 import { cefrBandColors, cefrCanDo, cefrAccessibilityLabel } from '../../../../../lib/cefr-labels';
 import type { ReadingBook, BookAnnotation, UserBookProgress, Subscription } from '../../../../../types';
 import { colors } from '../../../../../config/theme';
+import { useScreenView } from '../../../../../hooks/useScreenView';
 
 export default function BookDetailScreen() {
+  useScreenView('book');
   const { bookId } = useLocalSearchParams<{ bookId: string }>();
   const router = useRouter();
   const goBack = useSafeBack('/(app)');

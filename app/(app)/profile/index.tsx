@@ -27,6 +27,7 @@ import { presetUrlFromId, type AvatarPreset } from '../../../lib/avatar-presets'
 import JoinClassModal from '../../../components/school/JoinClassModal';
 import RoleSwitcher from '../../../components/school/RoleSwitcher';
 import { BecomeTeacherSheet } from '../../../components/school/BecomeTeacherSheet';
+import { useScreenView } from '../../../hooks/useScreenView';
 
 const LEVEL_LABELS: Record<string, string> = {
   beginner: 'Beginner',
@@ -37,6 +38,7 @@ const LEVEL_LABELS: Record<string, string> = {
 };
 
 export default function ProfileScreen() {
+  useScreenView('profile');
   const { user, signOut } = useAuth();
   const { profile, subscription, setProfile } = useAppStore();
   const { enrolledClasses, loadStudentSchoolData, roles, activeRole, setActiveRole } = useSchoolStore();

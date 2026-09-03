@@ -17,8 +17,10 @@ import { loadErrorCopy, type ErrorCopy } from '../../../lib/error-copy';
 import type { DailyNewsArticle, VocabularyHighlight } from '../../../types';
 import { colors } from '../../../config/theme';
 import { ArticleAudioPlayer } from '../../../components/news/ArticleAudioPlayer';
+import { useScreenView } from '../../../hooks/useScreenView';
 
 export default function NewsReaderScreen() {
+  useScreenView('news');
   const { date } = useLocalSearchParams<{ date: string }>();
   const goBack = useSafeBack('/(app)');
   const { user } = useAuth();

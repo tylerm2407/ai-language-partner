@@ -33,8 +33,10 @@ import { Heading } from '../../components/ui/Text';
 import { loadErrorCopy, type ErrorCopy } from '../../lib/error-copy';
 import { colors, typography, spacing } from '../../config/theme';
 import type { DailyStats } from '../../types';
+import { useScreenView } from '../../hooks/useScreenView';
 
 export default function HomeScreen() {
+  useScreenView('home');
   const { user } = useAuth();
   const router = useRouter();
   const { profile, dailyStats, reviewCount } = useAppStore();

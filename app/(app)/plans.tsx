@@ -46,12 +46,14 @@ import { PlanStepCard } from '../../components/subscription/PlanStepCard';
 import { colors, radii, spacing, typography } from '../../config/theme';
 import { GlowLayer } from '../../components/ui/GlowBackground';
 import { TERMS_URL, PRIVACY_URL } from '../../config/app';
+import { useScreenView } from '../../hooks/useScreenView';
 
 type BillingTerm = 'monthly' | 'annual';
 
 const DEFAULT_TIER: Exclude<PlanId, 'starter'> = 'premium';
 
 export default function PlansScreen() {
+  useScreenView('paywall');
   const { user } = useAuth();
   const { subscription, refreshSubscription, setEntitledTier } = useAppStore();
   const router = useRouter();

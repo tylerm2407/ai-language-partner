@@ -13,8 +13,10 @@ import { EmptyState } from '../../../components/ui/EmptyState';
 import type { ReviewRating } from '../../../types';
 import { GlowLayer } from '../../../components/ui/GlowBackground';
 import { colors } from '../../../config/theme';
+import { useScreenView } from '../../../hooks/useScreenView';
 
 export default function ReviewScreen() {
+  useScreenView('review');
   const goBack = useSafeBack('/(app)');
   const { items, cards, loading, loadQueue, submitReview } = useReviewQueue();
   const { addStats } = useDailyStats();

@@ -11,8 +11,10 @@ import { ComprehensionQuestions } from '../../../../components/reading/Comprehen
 import { haptic } from '../../../../lib/haptics';
 import { colors } from '../../../../config/theme';
 import { GlowLayer } from '../../../../components/ui/GlowBackground';
+import { useScreenView } from '../../../../hooks/useScreenView';
 
 export default function ReadingPassageScreen() {
+  useScreenView('passage');
   const { passageId } = useLocalSearchParams<{ passageId: string }>();
   const goBack = useSafeBack('/(app)');
   const router = useRouter();

@@ -37,6 +37,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { BookCard } from '../../../components/reading/BookCard';
 import { ContinueReadingSection } from '../../../components/reading/ContinueReadingSection';
 import { cefrBandColors, cefrCanDo, cefrAccessibilityLabel } from '../../../lib/cefr-labels';
+import { useScreenView } from '../../../hooks/useScreenView';
 
 
 type CourseTab = 'vocab' | 'reading' | 'writing';
@@ -57,6 +58,7 @@ const TAB_CONFIG: { key: CourseTab; label: string }[] = [
 const FOR_YOU_TAB = 'for-you';
 
 export default function LearnScreen() {
+  useScreenView('learn');
   const router = useRouter();
   const { reviewCount, profile } = useAppStore();
   // The review screen and the lesson warm-up both clear cards without this

@@ -37,6 +37,8 @@ import { AvatarPresetPicker } from '../../components/avatar/AvatarPresetPicker';
 import { colors } from '../../config/theme';
 import { SUPPORTED_LANGUAGES, DAILY_GOALS } from '../../config/app';
 import { authErrorCopy } from '../../lib/auth-errors';
+import { trackEvent } from '../../lib/analytics';
+import { useScreenView } from '../../hooks/useScreenView';
 import {
   loadPendingOnboarding,
   savePendingOnboarding,
@@ -113,6 +115,24 @@ const ALL_STEPS: Step[] = [
   'goal',
 ];
 
+/**
+ * Every step in order, including the two that sit outside `ALL_STEPS`.
+ *
+ * `ALL_STEPS` drives the progress header and deliberately omits `lesson` and
+ * `save`. The funnel needs the whole path, or the last two steps — where the
+ * learner is closest to converting and so where a drop-off costs most — would
+ * be invisible.
+ */
+const FUNNEL_STEPS: Step[] = [
+  'language',
+  'idealSelf',
+  'level',
+  'identity',
+  'goal',
+  'lesson',
+  'save',
+];
+
 const IDEAL_SELF_MAX_CHARS = 300;
 const DISPLAY_NAME_MAX_CHARS = 24;
 
@@ -126,6 +146,7 @@ const DEFAULT_DAILY_GOAL = 10;
 
 
 export default function OnboardingScreen() {
+  useScreenView('onboarding');
   // `authLoading` matters: useAuth resolves the session asynchronously, so
   // `user` is null on the first render even for a signed-in learner. Treating
   // that null as "signed out" would skip the flush below and drop the learner
@@ -342,6 +363,14 @@ export default function OnboardingScreen() {
         // control is a <Button>, so the tap has already ticked; this is the
         // setup being accepted, and it must not fire on the error path below.
         haptic('complete');
+        // Same rule for the event: the funnel's last step must mean "the
+        // profile was written", not "they pressed the button". Counting taps
+        // here would hide exactly the failures worth knowing about.
+        trackEvent('onboarding_completed', {
+          language: targetLanguage,
+          band: level,
+          count: Math.round((Date.now() - (startedAt ?? Date.now())) / 1000),
+        });
         return;
       }
       // Pre-auth: park the answers and send them to sign-up. The root route
@@ -351,6 +380,15 @@ export default function OnboardingScreen() {
       setCompletedAt(stamp);
       await savePendingOnboarding({ ...draft, completedAt: stamp }, startedAt);
       haptic('complete');
+      // The pre-auth path completes onboarding but has no account yet, so the
+      // profile write happens later on the flush. This is still the end of the
+      // onboarding funnel — the sign-up that follows is its own step, and
+      // conflating them would hide learners lost between the two.
+      trackEvent('onboarding_completed', {
+        language: targetLanguage,
+        band: level,
+        count: Math.round((Date.now() - (startedAt ?? Date.now())) / 1000),
+      });
       router.replace('/(public)/auth');
     } catch (err: unknown) {
       console.error('handleFinish error:', err);
@@ -387,6 +425,23 @@ export default function OnboardingScreen() {
       completedAt: new Date().toISOString(),
     });
   }, []);
+
+  // One effect rather than instrumenting a dozen setStep call sites: this
+  // records every ARRIVAL at a step however it happened, including going back,
+  // and cannot drift out of step with a button somebody adds later.
+  //
+  // Gated on `hydrated` because the draft is read asynchronously — firing
+  // before it lands would report 'language' for a learner who is actually
+  // resuming at step four, and quietly invent a drop-off that never happened.
+  useEffect(() => {
+    if (!hydrated) return;
+    trackEvent('onboarding_step_viewed', {
+      stepName: step,
+      step: FUNNEL_STEPS.indexOf(step) + 1,
+      count: FUNNEL_STEPS.length,
+      language: targetLanguage,
+    });
+  }, [step, hydrated, targetLanguage]);
 
   const stepIndex = ALL_STEPS.indexOf(step);
   // Goal gradient (DESIGN.md §UX Psychology Principles #2): the learner is

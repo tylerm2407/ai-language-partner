@@ -64,7 +64,18 @@ type EventName =
 
   // ── The wall: every place the product says no. The churn events.
   | 'quota_exhausted'
-  | 'feature_unavailable';
+  | 'feature_unavailable'
+
+  /**
+   * A screen was shown.
+   *
+   * Deliberately a normal event with a `screen` property rather than a
+   * provider-specific screen call: `AnalyticsProvider` has three methods on
+   * purpose, and every provider can group by a property. It also means screen
+   * views obey the same closed-union and closed-property rules as everything
+   * else, instead of being a second, looser channel.
+   */
+  | 'screen_viewed';
 
 /**
  * The only properties an event may carry.
@@ -119,6 +130,9 @@ export interface EventProperties {
   /** How hard the paywall was: 'soft' | 'hard'. A soft gate that is declined
    *  and a hard gate that blocks are different events for the same screen. */
   gate?: string;
+  /** Named step of a multi-step flow, e.g. 'idealSelf'. From a closed set in
+   *  the flow itself — readable in a funnel, where a bare index is not. */
+  stepName?: string;
 }
 
 /**

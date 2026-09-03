@@ -24,8 +24,10 @@ import { Body } from '../../../components/ui/Text';
 import { GradientBackground } from '../../../components/ui/GradientBackground';
 import { colors, spacing } from '../../../config/theme';
 import type { Lesson } from '../../../types';
+import { useScreenView } from '../../../hooks/useScreenView';
 
 export default function LessonScreen() {
+  useScreenView('lesson');
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
   const router = useRouter();
   const goBack = useSafeBack('/(app)');
