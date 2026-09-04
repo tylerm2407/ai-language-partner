@@ -152,7 +152,13 @@ export function MultipleChoice({
                 flexDirection: 'row',
                 alignItems: 'center',
                 gap: spacing.sm + 2,
-                minHeight: 62,
+                // 54, not 62. Four options plus their gaps is the tallest
+                // thing any exercise puts in the body, and the footer below is
+                // pinned — so every point here is a point the last option
+                // loses against the note's top rule on a small screen. Still
+                // 10pt clear of the 44pt minimum target (.claude/rules/
+                // mobile-ui.md), and the row grows past this for a long option.
+                minHeight: 54,
                 paddingHorizontal: spacing.md,
                 paddingVertical: spacing.xs + 2,
                 borderRadius: radii.lg,

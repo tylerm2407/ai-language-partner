@@ -50,10 +50,26 @@ interface ExerciseChromeProps {
 
 /** Reserved so the layout does not jump when the note appears.
  *
- *  Sized for the tallest state — the retry row, which is a kicker line plus a
- *  44pt "Show answer" target. The old 58 fitted a kicker and two lines of body
- *  and would have made the footer jump every time a second attempt opened. */
-const NOTE_MIN_HEIGHT = 92;
+ *  Sized for the tallest state — the retry row, which is a kicker line (19pt)
+ *  plus a gap and a 44pt "Show answer" target. The old 58 fitted a kicker and
+ *  two lines of body and would have made the footer jump every time a second
+ *  attempt opened. */
+const NOTE_MIN_HEIGHT_RETRY = 76;
+
+/** Reserved for every other state.
+ *
+ *  Reserving the retry height ALWAYS cost 36pt on every exercise, and the
+ *  footer already spends ~216pt before the note: 16 top padding, the note row
+ *  and its 16 bottom padding, a ~50pt navigation row, and up to 76pt clearing
+ *  the floating tab bar. On a 667pt screen that left the body too little room
+ *  for a four-option multiple choice — four 62pt options plus gaps is 278pt
+ *  before the prompt card — so the options were squeezed against the note.
+ *
+ *  56 fits the tallest non-retry state (a kicker plus two 19pt body lines).
+ *  Entering a second attempt now grows the row by 20pt, which is both smaller
+ *  than the 34pt jump the old constant was chosen to avoid and paid only when
+ *  the learner got something wrong, rather than on every question. */
+const NOTE_MIN_HEIGHT = 56;
 
 /**
  * ExerciseChrome — the shared frame every exercise type renders inside:
@@ -196,7 +212,10 @@ export function ExerciseChrome({
         style={{ flex: 1, minHeight: 0 }}
         contentContainerStyle={{
           paddingHorizontal: spacing.lg - 2,
-          paddingTop: spacing.lg + 6,
+          // Was spacing.lg + 6. The header above already separates itself with
+          // its own padding and a rule, so this was doubling a gap that was
+          // costing the exercise body 14pt it needed more.
+          paddingTop: spacing.md,
           // Clears the footer's top rule when the exercise is scrolled to the
           // end, so the card never sits flush against the note row.
           paddingBottom: spacing.xl,
@@ -212,16 +231,20 @@ export function ExerciseChrome({
           paddingHorizontal: spacing.lg - 2,
           paddingTop: spacing.md,
           paddingBottom: footerBottomInset,
-          // The exercise body scrolls under this footer, so a tall exercise is
-          // clipped at its edge. Without a rule the note reads as the last line
-          // inside the question card rather than a separate region.
+          // Opaque, and stated rather than inherited. The footer sits directly
+          // beneath a scrolling region: anything translucent here lets a
+          // long exercise show through the note as it scrolls past, which
+          // reads as the two overlapping.
+          backgroundColor: colors.surface.raised,
+          // Without a rule the note reads as the last line inside the question
+          // card rather than a separate region.
           borderTopWidth: 1,
           borderTopColor: colors.border.subtle,
         }}
       >
         <View
           style={{
-            minHeight: NOTE_MIN_HEIGHT,
+            minHeight: retry ? NOTE_MIN_HEIGHT_RETRY : NOTE_MIN_HEIGHT,
             paddingBottom: spacing.md,
             flexDirection: 'row',
             // Centred, not top-aligned: the one-line placeholder used to pin
