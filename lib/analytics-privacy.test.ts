@@ -139,3 +139,38 @@ describe('the learning loop is instrumented as a funnel', () => {
     expect(screen).toMatch(/if \(!completedRef\.current/);
   });
 });
+
+describe('screen views measure attention, not mounting', () => {
+  it('fires on focus rather than on mount', () => {
+    // The tab navigator mounts sibling tab screens alongside the one being
+    // navigated to. A mount-based hook reported a view for every tab the
+    // learner never looked at — `learn` and `chat` landed 1ms apart, three
+    // times in one session, and chat came out as the most-used screen in the
+    // app. Only focus means "the learner is looking at this".
+    const hook = readFileSync(resolve(ROOT, 'hooks/useScreenView.ts'), 'utf8');
+    expect(hook).toContain('useFocusEffect');
+    expect(hook).not.toMatch(/\buseEffect\(/);
+  });
+
+  it('does not depend on the props object, which would refire every render', () => {
+    const hook = readFileSync(resolve(ROOT, 'hooks/useScreenView.ts'), 'utf8');
+    expect(hook).not.toMatch(/\},\s*\[[^\]]*\bprops\b[^\]]*\]\)/);
+  });
+});
+
+describe('development traffic is marked', () => {
+  it('isDevBuild is stamped on the capture path, not only via register()', () => {
+    // register() is async and persists to storage; fired and forgotten, a
+    // rejection is silent — which is what left every event unmarked and the
+    // project's test-account filter matching nothing. The filter that keeps
+    // development traffic out of real numbers must not depend on a promise
+    // nobody awaits.
+    const provider = readFileSync(resolve(ROOT, 'lib/analytics-posthog.ts'), 'utf8');
+    const captureBlock = provider.slice(
+      provider.indexOf('capture: ('),
+      provider.indexOf('identify: ('),
+    );
+    expect(captureBlock).toContain('isDevBuild');
+    expect(provider).toMatch(/register\([^)]*\)[\s\S]{0,120}catch/);
+  });
+});

@@ -58,7 +58,16 @@ export function startAnalytics(): boolean {
     // project's test-account filter excludes them from real numbers — so a
     // developer opening the app twenty times does not read as an engaged user
     // and quietly inflate every retention curve.
-    client.register({ isDevBuild: __DEV__ });
+    //
+    // `register` is ASYNC and persists to storage. Fired and forgotten, a
+    // rejection here is silent — which is exactly what happened the first time
+    // and left every event unmarked, so the filter matched nothing. It is
+    // still used, because super properties are the only way to reach events
+    // the SDK captures itself (app lifecycle, $identify) which never pass
+    // through the wrapper below.
+    void client.register({ isDevBuild: __DEV__ }).catch((err) => {
+      console.warn('[analytics] register failed — dev events will not be filtered:', err);
+    });
 
     const provider: AnalyticsProvider = {
       capture: (event, properties) => {
@@ -66,7 +75,14 @@ export function startAnalytics(): boolean {
         // and EventProperties deliberately has none — that closed shape is
         // what keeps learner free text out of PostHog, so it is widened HERE,
         // at the boundary, rather than loosened at the call sites.
-        client?.capture(event, { ...properties, appVersion: appVersion() } as Record<string, string | number | boolean>);
+        // isDevBuild is set here as well as via register(): this path is the
+        // one proven to land, and the filter that keeps development traffic
+        // out of real numbers must not depend on a promise nobody awaits.
+        client?.capture(event, {
+          ...properties,
+          appVersion: appVersion(),
+          isDevBuild: __DEV__,
+        } as Record<string, string | number | boolean>);
       },
       identify: (userId, traits) => {
         client?.identify(userId, traits as Record<string, string | number | boolean> | undefined);
