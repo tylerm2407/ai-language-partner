@@ -549,7 +549,7 @@ serve(async (req: Request) => {
       // The safety fallback is pre-authored text, not a model completion, so
       // there is no gloss to carry. Null, not omitted: the client reads null
       // as "translate on demand", which is exactly the old behaviour.
-      ? { reply: rawText, correction: null, vocabularyHighlights: [], gloss: null }
+      ? { reply: rawText, correction: null, vocabularyHighlights: [], gloss: null, askedForRepair: null }
       : parseAIResponse(rawText);
 
     // Quota already consumed atomically before the LLM call.
@@ -716,6 +716,11 @@ async function finalizeTurn(
      *  (see usesPromptFirstCorrection), and the client should not have to
      *  know that rule to participate in it. */
     requestedRepair,
+    /** What the model said it did, before `requestedRepair` folded in the
+     *  guards. Observability only — nothing branches on it. Null means the
+     *  model reported nothing and the level-based inference was used, which is
+     *  worth being able to see from outside. */
+    askedForRepair: parsed.askedForRepair,
     /** The stance this turn was generated with. Returned for observability
      *  — nothing in the client branches on it. */
     dialogueAct: ctx.dialogueAct,
@@ -773,7 +778,7 @@ async function stripUnsafeMetadata(
     language,
     ts: new Date().toISOString(),
   }));
-  return { reply: parsed.reply, correction: null, vocabularyHighlights: [], gloss: null };
+  return { reply: parsed.reply, correction: null, vocabularyHighlights: [], gloss: null, askedForRepair: null };
 }
 
 function windowMessages(
