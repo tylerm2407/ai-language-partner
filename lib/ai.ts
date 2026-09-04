@@ -1,4 +1,5 @@
-import { supabase } from './supabase';
+import { supabase, AI_REQUEST_TIMEOUT_MS } from './supabase';
+import { scanSseFrames, parseSseData } from './sse';
 import type {
   ConversationMessage,
   CorrectionDetail,
@@ -239,6 +240,272 @@ export async function sendChatMessage(request: AIChatRequest): Promise<AIChatRes
   }
 
   return data as AIChatResponse;
+}
+
+/**
+ * Master switch for the streaming chat path.
+ *
+ * Streaming is opt-in twice over: this constant has to be true AND the caller
+ * has to ask for it. Flipping this to false puts every turn back on
+ * `sendChatMessage` with no other change — which is the point of having it. The
+ * streaming path spans a wire protocol, a runtime with no `ReadableStream`, and
+ * a server that is deployed separately from this binary; a one-line way back is
+ * cheap next to shipping an app that cannot talk to its own tutor.
+ */
+export const CHAT_STREAMING_ENABLED: boolean = true;
+
+/**
+ * The stream did not work, and the turn has NOT been answered.
+ *
+ * Distinct from a server refusal on purpose. A 429 for a spent daily allowance
+ * or a RATE_LIMITED means the model was never called and will refuse a second
+ * time identically — retrying it non-streaming would show the learner two
+ * errors and, on some paths, spend the allowance twice. This error means the
+ * opposite: the transport broke, nothing was decided, and the caller SHOULD
+ * complete the turn the old way.
+ */
+export class ChatStreamUnavailableError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ChatStreamUnavailableError';
+  }
+}
+
+export interface ChatStreamHandlers {
+  /** A piece of the reply, already content-safety validated server-side. */
+  onChunk: (text: string) => void;
+  /**
+   * The server abandoned its own reply on a safety failure and sent canned
+   * text instead. Everything shown or spoken so far is void and must be
+   * replaced with this — not appended to.
+   */
+  onFallback?: (reply: string) => void;
+}
+
+/** Shape of the `done` frame. Same fields the non-streaming response carries. */
+type DoneFrame = AIChatResponse;
+
+/**
+ * Send a chat turn and consume the reply as it is generated.
+ *
+ * WHY XHR AND NOT FETCH
+ *
+ * React Native has no `ReadableStream`: `response.body` is null on every
+ * platform, so `fetch` cannot hand back a partial response no matter how the
+ * server frames it. `XMLHttpRequest` can — at `readyState === 3` the bytes
+ * received so far are readable as `xhr.responseText`. Every RN SSE library is
+ * this, and this is small enough not to be a dependency. `supabase.functions
+ * .invoke` is fetch-based, so it is unusable here; the URL and the auth headers
+ * are assembled by hand to match exactly what it would have sent.
+ *
+ * WHAT IT RESOLVES WITH
+ *
+ * The `done` frame, which is the same object `sendChatMessage` returns — so
+ * everything downstream of the call site is unchanged.
+ *
+ * DEGRADATION, IN ORDER OF LIKELIHOOD
+ *
+ *   1. The deployed function does not know `stream: true` and answers with an
+ *      ordinary JSON body. That is detected here and returned as the result.
+ *      No second call, no second charge — which matters, because this is the
+ *      state of the world until the server side ships.
+ *   2. A 4xx/5xx with a JSON body: thrown in the exact message format
+ *      `sendChatMessage` throws, so the caller's existing quota and rate-limit
+ *      handling matches on it unchanged.
+ *   3. Anything else — no events, a dead socket, a timeout, a 200 that is not
+ *      an event stream — throws `ChatStreamUnavailableError` and the caller
+ *      retries non-streaming.
+ */
+export async function streamChatMessage(
+  request: AIChatRequest,
+  handlers: ChatStreamHandlers,
+): Promise<AIChatResponse> {
+  const baseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+  // Read from env rather than the client: `supabase.functions` does not expose
+  // its base URL, and lib/supabase.ts already refuses to load without both of
+  // these, so they cannot be missing by the time a chat screen exists.
+  if (!baseUrl || !anonKey) {
+    throw new ChatStreamUnavailableError('Supabase URL or key missing.');
+  }
+
+  const { data: sessionData } = await supabase.auth.getSession();
+  const accessToken = sessionData.session?.access_token;
+  if (!accessToken) {
+    // No JWT means the edge function would 401. Let the non-streaming path
+    // produce that error, where the 401 handler in lib/supabase.ts sees it.
+    throw new ChatStreamUnavailableError('No session for the streaming request.');
+  }
+
+  return new Promise<AIChatResponse>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${baseUrl}/functions/v1/ai-chat`, true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.setRequestHeader('Accept', 'text/event-stream');
+    xhr.setRequestHeader('apikey', anonKey);
+    xhr.setRequestHeader('Authorization', `Bearer ${accessToken}`);
+    // Same budget the fetch path gets in lib/supabase.ts. A stream that has
+    // stopped producing is indistinguishable from a hung request, and a turn
+    // that never settles is the worst outcome of the three.
+    xhr.timeout = AI_REQUEST_TIMEOUT_MS;
+
+    /** Index past the last complete SSE frame. See lib/sse.ts on why not a delta. */
+    let offset = 0;
+    let done: DoneFrame | null = null;
+    let fallbackReply: string | null = null;
+    let serverError: { error?: string; code?: string } | null = null;
+    let settled = false;
+
+    const finish = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      fn();
+    };
+
+    const drainFrames = () => {
+      const text: string = xhr.responseText ?? '';
+      const { events, consumed } = scanSseFrames(text, offset);
+      offset = consumed;
+
+      for (const frame of events) {
+        switch (frame.event) {
+          case 'chunk': {
+            const payload = parseSseData<{ text?: string }>(frame.data);
+            if (payload?.text) handlers.onChunk(payload.text);
+            break;
+          }
+          case 'done':
+            done = parseSseData<DoneFrame>(frame.data);
+            break;
+          case 'fallback': {
+            const payload = parseSseData<{ reply?: string }>(frame.data);
+            if (payload?.reply) {
+              fallbackReply = payload.reply;
+              handlers.onFallback?.(payload.reply);
+            }
+            break;
+          }
+          case 'error':
+            serverError = parseSseData<{ error?: string; code?: string }>(frame.data) ?? {};
+            break;
+          default:
+            // An event type this build does not know about. Ignoring it is how
+            // a newer server stays compatible with an older binary.
+            break;
+        }
+      }
+    };
+
+    xhr.onreadystatechange = () => {
+      if (xhr.readyState === 3) {
+        // Status FIRST. A 429 body is ordinary JSON, and feeding it to the SSE
+        // scanner would produce no frames and swallow the quota code.
+        if (xhr.status !== 200) return;
+        try {
+          drainFrames();
+        } catch (err) {
+          finish(() => reject(new ChatStreamUnavailableError(`Stream read failed: ${String(err)}`)));
+          xhr.abort();
+        }
+        return;
+      }
+
+      if (xhr.readyState !== 4) return;
+
+      // status 0 = the request never completed: no network, aborted, or a TLS
+      // failure. Nothing was decided, so the turn is still winnable.
+      if (xhr.status === 0) {
+        finish(() => reject(new ChatStreamUnavailableError('Stream connection failed.')));
+        return;
+      }
+
+      if (xhr.status >= 400) {
+        finish(() => reject(httpErrorFrom(xhr)));
+        return;
+      }
+
+      try {
+        drainFrames();
+      } catch {
+        // fall through to the no-events handling below
+      }
+
+      if (serverError) {
+        const detail = serverError.error ?? 'AI chat failed';
+        finish(() =>
+          reject(new Error(serverError?.code ? `${detail} [${serverError.code}]` : detail)),
+        );
+        return;
+      }
+      if (done) {
+        const result = done;
+        finish(() => resolve(result));
+        return;
+      }
+      if (fallbackReply) {
+        // A safety fallback carries no correction and teaches nothing — the
+        // server threw its own reply away. Fill in the rest of the envelope so
+        // the caller does not have to special-case it.
+        const reply = fallbackReply;
+        finish(() =>
+          resolve({ reply, correction: null, audioUrl: null, vocabularyHighlights: [], savedWords: [] }),
+        );
+        return;
+      }
+
+      // 200 with no frames at all: almost certainly a deployment that ignored
+      // `stream: true` and answered normally. Use that answer — calling again
+      // would bill the learner twice for one turn.
+      const plain = parseSseData<AIChatResponse & { error?: string; code?: string }>(
+        xhr.responseText ?? '',
+      );
+      if (plain?.error) {
+        finish(() => reject(new Error(plain.code ? `${plain.error} [${plain.code}]` : plain.error!)));
+        return;
+      }
+      if (plain && typeof plain.reply === 'string') {
+        finish(() => resolve(plain));
+        return;
+      }
+
+      finish(() => reject(new ChatStreamUnavailableError('Stream produced no usable response.')));
+    };
+
+    xhr.onerror = () => {
+      finish(() => reject(new ChatStreamUnavailableError('Stream transport error.')));
+    };
+    xhr.ontimeout = () => {
+      finish(() => reject(new ChatStreamUnavailableError('Stream timed out.')));
+    };
+
+    try {
+      xhr.send(JSON.stringify({ ...request, stream: true }));
+    } catch (err) {
+      finish(() => reject(new ChatStreamUnavailableError(`Stream send failed: ${String(err)}`)));
+    }
+  });
+}
+
+/**
+ * Build the error a non-2xx stream response should throw.
+ *
+ * Deliberately identical in shape to what `sendChatMessage` produces —
+ * `${status}: ${detail} [${code}]` — because the chat screen matches on
+ * substrings of that message to decide between an upgrade prompt, a "slow
+ * down" alert, and a generic failure. A different format here would silently
+ * turn a quota refusal into "Sorry, I had trouble responding."
+ */
+function httpErrorFrom(xhr: XMLHttpRequest): Error {
+  let detail = `Edge Function returned a non-2xx status code`;
+  let code: string | undefined;
+  try {
+    const body = JSON.parse(xhr.responseText ?? '') as { error?: string; code?: string };
+    if (body?.error) detail = body.error;
+    if (typeof body?.code === 'string') code = body.code;
+  } catch {
+    // Body wasn't JSON — fall through with the generic message.
+  }
+  return new Error(`${xhr.status}: ${detail}${code ? ` [${code}]` : ''}`);
 }
 
 /**

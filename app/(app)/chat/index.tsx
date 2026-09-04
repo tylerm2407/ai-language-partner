@@ -7,7 +7,18 @@ import { useSafeBack } from '../../../hooks/useSafeBack';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAppStore, effectiveTier } from '../../../stores/useAppStore';
 import { useOnboardingChecklist } from '../../../hooks/useOnboardingChecklist';
-import { sendChatMessage, getSpeechUri, VoiceError } from '../../../lib/ai';
+import {
+  sendChatMessage,
+  streamChatMessage,
+  getSpeechUri,
+  VoiceError,
+  ChatStreamUnavailableError,
+  CHAT_STREAMING_ENABLED,
+  type AIChatRequest,
+  type AIChatResponse,
+} from '../../../lib/ai';
+import { createSentenceStream } from '../../../lib/sentence-stream';
+import { createSpeechQueue, type SpeechQueue } from '../../../lib/speech-queue';
 import { showLimitAlert } from '../../../lib/limit-messaging';
 import { CEFR_BAND_BY_LEVEL } from '../../../lib/cefr-proficiency';
 import { cefrLabel, cefrAccessibilityLabel } from '../../../lib/cefr-labels';
@@ -81,6 +92,25 @@ const SCENARIOS: Scenario[] = SCENARIO_ORDER.map((key) => {
     description: meta.description,
   };
 });
+
+/**
+ * Replace a message by id, or append it if it is not in the list yet.
+ *
+ * A streamed reply is written into the transcript before it is finished, so the
+ * same id is updated many times and then replaced one last time by the real
+ * message from the `done` frame — which is the only place the correction and
+ * the audio URL exist.
+ */
+function upsertMessage(
+  list: ConversationMessage[],
+  msg: ConversationMessage,
+): ConversationMessage[] {
+  const index = list.findIndex((m) => m.id === msg.id);
+  if (index < 0) return [...list, msg];
+  const next = list.slice();
+  next[index] = msg;
+  return next;
+}
 
 export default function ChatScreen() {
   useScreenView('chat');
@@ -158,6 +188,11 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
   const repairOutstandingRef = useRef(false);
   // Track the current ElevenLabs TTS sound for cleanup on error/unmount
   const ttsSoundRef = useRef<Audio.Sound | null>(null);
+  /** The sentence queue speaking the current streamed reply, if any. */
+  const speechQueueRef = useRef<SpeechQueue | null>(null);
+  /** Settles the promise the queue is awaiting for the sentence now playing.
+   *  Held so `stopSpeaking` can release it — see the comment there. */
+  const playbackResolveRef = useRef<(() => void) | null>(null);
 
   const level = profile?.level ?? 'beginner';
 
@@ -314,21 +349,103 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
     saveChatMessage(sessionId, msg).catch(console.error);
   }, []);
 
-  // Clean up TTS sound on unmount
+  // Clean up TTS on unmount. The queue has to be cancelled too, or a reply
+  // that is still being streamed keeps synthesising and playing sentences into
+  // a screen that no longer exists.
   useEffect(() => {
     return () => {
+      speechQueueRef.current?.cancel();
+      speechQueueRef.current = null;
       ttsSoundRef.current?.unloadAsync().catch(() => {});
     };
   }, []);
 
   /** Cut off any in-flight TTS — leaving live mode shouldn't leave a voice talking. */
   const stopSpeaking = useCallback(() => {
+    // The queue goes first. With sentence-queued playback there is usually more
+    // audio lined up behind the sound that is currently out, so unloading only
+    // that one would silence the tutor for half a second and then let the next
+    // sentence start — which is not what "stop" means to anyone.
+    speechQueueRef.current?.cancel();
+    speechQueueRef.current = null;
+    // Release whoever is awaiting the current sentence. The queue sequences on
+    // that promise, and unloading the sound below detaches the status callback
+    // that would otherwise have settled it, so without this the pump would sit
+    // on a promise that can never resolve.
+    playbackResolveRef.current?.();
+    playbackResolveRef.current = null;
+
     const sound = ttsSoundRef.current;
     if (!sound) return;
     ttsSoundRef.current = null;
     sound.setOnPlaybackStatusUpdate(null);
     sound.unloadAsync().catch(() => {});
   }, []);
+
+  /**
+   * Play one URI, resolving when it has finished.
+   *
+   * The queue in lib/speech-queue.ts starts the next sentence when this
+   * settles, so it must settle on EVERY exit: finished normally, cut off by
+   * `stopSpeaking`, or failed to load. A promise that never settles here is a
+   * hands-free loop whose microphone never reopens.
+   */
+  const playUri = useCallback(async (uri: string) => {
+    const { sound } = await Audio.Sound.createAsync({ uri });
+    ttsSoundRef.current = sound;
+    await new Promise<void>((resolve) => {
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        if (playbackResolveRef.current === finish) playbackResolveRef.current = null;
+        sound.setOnPlaybackStatusUpdate(null);
+        sound.unloadAsync().catch(() => {});
+        if (ttsSoundRef.current === sound) ttsSoundRef.current = null;
+        resolve();
+      };
+      playbackResolveRef.current = finish;
+      sound.setOnPlaybackStatusUpdate((status) => {
+        // `!isLoaded` is the sound being unloaded out from under us (barge-in,
+        // leaving the screen); `didJustFinish` is the ordinary end. Either way
+        // this sentence is over and the next one may start.
+        if (!status.isLoaded || status.didJustFinish) finish();
+      });
+      sound.playAsync().catch(finish);
+    });
+  }, []);
+
+  /**
+   * Open a sentence queue for one streamed reply.
+   *
+   * `onDrained` is the whole reason this is a queue and not a loop: in
+   * hands-free mode the microphone reopens when playback ends, and with several
+   * sentences per turn "ends" means the LAST one. Reopening after the first
+   * would have the learner answering a tutor that is still talking, and — with
+   * no echo cancellation anywhere in this app (see lib/audio-session.ts) — the
+   * recogniser would hear the tutor's remaining sentences as the learner's
+   * answer. `close()` at the end of the stream is what arms this.
+   */
+  const startSpeechQueue = useCallback((handsFree: boolean): SpeechQueue => {
+    const queue = createSpeechQueue({
+      synthesize: (sentence) => getSpeechUri(sentence, targetLanguage, user?.id, { voiceGender }),
+      play: playUri,
+      onSpeakingStarted: () => {
+        if (handsFree) setHandsFreeState('TTS_PLAYING');
+      },
+      onError: (err, sentence) => {
+        // One sentence lost is a gap in the audio. The queue keeps going, so
+        // the turn still ends and the loop still pivots.
+        console.warn('[chat] sentence playback failed:', sentence, err);
+      },
+      onDrained: () => {
+        if (speechQueueRef.current === queue) speechQueueRef.current = null;
+        if (handsFree) setShouldStartListening(true);
+      },
+    });
+    speechQueueRef.current = queue;
+    return queue;
+  }, [targetLanguage, user?.id, voiceGender, playUri]);
 
   /**
    * Barge-in: stop the tutor and hand the turn straight back.
@@ -529,7 +646,7 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
         ? newMessages.slice(newMessages.length - MAX_CONTEXT_MESSAGES)
         : newMessages;
 
-      const response = await sendChatMessage({
+      const requestPayload: AIChatRequest = {
         userId: user?.id ?? '',
         messages: contextMessages.map((m) => ({ role: m.role, content: m.content })),
         targetLanguage,
@@ -552,19 +669,115 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
         // correction policy — and this is how the tutor knows to react to the
         // learner's attempt instead of asking them to try again.
         previousTurnRequestedRepair: repairOutstandingRef.current,
-      });
+      };
+
+      const assistantId = (Date.now() + 1).toString();
+      // Fixed once. A streamed draft is re-rendered on every chunk, and a
+      // timestamp that moved with it would make ChatBubble look like a
+      // different message each time.
+      const assistantTimestamp = new Date().toISOString();
+
+      // ─── The streamed turn, and the way back from it ──────────────────
+      //
+      // The reply is consumed sentence by sentence so the tutor can start
+      // speaking sentence one while the model is still writing sentence three.
+      // Every part of that is best-effort: the stream may fail to open, break
+      // mid-flight, or reach a deployment that has never heard of `stream:
+      // true`. In all three cases the turn is finished by the ordinary
+      // non-streaming call and the learner never finds out.
+      //
+      // What is deliberately NOT retried is a refusal. A daily-limit or
+      // rate-limit rejection means the model was never called and would refuse
+      // identically a second time, so `streamChatMessage` throws those in the
+      // same message format `sendChatMessage` does and they fall straight
+      // through to the handling below.
+      let queue: SpeechQueue | null = null;
+      let sentenceCount = 0;
+      let sawFallback = false;
+      let response: AIChatResponse;
+
+      if (CHAT_STREAMING_ENABLED) {
+        const sentences = createSentenceStream();
+        if (voiceMode) {
+          await setAudioSessionMode(playbackModeFor(handsFreeActive)).catch(() => {});
+          queue = startSpeechQueue(handsFreeActive);
+        }
+        try {
+          response = await streamChatMessage(requestPayload, {
+            onChunk: (chunk) => {
+              const ready = sentences.push(chunk);
+              const soFar = sentences.text();
+              setMessages((prev) =>
+                upsertMessage(prev, {
+                  id: assistantId,
+                  role: 'assistant',
+                  content: soFar,
+                  audioUrl: null,
+                  // The correction only exists in the `done` frame. A draft
+                  // carries none rather than a wrong one.
+                  correction: null,
+                  timestamp: assistantTimestamp,
+                }),
+              );
+              for (const sentence of ready) {
+                queue?.enqueue(sentence);
+                sentenceCount++;
+              }
+            },
+            onFallback: () => {
+              // The server abandoned its own reply on a safety failure. What is
+              // on screen and in the queue is void: stop speaking it mid-word
+              // rather than finishing a sentence the server just withdrew. The
+              // canned reply is spoken whole further down.
+              sawFallback = true;
+              stopSpeaking();
+              queue = null;
+            },
+          });
+          // The model's last sentence usually arrives with no trailing
+          // whitespace, so the splitter is still holding it — without this
+          // flush the learner never hears the end of the turn.
+          if (queue && !sawFallback) {
+            for (const sentence of sentences.flush()) {
+              queue.enqueue(sentence);
+              sentenceCount++;
+            }
+          }
+        } catch (err) {
+          // Undo the half-finished turn before deciding anything: the draft
+          // bubble is not a reply, and the queue may be mid-sentence.
+          stopSpeaking();
+          queue = null;
+          sentenceCount = 0;
+          sawFallback = false;
+          setMessages((prev) => prev.filter((m) => m.id !== assistantId));
+
+          if (!(err instanceof ChatStreamUnavailableError)) throw err;
+
+          // Nothing was decided, so the turn is still winnable. If audio had
+          // already started, the learner hears the reply again from the top —
+          // a repeat is a far better outcome than a turn that ends in silence.
+          console.warn('[chat] streaming unavailable, completing normally:', err.message);
+          response = await sendChatMessage(requestPayload);
+        }
+      } else {
+        response = await sendChatMessage(requestPayload);
+      }
 
       repairOutstandingRef.current = response.requestedRepair === true;
 
       const assistantMsg: ConversationMessage = {
-        id: (Date.now() + 1).toString(),
+        id: assistantId,
         role: 'assistant',
         content: response.reply,
         audioUrl: response.audioUrl,
         correction: response.correction,
-        timestamp: new Date().toISOString(),
+        timestamp: assistantTimestamp,
       };
-      setMessages((prev) => [...prev, assistantMsg]);
+      // Replaces the streaming draft wholesale, so the transcript and history
+      // both get the server's final text plus the correction, which only ever
+      // arrives with `done`.
+      setMessages((prev) => upsertMessage(prev, assistantMsg));
       // Only when the server actually sent one. An older deployment, or the
       // safety fallback reply, returns null — and a null here is what routes
       // Translate back through the `translate` function.
@@ -581,7 +794,17 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
       // Mark onboarding checklist item on first successful chat
       markOnboardingItem('aiConversation').catch(console.error);
 
-      if (voiceMode) {
+      if (voiceMode && queue && sentenceCount > 0 && !sawFallback) {
+        // Already speaking. `close()` is what lets the queue's drain callback
+        // fire once the LAST sentence finishes — which in hands-free is what
+        // reopens the microphone. Calling speakReply here instead would play
+        // the whole reply a second time on top of the sentences.
+        queue.close();
+      } else if (voiceMode) {
+        // Nothing streamed into the queue: the non-streaming fallback, a reply
+        // that arrived without chunks, or a safety fallback that voided what
+        // had been queued. Speak it whole, exactly as every turn did before.
+        queue?.cancel();
         speakReply(response.reply, handsFreeActive);
       } else if (handsFreeActive) {
         // Hands-free with TTS off still has to hand the turn back.

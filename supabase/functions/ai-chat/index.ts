@@ -23,10 +23,12 @@ import { buildSystemPrompt, buildTopicTurn, usesPromptFirstCorrection } from './
 // parseAIResponse/normalizeCorrection/normalizeVocabulary moved to parse.ts so
 // they can be tested: index.ts calls serve() at module scope, so importing it
 // from a test would stand up an HTTP listener.
-import { parseAIResponse, type VocabHighlight } from './parse.ts';
-import { actInstruction, selectDialogueAct } from './dialogue-act.ts';
+import { parseAIResponse, type ParsedAIResponse, type VocabHighlight } from './parse.ts';
+import { actInstruction, selectDialogueAct, type DialogueAct } from './dialogue-act.ts';
+import { chatStreamResponse } from './stream.ts';
 import { floorShareNote, pushNote, selectPushStance } from './turn-policy.ts';
 import { generateValidated } from '../_shared/validated-generate.ts';
+import { validateContentSafety } from '../_shared/content-safety.ts';
 import { proficiencyToCefr } from '../_shared/cefr.ts';
 import { checkBurstLimit } from '../_shared/burst-limit.ts';
 import { PROVIDER_TIMEOUT_MS, providerFetch } from '../_shared/provider-fetch.ts';
@@ -111,6 +113,12 @@ interface ChatRequest {
   /** The conversation is ending (an assignment's time is up, or the learner is
    *  wrapping up), so the tutor should close rather than open a new thread. */
   isClosing?: boolean;
+  /** Deliver the reply as server-sent events, a sentence at a time, so the
+   *  client can start synthesising speech for sentence one while the rest is
+   *  still being written. Strictly opt-in: absent or false is byte-identical
+   *  to the pre-streaming behaviour, which is what the client falls back to if
+   *  streaming ever misbehaves in the field. */
+  stream?: boolean;
 }
 
 /**
@@ -220,6 +228,7 @@ serve(async (req: Request) => {
       recognizerConfidence,
       previousTurnRequestedRepair,
       isClosing,
+      stream: wantsStream,
     } = (await req.json()) as ChatRequest;
     const nativeLanguage = rawNativeLanguage || 'en';
 
@@ -396,6 +405,113 @@ serve(async (req: Request) => {
 
     const fallbackReply = FALLBACK_REPLIES[targetLanguage] ?? FALLBACK_REPLIES.en;
 
+    // Everything the turn is about, resolved before the model is called so
+    // both transports finalize from exactly the same facts.
+    const turnContext: TurnContext = {
+      userId: authenticatedUserId,
+      chatSessionId,
+      targetLanguage,
+      level,
+      cefrLevel,
+      dialogueAct,
+      modality: modality === 'speaking' ? 'speaking' : 'writing',
+      recognizerConfidence,
+      learnerTurn: messages[messages.length - 1]?.content ?? '',
+      chatCardsLimit: limits.dailyChatCards,
+    };
+
+    // One request body, read two ways. The streaming path adds exactly one key
+    // (`stream: true`) and changes nothing else — same model, same max_tokens,
+    // same system blocks in the same order, same single cache_control
+    // breakpoint. Building it once is what guarantees that: two copies drift,
+    // and a drifted system array means the cached prefix is no longer shared
+    // between the two paths, so every streamed turn pays full input price for
+    // a prompt the non-streaming path gets at cache rates.
+    const anthropicBody = {
+      model: TEXT_MODEL,
+      // The prompt asks for "1-3 sentences" plus a correction object;
+      // that lands near 250 tokens. 400 leaves headroom without paying
+      // for a ceiling nothing reaches — output is $5/MTok against $1
+      // for input, so this cap costs more than the whole prompt does.
+      max_tokens: 500,
+      // The scenario prompt is the cached prefix. Everything after it is
+      // appended uncached, deliberately: the code-switch note changes
+      // turn to turn, and the learner profile is unique per user. Put
+      // either one inside the cached block and the prefix stops being
+      // shared — every learner misses the cache on every turn, forever.
+      // The code-switch note goes last because it is about *this* turn.
+      //
+      // The learner's `topic` used to sit inside that cached block,
+      // which broke this exact rule — it is the most variable input
+      // there is. It is now a fenced user turn in `messages` below,
+      // which restores a shared prefix AND puts caller text behind a
+      // role boundary instead of a fence in our own voice.
+      system: [
+        { type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } },
+        ...(learnerNote ? [{ type: 'text', text: learnerNote }] : []),
+        // The dialogue act belongs out here for the same reason as the
+        // other two: it changes every turn, and inside the cached block
+        // it would make the shared prefix unshareable. It sits before
+        // the code-switch note because that note is the narrower
+        // instruction — it should be the last thing read.
+        ...(actNote ? [{ type: 'text', text: actNote }] : []),
+        // Both governors ride out here for the same reason as the act:
+        // they change turn to turn and would poison the shared prefix.
+        ...(floorNote ? [{ type: 'text', text: floorNote }] : []),
+        ...(stretchNote ? [{ type: 'text', text: stretchNote }] : []),
+        ...(codeSwitchNote ? [{ type: 'text', text: codeSwitchNote }] : []),
+      ],
+      messages: [
+        ...(topicTurn ? [topicTurn] : []),
+        ...windowMessages(messages),
+      ].map((m) => ({
+        role: m.role === 'assistant' ? 'assistant' : 'user',
+        content: m.content,
+      })),
+    };
+
+    // ── Streaming ──────────────────────────────────────────────────────
+    //
+    // Opt-in, and the non-streaming path below is untouched: it is the
+    // fallback if streaming misbehaves in the field, so `stream` absent or
+    // false has to stay byte-identical to what shipped before this existed.
+    //
+    // Note what has ALREADY happened by the time we get here: the burst limit
+    // and `consume_daily_quota` were both consumed above, and a rejection from
+    // either returned a normal JSON 429. That ordering is not incidental — the
+    // client checks the status code before it opens an event stream, so a
+    // limit reached must never be an SSE frame.
+    if (wantsStream === true) {
+      return chatStreamResponse({
+        requestBody: anthropicBody,
+        apiKey: ANTHROPIC_API_KEY,
+        fallbackReply,
+        language: targetLanguage,
+        targetLevel: cefrLevel,
+        finalize: async (rawText: string) => {
+          const streamed = await stripUnsafeMetadata(parseAIResponse(rawText), targetLanguage);
+          return await finalizeTurn(supabase, turnContext, streamed);
+        },
+        finalizeFallback: async () => {
+          // The learner still spoke. The fallback replaces what WE said, not
+          // the evidence their turn provides — the non-streaming safety
+          // fallback records it too, and skipping it here would make a
+          // learner's measured level depend on which transport their client
+          // happened to choose. There is nothing else to do: a fallback reply
+          // carries no correction to log and no vocabulary to save.
+          await recordConversationEvidence(supabase, {
+            userId: turnContext.userId,
+            targetLanguage: turnContext.targetLanguage,
+            cefrLevel: turnContext.cefrLevel,
+            modality: turnContext.modality,
+            text: turnContext.learnerTurn,
+            correction: null,
+            recognizerConfidence: turnContext.recognizerConfidence,
+          });
+        },
+      });
+    }
+
     const { text: rawText, usedFallback } = await generateValidated({
       fn: 'ai-chat',
       targetLevel: cefrLevel,
@@ -411,48 +527,7 @@ serve(async (req: Request) => {
               'x-api-key': ANTHROPIC_API_KEY,
               'anthropic-version': '2023-06-01',
             },
-            body: JSON.stringify({
-              model: TEXT_MODEL,
-              // The prompt asks for "1-3 sentences" plus a correction object;
-              // that lands near 250 tokens. 400 leaves headroom without paying
-              // for a ceiling nothing reaches — output is $5/MTok against $1
-              // for input, so this cap costs more than the whole prompt does.
-              max_tokens: 500,
-              // The scenario prompt is the cached prefix. Everything after it is
-              // appended uncached, deliberately: the code-switch note changes
-              // turn to turn, and the learner profile is unique per user. Put
-              // either one inside the cached block and the prefix stops being
-              // shared — every learner misses the cache on every turn, forever.
-              // The code-switch note goes last because it is about *this* turn.
-              //
-              // The learner's `topic` used to sit inside that cached block,
-              // which broke this exact rule — it is the most variable input
-              // there is. It is now a fenced user turn in `messages` below,
-              // which restores a shared prefix AND puts caller text behind a
-              // role boundary instead of a fence in our own voice.
-              system: [
-                { type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } },
-                ...(learnerNote ? [{ type: 'text', text: learnerNote }] : []),
-                // The dialogue act belongs out here for the same reason as the
-                // other two: it changes every turn, and inside the cached block
-                // it would make the shared prefix unshareable. It sits before
-                // the code-switch note because that note is the narrower
-                // instruction — it should be the last thing read.
-                ...(actNote ? [{ type: 'text', text: actNote }] : []),
-                // Both governors ride out here for the same reason as the act:
-                // they change turn to turn and would poison the shared prefix.
-                ...(floorNote ? [{ type: 'text', text: floorNote }] : []),
-                ...(stretchNote ? [{ type: 'text', text: stretchNote }] : []),
-                ...(codeSwitchNote ? [{ type: 'text', text: codeSwitchNote }] : []),
-              ],
-              messages: [
-                ...(topicTurn ? [topicTurn] : []),
-                ...windowMessages(messages),
-              ].map((m) => ({
-                role: m.role === 'assistant' ? 'assistant' : 'user',
-                content: m.content,
-              })),
-            }),
+            body: JSON.stringify(anthropicBody),
           },
           { provider: 'anthropic', timeoutMs: PROVIDER_TIMEOUT_MS.text },
         );
@@ -470,7 +545,7 @@ serve(async (req: Request) => {
 
     // When the safety fallback fires, we skip parsing (no [CORRECTION] block)
     // and deliver a clean reply with no correction metadata.
-    const { reply, correction, vocabularyHighlights, gloss } = usedFallback
+    const parsed: ParsedAIResponse = usedFallback
       // The safety fallback is pre-authored text, not a model completion, so
       // there is no gloss to carry. Null, not omitted: the client reads null
       // as "translate on demand", which is exactly the old behaviour.
@@ -478,98 +553,8 @@ serve(async (req: Request) => {
       : parseAIResponse(rawText);
 
     // Quota already consumed atomically before the LLM call.
-
-    // Log correction + compute repetition count. Non-fatal: chat reply
-    // returns even if logging/counting fails.
-    let enrichedCorrection: CorrectionDetail | null = correction;
-    if (correction && correction.shortLabel) {
-      try {
-        await supabase.from('correction_log').insert({
-          user_id: authenticatedUserId,
-          chat_session_id: chatSessionId ?? null,
-          target_language: targetLanguage,
-          error_type: correction.errorType,
-          severity: correction.severity,
-          short_label: correction.shortLabel,
-          original: correction.original || null,
-          corrected: correction.corrected || null,
-          explanation: correction.explanation || null,
-        });
-
-        // Count recent occurrences of this short_label (past 7 days, including today)
-        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-        const { count, error: countErr } = await supabase
-          .from('correction_log')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', authenticatedUserId)
-          .eq('short_label', correction.shortLabel)
-          .gte('created_at', sevenDaysAgo);
-
-        if (!countErr && typeof count === 'number') {
-          enrichedCorrection = { ...correction, repetitionCount: count };
-        }
-      } catch (logErr) {
-        console.warn('[ai-chat] correction_log write failed (non-fatal):', logErr);
-      }
-    }
-
-    // ── What this turn leaves behind ───────────────────────────────────
-    //
-    // Both writes are non-fatal and deliberately last: the learner has their
-    // reply, and neither a missed card nor a missed data point is worth
-    // failing a conversation over.
-    // A repair is outstanding only when there was something to repair AND the
-    // level's policy is to make the learner fix it. At beginner and elementary
-    // the tutor recasts and moves on, so there is no attempt coming.
-    const requestedRepair =
-      enrichedCorrection !== null && usesPromptFirstCorrection(level) && dialogueAct !== 'follow_repair';
-
-    const learnerTurn = messages[messages.length - 1]?.content ?? '';
-    const turnModality = modality === 'speaking' ? 'speaking' : 'writing';
-
-    await recordConversationEvidence(supabase, {
-      userId: authenticatedUserId,
-      targetLanguage,
-      cefrLevel,
-      modality: turnModality,
-      text: learnerTurn,
-      correction,
-      recognizerConfidence,
-    });
-
-    const savedWords = await saveChatVocabulary(supabase, {
-      userId: authenticatedUserId,
-      targetLanguage,
-      cefrLevel,
-      words: vocabularyHighlights,
-      limit: limits.dailyChatCards,
-    });
-
     return new Response(
-      JSON.stringify({
-        reply,
-        correction: enrichedCorrection,
-        vocabularyHighlights,
-        /** Which of the highlighted words actually became review cards. The
-         *  UI marks these so the learner knows the word is coming back. */
-        savedWords,
-        // Null is a supported value, not an omission: the client treats a
-        // missing gloss as "translate on demand" rather than as an error.
-        gloss,
-        /** Did this turn ask the learner to fix something themselves? The
-         *  client carries it back on the next turn so the controller can
-         *  react to their attempt and, crucially, not ask a second time.
-         *
-         *  Server-decided rather than client-inferred: whether a correction
-         *  becomes an elicitation or a recast is the level policy's call
-         *  (see usesPromptFirstCorrection), and the client should not have to
-         *  know that rule to participate in it. */
-        requestedRepair,
-        /** The stance this turn was generated with. Returned for observability
-         *  — nothing in the client branches on it. */
-        dialogueAct,
-        audioUrl: null,
-      }),
+      JSON.stringify(await finalizeTurn(supabase, turnContext, parsed)),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
@@ -584,6 +569,192 @@ serve(async (req: Request) => {
     );
   }
 });
+
+// ─── Finalising a turn ───────────────────────────────────────────────────
+
+/** Everything about the turn that both transports need in order to finish it
+ *  the same way. Assembled once, before the model is called. */
+interface TurnContext {
+  userId: string;
+  chatSessionId?: string;
+  targetLanguage: string;
+  level: string;
+  cefrLevel: string;
+  dialogueAct: DialogueAct;
+  modality: 'speaking' | 'writing';
+  recognizerConfidence?: number;
+  /** The learner's own last message — what the evidence is scored on. */
+  learnerTurn: string;
+  /** `limits.dailyChatCards`, the per-day allowance for vocabulary cards. */
+  chatCardsLimit: number;
+}
+
+/**
+ * Log the correction, leave the evidence, save the cards, and build the
+ * response object.
+ *
+ * Extracted when streaming was added, and shared by both transports on
+ * purpose. The alternative was a second copy of this sequence inside the SSE
+ * writer, and a second copy is exactly how a side effect ends up happening on
+ * one path and not the other — which for `correction_log` and
+ * `conversation_evidence` would mean a learner's repetition counts and
+ * measured level quietly depend on which transport their client chose.
+ *
+ * The order is load-bearing and unchanged: correction first (its repetition
+ * count goes into the response), then evidence, then cards. Every write here
+ * is non-fatal; the learner has their reply either way.
+ */
+async function finalizeTurn(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  ctx: TurnContext,
+  parsed: ParsedAIResponse,
+): Promise<Record<string, unknown>> {
+  const { reply, correction, vocabularyHighlights, gloss } = parsed;
+
+  // Log correction + compute repetition count. Non-fatal: chat reply
+  // returns even if logging/counting fails.
+  let enrichedCorrection: CorrectionDetail | null = correction;
+  if (correction && correction.shortLabel) {
+    try {
+      await supabase.from('correction_log').insert({
+        user_id: ctx.userId,
+        chat_session_id: ctx.chatSessionId ?? null,
+        target_language: ctx.targetLanguage,
+        error_type: correction.errorType,
+        severity: correction.severity,
+        short_label: correction.shortLabel,
+        original: correction.original || null,
+        corrected: correction.corrected || null,
+        explanation: correction.explanation || null,
+      });
+
+      // Count recent occurrences of this short_label (past 7 days, including today)
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const { count, error: countErr } = await supabase
+        .from('correction_log')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', ctx.userId)
+        .eq('short_label', correction.shortLabel)
+        .gte('created_at', sevenDaysAgo);
+
+      if (!countErr && typeof count === 'number') {
+        enrichedCorrection = { ...correction, repetitionCount: count };
+      }
+    } catch (logErr) {
+      console.warn('[ai-chat] correction_log write failed (non-fatal):', logErr);
+    }
+  }
+
+  // ── What this turn leaves behind ───────────────────────────────────
+  //
+  // Both writes are non-fatal and deliberately last: the learner has their
+  // reply, and neither a missed card nor a missed data point is worth
+  // failing a conversation over.
+  // A repair is outstanding only when there was something to repair AND the
+  // level's policy is to make the learner fix it. At beginner and elementary
+  // the tutor recasts and moves on, so there is no attempt coming.
+  const requestedRepair =
+    enrichedCorrection !== null &&
+    usesPromptFirstCorrection(ctx.level) &&
+    ctx.dialogueAct !== 'follow_repair';
+
+  await recordConversationEvidence(supabase, {
+    userId: ctx.userId,
+    targetLanguage: ctx.targetLanguage,
+    cefrLevel: ctx.cefrLevel,
+    modality: ctx.modality,
+    text: ctx.learnerTurn,
+    correction,
+    recognizerConfidence: ctx.recognizerConfidence,
+  });
+
+  const savedWords = await saveChatVocabulary(supabase, {
+    userId: ctx.userId,
+    targetLanguage: ctx.targetLanguage,
+    cefrLevel: ctx.cefrLevel,
+    words: vocabularyHighlights,
+    limit: ctx.chatCardsLimit,
+  });
+
+  return {
+    reply,
+    correction: enrichedCorrection,
+    vocabularyHighlights,
+    /** Which of the highlighted words actually became review cards. The
+     *  UI marks these so the learner knows the word is coming back. */
+    savedWords,
+    // Null is a supported value, not an omission: the client treats a
+    // missing gloss as "translate on demand" rather than as an error.
+    gloss,
+    /** Did this turn ask the learner to fix something themselves? The
+     *  client carries it back on the next turn so the controller can
+     *  react to their attempt and, crucially, not ask a second time.
+     *
+     *  Server-decided rather than client-inferred: whether a correction
+     *  becomes an elicitation or a recast is the level policy's call
+     *  (see usesPromptFirstCorrection), and the client should not have to
+     *  know that rule to participate in it. */
+    requestedRepair,
+    /** The stance this turn was generated with. Returned for observability
+     *  — nothing in the client branches on it. */
+    dialogueAct: ctx.dialogueAct,
+    audioUrl: null,
+  };
+}
+
+/**
+ * Safety-gate the half of the envelope that streaming never streamed.
+ *
+ * On the streaming path the reply is validated sentence by sentence on its way
+ * out (./stream.ts). The correction, the vocabulary list and the gloss are not
+ * streamed — they arrive whole, at the end — so they have not been through the
+ * gate at all, and every one of them is text the learner reads. Without this
+ * check, streaming would be a hole in CLAUDE.md §1.1 rather than a different
+ * shape of the same guarantee.
+ *
+ * A flag drops the metadata and KEEPS the reply, which is the deliberate
+ * difference from `generateValidated`, where one flagged word anywhere in the
+ * envelope discards the entire turn. Here the reply is already on the
+ * learner's screen and already clean sentence by sentence, so there is nothing
+ * to retract — and a turn that teaches nothing is a much smaller loss than a
+ * turn that contradicts what the learner just heard.
+ *
+ * Not used on the non-streaming path: `generateValidated` already validates
+ * the whole envelope there, and a second pass would only reject twice.
+ */
+async function stripUnsafeMetadata(
+  parsed: ParsedAIResponse,
+  language: string,
+): Promise<ParsedAIResponse> {
+  const parts = [
+    parsed.correction?.shortLabel,
+    parsed.correction?.explanation,
+    parsed.correction?.original,
+    parsed.correction?.corrected,
+    parsed.correction?.example,
+    parsed.gloss,
+    ...parsed.vocabularyHighlights.flatMap((v) => [v.word, v.translation]),
+  ].filter((s): s is string => typeof s === 'string' && s.length > 0);
+  if (parts.length === 0) return parsed;
+
+  const check = await validateContentSafety(parts.join('\n'), { language, fn: 'ai-chat' });
+  if (check.safe) return parsed;
+
+  // Same event name the non-streaming path logs, plus a scope so the two are
+  // distinguishable in the same query — this rejection costs the learner a
+  // correction, not a conversation.
+  console.log(JSON.stringify({
+    evt: 'safety_reject',
+    fn: 'ai-chat',
+    attempt: 1,
+    scope: 'stream_metadata',
+    reasons: check.reasons,
+    language,
+    ts: new Date().toISOString(),
+  }));
+  return { reply: parsed.reply, correction: null, vocabularyHighlights: [], gloss: null };
+}
 
 function windowMessages(
   messages: { role: string; content: string }[]
