@@ -37,6 +37,23 @@ export interface ParsedAIResponse {
    * it never costs the feature.
    */
   gloss: string | null;
+  /**
+   * Did the reply ask the learner to fix the error themselves, withholding the
+   * correct form?
+   *
+   * Self-reported by the model, because only the model knows what it actually
+   * wrote. This used to be inferred from level plus the presence of a
+   * correction, which was wrong in a way that compounded: live testing found
+   * the tutor handing over the corrected sentence in every advanced sample
+   * while the inferred flag still said a repair had been requested, so the
+   * NEXT turn opened by reacting to an attempt the learner was never invited
+   * to make.
+   *
+   * Null when the model did not report it — an older deployment, or a
+   * truncated response. The caller falls back to the old inference in that
+   * case, which is no worse than what shipped before.
+   */
+  askedForRepair: boolean | null;
 }
 
 /**
@@ -124,6 +141,12 @@ export function normalizeVocabulary(raw: unknown): VocabHighlight[] {
   return out;
 }
 
+/** Strictly boolean, or null. A string "true" or a missing field must not read
+ *  as a claim that the learner was asked to self-correct. */
+function normalizeAskedForRepair(raw: unknown): boolean | null {
+  return typeof raw === 'boolean' ? raw : null;
+}
+
 export function parseAIResponse(text: string): ParsedAIResponse {
   const cleaned = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
   try {
@@ -133,6 +156,7 @@ export function parseAIResponse(text: string): ParsedAIResponse {
       correction: normalizeCorrection(parsed.correction),
       vocabularyHighlights: normalizeVocabulary(parsed.vocabularyHighlights),
       gloss: normalizeGloss(parsed.gloss),
+      askedForRepair: normalizeAskedForRepair(parsed.askedForRepair),
     };
   } catch {
     const firstBrace = cleaned.indexOf('{');
@@ -145,6 +169,7 @@ export function parseAIResponse(text: string): ParsedAIResponse {
           correction: normalizeCorrection(parsed.correction),
           vocabularyHighlights: normalizeVocabulary(parsed.vocabularyHighlights),
           gloss: normalizeGloss(parsed.gloss),
+          askedForRepair: normalizeAskedForRepair(parsed.askedForRepair),
         };
       } catch {
         // fall through
@@ -156,7 +181,7 @@ export function parseAIResponse(text: string): ParsedAIResponse {
     const correctionMarker = '[CORRECTION]:';
     const index = text.indexOf(correctionMarker);
     if (index === -1) {
-      return { reply: text.trim(), correction: null, vocabularyHighlights: [], gloss: null };
+      return { reply: text.trim(), correction: null, vocabularyHighlights: [], gloss: null, askedForRepair: null };
     }
     const reply = text.substring(0, index).trim();
     const correction = text.substring(index + correctionMarker.length).trim();
@@ -165,6 +190,7 @@ export function parseAIResponse(text: string): ParsedAIResponse {
       correction: normalizeCorrection(correction),
       vocabularyHighlights: [],
       gloss: null,
+      askedForRepair: null,
     };
   }
 }

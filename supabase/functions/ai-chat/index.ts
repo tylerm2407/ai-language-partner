@@ -651,13 +651,33 @@ async function finalizeTurn(
   // Both writes are non-fatal and deliberately last: the learner has their
   // reply, and neither a missed card nor a missed data point is worth
   // failing a conversation over.
-  // A repair is outstanding only when there was something to repair AND the
-  // level's policy is to make the learner fix it. At beginner and elementary
-  // the tutor recasts and moves on, so there is no attempt coming.
-  const requestedRepair =
+  // Did we actually ask the learner to fix something themselves?
+  //
+  // Prefer what the model says it did. This was previously INFERRED from the
+  // level plus the presence of a correction, and live testing showed that
+  // inference was simply wrong: across 9 advanced samples the tutor handed
+  // over the corrected sentence every time while the flag still claimed a
+  // repair had been requested. The client carries the flag back,
+  // selectDialogueAct gives `follow_repair` top precedence, and the next turn
+  // opened with "this is their attempt" at a repair nobody had invited. A
+  // wrong answer here does not stay here — it corrupts the following turn.
+  //
+  // Fall back to the old inference when the model reports nothing (older
+  // deployment, truncated output). That is no worse than what shipped before,
+  // and it still cannot fire where the policy is to recast.
+  const inferredRepair =
     enrichedCorrection !== null &&
     usesPromptFirstCorrection(ctx.level) &&
     ctx.dialogueAct !== 'follow_repair';
+  const requestedRepair =
+    parsed.askedForRepair === null
+      ? inferredRepair
+      : // Both must hold. The model can only have asked if there was something
+        // to ask about, and a `follow_repair` turn is us reacting to an attempt,
+        // never opening a new one.
+        parsed.askedForRepair &&
+        enrichedCorrection !== null &&
+        ctx.dialogueAct !== 'follow_repair';
 
   await recordConversationEvidence(supabase, {
     userId: ctx.userId,

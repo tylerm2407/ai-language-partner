@@ -354,6 +354,9 @@ export async function streamChatMessage(
     let done: DoneFrame | null = null;
     let fallbackReply: string | null = null;
     let serverError: { error?: string; code?: string } | null = null;
+    /** Has any validated sentence already reached the learner's screen? Decides
+     *  whether a server-side failure is still recoverable by retrying. */
+    let sawChunk = false;
     let settled = false;
 
     const finish = (fn: () => void) => {
@@ -371,7 +374,10 @@ export async function streamChatMessage(
         switch (frame.event) {
           case 'chunk': {
             const payload = parseSseData<{ text?: string }>(frame.data);
-            if (payload?.text) handlers.onChunk(payload.text);
+            if (payload?.text) {
+              sawChunk = true;
+              handlers.onChunk(payload.text);
+            }
             break;
           }
           case 'done':
@@ -432,8 +438,22 @@ export async function streamChatMessage(
 
       if (serverError) {
         const detail = serverError.error ?? 'AI chat failed';
+        const message = serverError.code ? `${detail} [${serverError.code}]` : detail;
+
+        // A failure BEFORE any sentence reached the screen is still fully
+        // recoverable, and recovering it matters: the non-streaming path wraps
+        // the provider call in generateValidated, which retries twice and then
+        // serves pre-authored content on an outage. Rejecting plainly here
+        // would make streaming strictly LESS resilient than the path it
+        // replaced — a provider blip would cost the learner their turn, where
+        // before it cost them nothing they could see.
+        //
+        // Once a chunk has been shown, retrying is the wrong trade: the model
+        // already produced output, the quota is already spent, and a second
+        // call would bill the turn twice and replay audio the learner heard.
+        // Surface it instead.
         finish(() =>
-          reject(new Error(serverError?.code ? `${detail} [${serverError.code}]` : detail)),
+          reject(sawChunk ? new Error(message) : new ChatStreamUnavailableError(message)),
         );
         return;
       }
