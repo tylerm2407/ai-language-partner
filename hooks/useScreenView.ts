@@ -1,5 +1,5 @@
-import { useCallback } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
+import { useContext, useEffect } from 'react';
+import { NavigationContext } from '@react-navigation/native';
 import { trackEvent, type EventProperties } from '../lib/analytics';
 
 /**
@@ -38,12 +38,31 @@ export type ScreenName =
 
 export function useScreenView(screen: ScreenName, props: EventProperties = {}): void {
   // Only the primitive fields are dependencies: depending on the object itself
-  // would rebuild the callback every render, because a fresh object literal is
-  // a new identity each time, and one visit would report as hundreds.
+  // would re-run the effect every render, because a fresh object literal is a
+  // new identity each time, and one visit would report as hundreds.
   const { language, band, tier, contentId } = props;
-  useFocusEffect(
-    useCallback(() => {
+
+  // Subscribed to rather than required. `useFocusEffect` throws outright when
+  // there is no navigator above it — which is every screen rendered in a test
+  // harness, and it took the paywall suite down. Reading the context instead
+  // lets a screen be rendered in isolation without a NavigationContainer, and
+  // report once, which is the honest answer when nothing can tell it whether
+  // it is focused.
+  const navigation = useContext(NavigationContext);
+
+  useEffect(() => {
+    const report = () => {
       trackEvent('screen_viewed', { screen, language, band, tier, contentId });
-    }, [screen, language, band, tier, contentId]),
-  );
+    };
+
+    if (!navigation) {
+      report();
+      return;
+    }
+
+    // Already the visible screen on mount — the ordinary case for a push.
+    if (navigation.isFocused()) report();
+    // And every time it is returned to. Coming back to Review is a visit.
+    return navigation.addListener('focus', report);
+  }, [navigation, screen, language, band, tier, contentId]);
 }

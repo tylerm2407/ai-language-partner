@@ -148,8 +148,18 @@ describe('screen views measure attention, not mounting', () => {
     // times in one session, and chat came out as the most-used screen in the
     // app. Only focus means "the learner is looking at this".
     const hook = readFileSync(resolve(ROOT, 'hooks/useScreenView.ts'), 'utf8');
-    expect(hook).toContain('useFocusEffect');
-    expect(hook).not.toMatch(/\buseEffect\(/);
+    // Subscribed to via the navigation context rather than useFocusEffect,
+    // which throws outright when no navigator is above it — every screen
+    // rendered in a test harness.
+    expect(hook).toContain("navigation.addListener('focus'");
+    expect(hook).toContain('navigation.isFocused()');
+  });
+
+  it('still reports once when rendered with no navigator at all', () => {
+    // A screen rendered in isolation must not crash, and reporting once is the
+    // honest answer when nothing can say whether it is focused.
+    const hook = readFileSync(resolve(ROOT, 'hooks/useScreenView.ts'), 'utf8');
+    expect(hook).toMatch(/if \(!navigation\)/);
   });
 
   it('does not depend on the props object, which would refire every render', () => {
