@@ -1,10 +1,41 @@
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { useEffect, useState } from 'react';
+import { View, Text, Pressable, StyleSheet, type LayoutChangeEvent } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import Animated, {
+  Easing,
+  cancelAnimation,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 import { MagazineGlassCard } from './MagazineGlassCard';
 import { colors, typography } from '../../config/theme';
+import { useMotion } from '../../hooks/useMotion';
 import type { UnitProgressTile } from '../../lib/supabase-queries';
+
+const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
+
+// ─── Progress-bar glow ─────────────────────────────────────────────────────
+// Two slow loops layered on the gradient fill:
+//   - a halo under the track (a vertical gradient fading to transparent, no
+//     shadow — the design system keeps cards flat and Android would not colour
+//     a shadow anyway) that breathes between the two opacities below;
+//   - a narrow highlight that sweeps left→right across the filled portion,
+//     rests, and sweeps again.
+// Both gate on Reduce Motion and on the tab being focused, for the same reason
+// GlowBackground does: backgrounded tabs stay mounted, and eight tiles' worth
+// of loops running behind another screen is wasted GPU for the whole session.
+const HALO_BREATHE_MS = 2600;
+const HALO_OPACITY = [0.45, 1] as const;
+const SHIMMER_SWEEP_MS = 1400;
+const SHIMMER_REST_MS = 2200;
+const SHIMMER_WIDTH_FRACTION = 0.6;
 
 export interface LessonTileData {
   id: string;
@@ -49,6 +80,103 @@ export function unitTilesToLessonTiles(units: UnitProgressTile[]): LessonTileDat
   }));
 }
 
+function ProgressGlow({
+  progressPct,
+  gradientColors,
+}: {
+  progressPct: number;
+  gradientColors: [string, string];
+}) {
+  const { shouldReduce } = useMotion();
+  const isFocused = useIsFocused();
+  const animate = !shouldReduce && isFocused && progressPct > 0;
+
+  const [trackWidth, setTrackWidth] = useState(0);
+  const halo = useSharedValue<number>(HALO_OPACITY[0]);
+  const sweep = useSharedValue(0);
+
+  useEffect(() => {
+    if (!animate) {
+      // Assigning does not stop an in-flight withRepeat — cancel first.
+      cancelAnimation(halo);
+      cancelAnimation(sweep);
+      halo.value = HALO_OPACITY[0];
+      sweep.value = 0;
+      return;
+    }
+    halo.value = withRepeat(
+      withSequence(
+        withTiming(HALO_OPACITY[1], { duration: HALO_BREATHE_MS, easing: Easing.inOut(Easing.sin) }),
+        withTiming(HALO_OPACITY[0], { duration: HALO_BREATHE_MS, easing: Easing.inOut(Easing.sin) }),
+      ),
+      -1,
+      false,
+    );
+    sweep.value = 0;
+    sweep.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: SHIMMER_SWEEP_MS, easing: Easing.inOut(Easing.cubic) }),
+        withDelay(SHIMMER_REST_MS, withTiming(0, { duration: 0 })),
+      ),
+      -1,
+      false,
+    );
+    return () => {
+      cancelAnimation(halo);
+      cancelAnimation(sweep);
+    };
+  }, [animate, halo, sweep]);
+
+  const haloStyle = useAnimatedStyle(() => ({ opacity: halo.value }));
+  const shimmerStyle = useAnimatedStyle(() => {
+    const shimmerWidth = trackWidth * SHIMMER_WIDTH_FRACTION;
+    // Start fully off the left edge, end fully off the right edge of the track.
+    const travel = trackWidth + shimmerWidth;
+    return {
+      width: shimmerWidth,
+      transform: [{ translateX: -shimmerWidth + sweep.value * travel }],
+    };
+  });
+
+  const onLayout = (e: LayoutChangeEvent) => setTrackWidth(e.nativeEvent.layout.width);
+  const fillWidth = { width: `${progressPct}%` } as const;
+
+  return (
+    <View style={styles.progressWrap} onLayout={onLayout}>
+      {progressPct > 0 && (
+        <Animated.View pointerEvents="none" style={[styles.halo, fillWidth, haloStyle]}>
+          <LinearGradient
+            colors={['transparent', gradientColors[0], 'transparent']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+        </Animated.View>
+      )}
+      <View style={styles.swatchTrack}>
+        {progressPct > 0 && (
+          <LinearGradient
+            colors={gradientColors}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={[styles.swatchFill, fillWidth]}
+          >
+            {animate && trackWidth > 0 && (
+              <AnimatedLinearGradient
+                pointerEvents="none"
+                colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.45)', 'rgba(255,255,255,0)']}
+                start={{ x: 0, y: 0.5 }}
+                end={{ x: 1, y: 0.5 }}
+                style={[styles.shimmer, shimmerStyle]}
+              />
+            )}
+          </LinearGradient>
+        )}
+      </View>
+    </View>
+  );
+}
+
 function Tile({ tile }: { tile: LessonTileData }) {
   const router = useRouter();
   const isComplete = tile.progress >= 1 && tile.lessonCount > 0;
@@ -79,16 +207,7 @@ function Tile({ tile }: { tile: LessonTileData }) {
         {/* Progress bar — empty track when no lessons started, gradient
             fill scales with tile.progress. Replaces the old decorative
             gradient swatch so the top-of-tile bar carries real signal. */}
-        <View style={styles.swatchTrack}>
-          {progressPct > 0 && (
-            <LinearGradient
-              colors={tile.gradientColors}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={[styles.swatchFill, { width: `${progressPct}%` }]}
-            />
-          )}
-        </View>
+        <ProgressGlow progressPct={progressPct} gradientColors={tile.gradientColors} />
         <Text style={styles.tileTitle} numberOfLines={1}>
           {tile.title}
         </Text>
@@ -133,7 +252,9 @@ export function LessonTileGrid({ tiles, loading, error, onRetry }: LessonTileGri
           {[0, 1, 2, 3].map((i) => (
             <View key={i} style={styles.tile}>
               <MagazineGlassCard>
-                <View style={styles.swatchTrack} />
+                <View style={styles.progressWrap}>
+                  <View style={styles.swatchTrack} />
+                </View>
                 <View style={styles.skeletonLine} />
                 <View style={[styles.skeletonLine, styles.skeletonLineShort]} />
               </MagazineGlassCard>
@@ -177,16 +298,35 @@ const styles = StyleSheet.create({
     width: '47%',
     flexGrow: 1,
   },
+  progressWrap: {
+    marginBottom: 12,
+  },
   swatchTrack: {
     height: 6,
     borderRadius: 3,
-    marginBottom: 12,
     backgroundColor: 'rgba(255,255,255,0.08)',
     overflow: 'hidden',
   },
   swatchFill: {
     height: '100%',
     borderRadius: 3,
+    overflow: 'hidden',
+  },
+  /** Soft colour bleed above and below the fill. Sits under the track (paint
+   *  order) and is taller than it so the fade reads as light, not as a box. */
+  halo: {
+    position: 'absolute',
+    top: -7,
+    left: 0,
+    height: 20,
+    borderRadius: 10,
+    opacity: HALO_OPACITY[0],
+  },
+  shimmer: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
   },
   tileTitle: {
     fontFamily: typography.family.semibold,

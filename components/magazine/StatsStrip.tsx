@@ -26,13 +26,19 @@ import { cefrBandForProficiencyLevel } from '../../lib/cefr-proficiency';
 import { cefrCanDo, cefrAccessibilityLabel } from '../../lib/cefr-labels';
 import { colors, spacing, typography } from '../../config/theme';
 
-export function StatsStrip() {
+interface StatsStripProps {
+  /** `center` lines the strip up under a centered greeting. */
+  align?: 'left' | 'center';
+}
+
+export function StatsStrip({ align = 'left' }: StatsStripProps) {
   const profile = useAppStore((s) => s.profile);
   const band = cefrBandForProficiencyLevel(profile?.level ?? 'beginner');
+  const centered = align === 'center';
 
   return (
-    <View style={styles.block}>
-      <View style={styles.row}>
+    <View style={[styles.block, centered && styles.blockCentered]}>
+      <View style={[styles.row, centered && styles.rowCentered]}>
         <Ionicons name="ribbon-outline" size={13} color={colors.action.accent} />
         {/* The code is the eyebrow; the sentence below is the substance. Read as
             one utterance by VoiceOver so the two are never separated. */}
@@ -43,7 +49,11 @@ export function StatsStrip() {
           LEVEL {band}
         </Text>
       </View>
-      <Text style={styles.canDo} accessibilityElementsHidden importantForAccessibility="no">
+      <Text
+        style={[styles.canDo, centered && styles.canDoCentered]}
+        accessibilityElementsHidden
+        importantForAccessibility="no"
+      >
         {cefrCanDo(band)}
       </Text>
     </View>
@@ -53,6 +63,15 @@ export function StatsStrip() {
 const styles = StyleSheet.create({
   block: {
     marginBottom: spacing.lg,
+  },
+  blockCentered: {
+    alignItems: 'center',
+  },
+  rowCentered: {
+    justifyContent: 'center',
+  },
+  canDoCentered: {
+    textAlign: 'center',
   },
   row: {
     flexDirection: 'row',

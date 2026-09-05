@@ -1,17 +1,17 @@
-import { Text, StyleSheet } from 'react-native';
+import { Text, StyleSheet, type StyleProp, type TextStyle } from 'react-native';
 import { colors, typography, spacing } from '../../config/theme';
 
 const DAYS = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
 const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 
-export function DateLabel() {
+export function DateLabel({ style }: { style?: StyleProp<TextStyle> }) {
   const now = new Date();
   const dayName = DAYS[now.getDay()];
   const month = MONTHS[now.getMonth()];
   const date = now.getDate();
 
   return (
-    <Text style={styles.label}>
+    <Text style={[styles.label, style]}>
       {dayName} {'·'} {month} {date}
     </Text>
   );

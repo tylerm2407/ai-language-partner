@@ -191,15 +191,15 @@ export default function HomeScreen() {
                 empty states — where it lands as an event. */}
             <View style={styles.headerRow}>
               <View style={styles.headerText}>
-                <DateLabel />
-                <Heading level={2}>
+                <DateLabel style={styles.centered} />
+                <Heading level={2} style={styles.centered}>
                   {greeting}
                   {profile?.displayName ? `, ${profile.displayName}` : ''}
                 </Heading>
               </View>
             </View>
 
-            <StatsStrip />
+            <StatsStrip align="center" />
 
             {/* News hero card */}
             <NewsHeroCard
@@ -339,15 +339,21 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  /** Centered masthead: date, greeting and level strip share one axis so the
+   *  top of Home reads as a single block rather than a left-ragged stack. */
   headerRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     gap: spacing.xs,
   },
   headerText: {
     flex: 1,
     minWidth: 0,
+    alignItems: 'center',
+  },
+  centered: {
+    textAlign: 'center',
   },
   sectionTitle: {
     fontFamily: typography.family.serif,
