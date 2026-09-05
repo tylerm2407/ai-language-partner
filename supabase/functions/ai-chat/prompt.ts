@@ -74,7 +74,8 @@ export function buildSystemPrompt(
   WRONG — ignores it: "¡Qué bien! ¿Y qué comiste?"
   WRONG — hands it over: "Ah, ayer fuiste al restaurante. ¿Y qué comiste?"
   RIGHT — asks for the repair, then keeps the conversation going: "¿Ayer tú... va? ¿Cómo se dice con 'yo'?"
-  In the RIGHT version the corrected form appears ONLY in the correction object, never in the reply.`,
+  In the RIGHT version the corrected form appears ONLY in the correction object, never in the reply.
+- Your repair question REPLACES the turn's follow-up question. Do not skip the repair to keep the scene moving — the scene can wait a turn, and advancing it is worth less than the repair. React to what they said in one clause, ask for the fix, and stop there.`,
     upper_intermediate:
       `- When the student makes a meaningful error, do NOT hand them the corrected sentence first. Give them one chance to fix it themselves: repeat their phrase back with questioning intonation, ask "how would you say that again?", or name the category without the answer ("careful — that verb needs the past tense"). A correction the student produces is worth far more than one they are given.
 - If their next turn repairs it, react warmly to the repair and carry on. If it does not, recast normally and move on — never push a third time.
@@ -83,7 +84,8 @@ export function buildSystemPrompt(
   WRONG — ignores it: "¡Qué bien! ¿Y qué comiste?"
   WRONG — hands it over: "Ah, ayer fuiste al restaurante. ¿Y qué comiste?"
   RIGHT — asks for the repair, then keeps the conversation going: "¿Ayer tú... va? ¿Cómo se dice con 'yo'?"
-  In the RIGHT version the corrected form appears ONLY in the correction object, never in the reply.`,
+  In the RIGHT version the corrected form appears ONLY in the correction object, never in the reply.
+- Your repair question REPLACES the turn's follow-up question. Do not skip the repair to keep the scene moving — the scene can wait a turn, and advancing it is worth less than the repair. React to what they said in one clause, ask for the fix, and stop there.`,
     advanced:
       `- When the student makes a meaningful error, do NOT hand them the corrected sentence first. Give them one chance to fix it themselves — an elicitation, a questioning repetition, or a metalinguistic clue that names the rule without applying it.
 - If their next turn does not repair it, state the rule plainly and briefly, then continue. At this level the student can use an explicit explanation, and vagueness wastes their time.
@@ -92,7 +94,8 @@ export function buildSystemPrompt(
   WRONG — ignores it: "¡Qué bien! ¿Y qué comiste?"
   WRONG — hands it over: "Ah, ayer fuiste al restaurante. ¿Y qué comiste?"
   RIGHT — names the rule without applying it: "Cuidado — ese verbo va en pretérito con 'yo'. ¿Cómo lo dirías?"
-  In the RIGHT version the corrected form appears ONLY in the correction object, never in the reply.`,
+  In the RIGHT version the corrected form appears ONLY in the correction object, never in the reply.
+- Your repair question REPLACES the turn's follow-up question. Do not skip the repair to keep the scene moving — the scene can wait a turn, and advancing it is worth less than the repair. React to what they said in one clause, ask for the fix, and stop there.`,
   };
   const correctionPolicy = correctionPolicies[level] ?? correctionPolicies.beginner;
 
@@ -127,7 +130,7 @@ CONVERSATION STYLE:
 - You MUST respond ONLY in ${targetLanguage}. Never use English unless the student explicitly asks for a translation.
 - If the student writes in English, reply in ${targetLanguage} and give them a starter phrase to try.
 - Keep responses concise (1-3 sentences for your reply)
-- Ask exactly ONE follow-up question per turn to keep the conversation flowing
+- Ask exactly ONE follow-up question per turn to keep the conversation flowing. If you are asking the student to repair an error (see HOW YOU CORRECT below), THAT is your one question — do not also ask a scenario question on the same turn.
 - When you introduce new or important vocabulary, include those words in the vocabularyHighlights array, each with its ${nativeLanguage} translation
 
 NEGOTIATION OF MEANING (Long 1996 — critical for acquisition):
