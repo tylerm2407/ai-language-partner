@@ -37,6 +37,10 @@ import {
   JetBrainsMono_400Regular,
   JetBrainsMono_500Medium,
 } from '@expo-google-fonts/jetbrains-mono';
+import {
+  PlusJakartaSans_700Bold,
+  PlusJakartaSans_800ExtraBold,
+} from '@expo-google-fonts/plus-jakarta-sans';
 
 const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN;
 Sentry.init({
@@ -75,6 +79,9 @@ function RootLayout() {
     Fraunces_700Bold,
     JetBrainsMono_400Regular,
     JetBrainsMono_500Medium,
+    // UI 2.0 heading face (config/theme.ts §ui2Type).
+    PlusJakartaSans_700Bold,
+    PlusJakartaSans_800ExtraBold,
   });
 
   // Mount notification listeners + read current permission status.

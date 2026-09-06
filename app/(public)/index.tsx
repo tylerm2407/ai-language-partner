@@ -1,134 +1,70 @@
-import { useEffect, useRef } from 'react';
-import { View, Text, Pressable, Animated } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { GradientBackground } from '../../components/ui/GradientBackground';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import { Ui2Screen } from '../../components/ui2/Ui2Screen';
+import { SlabButton } from '../../components/ui2/SlabButton';
+import { MascotSol } from '../../components/ui2/MascotSol';
 import { RotatingGreeting } from '../../components/auth/RotatingGreeting';
 import { useMotion } from '../../hooks/useMotion';
-import { colors, typography } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 
+/**
+ * Welcome — the first screen of UI 2.0. Sol idles, the headline and subline
+ * fade up in sequence, then the two actions. No progress bar: nothing has
+ * been answered yet.
+ */
 export default function WelcomeScreen() {
   const router = useRouter();
   const { shouldReduce } = useMotion();
-
-  const logoOpacity = useRef(new Animated.Value(0)).current;
-  const logoTranslateY = useRef(new Animated.Value(20)).current;
-  const subtitleOpacity = useRef(new Animated.Value(0)).current;
-  const socialOpacity = useRef(new Animated.Value(0)).current;
-  const buttonsOpacity = useRef(new Animated.Value(0)).current;
-  const buttonsTranslateY = useRef(new Animated.Value(30)).current;
-
-  useEffect(() => {
-    if (shouldReduce) {
-      logoOpacity.setValue(1);
-      logoTranslateY.setValue(0);
-      subtitleOpacity.setValue(1);
-      socialOpacity.setValue(1);
-      buttonsOpacity.setValue(1);
-      buttonsTranslateY.setValue(0);
-    } else {
-      Animated.parallel([
-        Animated.timing(logoOpacity, { toValue: 1, duration: 600, useNativeDriver: true }),
-        Animated.timing(logoTranslateY, { toValue: 0, duration: 600, useNativeDriver: true }),
-      ]).start();
-
-      Animated.sequence([
-        Animated.delay(300),
-        Animated.timing(subtitleOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
-      ]).start();
-
-      Animated.sequence([
-        Animated.delay(400),
-        Animated.timing(socialOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
-      ]).start();
-
-      Animated.sequence([
-        Animated.delay(600),
-        Animated.parallel([
-          Animated.timing(buttonsOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
-          Animated.timing(buttonsTranslateY, { toValue: 0, duration: 500, useNativeDriver: true }),
-        ]),
-      ]).start();
-    }
-  }, [shouldReduce, buttonsOpacity, buttonsTranslateY, logoOpacity, logoTranslateY, socialOpacity, subtitleOpacity]);
+  const { c, type } = useUi2Theme();
+  const enter = (i: number) => (shouldReduce ? undefined : FadeInDown.delay(120 + i * 120).duration(420));
 
   return (
-    <GradientBackground>
-    <SafeAreaView className="flex-1">
-      <View className="flex-1 items-center justify-center px-8">
-        <Animated.View style={{ opacity: logoOpacity, transform: [{ translateY: logoTranslateY }], alignItems: 'center' }}>
-          <Text
-            style={{ fontFamily: typography.family.display, fontSize: 48 }}
-            className="text-primary mb-1"
-            accessibilityRole="header"
-          >
-            Fluenci
-          </Text>
-          {/* Shared with the auth hero (components/auth/RotatingGreeting) so the
-              two screens cannot drift apart. The welcome screen shows the word
-              alone; auth adds the language name beneath it. */}
-          <View style={{ height: 36, justifyContent: 'center' }}>
-            <RotatingGreeting size={20} color={colors.text.tertiary} />
-          </View>
-        </Animated.View>
-
-        <Animated.View style={{ opacity: subtitleOpacity }}>
-          <Text className="text-lg text-text-secondary text-center mb-8">
-            Learn languages with AI-powered lessons and conversations
-          </Text>
-        </Animated.View>
-
-        {/* Social Proof + Value Props */}
-        <Animated.View style={{ opacity: socialOpacity, width: '100%', marginBottom: 32 }}>
-          <View className="flex-row items-center justify-center mb-4">
-            <Ionicons name="people" size={16} color={colors.correctionChip.grammar.text} />
-            <Text className="text-sm text-text-secondary ml-2">
-              AI-powered fluency, one lesson at a time
-            </Text>
-          </View>
-          <View className="gap-3">
-            <View className="flex-row items-center">
-              <Ionicons name="chatbubbles-outline" size={18} color={colors.premium.base} />
-              <Text className="text-sm text-text-tertiary ml-3">AI-powered conversations</Text>
-            </View>
-            <View className="flex-row items-center">
-              <Ionicons name="newspaper-outline" size={18} color={colors.league.diamond} />
-              <Text className="text-sm text-text-tertiary ml-3">Daily news in your target language</Text>
-            </View>
-            <View className="flex-row items-center">
-              <Ionicons name="trending-up-outline" size={18} color={colors.success.light} />
-              <Text className="text-sm text-text-tertiary ml-3">Personalized to your level</Text>
-            </View>
-          </View>
-        </Animated.View>
-
-        <Animated.View style={{ opacity: buttonsOpacity, transform: [{ translateY: buttonsTranslateY }], width: '100%' }}>
-          {/*
-            Straight into onboarding — no account required. The sign-up gate
-            comes after the learner has a placement result and an avatar of
-            their own (DESIGN.md §UX Psychology Principles #3 and #4).
-          */}
-          <Pressable
-            className="w-full bg-primary py-4 rounded-[14px] items-center mb-4"
-            onPress={() => router.push('/(public)/onboarding')}
-            accessibilityRole="button"
-            accessibilityLabel="Get started"
-          >
-            <Text className="text-white text-lg font-semibold">Get Started</Text>
-          </Pressable>
-
-          <Pressable
-            className="w-full bg-dark-card-alt py-4 rounded-[14px] items-center"
+    <Ui2Screen
+      fixed
+      footer={
+        <>
+          {/* Straight into onboarding — no account required. The sign-up gate
+              comes after the learner has a lesson and an avatar of their own
+              (DESIGN.md §UX Psychology Principles #3 and #4). */}
+          <SlabButton label="Get started" onPress={() => router.push('/(public)/onboarding')} />
+          <SlabButton
+            label="I already have an account"
+            variant="ghost"
             onPress={() => router.push('/(public)/auth')}
-            accessibilityRole="button"
-            accessibilityLabel="Sign in"
+            accessibilityHint="Sign in"
+          />
+        </>
+      }
+    >
+      <View style={styles.body}>
+        <MascotSol size={150} />
+        <Animated.View entering={enter(0)} style={styles.block}>
+          <Text
+            accessibilityRole="header"
+            style={{ fontFamily: type.heading, fontSize: 40, lineHeight: 44, letterSpacing: -0.8, color: c.ink, textAlign: 'center' }}
           >
-            <Text className="text-text-primary text-lg font-semibold">I already have an account</Text>
-          </Pressable>
+            Speak it,{'\n'}don&apos;t just{'\n'}study it.
+          </Text>
+        </Animated.View>
+        <Animated.View entering={enter(1)} style={styles.block}>
+          <Text style={{ fontFamily: type.ui, fontSize: 16, lineHeight: 23, color: c.muted, textAlign: 'center', maxWidth: 300 }}>
+            Short daily sessions, real conversations with an AI tutor, and a level you can actually
+            measure.
+          </Text>
+        </Animated.View>
+        <Animated.View entering={enter(2)} style={styles.greeting}>
+          {/* Shared with the auth hero (components/auth/RotatingGreeting) so
+              the two screens cannot drift apart. */}
+          <RotatingGreeting size={18} color={c.idle} />
         </Animated.View>
       </View>
-    </SafeAreaView>
-    </GradientBackground>
+    </Ui2Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  body: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 22, paddingHorizontal: 28 },
+  block: { alignItems: 'center' },
+  greeting: { height: 32, justifyContent: 'center' },
+});

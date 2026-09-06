@@ -333,3 +333,101 @@ export const elevation = {
 
 export const theme = { colors, spacing, radii, typography, motion, elevation };
 export type Theme = typeof theme;
+
+// ─── UI 2.0 ("Tactile") — light + dark ────────────────────────────────────
+/**
+ * The redesign palette, chosen 2026-09-06 from the Home direction boards
+ * (canvas "Fluenci UI 2.0", board D3). It lives beside the Dark Glow tokens
+ * above rather than replacing them: screens migrate one at a time on
+ * `redesign/ui-2.0`, and a screen that has not migrated keeps rendering from
+ * `colors`. Read it through `useUi2Theme()` (hooks/useUi2Theme.ts), which
+ * picks light or dark from the OS setting.
+ *
+ * Contrast, checked against each scheme's `bg`: ink is 14.8:1 light / 17.2:1
+ * dark; muted is 5.1:1 light / 8.9:1 dark; white on `primary` is 5.6:1 light /
+ * 4.6:1 dark. Nothing below AA.
+ */
+export const ui2Light = {
+  bg: '#FFFFFF',
+  surface2: '#F5F4FA',
+  card: '#FFFFFF',
+  cardBorder: '#E9E7F3',
+  ink: '#23203A',
+  muted: '#6E6A88',
+  idle: '#8C88A6',
+  primary: '#6A4CFF',
+  slab: '#4D33D6',
+  primaryTint: '#EFEBFF',
+  primaryTintBorder: '#D9D1FF',
+  /** Text on primaryTint: primary itself is 4.4:1 there, just under AA. */
+  onTint: '#4D33D6',
+  onPrimary: '#FFFFFF',
+  onPrimaryMuted: '#E8E3FF',
+  ctaOnPrimaryBg: '#FFFFFF',
+  ctaOnPrimarySlab: '#D9D1FF',
+  ctaOnPrimaryText: '#6A4CFF',
+  yellow: '#FFC857',
+  yellowTint: '#FFF4D6',
+  yellowBorder: '#FFE3A3',
+  green: '#33C48D',
+  greenTint: '#E6F8F0',
+  greenBorder: '#BFEBD8',
+  pink: '#FF5C8A',
+  pinkTint: '#FFE9F1',
+  track: '#EFEBFF',
+  error: '#E5484D',
+} as const;
+
+export type Ui2Palette = Record<keyof typeof ui2Light, string>;
+
+export const ui2Dark: Ui2Palette = {
+  bg: '#0C0B14',
+  surface2: '#100E1C',
+  card: '#17152A',
+  cardBorder: '#27243F',
+  ink: '#F4F2FF',
+  muted: '#A6A2C2',
+  idle: '#6C6890',
+  // #7C63FF (the boards' value) is 4.2:1 under white; one step darker clears AA.
+  primary: '#7057FF',
+  slab: '#5641D9',
+  primaryTint: '#2A2450',
+  primaryTintBorder: '#3E3670',
+  onTint: '#C4B5FD',
+  onPrimary: '#FFFFFF',
+  onPrimaryMuted: '#E8E3FF',
+  ctaOnPrimaryBg: '#FFFFFF',
+  ctaOnPrimarySlab: '#CFC6FF',
+  ctaOnPrimaryText: '#5641D9',
+  yellow: '#FFC857',
+  yellowTint: '#33301F',
+  yellowBorder: '#4A4426',
+  green: '#33C48D',
+  greenTint: '#1A3A2F',
+  greenBorder: '#245244',
+  pink: '#FF5C8A',
+  pinkTint: '#3A2230',
+  track: '#26224A',
+  error: '#FF6B70',
+};
+
+
+/** UI 2.0 type: Plus Jakarta Sans for headings, Nunito for everything else. */
+export const ui2Type = {
+  heading: 'PlusJakartaSans_800ExtraBold',
+  headingBold: 'PlusJakartaSans_700Bold',
+  ui: 'Nunito_600SemiBold',
+  uiBold: 'Nunito_700Bold',
+  uiHeavy: 'Nunito_800ExtraBold',
+} as const;
+
+/** UI 2.0 shape: slab cards are 2px border + a thicker bottom edge. */
+export const ui2Shape = {
+  radiusCard: 18,
+  radiusHero: 24,
+  radiusButton: 18,
+  border: 2,
+  slab: 5,
+  slabPressed: 2,
+  buttonSlab: 6,
+} as const;

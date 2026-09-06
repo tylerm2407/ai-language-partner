@@ -596,10 +596,28 @@ scroll frames and forced an iOS/Android visual fork that never matched.
 - `<FloatingTabBar />` — custom `tabBar` for Expo Router `<Tabs>`
 - Positioned absolute, centered, `bottom: max(safeArea.bottom, 16) + 12`
 - Opaque `surface.card` pill, 1px `border.default` — identical on both platforms
-- 4 icons: Home, Learn, Chat, Profile — no labels. Glyph *switches* on focus
-  (`home-outline` → `home`), it is not just recolored
+- 5 icons: Home, Learn, Tutor, Chat, Profile — no labels. Glyph *switches* on
+  focus (`home-outline` → `home`), it is not just recolored
 - Active icon: 40px gradient circle, `action.primaryFill` → `magazine.accentViolet`
-- Width: 240px, height: 56px, borderRadius: 999, 44pt hit targets
+- Height: 56px, borderRadius: 999, 44pt hit targets
+- **Width is per icon count**, from `tabPillWidth()` — 4 icons → 240px, 5 → 296px
+  (8 × 37, so the 8pt grid holds). `space-evenly` splits the leftover into
+  (count + 1) gaps: 12.8px at 4-in-240, 12.667px at 5-in-296, which is why
+  adding Tutor did not visibly move the other four. Five icons in the old 240
+  would have left 3.33px and put two 40px circles almost in contact. An
+  unmeasured count throws rather than cramping — add a measured entry instead
+- `floatingTabBarSpace()` is **unchanged at 64px**: it is the vertical
+  reservation every bottom-pinned screen makes, and widening the pill does not
+  touch it
+- The bar renders **nothing** while a full-screen nested route is focused
+  (`FULL_SCREEN_ROUTES`, currently `tutor/call`). The root layout is `<Slot/>`,
+  so there is no navigator above `<Tabs>` to push a full-screen route onto, and
+  a child cannot z-index over a sibling tabBar — hiding it is the only lever.
+  Leaving it up during a live call also invites the tab tap that strands the
+  peer connection
+- Tab ORDER comes from `<Tabs.Screen>` declaration order in
+  `app/(app)/_layout.tsx`, not from `VISIBLE_TABS` — the bar filters
+  `state.routes`, which preserves navigator order
 
 ### Home Screen Layout (top to bottom)
 
@@ -830,3 +848,47 @@ nothing to sell — no IAP on the build, a failed offerings call, or an empty
 offering. A gate with no door is an App Review 3.1.1 rejection and a dead app
 for anyone who hits it. Covered by `app/(app)/plans.test.tsx`; do not remove it
 to make the gate "harder".
+
+---
+
+## UI 2.0 — "Tactile" (redesign branch `redesign/ui-2.0`)
+
+**Status:** in rollout, one screen at a time. Onboarding and the welcome screen
+are on it (2026-09-06); every other screen still renders Dark Glow from the
+tokens above. Do not mix the two systems on one screen.
+
+Direction chosen from the Home boards on the design canvas ("Fluenci UI 2.0",
+board D3). Tokens live in `config/theme.ts` as `ui2Light`, `ui2Dark`, `ui2Type`,
+`ui2Shape`; read them through `hooks/useUi2Theme.ts`, which follows the OS
+scheme (`app.json` `userInterfaceStyle: "automatic"`).
+
+### Palette
+
+| Token | Light | Dark | Usage |
+|---|---|---|---|
+| `bg` | `#FFFFFF` | `#0C0B14` | Screen ground. Dark is near-black with a violet cast, never pure black |
+| `card` / `cardBorder` | `#FFFFFF` / `#E9E7F3` | `#17152A` / `#27243F` | Slab cards |
+| `ink` / `muted` / `idle` | `#23203A` / `#6E6A88` / `#8C88A6` | `#F4F2FF` / `#A6A2C2` / `#6C6890` | Text: primary / helper (AA) / placeholders and inactive icons |
+| `primary` / `slab` | `#6A4CFF` / `#4D33D6` | `#7057FF` / `#5641D9` | CTA fill and its bottom edge; white on it clears AA both schemes |
+| `onTint` | `#4D33D6` | `#C4B5FD` | Text on `primaryTint` (chips, eyebrows). `primary` itself is 4.4:1 there |
+| `primaryTint` / `primaryTintBorder` | `#EFEBFF` / `#D9D1FF` | `#2A2450` / `#3E3670` | Selected rows, level card, chips |
+| `yellow` / `green` / `pink` + `*Tint` | see `config/theme.ts` | deepened | Read / review / unit colour coding |
+| `track` | `#EFEBFF` | `#26224A` | Unfilled progress |
+
+`hooks/useUi2Theme.test.ts` pins the contrast floors.
+
+### Shape and type
+
+- **Slab card**: 2px border, 5px bottom edge (`ui2Shape.slab`), radius 18; hero
+  cards radius 24. **Selected** = pressed in: card drops 3px, edge thins to 2px,
+  tint fill, check pops in with overshoot (`components/ui2/OptionRow.tsx`).
+- **Slab button**: 6px edge; pressing sinks the block 4px on a spring, haptic on
+  the way down (`components/ui2/SlabButton.tsx`).
+- **Type**: Plus Jakarta Sans 800 for headings, Nunito 600/700/800 for UI. No
+  serif in UI 2.0.
+- **Motion vocabulary** (all gated on `useMotion().shouldReduce`): step change =
+  bubble slides in from the right, rows cascade 40ms apart (`FadeInDown`);
+  progress bar springs to its new width; the plan-building loader runs ~2.4s.
+- **Mascot**: `components/ui2/MascotSol.tsx` is a code-only stand-in with a
+  `mood` API (`idle` / `think` / `cheer`). The artist's character replaces it as
+  a Rive state machine behind the same props.

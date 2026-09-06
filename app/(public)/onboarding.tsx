@@ -2,15 +2,15 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
-  Pressable,
-  ScrollView,
   Alert,
   TextInput,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
 import {
@@ -21,8 +21,20 @@ import {
   incrementXpIdempotent,
 } from '../../lib/supabase-queries';
 import { useAppStore } from '../../stores/useAppStore';
-import { Button } from '../../components/ui/Button';
 import { LessonRunner, type LessonResult } from '../../components/lesson/LessonRunner';
+import { Ui2Screen } from '../../components/ui2/Ui2Screen';
+import { SlabButton } from '../../components/ui2/SlabButton';
+import { SlabCard } from '../../components/ui2/SlabCard';
+import { OptionRow } from '../../components/ui2/OptionRow';
+import { StepHeader } from '../../components/ui2/StepHeader';
+import { SpeechBubble } from '../../components/ui2/SpeechBubble';
+import { MascotSol, type MascotMood } from '../../components/ui2/MascotSol';
+import { Chip } from '../../components/ui2/Chip';
+import { PlanBuilder } from '../../components/ui2/PlanBuilder';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
+import { useMotion } from '../../hooks/useMotion';
+import { cefrBandForProficiencyLevel } from '../../lib/cefr-proficiency';
+import { cefrCanDo } from '../../lib/cefr-labels';
 import {
   trialExercisesFor,
   hasTrialLesson,
@@ -34,7 +46,6 @@ import { Avatar } from '../../components/avatar/Avatar';
 import { presetUrlFromId, type AvatarPreset } from '../../lib/avatar-presets';
 import { haptic } from '../../lib/haptics';
 import { AvatarPresetPicker } from '../../components/avatar/AvatarPresetPicker';
-import { colors } from '../../config/theme';
 import { SUPPORTED_LANGUAGES, DAILY_GOALS } from '../../config/app';
 import { authErrorCopy } from '../../lib/auth-errors';
 import { trackEvent } from '../../lib/analytics';
@@ -70,6 +81,28 @@ const IDEAL_SELF_PLACEHOLDER: Partial<Record<LanguageCode, string>> = {
   en: 'Giving a confident talk at work in English.',
 };
 
+/**
+ * Tap-to-fill starters for the ideal-self field. A learner who would rather
+ * not write from nothing gets a sentence to edit; the language name is
+ * substituted so the sentence is already theirs.
+ */
+const IDEAL_SELF_STARTERS: { tag: string; text: (lang: string) => string }[] = [
+  { tag: 'Travel', text: (l) => `Getting around on a trip and never needing English, in ${l}.` },
+  { tag: 'Family', text: (l) => `Following the whole conversation at a family dinner in ${l}.` },
+  { tag: 'Work', text: (l) => `Running a meeting in ${l} without preparing every line.` },
+  { tag: 'Films & music', text: (l) => `Watching a film in ${l} with the subtitles off.` },
+  { tag: 'Moving abroad', text: (l) => `Settling in somewhere ${l} is spoken and feeling at home.` },
+];
+
+/** Number of lit signal bars per self-reported level, shown on the level rows. */
+const LEVEL_BARS: Record<ProficiencyLevel, number> = {
+  beginner: 1,
+  elementary: 2,
+  intermediate: 3,
+  upper_intermediate: 4,
+  advanced: 5,
+};
+
 const LEVELS: { value: ProficiencyLevel; label: string; description: string }[] = [
   { value: 'beginner', label: 'Beginner', description: 'I know a few words' },
   { value: 'elementary', label: 'Elementary', description: 'I can form basic sentences' },
@@ -99,6 +132,7 @@ type Step =
   | 'identity'
   | 'goal'
   | 'lesson'
+  | 'building'
   | 'save';
 
 /**
@@ -122,6 +156,10 @@ const ALL_STEPS: Step[] = [
  * `save`. The funnel needs the whole path, or the last two steps — where the
  * learner is closest to converting and so where a drop-off costs most — would
  * be invisible.
+ *
+ * `building` (the plan-building loader, UI 2.0) is in neither list: it needs
+ * no progress header, and it is not a place a learner can decide to leave, so
+ * counting it would only pad the funnel.
  */
 const FUNNEL_STEPS: Step[] = [
   'language',
@@ -145,8 +183,49 @@ const DEFAULT_LEVEL: ProficiencyLevel = 'beginner';
 const DEFAULT_DAILY_GOAL = 10;
 
 
+/** Sol's mood: a base mood per step, with a one-shot cheer on a good tap. */
+function useMascotMood(base: MascotMood): [MascotMood, () => void] {
+  const [cheering, setCheering] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cheer = useCallback(() => {
+    setCheering(true);
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => setCheering(false), 700);
+  }, []);
+  useEffect(() => () => {
+    if (timer.current) clearTimeout(timer.current);
+  }, []);
+  return [cheering ? 'cheer' : base, cheer];
+}
+
+function LevelBars({ lit }: { lit: number }) {
+  const { c } = useUi2Theme();
+  return (
+    <View style={styles.bars} accessibilityElementsHidden importantForAccessibility="no">
+      {[0, 1, 2, 3, 4].map((k) => (
+        <View
+          key={k}
+          style={[styles.bar, { height: 6 + k * 4, backgroundColor: k < lit ? c.primary : c.idle, opacity: k < lit ? 1 : 0.45 }]}
+        />
+      ))}
+    </View>
+  );
+}
+
+function FlagTile({ flag }: { flag: string }) {
+  const { c } = useUi2Theme();
+  return (
+    <View style={[styles.flagTile, { backgroundColor: c.surface2 }]} accessibilityElementsHidden importantForAccessibility="no">
+      <Text style={styles.flagGlyph}>{flag}</Text>
+    </View>
+  );
+}
+
 export default function OnboardingScreen() {
   useScreenView('onboarding');
+  const { c, type } = useUi2Theme();
+  const { shouldReduce } = useMotion();
+  const [mood, cheer] = useMascotMood('idle');
   // `authLoading` matters: useAuth resolves the session asynchronously, so
   // `user` is null on the first render even for a signed-in learner. Treating
   // that null as "signed out" would skip the flush below and drop the learner
@@ -434,7 +513,7 @@ export default function OnboardingScreen() {
   // before it lands would report 'language' for a learner who is actually
   // resuming at step four, and quietly invent a drop-off that never happened.
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || step === 'building') return;
     trackEvent('onboarding_step_viewed', {
       stepName: step,
       step: FUNNEL_STEPS.indexOf(step) + 1,
@@ -444,20 +523,21 @@ export default function OnboardingScreen() {
   }, [step, hydrated, targetLanguage]);
 
   const stepIndex = ALL_STEPS.indexOf(step);
-  // Goal gradient (DESIGN.md §UX Psychology Principles #2): the learner is
-  // credited for the step they're on, so this never reads 0%.
-  const progressPct = Math.round(((stepIndex + 1) / ALL_STEPS.length) * 100);
+  const band = cefrBandForProficiencyLevel(level);
+  const enter = (i: number) => (shouldReduce ? undefined : FadeInDown.delay(80 + i * 40).duration(360));
 
   if (!hydrated || flushing) {
     return (
-      <GradientBackground>
-        <SafeAreaView className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={colors.action.accent} />
+      <Ui2Screen fixed>
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={c.primary} />
           {flushing && (
-            <Text className="text-base text-text-secondary mt-4">Setting up your course…</Text>
+            <Text style={{ fontFamily: type.uiBold, fontSize: 15, color: c.muted, marginTop: 16 }}>
+              Setting up your course…
+            </Text>
           )}
-        </SafeAreaView>
-      </GradientBackground>
+        </View>
+      </Ui2Screen>
     );
   }
 
@@ -469,8 +549,11 @@ export default function OnboardingScreen() {
    * `userId` is deliberately empty. Every persistence path in LessonRunner —
    * the resume snapshot, the SRS warm-up, review-item writes — is guarded on
    * it, so the run touches neither the network nor storage. Nothing here is
-   * lost by not being saved: the result the learner cares about is the XP and
-   * the score, and those ride into the account on the pending draft.
+   * lost by not being saved: the result the learner cares about is the score,
+   * and that rides into the account on the pending draft.
+   *
+   * The runner still renders on the Dark Glow surface: the lesson runner is a
+   * later screen in the redesign, and restyling it here would be half a job.
    */
   if (step === 'lesson') {
     return (
@@ -488,7 +571,7 @@ export default function OnboardingScreen() {
               userId=""
               targetLanguage={targetLanguage}
               onComplete={handleTrialComplete}
-              onExit={() => setStep('save')}
+              onExit={() => setStep('building')}
             />
           </KeyboardAvoidingView>
         </SafeAreaView>
@@ -496,356 +579,358 @@ export default function OnboardingScreen() {
     );
   }
 
-  return (
-    <GradientBackground>
-    <SafeAreaView className="flex-1">
-      <KeyboardAvoidingView
-        className="flex-1"
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-      <ScrollView
-        className="flex-1 px-6 pt-6"
-        contentContainerStyle={{ paddingBottom: 40 }}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* Step indicator — always shows real, non-zero progress */}
-        <View className="mb-8">
-          <View className="flex-row items-center justify-between mb-2">
-            <Text className="text-xs font-semibold text-text-tertiary">
-              Step {stepIndex + 1} of {ALL_STEPS.length}
-            </Text>
-            <Text className="text-xs font-semibold text-primary">{progressPct}% set up</Text>
-          </View>
-          <View className="flex-row gap-2">
-            {ALL_STEPS.map((s) => {
-              const thisIdx = ALL_STEPS.indexOf(s);
-              return (
-                <View
-                  key={s}
-                  className={`flex-1 h-1.5 rounded-full ${thisIdx <= stepIndex ? 'bg-primary' : 'bg-dark-card-alt'}`}
-                />
-              );
-            })}
-          </View>
-        </View>
+  /**
+   * The payoff loader. Nothing is fetched here — the level is the learner's own
+   * answer and the first lesson is bundled — but the result lands better as
+   * something built than something echoed back. ~2.4s, then the save ask.
+   */
+  if (step === 'building') {
+    return (
+      <Ui2Screen fixed>
+        <PlanBuilder
+          stages={[`Setting your level · ${band}`, 'Picking your first lesson', "Preparing today's read"]}
+          onDone={() => setStep('save')}
+        />
+      </Ui2Screen>
+    );
+  }
 
-        {step === 'language' && (
+  /**
+   * Reciprocity (DESIGN.md §UX Psychology Principles #3) and the IKEA
+   * effect (#4): the learner has already been taught something before an
+   * email was ever asked for. The ask is to keep what they have, not to
+   * unlock what they might get.
+   */
+  if (step === 'save') {
+    return (
+      <Ui2Screen
+        footer={
           <>
-            <Text className="text-[28px] font-bold text-text-primary mb-2" accessibilityRole="header">
-              What language do you want to learn?
-            </Text>
-            <Text className="text-base text-text-secondary mb-6">
-              Spanish is our most popular course — change it any time.
-            </Text>
-
-            {SUPPORTED_LANGUAGES.map((lang) => (
-              <Pressable
-                key={lang.code}
-                className={`p-4 rounded-2xl mb-3 flex-row items-center ${
-                  targetLanguage === lang.code
-                    ? 'bg-primary-tint border-2 border-primary'
-                    : 'bg-dark-card border-2 border-transparent'
-                }`}
-                onPress={() => {
-                  haptic('select');
-                  setTargetLanguage(lang.code as LanguageCode);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={lang.name}
-                accessibilityState={{ selected: targetLanguage === lang.code }}
-              >
-                <Text className="text-2xl mr-3">{lang.flag}</Text>
-                <Text className="text-lg font-semibold text-text-primary">{lang.name}</Text>
-              </Pressable>
-            ))}
-
-            <View className="mt-6">
-              <Button label={`Continue with ${languageName}`} onPress={() => setStep('idealSelf')} />
-            </View>
-          </>
-        )}
-
-        {step === 'idealSelf' && (
-          <>
-            <Text className="text-[28px] font-bold text-text-primary mb-2" accessibilityRole="header">
-              Picture a moment you&apos;d love to have in this language.
-            </Text>
-            <Text className="text-base text-text-secondary mb-6">
-              One sentence is enough. You can skip this if you&apos;d rather not say.
-            </Text>
-
-            <View className="bg-dark-card rounded-2xl p-4 mb-4 border border-transparent focus:border-primary">
-              <TextInput
-                value={idealL2Self}
-                onChangeText={(text) => setIdealL2Self(text.slice(0, IDEAL_SELF_MAX_CHARS))}
-                placeholder={IDEAL_SELF_PLACEHOLDER[targetLanguage] ?? IDEAL_SELF_PLACEHOLDER.en}
-                placeholderTextColor={colors.text.quaternary}
-                multiline
-                numberOfLines={4}
-                maxLength={IDEAL_SELF_MAX_CHARS}
-                className="text-lg text-text-primary min-h-[100px]"
-                style={{ textAlignVertical: 'top' }}
-                accessibilityLabel="Your ideal L2 self — a sentence describing your language vision"
-              />
-              <Text className="text-xs text-text-secondary mt-2 text-right">
-                {idealL2Self.length} / {IDEAL_SELF_MAX_CHARS}
-              </Text>
-            </View>
-
-            <View className="flex-row gap-3 mt-2">
-              <View className="flex-1">
-                <Button label="Back" variant="secondary" onPress={() => setStep('language')} />
-              </View>
-              <View className="flex-1">
-                <Button
-                  label={idealL2Self.trim() ? 'Continue' : 'Skip'}
-                  onPress={() => setStep('level')}
-                />
-              </View>
-            </View>
-          </>
-        )}
-
-        {step === 'level' && (
-          <>
-            <Text className="text-[28px] font-bold text-text-primary mb-2" accessibilityRole="header">
-              What&apos;s your level?
-            </Text>
-            {/* The acronym used to be introduced on the removed mode step, and
-                this is now the first and only place a new user meets it — so it
-                defines itself here or nowhere. */}
-            <Text className="text-base text-text-secondary mb-6">
-              Pick whichever is closest. Nothing here is a test, and you can change it any
-              time. From here on your progress is shown as a CEFR level — the A1 to C2
-              scale — stated as what you can actually do, and backed by the work you&apos;ve
-              done.
-            </Text>
-
-            {LEVELS.map((l) => (
-              <Pressable
-                key={l.value}
-                className={`p-4 rounded-2xl mb-3 ${
-                  level === l.value
-                    ? 'bg-primary-tint border-2 border-primary'
-                    : 'bg-dark-card border-2 border-transparent'
-                }`}
-                onPress={() => {
-                  haptic('select');
-                  setLevel(l.value);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={`${l.label}: ${l.description}`}
-                accessibilityState={{ selected: level === l.value }}
-              >
-                <Text className="text-lg font-semibold text-text-primary">{l.label}</Text>
-                <Text className="text-sm text-text-secondary mt-1">{l.description}</Text>
-              </Pressable>
-            ))}
-
-            <View className="flex-row gap-3 mt-6">
-              <View className="flex-1">
-                <Button label="Back" variant="secondary" onPress={() => setStep('idealSelf')} />
-              </View>
-              <View className="flex-1">
-                <Button label="Continue" onPress={() => setStep('identity')} />
-              </View>
-            </View>
-          </>
-        )}
-
-        {/*
-          IKEA effect (DESIGN.md §UX Psychology Principles #4): the learner
-          builds something of their own before the sign-up gate, so leaving
-          means abandoning it rather than skipping a form.
-        */}
-        {step === 'identity' && (
-          <>
-            <Text className="text-[28px] font-bold text-text-primary mb-2" accessibilityRole="header">
-              Make it yours
-            </Text>
-            <Text className="text-base text-text-secondary mb-6">
-              Pick a name and a look. This is who you&apos;ll be in {languageName}.
-            </Text>
-
-            <View className="items-center mb-6">
-              <Avatar
-                size="large"
-                imageUri={avatarPresetId ? presetUrlFromId(avatarPresetId) : null}
-                displayName={displayName}
-              />
-              <Pressable
-                onPress={() => {
-                  haptic('select');
-                  setCustomizerOpen(true);
-                }}
-                className="mt-4 px-5 py-3 rounded-[14px] bg-dark-card-alt"
-                accessibilityRole="button"
-                accessibilityLabel="Choose your avatar"
-              >
-                <Text className="text-base font-semibold text-primary">
-                  {avatarPresetId ? 'Change avatar' : 'Choose avatar'}
-                </Text>
-              </Pressable>
-            </View>
-
-            <View className="bg-dark-card rounded-2xl p-4 mb-4">
-              <TextInput
-                value={displayName}
-                onChangeText={(text) => setDisplayName(text.slice(0, DISPLAY_NAME_MAX_CHARS))}
-                placeholder="What should we call you?"
-                placeholderTextColor={colors.text.quaternary}
-                maxLength={DISPLAY_NAME_MAX_CHARS}
-                className="text-lg text-text-primary"
-                accessibilityLabel="Your display name"
-              />
-            </View>
-
-            <View className="flex-row gap-3 mt-2">
-              <View className="flex-1">
-                <Button
-                  label="Back"
-                  variant="secondary"
-                  onPress={() => setStep('level')}
-                />
-              </View>
-              <View className="flex-1">
-                <Button label="Continue" onPress={() => setStep('goal')} />
-              </View>
-            </View>
-
-            {/* Pre-auth, deliberately. The preset catalogue is anon-readable
-                (migration 082) precisely so this step keeps its avatar — the
-                IKEA effect above depends on the learner building something
-                before the sign-up gate, not after it. The choice rides in the
-                local draft and is flushed by writeProfile once a session
-                exists; nothing is written server-side here. */}
-            <AvatarPresetPicker
-              visible={customizerOpen}
-              selectedId={avatarPresetId}
-              onClose={() => setCustomizerOpen(false)}
-              onSelect={(preset: AvatarPreset) => {
-                setAvatarPresetId(preset.id);
-                setCustomizerOpen(false);
-              }}
-            />
-          </>
-        )}
-
-        {step === 'goal' && (
-          <>
-            <Text className="text-[28px] font-bold text-text-primary mb-2" accessibilityRole="header">
-              How much time do you have?
-            </Text>
-            <Text className="text-base text-text-secondary mb-6">
-              This sets the length of your daily session. Nothing breaks if you skip a day.
-            </Text>
-
-            {DAILY_GOALS.map((goal) => (
-              <Pressable
-                key={goal}
-                className={`p-4 rounded-2xl mb-3 flex-row flex-wrap items-center justify-between gap-1 ${
-                  dailyGoal === goal
-                    ? 'bg-primary-tint border-2 border-primary'
-                    : 'bg-dark-card border-2 border-transparent'
-                }`}
-                onPress={() => {
-                  haptic('select');
-                  setDailyGoal(goal);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={`${goal} minutes per day`}
-                accessibilityState={{ selected: dailyGoal === goal }}
-              >
-                <Text className="text-lg font-semibold text-text-primary">{goal} minutes</Text>
-                {/* No commitment labels. The scale used to end at "Insane",
-                    which dares the learner into a budget they will miss, and a
-                    missed daily goal is the first step out of the habit. A time
-                    budget is a practical choice, not a measure of seriousness. */}
-              </Pressable>
-            ))}
-
-            <View className="flex-row gap-3 mt-6">
-              <View className="flex-1">
-                <Button label="Back" variant="secondary" onPress={() => setStep('identity')} />
-              </View>
-              <View className="flex-1">
-                {/* No bundled trial for this language yet — skip to the ask
-                    rather than teach the wrong one (components/onboarding/
-                    trial-lesson.ts). */}
-                <Button
-                  label={trialAvailable ? 'Start my first lesson' : 'Continue'}
-                  onPress={() => setStep(trialAvailable ? 'lesson' : 'save')}
-                />
-              </View>
-            </View>
-          </>
-        )}
-
-        {/*
-          Reciprocity (DESIGN.md §UX Psychology Principles #3) and the IKEA
-          effect (#4): the learner has already been taught something and has
-          already earned XP, before an email was ever asked for. The ask is
-          therefore to keep what they have, not to unlock what they might get.
-          The numbers below are the point of the screen — say them plainly.
-        */}
-        {step === 'save' && (
-          <>
-            <Text className="text-[28px] font-bold text-text-primary mb-2" accessibilityRole="header">
-              {trial ? 'Nice work.' : 'Ready when you are.'}
-            </Text>
-            <Text className="text-base text-text-secondary mb-6">
-              {trial
-                ? `That was your first ${languageName} lesson. Create an account to keep it — otherwise it disappears when you close the app.`
-                : `Create an account to save your ${languageName} setup and pick up where you left off.`}
-            </Text>
-
-            {trial && (
-              <View className="bg-dark-card rounded-2xl p-5 mb-4 border-2 border-primary">
-                <View className="flex-row justify-between items-center mb-3">
-                  <Text className="text-base text-text-secondary">XP earned</Text>
-                  <Text className="text-[28px] font-bold text-primary">+{trial.xpEarned}</Text>
-                </View>
-                <View className="flex-row justify-between items-center">
-                  <Text className="text-base text-text-secondary">Correct</Text>
-                  <Text className="text-lg font-semibold text-text-primary">
-                    {trial.correctCount} of {trial.totalCount}
-                  </Text>
-                </View>
-              </View>
-            )}
-
-            <View className="bg-dark-card rounded-2xl p-4 mb-6">
-              <Text className="text-sm font-bold text-success mb-3">SIGNING UP SAVES</Text>
-              <Text className="text-base text-text-primary mb-1">
-                · Your {trial ? `${trial.xpEarned} XP and this lesson` : 'progress'}
-              </Text>
-              <Text className="text-base text-text-primary mb-1">· Your {languageName} course and level</Text>
-              <Text className="text-base text-text-primary">· Your progress, from today</Text>
-            </View>
-
-            <Button
+            <SlabButton
               label={user ? 'Start learning' : 'Save my progress'}
               onPress={handleFinish}
               loading={saving}
               disabled={saving}
+              arrow={false}
             />
-            <Pressable
+            <SlabButton
+              label="Change my setup"
+              variant="ghost"
               onPress={() => {
                 haptic('buttonPress');
                 setStep('goal');
               }}
-              className="py-3 items-center mt-1"
-              style={{ minHeight: 44, justifyContent: 'center' }}
-              accessibilityRole="button"
-              accessibilityLabel="Go back and change your setup"
-            >
-              <Text className="text-sm text-text-secondary">Change my setup</Text>
-            </Pressable>
+              accessibilityHint="Go back and change your answers"
+            />
           </>
+        }
+      >
+        <Animated.View entering={shouldReduce ? undefined : FadeInDown.duration(360)} style={styles.centerCol}>
+          <MascotSol size={110} mood="cheer" />
+          <Text accessibilityRole="header" style={{ fontFamily: type.heading, fontSize: 30, lineHeight: 34, color: c.ink }}>
+            {trial ? 'Nice work.' : 'Ready when you are.'}
+          </Text>
+          <Text style={{ fontFamily: type.ui, fontSize: 14, lineHeight: 20, color: c.muted, textAlign: 'center' }}>
+            {trial
+              ? `That was your first ${languageName} lesson. Create an account to keep it — otherwise it disappears when you close the app.`
+              : `Create an account to save your ${languageName} setup and pick up where you left off.`}
+          </Text>
+        </Animated.View>
+
+        <Animated.View entering={enter(1)}>
+          <SlabCard tint="primary" style={styles.levelCard} accessibilityLabel={`Your level: ${band}. ${cefrCanDo(band)}`}>
+            <View style={[styles.levelBadge, { backgroundColor: c.primary }]}>
+              <Text style={{ fontFamily: type.heading, fontSize: 22, color: c.onPrimary }}>{band}</Text>
+            </View>
+            <View style={styles.levelText}>
+              <Text style={[styles.eyebrow, { fontFamily: type.uiHeavy, color: c.onTint }]}>Your level</Text>
+              <Text style={{ fontFamily: type.uiBold, fontSize: 14, lineHeight: 19, color: c.ink }}>{cefrCanDo(band)}</Text>
+            </View>
+          </SlabCard>
+        </Animated.View>
+
+        {trial && (
+          <Animated.View entering={enter(2)} style={styles.statRow}>
+            <SlabCard tint="green" style={styles.stat}>
+              <Text style={{ fontFamily: type.heading, fontSize: 26, lineHeight: 30, color: c.ink }}>
+                {trial.correctCount} / {trial.totalCount}
+              </Text>
+              <Text style={{ fontFamily: type.uiBold, fontSize: 12, color: c.muted }}>correct</Text>
+            </SlabCard>
+            <SlabCard tint="yellow" style={styles.stat}>
+              <Text style={{ fontFamily: type.heading, fontSize: 26, lineHeight: 30, color: c.ink }}>1</Text>
+              <Text style={{ fontFamily: type.uiBold, fontSize: 12, color: c.muted }}>lesson done</Text>
+            </SlabCard>
+          </Animated.View>
         )}
-      </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
-    </GradientBackground>
+
+        <Animated.View entering={enter(3)}>
+          <SlabCard style={{ gap: 6 }}>
+            <Text style={[styles.eyebrow, { fontFamily: type.uiHeavy, color: c.green }]}>Signing up saves</Text>
+            <Text style={{ fontFamily: type.uiBold, fontSize: 14, lineHeight: 20, color: c.ink }}>
+              {trial ? 'This lesson · your' : 'Your'} {languageName} course and level · your progress, from today
+            </Text>
+          </SlabCard>
+        </Animated.View>
+      </Ui2Screen>
+    );
+  }
+
+  // ─── The five form steps ────────────────────────────────────────────────
+  const prev: Partial<Record<Step, Step>> = {
+    idealSelf: 'language',
+    level: 'idealSelf',
+    identity: 'level',
+    goal: 'identity',
+  };
+  const goBack = prev[step] ? () => setStep(prev[step] as Step) : undefined;
+
+  let footer: React.ReactNode = null;
+  let body: React.ReactNode = null;
+
+  if (step === 'language') {
+    footer = <SlabButton label={`Continue with ${languageName}`} onPress={() => setStep('idealSelf')} />;
+    body = (
+      <>
+        <SpeechBubble text="What language do you want to learn?" mood={mood} />
+        <View style={styles.rows}>
+          {SUPPORTED_LANGUAGES.map((lang, i) => (
+            <OptionRow
+              key={lang.code}
+              index={i}
+              title={lang.name}
+              selected={targetLanguage === lang.code}
+              onSelect={() => {
+                setTargetLanguage(lang.code as LanguageCode);
+                cheer();
+              }}
+              lead={<FlagTile flag={lang.flag} />}
+            />
+          ))}
+        </View>
+      </>
+    );
+  }
+
+  if (step === 'idealSelf') {
+    const hasText = idealL2Self.trim().length > 0;
+    footer = (
+      <SlabButton label={hasText ? 'Continue' : 'Skip for now'} arrow={hasText} onPress={() => setStep('level')} />
+    );
+    body = (
+      <>
+        <SpeechBubble text={`Picture a moment you'd love to have in ${languageName}.`} mood="think" />
+        <Animated.View entering={enter(0)}>
+          <Text style={{ fontFamily: type.ui, fontSize: 14, lineHeight: 20, color: c.muted }}>
+            One sentence is enough. You can skip this if you&apos;d rather not say.
+          </Text>
+        </Animated.View>
+        <Animated.View entering={enter(1)}>
+          <SlabCard style={[styles.inputCard, { borderColor: c.primary }]}>
+            <TextInput
+              value={idealL2Self}
+              onChangeText={(text) => setIdealL2Self(text.slice(0, IDEAL_SELF_MAX_CHARS))}
+              placeholder={IDEAL_SELF_PLACEHOLDER[targetLanguage] ?? IDEAL_SELF_PLACEHOLDER.en}
+              placeholderTextColor={c.idle}
+              multiline
+              numberOfLines={4}
+              maxLength={IDEAL_SELF_MAX_CHARS}
+              style={[styles.multiline, { fontFamily: type.ui, color: c.ink }]}
+              accessibilityLabel="Your ideal L2 self — a sentence describing your language vision"
+            />
+            <Text style={{ fontFamily: type.uiHeavy, fontSize: 12, color: c.muted, textAlign: 'right' }}>
+              {idealL2Self.length} / {IDEAL_SELF_MAX_CHARS}
+            </Text>
+          </SlabCard>
+        </Animated.View>
+        <Animated.View entering={enter(2)} style={styles.chips}>
+          {IDEAL_SELF_STARTERS.map((s) => (
+            <Chip key={s.tag} label={s.tag} onPress={() => setIdealL2Self(s.text(languageName))} />
+          ))}
+        </Animated.View>
+      </>
+    );
+  }
+
+  if (step === 'level') {
+    footer = <SlabButton label="Continue" onPress={() => setStep('identity')} />;
+    body = (
+      <>
+        <SpeechBubble text="What's your level?" mood={mood} />
+        {/* The acronym used to be introduced on the removed mode step, and
+            this is now the first and only place a new user meets it — so it
+            defines itself here or nowhere. */}
+        <Animated.View entering={enter(0)}>
+          <Text style={{ fontFamily: type.ui, fontSize: 14, lineHeight: 20, color: c.muted }}>
+            Pick whichever is closest. Nothing here is a test, and you can change it any time. From
+            here on your progress is shown as a CEFR level — the A1 to C2 scale — stated as what you
+            can actually do.
+          </Text>
+        </Animated.View>
+        <View style={styles.rows}>
+          {LEVELS.map((l, i) => (
+            <OptionRow
+              key={l.value}
+              index={i + 1}
+              title={l.label}
+              subtitle={l.description}
+              selected={level === l.value}
+              onSelect={() => {
+                setLevel(l.value);
+                cheer();
+              }}
+              lead={<LevelBars lit={LEVEL_BARS[l.value]} />}
+              trail={<Chip label={cefrBandForProficiencyLevel(l.value)} />}
+            />
+          ))}
+        </View>
+      </>
+    );
+  }
+
+  /*
+    IKEA effect (DESIGN.md §UX Psychology Principles #4): the learner builds
+    something of their own before the sign-up gate, so leaving means
+    abandoning it rather than skipping a form.
+  */
+  if (step === 'identity') {
+    footer = <SlabButton label="Continue" onPress={() => setStep('goal')} />;
+    body = (
+      <>
+        <SpeechBubble text="Make it yours" mood={mood} />
+        <Animated.View entering={enter(0)}>
+          <Text style={{ fontFamily: type.ui, fontSize: 14, lineHeight: 20, color: c.muted }}>
+            Pick a name and a look. This is who you&apos;ll be in {languageName}.
+          </Text>
+        </Animated.View>
+        <Animated.View entering={enter(1)}>
+          <SlabCard style={[styles.inputCard, { borderColor: c.primary }]}>
+            <TextInput
+              value={displayName}
+              onChangeText={(text) => setDisplayName(text.slice(0, DISPLAY_NAME_MAX_CHARS))}
+              placeholder="What should we call you?"
+              placeholderTextColor={c.idle}
+              maxLength={DISPLAY_NAME_MAX_CHARS}
+              style={[styles.singleLine, { fontFamily: type.uiHeavy, color: c.ink }]}
+              accessibilityLabel="Your display name"
+              autoFocus={!displayName}
+            />
+          </SlabCard>
+        </Animated.View>
+        <Animated.View entering={enter(2)}>
+          <Text style={[styles.eyebrow, { fontFamily: type.uiHeavy, color: c.muted }]}>Pick a look</Text>
+        </Animated.View>
+        <Animated.View entering={enter(3)}>
+          <SlabCard style={styles.avatarRow}>
+            <Avatar
+              size="medium"
+              imageUri={avatarPresetId ? presetUrlFromId(avatarPresetId) : null}
+              displayName={displayName}
+            />
+            <View style={{ flex: 1 }}>
+              <SlabButton
+                label={avatarPresetId ? 'Change avatar' : 'Choose avatar'}
+                variant="onPrimary"
+                arrow={false}
+                onPress={() => setCustomizerOpen(true)}
+              />
+            </View>
+          </SlabCard>
+        </Animated.View>
+
+        {/* Pre-auth, deliberately. The preset catalogue is anon-readable
+            (migration 082) precisely so this step keeps its avatar — the
+            IKEA effect above depends on the learner building something
+            before the sign-up gate, not after it. The choice rides in the
+            local draft and is flushed by writeProfile once a session
+            exists; nothing is written server-side here. */}
+        <AvatarPresetPicker
+          visible={customizerOpen}
+          selectedId={avatarPresetId}
+          onClose={() => setCustomizerOpen(false)}
+          onSelect={(preset: AvatarPreset) => {
+            setAvatarPresetId(preset.id);
+            setCustomizerOpen(false);
+            cheer();
+          }}
+        />
+      </>
+    );
+  }
+
+  if (step === 'goal') {
+    // No bundled trial for this language yet — skip to the loader rather
+    // than teach the wrong one (components/onboarding/trial-lesson.ts).
+    footer = (
+      <SlabButton
+        label={trialAvailable ? 'Start my first lesson' : 'Continue'}
+        onPress={() => setStep(trialAvailable ? 'lesson' : 'building')}
+      />
+    );
+    body = (
+      <>
+        <SpeechBubble text="How much time do you have?" mood={mood} />
+        <Animated.View entering={enter(0)}>
+          <Text style={{ fontFamily: type.ui, fontSize: 14, lineHeight: 20, color: c.muted }}>
+            This sets the length of your daily session. Nothing breaks if you skip a day.
+          </Text>
+        </Animated.View>
+        <View style={styles.rows}>
+          {/* No commitment labels. The scale used to end at "Insane", which
+              dares the learner into a budget they will miss, and a missed
+              daily goal is the first step out of the habit. */}
+          {DAILY_GOALS.map((goal, i) => (
+            <OptionRow
+              key={goal}
+              index={i + 1}
+              title={`${goal} minutes`}
+              subtitle={goal <= 5 ? 'One quick exercise' : goal <= 10 ? 'A short session' : goal <= 15 ? 'A full session' : 'Session plus a read'}
+              selected={dailyGoal === goal}
+              onSelect={() => {
+                setDailyGoal(goal);
+                cheer();
+              }}
+              lead={<Chip label={`${goal}`} />}
+              accessibilityLabel={`${goal} minutes per day`}
+            />
+          ))}
+        </View>
+      </>
+    );
+  }
+
+  return (
+    <Ui2Screen footer={footer}>
+      {/* Step indicator — always shows real, non-zero progress (goal gradient,
+          DESIGN.md §UX Psychology Principles #2). */}
+      <StepHeader step={stepIndex + 1} total={ALL_STEPS.length} onBack={goBack} />
+      {/* Keyed on the step so the body remounts and every entering animation
+          replays: the slide-in bubble, the row cascade. */}
+      <View key={step} style={styles.stepBody}>
+        {body}
+      </View>
+    </Ui2Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  centerCol: { alignItems: 'center', gap: 12, paddingTop: 8 },
+  stepBody: { gap: 18 },
+  rows: { gap: 10 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  inputCard: { gap: 10 },
+  multiline: { fontSize: 16, lineHeight: 24, minHeight: 110, textAlignVertical: 'top', padding: 0 },
+  singleLine: { fontSize: 16, lineHeight: 22, padding: 0, minHeight: 28 },
+  avatarRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  eyebrow: { fontSize: 12, letterSpacing: 1, textTransform: 'uppercase' },
+  levelCard: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  levelBadge: { width: 56, height: 56, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  levelText: { flex: 1, gap: 3 },
+  statRow: { flexDirection: 'row', gap: 12 },
+  stat: { flex: 1, gap: 2, padding: 14 },
+  bars: { flexDirection: 'row', alignItems: 'flex-end', gap: 3, height: 22 },
+  bar: { width: 5, borderRadius: 2 },
+  flagTile: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  flagGlyph: { fontSize: 20 },
+});
