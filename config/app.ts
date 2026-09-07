@@ -32,6 +32,42 @@ export const HANDSFREE_DEFAULTS = {
   maxQueueItems: 60,
 } as const;
 
+// Live voice tutor — the speech-to-speech call.
+//
+// OFF for the first TestFlight. This is the CLIENT-side kill switch and it
+// controls exactly one thing: whether the tutor entry point exists in the UI.
+// It does not and cannot stop spend — a build already in someone's hands has
+// its own copy of this constant. The server-side switch is the one that binds:
+// `get_effective_limits` returning `dailyTutorMinutes: 0`, which makes `start`
+// answer TUTOR_NOT_ENTITLED for everyone regardless of what any binary thinks.
+// Turn both off if the feature misbehaves; turn this one off first, because it
+// is the one that ships without a deploy.
+//
+// Unverified on hardware at the time this was written: WebRTC over cellular
+// and behind carrier NAT, audio routing to and from Bluetooth, what an
+// incoming phone call does to a live session, and whether the ephemeral
+// credential survives a backgrounded app long enough to matter. Any of those
+// misbehaving is a reason to set this back to false — the entry point is the
+// only thing that disappears, and an in-flight call is unaffected.
+export const TUTOR_ENABLED = false;
+
+export const TUTOR_DEFAULTS = {
+  /** What the client ASKS for. The server grants the smaller of this, what is
+   *  left of the day, and what is left of the month — see `resolveGrant` in
+   *  supabase/functions/_shared/tutor-pricing.ts. Asking for less than the
+   *  daily allowance on purpose: a learner who wants a second call today
+   *  should still have the minutes for one. */
+  requestedMinutes: 10,
+  /** Fallback heartbeat cadence, in seconds. The server sends the real value
+   *  as `heartbeatIntervalSeconds` on `start`; this is only what to use before
+   *  that response has arrived, and it must stay well under the reaper's
+   *  abandonment window. */
+  heartbeatSeconds: 20,
+  /** Longest a single call may run regardless of budget. A ceiling on the
+   *  worst case where every other bound has failed. */
+  maxSessionMs: 60 * 60 * 1000,
+} as const;
+
 export const SRS_DEFAULTS = {
   initialEaseFactor: 2.5,
   minimumEaseFactor: 1.3,

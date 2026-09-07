@@ -34,7 +34,14 @@ export type ScreenName =
   | 'paywall'
   | 'onboarding'
   | 'checkpoint'
-  | 'news';
+  | 'news'
+  // The live tutor is three screens, not one: choosing a tutor and a
+  // correction mode, the call itself, and the debrief afterwards. Collapsing
+  // them would hide the two drop-offs that matter — never placing the call,
+  // and never reading what came out of it.
+  | 'tutor'
+  | 'tutor_call'
+  | 'tutor_debrief';
 
 export function useScreenView(screen: ScreenName, props: EventProperties = {}): void {
   // Only the primitive fields are dependencies: depending on the object itself

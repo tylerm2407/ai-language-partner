@@ -1,5 +1,24 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
   <uses-permission android:name="android.permission.INTERNET"/>
+  <!-- Live voice tutor (react-native-webrtc). Only these two are missing:
+       everything else WebRTC wants (INTERNET, RECORD_AUDIO,
+       MODIFY_AUDIO_SETTINGS, SYSTEM_ALERT_WINDOW) is already declared above.
+
+       Added BY HAND rather than via @config-plugins/react-native-webrtc,
+       for two reasons. That plugin only takes effect through `expo prebuild`,
+       which regenerates this file and would delete the MusicService block
+       below — killing Android background news playback. And it injects
+       android.permission.CAMERA, which drags in Play Console permission
+       declarations for a feature that captures no video.
+
+       Skipping the plugin leaks nothing: the library's own manifest declares
+       no permissions at all, only a MediaProjectionService we never start.
+
+       NOT added: BLUETOOTH. The plugin adds the legacy one (maxSdkVersion 30);
+       if Bluetooth headset routing is wanted later the modern spelling is
+       BLUETOOTH_CONNECT. -->
+  <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+  <uses-permission android:name="android.permission.WAKE_LOCK"/>
   <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
   <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
   <uses-permission android:name="android.permission.RECORD_AUDIO"/>

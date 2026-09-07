@@ -7,8 +7,10 @@ import { useOfflineQueueFlush } from '../../hooks/useOfflineQueueFlush';
 import { useLessonSessionSweep } from '../../hooks/useLessonSessionSweep';
 import { useOnboardingReconciliation } from '../../hooks/useOnboardingReconciliation';
 import { useTimezoneSync } from '../../hooks/useProfile';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 
 export default function AppLayout() {
+  const { c } = useUi2Theme();
   // Replay queued offline writes on mount / reconnect / foreground.
   useOfflineQueueFlush();
   useLessonSessionSweep();
@@ -47,7 +49,7 @@ export default function AppLayout() {
 
   return (
     <ErrorBoundary>
-      <View className="flex-1 bg-dark">
+      <View className="flex-1" style={{ backgroundColor: c.bg }}>
         <OfflineBanner />
         <Tabs
           tabBar={(props) => <FloatingTabBar {...props} />}
@@ -65,6 +67,16 @@ export default function AppLayout() {
             name="learn"
             options={{
               title: 'Learn',
+            }}
+          />
+          {/* Tab ORDER is this declaration order, not the order of
+              VISIBLE_TABS in FloatingTabBar — the bar filters `state.routes`,
+              which the navigator keeps in the order its screens were declared.
+              Tutor sits between Learn and Chat so it takes the centre slot. */}
+          <Tabs.Screen
+            name="tutor"
+            options={{
+              title: 'Tutor',
             }}
           />
           <Tabs.Screen

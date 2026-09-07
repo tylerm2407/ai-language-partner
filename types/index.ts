@@ -966,3 +966,75 @@ export interface ConversationGrade {
   strengths: string[];
   improvements: string[];
 }
+
+// ─── Live Voice Tutor ───────────────────────────────────────────
+
+/**
+ * The written debrief a live tutor session produces.
+ *
+ * This is the shape of the `tutor_sessions.debrief` jsonb column (migration
+ * 107), written by `supabase/functions/_shared/tutor-writeback.ts`. It lives
+ * here rather than beside a caller because CLAUDE.md section 3 puts DB row
+ * shapes in this file, and because TWO client call sites return one —
+ * `endTutorSession` inline at the end of a call, and `fetchTutorSessionSummary`
+ * when the debrief screen has to poll for a late analysis.
+ *
+ * It is a MIRROR of the interfaces in
+ * `supabase/functions/_shared/tutor-analysis.ts`. Those run under Deno and
+ * cannot be imported from the app, so the two definitions are held together by
+ * review rather than by the compiler. If you change one, change both.
+ *
+ * THE LANGUAGE SPLIT IS DELIBERATE and the UI has to respect it: everything
+ * here is in the learner's NATIVE language except `theirs`, `better` and
+ * `phrase`, which stay in the language being learned. That is the same split
+ * `ai-chat/prompt.ts` CORRECTION RULES already enforce — clarity beats
+ * immersion when the learner is reading a rule about their own mistake.
+ */
+export interface TutorDebriefPattern {
+  /** Native language: what to call this mistake. */
+  label: string;
+  /** Native language: why it is wrong. */
+  why: string;
+  /** TARGET language: what the learner actually said. */
+  theirs: string;
+  /** TARGET language: what a native speaker would say. */
+  better: string;
+}
+
+export interface TutorDebriefPhrase {
+  /** TARGET language. */
+  phrase: string;
+  /** Native language. */
+  meaning: string;
+  /** Native language: when to reach for it. */
+  when: string;
+}
+
+export interface TutorDebrief {
+  /** Something the learner actually said that worked, quoted back to them. */
+  highlight: string;
+  /**
+   * At most three, each having occurred at least twice, most frequent first.
+   * These are PATTERNS, not an error list — a debrief enumerating every mistake
+   * is a punishment, and a learner who feels punished stops speaking. An empty
+   * array is a good outcome, not a missing one.
+   */
+  patterns: TutorDebriefPattern[];
+  /** At most three phrases they could have used but did not. */
+  reachFor: TutorDebriefPhrase[];
+  /** One concrete thing to try next time. */
+  nextTime: string;
+  /**
+   * Always the SERVER's measurement, never the model's — it has no clock, and
+   * this is the one number in the debrief a learner will actually check.
+   */
+  minutesSpoken: number;
+}
+
+/** A finished session as the lobby and debrief screens read it back. */
+export interface TutorSessionSummary {
+  sessionId: string;
+  minutes: number;
+  debrief: TutorDebrief | null;
+  endedAt: string | null;
+}

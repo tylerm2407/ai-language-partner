@@ -68,6 +68,19 @@ type EventName =
   /** A learner saved a word from reading into their SRS deck. */
   | 'card_saved'
 
+  // ── The live voice tutor. Reach and retention for the most expensive thing
+  //    the product does — a session nobody starts twice is a pricing problem.
+  | 'tutor_session_started'
+  /** Ended for ANY reason. The reason travels in `code` (the server's
+   *  `end_reason`) and the duration in `count` (seconds), because
+   *  `EventProperties` is closed and neither deserves a key of its own. */
+  | 'tutor_session_ended'
+  /** The learner changed how they want to be corrected. The mode travels in
+   *  `source`. This is the only setting in the app that is a statement about
+   *  how someone copes with being interrupted, and which way people move is
+   *  worth knowing before the default is chosen for them. */
+  | 'tutor_correction_mode_changed'
+
   // ── The wall: every place the product says no. The churn events.
   | 'quota_exhausted'
   | 'feature_unavailable'

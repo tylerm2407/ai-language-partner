@@ -155,3 +155,25 @@ verify_jwt = true
 
 [functions.score-pronunciation]
 verify_jwt = true
+
+# ─── tutor-session ────────────────────────────────────────────────────────
+# MUST be false, for the same reason as ai-chat: the function authenticates
+# every request itself with supabase.auth.getUser(token), which works whatever
+# signing algorithm this project is configured for, whereas the platform gate
+# has historically rejected valid tokens here. Without an entry the CLI
+# defaults this to TRUE and every call from the app 401s before reaching a line
+# of our code — which looks like an auth bug in the client and is not.
+#
+# Nothing is left unguarded by turning it off: verifyBearer runs before any
+# dispatch, and each of the three actions re-checks that the caller owns the
+# session it names, because a valid token for user A must not be able to
+# heartbeat, settle or read the debrief of user B's session.
+[functions.tutor-session]
+verify_jwt = false
+
+# ─── tutor-session-reaper ─────────────────────────────────────────────────
+# MUST be false. pg_cron cannot present a Supabase user JWT, so the platform
+# gate would reject every tick. Auth is a bearer comparison against CRON_SECRET
+# read from Vault, the same pattern daily-news-audio-cron uses.
+[functions.tutor-session-reaper]
+verify_jwt = false

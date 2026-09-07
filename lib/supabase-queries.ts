@@ -6,6 +6,7 @@ import { CEFR_BAND_BY_LEVEL, CEFR_LADDER,
 } from './cefr-proficiency';
 import { localToday } from './dates';
 import { trackEvent, trackRefusal } from './analytics';
+import { asTutorDebrief } from './tutor-api';
 import { wordTokens } from './reading-text';
 import type {
   ProficiencyEvidence,
@@ -66,6 +67,8 @@ import type {
   LanguageCode,
   ProficiencyLevel,
   SubmissionStatus,
+  TutorDebrief,
+  TutorSessionSummary,
 } from '../types';
 
 // ─── User Profile ───────────────────────────────────────────────
@@ -3710,4 +3713,115 @@ export async function reportAiContent(params: {
     context: params.context ?? {},
   });
   if (error) throw error;
+}
+
+// ─── Tutor Sessions ─────────────────────────────────────────────
+// The learner's own view of `tutor_sessions` (migration 107). Owner-readable
+// via RLS and deliberately read-only: `granted_cents` and `observed_seconds`
+// ARE the spend ceiling's accounting and `debrief` is model output, so there
+// is no INSERT/UPDATE/DELETE policy at all. Everything that writes this table
+// writes it from the `tutor-session` edge function under the service role.
+//
+// It grows without bound — one row per call, forever — so every query here
+// takes a `.limit()`, per the rule in CLAUDE.md §4.
+
+/** A finished call, as the home screen wants to mention it. */
+export interface LastTutorSession {
+  /** Whole minutes, floored at 1: a 40-second call is a short call, not none. */
+  minutes: number;
+  /** The debrief's `highlight` — the one thing that went well. Null when the
+   *  session has no debrief yet (still being analysed, or the transcript
+   *  buffer expired before `end` ran). */
+  headline: string | null;
+}
+
+/**
+ * The learner's most recent COMPLETED tutor session.
+ *
+ * Open sessions are excluded on `ended_at`: an in-flight call has no observed
+ * duration and no debrief, so surfacing it would render "0 minutes" next to an
+ * empty headline. `end_reason` is read but not filtered on — a session that
+ * ended on 'budget' or 'safety' still happened and the learner still spoke.
+ */
+export async function fetchLastTutorSession(
+  userId: string,
+): Promise<LastTutorSession | null> {
+  const { data, error } = await supabase
+    .from('tutor_sessions')
+    .select('observed_seconds, debrief, ended_at')
+    .eq('user_id', userId)
+    .not('ended_at', 'is', null)
+    .order('ended_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+
+  return {
+    minutes: tutorMinutesFromSeconds(data.observed_seconds as number | null),
+    headline: tutorHeadline(data.debrief),
+  };
+}
+
+/**
+ * One session by id.
+ *
+ * No `user_id` filter here and none is needed — the RLS policy is
+ * `(select auth.uid()) = user_id`, so another learner's id returns no rows
+ * rather than someone else's debrief. `.limit(1)` regardless: `id` is the
+ * primary key so it cannot return more, and the rule does not have exceptions
+ * worth remembering per call site.
+ *
+ * `minutes` comes from `observed_seconds` — the same number the ledger bills
+ * against — rather than from `debrief.minutesSpoken`, which the writer already
+ * overwrites from the server measurement. Reading the column keeps them one
+ * value even if an older row was written before that was true.
+ */
+export async function fetchTutorSessionSummary(
+  sessionId: string,
+): Promise<TutorSessionSummary | null> {
+  const { data, error } = await supabase
+    .from('tutor_sessions')
+    .select('id, observed_seconds, debrief, ended_at')
+    .eq('id', sessionId)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+
+  return {
+    sessionId: data.id as string,
+    minutes: tutorMinutesFromSeconds(data.observed_seconds as number | null),
+    debrief: asTutorDebrief(data.debrief),
+    // Null means the session is still open. The debrief screen polls on
+    // exactly this: a null `endedAt` with a null `debrief` is "still being
+    // written", where a set `endedAt` with a null `debrief` is "there will
+    // not be one" — two states that look identical without this column.
+    endedAt: (data.ended_at as string | null) ?? null,
+  };
+}
+
+/**
+ * Seconds the server observed → whole minutes to show.
+ *
+ * Floored at 1 for anything that actually happened. Rounding a 40-second call
+ * to "0 minutes" reads as a bug rather than as a short session — the same
+ * choice `end.ts` makes server-side, kept identical so the debrief screen and
+ * the home screen cannot disagree about one call.
+ */
+function tutorMinutesFromSeconds(seconds: number | null): number {
+  const s = typeof seconds === 'number' && Number.isFinite(seconds) ? seconds : 0;
+  if (s <= 0) return 0;
+  return Math.max(1, Math.round(s / 60));
+}
+
+/** The debrief's headline, or nothing. Never a placeholder sentence — the
+ *  caller decides what an unanalysed session looks like, and it is not the
+ *  same thing as a session whose highlight happened to be empty. */
+function tutorHeadline(debrief: unknown): string | null {
+  const parsed: TutorDebrief | null = asTutorDebrief(debrief);
+  const headline = parsed?.highlight.trim() ?? '';
+  return headline.length > 0 ? headline : null;
 }

@@ -29,6 +29,30 @@ jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: 'SafeAreaView
 jest.mock('../components/ui/GlowBackground', () => ({ GlowLayer: 'GlowLayer' }));
 jest.mock('../lib/analytics', () => ({ trackEvent: jest.fn() }));
 
+// The UI 2.0 primitives the screen now uses animate and buzz, so they reach for
+// two native modules that do not exist under jest. Same stand-ins as
+// components/ui2/ui2-primitives.test.tsx: a shared value is a plain box, an
+// animated style is its factory evaluated once, and a spring settles instantly.
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  __esModule: true,
+  default: {
+    setItem: jest.fn(async () => {}),
+    getItem: jest.fn(async () => null),
+    removeItem: jest.fn(async () => {}),
+  },
+}));
+jest.mock('react-native-reanimated', () => {
+  const { View } = jest.requireActual('react-native');
+  return {
+    __esModule: true,
+    default: { View },
+    useSharedValue: (initial: number) => ({ value: initial }),
+    useAnimatedStyle: (factory: () => unknown) => factory(),
+    withSpring: (to: number) => to,
+    FadeInDown: { delay: () => ({ duration: () => ({}) }) },
+  };
+});
+
 const mockReplace = jest.fn();
 const mockBack = jest.fn();
 const mockCanGoBack = jest.fn(() => false);

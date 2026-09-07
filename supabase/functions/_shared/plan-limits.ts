@@ -72,6 +72,37 @@ export interface PlanLimits {
    * rather than taking it from the caller. Review of already-learned material
    * is uncapped on every tier.
    */
+  /**
+   * Minutes of LIVE VOICE TUTOR per day (migration 107/109), metered on
+   * `daily_usage.tutor_seconds` as integer SECONDS.
+   *
+   * Deliberately separate from `dailyVoiceMinutes`. That counter pays for the
+   * transcribe + tts cascade at roughly $0.02/min; the Realtime tutor is about
+   * five times that per minute, and one wallet meaning two prices mis-prices
+   * both. Keeping them apart is also what stops a learner spending their
+   * pronunciation-practice allowance on a conversation, or the reverse.
+   *
+   * This is the DAILY shape of the cap, and it is the weaker of the two: it
+   * stops one bad day and stops a learner burning the month on day one. The
+   * ceiling that actually guarantees the margin is `monthlyTutorCents`.
+   */
+  dailyTutorMinutes: number;
+  /**
+   * The per-user monthly SPEND ceiling for the live tutor, in cents
+   * (migration 109), metered on `monthly_usage.tutor_cents`.
+   *
+   * The 2026-09-04 cost pass concluded that a worst-case margin floor "is NOT
+   * reachable by caps" and that a per-user monthly spend ceiling was the only
+   * mechanism that guarantees one by construction. This is that mechanism, and
+   * the live tutor is the feature that forced it: it is the one thing in the
+   * app whose worst case is margin-negative.
+   *
+   * Denominated in cents INTERNALLY and minutes EXTERNALLY. A learner must
+   * never be shown a dollar figure for their remaining AI. Divide by
+   * `_shared/tutor-pricing.ts` TUTOR_CENTS_PER_MINUTE to get the minutes the
+   * plan is actually sold on — roughly 24 / 66 / 116 per month.
+   */
+  monthlyTutorCents: number;
   dailyNewCards: number;
   /**
    * Hints served by `get-hint` per day, metered on `daily_usage.hints_generated`
@@ -143,10 +174,10 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
   // Classroom students are unaffected — their org's contract_config is merged
   // in by get_effective_limits with GREATEST(), so a 0 personal quota still
   // resolves to the school's allowance.
-  starter:   { dailyTextMessages: 0,  dailyVoiceMinutes: 0,  dailyTranslations: 10, dailyWordLookups: 60,  dailyWritingGrades: 0,  dailyPronunciationScores: 0, dailyLessonTtsPlays: 5,   monthlyAvatarGenerations: 0, dailyNewCards: 5,    dailyHints: 5,   dailyGoalTracks: 1, dailyAudiobookChapters: 0, dailyChatCards: 3,    offlineMode: false },
-  basic:     { dailyTextMessages: 20, dailyVoiceMinutes: 6,  dailyTranslations: 30, dailyWordLookups: 300, dailyWritingGrades: 3,  dailyPronunciationScores: 3, dailyLessonTtsPlays: 25,  monthlyAvatarGenerations: 3, dailyNewCards: 20,   dailyHints: 30,  dailyGoalTracks: 1, dailyAudiobookChapters: 0, dailyChatCards: 15,   offlineMode: false },
-  premium:   { dailyTextMessages: 50, dailyVoiceMinutes: 12, dailyTranslations: 60, dailyWordLookups: 600, dailyWritingGrades: 7,  dailyPronunciationScores: 5, dailyLessonTtsPlays: 50, monthlyAvatarGenerations: 3, dailyNewCards: 9999, dailyHints: 75,  dailyGoalTracks: 1, dailyAudiobookChapters: 3, dailyChatCards: 30,   offlineMode: true },
-  vip:       { dailyTextMessages: 75, dailyVoiceMinutes: 18, dailyTranslations: 90, dailyWordLookups: 800, dailyWritingGrades: 12, dailyPronunciationScores: 7, dailyLessonTtsPlays: 80, monthlyAvatarGenerations: 3, dailyNewCards: 9999, dailyHints: 150, dailyGoalTracks: 1, dailyAudiobookChapters: 5, dailyChatCards: 50, offlineMode: true },
+  starter:   { dailyTextMessages: 0,  dailyVoiceMinutes: 0,  dailyTranslations: 10, dailyWordLookups: 60,  dailyWritingGrades: 0,  dailyPronunciationScores: 0, dailyLessonTtsPlays: 5,   monthlyAvatarGenerations: 0, dailyNewCards: 5,    dailyHints: 5,   dailyGoalTracks: 1, dailyAudiobookChapters: 0, dailyChatCards: 3,    dailyTutorMinutes: 0, monthlyTutorCents: 0, offlineMode: false },
+  basic:     { dailyTextMessages: 20, dailyVoiceMinutes: 6,  dailyTranslations: 30, dailyWordLookups: 300, dailyWritingGrades: 3,  dailyPronunciationScores: 3, dailyLessonTtsPlays: 25,  monthlyAvatarGenerations: 3, dailyNewCards: 20,   dailyHints: 30,  dailyGoalTracks: 1, dailyAudiobookChapters: 0, dailyChatCards: 15,   dailyTutorMinutes: 15, monthlyTutorCents: 300, offlineMode: false },
+  premium:   { dailyTextMessages: 50, dailyVoiceMinutes: 12, dailyTranslations: 60, dailyWordLookups: 600, dailyWritingGrades: 7,  dailyPronunciationScores: 5, dailyLessonTtsPlays: 50, monthlyAvatarGenerations: 3, dailyNewCards: 9999, dailyHints: 75,  dailyGoalTracks: 1, dailyAudiobookChapters: 3, dailyChatCards: 30,   dailyTutorMinutes: 30, monthlyTutorCents: 800, offlineMode: true },
+  vip:       { dailyTextMessages: 75, dailyVoiceMinutes: 18, dailyTranslations: 90, dailyWordLookups: 800, dailyWritingGrades: 12, dailyPronunciationScores: 7, dailyLessonTtsPlays: 80, monthlyAvatarGenerations: 3, dailyNewCards: 9999, dailyHints: 150, dailyGoalTracks: 1, dailyAudiobookChapters: 5, dailyChatCards: 50, dailyTutorMinutes: 45, monthlyTutorCents: 1400, offlineMode: true },
 };
 
 export function getPlanLimits(tier: string): PlanLimits {
@@ -226,6 +257,15 @@ export async function getEffectiveLimits(
         typeof row.dailyAudiobookChapters === 'number'
           ? row.dailyAudiobookChapters
           : base.dailyAudiobookChapters,
+      // Added by migration 109, so the RPC DOES return both, school override
+      // included. Same fallback discipline as dailyChatCards: if an older
+      // deployment of get_effective_limits is somehow still live, fall through
+      // to the tier floor rather than inventing a value. Under-serving a limit
+      // is recoverable; handing out unmetered Realtime minutes is not.
+      dailyTutorMinutes:
+        typeof row.dailyTutorMinutes === 'number' ? row.dailyTutorMinutes : base.dailyTutorMinutes,
+      monthlyTutorCents:
+        typeof row.monthlyTutorCents === 'number' ? row.monthlyTutorCents : base.monthlyTutorCents,
       offlineMode: row.offlineMode === true || row.offline_mode === true || false,
     };
   } catch {

@@ -17,13 +17,20 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, corsResponse } from '../_shared/cors.ts';
 import { getEffectiveLimits } from '../_shared/plan-limits.ts';
-import { combinedScore, scoreTurn } from '../_shared/turn-accuracy.ts';
 import { getScenario } from '../_shared/scenarios.ts';
 import { buildSystemPrompt, buildTopicTurn, usesPromptFirstCorrection } from './prompt.ts';
 // parseAIResponse/normalizeCorrection/normalizeVocabulary moved to parse.ts so
 // they can be tested: index.ts calls serve() at module scope, so importing it
 // from a test would stand up an HTTP listener.
-import { parseAIResponse, type ParsedAIResponse, type VocabHighlight } from './parse.ts';
+import { parseAIResponse, type ParsedAIResponse } from './parse.ts';
+// The two write-backs a turn leaves behind — the SRS cards and the proficiency
+// evidence — live in _shared for the same reason and one more. The reason:
+// they could not be tested from here. The extra one: `tutor-session` has to
+// perform both with exactly this quota discipline, and a second copy of the
+// charge/refund ordering would drift silently, in the direction of charging a
+// learner for cards that do not exist.
+import { saveChatVocabulary } from '../_shared/chat-vocabulary.ts';
+import { recordConversationEvidence } from '../_shared/conversation-evidence.ts';
 import { actInstruction, selectDialogueAct, type DialogueAct } from './dialogue-act.ts';
 import { chatStreamResponse } from './stream.ts';
 import { floorShareNote, pushNote, selectPushStance } from './turn-policy.ts';
@@ -825,179 +832,13 @@ function windowMessages(
 
 // ─── What a conversation leaves behind ──────────────────────────────────
 //
-// Both helpers are best-effort by construction. The learner already has their
-// reply by the time either runs, so every failure path here logs and returns
-// rather than throwing — a lost card or a lost data point must never cost
-// someone their conversation.
-
-interface EvidenceInput {
-  userId: string;
-  targetLanguage: string;
-  cefrLevel: string;
-  modality: 'speaking' | 'writing';
-  text: string;
-  correction: CorrectionDetail | null;
-  recognizerConfidence?: number;
-}
-
-/**
- * Record this turn as proficiency evidence, if it is any.
- *
- * `scoreTurn` returns null for turns that should not count — too short to be
- * a language sample, or spoken and not clearly heard. That refusal is the
- * point: a wrong data point in a measured CEFR level is worse than a missing
- * one, because the learner reads the level and acts on it.
- */
-// deno-lint-ignore no-explicit-any
-async function recordConversationEvidence(supabase: any, input: EvidenceInput): Promise<void> {
-  try {
-    const score = scoreTurn({
-      modality: input.modality,
-      text: input.text,
-      correction: input.correction,
-      recognizerConfidence: input.recognizerConfidence ?? null,
-    });
-    if (!score) return;
-
-    await supabase.from('conversation_evidence').insert({
-      user_id: input.userId,
-      target_language: input.targetLanguage,
-      cefr_level: input.cefrLevel,
-      modality: input.modality,
-      intelligibility: score.intelligibility,
-      accuracy: score.accuracy,
-      word_count: score.wordCount,
-    });
-  } catch (err) {
-    console.warn('[ai-chat] conversation_evidence write failed (non-fatal):', err);
-  }
-}
-
-interface VocabSaveInput {
-  userId: string;
-  targetLanguage: string;
-  cefrLevel: string;
-  words: VocabHighlight[];
-  limit: number;
-}
-
-/**
- * Turn the words the tutor just taught into review cards.
- *
- * This closes a loop whose other half already existed: `learner-context.ts`
- * has always pulled struggling cards back into the tutor's prompt, so the
- * moment these words become cards the tutor starts reusing tomorrow what it
- * introduced today, with no further work.
- *
- * Order matters here. Dedupe first because it is free and a repeat word must
- * not cost a slot; charge second, because `consume_daily_quota` is the atomic
- * check-and-increment and charging after the insert would let concurrent
- * turns both pass; refund on any failure after the charge, which is precisely
- * why `chat_cards` was added to the refund whitelist in migration 095.
- *
- * Returns the words that actually became cards, so the UI can tell the
- * learner which ones are coming back.
- */
-// deno-lint-ignore no-explicit-any
-async function saveChatVocabulary(supabase: any, input: VocabSaveInput): Promise<string[]> {
-  const saved: string[] = [];
-  // A tutor turn offering more than this is not teaching vocabulary, it is
-  // listing it — and each entry costs a quota slot and two round trips.
-  const candidates = input.words.filter((w) => w.word && w.translation).slice(0, 3);
-  if (candidates.length === 0 || input.limit <= 0) return saved;
-
-  for (const { word, translation } of candidates) {
-    try {
-      // Already studying it? Nothing to do, and nothing to charge. Without
-      // this a tutor that says "la cuenta" across ten sessions would build
-      // ten cards, each with its own independent SM-2 schedule.
-      const { data: existing } = await supabase
-        .from('cards')
-        .select('id')
-        .eq('user_id', input.userId)
-        .eq('language', input.targetLanguage)
-        .ilike('target_text', word)
-        .limit(1);
-      if (Array.isArray(existing) && existing.length > 0) continue;
-
-      const { data: allowed, error: quotaErr } = await supabase.rpc('consume_daily_quota', {
-        p_user_id: input.userId,
-        p_counter: 'chat_cards',
-        p_limit: input.limit,
-        p_amount: 1,
-      });
-      // Fail closed on a broken counter, and stop trying for this turn — the
-      // next word would hit the same error.
-      if (quotaErr) {
-        console.warn('[ai-chat] chat_cards quota check failed:', quotaErr.message);
-        break;
-      }
-      if (allowed !== true) break; // day's allowance spent
-
-      const { data: card, error: cardErr } = await supabase
-        .from('cards')
-        .insert({
-          user_id: input.userId,
-          course_id: null,
-          unit_id: null,
-          native_text: translation,
-          target_text: word,
-          language: input.targetLanguage,
-          // Tagged with the level the conversation was held at. Without this
-          // the card is invisible to `analyzeBands`, which skips items with a
-          // null cefr_level — the card would exist, be reviewed, and still
-          // never count toward the learner's own measured vocabulary.
-          cefr_level: input.cefrLevel,
-          skill_type: 'vocabulary',
-          source_type: 'manual',
-          tags: ['chat', 'vocabulary'],
-        })
-        .select('id')
-        .single();
-
-      if (cardErr || !card) {
-        await supabase.rpc('refund_daily_quota', {
-          p_user_id: input.userId,
-          p_counter: 'chat_cards',
-          p_amount: 1,
-        });
-        console.warn('[ai-chat] chat card insert failed:', cardErr?.message);
-        continue;
-      }
-
-      const { error: reviewErr } = await supabase.from('review_items').upsert(
-        {
-          user_id: input.userId,
-          card_id: card.id,
-          ease_factor: 2.5,
-          interval: 0,
-          repetitions: 0,
-          next_due: new Date().toISOString(),
-          last_reviewed_at: null,
-          status: 'new',
-        },
-        { onConflict: 'user_id,card_id' },
-      );
-      if (reviewErr) {
-        // The card exists but is not scheduled, so it is not a review card and
-        // should not have been charged for.
-        await supabase.rpc('refund_daily_quota', {
-          p_user_id: input.userId,
-          p_counter: 'chat_cards',
-          p_amount: 1,
-        });
-        console.warn('[ai-chat] chat card review_item failed:', reviewErr.message);
-        continue;
-      }
-
-      saved.push(word);
-    } catch (err) {
-      console.warn('[ai-chat] chat vocabulary save failed (non-fatal):', err);
-    }
-  }
-
-  return saved;
-}
+// `saveChatVocabulary` and `recordConversationEvidence` used to live here.
+// They now live in `_shared/chat-vocabulary.ts` and
+// `_shared/conversation-evidence.ts`, imported at the top of this file,
+// because `tutor-session` must do both with exactly the same quota discipline
+// and the same definition of what counts as a language sample. Both are still
+// best-effort by construction: the learner has their reply before either runs,
+// so every failure path logs and returns rather than throwing.
 
 /**
  * How well the learner has been doing lately at the level they are on.

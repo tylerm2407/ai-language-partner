@@ -7,6 +7,11 @@ Progress is expressed as **measured proficiency, not points**. XP still accrues 
 
 The most important constraints:
 1. Every AI interaction passes through the content-safety + CEFR level-check pipeline (`supabase/functions/_shared/validated-generate.ts`).
+
+   **One exception, and only one: the live voice tutor (`supabase/functions/tutor-session`).** It is a speech-to-speech WebRTC session between the learner's device and OpenAI, so the audio never traverses our infrastructure and there is no point at which output can be gated *before* the learner hears it. Safety there is **post-hoc on the output transcript**: the client posts each completed tutor transcript to `tutor-session`, which runs the same `validateContentSafety` from `_shared/content-safety.ts` — plus an OpenAI moderation call for ja/ko/zh/ru, which the regex patterns cannot see — and on a flag tells the client to cut playback, cancel the response, and log to `tutor_safety_events`. Three cuts end the session.
+
+   This is genuinely weaker than the pre-generation gate: a fraction of a second of flagged audio may be heard before the cut lands. It was accepted because the alternative — proxying the audio through an edge function — reintroduces exactly the round-trip latency that makes a spoken tutor worth building. **Do not treat this as a precedent.** Any new AI surface whose output we can see before the learner does still goes through `generateValidated`, no exceptions. The end-of-session written debrief, which we *do* generate server-side, goes through it like everything else.
+
 2. The client is untrusted — anything with economic or competitive meaning (XP, quotas, subscription tier, proficiency evidence) is written server-side (guarded RPC or service-role edge function), never by direct client table writes.
 3. All AI API keys live in Supabase Edge Function secrets — never in the client.
 
