@@ -18,6 +18,7 @@ import { revokeAllAiConsent } from '../../../lib/ai-consent';
 import { cefrBandForProficiencyLevel } from '../../../lib/cefr-proficiency';
 import { cefrCanDo } from '../../../lib/cefr-labels';
 import type { LanguageCode, ProficiencyLevel } from '../../../types';
+import { SentrySmokeTrigger } from '../../../components/debug/SentrySmokeTrigger';
 
 const LEVELS: { value: ProficiencyLevel; label: string }[] = [
   { value: 'beginner', label: 'Beginner' },
@@ -427,6 +428,7 @@ export default function SettingsScreen() {
             </Text>
           </Pressable>
         </View>
+        <SentrySmokeTrigger />
       </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
