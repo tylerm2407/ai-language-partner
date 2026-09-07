@@ -682,7 +682,16 @@ export default function OnboardingScreen() {
     identity: 'level',
     goal: 'identity',
   };
-  const goBack = prev[step] ? () => setStep(prev[step] as Step) : undefined;
+  // The first step backs out to the welcome screen: someone who already has
+  // an account and tapped "Get started" by mistake needs a way to "I already
+  // have an account" without killing the app. Welcome pushes this route, so
+  // back() normally lands there; the replace covers a cold start straight
+  // into onboarding (deep link, resumed draft) where there is no history.
+  const leaveToWelcome = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace('/(public)');
+  };
+  const goBack = prev[step] ? () => setStep(prev[step] as Step) : leaveToWelcome;
 
   let footer: React.ReactNode = null;
   let body: React.ReactNode = null;
@@ -691,7 +700,7 @@ export default function OnboardingScreen() {
     footer = <SlabButton label={`Continue with ${languageName}`} onPress={() => setStep('idealSelf')} />;
     body = (
       <>
-        <SpeechBubble text="What language do you want to learn?" mood={mood} />
+        <SpeechBubble text="What language do you want to learn?" mood={mood} entrance="slide" />
         <View style={styles.rows}>
           {SUPPORTED_LANGUAGES.map((lang, i) => (
             <OptionRow
@@ -718,7 +727,7 @@ export default function OnboardingScreen() {
     );
     body = (
       <>
-        <SpeechBubble text={`Picture a moment you'd love to have in ${languageName}.`} mood="think" />
+        <SpeechBubble text={`Picture a moment you'd love to have in ${languageName}.`} mood="think" entrance="rise" />
         <Animated.View entering={enter(0)}>
           <Text style={{ fontFamily: type.ui, fontSize: 14, lineHeight: 20, color: c.muted }}>
             One sentence is enough. You can skip this if you&apos;d rather not say.
@@ -755,7 +764,7 @@ export default function OnboardingScreen() {
     footer = <SlabButton label="Continue" onPress={() => setStep('identity')} />;
     body = (
       <>
-        <SpeechBubble text="What's your level?" mood={mood} />
+        <SpeechBubble text="What's your level?" mood={mood} entrance="pop" />
         {/* The acronym used to be introduced on the removed mode step, and
             this is now the first and only place a new user meets it — so it
             defines itself here or nowhere. */}
@@ -796,7 +805,7 @@ export default function OnboardingScreen() {
     footer = <SlabButton label="Continue" onPress={() => setStep('goal')} />;
     body = (
       <>
-        <SpeechBubble text="Make it yours" mood={mood} />
+        <SpeechBubble text="Make it yours" mood={mood} entrance="meet" />
         <Animated.View entering={enter(0)}>
           <Text style={{ fontFamily: type.ui, fontSize: 14, lineHeight: 20, color: c.muted }}>
             Pick a name and a look. This is who you&apos;ll be in {languageName}.
@@ -868,7 +877,7 @@ export default function OnboardingScreen() {
     );
     body = (
       <>
-        <SpeechBubble text="How much time do you have?" mood={mood} />
+        <SpeechBubble text="How much time do you have?" mood={mood} entrance="drop" />
         <Animated.View entering={enter(0)}>
           <Text style={{ fontFamily: type.ui, fontSize: 14, lineHeight: 20, color: c.muted }}>
             This sets the length of your daily session. Nothing breaks if you skip a day.
