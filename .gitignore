@@ -49,3 +49,9 @@ expo-env.d.ts
 # Backups of the secrets file. A stray copy here is a full credential
 # dump sitting where `git add -A` can reach it.
 .env.bak*
+
+# Local Xcode build output (xcodebuild -derivedDataPath ios/build-debug for
+# ad-hoc simulator builds). 3.8 GB untracked here made the EAS project
+# tarball fail to upload.
+ios/build/
+ios/build-debug/
