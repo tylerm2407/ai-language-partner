@@ -22,7 +22,7 @@ import { radii, spacing } from '../../config/theme';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { AI_CONSENT_COPY, type AiConsentKind } from '../../lib/ai-consent';
 
-const PRIVACY_URL = 'https://fluenci.com/privacy';
+const PRIVACY_URL = 'https://fluenciapp.com/privacy';
 
 interface AiConsentSheetProps {
   visible: boolean;

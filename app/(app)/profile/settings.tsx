@@ -302,7 +302,7 @@ export default function SettingsScreen() {
             icon="shield-checkmark-outline"
             title="Privacy Policy"
             role="link"
-            onPress={() => Linking.openURL('https://fluenci.com/privacy')}
+            onPress={() => Linking.openURL('https://fluenciapp.com/privacy')}
             accessibilityLabel="Privacy Policy"
           />
           <Ui2ListRow
@@ -310,7 +310,7 @@ export default function SettingsScreen() {
             icon="document-text-outline"
             title="Terms of Service"
             role="link"
-            onPress={() => Linking.openURL('https://fluenci.com/terms')}
+            onPress={() => Linking.openURL('https://fluenciapp.com/terms')}
             accessibilityLabel="Terms of Service"
           />
 

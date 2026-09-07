@@ -112,9 +112,9 @@ export function levelToNewsTier(level: ProficiencyLevel): NewsTier {
 // profile screens already open; new code should import them from here rather
 // than hardcoding a sixth copy.
 //
-// WARNING: fluenci.com is currently a parking page — the domain is not under
-// our control. The links resolve, so the binary requirement is met mechanically,
-// but a reviewer following them will not find a terms or privacy document.
-// Point these at real pages before submission.
-export const TERMS_URL = 'https://fluenci.com/terms';
-export const PRIVACY_URL = 'https://fluenci.com/privacy';
+// fluenciapp.com was registered on 2026-09-07 (fluenci.com is someone else's
+// parking page). As of that date nothing is hosted there yet: these paths must
+// serve real terms and privacy documents before App Store submission, because
+// review follows them.
+export const TERMS_URL = 'https://fluenciapp.com/terms';
+export const PRIVACY_URL = 'https://fluenciapp.com/privacy';

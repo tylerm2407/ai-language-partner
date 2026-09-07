@@ -305,10 +305,10 @@ export default function SubscriptionScreen() {
 
         {/* Legal — App Store requires terms + privacy on the paywall */}
         <View className="flex-row flex-wrap justify-center gap-4 mt-4">
-          <Pressable onPress={() => Linking.openURL('https://fluenci.com/terms')} accessibilityRole="link">
+          <Pressable onPress={() => Linking.openURL('https://fluenciapp.com/terms')} accessibilityRole="link">
             <Text className="text-xs underline" style={{ color: c.idle }}>Terms of Use</Text>
           </Pressable>
-          <Pressable onPress={() => Linking.openURL('https://fluenci.com/privacy')} accessibilityRole="link">
+          <Pressable onPress={() => Linking.openURL('https://fluenciapp.com/privacy')} accessibilityRole="link">
             <Text className="text-xs underline" style={{ color: c.idle }}>Privacy Policy</Text>
           </Pressable>
         </View>

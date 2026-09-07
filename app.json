@@ -81,7 +81,7 @@
     "experiments": {
       "typedRoutes": true
     },
-    "privacyUrl": "https://fluenci.com/privacy",
+    "privacyUrl": "https://fluenciapp.com/privacy",
     "extra": {
       "router": {},
       "eas": {
