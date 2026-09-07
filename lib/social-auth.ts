@@ -37,8 +37,8 @@
  *   as an authorized redirect URI there. Its id/secret go in Supabase →
  *   Providers → Google, and `OAUTH_REDIRECT` below must be added to Supabase →
  *   URL Configuration → Redirect URLs, alongside the existing reset-password
- *   entry rather than replacing it. Gated off by GOOGLE_SIGN_IN_ENABLED until
- *   all of that exists.
+ *   entry rather than replacing it. GOOGLE_SIGN_IN_ENABLED gates the button
+ *   on the client so it can be pulled without a server change.
  */
 
 import { Platform } from 'react-native';
@@ -54,22 +54,20 @@ export const OAUTH_REDIRECT = Linking.createURL('auth-callback');
 /**
  * Whether to offer Google sign-in.
  *
- * OFF until a Google Cloud OAuth client exists and is pasted into Supabase →
- * Authentication → Providers → Google. The flow below is complete and works
- * the moment those are in place — this gates the *button*, because a provider
- * that is not configured server-side fails only after the learner has tapped
- * it and watched a browser open.
+ * ON since 2026-09-07: the Google Cloud OAuth client (Web application type,
+ * Fluenci's own Cloud project — not Tidewater's, because the consent screen
+ * is per project) is pasted into Supabase → Authentication → Providers →
+ * Google, and OAUTH_REDIRECT is in Supabase → URL Configuration → Redirect
+ * URLs alongside the reset-password entry.
  *
- * To enable: create a **Web application** OAuth client in Google Cloud with
- * `https://<project-ref>.supabase.co/auth/v1/callback` as an authorized
- * redirect URI, add its id/secret to Supabase, add OAUTH_REDIRECT above to
- * Supabase → URL Configuration → Redirect URLs (alongside the existing
- * reset-password entry, not replacing it), then flip this to true.
+ * This gates the *button*, not the flow: a provider that is not configured
+ * server-side fails only after the learner has tapped it and watched a
+ * browser open. Flip it back to false if the provider is ever disabled.
  *
- * Note App Store Guideline 4.8: offering Google means Sign in with Apple must
- * be offered too. It already is, so turning this on is safe on that front.
+ * App Store Guideline 4.8: offering Google means Sign in with Apple must be
+ * offered too. It is, on every iOS 13+ device.
  */
-export const GOOGLE_SIGN_IN_ENABLED = false;
+export const GOOGLE_SIGN_IN_ENABLED = true;
 
 /**
  * Whether the Apple button should render at all.
