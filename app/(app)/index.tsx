@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { View, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../hooks/useAuth';
@@ -11,8 +12,7 @@ import { fetchStatsRange } from '../../lib/supabase-queries';
 import { localDayKey } from '../../lib/dates';
 import { getTargetLanguage, targetLanguageGreeting } from '../../lib/language';
 import { cefrBandForProficiencyLevel } from '../../lib/cefr-proficiency';
-import { Ionicons } from '@expo/vector-icons';
-import { GradientBackground } from '../../components/ui/GradientBackground';
+import { cefrCanDo } from '../../lib/cefr-labels';
 import { useLevel } from '../../hooks/useLevel';
 import { useDailyNews } from '../../hooks/useDailyNews';
 import { useNotifications, scheduleDailyPracticeReminder } from '../../hooks/useNotifications';
@@ -20,20 +20,23 @@ import { useOnboardingChecklist } from '../../hooks/useOnboardingChecklist';
 import { useReviewCountSync } from '../../hooks/useReviewCountSync';
 import { PrePermissionSheet } from '../../components/gamification/PrePermissionSheet';
 import { OnboardingChecklistFab } from '../../components/onboarding/OnboardingChecklistFab';
-import { DateLabel } from '../../components/magazine/DateLabel';
-import { StatsStrip } from '../../components/magazine/StatsStrip';
-import { NewsHeroCard } from '../../components/magazine/NewsHeroCard';
-import { SessionBand } from '../../components/magazine/SessionBand';
-import { LessonTileGrid, unitTilesToLessonTiles } from '../../components/magazine/LessonTile';
+import { unitTilesToLessonTiles } from '../../components/magazine/LessonTile';
 import { useUnitProgressTiles } from '../../hooks/useUnitProgressTiles';
-import { MagazineDailyChallenges } from '../../components/magazine/MagazineDailyChallenges';
-import { WeekInWords } from '../../components/magazine/WeekInWords';
-import { MagazineGlassCard } from '../../components/magazine/MagazineGlassCard';
-import { Heading } from '../../components/ui/Text';
+import { useDailyChallenges } from '../../hooks/useDailyChallenges';
+import { HomeHeader, LevelDueRow, SessionHero, ReadRow } from '../../components/ui2/home/HomeSections';
+import { UnitRows, DailyThree, WeekStrip, ActionRow, SectionTitle } from '../../components/ui2/home/HomeProgress';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { loadErrorCopy, type ErrorCopy } from '../../lib/error-copy';
-import { colors, typography, spacing } from '../../config/theme';
 import type { DailyStats } from '../../types';
+
 import { useScreenView } from '../../hooks/useScreenView';
+
+/** Reading time at a learner's pace (~140 wpm in a second language). */
+function readMinutes(content: string | null | undefined): number | null {
+  if (!content) return null;
+  const words = content.trim().split(/\s+/).length;
+  return Math.max(1, Math.round(words / 140));
+}
 
 export default function HomeScreen() {
   useScreenView('home');
@@ -77,6 +80,12 @@ export default function HomeScreen() {
   const { markItem: markChecklistItem, skipItem: skipChecklistItem } = useOnboardingChecklist();
   const greeting = targetLanguageGreeting(getTargetLanguage(profile));
   const [showPrePermission, setShowPrePermission] = useState(false);
+  const { c, scheme } = useUi2Theme();
+  const { challenges } = useDailyChallenges();
+  const band = cefrBandForProficiencyLevel(profile?.level ?? 'beginner');
+  // The session hero points at the first unit with an unfinished lesson; the
+  // rollup is ordered by curriculum position, so that is the learner's next.
+  const nextTile = lessonTiles?.find((t) => t.nextLessonId) ?? null;
 
   // Show the pre-permission sheet once, after the learner has completed
   // their first lesson. Only asks if the OS permission is still undetermined;
@@ -173,222 +182,107 @@ export default function HomeScreen() {
   }, [user?.id, loadWeeklyStats, loadStudentSchoolData, schoolEnabled]);
 
   return (
-    <GradientBackground>
-      <View className="flex-1">
-        <ScrollView
-          className="flex-1 px-4"
-          contentContainerStyle={{ paddingBottom: 120, paddingTop: 8 }}
-        >
-          <SafeAreaView edges={['top']}>
-            {/* Header — date + target-language greeting. Stats get their own
-                row beneath so the greeting has room to breathe (they used to
-                share this row with the date).
+    <View style={[styles.root, { backgroundColor: c.bg }]}>
+      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+      <ScrollView
+        style={styles.root}
+        // 120 keeps the last card clear of the floating tab bar.
+        contentContainerStyle={styles.body}
+        showsVerticalScrollIndicator={false}
+      >
+        <SafeAreaView edges={['top']} style={styles.stack}>
+          <HomeHeader greeting={greeting} name={profile?.displayName} />
 
-                The mascot used to sit on the right of this row. It is gone from
-                chrome on purpose: a permanent mascot in the header is the
-                Duolingo silhouette regardless of what the character looks like.
-                The dragon now appears only at moments — celebration, level-up,
-                empty states — where it lands as an event. */}
-            <View style={styles.headerRow}>
-              <View style={styles.headerText}>
-                <DateLabel style={styles.centered} />
-                <Heading level={2} style={styles.centered}>
-                  {greeting}
-                  {profile?.displayName ? `, ${profile.displayName}` : ''}
-                </Heading>
-              </View>
-            </View>
+          <LevelDueRow
+            band={band}
+            dueCount={reviewCount}
+            onReview={() => router.push('/learn/review' as any)}
+          />
 
-            <StatsStrip align="center" />
+          <SessionHero
+            title={nextTile?.title ?? 'Your next lesson'}
+            minutes={profile?.dailyGoalMinutes ?? 15}
+            subtitle={cefrCanDo(band)}
+            onStart={() =>
+              router.push((nextTile?.nextLessonId ? `/learn/${nextTile.nextLessonId}` : '/learn') as any)
+            }
+          />
 
-            {/* News hero card */}
-            <NewsHeroCard
-              article={article}
-              isLoading={newsLoading}
-              error={newsError}
-              hasRead={newsHasRead}
-              level={cefrBandForProficiencyLevel(profile?.level ?? 'intermediate')}
-              onPress={() => {
-                if (article) {
-                  router.push({
-                    pathname: '/news/[date]',
-                    params: { date: article.date },
-                  } as any);
-                }
-              }}
+          <ReadRow
+            title={article?.title ?? null}
+            minutes={readMinutes(article?.content)}
+            loading={newsLoading}
+            error={newsError}
+            hasRead={newsHasRead}
+            onPress={() => {
+              if (article) {
+                router.push({ pathname: '/news/[date]', params: { date: article.date } } as any);
+              }
+            }}
+          />
+
+          <UnitRows
+            tiles={lessonTiles}
+            loading={tilesLoading}
+            error={tilesError}
+            onRetry={refetchTiles}
+            onOpen={(tile) => router.push((tile.nextLessonId ? `/learn/${tile.nextLessonId}` : '/learn') as any)}
+            onAll={() => router.push('/learn' as any)}
+          />
+
+          <DailyThree items={challenges} />
+
+          <WeekStrip
+            stats={weeklyStats}
+            error={weeklyStatsError}
+            onRetry={() => { if (user?.id) loadWeeklyStats(user.id); }}
+          />
+
+          <View style={styles.stack}>
+            <SectionTitle title="Practice" />
+            <ActionRow
+              index={0}
+              icon="chatbubbles-outline"
+              tint="primary"
+              title="Talk with your tutor"
+              subtitle="A real conversation, corrected as you go"
+              onPress={() => router.push('/chat' as any)}
             />
-
-            {/* Today's session band */}
-            <SessionBand />
-
-            {/* Continue learning — 2-column tiles pulled from user's real curriculum */}
-            <LessonTileGrid tiles={lessonTiles} loading={tilesLoading} error={tilesError} onRetry={refetchTiles} />
-
-            {/* Daily challenges */}
-            <MagazineDailyChallenges dailyStats={dailyStats ?? null} />
-
-            {/* Week in words */}
-            <WeekInWords
-              stats={weeklyStats}
-              error={weeklyStatsError}
-              onRetry={() => { if (user?.id) loadWeeklyStats(user.id); }}
-            />
-
-            {/* Quick Actions */}
-            <Text style={styles.sectionTitle}>Quick Actions</Text>
-
-            <MagazineGlassCard style={styles.quickAction}>
-              <Pressable
-                style={styles.quickActionRow}
-                onPress={() => router.push('/learn' as any)}
-                accessibilityRole="button"
-                accessibilityLabel="Start a Lesson"
-              >
-                <View style={[styles.quickActionIcon, { backgroundColor: 'rgba(79,142,247,0.15)' }]}>
-                  <Ionicons name="play" size={18} color={colors.magazine.accentBlue} />
-                </View>
-                <View style={styles.quickActionText}>
-                  <Text style={styles.quickActionTitle}>Start a Lesson</Text>
-                  <Text style={styles.quickActionSub}>Continue where you left off</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={colors.text.quaternary} />
-              </Pressable>
-            </MagazineGlassCard>
-
-            <MagazineGlassCard style={styles.quickAction}>
-              <Pressable
-                style={styles.quickActionRow}
-                onPress={() => router.push('/chat' as any)}
-                accessibilityRole="button"
-                accessibilityLabel="Practice with AI"
-              >
-                <View style={[styles.quickActionIcon, { backgroundColor: 'rgba(168,85,247,0.15)' }]}>
-                  <Ionicons name="chatbubbles" size={18} color={colors.magazine.accentLilac} />
-                </View>
-                <View style={styles.quickActionText}>
-                  <Text style={styles.quickActionTitle}>AI Conversation</Text>
-                  <Text style={styles.quickActionSub}>Practice speaking with AI</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={colors.text.quaternary} />
-              </Pressable>
-            </MagazineGlassCard>
-
             {/* Hands-free. This is the only entry point into the eyes-free
-                session, and now the only route into the `/practice` group at
-                all: the tab is `href: null` in the tab layout, absent from
-                FloatingTabBar's VISIBLE_TABS, and the group's index screen was
-                deleted when the second chat surface was retired into `/chat`.
-                Removing this link makes the feature unreachable rather than
-                merely hidden. */}
+                session, and the only route into the `/practice` group at all
+                (the tab is `href: null`); removing it makes the feature
+                unreachable rather than hidden. */}
             {HANDSFREE_ENABLED && (
-              <MagazineGlassCard style={styles.quickAction}>
-                <Pressable
-                  style={styles.quickActionRow}
-                  onPress={() => router.push('/practice/handsfree' as any)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Start a hands-free practice session"
-                  accessibilityHint="Runs a spoken review session you can do without looking at the screen"
-                >
-                  <View style={[styles.quickActionIcon, { backgroundColor: 'rgba(168,85,247,0.15)' }]}>
-                    <Ionicons name="headset" size={18} color={colors.premium.base} />
-                  </View>
-                  <View style={styles.quickActionText}>
-                    <Text style={styles.quickActionTitle}>Hands-free practice</Text>
-                    <Text style={styles.quickActionSub}>Speak and listen — no screen needed</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={18} color={colors.text.quaternary} />
-                </Pressable>
-              </MagazineGlassCard>
+              <ActionRow
+                index={1}
+                icon="headset-outline"
+                tint="pink"
+                title="Hands-free practice"
+                subtitle="Speak and listen — no screen needed"
+                onPress={() => router.push('/practice/handsfree' as any)}
+                accessibilityHint="Runs a spoken review session you can do without looking at the screen"
+              />
             )}
+          </View>
+        </SafeAreaView>
+      </ScrollView>
 
-            {reviewCount > 0 && (
-              <MagazineGlassCard style={styles.quickAction}>
-                <Pressable
-                  style={styles.quickActionRow}
-                  onPress={() => router.push('/learn/review' as any)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Review ${reviewCount} flashcards`}
-                >
-                  <View style={[styles.quickActionIcon, { backgroundColor: 'rgba(34,211,153,0.15)' }]}>
-                    <Ionicons name="refresh" size={18} color="#34D399" />
-                  </View>
-                  <View style={styles.quickActionText}>
-                    <Text style={styles.quickActionTitle}>Review Cards</Text>
-                    <Text style={styles.quickActionSub}>{reviewCount} cards due</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={18} color={colors.text.quaternary} />
-                </Pressable>
-              </MagazineGlassCard>
-            )}
-          </SafeAreaView>
-        </ScrollView>
+      {/* Pre-permission sheet — shown once, post-first-lesson, before the
+          iOS system notification prompt. Lifts opt-in ~2-3× vs cold-firing. */}
+      <PrePermissionSheet
+        visible={showPrePermission}
+        onEnable={handleEnableReminders}
+        onDismiss={handleDismissPrePermission}
+      />
 
-        {/* Pre-permission sheet — shown once, post-first-lesson, before the
-            iOS system notification prompt. Lifts opt-in ~2-3× vs cold-firing. */}
-        <PrePermissionSheet
-          visible={showPrePermission}
-          onEnable={handleEnableReminders}
-          onDismiss={handleDismissPrePermission}
-        />
-
-        {/* Floating onboarding checklist FAB */}
-        <OnboardingChecklistFab />
-      </View>
-    </GradientBackground>
+      {/* Floating onboarding checklist FAB */}
+      <OnboardingChecklistFab />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  /** Centered masthead: date, greeting and level strip share one axis so the
-   *  top of Home reads as a single block rather than a left-ragged stack. */
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-    gap: spacing.xs,
-  },
-  headerText: {
-    flex: 1,
-    minWidth: 0,
-    alignItems: 'center',
-  },
-  centered: {
-    textAlign: 'center',
-  },
-  sectionTitle: {
-    fontFamily: typography.family.serif,
-    fontSize: 18,
-    color: colors.text.primary,
-    marginBottom: spacing.sm,
-    marginTop: spacing.xxs,
-  },
-  quickAction: {
-    marginBottom: 12,
-  },
-  quickActionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  quickActionIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 14,
-  },
-  quickActionText: {
-    flex: 1,
-  },
-  quickActionTitle: {
-    fontFamily: typography.family.semibold,
-    fontSize: 15,
-    color: colors.text.primary,
-  },
-  quickActionSub: {
-    fontFamily: typography.family.regular,
-    fontSize: 13,
-    color: colors.text.tertiary,
-    marginTop: 1,
-  },
+  root: { flex: 1 },
+  body: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 120 },
+  stack: { gap: 18 },
 });
