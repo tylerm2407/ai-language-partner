@@ -52,6 +52,7 @@ import { useUi2Theme } from '../../../hooks/useUi2Theme';
 import { useAiConsent } from '../../../hooks/useAiConsent';
 import { Chip } from '../../../components/ui2/Chip';
 import { useScreenView } from '../../../hooks/useScreenView';
+import { Mascot } from '../../../components/mascot/Mascot';
 
 /**
  * The level line in the header status row.
@@ -1100,6 +1101,13 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
         >
           <Ionicons name="chevron-back" size={22} color={c.idle} />
         </Pressable>
+
+        {/* Sol sits in the header as the tutor's face: thinking while a reply
+            is on its way, listening while the mic is open, idle otherwise. */}
+        <Mascot
+          state={sending ? 'thinking' : handsFreeActive && handsFreeState === 'LISTENING' ? 'listening' : 'idle'}
+          size={44}
+        />
 
         <View className="flex-1">
           <Body weight="extrabold" numberOfLines={1}>

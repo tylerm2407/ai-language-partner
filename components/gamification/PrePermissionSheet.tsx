@@ -31,7 +31,7 @@ export function PrePermissionSheet({
   return (
     <Ui2Sheet visible={visible} onDismiss={onDismiss} dismissOnBackdrop={false}>
       <View style={{ alignItems: 'center', paddingTop: spacing.sm }}>
-        <Mascot state="happy" size="md" style={{ marginBottom: spacing.md }} />
+        <Mascot state="sleepy" size="lg" style={{ marginBottom: spacing.md }} />
         <Heading level={2} style={{ textAlign: 'center' }}>
           One reminder a day
         </Heading>
