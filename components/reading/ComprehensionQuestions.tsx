@@ -2,10 +2,10 @@ import { useState, useCallback } from 'react';
 import { View, Text, Pressable, TextInput, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { haptic } from '../../lib/haptics';
-import { ProgressBar } from '../ui/ProgressBar';
+import { Ui2ProgressBar } from '../ui2/Ui2ProgressBar';
 import { gradeAnswer } from '../../lib/grading';
 import type { ReadingQuestion } from '../../types';
-import { colors } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 
 interface Props {
   questions: ReadingQuestion[];
@@ -14,6 +14,7 @@ interface Props {
 }
 
 export function ComprehensionQuestions({ questions, onComplete, onExit }: Props) {
+  const { c } = useUi2Theme();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [correctCount, setCorrectCount] = useState(0);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
@@ -62,17 +63,17 @@ export function ComprehensionQuestions({ questions, onComplete, onExit }: Props)
       : selectedOption !== null;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface.raised }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
       {/* Header */}
       <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
           <Pressable onPress={onExit} style={{ padding: 8, marginRight: 8 }} accessibilityRole="button" accessibilityLabel="Exit">
-            <Text style={{ fontSize: 24, color: colors.text.tertiary }}>x</Text>
+            <Text style={{ fontSize: 24, color: c.muted }}>x</Text>
           </Pressable>
           <View style={{ flex: 1 }}>
-            <ProgressBar progress={progress} />
+            <Ui2ProgressBar progress={progress} />
           </View>
-          <Text style={{ marginLeft: 12, fontSize: 14, color: colors.text.tertiary }}>
+          <Text style={{ marginLeft: 12, fontSize: 14, color: c.muted }}>
             {currentIndex + 1}/{questions.length}
           </Text>
         </View>
@@ -84,10 +85,10 @@ export function ComprehensionQuestions({ questions, onComplete, onExit }: Props)
       >
       <ScrollView contentContainerStyle={{ padding: 20, flexGrow: 1 }} keyboardShouldPersistTaps="handled">
         {/* Question */}
-        <Text style={{ fontSize: 14, fontWeight: '600', color: colors.action.accent, marginBottom: 8 }}>
+        <Text style={{ fontSize: 14, fontWeight: '600', color: c.onTint, marginBottom: 8 }}>
           Comprehension
         </Text>
-        <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text.primary, marginBottom: 20, lineHeight: 26 }}>
+        <Text style={{ fontSize: 18, fontWeight: '600', color: c.ink, marginBottom: 20, lineHeight: 26 }}>
           {question.questionText}
         </Text>
 
@@ -95,23 +96,25 @@ export function ComprehensionQuestions({ questions, onComplete, onExit }: Props)
         {(question.questionType === 'multiple_choice' || question.questionType === 'true_false') && question.options && (
           <View>
             {question.options.map((option, index) => {
-              // Answer-state fills are the theme's dark tints, not the light
-              // green/red (#DCFCE7 / #FEE2E2) this used before the surface went
-              // dark — those left the option text at ~1.4:1.
-              let bgColor: string = colors.surface.cardAlt;
-              let borderColor = 'transparent';
+              // Answer-state fills are the UI 2.0 tints, which are defined
+              // per scheme — the previous fixed pair was readable on one ground
+              // only. The option text stays `ink` on every one of them, and the
+              // state is never carried by the fill alone: the banner below the
+              // list says "Correct!" or "Not quite." in words.
+              let bgColor: string = c.surface2;
+              let borderColor = c.cardBorder;
 
               if (isRevealed) {
                 if (option === question.correctAnswer) {
-                  bgColor = colors.success.tint;
-                  borderColor = colors.success.base;
+                  bgColor = c.greenTint;
+                  borderColor = c.green;
                 } else if (option === selectedOption && !isCorrect) {
-                  bgColor = colors.error.tint;
-                  borderColor = colors.error.base;
+                  bgColor = c.pinkTint;
+                  borderColor = c.error;
                 }
               } else if (option === selectedOption) {
-                bgColor = colors.action.primaryTint;
-                borderColor = colors.indigo[500];
+                bgColor = c.primaryTint;
+                borderColor = c.primary;
               }
 
               return (
@@ -130,7 +133,7 @@ export function ComprehensionQuestions({ questions, onComplete, onExit }: Props)
                   accessibilityRole="button"
                   accessibilityLabel={option}
                 >
-                  <Text style={{ fontSize: 17, fontWeight: '600', color: colors.text.primary }}>{option}</Text>
+                  <Text style={{ fontSize: 17, fontWeight: '600', color: c.ink }}>{option}</Text>
                 </Pressable>
               );
             })}
@@ -144,24 +147,24 @@ export function ComprehensionQuestions({ questions, onComplete, onExit }: Props)
               value={textAnswer}
               onChangeText={setTextAnswer}
               placeholder="Type your answer..."
-              placeholderTextColor={colors.text.quaternary}
+              placeholderTextColor={c.idle}
               editable={!isRevealed}
               style={{
                 borderWidth: 2,
-                borderColor: isRevealed ? (isCorrect ? '#22C55E' : '#EF4444') : colors.border.default,
+                borderColor: isRevealed ? (isCorrect ? c.green : c.error) : c.cardBorder,
                 borderRadius: 14,
                 paddingHorizontal: 16,
                 paddingVertical: 10,
                 fontSize: 16,
                 minHeight: 80,
                 textAlignVertical: 'top',
-                color: colors.text.primary,
+                color: c.ink,
               }}
               multiline
               accessibilityLabel="Your answer"
             />
             {isRevealed && !isCorrect && (
-              <Text style={{ fontSize: 14, color: colors.error.light, marginTop: 8 }}>
+              <Text style={{ fontSize: 14, color: c.error, marginTop: 8 }}>
                 Correct answer: {question.correctAnswer}
               </Text>
             )}
@@ -171,7 +174,7 @@ export function ComprehensionQuestions({ questions, onComplete, onExit }: Props)
         {/* Feedback */}
         {isRevealed && (
           <View style={{
-            backgroundColor: isCorrect ? colors.success.tint : colors.error.tint,
+            backgroundColor: isCorrect ? c.greenTint : c.pinkTint,
             borderRadius: 14,
             padding: 16,
             marginTop: 16,
@@ -179,7 +182,7 @@ export function ComprehensionQuestions({ questions, onComplete, onExit }: Props)
             <Text style={{
               fontSize: 16,
               fontWeight: '600',
-              color: isCorrect ? colors.success.light : colors.error.light,
+              color: c.ink,
             }}>
               {isCorrect ? 'Correct!' : 'Not quite.'}
             </Text>
@@ -188,13 +191,13 @@ export function ComprehensionQuestions({ questions, onComplete, onExit }: Props)
       </ScrollView>
 
       {/* Bottom Button */}
-      <View style={{ padding: 20, borderTopWidth: 1, borderTopColor: colors.border.default }}>
+      <View style={{ padding: 20, borderTopWidth: 1, borderTopColor: c.cardBorder }}>
         {!isRevealed ? (
           <Pressable
             onPress={handleCheck}
             disabled={!canCheck}
             style={{
-              backgroundColor: canCheck ? '#4F46E5' : '#C7D2FE',
+              backgroundColor: canCheck ? c.primary : c.track,
               paddingVertical: 16,
               borderRadius: 14,
               alignItems: 'center',
@@ -202,15 +205,16 @@ export function ComprehensionQuestions({ questions, onComplete, onExit }: Props)
             accessibilityRole="button"
             accessibilityLabel="Check answer"
           >
-            {/* The disabled fill is indigo.200 — a very light lavender. White on
-                it is 1.4:1; the dark indigo step is 7.7:1. */}
-            <Text style={{ color: canCheck ? '#fff' : '#312E81', fontSize: 18, fontWeight: '600' }}>Check</Text>
+            {/* The disabled label is `idle`, not white: white on the unfilled
+                track is ~1.4:1 in light mode. `idle` is the palette's own
+                placeholder/inactive step and clears in both schemes. */}
+            <Text style={{ color: canCheck ? c.onPrimary : c.idle, fontSize: 18, fontWeight: '600' }}>Check</Text>
           </Pressable>
         ) : (
           <Pressable
             onPress={handleNext}
             style={{
-              backgroundColor: '#4F46E5',
+              backgroundColor: c.primary,
               paddingVertical: 16,
               borderRadius: 14,
               alignItems: 'center',
@@ -218,7 +222,7 @@ export function ComprehensionQuestions({ questions, onComplete, onExit }: Props)
             accessibilityRole="button"
             accessibilityLabel={currentIndex + 1 < questions.length ? 'Next question' : 'Finish'}
           >
-            <Text style={{ color: '#fff', fontSize: 18, fontWeight: '600' }}>
+            <Text style={{ color: c.onPrimary, fontSize: 18, fontWeight: '600' }}>
               {currentIndex + 1 < questions.length ? 'Next' : 'Finish'}
             </Text>
           </Pressable>

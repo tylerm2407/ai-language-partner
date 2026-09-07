@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 
 interface RoleSwitcherProps {
   activeRole: 'learner' | 'teacher';
@@ -9,11 +9,12 @@ interface RoleSwitcherProps {
 }
 
 export default function RoleSwitcher({ activeRole, onSwitch }: RoleSwitcherProps) {
+  const { c } = useUi2Theme();
   return (
     <View
       style={{
         flexDirection: 'row',
-        backgroundColor: colors.surface.cardAlt,
+        backgroundColor: c.surface2,
         borderRadius: 12,
         padding: 3,
       }}
@@ -32,17 +33,17 @@ export default function RoleSwitcher({ activeRole, onSwitch }: RoleSwitcherProps
           justifyContent: 'center',
           paddingVertical: 10,
           borderRadius: 10,
-          backgroundColor: activeRole === 'learner' ? '#4F46E5' : 'transparent',
+          backgroundColor: activeRole === 'learner' ? c.primary : 'transparent',
         }}
       >
         <Ionicons
           name="person-outline"
           size={16}
-          color={activeRole === 'learner' ? '#FFFFFF' : '#94A3B8'}
+          color={activeRole === 'learner' ? c.onPrimary : c.muted}
         />
         <Text
           style={{
-            color: activeRole === 'learner' ? '#FFFFFF' : '#94A3B8',
+            color: activeRole === 'learner' ? c.onPrimary : c.muted,
             fontSize: 14,
             fontFamily: 'Nunito_600SemiBold',
             marginLeft: 6,
@@ -65,17 +66,17 @@ export default function RoleSwitcher({ activeRole, onSwitch }: RoleSwitcherProps
           justifyContent: 'center',
           paddingVertical: 10,
           borderRadius: 10,
-          backgroundColor: activeRole === 'teacher' ? '#4F46E5' : 'transparent',
+          backgroundColor: activeRole === 'teacher' ? c.primary : 'transparent',
         }}
       >
         <Ionicons
           name="school-outline"
           size={16}
-          color={activeRole === 'teacher' ? '#FFFFFF' : '#94A3B8'}
+          color={activeRole === 'teacher' ? c.onPrimary : c.muted}
         />
         <Text
           style={{
-            color: activeRole === 'teacher' ? '#FFFFFF' : '#94A3B8',
+            color: activeRole === 'teacher' ? c.onPrimary : c.muted,
             fontSize: 14,
             fontFamily: 'Nunito_600SemiBold',
             marginLeft: 6,

@@ -1,15 +1,17 @@
 import { useEffect, useRef } from 'react';
 import { View, Text, Pressable, Modal, Dimensions, Animated, Easing } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { GRADIENT_COLORS, GRADIENT_START, GRADIENT_END } from '../../config/gradients';
 import { Ionicons } from '@expo/vector-icons';
+import { SlabCard } from '../ui2/SlabCard';
+import { scrimColor } from '../ui2/Ui2Sheet';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { getLeagueConfig } from '../../lib/levels';
 import { haptic } from '../../lib/haptics';
-import { colors } from '../../config/theme';
 import type { LeagueTier } from '../../lib/levels';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const PARTICLE_COUNT = 14;
+/** 0xB3 ≈ 70%, matching the achievement modal's scrim. */
+const SCRIM_ALPHA = 'B3';
 
 function ConfettiParticle({ index, color }: { index: number; color: string }) {
   const translateX = useRef(new Animated.Value(0)).current;
@@ -64,6 +66,7 @@ interface LevelUpModalProps {
 }
 
 export function LevelUpModal({ visible, newLevel, newTier, tierChanged, onDismiss }: LevelUpModalProps) {
+  const { c, scheme } = useUi2Theme();
   const cardScale = useRef(new Animated.Value(0)).current;
   const cardOpacity = useRef(new Animated.Value(0)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
@@ -102,19 +105,15 @@ export function LevelUpModal({ visible, newLevel, newTier, tierChanged, onDismis
     }
   }, [visible, tierChanged, cardScale, cardOpacity, backdropOpacity, levelScale]);
 
-  const confettiColors = [leagueConfig.color, colors.warning.base, colors.success.light, colors.league.diamond, '#F472B6', colors.premium.base];
+  const confettiColors = [leagueConfig.color, c.yellow, c.green, c.primary, c.pink, c.onTint];
 
   return (
     <Modal transparent visible={visible} animationType="none" onRequestClose={onDismiss}>
-      <Animated.View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.surface.overlay, opacity: backdropOpacity }}>
+      <Animated.View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: scrimColor(scheme, c) + SCRIM_ALPHA, opacity: backdropOpacity }}>
         <Animated.View style={{ width: SCREEN_WIDTH * 0.82, borderRadius: 24, overflow: 'hidden', transform: [{ scale: cardScale }], opacity: cardOpacity }}>
-          <LinearGradient
-            colors={[...GRADIENT_COLORS]}
-            start={GRADIENT_START}
-            end={GRADIENT_END}
-            style={{ borderRadius: 24, padding: 1.5 }}
-          >
-            <View style={{ borderRadius: 22.5, padding: 32, alignItems: 'center', backgroundColor: '#151921' }}>
+          {/* Was a gradient hairline around a fixed dark panel; the slab's own
+              border and bottom edge carry that depth in UI 2.0. */}
+          <SlabCard hero style={{ padding: 32, alignItems: 'center' }}>
               {/* Confetti */}
               <View style={{ position: 'absolute', top: '35%', left: '50%' }}>
                 {Array.from({ length: PARTICLE_COUNT }).map((_, i) => (
@@ -122,45 +121,48 @@ export function LevelUpModal({ visible, newLevel, newTier, tierChanged, onDismis
                 ))}
               </View>
 
-              <Text className="text-sm font-semibold text-text-secondary tracking-widest uppercase mb-4">
+              <Text className="text-sm font-semibold tracking-widest uppercase mb-4" style={{ color: c.muted }}>
                 {tierChanged ? 'League Promotion!' : 'Level Up!'}
               </Text>
 
               {/* Level number */}
               <Animated.View style={{ transform: [{ scale: levelScale }], marginBottom: 16 }}>
-                <View style={{ width: 80, height: 80, borderRadius: 40, overflow: 'hidden' }}>
-                  <LinearGradient
-                    colors={tierChanged ? [leagueConfig.color, leagueConfig.color + 'CC'] : [...GRADIENT_COLORS]}
-                    start={GRADIENT_START}
-                    end={GRADIENT_END}
-                    style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
-                  >
-                    <Text style={{ color: '#FFFFFF', fontSize: 32, fontWeight: '800' }}>{newLevel}</Text>
-                  </LinearGradient>
+                <View
+                  style={{
+                    width: 80,
+                    height: 80,
+                    borderRadius: 40,
+                    overflow: 'hidden',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    backgroundColor: tierChanged ? leagueConfig.color : c.primary,
+                  }}
+                >
+                  <Text style={{ color: c.onPrimary, fontSize: 32, fontWeight: '800' }}>{newLevel}</Text>
                 </View>
               </Animated.View>
 
-              <Text className="text-2xl font-bold text-text-primary text-center mb-2">
+              <Text className="text-2xl font-bold text-center mb-2" style={{ color: c.ink }}>
                 Level {newLevel}!
               </Text>
 
               {tierChanged && (
                 <View className="flex-row items-center gap-2 mb-4">
                   <Ionicons name="shield" size={24} color={leagueConfig.color} />
-                  <Text style={{ color: leagueConfig.color, fontSize: 20, fontWeight: '800' }}>
+                  <Text style={{ color: c.ink, fontSize: 20, fontWeight: '800' }}>
                     {leagueConfig.label} League
                   </Text>
                 </View>
               )}
 
-              <Text className="text-base text-text-secondary text-center mb-8">
+              <Text className="text-base text-center mb-8" style={{ color: c.muted }}>
                 {tierChanged
                   ? `You've been promoted to the ${leagueConfig.label} League! Keep it up!`
                   : 'Keep learning to reach the next level!'}
               </Text>
 
               <Pressable
-                style={{ width: '100%', borderRadius: 14, overflow: 'hidden' }}
+                style={{ width: '100%', borderRadius: 14, overflow: 'hidden', paddingVertical: 16, alignItems: 'center', backgroundColor: tierChanged ? leagueConfig.color : c.primary }}
                 onPress={() => {
                   haptic('buttonPress');
                   onDismiss();
@@ -168,19 +170,11 @@ export function LevelUpModal({ visible, newLevel, newTier, tierChanged, onDismis
                 accessibilityRole="button"
                 accessibilityLabel="Continue"
               >
-                <LinearGradient
-                  colors={tierChanged ? [leagueConfig.color, leagueConfig.color + 'CC'] : [...GRADIENT_COLORS]}
-                  start={GRADIENT_START}
-                  end={GRADIENT_END}
-                  style={{ paddingVertical: 16, alignItems: 'center', borderRadius: 14 }}
-                >
-                  <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '700' }}>
-                    Continue
-                  </Text>
-                </LinearGradient>
+                <Text style={{ color: c.onPrimary, fontSize: 18, fontWeight: '700' }}>
+                  Continue
+                </Text>
               </Pressable>
-            </View>
-          </LinearGradient>
+          </SlabCard>
         </Animated.View>
       </Animated.View>
     </Modal>

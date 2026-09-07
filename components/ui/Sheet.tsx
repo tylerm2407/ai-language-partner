@@ -7,6 +7,14 @@
  * avatar-customizer, settings, etc.
  *
  * Animation honors useMotion; reduced-motion collapses to a dissolve.
+ *
+ * UI 2.0: the sheet is a slab — `card` fill, `cardBorder` top edge at
+ * `shape.border` — and the scrim is the palette-derived one from
+ * `components/ui2/Ui2Sheet`, imported rather than re-derived so the two sheets
+ * cannot drift. `SCRIM_OPACITY` is why the backdrop animates to 0.55 rather
+ * than 1: Dark Glow's `surface.overlay` carried its own alpha, the UI 2.0
+ * palette has no overlay token, and an opaque scrim would hide the screen
+ * behind it entirely.
  */
 
 import React, { useEffect, useRef } from 'react';
@@ -19,8 +27,10 @@ import {
   StyleSheet,
   Dimensions,
 } from 'react-native';
-import { colors, radii, spacing } from '../../config/theme';
+import { radii, spacing } from '../../config/theme';
 import { useMotion } from '../../hooks/useMotion';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
+import { scrimColor } from '../ui2/Ui2Sheet';
 
 interface SheetProps {
   visible: boolean;
@@ -34,6 +44,8 @@ interface SheetProps {
 }
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
+/** Matches Ui2Sheet — the alpha Dark Glow's `surface.overlay` token used to carry. */
+const SCRIM_OPACITY = 0.55;
 
 export function Sheet({
   visible,
@@ -43,6 +55,7 @@ export function Sheet({
   height = 'auto',
   style,
 }: SheetProps) {
+  const { c, scheme, shape } = useUi2Theme();
   const { shouldReduce, duration } = useMotion();
   const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
@@ -51,7 +64,7 @@ export function Sheet({
     if (visible) {
       if (shouldReduce) {
         translateY.setValue(0);
-        backdropOpacity.setValue(1);
+        backdropOpacity.setValue(SCRIM_OPACITY);
       } else {
         Animated.parallel([
           Animated.timing(translateY, {
@@ -60,7 +73,7 @@ export function Sheet({
             useNativeDriver: true,
           }),
           Animated.timing(backdropOpacity, {
-            toValue: 1,
+            toValue: SCRIM_OPACITY,
             duration: duration.medium,
             useNativeDriver: true,
           }),
@@ -81,7 +94,12 @@ export function Sheet({
       statusBarTranslucent
     >
       {/* Backdrop */}
-      <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]}>
+      <Animated.View
+        style={[
+          styles.backdrop,
+          { backgroundColor: scrimColor(scheme, c), opacity: backdropOpacity },
+        ]}
+      >
         <Pressable
           style={StyleSheet.absoluteFill}
           onPress={dismissOnBackdrop ? onDismiss : undefined}
@@ -93,13 +111,18 @@ export function Sheet({
       <Animated.View
         style={[
           styles.sheet,
+          {
+            backgroundColor: c.card,
+            borderColor: c.cardBorder,
+            borderTopWidth: shape.border,
+          },
           height !== 'auto' ? { height } : undefined,
           { transform: [{ translateY }] },
           style,
         ]}
       >
         <View style={styles.grabberWrapper}>
-          <View style={styles.grabber} />
+          <View style={[styles.grabber, { backgroundColor: c.idle }]} />
         </View>
         {/* A pinned height is only useful if the content can actually fill it.
             Without this, a caller that passes `height` gets a tall sheet with
@@ -117,20 +140,16 @@ export function Sheet({
 const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.surface.overlay,
   },
   sheet: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: colors.surface.sheet,
     borderTopLeftRadius: radii.xxl,
     borderTopRightRadius: radii.xxl,
     paddingTop: spacing.xs,
     paddingBottom: spacing.xl,
-    borderTopWidth: 1,
-    borderColor: colors.border.subtle,
   },
   grabberWrapper: {
     alignItems: 'center',
@@ -140,7 +159,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: radii.pill,
-    backgroundColor: colors.border.strong,
   },
   content: {
     paddingHorizontal: spacing.lg,

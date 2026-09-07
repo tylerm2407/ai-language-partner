@@ -24,7 +24,6 @@ import { View, Text, Pressable, ScrollView, Alert, ActivityIndicator, Linking } 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { LinearGradient } from 'expo-linear-gradient';
 import type { PurchasesPackage } from 'react-native-purchases';
 import { useAuth } from '../../hooks/useAuth';
 import { useAppStore } from '../../stores/useAppStore';
@@ -43,8 +42,13 @@ import { type PlanId } from '../../lib/plans';
 import { STEP_ORDER, ctaLabel, renewalLine, trialOffer } from '../../lib/plan-pricing';
 import { trackEvent } from '../../lib/analytics';
 import { PlanStepCard } from '../../components/subscription/PlanStepCard';
-import { colors, radii, spacing, typography } from '../../config/theme';
-import { GlowLayer } from '../../components/ui/GlowBackground';
+import { SlabButton } from '../../components/ui2/SlabButton';
+import { SlabCard } from '../../components/ui2/SlabCard';
+// `colors` is deliberately NOT imported: it is the fixed DARK palette, and a
+// screen that reads it stays dark whatever the phone is set to. `radii` and
+// `spacing` are plain scheme-independent numbers and carry over unchanged.
+import { useUi2Theme } from '../../hooks/useUi2Theme';
+import { radii, spacing } from '../../config/theme';
 import { TERMS_URL, PRIVACY_URL } from '../../config/app';
 import { useScreenView } from '../../hooks/useScreenView';
 
@@ -53,6 +57,7 @@ type BillingTerm = 'monthly' | 'annual';
 const DEFAULT_TIER: Exclude<PlanId, 'starter'> = 'premium';
 
 export default function PlansScreen() {
+  const { c, type } = useUi2Theme();
   useScreenView('paywall');
   const { user } = useAuth();
   const { subscription, refreshSubscription, setEntitledTier } = useAppStore();
@@ -215,18 +220,26 @@ export default function PlansScreen() {
    */
   const blocked = !loading && (!isPurchasesAvailable() || failed || rungs.length === 0);
 
+  // Was a module-level const; the palette is per-scheme, so it has to be read
+  // inside the component. Same three numbers, same three call sites.
+  const legalStyle = {
+    fontFamily: type.ui,
+    fontSize: 10,
+    lineHeight: 14,
+    color: c.idle,
+  } as const;
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface.base }}>
-      <GlowLayer />
+    <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
       <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.md + 4, paddingBottom: spacing.lg }}>
         {/* The advertising line is the headline — unquoted, in the display face. */}
         <Text
           style={{
-            fontFamily: typography.family.display,
+            fontFamily: type.heading,
             fontSize: 30,
             lineHeight: 38,
             letterSpacing: -1,
-            color: colors.text.primary,
+            color: c.ink,
             marginTop: spacing.lg + 2,
           }}
         >
@@ -234,11 +247,11 @@ export default function PlansScreen() {
         </Text>
         <Text
           style={{
-            fontFamily: typography.family.monoMedium,
+            fontFamily: type.uiHeavy,
             fontSize: 10,
             lineHeight: 14,
             letterSpacing: 2.4,
-            color: colors.action.accent,
+            color: c.onTint,
             marginTop: spacing.sm,
           }}
         >
@@ -247,25 +260,16 @@ export default function PlansScreen() {
 
         {loading ? (
           <View style={{ paddingVertical: spacing.xxl, alignItems: 'center' }}>
-            <ActivityIndicator size="large" color={colors.action.accent} />
+            <ActivityIndicator size="large" color={c.primary} />
           </View>
         ) : blocked ? (
-          <View
-            style={{
-              marginTop: spacing.lg,
-              borderRadius: radii.xl,
-              padding: spacing.md + 4,
-              backgroundColor: colors.surface.card,
-              borderWidth: 1,
-              borderColor: colors.border.default,
-            }}
-          >
+          <SlabCard style={{ marginTop: spacing.lg, padding: spacing.md + 4 }}>
             <Text
               style={{
-                fontFamily: typography.family.medium,
+                fontFamily: type.ui,
                 fontSize: 16,
                 lineHeight: 24,
-                color: colors.text.secondary,
+                color: c.muted,
               }}
             >
               Plans aren’t available right now. Carry on learning — you can subscribe any time from
@@ -279,16 +283,16 @@ export default function PlansScreen() {
             >
               <Text
                 style={{
-                  fontFamily: typography.family.bold,
+                  fontFamily: type.uiBold,
                   fontSize: 15,
                   lineHeight: 21,
-                  color: colors.action.accent,
+                  color: c.onTint,
                 }}
               >
                 Continue
               </Text>
             </Pressable>
-          </View>
+          </SlabCard>
         ) : (
           <>
             {/* Term toggle. Annual carries the saving badge and is pre-selected:
@@ -299,9 +303,9 @@ export default function PlansScreen() {
                 flexDirection: 'row',
                 padding: 4,
                 borderRadius: radii.lg,
-                backgroundColor: colors.surface.card,
+                backgroundColor: c.card,
                 borderWidth: 1,
-                borderColor: colors.border.subtle,
+                borderColor: c.cardBorder,
                 marginTop: spacing.lg,
               }}
               accessibilityRole="tablist"
@@ -327,15 +331,15 @@ export default function PlansScreen() {
                       gap: 7,
                       minHeight: 44,
                       borderRadius: radii.md,
-                      backgroundColor: on ? colors.action.primaryFill : 'transparent',
+                      backgroundColor: on ? c.primary : 'transparent',
                     }}
                   >
                     <Text
                       style={{
-                        fontFamily: typography.family.extrabold,
+                        fontFamily: type.uiHeavy,
                         fontSize: 13,
                         lineHeight: 18,
-                        color: on ? colors.text.onPrimary : colors.text.tertiary,
+                        color: on ? c.onPrimary : c.idle,
                       }}
                     >
                       {opt === 'annual' ? 'Annual' : 'Monthly'}
@@ -346,15 +350,15 @@ export default function PlansScreen() {
                           paddingHorizontal: 6,
                           paddingVertical: 2,
                           borderRadius: radii.sm - 2,
-                          backgroundColor: on ? 'rgba(255,255,255,0.22)' : colors.success.tint,
+                          backgroundColor: on ? c.ctaOnPrimaryBg : c.greenTint,
                         }}
                       >
                         <Text
                           style={{
-                            fontFamily: typography.family.monoMedium,
+                            fontFamily: type.uiHeavy,
                             fontSize: 9,
                             lineHeight: 12,
-                            color: on ? colors.text.onPrimary : colors.success.light,
+                            color: on ? c.ctaOnPrimaryText : c.green,
                           }}
                         >
                           −{bestSavings}%
@@ -383,74 +387,38 @@ export default function PlansScreen() {
               })}
             </View>
 
-            <View
-              style={{
-                marginTop: spacing.sm + 1,
-                padding: spacing.md - 2,
-                borderRadius: radii.xl,
-                backgroundColor: colors.surface.card,
-                borderWidth: 1,
-                borderColor: colors.border.subtle,
-              }}
-            >
+            <SlabCard style={{ marginTop: spacing.sm + 1, padding: spacing.md - 2 }}>
               <Text
                 style={{
-                  fontFamily: typography.family.serif,
+                  fontFamily: type.ui,
                   fontSize: 15,
                   lineHeight: 22,
-                  color: colors.text.secondary,
+                  color: c.muted,
                 }}
               >
                 Learning a language has never been this easy.
               </Text>
-            </View>
+            </SlabCard>
 
             {/* CTA */}
-            <Pressable
+            <SlabButton
+              label={selectedPkg ? ctaLabel(selectedPkg, tier) : 'Subscribe'}
               onPress={handlePurchase}
+              loading={purchasing}
               disabled={busy || !selectedPkg}
-              accessibilityRole="button"
-              accessibilityLabel={selectedPkg ? ctaLabel(selectedPkg, tier) : 'Subscribe'}
+              arrow={false}
               style={{ marginTop: spacing.md }}
-            >
-              <LinearGradient
-                colors={[colors.action.primaryFill, colors.magazine.accentViolet]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={{
-                  minHeight: 52,
-                  borderRadius: radii.xl,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  opacity: busy ? 0.6 : 1,
-                }}
-              >
-                {purchasing ? (
-                  <ActivityIndicator color={colors.text.onPrimary} />
-                ) : (
-                  <Text
-                    style={{
-                      fontFamily: typography.family.extrabold,
-                      fontSize: 16,
-                      lineHeight: 22,
-                      color: colors.text.onPrimary,
-                    }}
-                  >
-                    {selectedPkg ? ctaLabel(selectedPkg, tier) : ''}
-                  </Text>
-                )}
-              </LinearGradient>
-            </Pressable>
+            />
 
             {/* Renewal terms, verbatim from the store product. Required in the
                 binary by App Review, and the honest thing to show. */}
             <Text
               style={{
-                fontFamily: typography.family.semibold,
+                fontFamily: type.ui,
                 fontSize: 11,
                 lineHeight: 16,
                 textAlign: 'center',
-                color: colors.text.quaternary,
+                color: c.idle,
                 marginTop: spacing.sm - 2,
               }}
             >
@@ -507,11 +475,11 @@ export default function PlansScreen() {
             >
               <Text
                 style={{
-                  fontFamily: typography.family.bold,
+                  fontFamily: type.uiBold,
                   fontSize: 14,
                   lineHeight: 20,
                   textAlign: 'center',
-                  color: colors.text.secondary,
+                  color: c.muted,
                 }}
               >
                 Continue on the free plan
@@ -519,11 +487,11 @@ export default function PlansScreen() {
             </Pressable>
             <Text
               style={{
-                fontFamily: typography.family.medium,
+                fontFamily: type.ui,
                 fontSize: 11,
                 lineHeight: 16,
                 textAlign: 'center',
-                color: colors.text.quaternary,
+                color: c.idle,
                 marginTop: 2,
               }}
             >
@@ -536,10 +504,3 @@ export default function PlansScreen() {
     </SafeAreaView>
   );
 }
-
-const legalStyle = {
-  fontFamily: typography.family.semibold,
-  fontSize: 10,
-  lineHeight: 14,
-  color: colors.text.quaternary,
-} as const;

@@ -4,7 +4,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import { File } from 'expo-file-system/next';
-import { colors, spacing } from '../../config/theme';
+import { spacing } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { setAudioSessionMode, recordingModeFor } from '../../lib/audio-session';
 import { chatVadForLevel, createVadState, feedVadSample, type VadState } from '../../lib/vad';
 import { LiveComposer } from './LiveComposer';
@@ -121,6 +122,7 @@ export function ChatInput({
   onInterruptPlayback,
   cefrLevel,
 }: ChatInputProps) {
+  const { c } = useUi2Theme();
   const insets = useSafeAreaInsets();
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
@@ -439,12 +441,17 @@ export function ChatInput({
 
     const statusColor = (() => {
       switch (handsFreeState) {
-        case 'CONNECTING': return colors.warning.light;
-        case 'LISTENING': return colors.success.base;
-        case 'PROCESSING': return colors.warning.light;
-        case 'AI_RESPONDING': return colors.league.diamond;
-        case 'TTS_PLAYING': return colors.league.diamond;
-        default: return colors.text.tertiary;
+        // Three legible bands, not five colours: `yellow` is 1.5:1 and `green`
+        // 2.2:1 as TEXT on a light ground, so the old warning/success pair
+        // stopped being readable the moment the app followed the phone. The
+        // state itself is still carried by `statusText` and by the mic glyph,
+        // which is what makes narrowing the colour safe.
+        case 'CONNECTING': return c.muted;
+        case 'LISTENING': return c.primary;
+        case 'PROCESSING': return c.muted;
+        case 'AI_RESPONDING': return c.onTint;
+        case 'TTS_PLAYING': return c.onTint;
+        default: return c.idle;
       }
     })();
 
@@ -461,7 +468,7 @@ export function ChatInput({
               ? 'volume-high'
               : 'ellipsis-horizontal'
         }
-        micColor={handsFreeState === 'LISTENING' ? colors.success.base : colors.action.primaryFill}
+        micColor={handsFreeState === 'LISTENING' ? c.green : c.primary}
         micAccessibilityLabel={
           handsFreeState === 'TTS_PLAYING' && onInterruptPlayback
             ? 'Tap to interrupt and speak'
@@ -491,7 +498,7 @@ export function ChatInput({
         meterLevel={meterLevel}
         live={isRecording}
         micIcon={isRecording ? 'mic' : 'mic-outline'}
-        micColor={isRecording ? colors.success.base : colors.action.primaryFill}
+        micColor={isRecording ? c.green : c.primary}
         micAccessibilityLabel={isRecording ? 'Release to stop recording' : 'Hold to record'}
         statusText={
           tooShortMessage ??
@@ -499,10 +506,10 @@ export function ChatInput({
         }
         statusColor={
           tooShortMessage
-            ? colors.warning.light
+            ? c.error
             : isRecording
-              ? colors.success.base
-              : colors.text.secondary
+              ? c.primary
+              : c.muted
         }
         busy={sending}
         onMicPressIn={() => startRecording(false)}
@@ -515,7 +522,7 @@ export function ChatInput({
 
   // Text mode UI (also used as fallback in voice mode)
   return (
-    <View className="flex-row items-end px-4 py-3 border-t border-dark-border bg-dark" style={{ paddingBottom: 12 + insets.bottom + 60 }}>
+    <View className="flex-row items-end px-4 py-3" style={{ paddingBottom: 12 + insets.bottom + 60, borderTopWidth: 1, borderTopColor: c.cardBorder, backgroundColor: c.bg }}>
       {/* Show mic icon to switch back to voice mode if in voice fallback */}
       {voiceMode && showTextFallback && (
         <Pressable
@@ -524,14 +531,15 @@ export function ChatInput({
           accessibilityLabel="Switch to voice mode"
           className="w-11 h-11 items-center justify-center mr-2"
         >
-          <Ionicons name="mic-outline" size={22} color={colors.correctionChip.grammar.text} />
+          <Ionicons name="mic-outline" size={22} color={c.primary} />
         </Pressable>
       )}
 
       <TextInput
-        className="flex-1 border-2 border-dark-border bg-dark-card-alt rounded-[14px] px-4 py-3 text-base text-text-primary mr-3 max-h-24 font-sans"
+        className="flex-1 border-2 rounded-[14px] px-4 py-3 text-base mr-3 max-h-24 font-sans"
+        style={{ borderColor: c.cardBorder, backgroundColor: c.surface2, color: c.ink }}
         placeholder="Type your message..."
-        placeholderTextColor={colors.text.quaternary}
+        placeholderTextColor={c.idle}
         value={value}
         onChangeText={onChangeText}
         multiline
@@ -551,16 +559,17 @@ export function ChatInput({
         accessibilityHint="Type a message to send"
       />
       <Pressable
-        className={`w-11 h-11 rounded-[22px] items-center justify-center bg-primary ${value.trim() ? '' : 'opacity-60'}`}
+        className={`w-11 h-11 rounded-[22px] items-center justify-center ${value.trim() ? '' : 'opacity-60'}`}
+        style={{ backgroundColor: c.primary }}
         onPress={() => onSend()}
         disabled={!value.trim() || sending}
         accessibilityRole="button"
         accessibilityLabel="Send message"
       >
         {sending ? (
-          <ActivityIndicator color="white" size="small" />
+          <ActivityIndicator color={c.onPrimary} size="small" />
         ) : (
-          <Ionicons name="send" size={18} color="white" />
+          <Ionicons name="send" size={18} color={c.onPrimary} />
         )}
       </Pressable>
     </View>

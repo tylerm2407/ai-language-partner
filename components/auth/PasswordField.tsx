@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { View, Text, TextInput, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, radii, spacing, typography } from '../../config/theme';
+import { spacing, type Ui2Palette } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 
 interface PasswordFieldProps {
   value: string;
@@ -43,12 +44,15 @@ export function passwordStrength(pw: string): { score: 0 | 1 | 2 | 3 | 4; label:
   return { score: clamped, label: labels[clamped] };
 }
 
-const METER_COLORS = [
-  colors.border.subtle,
-  colors.error.base,
-  colors.warning.light,
-  colors.warning.light,
-  colors.success.base,
+/** Indexed by strength score, so segment 0 is the empty-meter grey. Taking the
+ *  palette as an argument rather than reading a module-level `colors` is what
+ *  lets the meter follow the phone's light/dark setting. */
+const meterColors = (c: Ui2Palette): string[] => [
+  c.track,
+  c.error,
+  c.yellow,
+  c.yellow,
+  c.green,
 ];
 
 export function PasswordField({
@@ -59,6 +63,7 @@ export function PasswordField({
   isNew = false,
   onSubmitEditing,
 }: PasswordFieldProps) {
+  const { c, type, shape } = useUi2Theme();
   const [revealed, setRevealed] = useState(false);
   const [focused, setFocused] = useState(false);
   const strength = passwordStrength(value);
@@ -72,22 +77,25 @@ export function PasswordField({
           gap: spacing.sm + 2,
           height: 58,
           paddingHorizontal: spacing.md + 2,
-          borderRadius: radii.lg,
-          backgroundColor: colors.surface.card,
-          borderWidth: focused ? 1.5 : 1,
-          borderColor: focused ? 'rgba(129,140,248,0.5)' : colors.border.subtle,
+          borderRadius: shape.radiusCard,
+          backgroundColor: c.card,
+          // Focus recolours the outline instead of thickening it, the same way
+          // Ui2Input does: on a white ground a 0.5px growth is invisible.
+          borderWidth: shape.border,
+          borderBottomWidth: shape.slab,
+          borderColor: focused ? c.primary : c.cardBorder,
         }}
       >
-        <Ionicons name="lock-closed-outline" size={17} color={colors.text.tertiary} />
+        <Ionicons name="lock-closed-outline" size={17} color={focused ? c.primary : c.idle} />
         <TextInput
           style={{
             flex: 1,
-            fontFamily: typography.family.medium,
+            fontFamily: type.ui,
             fontSize: 15,
-            color: colors.text.primary,
+            color: c.ink,
           }}
           placeholder={placeholder}
-          placeholderTextColor={colors.text.quaternary}
+          placeholderTextColor={c.idle}
           value={value}
           onChangeText={onChangeText}
           onFocus={() => setFocused(true)}
@@ -113,10 +121,10 @@ export function PasswordField({
         >
           <Text
             style={{
-              fontFamily: typography.family.bold,
+              fontFamily: type.uiBold,
               fontSize: 11,
               letterSpacing: 1.2,
-              color: colors.action.accent,
+              color: c.primary,
             }}
           >
             {revealed ? 'HIDE' : 'SHOW'}
@@ -143,17 +151,17 @@ export function PasswordField({
                   height: 4,
                   borderRadius: 2,
                   backgroundColor:
-                    seg <= strength.score ? METER_COLORS[strength.score] : colors.border.subtle,
+                    seg <= strength.score ? meterColors(c)[strength.score] : c.track,
                 }}
               />
             ))}
           </View>
           <Text
             style={{
-              fontFamily: typography.family.mono,
+              fontFamily: type.uiBold,
               fontSize: 10,
               letterSpacing: 1.3,
-              color: strength.score >= 4 ? colors.success.light : colors.text.tertiary,
+              color: strength.score >= 4 ? c.green : c.muted,
             }}
             accessibilityLiveRegion="polite"
           >

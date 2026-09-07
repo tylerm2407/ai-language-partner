@@ -19,11 +19,15 @@ import {
 } from '../../../lib/purchases';
 import { PLAN_FEATURES, type PlanId } from '../../../lib/plans';
 import { trackEvent } from '../../../lib/analytics';
-import { Button } from '../../../components/ui/Button';
-import { Badge } from '../../../components/ui/Badge';
-import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../../config/theme';
-import { GlowLayer } from '../../../components/ui/GlowBackground';
+import { SlabButton } from '../../../components/ui2/SlabButton';
+import { Ui2Badge } from '../../../components/ui2/Ui2Badge';
+import { Ui2Header } from '../../../components/ui2/Ui2Header';
+import { SlabCard } from '../../../components/ui2/SlabCard';
+// `colors` is deliberately NOT imported: it is the fixed DARK palette, and a
+// screen that reads it stays dark whatever the phone is set to. `spacing` is a
+// plain scheme-independent number.
+import { useUi2Theme } from '../../../hooks/useUi2Theme';
+import { spacing } from '../../../config/theme';
 import { TrialTimeline } from '../../../components/subscription/TrialTimeline';
 import { PlanCard } from '../../../components/subscription/PlanCard';
 import { trialDaysFromPeriod } from '../../../lib/trial-timeline';
@@ -43,6 +47,7 @@ const MANAGE_URL =
 const DISPLAY_TIER_ORDER: PlanId[] = ['vip', 'premium', 'basic'];
 
 export default function SubscriptionScreen() {
+  const { c } = useUi2Theme();
   const { user } = useAuth();
   const { profile, subscription, entitledTier, refreshSubscription, setEntitledTier } = useAppStore();
   const goBack = useSafeBack('/(app)');
@@ -175,22 +180,16 @@ export default function SubscriptionScreen() {
   }, [packages]);
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.surface.base }}>
-      <GlowLayer />
-      <View className="flex-row items-center px-4 py-3 border-b border-dark-border">
-        <Pressable onPress={() => goBack()} accessibilityRole="button" accessibilityLabel="Go back">
-          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
-        </Pressable>
-        <Text className="text-lg font-semibold text-text-primary ml-3">Subscription</Text>
-      </View>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: c.bg }}>
+      <Ui2Header title="Subscription" onBack={() => goBack()} />
 
       <ScrollView className="flex-1 px-4 pt-6" contentContainerStyle={{ paddingBottom: 40 }}>
-        <Text className="text-2xl font-bold text-text-primary mb-2">Choose Your Plan</Text>
+        <Text className="text-2xl font-bold mb-2" style={{ color: c.ink }}>Choose Your Plan</Text>
         {/* Says what a paid plan actually buys. An earlier line led with
             "unlimited hearts" — a mechanic that has since been removed
             outright, because framing the product as selling relief from its own
             friction is the trap this tier list exists to avoid. */}
-        <Text className="text-base text-text-secondary mb-6">
+        <Text className="text-base mb-6" style={{ color: c.muted }}>
           Lessons, reviews and reading are free, always. Paid plans add daily
           tutor conversation, voice practice and writing feedback.
         </Text>
@@ -202,20 +201,20 @@ export default function SubscriptionScreen() {
             account gets and leaves the pitch to the rungs below. The list is
             PLAN_FEATURES.starter, so it cannot drift from lib/plans.ts. */}
         {currentTier === 'starter' && (
-          <View className="rounded-2xl p-5 mb-4 border-2 border-border-subtle bg-dark-card">
-            <Text className="text-2xl font-bold text-text-primary mb-1">Free plan</Text>
-            <Text className="text-sm text-text-secondary mb-3">
+          <SlabCard style={{ marginBottom: spacing.md }}>
+            <Text className="text-2xl font-bold mb-1" style={{ color: c.ink }}>Free plan</Text>
+            <Text className="text-sm mb-3" style={{ color: c.muted }}>
               You can keep learning on this plan for as long as you like. What it includes:
             </Text>
             {PLAN_FEATURES.starter.map((feature) => (
-              <Text key={feature} className="text-sm text-text-primary mb-1">
+              <Text key={feature} className="text-sm mb-1" style={{ color: c.ink }}>
                 · {feature}
               </Text>
             ))}
-            <Text className="text-sm text-text-secondary mt-3">
+            <Text className="text-sm mt-3" style={{ color: c.muted }}>
               The AI tutor, voice practice and writing grades need a paid plan.
             </Text>
-          </View>
+          </SlabCard>
         )}
 
         {/* Trial mechanics, stated before the prices rather than after the
@@ -227,35 +226,35 @@ export default function SubscriptionScreen() {
 
         {/* Current plan banner */}
         {currentTier !== 'starter' && (
-          <View className="rounded-2xl p-4 mb-4 border-2 border-success bg-success-bg">
-            <Badge variant="success" label="Current Plan" />
-            <Text className="text-lg font-semibold text-text-primary mt-2 capitalize">{currentTier}</Text>
+          <SlabCard tint="green" style={{ marginBottom: spacing.md }}>
+            <Ui2Badge variant="success" label="Current Plan" />
+            <Text className="text-lg font-semibold mt-2 capitalize" style={{ color: c.ink }}>{currentTier}</Text>
             {subscription?.currentPeriodEnd ? (
-              <Text className="text-sm text-text-secondary mt-1">
+              <Text className="text-sm mt-1" style={{ color: c.muted }}>
                 {subscription.cancelAtPeriodEnd ? 'Ends' : 'Renews'} on{' '}
                 {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
               </Text>
             ) : null}
-          </View>
+          </SlabCard>
         )}
 
         {!isPurchasesAvailable() ? (
-          <View className="rounded-2xl p-5 mb-4 border border-dark-border bg-dark-card">
-            <Text className="text-base text-text-secondary">
+          <SlabCard style={{ marginBottom: spacing.md }}>
+            <Text className="text-base" style={{ color: c.muted }}>
               Subscriptions are available in the App Store and Google Play builds of Fluenci.
             </Text>
-          </View>
+          </SlabCard>
         ) : loadingOfferings ? (
           <View className="py-12 items-center">
-            <ActivityIndicator size="large" color={colors.action.accent} />
+            <ActivityIndicator size="large" color={c.primary} />
           </View>
         ) : offeringsError ? (
-          <View className="rounded-2xl p-5 mb-4 border border-dark-border bg-dark-card">
-            <Text className="text-base text-text-primary mb-3">
+          <SlabCard style={{ marginBottom: spacing.md }}>
+            <Text className="text-base mb-3" style={{ color: c.ink }}>
               We couldn&apos;t load plans right now.
             </Text>
-            <Button label="Try again" variant="secondary" onPress={loadOfferings} />
-          </View>
+            <SlabButton label="Try again" arrow={false} onPress={loadOfferings} />
+          </SlabCard>
         ) : (
           sortedPackages.map((pkg) => {
             const tier = tierFromPackage(pkg);
@@ -285,9 +284,9 @@ export default function SubscriptionScreen() {
             className="py-3 items-center mt-2"
           >
             {restoring ? (
-              <ActivityIndicator color={colors.text.secondary} />
+              <ActivityIndicator color={c.muted} />
             ) : (
-              <Text className="text-base text-primary font-medium">Restore Purchases</Text>
+              <Text className="text-base font-medium" style={{ color: c.onTint }}>Restore Purchases</Text>
             )}
           </Pressable>
         )}
@@ -300,17 +299,17 @@ export default function SubscriptionScreen() {
             accessibilityLabel="Manage subscription"
             className="py-3 items-center"
           >
-            <Text className="text-base text-text-secondary">Manage Subscription</Text>
+            <Text className="text-base" style={{ color: c.muted }}>Manage Subscription</Text>
           </Pressable>
         )}
 
         {/* Legal — App Store requires terms + privacy on the paywall */}
         <View className="flex-row flex-wrap justify-center gap-4 mt-4">
           <Pressable onPress={() => Linking.openURL('https://fluenci.com/terms')} accessibilityRole="link">
-            <Text className="text-xs text-text-tertiary underline">Terms of Use</Text>
+            <Text className="text-xs underline" style={{ color: c.idle }}>Terms of Use</Text>
           </Pressable>
           <Pressable onPress={() => Linking.openURL('https://fluenci.com/privacy')} accessibilityRole="link">
-            <Text className="text-xs text-text-tertiary underline">Privacy Policy</Text>
+            <Text className="text-xs underline" style={{ color: c.idle }}>Privacy Policy</Text>
           </Pressable>
         </View>
       </ScrollView>

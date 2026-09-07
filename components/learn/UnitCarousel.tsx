@@ -20,10 +20,11 @@ import {
   useWindowDimensions,
   type ListRenderItemInfo,
 } from 'react-native';
-import { Body } from '../ui/Text';
+import { Body } from '../ui2/Ui2Text';
 import { Mono } from './Mono';
 import { usePressed } from '../../hooks/usePressed';
-import { colors, radii, spacing, typography } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
+import { radii, spacing, typography } from '../../config/theme';
 import type { UnitProgress } from '../../lib/learn-progress';
 
 interface UnitCarouselProps {
@@ -122,6 +123,7 @@ const UnitCard = React.memo(function UnitCard({
   selected,
   onPress,
 }: UnitCardProps) {
+  const { c } = useUi2Theme();
   const { pressed, pressHandlers } = usePressed();
   const { completedCount, totalCount, progress } = unit;
   const finished = totalCount > 0 && completedCount === totalCount;
@@ -137,14 +139,16 @@ const UnitCard = React.memo(function UnitCard({
       style={[
         styles.card,
         { width },
-        selected ? styles.cardSelected : styles.cardIdle,
+        selected
+          ? { backgroundColor: c.primaryTint, borderColor: c.primaryTintBorder }
+          : { backgroundColor: c.card, borderColor: c.cardBorder },
         pressed && styles.cardPressed,
       ]}
     >
       <Body
         style={[
           styles.number,
-          { color: selected ? colors.indigo[300] : colors.text.quaternary },
+          { color: selected ? c.primary : c.idle },
         ]}
       >
         {String(unit.index + 1).padStart(2, '0')}
@@ -161,17 +165,17 @@ const UnitCard = React.memo(function UnitCard({
       </Body>
 
       <View style={styles.progressRow}>
-        <View style={styles.track}>
+        <View style={[styles.track, { backgroundColor: c.track }]}>
           <View
             style={[
               styles.fill,
               {
                 width: `${Math.round(progress * 100)}%`,
                 backgroundColor: finished
-                  ? colors.success.base
+                  ? c.green
                   : selected
-                    ? colors.indigo[400]
-                    : 'rgba(255, 255, 255, 0.32)',
+                    ? c.primary
+                    : c.idle,
               },
             ]}
           />
@@ -179,7 +183,7 @@ const UnitCard = React.memo(function UnitCard({
         <Mono
           size={11}
           medium
-          color={selected ? colors.text.secondary : colors.text.tertiary}
+          color={selected ? c.muted : c.idle}
           style={styles.count}
         >
           {`${completedCount}/${totalCount}`}
@@ -200,14 +204,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: spacing.md,
     justifyContent: 'space-between',
-  },
-  cardIdle: {
-    backgroundColor: colors.surface.card,
-    borderColor: colors.border.subtle,
-  },
-  cardSelected: {
-    backgroundColor: colors.action.primaryTint,
-    borderColor: colors.action.primaryBorder,
   },
   cardPressed: {
     opacity: 0.8,
@@ -231,7 +227,6 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 4,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(255, 255, 255, 0.10)',
     overflow: 'hidden',
   },
   fill: {

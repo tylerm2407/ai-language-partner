@@ -13,10 +13,11 @@
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Body } from '../ui/Text';
+import { Body } from '../ui2/Ui2Text';
 import { Mono } from './Mono';
 import { usePressed } from '../../hooks/usePressed';
-import { colors, radii, spacing } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
+import { radii, spacing } from '../../config/theme';
 
 interface ReviewShortcutProps {
   count: number;
@@ -24,6 +25,7 @@ interface ReviewShortcutProps {
 }
 
 export function ReviewShortcut({ count, onPress }: ReviewShortcutProps) {
+  const { c } = useUi2Theme();
   const { pressed, pressHandlers } = usePressed();
   if (count <= 0) return null;
 
@@ -33,21 +35,21 @@ export function ReviewShortcut({ count, onPress }: ReviewShortcutProps) {
       {...pressHandlers}
       accessibilityRole="button"
       accessibilityLabel={`Review cards. ${count} ${count === 1 ? 'card' : 'cards'} due.`}
-      style={[styles.row, pressed && styles.pressed]}
+      style={[styles.row, { borderColor: c.greenBorder, backgroundColor: c.greenTint }, pressed && styles.pressed]}
     >
-      <View style={styles.iconWell}>
-        <Ionicons name="refresh" size={18} color={colors.success.base} />
+      <View style={[styles.iconWell, { backgroundColor: c.greenBorder }]}>
+        <Ionicons name="refresh" size={18} color={c.green} />
       </View>
       <Body size="md" weight="bold" style={styles.label}>
         Review cards
       </Body>
-      <Mono size={11} medium color={colors.success.base}>
+      <Mono size={11} medium color={c.green}>
         {`${count} DUE`}
       </Mono>
       <Ionicons
         name="chevron-forward"
         size={16}
-        color={colors.text.quaternary}
+        color={c.idle}
         style={styles.chevron}
       />
     </Pressable>
@@ -63,8 +65,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: colors.success.border,
-    backgroundColor: colors.success.tint,
   },
   pressed: {
     opacity: 0.75,
@@ -75,7 +75,6 @@ const styles = StyleSheet.create({
     borderRadius: radii.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(34, 197, 94, 0.16)',
   },
   label: {
     flex: 1,

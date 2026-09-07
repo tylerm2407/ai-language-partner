@@ -1,11 +1,11 @@
 import { useRef, useState } from 'react';
-import { View, Text, TextInput, Pressable } from 'react-native';
+import { View, Text, TextInput, Pressable, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { haptic } from '../../lib/haptics';
 import { ExerciseCard } from './ExerciseCard';
 import { FeedbackCard } from './FeedbackCard';
-import { Button } from '../ui/Button';
-import { colors } from '../../config/theme';
+import { SlabButton } from '../ui2/SlabButton';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { gradeAnswer } from '../../lib/grading';
 import type { GradeResult } from '../../lib/grading';
 import { isRestored, regradePick } from '../../lib/exercise-restore';
@@ -35,6 +35,7 @@ export function ListeningExercise({
   language,
   cefrLevel,
 }: ListeningExerciseProps) {
+  const { c } = useUi2Theme();
   // Seeded from the recorded pick so Previous comes back to the answer the
   // learner actually gave, in its graded state — see lib/exercise-restore.ts.
   const [answer, setAnswer] = useState(selected ?? '');
@@ -140,28 +141,31 @@ export function ListeningExercise({
   };
 
 
-  const getOptionStyle = (option: string) => {
+  /** A style object rather than the Tailwind classes it used to return: the
+   *  fills are palette tokens now, so they follow the phone's scheme. */
+  const getOptionStyle = (option: string): ViewStyle => {
     if (!submitted && !showResult) {
-      return 'bg-dark-card-alt border-2 border-transparent';
+      return { backgroundColor: c.surface2, borderColor: 'transparent' };
     }
     const isCorrectOption =
       option.toLowerCase() === exercise.correctAnswer.toLowerCase() ||
       exercise.acceptedAnswers.map((a) => a.toLowerCase()).includes(option.toLowerCase());
 
     if ((submitted || showResult) && isCorrectOption) {
-      return 'bg-success-bg border-2 border-success';
+      return { backgroundColor: c.greenTint, borderColor: c.green };
     }
     if (option === answer && !isCorrectOption) {
-      return 'bg-error-bg border-2 border-error';
+      return { backgroundColor: c.pinkTint, borderColor: c.error };
     }
-    return 'bg-dark-card-alt border-2 border-transparent';
+    return { backgroundColor: c.surface2, borderColor: 'transparent' };
   };
 
   return (
     <ExerciseCard type={exercise.type} prompt="Listen and answer">
       {/* Audio play button */}
       <Pressable
-        className="bg-primary w-20 h-20 rounded-full items-center justify-center self-center mb-6"
+        className="w-20 h-20 rounded-full items-center justify-center self-center mb-6"
+        style={{ backgroundColor: c.primary }}
         onPress={() => handlePlayAudio()}
         disabled={playing || loading || synthesizing || (!exercise.promptAudioUrl && !canSynthesize)}
         accessibilityRole="button"
@@ -172,7 +176,7 @@ export function ListeningExercise({
         <Ionicons
           name={synthesizing ? 'hourglass' : playing ? 'volume-high' : 'play'}
           size={36}
-          color="white"
+          color={c.onPrimary}
         />
       </Pressable>
 
@@ -181,20 +185,20 @@ export function ListeningExercise({
           can only refuse is worse than no button. */}
       {hasPlayed && canSynthesize && !quotaExhausted && (
         <Pressable
-          className="flex-row items-center self-center mb-6 px-4 rounded-[12px] bg-dark-card-alt"
-          style={{ minHeight: 44 }}
+          className="flex-row items-center self-center mb-6 px-4 rounded-[12px]"
+          style={{ minHeight: 44, backgroundColor: c.surface2 }}
           onPress={() => handlePlayAudio(LESSON_SLOW_RATE)}
           disabled={playing || loading || synthesizing}
           accessibilityRole="button"
           accessibilityLabel="Play the audio again, slower"
         >
-          <Ionicons name="play-outline" size={18} color={colors.indigo[400]} />
-          <Text className="text-text-secondary text-sm ml-2">Slower</Text>
+          <Ionicons name="play-outline" size={18} color={c.primary} />
+          <Text className="text-sm ml-2" style={{ color: c.muted }}>Slower</Text>
         </Pressable>
       )}
 
       {!exercise.promptAudioUrl && !canSynthesize && (
-        <Text className="text-text-tertiary text-sm text-center mb-4">
+        <Text className="text-sm text-center mb-4" style={{ color: c.idle }}>
           No audio available for this exercise
         </Text>
       )}
@@ -207,8 +211,8 @@ export function ListeningExercise({
           accessibilityRole="alert"
           accessibilityLabel={`Audio unavailable. ${synthesisError}. Tap play to retry.`}
         >
-          <Ionicons name="alert-circle" size={16} color={colors.error.base} />
-          <Text className="text-error text-sm ml-1 flex-1">
+          <Ionicons name="alert-circle" size={16} color={c.error} />
+          <Text className="text-sm ml-1 flex-1" style={{ color: c.error }}>
             Couldn&apos;t load the audio — tap play to retry
           </Text>
         </View>
@@ -221,8 +225,8 @@ export function ListeningExercise({
           accessibilityRole="alert"
           accessibilityLabel="Audio failed to play. Tap play to retry."
         >
-          <Ionicons name="alert-circle" size={16} color={colors.error.base} />
-          <Text className="text-error text-sm ml-1">
+          <Ionicons name="alert-circle" size={16} color={c.error} />
+          <Text className="text-sm ml-1" style={{ color: c.error }}>
             Audio failed to play — tap play to retry
           </Text>
         </View>
@@ -234,7 +238,8 @@ export function ListeningExercise({
           {exercise.options!.map((option, index) => (
             <Pressable
               key={index}
-              className={`p-4 rounded-[14px] mb-2.5 flex-row items-center ${getOptionStyle(option)}`}
+              className="p-4 rounded-[14px] mb-2.5 flex-row items-center border-2"
+              style={getOptionStyle(option)}
               onPress={() => handleSelectOption(option)}
               disabled={submitted || showResult}
               accessibilityRole="button"
@@ -246,14 +251,14 @@ export function ListeningExercise({
                   exercise.acceptedAnswers.map((a) => a.toLowerCase()).includes(option.toLowerCase());
                 const isSelected = option === answer;
                 if (isCorrectOption) {
-                  return <Ionicons name="checkmark-circle" size={20} color={colors.success.base} style={{ marginRight: 8 }} />;
+                  return <Ionicons name="checkmark-circle" size={20} color={c.green} style={{ marginRight: 8 }} />;
                 }
                 if (isSelected && !isCorrectOption) {
-                  return <Ionicons name="close-circle" size={20} color={colors.error.base} style={{ marginRight: 8 }} />;
+                  return <Ionicons name="close-circle" size={20} color={c.error} style={{ marginRight: 8 }} />;
                 }
                 return null;
               })()}
-              <Text className="text-text-primary text-[17px] font-semibold flex-1">
+              <Text className="text-[17px] font-semibold flex-1" style={{ color: c.ink }}>
                 {option}
               </Text>
             </Pressable>
@@ -262,9 +267,13 @@ export function ListeningExercise({
       ) : (
         <>
           <TextInput
-            className={`border-2 ${submitted ? (result?.isCorrect ? 'border-success' : 'border-error') : 'border-input-border'} rounded-[14px] px-4 py-2.5 text-base text-text-primary`}
+            className="border-2 rounded-[14px] px-4 py-2.5 text-base"
+            style={{
+              borderColor: submitted ? (result?.isCorrect ? c.green : c.error) : c.cardBorder,
+              color: c.ink,
+            }}
             placeholder="Type what you heard..."
-            placeholderTextColor="#64748B"
+            placeholderTextColor={c.idle}
             value={answer}
             onChangeText={setAnswer}
             editable={!submitted && !showResult}
@@ -276,16 +285,16 @@ export function ListeningExercise({
               <Ionicons
                 name={result.isCorrect ? 'checkmark-circle' : 'close-circle'}
                 size={20}
-                color={result.isCorrect ? colors.success.base : colors.error.base}
+                color={result.isCorrect ? c.green : c.error}
               />
-              <Text className={`ml-1 text-sm font-semibold ${result.isCorrect ? 'text-success' : 'text-error'}`}>
+              <Text className="ml-1 text-sm font-semibold" style={{ color: c.ink }}>
                 {result.isCorrect ? 'Correct' : 'Incorrect'}
               </Text>
             </View>
           )}
           {!submitted && !showResult && (
             <View className="mt-4">
-              <Button
+              <SlabButton
                 label="Check"
                 onPress={handleSubmitTyped}
                 disabled={!answer.trim()}

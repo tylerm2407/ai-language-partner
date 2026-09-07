@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Text, Animated, Easing } from 'react-native';
 import { useMotion } from '../../hooks/useMotion';
-import { colors, typography } from '../../config/theme';
+import { typography } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 
 /**
  * The rotating multilingual greeting, lifted out of `app/(public)/index.tsx`
@@ -33,6 +34,9 @@ const FADE_MS = 320;
 interface RotatingGreetingProps {
   /** Font size for the word. 56 for the sign-up hero, 34 for sign-in. */
   size?: number;
+  /** Defaults to the scheme's ink. A default PARAMETER cannot read the theme —
+   *  parameter defaults are evaluated before the hook runs — so it is resolved
+   *  in the body instead. */
   color?: string;
   showLanguage?: boolean;
   align?: 'center' | 'left';
@@ -40,10 +44,11 @@ interface RotatingGreetingProps {
 
 export function RotatingGreeting({
   size = 56,
-  color = colors.text.primary,
+  color,
   showLanguage = false,
   align = 'center',
 }: RotatingGreetingProps) {
+  const { c } = useUi2Theme();
   const { shouldReduce } = useMotion();
   const [index, setIndex] = useState(0);
   const opacity = useRef(new Animated.Value(1)).current;
@@ -89,7 +94,7 @@ export function RotatingGreeting({
           fontSize,
           lineHeight: size * 1.32,
           letterSpacing: -1.4,
-          color,
+          color: color ?? c.ink,
         }}
       >
         {current.word}
@@ -100,7 +105,7 @@ export function RotatingGreeting({
             fontFamily: typography.family.mono,
             fontSize: 11,
             letterSpacing: 2.2,
-            color: colors.text.tertiary,
+            color: c.idle,
             marginTop: 6,
           }}
         >

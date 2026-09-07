@@ -4,8 +4,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { haptic } from '../../lib/haptics';
 import { FeedbackCard } from './FeedbackCard';
 import { HighlightedText } from '../shared/HighlightedText';
-import { Body, Caption } from '../ui/Text';
-import { colors, spacing, radii } from '../../config/theme';
+import { Body, Caption } from '../ui2/Ui2Text';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
+import { spacing, radii } from '../../config/theme';
 import { gradeAnswer } from '../../lib/grading';
 import type { GradeResult } from '../../lib/grading';
 import { isRestored, regradePick, restorePlacedTiles } from '../../lib/exercise-restore';
@@ -36,6 +37,7 @@ export function SentenceConstructionExercise({
   language,
   cefrLevel,
 }: Props) {
+  const { c } = useUi2Theme();
   const tiles = useMemo(() => {
     const correctTiles = (exercise.metadata?.tiles as string[]) ?? exercise.correctAnswer.split(' ');
     const distractors = (exercise.metadata?.distractors as string[]) ?? [];
@@ -107,22 +109,23 @@ export function SentenceConstructionExercise({
       <HighlightedText
         text={exercise.prompt}
         highlight={highlight}
-        className="text-text-primary text-[18px] font-sans-semibold mb-5 leading-7"
+        className="text-[18px] font-sans-semibold mb-5 leading-7"
+        style={{ color: c.ink }}
       />
 
       {/* Answer area */}
       <View style={{
-        backgroundColor: colors.surface.cardAlt, borderRadius: radii.xl, padding: spacing.md, marginBottom: spacing.lg + spacing.xxs,
+        backgroundColor: c.surface2, borderRadius: radii.xl, padding: spacing.md, marginBottom: spacing.lg + spacing.xxs,
         minHeight: 80, flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs,
         borderWidth: isRevealed ? 2 : 0,
-        borderColor: isRevealed ? (isCorrect ? colors.success.base : colors.error.base) : 'transparent',
+        borderColor: isRevealed ? (isCorrect ? c.green : c.error) : 'transparent',
       }}>
         {isRevealed && (
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xxs }}>
             <Ionicons
               name={isCorrect ? 'checkmark-circle' : 'close-circle'}
               size={20}
-              color={isCorrect ? colors.success.base : colors.error.base}
+              color={isCorrect ? c.green : c.error}
               style={{ marginRight: spacing.xxs }}
             />
           </View>
@@ -135,9 +138,9 @@ export function SentenceConstructionExercise({
             key={`placed-${placedIndex}`}
             onPress={() => !isRevealed && handleTapPlaced(placedIndex)}
             style={{
-              backgroundColor: colors.indigo[900],
+              backgroundColor: c.primaryTint,
               borderWidth: 2,
-              borderColor: colors.action.primaryFill,
+              borderColor: c.primaryTintBorder,
               borderRadius: radii.sm,
               paddingHorizontal: spacing.sm,
               paddingVertical: spacing.xs,
@@ -161,7 +164,12 @@ export function SentenceConstructionExercise({
               key={`tile-${tileIndex}`}
               onPress={() => handleTapAvailable(tileIndex)}
               style={{
-                backgroundColor: colors.surface.card,
+                // surface2 plus a hairline, not the card fill: on a white
+                // ground in the light scheme a card-coloured tile is invisible
+                // against the screen it sits on.
+                backgroundColor: c.surface2,
+                borderWidth: 1,
+                borderColor: c.cardBorder,
                 borderRadius: radii.sm,
                 paddingHorizontal: spacing.sm,
                 paddingVertical: spacing.xs,
@@ -193,7 +201,8 @@ export function SentenceConstructionExercise({
           onPress={handleCheck}
           disabled={placed.length === 0}
           style={{
-            backgroundColor: placed.length > 0 ? colors.action.primaryFill : colors.indigo[200],
+            backgroundColor: c.primary,
+            opacity: placed.length > 0 ? 1 : 0.6,
             paddingVertical: spacing.md, borderRadius: radii.lg, alignItems: 'center',
           }}
           accessibilityRole="button"

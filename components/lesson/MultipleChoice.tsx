@@ -4,7 +4,8 @@ import { ExerciseCard } from './ExerciseCard';
 import { HighlightedText } from '../shared/HighlightedText';
 import { gradeAnswer } from '../../lib/grading';
 import { logExerciseCorrection } from '../../lib/supabase-queries';
-import { colors, radii, spacing, typography } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
+import { radii, spacing, typography } from '../../config/theme';
 import type { Exercise, FeedbackErrorType, LanguageCode } from '../../types';
 
 interface MultipleChoiceProps {
@@ -37,6 +38,7 @@ export function MultipleChoice({
   userId,
   language,
 }: MultipleChoiceProps) {
+  const { c } = useUi2Theme();
   const options = exercise.options ?? [];
   const locked = selected !== null || showResult;
 
@@ -68,20 +70,25 @@ export function MultipleChoice({
   };
 
   /**
-   * Answered rows earn a border and a key-tile fill; unanswered-and-not-picked
-   * rows keep surface.cardAlt with a tertiary label. They are never dropped to
+   * Answered rows earn a hued border and a key-tile fill; unanswered-and-not-
+   * picked rows keep `surface2` with a dimmer label. They are never dropped to
    * the card's own fill — that dissolves the row and drops the label under AA.
+   *
+   * The CORRECT / YOUR PICK marks are `ink`, not their own hue: UI 2.0's green
+   * is a fill chosen to be seen at 20px, not read at 9px (see the note at the
+   * top of components/ui2/Ui2Badge.tsx). The verdict is carried by the word
+   * itself, the row fill and the border — never by colour alone.
    */
   const rowPalette = (option: string) => {
     const isPick = option === selected;
     const right = isCorrectOption(option);
     if (!locked) {
       return {
-        bg: colors.surface.cardAlt,
-        border: colors.border.subtle,
-        keyBg: colors.surface.card,
-        keyText: colors.text.tertiary,
-        label: colors.text.secondary,
+        bg: c.surface2,
+        border: c.cardBorder,
+        keyBg: c.card,
+        keyText: c.idle,
+        label: c.muted,
         weight: '600' as const,
         mark: null as string | null,
         markColor: 'transparent',
@@ -89,34 +96,34 @@ export function MultipleChoice({
     }
     if (right) {
       return {
-        bg: colors.success.tint,
-        border: colors.success.base,
-        keyBg: colors.success.base,
-        keyText: colors.text.onSuccess,
-        label: colors.text.primary,
+        bg: c.greenTint,
+        border: c.green,
+        keyBg: c.green,
+        keyText: c.onPrimary,
+        label: c.ink,
         weight: '700' as const,
         mark: 'CORRECT',
-        markColor: colors.success.light,
+        markColor: c.ink,
       };
     }
     if (isPick) {
       return {
-        bg: colors.error.tint,
-        border: colors.error.base,
-        keyBg: colors.error.base,
-        keyText: colors.text.onPrimary,
-        label: colors.text.primary,
+        bg: c.pinkTint,
+        border: c.error,
+        keyBg: c.error,
+        keyText: c.onPrimary,
+        label: c.ink,
         weight: '700' as const,
         mark: 'YOUR PICK',
-        markColor: colors.error.light,
+        markColor: c.ink,
       };
     }
     return {
-      bg: colors.surface.cardAlt,
-      border: colors.border.subtle,
-      keyBg: colors.surface.card,
-      keyText: colors.text.tertiary,
-      label: colors.text.tertiary,
+      bg: c.surface2,
+      border: c.cardBorder,
+      keyBg: c.card,
+      keyText: c.idle,
+      label: c.idle,
       weight: '600' as const,
       mark: null,
       markColor: 'transparent',
@@ -132,7 +139,8 @@ export function MultipleChoice({
         <HighlightedText
           text={exercise.prompt}
           highlight={highlight}
-          className="text-text-primary text-[22px] font-sans-semibold"
+          className="text-[22px] font-sans-semibold"
+          style={{ color: c.ink }}
         />
       }
     >

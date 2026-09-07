@@ -3,11 +3,11 @@ import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl } 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { GradientBackground } from '../../components/ui/GradientBackground';
-import { GlassSurface } from '../../components/ui/GlassSurface';
+import { SlabCard } from '../../components/ui2/SlabCard';
 import { useSchoolStore } from '../../stores/useSchoolStore';
 import { useAuth } from '../../hooks/useAuth';
 import { useTeacherDashboard } from '../../hooks/useTeacherDashboard';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 
 interface QuickStat {
   label: string;
@@ -51,6 +51,7 @@ function formatRelativeTime(dateStr: string): string {
 }
 
 export default function TeacherDashboardScreen() {
+  const { c } = useUi2Theme();
   const router = useRouter();
   const { user } = useAuth();
   const { organization, classrooms, loadTeacherData } = useSchoolStore();
@@ -81,19 +82,19 @@ export default function TeacherDashboardScreen() {
       label: 'Active Students',
       value: String(totalStudents),
       icon: 'people-outline',
-      color: '#A855F7',
+      color: c.primary,
     },
     {
       label: 'Pending Grades',
       value: String(pendingSubmissions),
       icon: 'document-text-outline',
-      color: '#F59E0B',
+      color: c.yellow,
     },
     {
       label: 'Avg Completion',
       value: averageCompletionRate > 0 ? `${Math.round(averageCompletionRate * 100)}%` : '—',
       icon: 'stats-chart-outline',
-      color: '#22C55E',
+      color: c.green,
     },
   ];
 
@@ -118,63 +119,62 @@ export default function TeacherDashboardScreen() {
 
   if (!organization) {
     return (
-      <GradientBackground>
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
         <SafeAreaView className="flex-1 justify-center items-center px-6">
-          <Ionicons name="school-outline" size={64} color="#64748B" />
+          <Ionicons name="school-outline" size={64} color={c.idle} />
           <Text
-            className="text-xl text-text-primary mt-4 text-center"
-            style={{ fontFamily: 'Nunito_600SemiBold' }}
+            className="text-xl mt-4 text-center"
+            style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
           >
             Not linked to a school
           </Text>
-          <Text className="text-base text-text-secondary mt-2 text-center">
+          <Text className="text-base mt-2 text-center" style={{ color: c.muted }}>
             Contact your school administrator to get set up as a teacher.
           </Text>
         </SafeAreaView>
-      </GradientBackground>
+      </View>
     );
   }
 
   return (
-    <GradientBackground>
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
       <SafeAreaView className="flex-1" edges={['top']}>
         <ScrollView
           className="flex-1 px-4 pt-2"
           contentContainerStyle={{ paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={loading} onRefresh={refresh} tintColor="#818CF8" />
+            <RefreshControl refreshing={loading} onRefresh={refresh} tintColor={c.primary} />
           }
         >
           {/* Header */}
           <Text
-            className="text-[28px] text-text-primary mb-1"
-            style={{ fontFamily: 'Nunito_800ExtraBold' }}
+            className="text-[28px] mb-1"
+            style={{ fontFamily: 'Nunito_800ExtraBold', color: c.ink }}
             accessibilityRole="header"
           >
             Dashboard
           </Text>
           <Text
-            className="text-base text-text-secondary mb-6"
-            style={{ fontFamily: 'Nunito_400Regular' }}
+            className="text-base mb-6"
+            style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
           >
             {organization.name}
           </Text>
 
           {loading ? (
-            <ActivityIndicator color="#818CF8" size="large" style={{ marginTop: 32 }} />
+            <ActivityIndicator color={c.primary} size="large" style={{ marginTop: 32 }} />
           ) : (
             <>
               {/* Load Error */}
               {error && (
-                <GlassSurface
-                  style={{ marginBottom: 16 }}
-                  innerStyle={{ padding: 14, flexDirection: 'row', alignItems: 'center' }}
+                <SlabCard
+                  style={{ marginBottom: 16, padding: 14, flexDirection: 'row', alignItems: 'center' }}
                 >
-                  <Ionicons name="warning-outline" size={18} color="#F59E0B" />
+                  <Ionicons name="warning-outline" size={18} color={c.yellow} />
                   <Text
-                    className="text-sm text-text-secondary flex-1 ml-2"
-                    style={{ fontFamily: 'Nunito_400Regular' }}
+                    className="text-sm flex-1 ml-2"
+                    style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
                   >
                     {error}
                   </Text>
@@ -185,62 +185,58 @@ export default function TeacherDashboardScreen() {
                     style={{ paddingVertical: 6, paddingHorizontal: 12 }}
                   >
                     <Text
-                      style={{ color: '#818CF8', fontSize: 13, fontFamily: 'Nunito_600SemiBold' }}
+                      style={{ color: c.primary, fontSize: 13, fontFamily: 'Nunito_600SemiBold' }}
                     >
                       Retry
                     </Text>
                   </Pressable>
-                </GlassSurface>
+                </SlabCard>
               )}
 
               {/* Quick Stats */}
               <View className="flex-row mb-6" style={{ gap: 10 }}>
                 {stats.map((stat) => (
-                  <GlassSurface
+                  <SlabCard
                     key={stat.label}
-                    style={{ flex: 1 }}
-                    innerStyle={{ padding: 14, alignItems: 'center' }}
+                    style={{ flex: 1, padding: 14, alignItems: 'center' }}
                     accessibilityLabel={`${stat.label}: ${stat.value}`}
                     accessibilityRole="summary"
                   >
                     <Ionicons name={stat.icon} size={22} color={stat.color} />
                     <Text
-                      className="text-xl text-text-primary mt-2"
-                      style={{ fontFamily: 'Nunito_700Bold' }}
+                      className="text-xl mt-2"
+                      style={{ fontFamily: 'Nunito_700Bold', color: c.ink }}
                     >
                       {stat.value}
                     </Text>
                     <Text
-                      className="text-xs text-text-secondary mt-1 text-center"
-                      style={{ fontFamily: 'Nunito_500Medium' }}
+                      className="text-xs mt-1 text-center"
+                      style={{ fontFamily: 'Nunito_500Medium', color: c.muted }}
                       numberOfLines={1}
                     >
                       {stat.label}
                     </Text>
-                  </GlassSurface>
+                  </SlabCard>
                 ))}
               </View>
 
               {/* Upcoming Due Dates */}
               <Text
-                className="text-xl text-text-primary mb-3"
-                style={{ fontFamily: 'Nunito_600SemiBold' }}
+                className="text-xl mb-3"
+                style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
               >
                 Upcoming
               </Text>
               {upcoming.length === 0 ? (
-                <GlassSurface
-                  style={{ marginBottom: 16 }}
-                  innerStyle={{ padding: 20, alignItems: 'center' }}
-                >
-                  <Ionicons name="calendar-outline" size={28} color="#64748B" />
+                <SlabCard style={{ marginBottom: 16, padding: 20, alignItems: 'center' }}>
+                  <Ionicons name="calendar-outline" size={28} color={c.idle} />
                   <Text
-                    className="text-sm text-text-secondary mt-2"
-                    style={{ fontFamily: 'Nunito_400Regular' }}
+                    className="text-sm mt-2"
+                    style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
                   >
                     No upcoming assignments
                   </Text>
-                </GlassSurface>
+                </SlabCard>
               ) : (
                 upcoming.slice(0, 3).map((item) => (
                   <Pressable
@@ -251,13 +247,10 @@ export default function TeacherDashboardScreen() {
                     accessibilityRole="button"
                     accessibilityLabel={`Assignment: ${item.title}`}
                   >
-                    <GlassSurface
-                      style={{ marginBottom: 10 }}
-                      innerStyle={{ padding: 14 }}
-                    >
+                    <SlabCard style={{ marginBottom: 10, padding: 14 }}>
                       <Text
-                        className="text-base text-text-primary"
-                        style={{ fontFamily: 'Nunito_600SemiBold' }}
+                        className="text-base"
+                        style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
                         numberOfLines={1}
                       >
                         {item.title}
@@ -267,8 +260,8 @@ export default function TeacherDashboardScreen() {
                         style={{ gap: 12 }}
                       >
                         <Text
-                          className="text-xs text-text-secondary"
-                          style={{ fontFamily: 'Nunito_500Medium' }}
+                          className="text-xs"
+                          style={{ fontFamily: 'Nunito_500Medium', color: c.muted }}
                         >
                           {item.classroomName}
                         </Text>
@@ -277,44 +270,41 @@ export default function TeacherDashboardScreen() {
                             className="text-xs"
                             style={{
                               fontFamily: 'Nunito_500Medium',
-                              color: '#F59E0B',
+                              color: c.yellow,
                             }}
                           >
                             {formatRelativeTime(item.dueAt)}
                           </Text>
                         )}
                         <Text
-                          className="text-xs text-text-secondary"
-                          style={{ fontFamily: 'Nunito_500Medium' }}
+                          className="text-xs"
+                          style={{ fontFamily: 'Nunito_500Medium', color: c.muted }}
                         >
                           {item.submissionCount}/{item.totalStudents} submitted
                         </Text>
                       </View>
-                    </GlassSurface>
+                    </SlabCard>
                   </Pressable>
                 ))
               )}
 
               {/* Recent Activity */}
               <Text
-                className="text-xl text-text-primary mt-4 mb-3"
-                style={{ fontFamily: 'Nunito_600SemiBold' }}
+                className="text-xl mt-4 mb-3"
+                style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
               >
                 Recent Activity
               </Text>
               {activity.length === 0 ? (
-                <GlassSurface
-                  style={{ marginBottom: 16 }}
-                  innerStyle={{ padding: 20, alignItems: 'center' }}
-                >
-                  <Ionicons name="pulse-outline" size={28} color="#64748B" />
+                <SlabCard style={{ marginBottom: 16, padding: 20, alignItems: 'center' }}>
+                  <Ionicons name="pulse-outline" size={28} color={c.idle} />
                   <Text
-                    className="text-sm text-text-secondary mt-2"
-                    style={{ fontFamily: 'Nunito_400Regular' }}
+                    className="text-sm mt-2"
+                    style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
                   >
                     No recent activity
                   </Text>
-                </GlassSurface>
+                </SlabCard>
               ) : (
                 activity.slice(0, 5).map((event) => (
                   <View
@@ -322,17 +312,17 @@ export default function TeacherDashboardScreen() {
                     className="flex-row items-center mb-3"
                     style={{ gap: 10 }}
                   >
-                    <Ionicons name={event.icon} size={18} color="#64748B" />
+                    <Ionicons name={event.icon} size={18} color={c.idle} />
                     <Text
-                      className="text-sm text-text-primary flex-1"
-                      style={{ fontFamily: 'Nunito_400Regular' }}
+                      className="text-sm flex-1"
+                      style={{ fontFamily: 'Nunito_400Regular', color: c.ink }}
                       numberOfLines={1}
                     >
                       {event.text}
                     </Text>
                     <Text
-                      className="text-xs text-text-secondary"
-                      style={{ fontFamily: 'Nunito_500Medium' }}
+                      className="text-xs"
+                      style={{ fontFamily: 'Nunito_500Medium', color: c.muted }}
                     >
                       {formatRelativeTime(event.timestamp)}
                     </Text>
@@ -343,6 +333,6 @@ export default function TeacherDashboardScreen() {
           )}
         </ScrollView>
       </SafeAreaView>
-    </GradientBackground>
+    </View>
   );
 }

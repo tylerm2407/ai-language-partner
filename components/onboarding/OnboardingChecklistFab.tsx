@@ -33,8 +33,8 @@ import { haptic } from '../../lib/haptics';
 import Svg, { Circle as SvgCircle } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import * as Sentry from '@sentry/react-native';
-import { Sheet } from '../ui/Sheet';
-import { Heading, Body, Caption } from '../ui/Text';
+import { Ui2Sheet } from '../ui2/Ui2Sheet';
+import { Heading, Body, Caption } from '../ui2/Ui2Text';
 import {
   useOnboardingChecklist,
   type OnboardingRow,
@@ -46,7 +46,8 @@ import {
   ONBOARDING_COMPLETE_XP,
   ONBOARDING_COMPLETE_XP_KEY,
 } from '../../lib/onboarding-checklist';
-import { colors, radii, spacing } from '../../config/theme';
+import { radii, spacing, ui2Dark, ui2Light, type Ui2Palette } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 
 const FAB_SIZE = 60;
 const RING_STROKE = 4;
@@ -55,7 +56,17 @@ const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
 const AnimatedCircle = Animated.createAnimatedComponent(SvgCircle);
 
-const CONFETTI_COLORS = ['#FBBF24', '#34D399', '#38BDF8', '#A855F7', '#F472B6', '#60A5FA'];
+/** Confetti keeps a fixed festive spread rather than following the scheme: it
+ *  is a 2.5s burst over a scrim, and the six hues exist to be MANY. They are
+ *  still tokens — pinned to one end of each pair, like the mascot's palette. */
+const CONFETTI_COLORS = [
+  ui2Light.yellow,
+  ui2Light.green,
+  ui2Light.primary,
+  ui2Dark.onTint,
+  ui2Light.pink,
+  ui2Dark.primary,
+];
 const PARTICLE_COUNT = 12;
 
 /** How long the confetti stays up before the checklist retires itself. */
@@ -119,6 +130,8 @@ interface OnboardingChecklistFabProps {
 }
 
 export function OnboardingChecklistFab({ bottomOffset = 100 }: OnboardingChecklistFabProps) {
+  const { c, scheme } = useUi2Theme();
+  const styles = STYLES[scheme];
   const router = useRouter();
   const {
     isVisible,
@@ -394,7 +407,7 @@ export function OnboardingChecklistFab({ bottomOffset = 100 }: OnboardingCheckli
               cx={FAB_SIZE / 2}
               cy={FAB_SIZE / 2}
               r={RING_RADIUS}
-              stroke={colors.border.default}
+              stroke={c.track}
               strokeWidth={RING_STROKE}
               fill="none"
             />
@@ -403,7 +416,7 @@ export function OnboardingChecklistFab({ bottomOffset = 100 }: OnboardingCheckli
               cx={FAB_SIZE / 2}
               cy={FAB_SIZE / 2}
               r={RING_RADIUS}
-              stroke={colors.indigo[400]}
+              stroke={c.primary}
               strokeWidth={RING_STROKE}
               strokeLinecap="round"
               fill="none"
@@ -417,7 +430,7 @@ export function OnboardingChecklistFab({ bottomOffset = 100 }: OnboardingCheckli
 
           {/* Center label — count / rocket icon */}
           <View style={styles.fabInner}>
-            <Ionicons name="rocket" size={14} color={colors.indigo[300]} />
+            <Ionicons name="rocket" size={14} color={c.primary} />
             <Body size="sm" weight="bold" style={styles.fabCount}>
               {completedCount}/{totalCount}
             </Body>
@@ -426,12 +439,12 @@ export function OnboardingChecklistFab({ bottomOffset = 100 }: OnboardingCheckli
       </Animated.View>
 
       {/* Expandable sheet */}
-      <Sheet visible={open} onDismiss={() => setOpen(false)}>
+      <Ui2Sheet visible={open} onDismiss={() => setOpen(false)}>
         <View style={{ paddingBottom: spacing.sm }}>
           {/* Header */}
           <View style={styles.sheetHeader}>
             <View style={styles.sheetHeaderLeft}>
-              <Ionicons name="rocket" size={20} color={colors.indigo[400]} />
+              <Ionicons name="rocket" size={20} color={c.primary} />
               <Heading level={3} style={{ marginLeft: spacing.xs }}>
                 Get started
               </Heading>
@@ -491,49 +504,54 @@ export function OnboardingChecklistFab({ bottomOffset = 100 }: OnboardingCheckli
                     style={[
                       styles.checkCircle,
                       done
-                        ? { backgroundColor: colors.success.base, borderColor: 'transparent' }
-                        : { borderColor: colors.text.tertiary },
+                        ? { backgroundColor: c.green, borderColor: 'transparent' }
+                        : { borderColor: c.idle },
                     ]}
                   >
-                    {done && <Ionicons name="checkmark" size={14} color={colors.text.onSuccess} />}
+                    {done && <Ionicons name="checkmark" size={14} color={c.onPrimary} />}
                     {/* A dash, not a tick: resolved, not achieved. The glyph is
                         the non-colour signal DESIGN.md requires alongside the
                         muted tone and the "Skipped" caption. */}
-                    {skipped && <Ionicons name="remove" size={14} color={colors.text.tertiary} />}
+                    {skipped && <Ionicons name="remove" size={14} color={c.idle} />}
                   </View>
                   <Ionicons
                     name={item.icon as never}
                     size={18}
-                    color={done ? colors.success.base : colors.text.tertiary}
+                    color={done ? c.green : c.idle}
                     style={{ marginRight: spacing.xs }}
                   />
                   <Text
                     style={[
                       styles.itemLabel,
                       done
-                        ? { color: colors.success.light, textDecorationLine: 'line-through' }
+                        ? { color: c.green, textDecorationLine: 'line-through' }
                         : skipped
-                          ? { color: colors.text.quaternary }
-                          : { color: colors.text.primary },
+                          ? { color: c.idle }
+                          : { color: c.ink },
                     ]}
                   >
                     {item.label}
                   </Text>
                   {skipped && <Caption tone="tertiary" style={styles.skippedCaption}>Skipped</Caption>}
                   {interactive && !skipped && item.route && (
-                    <Ionicons name="chevron-forward" size={16} color={colors.text.tertiary} />
+                    <Ionicons name="chevron-forward" size={16} color={c.idle} />
                   )}
                 </Pressable>
               );
             })}
           </View>
         </View>
-      </Sheet>
+      </Ui2Sheet>
     </>
   );
 }
 
-const styles = StyleSheet.create({
+/**
+ * One frozen sheet per SCHEME, built at module load. A `StyleSheet.create` in
+ * the component body would re-register on every render, and a `useMemo` would
+ * add a second hook to a migration that is meant to add exactly one.
+ */
+const makeStyles = (c: Ui2Palette) => StyleSheet.create({
   fabWrapper: {
     position: 'absolute',
     right: spacing.md,
@@ -546,13 +564,15 @@ const styles = StyleSheet.create({
     width: FAB_SIZE,
     height: FAB_SIZE,
     borderRadius: FAB_SIZE / 2,
-    backgroundColor: colors.surface.card,
+    backgroundColor: c.card,
     borderWidth: 1,
-    borderColor: colors.border.subtle,
+    borderColor: c.cardBorder,
     alignItems: 'center',
     justifyContent: 'center',
-    // Subtle shadow — the only place in chrome where elevation is allowed
-    shadowColor: '#000',
+    // Subtle shadow — the only place in chrome where elevation is allowed.
+    // `ink` rather than a raw black: on a light phone a pure-black drop under a
+    // white FAB reads as dirt, and ink is the scheme's own darkest value.
+    shadowColor: c.ink,
     shadowOpacity: 0.35,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
@@ -563,7 +583,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   fabCount: {
-    color: colors.text.primary,
+    color: c.ink,
     marginTop: 1,
   },
   confettiAnchor: {
@@ -590,12 +610,12 @@ const styles = StyleSheet.create({
   progressTrack: {
     height: 6,
     borderRadius: radii.pill,
-    backgroundColor: colors.surface.cardAlt,
+    backgroundColor: c.track,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: colors.indigo[400],
+    backgroundColor: c.primary,
     borderRadius: radii.pill,
   },
   itemRow: {
@@ -625,3 +645,5 @@ const styles = StyleSheet.create({
     fontFamily: 'Nunito_500Medium',
   },
 });
+
+const STYLES = { light: makeStyles(ui2Light), dark: makeStyles(ui2Dark) };

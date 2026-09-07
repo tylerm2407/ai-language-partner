@@ -1,12 +1,13 @@
 import { useState, useMemo } from 'react';
-import { View, Text, TextInput, FlatList, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
+import { View, Text, FlatList, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import { useSafeBack } from '../../../../hooks/useSafeBack';
 import { Ionicons } from '@expo/vector-icons';
-import { GradientBackground } from '../../../../components/ui/GradientBackground';
-import { GlassSurface } from '../../../../components/ui/GlassSurface';
-import { GradientButton } from '../../../../components/ui/GradientButton';
+import { SlabCard } from '../../../../components/ui2/SlabCard';
+import { SlabButton } from '../../../../components/ui2/SlabButton';
+import { Ui2Input } from '../../../../components/ui2/Ui2Input';
+import { useUi2Theme } from '../../../../hooks/useUi2Theme';
 import { callSchoolAction } from '../../../../lib/supabase-queries';
 
 interface EnrollResult {
@@ -18,6 +19,7 @@ interface EnrollResult {
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function BulkEnrollScreen() {
+  const { c } = useUi2Theme();
   const goBack = useSafeBack('/(teacher)');
   const { classId } = useLocalSearchParams<{ classId: string }>();
   const [emailText, setEmailText] = useState('');
@@ -77,7 +79,7 @@ export default function BulkEnrollScreen() {
   const errorCount = results?.filter((r) => !r.success).length ?? 0;
 
   return (
-    <GradientBackground>
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
       <SafeAreaView className="flex-1" edges={['top']}>
         <KeyboardAvoidingView
           className="flex-1"
@@ -90,63 +92,54 @@ export default function BulkEnrollScreen() {
             accessibilityLabel="Go back"
             className="flex-row items-center mb-4 min-h-11 -ml-1 pl-1"
           >
-            <Ionicons name="chevron-back" size={24} color="#818CF8" />
-            <Text className="text-base text-primary ml-1" style={{ fontFamily: 'Nunito_600SemiBold' }}>Back</Text>
+            <Ionicons name="chevron-back" size={24} color={c.primary} />
+            <Text className="text-base ml-1" style={{ fontFamily: 'Nunito_600SemiBold', color: c.primary }}>Back</Text>
           </Pressable>
 
           <Text
-            className="text-[28px] text-text-primary mb-2"
-            style={{ fontFamily: 'Nunito_800ExtraBold' }}
+            className="text-[28px] mb-2"
+            style={{ fontFamily: 'Nunito_800ExtraBold', color: c.ink }}
             accessibilityRole="header"
           >
             Bulk Enroll Students
           </Text>
           <Text
-            className="text-sm text-text-secondary mb-4"
-            style={{ fontFamily: 'Nunito_400Regular' }}
+            className="text-sm mb-4"
+            style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
           >
             Enter student email addresses, one per line
           </Text>
 
           {/* Email Input */}
-          <GlassSurface style={{ marginBottom: 12 }} innerStyle={{ padding: 0 }}>
-            <TextInput
-              value={emailText}
-              onChangeText={setEmailText}
-              placeholder={'student1@school.edu\nstudent2@school.edu\nstudent3@school.edu'}
-              placeholderTextColor="#64748B"
-              multiline
-              style={{
-                color: '#F1F5F9',
-                fontSize: 14,
-                fontFamily: 'Nunito_400Regular',
-                padding: 14,
-                minHeight: 200,
-                textAlignVertical: 'top',
-              }}
-              accessibilityLabel="Email addresses input"
-            />
-          </GlassSurface>
+          <Ui2Input
+            containerStyle={{ marginBottom: 12 }}
+            value={emailText}
+            onChangeText={setEmailText}
+            placeholder={'student1@school.edu\nstudent2@school.edu\nstudent3@school.edu'}
+            multiline
+            inputStyle={{ minHeight: 176, fontSize: 14 }}
+            accessibilityLabel="Email addresses input"
+          />
 
           {/* Counter */}
           <View className="flex-row items-center mb-4" style={{ gap: 12 }}>
             <View className="flex-row items-center" style={{ gap: 4 }}>
-              <Ionicons name="checkmark-circle" size={16} color="#22C55E" />
-              <Text style={{ color: '#22C55E', fontSize: 13, fontFamily: 'Nunito_600SemiBold' }}>
+              <Ionicons name="checkmark-circle" size={16} color={c.green} />
+              <Text style={{ color: c.green, fontSize: 13, fontFamily: 'Nunito_600SemiBold' }}>
                 {validEmails.length} valid
               </Text>
             </View>
             {invalidEmails.length > 0 && (
               <View className="flex-row items-center" style={{ gap: 4 }}>
-                <Ionicons name="alert-circle" size={16} color="#EF4444" />
-                <Text style={{ color: '#EF4444', fontSize: 13, fontFamily: 'Nunito_600SemiBold' }}>
+                <Ionicons name="alert-circle" size={16} color={c.error} />
+                <Text style={{ color: c.error, fontSize: 13, fontFamily: 'Nunito_600SemiBold' }}>
                   {invalidEmails.length} invalid
                 </Text>
               </View>
             )}
           </View>
 
-          <GradientButton
+          <SlabButton
             label={enrolling ? 'Enrolling...' : `Enroll ${validEmails.length} Students`}
             onPress={handleEnroll}
             loading={enrolling}
@@ -161,16 +154,16 @@ export default function BulkEnrollScreen() {
               <View className="flex-row items-center mb-3" style={{ gap: 12 }}>
                 {successCount > 0 && (
                   <View className="flex-row items-center" style={{ gap: 4 }}>
-                    <Ionicons name="checkmark-circle" size={18} color="#22C55E" />
-                    <Text style={{ color: '#22C55E', fontSize: 14, fontFamily: 'Nunito_600SemiBold' }}>
+                    <Ionicons name="checkmark-circle" size={18} color={c.green} />
+                    <Text style={{ color: c.green, fontSize: 14, fontFamily: 'Nunito_600SemiBold' }}>
                       {successCount} enrolled
                     </Text>
                   </View>
                 )}
                 {errorCount > 0 && (
                   <View className="flex-row items-center" style={{ gap: 4 }}>
-                    <Ionicons name="close-circle" size={18} color="#EF4444" />
-                    <Text style={{ color: '#EF4444', fontSize: 14, fontFamily: 'Nunito_600SemiBold' }}>
+                    <Ionicons name="close-circle" size={18} color={c.error} />
+                    <Text style={{ color: c.error, fontSize: 14, fontFamily: 'Nunito_600SemiBold' }}>
                       {errorCount} failed
                     </Text>
                   </View>
@@ -183,13 +176,13 @@ export default function BulkEnrollScreen() {
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ paddingBottom: 100 }}
                 renderItem={({ item }) => (
-                  <GlassSurface style={{ marginBottom: 6 }} innerStyle={{ padding: 10, flexDirection: 'row', alignItems: 'center' }}>
-                    <Ionicons name="close-circle" size={16} color="#EF4444" style={{ marginRight: 8 }} />
+                  <SlabCard style={{ marginBottom: 6, padding: 10, flexDirection: 'row', alignItems: 'center' }}>
+                    <Ionicons name="close-circle" size={16} color={c.error} style={{ marginRight: 8 }} />
                     <View className="flex-1">
-                      <Text className="text-sm text-text-primary" style={{ fontFamily: 'Nunito_500Medium' }}>{item.email}</Text>
-                      <Text className="text-xs" style={{ color: '#EF4444', fontFamily: 'Nunito_400Regular' }}>{item.error}</Text>
+                      <Text className="text-sm" style={{ fontFamily: 'Nunito_500Medium', color: c.ink }}>{item.email}</Text>
+                      <Text className="text-xs" style={{ color: c.error, fontFamily: 'Nunito_400Regular' }}>{item.error}</Text>
                     </View>
-                  </GlassSurface>
+                  </SlabCard>
                 )}
                 ListEmptyComponent={null}
               />
@@ -198,6 +191,6 @@ export default function BulkEnrollScreen() {
         </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
-    </GradientBackground>
+    </View>
   );
 }

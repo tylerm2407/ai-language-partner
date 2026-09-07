@@ -41,6 +41,8 @@ import {
   PlusJakartaSans_700Bold,
   PlusJakartaSans_800ExtraBold,
 } from '@expo-google-fonts/plus-jakarta-sans';
+import { redactTutorSecrets } from '../lib/tutor-api';
+import { useUi2Theme } from '../hooks/useUi2Theme';
 
 const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN;
 Sentry.init({
@@ -51,9 +53,23 @@ Sentry.init({
   // Set per EAS build profile (eas.json → EXPO_PUBLIC_APP_ENV) so preview
   // builds do not pollute the production issue stream or its alert rules.
   environment: process.env.EXPO_PUBLIC_APP_ENV ?? 'production',
+  // Strip the live tutor's ephemeral OpenAI credential out of anything we send.
+  //
+  // `startTutorSession` returns a short-lived `clientSecret` that the device
+  // uses to open a WebRTC session directly with OpenAI. It is deliberately
+  // never persisted and never logged, but a crash report is the one path that
+  // serialises arbitrary state without anyone asking it to — an unhandled
+  // rejection carrying the start response, or a breadcrumb from the fetch that
+  // produced it, would put a working credential in a third-party dashboard.
+  //
+  // `redactTutorSecrets` lives in lib/tutor-api.ts, next to the shape it
+  // redacts, so this wiring does not have to know that shape.
+  beforeSend: (event) => redactTutorSecrets(event),
+  beforeBreadcrumb: (breadcrumb) => redactTutorSecrets(breadcrumb),
 });
 
 function RootLayout() {
+  const { c, scheme } = useUi2Theme();
   const { session, loading: authLoading } = useAuth();
   const { profile, dailyStats, loadUserData, setEntitledTier, error: profileError } = useAppStore();
   const { roles, activeRole, loadRoles } = useSchoolStore();
@@ -221,9 +237,9 @@ function RootLayout() {
   if (authLoading || !fontsLoaded || (session && (!dataLoaded || !rolesLoaded))) {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <View className="flex-1 items-center justify-center bg-dark">
-          <ActivityIndicator size="large" color="#818CF8" />
-          <StatusBar style="light" />
+        <View className="flex-1 items-center justify-center" style={{ backgroundColor: c.bg }}>
+          <ActivityIndicator size="large" color={c.primary} />
+          <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
         </View>
       </GestureHandlerRootView>
     );
@@ -234,22 +250,23 @@ function RootLayout() {
   if (session && dataLoaded && !profile && profileError) {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <View className="flex-1 items-center justify-center bg-dark px-6">
-          <Text className="text-white text-xl font-semibold text-center mb-2">
+        <View className="flex-1 items-center justify-center px-6" style={{ backgroundColor: c.bg }}>
+          <Text className="text-xl font-semibold text-center mb-2" style={{ color: c.ink }}>
             Couldn&apos;t load your profile
           </Text>
-          <Text className="text-text-secondary text-base text-center mb-6">
+          <Text className="text-base text-center mb-6" style={{ color: c.muted }}>
             Check your connection and try again. Your progress is safe.
           </Text>
           <Pressable
             onPress={() => setDataLoaded(false)}
-            className="bg-primary px-6 py-3 rounded-2xl"
+            className="px-6 py-3 rounded-2xl"
+            style={{ backgroundColor: c.primary }}
             accessibilityRole="button"
             accessibilityLabel="Retry loading your profile"
           >
-            <Text className="text-white text-base font-semibold">Try Again</Text>
+            <Text className="text-base font-semibold" style={{ color: c.onPrimary }}>Try Again</Text>
           </Pressable>
-          <StatusBar style="light" />
+          <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
         </View>
       </GestureHandlerRootView>
     );
@@ -260,7 +277,7 @@ function RootLayout() {
       <ErrorBoundary>
         <Slot />
       </ErrorBoundary>
-      <StatusBar style="light" />
+      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
     </GestureHandlerRootView>
   );
 }

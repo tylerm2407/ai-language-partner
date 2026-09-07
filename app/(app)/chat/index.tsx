@@ -26,8 +26,6 @@ import { ChatBubble } from '../../../components/chat/ChatBubble';
 import { ChatInput } from '../../../components/chat/ChatInput';
 import type { HandsFreeState } from '../../../components/chat/ChatInput';
 import { TypingIndicator } from '../../../components/chat/TypingIndicator';
-import { GradientBackground } from '../../../components/ui/GradientBackground';
-import { GlassSurface } from '../../../components/ui/GlassSurface';
 import AssignmentTimer from '../../../components/school/AssignmentTimer';
 import { useAssignmentTimer } from '../../../hooks/useAssignmentTimer';
 import type { ConversationMessage, Assignment, AssignmentSubmission, LanguageCode, ProficiencyLevel } from '../../../types';
@@ -44,10 +42,15 @@ import {
 } from '../../../lib/voice-preference';
 import { SCENARIO_META, SCENARIO_ORDER, type ScenarioKey } from '../../../types/scenarios';
 import { SCHOOL_ENABLED } from '../../../config/app';
-import { colors, radii, spacing } from '../../../config/theme';
-import { Body, Caption } from '../../../components/ui/Text';
+// `colors` is deliberately NOT imported: it is the fixed DARK palette, and a
+// screen that reads it stays dark whatever the phone is set to. `radii` and
+// `spacing` are plain scheme-independent numbers and carry over unchanged.
+import { radii, spacing } from '../../../config/theme';
+import { Body, Caption } from '../../../components/ui2/Ui2Text';
+import { SlabCard } from '../../../components/ui2/SlabCard';
+import { useUi2Theme } from '../../../hooks/useUi2Theme';
 import { useAiConsent } from '../../../hooks/useAiConsent';
-import { Chip } from '../../../components/ui/Chip';
+import { Chip } from '../../../components/ui2/Chip';
 import { useScreenView } from '../../../hooks/useScreenView';
 
 /**
@@ -113,6 +116,7 @@ function upsertMessage(
 }
 
 export default function ChatScreen() {
+  const { c } = useUi2Theme();
   useScreenView('chat');
   const { profile } = useAppStore();
   const targetLanguage = getTargetLanguage(profile);
@@ -121,11 +125,11 @@ export default function ChatScreen() {
   // default to any language. Mirrors the assignment-loading state below.
   if (!targetLanguage) {
     return (
-      <GradientBackground>
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
         <View className="flex-1 items-center justify-center">
-          <Text className="text-text-secondary">Loading...</Text>
+          <Text style={{ color: c.muted }}>Loading...</Text>
         </View>
-      </GradientBackground>
+      </View>
     );
   }
 
@@ -133,6 +137,7 @@ export default function ChatScreen() {
 }
 
 function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
+  const { c } = useUi2Theme();
   const { user } = useAuth();
   const { profile, subscription, entitledTier, roles } = useAppStore();
   const { markItem: markOnboardingItem } = useOnboardingChecklist();
@@ -918,11 +923,11 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
   // Skip scenario picker while assignment is loading
   if (params.assignmentId && !selectedScenario) {
     return (
-      <GradientBackground>
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
         <View className="flex-1 items-center justify-center">
-          <Text className="text-text-secondary">Loading assignment...</Text>
+          <Text style={{ color: c.muted }}>Loading assignment...</Text>
         </View>
-      </GradientBackground>
+      </View>
     );
   }
 
@@ -941,28 +946,28 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
   const schoolExempt = SCHOOL_ENABLED && (roles.includes('student') || roles.includes('teacher'));
   if (tier === 'starter' && !schoolExempt && !assignmentMode) {
     return (
-      <GradientBackground>
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
         <SafeAreaView className="flex-1" edges={['top']}>
           <View className="flex-1 px-6 justify-center">
-            <View className="w-14 h-14 rounded-full bg-primary/15 items-center justify-center mb-5">
-              <Ionicons name="chatbubbles-outline" size={28} color={colors.premium.base} />
+            <View className="w-14 h-14 rounded-full items-center justify-center mb-5" style={{ backgroundColor: c.primaryTint }}>
+              <Ionicons name="chatbubbles-outline" size={28} color={c.primary} />
             </View>
-            <Text className="text-[28px] font-bold text-text-primary mb-2" accessibilityRole="header">
+            <Text className="text-[28px] font-bold mb-2" style={{ color: c.ink }} accessibilityRole="header">
               The AI tutor is part of a plan
             </Text>
-            <Text className="text-base text-text-secondary mb-6">
+            <Text className="text-base mb-6" style={{ color: c.muted }}>
               Conversations and voice practice are the parts of Fluenci that cost real money to
               run, so they sit behind a subscription. Everything else — lessons, reviews, reading
               and the daily news — stays free.
             </Text>
             <Pressable
-              className="bg-primary rounded-[14px] py-4 items-center"
+              className="rounded-[14px] py-4 items-center"
               onPress={() => router.push('/(app)/plans')}
               accessibilityRole="button"
               accessibilityLabel="See plans"
-              style={{ minHeight: 44, justifyContent: 'center' }}
+              style={{ backgroundColor: c.primary, minHeight: 44, justifyContent: 'center' }}
             >
-              <Text className="text-base font-semibold text-white">See plans</Text>
+              <Text className="text-base font-semibold" style={{ color: c.onPrimary }}>See plans</Text>
             </Pressable>
             <Pressable
               className="py-3 items-center mt-1"
@@ -971,22 +976,22 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
               accessibilityLabel="Go to lessons instead"
               style={{ minHeight: 44, justifyContent: 'center' }}
             >
-              <Text className="text-sm text-text-secondary">Keep learning for free</Text>
+              <Text className="text-sm" style={{ color: c.muted }}>Keep learning for free</Text>
             </Pressable>
           </View>
         </SafeAreaView>
-      </GradientBackground>
+      </View>
     );
   }
 
   // Scenario picker
   if (!selectedScenario) {
     return (
-      <GradientBackground>
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
       <SafeAreaView className="flex-1" edges={['top']}>
         <View className="flex-1 px-4 pt-2">
-          <Text className="text-[28px] font-bold text-text-primary mb-2">AI Chat</Text>
-          <Text className="text-base text-text-secondary mb-6">
+          <Text className="text-[28px] font-bold mb-2" style={{ color: c.ink }}>AI Chat</Text>
+          <Text className="text-base mb-6" style={{ color: c.muted }}>
             Choose a scenario to practice {targetLanguage.toUpperCase()} conversation
           </Text>
           <FlatList
@@ -995,69 +1000,69 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 100 }}
             renderItem={({ item: scenario }) => (
-              <GlassSurface style={{ marginBottom: 12 }}>
+              <SlabCard style={{ marginBottom: 12 }}>
                 <View className="p-5">
                   <View className="flex-row items-center mb-3">
-                    <View className="w-10 h-10 rounded-full bg-primary/15 items-center justify-center">
-                      <Ionicons name={scenario.icon} size={22} color={colors.premium.base} />
+                    <View className="w-10 h-10 rounded-full items-center justify-center" style={{ backgroundColor: c.primaryTint }}>
+                      <Ionicons name={scenario.icon} size={22} color={c.primary} />
                     </View>
                     <View className="ml-4 flex-1">
-                      <Text className="text-base font-semibold text-text-primary">{scenario.label}</Text>
-                      <Text className="text-sm text-text-secondary mt-0.5">
+                      <Text className="text-base font-semibold" style={{ color: c.ink }}>{scenario.label}</Text>
+                      <Text className="text-sm mt-0.5" style={{ color: c.muted }}>
                         {scenario.description}
                       </Text>
                     </View>
                   </View>
                   <View className="flex-row" style={{ gap: 10 }}>
                     <Pressable
-                      className="flex-1 bg-primary rounded-[14px] py-3 items-center flex-row justify-center"
+                      className="flex-1 rounded-[14px] py-3 items-center flex-row justify-center" style={{ backgroundColor: c.primary }}
                       onPress={() => startChat(scenario, false)}
                       accessibilityRole="button"
                       accessibilityLabel={`Text chat: ${scenario.label}`}
                     >
-                      <Ionicons name="chatbubble-outline" size={16} color={colors.text.onPrimary} />
-                      <Text className="text-sm font-semibold text-white ml-2">Text Chat</Text>
+                      <Ionicons name="chatbubble-outline" size={16} color={c.onPrimary} />
+                      <Text className="text-sm font-semibold ml-2" style={{ color: c.onPrimary }}>Text Chat</Text>
                     </Pressable>
                     <Pressable
-                      className="flex-1 bg-success rounded-[14px] py-3 items-center flex-row justify-center"
+                      className="flex-1 rounded-[14px] py-3 items-center flex-row justify-center" style={{ backgroundColor: c.green }}
                       onPress={() => startChat(scenario, true)}
                       accessibilityRole="button"
                       accessibilityLabel={`Live voice: ${scenario.label}`}
                       accessibilityHint="Start a real-time voice conversation"
                     >
-                      <Ionicons name="mic" size={16} color={colors.text.onPrimary} />
-                      <Text className="text-sm font-semibold text-white ml-2">Live Voice</Text>
+                      <Ionicons name="mic" size={16} color={c.onPrimary} />
+                      <Text className="text-sm font-semibold ml-2" style={{ color: c.onPrimary }}>Live Voice</Text>
                     </Pressable>
                   </View>
                 </View>
-              </GlassSurface>
+              </SlabCard>
             )}
           />
         </View>
       </SafeAreaView>
-      </GradientBackground>
+      </View>
     );
   }
 
   // Chat interface
   return (
-    <GradientBackground>
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
     <SafeAreaView className="flex-1" edges={['top']}>
       {/* Assignment Banner */}
       {assignmentMode && currentAssignment && (
-        <GlassSurface style={{ marginHorizontal: 12, marginTop: 4, marginBottom: 4 }}>
+        <SlabCard style={{ marginHorizontal: 12, marginTop: 4, marginBottom: 4 }}>
           <View className="px-4 py-2 flex-row items-center">
-            <Ionicons name="school-outline" size={18} color={colors.premium.base} />
-            <Text className="text-sm text-text-primary font-semibold ml-2 flex-1" numberOfLines={1}>
+            <Ionicons name="school-outline" size={18} color={c.primary} />
+            <Text className="text-sm font-semibold ml-2 flex-1" style={{ color: c.ink }} numberOfLines={1}>
               Assignment: {currentAssignment.title}
             </Text>
             {currentAssignment.dueAt && (
-              <Text className="text-xs text-text-tertiary ml-2">
+              <Text className="text-xs ml-2" style={{ color: c.idle }}>
                 Due {new Date(currentAssignment.dueAt).toLocaleDateString()}
               </Text>
             )}
           </View>
-        </GlassSurface>
+        </SlabCard>
       )}
 
       {/* Assignment Timer Overlay */}
@@ -1070,8 +1075,8 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
 
       {/* Header — deck screen 08: chevron · mascot · title/status stack · chip */}
       <View
-        className="flex-row items-center px-4 py-3 border-b border-dark-border"
-        style={{ gap: spacing.sm }}
+        className="flex-row items-center px-4 py-3 border-b"
+        style={{ borderColor: c.cardBorder, gap: spacing.sm }}
       >
         <Pressable
           onPress={() => {
@@ -1093,7 +1098,7 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
           accessibilityLabel="Go back"
           hitSlop={8}
         >
-          <Ionicons name="chevron-back" size={22} color={colors.text.tertiary} />
+          <Ionicons name="chevron-back" size={22} color={c.idle} />
         </Pressable>
 
         <View className="flex-1">
@@ -1107,7 +1112,7 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
                   width: 6,
                   height: 6,
                   borderRadius: radii.pill,
-                  backgroundColor: colors.success.base,
+                  backgroundColor: c.green,
                 }}
               />
             )}
@@ -1137,10 +1142,10 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
             disabled={submitting}
             accessibilityRole="button"
             accessibilityLabel="Submit assignment"
-            className="min-h-9 py-1.5 px-3 rounded-full items-center justify-center flex-row bg-success"
+            className="min-h-9 py-1.5 px-3 rounded-full items-center justify-center flex-row" style={{ backgroundColor: c.green }}
           >
-            <Ionicons name="checkmark-circle-outline" size={16} color={colors.text.onPrimary} />
-            <Text className="text-xs font-semibold text-white ml-1.5">
+            <Ionicons name="checkmark-circle-outline" size={16} color={c.onPrimary} />
+            <Text className="text-xs font-semibold ml-1.5" style={{ color: c.onPrimary }}>
               {submitting ? 'Submitting...' : 'Submit'}
             </Text>
           </Pressable>
@@ -1156,16 +1161,17 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
           accessibilityLabel={handsFreeActive ? 'End live voice conversation' : 'Start live voice conversation'}
           accessibilityHint="Real-time bidirectional voice conversation with AI tutor"
           className={`min-h-9 py-1.5 rounded-full items-center justify-center flex-row ${
-            handsFreeActive ? 'w-9 bg-success' : 'px-3 bg-dark-card'
+            handsFreeActive ? 'w-9' : 'px-3'
           }`}
+          style={{ backgroundColor: handsFreeActive ? c.green : c.card }}
         >
           <Ionicons
             name={handsFreeActive ? 'mic' : 'mic-outline'}
             size={16}
-            color={handsFreeActive ? colors.text.onPrimary : colors.text.quaternary}
+            color={handsFreeActive ? c.onPrimary : c.idle}
           />
           {!handsFreeActive && (
-            <Text className="text-xs font-sans-semibold ml-1.5 text-text-tertiary">
+            <Text className="text-xs font-sans-semibold ml-1.5" style={{ color: c.idle }}>
               Live Voice
             </Text>
           )}
@@ -1178,9 +1184,10 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
             hitSlop={4}
             accessibilityRole="button"
             accessibilityLabel={voiceMode ? 'Switch to text mode' : 'Switch to voice mode'}
-            className={`w-9 h-9 rounded-full items-center justify-center ${voiceMode ? 'bg-primary' : 'bg-dark-card'}`}
+            className="w-9 h-9 rounded-full items-center justify-center"
+            style={{ backgroundColor: voiceMode ? c.primary : c.card }}
           >
-            <Ionicons name={voiceMode ? 'mic' : 'mic-outline'} size={20} color={voiceMode ? colors.text.onPrimary : colors.indigo[300]} />
+            <Ionicons name={voiceMode ? 'mic' : 'mic-outline'} size={20} color={voiceMode ? c.onPrimary : c.onTint} />
           </Pressable>
         )}
       </View>
@@ -1232,6 +1239,6 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
         {consentSheet}
       </KeyboardAvoidingView>
     </SafeAreaView>
-    </GradientBackground>
+    </View>
   );
 }

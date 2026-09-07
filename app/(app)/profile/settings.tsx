@@ -1,14 +1,20 @@
 import { useState } from 'react';
-import { View, Text, Pressable, ScrollView, TextInput, Alert, Linking, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, Pressable, ScrollView, Alert, Linking, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useSafeBack } from '../../../hooks/useSafeBack';
 import { Ionicons } from '@expo/vector-icons';
 import { useProfile } from '../../../hooks/useProfile';
 import { useAuth } from '../../../hooks/useAuth';
-import { Button } from '../../../components/ui/Button';
-import { GradientBackground } from '../../../components/ui/GradientBackground';
-import { colors } from '../../../config/theme';
+import { SlabButton } from '../../../components/ui2/SlabButton';
+import { Ui2Header } from '../../../components/ui2/Ui2Header';
+import { Ui2Input } from '../../../components/ui2/Ui2Input';
+import { Ui2ListRow } from '../../../components/ui2/Ui2ListRow';
+// `colors` is deliberately NOT imported: it is the fixed DARK palette, and a
+// screen that reads it stays dark whatever the phone is set to. `spacing` and
+// `radii` are plain scheme-independent numbers.
+import { useUi2Theme } from '../../../hooks/useUi2Theme';
+import { radii, spacing } from '../../../config/theme';
 import { SUPPORTED_LANGUAGES, DAILY_GOALS } from '../../../config/app';
 import { supabase } from '../../../lib/supabase';
 import { getTargetLanguage } from '../../../lib/language';
@@ -36,6 +42,7 @@ function levelCanDo(level: ProficiencyLevel): string {
 }
 
 export default function SettingsScreen() {
+  const { c } = useUi2Theme();
   const goBack = useSafeBack('/(app)');
   const { profile, updateProfile } = useProfile();
   const { signOut, user } = useAuth();
@@ -98,15 +105,9 @@ export default function SettingsScreen() {
   };
 
   return (
-    <GradientBackground>
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
     <SafeAreaView className="flex-1">
-      {/* Header */}
-      <View className="flex-row items-center px-4 py-3 border-b border-dark-border">
-        <Pressable onPress={() => goBack()} accessibilityRole="button" accessibilityLabel="Go back">
-          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
-        </Pressable>
-        <Text className="text-lg font-semibold text-text-primary ml-3">Settings</Text>
-      </View>
+      <Ui2Header title="Settings" onBack={() => goBack()} />
 
       <KeyboardAvoidingView
         className="flex-1"
@@ -118,85 +119,93 @@ export default function SettingsScreen() {
         keyboardShouldPersistTaps="handled"
       >
         {/* Display Name */}
-        <Text className="text-sm font-semibold text-text-secondary mb-2 uppercase tracking-wide">Display Name</Text>
-        <TextInput
-          className="bg-dark-card-alt rounded-[14px] px-4 py-4 text-base text-text-primary border border-border-input mb-6"
+        <Text className="text-sm font-semibold mb-2 uppercase tracking-wide" style={{ color: c.muted }}>Display Name</Text>
+        <Ui2Input
+          containerStyle={{ marginBottom: spacing.lg }}
           value={displayName}
           onChangeText={setDisplayName}
           placeholder="Your name"
-          placeholderTextColor={colors.text.quaternary}
           autoCapitalize="words"
           accessibilityLabel="Display name"
         />
 
         {/* Target Language */}
-        <Text className="text-sm font-semibold text-text-secondary mb-2 uppercase tracking-wide">Target Language</Text>
+        <Text className="text-sm font-semibold mb-2 uppercase tracking-wide" style={{ color: c.muted }}>Target Language</Text>
         <View className="mb-6">
           {SUPPORTED_LANGUAGES.map((lang) => (
             <Pressable
               key={lang.code}
-              className={`p-4 rounded-2xl mb-2 flex-row items-center ${
-                targetLanguage === lang.code
-                  ? 'bg-primary-tint border-2 border-primary'
-                  : 'bg-dark-card border-2 border-transparent'
-              }`}
+              className="p-4 rounded-2xl mb-2 flex-row items-center"
+              style={{
+                borderWidth: 2,
+                backgroundColor: targetLanguage === lang.code ? c.primaryTint : c.card,
+                borderColor: targetLanguage === lang.code ? c.primary : c.cardBorder,
+              }}
               onPress={() => setTargetLanguage(lang.code as LanguageCode)}
               accessibilityRole="button"
               accessibilityState={{ selected: targetLanguage === lang.code }}
             >
               <Text className="text-xl mr-3">{lang.flag}</Text>
-              <Text className="text-base font-semibold text-text-primary">{lang.name}</Text>
+              <Text className="text-base font-semibold" style={{ color: c.ink }}>{lang.name}</Text>
               {targetLanguage === lang.code && (
-                <Ionicons name="checkmark-circle" size={20} color={colors.league.diamond} style={{ marginLeft: 'auto' }} />
+                <Ionicons name="checkmark-circle" size={20} color={c.onTint} style={{ marginLeft: 'auto' }} />
               )}
             </Pressable>
           ))}
         </View>
 
         {/* Level */}
-        <Text className="text-sm font-semibold text-text-secondary mb-2 uppercase tracking-wide">Proficiency Level</Text>
+        <Text className="text-sm font-semibold mb-2 uppercase tracking-wide" style={{ color: c.muted }}>Proficiency Level</Text>
         <View className="mb-6">
           {LEVELS.map((l) => (
             <Pressable
               key={l.value}
-              className={`p-4 rounded-2xl mb-2 ${
-                level === l.value
-                  ? 'bg-primary-tint border-2 border-primary'
-                  : 'bg-dark-card border-2 border-transparent'
-              }`}
+              className="p-4 rounded-2xl mb-2"
+              style={{
+                borderWidth: 2,
+                backgroundColor: level === l.value ? c.primaryTint : c.card,
+                borderColor: level === l.value ? c.primary : c.cardBorder,
+              }}
               onPress={() => setLevel(l.value)}
               accessibilityRole="button"
               accessibilityLabel={`${l.label}. ${levelCanDo(l.value)}`}
               accessibilityState={{ selected: level === l.value }}
             >
-              <Text className="text-base font-semibold text-text-primary">{l.label}</Text>
-              <Text className="text-sm text-text-secondary mt-0.5 pr-8">{levelCanDo(l.value)}</Text>
+              <Text className="text-base font-semibold" style={{ color: c.ink }}>{l.label}</Text>
+              <Text className="text-sm mt-0.5 pr-8" style={{ color: c.muted }}>{levelCanDo(l.value)}</Text>
               {level === l.value && (
-                <Ionicons name="checkmark-circle" size={20} color={colors.league.diamond} style={{ position: 'absolute', right: 16, top: 16 }} />
+                <Ionicons name="checkmark-circle" size={20} color={c.onTint} style={{ position: 'absolute', right: 16, top: 16 }} />
               )}
             </Pressable>
           ))}
         </View>
 
         {/* Daily Goal */}
-        <Text className="text-sm font-semibold text-text-secondary mb-2 uppercase tracking-wide">Daily Goal</Text>
+        <Text className="text-sm font-semibold mb-2 uppercase tracking-wide" style={{ color: c.muted }}>Daily Goal</Text>
         <View className="flex-row gap-2 mb-8">
           {DAILY_GOALS.map((goal) => (
             <Pressable
               key={goal}
-              className={`flex-1 py-3 rounded-[14px] items-center ${
-                dailyGoal === goal
-                  ? 'bg-primary'
-                  : 'bg-dark-card border border-dark-border'
-              }`}
+              className="flex-1 py-3 rounded-[14px] items-center"
+              style={{
+                borderWidth: 1,
+                backgroundColor: dailyGoal === goal ? c.primary : c.card,
+                borderColor: dailyGoal === goal ? c.primary : c.cardBorder,
+              }}
               onPress={() => setDailyGoal(goal)}
               accessibilityRole="button"
               accessibilityState={{ selected: dailyGoal === goal }}
             >
-              <Text className={`text-base font-semibold ${dailyGoal === goal ? 'text-white' : 'text-text-primary'}`}>
+              <Text
+                className="text-base font-semibold"
+                style={{ color: dailyGoal === goal ? c.onPrimary : c.ink }}
+              >
                 {goal}
               </Text>
-              <Text className={`text-xs ${dailyGoal === goal ? 'text-white/70' : 'text-text-tertiary'}`}>
+              <Text
+                className="text-xs"
+                style={{ color: dailyGoal === goal ? c.onPrimaryMuted : c.idle }}
+              >
                 min
               </Text>
             </Pressable>
@@ -206,13 +215,16 @@ export default function SettingsScreen() {
         {/* Motion — WCAG 2.2 SC 2.2.2 (Level A) asks for a mechanism to stop
             auto-starting motion. The OS Reduce Motion switch is honored too;
             this is the in-app equivalent, and either one suppresses motion. */}
-        <Text className="text-sm font-semibold text-text-secondary mb-2 uppercase tracking-wide">
+        <Text className="text-sm font-semibold mb-2 uppercase tracking-wide" style={{ color: c.muted }}>
           Motion
         </Text>
         <Pressable
-          className={`p-4 rounded-2xl mb-6 flex-row items-center ${
-            reduceMotion ? 'bg-primary-tint border-2 border-primary' : 'bg-dark-card border-2 border-transparent'
-          }`}
+          className="p-4 rounded-2xl mb-6 flex-row items-center"
+          style={{
+            borderWidth: 2,
+            backgroundColor: reduceMotion ? c.primaryTint : c.card,
+            borderColor: reduceMotion ? c.primary : c.cardBorder,
+          }}
           onPress={toggleReduceMotion}
           accessibilityRole="switch"
           accessibilityState={{ checked: reduceMotion }}
@@ -222,13 +234,13 @@ export default function SettingsScreen() {
           <Ionicons
             name={reduceMotion ? 'checkmark-circle' : 'ellipse-outline'}
             size={24}
-            color={reduceMotion ? colors.action.accent : colors.text.tertiary}
+            color={reduceMotion ? c.onTint : c.idle}
           />
           <View className="ml-3 flex-1">
-            <Text className="text-base font-semibold text-text-primary">
+            <Text className="text-base font-semibold" style={{ color: c.ink }}>
               Reduce motion
             </Text>
-            <Text className="text-sm text-text-secondary mt-0.5">
+            <Text className="text-sm mt-0.5" style={{ color: c.muted }}>
               Stops looping and celebratory animation. Applies straight away, and
               follows your device&apos;s Reduce Motion setting as well.
             </Text>
@@ -241,13 +253,16 @@ export default function SettingsScreen() {
             phone resting on a hard desk. There is no OS-wide switch we can
             read for it the way `useMotion` reads Reduce Motion, so this is the
             only mechanism the learner has. */}
-        <Text className="text-sm font-semibold text-text-secondary mb-2 uppercase tracking-wide">
+        <Text className="text-sm font-semibold mb-2 uppercase tracking-wide" style={{ color: c.muted }}>
           Haptics
         </Text>
         <Pressable
-          className={`p-4 rounded-2xl mb-8 flex-row items-center ${
-            hapticsOn ? 'bg-primary-tint border-2 border-primary' : 'bg-dark-card border-2 border-transparent'
-          }`}
+          className="p-4 rounded-2xl mb-8 flex-row items-center"
+          style={{
+            borderWidth: 2,
+            backgroundColor: hapticsOn ? c.primaryTint : c.card,
+            borderColor: hapticsOn ? c.primary : c.cardBorder,
+          }}
           onPress={toggleHaptics}
           accessibilityRole="switch"
           accessibilityState={{ checked: hapticsOn }}
@@ -257,13 +272,13 @@ export default function SettingsScreen() {
           <Ionicons
             name={hapticsOn ? 'checkmark-circle' : 'ellipse-outline'}
             size={24}
-            color={hapticsOn ? colors.action.accent : colors.text.tertiary}
+            color={hapticsOn ? c.onTint : c.idle}
           />
           <View className="ml-3 flex-1">
-            <Text className="text-base font-semibold text-text-primary">
+            <Text className="text-base font-semibold" style={{ color: c.ink }}>
               Vibration
             </Text>
-            <Text className="text-sm text-text-secondary mt-0.5">
+            <Text className="text-sm mt-0.5" style={{ color: c.muted }}>
               Buzzes on answers, button presses and when you finish something.
               Turning this off silences all of them. Applies straight away.
             </Text>
@@ -271,8 +286,9 @@ export default function SettingsScreen() {
         </Pressable>
 
         {/* Save */}
-        <Button
+        <SlabButton
           label="Save Changes"
+          arrow={false}
           onPress={handleSave}
           loading={saving}
           disabled={!hasChanges || saving}
@@ -280,32 +296,31 @@ export default function SettingsScreen() {
 
         {/* Legal */}
         <View className="mt-10 mb-6">
-          <Text className="text-sm font-semibold text-text-secondary mb-2 uppercase tracking-wide">Legal</Text>
-          <Pressable
-            className="bg-dark-card rounded-2xl p-5 mb-3 flex-row items-center"
+          <Text className="text-sm font-semibold mb-2 uppercase tracking-wide" style={{ color: c.muted }}>Legal</Text>
+          <Ui2ListRow
+            style={{ marginBottom: spacing.sm }}
+            icon="shield-checkmark-outline"
+            title="Privacy Policy"
+            role="link"
             onPress={() => Linking.openURL('https://fluenci.com/privacy')}
-            accessibilityRole="link"
             accessibilityLabel="Privacy Policy"
-          >
-            <Ionicons name="shield-checkmark-outline" size={24} color={colors.premium.base} />
-            <Text className="text-base font-semibold text-text-primary ml-4 flex-1">Privacy Policy</Text>
-            <Ionicons name="open-outline" size={18} color={colors.correctionChip.grammar.text} />
-          </Pressable>
-          <Pressable
-            className="bg-dark-card rounded-2xl p-5 mb-3 flex-row items-center"
+          />
+          <Ui2ListRow
+            style={{ marginBottom: spacing.sm }}
+            icon="document-text-outline"
+            title="Terms of Service"
+            role="link"
             onPress={() => Linking.openURL('https://fluenci.com/terms')}
-            accessibilityRole="link"
             accessibilityLabel="Terms of Service"
-          >
-            <Ionicons name="document-text-outline" size={24} color={colors.premium.base} />
-            <Text className="text-base font-semibold text-text-primary ml-4 flex-1">Terms of Service</Text>
-            <Ionicons name="open-outline" size={18} color={colors.correctionChip.grammar.text} />
-          </Pressable>
+          />
 
           {/* Withdrawing consent must be as easy as granting it (Apple 5.1.1(ii)),
               so it lives here rather than behind a support request. */}
-          <Pressable
-            className="bg-dark-card rounded-2xl p-5 mb-3 flex-row items-center"
+          <Ui2ListRow
+            style={{ marginBottom: spacing.sm }}
+            icon="hand-left-outline"
+            title="Withdraw AI consent"
+            subtitle="Stop sending messages and audio to our AI providers"
             onPress={() => {
               Alert.alert(
                 'Withdraw AI consent',
@@ -331,24 +346,21 @@ export default function SettingsScreen() {
                 ],
               );
             }}
-            accessibilityRole="button"
             accessibilityLabel="Withdraw AI consent"
-          >
-            <Ionicons name="hand-left-outline" size={24} color={colors.premium.base} />
-            <View className="ml-4 flex-1">
-              <Text className="text-base font-semibold text-text-primary">Withdraw AI consent</Text>
-              <Text className="text-sm text-text-tertiary mt-0.5">
-                Stop sending messages and audio to our AI providers
-              </Text>
-            </View>
-          </Pressable>
+          />
         </View>
 
         {/* Delete Account */}
         <View className="mb-4">
-          <Text className="text-sm font-semibold text-text-secondary mb-2 uppercase tracking-wide">Danger Zone</Text>
+          <Text className="text-sm font-semibold mb-2 uppercase tracking-wide" style={{ color: c.muted }}>Danger Zone</Text>
           <Pressable
-            className="bg-error-bg py-4 rounded-[14px] items-center"
+            className="py-4 items-center"
+            style={{
+              borderRadius: radii.lg,
+              borderWidth: 2,
+              backgroundColor: c.pinkTint,
+              borderColor: c.error,
+            }}
             disabled={deleting}
             onPress={() => {
               Alert.alert(
@@ -423,7 +435,7 @@ export default function SettingsScreen() {
             accessibilityRole="button"
             accessibilityLabel="Delete account"
           >
-            <Text className="text-error-dark text-base font-semibold">
+            <Text className="text-base font-semibold" style={{ color: c.error }}>
               {deleting ? 'Deleting...' : 'Delete Account'}
             </Text>
           </Pressable>
@@ -432,6 +444,6 @@ export default function SettingsScreen() {
       </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
-    </GradientBackground>
+    </View>
   );
 }

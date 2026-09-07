@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { ActivityIndicator, Text, Pressable } from 'react-native';
+import { ActivityIndicator, View, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import { useSafeBack } from '../../../../hooks/useSafeBack';
 import { useAuth } from '../../../../hooks/useAuth';
 import { useAppStore, effectiveTier } from '../../../../stores/useAppStore';
-import { GradientBackground } from '../../../../components/ui/GradientBackground';
 import {
   fetchWritingPromptById,
   submitWriting,
@@ -20,9 +19,13 @@ import { getTargetLanguage } from '../../../../lib/language';
 import { writingXpKey } from '../../../../lib/offline-queue';
 import { limitCopy } from '../../../../lib/limit-messaging';
 import type { WritingPrompt, WritingFeedback, WritingSubmission } from '../../../../types';
-import { colors } from '../../../../config/theme';
+// `colors` is deliberately NOT imported: it is the fixed DARK palette, and a
+// screen that reads it stays dark whatever the phone is set to.
+import { useUi2Theme } from '../../../../hooks/useUi2Theme';
+import { Body } from '../../../../components/ui2/Ui2Text';
 
 export default function WritingPromptScreen() {
+  const { c } = useUi2Theme();
   const { promptId } = useLocalSearchParams<{ promptId: string }>();
   const goBack = useSafeBack('/(app)');
   const { user } = useAuth();
@@ -180,24 +183,24 @@ export default function WritingPromptScreen() {
 
   if (isLoading) {
     return (
-      <GradientBackground variant="raised">
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
         <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color={colors.action.accent} />
+          <ActivityIndicator size="large" color={c.primary} />
         </SafeAreaView>
-      </GradientBackground>
+      </View>
     );
   }
 
   if (error && !feedback) {
     return (
-      <GradientBackground variant="raised">
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
         <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-          <Text style={{ fontSize: 16, color: colors.error.base, textAlign: 'center' }}>{error}</Text>
+          <Body tone="error" style={{ textAlign: 'center' }}>{error}</Body>
           <Pressable onPress={() => goBack()} style={{ marginTop: 16 }} accessibilityRole="button">
-            <Text style={{ fontSize: 16, color: colors.action.accent }}>Go Back</Text>
+            <Body tone="accent" weight="semibold">Go Back</Body>
           </Pressable>
         </SafeAreaView>
-      </GradientBackground>
+      </View>
     );
   }
 
@@ -216,11 +219,11 @@ export default function WritingPromptScreen() {
 
   if (!prompt) {
     return (
-      <GradientBackground variant="raised">
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
         <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <Text style={{ fontSize: 16, color: colors.text.tertiary }}>Writing prompt not found.</Text>
+          <Body tone="tertiary">Writing prompt not found.</Body>
         </SafeAreaView>
-      </GradientBackground>
+      </View>
     );
   }
 

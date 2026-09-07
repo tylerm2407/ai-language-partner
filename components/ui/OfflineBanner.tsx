@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { View, Text, Platform, AppState } from 'react-native';
+import { View, Platform, AppState } from 'react-native';
 import NetInfo, { type NetInfoState } from '@react-native-community/netinfo';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
+import { Body } from '../ui2/Ui2Text';
 
 /**
  * How often to re-check while we believe we are offline.
@@ -31,6 +33,7 @@ export function looksOffline(state: NetInfoState): boolean {
 }
 
 export function OfflineBanner() {
+  const { c } = useUi2Theme();
   const [isOffline, setIsOffline] = useState(false);
   // Read inside the interval callback without making it a dependency, so the
   // timer is not torn down and rebuilt on every state change.
@@ -85,10 +88,10 @@ export function OfflineBanner() {
   if (!isOffline) return null;
 
   return (
-    <View className="bg-error px-4 py-2">
-      <Text className="text-white text-sm text-center font-medium">
+    <View style={{ backgroundColor: c.error, paddingHorizontal: 16, paddingVertical: 8 }}>
+      <Body size="sm" weight="semibold" tone="onPrimary" style={{ textAlign: 'center' }}>
         You're offline. Some features may not work.
-      </Text>
+      </Body>
     </View>
   );
 }

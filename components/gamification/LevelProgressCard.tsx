@@ -1,8 +1,8 @@
 import { View, Text } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { GlassSurface } from '../ui/GlassSurface';
-import { GRADIENT_COLORS, GRADIENT_START, GRADIENT_END } from '../../config/gradients';
+import { SlabCard } from '../ui2/SlabCard';
+import { Ui2ProgressBar } from '../ui2/Ui2ProgressBar';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { getLeagueConfig } from '../../lib/levels';
 import type { LeagueTier } from '../../lib/levels';
 
@@ -16,26 +16,31 @@ interface LevelProgressCardProps {
 }
 
 export function LevelProgressCard({ level, tier, xpInLevel, xpToNextLevel, progress, totalXp }: LevelProgressCardProps) {
+  const { c } = useUi2Theme();
   const leagueConfig = getLeagueConfig(tier);
 
   return (
-    <GlassSurface innerStyle={{ padding: 20 }}>
+    <SlabCard style={{ padding: 20 }}>
       <View className="flex-row items-center mb-3">
-        {/* Level circle */}
-        <View style={{ width: 48, height: 48, borderRadius: 24, overflow: 'hidden', marginRight: 12 }}>
-          <LinearGradient
-            colors={[...GRADIENT_COLORS]}
-            start={GRADIENT_START}
-            end={GRADIENT_END}
-            style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
-          >
-            <Text style={{ color: '#FFFFFF', fontSize: 20, fontWeight: '800' }}>{level}</Text>
-          </LinearGradient>
+        {/* Level circle — a flat primary disc; UI 2.0 has no gradients. */}
+        <View
+          style={{
+            width: 48,
+            height: 48,
+            borderRadius: 24,
+            overflow: 'hidden',
+            marginRight: 12,
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: c.primary,
+          }}
+        >
+          <Text style={{ color: c.onPrimary, fontSize: 20, fontWeight: '800' }}>{level}</Text>
         </View>
 
         <View className="flex-1">
-          <Text className="text-base font-semibold text-text-primary">Level {level}</Text>
-          <Text className="text-xs text-text-secondary">{totalXp.toLocaleString()} total XP</Text>
+          <Text className="text-base font-semibold" style={{ color: c.ink }}>Level {level}</Text>
+          <Text className="text-xs" style={{ color: c.muted }}>{totalXp.toLocaleString()} total XP</Text>
         </View>
 
         {/* League badge */}
@@ -48,19 +53,10 @@ export function LevelProgressCard({ level, tier, xpInLevel, xpToNextLevel, progr
       </View>
 
       {/* XP Progress bar */}
-      <View className="h-2 bg-dark-card-alt rounded-full overflow-hidden">
-        <View style={{ width: `${Math.min(progress * 100, 100)}%`, height: '100%', borderRadius: 999 }}>
-          <LinearGradient
-            colors={[...GRADIENT_COLORS]}
-            start={GRADIENT_START}
-            end={GRADIENT_END}
-            style={{ flex: 1, borderRadius: 999 }}
-          />
-        </View>
-      </View>
-      <Text className="text-xs text-text-tertiary mt-1">
+      <Ui2ProgressBar progress={progress} height={8} />
+      <Text className="text-xs mt-1" style={{ color: c.muted }}>
         {level >= 100 ? 'Max level reached!' : `${xpInLevel} / ${xpToNextLevel} XP to level ${level + 1}`}
       </Text>
-    </GlassSurface>
+    </SlabCard>
   );
 }

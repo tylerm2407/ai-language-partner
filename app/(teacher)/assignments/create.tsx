@@ -2,7 +2,6 @@ import { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   ScrollView,
   Pressable,
   Alert,
@@ -14,13 +13,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useSafeBack } from '../../../hooks/useSafeBack';
 import { Ionicons } from '@expo/vector-icons';
-import { GradientBackground } from '../../../components/ui/GradientBackground';
-import { GlassSurface } from '../../../components/ui/GlassSurface';
-import { GradientButton } from '../../../components/ui/GradientButton';
+import { SlabCard } from '../../../components/ui2/SlabCard';
+import { SlabButton } from '../../../components/ui2/SlabButton';
+import { Ui2Input } from '../../../components/ui2/Ui2Input';
+import { scrimColor } from '../../../components/ui2/Ui2Sheet';
 import { useSchoolStore } from '../../../stores/useSchoolStore';
 import { useAssignmentBuilder, type AssignmentFormState } from '../../../hooks/useAssignmentBuilder';
 import type { ProficiencyLevel, LanguageCode, Classroom } from '../../../types';
-import { colors } from '../../../config/theme';
+// `colors` is deliberately NOT imported: it is the fixed DARK palette. `ui2Shape`
+// is a set of scheme-independent numbers and carries over unchanged.
+import { ui2Shape } from '../../../config/theme';
+import { useUi2Theme } from '../../../hooks/useUi2Theme';
 
 // ─── Scenarios ──────────────────────────────────────────────────
 interface Scenario {
@@ -122,6 +125,10 @@ const LEVELS: { value: ProficiencyLevel; label: string }[] = [
 ];
 
 export default function CreateAssignmentScreen() {
+  // `scheme` is destructured alongside `c` for the modal scrim: the scrim
+  // colour inverts between schemes, so it cannot be a fixed rgba() — see the
+  // header of components/ui2/Ui2Sheet.tsx.
+  const { c, scheme } = useUi2Theme();
   const goBack = useSafeBack('/(teacher)');
   const { classrooms } = useSchoolStore();
 
@@ -232,7 +239,7 @@ export default function CreateAssignmentScreen() {
   };
 
   return (
-    <GradientBackground>
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
       <SafeAreaView className="flex-1" edges={['top']}>
         <KeyboardAvoidingView
           className="flex-1"
@@ -251,18 +258,18 @@ export default function CreateAssignmentScreen() {
             accessibilityLabel="Go back"
             className="flex-row items-center mb-4"
           >
-            <Ionicons name="chevron-back" size={24} color="#818CF8" />
+            <Ionicons name="chevron-back" size={24} color={c.primary} />
             <Text
-              className="text-base text-primary ml-1"
-              style={{ fontFamily: 'Nunito_600SemiBold' }}
+              className="text-base ml-1"
+              style={{ fontFamily: 'Nunito_600SemiBold', color: c.primary }}
             >
               Back
             </Text>
           </Pressable>
 
           <Text
-            className="text-[28px] text-text-primary mb-6"
-            style={{ fontFamily: 'Nunito_800ExtraBold' }}
+            className="text-[28px] mb-6"
+            style={{ fontFamily: 'Nunito_800ExtraBold', color: c.ink }}
             accessibilityRole="header"
           >
             Create Assignment
@@ -272,8 +279,8 @@ export default function CreateAssignmentScreen() {
           {classrooms.length > 1 && (
             <>
               <Text
-                className="text-sm text-text-secondary mb-2"
-                style={{ fontFamily: 'Nunito_600SemiBold' }}
+                className="text-sm mb-2"
+                style={{ fontFamily: 'Nunito_600SemiBold', color: c.muted }}
               >
                 Class
               </Text>
@@ -282,20 +289,17 @@ export default function CreateAssignmentScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={`Select class, currently ${selectedClass?.name ?? 'none'}`}
               >
-                <GlassSurface
-                  style={{ marginBottom: 20 }}
-                  innerStyle={{ padding: 14 }}
-                >
+                <SlabCard style={{ marginBottom: 20, padding: 14 }}>
                   <View className="flex-row items-center justify-between">
                     <Text
-                      className="text-base text-text-primary"
-                      style={{ fontFamily: 'Nunito_400Regular' }}
+                      className="text-base"
+                      style={{ fontFamily: 'Nunito_400Regular', color: c.ink }}
                     >
                       {selectedClass?.name ?? 'Select a class'}
                     </Text>
-                    <Ionicons name="chevron-down" size={18} color="#64748B" />
+                    <Ionicons name="chevron-down" size={18} color={c.idle} />
                   </View>
-                </GlassSurface>
+                </SlabCard>
               </Pressable>
             </>
           )}
@@ -309,33 +313,38 @@ export default function CreateAssignmentScreen() {
           >
             <Pressable
               className="flex-1 justify-center items-center"
-              style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}
+              // `8C` is 0.55 alpha. It has to live in the colour, not in an
+              // `opacity` prop: this Pressable is the scrim AND the parent of
+              // the picker card, and `opacity` would fade the card with it.
+              style={{ backgroundColor: `${scrimColor(scheme, c)}8C` }}
               onPress={() => setShowClassPicker(false)}
               accessibilityRole="button"
               accessibilityLabel="Close class picker"
             >
               <View
                 style={{
-                  backgroundColor: '#151921',
-                  borderRadius: 18,
+                  backgroundColor: c.card,
+                  borderWidth: ui2Shape.border,
+                  borderColor: c.cardBorder,
+                  borderRadius: ui2Shape.radiusCard,
                   padding: 8,
                   width: '80%',
                   maxHeight: '50%',
                 }}
               >
                 <ScrollView>
-                  {classrooms.map((c) => (
+                  {classrooms.map((room) => (
                     <Pressable
-                      key={c.id}
-                      onPress={() => handleClassSelect(c)}
+                      key={room.id}
+                      onPress={() => handleClassSelect(room)}
                       accessibilityRole="button"
-                      accessibilityLabel={c.name}
+                      accessibilityLabel={room.name}
                       style={{
                         paddingVertical: 14,
                         paddingHorizontal: 16,
                         backgroundColor:
-                          c.id === selectedClassId
-                            ? 'rgba(168, 85, 247, 0.15)'
+                          room.id === selectedClassId
+                            ? c.primaryTint
                             : 'transparent',
                         borderRadius: 12,
                       }}
@@ -343,12 +352,12 @@ export default function CreateAssignmentScreen() {
                       <Text
                         style={{
                           color:
-                            c.id === selectedClassId ? '#A855F7' : '#F1F5F9',
+                            room.id === selectedClassId ? c.onTint : c.ink,
                           fontSize: 16,
                           fontFamily: 'Nunito_500Medium',
                         }}
                       >
-                        {c.name}
+                        {room.name}
                       </Text>
                     </Pressable>
                   ))}
@@ -359,31 +368,23 @@ export default function CreateAssignmentScreen() {
 
           {/* Title */}
           <Text
-            className="text-sm text-text-secondary mb-2"
-            style={{ fontFamily: 'Nunito_600SemiBold' }}
+            className="text-sm mb-2"
+            style={{ fontFamily: 'Nunito_600SemiBold', color: c.muted }}
           >
             Title *
           </Text>
-          <GlassSurface style={{ marginBottom: 20 }} innerStyle={{ padding: 0 }}>
-            <TextInput
-              value={title}
-              onChangeText={setTitle}
-              placeholder="e.g. Restaurant Conversation Practice"
-              placeholderTextColor="#64748B"
-              style={{
-                color: '#F1F5F9',
-                fontSize: 16,
-                fontFamily: 'Nunito_400Regular',
-                padding: 14,
-              }}
-              accessibilityLabel="Assignment title"
-            />
-          </GlassSurface>
+          <Ui2Input
+            value={title}
+            onChangeText={setTitle}
+            placeholder="e.g. Restaurant Conversation Practice"
+            containerStyle={{ marginBottom: 20 }}
+            accessibilityLabel="Assignment title"
+          />
 
           {/* Scenario Picker */}
           <Text
-            className="text-sm text-text-secondary mb-2"
-            style={{ fontFamily: 'Nunito_600SemiBold' }}
+            className="text-sm mb-2"
+            style={{ fontFamily: 'Nunito_600SemiBold', color: c.muted }}
           >
             Scenario *
           </Text>
@@ -403,24 +404,20 @@ export default function CreateAssignmentScreen() {
                   borderRadius: 14,
                   alignItems: 'center',
                   backgroundColor:
-                    selectedScenario === s.key
-                      ? 'rgba(168, 85, 247, 0.2)'
-                      : colors.surface.cardAlt,
-                  borderWidth: 1,
+                    selectedScenario === s.key ? c.primaryTint : c.surface2,
+                  borderWidth: ui2Shape.border,
                   borderColor:
-                    selectedScenario === s.key
-                      ? '#A855F7'
-                      : 'rgba(255, 255, 255, 0.08)',
+                    selectedScenario === s.key ? c.primaryTintBorder : c.cardBorder,
                 }}
               >
                 <Ionicons
                   name={s.icon}
                   size={22}
-                  color={selectedScenario === s.key ? '#A855F7' : '#64748B'}
+                  color={selectedScenario === s.key ? c.onTint : c.idle}
                 />
                 <Text
                   style={{
-                    color: selectedScenario === s.key ? '#A855F7' : '#94A3B8',
+                    color: selectedScenario === s.key ? c.onTint : c.muted,
                     fontSize: 11,
                     fontFamily: 'Nunito_600SemiBold',
                     marginTop: 6,
@@ -446,24 +443,20 @@ export default function CreateAssignmentScreen() {
                 borderRadius: 14,
                 alignItems: 'center',
                 backgroundColor:
-                  selectedScenario === 'custom'
-                    ? 'rgba(168, 85, 247, 0.2)'
-                    : colors.surface.cardAlt,
-                borderWidth: 1,
+                  selectedScenario === 'custom' ? c.primaryTint : c.surface2,
+                borderWidth: ui2Shape.border,
                 borderColor:
-                  selectedScenario === 'custom'
-                    ? '#A855F7'
-                    : 'rgba(255, 255, 255, 0.08)',
+                  selectedScenario === 'custom' ? c.primaryTintBorder : c.cardBorder,
               }}
             >
               <Ionicons
                 name="create-outline"
                 size={22}
-                color={selectedScenario === 'custom' ? '#A855F7' : '#64748B'}
+                color={selectedScenario === 'custom' ? c.onTint : c.idle}
               />
               <Text
                 style={{
-                  color: selectedScenario === 'custom' ? '#A855F7' : '#94A3B8',
+                  color: selectedScenario === 'custom' ? c.onTint : c.muted,
                   fontSize: 11,
                   fontFamily: 'Nunito_600SemiBold',
                   marginTop: 6,
@@ -478,62 +471,36 @@ export default function CreateAssignmentScreen() {
           {/* Custom scenario fields */}
           {selectedScenario === 'custom' && (
             <View className="mb-4">
-              <GlassSurface style={{ marginBottom: 10 }} innerStyle={{ padding: 0 }}>
-                <TextInput
-                  value={customLabel}
-                  onChangeText={setCustomLabel}
-                  placeholder="Scenario label"
-                  placeholderTextColor="#64748B"
-                  style={{
-                    color: '#F1F5F9',
-                    fontSize: 15,
-                    fontFamily: 'Nunito_400Regular',
-                    padding: 14,
-                  }}
-                  accessibilityLabel="Custom scenario label"
-                />
-              </GlassSurface>
-              <GlassSurface style={{ marginBottom: 10 }} innerStyle={{ padding: 0 }}>
-                <TextInput
-                  value={customDescription}
-                  onChangeText={setCustomDescription}
-                  placeholder="Description for students"
-                  placeholderTextColor="#64748B"
-                  multiline
-                  style={{
-                    color: '#F1F5F9',
-                    fontSize: 15,
-                    fontFamily: 'Nunito_400Regular',
-                    padding: 14,
-                    minHeight: 60,
-                  }}
-                  accessibilityLabel="Custom scenario description"
-                />
-              </GlassSurface>
-              <GlassSurface style={{ marginBottom: 10 }} innerStyle={{ padding: 0 }}>
-                <TextInput
-                  value={customContext}
-                  onChangeText={setCustomContext}
-                  placeholder="System context (AI instructions)"
-                  placeholderTextColor="#64748B"
-                  multiline
-                  style={{
-                    color: '#F1F5F9',
-                    fontSize: 15,
-                    fontFamily: 'Nunito_400Regular',
-                    padding: 14,
-                    minHeight: 80,
-                  }}
-                  accessibilityLabel="Custom scenario system context"
-                />
-              </GlassSurface>
+              <Ui2Input
+                value={customLabel}
+                onChangeText={setCustomLabel}
+                placeholder="Scenario label"
+                containerStyle={{ marginBottom: 10 }}
+                accessibilityLabel="Custom scenario label"
+              />
+              <Ui2Input
+                value={customDescription}
+                onChangeText={setCustomDescription}
+                placeholder="Description for students"
+                multiline
+                containerStyle={{ marginBottom: 10 }}
+                accessibilityLabel="Custom scenario description"
+              />
+              <Ui2Input
+                value={customContext}
+                onChangeText={setCustomContext}
+                placeholder="System context (AI instructions)"
+                multiline
+                containerStyle={{ marginBottom: 10 }}
+                accessibilityLabel="Custom scenario system context"
+              />
             </View>
           )}
 
           {/* Level */}
           <Text
-            className="text-sm text-text-secondary mb-2"
-            style={{ fontFamily: 'Nunito_600SemiBold' }}
+            className="text-sm mb-2"
+            style={{ fontFamily: 'Nunito_600SemiBold', color: c.muted }}
           >
             Level
           </Text>
@@ -550,19 +517,15 @@ export default function CreateAssignmentScreen() {
                   paddingHorizontal: 14,
                   borderRadius: 999,
                   backgroundColor:
-                    level === lvl.value
-                      ? 'rgba(168, 85, 247, 0.2)'
-                      : colors.surface.cardAlt,
-                  borderWidth: 1,
+                    level === lvl.value ? c.primaryTint : c.surface2,
+                  borderWidth: ui2Shape.border,
                   borderColor:
-                    level === lvl.value
-                      ? '#A855F7'
-                      : 'rgba(255, 255, 255, 0.1)',
+                    level === lvl.value ? c.primaryTintBorder : c.cardBorder,
                 }}
               >
                 <Text
                   style={{
-                    color: level === lvl.value ? '#A855F7' : '#94A3B8',
+                    color: level === lvl.value ? c.onTint : c.muted,
                     fontSize: 13,
                     fontFamily: 'Nunito_600SemiBold',
                   }}
@@ -575,8 +538,8 @@ export default function CreateAssignmentScreen() {
 
           {/* Minimum Duration */}
           <Text
-            className="text-sm text-text-secondary mb-2"
-            style={{ fontFamily: 'Nunito_600SemiBold' }}
+            className="text-sm mb-2"
+            style={{ fontFamily: 'Nunito_600SemiBold', color: c.muted }}
           >
             Minimum Duration
           </Text>
@@ -593,19 +556,15 @@ export default function CreateAssignmentScreen() {
                   paddingHorizontal: 14,
                   borderRadius: 999,
                   backgroundColor:
-                    minDuration === d
-                      ? colors.action.primaryTint
-                      : colors.surface.cardAlt,
-                  borderWidth: 1,
+                    minDuration === d ? c.primaryTint : c.surface2,
+                  borderWidth: ui2Shape.border,
                   borderColor:
-                    minDuration === d
-                      ? '#818CF8'
-                      : 'rgba(255, 255, 255, 0.1)',
+                    minDuration === d ? c.primaryTintBorder : c.cardBorder,
                 }}
               >
                 <Text
                   style={{
-                    color: minDuration === d ? '#818CF8' : '#94A3B8',
+                    color: minDuration === d ? c.onTint : c.muted,
                     fontSize: 13,
                     fontFamily: 'Nunito_600SemiBold',
                   }}
@@ -618,15 +577,15 @@ export default function CreateAssignmentScreen() {
 
           {/* Mode */}
           <Text
-            className="text-sm text-text-secondary mb-2"
-            style={{ fontFamily: 'Nunito_600SemiBold' }}
+            className="text-sm mb-2"
+            style={{ fontFamily: 'Nunito_600SemiBold', color: c.muted }}
           >
             Mode
           </Text>
           <View
             className="flex-row mb-4"
             style={{
-              backgroundColor: colors.surface.cardAlt,
+              backgroundColor: c.surface2,
               borderRadius: 12,
               padding: 3,
             }}
@@ -644,14 +603,12 @@ export default function CreateAssignmentScreen() {
                   borderRadius: 10,
                   alignItems: 'center',
                   backgroundColor:
-                    mode === m.value
-                      ? 'rgba(168, 85, 247, 0.2)'
-                      : 'transparent',
+                    mode === m.value ? c.primaryTint : 'transparent',
                 }}
               >
                 <Text
                   style={{
-                    color: mode === m.value ? '#A855F7' : '#94A3B8',
+                    color: mode === m.value ? c.onTint : c.muted,
                     fontSize: 14,
                     fontFamily: 'Nunito_600SemiBold',
                   }}
@@ -664,113 +621,82 @@ export default function CreateAssignmentScreen() {
 
           {/* Vocabulary Focus */}
           <Text
-            className="text-sm text-text-secondary mb-2"
-            style={{ fontFamily: 'Nunito_600SemiBold' }}
+            className="text-sm mb-2"
+            style={{ fontFamily: 'Nunito_600SemiBold', color: c.muted }}
           >
             Vocabulary Focus (comma-separated)
           </Text>
-          <GlassSurface style={{ marginBottom: 16 }} innerStyle={{ padding: 0 }}>
-            <TextInput
-              value={vocabFocus}
-              onChangeText={setVocabFocus}
-              placeholder="e.g. menu, allergy, reservation"
-              placeholderTextColor="#64748B"
-              style={{
-                color: '#F1F5F9',
-                fontSize: 15,
-                fontFamily: 'Nunito_400Regular',
-                padding: 14,
-              }}
-              accessibilityLabel="Vocabulary focus"
-            />
-          </GlassSurface>
+          <Ui2Input
+            value={vocabFocus}
+            onChangeText={setVocabFocus}
+            placeholder="e.g. menu, allergy, reservation"
+            containerStyle={{ marginBottom: 16 }}
+            accessibilityLabel="Vocabulary focus"
+          />
 
           {/* Grammar Focus */}
           <Text
-            className="text-sm text-text-secondary mb-2"
-            style={{ fontFamily: 'Nunito_600SemiBold' }}
+            className="text-sm mb-2"
+            style={{ fontFamily: 'Nunito_600SemiBold', color: c.muted }}
           >
             Grammar Focus (comma-separated)
           </Text>
-          <GlassSurface style={{ marginBottom: 16 }} innerStyle={{ padding: 0 }}>
-            <TextInput
-              value={grammarFocus}
-              onChangeText={setGrammarFocus}
-              placeholder="e.g. conditional tense, polite requests"
-              placeholderTextColor="#64748B"
-              style={{
-                color: '#F1F5F9',
-                fontSize: 15,
-                fontFamily: 'Nunito_400Regular',
-                padding: 14,
-              }}
-              accessibilityLabel="Grammar focus"
-            />
-          </GlassSurface>
+          <Ui2Input
+            value={grammarFocus}
+            onChangeText={setGrammarFocus}
+            placeholder="e.g. conditional tense, polite requests"
+            containerStyle={{ marginBottom: 16 }}
+            accessibilityLabel="Grammar focus"
+          />
 
           {/* Instructions */}
           <Text
-            className="text-sm text-text-secondary mb-2"
-            style={{ fontFamily: 'Nunito_600SemiBold' }}
+            className="text-sm mb-2"
+            style={{ fontFamily: 'Nunito_600SemiBold', color: c.muted }}
           >
             Instructions
           </Text>
-          <GlassSurface style={{ marginBottom: 16 }} innerStyle={{ padding: 0 }}>
-            <TextInput
-              value={instructions}
-              onChangeText={setInstructions}
-              placeholder="Additional instructions for students..."
-              placeholderTextColor="#64748B"
-              multiline
-              style={{
-                color: '#F1F5F9',
-                fontSize: 15,
-                fontFamily: 'Nunito_400Regular',
-                padding: 14,
-                minHeight: 80,
-              }}
-              accessibilityLabel="Assignment instructions"
-            />
-          </GlassSurface>
+          <Ui2Input
+            value={instructions}
+            onChangeText={setInstructions}
+            placeholder="Additional instructions for students..."
+            multiline
+            containerStyle={{ marginBottom: 16 }}
+            accessibilityLabel="Assignment instructions"
+          />
 
           {/* Due Date */}
           <Text
-            className="text-sm text-text-secondary mb-2"
-            style={{ fontFamily: 'Nunito_600SemiBold' }}
+            className="text-sm mb-2"
+            style={{ fontFamily: 'Nunito_600SemiBold', color: c.muted }}
           >
             Due Date
           </Text>
-          <GlassSurface style={{ marginBottom: 24 }} innerStyle={{ padding: 0 }}>
-            <TextInput
-              value={dueDate}
-              onChangeText={setDueDate}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor="#64748B"
-              style={{
-                color: '#F1F5F9',
-                fontSize: 15,
-                fontFamily: 'Nunito_400Regular',
-                padding: 14,
-              }}
-              accessibilityLabel="Due date"
-            />
-          </GlassSurface>
+          <Ui2Input
+            value={dueDate}
+            onChangeText={setDueDate}
+            placeholder="YYYY-MM-DD"
+            containerStyle={{ marginBottom: 24 }}
+            accessibilityLabel="Due date"
+          />
 
           {/* Error state + retry via the action buttons */}
           {error && (
             <View
               className="flex-row items-center mb-4"
               style={{
-                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                backgroundColor: c.card,
+                borderWidth: ui2Shape.border,
+                borderColor: c.error,
                 borderRadius: 12,
                 padding: 12,
                 gap: 8,
               }}
             >
-              <Ionicons name="warning-outline" size={18} color="#EF4444" />
+              <Ionicons name="warning-outline" size={18} color={c.error} />
               <Text
                 className="text-sm flex-1"
-                style={{ color: '#EF4444', fontFamily: 'Nunito_500Medium' }}
+                style={{ color: c.error, fontFamily: 'Nunito_500Medium' }}
               >
                 {error}
               </Text>
@@ -790,14 +716,14 @@ export default function CreateAssignmentScreen() {
                 paddingVertical: 16,
                 borderRadius: 14,
                 alignItems: 'center',
-                borderWidth: 1,
-                borderColor: 'rgba(255, 255, 255, 0.15)',
-                backgroundColor: colors.surface.cardAlt,
+                borderWidth: ui2Shape.border,
+                borderColor: c.cardBorder,
+                backgroundColor: c.surface2,
               }}
             >
               <Text
                 style={{
-                  color: '#94A3B8',
+                  color: c.muted,
                   fontSize: 16,
                   fontFamily: 'Nunito_600SemiBold',
                 }}
@@ -806,7 +732,7 @@ export default function CreateAssignmentScreen() {
               </Text>
             </Pressable>
             <View style={{ flex: 1 }}>
-              <GradientButton
+              <SlabButton
                 label="Publish"
                 onPress={handlePublish}
                 loading={loading}
@@ -818,6 +744,6 @@ export default function CreateAssignmentScreen() {
         </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
-    </GradientBackground>
+    </View>
   );
 }

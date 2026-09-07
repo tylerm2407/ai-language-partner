@@ -19,16 +19,20 @@ import { checkAndAwardAchievements, type AchievementDefinition } from '../../../
 import { lessonXpKey } from '../../../lib/offline-queue';
 import { getTargetLanguage } from '../../../lib/language';
 import { useSafeBack } from '../../../hooks/useSafeBack';
-import { Button } from '../../../components/ui/Button';
-import { Body } from '../../../components/ui/Text';
-import { GradientBackground } from '../../../components/ui/GradientBackground';
-import { colors, spacing } from '../../../config/theme';
+import { SlabButton } from '../../../components/ui2/SlabButton';
+import { Body } from '../../../components/ui2/Ui2Text';
+// `colors` is deliberately NOT imported: it is the fixed DARK palette, and a
+// screen that reads it stays dark whatever the phone is set to. `spacing` is a
+// plain scheme-independent number set and carries over unchanged.
+import { spacing } from '../../../config/theme';
+import { useUi2Theme } from '../../../hooks/useUi2Theme';
 import type { Lesson } from '../../../types';
 import { useScreenView } from '../../../hooks/useScreenView';
 import { trackEvent } from '../../../lib/analytics';
 
 export default function LessonScreen() {
   useScreenView('lesson');
+  const { c } = useUi2Theme();
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
   const router = useRouter();
   const goBack = useSafeBack('/(app)');
@@ -124,11 +128,11 @@ export default function LessonScreen() {
 
   if (loading || !targetLanguage) {
     return (
-      <GradientBackground variant="raised">
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
       <SafeAreaView className="flex-1 items-center justify-center">
-        <ActivityIndicator size="large" color={colors.league.diamond} />
+        <ActivityIndicator size="large" color={c.primary} />
       </SafeAreaView>
-      </GradientBackground>
+      </View>
     );
   }
 
@@ -136,28 +140,28 @@ export default function LessonScreen() {
   // user knows a retry can help.
   if (loadError) {
     return (
-      <GradientBackground variant="raised">
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
       <SafeAreaView className="flex-1 items-center justify-center px-8">
         <Body size="lg" tone="secondary" style={{ marginBottom: 16, textAlign: 'center' }}>
           Couldn't load this lesson. Check your connection and try again.
         </Body>
-        <Button label="Try Again" variant="primary" onPress={loadLesson} />
-        <View style={{ marginTop: 12 }}>
-          <Button label="Go Back" variant="secondary" onPress={goBack} />
+        <SlabButton label="Try Again" variant="primary" arrow={false} onPress={loadLesson} style={{ alignSelf: 'stretch' }} />
+        <View style={{ marginTop: 12, alignSelf: 'stretch' }}>
+          <SlabButton label="Go Back" variant="ghost" arrow={false} onPress={goBack} />
         </View>
       </SafeAreaView>
-      </GradientBackground>
+      </View>
     );
   }
 
   if (!lesson) {
     return (
-      <GradientBackground variant="raised">
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
       <SafeAreaView className="flex-1 items-center justify-center px-8">
         <Body size="lg" tone="secondary" style={{ marginBottom: 16 }}>Lesson not found</Body>
-        <Button label="Go Back" variant="secondary" onPress={goBack} />
+        <SlabButton label="Go Back" variant="ghost" arrow={false} onPress={goBack} style={{ alignSelf: 'stretch' }} />
       </SafeAreaView>
-      </GradientBackground>
+      </View>
     );
   }
 
@@ -314,7 +318,7 @@ export default function LessonScreen() {
   };
 
   return (
-    <GradientBackground variant="raised">
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
     <SafeAreaView className="flex-1">
       <KeyboardAvoidingView
         className="flex-1"
@@ -324,14 +328,14 @@ export default function LessonScreen() {
           completion is already in the shared progress store either way — but
           silence would be dishonest when the row is only queued. */}
       {saveState === 'queued' && (
-        <View style={{ backgroundColor: colors.surface.card, paddingHorizontal: spacing.md, paddingVertical: spacing.xs }}>
+        <View style={{ backgroundColor: c.card, paddingHorizontal: spacing.md, paddingVertical: spacing.xs }}>
           <Body size="sm" tone="secondary" style={{ textAlign: 'center' }}>
             Progress saved on this device — it'll sync when you're back online.
           </Body>
         </View>
       )}
       {saveState === 'failed' && (
-        <View style={{ backgroundColor: colors.surface.card, paddingHorizontal: spacing.md, paddingVertical: spacing.xs }}>
+        <View style={{ backgroundColor: c.card, paddingHorizontal: spacing.md, paddingVertical: spacing.xs }}>
           <Body size="sm" tone="secondary" style={{ textAlign: 'center' }}>
             We couldn't save this lesson. Please try it again.
           </Body>
@@ -362,6 +366,6 @@ export default function LessonScreen() {
         onDismiss={dismissAchievement}
       />
     </SafeAreaView>
-    </GradientBackground>
+    </View>
   );
 }

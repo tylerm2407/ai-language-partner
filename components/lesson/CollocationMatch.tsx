@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text, Pressable, type ViewStyle } from 'react-native';
 import { haptic } from '../../lib/haptics';
 import { ExerciseCard } from './ExerciseCard';
 import { FeedbackCard } from './FeedbackCard';
-import { Button } from '../ui/Button';
+import { SlabButton } from '../ui2/SlabButton';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import type { GradeResult } from '../../lib/grading';
 import { isRestored, splitJoinedAnswer } from '../../lib/exercise-restore';
 import type { Exercise } from '../../types';
@@ -29,6 +30,7 @@ export function CollocationMatch({
   language,
   cefrLevel,
 }: CollocationMatchProps) {
+  const { c } = useUi2Theme();
   const collocations: string[] = (exercise.metadata?.collocations as string[]) ?? [];
   const distractors: string[] = exercise.distractors ?? [];
   const allOptions = [...collocations, ...distractors];
@@ -41,9 +43,10 @@ export function CollocationMatch({
    * so there is nothing generic to re-run.
    */
   const gradeSelection = (selectedArr: string[]): GradeResult => {
-    const correctSet = new Set(collocations.map((c) => c.toLowerCase()));
+    // `w`, not `c`: `c` is the palette in this scope now.
+    const correctSet = new Set(collocations.map((w) => w.toLowerCase()));
     const lowered = selectedArr.map((sel) => sel.toLowerCase());
-    const allCorrectSelected = collocations.every((c) => lowered.includes(c.toLowerCase()));
+    const allCorrectSelected = collocations.every((w) => lowered.includes(w.toLowerCase()));
     const noWrongSelected = lowered.every((sel) => correctSet.has(sel));
     const isCorrect = allCorrectSelected && noWrongSelected;
     const joined = selectedArr.join(', ');
@@ -103,31 +106,35 @@ export function CollocationMatch({
   };
 
 
-  const getOptionStyle = (word: string) => {
+  /** Returns a style object rather than the Tailwind classes it used to: the
+   *  fills are palette tokens now, and `bg-primary/20` in particular was an
+   *  opacity wash over an assumed-dark ground, whose UI 2.0 equivalent is the
+   *  real `primaryTint` token in each scheme. */
+  const getOptionStyle = (word: string): ViewStyle => {
     const isSelected = selectedWords.has(word);
-    const isCollocation = collocations.map((c) => c.toLowerCase()).includes(word.toLowerCase());
+    const isCollocation = collocations.map((w) => w.toLowerCase()).includes(word.toLowerCase());
 
     if (!submitted && !showResult) {
       return isSelected
-        ? 'bg-primary/20 border-2 border-primary'
-        : 'bg-dark-card-alt border-2 border-transparent';
+        ? { backgroundColor: c.primaryTint, borderColor: c.primary }
+        : { backgroundColor: c.surface2, borderColor: 'transparent' };
     }
 
     // After submission: highlight correct/incorrect
     if (isCollocation) {
-      return 'bg-success-bg border-2 border-success';
+      return { backgroundColor: c.greenTint, borderColor: c.green };
     }
     if (isSelected && !isCollocation) {
-      return 'bg-error-bg border-2 border-error';
+      return { backgroundColor: c.pinkTint, borderColor: c.error };
     }
-    return 'bg-dark-card-alt border-2 border-transparent';
+    return { backgroundColor: c.surface2, borderColor: 'transparent' };
   };
 
   return (
     <ExerciseCard type={exercise.type} prompt={exercise.prompt}>
       <View className="mb-4 items-center">
-        <Text className="text-primary text-2xl font-bold">{targetWord}</Text>
-        <Text className="text-text-secondary text-sm mt-1">
+        <Text className="text-2xl font-bold" style={{ color: c.primary }}>{targetWord}</Text>
+        <Text className="text-sm mt-1" style={{ color: c.muted }}>
           Select all words that collocate with this word
         </Text>
       </View>
@@ -136,7 +143,8 @@ export function CollocationMatch({
         {allOptions.map((word, index) => (
           <Pressable
             key={index}
-            className={`px-4 py-2.5 rounded-[14px] ${getOptionStyle(word)}`}
+            className="px-4 py-2.5 rounded-[14px] border-2"
+            style={getOptionStyle(word)}
             onPress={() => handleToggle(word)}
             disabled={submitted || showResult}
             accessibilityRole="button"
@@ -146,7 +154,7 @@ export function CollocationMatch({
               disabled: submitted || showResult,
             }}
           >
-            <Text className="text-text-primary text-[15px] font-semibold">
+            <Text className="text-[15px] font-semibold" style={{ color: c.ink }}>
               {word}
             </Text>
           </Pressable>
@@ -166,7 +174,7 @@ export function CollocationMatch({
 
       {!submitted && !showResult && (
         <View className="mt-4">
-          <Button
+          <SlabButton
             label="Check"
             onPress={handleSubmit}
             disabled={selectedWords.size === 0}

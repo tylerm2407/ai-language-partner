@@ -3,17 +3,18 @@ import { View, Text, FlatList, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { GradientBackground } from '../../../components/ui/GradientBackground';
-import { GradientButton } from '../../../components/ui/GradientButton';
+import { SlabButton } from '../../../components/ui2/SlabButton';
 import AssignmentCard from '../../../components/school/AssignmentCard';
 import { useSchoolStore } from '../../../stores/useSchoolStore';
 import { useAuth } from '../../../hooks/useAuth';
 import { fetchClassroomAssignments } from '../../../lib/supabase-queries';
 import type { Assignment } from '../../../types';
-import { InlineError } from '../../../components/ui/InlineError';
+import { Ui2InlineError } from '../../../components/ui2/Ui2InlineError';
 import { loadErrorCopy, type ErrorCopy } from '../../../lib/error-copy';
+import { useUi2Theme } from '../../../hooks/useUi2Theme';
 
 export default function AssignmentsListScreen() {
+  const { c } = useUi2Theme();
   const router = useRouter();
   const { user } = useAuth();
   const { loadTeacherData } = useSchoolStore();
@@ -67,18 +68,18 @@ export default function AssignmentsListScreen() {
   );
 
   return (
-    <GradientBackground>
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
       <SafeAreaView className="flex-1" edges={['top']}>
         <View className="flex-1 px-4 pt-2">
           <Text
-            className="text-[28px] text-text-primary mb-4"
-            style={{ fontFamily: 'Nunito_800ExtraBold' }}
+            className="text-[28px] mb-4"
+            style={{ fontFamily: 'Nunito_800ExtraBold', color: c.ink }}
             accessibilityRole="header"
           >
             Assignments
           </Text>
 
-          <GradientButton
+          <SlabButton
             label="Create Assignment"
             onPress={() => router.push('/assignments/create' as any)}
             style={{ marginBottom: 20 }}
@@ -86,26 +87,26 @@ export default function AssignmentsListScreen() {
           />
 
           {partial && !loading && !error ? (
-            <Text className="text-sm text-warning mb-2">
+            <Text className="text-sm mb-2" style={{ color: c.yellow }}>
               Some classes couldn&apos;t be loaded. Pull to try again.
             </Text>
           ) : null}
           {loading ? (
-            <ActivityIndicator color="#818CF8" size="large" style={{ marginTop: 32 }} />
+            <ActivityIndicator color={c.primary} size="large" style={{ marginTop: 32 }} />
           ) : error ? (
-            <InlineError copy={error} onRetry={load} />
+            <Ui2InlineError copy={error} onRetry={load} />
           ) : assignments.length === 0 ? (
             <View className="flex-1 justify-center items-center" style={{ paddingBottom: 80 }}>
-              <Ionicons name="document-text-outline" size={56} color="#64748B" />
+              <Ionicons name="document-text-outline" size={56} color={c.idle} />
               <Text
-                className="text-lg text-text-primary mt-4"
-                style={{ fontFamily: 'Nunito_600SemiBold' }}
+                className="text-lg mt-4"
+                style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
               >
                 No assignments yet
               </Text>
               <Text
-                className="text-sm text-text-secondary mt-1 text-center px-8"
-                style={{ fontFamily: 'Nunito_400Regular' }}
+                className="text-sm mt-1 text-center px-8"
+                style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
               >
                 Create your first assignment to give students conversation practice.
               </Text>
@@ -121,6 +122,6 @@ export default function AssignmentsListScreen() {
           )}
         </View>
       </SafeAreaView>
-    </GradientBackground>
+    </View>
   );
 }

@@ -3,7 +3,8 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { MagazineGlassCard } from './MagazineGlassCard';
-import { colors, typography, radii } from '../../config/theme';
+import { typography, radii, ui2Dark, ui2Light, type Ui2Palette } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { useAppStore } from '../../stores/useAppStore';
 
 // Editorial face. Fraunces_600SemiBold carries its own weight — never pair it
@@ -11,6 +12,7 @@ import { useAppStore } from '../../stores/useAppStore';
 const serifFont = typography.family.serif;
 
 export function SessionBand() {
+  const { c, scheme } = useUi2Theme();
   const router = useRouter();
   const profile = useAppStore((s) => s.profile);
   const language = profile?.targetLanguage?.toUpperCase() ?? 'LESSON';
@@ -21,27 +23,27 @@ export function SessionBand() {
       accessibilityRole="button"
       accessibilityLabel="Continue your lesson"
     >
-      <MagazineGlassCard style={styles.card}>
-        <View style={styles.row}>
+      <MagazineGlassCard style={themed[scheme].card}>
+        <View style={themed[scheme].row}>
           {/* Play button */}
           <LinearGradient
-            colors={[colors.magazine.accentBlue, colors.magazine.accentViolet]}
+            colors={[c.primary, c.pink]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={styles.playButton}
+            style={themed[scheme].playButton}
           >
-            <Ionicons name="play" size={18} color="#FFFFFF" />
+            <Ionicons name="play" size={18} color={c.onPrimary} />
           </LinearGradient>
 
           {/* Text */}
-          <View style={styles.textCol}>
-            <Text style={styles.kicker}>CONTINUE · {language}</Text>
-            <Text style={styles.title}>Today's Session</Text>
+          <View style={themed[scheme].textCol}>
+            <Text style={themed[scheme].kicker}>CONTINUE · {language}</Text>
+            <Text style={themed[scheme].title}>Today's Session</Text>
           </View>
 
           {/* Duration pill */}
-          <View style={styles.durationPill}>
-            <Text style={styles.durationText}>15 min</Text>
+          <View style={themed[scheme].durationPill}>
+            <Text style={themed[scheme].durationText}>15 min</Text>
           </View>
         </View>
       </MagazineGlassCard>
@@ -49,7 +51,8 @@ export function SessionBand() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: Ui2Palette) =>
+  StyleSheet.create({
   card: {
     marginBottom: 20,
   },
@@ -72,17 +75,17 @@ const styles = StyleSheet.create({
     fontFamily: typography.family.mono,
     fontSize: 10,
     letterSpacing: 1.5,
-    color: colors.text.tertiary,
+    color: c.muted,
     textTransform: 'uppercase',
     marginBottom: 2,
   },
   title: {
     fontFamily: serifFont,
     fontSize: 18,
-    color: colors.text.primary,
+    color: c.ink,
   },
   durationPill: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: c.primaryTint,
     borderRadius: radii.pill,
     paddingHorizontal: 10,
     paddingVertical: 5,
@@ -90,6 +93,9 @@ const styles = StyleSheet.create({
   durationText: {
     fontFamily: typography.family.mono,
     fontSize: 11,
-    color: colors.text.secondary,
+    color: c.onTint,
   },
-});
+  });
+
+/** Both schemes built once at module load — see DateLabel for why. */
+const themed = { light: makeStyles(ui2Light), dark: makeStyles(ui2Dark) } as const;

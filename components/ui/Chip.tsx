@@ -8,7 +8,8 @@
 import React from 'react';
 import { View, Pressable, type ViewStyle, StyleSheet } from 'react-native';
 import { Caption } from './Text';
-import { colors, radii, spacing } from '../../config/theme';
+import { radii, spacing, type Ui2Palette } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 
 type Variant =
   | 'neutral'
@@ -24,22 +25,34 @@ interface ChipProps {
   variant?: Variant;
   leftIcon?: React.ReactNode;
   onPress?: () => void;
-  /** Use theme.colors.correctionChip keys for correction-banner chips. */
+  /** Escape hatch for callers that already resolved a scheme-aware pair. */
   customColors?: { bg: string; text: string };
   style?: ViewStyle;
 }
 
-const VARIANT_STYLES: Record<Variant, { bg: string; text: string }> = {
-  neutral: { bg: colors.surface.cardAlt, text: colors.text.secondary },
-  primary: { bg: 'rgba(99, 102, 241, 0.22)', text: colors.indigo[300] },
-  success: { bg: colors.success.tint, text: colors.success.light },
-  error: { bg: colors.error.tint, text: colors.error.light },
-  warning: { bg: colors.warning.tint, text: colors.warning.light },
-  premium: { bg: colors.premium.tint, text: colors.premium.base },
-};
+/**
+ * The variant table, resolved against the scheme-aware palette. Deliberately
+ * the same fills `components/ui2/Chip.tsx` uses: DESIGN.md maps this chip onto
+ * that one, screens render both, and a chip whose `success` variant is a
+ * different green depending on which import a screen happened to use is a
+ * visible inconsistency rather than a theoretical one.
+ *
+ * `premium` folds onto the primary tint for the same reason it does there:
+ * UI 2.0 has one accent, and inventing a second here would put a colour on
+ * screen that exists nowhere in the design.
+ */
+const variantFills = (c: Ui2Palette): Record<Variant, { bg: string; text: string }> => ({
+  neutral: { bg: c.surface2, text: c.muted },
+  primary: { bg: c.primaryTint, text: c.onTint },
+  success: { bg: c.greenTint, text: c.green },
+  error: { bg: c.pinkTint, text: c.error },
+  warning: { bg: c.yellowTint, text: c.yellow },
+  premium: { bg: c.primaryTint, text: c.onTint },
+});
 
 export function Chip({ label, variant = 'neutral', leftIcon, onPress, customColors, style }: ChipProps) {
-  const palette = customColors ?? VARIANT_STYLES[variant];
+  const { c } = useUi2Theme();
+  const palette = customColors ?? variantFills(c)[variant];
 
   const content = (
     <>

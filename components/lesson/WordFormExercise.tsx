@@ -4,7 +4,8 @@ import { haptic } from '../../lib/haptics';
 import { ExerciseCard } from './ExerciseCard';
 import { FeedbackCard } from './FeedbackCard';
 import { HighlightedText } from '../shared/HighlightedText';
-import { Button } from '../ui/Button';
+import { SlabButton } from '../ui2/SlabButton';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { gradeAnswer } from '../../lib/grading';
 import type { GradeResult } from '../../lib/grading';
 import { isRestored, regradePick } from '../../lib/exercise-restore';
@@ -30,6 +31,7 @@ export function WordFormExercise({
   language,
   cefrLevel,
 }: WordFormExerciseProps) {
+  const { c } = useUi2Theme();
   // Seeded from the recorded pick so Previous comes back to the answer the
   // learner actually gave, in its graded state — see lib/exercise-restore.ts.
   const [answer, setAnswer] = useState(selected ?? '');
@@ -66,24 +68,26 @@ export function WordFormExercise({
   };
 
 
-  const getBorderClass = () => {
-    if (!submitted) return 'border-input-border';
-    if (result?.isCorrect) return 'border-success';
-    return 'border-error';
+  /** A palette token rather than the Tailwind border class it used to return,
+   *  so the graded outline follows the phone's light/dark setting. */
+  const getBorderColor = () => {
+    if (!submitted) return c.cardBorder;
+    if (result?.isCorrect) return c.green;
+    return c.error;
   };
 
   return (
     <ExerciseCard type={exercise.type} prompt="Complete the word form">
       {/* Word family hint */}
       {(baseWord || wordFamily.length > 0) && (
-        <View className="mb-4 p-3 rounded-[14px] bg-dark-card-alt">
+        <View className="mb-4 p-3 rounded-[14px]" style={{ backgroundColor: c.surface2 }}>
           {baseWord ? (
-            <Text className="text-text-secondary text-sm">
-              Base word: <Text className="text-primary font-bold">{baseWord}</Text>
+            <Text className="text-sm" style={{ color: c.muted }}>
+              Base word: <Text className="font-bold" style={{ color: c.primary }}>{baseWord}</Text>
             </Text>
           ) : null}
           {wordFamily.length > 0 && (
-            <Text className="text-text-secondary text-sm mt-1">
+            <Text className="text-sm mt-1" style={{ color: c.muted }}>
               Word family: {wordFamily.join(', ')}
             </Text>
           )}
@@ -92,24 +96,26 @@ export function WordFormExercise({
 
       <View className="mb-4">
         {parts.length > 1 ? (
-          <Text className="text-text-primary text-lg leading-7">
+          <Text className="text-lg leading-7" style={{ color: c.ink }}>
             <HighlightedText text={parts[0] ?? ''} highlight={highlight} />
-            <Text className="text-primary font-bold"> _____ </Text>
+            <Text className="font-bold" style={{ color: c.primary }}> _____ </Text>
             <HighlightedText text={parts[1] ?? ''} highlight={highlight} />
           </Text>
         ) : (
           <HighlightedText
             text={exercise.prompt}
             highlight={highlight}
-            className="text-text-primary text-lg leading-7"
+            className="text-lg leading-7"
+            style={{ color: c.ink }}
           />
         )}
       </View>
 
       <TextInput
-        className={`border-2 ${getBorderClass()} rounded-[14px] px-4 py-2.5 text-base text-text-primary`}
+        className="border-2 rounded-[14px] px-4 py-2.5 text-base"
+        style={{ borderColor: getBorderColor(), color: c.ink }}
         placeholder="Type the correct word form..."
-        placeholderTextColor="#64748B"
+        placeholderTextColor={c.idle}
         value={answer}
         onChangeText={setAnswer}
         editable={!submitted && !showResult}
@@ -131,7 +137,7 @@ export function WordFormExercise({
 
       {!submitted && !showResult && (
         <View className="mt-4">
-          <Button
+          <SlabButton
             label="Check"
             onPress={handleSubmit}
             disabled={!answer.trim()}

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 
 interface StudentRowProps {
   studentId: string;
@@ -22,12 +23,13 @@ export default function StudentRow({
   completionRate,
   onRemove,
 }: StudentRowProps) {
+  const { c } = useUi2Theme();
   const initial = displayName.charAt(0).toUpperCase();
 
   return (
     <View
       className="flex-row items-center py-3"
-      style={{ borderBottomWidth: 1, borderBottomColor: 'rgba(255, 255, 255, 0.06)' }}
+      style={{ borderBottomWidth: 1, borderBottomColor: c.cardBorder }}
       accessibilityLabel={`Student: ${displayName}`}
     >
       {/* Avatar */}
@@ -36,7 +38,7 @@ export default function StudentRow({
           width: 40,
           height: 40,
           borderRadius: 20,
-          backgroundColor: 'rgba(99, 102, 241, 0.2)',
+          backgroundColor: c.primaryTint,
           alignItems: 'center',
           justifyContent: 'center',
           marginRight: 12,
@@ -44,7 +46,7 @@ export default function StudentRow({
       >
         <Text
           style={{
-            color: '#818CF8',
+            color: c.onTint,
             fontSize: 16,
             fontFamily: 'Nunito_700Bold',
           }}
@@ -57,7 +59,7 @@ export default function StudentRow({
       <View style={{ flex: 1 }}>
         <Text
           style={{
-            color: '#FFFFFF',
+            color: c.ink,
             fontSize: 15,
             fontFamily: 'Nunito_600SemiBold',
           }}
@@ -67,7 +69,7 @@ export default function StudentRow({
         </Text>
         <Text
           style={{
-            color: '#64748B',
+            color: c.muted,
             fontSize: 12,
             fontFamily: 'Nunito_400Regular',
             marginTop: 2,
@@ -90,7 +92,7 @@ export default function StudentRow({
             style={{
               height: 6,
               borderRadius: 3,
-              backgroundColor: 'rgba(255, 255, 255, 0.08)',
+              backgroundColor: c.track,
               overflow: 'hidden',
             }}
           >
@@ -99,14 +101,14 @@ export default function StudentRow({
                 height: '100%',
                 width: `${Math.min(100, Math.round(completionRate * 100))}%`,
                 backgroundColor:
-                  completionRate >= 0.8 ? '#22C55E' : completionRate >= 0.5 ? '#F59E0B' : '#EF4444',
+                  completionRate >= 0.8 ? c.green : completionRate >= 0.5 ? c.yellow : c.error,
                 borderRadius: 3,
               }}
             />
           </View>
           <Text
             style={{
-              color: '#94A3B8',
+              color: c.muted,
               fontSize: 10,
               fontFamily: 'Nunito_500Medium',
               textAlign: 'center',
@@ -127,7 +129,7 @@ export default function StudentRow({
           hitSlop={8}
           style={{ padding: 4 }}
         >
-          <Ionicons name="trash-outline" size={18} color="#EF4444" />
+          <Ionicons name="trash-outline" size={18} color={c.error} />
         </Pressable>
       )}
     </View>

@@ -5,7 +5,7 @@ import { haptic } from '../../lib/haptics';
 import { ExerciseCard } from './ExerciseCard';
 import { FeedbackCard } from './FeedbackCard';
 import { HighlightedText } from '../shared/HighlightedText';
-import { colors } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { useAudioRecorder } from '../../hooks/useAudioRecorder';
 import { useAudioPlayer } from '../../hooks/useAudioPlayer';
 import { usePhonemeDrill } from '../../hooks/usePhonemeDrill';
@@ -36,6 +36,7 @@ export function SpeakingExercise({
   targetLanguage,
   cefrLevel,
 }: SpeakingExerciseProps) {
+  const { c } = useUi2Theme();
   const { recording, audioUri, error: recorderError, startRecording, stopRecording, getBase64 } = useAudioRecorder();
   const { playing, error: playerError, play } = useAudioPlayer();
   const [scoring, setScoring] = useState(false);
@@ -150,7 +151,8 @@ export function SpeakingExercise({
     <HighlightedText
       text={exercise.prompt}
       highlight={highlight}
-      className="text-text-primary text-[22px] font-sans-semibold"
+      className="text-[22px] font-sans-semibold"
+      style={{ color: c.ink }}
     />
   );
 
@@ -160,35 +162,38 @@ export function SpeakingExercise({
       {exercise.promptAudioUrl && (
         <View className="mb-4">
           <Pressable
-            className="bg-dark-card-alt rounded-[14px] p-4 flex-row items-center"
+            className="rounded-[14px] p-4 flex-row items-center"
+            style={{ backgroundColor: c.surface2 }}
             onPress={() => play(exercise.promptAudioUrl!)}
             accessibilityRole="button"
             accessibilityLabel="Play prompt audio"
           >
-            <Ionicons name={playing ? 'volume-high' : 'play-circle'} size={28} color={colors.indigo[400]} />
-            <Text className="text-text-primary text-base ml-3">Listen to the prompt</Text>
+            <Ionicons name={playing ? 'volume-high' : 'play-circle'} size={28} color={c.primary} />
+            <Text className="text-base ml-3" style={{ color: c.ink }}>Listen to the prompt</Text>
           </Pressable>
           {/* HVPT replay: rotate through per-language voices on each tap. */}
           <Pressable
-            className="bg-dark-card-alt/60 rounded-[12px] p-3 flex-row items-center mt-2 self-start"
+            className="rounded-[12px] p-3 flex-row items-center mt-2 self-start"
+            style={{ backgroundColor: c.surface2 }}
             onPress={() => phonemeDrill.playNext(exercise.correctAnswer)}
             disabled={phonemeDrill.isPlaying}
             accessibilityRole="button"
             accessibilityLabel="Replay in a different voice"
           >
             {phonemeDrill.isPlaying ? (
-              <ActivityIndicator size="small" color={colors.indigo[400]} />
+              <ActivityIndicator size="small" color={c.primary} />
             ) : (
-              <Ionicons name="refresh" size={20} color={colors.indigo[400]} />
+              <Ionicons name="refresh" size={20} color={c.primary} />
             )}
-            <Text className="text-text-secondary text-sm ml-2">Replay in a different voice</Text>
+            <Text className="text-sm ml-2" style={{ color: c.muted }}>Replay in a different voice</Text>
           </Pressable>
         </View>
       )}
 
       {/* Record button */}
       <Pressable
-        className={`w-20 h-20 rounded-full items-center justify-center self-center mb-4 ${recording ? 'bg-error' : 'bg-primary'}`}
+        className="w-20 h-20 rounded-full items-center justify-center self-center mb-4"
+        style={{ backgroundColor: recording ? c.error : c.primary }}
         onPress={handleToggleRecord}
         disabled={scoring || scoreState !== null}
         accessibilityRole="button"
@@ -197,11 +202,11 @@ export function SpeakingExercise({
         <Ionicons
           name={recording ? 'stop' : 'mic'}
           size={36}
-          color="white"
+          color={c.onPrimary}
         />
       </Pressable>
 
-      <Text className="text-text-secondary text-sm text-center mb-4">
+      <Text className="text-sm text-center mb-4" style={{ color: c.muted }}>
         {recording ? 'Recording... Tap to stop' : scoreState ? '' : 'Tap to record your answer'}
       </Text>
 
@@ -212,8 +217,8 @@ export function SpeakingExercise({
           accessibilityRole="alert"
           accessibilityLabel={`Audio error: ${recorderError ?? playerError}`}
         >
-          <Ionicons name="alert-circle" size={16} color={colors.error.base} />
-          <Text className="text-error text-sm ml-1 text-center flex-shrink">
+          <Ionicons name="alert-circle" size={16} color={c.error} />
+          <Text className="text-sm ml-1 text-center flex-shrink" style={{ color: c.error }}>
             {recorderError ?? playerError}
           </Text>
         </View>
@@ -222,19 +227,20 @@ export function SpeakingExercise({
       {/* Score button */}
       {audioUri && !scoreState && !scoring && (
         <Pressable
-          className="bg-primary py-4 px-12 rounded-[14px] items-center"
+          className="py-4 px-12 rounded-[14px] items-center"
+          style={{ backgroundColor: c.primary }}
           onPress={handleScore}
           accessibilityRole="button"
           accessibilityLabel="Score pronunciation"
         >
-          <Text className="text-white text-lg font-semibold">Score My Answer</Text>
+          <Text className="text-lg font-semibold" style={{ color: c.onPrimary }}>Score My Answer</Text>
         </Pressable>
       )}
 
       {scoring && (
         <View className="items-center py-4">
-          <ActivityIndicator size="large" color={colors.indigo[400]} />
-          <Text className="text-text-tertiary text-sm mt-2">Scoring pronunciation...</Text>
+          <ActivityIndicator size="large" color={c.primary} />
+          <Text className="text-sm mt-2" style={{ color: c.idle }}>Scoring pronunciation...</Text>
         </View>
       )}
 
@@ -243,27 +249,27 @@ export function SpeakingExercise({
       {scoreState && (
         <View className="items-center">
           <View
-            className={`w-14 h-14 rounded-full items-center justify-center ${
-              scoreState.correct ? 'bg-success-bg' : 'bg-error-bg'
-            }`}
+            className="w-14 h-14 rounded-full items-center justify-center"
+            style={{ backgroundColor: scoreState.correct ? c.greenTint : c.pinkTint }}
           >
             <Ionicons
               name={scoreState.correct ? 'checkmark-circle' : 'close-circle'}
               size={28}
-              color={scoreState.correct ? colors.success.base : colors.error.base}
+              color={scoreState.correct ? c.green : c.error}
             />
           </View>
           <Text
-            className="text-text-primary text-lg font-sans-semibold mt-2"
+            className="text-lg font-sans-semibold mt-2"
+            style={{ color: c.ink }}
             accessibilityRole="header"
           >
             {scoreState.correct ? 'Sounded right' : 'Not quite'}
           </Text>
-          <Text className="text-text-secondary text-base text-center mt-1">
+          <Text className="text-base text-center mt-1" style={{ color: c.muted }}>
             {scoreState.feedback}
           </Text>
           {scoreState.transcription && (
-            <Text className="text-text-tertiary text-xs mt-2 text-center italic">
+            <Text className="text-xs mt-2 text-center italic" style={{ color: c.idle }}>
               Heard: "{scoreState.transcription}"
             </Text>
           )}

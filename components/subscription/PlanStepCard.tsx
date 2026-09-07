@@ -11,7 +11,8 @@
  */
 import { View, Text, Pressable } from 'react-native';
 import type { PurchasesPackage } from 'react-native-purchases';
-import { colors, radii, spacing, typography } from '../../config/theme';
+import { radii, spacing, typography } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import type { PlanId } from '../../lib/plans';
 import { perDayString, billedLine, CAPACITY, METER_BLOCKS, STEP_ADDS } from '../../lib/plan-pricing';
 
@@ -25,6 +26,7 @@ interface PlanStepCardProps {
 }
 
 export function PlanStepCard({ pkg, tier, selected, isPopular, onSelect, disabled }: PlanStepCardProps) {
+  const { c } = useUi2Theme();
   const capacity = CAPACITY[tier];
   const name = tier === 'vip' ? 'VIP' : tier.charAt(0).toUpperCase() + tier.slice(1);
 
@@ -39,8 +41,8 @@ export function PlanStepCard({ pkg, tier, selected, isPopular, onSelect, disable
         padding: spacing.md - 2,
         borderRadius: radii.xl,
         borderWidth: 1.5,
-        backgroundColor: selected ? colors.action.primaryTint : colors.surface.raised,
-        borderColor: selected ? colors.action.primaryBorder : colors.border.subtle,
+        backgroundColor: selected ? c.primaryTint : c.card,
+        borderColor: selected ? c.primaryTintBorder : c.cardBorder,
         // 44pt minimum target is satisfied by the row's own height (~86pt).
       }}
     >
@@ -52,7 +54,7 @@ export function PlanStepCard({ pkg, tier, selected, isPopular, onSelect, disable
                 fontFamily: typography.family.extrabold,
                 fontSize: 15,
                 lineHeight: 21,
-                color: colors.text.primary,
+                color: c.ink,
               }}
             >
               {name}
@@ -63,9 +65,9 @@ export function PlanStepCard({ pkg, tier, selected, isPopular, onSelect, disable
                   paddingHorizontal: spacing.xs,
                   paddingVertical: 3,
                   borderRadius: radii.sm - 1,
-                  backgroundColor: colors.action.primaryTint,
+                  backgroundColor: c.primaryTint,
                   borderWidth: 1,
-                  borderColor: colors.action.primaryBorder,
+                  borderColor: c.primaryTintBorder,
                 }}
               >
                 <Text
@@ -74,7 +76,7 @@ export function PlanStepCard({ pkg, tier, selected, isPopular, onSelect, disable
                     fontSize: 9,
                     lineHeight: 12,
                     letterSpacing: 1,
-                    color: colors.indigo[300],
+                    color: c.onTint,
                   }}
                 >
                   MOST POPULAR
@@ -87,7 +89,7 @@ export function PlanStepCard({ pkg, tier, selected, isPopular, onSelect, disable
               fontFamily: typography.family.semibold,
               fontSize: 12,
               lineHeight: 17,
-              color: colors.text.tertiary,
+              color: c.muted,
               marginTop: 4,
             }}
           >
@@ -104,7 +106,7 @@ export function PlanStepCard({ pkg, tier, selected, isPopular, onSelect, disable
               fontSize: 20,
               lineHeight: 25,
               letterSpacing: -0.5,
-              color: colors.text.onPrimary,
+              color: c.ink,
             }}
           >
             {perDayString(pkg)}
@@ -115,7 +117,7 @@ export function PlanStepCard({ pkg, tier, selected, isPopular, onSelect, disable
               fontSize: 9,
               lineHeight: 12,
               letterSpacing: 1.2,
-              color: colors.text.quaternary,
+              color: c.muted,
             }}
           >
             PER DAY
@@ -137,7 +139,7 @@ export function PlanStepCard({ pkg, tier, selected, isPopular, onSelect, disable
               height: 7,
               flex: 1,
               borderRadius: 2,
-              backgroundColor: i < capacity.fill ? colors.action.accent : colors.surface.track,
+              backgroundColor: i < capacity.fill ? c.primary : c.track,
             }}
           />
         ))}
@@ -147,7 +149,7 @@ export function PlanStepCard({ pkg, tier, selected, isPopular, onSelect, disable
             fontSize: 9,
             lineHeight: 12,
             letterSpacing: 1,
-            color: colors.text.tertiary,
+            color: c.muted,
             marginLeft: 6,
           }}
         >
@@ -160,7 +162,7 @@ export function PlanStepCard({ pkg, tier, selected, isPopular, onSelect, disable
           fontFamily: typography.family.monoMedium,
           fontSize: 10,
           lineHeight: 14,
-          color: colors.text.quaternary,
+          color: c.muted,
           marginTop: 9,
         }}
       >

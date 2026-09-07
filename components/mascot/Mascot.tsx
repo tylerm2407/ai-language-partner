@@ -23,7 +23,7 @@
 import React from 'react';
 import Svg, { Path, Circle, G } from 'react-native-svg';
 import { View, type ViewStyle } from 'react-native';
-import { colors } from '../../config/theme';
+import { ui2Dark, ui2Light } from '../../config/theme';
 
 export type MascotState =
   | 'idle'
@@ -45,13 +45,22 @@ interface MascotProps {
 
 const SIZE_PX: Record<MascotSize, number> = { xs: 32, sm: 48, md: 80, lg: 128 };
 
-const STAR_FILL = colors.indigo[500];
-const STAR_STROKE = colors.indigo[700];
-const TRAIL_COLOR = colors.indigo[400];
-const EYE_COLOR = '#F8FAFC'; // near-ivory — AAA against indigo-500
-const PUPIL_COLOR = '#0C0F14';
-const MOUTH_COLOR = colors.indigo[800];
-const SPARK_COLOR = '#FDE68A';
+/**
+ * The mascot is ILLUSTRATION, not chrome, so its palette is fixed rather than
+ * scheme-following: a character whose face flips colour with the OS setting
+ * reads as two different characters. The values are still UI 2.0 tokens — they
+ * are just pinned to one end of the pair instead of resolved through
+ * `useUi2Theme()`, which is also why this file has no hook. `ui2Light` /
+ * `ui2Dark` are plain exported palettes; the banned import is `colors`, the
+ * fixed DARK theme.
+ */
+const STAR_FILL = ui2Light.primary;
+const STAR_STROKE = ui2Light.slab;
+const TRAIL_COLOR = ui2Dark.onTint;
+const EYE_COLOR = ui2Light.onPrimary; // AAA against the star fill
+const PUPIL_COLOR = ui2Dark.bg;
+const MOUTH_COLOR = ui2Light.ink;
+const SPARK_COLOR = ui2Light.yellow;
 
 /**
  * 4-point rounded star silhouette. viewBox 0 0 100 100, centered at (55, 45)

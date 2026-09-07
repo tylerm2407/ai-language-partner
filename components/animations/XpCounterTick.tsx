@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Text, Animated } from 'react-native';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 
 interface XpCounterTickProps {
   targetXp: number;
@@ -8,6 +9,7 @@ interface XpCounterTickProps {
 }
 
 export function XpCounterTick({ targetXp, trigger, style }: XpCounterTickProps) {
+  const { c } = useUi2Theme();
   const [displayValue, setDisplayValue] = useState(0);
   const animatedValue = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(1)).current;
@@ -39,7 +41,7 @@ export function XpCounterTick({ targetXp, trigger, style }: XpCounterTickProps) 
 
   return (
     <Animated.View style={[{ transform: [{ scale }] }, style]}>
-      <Text style={{ color: '#38BDF8', fontSize: 32, fontWeight: '800', textAlign: 'center' }}>
+      <Text style={{ color: c.primary, fontSize: 32, fontWeight: '800', textAlign: 'center' }}>
         +{displayValue} XP
       </Text>
     </Animated.View>

@@ -4,12 +4,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useSafeBack } from '../../../hooks/useSafeBack';
 import { Ionicons } from '@expo/vector-icons';
-import { GradientBackground } from '../../../components/ui/GradientBackground';
-import { GlassSurface } from '../../../components/ui/GlassSurface';
+import { SlabCard } from '../../../components/ui2/SlabCard';
 import { useSchoolStore } from '../../../stores/useSchoolStore';
 import { fetchAuditLogs } from '../../../lib/supabase-queries';
-import { colors } from '../../../config/theme';
-import { InlineError } from '../../../components/ui/InlineError';
+// `colors` is deliberately not imported: it is the fixed DARK palette. Colour
+// comes from useUi2Theme(); only the scheme-independent types come from here.
+import type { Ui2Palette } from '../../../config/theme';
+import { useUi2Theme } from '../../../hooks/useUi2Theme';
+import { Ui2InlineError } from '../../../components/ui2/Ui2InlineError';
 import { loadErrorCopy, type ErrorCopy } from '../../../lib/error-copy';
 
 interface AuditEntry {
@@ -30,15 +32,28 @@ function formatTimestamp(dateStr: string): string {
     d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 }
 
-const ACTION_COLORS: Record<string, string> = {
-  create: '#22C55E',
-  update: '#818CF8',
-  delete: '#EF4444',
-  grant: '#A855F7',
-  read: '#94A3B8',
+/**
+ * Per-action colour, as a palette lookup rather than the old fixed hex map —
+ * the pill has to stay legible in both schemes, and `read`/unknown actions
+ * share the muted default the old `?? '#94A3B8'` fallback gave them.
+ */
+const actionTone = (c: Ui2Palette, action: string): { fg: string; bg: string } => {
+  switch (action) {
+    case 'create':
+      return { fg: c.green, bg: c.greenTint };
+    case 'update':
+      return { fg: c.primary, bg: c.primaryTint };
+    case 'delete':
+      return { fg: c.error, bg: c.pinkTint };
+    case 'grant':
+      return { fg: c.pink, bg: c.pinkTint };
+    default:
+      return { fg: c.idle, bg: c.surface2 };
+  }
 };
 
 export default function AuditLogScreen() {
+  const { c } = useUi2Theme();
   const goBack = useSafeBack('/(teacher)');
   const { organization } = useSchoolStore();
   const [entries, setEntries] = useState<AuditEntry[]>([]);
@@ -75,7 +90,7 @@ export default function AuditLogScreen() {
   }, [load]);
 
   return (
-    <GradientBackground>
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
       <SafeAreaView className="flex-1" edges={['top']}>
         <View className="flex-1 px-4 pt-2">
           <Pressable
@@ -84,13 +99,13 @@ export default function AuditLogScreen() {
             accessibilityLabel="Go back"
             className="flex-row items-center mb-4"
           >
-            <Ionicons name="chevron-back" size={24} color="#818CF8" />
-            <Text className="text-base text-primary ml-1" style={{ fontFamily: 'Nunito_600SemiBold' }}>Back</Text>
+            <Ionicons name="chevron-back" size={24} color={c.primary} />
+            <Text className="text-base ml-1" style={{ fontFamily: 'Nunito_600SemiBold', color: c.primary }}>Back</Text>
           </Pressable>
 
           <Text
-            className="text-[28px] text-text-primary mb-4"
-            style={{ fontFamily: 'Nunito_800ExtraBold' }}
+            className="text-[28px] mb-4"
+            style={{ fontFamily: 'Nunito_800ExtraBold', color: c.ink }}
             accessibilityRole="header"
           >
             Audit Log
@@ -106,14 +121,14 @@ export default function AuditLogScreen() {
                   paddingHorizontal: 12,
                   paddingVertical: 6,
                   borderRadius: 999,
-                  backgroundColor: filter === opt ? colors.action.primaryTint : colors.surface.cardAlt,
+                  backgroundColor: filter === opt ? c.primaryTint : c.surface2,
                 }}
                 accessibilityRole="button"
                 accessibilityState={{ selected: filter === opt }}
               >
                 <Text
                   style={{
-                    color: filter === opt ? '#818CF8' : '#94A3B8',
+                    color: filter === opt ? c.onTint : c.muted,
                     fontSize: 13,
                     fontFamily: 'Nunito_600SemiBold',
                   }}
@@ -125,9 +140,9 @@ export default function AuditLogScreen() {
           </View>
 
           {loading ? (
-            <ActivityIndicator color="#818CF8" size="large" style={{ marginTop: 32 }} />
+            <ActivityIndicator color={c.primary} size="large" style={{ marginTop: 32 }} />
           ) : error ? (
-            <InlineError copy={error} onRetry={load} />
+            <Ui2InlineError copy={error} onRetry={load} />
           ) : (
             <FlatList
               data={entries}
@@ -135,10 +150,10 @@ export default function AuditLogScreen() {
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingBottom: 100 }}
               refreshControl={
-                <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#818CF8" />
+                <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={c.primary} />
               }
               renderItem={({ item }) => (
-                <GlassSurface style={{ marginBottom: 8 }} innerStyle={{ padding: 12 }}>
+                <SlabCard style={{ marginBottom: 8, padding: 12 }}>
                   <View className="flex-row items-center justify-between mb-1">
                     <View className="flex-row items-center" style={{ gap: 8 }}>
                       <View
@@ -146,35 +161,35 @@ export default function AuditLogScreen() {
                           paddingHorizontal: 6,
                           paddingVertical: 2,
                           borderRadius: 4,
-                          backgroundColor: `${ACTION_COLORS[item.action] ?? '#94A3B8'}20`,
+                          backgroundColor: actionTone(c, item.action).bg,
                         }}
                       >
-                        <Text style={{ color: ACTION_COLORS[item.action] ?? '#94A3B8', fontSize: 11, fontFamily: 'Nunito_600SemiBold' }}>
+                        <Text style={{ color: actionTone(c, item.action).fg, fontSize: 11, fontFamily: 'Nunito_600SemiBold' }}>
                           {item.action.toUpperCase()}
                         </Text>
                       </View>
-                      <Text className="text-xs text-text-secondary" style={{ fontFamily: 'Nunito_500Medium' }}>
+                      <Text className="text-xs" style={{ fontFamily: 'Nunito_500Medium', color: c.muted }}>
                         {item.actorRole}
                       </Text>
                     </View>
-                    <Text className="text-xs text-text-secondary" style={{ fontFamily: 'Nunito_400Regular' }}>
+                    <Text className="text-xs" style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}>
                       {formatTimestamp(item.createdAt)}
                     </Text>
                   </View>
-                  <Text className="text-sm text-text-primary" style={{ fontFamily: 'Nunito_400Regular' }}>
+                  <Text className="text-sm" style={{ fontFamily: 'Nunito_400Regular', color: c.ink }}>
                     {item.resourceType}{item.resourceId ? ` (${item.resourceId.slice(0, 8)}...)` : ''}
                   </Text>
                   {item.ipAddress && (
-                    <Text className="text-xs text-text-secondary mt-1" style={{ fontFamily: 'Nunito_400Regular' }}>
+                    <Text className="text-xs mt-1" style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}>
                       IP: {item.ipAddress}
                     </Text>
                   )}
-                </GlassSurface>
+                </SlabCard>
               )}
               ListEmptyComponent={
                 <View className="items-center mt-8">
-                  <Ionicons name="document-text-outline" size={48} color="#64748B" />
-                  <Text className="text-base text-text-secondary mt-3" style={{ fontFamily: 'Nunito_500Medium' }}>
+                  <Ionicons name="document-text-outline" size={48} color={c.idle} />
+                  <Text className="text-base mt-3" style={{ fontFamily: 'Nunito_500Medium', color: c.muted }}>
                     No audit entries found
                   </Text>
                 </View>
@@ -183,6 +198,6 @@ export default function AuditLogScreen() {
           )}
         </View>
       </SafeAreaView>
-    </GradientBackground>
+    </View>
   );
 }

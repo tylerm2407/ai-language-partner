@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   ScrollView,
   Pressable,
   Alert,
@@ -14,16 +13,20 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import { useSafeBack } from '../../../../hooks/useSafeBack';
 import { Ionicons } from '@expo/vector-icons';
-import { GradientBackground } from '../../../../components/ui/GradientBackground';
-import { GlassSurface } from '../../../../components/ui/GlassSurface';
-import { GradientButton } from '../../../../components/ui/GradientButton';
+import { SlabCard } from '../../../../components/ui2/SlabCard';
+import { SlabButton } from '../../../../components/ui2/SlabButton';
+import { Ui2Input } from '../../../../components/ui2/Ui2Input';
 import StatusBadge from '../../../../components/school/StatusBadge';
 import TranscriptViewer from '../../../../components/school/TranscriptViewer';
 import { fetchSubmissionDetail, fetchSubmissionTranscript, fetchAssignmentById, gradeSubmission } from '../../../../lib/supabase-queries';
 import { useSchoolStore } from '../../../../stores/useSchoolStore';
 import type { Assignment, AssignmentSubmission, ConversationMessage } from '../../../../types';
-import { InlineError } from '../../../../components/ui/InlineError';
+import { Ui2InlineError } from '../../../../components/ui2/Ui2InlineError';
 import { loadErrorCopy, type ErrorCopy } from '../../../../lib/error-copy';
+// `colors` is deliberately NOT imported: it is the fixed DARK palette. `ui2Shape`
+// is a set of scheme-independent numbers.
+import { ui2Shape } from '../../../../config/theme';
+import { useUi2Theme } from '../../../../hooks/useUi2Theme';
 
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return '—';
@@ -37,17 +40,18 @@ function formatDate(dateStr: string | null): string {
 }
 
 function RubricRow({ label, score }: { label: string; score: number }) {
+  const { c } = useUi2Theme();
   return (
     <View className="flex-row items-center justify-between mb-2">
       <Text
-        className="text-sm text-text-secondary"
-        style={{ fontFamily: 'Nunito_500Medium' }}
+        className="text-sm"
+        style={{ fontFamily: 'Nunito_500Medium', color: c.muted }}
       >
         {label}
       </Text>
       <Text
         style={{
-          color: score >= 80 ? '#22C55E' : score >= 60 ? '#F59E0B' : '#EF4444',
+          color: score >= 80 ? c.green : score >= 60 ? c.yellow : c.error,
           fontSize: 14,
           fontFamily: 'Nunito_700Bold',
         }}
@@ -59,6 +63,7 @@ function RubricRow({ label, score }: { label: string; score: number }) {
 }
 
 export default function GradingScreen() {
+  const { c } = useUi2Theme();
   const goBack = useSafeBack('/(teacher)');
   const { assignmentId, submissionId } = useLocalSearchParams<{
     assignmentId: string;
@@ -123,26 +128,26 @@ export default function GradingScreen() {
 
   if (loading) {
     return (
-      <GradientBackground>
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
         <SafeAreaView className="flex-1 justify-center items-center">
-          <ActivityIndicator color="#818CF8" size="large" />
+          <ActivityIndicator color={c.primary} size="large" />
         </SafeAreaView>
-      </GradientBackground>
+      </View>
     );
   }
 
   if (loadError) {
     return (
-      <GradientBackground>
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
         <SafeAreaView className="flex-1 justify-center">
-          <InlineError copy={loadError} onRetry={() => setReloadKey((k) => k + 1)} />
+          <Ui2InlineError copy={loadError} onRetry={() => setReloadKey((k) => k + 1)} />
         </SafeAreaView>
-      </GradientBackground>
+      </View>
     );
   }
 
   return (
-    <GradientBackground>
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
       <SafeAreaView className="flex-1" edges={['top']}>
         <KeyboardAvoidingView
           className="flex-1"
@@ -161,28 +166,25 @@ export default function GradingScreen() {
             accessibilityLabel="Go back"
             className="flex-row items-center mb-4"
           >
-            <Ionicons name="chevron-back" size={24} color="#818CF8" />
+            <Ionicons name="chevron-back" size={24} color={c.primary} />
             <Text
-              className="text-base text-primary ml-1"
-              style={{ fontFamily: 'Nunito_600SemiBold' }}
+              className="text-base ml-1"
+              style={{ fontFamily: 'Nunito_600SemiBold', color: c.primary }}
             >
               Back
             </Text>
           </Pressable>
 
           <Text
-            className="text-[28px] text-text-primary mb-4"
-            style={{ fontFamily: 'Nunito_800ExtraBold' }}
+            className="text-[28px] mb-4"
+            style={{ fontFamily: 'Nunito_800ExtraBold', color: c.ink }}
             accessibilityRole="header"
           >
             Review Submission
           </Text>
 
           {/* Student Info */}
-          <GlassSurface
-            style={{ marginBottom: 16 }}
-            innerStyle={{ padding: 16 }}
-          >
+          <SlabCard style={{ marginBottom: 16, padding: 16 }}>
             <View className="flex-row items-center justify-between mb-2">
               <View className="flex-row items-center">
                 <View
@@ -190,23 +192,23 @@ export default function GradingScreen() {
                     width: 40,
                     height: 40,
                     borderRadius: 20,
-                    backgroundColor: 'rgba(168, 85, 247, 0.2)',
+                    backgroundColor: c.primaryTint,
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
                 >
-                  <Ionicons name="person" size={20} color="#A855F7" />
+                  <Ionicons name="person" size={20} color={c.onTint} />
                 </View>
                 <View className="ml-3">
                   <Text
-                    className="text-base text-text-primary"
-                    style={{ fontFamily: 'Nunito_600SemiBold' }}
+                    className="text-base"
+                    style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
                   >
                     {submission?.studentName ?? 'Student'}
                   </Text>
                   <Text
-                    className="text-xs text-text-secondary"
-                    style={{ fontFamily: 'Nunito_400Regular' }}
+                    className="text-xs"
+                    style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
                   >
                     Submitted {formatDate(submission?.submittedAt ?? null)}
                   </Text>
@@ -219,10 +221,10 @@ export default function GradingScreen() {
             <View className="flex-row items-center" style={{ gap: 12 }}>
               {submission?.conversationDurationMinutes != null && (
                 <View className="flex-row items-center">
-                  <Ionicons name="time-outline" size={14} color="#94A3B8" />
+                  <Ionicons name="time-outline" size={14} color={c.idle} />
                   <Text
                     style={{
-                      color: '#94A3B8',
+                      color: c.muted,
                       fontSize: 12,
                       fontFamily: 'Nunito_500Medium',
                       marginLeft: 4,
@@ -235,7 +237,8 @@ export default function GradingScreen() {
               {submission?.isLate && (
                 <View
                   style={{
-                    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                    borderWidth: ui2Shape.border,
+                    borderColor: c.error,
                     paddingHorizontal: 8,
                     paddingVertical: 2,
                     borderRadius: 999,
@@ -243,7 +246,7 @@ export default function GradingScreen() {
                 >
                   <Text
                     style={{
-                      color: '#EF4444',
+                      color: c.error,
                       fontSize: 11,
                       fontFamily: 'Nunito_600SemiBold',
                     }}
@@ -253,20 +256,17 @@ export default function GradingScreen() {
                 </View>
               )}
             </View>
-          </GlassSurface>
+          </SlabCard>
 
           {/* AI Rubric */}
           <Text
-            className="text-xl text-text-primary mb-3"
-            style={{ fontFamily: 'Nunito_600SemiBold' }}
+            className="text-xl mb-3"
+            style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
           >
             AI Evaluation
           </Text>
           {aiFeedback ? (
-            <GlassSurface
-              style={{ marginBottom: 16 }}
-              innerStyle={{ padding: 16 }}
-            >
+            <SlabCard style={{ marginBottom: 16, padding: 16 }}>
               <RubricRow label="Participation" score={aiFeedback.participation} />
               <RubricRow label="Language Usage" score={aiFeedback.languageUsage} />
               <RubricRow
@@ -279,22 +279,22 @@ export default function GradingScreen() {
               />
               <View
                 style={{
-                  borderTopWidth: 1,
-                  borderTopColor: 'rgba(255,255,255,0.08)',
+                  borderTopWidth: ui2Shape.border,
+                  borderTopColor: c.cardBorder,
                   marginTop: 8,
                   paddingTop: 10,
                 }}
               >
                 <View className="flex-row items-center justify-between">
                   <Text
-                    className="text-base text-text-primary"
-                    style={{ fontFamily: 'Nunito_600SemiBold' }}
+                    className="text-base"
+                    style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
                   >
                     Total Score
                   </Text>
                   <Text
                     style={{
-                      color: '#818CF8',
+                      color: c.primary,
                       fontSize: 20,
                       fontFamily: 'Nunito_800ExtraBold',
                     }}
@@ -307,8 +307,8 @@ export default function GradingScreen() {
               {/* Summary */}
               {aiFeedback.summary ? (
                 <Text
-                  className="text-sm text-text-secondary mt-3"
-                  style={{ fontFamily: 'Nunito_400Regular' }}
+                  className="text-sm mt-3"
+                  style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
                 >
                   {aiFeedback.summary}
                 </Text>
@@ -318,8 +318,8 @@ export default function GradingScreen() {
               {aiFeedback.strengths.length > 0 && (
                 <View className="mt-3">
                   <Text
-                    className="text-xs text-text-secondary mb-1"
-                    style={{ fontFamily: 'Nunito_600SemiBold' }}
+                    className="text-xs mb-1"
+                    style={{ fontFamily: 'Nunito_600SemiBold', color: c.muted }}
                   >
                     Strengths
                   </Text>
@@ -328,12 +328,12 @@ export default function GradingScreen() {
                       <Ionicons
                         name="checkmark-circle"
                         size={14}
-                        color="#22C55E"
+                        color={c.green}
                         style={{ marginTop: 2, marginRight: 6 }}
                       />
                       <Text
-                        className="text-sm text-text-primary flex-1"
-                        style={{ fontFamily: 'Nunito_400Regular' }}
+                        className="text-sm flex-1"
+                        style={{ fontFamily: 'Nunito_400Regular', color: c.ink }}
                       >
                         {s}
                       </Text>
@@ -346,8 +346,8 @@ export default function GradingScreen() {
               {aiFeedback.improvements.length > 0 && (
                 <View className="mt-3">
                   <Text
-                    className="text-xs text-text-secondary mb-1"
-                    style={{ fontFamily: 'Nunito_600SemiBold' }}
+                    className="text-xs mb-1"
+                    style={{ fontFamily: 'Nunito_600SemiBold', color: c.muted }}
                   >
                     Areas for Improvement
                   </Text>
@@ -356,12 +356,12 @@ export default function GradingScreen() {
                       <Ionicons
                         name="arrow-up-circle"
                         size={14}
-                        color="#F59E0B"
+                        color={c.yellow}
                         style={{ marginTop: 2, marginRight: 6 }}
                       />
                       <Text
-                        className="text-sm text-text-primary flex-1"
-                        style={{ fontFamily: 'Nunito_400Regular' }}
+                        className="text-sm flex-1"
+                        style={{ fontFamily: 'Nunito_400Regular', color: c.ink }}
                       >
                         {s}
                       </Text>
@@ -369,26 +369,23 @@ export default function GradingScreen() {
                   ))}
                 </View>
               )}
-            </GlassSurface>
+            </SlabCard>
           ) : (
-            <GlassSurface
-              style={{ marginBottom: 16 }}
-              innerStyle={{ padding: 20, alignItems: 'center' }}
-            >
-              <Ionicons name="analytics-outline" size={28} color="#64748B" />
+            <SlabCard style={{ marginBottom: 16, padding: 20, alignItems: 'center' }}>
+              <Ionicons name="analytics-outline" size={28} color={c.idle} />
               <Text
-                className="text-sm text-text-secondary mt-2"
-                style={{ fontFamily: 'Nunito_400Regular' }}
+                className="text-sm mt-2"
+                style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
               >
                 AI evaluation not available
               </Text>
-            </GlassSurface>
+            </SlabCard>
           )}
 
           {/* Transcript placeholder */}
           <Text
-            className="text-xl text-text-primary mb-3"
-            style={{ fontFamily: 'Nunito_600SemiBold' }}
+            className="text-xl mb-3"
+            style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
           >
             Conversation Transcript
           </Text>
@@ -398,76 +395,56 @@ export default function GradingScreen() {
               targetLanguage={assignment?.targetLanguage ?? 'en'}
             />
           ) : (
-            <GlassSurface
-              style={{ marginBottom: 20 }}
-              innerStyle={{ padding: 20, alignItems: 'center' }}
-            >
-              <Ionicons name="chatbox-outline" size={28} color="#64748B" />
+            <SlabCard style={{ marginBottom: 20, padding: 20, alignItems: 'center' }}>
+              <Ionicons name="chatbox-outline" size={28} color={c.idle} />
               <Text
-                className="text-sm text-text-secondary mt-2"
-                style={{ fontFamily: 'Nunito_400Regular' }}
+                className="text-sm mt-2"
+                style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
               >
                 No transcript available
               </Text>
-            </GlassSurface>
+            </SlabCard>
           )}
 
           {/* Teacher Feedback */}
           <Text
-            className="text-xl text-text-primary mb-3"
-            style={{ fontFamily: 'Nunito_600SemiBold' }}
+            className="text-xl mb-3"
+            style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
           >
             Teacher Feedback
           </Text>
 
           <Text
-            className="text-sm text-text-secondary mb-2"
-            style={{ fontFamily: 'Nunito_600SemiBold' }}
+            className="text-sm mb-2"
+            style={{ fontFamily: 'Nunito_600SemiBold', color: c.muted }}
           >
             Score Override (0-100)
           </Text>
-          <GlassSurface style={{ marginBottom: 16 }} innerStyle={{ padding: 0 }}>
-            <TextInput
-              value={scoreOverride}
-              onChangeText={setScoreOverride}
-              placeholder="Leave blank to use AI score"
-              placeholderTextColor="#64748B"
-              keyboardType="numeric"
-              style={{
-                color: '#F1F5F9',
-                fontSize: 16,
-                fontFamily: 'Nunito_400Regular',
-                padding: 14,
-              }}
-              accessibilityLabel="Score override"
-            />
-          </GlassSurface>
+          <Ui2Input
+            value={scoreOverride}
+            onChangeText={setScoreOverride}
+            placeholder="Leave blank to use AI score"
+            keyboardType="numeric"
+            containerStyle={{ marginBottom: 16 }}
+            accessibilityLabel="Score override"
+          />
 
           <Text
-            className="text-sm text-text-secondary mb-2"
-            style={{ fontFamily: 'Nunito_600SemiBold' }}
+            className="text-sm mb-2"
+            style={{ fontFamily: 'Nunito_600SemiBold', color: c.muted }}
           >
             Comments
           </Text>
-          <GlassSurface style={{ marginBottom: 24 }} innerStyle={{ padding: 0 }}>
-            <TextInput
-              value={comments}
-              onChangeText={setComments}
-              placeholder="Add feedback for the student..."
-              placeholderTextColor="#64748B"
-              multiline
-              style={{
-                color: '#F1F5F9',
-                fontSize: 15,
-                fontFamily: 'Nunito_400Regular',
-                padding: 14,
-                minHeight: 100,
-              }}
-              accessibilityLabel="Teacher comments"
-            />
-          </GlassSurface>
+          <Ui2Input
+            value={comments}
+            onChangeText={setComments}
+            placeholder="Add feedback for the student..."
+            multiline
+            containerStyle={{ marginBottom: 24 }}
+            accessibilityLabel="Teacher comments"
+          />
 
-          <GradientButton
+          <SlabButton
             label="Submit Feedback"
             onPress={handleSubmitFeedback}
             loading={saving}
@@ -476,6 +453,6 @@ export default function GradingScreen() {
         </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
-    </GradientBackground>
+    </View>
   );
 }

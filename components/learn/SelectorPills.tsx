@@ -20,10 +20,11 @@
 
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { Body, Caption } from '../ui/Text';
+import { Body, Caption } from '../ui2/Ui2Text';
 import { usePressed } from '../../hooks/usePressed';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { cefrCanDo, cefrAccessibilityLabel } from '../../lib/cefr-labels';
-import { colors, radii, spacing } from '../../config/theme';
+import { radii, spacing } from '../../config/theme';
 import type { Course } from '../../types';
 
 interface PillProps {
@@ -35,6 +36,7 @@ interface PillProps {
 }
 
 function Pill({ label, selected, onPress, accessibilityLabel, accessibilityRole }: PillProps) {
+  const { c } = useUi2Theme();
   const { pressed, pressHandlers } = usePressed();
   return (
     <Pressable
@@ -45,7 +47,9 @@ function Pill({ label, selected, onPress, accessibilityLabel, accessibilityRole 
       accessibilityState={{ selected }}
       style={[
         styles.pill,
-        selected ? styles.pillSelected : styles.pillIdle,
+        selected
+          ? { backgroundColor: c.primary, borderColor: c.slab }
+          : { backgroundColor: c.card, borderColor: c.cardBorder },
         pressed && styles.pillPressed,
       ]}
     >
@@ -158,14 +162,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderRadius: radii.pill,
     borderWidth: 1,
-  },
-  pillIdle: {
-    backgroundColor: colors.surface.card,
-    borderColor: colors.border.subtle,
-  },
-  pillSelected: {
-    backgroundColor: colors.action.primaryFill,
-    borderColor: colors.action.primaryFill,
   },
   pillPressed: {
     opacity: 0.8,

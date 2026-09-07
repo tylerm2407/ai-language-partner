@@ -1,18 +1,20 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Alert, ActivityIndicator, ScrollView, KeyboardAvoidingView, Platform, Pressable, Share } from 'react-native';
+import { View, Text, Alert, ActivityIndicator, ScrollView, KeyboardAvoidingView, Platform, Pressable, Share } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useSafeBack } from '../../../hooks/useSafeBack';
 import * as Clipboard from 'expo-clipboard';
 import { haptic } from '../../../lib/haptics';
 import { Ionicons } from '@expo/vector-icons';
-import { GradientBackground } from '../../../components/ui/GradientBackground';
-import { GlassSurface } from '../../../components/ui/GlassSurface';
-import { GradientButton } from '../../../components/ui/GradientButton';
+import { SlabCard } from '../../../components/ui2/SlabCard';
+import { SlabButton } from '../../../components/ui2/SlabButton';
+import { Ui2Input } from '../../../components/ui2/Ui2Input';
+import { useUi2Theme } from '../../../hooks/useUi2Theme';
 import { useSchoolStore } from '../../../stores/useSchoolStore';
 import { callSchoolAdminAction } from '../../../lib/supabase-queries';
 
 export default function DataManagementScreen() {
+  const { c } = useUi2Theme();
   const goBack = useSafeBack('/(teacher)');
   const { organization } = useSchoolStore();
   const [exporting, setExporting] = useState(false);
@@ -96,7 +98,7 @@ export default function DataManagementScreen() {
   };
 
   return (
-    <GradientBackground>
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
       <SafeAreaView className="flex-1" edges={['top']}>
         <KeyboardAvoidingView
           className="flex-1"
@@ -114,27 +116,27 @@ export default function DataManagementScreen() {
             accessibilityLabel="Go back"
             className="flex-row items-center mb-4"
           >
-            <Ionicons name="chevron-back" size={24} color="#818CF8" />
-            <Text className="text-base text-primary ml-1" style={{ fontFamily: 'Nunito_600SemiBold' }}>Back</Text>
+            <Ionicons name="chevron-back" size={24} color={c.primary} />
+            <Text className="text-base ml-1" style={{ fontFamily: 'Nunito_600SemiBold', color: c.primary }}>Back</Text>
           </Pressable>
 
           <Text
-            className="text-[28px] text-text-primary mb-6"
-            style={{ fontFamily: 'Nunito_800ExtraBold' }}
+            className="text-[28px] mb-6"
+            style={{ fontFamily: 'Nunito_800ExtraBold', color: c.ink }}
             accessibilityRole="header"
           >
             Data Management
           </Text>
 
           {/* Export Section */}
-          <Text className="text-xl text-text-primary mb-3" style={{ fontFamily: 'Nunito_600SemiBold' }}>
+          <Text className="text-xl mb-3" style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}>
             Export All Data
           </Text>
-          <GlassSurface style={{ marginBottom: 24 }} innerStyle={{ padding: 16 }}>
-            <Text className="text-sm text-text-secondary mb-4" style={{ fontFamily: 'Nunito_400Regular' }}>
+          <SlabCard style={{ marginBottom: 24 }}>
+            <Text className="text-sm mb-4" style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}>
               Generate a complete export of all organization data including students, assignments, submissions, and chat transcripts in JSON format. You can then copy or share the exported data.
             </Text>
-            <GradientButton
+            <SlabButton
               label={exporting ? 'Exporting...' : 'Export Organization Data'}
               onPress={handleExport}
               loading={exporting}
@@ -143,12 +145,12 @@ export default function DataManagementScreen() {
             {exportResult && (
               <View className="mt-4">
                 <View className="flex-row items-center mb-2" style={{ gap: 6 }}>
-                  <Ionicons name="checkmark-circle" size={16} color="#22C55E" />
-                  <Text style={{ color: '#22C55E', fontSize: 13, fontFamily: 'Nunito_500Medium' }}>
+                  <Ionicons name="checkmark-circle" size={16} color={c.green} />
+                  <Text style={{ color: c.green, fontSize: 13, fontFamily: 'Nunito_500Medium' }}>
                     Export ready
                   </Text>
                 </View>
-                <Text className="text-sm text-text-secondary mb-3" style={{ fontFamily: 'Nunito_400Regular' }}>
+                <Text className="text-sm mb-3" style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}>
                   {exportCount('classrooms')} classrooms · {exportCount('members')} members ·{' '}
                   {exportCount('assignments')} assignments · {exportCount('submissions')} submissions ·{' '}
                   {exportCount('chatMessages')} chat messages
@@ -160,7 +162,7 @@ export default function DataManagementScreen() {
                     accessibilityLabel="Copy export JSON to clipboard"
                     className="flex-row items-center"
                     style={{
-                      backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                      backgroundColor: c.primaryTint,
                       paddingHorizontal: 14,
                       paddingVertical: 10,
                       borderRadius: 10,
@@ -170,11 +172,11 @@ export default function DataManagementScreen() {
                     <Ionicons
                       name={copiedExport ? 'checkmark-circle' : 'copy-outline'}
                       size={16}
-                      color={copiedExport ? '#22C55E' : '#818CF8'}
+                      color={copiedExport ? c.green : c.onTint}
                     />
                     <Text
                       style={{
-                        color: copiedExport ? '#22C55E' : '#818CF8',
+                        color: copiedExport ? c.green : c.onTint,
                         fontSize: 14,
                         fontFamily: 'Nunito_600SemiBold',
                       }}
@@ -188,65 +190,57 @@ export default function DataManagementScreen() {
                     accessibilityLabel="Share export JSON"
                     className="flex-row items-center"
                     style={{
-                      backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                      backgroundColor: c.primaryTint,
                       paddingHorizontal: 14,
                       paddingVertical: 10,
                       borderRadius: 10,
                       gap: 6,
                     }}
                   >
-                    <Ionicons name="share-outline" size={16} color="#818CF8" />
-                    <Text style={{ color: '#818CF8', fontSize: 14, fontFamily: 'Nunito_600SemiBold' }}>
+                    <Ionicons name="share-outline" size={16} color={c.onTint} />
+                    <Text style={{ color: c.onTint, fontSize: 14, fontFamily: 'Nunito_600SemiBold' }}>
                       Share
                     </Text>
                   </Pressable>
                 </View>
               </View>
             )}
-          </GlassSurface>
+          </SlabCard>
 
           {/* Danger Zone */}
-          <Text className="text-xl mb-3" style={{ fontFamily: 'Nunito_600SemiBold', color: '#EF4444' }}>
+          <Text className="text-xl mb-3" style={{ fontFamily: 'Nunito_600SemiBold', color: c.error }}>
             Danger Zone
           </Text>
-          <GlassSurface
-            style={{ marginBottom: 16, borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.3)' }}
-            innerStyle={{ padding: 16 }}
+          <SlabCard
+            style={{ marginBottom: 16, borderColor: c.error }}
           >
             <View className="flex-row items-center mb-3" style={{ gap: 8 }}>
-              <Ionicons name="warning-outline" size={20} color="#EF4444" />
-              <Text className="text-base text-text-primary" style={{ fontFamily: 'Nunito_600SemiBold' }}>
+              <Ionicons name="warning-outline" size={20} color={c.error} />
+              <Text className="text-base" style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}>
                 Permanently Delete All Data
               </Text>
             </View>
-            <Text className="text-sm text-text-secondary mb-4" style={{ fontFamily: 'Nunito_400Regular' }}>
+            <Text className="text-sm mb-4" style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}>
               This will permanently delete all organization data including classrooms, enrollments, assignments, submissions, and chat messages. This action cannot be undone.
             </Text>
 
-            <Text className="text-sm text-text-secondary mb-2" style={{ fontFamily: 'Nunito_500Medium' }}>
+            <Text className="text-sm mb-2" style={{ fontFamily: 'Nunito_500Medium', color: c.muted }}>
               Type "{organization?.name}" to confirm:
             </Text>
-            <GlassSurface style={{ marginBottom: 16 }} innerStyle={{ padding: 0 }}>
-              <TextInput
-                value={confirmText}
-                onChangeText={setConfirmText}
-                placeholder="Organization name"
-                placeholderTextColor="#64748B"
-                style={{
-                  color: '#F1F5F9',
-                  fontSize: 15,
-                  fontFamily: 'Nunito_400Regular',
-                  padding: 14,
-                }}
-                accessibilityLabel="Confirmation input"
-              />
-            </GlassSurface>
+            <Ui2Input
+              containerStyle={{ marginBottom: 16 }}
+              value={confirmText}
+              onChangeText={setConfirmText}
+              placeholder="Organization name"
+              inputStyle={{ fontSize: 15 }}
+              accessibilityLabel="Confirmation input"
+            />
 
             <Pressable
               onPress={handleDelete}
               disabled={deleting || confirmText !== organization?.name}
               style={{
-                backgroundColor: confirmText === organization?.name ? '#EF4444' : 'rgba(239, 68, 68, 0.3)',
+                backgroundColor: confirmText === organization?.name ? c.error : c.pinkTint,
                 paddingVertical: 14,
                 borderRadius: 12,
                 alignItems: 'center',
@@ -256,17 +250,17 @@ export default function DataManagementScreen() {
               accessibilityLabel="Permanently delete all data"
             >
               {deleting ? (
-                <ActivityIndicator color="#FFFFFF" />
+                <ActivityIndicator color={c.onPrimary} />
               ) : (
-                <Text style={{ color: '#FFFFFF', fontSize: 16, fontFamily: 'Nunito_600SemiBold' }}>
+                <Text style={{ color: confirmText === organization?.name ? c.onPrimary : c.error, fontSize: 16, fontFamily: 'Nunito_600SemiBold' }}>
                   Permanently Delete
                 </Text>
               )}
             </Pressable>
-          </GlassSurface>
+          </SlabCard>
         </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
-    </GradientBackground>
+    </View>
   );
 }

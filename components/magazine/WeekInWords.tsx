@@ -1,6 +1,7 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { MagazineGlassCard } from './MagazineGlassCard';
-import { colors, typography } from '../../config/theme';
+import { typography, ui2Dark, ui2Light, type Ui2Palette } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { localDayKey } from '../../lib/dates';
 import type { ErrorCopy } from '../../lib/error-copy';
 import type { DailyStats } from '../../types';
@@ -22,20 +23,22 @@ const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 const serifFont = typography.family.serif;
 
 export function WeekInWords({ stats, error, onRetry }: WeekInWordsProps) {
+  const { scheme } = useUi2Theme();
+
   if (error) {
     return (
-      <MagazineGlassCard style={styles.card}>
-        <Text style={styles.sectionTitle}>Week in words</Text>
-        <Text style={styles.errorTitle}>{error.title}</Text>
-        <Text style={styles.errorBody}>{error.message}</Text>
+      <MagazineGlassCard style={themed[scheme].card}>
+        <Text style={themed[scheme].sectionTitle}>Week in words</Text>
+        <Text style={themed[scheme].errorTitle}>{error.title}</Text>
+        <Text style={themed[scheme].errorBody}>{error.message}</Text>
         {onRetry && (
           <Pressable
             onPress={onRetry}
             accessibilityRole="button"
             accessibilityLabel="Try loading this week's stats again"
-            style={styles.retry}
+            style={themed[scheme].retry}
           >
-            <Text style={styles.retryLabel}>Try again</Text>
+            <Text style={themed[scheme].retryLabel}>Try again</Text>
           </Pressable>
         )}
       </MagazineGlassCard>
@@ -64,28 +67,28 @@ export function WeekInWords({ stats, error, onRetry }: WeekInWordsProps) {
   }
 
   return (
-    <MagazineGlassCard style={styles.card}>
-      <Text style={styles.sectionTitle}>Week in words</Text>
-      <View style={styles.content}>
+    <MagazineGlassCard style={themed[scheme].card}>
+      <Text style={themed[scheme].sectionTitle}>Week in words</Text>
+      <View style={themed[scheme].content}>
         {/* Big number */}
-        <Text style={styles.bigNumber}>{totalXp}</Text>
-        <Text style={styles.bigLabel}>XP THIS WEEK</Text>
+        <Text style={themed[scheme].bigNumber}>{totalXp}</Text>
+        <Text style={themed[scheme].bigLabel}>XP THIS WEEK</Text>
 
         {/* 7-day dot grid */}
-        <View style={styles.dotRow}>
+        <View style={themed[scheme].dotRow}>
           {dots.map((dot, i) => (
-            <View key={i} style={styles.dotCol}>
+            <View key={i} style={themed[scheme].dotCol}>
               <View
                 style={[
-                  styles.dot,
-                  dot.active && styles.dotActive,
-                  dot.isToday && styles.dotToday,
+                  themed[scheme].dot,
+                  dot.active && themed[scheme].dotActive,
+                  dot.isToday && themed[scheme].dotToday,
                 ]}
               />
               <Text
                 style={[
-                  styles.dotLabel,
-                  dot.isToday && styles.dotLabelToday,
+                  themed[scheme].dotLabel,
+                  dot.isToday && themed[scheme].dotLabelToday,
                 ]}
               >
                 {dot.label}
@@ -98,14 +101,15 @@ export function WeekInWords({ stats, error, onRetry }: WeekInWordsProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: Ui2Palette) =>
+  StyleSheet.create({
   card: {
     marginBottom: 20,
   },
   sectionTitle: {
     fontFamily: serifFont,
     fontSize: 18,
-    color: colors.text.primary,
+    color: c.ink,
     marginBottom: 16,
   },
   content: {
@@ -114,12 +118,12 @@ const styles = StyleSheet.create({
   errorTitle: {
     fontFamily: typography.family.semibold,
     fontSize: 15,
-    color: colors.text.primary,
+    color: c.ink,
   },
   errorBody: {
     fontFamily: typography.family.regular,
     fontSize: 13,
-    color: colors.text.tertiary,
+    color: c.muted,
     marginTop: 4,
   },
   retry: {
@@ -129,12 +133,12 @@ const styles = StyleSheet.create({
   retryLabel: {
     fontFamily: typography.family.semibold,
     fontSize: 13,
-    color: colors.action.accent,
+    color: c.primary,
   },
   bigNumber: {
     fontFamily: serifFont,
     fontSize: 56,
-    color: colors.text.primary,
+    color: c.ink,
     // Deliberately under minLineHeight(56, 'display') = 70. This renders digits
     // only, which stop at Fraunces' capHeight (0.700em = 39px here) while the
     // line box still reserves 60 - descent(14px) = 46px above the baseline. Do
@@ -146,7 +150,7 @@ const styles = StyleSheet.create({
     fontFamily: typography.family.mono,
     fontSize: 10,
     letterSpacing: 2,
-    color: colors.text.tertiary,
+    color: c.muted,
     marginTop: 4,
     marginBottom: 20,
   },
@@ -162,22 +166,25 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: c.track,
   },
   dotActive: {
-    backgroundColor: colors.magazine.accentViolet,
+    backgroundColor: c.primary,
   },
   dotToday: {
-    backgroundColor: colors.magazine.accentBlue,
+    backgroundColor: c.green,
     borderWidth: 1.5,
-    borderColor: 'rgba(79,142,247,0.4)',
+    borderColor: c.greenBorder,
   },
   dotLabel: {
     fontFamily: typography.family.mono,
     fontSize: 10,
-    color: colors.text.quaternary,
+    color: c.idle,
   },
   dotLabelToday: {
-    color: colors.magazine.accentBlue,
+    color: c.green,
   },
-});
+  });
+
+/** Both schemes built once at module load — see DateLabel for why. */
+const themed = { light: makeStyles(ui2Light), dark: makeStyles(ui2Dark) } as const;

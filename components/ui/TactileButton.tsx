@@ -11,10 +11,14 @@
  * call site had to move.
  *
  * Variants:
- *   primary   — indigo.600 fill, white label. Default CTA.
- *   secondary — surface-card fill, hairline border. "Cancel" / "Skip".
- *   danger    — error.dark fill, white label. Destructive / exit.
- *   ghost     — transparent fill, indigo.400 label only. Tertiary actions.
+ *   primary   — `primary` fill, `onPrimary` label. Default CTA.
+ *   secondary — `card` fill, `cardBorder` border. "Cancel" / "Skip".
+ *   danger    — `error` fill, ground-coloured label. Destructive / exit.
+ *   ghost     — transparent fill, `onTint` label only. Tertiary actions.
+ *
+ * Colour comes from `useUi2Theme()` — see `variantPalette` below. Nothing here
+ * reads the fixed dark `colors` palette, because this primitive is rendered
+ * inside screens that already follow the phone's light/dark setting.
  *
  * Haptic + press animation both honor useMotion.shouldReduce.
  */
@@ -22,7 +26,8 @@
 import React, { useRef } from 'react';
 import { Pressable, Animated, View, type ViewStyle, StyleSheet } from 'react-native';
 import { haptic } from '../../lib/haptics';
-import { colors, radii, spacing, typography } from '../../config/theme';
+import { radii, spacing, typography, ui2Shape, type Ui2Palette } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { useMotion } from '../../hooks/useMotion';
 import { Body } from './Text';
 
@@ -41,38 +46,57 @@ interface TactileButtonProps {
   fullWidth?: boolean;
 }
 
-const STYLES = {
+interface VariantPalette {
+  fill: string;
+  text: string;
+  borderColor: string;
+  borderWidth: number;
+}
+
+/**
+ * The variant table, resolved against the scheme-aware palette.
+ *
+ * An arrow const rather than a `function` so it stays a plain value from the
+ * module's point of view, and pure so the table can be asserted without a
+ * render harness — same shape as `badgeColors` in components/ui2/Ui2Badge.tsx.
+ *
+ * `danger` is the one entry the UI 2.0 palette cannot make AA-clean in both
+ * schemes. `error` is a DARK red in light mode and a LIGHT red in dark mode, so
+ * the readable label is the page ground in each: `c.bg` is white on the light
+ * fill (3.9:1) and near-black on the dark one (6.8:1). White in both, which is
+ * what this variant used to do, would be 2.8:1 in dark — strictly worse. There
+ * is no darker red in the palette to reach 4.5:1 in light; the variant has no
+ * call sites today, and the fix if it gains one is a tinted danger button
+ * (`pinkTint` fill + `ink` label), which is the answer Ui2Badge already took.
+ */
+const variantPalette = (c: Ui2Palette): Record<Variant, VariantPalette> => ({
   primary: {
-    // indigo.600, deliberately not indigo.500: white on .500 is 4.47:1, which
-    // is under AA, and that was every CTA in the app before the fill/accent
-    // split. On .600 it is 6.4:1.
-    fill: colors.action.primaryFill,
-    text: colors.text.onPrimary,
+    // White on `primary` is 5.6:1 light / 4.6:1 dark — both clear AA, which is
+    // why the palette picks a primary one step darker than the design boards'.
+    fill: c.primary,
+    text: c.onPrimary,
     borderColor: 'transparent',
     borderWidth: 0,
   },
   secondary: {
-    fill: colors.surface.card,
-    text: colors.text.primary,
-    borderColor: colors.border.default,
-    borderWidth: 1,
+    fill: c.card,
+    text: c.ink,
+    borderColor: c.cardBorder,
+    borderWidth: ui2Shape.border,
   },
   danger: {
-    // error.dark, not error.base: the label is 17px bold, which is under the
-    // 14pt threshold for "large text", so it needs the full 4.5:1. White on
-    // error.base is 3.8:1; on error.dark it is 4.8:1.
-    fill: colors.error.dark,
-    text: colors.text.onPrimary,
+    fill: c.error,
+    text: c.bg,
     borderColor: 'transparent',
     borderWidth: 0,
   },
   ghost: {
     fill: 'transparent',
-    text: colors.action.accent,
+    text: c.onTint,
     borderColor: 'transparent',
     borderWidth: 0,
   },
-} as const;
+});
 
 const PRESS_SCALE = 0.96;
 
@@ -88,7 +112,8 @@ export function TactileButton({
   accessibilityLabel,
   fullWidth = true,
 }: TactileButtonProps) {
-  const palette = STYLES[variant];
+  const { c } = useUi2Theme();
+  const palette = variantPalette(c)[variant];
   const scale = useRef(new Animated.Value(1)).current;
   const { shouldReduce, duration } = useMotion();
 

@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { View, ActivityIndicator, Text, Pressable } from 'react-native';
+import { View, ActivityIndicator, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeBack } from '../../../../hooks/useSafeBack';
@@ -9,12 +9,15 @@ import { useWordLookup } from '../../../../hooks/useWordLookup';
 import { ReadingPassageViewer } from '../../../../components/reading/ReadingPassageViewer';
 import { ComprehensionQuestions } from '../../../../components/reading/ComprehensionQuestions';
 import { haptic } from '../../../../lib/haptics';
-import { colors } from '../../../../config/theme';
-import { GlowLayer } from '../../../../components/ui/GlowBackground';
+// `colors` is deliberately NOT imported: it is the fixed DARK palette, and a
+// screen that reads it stays dark whatever the phone is set to.
+import { useUi2Theme } from '../../../../hooks/useUi2Theme';
+import { Heading, Body } from '../../../../components/ui2/Ui2Text';
 import { useScreenView } from '../../../../hooks/useScreenView';
 
 export default function ReadingPassageScreen() {
   useScreenView('passage');
+  const { c, shape } = useUi2Theme();
   const { passageId } = useLocalSearchParams<{ passageId: string }>();
   const goBack = useSafeBack('/(app)');
   const router = useRouter();
@@ -42,20 +45,18 @@ export default function ReadingPassageScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface.base, justifyContent: 'center', alignItems: 'center' }}>
-        <GlowLayer drift={false} />
-        <ActivityIndicator size="large" color={colors.action.accent} />
+      <SafeAreaView style={{ flex: 1, backgroundColor: c.bg, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={c.primary} />
       </SafeAreaView>
     );
   }
 
   if (error || !passage) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface.base, justifyContent: 'center', alignItems: 'center' }}>
-        <GlowLayer drift={false} />
-        <Text style={{ fontSize: 16, color: colors.text.quaternary }}>{error ?? 'Passage not found.'}</Text>
+      <SafeAreaView style={{ flex: 1, backgroundColor: c.bg, justifyContent: 'center', alignItems: 'center' }}>
+        <Body tone="tertiary">{error ?? 'Passage not found.'}</Body>
         <Pressable onPress={() => goBack()} style={{ marginTop: 16 }} accessibilityRole="button">
-          <Text style={{ fontSize: 16, color: colors.action.accent }}>Go Back</Text>
+          <Body tone="accent" weight="semibold">Go Back</Body>
         </Pressable>
       </SafeAreaView>
     );
@@ -63,26 +64,29 @@ export default function ReadingPassageScreen() {
 
   if (phase === 'complete') {
     const scorePercent = Math.round(score * 100);
-    const scoreColor = scorePercent >= 80 ? colors.success.base : scorePercent >= 60 ? colors.warning.base : colors.error.base;
-    const scoreBg = scorePercent >= 80 ? 'rgba(34, 197, 94, 0.15)' : scorePercent >= 60 ? 'rgba(245, 158, 11, 0.15)' : 'rgba(239, 68, 68, 0.15)';
+    // The ring's FILL carries the band; the number itself stays `ink`. The
+    // hue tokens (green/yellow/pink) do not clear AA on their own tints in the
+    // light scheme, and the percentage already states the score in words.
+    const scoreBorder = scorePercent >= 80 ? c.greenBorder : scorePercent >= 60 ? c.yellowBorder : c.pinkTint;
+    const scoreBg = scorePercent >= 80 ? c.greenTint : scorePercent >= 60 ? c.yellowTint : c.pinkTint;
 
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface.base }}>
-        <GlowLayer drift={false} />
+      <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-          <Text style={{ fontSize: 28, fontWeight: '700', marginBottom: 8, color: colors.text.primary }} accessibilityRole="header">
+          <Heading level={2} style={{ marginBottom: 8 }} accessibilityRole="header">
             Reading Complete!
-          </Text>
-          <Text style={{ fontSize: 16, color: colors.text.tertiary, marginBottom: 24 }}>{passage.title}</Text>
+          </Heading>
+          <Body tone="tertiary" style={{ marginBottom: 24 }}>{passage.title}</Body>
 
           <View style={{
             width: 100, height: 100, borderRadius: 50,
-            backgroundColor: scoreBg, justifyContent: 'center', alignItems: 'center', marginBottom: 24,
+            backgroundColor: scoreBg, borderColor: scoreBorder, borderWidth: shape.border,
+            justifyContent: 'center', alignItems: 'center', marginBottom: 24,
           }}>
-            <Text style={{ fontSize: 32, fontWeight: '700', color: scoreColor }}>{scorePercent}%</Text>
+            <Heading level={1}>{scorePercent}%</Heading>
           </View>
 
-          <Text style={{ fontSize: 14, color: colors.text.tertiary, marginBottom: 32 }}>Comprehension Score</Text>
+          <Body size="sm" tone="tertiary" style={{ marginBottom: 32 }}>Comprehension Score</Body>
 
           <Pressable
             onPress={() => {
@@ -90,12 +94,12 @@ export default function ReadingPassageScreen() {
               goBack();
             }}
             style={{
-              backgroundColor: colors.action.primaryFill, paddingHorizontal: 48, paddingVertical: 16, borderRadius: 14,
+              backgroundColor: c.primary, paddingHorizontal: 48, paddingVertical: 16, borderRadius: 14,
             }}
             accessibilityRole="button"
             accessibilityLabel="Continue"
           >
-            <Text style={{ color: colors.text.onPrimary, fontSize: 18, fontWeight: '600' }}>Continue</Text>
+            <Body size="lg" weight="semibold" tone="onPrimary">Continue</Body>
           </Pressable>
         </View>
       </SafeAreaView>

@@ -10,6 +10,11 @@
  * Haptic + confetti scale with mood intensity. All motion honors
  * useMotion().shouldReduce — reduced-motion collapses to a dissolve +
  * static mascot (no confetti particles, no scale bounce).
+ *
+ * UI 2.0: the scrim is the palette-derived one shared with `Ui2Sheet` (which is
+ * why the backdrop animates to SCRIM_OPACITY rather than 1 — the UI 2.0 palette
+ * has no overlay token carrying its own alpha), and the confetti takes the five
+ * accent colours from the scheme's palette instead of the fixed dark one.
  */
 
 import React, { useEffect, useRef } from 'react';
@@ -22,11 +27,13 @@ import {
   Pressable,
 } from 'react-native';
 import { haptic, type HapticIntent } from '../../lib/haptics';
-import { colors, motion, spacing } from '../../config/theme';
+import { motion, spacing } from '../../config/theme';
 import { useMotion } from '../../hooks/useMotion';
+import { useUi2Theme, type Ui2Theme } from '../../hooks/useUi2Theme';
 import { Mascot, type MascotState } from '../mascot/Mascot';
-import { Body, Hero } from './Text';
-import { TactileButton } from './TactileButton';
+import { Body, Hero } from '../ui2/Ui2Text';
+import { SlabButton } from '../ui2/SlabButton';
+import { scrimColor } from '../ui2/Ui2Sheet';
 
 type Mood = 'correct' | 'lessonComplete' | 'levelUp';
 
@@ -58,12 +65,17 @@ const MOOD_CONFIG: Record<
   levelUp: { mascot: 'cheering', particles: 40, hapticIntent: 'levelUp' },
 };
 
-const PARTICLE_COLORS = [
-  colors.indigo[400],
-  colors.success.base,
-  colors.warning.base,
-  colors.premium.base,
-  colors.indigo[200],
+/** Matches Ui2Sheet — the alpha Dark Glow's `surface.overlay` token used to carry. */
+const SCRIM_OPACITY = 0.55;
+
+/** Confetti, from the scheme's accents. Arrow const, not a declaration: it is a
+ *  colour lookup, not a unit of behaviour. */
+const particleColors = (c: Ui2Theme['c']): string[] => [
+  c.primary,
+  c.green,
+  c.yellow,
+  c.pink,
+  c.onTint,
 ];
 
 function Particle({
@@ -73,6 +85,7 @@ function Particle({
   index: number;
   shouldAnimate: boolean;
 }) {
+  const { c } = useUi2Theme();
   const angle = (index * (360 / 20) + Math.random() * 30) * (Math.PI / 180);
   const distance = 90 + Math.random() * 80;
   const tx = useRef(new Animated.Value(0)).current;
@@ -106,7 +119,8 @@ function Particle({
     ]).start();
   }, [shouldAnimate, angle, distance, index, opacity, tx, ty, rotate]);
 
-  const color = PARTICLE_COLORS[index % PARTICLE_COLORS.length];
+  const palette = particleColors(c);
+  const color = palette[index % palette.length];
 
   return (
     <Animated.View
@@ -139,6 +153,7 @@ export function CelebrationOverlay({
   ctaLabel,
   onDismiss,
 }: CelebrationOverlayProps) {
+  const { c, scheme } = useUi2Theme();
   const { shouldReduce, duration } = useMotion();
   const config = MOOD_CONFIG[mood];
   const scale = useRef(new Animated.Value(0.8)).current;
@@ -157,11 +172,11 @@ export function CelebrationOverlay({
 
     if (shouldReduce) {
       scale.setValue(1);
-      overlayOpacity.setValue(1);
+      overlayOpacity.setValue(SCRIM_OPACITY);
     } else {
       Animated.parallel([
         Animated.timing(overlayOpacity, {
-          toValue: 1,
+          toValue: SCRIM_OPACITY,
           duration: duration.medium,
           useNativeDriver: true,
         }),
@@ -189,7 +204,12 @@ export function CelebrationOverlay({
       onRequestClose={onDismiss}
       statusBarTranslucent
     >
-      <Animated.View style={[styles.backdrop, { opacity: overlayOpacity }]}>
+      <Animated.View
+        style={[
+          styles.backdrop,
+          { backgroundColor: scrimColor(scheme, c), opacity: overlayOpacity },
+        ]}
+      >
         <Pressable style={StyleSheet.absoluteFill} onPress={ctaLabel ? undefined : onDismiss} />
 
         {/* Confetti — omitted entirely when reduced-motion */}
@@ -221,7 +241,7 @@ export function CelebrationOverlay({
 
           {ctaLabel && onDismiss && (
             <View style={styles.cta}>
-              <TactileButton label={ctaLabel} onPress={onDismiss} fullWidth />
+              <SlabButton label={ctaLabel} onPress={onDismiss} />
             </View>
           )}
         </Animated.View>
@@ -233,7 +253,6 @@ export function CelebrationOverlay({
 const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.surface.overlay,
     justifyContent: 'center',
     alignItems: 'center',
   },

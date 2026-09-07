@@ -2,7 +2,7 @@ import { View, Text, ScrollView, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { ReadingBook, UserBookProgress } from '../../types';
 import { cefrBandColors, cefrAccessibilityLabel } from '../../lib/cefr-labels';
-import { colors } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 
 interface InProgressBook {
   book: ReadingBook;
@@ -15,13 +15,15 @@ interface ContinueReadingSectionProps {
 }
 
 export function ContinueReadingSection({ books, onPress }: ContinueReadingSectionProps) {
+  const { c } = useUi2Theme();
+
   if (books.length === 0) return null;
 
   return (
     <View style={{ marginBottom: 16 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-        <Ionicons name="book" size={18} color="#818CF8" />
-        <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text.primary, marginLeft: 8 }}>
+        <Ionicons name="book" size={18} color={c.primary} />
+        <Text style={{ fontSize: 18, fontWeight: '700', color: c.ink, marginLeft: 8 }}>
           Continue Reading
         </Text>
       </View>
@@ -44,14 +46,17 @@ export function ContinueReadingSection({ books, onPress }: ContinueReadingSectio
               accessibilityLabel={`Continue reading ${book.title}, ${percent}% complete. ${cefrAccessibilityLabel(book.cefrLevel)}`}
               style={{
                 width: 200,
-                backgroundColor: colors.surface.card,
+                backgroundColor: c.card,
+                // Outlined, or the card vanishes into a light ground.
+                borderWidth: 1,
+                borderColor: c.cardBorder,
                 borderRadius: 14,
                 padding: 14,
               }}
             >
               <Text
                 numberOfLines={2}
-                style={{ fontSize: 14, fontWeight: '600', color: colors.text.primary, marginBottom: 8 }}
+                style={{ fontSize: 14, fontWeight: '600', color: c.ink, marginBottom: 8 }}
               >
                 {book.title}
               </Text>
@@ -76,7 +81,7 @@ export function ContinueReadingSection({ books, onPress }: ContinueReadingSectio
               <View
                 style={{
                   height: 4,
-                  backgroundColor: colors.surface.cardAlt,
+                  backgroundColor: c.track,
                   borderRadius: 2,
                   overflow: 'hidden',
                   marginBottom: 6,
@@ -86,17 +91,17 @@ export function ContinueReadingSection({ books, onPress }: ContinueReadingSectio
                   style={{
                     height: 4,
                     width: `${Math.min(percent, 100)}%`,
-                    backgroundColor: '#4F46E5',
+                    backgroundColor: c.primary,
                     borderRadius: 2,
                   }}
                 />
               </View>
 
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Text style={{ fontSize: 12, fontWeight: '400', color: colors.text.tertiary }}>
+                <Text style={{ fontSize: 12, fontWeight: '400', color: c.muted }}>
                   {percent}%
                 </Text>
-                <Text style={{ fontSize: 12, fontWeight: '600', color: colors.action.accent }}>
+                <Text style={{ fontSize: 12, fontWeight: '600', color: c.onTint }}>
                   Continue →
                 </Text>
               </View>

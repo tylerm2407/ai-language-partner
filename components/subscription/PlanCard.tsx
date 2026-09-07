@@ -9,9 +9,10 @@ import { Ionicons } from '@expo/vector-icons';
 import type { PurchasesPackage } from 'react-native-purchases';
 import { isAnnualPackage } from '../../lib/purchases';
 import { PLAN_FEATURES, type PlanId } from '../../lib/plans';
-import { Button } from '../ui/Button';
-import { Badge } from '../ui/Badge';
-import { colors } from '../../config/theme';
+import { SlabButton } from '../ui2/SlabButton';
+import { SlabCard } from '../ui2/SlabCard';
+import { Ui2Badge } from '../ui2/Ui2Badge';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 
 interface PlanCardProps {
   pkg: PurchasesPackage;
@@ -37,6 +38,7 @@ export function PlanCard({
   disabled,
   ctaLabel = 'Subscribe',
 }: PlanCardProps) {
+  const { c } = useUi2Theme();
   const features = PLAN_FEATURES[tier] ?? [];
 
   // Annual plans lead with their true per-month equivalent; the full amount
@@ -45,62 +47,64 @@ export function PlanCard({
   const perMonthString = isAnnual ? pkg.product.pricePerMonthString : null;
 
   return (
-    <View
-      className={`rounded-2xl p-5 mb-4 border-2 ${
-        isCurrentPlan
-          ? 'border-success bg-success-bg'
-          : isPopular
-          ? 'border-primary bg-dark-card'
-          : 'border-dark-border bg-dark-card'
-      }`}
+    // The state that used to be a border colour is now the slab's TINT, and
+    // the "Current Plan" badge still spells it out — plan state is never
+    // carried by colour alone.
+    <SlabCard
+      tint={isCurrentPlan ? 'green' : isPopular ? 'primary' : 'card'}
+      style={{ padding: 20, marginBottom: 16 }}
     >
       <View className="flex-row items-center gap-2 mb-2">
-        {isCurrentPlan && <Badge variant="success" label="Current Plan" />}
+        {isCurrentPlan && <Ui2Badge variant="success" label="Current Plan" />}
         {isPopular && !isCurrentPlan && (
-          <View className="bg-primary rounded-lg px-3 py-1">
-            <Text className="text-white text-xs font-bold">MOST POPULAR</Text>
+          <View className="rounded-lg px-3 py-1" style={{ backgroundColor: c.primary }}>
+            <Text className="text-xs font-bold" style={{ color: c.onPrimary }}>MOST POPULAR</Text>
           </View>
         )}
       </View>
 
       <View className="flex-row flex-wrap items-baseline mb-1">
-        <Text className="text-2xl font-bold text-text-primary">
+        <Text className="text-2xl font-bold" style={{ color: c.ink }}>
           {perMonthString ?? pkg.product.priceString}
         </Text>
-        <Text className="text-sm text-text-secondary ml-1">
+        <Text className="text-sm ml-1" style={{ color: c.muted }}>
           /{isAnnual && perMonthString ? 'mo' : 'month'}
         </Text>
         {savingsPct > 0 && (
-          <View className="bg-success-bg rounded-lg px-2 py-0.5 ml-2">
-            <Text className="text-xs font-bold text-success">SAVE {savingsPct}%</Text>
+          <View className="rounded-lg px-2 py-0.5 ml-2" style={{ backgroundColor: c.greenTint }}>
+            <Text className="text-xs font-bold" style={{ color: c.ink }}>SAVE {savingsPct}%</Text>
           </View>
         )}
       </View>
       {isAnnual && (
-        <Text className="text-sm text-text-secondary mb-1">
+        <Text className="text-sm mb-1" style={{ color: c.muted }}>
           Billed annually at {pkg.product.priceString}
         </Text>
       )}
-      <Text className="text-lg font-semibold text-text-primary mb-3">{pkg.product.title}</Text>
+      <Text className="text-lg font-semibold mb-3" style={{ color: c.ink }}>{pkg.product.title}</Text>
 
       {features.map((feature, idx) => (
         <View key={idx} className="flex-row items-center mb-2">
-          <Ionicons name="checkmark-circle" size={18} color={colors.success.light} />
-          <Text className="flex-1 text-sm text-text-secondary ml-2">{feature}</Text>
+          <Ionicons name="checkmark-circle" size={18} color={c.green} />
+          <Text className="flex-1 text-sm ml-2" style={{ color: c.muted }}>{feature}</Text>
         </View>
       ))}
 
       {!isCurrentPlan && (
         <View className="mt-4">
-          <Button
+          {/* UI 2.0 has no filled "secondary": the popular card is already set
+              apart by its tint and badge, and a ghost CTA on a purchase card
+              would read as the weaker of two real actions. */}
+          <SlabButton
             label={ctaLabel}
-            variant={isPopular ? 'primary' : 'secondary'}
+            variant="primary"
             onPress={onPurchase}
             loading={loading}
             disabled={disabled}
+            arrow={false}
           />
         </View>
       )}
-    </View>
+    </SlabCard>
   );
 }

@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Text, Animated, Easing } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { GRADIENT_START, GRADIENT_END } from '../../config/gradients';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 
 interface XpPopupProps {
   xp: number;
@@ -10,6 +9,7 @@ interface XpPopupProps {
 }
 
 export function XpPopup({ xp, visible, onDone }: XpPopupProps) {
+  const { c } = useUi2Theme();
   const translateY = useRef(new Animated.Value(0)).current;
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.5)).current;
@@ -53,35 +53,33 @@ export function XpPopup({ xp, visible, onDone }: XpPopupProps) {
         alignSelf: 'center',
         zIndex: 999,
         borderRadius: 20,
-        shadowColor: '#38BDF8',
+        // Flat primary block instead of the old purple→sky gradient: UI 2.0
+        // grounds on solid fills, and the shadow now tints with the scheme.
+        backgroundColor: c.primary,
+        shadowColor: c.slab,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.4,
         shadowRadius: 12,
         elevation: 8,
         overflow: 'hidden',
+        paddingHorizontal: 20,
+        paddingVertical: 10,
         transform: [{ translateY }, { scale }],
         opacity,
       }}
       pointerEvents="none"
     >
-      <LinearGradient
-        colors={['rgba(168, 85, 247, 0.9)', 'rgba(56, 189, 248, 0.9)']}
-        start={GRADIENT_START}
-        end={GRADIENT_END}
-        style={{ paddingHorizontal: 20, paddingVertical: 10 }}
+      <Text
+        style={{
+          color: c.onPrimary,
+          fontSize: 24,
+          fontFamily: 'Nunito_800ExtraBold',
+          fontWeight: '800',
+          textAlign: 'center',
+        }}
       >
-        <Text
-          style={{
-            color: '#FFFFFF',
-            fontSize: 24,
-            fontFamily: 'Nunito_800ExtraBold',
-            fontWeight: '800',
-            textAlign: 'center',
-          }}
-        >
-          +{xp} XP
-        </Text>
-      </LinearGradient>
+        +{xp} XP
+      </Text>
     </Animated.View>
   );
 }

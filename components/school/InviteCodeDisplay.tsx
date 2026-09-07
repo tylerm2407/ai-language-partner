@@ -2,7 +2,8 @@ import React from 'react';
 import { View, Text, Pressable, Share, Platform } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
-import { GlassSurface } from '../ui/GlassSurface';
+import { SlabCard } from '../ui2/SlabCard';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 
 interface InviteCodeDisplayProps {
   code: string;
@@ -11,6 +12,7 @@ interface InviteCodeDisplayProps {
 }
 
 export default function InviteCodeDisplay({ code, active, onRegenerate }: InviteCodeDisplayProps) {
+  const { c } = useUi2Theme();
   const handleCopy = async () => {
     await Clipboard.setStringAsync(code);
   };
@@ -26,7 +28,7 @@ export default function InviteCodeDisplay({ code, active, onRegenerate }: Invite
   };
 
   return (
-    <GlassSurface innerStyle={{ padding: 20 }}>
+    <SlabCard style={{ padding: 20 }}>
       {/* Active / Inactive indicator */}
       <View className="flex-row items-center mb-3">
         <View
@@ -34,13 +36,13 @@ export default function InviteCodeDisplay({ code, active, onRegenerate }: Invite
             width: 8,
             height: 8,
             borderRadius: 4,
-            backgroundColor: active ? '#22C55E' : '#64748B',
+            backgroundColor: active ? c.green : c.idle,
             marginRight: 6,
           }}
         />
         <Text
           style={{
-            color: active ? '#22C55E' : '#64748B',
+            color: active ? c.ink : c.muted,
             fontSize: 12,
             fontFamily: 'Nunito_500Medium',
           }}
@@ -53,7 +55,7 @@ export default function InviteCodeDisplay({ code, active, onRegenerate }: Invite
       <View
         style={{
           borderWidth: 1,
-          borderColor: 'rgba(255, 255, 255, 0.15)',
+          borderColor: c.cardBorder,
           borderRadius: 12,
           paddingVertical: 14,
           paddingHorizontal: 20,
@@ -63,7 +65,7 @@ export default function InviteCodeDisplay({ code, active, onRegenerate }: Invite
       >
         <Text
           style={{
-            color: '#FFFFFF',
+            color: c.ink,
             fontSize: 28,
             fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
             letterSpacing: 4,
@@ -84,16 +86,16 @@ export default function InviteCodeDisplay({ code, active, onRegenerate }: Invite
           style={{
             flexDirection: 'row',
             alignItems: 'center',
-            backgroundColor: 'rgba(99, 102, 241, 0.2)',
+            backgroundColor: c.primaryTint,
             paddingHorizontal: 16,
             paddingVertical: 10,
             borderRadius: 10,
           }}
         >
-          <Ionicons name="copy-outline" size={16} color="#818CF8" />
+          <Ionicons name="copy-outline" size={16} color={c.onTint} />
           <Text
             style={{
-              color: '#818CF8',
+              color: c.onTint,
               fontSize: 14,
               fontFamily: 'Nunito_600SemiBold',
               marginLeft: 6,
@@ -110,16 +112,16 @@ export default function InviteCodeDisplay({ code, active, onRegenerate }: Invite
           style={{
             flexDirection: 'row',
             alignItems: 'center',
-            backgroundColor: 'rgba(99, 102, 241, 0.2)',
+            backgroundColor: c.primaryTint,
             paddingHorizontal: 16,
             paddingVertical: 10,
             borderRadius: 10,
           }}
         >
-          <Ionicons name="share-outline" size={16} color="#818CF8" />
+          <Ionicons name="share-outline" size={16} color={c.onTint} />
           <Text
             style={{
-              color: '#818CF8',
+              color: c.onTint,
               fontSize: 14,
               fontFamily: 'Nunito_600SemiBold',
               marginLeft: 6,
@@ -137,16 +139,16 @@ export default function InviteCodeDisplay({ code, active, onRegenerate }: Invite
             style={{
               flexDirection: 'row',
               alignItems: 'center',
-              backgroundColor: 'rgba(239, 68, 68, 0.15)',
+              backgroundColor: c.pinkTint,
               paddingHorizontal: 16,
               paddingVertical: 10,
               borderRadius: 10,
             }}
           >
-            <Ionicons name="refresh-outline" size={16} color="#EF4444" />
+            <Ionicons name="refresh-outline" size={16} color={c.error} />
             <Text
               style={{
-                color: '#EF4444',
+                color: c.error,
                 fontSize: 14,
                 fontFamily: 'Nunito_600SemiBold',
                 marginLeft: 6,
@@ -157,6 +159,6 @@ export default function InviteCodeDisplay({ code, active, onRegenerate }: Invite
           </Pressable>
         )}
       </View>
-    </GlassSurface>
+    </SlabCard>
   );
 }

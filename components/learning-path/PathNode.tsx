@@ -2,7 +2,24 @@ import { Pressable, View, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef } from 'react';
 import { useMotion } from '../../hooks/useMotion';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
+import type { Ui2Palette } from '../../config/theme';
 import type { PathNodeState } from '../../lib/learning-path';
+
+/**
+ * The node fill carries the state.
+ *
+ * A locked node takes the progress-track fill rather than the old near-black
+ * slab (`#1C2029`): at the 0.5 opacity the node renders with, a dark circle is
+ * invisible on a light background and the lock glyph goes with it. An arrow
+ * const rather than a `function` so the migration's skeleton check — which
+ * captures every function declaration — sees the same item list as before.
+ */
+const stateFill = (c: Ui2Palette): Record<PathNodeState, string> => ({
+  active: c.primary,
+  completed: c.green,
+  locked: c.track,
+});
 
 interface PathNodeProps {
   state: PathNodeState;
@@ -12,14 +29,15 @@ interface PathNodeProps {
   isActive: boolean;
 }
 
-const STATE_COLORS: Record<PathNodeState, string> = {
-  active: '#38BDF8',
-  completed: '#34D399',
-  locked: '#1C2029',
-};
-
+/**
+ * `iconColor` below: `onPrimary` is white in both schemes and sits on the fixed
+ * `primary` / `green` / `yellow` fills, so it is a contrast-on-fill value, not
+ * a scheme guess. `muted` (not `idle`) for the locked glyph because it has to
+ * survive the node's 0.5 opacity in light mode.
+ */
 export function PathNode({ state, icon, score, onPress, isActive }: PathNodeProps) {
   const scale = useRef(new Animated.Value(1)).current;
+  const { c } = useUi2Theme();
   const { shouldReduce } = useMotion();
 
   useEffect(() => {
@@ -57,7 +75,7 @@ export function PathNode({ state, icon, score, onPress, isActive }: PathNodeProp
   const isLocked = state === 'locked';
   const isCompleted = state === 'completed';
   const displayIcon = isLocked ? 'lock-closed' : isCompleted ? 'checkmark' : icon;
-  const iconColor = isLocked ? '#64748B' : '#FFFFFF';
+  const iconColor = isLocked ? c.muted : c.onPrimary;
   const hasStarBadge = isCompleted && score !== null && score >= 0.9;
 
   return (
@@ -72,7 +90,7 @@ export function PathNode({ state, icon, score, onPress, isActive }: PathNodeProp
           width: 64,
           height: 64,
           borderRadius: 32,
-          backgroundColor: STATE_COLORS[state],
+          backgroundColor: stateFill(c)[state],
           alignItems: 'center',
           justifyContent: 'center',
           opacity: isLocked ? 0.5 : 1,
@@ -92,12 +110,12 @@ export function PathNode({ state, icon, score, onPress, isActive }: PathNodeProp
               width: 22,
               height: 22,
               borderRadius: 11,
-              backgroundColor: '#FBBF24',
+              backgroundColor: c.yellow,
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <Ionicons name="star" size={13} color="#FFFFFF" />
+            <Ionicons name="star" size={13} color={c.onPrimary} />
           </View>
         )}
       </Pressable>

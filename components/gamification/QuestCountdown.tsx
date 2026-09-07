@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 
 function getTimeUntilMidnightUTC(): { hours: number; minutes: number } {
   const now = new Date();
@@ -19,6 +20,7 @@ function getTimeUntilMidnightUTC(): { hours: number; minutes: number } {
 }
 
 export function QuestCountdown() {
+  const { c } = useUi2Theme();
   const [time, setTime] = useState(getTimeUntilMidnightUTC);
 
   useEffect(() => {
@@ -31,8 +33,8 @@ export function QuestCountdown() {
 
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-      <Ionicons name="time-outline" size={12} color="#9CA3AF" />
-      <Text className="text-text-secondary" style={{ fontSize: 12 }}>
+      <Ionicons name="time-outline" size={12} color={c.muted} />
+      <Text style={{ fontSize: 12, color: c.muted }}>
         Resets in {time.hours}h {time.minutes}m
       </Text>
     </View>

@@ -11,9 +11,9 @@
 
 import React from 'react';
 import { View } from 'react-native';
-import { Sheet } from '../ui/Sheet';
-import { TactileButton } from '../ui/TactileButton';
-import { Heading, Body } from '../ui/Text';
+import { Ui2Sheet } from '../ui2/Ui2Sheet';
+import { SlabButton } from '../ui2/SlabButton';
+import { Heading, Body } from '../ui2/Ui2Text';
 import { Mascot } from '../mascot/Mascot';
 import { spacing } from '../../config/theme';
 
@@ -29,7 +29,7 @@ export function PrePermissionSheet({
   onDismiss,
 }: PrePermissionSheetProps) {
   return (
-    <Sheet visible={visible} onDismiss={onDismiss} dismissOnBackdrop={false}>
+    <Ui2Sheet visible={visible} onDismiss={onDismiss} dismissOnBackdrop={false}>
       <View style={{ alignItems: 'center', paddingTop: spacing.sm }}>
         <Mascot state="happy" size="md" style={{ marginBottom: spacing.md }} />
         <Heading level={2} style={{ textAlign: 'center' }}>
@@ -43,21 +43,21 @@ Lumi will tap you once in the evening if you haven't practised yet. One nudge a 
         </Body>
 
         <View style={{ alignSelf: 'stretch', marginTop: spacing.lg }}>
-          <TactileButton
+          <SlabButton
             label="Enable reminders"
             onPress={onEnable}
-            accessibilityLabel="Enable notifications"
+            accessibilityHint="Turns on notifications"
           />
         </View>
         <View style={{ alignSelf: 'stretch', marginTop: spacing.xs }}>
-          <TactileButton
+          <SlabButton
             label="Not yet"
             variant="ghost"
             onPress={onDismiss}
-            accessibilityLabel="Dismiss without enabling notifications"
+            accessibilityHint="Dismisses without enabling notifications"
           />
         </View>
       </View>
-    </Sheet>
+    </Ui2Sheet>
   );
 }

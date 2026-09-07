@@ -13,7 +13,8 @@ import {
   splitParagraphs,
   type Paragraph,
 } from '../../lib/reading-text';
-import { colors, radii, spacing } from '../../config/theme';
+import { radii, spacing } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import type { ReadingBook, ReviewItem } from '../../types';
 
 interface Props {
@@ -60,6 +61,7 @@ export function BookReader({
   onComplete,
   onExit,
 }: Props) {
+  const { c } = useUi2Theme();
   const [fontSizeIndex, setFontSizeIndex] = useState(1); // default 16px
   const [currentPage, setCurrentPage] = useState(0);
   const [showFontControls, setShowFontControls] = useState(false);
@@ -181,17 +183,17 @@ export function BookReader({
   }, [narrator, onExit]);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface.raised }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
       {/* Header */}
       <View style={{ paddingHorizontal: spacing.md, paddingVertical: spacing.xs, flexDirection: 'row', alignItems: 'center' }}>
         <Pressable onPress={handleExit} style={{ padding: spacing.xs }} accessibilityRole="button" accessibilityLabel="Exit reading">
-          <Ionicons name="close" size={24} color={colors.text.secondary} />
+          <Ionicons name="close" size={24} color={c.muted} />
         </Pressable>
         <View style={{ flex: 1, marginLeft: spacing.xs }}>
-          <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary }} numberOfLines={1}>
+          <Text style={{ fontSize: 16, fontWeight: '600', color: c.ink }} numberOfLines={1}>
             {book.title}
           </Text>
-          <Text style={{ fontSize: 12, color: colors.text.tertiary }}>
+          <Text style={{ fontSize: 12, color: c.muted }}>
             Page {currentPage + 1} of {totalPages}
           </Text>
         </View>
@@ -203,7 +205,7 @@ export function BookReader({
               accessibilityRole="button"
               accessibilityLabel={`Playback speed ${narrator.speed}x`}
             >
-              <Text style={{ fontSize: 13, fontWeight: '600', color: colors.indigo[400] }}>{narrator.speed}x</Text>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: c.primary }}>{narrator.speed}x</Text>
             </Pressable>
             <Pressable
               onPress={handlePlayPause}
@@ -214,7 +216,7 @@ export function BookReader({
               <Ionicons
                 name={narrator.isPlaying && !narrator.isPaused ? 'pause-circle' : 'play-circle'}
                 size={28}
-                color={colors.indigo[400]}
+                color={c.primary}
               />
             </Pressable>
           </>
@@ -225,13 +227,13 @@ export function BookReader({
           accessibilityRole="button"
           accessibilityLabel="Font size"
         >
-          <Ionicons name="text" size={20} color={colors.indigo[400]} />
+          <Ionicons name="text" size={20} color={c.primary} />
         </Pressable>
       </View>
 
       {/* Progress Bar */}
-      <View style={{ height: 3, backgroundColor: colors.surface.cardAlt, marginHorizontal: spacing.md }}>
-        <View style={{ height: 3, backgroundColor: colors.action.primaryFill, width: `${progressPercent}%` }} />
+      <View style={{ height: 3, backgroundColor: c.track, marginHorizontal: spacing.md }}>
+        <View style={{ height: 3, backgroundColor: c.primary, width: `${progressPercent}%` }} />
       </View>
 
       {/* Font Size Controls */}
@@ -244,9 +246,9 @@ export function BookReader({
             accessibilityRole="button"
             accessibilityLabel="Decrease font size"
           >
-            <Text style={{ fontSize: 14, color: colors.indigo[400], fontWeight: '600' }}>A-</Text>
+            <Text style={{ fontSize: 14, color: c.primary, fontWeight: '600' }}>A-</Text>
           </Pressable>
-          <Text style={{ fontSize: 14, color: colors.text.secondary }}>{fontSize}px</Text>
+          <Text style={{ fontSize: 14, color: c.muted }}>{fontSize}px</Text>
           <Pressable
             onPress={() => setFontSizeIndex(Math.min(FONT_SIZES.length - 1, fontSizeIndex + 1))}
             disabled={fontSizeIndex === FONT_SIZES.length - 1}
@@ -254,7 +256,7 @@ export function BookReader({
             accessibilityRole="button"
             accessibilityLabel="Increase font size"
           >
-            <Text style={{ fontSize: 18, color: colors.indigo[400], fontWeight: '600' }}>A+</Text>
+            <Text style={{ fontSize: 18, color: c.primary, fontWeight: '600' }}>A+</Text>
           </Pressable>
         </View>
       )}
@@ -286,19 +288,20 @@ export function BookReader({
       {/* Page Navigation — always visible at bottom */}
       <View style={{
         flexDirection: 'row', paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.sm + insets.bottom + 60, gap: spacing.sm,
-        borderTopWidth: 1, borderTopColor: colors.border.default, backgroundColor: colors.surface.raised,
+        borderTopWidth: 1, borderTopColor: c.cardBorder, backgroundColor: c.bg,
       }}>
         <Pressable
           onPress={() => goToPage(currentPage - 1)}
           disabled={currentPage === 0}
           style={{
             flex: 1, paddingVertical: 14, borderRadius: radii.lg, alignItems: 'center',
-            backgroundColor: currentPage === 0 ? colors.surface.cardAlt : colors.surface.card,
+            backgroundColor: currentPage === 0 ? c.surface2 : c.card,
+            borderWidth: 1, borderColor: c.cardBorder,
           }}
           accessibilityRole="button"
           accessibilityLabel="Previous page"
         >
-          <Text style={{ fontSize: 16, fontWeight: '600', color: currentPage === 0 ? colors.text.tertiary : colors.text.primary }}>
+          <Text style={{ fontSize: 16, fontWeight: '600', color: currentPage === 0 ? c.idle : c.ink }}>
             Previous
           </Text>
         </Pressable>
@@ -307,12 +310,12 @@ export function BookReader({
           disabled={currentPage >= totalPages - 1}
           style={{
             flex: 1, paddingVertical: 14, borderRadius: radii.lg, alignItems: 'center',
-            backgroundColor: currentPage >= totalPages - 1 ? colors.indigo[200] : colors.action.primaryFill,
+            backgroundColor: currentPage >= totalPages - 1 ? c.track : c.primary,
           }}
           accessibilityRole="button"
           accessibilityLabel="Next page"
         >
-          <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.onPrimary }}>
+          <Text style={{ fontSize: 16, fontWeight: '600', color: currentPage >= totalPages - 1 ? c.idle : c.onPrimary }}>
             {currentPage >= totalPages - 1 ? 'Finish' : 'Next'}
           </Text>
         </Pressable>

@@ -7,6 +7,8 @@
  * buried in a policy. Named providers, plain language, and a real decline path.
  *
  * Composed from Sheet + existing typography/tokens — no new visual patterns.
+ * UI 2.0: colour comes from `useUi2Theme()`, the type from `Ui2Text`, and the
+ * agree button carries the slab bottom edge like every other UI 2.0 CTA.
  * Copy lives in lib/ai-consent.ts so the sheet, Settings and the privacy policy
  * cannot drift apart.
  */
@@ -15,8 +17,9 @@ import React, { useState } from 'react';
 import { View, Pressable, ScrollView, StyleSheet, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Sheet } from './Sheet';
-import { Body, Caption } from './Text';
-import { colors, radii, spacing } from '../../config/theme';
+import { Body, Caption } from '../ui2/Ui2Text';
+import { radii, spacing } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { AI_CONSENT_COPY, type AiConsentKind } from '../../lib/ai-consent';
 
 const PRIVACY_URL = 'https://fluenci.com/privacy';
@@ -31,6 +34,7 @@ interface AiConsentSheetProps {
 }
 
 export function AiConsentSheet({ visible, kind, onAgree, onDecline }: AiConsentSheetProps) {
+  const { c, shape } = useUi2Theme();
   const [declined, setDeclined] = useState(false);
   const copy = AI_CONSENT_COPY[kind];
 
@@ -55,15 +59,15 @@ export function AiConsentSheet({ visible, kind, onAgree, onDecline }: AiConsentS
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         {declined ? (
           <>
-            <Body style={styles.title}>Not a problem</Body>
-            <Body style={styles.paragraph}>{copy.declinedNote}</Body>
+            <Body weight="bold" style={styles.title}>Not a problem</Body>
+            <Body tone="secondary" style={styles.paragraph}>{copy.declinedNote}</Body>
             <Pressable
-              style={styles.primaryButton}
+              style={[styles.primaryButton, { backgroundColor: c.primary, borderBottomColor: c.slab, borderBottomWidth: shape.buttonSlab }]}
               onPress={handleClose}
               accessibilityRole="button"
               accessibilityLabel="Close"
             >
-              <Body style={styles.primaryButtonText}>Got it</Body>
+              <Body weight="bold" tone="onPrimary">Got it</Body>
             </Pressable>
             <Pressable
               style={styles.secondaryButton}
@@ -71,24 +75,24 @@ export function AiConsentSheet({ visible, kind, onAgree, onDecline }: AiConsentS
               accessibilityRole="button"
               accessibilityLabel="Back to the details"
             >
-              <Body style={styles.secondaryButtonText}>Read it again</Body>
+              <Body tone="secondary">Read it again</Body>
             </Pressable>
           </>
         ) : (
           <>
-            <View style={styles.iconRow}>
+            <View style={[styles.iconRow, { backgroundColor: c.primaryTint }]}>
               <Ionicons
                 name={kind === 'voice' ? 'mic-outline' : 'chatbubbles-outline'}
                 size={24}
-                color={colors.action.accent}
+                color={c.onTint}
               />
             </View>
-            <Body style={styles.title}>{copy.title}</Body>
-            <Body style={styles.paragraph}>{copy.intro}</Body>
+            <Body weight="bold" style={styles.title}>{copy.title}</Body>
+            <Body tone="secondary" style={styles.paragraph}>{copy.intro}</Body>
 
-            <View style={styles.noticeBox}>
+            <View style={[styles.noticeBox, { backgroundColor: c.surface2 }]}>
               {copy.points.map((point) => (
-                <Caption key={point} style={styles.noticeLine}>
+                <Caption key={point} tone="secondary">
                   {`• ${point}`}
                 </Caption>
               ))}
@@ -100,17 +104,17 @@ export function AiConsentSheet({ visible, kind, onAgree, onDecline }: AiConsentS
               accessibilityLabel="Read the full privacy policy"
               style={styles.linkRow}
             >
-              <Caption style={styles.linkText}>Read the full privacy policy</Caption>
-              <Ionicons name="open-outline" size={14} color={colors.action.accent} />
+              <Caption tone="accent" style={styles.linkText}>Read the full privacy policy</Caption>
+              <Ionicons name="open-outline" size={14} color={c.onTint} />
             </Pressable>
 
             <Pressable
-              style={styles.primaryButton}
+              style={[styles.primaryButton, { backgroundColor: c.primary, borderBottomColor: c.slab, borderBottomWidth: shape.buttonSlab }]}
               onPress={handleAgree}
               accessibilityRole="button"
               accessibilityLabel={copy.agreeLabel}
             >
-              <Body style={styles.primaryButtonText}>{copy.agreeLabel}</Body>
+              <Body weight="bold" tone="onPrimary">{copy.agreeLabel}</Body>
             </Pressable>
             <Pressable
               style={styles.secondaryButton}
@@ -118,7 +122,7 @@ export function AiConsentSheet({ visible, kind, onAgree, onDecline }: AiConsentS
               accessibilityRole="button"
               accessibilityLabel={copy.declineLabel}
             >
-              <Body style={styles.secondaryButtonText}>{copy.declineLabel}</Body>
+              <Body tone="secondary">{copy.declineLabel}</Body>
             </Pressable>
             <Caption style={styles.footnote}>
               You can withdraw this any time in Profile → Settings.
@@ -140,28 +144,21 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: radii.pill,
-    backgroundColor: colors.action.primaryTint,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.md,
   },
   title: {
-    fontWeight: '700',
     marginBottom: spacing.xs,
   },
   paragraph: {
-    color: colors.text.secondary,
     marginBottom: spacing.md,
   },
   noticeBox: {
-    backgroundColor: colors.surface.cardAlt,
     borderRadius: radii.md,
     padding: spacing.md,
     marginBottom: spacing.md,
     gap: spacing.sm,
-  },
-  noticeLine: {
-    color: colors.text.secondary,
   },
   linkRow: {
     flexDirection: 'row',
@@ -172,28 +169,19 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   linkText: {
-    color: colors.action.accent,
     textDecorationLine: 'underline',
   },
   primaryButton: {
-    backgroundColor: colors.action.primaryFill,
     borderRadius: radii.lg,
     minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.sm,
   },
-  primaryButtonText: {
-    color: colors.text.onPrimary,
-    fontWeight: '700',
-  },
   secondaryButton: {
     minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  secondaryButtonText: {
-    color: colors.text.secondary,
   },
   footnote: {
     textAlign: 'center',

@@ -2,21 +2,24 @@
  * GradientBackground — the app's single screen-background entry point.
  *
  * Variants:
- *   `base` / `cosmic` (default) — the Dark Glow ambient: surface.base with the
- *      drifting indigo/violet blob layer. See components/ui/GlowBackground.tsx.
- *   `raised` — the same glow WITHOUT drift, on surface.raised. Learning
- *      surfaces (lesson runner, writing prompt, drills) keep the theme's depth
- *      but spend no motion, per Mayer's coherence principle.
- *   `plain` — solid surface.base, no glow. Sheets, modals, and anything that
- *      already sits over a scrim.
+ *   `base` / `cosmic` (default) — the scheme ground, `c.bg`.
+ *   `raised` — the second ground step, `c.surface2`. Learning surfaces (lesson
+ *      runner, writing prompt, drills) keep a contrast step from the rest of
+ *      the app.
+ *   `plain` — solid `c.bg`. Sheets, modals, and anything that already sits over
+ *      a scrim.
  *
  * `cosmic` is retained as an alias of `base` so existing call sites keep
- * working unchanged.
+ * working unchanged. The name is now historical in a second way too: under
+ * UI 2.0 there is no gradient and no glow here — DESIGN.md maps this component
+ * to a flat `c.bg`, and `GlowBackground` is a plain themed container. The four
+ * variants survive because they are the public API, not because they still
+ * describe four different effects.
  */
 
 import React from 'react';
 import { View, StyleSheet, type ViewStyle } from 'react-native';
-import { colors } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { GlowBackground } from './GlowBackground';
 
 type Variant = 'base' | 'cosmic' | 'raised' | 'plain';
@@ -32,9 +35,11 @@ export function GradientBackground({
   style,
   variant = 'base',
 }: GradientBackgroundProps) {
+  const { c } = useUi2Theme();
+
   if (variant === 'plain') {
     return (
-      <View style={[styles.flex, { backgroundColor: colors.surface.base }, style]}>
+      <View style={[styles.flex, { backgroundColor: c.bg }, style]}>
         {children}
       </View>
     );
@@ -42,7 +47,7 @@ export function GradientBackground({
 
   if (variant === 'raised') {
     return (
-      <GlowBackground style={style} backgroundColor={colors.surface.raised} drift={false}>
+      <GlowBackground style={style} backgroundColor={c.surface2} drift={false}>
         {children}
       </GlowBackground>
     );

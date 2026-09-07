@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
-import { Sheet } from '../ui/Sheet';
-import { TactileButton } from '../ui/TactileButton';
-import { Heading, Body } from '../ui/Text';
+import { Ui2Sheet } from '../ui2/Ui2Sheet';
+import { SlabButton } from '../ui2/SlabButton';
+import { Heading, Body } from '../ui2/Ui2Text';
 import { supabase } from '../../lib/supabase';
-import { colors, spacing } from '../../config/theme';
+import { spacing } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 
 interface BecomeTeacherSheetProps {
   visible: boolean;
@@ -19,6 +20,7 @@ export function BecomeTeacherSheet({
   onClaimed,
   userId,
 }: BecomeTeacherSheetProps) {
+  const { c } = useUi2Theme();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,7 +47,7 @@ export function BecomeTeacherSheet({
   };
 
   return (
-    <Sheet visible={visible} onDismiss={onClose}>
+    <Ui2Sheet visible={visible} onDismiss={onClose}>
       <View style={styles.container}>
         <Heading level={2}>Become a Teacher</Heading>
         <Body tone="secondary" style={styles.body}>
@@ -61,16 +63,16 @@ export function BecomeTeacherSheet({
         )}
 
         {loading ? (
-          <ActivityIndicator size="small" color={colors.indigo[400]} />
+          <ActivityIndicator size="small" color={c.primary} />
         ) : (
           <View style={styles.buttons}>
-            <TactileButton
+            <SlabButton
               label="Become a Teacher"
               variant="primary"
               onPress={handleConfirm}
               disabled={loading}
             />
-            <TactileButton
+            <SlabButton
               label="Cancel"
               variant="ghost"
               onPress={onClose}
@@ -79,7 +81,7 @@ export function BecomeTeacherSheet({
           </View>
         )}
       </View>
-    </Sheet>
+    </Ui2Sheet>
   );
 }
 

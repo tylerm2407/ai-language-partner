@@ -1,6 +1,7 @@
 import React from 'react';
 import { Text } from 'react-native';
-import { GlassSurface } from '../ui/GlassSurface';
+import { SlabCard } from '../ui2/SlabCard';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 
 interface AssignmentTimerProps {
   elapsedSeconds: number;
@@ -18,26 +19,25 @@ function formatTime(totalSeconds: number): string {
 }
 
 export default function AssignmentTimer({ elapsedSeconds, requiredMinutes }: AssignmentTimerProps) {
+  const { c } = useUi2Theme();
   const requiredSeconds = requiredMinutes * 60;
   const met = elapsedSeconds >= requiredSeconds;
 
   return (
-    <GlassSurface
+    <SlabCard
       style={{
         position: 'absolute',
         top: 12,
         right: 12,
         zIndex: 10,
-      }}
-      innerStyle={{
         paddingHorizontal: 12,
         paddingVertical: 6,
+        borderRadius: 12,
       }}
-      borderRadius={12}
     >
       <Text
         style={{
-          color: met ? '#22C55E' : '#94A3B8',
+          color: met ? c.green : c.muted,
           fontSize: 14,
           fontFamily: 'Nunito_600SemiBold',
           fontVariant: ['tabular-nums'],
@@ -47,6 +47,6 @@ export default function AssignmentTimer({ elapsedSeconds, requiredMinutes }: Ass
       >
         {formatTime(elapsedSeconds)} / {formatTime(requiredSeconds)}
       </Text>
-    </GlassSurface>
+    </SlabCard>
   );
 }

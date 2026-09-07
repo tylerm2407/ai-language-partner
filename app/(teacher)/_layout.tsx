@@ -1,41 +1,38 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { BORDER_GRADIENT_COLORS } from '../../config/gradients';
-import { colors } from '../../config/theme';
 import { useSchoolStore } from '../../stores/useSchoolStore';
 import { ErrorBoundary } from '../../components/ui/ErrorBoundary';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 
 function TabBarBackground() {
+  const { c } = useUi2Theme();
   return (
     <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
-      <LinearGradient
-        colors={[`${BORDER_GRADIENT_COLORS[0]}4D`, `${BORDER_GRADIENT_COLORS[1]}4D`]}
-        start={{ x: 0, y: 0.5 }}
-        end={{ x: 1, y: 0.5 }}
-        style={{ height: 1 }}
-      />
+      {/* UI 2.0 grounds on flat colour — the hairline is the card border, not a
+          gradient. */}
+      <View style={{ height: 1, backgroundColor: c.cardBorder }} />
       {/* Opaque card fill — matching the learner FloatingTabBar. The old
           rgba(12,15,20,.95) was keyed to the pre-glow base and read as a
-          lighter grey band once the base deepened to #08090F. */}
-      <View style={{ flex: 1, backgroundColor: colors.surface.card }} />
+          lighter grey band once the base deepened. */}
+      <View style={{ flex: 1, backgroundColor: c.card }} />
     </View>
   );
 }
 
 export default function TeacherLayout() {
+  const { c } = useUi2Theme();
   const { roles } = useSchoolStore();
   const isAdmin = roles.includes('school_admin');
 
   return (
     <ErrorBoundary>
-    <View className="flex-1 bg-dark">
+    <View className="flex-1" style={{ backgroundColor: c.bg }}>
       <Tabs
         screenOptions={{
           headerShown: false,
-          tabBarActiveTintColor: '#818CF8',
-          tabBarInactiveTintColor: '#64748B',
+          tabBarActiveTintColor: c.primary,
+          tabBarInactiveTintColor: c.idle,
           tabBarStyle: {
             borderTopWidth: 0,
             backgroundColor: 'transparent',
@@ -45,12 +42,6 @@ export default function TeacherLayout() {
           tabBarLabelStyle: {
             fontSize: 12,
             fontFamily: 'Nunito_600SemiBold',
-          },
-          tabBarIconStyle: {
-            shadowColor: '#818CF8',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.3,
-            shadowRadius: 6,
           },
         }}
       >

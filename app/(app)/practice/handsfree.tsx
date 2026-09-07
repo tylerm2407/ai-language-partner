@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { View, Text, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useSafeBack } from '../../../hooks/useSafeBack';
@@ -8,6 +8,8 @@ import { useAuth } from '../../../hooks/useAuth';
 import { useAiConsent } from '../../../hooks/useAiConsent';
 import { useHandsFreeSession } from '../../../hooks/useHandsFreeSession';
 import { useMotion } from '../../../hooks/useMotion';
+import { useUi2Theme } from '../../../hooks/useUi2Theme';
+import { Body, Heading, Hero } from '../../../components/ui2/Ui2Text';
 import {
   acknowledgeDrivingSafety,
   hasAcknowledgedDrivingSafety,
@@ -15,7 +17,10 @@ import {
   saveHandsFreeConfig,
 } from '../../../lib/handsfree-storage';
 import { HANDSFREE_DEFAULTS } from '../../../config/app';
-import { colors, spacing, radii, typography } from '../../../config/theme';
+// `colors` is deliberately NOT imported: it is the fixed DARK palette, and a
+// screen that reads it stays dark whatever the phone is set to. `radii` and
+// `spacing` are plain scheme-independent numbers and carry over unchanged.
+import { spacing, radii } from '../../../config/theme';
 
 /**
  * The eyes-free session screen.
@@ -27,7 +32,10 @@ import { colors, spacing, radii, typography } from '../../../config/theme';
  *    the screen, the feature has failed its own premise. Every control here is
  *    optional.
  *  - Controls are 88pt tall, twice the HIG minimum. This is a glance-and-jab
- *    surface, sometimes in a mount, sometimes in a pocket.
+ *    surface, sometimes in a mount, sometimes in a pocket. That is why the CTAs
+ *    stay hand-rolled slabs rather than `SlabButton`, whose block is 56pt: the
+ *    UI 2.0 shape tokens give them the same 2px/6px edge at the height this
+ *    screen needs.
  *  - One status line, announced to VoiceOver as a live region, so a learner
  *    using a screen reader hears phase changes without touching anything.
  *  - No glow layer, no decorative motion, no progress countdown, no XP. Motion
@@ -39,6 +47,7 @@ import { colors, spacing, radii, typography } from '../../../config/theme';
 type Screen = 'disclaimer' | 'setup' | 'running';
 
 export default function HandsFreeScreen() {
+  const { c, shape } = useUi2Theme();
   const router = useRouter();
   const goBack = useSafeBack('/(app)');
   const { user } = useAuth();
@@ -92,10 +101,22 @@ export default function HandsFreeScreen() {
     await session.start();
   }, [user, durationMs, session, ensureConsent]);
 
+  const rootStyle = [styles.root, { backgroundColor: c.bg }];
+  // The 88pt slab, in UI 2.0 shape: fill on a thicker bottom edge.
+  const primaryButtonStyle = [
+    styles.primaryButton,
+    {
+      backgroundColor: c.primary,
+      borderBottomColor: c.slab,
+      borderBottomWidth: shape.buttonSlab,
+      borderRadius: shape.radiusButton,
+    },
+  ];
+
   if (screen === null) {
     return (
-      <SafeAreaView style={styles.root}>
-        <ActivityIndicator color={colors.action.accent} />
+      <SafeAreaView style={rootStyle}>
+        <ActivityIndicator color={c.primary} />
       </SafeAreaView>
     );
   }
@@ -103,28 +124,28 @@ export default function HandsFreeScreen() {
   // ── Safety notice ──────────────────────────────────────────────────────
   if (screen === 'disclaimer') {
     return (
-      <SafeAreaView style={styles.root}>
+      <SafeAreaView style={rootStyle}>
         <View style={styles.centered}>
-          <Ionicons name="car-outline" size={44} color={colors.action.accent} />
-          <Text style={styles.title} accessibilityRole="header">
+          <Ionicons name="car-outline" size={44} color={c.primary} />
+          <Heading level={2} accessibilityRole="header">
             Before you start
-          </Text>
-          <Text style={styles.body}>
+          </Heading>
+          <Body tone="secondary">
             This session runs entirely by voice. You do not need to look at or touch your phone
             at any point — it will keep going on its own.
-          </Text>
-          <Text style={styles.body}>
+          </Body>
+          <Body tone="secondary">
             If you are driving, keep your eyes on the road. Pull over before touching the screen.
-          </Text>
+          </Body>
         </View>
 
         <Pressable
-          style={styles.primaryButton}
+          style={primaryButtonStyle}
           onPress={acknowledge}
           accessibilityRole="button"
           accessibilityLabel="I understand"
         >
-          <Text style={styles.primaryLabel}>I understand</Text>
+          <Heading level={2} tone="onPrimary">I understand</Heading>
         </Pressable>
       </SafeAreaView>
     );
@@ -133,14 +154,14 @@ export default function HandsFreeScreen() {
   // ── Session length ─────────────────────────────────────────────────────
   if (screen === 'setup') {
     return (
-      <SafeAreaView style={styles.root}>
+      <SafeAreaView style={rootStyle}>
         <View style={styles.centered}>
-          <Text style={styles.title} accessibilityRole="header">
+          <Heading level={2} accessibilityRole="header">
             How long have you got?
-          </Text>
-          <Text style={styles.body}>
+          </Heading>
+          <Body tone="secondary">
             Your review queue, out loud. Pick a length that matches your journey.
-          </Text>
+          </Body>
 
           <View style={styles.durationList}>
             {HANDSFREE_DEFAULTS.durationOptionsMs.map((ms) => {
@@ -149,13 +170,23 @@ export default function HandsFreeScreen() {
               return (
                 <Pressable
                   key={ms}
-                  style={[styles.durationOption, selected && styles.durationOptionSelected]}
+                  style={[
+                    styles.durationOption,
+                    {
+                      backgroundColor: c.card,
+                      borderColor: c.cardBorder,
+                      borderWidth: shape.border,
+                      borderBottomWidth: shape.slab,
+                      borderRadius: shape.radiusCard,
+                    },
+                    selected && { backgroundColor: c.primaryTint, borderColor: c.primaryTintBorder },
+                  ]}
                   onPress={() => setDurationMs(ms)}
                   accessibilityRole="button"
                   accessibilityState={{ selected }}
                   accessibilityLabel={`${minutes} minutes`}
                 >
-                  <Text style={styles.durationLabel}>{minutes} minutes</Text>
+                  <Body size="lg" weight="bold">{minutes} minutes</Body>
                 </Pressable>
               );
             })}
@@ -163,22 +194,22 @@ export default function HandsFreeScreen() {
         </View>
 
         {session.error ? (
-          <Text style={styles.error} accessibilityRole="alert">
+          <Body size="sm" tone="error" style={styles.error} accessibilityRole="alert">
             {session.error}
-          </Text>
+          </Body>
         ) : null}
 
         <Pressable
-          style={styles.primaryButton}
+          style={primaryButtonStyle}
           onPress={begin}
           disabled={session.preparing}
           accessibilityRole="button"
           accessibilityLabel={session.preparing ? 'Preparing your session' : 'Start session'}
         >
           {session.preparing ? (
-            <ActivityIndicator color={colors.text.onPrimary} />
+            <ActivityIndicator color={c.onPrimary} />
           ) : (
-            <Text style={styles.primaryLabel}>Start</Text>
+            <Heading level={2} tone="onPrimary">Start</Heading>
           )}
         </Pressable>
         {consentSheet}
@@ -190,16 +221,27 @@ export default function HandsFreeScreen() {
   const paused = session.state.phase === 'paused';
   const listening = session.state.phase === 'listening';
 
+  const controlStyle = [
+    styles.control,
+    {
+      backgroundColor: c.card,
+      borderColor: c.cardBorder,
+      borderWidth: shape.border,
+      borderBottomWidth: shape.slab,
+      borderRadius: shape.radiusCard,
+    },
+  ];
+
   return (
-    <SafeAreaView style={styles.root}>
+    <SafeAreaView style={rootStyle}>
       <View style={styles.statusArea}>
-        <Text
+        <Hero
           style={styles.status}
           accessibilityRole="header"
           accessibilityLiveRegion="polite"
         >
           {session.statusLine}
-        </Text>
+        </Hero>
 
         {/* The only moving element on the screen, and it is gated: a pulsing
             indicator is useful peripheral feedback that the mic is open, and
@@ -207,33 +249,34 @@ export default function HandsFreeScreen() {
         <View
           style={[
             styles.listeningBar,
-            listening && !shouldReduce && styles.listeningBarActive,
-            listening && shouldReduce && styles.listeningBarStatic,
+            { backgroundColor: c.track },
+            listening && !shouldReduce && { backgroundColor: c.primary },
+            listening && shouldReduce && { backgroundColor: c.slab },
           ]}
         />
       </View>
 
       <View style={styles.controls}>
         <Pressable
-          style={styles.control}
+          style={controlStyle}
           onPress={session.repeat}
           accessibilityRole="button"
           accessibilityLabel={`Repeat card ${session.state.index + 1}`}
         >
-          <Text style={styles.controlLabel}>Repeat</Text>
+          <Heading level={2}>Repeat</Heading>
         </Pressable>
 
         <Pressable
-          style={styles.control}
+          style={controlStyle}
           onPress={session.skip}
           accessibilityRole="button"
           accessibilityLabel="Skip this card without scoring it"
         >
-          <Text style={styles.controlLabel}>Skip</Text>
+          <Heading level={2}>Skip</Heading>
         </Pressable>
 
         <Pressable
-          style={styles.control}
+          style={controlStyle}
           onPress={paused ? session.resume : session.pause}
           accessibilityRole="button"
           accessibilityLabel={
@@ -242,11 +285,11 @@ export default function HandsFreeScreen() {
               : `Pause the session. Currently on card ${session.state.index + 1}.`
           }
         >
-          <Text style={styles.controlLabel}>{paused ? 'Resume' : 'Pause'}</Text>
+          <Heading level={2}>{paused ? 'Resume' : 'Pause'}</Heading>
         </Pressable>
       </View>
 
-      <View style={styles.divider} />
+      <View style={[styles.divider, { backgroundColor: c.cardBorder }]} />
 
       <Pressable
         style={styles.endButton}
@@ -255,7 +298,7 @@ export default function HandsFreeScreen() {
         accessibilityLabel="End session"
         accessibilityHint="Ends the session and saves your progress."
       >
-        <Text style={styles.endLabel}>End session</Text>
+        <Body weight="bold" tone="error">End session</Body>
       </Pressable>
     </SafeAreaView>
   );
@@ -264,10 +307,15 @@ export default function HandsFreeScreen() {
 /** Twice the 44pt HIG minimum — this is a glance-and-jab surface. */
 const CONTROL_HEIGHT = 88;
 
+/**
+ * Layout only. Every colour on this screen comes from `useUi2Theme()` and is
+ * merged in at the call site — a StyleSheet is created once at module load and
+ * cannot see the scheme, which is exactly how a screen ends up dark on a phone
+ * set to light.
+ */
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.surface.base,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.lg,
   },
@@ -276,60 +324,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.md,
   },
-  title: {
-    fontFamily: typography.family.extrabold,
-    fontSize: typography.scale.h2.fontSize,
-    lineHeight: typography.scale.h2.lineHeight,
-    color: colors.text.primary,
-  },
-  body: {
-    fontFamily: typography.family.medium,
-    fontSize: typography.scale.body.fontSize,
-    lineHeight: typography.scale.body.lineHeight,
-    color: colors.text.secondary,
-  },
   statusArea: {
     flex: 1,
     justifyContent: 'center',
     gap: spacing.lg,
   },
   status: {
-    fontFamily: typography.family.extrabold,
-    fontSize: typography.scale.hero.fontSize,
-    lineHeight: typography.scale.hero.lineHeight,
-    color: colors.text.primary,
     textAlign: 'center',
   },
   listeningBar: {
     height: 6,
     borderRadius: radii.pill,
-    backgroundColor: colors.surface.cardAlt,
-  },
-  listeningBarActive: {
-    backgroundColor: colors.action.accent,
-  },
-  listeningBarStatic: {
-    backgroundColor: colors.action.primaryFill,
   },
   controls: {
     gap: spacing.sm,
   },
   control: {
     minHeight: CONTROL_HEIGHT,
-    borderRadius: radii.xl,
-    backgroundColor: colors.surface.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  controlLabel: {
-    fontFamily: typography.family.extrabold,
-    fontSize: typography.scale.h3.fontSize,
-    lineHeight: typography.scale.h3.lineHeight,
-    color: colors.text.primary,
-  },
   divider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.border.subtle,
     marginVertical: spacing.xl,
   },
   endButton: {
@@ -338,52 +354,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  endLabel: {
-    fontFamily: typography.family.bold,
-    fontSize: typography.scale.body.fontSize,
-    lineHeight: typography.scale.body.lineHeight,
-    color: colors.error.light,
-  },
   durationList: {
     gap: spacing.xs,
   },
   durationOption: {
     minHeight: 64,
-    borderRadius: radii.xl,
-    backgroundColor: colors.surface.card,
-    borderWidth: 2,
-    borderColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  durationOptionSelected: {
-    backgroundColor: colors.action.primaryTint,
-    borderColor: colors.action.primaryFill,
-  },
-  durationLabel: {
-    fontFamily: typography.family.bold,
-    fontSize: typography.scale.bodyLg.fontSize,
-    lineHeight: typography.scale.bodyLg.lineHeight,
-    color: colors.text.primary,
   },
   primaryButton: {
     minHeight: CONTROL_HEIGHT,
-    borderRadius: radii.xl,
-    backgroundColor: colors.action.primaryFill,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  primaryLabel: {
-    fontFamily: typography.family.extrabold,
-    fontSize: typography.scale.h3.fontSize,
-    lineHeight: typography.scale.h3.lineHeight,
-    color: colors.text.onPrimary,
-  },
   error: {
-    fontFamily: typography.family.medium,
-    fontSize: typography.scale.bodySm.fontSize,
-    lineHeight: typography.scale.bodySm.lineHeight,
-    color: colors.error.light,
     marginBottom: spacing.sm,
     textAlign: 'center',
   },

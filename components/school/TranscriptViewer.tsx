@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, FlatList } from 'react-native';
 import { ChatBubble } from '../chat/ChatBubble';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import type { ConversationMessage } from '../../types';
 
 interface TranscriptViewerProps {
@@ -9,12 +10,13 @@ interface TranscriptViewerProps {
 }
 
 export default function TranscriptViewer({ messages, targetLanguage }: TranscriptViewerProps) {
+  const { c } = useUi2Theme();
   return (
     <View style={{ flex: 1 }}>
       {/* Header */}
       <Text
         style={{
-          color: '#94A3B8',
+          color: c.muted,
           fontSize: 13,
           fontFamily: 'Nunito_600SemiBold',
           textTransform: 'uppercase',

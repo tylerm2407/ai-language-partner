@@ -2,8 +2,10 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { haptic } from '../../lib/haptics';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing } from '../../config/theme';
-import { Button } from '../ui/Button';
+import { spacing } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
+import { SlabButton } from '../ui2/SlabButton';
+import { Body } from '../ui2/Ui2Text';
 import { ExerciseChrome } from './ExerciseChrome';
 import { MultipleChoice } from './MultipleChoice';
 import { TranslationExercise } from './TranslationExercise';
@@ -118,6 +120,7 @@ export function LessonRunner({
   onComplete,
   onExit,
 }: LessonRunnerProps) {
+  const { c } = useUi2Theme();
   const [currentIndex, setCurrentIndex] = useState(0);
   // `showResult` survives only as the sparkle/shake trigger. Whether an
   // exercise has been answered is derived from `picks` — a single boolean
@@ -695,7 +698,7 @@ export function LessonRunner({
   if (!warmupResolved) {
     return (
       <View className="flex-1 items-center justify-center p-6">
-        <Text className="text-text-secondary text-base">Preparing your lesson…</Text>
+        <Text className="text-base" style={{ color: c.muted }}>Preparing your lesson…</Text>
       </View>
     );
   }
@@ -703,10 +706,10 @@ export function LessonRunner({
   if (exercises.length === 0 && !warmupPhase) {
     return (
       <View className="flex-1 items-center justify-center p-6">
-        <Text className="text-text-secondary text-lg text-center mb-4">
+        <Text className="text-lg text-center mb-4" style={{ color: c.muted }}>
           No exercises available for this lesson.
         </Text>
-        <Button label="Go Back" onPress={onExit} variant="secondary" />
+        <SlabButton label="Go Back" onPress={onExit} variant="ghost" />
       </View>
     );
   }
@@ -748,7 +751,12 @@ export function LessonRunner({
           accessibilityRole="button"
           accessibilityLabel="Dismiss expired lesson notice"
           style={{
-            backgroundColor: colors.surface.card,
+            backgroundColor: c.card,
+            // A hairline, because the chrome below this banner is surface2:
+            // in the light scheme a card-coloured strip on it has almost no
+            // edge of its own, and the notice reads as part of the header.
+            borderBottomWidth: 1,
+            borderBottomColor: c.cardBorder,
             paddingHorizontal: spacing.md,
             paddingVertical: spacing.sm,
             flexDirection: 'row',
@@ -756,14 +764,14 @@ export function LessonRunner({
             gap: spacing.xs,
           }}
         >
-          <Ionicons name="time-outline" size={18} color={colors.text.secondary} />
+          <Ionicons name="time-outline" size={18} color={c.muted} />
           <Text
-            style={{ flex: 1, color: colors.text.secondary, fontSize: 13 }}
+            style={{ flex: 1, color: c.muted, fontSize: 13 }}
             accessibilityLiveRegion="polite"
           >
             This lesson expired, so it's starting over. Unfinished lessons are saved for a day.
           </Text>
-          <Ionicons name="close" size={16} color={colors.text.tertiary} />
+          <Ionicons name="close" size={16} color={c.idle} />
         </Pressable>
       )}
 
@@ -777,7 +785,9 @@ export function LessonRunner({
           accessibilityRole="button"
           accessibilityLabel="Dismiss daily new-word limit notice"
           style={{
-            backgroundColor: colors.surface.card,
+            backgroundColor: c.card,
+            borderBottomWidth: 1,
+            borderBottomColor: c.cardBorder,
             paddingHorizontal: spacing.md,
             paddingVertical: spacing.sm,
             flexDirection: 'row',
@@ -785,15 +795,15 @@ export function LessonRunner({
             gap: spacing.xs,
           }}
         >
-          <Ionicons name="school-outline" size={18} color={colors.text.secondary} />
+          <Ionicons name="school-outline" size={18} color={c.muted} />
           <Text
-            style={{ flex: 1, color: colors.text.secondary, fontSize: 13 }}
+            style={{ flex: 1, color: c.muted, fontSize: 13 }}
             accessibilityLiveRegion="polite"
           >
             That&apos;s today&apos;s new words. Keep going — this lesson still counts, and
             reviewing what you know is always unlimited.
           </Text>
-          <Ionicons name="close" size={16} color={colors.text.tertiary} />
+          <Ionicons name="close" size={16} color={c.idle} />
         </Pressable>
       )}
 
@@ -936,9 +946,11 @@ function renderExercise(
     default:
       return (
         <View className="p-6">
-          <Text className="text-text-secondary text-center">
+          {/* Ui2Text rather than a styled Text: this branch is inside a plain
+              render helper, which cannot call useUi2Theme itself. */}
+          <Body tone="secondary" style={{ textAlign: 'center' }}>
             Unknown exercise type: {exercise.type}
-          </Text>
+          </Body>
         </View>
       );
   }

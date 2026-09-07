@@ -1,5 +1,6 @@
 import Svg, { Path } from 'react-native-svg';
 import { View } from 'react-native';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 
 interface PathConnectorProps {
   fromX: number;
@@ -9,9 +10,15 @@ interface PathConnectorProps {
   state: 'completed' | 'locked';
 }
 
+/**
+ * A drawn connector is the completed hue; an undrawn one is the same hairline
+ * the card borders use, so it recedes in whichever scheme is on. (`#252A35`,
+ * the value it replaces, was a dark-only slate that vanishes on white.)
+ */
 export function PathConnector({ fromX, fromY, toX, toY, state }: PathConnectorProps) {
+  const { c } = useUi2Theme();
   const isCompleted = state === 'completed';
-  const strokeColor = isCompleted ? '#34D399' : '#252A35';
+  const strokeColor = isCompleted ? c.green : c.cardBorder;
   const strokeWidth = isCompleted ? 3 : 2;
   const strokeDasharray = isCompleted ? undefined : '6,6';
 

@@ -10,14 +10,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeBack } from '../../../../hooks/useSafeBack';
 import { Ionicons } from '@expo/vector-icons';
-import { GradientBackground } from '../../../../components/ui/GradientBackground';
-import { GlassSurface } from '../../../../components/ui/GlassSurface';
+import { SlabCard } from '../../../../components/ui2/SlabCard';
 import StatusBadge from '../../../../components/school/StatusBadge';
 import { fetchAssignmentById, fetchAssignmentSubmissions } from '../../../../lib/supabase-queries';
 import { useSchoolStore } from '../../../../stores/useSchoolStore';
 import type { Assignment, AssignmentSubmission } from '../../../../types';
-import { InlineError } from '../../../../components/ui/InlineError';
+import { Ui2InlineError } from '../../../../components/ui2/Ui2InlineError';
 import { loadErrorCopy, type ErrorCopy } from '../../../../lib/error-copy';
+import { useUi2Theme } from '../../../../hooks/useUi2Theme';
 
 const MODE_LABEL: Record<string, string> = {
   text: 'Text',
@@ -35,6 +35,7 @@ function formatDate(dateStr: string | null): string {
 }
 
 export default function SubmissionsListScreen() {
+  const { c } = useUi2Theme();
   const router = useRouter();
   const goBack = useSafeBack('/(teacher)');
   const { assignmentId } = useLocalSearchParams<{ assignmentId: string }>();
@@ -89,26 +90,26 @@ export default function SubmissionsListScreen() {
 
   if (loading) {
     return (
-      <GradientBackground>
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
         <SafeAreaView className="flex-1 justify-center items-center">
-          <ActivityIndicator color="#818CF8" size="large" />
+          <ActivityIndicator color={c.primary} size="large" />
         </SafeAreaView>
-      </GradientBackground>
+      </View>
     );
   }
 
   if (error) {
     return (
-      <GradientBackground>
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
         <SafeAreaView className="flex-1 justify-center">
-          <InlineError copy={error} onRetry={() => setReloadKey((k) => k + 1)} />
+          <Ui2InlineError copy={error} onRetry={() => setReloadKey((k) => k + 1)} />
         </SafeAreaView>
-      </GradientBackground>
+      </View>
     );
   }
 
   return (
-    <GradientBackground>
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
       <SafeAreaView className="flex-1" edges={['top']}>
         <View className="flex-1 px-4 pt-2">
           {/* Back + Header */}
@@ -118,18 +119,18 @@ export default function SubmissionsListScreen() {
             accessibilityLabel="Go back"
             className="flex-row items-center mb-4"
           >
-            <Ionicons name="chevron-back" size={24} color="#818CF8" />
+            <Ionicons name="chevron-back" size={24} color={c.primary} />
             <Text
-              className="text-base text-primary ml-1"
-              style={{ fontFamily: 'Nunito_600SemiBold' }}
+              className="text-base ml-1"
+              style={{ fontFamily: 'Nunito_600SemiBold', color: c.primary }}
             >
               Back
             </Text>
           </Pressable>
 
           <Text
-            className="text-[28px] text-text-primary mb-2"
-            style={{ fontFamily: 'Nunito_800ExtraBold' }}
+            className="text-[28px] mb-2"
+            style={{ fontFamily: 'Nunito_800ExtraBold', color: c.ink }}
             accessibilityRole="header"
           >
             {assignment?.title ?? 'Assignment'}
@@ -137,17 +138,14 @@ export default function SubmissionsListScreen() {
 
           {/* Assignment Info */}
           {assignment && (
-            <GlassSurface
-              style={{ marginBottom: 16 }}
-              innerStyle={{ padding: 14 }}
-            >
+            <SlabCard style={{ marginBottom: 16, padding: 14 }}>
               <View className="flex-row flex-wrap" style={{ gap: 12 }}>
                 {assignment.scenarioKey && (
                   <View className="flex-row items-center">
-                    <Ionicons name="chatbubbles-outline" size={14} color="#94A3B8" />
+                    <Ionicons name="chatbubbles-outline" size={14} color={c.idle} />
                     <Text
                       style={{
-                        color: '#94A3B8',
+                        color: c.muted,
                         fontSize: 12,
                         fontFamily: 'Nunito_500Medium',
                         marginLeft: 4,
@@ -158,10 +156,10 @@ export default function SubmissionsListScreen() {
                   </View>
                 )}
                 <View className="flex-row items-center">
-                  <Ionicons name="calendar-outline" size={14} color="#94A3B8" />
+                  <Ionicons name="calendar-outline" size={14} color={c.idle} />
                   <Text
                     style={{
-                      color: '#94A3B8',
+                      color: c.muted,
                       fontSize: 12,
                       fontFamily: 'Nunito_500Medium',
                       marginLeft: 4,
@@ -171,10 +169,10 @@ export default function SubmissionsListScreen() {
                   </Text>
                 </View>
                 <View className="flex-row items-center">
-                  <Ionicons name="options-outline" size={14} color="#94A3B8" />
+                  <Ionicons name="options-outline" size={14} color={c.idle} />
                   <Text
                     style={{
-                      color: '#94A3B8',
+                      color: c.muted,
                       fontSize: 12,
                       fontFamily: 'Nunito_500Medium',
                       marginLeft: 4,
@@ -185,10 +183,10 @@ export default function SubmissionsListScreen() {
                 </View>
                 {assignment.minDurationMinutes > 0 && (
                   <View className="flex-row items-center">
-                    <Ionicons name="time-outline" size={14} color="#94A3B8" />
+                    <Ionicons name="time-outline" size={14} color={c.idle} />
                     <Text
                       style={{
-                        color: '#94A3B8',
+                        color: c.muted,
                         fontSize: 12,
                         fontFamily: 'Nunito_500Medium',
                         marginLeft: 4,
@@ -199,77 +197,68 @@ export default function SubmissionsListScreen() {
                   </View>
                 )}
               </View>
-            </GlassSurface>
+            </SlabCard>
           )}
 
           {/* Stats Row */}
           <View className="flex-row mb-4" style={{ gap: 10 }}>
-            <GlassSurface
-              style={{ flex: 1 }}
-              innerStyle={{ padding: 12, alignItems: 'center' }}
-            >
+            <SlabCard style={{ flex: 1, padding: 12, alignItems: 'center' }}>
               <Text
-                className="text-lg text-text-primary"
-                style={{ fontFamily: 'Nunito_700Bold' }}
+                className="text-lg"
+                style={{ fontFamily: 'Nunito_700Bold', color: c.ink }}
               >
                 {totalSubmissions}
               </Text>
               <Text
-                className="text-xs text-text-secondary"
-                style={{ fontFamily: 'Nunito_500Medium' }}
+                className="text-xs"
+                style={{ fontFamily: 'Nunito_500Medium', color: c.muted }}
               >
                 Total
               </Text>
-            </GlassSurface>
-            <GlassSurface
-              style={{ flex: 1 }}
-              innerStyle={{ padding: 12, alignItems: 'center' }}
-            >
+            </SlabCard>
+            <SlabCard style={{ flex: 1, padding: 12, alignItems: 'center' }}>
               <Text
-                className="text-lg text-text-primary"
-                style={{ fontFamily: 'Nunito_700Bold' }}
+                className="text-lg"
+                style={{ fontFamily: 'Nunito_700Bold', color: c.ink }}
               >
                 {completed}
               </Text>
               <Text
-                className="text-xs text-text-secondary"
-                style={{ fontFamily: 'Nunito_500Medium' }}
+                className="text-xs"
+                style={{ fontFamily: 'Nunito_500Medium', color: c.muted }}
               >
                 Completed
               </Text>
-            </GlassSurface>
-            <GlassSurface
-              style={{ flex: 1 }}
-              innerStyle={{ padding: 12, alignItems: 'center' }}
-            >
+            </SlabCard>
+            <SlabCard style={{ flex: 1, padding: 12, alignItems: 'center' }}>
               <Text
-                className="text-lg text-text-primary"
-                style={{ fontFamily: 'Nunito_700Bold' }}
+                className="text-lg"
+                style={{ fontFamily: 'Nunito_700Bold', color: c.ink }}
               >
                 {avgScore !== null ? `${avgScore}%` : '—'}
               </Text>
               <Text
-                className="text-xs text-text-secondary"
-                style={{ fontFamily: 'Nunito_500Medium' }}
+                className="text-xs"
+                style={{ fontFamily: 'Nunito_500Medium', color: c.muted }}
               >
                 Avg Score
               </Text>
-            </GlassSurface>
+            </SlabCard>
           </View>
 
           {/* Submissions List */}
           {submissions.length === 0 ? (
             <View className="flex-1 justify-center items-center" style={{ paddingBottom: 80 }}>
-              <Ionicons name="people-outline" size={48} color="#64748B" />
+              <Ionicons name="people-outline" size={48} color={c.idle} />
               <Text
-                className="text-base text-text-primary mt-3"
-                style={{ fontFamily: 'Nunito_600SemiBold' }}
+                className="text-base mt-3"
+                style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
               >
                 No submissions yet
               </Text>
               <Text
-                className="text-sm text-text-secondary mt-1 text-center px-8"
-                style={{ fontFamily: 'Nunito_400Regular' }}
+                className="text-sm mt-1 text-center px-8"
+                style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
               >
                 Submissions will appear here as students complete the assignment.
               </Text>
@@ -290,14 +279,11 @@ export default function SubmissionsListScreen() {
                   accessibilityRole="button"
                   accessibilityLabel={`Submission by ${item.studentName ?? 'student'}`}
                 >
-                  <GlassSurface
-                    style={{ marginBottom: 10 }}
-                    innerStyle={{ padding: 14 }}
-                  >
+                  <SlabCard style={{ marginBottom: 10, padding: 14 }}>
                     <View className="flex-row items-center justify-between mb-1">
                       <Text
-                        className="text-base text-text-primary flex-1 mr-2"
-                        style={{ fontFamily: 'Nunito_600SemiBold' }}
+                        className="text-base flex-1 mr-2"
+                        style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
                         numberOfLines={1}
                       >
                         {item.studentName ?? 'Student'}
@@ -311,7 +297,7 @@ export default function SubmissionsListScreen() {
                       {item.finalScore !== null && (
                         <Text
                           style={{
-                            color: '#22C55E',
+                            color: c.green,
                             fontSize: 13,
                             fontFamily: 'Nunito_600SemiBold',
                           }}
@@ -321,8 +307,8 @@ export default function SubmissionsListScreen() {
                       )}
                       {item.submittedAt && (
                         <Text
-                          className="text-xs text-text-secondary"
-                          style={{ fontFamily: 'Nunito_400Regular' }}
+                          className="text-xs"
+                          style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
                         >
                           {formatDate(item.submittedAt)}
                         </Text>
@@ -330,7 +316,7 @@ export default function SubmissionsListScreen() {
                       {item.isLate && (
                         <Text
                           style={{
-                            color: '#EF4444',
+                            color: c.error,
                             fontSize: 11,
                             fontFamily: 'Nunito_600SemiBold',
                           }}
@@ -339,13 +325,13 @@ export default function SubmissionsListScreen() {
                         </Text>
                       )}
                     </View>
-                  </GlassSurface>
+                  </SlabCard>
                 </Pressable>
               )}
             />
           )}
         </View>
       </SafeAreaView>
-    </GradientBackground>
+    </View>
   );
 }

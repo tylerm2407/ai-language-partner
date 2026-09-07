@@ -1,6 +1,7 @@
 import { View, Text, type TextStyle } from 'react-native';
 import type { ReactNode } from 'react';
-import { colors, minLineHeight, spacing, typography } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
+import { minLineHeight, spacing, typography } from '../../config/theme';
 import type { ExerciseType } from '../../types';
 
 interface ExerciseCardProps {
@@ -38,44 +39,49 @@ const TYPE_LABELS: Record<ExerciseType, string> = {
 };
 
 /**
- * Instruction label — sentence case, 14px, text.secondary.
+ * Instruction label — sentence case, 14px, helper tone.
  *
  * Lives here rather than in each exercise so all 16 types share one voice;
  * before this, a type that wanted a different prompt size simply set one.
+ * Colour is NOT here: UI 2.0 reads it from `useUi2Theme()`, which a module
+ * constant cannot, so it is merged in at the call site below.
  */
 const LABEL_STYLE: TextStyle = {
   fontFamily: typography.family.medium,
   fontSize: 14,
   lineHeight: minLineHeight(14),
-  color: colors.text.secondary,
   marginBottom: spacing.xs,
 };
 
 /**
- * Prompt — Nunito 22px semibold, text.primary.
+ * Prompt — Nunito 22px semibold, primary ink.
  *
- * Deliberately NOT Fraunces: config/theme.ts reserves the display face for
- * hero and celebration moments, and a serif question stem would compete with
- * the target-language text inside it.
+ * Deliberately NOT a display face: config/theme.ts reserves that for hero and
+ * celebration moments, and a serif question stem would compete with the
+ * target-language text inside it. Colour is merged in at the call site, for
+ * the same reason as LABEL_STYLE.
  */
 const PROMPT_STYLE: TextStyle = {
   fontFamily: typography.family.semibold,
   fontSize: 22,
   lineHeight: minLineHeight(22),
-  color: colors.text.primary,
 };
 
 export function ExerciseCard({ children, type, prompt, promptNode }: ExerciseCardProps) {
+  const { c } = useUi2Theme();
   return (
-    <View className="bg-dark-card rounded-[20px] p-6 min-h-[200px] shadow-card border border-white/10">
-      <Text style={LABEL_STYLE} accessibilityRole="header">
+    <View
+      className="rounded-[20px] p-6 min-h-[200px] shadow-card border"
+      style={{ backgroundColor: c.card, borderColor: c.cardBorder }}
+    >
+      <Text style={[LABEL_STYLE, { color: c.muted }]} accessibilityRole="header">
         {TYPE_LABELS[type]}
       </Text>
       {promptNode ? (
         <View style={{ marginBottom: spacing.lg }}>{promptNode}</View>
       ) : prompt ? (
         <Text
-          style={[PROMPT_STYLE, { marginBottom: spacing.lg }]}
+          style={[PROMPT_STYLE, { color: c.ink, marginBottom: spacing.lg }]}
           accessibilityRole="header"
         >
           {prompt}

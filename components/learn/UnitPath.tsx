@@ -18,8 +18,8 @@ import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useLessonProgress } from '../../hooks/useLessonProgress';
-import { Body, Heading } from '../ui/Text';
-import { Button } from '../ui/Button';
+import { Body, Heading } from '../ui2/Ui2Text';
+import { SlabButton } from '../ui2/SlabButton';
 import { Mono } from './Mono';
 import { UnitCarousel } from './UnitCarousel';
 import { LessonRow } from './LessonRow';
@@ -30,7 +30,8 @@ import {
   toPercent,
   type UnitWithLessons,
 } from '../../lib/learn-progress';
-import { colors, spacing } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
+import { spacing } from '../../config/theme';
 
 interface UnitPathProps {
   units: UnitWithLessons[];
@@ -40,6 +41,7 @@ interface UnitPathProps {
 }
 
 export function UnitPath({ units, courseId, header }: UnitPathProps) {
+  const { c } = useUi2Theme();
   const router = useRouter();
   const { getLessonState, getScore, loading, error, retry, refresh } = useLessonProgress(courseId);
 
@@ -85,7 +87,7 @@ export function UnitPath({ units, courseId, header }: UnitPathProps) {
         <Body size="lg" tone="secondary" style={styles.centeredText}>
           Couldn't load your progress. Check your connection and try again.
         </Body>
-        <Button label="Try Again" variant="primary" onPress={retry} />
+        <SlabButton label="Try Again" variant="primary" onPress={retry} />
       </View>
     );
   }
@@ -93,7 +95,7 @@ export function UnitPath({ units, courseId, header }: UnitPathProps) {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={colors.action.accent} />
+        <ActivityIndicator size="large" color={c.primary} />
         <Body size="sm" tone="tertiary" style={styles.loadingText}>
           Loading your progress…
         </Body>
@@ -124,11 +126,11 @@ export function UnitPath({ units, courseId, header }: UnitPathProps) {
       {header && <View style={styles.header}>{header}</View>}
 
       <View style={styles.eyebrowRow}>
-        <Mono size={12} medium>
+        <Mono size={12} medium color={c.idle}>
           {`${unitProgress.length} UNITS · ${totalLessons} LESSONS`}
         </Mono>
         {unitProgress.length > 1 && (
-          <Mono size={12} color={colors.text.tertiary}>
+          <Mono size={12} color={c.idle}>
             SWIPE →
           </Mono>
         )}
@@ -147,7 +149,7 @@ export function UnitPath({ units, courseId, header }: UnitPathProps) {
         <Mono
           size={12}
           medium
-          color={selected.mastery > 0 ? colors.indigo[300] : colors.text.tertiary}
+          color={selected.mastery > 0 ? c.primary : c.idle}
           accessibilityLabel={`${toPercent(selected.mastery)} percent of this unit mastered`}
         >
           {`${toPercent(selected.mastery)}% MASTERED`}

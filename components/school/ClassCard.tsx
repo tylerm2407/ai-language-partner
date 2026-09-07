@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { GlassSurface } from '../ui/GlassSurface';
+import { SlabCard } from '../ui2/SlabCard';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import type { Classroom } from '../../types';
 
 interface ClassCardProps {
@@ -18,20 +19,20 @@ function levelLabel(level: string): string {
 }
 
 export default function ClassCard({ classroom, onPress, showStudentCount }: ClassCardProps) {
+  const { c } = useUi2Theme();
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`Class: ${classroom.name}`}
     >
-      <GlassSurface
+      <SlabCard
         style={{ marginBottom: 12 }}
-        innerStyle={{ padding: 16 }}
       >
         {/* Name */}
         <Text
-          className="text-lg text-text-primary mb-1"
-          style={{ fontFamily: 'Nunito_600SemiBold' }}
+          className="text-lg mb-1"
+          style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
           numberOfLines={1}
         >
           {classroom.name}
@@ -41,7 +42,7 @@ export default function ClassCard({ classroom, onPress, showStudentCount }: Clas
         <View className="flex-row items-center mb-3" style={{ gap: 8 }}>
           <Text
             style={{
-              color: '#94A3B8',
+              color: c.muted,
               fontSize: 13,
               fontFamily: 'Nunito_500Medium',
               textTransform: 'uppercase',
@@ -51,7 +52,7 @@ export default function ClassCard({ classroom, onPress, showStudentCount }: Clas
           </Text>
           <View
             style={{
-              backgroundColor: 'rgba(99, 102, 241, 0.2)',
+              backgroundColor: c.primaryTint,
               paddingHorizontal: 8,
               paddingVertical: 2,
               borderRadius: 999,
@@ -59,7 +60,7 @@ export default function ClassCard({ classroom, onPress, showStudentCount }: Clas
           >
             <Text
               style={{
-                color: '#818CF8',
+                color: c.onTint,
                 fontSize: 11,
                 fontFamily: 'Nunito_600SemiBold',
               }}
@@ -73,10 +74,10 @@ export default function ClassCard({ classroom, onPress, showStudentCount }: Clas
         <View className="flex-row items-center" style={{ gap: 16 }}>
           {showStudentCount && classroom.studentCount != null && (
             <View className="flex-row items-center">
-              <Ionicons name="people-outline" size={14} color="#64748B" />
+              <Ionicons name="people-outline" size={14} color={c.muted} />
               <Text
                 style={{
-                  color: '#64748B',
+                  color: c.muted,
                   fontSize: 12,
                   fontFamily: 'Nunito_500Medium',
                   marginLeft: 4,
@@ -89,10 +90,10 @@ export default function ClassCard({ classroom, onPress, showStudentCount }: Clas
 
           {classroom.activeAssignmentCount != null && classroom.activeAssignmentCount > 0 && (
             <View className="flex-row items-center">
-              <Ionicons name="document-text-outline" size={14} color="#818CF8" />
+              <Ionicons name="document-text-outline" size={14} color={c.onTint} />
               <Text
                 style={{
-                  color: '#818CF8',
+                  color: c.onTint,
                   fontSize: 12,
                   fontFamily: 'Nunito_500Medium',
                   marginLeft: 4,
@@ -103,7 +104,7 @@ export default function ClassCard({ classroom, onPress, showStudentCount }: Clas
             </View>
           )}
         </View>
-      </GlassSurface>
+      </SlabCard>
     </Pressable>
   );
 }

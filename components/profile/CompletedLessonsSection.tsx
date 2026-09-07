@@ -18,7 +18,8 @@ import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../config/theme';
+import { type Ui2Palette } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { formatRelativeDay } from '../../lib/dates';
 import {
   fetchCompletedLessonsWithTitles,
@@ -36,19 +37,21 @@ interface Props {
  */
 const RECENT_LIMIT = 25;
 
-function scoreBadge(score: number): { label: string; color: string } {
+function scoreBadge(score: number, c: Ui2Palette): { label: string; color: string } {
   const pct = Math.round(score * 100);
   // A lesson score is grading feedback, so the top and bottom bands keep the
-  // two signal hues. The middle bands are greyscale and step DOWN in brightness
-  // as the score falls — the sweep briefly had 50-69% brighter than 70-89%,
-  // which inverted the ladder.
-  if (pct >= 90) return { label: `${pct}%`, color: '#22C55E' };
-  if (pct >= 70) return { label: `${pct}%`, color: '#38BDF8' };
-  if (pct >= 50) return { label: `${pct}%`, color: '#F59E0B' };
-  return { label: `${pct}%`, color: '#EF4444' };
+  // two signal hues. The middle bands step DOWN the ladder as the score falls —
+  // the sweep briefly had 50-69% brighter than 70-89%, which inverted it.
+  // The palette comes in as an argument because UI 2.0 colour is a function of
+  // the phone's scheme; a module-level table would freeze one of the two.
+  if (pct >= 90) return { label: `${pct}%`, color: c.green };
+  if (pct >= 70) return { label: `${pct}%`, color: c.primary };
+  if (pct >= 50) return { label: `${pct}%`, color: c.yellow };
+  return { label: `${pct}%`, color: c.error };
 }
 
 export function CompletedLessonsSection({ userId }: Props) {
+  const { c } = useUi2Theme();
   const router = useRouter();
   const [page, setPage] = useState<CompletedLessonsPage | null>(null);
   const [loading, setLoading] = useState(true);
@@ -122,7 +125,8 @@ export function CompletedLessonsSection({ userId }: Props) {
       <Pressable
         onPress={handlePress}
         disabled={!openable}
-        className="bg-dark-card rounded-2xl p-5 flex-row items-center"
+        className="rounded-2xl p-5 flex-row items-center border"
+        style={{ backgroundColor: c.card, borderColor: c.cardBorder }}
         accessibilityRole="button"
         accessibilityState={{ expanded, disabled: !openable }}
         accessibilityLabel={`Completed lessons. ${summary}`}
@@ -134,20 +138,20 @@ export function CompletedLessonsSection({ userId }: Props) {
             : undefined
         }
       >
-        <Ionicons name="checkmark-done-outline" size={24} color={colors.premium.base} />
+        <Ionicons name="checkmark-done-outline" size={24} color={c.primary} />
         <View className="ml-4 flex-1">
-          <Text className="text-base font-semibold text-text-primary">Completed Lessons</Text>
-          <Text className="text-sm text-text-secondary">{summary}</Text>
+          <Text className="text-base font-semibold" style={{ color: c.ink }}>Completed Lessons</Text>
+          <Text className="text-sm" style={{ color: c.muted }}>{summary}</Text>
         </View>
         {loading ? (
-          <ActivityIndicator size="small" color={colors.premium.base} />
+          <ActivityIndicator size="small" color={c.primary} />
         ) : unreadable ? (
-          <Ionicons name="refresh" size={20} color={colors.premium.base} />
+          <Ionicons name="refresh" size={20} color={c.primary} />
         ) : total > 0 ? (
           <Ionicons
             name={expanded ? 'chevron-up' : 'chevron-down'}
             size={20}
-            color={colors.premium.base}
+            color={c.primary}
           />
         ) : null}
       </Pressable>
@@ -155,12 +159,13 @@ export function CompletedLessonsSection({ userId }: Props) {
       {expanded && rows.length > 0 && (
         <View className="mt-2">
           {rows.map((row) => {
-            const badge = scoreBadge(row.score);
+            const badge = scoreBadge(row.score, c);
             return (
               <Pressable
                 key={row.id}
                 onPress={() => router.push(`/learn/${row.lessonId}` as any)}
-                className="bg-dark-card rounded-2xl p-4 mb-2 flex-row items-center"
+                className="rounded-2xl p-4 mb-2 flex-row items-center border"
+                style={{ backgroundColor: c.card, borderColor: c.cardBorder }}
                 accessibilityRole="button"
                 accessibilityLabel={`${row.lessonTitle}, completed ${formatRelativeDay(row.completedAt)}, score ${badge.label}`}
               >
@@ -171,10 +176,10 @@ export function CompletedLessonsSection({ userId }: Props) {
                   <Ionicons name="checkmark" size={18} color={badge.color} />
                 </View>
                 <View className="flex-1">
-                  <Text className="text-base font-semibold text-text-primary" numberOfLines={1}>
+                  <Text className="text-base font-semibold" style={{ color: c.ink }} numberOfLines={1}>
                     {row.lessonTitle}
                   </Text>
-                  <Text className="text-xs text-text-secondary mt-0.5">
+                  <Text className="text-xs mt-0.5" style={{ color: c.muted }}>
                     {formatRelativeDay(row.completedAt)} · +{row.xpEarned} XP
                   </Text>
                 </View>
@@ -186,7 +191,7 @@ export function CompletedLessonsSection({ userId }: Props) {
           })}
 
           {total > rows.length && (
-            <Text className="text-xs text-text-secondary text-center mt-1">
+            <Text className="text-xs text-center mt-1" style={{ color: c.muted }}>
               Showing your {rows.length} most recent.
             </Text>
           )}
@@ -199,7 +204,7 @@ export function CompletedLessonsSection({ userId }: Props) {
             accessibilityRole="button"
             accessibilityLabel="Collapse completed lessons"
           >
-            <Text className="text-sm font-semibold text-primary">Collapse</Text>
+            <Text className="text-sm font-semibold" style={{ color: c.primary }}>Collapse</Text>
           </Pressable>
         </View>
       )}

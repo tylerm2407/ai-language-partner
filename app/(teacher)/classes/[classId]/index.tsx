@@ -12,9 +12,8 @@ import { useSafeBack } from '../../../../hooks/useSafeBack';
 import * as Clipboard from 'expo-clipboard';
 import { haptic } from '../../../../lib/haptics';
 import { Ionicons } from '@expo/vector-icons';
-import { GradientBackground } from '../../../../components/ui/GradientBackground';
-import { GlassSurface } from '../../../../components/ui/GlassSurface';
-import { GradientButton } from '../../../../components/ui/GradientButton';
+import { SlabCard } from '../../../../components/ui2/SlabCard';
+import { SlabButton } from '../../../../components/ui2/SlabButton';
 import AssignmentCard from '../../../../components/school/AssignmentCard';
 import { useSchoolStore } from '../../../../stores/useSchoolStore';
 import {
@@ -22,7 +21,9 @@ import {
   fetchClassroomAssignments,
 } from '../../../../lib/supabase-queries';
 import type { Classroom, Assignment } from '../../../../types';
-import { colors } from '../../../../config/theme';
+// `colors` is deliberately not imported: it is the fixed DARK palette, so a
+// screen reading it stays dark whatever the phone is set to.
+import { useUi2Theme } from '../../../../hooks/useUi2Theme';
 
 interface StudentRowData {
   id: string;
@@ -33,6 +34,7 @@ interface StudentRowData {
 type Tab = 'students' | 'assignments';
 
 export default function ClassDetailScreen() {
+  const { c } = useUi2Theme();
   const router = useRouter();
   const goBack = useSafeBack('/(teacher)');
   const { classId } = useLocalSearchParams<{ classId: string }>();
@@ -97,9 +99,8 @@ export default function ClassDetailScreen() {
         accessibilityRole="button"
         accessibilityLabel={`Student: ${item.name}`}
       >
-        <GlassSurface
-          style={{ marginBottom: 10 }}
-          innerStyle={{ padding: 14 }}
+        <SlabCard
+          style={{ marginBottom: 10, padding: 14 }}
         >
           <View className="flex-row items-center">
             <View
@@ -107,23 +108,23 @@ export default function ClassDetailScreen() {
                 width: 36,
                 height: 36,
                 borderRadius: 18,
-                backgroundColor: 'rgba(168, 85, 247, 0.2)',
+                backgroundColor: c.primaryTint,
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              <Ionicons name="person-outline" size={18} color="#A855F7" />
+              <Ionicons name="person-outline" size={18} color={c.onTint} />
             </View>
             <View className="ml-3 flex-1">
               <Text
-                className="text-base text-text-primary"
-                style={{ fontFamily: 'Nunito_600SemiBold' }}
+                className="text-base"
+                style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
               >
                 {item.name}
               </Text>
               <Text
-                className="text-xs text-text-secondary"
-                style={{ fontFamily: 'Nunito_400Regular' }}
+                className="text-xs"
+                style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
               >
                 Enrolled{' '}
                 {new Date(item.enrolledAt).toLocaleDateString(undefined, {
@@ -132,9 +133,9 @@ export default function ClassDetailScreen() {
                 })}
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#64748B" />
+            <Ionicons name="chevron-forward" size={18} color={c.idle} />
           </View>
-        </GlassSurface>
+        </SlabCard>
       </Pressable>
     ),
     [classId, router],
@@ -154,16 +155,16 @@ export default function ClassDetailScreen() {
 
   if (loading) {
     return (
-      <GradientBackground>
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
         <SafeAreaView className="flex-1 justify-center items-center">
-          <ActivityIndicator color="#818CF8" size="large" />
+          <ActivityIndicator color={c.primary} size="large" />
         </SafeAreaView>
-      </GradientBackground>
+      </View>
     );
   }
 
   return (
-    <GradientBackground>
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
       <SafeAreaView className="flex-1" edges={['top']}>
         <View className="flex-1 px-4 pt-2">
           {/* Back + Header */}
@@ -173,18 +174,18 @@ export default function ClassDetailScreen() {
             accessibilityLabel="Go back"
             className="flex-row items-center mb-4 min-h-11 -ml-1 pl-1"
           >
-            <Ionicons name="chevron-back" size={24} color="#818CF8" />
+            <Ionicons name="chevron-back" size={24} color={c.primary} />
             <Text
-              className="text-base text-primary ml-1"
-              style={{ fontFamily: 'Nunito_600SemiBold' }}
+              className="text-base ml-1"
+              style={{ fontFamily: 'Nunito_600SemiBold', color: c.primary }}
             >
               Back
             </Text>
           </Pressable>
 
           <Text
-            className="text-[28px] text-text-primary mb-2"
-            style={{ fontFamily: 'Nunito_800ExtraBold' }}
+            className="text-[28px] mb-2"
+            style={{ fontFamily: 'Nunito_800ExtraBold', color: c.ink }}
             accessibilityRole="header"
           >
             {classroom?.name ?? 'Class'}
@@ -192,9 +193,9 @@ export default function ClassDetailScreen() {
 
           {/* Invite Code */}
           {classroom?.inviteCode && (
-            <GlassSurface
-              style={{ marginBottom: 16 }}
-              innerStyle={{
+            <SlabCard
+              style={{
+                marginBottom: 16,
                 padding: 14,
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -203,14 +204,14 @@ export default function ClassDetailScreen() {
             >
               <View>
                 <Text
-                  className="text-xs text-text-secondary"
-                  style={{ fontFamily: 'Nunito_500Medium' }}
+                  className="text-xs"
+                  style={{ fontFamily: 'Nunito_500Medium', color: c.muted }}
                 >
                   Invite Code
                 </Text>
                 <Text
-                  className="text-lg text-primary"
-                  style={{ fontFamily: 'Nunito_700Bold', letterSpacing: 2 }}
+                  className="text-lg"
+                  style={{ fontFamily: 'Nunito_700Bold', letterSpacing: 2, color: c.primary }}
                 >
                   {classroom.inviteCode}
                 </Text>
@@ -225,7 +226,7 @@ export default function ClassDetailScreen() {
               >
                 {copied && (
                   <Text
-                    style={{ color: '#22C55E', fontSize: 12, fontFamily: 'Nunito_600SemiBold' }}
+                    style={{ color: c.green, fontSize: 12, fontFamily: 'Nunito_600SemiBold' }}
                   >
                     Copied
                   </Text>
@@ -233,17 +234,17 @@ export default function ClassDetailScreen() {
                 <Ionicons
                   name={copied ? 'checkmark-circle' : 'copy-outline'}
                   size={20}
-                  color={copied ? '#22C55E' : '#818CF8'}
+                  color={copied ? c.green : c.primary}
                 />
               </Pressable>
-            </GlassSurface>
+            </SlabCard>
           )}
 
           {/* Segmented Control */}
           <View
             className="flex-row mb-4"
             style={{
-              backgroundColor: colors.surface.cardAlt,
+              backgroundColor: c.surface2,
               borderRadius: 12,
               padding: 3,
             }}
@@ -262,13 +263,13 @@ export default function ClassDetailScreen() {
                   alignItems: 'center',
                   backgroundColor:
                     tab === t
-                      ? 'rgba(168, 85, 247, 0.2)'
+                      ? c.primaryTint
                       : 'transparent',
                 }}
               >
                 <Text
                   style={{
-                    color: tab === t ? '#A855F7' : '#94A3B8',
+                    color: tab === t ? c.onTint : c.muted,
                     fontSize: 14,
                     fontFamily: 'Nunito_600SemiBold',
                   }}
@@ -282,20 +283,20 @@ export default function ClassDetailScreen() {
           {/* Tab Content */}
           {error ? (
             <View className="flex-1 justify-center items-center" style={{ paddingBottom: 80 }}>
-              <Ionicons name="warning-outline" size={48} color="#EF4444" />
+              <Ionicons name="warning-outline" size={48} color={c.error} />
               <Text
-                className="text-base text-text-primary mt-3"
-                style={{ fontFamily: 'Nunito_600SemiBold' }}
+                className="text-base mt-3"
+                style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
               >
                 Couldn't load class data
               </Text>
               <Text
-                className="text-sm text-text-secondary mt-1 text-center px-8"
-                style={{ fontFamily: 'Nunito_400Regular' }}
+                className="text-sm mt-1 text-center px-8"
+                style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
               >
                 {error}
               </Text>
-              <GradientButton
+              <SlabButton
                 label="Retry"
                 onPress={load}
                 style={{ marginTop: 16, minWidth: 140 }}
@@ -304,7 +305,7 @@ export default function ClassDetailScreen() {
             </View>
           ) : tab === 'students' ? (
             <>
-              <GradientButton
+              <SlabButton
                 label="Bulk Enroll Students"
                 onPress={() => router.push(`/classes/${classId}/enroll` as any)}
                 style={{ marginBottom: 16 }}
@@ -312,16 +313,16 @@ export default function ClassDetailScreen() {
               />
               {students.length === 0 ? (
                 <View className="flex-1 justify-center items-center" style={{ paddingBottom: 80 }}>
-                  <Ionicons name="people-outline" size={48} color="#64748B" />
+                  <Ionicons name="people-outline" size={48} color={c.idle} />
                   <Text
-                    className="text-base text-text-primary mt-3"
-                    style={{ fontFamily: 'Nunito_600SemiBold' }}
+                    className="text-base mt-3"
+                    style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
                   >
                     No students enrolled
                   </Text>
                   <Text
-                    className="text-sm text-text-secondary mt-1 text-center px-8"
-                    style={{ fontFamily: 'Nunito_400Regular' }}
+                    className="text-sm mt-1 text-center px-8"
+                    style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
                   >
                     Share the invite code with students so they can join this class.
                   </Text>
@@ -338,7 +339,7 @@ export default function ClassDetailScreen() {
             </>
           ) : (
             <>
-              <GradientButton
+              <SlabButton
                 label="Create Assignment"
                 onPress={() => router.push('/assignments/create' as any)}
                 style={{ marginBottom: 16 }}
@@ -346,16 +347,16 @@ export default function ClassDetailScreen() {
               />
               {assignments.length === 0 ? (
                 <View className="flex-1 justify-center items-center" style={{ paddingBottom: 80 }}>
-                  <Ionicons name="document-text-outline" size={48} color="#64748B" />
+                  <Ionicons name="document-text-outline" size={48} color={c.idle} />
                   <Text
-                    className="text-base text-text-primary mt-3"
-                    style={{ fontFamily: 'Nunito_600SemiBold' }}
+                    className="text-base mt-3"
+                    style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
                   >
                     No assignments yet
                   </Text>
                   <Text
-                    className="text-sm text-text-secondary mt-1 text-center px-8"
-                    style={{ fontFamily: 'Nunito_400Regular' }}
+                    className="text-sm mt-1 text-center px-8"
+                    style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
                   >
                     Create an assignment to give your students conversation practice.
                   </Text>
@@ -373,6 +374,6 @@ export default function ClassDetailScreen() {
           )}
         </View>
       </SafeAreaView>
-    </GradientBackground>
+    </View>
   );
 }

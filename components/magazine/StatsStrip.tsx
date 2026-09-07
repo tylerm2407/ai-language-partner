@@ -24,7 +24,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../../stores/useAppStore';
 import { cefrBandForProficiencyLevel } from '../../lib/cefr-proficiency';
 import { cefrCanDo, cefrAccessibilityLabel } from '../../lib/cefr-labels';
-import { colors, spacing, typography } from '../../config/theme';
+import { spacing, typography, ui2Dark, ui2Light, type Ui2Palette } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 
 interface StatsStripProps {
   /** `center` lines the strip up under a centered greeting. */
@@ -32,25 +33,26 @@ interface StatsStripProps {
 }
 
 export function StatsStrip({ align = 'left' }: StatsStripProps) {
+  const { c, scheme } = useUi2Theme();
   const profile = useAppStore((s) => s.profile);
   const band = cefrBandForProficiencyLevel(profile?.level ?? 'beginner');
   const centered = align === 'center';
 
   return (
-    <View style={[styles.block, centered && styles.blockCentered]}>
-      <View style={[styles.row, centered && styles.rowCentered]}>
-        <Ionicons name="ribbon-outline" size={13} color={colors.action.accent} />
+    <View style={[themed[scheme].block, centered && themed[scheme].blockCentered]}>
+      <View style={[themed[scheme].row, centered && themed[scheme].rowCentered]}>
+        <Ionicons name="ribbon-outline" size={13} color={c.primary} />
         {/* The code is the eyebrow; the sentence below is the substance. Read as
             one utterance by VoiceOver so the two are never separated. */}
         <Text
-          style={[styles.meta, styles.emphasis]}
+          style={[themed[scheme].meta, themed[scheme].emphasis]}
           accessibilityLabel={cefrAccessibilityLabel(band)}
         >
           LEVEL {band}
         </Text>
       </View>
       <Text
-        style={[styles.canDo, centered && styles.canDoCentered]}
+        style={[themed[scheme].canDo, centered && themed[scheme].canDoCentered]}
         accessibilityElementsHidden
         importantForAccessibility="no"
       >
@@ -60,7 +62,8 @@ export function StatsStrip({ align = 'left' }: StatsStripProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: Ui2Palette) =>
+  StyleSheet.create({
   block: {
     marginBottom: spacing.lg,
   },
@@ -87,21 +90,24 @@ const styles = StyleSheet.create({
     fontFamily: typography.family.mono,
     fontSize: 12,
     letterSpacing: typography.tracking.eyebrow,
-    color: colors.text.tertiary,
+    color: c.muted,
     textTransform: 'uppercase',
   },
   /** The value itself, not its unit. Brighter than the unit label so the pair
    *  reads as one figure with a caption rather than two words. */
   emphasis: {
     fontFamily: typography.family.monoMedium,
-    color: colors.text.primary,
+    color: c.ink,
   },
   /** Sentence case, body face — the eyebrow above is the only mono here. Set in
    *  the same tertiary as the eyebrow so the pair reads as one block. */
   canDo: {
     fontFamily: typography.family.regular,
     fontSize: 13,
-    color: colors.text.tertiary,
+    color: c.muted,
     marginTop: spacing.xxs,
   },
-});
+  });
+
+/** Both schemes built once at module load — see DateLabel for why. */
+const themed = { light: makeStyles(ui2Light), dark: makeStyles(ui2Dark) } as const;

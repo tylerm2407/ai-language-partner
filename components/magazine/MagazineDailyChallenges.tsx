@@ -1,10 +1,11 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MagazineGlassCard } from './MagazineGlassCard';
-import { ProgressBar } from '../ui/ProgressBar';
+import { Ui2ProgressBar } from '../ui2/Ui2ProgressBar';
 import { QuestCountdown } from '../gamification/QuestCountdown';
 import { useDailyChallenges } from '../../hooks/useDailyChallenges';
-import { colors, typography, radii } from '../../config/theme';
+import { typography, radii, ui2Dark, ui2Light, type Ui2Palette } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import type { DailyStats } from '../../types';
 
 interface MagazineDailyChallengesProps {
@@ -15,14 +16,20 @@ interface MagazineDailyChallengesProps {
 // with fontWeight, which makes Android synthesize a second bolding pass.
 const serifFont = typography.family.serif;
 
+/**
+ * The theme is destructured as `palette`, not `c`: the challenge rows below
+ * already bind `c` to the challenge itself, and shadowing it would silently
+ * swap the two inside the map.
+ */
 export function MagazineDailyChallenges({ dailyStats }: MagazineDailyChallengesProps) {
+  const { c: palette, scheme } = useUi2Theme();
   const { challenges, allCompleted } = useDailyChallenges();
 
   return (
-    <MagazineGlassCard style={styles.card}>
+    <MagazineGlassCard style={themed[scheme].card}>
       {/* Header */}
-      <View style={styles.headerRow}>
-        <Text style={styles.headerTitle}>Your daily three</Text>
+      <View style={themed[scheme].headerRow}>
+        <Text style={themed[scheme].headerTitle}>Your daily three</Text>
         <QuestCountdown />
       </View>
 
@@ -32,26 +39,26 @@ export function MagazineDailyChallenges({ dailyStats }: MagazineDailyChallengesP
         const isComplete = c.current >= c.target;
 
         return (
-          <View key={c.type} style={styles.challengeRow}>
-            <View style={[styles.iconCircle, { backgroundColor: c.color + '20' }]}>
+          <View key={c.type} style={themed[scheme].challengeRow}>
+            <View style={[themed[scheme].iconCircle, { backgroundColor: c.color + '20' }]}>
               {isComplete ? (
-                <Ionicons name="checkmark" size={14} color="#22C55E" />
+                <Ionicons name="checkmark" size={14} color={palette.green} />
               ) : (
                 <Ionicons name={c.icon as any} size={14} color={c.color} />
               )}
             </View>
-            <View style={styles.challengeText}>
+            <View style={themed[scheme].challengeText}>
               <Text
                 style={[
-                  styles.challengeTitle,
-                  isComplete && styles.challengeComplete,
+                  themed[scheme].challengeTitle,
+                  isComplete && themed[scheme].challengeComplete,
                 ]}
               >
                 {c.title}
               </Text>
-              <View style={styles.progressRow}>
-                <View style={styles.progressBarWrap}>
-                  <ProgressBar progress={progress} height={4} />
+              <View style={themed[scheme].progressRow}>
+                <View style={themed[scheme].progressBarWrap}>
+                  <Ui2ProgressBar progress={progress} height={4} />
                 </View>
               </View>
             </View>
@@ -63,15 +70,16 @@ export function MagazineDailyChallenges({ dailyStats }: MagazineDailyChallengesP
           claim: the reward for practising is the practice, and points are not
           something this product shows a learner any more. */}
       {allCompleted && (
-        <View style={styles.bonusSection}>
-          <Text style={styles.bonusClaimed}>All three done today</Text>
+        <View style={themed[scheme].bonusSection}>
+          <Text style={themed[scheme].bonusClaimed}>All three done today</Text>
         </View>
       )}
     </MagazineGlassCard>
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: Ui2Palette) =>
+  StyleSheet.create({
   card: {
     marginBottom: 20,
   },
@@ -84,7 +92,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontFamily: serifFont,
     fontSize: 18,
-    color: colors.text.primary,
+    color: c.ink,
   },
   challengeRow: {
     flexDirection: 'row',
@@ -105,11 +113,11 @@ const styles = StyleSheet.create({
   challengeTitle: {
     fontFamily: typography.family.regular,
     fontSize: 14,
-    color: colors.text.primary,
+    color: c.ink,
     marginBottom: 4,
   },
   challengeComplete: {
-    color: colors.success.base,
+    color: c.green,
     textDecorationLine: 'line-through',
   },
   progressRow: {
@@ -120,7 +128,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   xpPill: {
-    backgroundColor: colors.magazine.xpGold + '20',
+    backgroundColor: c.yellowTint,
     borderRadius: radii.pill,
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -129,25 +137,28 @@ const styles = StyleSheet.create({
   xpText: {
     fontFamily: typography.family.monoMedium,
     fontSize: 11,
-    color: colors.magazine.xpGold,
+    color: c.ink,
   },
   bonusSection: {
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.text.secondary + '40',
+    borderTopColor: c.cardBorder,
     alignItems: 'center',
   },
   bonusClaimed: {
     fontFamily: typography.family.regular,
     fontSize: 13,
-    color: colors.success.base,
+    color: c.green,
     fontWeight: '600',
   },
   bonusClaim: {
     fontFamily: typography.family.regular,
     fontSize: 13,
-    color: colors.magazine.xpGold,
+    color: c.ink,
     fontWeight: '600',
   },
-});
+  });
+
+/** Both schemes built once at module load — see DateLabel for why. */
+const themed = { light: makeStyles(ui2Light), dark: makeStyles(ui2Dark) } as const;

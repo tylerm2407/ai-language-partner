@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { View, Text, ScrollView, Pressable } from 'react-native';
+import { View, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import { useSafeBack } from '../../../hooks/useSafeBack';
@@ -8,18 +8,23 @@ import { haptic } from '../../../lib/haptics';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAppStore } from '../../../stores/useAppStore';
 import { fetchDailyNews, fetchNewsReadStatus, markNewsAsRead } from '../../../lib/supabase-queries';
-import { GradientBackground } from '../../../components/ui/GradientBackground';
-import { GradientBorderCard } from '../../../components/ui/GradientBorderCard';
-import { TactileButton } from '../../../components/ui/TactileButton';
+import { SlabCard } from '../../../components/ui2/SlabCard';
+import { SlabButton } from '../../../components/ui2/SlabButton';
+import { Body, Caption, Heading } from '../../../components/ui2/Ui2Text';
 import { levelToNewsTier } from '../../../config/app';
 import { getTargetLanguage } from '../../../lib/language';
 import { loadErrorCopy, type ErrorCopy } from '../../../lib/error-copy';
 import type { DailyNewsArticle, VocabularyHighlight } from '../../../types';
-import { colors } from '../../../config/theme';
+// `colors` is deliberately NOT imported: it is the fixed DARK palette, and a
+// screen that reads it stays dark whatever the phone is set to. `spacing` is a
+// set of plain scheme-independent numbers and carries over unchanged.
+import { spacing } from '../../../config/theme';
+import { useUi2Theme } from '../../../hooks/useUi2Theme';
 import { ArticleAudioPlayer } from '../../../components/news/ArticleAudioPlayer';
 import { useScreenView } from '../../../hooks/useScreenView';
 
 export default function NewsReaderScreen() {
+  const { c } = useUi2Theme();
   useScreenView('news');
   const { date } = useLocalSearchParams<{ date: string }>();
   const goBack = useSafeBack('/(app)');
@@ -77,26 +82,32 @@ export default function NewsReaderScreen() {
   }, [article, isMarking, readAt]);
 
   return (
-    <GradientBackground>
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
       <SafeAreaView className="flex-1">
         {/* Header */}
         <View className="flex-row items-center px-4 py-3">
           <Pressable
             onPress={() => goBack()}
             hitSlop={8}
-            className="w-10 h-10 items-center justify-center rounded-full bg-dark-card"
+            className="w-10 h-10 items-center justify-center rounded-full"
+            style={{ backgroundColor: c.card }}
             accessibilityRole="button"
             accessibilityLabel="Go back"
           >
-            <Ionicons name="arrow-back" size={22} color={colors.text.primary} />
+            <Ionicons name="arrow-back" size={22} color={c.ink} />
           </Pressable>
-          <Text className="text-lg font-semibold text-text-primary ml-3 flex-1">
+          <Body size="lg" weight="extrabold" style={{ marginLeft: spacing.sm, flex: 1 }}>
             Daily News
-          </Text>
+          </Body>
           {readAt && (
-            <View className="flex-row items-center bg-success-bg/40 rounded-full px-3 py-1">
-              <Ionicons name="checkmark-circle" size={14} color={colors.success.base} />
-              <Text className="text-xs font-semibold text-success ml-1">Read</Text>
+            <View
+              className="flex-row items-center rounded-full px-3 py-1"
+              style={{ backgroundColor: c.greenTint }}
+            >
+              <Ionicons name="checkmark-circle" size={14} color={c.green} />
+              <Body size="sm" weight="bold" style={{ marginLeft: spacing.xxs }}>
+                Read
+              </Body>
             </View>
           )}
         </View>
@@ -104,63 +115,64 @@ export default function NewsReaderScreen() {
         <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 120 }}>
           {isLoading ? (
             <View className="mt-8">
-              <View className="h-8 bg-dark-card rounded w-3/4 mb-4" />
-              <View className="h-4 bg-dark-card rounded w-full mb-2" />
-              <View className="h-4 bg-dark-card rounded w-full mb-2" />
-              <View className="h-4 bg-dark-card rounded w-5/6 mb-2" />
+              <View className="h-8 rounded w-3/4 mb-4" style={{ backgroundColor: c.card }} />
+              <View className="h-4 rounded w-full mb-2" style={{ backgroundColor: c.card }} />
+              <View className="h-4 rounded w-full mb-2" style={{ backgroundColor: c.card }} />
+              <View className="h-4 rounded w-5/6 mb-2" style={{ backgroundColor: c.card }} />
             </View>
           ) : error ? (
             <View className="mt-8 items-center">
-              <Ionicons name="cloud-offline-outline" size={48} color={colors.text.quaternary} />
-              <Text className="text-text-primary text-base font-semibold mt-4 text-center">
+              <Ionicons name="cloud-offline-outline" size={48} color={c.idle} />
+              <Body weight="bold" style={{ marginTop: spacing.md, textAlign: 'center' }}>
                 {error.title}
-              </Text>
-              <Text className="text-text-secondary text-sm mt-2 text-center">
+              </Body>
+              <Body size="sm" tone="secondary" style={{ marginTop: spacing.xs, textAlign: 'center' }}>
                 {error.message}
-              </Text>
+              </Body>
               <View className="mt-6 self-stretch">
-                <TactileButton
+                <SlabButton
                   label="Try again"
                   onPress={loadArticle}
-                  accessibilityLabel="Try loading today's article again"
+                  arrow={false}
+                  accessibilityHint="Try loading today's article again"
                 />
               </View>
             </View>
           ) : !article ? (
             <View className="mt-8 items-center">
-              <Ionicons name="newspaper-outline" size={48} color={colors.text.quaternary} />
-              <Text className="text-text-secondary text-base mt-4 text-center">
+              <Ionicons name="newspaper-outline" size={48} color={c.idle} />
+              <Body tone="secondary" style={{ marginTop: spacing.md, textAlign: 'center' }}>
                 No article available for this date yet.
-              </Text>
-              <Text className="text-text-tertiary text-sm mt-2 text-center">
+              </Body>
+              <Body size="sm" tone="tertiary" style={{ marginTop: spacing.xs, textAlign: 'center' }}>
                 Today&apos;s article publishes around 5 AM Eastern.
-              </Text>
+              </Body>
             </View>
           ) : (
             <View className="mt-4">
               {/* Title */}
-              <Text className="text-2xl font-bold text-text-primary mb-2">
+              <Heading level={2} style={{ marginBottom: spacing.xs }}>
                 {article.title}
-              </Text>
+              </Heading>
               {article.titleTranslation && (
-                <Text className="text-base text-text-secondary mb-4">
+                <Body tone="secondary" style={{ marginBottom: spacing.md }}>
                   {article.titleTranslation}
-                </Text>
+                </Body>
               )}
 
               {/* Summary */}
-              <Text className="text-sm text-primary mb-6">
+              <Body size="sm" tone="accent" style={{ marginBottom: spacing.lg }}>
                 {article.summary}
-              </Text>
+              </Body>
 
               {/* Listen. Sits between the summary and the body because that is
                   where a reader decides whether to read this or hear it. */}
               <ArticleAudioPlayer article={article} />
 
               {/* Content */}
-              <Text className="text-base text-text-primary leading-7 mb-6">
+              <Body style={{ lineHeight: 28, marginBottom: spacing.lg }}>
                 {article.content}
-              </Text>
+              </Body>
 
               {/* Show Translation Toggle */}
               {article.contentTranslation && (
@@ -174,18 +186,18 @@ export default function NewsReaderScreen() {
                     <Ionicons
                       name={showTranslation ? 'eye-off-outline' : 'eye-outline'}
                       size={20}
-                      color={colors.league.diamond}
+                      color={c.onTint}
                     />
-                    <Text className="text-primary font-semibold ml-2">
+                    <Body weight="bold" tone="accent" style={{ marginLeft: spacing.xs }}>
                       {showTranslation ? 'Hide Translation' : 'Show Translation'}
-                    </Text>
+                    </Body>
                   </Pressable>
                   {showTranslation && (
-                    <GradientBorderCard innerStyle={{ padding: 16 }}>
-                      <Text className="text-base text-text-secondary leading-7">
+                    <SlabCard>
+                      <Body tone="secondary" style={{ lineHeight: 28 }}>
                         {article.contentTranslation}
-                      </Text>
-                    </GradientBorderCard>
+                      </Body>
+                    </SlabCard>
                   )}
                 </View>
               )}
@@ -193,33 +205,35 @@ export default function NewsReaderScreen() {
               {/* Vocabulary Highlights */}
               {article.vocabularyHighlights.length > 0 && (
                 <View className="mb-8">
-                  <Text className="text-xl font-bold text-text-primary mb-4">
+                  <Heading level={3} style={{ marginBottom: spacing.md }}>
                     Vocabulary
-                  </Text>
+                  </Heading>
                   {article.vocabularyHighlights.map((item: VocabularyHighlight, index: number) => (
-                    <GradientBorderCard
+                    <SlabCard
                       key={`${item.word}-${index}`}
-                      style={{ marginBottom: 10 }}
-                      innerStyle={{ padding: 14 }}
+                      style={{ marginBottom: 10, padding: 14 }}
                     >
                       <View className="flex-row items-center justify-between">
                         <View className="flex-1">
-                          <Text className="text-base font-semibold text-text-primary">
+                          <Body weight="bold">
                             {item.word}
-                          </Text>
-                          <Text className="text-sm text-text-secondary mt-1">
+                          </Body>
+                          <Body size="sm" tone="secondary" style={{ marginTop: spacing.xxs }}>
                             {item.translation}
-                          </Text>
+                          </Body>
                         </View>
                         {item.partOfSpeech && (
-                          <View className="bg-dark-card-alt rounded-full px-3 py-1">
-                            <Text className="text-xs text-primary">
+                          <View
+                            className="rounded-full px-3 py-1"
+                            style={{ backgroundColor: c.primaryTint }}
+                          >
+                            <Caption tone="accent">
                               {item.partOfSpeech}
-                            </Text>
+                            </Caption>
                           </View>
                         )}
                       </View>
-                    </GradientBorderCard>
+                    </SlabCard>
                   ))}
                 </View>
               )}
@@ -227,11 +241,12 @@ export default function NewsReaderScreen() {
               {/* Mark as read CTA — hidden after it's been read once. */}
               {!readAt && (
                 <View className="mt-2">
-                  <TactileButton
+                  <SlabButton
                     label={isMarking ? 'Saving…' : 'Mark as read'}
                     onPress={handleMarkAsRead}
                     disabled={isMarking}
-                    accessibilityLabel="Mark today's article as read"
+                    arrow={false}
+                    accessibilityHint="Mark today's article as read"
                   />
                 </View>
               )}
@@ -239,6 +254,6 @@ export default function NewsReaderScreen() {
           )}
         </ScrollView>
       </SafeAreaView>
-    </GradientBackground>
+    </View>
   );
 }

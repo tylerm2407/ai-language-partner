@@ -6,14 +6,14 @@ import { useSafeBack } from '../../../hooks/useSafeBack';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../hooks/useAuth';
 import { fetchStudentAssignments, startAssignment } from '../../../lib/supabase-queries';
-import { GradientBackground } from '../../../components/ui/GradientBackground';
-import { GlassSurface } from '../../../components/ui/GlassSurface';
-import { GradientButton } from '../../../components/ui/GradientButton';
+import { SlabCard } from '../../../components/ui2/SlabCard';
+import { SlabButton } from '../../../components/ui2/SlabButton';
 import StatusBadge from '../../../components/school/StatusBadge';
-import { InlineError } from '../../../components/ui/InlineError';
+import { Ui2InlineError } from '../../../components/ui2/Ui2InlineError';
 import { loadErrorCopy, type ErrorCopy } from '../../../lib/error-copy';
 import RubricDisplay from '../../../components/school/RubricDisplay';
 import type { Assignment, AssignmentSubmission, SubmissionStatus } from '../../../types';
+import { useUi2Theme } from '../../../hooks/useUi2Theme';
 
 const MODE_LABELS: Record<string, string> = {
   text: 'Text Only',
@@ -52,6 +52,7 @@ function formatDate(dateStr: string | null): string {
 }
 
 export default function AssignmentDetailScreen() {
+  const { c } = useUi2Theme();
   const { assignmentId } = useLocalSearchParams<{ assignmentId: string }>();
   const router = useRouter();
   const goBack = useSafeBack('/(app)');
@@ -121,93 +122,93 @@ export default function AssignmentDetailScreen() {
 
   if (isLoading) {
     return (
-      <GradientBackground>
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
         <SafeAreaView className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#818CF8" />
+          <ActivityIndicator size="large" color={c.primary} />
         </SafeAreaView>
-      </GradientBackground>
+      </View>
     );
   }
 
   if (error) {
     return (
-      <GradientBackground>
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
         <SafeAreaView className="flex-1">
           <View className="flex-row items-center px-4 py-3">
             <Pressable
               onPress={() => goBack()}
               hitSlop={8}
-              className="w-10 h-10 items-center justify-center rounded-full bg-dark-card"
+              className="w-10 h-10 items-center justify-center rounded-full" style={{ backgroundColor: c.card }}
               accessibilityRole="button"
               accessibilityLabel="Go back"
             >
-              <Ionicons name="arrow-back" size={22} color="#E2E8F0" />
+              <Ionicons name="arrow-back" size={22} color={c.ink} />
             </Pressable>
-            <Text className="text-lg font-semibold text-text-primary ml-3">Assignment</Text>
+            <Text className="text-lg font-semibold ml-3" style={{ color: c.ink }}>Assignment</Text>
           </View>
-          <InlineError copy={error} onRetry={loadAssignment} />
+          <Ui2InlineError copy={error} onRetry={loadAssignment} />
         </SafeAreaView>
-      </GradientBackground>
+      </View>
     );
   }
 
   if (!assignment) {
     return (
-      <GradientBackground>
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
         <SafeAreaView className="flex-1">
           <View className="flex-row items-center px-4 py-3">
             <Pressable
               onPress={() => goBack()}
               hitSlop={8}
-              className="w-10 h-10 items-center justify-center rounded-full bg-dark-card"
+              className="w-10 h-10 items-center justify-center rounded-full" style={{ backgroundColor: c.card }}
               accessibilityRole="button"
               accessibilityLabel="Go back"
             >
-              <Ionicons name="arrow-back" size={22} color="#E2E8F0" />
+              <Ionicons name="arrow-back" size={22} color={c.ink} />
             </Pressable>
-            <Text className="text-lg font-semibold text-text-primary ml-3">Assignment</Text>
+            <Text className="text-lg font-semibold ml-3" style={{ color: c.ink }}>Assignment</Text>
           </View>
           <View className="flex-1 items-center justify-center px-6">
-            <Text className="text-text-secondary text-base text-center">Assignment not found.</Text>
+            <Text className="text-base text-center" style={{ color: c.muted }}>Assignment not found.</Text>
           </View>
         </SafeAreaView>
-      </GradientBackground>
+      </View>
     );
   }
 
   return (
-    <GradientBackground>
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
       <SafeAreaView className="flex-1">
         {/* Header */}
         <View className="flex-row items-center px-4 py-3">
           <Pressable
             onPress={() => goBack()}
             hitSlop={8}
-            className="w-10 h-10 items-center justify-center rounded-full bg-dark-card"
+            className="w-10 h-10 items-center justify-center rounded-full" style={{ backgroundColor: c.card }}
             accessibilityRole="button"
             accessibilityLabel="Go back"
           >
-            <Ionicons name="arrow-back" size={22} color="#E2E8F0" />
+            <Ionicons name="arrow-back" size={22} color={c.ink} />
           </Pressable>
-          <Text className="text-lg font-semibold text-text-primary ml-3 flex-1" numberOfLines={1}>
+          <Text className="text-lg font-semibold ml-3 flex-1" style={{ color: c.ink }} numberOfLines={1}>
             Assignment
           </Text>
         </View>
 
         <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 100 }}>
           {/* Assignment Info Card */}
-          <GlassSurface style={{ marginBottom: 16 }}>
+          <SlabCard style={{ marginBottom: 16 }}>
             <View className="p-5">
-              <Text className="text-xl font-bold text-text-primary mb-2">{assignment.title}</Text>
+              <Text className="text-xl font-bold mb-2" style={{ color: c.ink }}>{assignment.title}</Text>
               {assignment.description ? (
-                <Text className="text-sm text-text-secondary mb-4">{assignment.description}</Text>
+                <Text className="text-sm mb-4" style={{ color: c.muted }}>{assignment.description}</Text>
               ) : null}
 
               {/* Scenario */}
               {(assignment.scenarioKey ?? assignment.customScenario) && (
                 <View className="flex-row items-center mb-3">
-                  <Ionicons name="chatbubbles-outline" size={18} color="#A855F7" />
-                  <Text className="text-sm text-text-primary ml-2">
+                  <Ionicons name="chatbubbles-outline" size={18} color={c.primary} />
+                  <Text className="text-sm ml-2" style={{ color: c.ink }}>
                     {assignment.customScenario?.label ?? assignment.scenarioKey}
                   </Text>
                 </View>
@@ -215,13 +216,13 @@ export default function AssignmentDetailScreen() {
 
               {/* Language & Level */}
               <View className="flex-row items-center gap-2 mb-3">
-                <View className="bg-primary/15 rounded-full px-3 py-1">
-                  <Text className="text-xs font-semibold text-primary">
+                <View className="rounded-full px-3 py-1" style={{ backgroundColor: c.primaryTint }}>
+                  <Text className="text-xs font-semibold" style={{ color: c.primary }}>
                     {assignment.targetLanguage.toUpperCase()}
                   </Text>
                 </View>
-                <View className="bg-primary/15 rounded-full px-3 py-1">
-                  <Text className="text-xs font-semibold text-primary capitalize">
+                <View className="rounded-full px-3 py-1" style={{ backgroundColor: c.primaryTint }}>
+                  <Text className="text-xs font-semibold capitalize" style={{ color: c.primary }}>
                     {assignment.level.replace('_', ' ')}
                   </Text>
                 </View>
@@ -229,28 +230,28 @@ export default function AssignmentDetailScreen() {
 
               {/* Duration */}
               <View className="flex-row items-center mb-3">
-                <Ionicons name="time-outline" size={18} color="#64748B" />
-                <Text className="text-sm text-text-secondary ml-2">
+                <Ionicons name="time-outline" size={18} color={c.idle} />
+                <Text className="text-sm ml-2" style={{ color: c.muted }}>
                   Min duration: {assignment.minDurationMinutes} minutes
                 </Text>
               </View>
 
               {/* Mode */}
               <View className="flex-row items-center mb-3">
-                <Ionicons name={MODE_ICONS[assignment.mode] ?? 'swap-horizontal-outline'} size={18} color="#64748B" />
-                <Text className="text-sm text-text-secondary ml-2">
+                <Ionicons name={MODE_ICONS[assignment.mode] ?? 'swap-horizontal-outline'} size={18} color={c.idle} />
+                <Text className="text-sm ml-2" style={{ color: c.muted }}>
                   Mode: {MODE_LABELS[assignment.mode] ?? assignment.mode}
                 </Text>
               </View>
 
               {/* Due date */}
               <View className="flex-row items-center mb-3">
-                <Ionicons name="calendar-outline" size={18} color="#64748B" />
-                <Text className="text-sm text-text-secondary ml-2">
+                <Ionicons name="calendar-outline" size={18} color={c.idle} />
+                <Text className="text-sm ml-2" style={{ color: c.muted }}>
                   {assignment.dueAt ? formatDate(assignment.dueAt) : 'No due date'}
                 </Text>
                 {assignment.dueAt && (
-                  <Text className="text-xs text-text-tertiary ml-2">
+                  <Text className="text-xs ml-2" style={{ color: c.idle }}>
                     ({formatDueCountdown(assignment.dueAt)})
                   </Text>
                 )}
@@ -259,29 +260,29 @@ export default function AssignmentDetailScreen() {
               {/* Status */}
               <StatusBadge status={submissionStatus} />
             </View>
-          </GlassSurface>
+          </SlabCard>
 
           {/* Teacher Instructions */}
           {assignment.instructions ? (
-            <GlassSurface style={{ marginBottom: 16 }}>
+            <SlabCard style={{ marginBottom: 16 }}>
               <View className="p-5">
-                <Text className="text-base font-semibold text-text-primary mb-2">Teacher Instructions</Text>
-                <Text className="text-sm text-text-secondary">{assignment.instructions}</Text>
+                <Text className="text-base font-semibold mb-2" style={{ color: c.ink }}>Teacher Instructions</Text>
+                <Text className="text-sm" style={{ color: c.muted }}>{assignment.instructions}</Text>
               </View>
-            </GlassSurface>
+            </SlabCard>
           ) : null}
 
           {/* Vocabulary & Grammar Focus */}
           {(assignment.vocabularyFocus.length > 0 || assignment.grammarFocus.length > 0) && (
-            <GlassSurface style={{ marginBottom: 16 }}>
+            <SlabCard style={{ marginBottom: 16 }}>
               <View className="p-5">
                 {assignment.vocabularyFocus.length > 0 && (
                   <View className="mb-3">
-                    <Text className="text-sm font-semibold text-text-primary mb-2">Vocabulary Focus</Text>
+                    <Text className="text-sm font-semibold mb-2" style={{ color: c.ink }}>Vocabulary Focus</Text>
                     <View className="flex-row flex-wrap gap-2">
                       {assignment.vocabularyFocus.map((word) => (
-                        <View key={word} className="bg-primary/15 rounded-full px-3 py-1">
-                          <Text className="text-xs text-primary">{word}</Text>
+                        <View key={word} className="rounded-full px-3 py-1" style={{ backgroundColor: c.primaryTint }}>
+                          <Text className="text-xs" style={{ color: c.primary }}>{word}</Text>
                         </View>
                       ))}
                     </View>
@@ -289,23 +290,23 @@ export default function AssignmentDetailScreen() {
                 )}
                 {assignment.grammarFocus.length > 0 && (
                   <View>
-                    <Text className="text-sm font-semibold text-text-primary mb-2">Grammar Focus</Text>
+                    <Text className="text-sm font-semibold mb-2" style={{ color: c.ink }}>Grammar Focus</Text>
                     <View className="flex-row flex-wrap gap-2">
                       {assignment.grammarFocus.map((topic) => (
-                        <View key={topic} className="bg-primary/15 rounded-full px-3 py-1">
-                          <Text className="text-xs text-primary">{topic}</Text>
+                        <View key={topic} className="rounded-full px-3 py-1" style={{ backgroundColor: c.primaryTint }}>
+                          <Text className="text-xs" style={{ color: c.primary }}>{topic}</Text>
                         </View>
                       ))}
                     </View>
                   </View>
                 )}
               </View>
-            </GlassSurface>
+            </SlabCard>
           )}
 
           {/* Status-dependent CTA */}
           {submissionStatus === 'not_started' && (
-            <GradientButton
+            <SlabButton
               label={starting ? 'Starting...' : 'Start Conversation'}
               onPress={handleStart}
               disabled={starting}
@@ -316,7 +317,7 @@ export default function AssignmentDetailScreen() {
           {submissionStatus === 'in_progress' && (
             <View>
               {assignment.submission?.startedAt && (
-                <Text className="text-sm text-text-secondary text-center mb-3">
+                <Text className="text-sm text-center mb-3" style={{ color: c.muted }}>
                   Time so far:{' '}
                   {Math.round(
                     (Date.now() - new Date(assignment.submission.startedAt).getTime()) / (1000 * 60)
@@ -324,7 +325,7 @@ export default function AssignmentDetailScreen() {
                   min
                 </Text>
               )}
-              <GradientButton
+              <SlabButton
                 label="Continue Conversation"
                 onPress={handleContinue}
                 style={{ marginBottom: 16 }}
@@ -333,35 +334,35 @@ export default function AssignmentDetailScreen() {
           )}
 
           {submissionStatus === 'submitted' && (
-            <GlassSurface style={{ marginBottom: 16 }}>
+            <SlabCard style={{ marginBottom: 16 }}>
               <View className="p-5 items-center">
-                <Ionicons name="checkmark-circle" size={48} color="#22C55E" />
-                <Text className="text-base font-semibold text-text-primary mt-3">
+                <Ionicons name="checkmark-circle" size={48} color={c.green} />
+                <Text className="text-base font-semibold mt-3" style={{ color: c.ink }}>
                   Submitted on {formatDate(assignment.submission?.submittedAt ?? null)}
                 </Text>
-                <Text className="text-sm text-text-secondary mt-1">Waiting for grade</Text>
+                <Text className="text-sm mt-1" style={{ color: c.muted }}>Waiting for grade</Text>
               </View>
-            </GlassSurface>
+            </SlabCard>
           )}
 
           {submissionStatus === 'graded' && assignment.submission && (
             <View>
               {/* Score circle */}
-              <GlassSurface style={{ marginBottom: 16 }}>
+              <SlabCard style={{ marginBottom: 16 }}>
                 <View className="p-5 items-center">
                   <View className="w-20 h-20 rounded-full border-4 items-center justify-center" style={{
-                    borderColor: (assignment.submission.finalScore ?? 0) >= 80 ? '#22C55E' :
-                      (assignment.submission.finalScore ?? 0) >= 60 ? '#F59E0B' : '#EF4444',
+                    borderColor: (assignment.submission.finalScore ?? 0) >= 80 ? c.green :
+                      (assignment.submission.finalScore ?? 0) >= 60 ? c.yellow : c.error,
                   }}>
-                    <Text className="text-2xl font-bold text-text-primary">
+                    <Text className="text-2xl font-bold" style={{ color: c.ink }}>
                       {assignment.submission.finalScore ?? '-'}
                     </Text>
                   </View>
-                  <Text className="text-sm text-text-secondary mt-2">
+                  <Text className="text-sm mt-2" style={{ color: c.muted }}>
                     out of {assignment.maxPoints} points
                   </Text>
                 </View>
-              </GlassSurface>
+              </SlabCard>
 
               {/* Rubric */}
               {assignment.submission.aiFeedback && (
@@ -370,17 +371,17 @@ export default function AssignmentDetailScreen() {
 
               {/* Teacher feedback */}
               {assignment.submission.teacherFeedback && (
-                <GlassSurface style={{ marginBottom: 16, marginTop: 16 }}>
+                <SlabCard style={{ marginBottom: 16, marginTop: 16 }}>
                   <View className="p-5">
-                    <Text className="text-base font-semibold text-text-primary mb-2">Teacher Feedback</Text>
-                    <Text className="text-sm text-text-secondary">{assignment.submission.teacherFeedback}</Text>
+                    <Text className="text-base font-semibold mb-2" style={{ color: c.ink }}>Teacher Feedback</Text>
+                    <Text className="text-sm" style={{ color: c.muted }}>{assignment.submission.teacherFeedback}</Text>
                   </View>
-                </GlassSurface>
+                </SlabCard>
               )}
             </View>
           )}
         </ScrollView>
       </SafeAreaView>
-    </GradientBackground>
+    </View>
   );
 }

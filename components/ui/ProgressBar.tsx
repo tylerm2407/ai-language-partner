@@ -1,14 +1,33 @@
 import { useEffect, useRef } from 'react';
 import { View, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { GRADIENT_COLORS, GRADIENT_START, GRADIENT_END } from '../../config/gradients';
+import { GRADIENT_START, GRADIENT_END } from '../../config/gradients';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
+import type { Ui2Palette } from '../../config/theme';
 
 interface ProgressBarProps {
   progress: number; // 0 to 1
   height?: number;
 }
 
+/**
+ * The groove. `track` is the palette's unfilled-progress token — the same pair
+ * (`track` behind, `primary` in front) that `Ui2ProgressBar` and `StepHeader`
+ * use, so a screen showing both bars shows one bar.
+ *
+ * The `#818CF8` glow shadow that used to sit here is gone: it was tuned for a
+ * near-black ground and on a white one it is either invisible or a smudge.
+ */
+const trackStyle = (c: Ui2Palette, height: number) => ({
+  backgroundColor: c.track,
+  height,
+  borderRadius: 999,
+  overflow: 'hidden' as const,
+  width: '100%' as const,
+});
+
 export function ProgressBar({ progress, height = 8 }: ProgressBarProps) {
+  const { c } = useUi2Theme();
   const clampedProgress = Math.min(Math.max(progress, 0), 1);
   const widthAnim = useRef(new Animated.Value(clampedProgress)).current;
 
@@ -18,17 +37,7 @@ export function ProgressBar({ progress, height = 8 }: ProgressBarProps) {
 
   return (
     <View
-      className="bg-dark-card-alt rounded-full overflow-hidden w-full"
-      style={[
-        { height },
-        clampedProgress > 0 ? {
-          shadowColor: '#818CF8',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.2,
-          shadowRadius: 6,
-          elevation: 3,
-        } : {},
-      ]}
+      style={trackStyle(c, height)}
       accessibilityRole="progressbar"
       accessibilityValue={{ min: 0, max: 100, now: Math.round(clampedProgress * 100) }}
     >
@@ -43,7 +52,7 @@ export function ProgressBar({ progress, height = 8 }: ProgressBarProps) {
         }}
       >
         <LinearGradient
-          colors={[...GRADIENT_COLORS]}
+          colors={[c.primary, c.slab]}
           start={GRADIENT_START}
           end={GRADIENT_END}
           style={{ flex: 1, borderRadius: 999 }}

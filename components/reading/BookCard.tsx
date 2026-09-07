@@ -2,7 +2,7 @@ import { View, Text, Pressable, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { ReadingBook, UserBookProgress } from '../../types';
 import { cefrBandColors, cefrAccessibilityLabel } from '../../lib/cefr-labels';
-import { colors } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 
 interface BookCardProps {
   book: ReadingBook;
@@ -11,6 +11,7 @@ interface BookCardProps {
 }
 
 export function BookCard({ book, progress, onPress }: BookCardProps) {
+  const { c } = useUi2Theme();
   const cefrColor = cefrBandColors(book.cefrLevel);
   const isCompleted = !!progress?.completedAt;
   const hasProgress = progress && progress.percentComplete > 0;
@@ -25,7 +26,10 @@ export function BookCard({ book, progress, onPress }: BookCardProps) {
       accessibilityLabel={`${book.title}${isCompleted ? ', completed' : ''}. ${book.wordCount} words. ${cefrAccessibilityLabel(book.cefrLevel)}`}
       style={{
         flex: 1,
-        backgroundColor: colors.surface.card,
+        backgroundColor: c.card,
+        // A white card on a white ground is only a card if it is outlined.
+        borderWidth: 1,
+        borderColor: c.cardBorder,
         borderRadius: 14,
         overflow: 'hidden',
         marginBottom: 12,
@@ -79,12 +83,12 @@ export function BookCard({ book, progress, onPress }: BookCardProps) {
               width: 24,
               height: 24,
               borderRadius: 12,
-              backgroundColor: '#22C55E',
+              backgroundColor: c.green,
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+            <Ionicons name="checkmark" size={16} color={c.onPrimary} />
           </View>
         )}
       </View>
@@ -93,13 +97,13 @@ export function BookCard({ book, progress, onPress }: BookCardProps) {
       <View style={{ padding: 10 }}>
         <Text
           numberOfLines={1}
-          style={{ fontSize: 14, fontWeight: '600', color: colors.text.primary }}
+          style={{ fontSize: 14, fontWeight: '600', color: c.ink }}
         >
           {book.title}
         </Text>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 6 }}>
-          <Text style={{ fontSize: 12, fontWeight: '400', color: colors.text.tertiary }}>
+          <Text style={{ fontSize: 12, fontWeight: '400', color: c.muted }}>
             {book.wordCount} words
           </Text>
           <View
@@ -122,7 +126,7 @@ export function BookCard({ book, progress, onPress }: BookCardProps) {
             <View
               style={{
                 height: 4,
-                backgroundColor: colors.surface.cardAlt,
+                backgroundColor: c.track,
                 borderRadius: 2,
                 overflow: 'hidden',
               }}
@@ -131,12 +135,12 @@ export function BookCard({ book, progress, onPress }: BookCardProps) {
                 style={{
                   height: 4,
                   width: `${Math.min(percent, 100)}%`,
-                  backgroundColor: '#4F46E5',
+                  backgroundColor: c.primary,
                   borderRadius: 2,
                 }}
               />
             </View>
-            <Text style={{ fontSize: 11, fontWeight: '400', color: colors.text.tertiary, marginTop: 2 }}>
+            <Text style={{ fontSize: 11, fontWeight: '400', color: c.muted, marginTop: 2 }}>
               {Math.round(percent)}%
             </Text>
           </View>
@@ -144,14 +148,14 @@ export function BookCard({ book, progress, onPress }: BookCardProps) {
           <View
             style={{
               marginTop: 8,
-              backgroundColor: colors.action.primaryTint,
+              backgroundColor: c.primaryTint,
               borderRadius: 4,
               paddingHorizontal: 6,
               paddingVertical: 2,
               alignSelf: 'flex-start',
             }}
           >
-            <Text style={{ fontSize: 11, fontWeight: '600', color: colors.action.accent }}>New</Text>
+            <Text style={{ fontSize: 11, fontWeight: '600', color: c.onTint }}>New</Text>
           </View>
         )}
       </View>

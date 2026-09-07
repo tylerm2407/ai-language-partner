@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Modal, Pressable, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { GlassSurface } from '../ui/GlassSurface';
-import { GradientButton } from '../ui/GradientButton';
-import { colors } from '../../config/theme';
+import { SlabCard } from '../ui2/SlabCard';
+import { SlabButton } from '../ui2/SlabButton';
+import { scrimColor } from '../ui2/Ui2Sheet';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 
 interface JoinClassModalProps {
   visible: boolean;
@@ -11,7 +12,12 @@ interface JoinClassModalProps {
   onJoin: (code: string) => Promise<void>;
 }
 
+/** 0x8C ≈ 55% — the same scrim strength Ui2Sheet uses, appended to the
+ *  scheme's scrim token so the modal darkens correctly in both schemes. */
+const SCRIM_ALPHA = '8C';
+
 export default function JoinClassModal({ visible, onClose, onJoin }: JoinClassModalProps) {
+  const { c, scheme } = useUi2Theme();
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -62,7 +68,7 @@ export default function JoinClassModal({ visible, onClose, onJoin }: JoinClassMo
       <Pressable
         style={{
           flex: 1,
-          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          backgroundColor: scrimColor(scheme, c) + SCRIM_ALPHA,
           justifyContent: 'center',
           alignItems: 'center',
           padding: 24,
@@ -72,9 +78,8 @@ export default function JoinClassModal({ visible, onClose, onJoin }: JoinClassMo
         accessibilityLabel="Close modal"
       >
         <Pressable onPress={() => {}} style={{ width: '100%', maxWidth: 400 }}>
-          <GlassSurface
-            innerStyle={{ padding: 24 }}
-            borderRadius={20}
+          <SlabCard
+            style={{ padding: 24, borderRadius: 20 }}
           >
             {/* Close button */}
             <Pressable
@@ -84,13 +89,13 @@ export default function JoinClassModal({ visible, onClose, onJoin }: JoinClassMo
               style={{ position: 'absolute', top: 12, right: 12, zIndex: 1 }}
               hitSlop={8}
             >
-              <Ionicons name="close" size={24} color="#94A3B8" />
+              <Ionicons name="close" size={24} color={c.muted} />
             </Pressable>
 
             {/* Title */}
             <Text
               style={{
-                color: '#FFFFFF',
+                color: c.ink,
                 fontSize: 20,
                 fontFamily: 'Nunito_800ExtraBold',
                 textAlign: 'center',
@@ -101,7 +106,7 @@ export default function JoinClassModal({ visible, onClose, onJoin }: JoinClassMo
             </Text>
             <Text
               style={{
-                color: '#94A3B8',
+                color: c.muted,
                 fontSize: 14,
                 fontFamily: 'Nunito_400Regular',
                 textAlign: 'center',
@@ -114,10 +119,10 @@ export default function JoinClassModal({ visible, onClose, onJoin }: JoinClassMo
             {/* Success state */}
             {success ? (
               <View style={{ alignItems: 'center', paddingVertical: 20 }}>
-                <Ionicons name="checkmark-circle" size={48} color="#22C55E" />
+                <Ionicons name="checkmark-circle" size={48} color={c.green} />
                 <Text
                   style={{
-                    color: '#22C55E',
+                    color: c.ink,
                     fontSize: 16,
                     fontFamily: 'Nunito_600SemiBold',
                     marginTop: 12,
@@ -136,15 +141,15 @@ export default function JoinClassModal({ visible, onClose, onJoin }: JoinClassMo
                     setCode(text.toUpperCase().slice(0, 8));
                   }}
                   placeholder="ABCD1234"
-                  placeholderTextColor="#64748B"
+                  placeholderTextColor={c.idle}
                   maxLength={8}
                   autoCapitalize="characters"
                   autoCorrect={false}
                   editable={!loading}
                   accessibilityLabel="Invite code input"
                   style={{
-                    backgroundColor: colors.surface.cardAlt,
-                    color: '#FFFFFF',
+                    backgroundColor: c.surface2,
+                    color: c.ink,
                     fontSize: 22,
                     fontFamily: 'Nunito_600SemiBold',
                     textAlign: 'center',
@@ -153,7 +158,7 @@ export default function JoinClassModal({ visible, onClose, onJoin }: JoinClassMo
                     paddingHorizontal: 16,
                     borderRadius: 12,
                     borderWidth: 1,
-                    borderColor: error ? '#EF4444' : 'rgba(255, 255, 255, 0.15)',
+                    borderColor: error ? c.error : c.cardBorder,
                     marginBottom: 8,
                   }}
                 />
@@ -162,7 +167,7 @@ export default function JoinClassModal({ visible, onClose, onJoin }: JoinClassMo
                 {error && (
                   <Text
                     style={{
-                      color: '#EF4444',
+                      color: c.error,
                       fontSize: 13,
                       fontFamily: 'Nunito_500Medium',
                       textAlign: 'center',
@@ -177,19 +182,20 @@ export default function JoinClassModal({ visible, onClose, onJoin }: JoinClassMo
                 {/* Join button */}
                 <View style={{ marginTop: 12, alignItems: 'center' }}>
                   {loading ? (
-                    <ActivityIndicator size="large" color="#818CF8" />
+                    <ActivityIndicator size="large" color={c.primary} />
                   ) : (
-                    <GradientButton
+                    <SlabButton
                       label="Join Class"
                       onPress={handleJoin}
                       disabled={code.length !== 8}
                       accessibilityHint="Join the class with the entered invite code"
+                      arrow={false}
                     />
                   )}
                 </View>
               </>
             )}
-          </GlassSurface>
+          </SlabCard>
         </Pressable>
       </Pressable>
       </KeyboardAvoidingView>

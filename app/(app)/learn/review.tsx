@@ -1,4 +1,4 @@
-import { View, Text, Pressable, ScrollView, Alert } from 'react-native';
+import { View, Pressable, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useSafeBack } from '../../../hooks/useSafeBack';
@@ -6,18 +6,22 @@ import { useEffect, useState, useRef } from 'react';
 import { haptic } from '../../../lib/haptics';
 import { useReviewQueue } from '../../../hooks/useReviewQueue';
 import { useDailyStats } from '../../../hooks/useDailyStats';
-import { ProgressBar } from '../../../components/ui/ProgressBar';
-import { Button } from '../../../components/ui/Button';
-import { LoadingScreen } from '../../../components/ui/LoadingScreen';
-import { EmptyState } from '../../../components/ui/EmptyState';
+import { Ui2ProgressBar } from '../../../components/ui2/Ui2ProgressBar';
+import { SlabButton } from '../../../components/ui2/SlabButton';
+import { Ui2EmptyState } from '../../../components/ui2/Ui2EmptyState';
+import { Heading, Body, Caption } from '../../../components/ui2/Ui2Text';
 import type { ReviewRating } from '../../../types';
-import { GlowLayer } from '../../../components/ui/GlowBackground';
-import { colors } from '../../../config/theme';
+// `colors` is deliberately NOT imported: it is the fixed DARK palette, and a
+// screen that reads it stays dark whatever the phone is set to. `spacing` is a
+// plain scheme-independent number set.
+import { spacing } from '../../../config/theme';
+import { useUi2Theme } from '../../../hooks/useUi2Theme';
 import { useScreenView } from '../../../hooks/useScreenView';
 import { trackEvent } from '../../../lib/analytics';
 
 export default function ReviewScreen() {
   useScreenView('review');
+  const { c, shape } = useUi2Theme();
   const goBack = useSafeBack('/(app)');
   const { items, cards, loading, loadQueue, submitReview } = useReviewQueue();
   const { addStats } = useDailyStats();
@@ -94,14 +98,20 @@ export default function ReviewScreen() {
   };
 
   if (loading) {
-    return <LoadingScreen message="Loading review cards..." />;
+    // Was <LoadingScreen>, which is a Dark Glow component: it paints `bg-dark`
+    // and a fixed indigo spinner, so it would stay black on a light phone.
+    return (
+      <SafeAreaView className="flex-1 items-center justify-center" style={{ backgroundColor: c.bg }}>
+        <ActivityIndicator size="large" color={c.primary} />
+        <Body size="sm" tone="tertiary" style={{ marginTop: spacing.md }}>Loading review cards...</Body>
+      </SafeAreaView>
+    );
   }
 
   if (items.length === 0) {
     return (
-      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.surface.base }}>
-        <GlowLayer drift={false} />
-        <EmptyState
+      <SafeAreaView className="flex-1" style={{ backgroundColor: c.bg }}>
+        <Ui2EmptyState
           icon="checkmark-circle"
           title="All caught up!"
           description="No cards due for review. Keep learning to add more cards."
@@ -116,18 +126,20 @@ export default function ReviewScreen() {
 
   if (isComplete) {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center px-8" style={{ backgroundColor: colors.surface.base }}>
-        <GlowLayer drift={false} />
-        <View className="w-[100px] h-[100px] rounded-full bg-success-bg items-center justify-center mb-6">
-          <Text className="text-[32px] font-bold text-success">{reviewed}</Text>
+      <SafeAreaView className="flex-1 items-center justify-center px-8" style={{ backgroundColor: c.bg }}>
+        <View
+          className="w-[100px] h-[100px] rounded-full items-center justify-center mb-6"
+          style={{ backgroundColor: c.greenTint, borderColor: c.greenBorder, borderWidth: shape.border }}
+        >
+          <Heading level={1}>{reviewed}</Heading>
         </View>
-        <Text className="text-[28px] font-bold text-text-primary mb-2" accessibilityRole="header">
+        <Heading level={2} style={{ marginBottom: spacing.xs }} accessibilityRole="header">
           Review Complete!
-        </Text>
-        <Text className="text-base text-text-secondary mb-8">
+        </Heading>
+        <Body tone="secondary" style={{ marginBottom: spacing.xl }}>
           You reviewed {reviewed} cards.
-        </Text>
-        <Button label="Done" onPress={() => goBack()} />
+        </Body>
+        <SlabButton label="Done" arrow={false} onPress={() => goBack()} style={{ alignSelf: 'stretch' }} />
       </SafeAreaView>
     );
   }
@@ -136,17 +148,16 @@ export default function ReviewScreen() {
   const card = cards[item.cardId];
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.surface.base }}>
-      <GlowLayer drift={false} />
+    <SafeAreaView className="flex-1" style={{ backgroundColor: c.bg }}>
       {/* Header */}
       <View className="px-4 pt-2 pb-4">
         <View className="flex-row items-center justify-between mb-3">
-          <Button label="Exit" variant="danger" onPress={() => goBack()} style={{ paddingHorizontal: 16, paddingVertical: 8 }} />
-          <Text className="text-text-secondary text-sm">
+          <SlabButton label="Exit" variant="ghost" arrow={false} onPress={() => goBack()} style={{ paddingHorizontal: 16, paddingVertical: 8 }} />
+          <Body size="sm" tone="secondary">
             {currentIndex + 1} / {items.length}
-          </Text>
+          </Body>
         </View>
-        <ProgressBar progress={progress} />
+        <Ui2ProgressBar progress={progress} />
       </View>
 
       {/* Card. Scrolls rather than centres-and-clips: with the answer shown
@@ -156,75 +167,86 @@ export default function ReviewScreen() {
         className="flex-1"
         contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 }}
       >
-        <Text className="text-2xl font-bold text-text-primary text-center mb-8">
+        <Heading level={2} style={{ textAlign: 'center', marginBottom: spacing.xl }}>
           {card?.targetText ?? 'Loading...'}
-        </Text>
+        </Heading>
 
         {showAnswer ? (
           <>
-            <Text className="text-xl text-primary font-semibold text-center mb-4">
+            <Body size="lg" weight="semibold" tone="accent" style={{ textAlign: 'center', marginBottom: spacing.md }}>
               {card?.nativeText}
-            </Text>
+            </Body>
             {card?.exampleSentence && (
-              <Text className="text-sm text-text-secondary text-center italic mb-4">
+              <Body size="sm" tone="secondary" style={{ textAlign: 'center', fontStyle: 'italic', marginBottom: spacing.md }}>
                 {card.exampleSentence}
-              </Text>
+              </Body>
             )}
             {card?.exampleSentenceTranslation && (
-              <Text className="text-xs text-text-tertiary text-center mb-8">
+              <Caption size="sm" tone="tertiary" style={{ textAlign: 'center', marginBottom: spacing.xl }}>
                 {card.exampleSentenceTranslation}
-              </Text>
+              </Caption>
             )}
 
             {/* Rating buttons — maps to SM-2 ratings */}
             <View className="flex-row gap-3 w-full">
+              {/* The four SM-2 ratings. The fill carries the family and the
+                  LABEL carries the meaning — mobile-ui.md forbids a colour-only
+                  cue, and UI 2.0 has no error tint, so `pink` is the warm end of
+                  the scale. Text is `ink` on the three tints whose own hue is
+                  too light to clear AA on its tint in the light scheme. */}
               <Pressable
-                className="flex-1 bg-error-bg py-4 rounded-[14px] items-center"
+                className="flex-1 py-4 rounded-[14px] items-center"
+                style={{ backgroundColor: c.pinkTint, borderColor: c.pinkTint, borderWidth: shape.border }}
                 onPress={() => handleRate(1)}
                 disabled={submitting}
                 accessibilityRole="button"
                 accessibilityLabel="Again — I didn't know this"
               >
-                <Text className="text-error-dark text-base font-semibold">Again</Text>
-                <Text className="text-error-dark text-xs mt-1">Forgot</Text>
+                <Body weight="semibold">Again</Body>
+                <Caption size="sm" style={{ marginTop: 4 }}>Forgot</Caption>
               </Pressable>
               <Pressable
-                className="flex-1 bg-warning-bg py-4 rounded-[14px] items-center"
+                className="flex-1 py-4 rounded-[14px] items-center"
+                style={{ backgroundColor: c.yellowTint, borderColor: c.yellowBorder, borderWidth: shape.border }}
                 onPress={() => handleRate(3)}
                 disabled={submitting}
                 accessibilityRole="button"
                 accessibilityLabel="Hard — I remembered with effort"
               >
-                <Text className="text-warning text-base font-semibold">Hard</Text>
-                <Text className="text-warning text-xs mt-1">Struggled</Text>
+                <Body weight="semibold">Hard</Body>
+                <Caption size="sm" style={{ marginTop: 4 }}>Struggled</Caption>
               </Pressable>
               <Pressable
-                className="flex-1 bg-success-bg py-4 rounded-[14px] items-center"
+                className="flex-1 py-4 rounded-[14px] items-center"
+                style={{ backgroundColor: c.greenTint, borderColor: c.greenBorder, borderWidth: shape.border }}
                 onPress={() => handleRate(4)}
                 disabled={submitting}
                 accessibilityRole="button"
                 accessibilityLabel="Good — I remembered"
               >
-                <Text className="text-success text-base font-semibold">Good</Text>
-                <Text className="text-success text-xs mt-1">Knew it</Text>
+                <Body weight="semibold">Good</Body>
+                <Caption size="sm" style={{ marginTop: 4 }}>Knew it</Caption>
               </Pressable>
               <Pressable
-                className="flex-1 bg-primary-tint py-4 rounded-[14px] items-center"
+                className="flex-1 py-4 rounded-[14px] items-center"
+                style={{ backgroundColor: c.primaryTint, borderColor: c.primaryTintBorder, borderWidth: shape.border }}
                 onPress={() => handleRate(5)}
                 disabled={submitting}
                 accessibilityRole="button"
                 accessibilityLabel="Easy — this was trivial"
               >
-                <Text className="text-primary text-base font-semibold">Easy</Text>
-                <Text className="text-primary text-xs mt-1">Instant</Text>
+                <Body weight="semibold" tone="accent">Easy</Body>
+                <Caption size="sm" tone="accent" style={{ marginTop: 4 }}>Instant</Caption>
               </Pressable>
             </View>
           </>
         ) : (
-          <Button
+          <SlabButton
             label="Show Answer"
+            arrow={false}
             onPress={() => setShowAnswer(true)}
             accessibilityHint="Reveals the translation"
+            style={{ alignSelf: 'stretch' }}
           />
         )}
       </ScrollView>

@@ -10,9 +10,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import { useSafeBack } from '../../../../../hooks/useSafeBack';
 import { Ionicons } from '@expo/vector-icons';
-import { GradientBackground } from '../../../../../components/ui/GradientBackground';
-import { GlassSurface } from '../../../../../components/ui/GlassSurface';
-import { GradientButton } from '../../../../../components/ui/GradientButton';
+import { SlabCard } from '../../../../../components/ui2/SlabCard';
+import { SlabButton } from '../../../../../components/ui2/SlabButton';
+import { useUi2Theme } from '../../../../../hooks/useUi2Theme';
 import StatusBadge from '../../../../../components/school/StatusBadge';
 import {
   fetchClassroomStudents,
@@ -36,6 +36,7 @@ interface SubmissionRow {
 }
 
 export default function StudentProgressScreen() {
+  const { c } = useUi2Theme();
   const goBack = useSafeBack('/(teacher)');
   const { classId, studentId } = useLocalSearchParams<{
     classId: string;
@@ -102,16 +103,16 @@ export default function StudentProgressScreen() {
 
   if (loading) {
     return (
-      <GradientBackground>
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
         <SafeAreaView className="flex-1 justify-center items-center">
-          <ActivityIndicator color="#818CF8" size="large" />
+          <ActivityIndicator color={c.primary} size="large" />
         </SafeAreaView>
-      </GradientBackground>
+      </View>
     );
   }
 
   return (
-    <GradientBackground>
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
       <SafeAreaView className="flex-1" edges={['top']}>
         <ScrollView
           className="flex-1 px-4 pt-2"
@@ -125,18 +126,18 @@ export default function StudentProgressScreen() {
             accessibilityLabel="Go back"
             className="flex-row items-center mb-4"
           >
-            <Ionicons name="chevron-back" size={24} color="#818CF8" />
+            <Ionicons name="chevron-back" size={24} color={c.primary} />
             <Text
-              className="text-base text-primary ml-1"
-              style={{ fontFamily: 'Nunito_600SemiBold' }}
+              className="text-base ml-1"
+              style={{ fontFamily: 'Nunito_600SemiBold', color: c.primary }}
             >
               Back
             </Text>
           </Pressable>
 
           <Text
-            className="text-[28px] text-text-primary mb-4"
-            style={{ fontFamily: 'Nunito_800ExtraBold' }}
+            className="text-[28px] mb-4"
+            style={{ fontFamily: 'Nunito_800ExtraBold', color: c.ink }}
             accessibilityRole="header"
           >
             {student?.name ?? 'Student'}
@@ -144,30 +145,28 @@ export default function StudentProgressScreen() {
 
           {/* Error state + retry */}
           {error && (
-            <GlassSurface
-              style={{ marginBottom: 20 }}
-              innerStyle={{ padding: 20, alignItems: 'center' }}
+            <SlabCard
+              style={{ marginBottom: 20, padding: 20, alignItems: 'center' }}
             >
-              <Ionicons name="warning-outline" size={32} color="#EF4444" />
+              <Ionicons name="warning-outline" size={32} color={c.error} />
               <Text
-                className="text-sm text-text-secondary mt-2 text-center"
-                style={{ fontFamily: 'Nunito_400Regular' }}
+                className="text-sm mt-2 text-center"
+                style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
               >
                 {error}
               </Text>
-              <GradientButton
+              <SlabButton
                 label="Retry"
                 onPress={load}
                 style={{ marginTop: 12, minWidth: 140 }}
                 accessibilityHint="Retry loading student data"
               />
-            </GlassSurface>
+            </SlabCard>
           )}
 
           {/* Student Info Card */}
-          <GlassSurface
+          <SlabCard
             style={{ marginBottom: 20 }}
-            innerStyle={{ padding: 16 }}
           >
             <View className="flex-row items-center">
               <View
@@ -175,23 +174,23 @@ export default function StudentProgressScreen() {
                   width: 48,
                   height: 48,
                   borderRadius: 24,
-                  backgroundColor: 'rgba(168, 85, 247, 0.2)',
+                  backgroundColor: c.primaryTint,
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
               >
-                <Ionicons name="person" size={24} color="#A855F7" />
+                <Ionicons name="person" size={24} color={c.onTint} />
               </View>
               <View className="ml-4">
                 <Text
-                  className="text-lg text-text-primary"
-                  style={{ fontFamily: 'Nunito_600SemiBold' }}
+                  className="text-lg"
+                  style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
                 >
                   {student?.name ?? 'Unknown'}
                 </Text>
                 <Text
-                  className="text-sm text-text-secondary"
-                  style={{ fontFamily: 'Nunito_400Regular' }}
+                  className="text-sm"
+                  style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
                 >
                   Enrolled{' '}
                   {student?.enrolledAt
@@ -203,40 +202,38 @@ export default function StudentProgressScreen() {
                 </Text>
               </View>
             </View>
-          </GlassSurface>
+          </SlabCard>
 
           {/* Assignment History */}
           <Text
-            className="text-xl text-text-primary mb-3"
-            style={{ fontFamily: 'Nunito_600SemiBold' }}
+            className="text-xl mb-3"
+            style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
           >
             Assignment History
           </Text>
 
           {submissions.length === 0 ? (
-            <GlassSurface
-              style={{ marginBottom: 16 }}
-              innerStyle={{ padding: 20, alignItems: 'center' }}
+            <SlabCard
+              style={{ marginBottom: 16, padding: 20, alignItems: 'center' }}
             >
-              <Ionicons name="document-text-outline" size={32} color="#64748B" />
+              <Ionicons name="document-text-outline" size={32} color={c.idle} />
               <Text
-                className="text-sm text-text-secondary mt-2"
-                style={{ fontFamily: 'Nunito_400Regular' }}
+                className="text-sm mt-2"
+                style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
               >
                 No submissions yet
               </Text>
-            </GlassSurface>
+            </SlabCard>
           ) : (
             submissions.map((sub) => (
-              <GlassSurface
+              <SlabCard
                 key={sub.id}
-                style={{ marginBottom: 10 }}
-                innerStyle={{ padding: 14 }}
+                style={{ marginBottom: 10, padding: 14 }}
               >
                 <View className="flex-row items-center justify-between mb-1">
                   <Text
-                    className="text-base text-text-primary flex-1 mr-2"
-                    style={{ fontFamily: 'Nunito_600SemiBold' }}
+                    className="text-base flex-1 mr-2"
+                    style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
                     numberOfLines={1}
                   >
                     {sub.assignmentTitle}
@@ -247,7 +244,7 @@ export default function StudentProgressScreen() {
                   {sub.score !== null && (
                     <Text
                       style={{
-                        color: '#22C55E',
+                        color: c.green,
                         fontSize: 13,
                         fontFamily: 'Nunito_600SemiBold',
                       }}
@@ -257,8 +254,8 @@ export default function StudentProgressScreen() {
                   )}
                   {sub.submittedAt && (
                     <Text
-                      className="text-xs text-text-secondary"
-                      style={{ fontFamily: 'Nunito_400Regular' }}
+                      className="text-xs"
+                      style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
                     >
                       {new Date(sub.submittedAt).toLocaleDateString(undefined, {
                         month: 'short',
@@ -267,11 +264,11 @@ export default function StudentProgressScreen() {
                     </Text>
                   )}
                 </View>
-              </GlassSurface>
+              </SlabCard>
             ))
           )}
         </ScrollView>
       </SafeAreaView>
-    </GradientBackground>
+    </View>
   );
 }

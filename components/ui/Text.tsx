@@ -7,8 +7,14 @@
  *   <Caption>Stat label</Caption>
  *   <Hero>Nailed it!</Hero>  // display face (Fraunces), celebration moments
  *
- * All wrappers default color to text.primary; pass `tone="secondary"` /
+ * All wrappers default color to the scheme's ink; pass `tone="secondary"` /
  * `tone="tertiary"` / `tone="onPrimary"` / tone="accent" to override.
+ *
+ * COLOUR COMES FROM `useUi2Theme()`, not the fixed dark `colors` palette. These
+ * primitives render inside screens that are already on UI 2.0, so a fixed dark
+ * ink here is invisible on a developer's dark phone and unreadable on a light
+ * one. The type scale, the weights and the Dynamic Type ceilings below are
+ * scheme-independent and are deliberately untouched.
  *
  * DYNAMIC TYPE
  * React Native's `allowFontScaling` defaults to true and nothing in this tree
@@ -33,30 +39,38 @@
 
 import React from 'react';
 import { Text as RNText, type TextProps, type TextStyle } from 'react-native';
-import { colors, minLineHeight, typography } from '../../config/theme';
+import { minLineHeight, typography, type Ui2Palette } from '../../config/theme';
 import { useDisplayScale } from '../../hooks/useDisplayScale';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 
 type Tone = 'primary' | 'secondary' | 'tertiary' | 'onPrimary' | 'accent' | 'success' | 'error' | 'warning';
 type Weight = 'regular' | 'medium' | 'semibold' | 'bold' | 'extrabold';
 
-function toneColor(tone: Tone): string {
+/**
+ * The tone vocabulary is unchanged; only where the colour comes from changed.
+ * `c` is passed in rather than read from a module import so this stays a pure
+ * function — the palette is scheme-dependent and only a component can know it.
+ * The mapping mirrors components/ui2/Ui2Text.tsx exactly, so the two families
+ * of primitive cannot drift apart on the same screen.
+ */
+function toneColor(tone: Tone, c: Ui2Palette): string {
   switch (tone) {
     case 'secondary':
-      return colors.text.secondary;
+      return c.muted;
     case 'tertiary':
-      return colors.text.tertiary;
+      return c.idle;
     case 'onPrimary':
-      return colors.text.onPrimary;
+      return c.onPrimary;
     case 'accent':
-      return colors.indigo[400];
+      return c.onTint;
     case 'success':
-      return colors.success.light;
+      return c.green;
     case 'error':
-      return colors.error.light;
+      return c.error;
     case 'warning':
-      return colors.warning.light;
+      return c.yellow;
     default:
-      return colors.text.primary;
+      return c.ink;
   }
 }
 
@@ -79,6 +93,7 @@ interface HeadingProps extends TextProps {
   children: React.ReactNode;
 }
 export function Heading({ level = 1, tone = 'primary', style, children, ...rest }: HeadingProps) {
+  const { c } = useUi2Theme();
   const scale = useDisplayScale();
   const size = level === 1 ? typography.scale.h1 : level === 2 ? typography.scale.h2 : typography.scale.h3;
   const fontSize = Math.round(size.fontSize * scale);
@@ -87,7 +102,7 @@ export function Heading({ level = 1, tone = 'primary', style, children, ...rest 
     // Floored at the face's natural line box for the *scaled* size, so the
     // no-clip invariant holds at every device width — not just at baseline.
     lineHeight: Math.max(minLineHeight(fontSize), Math.round(size.lineHeight * scale)),
-    color: toneColor(tone),
+    color: toneColor(tone, c),
     fontFamily: familyFor(size.weight),
     letterSpacing: typography.tracking.heading,
   };
@@ -111,12 +126,13 @@ interface BodyProps extends TextProps {
   children: React.ReactNode;
 }
 export function Body({ size = 'md', tone = 'primary', weight, style, children, ...rest }: BodyProps) {
+  const { c } = useUi2Theme();
   const scale = size === 'lg' ? typography.scale.bodyLg : size === 'sm' ? typography.scale.bodySm : typography.scale.body;
   const effectiveWeight = weight ?? scale.weight;
   const baseStyle: TextStyle = {
     fontSize: scale.fontSize,
     lineHeight: scale.lineHeight,
-    color: toneColor(tone),
+    color: toneColor(tone, c),
     fontFamily: familyFor(effectiveWeight),
   };
   return (
@@ -133,11 +149,12 @@ interface CaptionProps extends TextProps {
   children: React.ReactNode;
 }
 export function Caption({ tone = 'secondary', size = 'md', style, children, ...rest }: CaptionProps) {
+  const { c } = useUi2Theme();
   const scale = size === 'sm' ? typography.scale.tiny : typography.scale.caption;
   const baseStyle: TextStyle = {
     fontSize: scale.fontSize,
     lineHeight: scale.lineHeight,
-    color: toneColor(tone),
+    color: toneColor(tone, c),
     fontFamily: familyFor(scale.weight),
   };
   return (
@@ -153,6 +170,7 @@ interface HeroProps extends TextProps {
   children: React.ReactNode;
 }
 export function Hero({ tone = 'primary', style, children, ...rest }: HeroProps) {
+  const { c } = useUi2Theme();
   const scale = useDisplayScale();
   const fontSize = Math.round(typography.scale.hero.fontSize * scale);
   const baseStyle: TextStyle = {
@@ -162,7 +180,7 @@ export function Hero({ tone = 'primary', style, children, ...rest }: HeroProps) 
       minLineHeight(fontSize, 'display'),
       Math.round(typography.scale.hero.lineHeight * scale),
     ),
-    color: toneColor(tone),
+    color: toneColor(tone, c),
     fontFamily: typography.family.display,
     letterSpacing: -0.8,
   };

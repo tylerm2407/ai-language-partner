@@ -892,3 +892,72 @@ scheme (`app.json` `userInterfaceStyle: "automatic"`).
 - **Mascot**: `components/ui2/MascotSol.tsx` is a code-only stand-in with a
   `mood` API (`idle` / `think` / `cheer`). The artist's character replaces it as
   a Rive state machine behind the same props.
+
+### Migrating a Dark Glow screen to UI 2.0
+
+Rollout COMPLETED 2026-09-07: every screen is on UI 2.0, in both schemes, and
+`userInterfaceStyle` is back to `"automatic"` in `app.json` and
+`ios/Fluenci/Info.plist`. It was temporarily `"dark"` during the migration so the
+half-converted app was not visibly inconsistent; that scaffolding is gone.
+
+`tests/ui2-migration.test.ts` now enforces the result: no screen may read the
+fixed dark `colors` palette or hardcode a hex. Comments are stripped before the
+scan, because during this migration three separate checks fired on prose rather
+than code, and a guard that cannot tell the difference teaches people to delete
+the documentation.
+
+**The primitives mirror the Dark Glow ones on purpose.** `Heading` / `Body` /
+`Caption` / `Hero` keep their names, props and `Tone` vocabulary; `Ui2Header`
+mirrors `ScreenHeader`, and so on down the list. A migration is therefore mostly
+an import swap plus deleting inline `colors.*`, not a rewrite of every node. That
+is deliberate: this file forbids mixing the two systems on one screen, so
+converting a whole screen has to be cheap enough that nobody converts half of it.
+
+| Dark Glow | UI 2.0 |
+|---|---|
+| `components/ui/Text` (`Heading`/`Body`/`Caption`/`Hero`) | `components/ui2/Ui2Text` (same names, same props) |
+| `components/ui/ScreenHeader` | `components/ui2/Ui2Header` |
+| `components/ui/Button`, `TactileButton`, `GradientButton` | `components/ui2/SlabButton` |
+| `components/ui/Card`, `GlassCard`, `Surface`, `GradientBorderCard` | `components/ui2/SlabCard` (`tint` picks the semantic fill) |
+| `components/ui/Sheet` | `components/ui2/Ui2Sheet` |
+| `components/ui/ProgressBar` | `components/ui2/Ui2ProgressBar` |
+| `components/ui/Badge` | `components/ui2/Ui2Badge` |
+| `components/ui/EmptyState` | `components/ui2/Ui2EmptyState` |
+| `components/ui/InlineError` | `components/ui2/Ui2InlineError` |
+| `components/ui/Chip` | `components/ui2/Chip` |
+| a raw `TextInput` | `components/ui2/Ui2Input` |
+| a hand-rolled settings row | `components/ui2/Ui2ListRow` |
+| `GlowBackground` / `GradientBackground` | nothing — UI 2.0 grounds on flat `c.bg` |
+
+**The rule that makes a migration checkable:** after converting a screen it must
+contain **no reference to `colors.*`, no hex literal, and no NativeWind colour
+class**. Colour comes only from `useUi2Theme()`.
+
+That third clause is the one people miss, because it hides. `tailwind.config.js`
+mirrors the OLD Dark Glow palette — `dark-card` is `#151921`, `text-primary` is
+`#F1F5F9` — so `className="bg-dark-card"` is a hardcoded near-black that contains
+no `colors.` and no hex and reads perfectly clean to a grep. Two `components/stats`
+files were fully dark-pinned this way while scanning green, and a live pair
+survived in the chat toolbar. Layout utilities are untouched: `border-b` and
+`px-3` name no colour. Only the palette keys in `tailwind.config.js` are banned.
+
+All three clauses are enforced by `tests/ui2-migration.test.ts`, which scans
+`app/` and `components/` entire — a scope it asserts, because an earlier version
+of that test scanned three hand-picked directories and passed while 82 files were
+still on Dark Glow.
+
+Note what that rule does NOT say. Importing from `config/theme` is fine and
+expected — it is still the token home, and it is where `ui2Light`, `ui2Dark`,
+`ui2Type`, `ui2Shape` and the `Ui2Palette` type live. `spacing` and `radii` are
+plain numbers with no scheme in them and may be used as before. The single
+harmful import is **`colors`**, which is a fixed DARK palette: a screen reading
+it is still Dark Glow no matter how it looks on your machine, and the failure is
+invisible until someone opens the app on a phone set to light.
+
+**Both schemes are part of "done".** Check a converted screen in light AND dark
+before calling it finished. The failure mode is not a crash; it is grey-on-grey
+text that nobody notices until a user with a light phone opens the app.
+
+`floatingTabBarSpace()` from `components/navigation/FloatingTabBar.tsx` is still
+the source of truth for bottom clearance on tabbed screens — the tab bar overlays
+content and does not participate in either design system.

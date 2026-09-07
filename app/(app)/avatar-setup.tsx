@@ -25,12 +25,19 @@ import { Avatar } from '../../components/avatar/Avatar';
 import { setAvatarKind } from '../../lib/supabase-queries';
 import { presetUrlFromId, type AvatarPreset } from '../../lib/avatar-presets';
 import { useAvatarImage, invalidateAvatarImage } from '../../hooks/useAvatarImage';
-import { GradientBackground } from '../../components/ui/GradientBackground';
-import { Button } from '../../components/ui/Button';
-import { colors, spacing, typography } from '../../config/theme';
+// `colors` is deliberately NOT imported: it is the fixed DARK palette, and a
+// screen that reads it stays dark whatever the phone is set to. `spacing` is a
+// plain scheme-independent number and carries over unchanged.
+import { SlabButton } from '../../components/ui2/SlabButton';
+import { Heading } from '../../components/ui2/Ui2Text';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
+import { spacing } from '../../config/theme';
 import { trackEvent } from '../../lib/analytics';
 
 export default function AvatarSetupScreen() {
+  // Unconditional and first: this component has an early return below, so the
+  // hook has to run before it or hook order changes between renders.
+  const { c } = useUi2Theme();
   const router = useRouter();
   const { profile, setProfile, loading } = useAppStore();
   const [generatorVisible, setGeneratorVisible] = useState(false);
@@ -98,31 +105,22 @@ export default function AvatarSetupScreen() {
   // a glitch on the one screen that is about how the learner looks.
   if (loading || !profile) {
     return (
-      <GradientBackground>
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
         <SafeAreaView className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={colors.action.accent} />
+          <ActivityIndicator size="large" color={c.primary} />
         </SafeAreaView>
-      </GradientBackground>
+      </View>
     );
   }
 
   return (
-    <GradientBackground>
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
       <SafeAreaView className="flex-1">
         <View className="flex-1 px-6 justify-center">
-          <Text
-            style={{
-              fontFamily: typography.family.display,
-              fontSize: 30,
-              lineHeight: 38,
-              letterSpacing: -1,
-              color: colors.text.primary,
-            }}
-            accessibilityRole="header"
-          >
+          <Heading level={1} style={{ letterSpacing: -1 }} accessibilityRole="header">
             {justChose ? 'That’s you.' : 'Pick your avatar.'}
-          </Text>
-          <Text className="text-base text-text-secondary mt-2 mb-8">
+          </Heading>
+          <Text className="text-base mt-2 mb-8" style={{ color: c.muted }}>
             {justChose
               ? 'It’s saved to your profile. You can change it any time from Profile → Avatar.'
               : 'Choose one of ours — free, and there are fifty. Or turn a photo of yourself into an illustrated avatar; every account gets one of those free.'}
@@ -133,13 +131,13 @@ export default function AvatarSetupScreen() {
           </View>
 
           {justChose ? (
-            <Button label="Continue" onPress={proceed} />
+            <SlabButton label="Continue" onPress={proceed} />
           ) : (
             <>
               {/* The library leads. It is free, unlimited and instant, where
                   the photo path spends a once-per-account entitlement — so the
                   cheap choice is the default one and the costly one is opt-in. */}
-              <Button label="Choose an avatar" onPress={() => setPickerVisible(true)} />
+              <SlabButton label="Choose an avatar" onPress={() => setPickerVisible(true)} />
               <Pressable
                 onPress={() => setGeneratorVisible(true)}
                 className="py-3 items-center mt-2"
@@ -147,7 +145,9 @@ export default function AvatarSetupScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="Make an avatar from a photo instead"
               >
-                <Text className="text-base font-semibold text-primary">Use a photo instead</Text>
+                <Text className="text-base font-semibold" style={{ color: c.onTint }}>
+                  Use a photo instead
+                </Text>
               </Pressable>
               <Pressable
                 onPress={proceed}
@@ -156,11 +156,11 @@ export default function AvatarSetupScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="Skip the avatar for now"
               >
-                <Text className="text-sm text-text-secondary">Not now</Text>
+                <Text className="text-sm" style={{ color: c.muted }}>Not now</Text>
               </Pressable>
               <Text
-                className="text-xs text-text-quaternary text-center"
-                style={{ marginTop: spacing.xs }}
+                className="text-xs text-center"
+                style={{ marginTop: spacing.xs, color: c.idle }}
               >
                 You can change this any time from your profile.
               </Text>
@@ -195,6 +195,6 @@ export default function AvatarSetupScreen() {
           proceed();
         }}
       />
-    </GradientBackground>
+    </View>
   );
 }

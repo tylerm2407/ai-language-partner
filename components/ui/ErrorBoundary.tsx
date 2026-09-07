@@ -1,7 +1,25 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Pressable } from 'react-native';
 import * as Sentry from '@sentry/react-native';
 import * as Updates from 'expo-updates';
+import { useUi2Theme, type Ui2Theme } from '../../hooks/useUi2Theme';
+import { Body, Heading } from '../ui2/Ui2Text';
+
+/**
+ * Hook bridge for the fallback UI.
+ *
+ * `ErrorBoundary` has to be a class — `getDerivedStateFromError` /
+ * `componentDidCatch` have no hook equivalent — and a class cannot call
+ * `useUi2Theme()`. Rather than lift the fallback markup out into its own
+ * component (which would move `handleRetry` / `handleReload` through props and
+ * make an unrelated refactor out of a re-theme), the palette is handed in
+ * through a render prop. Written as an arrow const on purpose: it is a local
+ * detail, not part of this module's API.
+ */
+const Ui2Themed = ({ children }: { children: (theme: Ui2Theme) => ReactNode }) => {
+  const theme = useUi2Theme();
+  return <>{children(theme)}</>;
+};
 
 interface Props {
   children: ReactNode;
@@ -57,28 +75,32 @@ export class ErrorBoundary extends Component<Props, State> {
       if (this.props.fallback) return this.props.fallback;
 
       return (
-        <View className="flex-1 items-center justify-center px-8 bg-dark">
-          <Text className="text-2xl font-sans-bold text-text-primary mb-2">Something went wrong</Text>
-          <Text className="text-base font-sans text-text-secondary text-center mb-6">
-            An unexpected error occurred. Please try again.
-          </Text>
-          <Pressable
-            className="bg-primary py-4 px-12 rounded-[14px]"
-            onPress={this.handleRetry}
-            accessibilityRole="button"
-            accessibilityLabel="Try again"
-          >
-            <Text className="text-white text-lg font-semibold">Try Again</Text>
-          </Pressable>
-          <Pressable
-            className="py-4 px-12"
-            onPress={this.handleReload}
-            accessibilityRole="button"
-            accessibilityLabel="Restart the app"
-          >
-            <Text className="text-text-secondary text-base font-semibold">Restart the app</Text>
-          </Pressable>
-        </View>
+        <Ui2Themed>
+          {({ c, shape }) => (
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, backgroundColor: c.bg }}>
+              <Heading level={1} style={{ marginBottom: 8 }}>Something went wrong</Heading>
+              <Body tone="secondary" style={{ textAlign: 'center', marginBottom: 24 }}>
+                An unexpected error occurred. Please try again.
+              </Body>
+              <Pressable
+                style={{ backgroundColor: c.primary, borderBottomColor: c.slab, borderBottomWidth: shape.buttonSlab, borderRadius: shape.radiusButton, paddingVertical: 16, paddingHorizontal: 48 }}
+                onPress={this.handleRetry}
+                accessibilityRole="button"
+                accessibilityLabel="Try again"
+              >
+                <Body size="lg" weight="extrabold" tone="onPrimary">Try Again</Body>
+              </Pressable>
+              <Pressable
+                style={{ paddingVertical: 16, paddingHorizontal: 48 }}
+                onPress={this.handleReload}
+                accessibilityRole="button"
+                accessibilityLabel="Restart the app"
+              >
+                <Body weight="bold" tone="secondary">Restart the app</Body>
+              </Pressable>
+            </View>
+          )}
+        </Ui2Themed>
       );
     }
 

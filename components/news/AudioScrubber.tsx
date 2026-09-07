@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { View, type LayoutChangeEvent } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
-import { colors, radii } from '../../config/theme';
+import { radii } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 
 const TRACK_HEIGHT = 4;
 const THUMB_SIZE = 14;
@@ -38,6 +39,7 @@ export function AudioScrubber({
   stepSeconds,
   disabled = false,
 }: AudioScrubberProps) {
+  const { c } = useUi2Theme();
   const [width, setWidth] = useState(0);
   // While dragging, the thumb follows the finger rather than the (still
   // playing) position, or it fights the user for control of its own handle.
@@ -97,7 +99,7 @@ export function AudioScrubber({
           style={{
             height: TRACK_HEIGHT,
             borderRadius: radii.pill,
-            backgroundColor: colors.border.subtle,
+            backgroundColor: c.track,
             overflow: 'visible',
           }}
         >
@@ -109,7 +111,7 @@ export function AudioScrubber({
               bottom: 0,
               width: `${progress * 100}%`,
               borderRadius: radii.pill,
-              backgroundColor: disabled ? colors.text.tertiary : colors.action.primaryFill,
+              backgroundColor: disabled ? c.idle : c.primary,
             }}
           />
           <View
@@ -120,7 +122,7 @@ export function AudioScrubber({
               width: THUMB_SIZE,
               height: THUMB_SIZE,
               borderRadius: radii.pill,
-              backgroundColor: disabled ? colors.text.tertiary : colors.action.primaryFill,
+              backgroundColor: disabled ? c.idle : c.primary,
             }}
           />
         </View>

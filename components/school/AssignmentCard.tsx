@@ -1,8 +1,10 @@
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { GlassSurface } from '../ui/GlassSurface';
+import { SlabCard } from '../ui2/SlabCard';
 import StatusBadge from './StatusBadge';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
+import type { Ui2Palette } from '../../config/theme';
 import type { Assignment, AssignmentSubmission } from '../../types';
 
 interface AssignmentCardProps {
@@ -11,14 +13,17 @@ interface AssignmentCardProps {
   submission?: AssignmentSubmission;
 }
 
-function getDueColor(dueAt: string | null): string {
-  if (!dueAt) return '#64748B';
+/** Takes the palette rather than reading a hook: it is called from JSX inside
+ *  the component, and a helper that called `useUi2Theme()` itself would be a
+ *  conditional hook the moment one of these branches stops rendering. */
+function getDueColor(dueAt: string | null, c: Ui2Palette): string {
+  if (!dueAt) return c.muted;
   const now = Date.now();
   const due = new Date(dueAt).getTime();
   const hoursLeft = (due - now) / (1000 * 60 * 60);
-  if (hoursLeft < 0) return '#EF4444';
-  if (hoursLeft < 24) return '#F59E0B';
-  return '#22C55E';
+  if (hoursLeft < 0) return c.error;
+  if (hoursLeft < 24) return c.yellow;
+  return c.green;
 }
 
 function formatDue(dueAt: string | null): string {
@@ -47,21 +52,21 @@ const MODE_LABEL: Record<Assignment['mode'], string> = {
 };
 
 export default function AssignmentCard({ assignment, onPress, submission }: AssignmentCardProps) {
+  const { c } = useUi2Theme();
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`Assignment: ${assignment.title}`}
     >
-      <GlassSurface
+      <SlabCard
         style={{ marginBottom: 12 }}
-        innerStyle={{ padding: 16 }}
       >
         {/* Header row */}
         <View className="flex-row items-center justify-between mb-1">
           <Text
-            className="text-lg text-text-primary flex-1 mr-2"
-            style={{ fontFamily: 'Nunito_600SemiBold' }}
+            className="text-lg flex-1 mr-2"
+            style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
             numberOfLines={1}
           >
             {assignment.title}
@@ -72,9 +77,9 @@ export default function AssignmentCard({ assignment, onPress, submission }: Assi
         {/* Description */}
         {assignment.description ? (
           <Text
-            className="text-sm text-text-secondary mb-3"
+            className="text-sm mb-3"
             numberOfLines={2}
-            style={{ fontFamily: 'Nunito_400Regular' }}
+            style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
           >
             {assignment.description}
           </Text>
@@ -87,10 +92,10 @@ export default function AssignmentCard({ assignment, onPress, submission }: Assi
             className="flex-row items-center"
             accessibilityLabel={`Due date: ${formatDue(assignment.dueAt)}`}
           >
-            <Ionicons name="calendar-outline" size={14} color={getDueColor(assignment.dueAt)} />
+            <Ionicons name="calendar-outline" size={14} color={getDueColor(assignment.dueAt, c)} />
             <Text
               style={{
-                color: getDueColor(assignment.dueAt),
+                color: getDueColor(assignment.dueAt, c),
                 fontSize: 12,
                 fontFamily: 'Nunito_500Medium',
                 marginLeft: 4,
@@ -105,11 +110,11 @@ export default function AssignmentCard({ assignment, onPress, submission }: Assi
             <Ionicons
               name={MODE_ICON[assignment.mode] as any}
               size={14}
-              color="#94A3B8"
+              color={c.muted}
             />
             <Text
               style={{
-                color: '#94A3B8',
+                color: c.muted,
                 fontSize: 12,
                 fontFamily: 'Nunito_500Medium',
                 marginLeft: 4,
@@ -122,10 +127,10 @@ export default function AssignmentCard({ assignment, onPress, submission }: Assi
           {/* Min duration */}
           {assignment.minDurationMinutes > 0 && (
             <View className="flex-row items-center">
-              <Ionicons name="time-outline" size={14} color="#94A3B8" />
+              <Ionicons name="time-outline" size={14} color={c.muted} />
               <Text
                 style={{
-                  color: '#94A3B8',
+                  color: c.muted,
                   fontSize: 12,
                   fontFamily: 'Nunito_500Medium',
                   marginLeft: 4,
@@ -136,7 +141,7 @@ export default function AssignmentCard({ assignment, onPress, submission }: Assi
             </View>
           )}
         </View>
-      </GlassSurface>
+      </SlabCard>
     </Pressable>
   );
 }

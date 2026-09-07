@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { View, TextInput, Pressable } from 'react-native';
+import { View, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { haptic } from '../../lib/haptics';
 import { FeedbackCard } from './FeedbackCard';
 import { HighlightedText } from '../shared/HighlightedText';
-import { Body, Caption } from '../ui/Text';
-import { colors, spacing, radii } from '../../config/theme';
+import { Body, Caption } from '../ui2/Ui2Text';
+import { Ui2Input } from '../ui2/Ui2Input';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
+import { spacing, radii } from '../../config/theme';
 import { gradeAnswer } from '../../lib/grading';
 import type { GradeResult } from '../../lib/grading';
 import { isRestored, regradePick } from '../../lib/exercise-restore';
@@ -35,6 +37,7 @@ export function ClozeExercise({
   language,
   cefrLevel,
 }: Props) {
+  const { c } = useUi2Theme();
   // Seeded from the recorded pick so Previous comes back to the answer the
   // learner actually gave, in its graded state — see lib/exercise-restore.ts.
   const [userInput, setUserInput] = useState(selected ?? '');
@@ -89,14 +92,14 @@ export function ClozeExercise({
 
       {/* Context sentence with blank */}
       <View style={{
-        backgroundColor: colors.surface.cardAlt, borderRadius: radii.xxl, padding: spacing.lg, marginBottom: spacing.lg + spacing.xxs, minHeight: 120,
+        backgroundColor: c.surface2, borderRadius: radii.xxl, padding: spacing.lg, marginBottom: spacing.lg + spacing.xxs, minHeight: 120,
         justifyContent: 'center',
       }}>
         <Body size="lg" style={{ lineHeight: 28 }}>
           <HighlightedText text={beforeBlank} highlight={highlight} />
           <View style={{
             borderBottomWidth: 2,
-            borderBottomColor: isRevealed ? (isCorrect ? colors.success.base : colors.error.base) : colors.action.primaryFill,
+            borderBottomColor: isRevealed ? (isCorrect ? c.green : c.error) : c.primary,
             minWidth: 80,
           }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
@@ -104,12 +107,12 @@ export function ClozeExercise({
                 <Ionicons
                   name={isCorrect ? 'checkmark-circle' : 'close-circle'}
                   size={20}
-                  color={isCorrect ? colors.success.base : colors.error.base}
+                  color={isCorrect ? c.green : c.error}
                   style={{ marginRight: spacing.xxs }}
                 />
               )}
               <Body size="lg" weight="semibold" style={{
-                color: isRevealed ? (isCorrect ? colors.success.base : colors.error.base) : colors.action.primaryFill,
+                color: isRevealed ? (isCorrect ? c.green : c.error) : c.primary,
                 textAlign: 'center',
                 paddingHorizontal: spacing.xxs,
               }}>
@@ -123,24 +126,13 @@ export function ClozeExercise({
 
       {/* Input */}
       {!isRevealed && (
-        <TextInput
+        <Ui2Input
           value={userInput}
           onChangeText={setUserInput}
           placeholder="Type the missing word..."
-          placeholderTextColor={colors.text.quaternary}
           autoFocus
-          style={{
-            borderWidth: 2,
-            borderColor: colors.border.strong,
-            borderRadius: radii.lg,
-            paddingHorizontal: spacing.md,
-            paddingVertical: 10,
-            fontSize: 18,
-            fontWeight: '600',
-            textAlign: 'center',
-            color: colors.text.primary,
-            marginBottom: spacing.md,
-          }}
+          containerStyle={{ marginBottom: spacing.md }}
+          inputStyle={{ fontSize: 18, textAlign: 'center' }}
           accessibilityLabel="Missing word"
         />
       )}
@@ -170,7 +162,10 @@ export function ClozeExercise({
           onPress={handleCheck}
           disabled={userInput.trim().length === 0}
           style={{
-            backgroundColor: userInput.trim().length > 0 ? colors.action.primaryFill : colors.indigo[200],
+            backgroundColor: c.primary,
+            // The disabled look is an opacity, like SlabButton's: a paler fill
+            // token would drop the white label under AA in the light scheme.
+            opacity: userInput.trim().length > 0 ? 1 : 0.6,
             paddingVertical: spacing.md,
             borderRadius: radii.lg,
             alignItems: 'center',

@@ -16,11 +16,11 @@ import { ExerciseTrack } from './ExerciseTrack';
 import { MultipleChoice } from './MultipleChoice';
 import { TranslationExercise } from './TranslationExercise';
 import { SentenceConstructionExercise } from './SentenceConstructionExercise';
-import { colors } from '../../config/theme';
+import { paletteForScheme } from '../../hooks/useUi2Theme';
 import type { Exercise } from '../../types';
 
 jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Ionicons' }));
-// TactileButton -> useMotion -> lib/motion-preference reaches for the native
+// SlabButton -> useMotion -> lib/motion-preference reaches for the native
 // AsyncStorage module, which does not exist under jest.
 jest.mock('@react-native-async-storage/async-storage', () => ({
   __esModule: true,
@@ -47,6 +47,10 @@ jest.mock('../../hooks/useAudioPlayer', () => ({
 
 /** ExerciseChrome reads safe-area insets to clear the floating tab bar, so
  *  every render needs a provider with deterministic metrics. */
+/** The UI 2.0 palette these renders resolve to. jest has no native appearance
+ *  module, so `useColorScheme()` answers null and `useUi2Theme` falls to light. */
+const c = paletteForScheme('light');
+
 const METRICS = {
   frame: { x: 0, y: 0, width: 402, height: 874 },
   insets: { top: 59, left: 0, right: 0, bottom: 34 },
@@ -252,10 +256,10 @@ describe('ExerciseTrack', () => {
   it('colours past, current and future ticks distinctly', () => {
     const r = render(<ExerciseTrack total={4} currentIndex={2} completedCount={2} />);
     expect(ticks(r).map((t) => t.props.style.backgroundColor)).toEqual([
-      colors.success.base,
-      colors.success.base,
-      colors.action.accent,
-      colors.surface.track,
+      c.green,
+      c.green,
+      c.primary,
+      c.track,
     ]);
   });
 

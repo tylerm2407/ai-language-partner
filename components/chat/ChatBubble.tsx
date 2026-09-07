@@ -6,7 +6,8 @@ import { getTextToSpeech, translateText, VoiceError } from '../../lib/ai';
 import { saveCorrectionAsCard } from '../../lib/supabase-queries';
 import { isClose } from '../../lib/fuzzyMatch';
 import type { VoiceGender } from '../../lib/voice-preference';
-import { colors, radii, spacing, typography } from '../../config/theme';
+import { radii, spacing, typography, type Ui2Palette } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { ReportContentSheet } from '../ui/ReportContentSheet';
 import {
   normalizeCorrection,
@@ -44,12 +45,13 @@ interface ChatBubbleProps {
 
 /** Render message content with **bold** words highlighted as vocabulary. */
 function HighlightedContent({ text, isUser }: { text: string; isUser: boolean }) {
+  const { c } = useUi2Theme();
   // Split on **word** patterns, keeping the delimiters
   const parts = text.split(/(\*\*[^*]+\*\*)/g);
 
   return (
     // Deck: bubble copy is body/600, not regular.
-    <Text className={`text-base font-sans-semibold ${isUser ? 'text-white' : 'text-text-primary'}`}>
+    <Text className="text-base font-sans-semibold" style={{ color: isUser ? c.onPrimary : c.ink }}>
       {parts.map((part, index) => {
         if (part.startsWith('**') && part.endsWith('**')) {
           const word = part.slice(2, -2);
@@ -59,7 +61,7 @@ function HighlightedContent({ text, isUser }: { text: string; isUser: boolean })
               // font-sans-bold, not font-bold: a fontWeight on top of a custom
               // family makes Android synthesize a second bolding pass.
               className="font-sans-bold"
-              style={!isUser ? { backgroundColor: colors.correctionChip.grammar.bg, borderRadius: spacing.xxs } : undefined}
+              style={!isUser ? { backgroundColor: c.primaryTint, borderRadius: spacing.xxs } : undefined}
             >
               {word}
             </Text>
@@ -103,6 +105,7 @@ async function cacheSound(id: string, sound: Audio.Sound): Promise<void> {
 const translationCache = new Map<string, string>();
 
 export function ChatBubble({ message, targetLanguage, userId, nativeLanguage, cefrLevel, voiceGender, gloss }: ChatBubbleProps) {
+  const { c } = useUi2Theme();
   const isUser = message.role === 'user';
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -226,11 +229,12 @@ export function ChatBubble({ message, targetLanguage, userId, nativeLanguage, ce
   return (
     <View className={`mb-2 max-w-[84%] ${isUser ? 'self-end' : 'self-start'}`}>
       <View
-        className={`p-3 ${
+        className={`p-3 rounded-[18px] ${isUser ? 'rounded-br-[4px]' : 'rounded-bl-[4px] border'}`}
+        style={
           isUser
-            ? 'bg-primary rounded-[18px] rounded-br-[4px]'
-            : 'bg-dark-card rounded-[18px] rounded-bl-[4px] border border-dark-border'
-        }`}
+            ? { backgroundColor: c.primary }
+            : { backgroundColor: c.card, borderColor: c.cardBorder }
+        }
         accessibilityLabel={`${isUser ? 'You' : 'Assistant'}: ${message.content}`}
       >
         <HighlightedContent text={message.content} isUser={isUser} />
@@ -243,21 +247,22 @@ export function ChatBubble({ message, targetLanguage, userId, nativeLanguage, ce
             onPress={handleSpeak}
             accessibilityRole="button"
             accessibilityLabel={isPlaying ? 'Stop audio' : 'Listen to this message'}
-            className={`flex-row items-center ${isPlaying ? 'bg-error-bg rounded-lg px-2 py-1' : ''}`}
+            className={`flex-row items-center ${isPlaying ? 'rounded-lg px-2 py-1' : ''}`}
+            style={isPlaying ? { backgroundColor: c.surface2 } : undefined}
             hitSlop={8}
           >
             {isLoadingAudio ? (
-              <ActivityIndicator size="small" color={isUser ? colors.text.onPrimary : colors.correctionChip.grammar.text} />
+              <ActivityIndicator size="small" color={isUser ? c.onPrimary : c.primary} />
             ) : (
               <Ionicons
                 name={isPlaying ? 'stop-circle' : 'volume-medium-outline'}
                 size={isPlaying ? 20 : 16}
-                color={isPlaying ? colors.error.base : isUser ? colors.text.onPrimary : colors.correctionChip.grammar.text}
+                color={isPlaying ? c.error : isUser ? c.onPrimary : c.primary}
               />
             )}
             <Text
               className="text-xs ml-1"
-              style={{ color: isUser ? 'rgba(255,255,255,0.9)' : colors.indigo[300] }}
+              style={{ color: isUser ? c.onPrimaryMuted : c.primary }}
             >
               {isLoadingAudio ? 'Loading...' : isPlaying ? 'Stop' : 'Listen'}
             </Text>
@@ -274,11 +279,11 @@ export function ChatBubble({ message, targetLanguage, userId, nativeLanguage, ce
               disabled={isLoadingTranslation}
             >
               {isLoadingTranslation ? (
-                <ActivityIndicator size="small" color={colors.correctionChip.grammar.text} />
+                <ActivityIndicator size="small" color={c.primary} />
               ) : (
-                <Ionicons name="language-outline" size={16} color={colors.correctionChip.grammar.text} />
+                <Ionicons name="language-outline" size={16} color={c.primary} />
               )}
-              <Text className="text-xs ml-1" style={{ color: colors.indigo[300] }}>
+              <Text className="text-xs ml-1" style={{ color: c.primary }}>
                 {isLoadingTranslation ? 'Translating...' : showTranslation ? 'Hide' : 'Translate'}
               </Text>
             </Pressable>
@@ -294,8 +299,8 @@ export function ChatBubble({ message, targetLanguage, userId, nativeLanguage, ce
               className="flex-row items-center"
               hitSlop={8}
             >
-              <Ionicons name="flag-outline" size={14} color={colors.text.tertiary} />
-              <Text className="text-xs ml-1" style={{ color: colors.text.tertiary }}>
+              <Ionicons name="flag-outline" size={14} color={c.idle} />
+              <Text className="text-xs ml-1" style={{ color: c.idle }}>
                 Report
               </Text>
             </Pressable>
@@ -303,7 +308,7 @@ export function ChatBubble({ message, targetLanguage, userId, nativeLanguage, ce
         </View>
 
         {!isUser && translationError && (
-          <Text className="text-xs mt-2" style={{ color: colors.error.light }}>
+          <Text className="text-xs mt-2" style={{ color: c.error }}>
             Couldn't translate. Tap to retry.
           </Text>
         )}
@@ -316,14 +321,14 @@ export function ChatBubble({ message, targetLanguage, userId, nativeLanguage, ce
       {!isUser && showTranslation && translation && (
         <Text
           className="text-[13px] mt-1 ml-1"
-          style={{ color: colors.text.tertiary }}
+          style={{ color: c.idle }}
         >
           {translation}
         </Text>
       )}
 
       {/* Timestamp */}
-      <Text className={`text-[10px] text-text-secondary mt-0.5 ${isUser ? 'text-right mr-1' : 'ml-1'}`}>
+      <Text className={`text-[10px] mt-0.5 ${isUser ? 'text-right mr-1' : 'ml-1'}`} style={{ color: c.muted }}>
         {formatTimestamp(message.timestamp)}
       </Text>
 
@@ -367,21 +372,48 @@ export function ChatBubble({ message, targetLanguage, userId, nativeLanguage, ce
 //   9. Severity indicator — banner background + border tint by severity
 //  10. Example usage — extra sentence demonstrating correct pattern
 
-const SEVERITY_STYLES: Record<CorrectionSeverity, { bg: string; border: string; label: string }> = {
-  minor:    { bg: 'rgba(148, 163, 184, 0.15)', border: 'rgba(148, 163, 184, 0.35)', label: 'MINOR' },
-  moderate: { bg: colors.warning.tint,          border: colors.warning.border,        label: 'MODERATE' },
-  critical: { bg: colors.error.tint,            border: colors.error.border,          label: 'CRITICAL' },
-};
+/**
+ * Severity: border colour on the banner, plus the `· MINOR` text label.
+ *
+ * The chip PLATE is `c.card` for all three rather than a severity tint. It sits
+ * on top of the type tint below, and two tints stacked (a MODERATE chip on a
+ * word_order banner, both yellow) cancel each other out. A flat card plate
+ * reads on every one of the seven fills in both schemes, and severity keeps
+ * both of the carriers DESIGN.md actually names for it: the banner border and
+ * the written label.
+ *
+ * Arrow consts rather than module constants because UI 2.0 colour is a function
+ * of the phone's scheme — a module-level table would freeze one of them.
+ */
+const severityStyles = (c: Ui2Palette): Record<CorrectionSeverity, { bg: string; border: string; label: string }> => ({
+  minor:    { bg: c.card, border: c.cardBorder,   label: 'MINOR' },
+  moderate: { bg: c.card, border: c.yellowBorder, label: 'MODERATE' },
+  critical: { bg: c.card, border: c.error,        label: 'CRITICAL' },
+});
 
-const ERROR_TYPE_STYLES: Record<CorrectionErrorType, { bg: string; text: string; label: string }> = {
-  grammar:    { bg: colors.correctionChip.grammar.bg,     text: colors.correctionChip.grammar.text,     label: 'GRAMMAR' },
-  vocabulary: { bg: colors.correctionChip.vocabulary.bg,   text: colors.correctionChip.vocabulary.text,   label: 'VOCAB' },
-  spelling:   { bg: colors.correctionChip.spelling.bg,     text: colors.correctionChip.spelling.text,     label: 'SPELLING' },
-  word_order: { bg: colors.correctionChip.word_order.bg,   text: colors.correctionChip.word_order.text,   label: 'WORD ORDER' },
-  tense:      { bg: colors.correctionChip.tense.bg,        text: colors.correctionChip.tense.text,        label: 'TENSE' },
-  gender:     { bg: colors.correctionChip.gender.bg,        text: colors.correctionChip.gender.text,        label: 'GENDER' },
-  other:      { bg: colors.correctionChip.other.bg,         text: colors.correctionChip.other.text,         label: 'CORRECTION' },
-};
+/**
+ * Error type: the banner FILL, plus the chip's written label.
+ *
+ * UI 2.0 ships four tint families where Dark Glow had seven bespoke chip
+ * colours, so vocabulary/gender and spelling/other now share a fill. That is
+ * safe precisely because the type was never colour-only: `typeStyle.label`
+ * spells it out on the chip, which is the cue DESIGN.md §Accessibility
+ * requires. Inventing three more tints here would be a palette change, and the
+ * palette is not this component's to extend.
+ *
+ * `text` is `onTint` throughout — the one token guaranteed to clear AA on
+ * every tint in both schemes, and it is also what colours the Save/Practice
+ * row, which sits directly on the fill.
+ */
+const errorTypeStyles = (c: Ui2Palette): Record<CorrectionErrorType, { bg: string; text: string; label: string }> => ({
+  grammar:    { bg: c.primaryTint, text: c.onTint, label: 'GRAMMAR' },
+  vocabulary: { bg: c.pinkTint,    text: c.onTint, label: 'VOCAB' },
+  spelling:   { bg: c.surface2,    text: c.onTint, label: 'SPELLING' },
+  word_order: { bg: c.yellowTint,  text: c.onTint, label: 'WORD ORDER' },
+  tense:      { bg: c.greenTint,   text: c.onTint, label: 'TENSE' },
+  gender:     { bg: c.pinkTint,    text: c.onTint, label: 'GENDER' },
+  other:      { bg: c.surface2,    text: c.onTint, label: 'CORRECTION' },
+});
 
 interface CorrectionBannerProps {
   correction: CorrectionDetail;
@@ -407,8 +439,9 @@ export function CorrectionBanner({
   cefrLevel,
   voiceGender,
 }: CorrectionBannerProps) {
-  const severityStyle = SEVERITY_STYLES[correction.severity];
-  const typeStyle = ERROR_TYPE_STYLES[correction.errorType];
+  const { c } = useUi2Theme();
+  const severityStyle = severityStyles(c)[correction.severity];
+  const typeStyle = errorTypeStyles(c)[correction.errorType];
   const hasDiff = Boolean(correction.original && correction.corrected);
 
   // ─── State ──────────────────────────────────────────────────────────────
@@ -560,11 +593,11 @@ export function CorrectionBanner({
             {typeStyle.label}
           </Text>
         </View>
-        <Text style={{ color: colors.text.quaternary, fontFamily: typography.family.semibold, fontSize: 10 }}>
+        <Text style={{ color: c.muted, fontFamily: typography.family.semibold, fontSize: 10 }}>
           · {severityStyle.label}
         </Text>
         {showRepetition && (
-          <Text style={{ color: colors.warning.light, fontFamily: typography.family.semibold, fontSize: 10 }}>
+          <Text style={{ color: c.error, fontFamily: typography.family.semibold, fontSize: 10 }}>
             · {correction.repetitionCount}× this week
           </Text>
         )}
@@ -579,18 +612,18 @@ export function CorrectionBanner({
         >
           <Text
             style={{
-              color: colors.error.light,
+              color: c.error,
               fontSize: 14,
               textDecorationLine: 'line-through',
-              textDecorationColor: colors.error.light,
+              textDecorationColor: c.error,
             }}
           >
             {correction.original}
           </Text>
-          <Ionicons name="arrow-forward" size={13} color={colors.text.tertiary} />
+          <Ionicons name="arrow-forward" size={13} color={c.idle} />
           <Text
             style={{
-              color: colors.success.light,
+              color: c.green,
               fontFamily: typography.family.extrabold,
               fontSize: 14,
             }}
@@ -604,12 +637,12 @@ export function CorrectionBanner({
             accessibilityLabel="Listen to corrected phrase"
           >
             {isLoadingCorrectedAudio ? (
-              <ActivityIndicator size="small" color={colors.success.light} />
+              <ActivityIndicator size="small" color={c.green} />
             ) : (
               <Ionicons
                 name={isPlayingCorrectedAudio ? 'stop-circle' : 'volume-medium-outline'}
                 size={16}
-                color={isPlayingCorrectedAudio ? colors.error.base : colors.success.light}
+                color={isPlayingCorrectedAudio ? c.error : c.green}
               />
             )}
           </Pressable>
@@ -617,7 +650,7 @@ export function CorrectionBanner({
       )}
 
       {/* shortLabel — always visible */}
-      <Text style={{ color: colors.text.secondary, fontSize: 12, marginTop: hasDiff ? spacing.xxs : 6 }}>
+      <Text style={{ color: c.muted, fontSize: 12, marginTop: hasDiff ? spacing.xxs : 6 }}>
         {correction.shortLabel}
       </Text>
 
@@ -634,15 +667,15 @@ export function CorrectionBanner({
             <Ionicons
               name={whyExpanded ? 'chevron-down-outline' : 'chevron-forward-outline'}
               size={14}
-              color={colors.indigo[300]}
+              color={c.primary}
             />
-            <Text style={{ color: colors.indigo[300], fontSize: 12, marginLeft: 2, fontWeight: '600' }}>
+            <Text style={{ color: c.primary, fontSize: 12, marginLeft: 2, fontWeight: '600' }}>
               Why?
             </Text>
           </Pressable>
           {whyExpanded && (
             <View style={{ marginTop: spacing.xxs, paddingLeft: spacing.md }}>
-              <Text style={{ color: colors.text.primary, fontSize: 13, lineHeight: 18 }}>
+              <Text style={{ color: c.ink, fontSize: 13, lineHeight: 18 }}>
                 {translatedExplanation ?? correction.explanation}
               </Text>
               <Pressable
@@ -653,11 +686,11 @@ export function CorrectionBanner({
                 className="flex-row items-center mt-2"
               >
                 {isTranslatingExplanation ? (
-                  <ActivityIndicator size="small" color={colors.correctionChip.grammar.text} />
+                  <ActivityIndicator size="small" color={c.primary} />
                 ) : (
-                  <Ionicons name="language-outline" size={12} color={colors.correctionChip.grammar.text} />
+                  <Ionicons name="language-outline" size={12} color={c.primary} />
                 )}
-                <Text style={{ color: colors.correctionChip.grammar.text, fontSize: 11, marginLeft: spacing.xxs }}>
+                <Text style={{ color: c.primary, fontSize: 11, marginLeft: spacing.xxs }}>
                   {isTranslatingExplanation
                     ? 'Translating…'
                     : translatedExplanation
@@ -677,13 +710,13 @@ export function CorrectionBanner({
             marginTop: spacing.xs,
             paddingLeft: spacing.xs,
             borderLeftWidth: 2,
-            borderLeftColor: colors.success.border,
+            borderLeftColor: c.greenBorder,
           }}
         >
-          <Text style={{ color: colors.text.tertiary, fontSize: 11, fontWeight: '600', marginBottom: 2 }}>
+          <Text style={{ color: c.idle, fontSize: 11, fontWeight: '600', marginBottom: 2 }}>
             EXAMPLE
           </Text>
-          <Text style={{ color: colors.text.primary, fontSize: 13, fontStyle: 'italic' }}>
+          <Text style={{ color: c.ink, fontSize: 13, fontStyle: 'italic' }}>
             {correction.example}
           </Text>
         </View>
@@ -697,7 +730,7 @@ export function CorrectionBanner({
           marginTop: spacing.xs,
           paddingTop: spacing.xs,
           borderTopWidth: 1,
-          borderTopColor: colors.border.default,
+          borderTopColor: c.cardBorder,
         }}
       >
         <Pressable
@@ -715,12 +748,12 @@ export function CorrectionBanner({
             <Ionicons
               name={saveState === 'saved' ? 'checkmark-circle' : 'layers'}
               size={12}
-              color={saveState === 'saved' ? colors.success.light : saveState === 'error' ? colors.error.light : typeStyle.text}
+              color={saveState === 'saved' ? c.green : saveState === 'error' ? c.error : typeStyle.text}
             />
           )}
           <Text
             style={{
-              color: saveState === 'saved' ? colors.success.light : saveState === 'error' ? colors.error.light : typeStyle.text,
+              color: saveState === 'saved' ? c.green : saveState === 'error' ? c.error : typeStyle.text,
               fontFamily: typography.family.bold,
               fontSize: 12,
               marginLeft: spacing.xxs,
@@ -770,7 +803,7 @@ export function CorrectionBanner({
       {/* Mini drill */}
       {drillOpen && (
         <View style={{ marginTop: 10 }}>
-          <Text style={{ color: colors.text.tertiary, fontSize: 11, marginBottom: 6 }}>
+          <Text style={{ color: c.idle, fontSize: 11, marginBottom: 6 }}>
             Type the corrected version:
           </Text>
           <View className="flex-row items-center" style={{ gap: 6 }}>
@@ -781,17 +814,17 @@ export function CorrectionBanner({
                 if (drillResult) setDrillResult(null);
               }}
               placeholder={correction.original || '...'}
-              placeholderTextColor={colors.text.disabled}
+              placeholderTextColor={c.idle}
               style={{
                 flex: 1,
-                backgroundColor: colors.surface.overlay,
+                backgroundColor: c.card,
                 borderRadius: radii.sm,
                 paddingHorizontal: 10,
                 paddingVertical: spacing.xs,
-                color: colors.text.primary,
+                color: c.ink,
                 fontSize: 13,
                 borderWidth: 1,
-                borderColor: colors.border.default,
+                borderColor: c.cardBorder,
               }}
               autoCapitalize="none"
               autoCorrect={false}
@@ -804,25 +837,25 @@ export function CorrectionBanner({
               accessibilityRole="button"
               accessibilityLabel={drillResult === 'correct' ? 'Try again' : 'Submit attempt'}
               style={{
-                backgroundColor: colors.league.diamond,
+                backgroundColor: c.primary,
                 borderRadius: radii.sm,
                 paddingHorizontal: spacing.sm,
                 paddingVertical: spacing.xs,
                 opacity: !drillInput.trim() && drillResult !== 'correct' ? 0.4 : 1,
               }}
             >
-              <Text style={{ color: colors.surface.base, fontSize: 12, fontWeight: '700' }}>
+              <Text style={{ color: c.onPrimary, fontSize: 12, fontWeight: '700' }}>
                 {drillResult === 'correct' ? 'Again' : 'Check'}
               </Text>
             </Pressable>
           </View>
           {drillResult === 'correct' && (
-            <Text style={{ color: colors.success.light, fontSize: 12, marginTop: 6, fontWeight: '600' }}>
+            <Text style={{ color: c.green, fontSize: 12, marginTop: 6, fontWeight: '600' }}>
               ✓ Nailed it!
             </Text>
           )}
           {drillResult === 'incorrect' && (
-            <Text style={{ color: colors.error.light, fontSize: 12, marginTop: 6 }}>
+            <Text style={{ color: c.error, fontSize: 12, marginTop: 6 }}>
               ✗ Not quite — the target was "{correction.corrected}". Try again.
             </Text>
           )}

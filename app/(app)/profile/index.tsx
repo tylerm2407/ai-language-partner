@@ -8,10 +8,15 @@ import { useSchoolStore } from '../../../stores/useSchoolStore';
 import { SCHOOL_ENABLED, SUPPORTED_LANGUAGES } from '../../../config/app';
 import { useLevel } from '../../../hooks/useLevel';
 import { Ionicons } from '@expo/vector-icons';
-import { GradientBackground } from '../../../components/ui/GradientBackground';
-import { colors, radii, spacing, typography } from '../../../config/theme';
-import { Heading } from '../../../components/ui/Text';
-import { Chip } from '../../../components/ui/Chip';
+// `colors` is deliberately NOT imported: it is the fixed DARK palette, and a
+// screen that reads it stays dark whatever the phone is set to. `radii` and
+// `spacing` are plain scheme-independent numbers and carry over unchanged.
+import { useUi2Theme } from '../../../hooks/useUi2Theme';
+import { radii, spacing } from '../../../config/theme';
+import { Heading } from '../../../components/ui2/Ui2Text';
+import { Chip } from '../../../components/ui2/Chip';
+import { SlabCard } from '../../../components/ui2/SlabCard';
+import { Ui2ListRow } from '../../../components/ui2/Ui2ListRow';
 import { LevelBadge } from '../../../components/stats/LevelBadge';
 import { AchievementGrid } from '../../../components/gamification/AchievementGrid';
 import { Avatar } from '../../../components/avatar/Avatar';
@@ -29,6 +34,12 @@ import RoleSwitcher from '../../../components/school/RoleSwitcher';
 import { BecomeTeacherSheet } from '../../../components/school/BecomeTeacherSheet';
 import { useScreenView } from '../../../hooks/useScreenView';
 
+/** Reproduces the `capitalize` text transform the subscription row used to
+ *  carry as a class, so "premium" still reads "Premium". */
+function capitalize(word: string): string {
+  return word.charAt(0).toUpperCase() + word.slice(1);
+}
+
 const LEVEL_LABELS: Record<string, string> = {
   beginner: 'Beginner',
   elementary: 'Elementary',
@@ -38,6 +49,7 @@ const LEVEL_LABELS: Record<string, string> = {
 };
 
 export default function ProfileScreen() {
+  const { c, type } = useUi2Theme();
   useScreenView('profile');
   const { user, signOut } = useAuth();
   const { profile, subscription, setProfile } = useAppStore();
@@ -127,7 +139,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <GradientBackground>
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
     <SafeAreaView className="flex-1" edges={['top']}>
       <ScrollView className="flex-1 px-4 pt-2" contentContainerStyle={{ paddingBottom: 100 }}>
         {/* Header — title + settings. Settings also has a row further down; the
@@ -138,10 +150,10 @@ export default function ProfileScreen() {
             onPress={() => router.push('/profile/settings' as any)}
             accessibilityRole="button"
             accessibilityLabel="Settings"
-            style={styles.iconButton}
+            style={[styles.iconButton, { borderColor: c.cardBorder }]}
             hitSlop={8}
           >
-            <Ionicons name="settings-outline" size={18} color={colors.text.secondary} />
+            <Ionicons name="settings-outline" size={18} color={c.muted} />
           </Pressable>
         </View>
 
@@ -151,7 +163,7 @@ export default function ProfileScreen() {
             onPress={() => setCustomizerVisible(true)}
             accessibilityLabel="Change avatar"
             accessibilityRole="button"
-            style={styles.avatarRing}
+            style={[styles.avatarRing, { backgroundColor: c.primaryTint, borderColor: c.primary }]}
           >
             <Avatar size="medium" imageUri={avatarUri} displayName={profile?.displayName} />
           </Pressable>
@@ -159,7 +171,10 @@ export default function ProfileScreen() {
             <Heading level={3} numberOfLines={1}>
               {profile?.displayName ?? user?.email ?? 'Learner'}
             </Heading>
-            <Text style={styles.identityMeta} numberOfLines={1}>
+            <Text
+              style={[styles.identityMeta, { fontFamily: type.ui, color: c.idle }]}
+              numberOfLines={1}
+            >
               {profile?.displayName ? user?.email ?? '' : ''}
             </Text>
             <View style={styles.identityChips}>
@@ -185,27 +200,15 @@ export default function ProfileScreen() {
             It sits directly under the level ladder, above achievements and
             completed lessons, because it is the most credible artifact on this
             screen and it used to be the last thing a learner would ever find. */}
-        <Pressable
-          className="rounded-2xl p-5 mb-4 flex-row items-center"
-          style={{
-            backgroundColor: colors.premium.tint,
-            borderWidth: 1,
-            borderColor: colors.premium.base,
-          }}
+        <Ui2ListRow
+          style={{ marginBottom: spacing.md }}
+          icon="ribbon-outline"
+          title="Proficiency Report"
+          subtitle="Your estimated CEFR level and the evidence behind it"
           onPress={() => router.push('/profile/proficiency' as any)}
-          accessibilityRole="button"
           accessibilityLabel="View your proficiency report"
           accessibilityHint="Shows your estimated level per skill, what it means, and the evidence behind it"
-        >
-          <Ionicons name="ribbon-outline" size={24} color={colors.premium.base} />
-          <View className="ml-4 flex-1">
-            <Text className="text-base font-semibold text-text-primary">Proficiency Report</Text>
-            <Text className="text-sm text-text-secondary">
-              Your estimated CEFR level and the evidence behind it
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.premium.base} />
-        </Pressable>
+        />
 
         {/* Four Strands balance (Nation, research.md §14.3) */}
         <View className="mb-4">
@@ -221,35 +224,31 @@ export default function ProfileScreen() {
         {/* My Classes — hidden when school features are disabled */}
         {SCHOOL_ENABLED && (
           <>
-            <Text className="text-xl font-bold text-text-primary mb-3">My Classes</Text>
+            <Text className="text-xl font-bold mb-3" style={{ color: c.ink }}>My Classes</Text>
 
             {enrolledClasses.length > 0 ? (
               enrolledClasses.map((enrollment) => (
-                <View key={enrollment.id} className="bg-dark-card rounded-2xl p-5 mb-3 flex-row items-center">
-                  <Ionicons name="school-outline" size={24} color={colors.premium.base} />
-                  <View className="ml-4 flex-1">
-                    <Text className="text-base font-semibold text-text-primary">{enrollment.classroom?.name ?? 'Class'}</Text>
-                    <Text className="text-sm text-text-secondary">
-                      {enrollment.classroom?.targetLanguage?.toUpperCase() ?? ''} · {enrollment.classroom?.level ?? ''}
-                    </Text>
-                  </View>
-                </View>
+                <Ui2ListRow
+                  key={enrollment.id}
+                  style={{ marginBottom: spacing.sm }}
+                  icon="school-outline"
+                  title={enrollment.classroom?.name ?? 'Class'}
+                  subtitle={`${enrollment.classroom?.targetLanguage?.toUpperCase() ?? ''} · ${enrollment.classroom?.level ?? ''}`}
+                />
               ))
             ) : (
-              <View className="bg-dark-card rounded-2xl p-5 mb-3 items-center">
-                <Text className="text-text-secondary text-sm">Not enrolled in any classes</Text>
-              </View>
+              <SlabCard style={{ marginBottom: spacing.sm, alignItems: 'center' }}>
+                <Text className="text-sm" style={{ color: c.muted }}>Not enrolled in any classes</Text>
+              </SlabCard>
             )}
 
-            <Pressable
-              className="bg-dark-card rounded-2xl p-5 mb-6 flex-row items-center justify-center"
+            <Ui2ListRow
+              style={{ marginBottom: spacing.lg }}
+              icon="add-circle-outline"
+              title="Join a Class"
               onPress={() => setJoinModalVisible(true)}
-              accessibilityRole="button"
               accessibilityLabel="Join a class"
-            >
-              <Ionicons name="add-circle-outline" size={24} color={colors.premium.base} />
-              <Text className="text-base font-semibold text-primary ml-3">Join a Class</Text>
-            </Pressable>
+            />
 
             {/* Role Switcher — only show if user has teacher role */}
             {roles.includes('teacher') ? (
@@ -265,87 +264,70 @@ export default function ProfileScreen() {
                 />
               </View>
             ) : (
-              <Pressable
-                className="bg-dark-card rounded-2xl p-5 mb-6 flex-row items-center"
+              <Ui2ListRow
+                style={{ marginBottom: spacing.lg }}
+                icon="school-outline"
+                title="I teach a class"
+                subtitle="Create classes, assign work, grade submissions"
                 onPress={() => setBecomeTeacherVisible(true)}
-                accessibilityRole="button"
                 accessibilityLabel="I teach a class"
-              >
-                <Ionicons name="school-outline" size={24} color={colors.premium.base} />
-                <View className="ml-4 flex-1">
-                  <Text className="text-base font-semibold text-text-primary">I teach a class</Text>
-                  <Text className="text-sm text-text-secondary">Create classes, assign work, grade submissions</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={colors.correctionChip.grammar.text} />
-              </Pressable>
+              />
             )}
           </>
         )}
 
         {/* Settings */}
-        <Text className="text-xl font-bold text-text-primary mb-3">Settings</Text>
+        <Text className="text-xl font-bold mb-3" style={{ color: c.ink }}>Settings</Text>
 
-        <Pressable
-          className="bg-dark-card rounded-2xl p-5 mb-3 flex-row items-center"
+        <Ui2ListRow
+          style={{ marginBottom: spacing.sm }}
+          icon="card"
+          title="Subscription"
+          // Was a `capitalize` class on the old row; the tier strings are
+          // lowercase in the store, so the same casing is applied here.
+          subtitle={capitalize(subscription?.tier ?? 'Starter')}
           onPress={() => router.push('/profile/subscription' as any)}
-          accessibilityRole="button"
           accessibilityLabel="Subscription"
-        >
-          <Ionicons name="card" size={24} color={colors.premium.base} />
-          <View className="ml-4 flex-1">
-            <Text className="text-base font-semibold text-text-primary">Subscription</Text>
-            <Text className="text-sm text-text-secondary capitalize">{subscription?.tier ?? 'Starter'}</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.correctionChip.grammar.text} />
-        </Pressable>
+        />
 
-        <Pressable
-          className="bg-dark-card rounded-2xl p-5 mb-3 flex-row items-center"
+        <Ui2ListRow
+          style={{ marginBottom: spacing.sm }}
+          icon="settings"
+          title="Edit Settings"
+          subtitle="Language, level, daily goal, name"
           onPress={() => router.push('/profile/settings' as any)}
-          accessibilityRole="button"
           accessibilityLabel="Edit settings"
-        >
-          <Ionicons name="settings" size={24} color={colors.premium.base} />
-          <View className="ml-4 flex-1">
-            <Text className="text-base font-semibold text-text-primary">Edit Settings</Text>
-            <Text className="text-sm text-text-secondary">Language, level, daily goal, name</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.correctionChip.grammar.text} />
-        </Pressable>
+        />
 
-        <View className="bg-dark-card rounded-2xl p-5 mb-3 flex-row items-center">
-          <Ionicons name="language" size={24} color={colors.premium.base} />
-          <View className="ml-4 flex-1">
-            <Text className="text-base font-semibold text-text-primary">Target Language</Text>
-            <Text className="text-sm text-text-secondary">{languageLabel}</Text>
-          </View>
-        </View>
+        <Ui2ListRow
+          style={{ marginBottom: spacing.sm }}
+          icon="language"
+          title="Target Language"
+          subtitle={languageLabel}
+        />
 
-        <View className="bg-dark-card rounded-2xl p-5 mb-3 flex-row items-center">
-          <Ionicons name="trending-up" size={24} color={colors.premium.base} />
-          <View className="ml-4 flex-1">
-            <Text className="text-base font-semibold text-text-primary">Level</Text>
-            <Text className="text-sm text-text-secondary">{levelLabel}</Text>
-          </View>
-        </View>
+        <Ui2ListRow
+          style={{ marginBottom: spacing.sm }}
+          icon="trending-up"
+          title="Level"
+          subtitle={levelLabel}
+        />
 
-        <View className="bg-dark-card rounded-2xl p-5 mb-6 flex-row items-center">
-          <Ionicons name="time" size={24} color={colors.premium.base} />
-          <View className="ml-4 flex-1">
-            <Text className="text-base font-semibold text-text-primary">Daily Goal</Text>
-            <Text className="text-sm text-text-secondary">{profile?.dailyGoalMinutes ?? 10} minutes</Text>
-          </View>
-        </View>
+        <Ui2ListRow
+          style={{ marginBottom: spacing.lg }}
+          icon="time"
+          title="Daily Goal"
+          subtitle={`${profile?.dailyGoalMinutes ?? 10} minutes`}
+        />
 
         {/* Sign Out */}
-        <Pressable
-          className="bg-error-bg py-4 rounded-[14px] items-center"
+        <Ui2ListRow
+          icon="log-out-outline"
+          title="Sign Out"
+          destructive
           onPress={handleSignOut}
-          accessibilityRole="button"
           accessibilityLabel="Sign out"
-        >
-          <Text className="text-error-dark text-lg font-semibold">Sign Out</Text>
-        </Pressable>
+        />
       </ScrollView>
     </SafeAreaView>
     <AvatarPresetPicker
@@ -387,7 +369,7 @@ export default function ProfileScreen() {
         )}
       </>
     )}
-    </GradientBackground>
+    </View>
   );
 }
 
@@ -403,7 +385,6 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: colors.border.default,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -417,9 +398,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: radii.xxl,
-    backgroundColor: colors.action.primaryTint,
     borderWidth: 2,
-    borderColor: colors.action.primaryFill,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -429,10 +408,8 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   identityMeta: {
-    fontFamily: typography.family.mono,
-    fontSize: typography.scale.tiny.fontSize,
-    lineHeight: typography.scale.tiny.lineHeight,
-    color: colors.text.tertiary,
+    fontSize: 11,
+    lineHeight: 15,
     marginTop: 2,
   },
   identityChips: {

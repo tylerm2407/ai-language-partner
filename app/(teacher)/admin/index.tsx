@@ -2,8 +2,8 @@ import { View, Text, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { GradientBackground } from '../../../components/ui/GradientBackground';
-import { GlassSurface } from '../../../components/ui/GlassSurface';
+import { SlabCard } from '../../../components/ui2/SlabCard';
+import { useUi2Theme } from '../../../hooks/useUi2Theme';
 import { useSchoolStore } from '../../../stores/useSchoolStore';
 
 interface AdminAction {
@@ -20,40 +20,41 @@ const actions: AdminAction[] = [
 ];
 
 export default function AdminHubScreen() {
+  const { c } = useUi2Theme();
   const router = useRouter();
   const { organization } = useSchoolStore();
 
   return (
-    <GradientBackground>
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
       <SafeAreaView className="flex-1" edges={['top']}>
         <View className="flex-1 px-4 pt-2">
           <Text
-            className="text-[28px] text-text-primary mb-1"
-            style={{ fontFamily: 'Nunito_800ExtraBold' }}
+            className="text-[28px] mb-1"
+            style={{ fontFamily: 'Nunito_800ExtraBold', color: c.ink }}
             accessibilityRole="header"
           >
             Admin
           </Text>
           <Text
-            className="text-base text-text-secondary mb-6"
-            style={{ fontFamily: 'Nunito_400Regular' }}
+            className="text-base mb-6"
+            style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
           >
             {organization?.name ?? 'Organization'}
           </Text>
 
           {/* Org Info Card */}
-          <GlassSurface style={{ marginBottom: 20 }} innerStyle={{ padding: 16 }}>
+          <SlabCard style={{ marginBottom: 20 }}>
             <Text
-              className="text-sm text-text-secondary mb-2"
-              style={{ fontFamily: 'Nunito_600SemiBold' }}
+              className="text-sm mb-2"
+              style={{ fontFamily: 'Nunito_600SemiBold', color: c.muted }}
             >
               Organization Details
             </Text>
             <View className="flex-row items-center justify-between mb-1">
-              <Text className="text-sm text-text-secondary" style={{ fontFamily: 'Nunito_400Regular' }}>Status</Text>
-              <Text style={{ color: '#22C55E', fontSize: 14, fontFamily: 'Nunito_600SemiBold' }}>Active</Text>
+              <Text className="text-sm" style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}>Status</Text>
+              <Text style={{ color: c.green, fontSize: 14, fontFamily: 'Nunito_600SemiBold' }}>Active</Text>
             </View>
-          </GlassSurface>
+          </SlabCard>
 
           {/* Action Cards */}
           {actions.map((action) => (
@@ -63,13 +64,13 @@ export default function AdminHubScreen() {
               accessibilityRole="button"
               accessibilityLabel={action.title}
             >
-              <GlassSurface style={{ marginBottom: 12 }} innerStyle={{ padding: 16, flexDirection: 'row', alignItems: 'center' }}>
+              <SlabCard style={{ marginBottom: 12, flexDirection: 'row', alignItems: 'center' }}>
                 <View
                   style={{
                     width: 40,
                     height: 40,
                     borderRadius: 12,
-                    backgroundColor: action.icon === 'trash-outline' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(56, 189, 248, 0.15)',
+                    backgroundColor: action.icon === 'trash-outline' ? c.pinkTint : c.primaryTint,
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
@@ -77,19 +78,19 @@ export default function AdminHubScreen() {
                   <Ionicons
                     name={action.icon}
                     size={20}
-                    color={action.icon === 'trash-outline' ? '#EF4444' : '#818CF8'}
+                    color={action.icon === 'trash-outline' ? c.error : c.primary}
                   />
                 </View>
                 <View className="ml-3 flex-1">
-                  <Text className="text-base text-text-primary" style={{ fontFamily: 'Nunito_600SemiBold' }}>{action.title}</Text>
-                  <Text className="text-xs text-text-secondary" style={{ fontFamily: 'Nunito_400Regular' }}>{action.subtitle}</Text>
+                  <Text className="text-base" style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}>{action.title}</Text>
+                  <Text className="text-xs" style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}>{action.subtitle}</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={18} color="#64748B" />
-              </GlassSurface>
+                <Ionicons name="chevron-forward" size={18} color={c.idle} />
+              </SlabCard>
             </Pressable>
           ))}
         </View>
       </SafeAreaView>
-    </GradientBackground>
+    </View>
   );
 }

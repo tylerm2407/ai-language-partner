@@ -41,7 +41,6 @@ import {
   TRIAL_LESSON_ID,
   TRIAL_LESSON_XP,
 } from '../../components/onboarding/trial-lesson';
-import { GradientBackground } from '../../components/ui/GradientBackground';
 import { Avatar } from '../../components/avatar/Avatar';
 import { presetUrlFromId, type AvatarPreset } from '../../lib/avatar-presets';
 import { haptic } from '../../lib/haptics';
@@ -557,7 +556,7 @@ export default function OnboardingScreen() {
    */
   if (step === 'lesson') {
     return (
-      <GradientBackground variant="raised">
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
         <SafeAreaView className="flex-1">
           <KeyboardAvoidingView
             className="flex-1"
@@ -575,7 +574,7 @@ export default function OnboardingScreen() {
             />
           </KeyboardAvoidingView>
         </SafeAreaView>
-      </GradientBackground>
+      </View>
     );
   }
 

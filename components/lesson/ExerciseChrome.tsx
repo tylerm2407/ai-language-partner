@@ -2,11 +2,12 @@ import type { ReactNode } from 'react';
 import { View, Pressable, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { floatingTabBarSpace } from '../navigation/FloatingTabBar';
-import { TactileButton } from '../ui/TactileButton';
-import { Body } from '../ui/Text';
+import { SlabButton } from '../ui2/SlabButton';
+import { Body } from '../ui2/Ui2Text';
 import { ExerciseTrack } from './ExerciseTrack';
 import { ExerciseNote, type ExerciseNoteState } from './ExerciseNote';
-import { colors, spacing, typography } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
+import { spacing, typography } from '../../config/theme';
 
 interface ExerciseChromeProps {
   lessonTitle: string;
@@ -105,6 +106,7 @@ export function ExerciseChrome({
   onNext,
   children,
 }: ExerciseChromeProps) {
+  const { c } = useUi2Theme();
   const insets = useSafeAreaInsets();
   // The lesson route lives inside the tab navigator, and FloatingTabBar is
   // absolutely positioned over it — so a footer pinned to the bottom has to
@@ -131,7 +133,7 @@ export function ExerciseChrome({
           : { kind: 'wrong', note, correctAnswer };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.surface.raised }}>
+    <View style={{ flex: 1, backgroundColor: c.surface2 }}>
       {/* Header — unit name + text-only exit */}
       <View
         style={{
@@ -142,7 +144,7 @@ export function ExerciseChrome({
           paddingTop: spacing.md,
           paddingBottom: spacing.sm + 2,
           borderBottomWidth: 1,
-          borderBottomColor: colors.border.subtle,
+          borderBottomColor: c.cardBorder,
         }}
       >
         <View
@@ -155,9 +157,9 @@ export function ExerciseChrome({
           }}
         >
           <View
-            style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.action.accent }}
+            style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: c.primary }}
           />
-          <Body size="sm" weight="bold" numberOfLines={1} style={{ color: colors.text.primary }}>
+          <Body size="sm" weight="bold" numberOfLines={1} style={{ color: c.ink }}>
             {lessonTitle}
           </Body>
         </View>
@@ -172,7 +174,7 @@ export function ExerciseChrome({
             size="sm"
             weight="extrabold"
             style={{
-              color: colors.text.tertiary,
+              color: c.idle,
               fontSize: 12,
               letterSpacing: typography.tracking.banner + 0.2,
             }}
@@ -199,7 +201,7 @@ export function ExerciseChrome({
               fontFamily: typography.family.mono,
               fontSize: 10,
               letterSpacing: typography.tracking.eyebrow,
-              color: colors.text.tertiary,
+              color: c.idle,
             }}
           >
             {counterLabel}
@@ -235,11 +237,11 @@ export function ExerciseChrome({
           // beneath a scrolling region: anything translucent here lets a
           // long exercise show through the note as it scrolls past, which
           // reads as the two overlapping.
-          backgroundColor: colors.surface.raised,
+          backgroundColor: c.surface2,
           // Without a rule the note reads as the last line inside the question
           // card rather than a separate region.
           borderTopWidth: 1,
-          borderTopColor: colors.border.subtle,
+          borderTopColor: c.cardBorder,
         }}
       >
         <View
@@ -276,7 +278,7 @@ export function ExerciseChrome({
                   fontSize: 12,
                   fontWeight: '800',
                   letterSpacing: typography.tracking.banner + 0.2,
-                  color: colors.text.tertiary,
+                  color: c.idle,
                 }}
               >
                 SKIP
@@ -286,14 +288,14 @@ export function ExerciseChrome({
         </View>
 
         <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-          <TactileButton
+          <SlabButton
             label="Previous"
-            variant="secondary"
+            variant="ghost"
             onPress={onPrev}
             disabled={!canPrev}
             style={{ flex: 1 }}
           />
-          <TactileButton
+          <SlabButton
             label={isLast ? 'Finish' : 'Next'}
             variant="primary"
             onPress={onNext}

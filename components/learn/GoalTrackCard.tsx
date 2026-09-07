@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, radii, spacing } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
+import { radii, spacing } from '../../config/theme';
 import type { GoalTrack } from '../../types';
 
 /**
@@ -26,6 +27,7 @@ interface Props {
 }
 
 export function GoalTrackCard({ track, onOpenLesson, onNavigate }: Props) {
+  const { c } = useUi2Theme();
   const [busyLessonId, setBusyLessonId] = useState<string | null>(null);
   const [failedLessonId, setFailedLessonId] = useState<string | null>(null);
 
@@ -51,21 +53,21 @@ export function GoalTrackCard({ track, onOpenLesson, onNavigate }: Props) {
   return (
     <View
       style={{
-        backgroundColor: colors.surface.card,
+        backgroundColor: c.card,
         borderRadius: radii.lg,
         borderWidth: 1,
-        borderColor: colors.border.default,
+        borderColor: c.cardBorder,
         padding: spacing.md,
         marginBottom: spacing.sm,
       }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xxs }}>
-        <Ionicons name="flag-outline" size={18} color={colors.action.accent} />
+        <Ionicons name="flag-outline" size={18} color={c.primary} />
         <Text
           style={{
             fontSize: 12,
             fontWeight: '700',
-            color: colors.action.accent,
+            color: c.primary,
             marginLeft: spacing.xxs,
             letterSpacing: 0.5,
           }}
@@ -74,10 +76,10 @@ export function GoalTrackCard({ track, onOpenLesson, onNavigate }: Props) {
         </Text>
       </View>
 
-      <Text style={{ fontSize: 17, fontWeight: '700', color: colors.text.primary }}>
+      <Text style={{ fontSize: 17, fontWeight: '700', color: c.ink }}>
         {track.title}
       </Text>
-      <Text style={{ fontSize: 14, color: colors.text.tertiary, marginTop: spacing.xxs }}>
+      <Text style={{ fontSize: 14, color: c.idle, marginTop: spacing.xxs }}>
         {track.description}
       </Text>
 
@@ -112,23 +114,23 @@ export function GoalTrackCard({ track, onOpenLesson, onNavigate }: Props) {
                   width: 26,
                   height: 26,
                   borderRadius: 13,
-                  backgroundColor: colors.surface.cardAlt,
+                  backgroundColor: c.surface2,
                   alignItems: 'center',
                   justifyContent: 'center',
                   marginRight: spacing.sm,
                 }}
               >
-                <Text style={{ fontSize: 13, fontWeight: '700', color: colors.text.tertiary }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: c.idle }}>
                   {index + 1}
                 </Text>
               </View>
 
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text.primary }}>
+                <Text style={{ fontSize: 15, fontWeight: '600', color: c.ink }}>
                   {lesson.title}
                 </Text>
                 {(isBusy || blocked || failed) && (
-                  <Text style={{ fontSize: 12, color: colors.text.tertiary, marginTop: 2 }}>
+                  <Text style={{ fontSize: 12, color: c.idle, marginTop: 2 }}>
                     {isBusy
                       ? 'Preparing this lesson…'
                       : blocked
@@ -139,9 +141,9 @@ export function GoalTrackCard({ track, onOpenLesson, onNavigate }: Props) {
               </View>
 
               {isBusy ? (
-                <ActivityIndicator size="small" color={colors.text.tertiary} />
+                <ActivityIndicator size="small" color={c.idle} />
               ) : (
-                <Ionicons name="chevron-forward" size={18} color={colors.text.tertiary} />
+                <Ionicons name="chevron-forward" size={18} color={c.idle} />
               )}
             </Pressable>
           );
@@ -170,24 +172,25 @@ export function GoalTrackPrompt({
   error: string | null;
   onBuild: () => void;
 }) {
+  const { c } = useUi2Theme();
   return (
     <View
       style={{
-        backgroundColor: colors.surface.card,
+        backgroundColor: c.card,
         borderRadius: radii.lg,
         borderWidth: 1,
-        borderColor: colors.border.default,
+        borderColor: c.cardBorder,
         padding: spacing.md,
         marginBottom: spacing.sm,
       }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xxs }}>
-        <Ionicons name="flag-outline" size={18} color={colors.action.accent} />
+        <Ionicons name="flag-outline" size={18} color={c.primary} />
         <Text
           style={{
             fontSize: 12,
             fontWeight: '700',
-            color: colors.action.accent,
+            color: c.primary,
             marginLeft: spacing.xxs,
             letterSpacing: 0.5,
           }}
@@ -196,15 +199,15 @@ export function GoalTrackPrompt({
         </Text>
       </View>
 
-      <Text style={{ fontSize: 15, color: colors.text.primary, lineHeight: 21 }}>
+      <Text style={{ fontSize: 15, color: c.ink, lineHeight: 21 }}>
         “{goalText}”
       </Text>
-      <Text style={{ fontSize: 14, color: colors.text.tertiary, marginTop: spacing.xs }}>
+      <Text style={{ fontSize: 14, color: c.idle, marginTop: spacing.xs }}>
         We can build a short set of lessons aimed straight at that.
       </Text>
 
       {error && (
-        <Text style={{ fontSize: 13, color: colors.text.tertiary, marginTop: spacing.xs }}>
+        <Text style={{ fontSize: 13, color: c.idle, marginTop: spacing.xs }}>
           {error}
         </Text>
       )}
@@ -214,7 +217,7 @@ export function GoalTrackPrompt({
         disabled={isBuilding}
         style={{
           marginTop: spacing.sm,
-          backgroundColor: colors.action.primaryFill,
+          backgroundColor: c.primary,
           paddingVertical: spacing.sm,
           minHeight: 44,
           borderRadius: radii.md,
@@ -227,9 +230,9 @@ export function GoalTrackPrompt({
         accessibilityLabel="Build lessons for my goal"
       >
         {isBuilding ? (
-          <ActivityIndicator size="small" color={colors.text.onPrimary} />
+          <ActivityIndicator size="small" color={c.onPrimary} />
         ) : (
-          <Text style={{ color: colors.text.onPrimary, fontSize: 15, fontWeight: '600' }}>
+          <Text style={{ color: c.onPrimary, fontSize: 15, fontWeight: '600' }}>
             Build my lessons
           </Text>
         )}

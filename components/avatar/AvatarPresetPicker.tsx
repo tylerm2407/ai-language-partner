@@ -22,7 +22,8 @@ import {
 } from 'react-native';
 import { Sheet } from '../ui/Sheet';
 import { Body, Caption } from '../ui/Text';
-import { colors, radii, spacing } from '../../config/theme';
+import { spacing, ui2Dark, ui2Light, type Ui2Palette } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { fetchAvatarPresets, type AvatarPreset } from '../../lib/avatar-presets';
 
 interface AvatarPresetPickerProps {
@@ -40,6 +41,8 @@ const COLUMNS = 3;
 
 export const AvatarPresetPicker = React.memo(
   ({ visible, onClose, selectedId, onSelect, onUsePhoto }: AvatarPresetPickerProps) => {
+    const { c, scheme } = useUi2Theme();
+    const styles = STYLES[scheme];
     const [presets, setPresets] = useState<AvatarPreset[]>([]);
     const [loading, setLoading] = useState(true);
     const [failed, setFailed] = useState(false);
@@ -84,7 +87,11 @@ export const AvatarPresetPicker = React.memo(
           </Pressable>
         );
       },
-      [selectedId, onSelect],
+      // `styles` joins the deps because it is no longer a module constant: it
+      // is `STYLES[scheme]`, so a phone switching to dark mid-session must
+      // rebuild the tiles. The reference is stable per scheme, so this does not
+      // re-render on anything else.
+      [selectedId, onSelect, styles],
     );
 
     return (
@@ -94,7 +101,7 @@ export const AvatarPresetPicker = React.memo(
 
           {loading ? (
             <View style={styles.state}>
-              <ActivityIndicator size="large" color={colors.action.accent} />
+              <ActivityIndicator size="large" color={c.primary} />
             </View>
           ) : failed ? (
             <View style={styles.state}>
@@ -169,14 +176,22 @@ const TILE = Math.floor((SCREEN.width - spacing.lg * 2 - GUTTER * (COLUMNS - 1))
  */
 const SHEET_HEIGHT = Math.round(SCREEN.height * 0.85);
 
-const styles = StyleSheet.create({
+
+/**
+ * The sheet is built once per SCHEME, at module load, rather than per render.
+ * A `StyleSheet.create` inside the component would re-register the whole sheet
+ * on every render, and wrapping it in `useMemo` would add a hook to a file
+ * where the migration is supposed to add exactly one. Two frozen sheets and an
+ * index by scheme costs nothing and keeps the colour in tokens.
+ */
+const makeStyles = (c: Ui2Palette) => StyleSheet.create({
   // flex: 1 so the grid can claim the space the pinned sheet height provides.
   container: { flex: 1, paddingTop: spacing.xs },
-  title: { fontSize: 20, fontWeight: '700', color: colors.text.primary, marginBottom: spacing.sm },
+  title: { fontSize: 20, fontWeight: '700', color: c.ink, marginBottom: spacing.sm },
   // The loading and error states sit where the grid would, not above it, so the
   // sheet does not resize as it settles.
   state: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
-  errorText: { color: colors.text.secondary, textAlign: 'center' },
+  errorText: { color: c.muted, textAlign: 'center' },
   gridList: { flex: 1 },
   grid: { paddingBottom: spacing.md },
   row: { gap: GUTTER, marginBottom: GUTTER },
@@ -187,13 +202,13 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 3,
     borderColor: 'transparent',
-    backgroundColor: colors.surface.cardAlt,
+    backgroundColor: c.surface2,
   },
-  tileSelected: { borderColor: colors.action.accent },
+  tileSelected: { borderColor: c.primary },
   tileImage: { width: '100%', height: '100%' },
   footer: {
     borderTopWidth: 1,
-    borderTopColor: colors.border.subtle,
+    borderTopColor: c.cardBorder,
     paddingTop: spacing.xs,
   },
   footerAction: {
@@ -202,6 +217,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: spacing.xs,
   },
-  link: { color: colors.action.accent, fontWeight: '600' },
-  secondaryText: { color: colors.text.tertiary },
+  link: { color: c.primary, fontWeight: '600' },
+  secondaryText: { color: c.idle },
 });
+
+const STYLES = { light: makeStyles(ui2Light), dark: makeStyles(ui2Dark) };
