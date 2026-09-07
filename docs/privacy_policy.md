@@ -53,6 +53,7 @@ When you use Fluenci through a school or educational institution, the following 
 ### Operational Data
 
 - **Usage analytics** — screens visited, session duration, and feature engagement. This data is used for product improvement and is aggregated and stripped of personally identifiable information (PII) within 90 days.
+- **Crash and error reports** — when the app crashes or encounters an unexpected error, we collect a technical report containing the error message, stack trace, app version, device model, operating system version, and your internal account identifier (a random ID, not your name or email). We use this solely to diagnose and fix defects. Reports never include lesson content, chat messages, or voice audio, and credentials are stripped before the report leaves the device.
 
 ### Payment Information
 
@@ -94,6 +95,7 @@ We share data only with the subprocessors listed below, solely to operate the Se
 | **OpenAI** (Whisper API) | Voice audio | Speech-to-text transcription | Yes (API Terms of Service) | Yes |
 | **ElevenLabs** | Target language text only | Text-to-speech audio generation | Yes | No (no student identifiers are sent) |
 | **Stripe** | Email address, subscription tier | Payment processing | Yes (Stripe DPA) | Minimal (email and plan only) |
+| **Sentry** (Functional Software, Inc.) | Crash and error reports: error message, stack trace, app version, device model, OS version, internal account ID | Crash reporting and error diagnostics | Yes (Sentry DPA) | Minimal (internal account ID only; no name, email, or learning content) |
 
 **All subprocessors that receive student PII are contractually committed not to use that data for model training or any purpose beyond delivering the service.**
 
@@ -115,6 +117,7 @@ We retain data only as long as necessary to provide the Service. Retention perio
 | Spaced repetition data | Duration of contract + 30 days |
 | Voice recordings | **90 days after creation**, then permanently deleted |
 | Usage analytics | Aggregated and de-identified after 90 days; no PII retained beyond that point |
+| Crash and error reports | 90 days, then automatically deleted by Sentry |
 | Payment information | Managed by Stripe per their retention policy; Fluenci retains only the Stripe customer ID for the duration of the subscription |
 
 Upon contract termination or at the institution's request, all PII is anonymized or permanently deleted within 30 days. Anonymized, aggregate data may be retained for service improvement purposes.

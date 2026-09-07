@@ -48,6 +48,9 @@ Sentry.init({
   tracesSampleRate: 0.2,
   // Only enable in production builds that actually have a DSN configured.
   enabled: !__DEV__ && !!SENTRY_DSN,
+  // Set per EAS build profile (eas.json → EXPO_PUBLIC_APP_ENV) so preview
+  // builds do not pollute the production issue stream or its alert rules.
+  environment: process.env.EXPO_PUBLIC_APP_ENV ?? 'production',
 });
 
 function RootLayout() {
