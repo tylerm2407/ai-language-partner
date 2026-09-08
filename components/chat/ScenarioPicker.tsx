@@ -1,5 +1,9 @@
 /**
- * ScenarioPicker — what the AI Chat tab shows before a conversation.
+ * ScenarioPicker — what the Situations tab shows before a conversation.
+ *
+ * "Situations", not "AI Chat" (Tyler, 2026-09-08): the old title named the
+ * technology rather than what the learner gets, and could put people off. The
+ * AI is still disclosed — the consent sheet, and the subtitle's "your tutor".
  *
  * Direction G1 "Gallery" from the canvas page "AI Chat · picker" (Tyler,
  * 2026-09-08): a two-column grid of scene tiles, Free Chat last and full
@@ -81,7 +85,7 @@ export function ScenarioPicker({ scenarios, languageName, levelLine, resumable, 
   return (
     <View style={styles.root}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Hero accessibilityRole="header">AI Chat</Hero>
+        <Hero accessibilityRole="header">Situations</Hero>
         <Body tone="secondary" style={styles.subtitle}>
           Pick a scene to practise in {languageName}. Type or speak, your call.
         </Body>

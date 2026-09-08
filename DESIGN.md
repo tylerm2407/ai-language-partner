@@ -937,7 +937,9 @@ scheme (`app.json` `userInterfaceStyle: "automatic"`).
   chips (index · title · count, thin bar; selected is solid violet), 52pt
   lesson rows, no outlines anywhere. Home was offered five variations the
   same day and Tyler kept it as it is.
-- **AI Chat picker** (2026-09-08, canvas page "AI Chat · picker", G1 "Gallery"):
+- **Situations** (the chat tab, renamed from "AI Chat" 2026-09-08 — the old
+  title named the technology, not the benefit; canvas page "AI Chat ·
+  picker", G1 "Gallery"):
   a two-column grid of scene tiles (icon well in a rotating tint, label), Free
   Chat last and full width; tapping a tile opens `Ui2Sheet` with the icon,
   title, "Language · CEFR line", description, a resume hint, and ONE
