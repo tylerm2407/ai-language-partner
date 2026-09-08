@@ -937,6 +937,14 @@ scheme (`app.json` `userInterfaceStyle: "automatic"`).
   chips (index · title · count, thin bar; selected is solid violet), 52pt
   lesson rows, no outlines anywhere. Home was offered five variations the
   same day and Tyler kept it as it is.
+- **AI Chat picker** (2026-09-08, canvas page "AI Chat · picker", G1 "Gallery"):
+  a two-column grid of scene tiles (icon well in a rotating tint, label), Free
+  Chat last and full width; tapping a tile opens `Ui2Sheet` with the icon,
+  title, "Language · CEFR line", description, a resume hint, and ONE
+  Continue that opens the chat as text with the mic ready
+  (`components/chat/ScenarioPicker.tsx`). The old Text Chat / Live Voice pair
+  is gone from the picker: spoken replies and hands-free are toggles inside
+  the chat, and the real-time voice call is the Talk tab.
 - **Motion vocabulary** (all gated on `useMotion().shouldReduce`): step change =
   the hero block arrives with a per-step entrance (slide / rise / pop / meet /
   drop), the done segments light up 70ms apart, the question fades up, Sol

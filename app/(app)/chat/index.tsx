@@ -23,6 +23,7 @@ import { showLimitAlert } from '../../../lib/limit-messaging';
 import { CEFR_BAND_BY_LEVEL } from '../../../lib/cefr-proficiency';
 import { cefrLabel, cefrAccessibilityLabel } from '../../../lib/cefr-labels';
 import { ChatBubble } from '../../../components/chat/ChatBubble';
+import { ScenarioPicker, scenarioIdentity } from '../../../components/chat/ScenarioPicker';
 import { ChatInput } from '../../../components/chat/ChatInput';
 import type { HandsFreeState } from '../../../components/chat/ChatInput';
 import { TypingIndicator } from '../../../components/chat/TypingIndicator';
@@ -30,7 +31,7 @@ import AssignmentTimer from '../../../components/school/AssignmentTimer';
 import { useAssignmentTimer } from '../../../hooks/useAssignmentTimer';
 import type { ConversationMessage, Assignment, AssignmentSubmission, LanguageCode, ProficiencyLevel } from '../../../types';
 import { Ionicons } from '@expo/vector-icons';
-import { getOrCreateChatSession, saveChatMessage, loadChatMessages, fetchStudentAssignments, submitAssignment, upsertDailyStats } from '../../../lib/supabase-queries';
+import { getOrCreateChatSession, listChatSessions, saveChatMessage, loadChatMessages, fetchStudentAssignments, submitAssignment, upsertDailyStats } from '../../../lib/supabase-queries';
 import { getTargetLanguage } from '../../../lib/language';
 import { setAudioSessionMode, playbackModeFor } from '../../../lib/audio-session';
 import { saveErrorCopy } from '../../../lib/error-copy';
@@ -41,7 +42,7 @@ import {
   type VoiceGender,
 } from '../../../lib/voice-preference';
 import { SCENARIO_META, SCENARIO_ORDER, type ScenarioKey } from '../../../types/scenarios';
-import { SCHOOL_ENABLED } from '../../../config/app';
+import { SCHOOL_ENABLED, SUPPORTED_LANGUAGES } from '../../../config/app';
 // `colors` is deliberately NOT imported: it is the fixed DARK palette, and a
 // screen that reads it stays dark whatever the phone is set to. `radii` and
 // `spacing` are plain scheme-independent numbers and carry over unchanged.
@@ -201,6 +202,27 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
   const playbackResolveRef = useRef<(() => void) | null>(null);
 
   const level = profile?.level ?? 'beginner';
+  const languageName = SUPPORTED_LANGUAGES.find((l) => l.code === targetLanguage)?.name ?? targetLanguage.toUpperCase();
+
+  // Which scenes already have a saved conversation, for the picker's
+  // "picks up where you left off" line. Read-only: getOrCreateChatSession
+  // would CREATE a row per scene just by looking.
+  const [resumable, setResumable] = useState<ReadonlySet<string>>(new Set());
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    listChatSessions(user.id, 50)
+      .then((sessions) => {
+        if (cancelled) return;
+        setResumable(new Set(sessions.filter((sess) => sess.targetLanguage === targetLanguage).map((sess) => sess.scenarioKey)));
+      })
+      .catch(() => {
+        // The hint is a nicety; a failed lookup just reads as new conversations.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, targetLanguage]);
 
   // Load assignment data if assignmentId param present (school feature)
   useEffect(() => {
@@ -987,65 +1009,28 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
 
   // Scenario picker
   if (!selectedScenario) {
+    // Direction G1 "Gallery" (canvas "AI Chat · picker", 2026-09-08): tiles,
+    // a sheet per scene, one Continue. Text mode with the mic ready — the
+    // spoken-reply and hands-free toggles are inside the chat, so the old
+    // "Live Voice" shortcut is not needed here.
     return (
       <View style={{ flex: 1, backgroundColor: c.bg }}>
-      <SafeAreaView className="flex-1" edges={['top']}>
-        <View className="flex-1 px-4 pt-2">
-          <Text className="text-[28px] font-bold mb-2" style={{ color: c.ink }}>AI Chat</Text>
-          <Text className="text-base mb-6" style={{ color: c.muted }}>
-            Choose a scenario to practice {targetLanguage.toUpperCase()} conversation
-          </Text>
-          <FlatList
-            data={SCENARIOS}
-            keyExtractor={(item) => item.label}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 100 }}
-            renderItem={({ item: scenario }) => (
-              <SlabCard style={{ marginBottom: 12 }}>
-                <View className="p-5">
-                  <View className="flex-row items-center mb-3">
-                    <View className="w-10 h-10 rounded-full items-center justify-center" style={{ backgroundColor: c.primaryTint }}>
-                      <Ionicons name={scenario.icon} size={22} color={c.primary} />
-                    </View>
-                    <View className="ml-4 flex-1">
-                      <Text className="text-base font-semibold" style={{ color: c.ink }}>{scenario.label}</Text>
-                      <Text className="text-sm mt-0.5" style={{ color: c.muted }}>
-                        {scenario.description}
-                      </Text>
-                    </View>
-                  </View>
-                  <View className="flex-row" style={{ gap: 10 }}>
-                    <Pressable
-                      className="flex-1 rounded-[14px] py-3 items-center flex-row justify-center" style={{ backgroundColor: c.primary }}
-                      onPress={() => startChat(scenario, false)}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Text chat: ${scenario.label}`}
-                    >
-                      <Ionicons name="chatbubble-outline" size={16} color={c.onPrimary} />
-                      <Text className="text-sm font-semibold ml-2" style={{ color: c.onPrimary }}>Text Chat</Text>
-                    </Pressable>
-                    <Pressable
-                      className="flex-1 rounded-[14px] py-3 items-center flex-row justify-center" style={{ backgroundColor: c.green }}
-                      onPress={() => startChat(scenario, true)}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Live voice: ${scenario.label}`}
-                      accessibilityHint="Start a real-time voice conversation"
-                    >
-                      <Ionicons name="mic" size={16} color={c.onPrimary} />
-                      <Text className="text-sm font-semibold ml-2" style={{ color: c.onPrimary }}>Live Voice</Text>
-                    </Pressable>
-                  </View>
-                </View>
-              </SlabCard>
-            )}
+        <SafeAreaView className="flex-1" edges={['top']}>
+          <ScenarioPicker
+            scenarios={SCENARIOS}
+            languageName={languageName}
+            levelLine={cefrLabel(CEFR_FOR_LEVEL[level])}
+            resumable={resumable}
+            onStart={(picked) => {
+              const scenario = SCENARIOS.find((sc) => scenarioIdentity(sc) === scenarioIdentity(picked));
+              if (scenario) startChat(scenario, false);
+            }}
           />
-        </View>
-      </SafeAreaView>
+        </SafeAreaView>
       </View>
     );
   }
 
-  // Chat interface
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
     <SafeAreaView className="flex-1" edges={['top']}>
