@@ -114,6 +114,14 @@ type ModerationVerdict = {
   categories: string[];
 };
 
+function moderationApiKeyFromEnvironment(): string | null {
+  const runtime = globalThis as typeof globalThis & {
+    Deno?: { env?: { get: (name: string) => string | undefined } };
+    process?: { env?: Record<string, string | undefined> };
+  };
+  return runtime.Deno?.env?.get('OPENAI_KEY') ?? runtime.process?.env?.OPENAI_KEY ?? null;
+}
+
 // ─── CEFR Level Heuristics ──────────────────────────────────────────
 
 const CEFR_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'] as const;
@@ -355,7 +363,7 @@ export async function validateContentSafety(
   if (mode === 'skip') return { safe: true, reasons: [] };
 
   const apiKey = options?.moderationApiKey === undefined
-    ? (Deno.env.get('OPENAI_KEY') ?? null)
+    ? moderationApiKeyFromEnvironment()
     : options.moderationApiKey;
   if (!apiKey) {
     return mode === 'required'
