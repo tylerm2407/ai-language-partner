@@ -69,9 +69,9 @@
 | Feature | Detail |
 |---------|--------|
 | Automated Backups | Daily, managed by Supabase |
-| Point-in-Time Recovery | 30-day window |
+| Point-in-Time Recovery | Not enabled in the production configuration verified September 8, 2026 |
 | Recovery Time Objective (RTO) | < 4 hours |
-| Recovery Point Objective (RPO) | < 24 hours (daily backups), < 1 minute (PITR) |
+| Recovery Point Objective (RPO) | < 24 hours for database data; object-storage recovery is not yet established |
 
 ---
 

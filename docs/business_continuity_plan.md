@@ -1,7 +1,7 @@
 # Business Continuity & Disaster Recovery Plan
 
 **Product:** Fluenci — AI-Powered Language Learning Platform
-**Last Updated:** 2026-04-23
+**Last Updated:** 2026-09-08
 **Plan Owner:** Tyler Moore
 **Contact:** security@fluenci.app
 
@@ -37,8 +37,8 @@ This plan defines procedures for maintaining and restoring Fluenci's services fo
 | Metric | Target | Notes |
 |--------|--------|-------|
 | **Recovery Time Objective (RTO)** | < 4 hours | Time from incident declaration to service restoration |
-| **Recovery Point Objective (RPO) — Database** | < 1 minute | Via Supabase Point-in-Time Recovery (PITR) |
-| **Recovery Point Objective (RPO) — File Storage** | < 24 hours | Daily backup cycle |
+| **Recovery Point Objective (RPO) — Database** | < 24 hours | Current verified control is a daily database backup; PITR is not enabled |
+| **Recovery Point Objective (RPO) — File Storage** | Not yet established | Database backups include storage metadata, not stored objects; an independent object-backup control is required |
 | **Recovery Point Objective (RPO) — Edge Functions** | 0 (no data loss) | Code is in Git; redeployable at any time |
 | **Maximum Tolerable Downtime (MTD)** | 8 hours | Beyond this, institutional SLA commitments are at risk |
 
@@ -50,19 +50,19 @@ This plan defines procedures for maintaining and restoring Fluenci's services fo
 
 | Item | Detail |
 |------|--------|
-| Method | Supabase automated daily backups + continuous WAL archiving for PITR |
-| Frequency | Daily full backup; continuous WAL streaming |
-| PITR Window | 30 days |
+| Method | Supabase automated daily database backups |
+| Frequency | Daily |
+| PITR Window | Not available in the currently verified production configuration |
 | Encryption | AES-256 at rest via AWS KMS |
 | What is backed up | All PostgreSQL schemas, tables, indexes, RLS policies, stored procedures, extensions |
-| Verification | Quarterly restoration test (see Section 6) |
+| Verification | Not yet demonstrated; restoration exercises in Section 6 are planned controls |
 
 ### 4.2 File Storage Backups
 
 | Item | Detail |
 |------|--------|
-| Method | Supabase Storage (S3-backed) with S3 versioning |
-| Frequency | Continuous (S3 durability: 99.999999999%) |
+| Method | No independent recoverable object backup has been verified |
+| Frequency | Not established |
 | What is backed up | Audio files, user-uploaded content, static assets |
 
 ### 4.3 Edge Function Code
@@ -94,12 +94,12 @@ This plan defines procedures for maintaining and restoring Fluenci's services fo
 | 1 | Confirm outage via Supabase Dashboard and status page | Tyler |
 | 2 | Check Supabase status (status.supabase.com) for platform-wide incidents | Tyler |
 | 3 | If platform-wide: monitor Supabase status; proceed to communication plan | Tyler |
-| 4 | If project-specific: initiate PITR restore via Supabase Dashboard to last known good timestamp | Tyler |
+| 4 | If project-specific: restore the latest available daily database backup through Supabase support/dashboard procedures | Tyler |
 | 5 | Verify data integrity after restore (spot-check key tables, row counts, recent records) | Tyler |
 | 6 | Confirm Edge Functions reconnect successfully | Tyler |
 | 7 | Monitor for 4 hours post-restore | Tyler |
 
-**RTO:** < 4 hours | **RPO:** < 1 minute (PITR)
+**RTO:** Target < 4 hours (not restore-tested) | **RPO:** < 24 hours for the database
 
 ---
 
@@ -151,7 +151,7 @@ This plan defines procedures for maintaining and restoring Fluenci's services fo
 | 7 | Send all-clear notification to institutional contacts | Owen |
 | 8 | Conduct post-incident review within 48 hours | Tyler |
 
-**RTO:** Dependent on Supabase | **RPO:** < 1 minute (DB via PITR), < 24 hours (Storage)
+**RTO:** Dependent on Supabase | **RPO:** < 24 hours for the database; storage recovery is not yet established
 
 ---
 
@@ -164,31 +164,33 @@ This plan defines procedures for maintaining and restoring Fluenci's services fo
 | 1 | Identify scope of corruption (which tables, how many rows, time range) | Tyler |
 | 2 | Immediately halt any running migrations or deployments | Tyler |
 | 3 | Determine the latest clean timestamp (before corruption began) | Tyler |
-| 4 | Initiate PITR restore to the pre-corruption timestamp via Supabase Dashboard | Tyler |
+| 4 | Restore the latest clean daily backup; if no clean backup exists, preserve evidence and escalate before attempting surgical repair | Tyler |
 | 5 | Verify restored data integrity (compare row counts, spot-check affected records) | Tyler |
 | 6 | If corruption was caused by code: fix the bug, test, and redeploy before resuming | Tyler |
 | 7 | Document root cause and add regression test | Tyler |
 | 8 | If student data was affected: assess whether breach notification is required per IRP | Tyler |
 
-**RTO:** < 4 hours | **RPO:** < 1 minute (PITR to pre-corruption state)
+**RTO:** Target < 4 hours (not restore-tested) | **RPO:** Up to 24 hours, and potentially more if the newest backup contains the corruption
 
 ---
 
 ## 6. Backup Restoration Testing Schedule
 
-Backup restoration is tested quarterly to validate recovery procedures and data integrity.
+Backup restoration is planned quarterly. No completed restore exercise has yet
+been evidenced, so the schedule below is a control commitment, not a claim of
+operating effectiveness.
 
 | Quarter | Test Window | Scope |
 |---------|-------------|-------|
-| Q1 | January | Full database PITR restore to staging environment |
-| Q2 | April | Full database PITR restore + Edge Function redeploy |
-| Q3 | July | Full database PITR restore + Storage recovery verification |
+| Q1 | January | Restore latest daily database backup to an isolated staging project |
+| Q2 | April | Daily-backup restore + Edge Function redeploy |
+| Q3 | July | Database restore + implement and verify independent Storage recovery |
 | Q4 | October | Full DR simulation (all scenarios) |
 
 ### Test Procedure
 
 1. Create a staging project on Supabase (or use existing staging instance).
-2. Perform PITR restore of production database to staging.
+2. Restore a production backup into an isolated non-production project without overwriting production.
 3. Verify data integrity: row counts, schema correctness, RLS policy enforcement, recent records.
 4. Redeploy Edge Functions to staging and verify endpoint health.
 5. Document results, noting any failures or deviations from expected outcomes.
@@ -201,7 +203,7 @@ Backup restoration is tested quarterly to validate recovery procedures and data 
 **Tester:** [NAME]
 **Scope:** [WHAT WAS TESTED]
 **Result:** PASS / FAIL
-**PITR Restore Time:** [MINUTES]
+**Backup Restore Time:** [MINUTES]
 **Data Integrity Check:** PASS / FAIL
 **Edge Function Redeploy:** PASS / FAIL / N/A
 **Issues Found:** [DESCRIPTION or NONE]
