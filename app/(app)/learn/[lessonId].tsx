@@ -171,16 +171,6 @@ export default function LessonScreen() {
    */
   const handleComplete = async (result: LessonResult) => {
     completedRef.current = true;
-    trackEvent('lesson_completed', {
-      contentId: lesson?.id,
-      language: targetLanguage ?? undefined,
-      // The runner's skip-aware accuracy, NOT correctCount/totalExercises:
-      // a question the learner could not hear is out of the denominator, and
-      // recomputing it here is exactly how the recorded score and the score
-      // they were shown drifted apart once already.
-      score: result.accuracy,
-      count: result.totalExercises,
-    });
 
     // 1. Completion — the durable record of progress. Resolves once the row
     //    is in Postgres or in the replay queue (see useLessonProgressStore).
@@ -210,6 +200,16 @@ export default function LessonScreen() {
             result.timeSpentMs,
           );
           setSaveState(persisted ? 'saved' : 'queued');
+          // A completion means the durable server row or its durable replay
+          // queue exists — never merely that the runner called this handler.
+          trackEvent('lesson_completed', {
+            contentId: lesson.id,
+            language: targetLanguage ?? undefined,
+            score: result.accuracy,
+            count: result.totalExercises,
+            source: persisted ? 'server' : 'offline_queue',
+            outcome: persisted ? 'server_persisted' : 'local_queued',
+          });
         } catch (err) {
           console.error('[lesson] markLessonComplete failed:', err);
           setSaveState('failed');

@@ -186,12 +186,15 @@ export const useLessonProgressStore = create<LessonProgressStore>((set, get) => 
           extra: { lessonId, courseId },
         });
       }
-      await enqueue(userId, { type: 'lesson-completion', payload }).catch((queueErr) => {
-        // Queueing itself failing (storage full/unavailable) is the only path
-        // that can still lose the row — make it loud.
+      try {
+        await enqueue(userId, { type: 'lesson-completion', payload });
+      } catch (queueErr) {
+        // Queueing itself failing means there is no durable completion. Throw
+        // after reporting so callers cannot emit a successful completion event.
         console.error('[lesson-progress] failed to queue completion:', queueErr);
         Sentry.captureException(queueErr, { tags: { area: 'lesson-completion-queue' } });
-      });
+        throw queueErr;
+      }
       return { completion: optimistic, persisted: false };
     }
   },

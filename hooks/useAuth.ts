@@ -12,6 +12,7 @@ import { useLessonProgressStore } from '../stores/useLessonProgressStore';
 import { useSchoolStore } from '../stores/useSchoolStore';
 import { useAnimationStore } from '../stores/useAnimationStore';
 import type { Session } from '@supabase/supabase-js';
+import { identifyUser, trackEvent } from '../lib/analytics';
 
 /**
  * Auth session state, held once for the whole app.
@@ -145,6 +146,16 @@ export function useAuth() {
     if (error) {
       await clearPendingAuthIntent();
       throw error;
+    }
+    // `signUp` has returned a real auth.users id, so this means the account
+    // was accepted by Supabase rather than merely that the CTA was tapped.
+    // Some projects require email confirmation and return no session here;
+    // identifying with the persisted user id still keeps this event out of an
+    // anonymous bucket. Supabase may return an obfuscated existing-user result
+    // with no identities; do not count that as a new signup.
+    if (data.user && (data.user.identities?.length ?? 0) > 0) {
+      identifyUser(data.user.id);
+      trackEvent('signup_completed', { source: 'email', outcome: 'auth_persisted' });
     }
     // Projects with email confirmation disabled sign in immediately and never
     // produce a callback, so no intent should remain usable afterward.

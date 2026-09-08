@@ -93,11 +93,24 @@ export default function SubscriptionScreen() {
   const handlePurchase = async (pkg: PurchasesPackage) => {
     if (!user) return;
     setPurchasingId(pkg.identifier);
+    const requestedTier = tierFromPackage(pkg);
+    const requestedTerm = isMonthlyPackage(pkg) ? 'monthly' : 'annual';
+    trackEvent('purchase_started', {
+      tier: requestedTier,
+      term: requestedTerm,
+      provider: 'revenuecat',
+      outcome: 'attempted',
+    });
     try {
       const result = await purchasePackage(pkg);
       if (result.status === 'success') {
         const tier = result.tier ?? tierFromPackage(pkg);
-        trackEvent('purchase_completed', { tier });
+        trackEvent('purchase_provider_confirmed', {
+          tier,
+          term: requestedTerm,
+          provider: 'revenuecat',
+          outcome: 'sdk_entitlement_confirmed',
+        });
         // Entitlement first — the RevenueCat webhook writes the server tier a
         // round-trip later (and not at all if it exhausts its five retries),
         // and the paywall gate must not hold a paying learner in the meantime.
@@ -106,8 +119,22 @@ export default function SubscriptionScreen() {
         setTimeout(() => user && refreshSubscription(user.id), 2500);
         Alert.alert('You’re all set!', 'Your subscription is now active. Enjoy!');
       } else if (result.status === 'error') {
+        trackEvent('purchase_failed', {
+          tier: requestedTier,
+          term: requestedTerm,
+          provider: 'revenuecat',
+          outcome: 'sdk_error',
+          code: result.code,
+        });
         reportPurchaseFailure('purchase', result.message, tierFromPackage(pkg), result.code);
         Alert.alert('Purchase failed', result.message ?? 'Please try again.');
+      } else {
+        trackEvent('purchase_cancelled', {
+          tier: requestedTier,
+          term: requestedTerm,
+          provider: 'revenuecat',
+          outcome: 'user_cancelled',
+        });
       }
       // 'cancelled' — silent, expected.
     } finally {

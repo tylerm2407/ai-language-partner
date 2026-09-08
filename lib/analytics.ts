@@ -33,7 +33,9 @@ type EventName =
   | 'practice_started'
   | 'practice_ended'
   | 'subscription_started'
+  | 'subscription_renewed'
   | 'subscription_cancelled'
+  | 'subscription_expired'
   | 'onboarding_completed'
   | 'language_selected'
   | 'audio_played'
@@ -44,7 +46,11 @@ type EventName =
   // indistinguishable from an abandon.
   | 'paywall_declined'
   | 'free_avatar_generated'
+  | 'purchase_started'
+  | 'purchase_provider_confirmed'
   | 'purchase_completed'
+  | 'purchase_cancelled'
+  | 'purchase_failed'
   | 'purchase_restored'
   | 'plan_term_toggled'
   | 'plan_tier_selected'
@@ -52,6 +58,7 @@ type EventName =
 
   // ── Onboarding funnel: where do they fall out before starting?
   | 'onboarding_step_viewed'
+  | 'onboarding_draft_saved'
   | 'onboarding_abandoned'
   | 'signup_completed'
 
@@ -152,6 +159,12 @@ export interface EventProperties {
   /** Named step of a multi-step flow, e.g. 'idealSelf'. From a closed set in
    *  the flow itself — readable in a funnel, where a bare index is not. */
   stepName?: string;
+  /** Durable stage of a multi-system operation. */
+  outcome?: string;
+  /** External system that confirmed an operation, e.g. 'revenuecat'. */
+  provider?: string;
+  /** Explicit analytics environment selected at initialization. */
+  appEnvironment?: string;
 }
 
 /**

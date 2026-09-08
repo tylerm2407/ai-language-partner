@@ -370,6 +370,13 @@ export default function OnboardingScreen() {
         setFlushing(true);
         try {
           await writeProfile(user.id, pending);
+          trackEvent('onboarding_completed', {
+            language: pending.targetLanguage ?? DEFAULT_LANGUAGE,
+            band: pending.level ?? DEFAULT_LEVEL,
+            count: Math.round((Date.now() - pending.startedAt) / 1000),
+            source: 'post_signup_flush',
+            outcome: 'profile_persisted',
+          });
           return;
         } catch (err: unknown) {
           if (cancelled) return;
@@ -439,6 +446,8 @@ export default function OnboardingScreen() {
           language: targetLanguage,
           band: level,
           count: Math.round((Date.now() - (startedAt ?? Date.now())) / 1000),
+          source: 'authenticated',
+          outcome: 'profile_persisted',
         });
         return;
       }
@@ -449,14 +458,14 @@ export default function OnboardingScreen() {
       setCompletedAt(stamp);
       await savePendingOnboarding({ ...draft, completedAt: stamp }, startedAt);
       haptic('complete');
-      // The pre-auth path completes onboarding but has no account yet, so the
-      // profile write happens later on the flush. This is still the end of the
-      // onboarding funnel — the sign-up that follows is its own step, and
-      // conflating them would hide learners lost between the two.
-      trackEvent('onboarding_completed', {
+      // This is durable only on the device. The authoritative completion fires
+      // after writeProfile succeeds on the post-signup flush, making the loss
+      // between draft, account creation, and server persistence measurable.
+      trackEvent('onboarding_draft_saved', {
         language: targetLanguage,
         band: level,
         count: Math.round((Date.now() - (startedAt ?? Date.now())) / 1000),
+        outcome: 'local_persisted',
       });
       router.replace('/(public)/auth');
     } catch (err: unknown) {
@@ -621,9 +630,13 @@ export default function OnboardingScreen() {
             {trial ? 'Nice work.' : 'Ready when you are.'}
           </Text>
           <Text style={{ fontFamily: type.ui, fontSize: 14, lineHeight: 20, color: c.muted, textAlign: 'center' }}>
-            {trial
-              ? `That was your first ${languageName} lesson. Create an account to keep it — otherwise it disappears when you close the app.`
-              : `Create an account to save your ${languageName} setup and pick up where you left off.`}
+            {user
+              ? trial
+                ? `That was your first ${languageName} lesson. Save this setup to your account and keep learning.`
+                : `Save your ${languageName} setup to your account and pick up where you left off.`
+              : trial
+                ? `That was your first ${languageName} lesson. Create an account to keep it — otherwise it disappears when you close the app.`
+                : `Create an account to save your ${languageName} setup and pick up where you left off.`}
           </Text>
         </Animated.View>
 
@@ -656,7 +669,9 @@ export default function OnboardingScreen() {
 
         <Animated.View entering={enter(3)}>
           <SlabCard style={{ gap: 6 }}>
-            <Text style={[styles.eyebrow, { fontFamily: type.uiHeavy, color: c.green }]}>Signing up saves</Text>
+            <Text style={[styles.eyebrow, { fontFamily: type.uiHeavy, color: c.green }]}>
+              {user ? 'Saving keeps' : 'Signing up saves'}
+            </Text>
             <Text style={{ fontFamily: type.uiBold, fontSize: 14, lineHeight: 20, color: c.ink }}>
               {trial ? 'This lesson · your' : 'Your'} {languageName} course and level · your progress, from today
             </Text>

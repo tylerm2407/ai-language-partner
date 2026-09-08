@@ -160,11 +160,23 @@ export default function PlansScreen() {
     if (purchaseInFlight.current) return;
     purchaseInFlight.current = true;
     setPurchasing(true);
+    const requestedTier = tierFromPackage(selectedPkg);
+    trackEvent('purchase_started', {
+      tier: requestedTier,
+      term,
+      provider: 'revenuecat',
+      outcome: 'attempted',
+    });
     try {
       const result = await purchasePackage(selectedPkg);
       if (result.status === 'success') {
         const tier = result.tier ?? tierFromPackage(selectedPkg);
-        trackEvent('purchase_completed', { tier });
+        trackEvent('purchase_provider_confirmed', {
+          tier,
+          term,
+          provider: 'revenuecat',
+          outcome: 'sdk_entitlement_confirmed',
+        });
         // Open the gate on the entitlement RevenueCat just confirmed, BEFORE
         // navigating. `proceed()` remounts app/(app)/_layout.tsx, which reads
         // the tier and redirects straight back here if it still says
@@ -174,8 +186,22 @@ export default function PlansScreen() {
         setTimeout(() => user && refreshSubscription(user.id), 2500);
         proceed();
       } else if (result.status === 'error') {
+        trackEvent('purchase_failed', {
+          tier: requestedTier,
+          term,
+          provider: 'revenuecat',
+          outcome: 'sdk_error',
+          code: result.code,
+        });
         reportPurchaseFailure('purchase', result.message, tierFromPackage(selectedPkg), result.code);
         Alert.alert('Purchase failed', result.message ?? 'Please try again.');
+      } else {
+        trackEvent('purchase_cancelled', {
+          tier: requestedTier,
+          term,
+          provider: 'revenuecat',
+          outcome: 'user_cancelled',
+        });
       }
     } finally {
       purchaseInFlight.current = false;

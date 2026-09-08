@@ -23,6 +23,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { checkAuthorization, isPlausibleUuid, verifyWebhookSignature } from './auth.ts';
 import { classifyEvent, INACTIVE_EVENTS } from './tier.ts';
 import { fetchRevenueCatSubscription, transferUserIds } from './reconcile.ts';
+import { captureRevenueCatAnalytics } from './analytics.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -148,14 +149,14 @@ serve(async (req: Request) => {
   const claimStatus = claim && typeof claim === 'object' && !Array.isArray(claim)
     ? String((claim as Record<string, unknown>).status ?? '')
     : '';
-  if (claimStatus === 'completed') {
-    return new Response(JSON.stringify({ ok: true, duplicate: true }), { status: 200 });
-  }
-  if (claimStatus !== 'claimed') {
+  const eventWasCompleted = claimStatus === 'completed';
+  if (!eventWasCompleted && claimStatus !== 'claimed') {
     return new Response(JSON.stringify({ error: 'event_busy' }), { status: 503 });
   }
-  const leaseToken = String((claim as Record<string, unknown>).lease_token ?? '');
-  if (!isPlausibleUuid(leaseToken)) {
+  const leaseToken = eventWasCompleted
+    ? ''
+    : String((claim as Record<string, unknown>).lease_token ?? '');
+  if (!eventWasCompleted && !isPlausibleUuid(leaseToken)) {
     console.error('[revenuecat-webhook] event claim returned an invalid lease token');
     return new Response(JSON.stringify({ error: 'internal_error' }), { status: 500 });
   }
@@ -177,7 +178,9 @@ serve(async (req: Request) => {
     .eq('user_id', userId)
     .maybeSingle();
   if (existingError) {
-    await markEventFailed(eventId, leaseToken, 'subscription state lookup failed');
+    if (!eventWasCompleted) {
+      await markEventFailed(eventId, leaseToken, 'subscription state lookup failed');
+    }
     return new Response(JSON.stringify({ error: 'internal_error' }), { status: 500 });
   }
 
@@ -215,15 +218,31 @@ serve(async (req: Request) => {
         `${new Date(expirationMs as number).toISOString()}, but an active entitlement is ` +
         `already recorded through ${existing?.current_period_end}`,
     );
-    const { error: completeError } = await supabase.rpc(
-      'complete_revenuecat_event',
-      { p_event_id: eventId, p_lease_token: leaseToken },
-    );
-    if (completeError) {
-      await markEventFailed(eventId, leaseToken, 'stale event completion failed');
-      return new Response(JSON.stringify({ error: 'internal_error' }), { status: 500 });
+    if (!eventWasCompleted) {
+      const { error: completeError } = await supabase.rpc(
+        'complete_revenuecat_event',
+        { p_event_id: eventId, p_lease_token: leaseToken },
+      );
+      if (completeError) {
+        await markEventFailed(eventId, leaseToken, 'stale event completion failed');
+        return new Response(JSON.stringify({ error: 'internal_error' }), { status: 500 });
+      }
     }
     return new Response(JSON.stringify({ ok: true, stale: true }), { status: 200 });
+  }
+
+  if (eventWasCompleted) {
+    // A previous delivery may have committed the entitlement and then lost
+    // the analytics response. The stale-expiration guard above runs first so
+    // an intentionally ignored expiry can never become a real expiry event on
+    // retry. Genuine applied events reuse deterministic UUIDs and timestamps.
+    try {
+      await captureRevenueCatAnalytics(event, tier);
+    } catch (analyticsError) {
+      console.error('[revenuecat-webhook] analytics retry failed:', analyticsError);
+      return new Response(JSON.stringify({ error: 'analytics_unavailable' }), { status: 503 });
+    }
+    return new Response(JSON.stringify({ ok: true, duplicate: true }), { status: 200 });
   }
 
   // An out-of-order ACTIVE event must not shorten an entitlement either — a
@@ -266,6 +285,17 @@ serve(async (req: Request) => {
     console.error('[revenuecat-webhook] atomic event application failed:', error.message);
     await markEventFailed(eventId, leaseToken, 'atomic entitlement application failed');
     return new Response(JSON.stringify({ error: 'internal_error' }), { status: 500 });
+  }
+
+  // Only the webhook can assert that provider state was accepted and written
+  // to the entitlement source of truth. Configured ingestion failures return
+  // a retryable response; the already-completed event is safe to replay and
+  // deterministic insert ids prevent duplicate analytics.
+  try {
+    await captureRevenueCatAnalytics(event, tier);
+  } catch (analyticsError) {
+    console.error('[revenuecat-webhook] authoritative analytics failed:', analyticsError);
+    return new Response(JSON.stringify({ error: 'analytics_unavailable' }), { status: 503 });
   }
 
   return new Response(JSON.stringify({ ok: true }), { status: 200 });
