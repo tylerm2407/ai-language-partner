@@ -15,10 +15,19 @@
  *   (or: export PATH="$HOME/.deno/bin:$PATH" && deno test --allow-all
  *        supabase/functions/tutor-session-reaper/)
  */
-import { assert, assertEquals } from 'https://deno.land/std@0.208.0/assert/mod.ts';
-import { settlement, TUTOR_REAP_AFTER_SECONDS } from '../_shared/tutor-pricing.ts';
-import { EMPTY_ANALYSIS, type TutorAnalysis } from '../_shared/tutor-analysis.ts';
-import type { BufferedTurn } from '../_shared/tutor-transcript-buffer.ts';
+import {
+  assert,
+  assertEquals,
+} from "https://deno.land/std@0.208.0/assert/mod.ts";
+import {
+  settlement,
+  TUTOR_REAP_AFTER_SECONDS,
+} from "../_shared/tutor-pricing.ts";
+import {
+  EMPTY_ANALYSIS,
+  type TutorAnalysis,
+} from "../_shared/tutor-analysis.ts";
+import type { BufferedTurn } from "../_shared/tutor-transcript-buffer.ts";
 import {
   isStale,
   observedSecondsFor,
@@ -27,13 +36,14 @@ import {
   type ReaperDeps,
   SAFETY_EVENT_RETENTION_DAYS,
   type SettleClaim,
+  settleFor,
   staleCutoffIso,
-} from './reap.ts';
+} from "./reap.ts";
 
 // ─── Test doubles ─────────────────────────────────────────────────────────
 
 /** A fixed clock. Every timestamp below is expressed relative to it. */
-const NOW = Date.parse('2026-09-06T12:00:00.000Z');
+const NOW = Date.parse("2026-09-06T12:00:00.000Z");
 
 function agoIso(seconds: number): string {
   return new Date(NOW - seconds * 1000).toISOString();
@@ -41,13 +51,13 @@ function agoIso(seconds: number): string {
 
 function session(over: Partial<ReapableSession> = {}): ReapableSession {
   return {
-    id: 'session-1',
-    user_id: 'user-1',
-    target_language: 'es',
-    native_language: 'en',
-    level: 'intermediate',
-    cefr_level: 'B1',
-    correction_mode: 'as_you_go',
+    id: "session-1",
+    user_id: "user-1",
+    target_language: "es",
+    native_language: "en",
+    level: "intermediate",
+    cefr_level: "B1",
+    correction_mode: "as_you_go",
     granted_seconds: 600,
     granted_cents: 121,
     started_at: agoIso(400),
@@ -81,7 +91,7 @@ interface FakeOptions {
    * fake applies `last_heartbeat_at < cutoff` exactly as the SQL does.
    */
   applyCutoff?: boolean;
-  claim?: (id: string) => SettleClaim['status'];
+  claim?: (id: string) => SettleClaim["status"];
   alreadyObserved?: number;
   transcript?: (id: string) => { turns: BufferedTurn[]; available: boolean };
   analyzeThrows?: string;
@@ -91,6 +101,7 @@ interface FakeOptions {
   listStaleError?: string;
   sweepError?: string;
   sweepDeleted?: number;
+  terminateStatus?: "ended" | "busy" | "failed";
   /** Milliseconds the clock advances on each `now()` after the first. Used to
    *  drive the wall-clock budget deterministically. */
   clockStepMs?: number;
@@ -124,8 +135,14 @@ function fakeDeps(opts: FakeOptions = {}): { deps: ReaperDeps; calls: Calls } {
       const rows = opts.rows ?? [];
       const filtered = opts.applyCutoff === false
         ? rows
-        : rows.filter((r) => Date.parse(r.last_heartbeat_at) < Date.parse(cutoffIso));
+        : rows.filter((r) =>
+          Date.parse(r.last_heartbeat_at) < Date.parse(cutoffIso)
+        );
       return Promise.resolve(filtered.slice(0, limit));
+    },
+
+    terminateProvider() {
+      return Promise.resolve(opts.terminateStatus ?? "ended");
     },
 
     settleSession(sessionId, _userId, wanted) {
@@ -135,13 +152,14 @@ function fakeDeps(opts: FakeOptions = {}): { deps: ReaperDeps; calls: Calls } {
         refundSeconds: wanted.refundSeconds,
         refundCents: wanted.refundCents,
       });
-      const status = opts.claim ? opts.claim(sessionId) : 'settled';
+      const status = opts.claim ? opts.claim(sessionId) : "settled";
       return Promise.resolve(
-        status === 'error' ? { status } : {
+        status === "error" ? { status } : {
           status,
-          observedSeconds: status === 'already' && opts.alreadyObserved !== undefined
-            ? opts.alreadyObserved
-            : wanted.observedSeconds,
+          observedSeconds:
+            status === "already" && opts.alreadyObserved !== undefined
+              ? opts.alreadyObserved
+              : wanted.observedSeconds,
         },
       );
     },
@@ -150,7 +168,7 @@ function fakeDeps(opts: FakeOptions = {}): { deps: ReaperDeps; calls: Calls } {
       calls.transcriptReads.push(sessionId);
       return Promise.resolve(
         opts.transcript ? opts.transcript(sessionId) : {
-          turns: [{ speaker: 'learner' as const, text: 'hola qué tal' }],
+          turns: [{ speaker: "learner" as const, text: "hola qué tal" }],
           available: true,
         },
       );
@@ -204,13 +222,13 @@ function fakeDeps(opts: FakeOptions = {}): { deps: ReaperDeps; calls: Calls } {
 // conversation settled out from under it; too loose and an abandoned session
 // keeps a bigger slice of the learner's budget than it needed to.
 
-Deno.test('staleCutoffIso is exactly TUTOR_REAP_AFTER_SECONDS behind now', () => {
+Deno.test("staleCutoffIso is exactly TUTOR_REAP_AFTER_SECONDS behind now", () => {
   assertEquals(staleCutoffIso(NOW), agoIso(TUTOR_REAP_AFTER_SECONDS));
 });
 
-Deno.test('a session heartbeating 89s ago is not reaped; 91s ago is', async () => {
-  const fresh = session({ id: 'fresh', last_heartbeat_at: agoIso(89) });
-  const stale = session({ id: 'stale', last_heartbeat_at: agoIso(91) });
+Deno.test("a session heartbeating 89s ago is not reaped; 91s ago is", async () => {
+  const fresh = session({ id: "fresh", last_heartbeat_at: agoIso(89) });
+  const stale = session({ id: "stale", last_heartbeat_at: agoIso(91) });
 
   // The fake applies the same `last_heartbeat_at < cutoff` predicate the SQL
   // does, so this exercises the cutoff arithmetic end to end.
@@ -218,12 +236,12 @@ Deno.test('a session heartbeating 89s ago is not reaped; 91s ago is', async () =
   const summary = await reapAbandonedSessions(deps);
 
   assertEquals(summary.scanned, 1);
-  assertEquals(calls.closes.map((c) => c.id), ['stale']);
+  assertEquals(calls.closes.map((c) => c.id), ["stale"]);
   assertEquals(summary.reaped, 1);
   assertEquals(summary.errors, 0);
 });
 
-Deno.test('a session exactly at the boundary is left alone', () => {
+Deno.test("a session exactly at the boundary is left alone", () => {
   // `<` not `<=`, matching the SQL. At exactly 90s the learner may simply be
   // between heartbeats.
   const edge = session({ last_heartbeat_at: agoIso(TUTOR_REAP_AFTER_SECONDS) });
@@ -237,11 +255,22 @@ Deno.test('a session exactly at the boundary is left alone', () => {
   );
 });
 
-Deno.test('a live session slipping through the query is refused, not settled', async () => {
+Deno.test("the provider deadline wins even when forged heartbeats continue", () => {
+  const row = session({
+    last_heartbeat_at: new Date(NOW).toISOString(),
+    provider_connected_at: new Date(NOW - 600_000).toISOString(),
+    provider_deadline_at: new Date(NOW).toISOString(),
+    granted_seconds: 600,
+  });
+  assert(isStale(row, NOW));
+  assertEquals(settleFor(row, NOW)?.observedSeconds, 600);
+});
+
+Deno.test("a live session slipping through the query is refused, not settled", async () => {
   // Guards the one bug in here that would be invisible AND expensive: a
   // `listStale` that stopped filtering would otherwise bill learners who are
   // still mid-conversation.
-  const live = session({ id: 'live', last_heartbeat_at: agoIso(5) });
+  const live = session({ id: "live", last_heartbeat_at: agoIso(5) });
   const { deps, calls } = fakeDeps({ rows: [live], applyCutoff: false });
   const summary = await reapAbandonedSessions(deps);
 
@@ -253,14 +282,14 @@ Deno.test('a live session slipping through the query is refused, not settled', a
 
 // ─── The money ────────────────────────────────────────────────────────────
 
-Deno.test('observed seconds are measured heartbeat-minus-start, never to now', () => {
+Deno.test("observed seconds are measured heartbeat-minus-start, never to now", () => {
   // 400s ago it started, 100s ago it last checked in: 300 seconds of provable
   // presence. The 100 seconds since are NOT billed — that is the entire point
   // of settling to the heartbeat.
   assertEquals(observedSecondsFor(session()), 300);
 });
 
-Deno.test('refunds match settlement() exactly', async () => {
+Deno.test("refunds match settlement() exactly", async () => {
   const s = session({ granted_seconds: 600, granted_cents: 121 });
   const expected = settlement(s.granted_seconds, s.granted_cents, 300);
 
@@ -277,10 +306,10 @@ Deno.test('refunds match settlement() exactly', async () => {
   assertEquals(summary.settlementFailures, 0);
 });
 
-Deno.test('a session already settled by the end action is not refunded twice', async () => {
+Deno.test("a session already settled by the end action is not refunded twice", async () => {
   const { deps, calls } = fakeDeps({
     rows: [session()],
-    claim: () => 'already',
+    claim: () => "already",
     alreadyObserved: 120,
   });
   const summary = await reapAbandonedSessions(deps);
@@ -295,8 +324,8 @@ Deno.test('a session already settled by the end action is not refunded twice', a
   assertEquals(calls.writeBacks[0].observed, 120);
 });
 
-Deno.test('a claim that errors leaves the session entirely alone for the next tick', async () => {
-  const { deps, calls } = fakeDeps({ rows: [session()], claim: () => 'error' });
+Deno.test("a claim that errors leaves the session entirely alone for the next tick", async () => {
+  const { deps, calls } = fakeDeps({ rows: [session()], claim: () => "error" });
   const summary = await reapAbandonedSessions(deps);
 
   assertEquals(calls.closes.length, 0);
@@ -305,7 +334,19 @@ Deno.test('a claim that errors leaves the session entirely alone for the next ti
   assertEquals(summary.settlementFailures, 1);
 });
 
-Deno.test('elapsed time beyond the grant is clamped, not stored raw', async () => {
+Deno.test("a failed provider hangup prevents settlement and close", async () => {
+  const { deps, calls } = fakeDeps({
+    rows: [session()],
+    terminateStatus: "failed",
+  });
+  const summary = await reapAbandonedSessions(deps);
+  assertEquals(calls.claims.length, 0);
+  assertEquals(calls.closes.length, 0);
+  assertEquals(summary.settled, 0);
+  assertEquals(summary.errors, 1);
+});
+
+Deno.test("elapsed time beyond the grant is clamped, not stored raw", async () => {
   // started 700s ago, heartbeat 91s ago: 609 seconds of raw elapsed time
   // against a 600-second grant, because a client that ignored its own limit
   // keeps heartbeating past it. `settlement()` clamps to the grant, and the
@@ -326,7 +367,7 @@ Deno.test('elapsed time beyond the grant is clamped, not stored raw', async () =
 
 // ─── The learning ─────────────────────────────────────────────────────────
 
-Deno.test('a lost buffer skips the analysis but still settles and closes', async () => {
+Deno.test("a lost buffer skips the analysis but still settles and closes", async () => {
   const { deps, calls } = fakeDeps({
     rows: [session()],
     transcript: () => ({ turns: [], available: false }),
@@ -348,7 +389,7 @@ Deno.test('a lost buffer skips the analysis but still settles and closes', async
   assertEquals(calls.drops.length, 0);
 });
 
-Deno.test('an intact but empty buffer is distinguished from a lost one', async () => {
+Deno.test("an intact but empty buffer is distinguished from a lost one", async () => {
   const { deps, calls } = fakeDeps({
     rows: [session()],
     transcript: () => ({ turns: [], available: true }),
@@ -361,10 +402,10 @@ Deno.test('an intact but empty buffer is distinguished from a lost one', async (
   assertEquals(summary.reaped, 1);
 });
 
-Deno.test('alreadyAnalyzed is reported without a second write-back', async () => {
+Deno.test("alreadyAnalyzed is reported without a second write-back", async () => {
   const { deps, calls } = fakeDeps({
-    rows: [session({ id: 'raced' })],
-    alreadyAnalyzed: ['raced'],
+    rows: [session({ id: "raced" })],
+    alreadyAnalyzed: ["raced"],
   });
   const summary = await reapAbandonedSessions(deps);
 
@@ -376,13 +417,13 @@ Deno.test('alreadyAnalyzed is reported without a second write-back', async () =>
   assertEquals(summary.reaped, 1);
 });
 
-Deno.test('the write-back is handed the server-measured seconds, not the grant', async () => {
+Deno.test("the write-back is handed the server-measured seconds, not the grant", async () => {
   const { deps, calls } = fakeDeps({ rows: [session()] });
   await reapAbandonedSessions(deps);
-  assertEquals(calls.writeBacks, [{ id: 'session-1', observed: 300 }]);
+  assertEquals(calls.writeBacks, [{ id: "session-1", observed: 300 }]);
 });
 
-Deno.test('skipAnalysis settles money but retains the learning work', async () => {
+Deno.test("skipAnalysis settles money but retains the learning work", async () => {
   const { deps, calls } = fakeDeps({ rows: [session()] });
   const summary = await reapAbandonedSessions(deps, { skipAnalysis: true });
 
@@ -396,7 +437,7 @@ Deno.test('skipAnalysis settles money but retains the learning work', async () =
 
 // ─── Ordering ─────────────────────────────────────────────────────────────
 
-Deno.test('ended_at is written after the analysis, never before', async () => {
+Deno.test("ended_at is written after the analysis, never before", async () => {
   // The close is what removes the row from this function's own queue. Writing
   // it first would mean a process that died mid-analysis lost that session's
   // corrections, evidence and cards with nothing to pick them back up.
@@ -406,26 +447,26 @@ Deno.test('ended_at is written after the analysis, never before', async () => {
   const wrappedWriteBack = deps.writeBack.bind(deps);
   const wrappedClose = deps.closeSession.bind(deps);
   deps.writeBack = (s, a, o) => {
-    order.push('writeBack');
+    order.push("writeBack");
     return wrappedWriteBack(s, a, o);
   };
   deps.closeSession = (id, o) => {
-    order.push('close');
+    order.push("close");
     return wrappedClose(id, o);
   };
 
   await reapAbandonedSessions(deps);
-  assertEquals(order, ['writeBack', 'close']);
+  assertEquals(order, ["writeBack", "close"]);
 });
 
-Deno.test('every session is settled before any is analysed', async () => {
+Deno.test("every session is settled before any is analysed", async () => {
   // Phase A before phase B. A batch that interleaved would leave the learners
   // at the back of the queue waiting on the LLM calls of everyone ahead of
   // them before getting their money back.
   const order: string[] = [];
   const rows = [
-    session({ id: 'a', last_heartbeat_at: agoIso(300) }),
-    session({ id: 'b', last_heartbeat_at: agoIso(200) }),
+    session({ id: "a", last_heartbeat_at: agoIso(300) }),
+    session({ id: "b", last_heartbeat_at: agoIso(200) }),
   ];
   const { deps } = fakeDeps({ rows });
 
@@ -441,28 +482,28 @@ Deno.test('every session is settled before any is analysed', async () => {
   };
 
   await reapAbandonedSessions(deps);
-  assertEquals(order, ['settle:a', 'settle:b', 'analyze:a', 'analyze:b']);
+  assertEquals(order, ["settle:a", "settle:b", "analyze:a", "analyze:b"]);
 });
 
 // ─── Failure isolation ────────────────────────────────────────────────────
 
-Deno.test('one session throwing does not abort the batch', async () => {
+Deno.test("one session throwing does not abort the batch", async () => {
   const rows = [
-    session({ id: 'a', last_heartbeat_at: agoIso(300) }),
-    session({ id: 'poison', last_heartbeat_at: agoIso(250) }),
-    session({ id: 'c', last_heartbeat_at: agoIso(200) }),
+    session({ id: "a", last_heartbeat_at: agoIso(300) }),
+    session({ id: "poison", last_heartbeat_at: agoIso(250) }),
+    session({ id: "c", last_heartbeat_at: agoIso(200) }),
   ];
   const { deps, calls } = fakeDeps({
     rows,
     claim: (id) => {
-      if (id === 'poison') throw new Error('claim exploded');
-      return 'settled';
+      if (id === "poison") throw new Error("claim exploded");
+      return "settled";
     },
   });
 
   const summary = await reapAbandonedSessions(deps);
 
-  assertEquals(calls.closes.map((c) => c.id), ['a', 'c']);
+  assertEquals(calls.closes.map((c) => c.id), ["a", "c"]);
   assertEquals(summary.reaped, 2);
   assertEquals(summary.errors, 1);
   // The sweep still runs. A bad row must not cost the retention policy its
@@ -470,10 +511,10 @@ Deno.test('one session throwing does not abort the batch', async () => {
   assertEquals(calls.sweeps.length, 1);
 });
 
-Deno.test('an analysis failure remains open for a bounded retry', async () => {
+Deno.test("an analysis failure remains open for a bounded retry", async () => {
   const { deps, calls } = fakeDeps({
     rows: [session()],
-    analyzeThrows: 'anthropic exploded',
+    analyzeThrows: "anthropic exploded",
   });
   const summary = await reapAbandonedSessions(deps);
 
@@ -481,15 +522,15 @@ Deno.test('an analysis failure remains open for a bounded retry', async () => {
   assertEquals(summary.analysisRetries, 1);
   assertEquals(summary.reaped, 0);
   assertEquals(calls.closes.length, 0);
-  assertEquals(calls.analysisFailures, ['session-1']);
+  assertEquals(calls.analysisFailures, ["session-1"]);
   // Not dropped: the transcript was never successfully consumed.
   assertEquals(calls.drops.length, 0);
 });
 
-Deno.test('analysis closes only after the durable retry limit is exhausted', async () => {
+Deno.test("analysis closes only after the durable retry limit is exhausted", async () => {
   const { deps, calls } = fakeDeps({
     rows: [session()],
-    analyzeThrows: 'anthropic exploded',
+    analyzeThrows: "anthropic exploded",
     analysisAttempts: 3,
   });
   const summary = await reapAbandonedSessions(deps);
@@ -500,12 +541,12 @@ Deno.test('analysis closes only after the durable retry limit is exhausted', asy
   assertEquals(calls.drops.length, 0);
 });
 
-Deno.test('a close that fails leaves the session open and does not stop the batch', async () => {
+Deno.test("a close that fails leaves the session open and does not stop the batch", async () => {
   const rows = [
-    session({ id: 'a', last_heartbeat_at: agoIso(300) }),
-    session({ id: 'b', last_heartbeat_at: agoIso(200) }),
+    session({ id: "a", last_heartbeat_at: agoIso(300) }),
+    session({ id: "b", last_heartbeat_at: agoIso(200) }),
   ];
-  const { deps, calls } = fakeDeps({ rows, closeError: 'update failed' });
+  const { deps, calls } = fakeDeps({ rows, closeError: "update failed" });
   const summary = await reapAbandonedSessions(deps);
 
   assertEquals(calls.closes.length, 2);
@@ -516,9 +557,9 @@ Deno.test('a close that fails leaves the session open and does not stop the batc
   assertEquals(summary.settled, 2);
 });
 
-Deno.test('a failed scan does not skip the safety sweep', async () => {
+Deno.test("a failed scan does not skip the safety sweep", async () => {
   const { deps, calls } = fakeDeps({
-    listStaleError: 'postgrest down',
+    listStaleError: "postgrest down",
     sweepDeleted: 4,
   });
   const summary = await reapAbandonedSessions(deps);
@@ -531,11 +572,11 @@ Deno.test('a failed scan does not skip the safety sweep', async () => {
 
 // ─── The safety sweep ─────────────────────────────────────────────────────
 
-Deno.test('the safety sweep runs once per run, not once per session', async () => {
+Deno.test("the safety sweep runs once per run, not once per session", async () => {
   const rows = [
-    session({ id: 'a', last_heartbeat_at: agoIso(300) }),
-    session({ id: 'b', last_heartbeat_at: agoIso(250) }),
-    session({ id: 'c', last_heartbeat_at: agoIso(200) }),
+    session({ id: "a", last_heartbeat_at: agoIso(300) }),
+    session({ id: "b", last_heartbeat_at: agoIso(250) }),
+    session({ id: "c", last_heartbeat_at: agoIso(200) }),
   ];
   const { deps, calls } = fakeDeps({ rows, sweepDeleted: 7 });
   const summary = await reapAbandonedSessions(deps);
@@ -545,14 +586,14 @@ Deno.test('the safety sweep runs once per run, not once per session', async () =
   assertEquals(summary.safetyEventsDeleted, 7);
 });
 
-Deno.test('the safety sweep runs even when nothing was reaped', async () => {
+Deno.test("the safety sweep runs even when nothing was reaped", async () => {
   const { deps, calls } = fakeDeps({ rows: [], sweepDeleted: 2 });
   const summary = await reapAbandonedSessions(deps);
   assertEquals(calls.sweeps.length, 1);
   assertEquals(summary.safetyEventsDeleted, 2);
 });
 
-Deno.test('the safety cutoff is 90 days back', async () => {
+Deno.test("the safety cutoff is 90 days back", async () => {
   const { deps, calls } = fakeDeps({ rows: [] });
   await reapAbandonedSessions(deps);
   assertEquals(
@@ -561,10 +602,10 @@ Deno.test('the safety cutoff is 90 days back', async () => {
   );
 });
 
-Deno.test('a failed sweep is reported and does not fail the run', async () => {
+Deno.test("a failed sweep is reported and does not fail the run", async () => {
   const { deps, calls } = fakeDeps({
     rows: [session()],
-    sweepError: 'delete failed',
+    sweepError: "delete failed",
   });
   const summary = await reapAbandonedSessions(deps);
 
@@ -575,11 +616,11 @@ Deno.test('a failed sweep is reported and does not fail the run', async () => {
 
 // ─── The wall clock ───────────────────────────────────────────────────────
 
-Deno.test('the budget defers the learning half but never the money', async () => {
+Deno.test("the budget defers the learning half but never the money", async () => {
   const rows = [
-    session({ id: 'a', last_heartbeat_at: agoIso(300) }),
-    session({ id: 'b', last_heartbeat_at: agoIso(250) }),
-    session({ id: 'c', last_heartbeat_at: agoIso(200) }),
+    session({ id: "a", last_heartbeat_at: agoIso(300) }),
+    session({ id: "b", last_heartbeat_at: agoIso(250) }),
+    session({ id: "c", last_heartbeat_at: agoIso(200) }),
   ];
   // The clock advances on every `now()`, so the budget runs out partway
   // through phase B.
@@ -595,7 +636,7 @@ Deno.test('the budget defers the learning half but never the money', async () =>
   assertEquals(summary.reaped + summary.deferred, 3);
 });
 
-Deno.test('the batch limit is passed through to the query', async () => {
+Deno.test("the batch limit is passed through to the query", async () => {
   const rows = Array.from(
     { length: 5 },
     (_, i) => session({ id: `s${i}`, last_heartbeat_at: agoIso(300 - i) }),

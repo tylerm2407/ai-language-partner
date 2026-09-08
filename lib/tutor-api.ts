@@ -69,7 +69,7 @@ export type { TutorDebrief, TutorDebriefPattern, TutorDebriefPhrase } from '../t
 
 /** Property names that may hold the ephemeral credential, in any casing the
  *  wire or a local variable might use. */
-const SECRET_KEYS = new Set(['clientSecret', 'client_secret', 'ephemeralKey', 'ephemeral_key']);
+const SECRET_KEYS = new Set(['connectionToken', 'connection_token', 'clientSecret', 'client_secret', 'ephemeralKey', 'ephemeral_key']);
 
 const REDACTED = '[redacted]';
 
@@ -239,9 +239,9 @@ export interface StartTutorSessionResult {
    * OpenAI ephemeral credential. READ THE MODULE HEADER BEFORE TOUCHING THIS.
    * Hold it in memory for the length of the SDP exchange and drop it.
    */
-  clientSecret: string;
+  connectionToken: string;
   /** Unix seconds, or null when the provider did not say. */
-  clientSecretExpiresAt: number | null;
+  connectionTokenExpiresAt: number | null;
   model: string;
   callsUrl: string;
   /**
@@ -298,7 +298,7 @@ export async function startTutorSession(
     );
   }
 
-  const secret = typeof data?.clientSecret === 'string' ? data.clientSecret : '';
+  const secret = typeof data?.connectionToken === 'string' ? data.connectionToken : '';
   const sessionId = typeof data?.sessionId === 'string' ? data.sessionId : '';
   if (!sessionId || !secret) {
     // Deliberately says nothing about what DID come back. The one field worth
@@ -306,12 +306,12 @@ export async function startTutorSession(
     throw new Error('Could not start the tutor: the session response was incomplete.');
   }
 
-  const expires = data?.clientSecretExpiresAt;
+  const expires = data?.connectionTokenExpiresAt;
 
   return {
     sessionId,
-    clientSecret: secret,
-    clientSecretExpiresAt: typeof expires === 'number' ? expires : null,
+    connectionToken: secret,
+    connectionTokenExpiresAt: typeof expires === 'number' ? expires : null,
     model: typeof data?.model === 'string' ? data.model : '',
     callsUrl: typeof data?.callsUrl === 'string' ? data.callsUrl : '',
     // THE ONLY seconds-to-milliseconds conversion for the grant, on purpose.

@@ -1,5 +1,6 @@
 /**
- * Opening a live tutor session: reserve the money, then mint the token.
+ * Opening a live tutor session: prepare a one-use server capability, then
+ * reserve the money.
  *
  * THE ORDER IN HERE IS THE WHOLE DESIGN
  *
@@ -18,22 +19,34 @@
  * mint. If we have reserved and the mint then fails, the learner has been
  * charged for a session that never happened.
  */
-import { getEffectiveLimits, type PlanLimits } from '../_shared/plan-limits.ts';
+import { getEffectiveLimits, type PlanLimits } from "../_shared/plan-limits.ts";
 import {
   fetchLearnerContext,
   isEntitledToLearnerContext,
   serializeLearnerContext,
-} from '../_shared/learner-context.ts';
-import { fetchTutorMemory, serializeTutorMemory } from '../_shared/tutor-memory.ts';
-import { proficiencyToCefr } from '../_shared/cefr.ts';
-import { PROVIDER_TIMEOUT_MS, providerFetch } from '../_shared/provider-fetch.ts';
-import { resolveGrant, settlement, TUTOR_HEARTBEAT_SECONDS, TUTOR_MODEL } from '../_shared/tutor-pricing.ts';
-import { reserveTutorSession, settleTutorSession } from '../_shared/tutor-ledger.ts';
-import { buildTutorInstructions, type CorrectionMode, turnDetectionForLevel } from './instructions.ts';
-import { resolvePersona, speechSpeedForLevel } from './personas.ts';
-import { type PushSignal, selectPushStance } from '../ai-chat/turn-policy.ts';
-
-const CLIENT_SECRETS_URL = 'https://api.openai.com/v1/realtime/client_secrets';
+} from "../_shared/learner-context.ts";
+import {
+  fetchTutorMemory,
+  serializeTutorMemory,
+} from "../_shared/tutor-memory.ts";
+import { proficiencyToCefr } from "../_shared/cefr.ts";
+import {
+  resolveGrant,
+  TUTOR_HEARTBEAT_SECONDS,
+  TUTOR_MODEL,
+} from "../_shared/tutor-pricing.ts";
+import { reserveTutorSession } from "../_shared/tutor-ledger.ts";
+import {
+  newConnectionToken,
+  sha256Hex,
+} from "../_shared/tutor-provider-call.ts";
+import {
+  buildTutorInstructions,
+  type CorrectionMode,
+  turnDetectionForLevel,
+} from "./instructions.ts";
+import { resolvePersona, speechSpeedForLevel } from "./personas.ts";
+import { type PushSignal, selectPushStance } from "../ai-chat/turn-policy.ts";
 
 /** Cap on the tutor's spoken turn. Output audio is the most expensive token
  *  class in the feature, and this also enforces the learner's floor share:
@@ -72,15 +85,15 @@ async function readMeters(
       // NOTE the parameter names differ between these two functions:
       // fluenci_user_today takes p_uid, fluenci_user_month takes p_user_id.
       // Getting one wrong returns null and silently reads the wrong row.
-      supabase.rpc('fluenci_user_today', { p_uid: userId }),
-      supabase.rpc('fluenci_user_month', { p_user_id: userId }),
+      supabase.rpc("fluenci_user_today", { p_uid: userId }),
+      supabase.rpc("fluenci_user_month", { p_user_id: userId }),
     ]);
 
     const [dayRow, monthRow] = await Promise.all([
-      supabase.from('daily_usage').select('tutor_seconds').eq('user_id', userId)
-        .eq('date', day).maybeSingle(),
-      supabase.from('monthly_usage').select('tutor_cents').eq('user_id', userId)
-        .eq('month', month).maybeSingle(),
+      supabase.from("daily_usage").select("tutor_seconds").eq("user_id", userId)
+        .eq("date", day).maybeSingle(),
+      supabase.from("monthly_usage").select("tutor_cents").eq("user_id", userId)
+        .eq("month", month).maybeSingle(),
     ]);
 
     return {
@@ -89,7 +102,7 @@ async function readMeters(
     };
   } catch (err) {
     console.warn(
-      '[tutor-session] meter read failed:',
+      "[tutor-session] meter read failed:",
       err instanceof Error ? err.message : err,
     );
     return { tutorSecondsToday: 0, tutorCentsThisMonth: 0 };
@@ -106,10 +119,12 @@ async function readMeters(
  */
 async function safetyIdentifier(userId: string, salt: string): Promise<string> {
   const digest = await crypto.subtle.digest(
-    'SHA-256',
+    "SHA-256",
     new TextEncoder().encode(`${userId}:${salt}`),
   );
-  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('');
+  return Array.from(new Uint8Array(digest)).map((b) =>
+    b.toString(16).padStart(2, "0")
+  ).join("");
 }
 
 /** Reads the recent speaking evidence that decides whether to stretch this
@@ -124,12 +139,12 @@ async function fetchPushSignal(
 ): Promise<PushSignal> {
   try {
     const { data } = await supabase
-      .from('conversation_evidence')
-      .select('accuracy, intelligibility')
-      .eq('user_id', userId)
-      .eq('target_language', targetLanguage)
-      .eq('cefr_level', cefrLevel)
-      .order('created_at', { ascending: false })
+      .from("conversation_evidence")
+      .select("accuracy, intelligibility")
+      .eq("user_id", userId)
+      .eq("target_language", targetLanguage)
+      .eq("cefr_level", cefrLevel)
+      .order("created_at", { ascending: false })
       .limit(30);
     const rows = Array.isArray(data) ? data : [];
     if (rows.length === 0) return { sampleSize: 0, recentAccuracy: null };
@@ -137,7 +152,9 @@ async function fetchPushSignal(
       .filter((n) => Number.isFinite(n));
     return {
       sampleSize: acc.length,
-      recentAccuracy: acc.length > 0 ? acc.reduce((a, b) => a + b, 0) / acc.length : null,
+      recentAccuracy: acc.length > 0
+        ? acc.reduce((a, b) => a + b, 0) / acc.length
+        : null,
     };
   } catch {
     return { sampleSize: 0, recentAccuracy: null };
@@ -148,21 +165,21 @@ export async function handleStart(
   supabase: Client,
   userId: string,
   req: StartRequest,
-  env: { openaiKey: string; safetySalt: string },
+  env: { safetySalt: string; supabaseUrl: string },
 ): Promise<StartResult> {
   const targetLanguage = req.targetLanguage;
-  const nativeLanguage = req.nativeLanguage || 'en';
+  const nativeLanguage = req.nativeLanguage || "en";
   const level = req.level;
   const cefrLevel = proficiencyToCefr(level);
 
   // ── tier and entitlement ────────────────────────────────────────────
   const { data: sub } = await supabase
-    .from('subscriptions')
-    .select('tier, is_active')
-    .eq('user_id', userId)
-    .eq('is_active', true)
+    .from("subscriptions")
+    .select("tier, is_active")
+    .eq("user_id", userId)
+    .eq("is_active", true)
     .maybeSingle();
-  const tier = (sub?.tier as string | undefined) ?? 'starter';
+  const tier = (sub?.tier as string | undefined) ?? "starter";
 
   // Pass the tier. Omitting it is the documented footgun in plan-limits.ts and
   // here it would resolve every paying learner to dailyTutorMinutes: 0.
@@ -172,8 +189,8 @@ export async function handleStart(
     return {
       status: 403,
       body: {
-        error: 'The live tutor is part of a plan.',
-        code: 'TUTOR_NOT_ENTITLED',
+        error: "The live tutor is part of a plan.",
+        code: "TUTOR_NOT_ENTITLED",
       },
     };
   }
@@ -185,20 +202,24 @@ export async function handleStart(
       meters.tutorSecondsToday,
     monthlyCentsRemaining: limits.monthlyTutorCents -
       meters.tutorCentsThisMonth,
-    requestedSeconds: req.requestedMinutes ? Math.round(req.requestedMinutes * 60) : undefined,
+    requestedSeconds: req.requestedMinutes
+      ? Math.round(req.requestedMinutes * 60)
+      : undefined,
   });
 
   if (grant.seconds <= 0) {
     // Distinct codes, because the copy and the reset date differ: the daily one
     // comes back tonight, the monthly one does not.
-    const monthly = grant.reason === 'monthly';
+    const monthly = grant.reason === "monthly";
     return {
       status: 429,
       body: {
         error: monthly
-          ? 'You have used all your live tutor minutes this month.'
-          : 'You have used your live tutor time for today.',
-        code: monthly ? 'MONTHLY_TUTOR_BUDGET_REACHED' : 'DAILY_TUTOR_LIMIT_REACHED',
+          ? "You have used all your live tutor minutes this month."
+          : "You have used your live tutor time for today.",
+        code: monthly
+          ? "MONTHLY_TUTOR_BUDGET_REACHED"
+          : "DAILY_TUTOR_LIMIT_REACHED",
       },
     };
   }
@@ -214,7 +235,7 @@ export async function handleStart(
       ? fetchLearnerContext(supabase, {
         userId,
         targetLanguage,
-        include: ['goal', 'goal_track', 'pronunciation'],
+        include: ["goal", "goal_track", "pronunciation"],
       })
       : Promise.resolve(null),
     fetchTutorMemory(supabase, { userId, targetLanguage }),
@@ -229,14 +250,16 @@ export async function handleStart(
     personaName: persona.name,
     scenarioKey: req.scenarioKey ?? null,
     correctionMode: req.correctionMode,
-    learnerBlock: learnerCtx ? serializeLearnerContext(learnerCtx, { maxChars: 1200 }) : null,
+    learnerBlock: learnerCtx
+      ? serializeLearnerContext(learnerCtx, { maxChars: 1200 })
+      : null,
     memoryBlock: serializeTutorMemory(memoryNotes),
     pushStance: selectPushStance(pushSignal),
   });
 
   // ── the session row, before the token ───────────────────────────────
   const { data: session, error: sessionErr } = await supabase
-    .from('tutor_sessions')
+    .from("tutor_sessions")
     .insert({
       user_id: userId,
       target_language: targetLanguage,
@@ -253,22 +276,59 @@ export async function handleStart(
       // charges both counters and opens them. A crashed start cannot become a
       // phantom open session for the reaper.
       ended_at: new Date().toISOString(),
-      end_reason: 'error',
+      end_reason: "error",
       observed_seconds: 0,
     })
-    .select('id')
+    .select("id")
     .single();
 
   if (sessionErr || !session) {
     console.error(
-      '[tutor-session] session insert failed:',
+      "[tutor-session] session insert failed:",
       sessionErr?.message,
     );
     return {
       status: 500,
       body: {
-        error: 'Could not start a session. Please try again.',
-        code: 'SESSION_INSERT_FAILED',
+        error: "Could not start a session. Please try again.",
+        code: "SESSION_INSERT_FAILED",
+      },
+    };
+  }
+
+  const connectionToken = newConnectionToken();
+  const connectionTokenExpiresAt = Math.floor(Date.now() / 1000) + 120;
+  const sessionConfig = {
+    type: "realtime",
+    model: TUTOR_MODEL,
+    instructions,
+    audio: {
+      output: { voice: persona.voice, speed: speechSpeedForLevel(level) },
+      input: {
+        turn_detection: turnDetectionForLevel(level),
+        transcription: { model: "whisper-1" },
+      },
+    },
+    max_output_tokens: MAX_OUTPUT_TOKENS,
+    tools: [],
+  };
+  const prepared = await supabase.from("tutor_provider_connections").insert({
+    session_id: session.id,
+    token_hash: await sha256Hex(connectionToken),
+    session_config: sessionConfig,
+    safety_identifier: await safetyIdentifier(userId, env.safetySalt),
+    expires_at: new Date(connectionTokenExpiresAt * 1000).toISOString(),
+  });
+  if (prepared.error) {
+    console.error(
+      "[tutor-session] provider capability insert failed:",
+      prepared.error.message,
+    );
+    return {
+      status: 500,
+      body: {
+        error: "Could not prepare the tutor. Please try again.",
+        code: "SESSION_PREPARE_FAILED",
       },
     };
   }
@@ -283,153 +343,81 @@ export async function handleStart(
     });
   } catch (err) {
     console.error(
-      '[tutor-session] atomic reservation failed:',
+      "[tutor-session] atomic reservation failed:",
       err instanceof Error ? err.message : err,
+    );
+    await supabase.from("tutor_provider_connections").delete().eq(
+      "session_id",
+      session.id,
     );
     return {
       status: 500,
       body: {
-        error: 'Could not reserve tutor time. Please try again.',
-        code: 'RESERVATION_FAILED',
+        error: "Could not reserve tutor time. Please try again.",
+        code: "RESERVATION_FAILED",
       },
     };
   }
 
-  if (reserveStatus === 'monthly_limit') {
-    return {
-      status: 429,
-      body: {
-        error: 'You have used all your live tutor minutes this month.',
-        code: 'MONTHLY_TUTOR_BUDGET_REACHED',
-      },
-    };
-  }
-  if (reserveStatus === 'daily_limit') {
-    return {
-      status: 429,
-      body: {
-        error: 'You have used your live tutor time for today.',
-        code: 'DAILY_TUTOR_LIMIT_REACHED',
-      },
-    };
-  }
-
-  // ── mint ────────────────────────────────────────────────────────────
-  try {
-    const res = await providerFetch(
-      CLIENT_SECRETS_URL,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${env.openaiKey}`,
-          'OpenAI-Safety-Identifier': await safetyIdentifier(
-            userId,
-            env.safetySalt,
-          ),
-        },
-        body: JSON.stringify({
-          session: {
-            type: 'realtime',
-            model: TUTOR_MODEL,
-            instructions,
-            audio: {
-              output: {
-                voice: persona.voice,
-                speed: speechSpeedForLevel(level),
-              },
-              input: {
-                turn_detection: turnDetectionForLevel(level),
-                transcription: { model: 'whisper-1' },
-              },
-            },
-            max_output_tokens: MAX_OUTPUT_TOKENS,
-            tools: [],
-          },
-        }),
-      },
-      { provider: 'openai-realtime', timeoutMs: PROVIDER_TIMEOUT_MS.textShort },
+  if (reserveStatus === "monthly_limit") {
+    await supabase.from("tutor_provider_connections").delete().eq(
+      "session_id",
+      session.id,
     );
-
-    if (!res.ok) {
-      const detail = await res.text().catch(() => '');
-      // Never return the provider's text to the client — it can echo the
-      // instructions back, which would leak the system prompt.
-      console.error(
-        '[tutor-session] mint failed:',
-        res.status,
-        detail.slice(0, 300),
-      );
-      throw new Error(`mint ${res.status}`);
-    }
-
-    const minted = await res.json();
-    // The response shape has moved between API revisions; accept the secret at
-    // the top level or nested, and fail loudly rather than handing the client
-    // an undefined token it would spend a round trip discovering.
-    const clientSecret: string | undefined = minted?.value ??
-      minted?.client_secret?.value;
-    const expiresAt: number | undefined = minted?.expires_at ??
-      minted?.client_secret?.expires_at;
-    if (typeof clientSecret !== 'string' || clientSecret.length === 0) {
-      throw new Error('mint returned no client secret');
-    }
-
     return {
-      status: 200,
+      status: 429,
       body: {
-        sessionId: session.id,
-        clientSecret,
-        clientSecretExpiresAt: expiresAt ?? null,
-        model: TUTOR_MODEL,
-        callsUrl: 'https://api.openai.com/v1/realtime/calls',
-        grantedSeconds: grant.seconds,
-        heartbeatIntervalSeconds: TUTOR_HEARTBEAT_SECONDS,
-        correctionMode: req.correctionMode,
-        personaId: persona.id,
-        remainingTutorMinutesToday: Math.max(
-          0,
-          Math.floor(
-            (limits.dailyTutorMinutes * 60 - meters.tutorSecondsToday -
-              grant.seconds) / 60,
-          ),
+        error: "You have used all your live tutor minutes this month.",
+        code: "MONTHLY_TUTOR_BUDGET_REACHED",
+      },
+    };
+  }
+  if (reserveStatus === "daily_limit") {
+    await supabase.from("tutor_provider_connections").delete().eq(
+      "session_id",
+      session.id,
+    );
+    return {
+      status: 429,
+      body: {
+        error: "You have used your live tutor time for today.",
+        code: "DAILY_TUTOR_LIMIT_REACHED",
+      },
+    };
+  }
+  if (reserveStatus === "active_session") {
+    await supabase.from("tutor_provider_connections").delete().eq(
+      "session_id",
+      session.id,
+    );
+    return {
+      status: 409,
+      body: {
+        error: "A tutor session is already active.",
+        code: "TUTOR_SESSION_ACTIVE",
+      },
+    };
+  }
+
+  return {
+    status: 200,
+    body: {
+      sessionId: session.id,
+      connectionToken,
+      connectionTokenExpiresAt,
+      model: TUTOR_MODEL,
+      callsUrl: `${env.supabaseUrl}/functions/v1/tutor-session`,
+      grantedSeconds: grant.seconds,
+      heartbeatIntervalSeconds: TUTOR_HEARTBEAT_SECONDS,
+      correctionMode: req.correctionMode,
+      personaId: persona.id,
+      remainingTutorMinutesToday: Math.max(
+        0,
+        Math.floor(
+          (limits.dailyTutorMinutes * 60 - meters.tutorSecondsToday -
+            grant.seconds) / 60,
         ),
-      },
-    };
-  } catch (err) {
-    // THE important error path. We have charged for a session that will not
-    // happen; give it all back and mark the row so the reaper does not later
-    // try to settle a session that never opened.
-    try {
-      await settleTutorSession(supabase, {
-        sessionId: session.id,
-        userId,
-        settlement: settlement(grant.seconds, cents, 0),
-      });
-      await supabase
-        .from('tutor_sessions')
-        .update({ ended_at: new Date().toISOString(), end_reason: 'error' })
-        .eq('id', session.id)
-        .is('ended_at', null);
-    } catch (settleErr) {
-      // Keep the reserved row open: the reaper will retry the atomic
-      // settlement. Closing it here would hide a charge that still needs its
-      // refund.
-      console.error(
-        '[tutor-session] MINT REFUND FAILED:',
-        settleErr instanceof Error ? settleErr.message : settleErr,
-      );
-    }
-    console.error(
-      '[tutor-session] mint threw:',
-      err instanceof Error ? err.message : err,
-    );
-    return {
-      status: 502,
-      body: {
-        error: 'The tutor is unavailable right now. Please try again.',
-        code: 'TUTOR_UNAVAILABLE',
-      },
-    };
-  }
+      ),
+    },
+  };
 }

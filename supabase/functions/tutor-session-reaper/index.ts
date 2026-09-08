@@ -27,36 +27,46 @@
 //   (and only THEN apply the cron.schedule at the bottom of migration 110 —
 //    scheduling it first just means every tick 404s until the gap closes.)
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { corsHeaders, corsResponse } from '../_shared/cors.ts';
-import { getEffectiveLimits } from '../_shared/plan-limits.ts';
-import { analyzeTutorSession } from '../_shared/tutor-analysis.ts';
-import { writeBackTutorSession } from '../_shared/tutor-writeback.ts';
-import { recordTutorAnalysisFailure, settleTutorSession } from '../_shared/tutor-ledger.ts';
-import { dropTranscript, readTranscript } from '../_shared/tutor-transcript-buffer.ts';
-import type { CEFR } from '../_shared/level-checker.ts';
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders, corsResponse } from "../_shared/cors.ts";
+import { getEffectiveLimits } from "../_shared/plan-limits.ts";
+import { analyzeTutorSession } from "../_shared/tutor-analysis.ts";
+import { writeBackTutorSession } from "../_shared/tutor-writeback.ts";
+import {
+  recordTutorAnalysisFailure,
+  settleTutorSession,
+} from "../_shared/tutor-ledger.ts";
+import {
+  dropTranscript,
+  readTranscript,
+} from "../_shared/tutor-transcript-buffer.ts";
+import type { CEFR } from "../_shared/level-checker.ts";
+import { hangupTutorProvider } from "../_shared/tutor-provider-call.ts";
 import {
   REAP_BATCH_LIMIT,
   reapAbandonedSessions,
   type ReapableSession,
   type ReaperDeps,
   type SettleClaim,
-} from './reap.ts';
+} from "./reap.ts";
 
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const OPENAI_KEY = Deno.env.get("OPENAI_KEY") ?? "";
 
-const FN = 'tutor-session-reaper';
+const FN = "tutor-session-reaper";
 
 /** Exactly the columns ./reap.ts declares in `ReapableSession`. */
-const SESSION_COLUMNS = 'id, user_id, target_language, native_language, level, cefr_level, correction_mode, ' +
-  'granted_seconds, granted_cents, started_at, last_heartbeat_at, observed_seconds';
+const SESSION_COLUMNS =
+  "id, user_id, target_language, native_language, level, cefr_level, correction_mode, " +
+  "granted_seconds, granted_cents, started_at, last_heartbeat_at, observed_seconds, " +
+  "provider_connected_at, provider_deadline_at";
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
 
@@ -75,12 +85,12 @@ async function chatCardLimitFor(
   userId: string,
 ): Promise<number> {
   const { data: sub } = await supabase
-    .from('subscriptions')
-    .select('tier, is_active')
-    .eq('user_id', userId)
-    .eq('is_active', true)
+    .from("subscriptions")
+    .select("tier, is_active")
+    .eq("user_id", userId)
+    .eq("is_active", true)
     .maybeSingle();
-  const tier = (sub?.tier as string | undefined) ?? 'starter';
+  const tier = (sub?.tier as string | undefined) ?? "starter";
   const limits = await getEffectiveLimits(userId, supabase, tier);
   return limits.dailyChatCards;
 }
@@ -105,15 +115,22 @@ function buildDeps(supabase: any, anthropicKey: string): ReaperDeps {
       // batch that cannot cover everything covers the sessions that have been
       // waiting longest for their money.
       const { data, error } = await supabase
-        .from('tutor_sessions')
+        .from("tutor_sessions")
         .select(SESSION_COLUMNS)
-        .is('ended_at', null)
-        .lt('last_heartbeat_at', cutoffIso)
-        .order('last_heartbeat_at', { ascending: true })
+        .is("ended_at", null)
+        .or(
+          `last_heartbeat_at.lt.${cutoffIso},provider_deadline_at.lte.${
+            new Date().toISOString()
+          }`,
+        )
+        .order("last_heartbeat_at", { ascending: true })
         .limit(limit);
       if (error) throw new Error(error.message);
       return (data ?? []) as ReapableSession[];
     },
+
+    terminateProvider: (sessionId) =>
+      hangupTutorProvider(supabase, sessionId, OPENAI_KEY),
 
     async settleSession(sessionId, userId, wanted): Promise<SettleClaim> {
       try {
@@ -123,11 +140,11 @@ function buildDeps(supabase: any, anthropicKey: string): ReaperDeps {
           settlement: wanted,
         });
         return {
-          status: result.status === 'already_settled' ? 'already' : 'settled',
+          status: result.status === "already_settled" ? "already" : "settled",
           observedSeconds: result.observedSeconds,
         };
       } catch {
-        return { status: 'error' };
+        return { status: "error" };
       }
     },
 
@@ -171,14 +188,14 @@ function buildDeps(supabase: any, anthropicKey: string): ReaperDeps {
       // rather than trusted from the claim, so a row whose claim took the
       // fail-open path still lands correct.
       const { error } = await supabase
-        .from('tutor_sessions')
+        .from("tutor_sessions")
         .update({
           ended_at: new Date().toISOString(),
-          end_reason: 'abandoned',
+          end_reason: "abandoned",
           observed_seconds: observedSeconds,
         })
-        .eq('id', sessionId)
-        .is('ended_at', null);
+        .eq("id", sessionId)
+        .is("ended_at", null);
       if (error) throw new Error(error.message);
     },
 
@@ -186,10 +203,10 @@ function buildDeps(supabase: any, anthropicKey: string): ReaperDeps {
 
     async sweepSafetyEvents(cutoffIso) {
       const { data, error } = await supabase
-        .from('tutor_safety_events')
+        .from("tutor_safety_events")
         .delete()
-        .lt('created_at', cutoffIso)
-        .select('id');
+        .lt("created_at", cutoffIso)
+        .select("id");
       if (error) throw new Error(error.message);
       return Array.isArray(data) ? data.length : 0;
     },
@@ -197,7 +214,7 @@ function buildDeps(supabase: any, anthropicKey: string): ReaperDeps {
 }
 
 serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') return corsResponse();
+  if (req.method === "OPTIONS") return corsResponse();
 
   const startedAt = Date.now();
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -207,11 +224,11 @@ serve(async (req: Request) => {
   // (migration 020 + the get_cron_secret RPC); both pg_cron and this function
   // read the same value, so there is no separate env var to drift.
   const { data: secretData, error: secretErr } = await supabase.rpc(
-    'get_cron_secret',
+    "get_cron_secret",
   );
   if (secretErr || !secretData) {
     return json(
-      { error: 'Cron secret unavailable — Vault entry missing' },
+      { error: "Cron secret unavailable — Vault entry missing" },
       500,
     );
   }
@@ -219,19 +236,19 @@ serve(async (req: Request) => {
 
   if (!cronSecret || cronSecret.length < 16) {
     console.error(
-      '[SECURITY] CRON_SECRET is missing or too short. Set a 32+ byte random value in Vault.',
+      "[SECURITY] CRON_SECRET is missing or too short. Set a 32+ byte random value in Vault.",
     );
-    return json({ error: 'Cron secret is not configured securely' }, 500);
+    return json({ error: "Cron secret is not configured securely" }, 500);
   }
 
-  const authHeader = req.headers.get('authorization') ?? '';
-  const providedKey = authHeader.replace(/^Bearer\s+/i, '');
+  const authHeader = req.headers.get("authorization") ?? "";
+  const providedKey = authHeader.replace(/^Bearer\s+/i, "");
 
   // Constant-time comparison to prevent timing attacks. The length check is
   // not constant-time and does not need to be — the secret's length is not the
   // secret. Nothing about the caller is logged on rejection.
   if (!providedKey || providedKey.length !== cronSecret.length) {
-    return json({ error: 'Unauthorized — cron invocation only' }, 401);
+    return json({ error: "Unauthorized — cron invocation only" }, 401);
   }
   const encoder = new TextEncoder();
   const a = encoder.encode(providedKey);
@@ -241,7 +258,7 @@ serve(async (req: Request) => {
     mismatch |= a[i] ^ b[i];
   }
   if (mismatch !== 0) {
-    return json({ error: 'Unauthorized — cron invocation only' }, 401);
+    return json({ error: "Unauthorized — cron invocation only" }, 401);
   }
 
   // ── The run ───────────────────────────────────────────────────────
@@ -250,7 +267,10 @@ serve(async (req: Request) => {
   // suppressed analysis honestly is better than dressing it up as a lost
   // transcript buffer, which would send someone hunting a Redis outage that
   // never happened.
-  const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY') ?? '';
+  const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
+  if (!OPENAI_KEY) {
+    return json({ error: "Provider termination is not configured" }, 500);
+  }
   if (!anthropicKey) {
     console.error(
       `[${FN}] ANTHROPIC_API_KEY is not set; settling money and retaining transcripts for retry`,

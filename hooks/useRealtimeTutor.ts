@@ -139,7 +139,7 @@ export interface TutorCallSession {
    * logged, never persisted, and never interpolated into an error message —
    * see the header of `lib/tutor-api.ts`.
    */
-  clientSecret: string;
+  connectionToken: string;
   model: string;
   /** The SDP exchange endpoint the server named. */
   callsUrl: string;
@@ -679,7 +679,7 @@ export function useRealtimeTutor(
   const dial = useCallback(
     async (clientSecret: string, model: string) => {
       try {
-        await ensureTransport().connect({ clientSecret, model, callsUrl: callsUrlRef.current });
+        await ensureTransport().connect({ connectionToken: clientSecret, model, callsUrl: callsUrlRef.current });
       } catch (err) {
         console.warn('[tutor] connect failed:', err);
         setError('Could not connect to your tutor.');
@@ -977,7 +977,7 @@ export function useRealtimeTutor(
           type: 'start',
           now: Date.now(),
           sessionId: session.sessionId,
-          clientSecret: session.clientSecret,
+          clientSecret: session.connectionToken,
           model: session.model,
           grantedMs: Math.max(0, session.grantedMs),
           correctionMode: toSessionCorrectionMode(session.correctionMode),

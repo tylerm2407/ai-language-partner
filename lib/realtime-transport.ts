@@ -110,8 +110,8 @@ export type TransportEvent =
   | { readonly kind: 'error'; readonly stage: TransportStage; readonly message: string };
 
 export interface RealtimeConnectOptions {
-  /** The ephemeral client secret minted server-side. Never a real API key. */
-  clientSecret: string;
+  /** Single-use application capability for the server-owned SDP exchange. */
+  connectionToken: string;
   model: string;
   callsUrl: string;
 }
@@ -467,7 +467,7 @@ export function createWebRtcTransport(
       const response = await fetch(`${opts.callsUrl}?model=${encodeURIComponent(opts.model)}`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${opts.clientSecret}`,
+          Authorization: `Bearer ${opts.connectionToken}`,
           'Content-Type': 'application/sdp',
         },
         body: offerSdp,

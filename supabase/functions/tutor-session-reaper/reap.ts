@@ -49,12 +49,15 @@
  * against a stub with no database, no Redis and no provider.
  */
 
-import { settlement, TUTOR_REAP_AFTER_SECONDS } from '../_shared/tutor-pricing.ts';
-import type { BufferedTurn } from '../_shared/tutor-transcript-buffer.ts';
-import type { TutorAnalysis } from '../_shared/tutor-analysis.ts';
+import {
+  settlement,
+  TUTOR_REAP_AFTER_SECONDS,
+} from "../_shared/tutor-pricing.ts";
+import type { BufferedTurn } from "../_shared/tutor-transcript-buffer.ts";
+import type { TutorAnalysis } from "../_shared/tutor-analysis.ts";
 
 /** Log prefix, so a line is attributable to this stage. */
-const FN = 'tutor-session-reaper';
+const FN = "tutor-session-reaper";
 
 /**
  * How many sessions one tick will look at.
@@ -99,11 +102,13 @@ export interface ReapableSession {
   native_language: string;
   level: string;
   cefr_level: string;
-  correction_mode: 'as_you_go' | 'let_me_talk';
+  correction_mode: "as_you_go" | "let_me_talk";
   granted_seconds: number;
   granted_cents: number;
   started_at: string;
   last_heartbeat_at: string;
+  provider_connected_at?: string | null;
+  provider_deadline_at?: string | null;
   /** Non-null when a previous tick already settled the money and only the
    *  learning half is outstanding. */
   observed_seconds: number | null;
@@ -111,8 +116,8 @@ export interface ReapableSession {
 
 /** Outcome of the conditional `observed_seconds IS NULL` update. */
 export type SettleClaim =
-  | { status: 'settled' | 'already'; observedSeconds: number }
-  | { status: 'error' };
+  | { status: "settled" | "already"; observedSeconds: number }
+  | { status: "error" };
 
 // ─── Injected effects ─────────────────────────────────────────────────────
 
@@ -128,6 +133,9 @@ export interface ReaperDeps {
   /** `SELECT ... WHERE ended_at IS NULL AND last_heartbeat_at < cutoff
    *  ORDER BY last_heartbeat_at LIMIT n`. */
   listStale(cutoffIso: string, limit: number): Promise<ReapableSession[]>;
+
+  /** End the actual provider call before any ledger row becomes terminal. */
+  terminateProvider(sessionId: string): Promise<"ended" | "busy" | "failed">;
 
   /** Atomically records observed use and applies both quota refunds. */
   settleSession(
@@ -279,6 +287,10 @@ export function safetyCutoffIso(nowMs: number): string {
  * this function that would be invisible and expensive.
  */
 export function isStale(session: ReapableSession, nowMs: number): boolean {
+  const deadline = session.provider_deadline_at
+    ? Date.parse(session.provider_deadline_at)
+    : NaN;
+  if (Number.isFinite(deadline) && deadline <= nowMs) return true;
   const beat = Date.parse(session.last_heartbeat_at);
   if (!Number.isFinite(beat)) return false;
   return beat < nowMs - TUTOR_REAP_AFTER_SECONDS * 1000;
@@ -295,7 +307,7 @@ export function isStale(session: ReapableSession, nowMs: number): boolean {
  * guessing would mean guessing about money.
  */
 export function observedSecondsFor(session: ReapableSession): number | null {
-  const start = Date.parse(session.started_at);
+  const start = Date.parse(session.provider_connected_at ?? session.started_at);
   const beat = Date.parse(session.last_heartbeat_at);
   if (!Number.isFinite(start) || !Number.isFinite(beat)) return null;
   return Math.max(0, Math.round((beat - start) / 1000));
@@ -323,7 +335,20 @@ export interface SessionSettlement {
  * overstate our own costs and tell the learner they spoke for longer than we
  * ever let them.
  */
-export function settleFor(session: ReapableSession): SessionSettlement | null {
+export function settleFor(
+  session: ReapableSession,
+  nowMs = Date.now(),
+): SessionSettlement | null {
+  const deadline = session.provider_deadline_at
+    ? Date.parse(session.provider_deadline_at)
+    : NaN;
+  if (Number.isFinite(deadline) && deadline <= nowMs) {
+    return settlement(
+      session.granted_seconds,
+      session.granted_cents,
+      session.granted_seconds,
+    );
+  }
   const raw = observedSecondsFor(session);
   if (raw === null) return null;
   return settlement(session.granted_seconds, session.granted_cents, raw);
@@ -347,11 +372,11 @@ async function settleOne(
 ): Promise<number | null> {
   const claim = await deps.settleSession(session.id, session.user_id, owed);
 
-  if (claim.status === 'already') {
+  if (claim.status === "already") {
     summary.alreadySettled += 1;
     return claim.observedSeconds;
   }
-  if (claim.status === 'error') {
+  if (claim.status === "error") {
     // The database transaction rolled back, so leaving the row open makes the
     // complete settlement retryable on the next tick.
     console.error(
@@ -533,11 +558,20 @@ export async function reapAbandonedSessions(
         continue;
       }
 
-      const owed = settleFor(session);
+      const owed = settleFor(session, startedAt);
       if (owed === null) {
         summary.errors += 1;
         console.error(
           `[${FN}] session ${session.id} has unreadable timestamps; not settling`,
+        );
+        continue;
+      }
+
+      const termination = await deps.terminateProvider(session.id);
+      if (termination !== "ended") {
+        summary.errors += 1;
+        console.error(
+          `[${FN}] provider hangup ${termination} for ${session.id}; leaving it open`,
         );
         continue;
       }

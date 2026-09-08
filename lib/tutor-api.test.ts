@@ -37,8 +37,8 @@ const SECRET = 'ek_super_secret_ephemeral_value_do_not_leak';
 
 const START_OK = {
   sessionId: 'sess-1',
-  clientSecret: SECRET,
-  clientSecretExpiresAt: 1_800_000_000,
+  connectionToken: SECRET,
+  connectionTokenExpiresAt: 1_800_000_000,
   model: 'gpt-realtime',
   callsUrl: 'https://api.openai.com/v1/realtime/calls',
   grantedSeconds: 600,
@@ -126,8 +126,8 @@ describe('startTutorSession', () => {
     const result = await startTutorSession(START_INPUT);
     expect(result).toEqual({
       sessionId: 'sess-1',
-      clientSecret: SECRET,
-      clientSecretExpiresAt: 1_800_000_000,
+      connectionToken: SECRET,
+      connectionTokenExpiresAt: 1_800_000_000,
       model: 'gpt-realtime',
       callsUrl: 'https://api.openai.com/v1/realtime/calls',
       grantedMs: 600_000,
@@ -383,7 +383,7 @@ describe('the client secret never escapes', () => {
       error: httpError(500, {
         error: 'mint failed',
         code: 'SESSION_INSERT_FAILED',
-        clientSecret: SECRET,
+        connectionToken: SECRET,
         debug: { minted: SECRET },
       }),
     });
@@ -394,7 +394,7 @@ describe('the client secret never escapes', () => {
 
   it('is absent when a malformed response is refused', async () => {
     mockInvoke.mockResolvedValue({
-      data: { clientSecret: SECRET }, // no sessionId
+      data: { connectionToken: SECRET }, // no sessionId
       error: null,
     });
     const logged = await captureConsole(() => startTutorSession(START_INPUT));
@@ -413,7 +413,7 @@ describe('the client secret never escapes', () => {
 describe('redactTutorSecrets', () => {
   it('removes the secret from a nested object without mutating the original', () => {
     const event = {
-      extra: { response: { clientSecret: SECRET, sessionId: 'sess-1' } },
+      extra: { response: { connectionToken: SECRET, sessionId: 'sess-1' } },
       breadcrumbs: [{ data: { client_secret: SECRET } }],
     };
     const scrubbed = redactTutorSecrets(event);
@@ -422,11 +422,11 @@ describe('redactTutorSecrets', () => {
     expect(scrubbed.extra.response.sessionId).toBe('sess-1');
     // The caller's object is untouched — a scrub that mutates the event would
     // also mutate whatever the app is still holding.
-    expect(event.extra.response.clientSecret).toBe(SECRET);
+    expect(event.extra.response.connectionToken).toBe(SECRET);
   });
 
   it('survives a cycle instead of hanging the error path', () => {
-    const cyclic: Record<string, unknown> = { clientSecret: SECRET };
+    const cyclic: Record<string, unknown> = { connectionToken: SECRET };
     cyclic.self = cyclic;
     expect(() => redactTutorSecrets(cyclic)).not.toThrow();
     expect(JSON.stringify(redactTutorSecrets(cyclic))).not.toContain(SECRET);

@@ -2,7 +2,7 @@
  * Unit tests for the lobby → call baton.
  *
  * The reason this module exists rather than a route param is that the object
- * it carries holds a `clientSecret`. The tests below pin the two behaviours
+ * it carries holds a `connectionToken`. The tests below pin the two behaviours
  * that follow from that: the slot is empty until a call is actually started
  * (so a cold deep link cannot find a credential), and it is emptied when the
  * call is done rather than left holding a spent one.
@@ -18,8 +18,8 @@ import type { StartTutorSessionResult } from './tutor-api';
 function session(overrides: Partial<StartTutorSessionResult> = {}): StartTutorSessionResult {
   return {
     sessionId: 'sess-1',
-    clientSecret: 'ek_test',
-    clientSecretExpiresAt: null,
+    connectionToken: 'ek_test',
+    connectionTokenExpiresAt: null,
     model: 'gpt-realtime',
     callsUrl: 'https://api.openai.com/v1/realtime/calls',
     grantedMs: 600_000,

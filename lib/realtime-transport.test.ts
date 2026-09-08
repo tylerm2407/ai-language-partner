@@ -33,7 +33,7 @@ import {
 const ANSWER_SDP = 'v=0\r\no=- answer\r\n';
 
 const CONNECT = {
-  clientSecret: 'ek_test_secret',
+  connectionToken: 'ek_test_secret',
   model: 'gpt-realtime',
   callsUrl: DEFAULT_CALLS_URL,
 };

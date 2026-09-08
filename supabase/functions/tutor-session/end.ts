@@ -23,23 +23,30 @@
  * the direct WebRTC connection, so this transcript is suitable for learner
  * notes but is never authoritative for billing, entitlement, or safety.
  */
-import { proficiencyToCefr } from '../_shared/cefr.ts';
-import { getEffectiveLimits } from '../_shared/plan-limits.ts';
-import { settlement } from '../_shared/tutor-pricing.ts';
-import { recordTutorAnalysisFailure, settleTutorSession } from '../_shared/tutor-ledger.ts';
-import { dropTranscript, readTranscript } from '../_shared/tutor-transcript-buffer.ts';
-import { analyzeTutorSession } from '../_shared/tutor-analysis.ts';
-import { writeBackTutorSession } from '../_shared/tutor-writeback.ts';
+import { proficiencyToCefr } from "../_shared/cefr.ts";
+import { getEffectiveLimits } from "../_shared/plan-limits.ts";
+import { settlement } from "../_shared/tutor-pricing.ts";
+import {
+  recordTutorAnalysisFailure,
+  settleTutorSession,
+} from "../_shared/tutor-ledger.ts";
+import {
+  dropTranscript,
+  readTranscript,
+} from "../_shared/tutor-transcript-buffer.ts";
+import { analyzeTutorSession } from "../_shared/tutor-analysis.ts";
+import { writeBackTutorSession } from "../_shared/tutor-writeback.ts";
+import { hangupTutorProvider } from "../_shared/tutor-provider-call.ts";
 
 // deno-lint-ignore no-explicit-any
 type Client = any;
 
 export type TutorEndReason =
-  | 'learner'
-  | 'budget'
-  | 'safety'
-  | 'timeout'
-  | 'error';
+  | "learner"
+  | "budget"
+  | "safety"
+  | "timeout"
+  | "error";
 
 export interface EndRequest {
   sessionId: string;
@@ -56,29 +63,29 @@ export async function handleEnd(
   supabase: Client,
   userId: string,
   req: EndRequest,
-  env: { anthropicKey: string | null },
+  env: { anthropicKey: string | null; openaiKey: string },
 ): Promise<EndResult> {
   if (!req.sessionId) {
     return {
       status: 400,
-      body: { error: 'sessionId is required', code: 'BAD_REQUEST' },
+      body: { error: "sessionId is required", code: "BAD_REQUEST" },
     };
   }
 
   const { data: session, error } = await supabase
-    .from('tutor_sessions')
+    .from("tutor_sessions")
     .select(
-      'id, user_id, target_language, native_language, level, cefr_level, started_at, ' +
-        'last_heartbeat_at, granted_seconds, granted_cents, ended_at, observed_seconds, ' +
-        'correction_mode, debrief',
+      "id, user_id, target_language, native_language, level, cefr_level, started_at, " +
+        "last_heartbeat_at, granted_seconds, granted_cents, ended_at, observed_seconds, " +
+        "correction_mode, debrief, provider_connected_at",
     )
-    .eq('id', req.sessionId)
+    .eq("id", req.sessionId)
     .maybeSingle();
 
   if (error || !session) {
     return {
       status: 404,
-      body: { error: 'Session not found.', code: 'SESSION_NOT_FOUND' },
+      body: { error: "Session not found.", code: "SESSION_NOT_FOUND" },
     };
   }
   // Never trust the sessionId alone: without this any authenticated learner
@@ -86,7 +93,7 @@ export async function handleEnd(
   if (session.user_id !== userId) {
     return {
       status: 404,
-      body: { error: 'Session not found.', code: 'SESSION_NOT_FOUND' },
+      body: { error: "Session not found.", code: "SESSION_NOT_FOUND" },
     };
   }
 
@@ -108,8 +115,22 @@ export async function handleEnd(
     };
   }
 
-  // ── 1. settle ───────────────────────────────────────────────────────
-  const startedAt = new Date(session.started_at).getTime();
+  // ── 1. terminate the provider call ─────────────────────────────────
+  const hangup = await hangupTutorProvider(supabase, session.id, env.openaiKey);
+  if (hangup !== "ended") {
+    return {
+      status: 503,
+      body: {
+        error: "Your session is still being finalized. Please retry.",
+        code: "PROVIDER_HANGUP_PENDING",
+      },
+    };
+  }
+
+  // ── 2. settle ───────────────────────────────────────────────────────
+  const startedAt = new Date(
+    session.provider_connected_at ?? session.started_at,
+  ).getTime();
   const observedRaw = Math.ceil((Date.now() - startedAt) / 1000);
   const wanted = settlement(
     session.granted_seconds,
@@ -128,19 +149,19 @@ export async function handleEnd(
     // fails, none of those writes committed and the open row remains eligible
     // for the reaper to retry.
     console.error(
-      '[tutor-session] atomic settlement failed:',
+      "[tutor-session] atomic settlement failed:",
       err instanceof Error ? err.message : err,
     );
     return {
       status: 503,
       body: {
-        error: 'Your session is still being finalized. Please retry.',
-        code: 'SETTLEMENT_PENDING',
+        error: "Your session is still being finalized. Please retry.",
+        code: "SETTLEMENT_PENDING",
       },
     };
   }
 
-  // ── 2. analyse and write back (best effort) ─────────────────────────
+  // ── 3. analyse and write back (best effort) ─────────────────────────
   let debrief: unknown = null;
   let savedWords: string[] = [];
   let analyzed = false;
@@ -160,7 +181,7 @@ export async function handleEnd(
       const analysis = await analyzeTutorSession({
         transcript: buffered.turns,
         targetLanguage: session.target_language,
-        nativeLanguage: session.native_language ?? 'en',
+        nativeLanguage: session.native_language ?? "en",
         level: session.level,
         cefrLevel,
         correctionMode: session.correction_mode,
@@ -168,18 +189,18 @@ export async function handleEnd(
       });
 
       const { data: subscription } = await supabase
-        .from('subscriptions')
-        .select('tier, is_active')
-        .eq('user_id', userId)
-        .eq('is_active', true)
+        .from("subscriptions")
+        .select("tier, is_active")
+        .eq("user_id", userId)
+        .eq("is_active", true)
         .maybeSingle();
-      const tier = (subscription?.tier as string | undefined) ?? 'starter';
+      const tier = (subscription?.tier as string | undefined) ?? "starter";
       const limits = await getEffectiveLimits(userId, supabase, tier);
       const written = await writeBackTutorSession(supabase, {
         userId,
         sessionId: session.id,
         targetLanguage: session.target_language,
-        nativeLanguage: session.native_language ?? 'en',
+        nativeLanguage: session.native_language ?? "en",
         level: session.level,
         cefrLevel,
         analysis,
@@ -199,7 +220,7 @@ export async function handleEnd(
     // is recoverable by the reaper; failing the request here would tell the
     // learner their session broke when in fact it did not.
     console.error(
-      '[tutor-session] write-back failed:',
+      "[tutor-session] write-back failed:",
       err instanceof Error ? err.message : err,
     );
     await recordTutorAnalysisFailure(supabase, {
@@ -208,31 +229,31 @@ export async function handleEnd(
       error: err,
     }).catch((recordErr) => {
       console.error(
-        '[tutor-session] failed to record analysis retry:',
+        "[tutor-session] failed to record analysis retry:",
         recordErr instanceof Error ? recordErr.message : recordErr,
       );
     });
     recoveryPending = true;
   }
 
-  // ── 3. close, LAST ──────────────────────────────────────────────────
+  // ── 4. close, LAST ──────────────────────────────────────────────────
   let closeErr: { message: string } | null = null;
   if (!recoveryPending) {
     const closed = await supabase
-      .from('tutor_sessions')
+      .from("tutor_sessions")
       .update({
         ended_at: new Date().toISOString(),
-        end_reason: req.endReason ?? 'learner',
+        end_reason: req.endReason ?? "learner",
       })
-      .eq('id', session.id)
+      .eq("id", session.id)
       // Only close a session that is still open, so a race with the reaper
       // resolves to one writer rather than two.
-      .is('ended_at', null);
+      .is("ended_at", null);
     closeErr = closed.error;
   }
 
   if (closeErr) {
-    console.error('[tutor-session] close failed:', closeErr.message);
+    console.error("[tutor-session] close failed:", closeErr.message);
   }
 
   if (!recoveryPending && !closeErr) await dropTranscript(session.id);
