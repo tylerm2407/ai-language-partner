@@ -138,6 +138,10 @@ function RootLayout() {
   // Tie purchases, analytics, and crash reports to the signed-in user.
   // Idempotent; analytics/IAP no-op until a provider/keys are configured.
   useEffect(() => {
+    // The initial null session means "not restored yet", not "signed out".
+    // Resetting here fragments the persisted anonymous identity on every cold
+    // start and briefly detaches RevenueCat/Sentry from a returning learner.
+    if (authLoading) return;
     const userId = session?.user?.id ?? null;
     configurePurchases(userId);
     if (userId) {
@@ -149,7 +153,7 @@ function RootLayout() {
       resetAnalytics();
       Sentry.setUser(null);
     }
-  }, [session?.user?.id]);
+  }, [session?.user?.id, authLoading]);
 
   // Track the device's live RevenueCat entitlement. This is half of the paywall
   // gate (app/(app)/_layout.tsx) — without it, a learner who has just paid is

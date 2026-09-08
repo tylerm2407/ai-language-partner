@@ -4,6 +4,7 @@ import {
   isAnnualPackage,
   isMonthlyPackage,
   resolveKey,
+  subscribeToCustomerInfoUpdates,
   tierFromPackage,
 } from './purchases';
 
@@ -146,5 +147,23 @@ describe('resolveKey', () => {
       'appl_KLvWOLovdOVLmzAkMwLfDNaqNOK',
     );
     expect(warn).not.toHaveBeenCalled();
+  });
+});
+
+describe('subscribeToCustomerInfoUpdates', () => {
+  it('removes the exact callback that it registered', () => {
+    const addCustomerInfoUpdateListener = jest.fn();
+    const removeCustomerInfoUpdateListener = jest.fn();
+    const listener = jest.fn();
+    const unsubscribe = subscribeToCustomerInfoUpdates(
+      { addCustomerInfoUpdateListener, removeCustomerInfoUpdateListener },
+      listener,
+    );
+
+    expect(addCustomerInfoUpdateListener).toHaveBeenCalledTimes(1);
+    expect(addCustomerInfoUpdateListener).toHaveBeenCalledWith(listener);
+    unsubscribe();
+    expect(removeCustomerInfoUpdateListener).toHaveBeenCalledTimes(1);
+    expect(removeCustomerInfoUpdateListener).toHaveBeenCalledWith(listener);
   });
 });

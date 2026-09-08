@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { escapeSpreadsheetCsvCell } from './csv';
 import { SRS_DEFAULTS } from '../config/app';
 import { PLANS } from './plans';
 import { CEFR_BAND_BY_LEVEL, CEFR_LADDER,
@@ -3489,13 +3490,7 @@ export async function exportClassroomGradebookCsv(classroomId: string): Promise<
   );
 
   const rows: string[] = ['student,email,assignment,kind,status,final_score,max_points,submitted_at'];
-  const esc = (s: string | number | null | undefined) => {
-    if (s == null) return '';
-    const str = String(s);
-    return str.includes(',') || str.includes('"') || str.includes('\n')
-      ? `"${str.replace(/"/g, '""')}"`
-      : str;
-  };
+  const esc = escapeSpreadsheetCsvCell;
   for (const row of submissions ?? []) {
     const a = assignmentById.get(row.assignment_id as string);
     if (!a) continue;
