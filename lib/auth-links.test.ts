@@ -1,4 +1,11 @@
-import { parseAuthLink, RESET_PASSWORD_REDIRECT } from './auth-links';
+import {
+  AUTH_INTENT_TTL_MS,
+  authLinkMatchesIntent,
+  establishBoundAuthSession,
+  isExpectedAuthCallbackUrl,
+  parseAuthLink,
+  RESET_PASSWORD_REDIRECT,
+} from './auth-links';
 
 describe('parseAuthLink', () => {
   describe('recovery links (implicit flow, tokens in fragment)', () => {
@@ -122,5 +129,105 @@ describe('parseAuthLink', () => {
       expect(parseAuthLink('not a url at all ###???')).toEqual({ kind: 'none' });
       expect(parseAuthLink('#&&&=')).toEqual({ kind: 'none' });
     });
+  });
+});
+
+describe('auth callback binding', () => {
+  const recovery = parseAuthLink(
+    `${RESET_PASSWORD_REDIRECT}#access_token=at&refresh_token=rt&type=recovery`,
+  );
+  const now = 1_800_000_000_000;
+  const intent = { type: 'recovery' as const, email: 'learner@example.com', createdAt: now - 1_000 };
+
+  it('accepts only the dedicated callback route', () => {
+    expect(isExpectedAuthCallbackUrl('fluenci://reset-password#access_token=x')).toBe(true);
+    expect(isExpectedAuthCallbackUrl('fluenci://unrelated-route#access_token=x')).toBe(false);
+    expect(isExpectedAuthCallbackUrl('https://evil.example/reset-password#access_token=x')).toBe(false);
+    expect(isExpectedAuthCallbackUrl('exp://127.0.0.1:8081/--/reset-password', true)).toBe(true);
+    expect(isExpectedAuthCallbackUrl('exp://127.0.0.1:8081/--/reset-password', false)).toBe(false);
+  });
+
+  it('requires the verified token email and initiated flow to match', () => {
+    expect(authLinkMatchesIntent(recovery, intent, 'LEARNER@example.com', now)).toBe(true);
+    expect(authLinkMatchesIntent(recovery, intent, 'attacker@example.com', now)).toBe(false);
+    expect(authLinkMatchesIntent(recovery, { ...intent, type: 'signup' }, intent.email, now)).toBe(false);
+    expect(authLinkMatchesIntent(recovery, null, intent.email, now)).toBe(false);
+  });
+
+  it('rejects stale, future-dated, unknown-type, and PKCE callbacks', () => {
+    expect(authLinkMatchesIntent(
+      recovery,
+      { ...intent, createdAt: now - AUTH_INTENT_TTL_MS - 1 },
+      intent.email,
+      now,
+    )).toBe(false);
+    expect(authLinkMatchesIntent(recovery, { ...intent, createdAt: now + 1 }, intent.email, now)).toBe(false);
+    expect(authLinkMatchesIntent(
+      parseAuthLink(`${RESET_PASSWORD_REDIRECT}#access_token=at&refresh_token=rt&type=unknown`),
+      intent,
+      intent.email,
+      now,
+    )).toBe(false);
+    expect(authLinkMatchesIntent(
+      parseAuthLink(`${RESET_PASSWORD_REDIRECT}?code=unbound`),
+      intent,
+      intent.email,
+      now,
+    )).toBe(false);
+  });
+
+  it('verifies identity before changing the session', async () => {
+    const order: string[] = [];
+    const auth = {
+      getUser: jest.fn(async () => {
+        order.push('verify');
+        return { data: { user: { email: intent.email } }, error: null };
+      }),
+      setSession: jest.fn(async () => {
+        order.push('set-session');
+        return { error: null };
+      }),
+    };
+
+    await expect(establishBoundAuthSession(
+      auth,
+      `${RESET_PASSWORD_REDIRECT}#access_token=at&refresh_token=rt&type=recovery`,
+      recovery,
+      intent,
+      false,
+      now,
+    )).resolves.toBe('recovery');
+    expect(order).toEqual(['verify', 'set-session']);
+  });
+
+  it('never changes session for an unsolicited route or mismatched account', async () => {
+    const setSession = jest.fn(async () => ({ error: null }));
+    const auth = {
+      getUser: jest.fn(async () => ({
+        data: { user: { email: 'attacker@example.com' } },
+        error: null,
+      })),
+      setSession,
+    };
+
+    await expect(establishBoundAuthSession(
+      auth,
+      'fluenci://unrelated-route#access_token=at&refresh_token=rt&type=recovery',
+      recovery,
+      intent,
+      false,
+      now,
+    )).resolves.toBeNull();
+    expect(auth.getUser).not.toHaveBeenCalled();
+
+    await expect(establishBoundAuthSession(
+      auth,
+      `${RESET_PASSWORD_REDIRECT}#access_token=at&refresh_token=rt&type=recovery`,
+      recovery,
+      intent,
+      false,
+      now,
+    )).resolves.toBeNull();
+    expect(setSession).not.toHaveBeenCalled();
   });
 });

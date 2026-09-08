@@ -1,6 +1,7 @@
 import { useCallback, useSyncExternalStore } from 'react';
 import { supabase, setUnauthorizedHandler } from '../lib/supabase';
 import { RESET_PASSWORD_REDIRECT } from '../lib/auth-links';
+import { clearPendingAuthIntent, savePendingAuthIntent } from '../lib/pending-auth-intent';
 import { clearReadCache } from '../lib/read-cache';
 import { clearTtsCache } from '../lib/tts-cache';
 import { clearPendingOnboarding } from '../lib/pending-onboarding';
@@ -134,18 +135,32 @@ export function useAuth() {
   }, []);
 
   const signUpWithEmail = useCallback(async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({
-      email,
+    const normalizedEmail = email.trim().toLowerCase();
+    await savePendingAuthIntent({ type: 'signup', email: normalizedEmail, createdAt: Date.now() });
+    const { data, error } = await supabase.auth.signUp({
+      email: normalizedEmail,
       password,
+      options: { emailRedirectTo: RESET_PASSWORD_REDIRECT },
     });
-    if (error) throw error;
+    if (error) {
+      await clearPendingAuthIntent();
+      throw error;
+    }
+    // Projects with email confirmation disabled sign in immediately and never
+    // produce a callback, so no intent should remain usable afterward.
+    if (data?.session) await clearPendingAuthIntent();
   }, []);
 
   const resetPassword = useCallback(async (email: string) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    const normalizedEmail = email.trim().toLowerCase();
+    await savePendingAuthIntent({ type: 'recovery', email: normalizedEmail, createdAt: Date.now() });
+    const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
       redirectTo: RESET_PASSWORD_REDIRECT,
     });
-    if (error) throw error;
+    if (error) {
+      await clearPendingAuthIntent();
+      throw error;
+    }
   }, []);
 
   /** Set a new password for the signed-in user (used after a recovery deep link). */
