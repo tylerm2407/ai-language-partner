@@ -70,25 +70,22 @@ export function MultipleChoice({
   };
 
   /**
-   * Answered rows earn a hued border and a key-tile fill; unanswered-and-not-
-   * picked rows keep `surface2` with a dimmer label. They are never dropped to
-   * the card's own fill — that dissolves the row and drops the label under AA.
-   *
-   * The CORRECT / YOUR PICK marks are `ink`, not their own hue: UI 2.0's green
-   * is a fill chosen to be seen at 20px, not read at 9px (see the note at the
-   * top of components/ui2/Ui2Badge.tsx). The verdict is carried by the word
-   * itself, the row fill and the border — never by colour alone.
+   * Tint blocks: a row is a filled block with no outline. Unanswered rows sit
+   * on the ground tint with a white key tile; once locked, the right answer
+   * becomes a solid green block and a wrong pick a solid error block, each
+   * with its label in the on-tone ink and a white key tile. The verdict is
+   * carried by the word (CORRECT / YOUR PICK), the fill and the tile — never
+   * by colour alone.
    */
   const rowPalette = (option: string) => {
     const isPick = option === selected;
     const right = isCorrectOption(option);
     if (!locked) {
       return {
-        bg: c.surface2,
-        border: c.cardBorder,
-        keyBg: c.card,
-        keyText: c.idle,
-        label: c.muted,
+        bg: c.bg,
+        keyBg: c.primaryTint,
+        keyText: c.onTint,
+        label: c.ink,
         weight: '600' as const,
         mark: null as string | null,
         markColor: 'transparent',
@@ -96,32 +93,29 @@ export function MultipleChoice({
     }
     if (right) {
       return {
-        bg: c.greenTint,
-        border: c.green,
-        keyBg: c.green,
-        keyText: c.onPrimary,
-        label: c.ink,
+        bg: c.green,
+        keyBg: c.onPrimary,
+        keyText: c.green,
+        label: c.onGreen,
         weight: '700' as const,
         mark: 'CORRECT',
-        markColor: c.ink,
+        markColor: c.onGreen,
       };
     }
     if (isPick) {
       return {
-        bg: c.pinkTint,
-        border: c.error,
-        keyBg: c.error,
-        keyText: c.onPrimary,
-        label: c.ink,
+        bg: c.error,
+        keyBg: c.onPrimary,
+        keyText: c.error,
+        label: c.onError,
         weight: '700' as const,
         mark: 'YOUR PICK',
-        markColor: c.ink,
+        markColor: c.onError,
       };
     }
     return {
-      bg: c.surface2,
-      border: c.cardBorder,
-      keyBg: c.card,
+      bg: c.bg,
+      keyBg: c.surface2,
       keyText: c.idle,
       label: c.idle,
       weight: '600' as const,
@@ -171,8 +165,6 @@ export function MultipleChoice({
                 paddingVertical: spacing.xs + 2,
                 borderRadius: radii.lg,
                 backgroundColor: p.bg,
-                borderWidth: 1,
-                borderColor: p.border,
               }}
             >
               <View

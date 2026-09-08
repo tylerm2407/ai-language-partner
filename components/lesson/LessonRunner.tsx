@@ -817,6 +817,7 @@ export function LessonRunner({
             ? `QUICK REVIEW ${warmupIndex + 1} / ${warmupEntries.length}`
             : `QUESTION ${String(currentIndex + 1).padStart(2, '0')}`
         }
+        exerciseType={currentExercise?.type}
         note={currentExercise?.explanation ?? null}
         answeredCorrect={currentCorrect}
         recovered={currentStatus === 'recovered'}

@@ -872,7 +872,8 @@ scheme (`app.json` `userInterfaceStyle: "automatic"`).
 | `primary` / `slab` | `#6A4CFF` / `#4D33D6` | `#7057FF` / `#5641D9` | CTA fill; white on it clears AA both schemes. `slab` is a retired shim (edge width is 0) |
 | `onTint` | `#4D33D6` | `#C4B5FD` | Text on `primaryTint` (chips, eyebrows). `primary` itself is 4.4:1 there |
 | `primaryTint` / `primaryTintBorder` | `#EFEBFF` / `#D9D1FF` | `#2A2450` / `#3E3670` | Selected rows, level card, chips |
-| `yellow` / `green` / `pink` + `*Tint` | see `config/theme.ts` | deepened | Read / review / unit colour coding |
+| `yellow` / `green` / `pink` + `*Tint` | see `config/theme.ts` | deepened | Read / review / unit colour coding. Yellow is AMBER `#F5A524` (dark `#FFB340`) since 2026-09-08 — the old `#FFC857` was Duolingo's `#FFC800` with a touch of warmth |
+| `onGreen` / `onError` | `#0B3D2B` / `#FFFFFF` | `#0B3D2B` / `#1A0E10` | Text on a SOLID green or error block (lesson verdict hero, answered option rows) |
 | `track` / `trackOnCard` | `#EFEBFF` / `#FFFFFF` | `#26224A` / `#26224A` | Unfilled progress on the ground / on a tinted card (`Ui2ProgressBar onCard`) |
 
 `hooks/useUi2Theme.test.ts` pins the contrast floors.
@@ -905,6 +906,18 @@ scheme (`app.json` `userInterfaceStyle: "automatic"`).
   progress bar stack was Duolingo's onboarding part for part and is gone
   (`StepHeader` and `SpeechBubble` deleted). Short-label pickers (language)
   are a two-column tile grid of `OptionRow`s; long-label pickers stay rows.
+- **Lesson chrome** (2026-09-08, canvas page "Lesson chrome · A/B", variant B
+  "Hero card"): `ExerciseChrome` opens with the SAME `StepHero` block
+  onboarding uses — exit ×, lesson title + counter as the kicker, segmented
+  track, and the exercise type's instruction as the title (the card under it
+  skips its own label via `exercise-chrome-context`). On an answer the block
+  cross-fades to green or error and its title becomes the verdict with the
+  explanation under it; Sol reacts. The pinned footer keeps every state it
+  had — note row (placeholder, second try + Show answer, skipped, correct,
+  recovered, wrong with the answer), SKIP, Previous / Next / Finish — as tint
+  pills with no rules; the row says only what the block does not.
+  Multiple-choice rows are filled blocks: ground tint unanswered, solid green
+  for the answer, solid error for a wrong pick.
 - **Motion vocabulary** (all gated on `useMotion().shouldReduce`): step change =
   the hero block arrives with a per-step entrance (slide / rise / pop / meet /
   drop), the done segments light up 70ms apart, the question fades up, Sol

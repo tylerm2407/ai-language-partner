@@ -16,7 +16,9 @@ import { haptic } from '../../lib/haptics';
 import { useMotion } from '../../hooks/useMotion';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
 
-type Variant = 'primary' | 'onPrimary' | 'ghost';
+/** `tint` is the quiet filled pill — a card-coloured block, muted label — for a
+ *  secondary action that still needs a target (Previous beside Next). */
+type Variant = 'primary' | 'onPrimary' | 'ghost' | 'tint';
 
 interface SlabButtonProps {
   label: string;
@@ -65,7 +67,9 @@ export function SlabButton({
       ? { bg: c.primary, text: c.onPrimary }
       : variant === 'onPrimary'
         ? { bg: c.ctaOnPrimaryBg, text: c.ctaOnPrimaryText }
-        : { bg: 'transparent', text: c.muted };
+        : variant === 'tint'
+          ? { bg: c.card, text: c.muted }
+          : { bg: 'transparent', text: c.muted };
   const inactive = disabled || loading;
 
   if (variant === 'ghost') {

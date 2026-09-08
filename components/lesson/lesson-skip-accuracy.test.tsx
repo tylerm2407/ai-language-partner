@@ -41,6 +41,9 @@ jest.mock('expo-av', () => ({
     Sound: { createAsync: jest.fn(async () => ({ sound: { unloadAsync: jest.fn() } })) },
     Recording: { createAsync: jest.fn() },
   },
+  // The chrome's hero block mounts Sol, whose clips render through Video.
+  Video: () => null,
+  ResizeMode: { CONTAIN: 'contain', COVER: 'cover', STRETCH: 'stretch' },
 }));
 jest.mock('../../hooks/useAudioRecorder', () => ({
   useAudioRecorder: () => ({

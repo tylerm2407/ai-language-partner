@@ -41,6 +41,9 @@ jest.mock('../../lib/supabase-queries', () => ({
   fetchGrammarRule: jest.fn(() => Promise.resolve(null)),
 }));
 jest.mock('expo-speech', () => ({ speak: jest.fn() }));
+// The hero block mounts Sol, whose clips play through expo-av's native
+// player; under jest he is a box that renders nothing.
+jest.mock('../mascot/Mascot', () => ({ Mascot: () => null }));
 jest.mock('../../hooks/useAudioPlayer', () => ({
   useAudioPlayer: () => ({ playing: false, loading: false, error: null, play: jest.fn() }),
 }));
@@ -149,7 +152,7 @@ describe('ExerciseChrome', () => {
     const r = render(
       <ExerciseChrome {...chromeProps} canNext answeredCorrect={false} correctAnswer="water" />,
     );
-    expect(text(r)).toContain('ANSWER: WATER — ');
+    expect(text(r)).toContain('ANSWER: WATER');
   });
 
   it('renders the kicker alone when the exercise has no explanation', () => {
@@ -157,7 +160,7 @@ describe('ExerciseChrome', () => {
       <ExerciseChrome {...chromeProps} note={null} canNext answeredCorrect={false} />,
     );
     // Never an empty row: the kicker still states the answer.
-    expect(text(r)).toContain('ANSWER: WATER — ');
+    expect(text(r)).toContain('ANSWER: WATER');
   });
 
   it('labels the last exercise Finish', () => {

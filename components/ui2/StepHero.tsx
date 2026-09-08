@@ -1,17 +1,24 @@
 /**
- * StepHero — the onboarding step's header block (Tint blocks, variant C
- * "Hero block", canvas page "Onboarding · composition", picked 2026-09-08).
+ * StepHero — the step's header block (Tint blocks, variant C "Hero block",
+ * canvas page "Onboarding · composition", picked 2026-09-08; lesson variant B
+ * "Hero card", canvas page "Lesson chrome · A/B", picked the same day).
  *
- * One violet block carries everything the old StepHeader + SpeechBubble pair
- * split across two rows: the back chevron, "STEP n OF total", a segmented
- * progress strip, and the question itself. Sol peeks over the block's
- * bottom-right edge, playing his clips (idle loop, a nod on `cheer`).
+ * One violet block carries everything a step header used to split across two
+ * rows: the leading control (back chevron, or a close × for a lesson), a
+ * kicker ("STEP n OF total", or "GREETINGS & BASICS · QUESTION 03"), a
+ * segmented progress strip, and the title itself — the question in
+ * onboarding, the instruction or the verdict in a lesson. Sol peeks over the
+ * block's bottom-right edge, playing his clips (idle loop, a nod on `cheer`).
+ *
+ * `tone` recolours the whole block: `primary` while a step is open, `green`
+ * for a right answer, `error` for a wrong one. The change cross-fades rather
+ * than snapping, because a lesson does it ten times.
  *
  * Depth comes from motion, not from strokes or shadows:
  *   - the block arrives with a per-step `entrance` (same vocabulary the
  *     bubble had, so each step still feels like its own moment);
  *   - the segments for the steps done so far light up one after another;
- *   - the question fades up a beat after the block lands;
+ *   - the title fades up a beat after the block lands;
  *   - Sol pops in last and then bobs on a slow loop.
  * Every piece gates on Reduce Motion and settles to its final state at once.
  */
@@ -45,14 +52,34 @@ import { MascotSol, type MascotMood } from './MascotSol';
  * - `pop`: block and Sol both pop to size — a quick, confident question.
  * - `meet`: the block drifts in from the left, Sol from the right.
  * - `drop`: the block settles down from above, Sol drops in after.
+ * - `none`: no entrance — for a block that stays mounted and only changes
+ *   state, like the lesson hero between exercises.
  */
-export type StepHeroEntrance = 'slide' | 'rise' | 'pop' | 'meet' | 'drop';
+export type StepHeroEntrance = 'slide' | 'rise' | 'pop' | 'meet' | 'drop' | 'none';
+
+export type StepHeroTone = 'primary' | 'green' | 'error';
 
 interface StepHeroProps {
+  /** One-based position; lights segments 1..step and drives the default kicker. */
   step: number;
   total: number;
+  /** The title: the question, the instruction, or the verdict. */
   text: string;
+  /** A second line under the title — the explanation on a verdict. */
+  subtitle?: string;
+  /** Replaces "Step n of total". */
+  kicker?: string;
+  /**
+   * Segments lit fully. Defaults to `step`, which is right when every step
+   * before this one is done; a lesson passes its answered count instead,
+   * because a learner can walk back onto an answered exercise.
+   */
+  done?: number;
   onBack?: () => void;
+  /** `close` swaps the back chevron for an ×. */
+  leading?: 'back' | 'close';
+  leadingLabel?: string;
+  tone?: StepHeroTone;
   mood?: MascotMood;
   entrance?: StepHeroEntrance;
 }
@@ -89,30 +116,72 @@ function buildEntrance(entrance: StepHeroEntrance): EntranceSet {
         block: FadeInDown.springify().damping(15).stiffness(180),
         sol: FadeInDown.delay(140).springify().damping(13).stiffness(190),
       };
+    case 'none':
+      return {};
   }
 }
 
 const SOL_SIZE = 72;
 const SEGMENT_STAGGER_MS = 70;
+const TONE_FADE_MS = 260;
 
-function Segment({ index, lit, shouldReduce }: { index: number; lit: boolean; shouldReduce: boolean }) {
-  const { c } = useUi2Theme();
-  const on = useSharedValue(shouldReduce || !lit ? (lit ? 1 : 0) : 0);
+function Segment({
+  index,
+  state,
+  colour,
+  shouldReduce,
+}: {
+  index: number;
+  /** `done` full, `current` half, `todo` faint. */
+  state: 'done' | 'current' | 'todo';
+  colour: string;
+  shouldReduce: boolean;
+}) {
+  const target = state === 'done' ? 1 : state === 'current' ? 0.6 : 0.3;
+  const on = useSharedValue(shouldReduce ? target : 0.3);
   useEffect(() => {
     if (shouldReduce) {
-      on.value = lit ? 1 : 0;
+      on.value = target;
       return;
     }
-    on.value = lit ? withDelay(220 + index * SEGMENT_STAGGER_MS, withTiming(1, { duration: 260 })) : 0;
-  }, [lit, index, shouldReduce, on]);
-  const style = useAnimatedStyle(() => ({ opacity: 0.3 + on.value * 0.7 }));
-  return <Animated.View style={[styles.segment, { backgroundColor: c.onPrimary }, style]} />;
+    on.value = withDelay(220 + index * SEGMENT_STAGGER_MS, withTiming(target, { duration: 260 }));
+  }, [target, index, shouldReduce, on]);
+  const style = useAnimatedStyle(() => ({ opacity: on.value }));
+  return <Animated.View style={[styles.segment, { backgroundColor: colour }, style]} />;
 }
 
-export function StepHero({ step, total, text, onBack, mood = 'idle', entrance = 'slide' }: StepHeroProps) {
+export function StepHero({
+  step,
+  total,
+  text,
+  subtitle,
+  kicker,
+  done,
+  onBack,
+  leading = 'back',
+  leadingLabel,
+  tone = 'primary',
+  mood = 'idle',
+  entrance = 'slide',
+}: StepHeroProps) {
   const { c, type, shape } = useUi2Theme();
   const { shouldReduce } = useMotion();
   const anim: EntranceSet = shouldReduce ? {} : buildEntrance(entrance);
+
+  const fill =
+    tone === 'green'
+      ? { bg: c.green, fg: c.onGreen, fg2: c.onGreen }
+      : tone === 'error'
+        ? { bg: c.error, fg: c.onError, fg2: c.onError }
+        : { bg: c.primary, fg: c.onPrimary, fg2: c.onPrimaryMuted };
+
+  // Tone cross-fade. Reanimated interpolates colour strings, so the block
+  // slides from violet to green rather than blinking.
+  const bg = useSharedValue(fill.bg);
+  useEffect(() => {
+    bg.value = shouldReduce ? fill.bg : withTiming(fill.bg, { duration: TONE_FADE_MS });
+  }, [fill.bg, shouldReduce, bg]);
+  const bgStyle = useAnimatedStyle(() => ({ backgroundColor: bg.value }));
 
   // Sol's slow bob: 4px, 3.2s round trip. The clips animate his face; this
   // moves his whole body against the block, which is what reads as depth.
@@ -130,48 +199,75 @@ export function StepHero({ step, total, text, onBack, mood = 'idle', entrance = 
   }, [shouldReduce, bob]);
   const bobStyle = useAnimatedStyle(() => ({ transform: [{ translateY: bob.value }] }));
 
+  const lit = done ?? step;
   const segments = Array.from({ length: total }, (_, i) => i + 1);
+  const segmentState = (n: number): 'done' | 'current' | 'todo' =>
+    n <= lit && n !== step ? 'done' : n === step ? (n <= lit ? 'done' : 'current') : 'todo';
+
+  const label = leadingLabel ?? (leading === 'close' ? 'Exit lesson' : 'Back');
+  const textEntering = shouldReduce ? undefined : FadeInUp.delay(90).duration(320);
+
+  // Back sits on the left where iOS puts it; a close × sits on the right
+  // where a sheet's does. The kicker takes whichever side is free.
+  const control = (
+    <Pressable
+      onPress={() => {
+        haptic('buttonPress');
+        onBack?.();
+      }}
+      disabled={!onBack}
+      hitSlop={8}
+      style={[styles.control, leading === 'close' ? styles.controlRight : styles.controlLeft, { opacity: onBack ? 1 : 0 }]}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityElementsHidden={!onBack}
+    >
+      <Ionicons name={leading === 'close' ? 'close' : 'chevron-back'} size={22} color={fill.fg} />
+    </Pressable>
+  );
+  const kickerText = (
+    <Text
+      style={[styles.kicker, leading === 'close' ? styles.kickerLeft : styles.kickerRight, { fontFamily: type.uiHeavy, color: fill.fg2 }]}
+      numberOfLines={1}
+    >
+      {kicker ?? `Step ${step} of ${total}`}
+    </Text>
+  );
 
   return (
     <Animated.View entering={anim.block} style={styles.wrap}>
-      <View style={[styles.block, { backgroundColor: c.primary, borderRadius: shape.radiusHero }]}>
+      <Animated.View style={[styles.block, { borderRadius: shape.radiusHero }, bgStyle]}>
         <View style={styles.topRow}>
-          <Pressable
-            onPress={() => {
-              haptic('buttonPress');
-              onBack?.();
-            }}
-            disabled={!onBack}
-            style={[styles.back, { opacity: onBack ? 1 : 0 }]}
-            accessibilityRole="button"
-            accessibilityLabel="Back"
-            accessibilityElementsHidden={!onBack}
-          >
-            <Ionicons name="chevron-back" size={22} color={c.onPrimary} />
-          </Pressable>
-          <Text style={[styles.stepLabel, { fontFamily: type.uiHeavy, color: c.onPrimaryMuted }]}>
-            Step {step} of {total}
-          </Text>
+          {leading === 'close' ? kickerText : control}
+          {leading === 'close' ? control : kickerText}
         </View>
 
         <View
           style={styles.segments}
           accessibilityRole="progressbar"
           accessibilityValue={{ min: 0, max: total, now: step }}
+          accessibilityLabel={`${step} of ${total}`}
         >
           {segments.map((n) => (
-            <Segment key={n} index={n - 1} lit={n <= step} shouldReduce={shouldReduce} />
+            <Segment key={n} index={n - 1} state={segmentState(n)} colour={fill.fg} shouldReduce={shouldReduce} />
           ))}
         </View>
 
-        <Animated.Text
-          entering={shouldReduce ? undefined : FadeInUp.delay(90).duration(320)}
-          accessibilityRole="header"
-          style={[styles.question, { fontFamily: type.heading, color: c.onPrimary }]}
-        >
-          {text}
-        </Animated.Text>
-      </View>
+        {/* Keyed on the copy so a verdict replacing the instruction fades up
+            like a new step, instead of the old words being overwritten. */}
+        <Animated.View key={`${tone}:${text}`} entering={textEntering} style={styles.copy}>
+          <Text
+            accessibilityRole="header"
+            accessibilityLiveRegion={tone === 'primary' ? 'none' : 'polite'}
+            style={[styles.title, { fontFamily: type.heading, color: fill.fg }]}
+          >
+            {text}
+          </Text>
+          {subtitle ? (
+            <Text style={[styles.subtitle, { fontFamily: type.ui, color: fill.fg2 }]}>{subtitle}</Text>
+          ) : null}
+        </Animated.View>
+      </Animated.View>
 
       {/* Outside the block so nothing clips him, positioned to overlap its
           bottom-right edge. The clips are alpha video, so he sits on the
@@ -186,11 +282,17 @@ export function StepHero({ step, total, text, onBack, mood = 'idle', entrance = 
 const styles = StyleSheet.create({
   wrap: { position: 'relative', marginBottom: 6 },
   block: { paddingTop: 12, paddingHorizontal: 20, paddingBottom: 22, gap: 14 },
-  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginLeft: -14 },
-  stepLabel: { fontSize: 12, letterSpacing: 1, textTransform: 'uppercase' },
+  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  kicker: { flex: 1, fontSize: 12, letterSpacing: 1, textTransform: 'uppercase' },
+  kickerLeft: { textAlign: 'left' },
+  kickerRight: { textAlign: 'right' },
+  control: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  controlLeft: { marginLeft: -14 },
+  controlRight: { marginRight: -14 },
   segments: { flexDirection: 'row', gap: 6 },
   segment: { flex: 1, height: 4, borderRadius: 2 },
-  question: { fontSize: 24, lineHeight: 30, letterSpacing: -0.4, paddingRight: SOL_SIZE - 8 },
+  copy: { gap: 8, paddingRight: SOL_SIZE - 8 },
+  title: { fontSize: 24, lineHeight: 30, letterSpacing: -0.4 },
+  subtitle: { fontSize: 15, lineHeight: 21 },
   sol: { position: 'absolute', right: 10, bottom: -14, width: SOL_SIZE, height: SOL_SIZE },
 });

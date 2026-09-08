@@ -65,16 +65,20 @@ export function ExerciseNote({ state }: { state: ExerciseNoteState }) {
             empty answer. Going blank has to have an exit. */}
         <Pressable
           onPress={state.onGiveUp}
-          hitSlop={12}
-          style={{ minHeight: 44, justifyContent: 'center' }}
+          hitSlop={8}
+          style={{
+            alignSelf: 'flex-start',
+            minHeight: 36,
+            paddingHorizontal: 14,
+            borderRadius: 999,
+            backgroundColor: c.primaryTint,
+            justifyContent: 'center',
+          }}
           accessibilityRole="button"
           accessibilityLabel="Show the answer and move on"
         >
-          <Body
-            size="sm"
-            style={{ ...KICKER_STYLE, fontSize: 12, color: c.idle }}
-          >
-            SHOW ANSWER
+          <Body size="sm" weight="extrabold" style={{ fontSize: 13, color: c.onTint }}>
+            Show answer
           </Body>
         </Pressable>
       </View>
@@ -98,15 +102,19 @@ export function ExerciseNote({ state }: { state: ExerciseNoteState }) {
 
   const { kicker, color } =
     state.kind === 'correct'
-      ? { kicker: 'CORRECT — ', color: c.green }
+      ? { kicker: 'CORRECT', color: c.green }
       : state.kind === 'recovered'
-        ? { kicker: 'SECOND TRY — ', color: c.yellow }
-        : { kicker: `ANSWER: ${state.correctAnswer.toUpperCase()} — `, color: c.error };
+        ? { kicker: 'SECOND TRY', color: c.yellow }
+        : { kicker: `ANSWER: ${state.correctAnswer.toUpperCase()}`, color: c.error };
 
   const lead =
     state.kind === 'recovered'
       ? "Correct, but it doesn't count toward your score. "
       : '';
+  const body = `${lead}${state.note ?? ''}`;
+  // The dash joins the kicker to a sentence; with nothing after it, it dangled
+  // ("ANSWER: EL AGUA —") on every exercise without an explanation.
+  const joined = body ? `${kicker} — ` : kicker;
 
   return (
     <Body
@@ -115,10 +123,9 @@ export function ExerciseNote({ state }: { state: ExerciseNoteState }) {
       style={{ color: c.muted, ...BODY_STYLE }}
     >
       <Body size="sm" style={{ ...KICKER_STYLE, color }}>
-        {kicker}
+        {joined}
       </Body>
-      {lead}
-      {state.note ?? ''}
+      {body}
     </Body>
   );
 }

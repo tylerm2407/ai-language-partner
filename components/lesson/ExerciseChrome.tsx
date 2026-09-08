@@ -3,19 +3,31 @@ import { View, Pressable, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { floatingTabBarSpace } from '../navigation/FloatingTabBar';
 import { SlabButton } from '../ui2/SlabButton';
+import { StepHero, type StepHeroTone } from '../ui2/StepHero';
+import type { MascotMood } from '../ui2/MascotSol';
 import { Body } from '../ui2/Ui2Text';
-import { ExerciseTrack } from './ExerciseTrack';
 import { ExerciseNote, type ExerciseNoteState } from './ExerciseNote';
+import { ExerciseChromeContext } from './exercise-chrome-context';
+import { EXERCISE_TYPE_LABELS } from './ExerciseCard';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { spacing, typography } from '../../config/theme';
+import type { ExerciseType } from '../../types';
 
 interface ExerciseChromeProps {
   lessonTitle: string;
   currentIndex: number;
   total: number;
   completedCount?: number;
-  /** Eyebrow above the prompt — "QUESTION 02", or "QUICK REVIEW 1 / 5". */
+  /** Eyebrow beside the lesson title — "QUESTION 02", or "QUICK REVIEW 1 / 5". */
   counterLabel: string;
+  /**
+   * The exercise on screen. Puts the type's instruction ("Choose the correct
+   * answer") in the hero as its title; the card underneath then skips its
+   * own label. Optional so the existing prop contract, and every test that
+   * uses it, is unchanged — without it the hero titles itself with the
+   * lesson.
+   */
+  exerciseType?: ExerciseType;
   /** exercise.explanation, or null when the exercise has none. */
   note: string | null;
   /**
@@ -72,13 +84,60 @@ const NOTE_MIN_HEIGHT_RETRY = 76;
  *  the learner got something wrong, rather than on every question. */
 const NOTE_MIN_HEIGHT = 56;
 
+/** What the hero block says for each note state. The verdict and the
+ *  explanation moved UP here from the footer (canvas "Lesson chrome · A/B",
+ *  variant B, 2026-09-08); the footer row keeps what the block does not say. */
+interface HeroCopy {
+  tone: StepHeroTone;
+  title: string;
+  subtitle?: string;
+  mood: MascotMood;
+}
+
+function heroFor(state: ExerciseNoteState, instruction: string): HeroCopy {
+  // Without an explanation the block still says what the answer was; the
+  // footer kicker carries it too, in the same words the old chrome used.
+
+  switch (state.kind) {
+    case 'unanswered':
+      return { tone: 'primary', title: instruction, mood: 'idle' };
+    case 'retrying':
+      return { tone: 'error', title: 'Not quite', subtitle: 'One more try.', mood: 'thinking' };
+    case 'skipped':
+      return { tone: 'primary', title: 'Skipped', mood: 'idle' };
+    case 'correct':
+      return { tone: 'green', title: 'Correct', subtitle: state.note ?? undefined, mood: 'cheer' };
+    case 'recovered':
+      return { tone: 'green', title: 'Correct, second try', subtitle: state.note ?? undefined, mood: 'cheer' };
+    case 'wrong':
+      return {
+        tone: 'error',
+        title: 'Not quite',
+        subtitle: state.note ?? `The answer is ${state.correctAnswer}.`,
+        mood: 'thinking',
+      };
+  }
+}
+
 /**
- * ExerciseChrome — the shared frame every exercise type renders inside:
- * header, tick track, counter row, scrolling exercise body, and a PINNED
- * footer holding the note row and Previous/Next.
+ * ExerciseChrome — the shared frame every exercise type renders inside.
+ *
+ * Tint blocks, lesson variant B "Hero card": ONE block on top (StepHero, the
+ * same one onboarding uses) carries the exit ×, the lesson title and counter,
+ * a segmented track, and the title — the type's instruction while the
+ * learner is answering, the verdict and its explanation once they have. Sol
+ * peeks over its edge and reacts. Below it the scrolling exercise body, and a
+ * PINNED footer holding the note row, SKIP, and Previous / Next.
+ *
+ * Nothing the old chrome did is gone: the six note states (placeholder,
+ * second try with Show answer, skipped, correct, recovered, wrong with the
+ * correct answer), the skip affordance, the reserved note height, Finish on
+ * the last exercise. The verdict simply lives in the block now, so the note
+ * row says what the block does not: the correct answer on a miss, the count
+ * on a hit, the "did not score" on a recovery.
  *
  * Layout contract (do not change without re-checking on a small device):
- *   header + track + meta   flex: none
+ *   hero                    flex: none
  *   exercise body           flex: 1, minHeight: 0, scrollable
  *   note + Previous/Next    flex: none
  *
@@ -91,6 +150,7 @@ export function ExerciseChrome({
   total,
   completedCount,
   counterLabel,
+  exerciseType,
   note,
   answeredCorrect,
   retry = null,
@@ -108,18 +168,12 @@ export function ExerciseChrome({
 }: ExerciseChromeProps) {
   const { c } = useUi2Theme();
   const insets = useSafeAreaInsets();
-  // The lesson route lives inside the tab navigator, and FloatingTabBar is
-  // absolutely positioned over it — so a footer pinned to the bottom has to
-  // reserve the bar's space or Previous/Next render underneath it. The parent
-  // SafeAreaView already consumes insets.bottom, so subtract it back out.
   const footerBottomInset = Math.max(
     spacing.md,
     floatingTabBarSpace() - insets.bottom + spacing.sm,
   );
   const answered = answeredCorrect !== null;
-  // Precedence: retry > skipped > recovered > answered > placeholder. The
-  // first two are states in which the answer must stay hidden, so they have to
-  // win over anything that would reveal it.
+  const done = completedCount ?? currentIndex;
   const noteState: ExerciseNoteState = retry
     ? { kind: 'retrying', onGiveUp: retry.onGiveUp }
     : skipped
@@ -132,178 +186,133 @@ export function ExerciseChrome({
             : { kind: 'correct', note }
           : { kind: 'wrong', note, correctAnswer };
 
+  const instruction = exerciseType ? EXERCISE_TYPE_LABELS[exerciseType] : lessonTitle;
+  const hero = heroFor(noteState, instruction);
+  const kicker = `${lessonTitle} · ${counterLabel}`;
+
+  // The row repeats nothing the block already says. On a hit the explanation
+  // is in the block, so the row carries the running count instead; on a miss
+  // the kicker names the answer and the block explains; on a recovery the
+  // row's "did not count" sentence is the part the block leaves out.
+  const rowState: ExerciseNoteState =
+    noteState.kind === 'correct'
+      ? { kind: 'correct', note: `${Math.max(done, currentIndex + 1)} of ${total} answered.` }
+      : noteState.kind === 'wrong'
+        ? { kind: 'wrong', note: null, correctAnswer }
+        : noteState.kind === 'recovered'
+          ? { kind: 'recovered', note: null }
+          : noteState;
+
   return (
-    <View style={{ flex: 1, backgroundColor: c.surface2 }}>
-      {/* Header — unit name + text-only exit */}
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingHorizontal: spacing.lg - 2,
-          paddingTop: spacing.md,
-          paddingBottom: spacing.sm + 2,
-          borderBottomWidth: 1,
-          borderBottomColor: c.cardBorder,
-        }}
-      >
+    <ExerciseChromeContext.Provider value={{ instructionInHero: !!exerciseType }}>
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
+        {/* Hero — exit, lesson title + counter, track, instruction or verdict */}
+        <View style={{ paddingHorizontal: spacing.lg - 2, paddingTop: spacing.sm }}>
+          <StepHero
+            step={currentIndex + 1}
+            total={total}
+            done={done}
+            kicker={kicker}
+            text={hero.title}
+            subtitle={hero.subtitle}
+            tone={hero.tone}
+            mood={hero.mood}
+            leading="close"
+            leadingLabel="Exit lesson"
+            onBack={onExit}
+            entrance="none"
+          />
+        </View>
+        {/* Exercise body — the only scrolling region */}
+        <ScrollView
+          style={{ flex: 1, minHeight: 0 }}
+          contentContainerStyle={{
+            paddingHorizontal: spacing.lg - 2,
+            // Sol overlaps the hero's bottom edge by 14pt; the body starts
+            // under him rather than beside him.
+            paddingTop: spacing.md + 6,
+            // Clears the footer when the exercise is scrolled to the end, so
+            // the card never sits flush against the note row.
+            paddingBottom: spacing.xl,
+          }}
+          keyboardShouldPersistTaps="handled"
+        >
+          {children}
+        </ScrollView>
+        {/* Pinned footer — note row, then navigation */}
         <View
           style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: spacing.xs + 2,
-            flex: 1,
-            paddingRight: spacing.sm,
+            paddingHorizontal: spacing.lg - 2,
+            paddingTop: spacing.sm,
+            paddingBottom: footerBottomInset,
+            // Opaque, and stated rather than inherited. The footer sits
+            // directly beneath a scrolling region: anything translucent here
+            // lets a long exercise show through the note as it scrolls past,
+            // which reads as the two overlapping.
+            backgroundColor: c.bg,
           }}
         >
           <View
-            style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: c.primary }}
-          />
-          <Body size="sm" weight="bold" numberOfLines={1} style={{ color: c.ink }}>
-            {lessonTitle}
-          </Body>
-        </View>
-        <Pressable
-          onPress={onExit}
-          accessibilityRole="button"
-          accessibilityLabel="Exit lesson"
-          hitSlop={12}
-          style={{ minHeight: 44, justifyContent: 'center' }}
-        >
-          <Body
-            size="sm"
-            weight="extrabold"
             style={{
-              color: c.idle,
-              fontSize: 12,
-              letterSpacing: typography.tracking.banner + 0.2,
+              minHeight: retry ? NOTE_MIN_HEIGHT_RETRY : NOTE_MIN_HEIGHT,
+              paddingBottom: spacing.sm + 2,
+              paddingHorizontal: spacing.xs,
+              flexDirection: 'row',
+              // Centred, not top-aligned: the one-line placeholder used to pin
+              // itself to the top of the reserved block, hard against the
+              // clipped card above, while ~60pt of the reserve sat empty below.
+              alignItems: 'center',
+              gap: spacing.sm,
             }}
           >
-            EXIT
-          </Body>
-        </Pressable>
-      </View>
-
-      {/* Tick track + meta row */}
-      <View style={{ paddingHorizontal: spacing.lg - 2, paddingTop: spacing.md }}>
-        <ExerciseTrack total={total} currentIndex={currentIndex} completedCount={completedCount} />
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginTop: spacing.sm,
-          }}
-        >
-          <Body
-            size="sm"
-            style={{
-              fontFamily: typography.family.mono,
-              fontSize: 10,
-              letterSpacing: typography.tracking.eyebrow,
-              color: c.idle,
-            }}
-          >
-            {counterLabel}
-          </Body>
-        </View>
-      </View>
-
-      {/* Exercise body — the only scrolling region */}
-      <ScrollView
-        style={{ flex: 1, minHeight: 0 }}
-        contentContainerStyle={{
-          paddingHorizontal: spacing.lg - 2,
-          // Was spacing.lg + 6. The header above already separates itself with
-          // its own padding and a rule, so this was doubling a gap that was
-          // costing the exercise body 14pt it needed more.
-          paddingTop: spacing.md,
-          // Clears the footer's top rule when the exercise is scrolled to the
-          // end, so the card never sits flush against the note row.
-          paddingBottom: spacing.xl,
-        }}
-        keyboardShouldPersistTaps="handled"
-      >
-        {children}
-      </ScrollView>
-
-      {/* Pinned footer — note row, then navigation */}
-      <View
-        style={{
-          paddingHorizontal: spacing.lg - 2,
-          paddingTop: spacing.md,
-          paddingBottom: footerBottomInset,
-          // Opaque, and stated rather than inherited. The footer sits directly
-          // beneath a scrolling region: anything translucent here lets a
-          // long exercise show through the note as it scrolls past, which
-          // reads as the two overlapping.
-          backgroundColor: c.surface2,
-          // Without a rule the note reads as the last line inside the question
-          // card rather than a separate region.
-          borderTopWidth: 1,
-          borderTopColor: c.cardBorder,
-        }}
-      >
-        <View
-          style={{
-            minHeight: retry ? NOTE_MIN_HEIGHT_RETRY : NOTE_MIN_HEIGHT,
-            paddingBottom: spacing.md,
-            flexDirection: 'row',
-            // Centred, not top-aligned: the one-line placeholder used to pin
-            // itself to the top of the reserved block, hard against the
-            // clipped card above, while ~60pt of the reserve sat empty below.
-            alignItems: 'center',
-            gap: spacing.sm,
-          }}
-        >
-          <View style={{ flex: 1 }}>
-            <ExerciseNote state={noteState} />
-          </View>
-
-          {/* Skip. Styled like the header's text-only EXIT rather than given a
-              third footer button: three buttons across a 375pt screen is three
-              cramped targets, and this is deliberately the quiet option. */}
-          {onSkip ? (
-            <Pressable
-              onPress={onSkip}
-              hitSlop={12}
-              style={{ minHeight: 44, justifyContent: 'center' }}
-              accessibilityRole="button"
-              accessibilityLabel="Skip this question without scoring it"
-            >
-              <Body
-                size="sm"
-                style={{
-                  fontFamily: typography.family.mono,
-                  fontSize: 12,
-                  fontWeight: '800',
-                  letterSpacing: typography.tracking.banner + 0.2,
-                  color: c.idle,
-                }}
+            <View style={{ flex: 1 }}>
+              <ExerciseNote state={rowState} />
+            </View>
+            {/* Skip. Styled like a text-only action rather than given a third
+                footer button: three buttons across a 375pt screen is three
+                cramped targets, and this is deliberately the quiet option. */}
+            {onSkip ? (
+              <Pressable
+                onPress={onSkip}
+                hitSlop={12}
+                style={{ minHeight: 44, justifyContent: 'center' }}
+                accessibilityRole="button"
+                accessibilityLabel="Skip this question without scoring it"
               >
-                SKIP
-              </Body>
-            </Pressable>
-          ) : null}
-        </View>
-
-        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-          <SlabButton
-            label="Previous"
-            variant="ghost"
-            onPress={onPrev}
-            disabled={!canPrev}
-            style={{ flex: 1 }}
-          />
-          <SlabButton
-            label={isLast ? 'Finish' : 'Next'}
-            variant="primary"
-            onPress={onNext}
-            disabled={!canNext}
-            style={{ flex: 1 }}
-          />
+                <Body
+                  size="sm"
+                  style={{
+                    fontFamily: typography.family.mono,
+                    fontSize: 12,
+                    fontWeight: '800',
+                    letterSpacing: typography.tracking.banner + 0.2,
+                    color: c.idle,
+                  }}
+                >
+                  SKIP
+                </Body>
+              </Pressable>
+            ) : null}
+          </View>
+          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+            <SlabButton
+              label="Previous"
+              variant="tint"
+              arrow={false}
+              onPress={onPrev}
+              disabled={!canPrev}
+              style={{ flex: 1 }}
+            />
+            <SlabButton
+              label={isLast ? 'Finish' : 'Next'}
+              variant="primary"
+              onPress={onNext}
+              disabled={!canNext}
+              style={{ flex: 1 }}
+            />
+          </View>
         </View>
       </View>
-    </View>
+    </ExerciseChromeContext.Provider>
   );
 }

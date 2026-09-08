@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { minLineHeight, spacing, typography } from '../../config/theme';
 import type { ExerciseType } from '../../types';
+import { useExerciseChrome } from './exercise-chrome-context';
 
 interface ExerciseCardProps {
   children: ReactNode;
@@ -19,7 +20,7 @@ interface ExerciseCardProps {
   promptNode?: ReactNode;
 }
 
-const TYPE_LABELS: Record<ExerciseType, string> = {
+export const EXERCISE_TYPE_LABELS: Record<ExerciseType, string> = {
   multiple_choice: 'Choose the correct answer',
   listening_choice: 'What did you hear?',
   listening_type: 'Type what you hear',
@@ -68,15 +69,21 @@ const PROMPT_STYLE: TextStyle = {
 };
 
 export function ExerciseCard({ children, type, prompt, promptNode }: ExerciseCardProps) {
-  const { c } = useUi2Theme();
+  const { c, shape } = useUi2Theme();
+  const { instructionInHero } = useExerciseChrome();
   return (
     <View
-      className="rounded-[20px] p-6 min-h-[200px] shadow-card border"
-      style={{ backgroundColor: c.card, borderColor: c.cardBorder }}
+      className="p-6 min-h-[200px]"
+      style={{ backgroundColor: c.card, borderRadius: shape.radiusCard }}
     >
-      <Text style={[LABEL_STYLE, { color: c.muted }]} accessibilityRole="header">
-        {TYPE_LABELS[type]}
-      </Text>
+      {/* Under ExerciseChrome the hero block already titles itself with this
+          instruction; printing it again here put the same words twice in
+          60pt. Anywhere else the card still introduces itself. */}
+      {instructionInHero ? null : (
+        <Text style={[LABEL_STYLE, { color: c.muted }]} accessibilityRole="header">
+          {EXERCISE_TYPE_LABELS[type]}
+        </Text>
+      )}
       {promptNode ? (
         <View style={{ marginBottom: spacing.lg }}>{promptNode}</View>
       ) : prompt ? (
