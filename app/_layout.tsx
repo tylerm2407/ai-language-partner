@@ -49,14 +49,14 @@ Sentry.init({
   // Set per EAS build profile (eas.json → EXPO_PUBLIC_APP_ENV) so preview
   // builds do not pollute the production issue stream or its alert rules.
   environment: process.env.EXPO_PUBLIC_APP_ENV ?? 'production',
-  // Strip the live tutor's ephemeral OpenAI credential out of anything we send.
+  // Strip the live tutor's one-use connection capability out of anything we send.
   //
-  // `startTutorSession` returns a short-lived `clientSecret` that the device
-  // uses to open a WebRTC session directly with OpenAI. It is deliberately
+  // `startTutorSession` returns a short-lived `connectionToken` that the device
+  // uses for one server-controlled SDP exchange. It is deliberately
   // never persisted and never logged, but a crash report is the one path that
   // serialises arbitrary state without anyone asking it to — an unhandled
   // rejection carrying the start response, or a breadcrumb from the fetch that
-  // produced it, would put a working credential in a third-party dashboard.
+  // produced it, would put a working capability in a third-party dashboard.
   //
   // `redactTutorSecrets` lives in lib/tutor-api.ts, next to the shape it
   // redacts, so this wiring does not have to know that shape.

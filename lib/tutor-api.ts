@@ -11,11 +11,10 @@
  *   `endTutorSession`    — settles the money. It may throw, but the money is
  *                          already correct by the time it does.
  *
- * ── THE CLIENT SECRET ──
+ * ── THE CONNECTION CAPABILITY ──
  *
- * `start` returns an OpenAI ephemeral credential. For the life of the call it
- * is a bearer token for a paid API on our account, and unlike our own JWT
- * nothing about it is scoped to a user we could later disown.
+ * `start` returns a one-use Fluenci capability for the server-controlled SDP
+ * exchange. It is not a provider credential, but it still must not leak.
  *
  * It must never be:
  *   - logged (no `console.log`, no `__DEV__` dump, no error message that
@@ -236,19 +235,19 @@ export interface StartTutorSessionResult {
   /** `tutor_sessions.id`. The handle for every later call, and safe to log. */
   sessionId: string;
   /**
-   * OpenAI ephemeral credential. READ THE MODULE HEADER BEFORE TOUCHING THIS.
+   * One-use Fluenci connection capability. READ THE MODULE HEADER BEFORE TOUCHING THIS.
    * Hold it in memory for the length of the SDP exchange and drop it.
    */
   connectionToken: string;
-  /** Unix seconds, or null when the provider did not say. */
+  /** Unix seconds when the application capability expires. */
   connectionTokenExpiresAt: number | null;
   model: string;
   callsUrl: string;
   /**
    * MILLISECONDS reserved and CHARGED IN FULL up front. The client is expected
    * to hang up at it; what is not used is refunded on `end`. It is not a
-   * suggestion — once the WebRTC session is established we are not in the
-   * media path and cannot stop it.
+   * suggestion — the server enforces the matching provider deadline and can
+   * terminate the provider call independently of this client.
    *
    * The server speaks SECONDS (`start.ts` returns `grantedSeconds`) and every
    * client-side consumer speaks milliseconds — `assessTutorBudget` takes
