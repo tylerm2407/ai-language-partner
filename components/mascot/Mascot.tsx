@@ -13,7 +13,12 @@
  *     `idle` mid-clip is ignored until the clip finishes, so a 700ms "cheer"
  *     tick from a picker still shows the whole nod.
  *   - Reduce Motion, Android, and the moment before the first frame decodes
- *     all show the transparent still. Android gets the still because
+ *     all show the transparent still.
+ *   - The iOS SIMULATOR decodes only the base layer of an HEVC-with-alpha
+ *     clip, so there Sol sits in a white square wherever he overlaps colour
+ *     (the onboarding hero). That is the simulator, not the asset: the
+ *     .mov reports "HEVC with Alpha" and a device composites it. Judge the
+ *     overlap on a device. Android gets the still because
  *     ExoPlayer does not composite HEVC alpha; the animated WebPs in the same
  *     folder are the Android path once Fresco's animated-webp module is added.
  *
@@ -127,7 +132,7 @@ export function Mascot({ state = 'idle', size = 'md', style, accessibilityVisibl
       <Video
         key={clip}
         source={CLIPS[clip]}
-        style={styles.fill}
+        style={[styles.fill, styles.clear]}
         resizeMode={ResizeMode.CONTAIN}
         shouldPlay
         isMuted
@@ -155,5 +160,8 @@ export function mascotForOutcome(outcome: 'correct' | 'wrong' | 'complete'): Mas
 }
 
 const styles = StyleSheet.create({
+  // The player view must not paint its own ground, or the alpha clip sits in
+  // a box wherever Sol overlaps a coloured surface (the onboarding hero).
+  clear: { backgroundColor: 'transparent' },
   fill: { width: '100%', height: '100%', backgroundColor: 'transparent' },
 });

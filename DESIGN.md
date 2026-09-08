@@ -897,12 +897,23 @@ scheme (`app.json` `userInterfaceStyle: "automatic"`).
   `typography.family` both point at it). Nunito and Plus Jakarta Sans are gone
   from the binary. Line box 1.366em, same as Nunito's, so `leading.sans` and
   the type scale did not move. No serif in UI 2.0.
+- **Onboarding composition** (2026-09-08, canvas page "Onboarding ·
+  composition", variant C "Hero block"): each step opens with ONE violet block
+  (`components/ui2/StepHero.tsx`) carrying back, "Step n of 5", a segmented
+  progress strip and the question in white; Sol peeks over its bottom-right
+  edge playing his clips. The old mascot-left / speech-bubble-right / fat
+  progress bar stack was Duolingo's onboarding part for part and is gone
+  (`StepHeader` and `SpeechBubble` deleted). Short-label pickers (language)
+  are a two-column tile grid of `OptionRow`s; long-label pickers stay rows.
 - **Motion vocabulary** (all gated on `useMotion().shouldReduce`): step change =
-  bubble slides in from the right, rows cascade 40ms apart (`FadeInDown`);
-  progress bar springs to its new width; the plan-building loader runs ~2.4s.
-- **Mascot**: `components/ui2/MascotSol.tsx` is a code-only stand-in with a
-  `mood` API (`idle` / `think` / `cheer`). The artist's character replaces it as
-  a Rive state machine behind the same props.
+  the hero block arrives with a per-step entrance (slide / rise / pop / meet /
+  drop), the done segments light up 70ms apart, the question fades up, Sol
+  pops in last and bobs 4px on a 3.2s loop; rows cascade 40ms apart
+  (`FadeInDown`); the plan-building loader runs ~2.4s.
+- **Mascot**: `components/ui2/MascotSol.tsx` wraps `components/mascot/Mascot`,
+  which plays Sol's alpha-video clips (`assets/mascot/video`) with a `mood`
+  API (`idle` / `think` / `cheer` / …). A Rive rig would replace the video
+  behind the same props.
 
 ### Migrating a Dark Glow screen to UI 2.0
 

@@ -26,8 +26,7 @@ import { Ui2Screen } from '../../components/ui2/Ui2Screen';
 import { SlabButton } from '../../components/ui2/SlabButton';
 import { SlabCard } from '../../components/ui2/SlabCard';
 import { OptionRow } from '../../components/ui2/OptionRow';
-import { StepHeader } from '../../components/ui2/StepHeader';
-import { SpeechBubble } from '../../components/ui2/SpeechBubble';
+import { StepHero, type StepHeroEntrance } from '../../components/ui2/StepHero';
 import { MascotSol, type MascotMood } from '../../components/ui2/MascotSol';
 import { Chip } from '../../components/ui2/Chip';
 import { PlanBuilder } from '../../components/ui2/PlanBuilder';
@@ -214,10 +213,15 @@ function LevelBars({ lit, selected }: { lit: number; selected: boolean }) {
   );
 }
 
-function FlagTile({ flag }: { flag: string }) {
+function FlagTile({ flag, selected }: { flag: string; selected: boolean }) {
   const { c } = useUi2Theme();
+  // On the selected tile the block is solid primary; the flag sits on white.
   return (
-    <View style={[styles.flagTile, { backgroundColor: c.surface2 }]} accessibilityElementsHidden importantForAccessibility="no">
+    <View
+      style={[styles.flagTile, { backgroundColor: selected ? c.onPrimary : c.primaryTint }]}
+      accessibilityElementsHidden
+      importantForAccessibility="no"
+    >
       <Text style={styles.flagGlyph}>{flag}</Text>
     </View>
   );
@@ -695,6 +699,17 @@ export default function OnboardingScreen() {
     else router.replace('/(public)');
   };
   const goBack = prev[step] ? () => setStep(prev[step] as Step) : leaveToWelcome;
+  // The step's header block: back, "Step n of 5", segments, the question, Sol.
+  const hero = (text: string, entrance: StepHeroEntrance, heroMood: MascotMood = mood) => (
+    <StepHero
+      step={stepIndex + 1}
+      total={ALL_STEPS.length}
+      text={text}
+      onBack={goBack}
+      mood={heroMood}
+      entrance={entrance}
+    />
+  );
 
   let footer: React.ReactNode = null;
   let body: React.ReactNode = null;
@@ -703,8 +718,16 @@ export default function OnboardingScreen() {
     footer = <SlabButton label={`Continue with ${languageName}`} onPress={() => setStep('idealSelf')} />;
     body = (
       <>
-        <SpeechBubble text="What language do you want to learn?" mood={mood} entrance="slide" />
-        <View style={styles.rows}>
+        {hero('What language do you want to learn?', 'slide')}
+        <Animated.View entering={enter(0)}>
+          <Text style={{ fontFamily: type.ui, fontSize: 14, lineHeight: 20, color: c.muted }}>
+            You can add another later.
+          </Text>
+        </Animated.View>
+        {/* Short labels, so two columns: the grid is a different silhouette
+            from a stacked list, and eight rows plus the hero did not fit
+            above the CTA on the canvas. */}
+        <View style={styles.tiles}>
           {SUPPORTED_LANGUAGES.map((lang, i) => (
             <OptionRow
               key={lang.code}
@@ -715,7 +738,9 @@ export default function OnboardingScreen() {
                 setTargetLanguage(lang.code as LanguageCode);
                 cheer();
               }}
-              lead={<FlagTile flag={lang.flag} />}
+              lead={<FlagTile flag={lang.flag} selected={targetLanguage === lang.code} />}
+              style={styles.tile}
+              tile
             />
           ))}
         </View>
@@ -730,7 +755,7 @@ export default function OnboardingScreen() {
     );
     body = (
       <>
-        <SpeechBubble text={`Picture a moment you'd love to have in ${languageName}.`} mood="think" entrance="rise" />
+        {hero(`Picture a moment you'd love to have in ${languageName}.`, 'rise', 'think')}
         <Animated.View entering={enter(0)}>
           <Text style={{ fontFamily: type.ui, fontSize: 14, lineHeight: 20, color: c.muted }}>
             One sentence is enough. You can skip this if you&apos;d rather not say.
@@ -767,7 +792,7 @@ export default function OnboardingScreen() {
     footer = <SlabButton label="Continue" onPress={() => setStep('identity')} />;
     body = (
       <>
-        <SpeechBubble text="What's your level?" mood={mood} entrance="pop" />
+        {hero("What's your level?", 'pop')}
         {/* The acronym used to be introduced on the removed mode step, and
             this is now the first and only place a new user meets it — so it
             defines itself here or nowhere. */}
@@ -808,7 +833,7 @@ export default function OnboardingScreen() {
     footer = <SlabButton label="Continue" onPress={() => setStep('goal')} />;
     body = (
       <>
-        <SpeechBubble text="Make it yours" mood={mood} entrance="meet" />
+        {hero('Make it yours', 'meet')}
         <Animated.View entering={enter(0)}>
           <Text style={{ fontFamily: type.ui, fontSize: 14, lineHeight: 20, color: c.muted }}>
             Pick a name and a look. This is who you&apos;ll be in {languageName}.
@@ -880,7 +905,7 @@ export default function OnboardingScreen() {
     );
     body = (
       <>
-        <SpeechBubble text="How much time do you have?" mood={mood} entrance="drop" />
+        {hero('How much time do you have?', 'drop')}
         <Animated.View entering={enter(0)}>
           <Text style={{ fontFamily: type.ui, fontSize: 14, lineHeight: 20, color: c.muted }}>
             This sets the length of your daily session. Nothing breaks if you skip a day.
@@ -912,11 +937,11 @@ export default function OnboardingScreen() {
 
   return (
     <Ui2Screen footer={footer}>
-      {/* Step indicator — always shows real, non-zero progress (goal gradient,
-          DESIGN.md §UX Psychology Principles #2). */}
-      <StepHeader step={stepIndex + 1} total={ALL_STEPS.length} onBack={goBack} />
       {/* Keyed on the step so the body remounts and every entering animation
-          replays: the slide-in bubble, the row cascade. */}
+          replays: the hero block's entrance, the segments, the row cascade.
+          The step indicator lives inside the hero and always shows real,
+          non-zero progress (goal gradient, DESIGN.md §UX Psychology
+          Principles #2). */}
       <View key={step} style={styles.stepBody}>
         {body}
       </View>
@@ -929,6 +954,8 @@ const styles = StyleSheet.create({
   centerCol: { alignItems: 'center', gap: 12, paddingTop: 8 },
   stepBody: { gap: 18 },
   rows: { gap: 10 },
+  tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  tile: { flexBasis: '47%', flexGrow: 1 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   inputCard: { gap: 10 },
   multiline: { fontSize: 16, lineHeight: 24, minHeight: 110, textAlignVertical: 'top', padding: 0 },
@@ -942,6 +969,6 @@ const styles = StyleSheet.create({
   stat: { flex: 1, gap: 2, padding: 14 },
   bars: { flexDirection: 'row', alignItems: 'flex-end', gap: 3, height: 22 },
   bar: { width: 5, borderRadius: 2 },
-  flagTile: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  flagGlyph: { fontSize: 20 },
+  flagTile: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  flagGlyph: { fontSize: 18 },
 });

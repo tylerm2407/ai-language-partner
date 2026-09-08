@@ -12,7 +12,7 @@ interface ProgressBarProps {
 
 /**
  * The groove. `track` is the palette's unfilled-progress token — the same pair
- * (`track` behind, `primary` in front) that `Ui2ProgressBar` and `StepHeader`
+ * (`track` behind, `primary` in front) that `Ui2ProgressBar` and `StepHero`
  * use, so a screen showing both bars shows one bar.
  *
  * The `#818CF8` glow shadow that used to sit here is gone: it was tuned for a

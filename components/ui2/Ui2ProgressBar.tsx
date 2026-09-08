@@ -10,7 +10,7 @@
  * glow shadow. Both are Dark Glow artefacts: on a white ground the indigo glow
  * is invisible and the gradient reads as a smudge. UI 2.0 fills with a flat
  * `c.primary` on a `c.track` groove, which is the pair DESIGN.md names for
- * filled/unfilled progress and the same pair `StepHeader` already uses.
+ * filled/unfilled progress and the same pair `StepHero` already uses.
  *
  * The spring moved from RN `Animated` to Reanimated so the width interpolation
  * runs on the UI thread — the old one passed `useNativeDriver: false` because

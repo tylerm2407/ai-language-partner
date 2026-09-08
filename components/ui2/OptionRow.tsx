@@ -34,6 +34,13 @@ interface OptionRowProps {
   lead?: React.ReactNode;
   /** Trailing slot shown when NOT selected (the check replaces it). */
   trail?: React.ReactNode;
+  /**
+   * Grid-tile density for short labels in a two-column grid: tighter padding,
+   * one-line title, and no trailing check — the solid fill already says
+   * "selected", and a 170px tile has no room for a 26px disc beside a word
+   * like "Portuguese".
+   */
+  tile?: boolean;
   accessibilityLabel?: string;
   style?: ViewStyle;
 }
@@ -51,6 +58,7 @@ export function OptionRow({
   trail,
   accessibilityLabel,
   style,
+  tile = false,
 }: OptionRowProps) {
   const { c, type, shape } = useUi2Theme();
   const { shouldReduce } = useMotion();
@@ -85,6 +93,7 @@ export function OptionRow({
         <Animated.View
           style={[
             styles.row,
+            tile && styles.tileRow,
             {
               backgroundColor: selected ? c.primary : c.card,
               borderRadius: shape.radiusCard,
@@ -93,7 +102,10 @@ export function OptionRow({
         >
           {lead}
           <View style={styles.text}>
-            <Text style={{ fontFamily: type.uiHeavy, fontSize: 16, lineHeight: 22, color: selected ? c.onPrimary : c.ink }}>
+            <Text
+              numberOfLines={tile ? 1 : undefined}
+              style={{ fontFamily: type.uiHeavy, fontSize: tile ? 15 : 16, lineHeight: 22, color: selected ? c.onPrimary : c.ink }}
+            >
               {title}
             </Text>
             {subtitle ? (
@@ -102,7 +114,7 @@ export function OptionRow({
               </Text>
             ) : null}
           </View>
-          {selected ? (
+          {selected && !tile ? (
             <Animated.View style={[styles.check, { backgroundColor: c.onPrimary }, checkStyle]}>
               <Ionicons name="checkmark" size={16} color={c.primary} />
             </Animated.View>
@@ -124,6 +136,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     minHeight: 60,
   },
+  tileRow: { gap: 10, paddingHorizontal: 12, paddingVertical: 12, minHeight: 64 },
   text: { flex: 1, gap: 2, minWidth: 0 },
   check: {
     width: 26,
