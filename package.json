@@ -9,11 +9,13 @@
     "tunnel": "expo start --tunnel",
     "ios": "expo run:ios",
     "android": "expo run:android",
+    "eas-build-pre-install": "node scripts/validate-build-environment.cjs",
     "lint": "eslint .",
     "test": "jest",
     "test:functions": "deno test --allow-read --allow-env supabase/functions",
     "typecheck": "tsc --noEmit",
-    "check": "npm run typecheck && npm run lint && npm test"
+    "test:build-env": "node --test scripts/validate-build-environment.node-test.cjs",
+    "check": "npm run typecheck && npm run lint && npm run test:build-env && npm test"
   },
   "dependencies": {
     "@expo-google-fonts/fraunces": "^0.4.1",
