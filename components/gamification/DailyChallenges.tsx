@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { View, Text, Pressable, Alert } from 'react-native';
+import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Ui2ProgressBar } from '../ui2/Ui2ProgressBar';
 import { SlabCard } from '../ui2/SlabCard';
@@ -15,22 +14,9 @@ interface DailyChallengesProps {
 
 export function DailyChallenges({ dailyStats }: DailyChallengesProps) {
   const { c } = useUi2Theme();
-  const { challenges, allCompleted, bonusXpClaimed, claimBonusXp } = useDailyChallenges();
-  const [claiming, setClaiming] = useState(false);
+  const { challenges, allCompleted } = useDailyChallenges();
 
   const completedCount = challenges.filter((ch) => ch.completed).length;
-
-  const handleClaimBonus = async () => {
-    setClaiming(true);
-    try {
-      await claimBonusXp();
-    } catch (err) {
-      console.error('Failed to claim bonus XP:', err);
-      Alert.alert('Claim failed', 'Could not claim your bonus XP. Please try again.');
-    } finally {
-      setClaiming(false);
-    }
-  };
 
   return (
     <SlabCard style={{ padding: 20, marginBottom: 24 }}>
@@ -45,7 +31,7 @@ export function DailyChallenges({ dailyStats }: DailyChallengesProps) {
         </Text>
       </View>
       <View className="flex-row items-center justify-between mb-4">
-        <Text className="text-xs" style={{ color: c.muted }}>Complete all for +50 XP bonus</Text>
+        <Text className="text-xs" style={{ color: c.muted }}>Three focused goals for today</Text>
         <QuestCountdown />
       </View>
 
@@ -111,32 +97,15 @@ export function DailyChallenges({ dailyStats }: DailyChallengesProps) {
         );
       })}
 
-      {/* Bonus XP Indicator */}
+      {/* Completion indicator */}
       {allCompleted && (
         <View className="mt-3 pt-3" style={{ borderTopWidth: 1, borderTopColor: c.cardBorder }}>
-          {bonusXpClaimed ? (
-            <View className="flex-row items-center justify-center gap-2">
-              <Ionicons name="star" size={18} color={c.yellow} />
-              <Text className="text-sm font-semibold" style={{ color: c.ink }}>
-                All challenges complete! +50 Bonus XP claimed
-              </Text>
-              <Ionicons name="star" size={18} color={c.yellow} />
-            </View>
-          ) : (
-            <Pressable
-              onPress={handleClaimBonus}
-              disabled={claiming}
-              style={{ opacity: claiming ? 0.6 : 1 }}
-            >
-              <View className="flex-row items-center justify-center gap-2">
-                <Ionicons name="star" size={18} color={c.yellow} />
-                <Text className="text-sm font-semibold" style={{ color: c.ink }}>
-                  Claim +50 Bonus XP
-                </Text>
-                <Ionicons name="star" size={18} color={c.yellow} />
-              </View>
-            </Pressable>
-          )}
+          <View className="flex-row items-center justify-center gap-2">
+            <Ionicons name="checkmark-circle" size={18} color={c.green} />
+            <Text className="text-sm font-semibold" style={{ color: c.ink }}>
+              All challenges complete today
+            </Text>
+          </View>
         </View>
       )}
     </SlabCard>

@@ -180,7 +180,7 @@ export function CompletedLessonsSection({ userId }: Props) {
                     {row.lessonTitle}
                   </Text>
                   <Text className="text-xs mt-0.5" style={{ color: c.muted }}>
-                    {formatRelativeDay(row.completedAt)} · +{row.xpEarned} XP
+                    {formatRelativeDay(row.completedAt)} · {Math.round(row.score * 100)}% score
                   </Text>
                 </View>
                 <Text className="text-sm font-semibold ml-2" style={{ color: badge.color }}>

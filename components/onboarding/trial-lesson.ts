@@ -22,7 +22,7 @@
  */
 import type { Exercise, LanguageCode } from '../../types';
 
-/** XP awarded for finishing the trial. Matches a normal first lesson. */
+/** Legacy scoring weight used by the shared lesson summarizer. Not awarded. */
 export const TRIAL_LESSON_XP = 20;
 
 /**

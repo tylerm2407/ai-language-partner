@@ -2,10 +2,7 @@
  * The two defects this component existed to have, and the one it must never
  * grow back.
  *
- * 1. The +50 XP double-awarded once per app launch, unbounded, because the
- *    award went through `earnXp` — which mints a random idempotency key, so the
- *    server's `(user_id, event_key)` de-dupe protected nothing.
- * 2. The all-complete auto-dismiss had never fired: the once-only guard was
+ * 1. The all-complete auto-dismiss had never fired: the once-only guard was
  *    `useState`, so writing it re-ran the effect and the cleanup cleared both
  *    timers first. That is the regression the mid-celebration `setProfile` test
  *    below pins — an unrelated store write must not cancel `markCelebrated`.
@@ -56,13 +53,11 @@ jest.mock('../../hooks/useMotion', () => ({
   useMotion: () => ({ shouldReduce: true, duration: {}, easing: {}, durationOr0: () => 0 }),
 }));
 
-import { incrementXpIdempotent, updateOnboardingChecklist } from '../../lib/supabase-queries';
+import { updateOnboardingChecklist } from '../../lib/supabase-queries';
 import { useAppStore } from '../../stores/useAppStore';
-import { ONBOARDING_COMPLETE_XP_KEY } from '../../lib/onboarding-checklist';
 import { OnboardingChecklistFab } from './OnboardingChecklistFab';
 import type { OnboardingChecklist, UserProfile } from '../../types';
 
-const mockXp = incrementXpIdempotent as jest.Mock;
 const mockUpdate = updateOnboardingChecklist as jest.Mock;
 
 const RESOLVED: OnboardingChecklist = {
@@ -123,17 +118,15 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-it('awards the completion XP exactly once, under the literal stable key', () => {
+it('retires and celebrates a completed checklist without awarding XP', () => {
   useAppStore.setState({ profile: profileWith(RESOLVED) });
   const tree = render();
 
-  expect(mockXp).toHaveBeenCalledTimes(1);
-  expect(mockXp).toHaveBeenCalledWith(50, 'onboarding-checklist:v1');
-  expect(mockXp.mock.calls[0][1]).toBe(ONBOARDING_COMPLETE_XP_KEY);
+  expect(mockUpdate).toHaveBeenCalledTimes(1);
 
-  // Re-render for any reason at all — still one award.
+  // Re-render for any reason at all — still one retirement write.
   act(() => { tree.update(<SafeAreaProvider><OnboardingChecklistFab /></SafeAreaProvider>); });
-  expect(mockXp).toHaveBeenCalledTimes(1);
+  expect(mockUpdate).toHaveBeenCalledTimes(1);
 });
 
 it('renders nothing once celebratedAt is set, even with dismissed still false', () => {
@@ -142,7 +135,6 @@ it('renders nothing once celebratedAt is set, even with dismissed still false', 
   });
   const tree = render();
   expect(fabRendered(tree)).toBe(false);
-  expect(mockXp).not.toHaveBeenCalled();
 });
 
 it('renders nothing before the profile has loaded', () => {
@@ -156,12 +148,11 @@ it('renders the rocket when there is still something to do', () => {
   });
   const tree = render();
   expect(fabRendered(tree)).toBe(true);
-  expect(mockXp).not.toHaveBeenCalled();
 });
 
 /**
  * The regression for the never-firing auto-dismiss. A `setProfile` landing
- * mid-celebration (an XP write, a streak refresh, the reconciler) re-renders
+ * mid-celebration (a profile write, a stats refresh, the reconciler) re-renders
  * this component; if that re-render can reach the effect's cleanup, the timer
  * dies and `markCelebrated` never runs — which is exactly why the rocket used
  * to stay on screen forever.
@@ -213,5 +204,5 @@ it('persists the retirement immediately, without waiting on any timer', () => {
 it('does not celebrate a checklist the learner hid before finishing it', () => {
   useAppStore.setState({ profile: profileWith({ ...RESOLVED, dismissed: true }) });
   render();
-  expect(mockXp).not.toHaveBeenCalled();
+  expect(mockUpdate).not.toHaveBeenCalled();
 });

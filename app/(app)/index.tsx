@@ -118,7 +118,7 @@ export default function HomeScreen() {
       status = await requestPermissionsExplicit();
       if (status === 'granted' && profile) {
         await scheduleDailyPracticeReminder({
-          xpEarnedToday: dailyStats?.xpEarned ?? 0,
+          practiceMinutesToday: dailyStats?.minutesPracticed ?? 0,
           preferredHour: 21,
           idealL2Self: profile.idealL2Self ?? null,
         });

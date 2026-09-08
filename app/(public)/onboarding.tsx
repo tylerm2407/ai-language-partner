@@ -18,7 +18,6 @@ import {
   markOnboardingComplete,
   updateOnboardingChecklist,
   setAvatarKind,
-  incrementXpIdempotent,
 } from '../../lib/supabase-queries';
 import { useAppStore } from '../../stores/useAppStore';
 import { LessonRunner, type LessonResult } from '../../components/lesson/LessonRunner';
@@ -304,21 +303,6 @@ export default function OnboardingScreen() {
       });
       await markOnboardingComplete(userId);
 
-      // The XP the learner earned in the pre-auth trial. The sign-up screen
-      // promised it by name, so it has to land — but it must not block the
-      // flush: a failure here costs the learner a number, while a throw would
-      // cost them the whole profile write and strand them back in onboarding.
-      //
-      // Keyed on the trial's completion timestamp, which is stable across
-      // retries of the same draft, so the idempotency guard (migration 046)
-      // makes a re-run of this flush a no-op rather than a second award.
-      if (draft.trial && draft.trial.xpEarned > 0) {
-        await incrementXpIdempotent(
-          draft.trial.xpEarned,
-          `trial-lesson:${draft.trial.completedAt}`,
-        ).catch((err) => console.error('[onboarding] trial XP award failed:', err));
-      }
-
       await clearPendingOnboarding();
       await loadUserData(userId);
 
@@ -499,8 +483,8 @@ export default function OnboardingScreen() {
    * into the account on the pending draft: nothing about this run exists
    * server-side, because there is no account to attach it to yet.
    *
-   * XP is taken from the runner rather than from TRIAL_LESSON_XP so the number
-   * on the next screen is the one the celebration just showed.
+   * The score is retained locally so the sign-up screen can show the concrete
+   * lesson result that will be saved with the new account.
    */
   const handleTrialComplete = useCallback(async (result: LessonResult) => {
     setTrial({

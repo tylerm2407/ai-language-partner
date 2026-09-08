@@ -102,16 +102,16 @@ function RootLayout() {
   const { permissionGranted } = useNotifications();
 
   // Re-arm the daily practice reminder whenever the inputs change
-  // (xp/permission). Silent no-op if permission isn't granted yet
-  // or if XP was already earned today.
+  // (practice/permission). Silent no-op if permission isn't granted yet
+  // or if the learner already practised today.
   useEffect(() => {
     if (!profile || !permissionGranted) return;
     scheduleDailyPracticeReminder({
-      xpEarnedToday: dailyStats?.xpEarned ?? 0,
+      practiceMinutesToday: dailyStats?.minutesPracticed ?? 0,
       preferredHour: 21,
       idealL2Self: profile.idealL2Self ?? null,
     }).catch(() => {});
-  }, [profile, dailyStats?.xpEarned, permissionGranted]);
+  }, [profile, dailyStats?.minutesPracticed, permissionGranted]);
 
   // Also re-arm on background — covers edge cases where the user
   // backgrounds before the schedule-on-change useEffect has resolved.
@@ -119,14 +119,14 @@ function RootLayout() {
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'background' && profile && permissionGranted) {
         scheduleDailyPracticeReminder({
-          xpEarnedToday: dailyStats?.xpEarned ?? 0,
+          practiceMinutesToday: dailyStats?.minutesPracticed ?? 0,
           preferredHour: 21,
           idealL2Self: profile.idealL2Self ?? null,
         }).catch(() => {});
       }
     });
     return () => sub.remove();
-  }, [profile, dailyStats?.xpEarned, permissionGranted]);
+  }, [profile, dailyStats?.minutesPracticed, permissionGranted]);
 
   // Register the analytics provider once, before anything tries to track.
   // No-ops without EXPO_PUBLIC_POSTHOG_KEY, which is the normal state for a

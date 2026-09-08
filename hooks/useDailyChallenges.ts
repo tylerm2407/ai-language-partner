@@ -1,20 +1,19 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { AppState } from 'react-native';
 import { useAuth } from './useAuth';
 import { useAppStore } from '../stores/useAppStore';
-import { fetchDailyChallenges, upsertDailyChallenges, claimDailyChallengeBonus } from '../lib/supabase-queries';
-import { localToday, localDayKey } from '../lib/dates';
+import { fetchDailyChallenges, upsertDailyChallenges } from '../lib/supabase-queries';
+import { localToday } from '../lib/dates';
 import { pickDailyChallenges } from '../lib/challenges';
 import type { DailyChallenge, DailyChallengesRecord, DailyStats } from '../types';
 
 export function useDailyChallenges() {
   const { user } = useAuth();
-  const { dailyStats, profile, patchProfile } = useAppStore();
+  const { dailyStats } = useAppStore();
   const [record, setRecord] = useState<DailyChallengesRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadNonce, setReloadNonce] = useState(0);
-  const claimInFlight = useRef(false);
 
   const retry = useCallback(() => setReloadNonce((n) => n + 1), []);
 
@@ -63,7 +62,7 @@ export function useDailyChallenges() {
     };
 
     load();
-  }, [user?.id, today, reloadNonce]);
+  }, [user, today, reloadNonce]);
 
   // Update progress when daily stats change
   useEffect(() => {
@@ -104,28 +103,7 @@ export function useDailyChallenges() {
     // the challenges load, so keying on dailyStats alone leaves progress
     // stale until the next stat change. The JSON-equality guard above stops
     // the setRecord → re-run cycle from looping.
-  }, [dailyStats, record]);
-
-  const claimBonusXp = useCallback(async () => {
-    if (!user || !record || record.bonusXpClaimed || !record.allCompleted) return 0;
-    if (claimInFlight.current) return 0;
-    claimInFlight.current = true;
-
-    try {
-      // Server-authoritative: the RPC validates completion + double-claim and
-      // grants the XP atomically (migration 043). On failure it throws —
-      // local state stays unclaimed.
-      const { bonusXp, totalXp } = await claimDailyChallengeBonus();
-      setRecord({ ...record, bonusXpClaimed: true });
-      // Guard against a null/zero RPC row: never replace displayed XP with 0.
-      if (profile && totalXp > 0) {
-        patchProfile({ totalXp });
-      }
-      return bonusXp;
-    } finally {
-      claimInFlight.current = false;
-    }
-  }, [user, record, profile, patchProfile]);
+  }, [dailyStats, record, today, user]);
 
   return {
     challenges: record?.challenges ?? [],
@@ -135,6 +113,5 @@ export function useDailyChallenges() {
     /** Non-null when today's challenges could not be loaded. Render a retry. */
     error,
     retry,
-    claimBonusXp,
   };
 }

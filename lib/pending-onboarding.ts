@@ -31,7 +31,7 @@ export const PENDING_ONBOARDING_TTL_MS = 7 * 24 * 60 * 60 * 1000;
  * How long a draft stays claimable AFTER `completedAt` is stamped.
  *
  * A completed draft is the dangerous one. It is the fully populated one —
- * display name, the free-text `idealL2Self` goal, level, trial XP — and it is
+ * display name, the free-text `idealL2Self` goal, level, trial result — and it is
  * the one `isFlushable` lets the onboarding screen write into whatever account
  * happens to be signed in when it is next read. On a shared device (the
  * university pilots put several learners on one iPad) seven days of that means
@@ -55,14 +55,13 @@ export const PENDING_ONBOARDING_COMPLETED_TTL_MS = 60 * 60 * 1000;
 /**
  * What the learner did in the pre-auth trial lesson.
  *
- * Kept so the sign-up screen can name the actual numbers ("keep your 20 XP")
- * rather than gesture at "your progress", and so the post-signup flush can
+ * Kept so the sign-up screen can name the actual result rather than gesture at
+ * "your progress", and so the post-signup flush can
  * tick the first-lesson checklist item for work that really happened.
  *
  * NOT a substitute for a lesson completion row. The trial lesson is bundled in
  * the app (components/onboarding/trial-lesson.ts) and has no `lessons.id`, so
- * there is nothing to record against — the XP is granted on flush, the
- * completion is not.
+ * there is nothing to record against; the checklist preserves the completion.
  */
 export interface TrialLessonResult {
   xpEarned: number;
