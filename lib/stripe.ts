@@ -4,8 +4,6 @@ import { PLAN_FEATURES } from './plans';
 import type { PlanId } from './plans';
 
 interface CheckoutOptions {
-  userId: string;
-  email: string;
   priceKey: string;
 }
 
@@ -16,8 +14,6 @@ interface CheckoutOptions {
 export async function openCheckout(options: CheckoutOptions): Promise<void> {
   const { data, error } = await supabase.functions.invoke('create-checkout', {
     body: {
-      userId: options.userId,
-      email: options.email,
       priceKey: options.priceKey,
     },
   });
