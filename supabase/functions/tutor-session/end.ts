@@ -18,22 +18,28 @@
  *
  * WHY THE TRANSCRIPT IS NOT IN THE REQUEST BODY
  *
- * The server accumulated it turn by turn in Redis, from calls it authenticated.
- * Accepting an end-of-session transcript from the client instead would let a
- * modified client author its own learning record — and SRS cards cost a metered
- * `chat_cards` slot, so that is a way to mint vocabulary the learner never met.
+ * Authenticated turn calls append it to Redis incrementally instead of trusting
+ * one end-of-session payload. The words still originate on the client side of
+ * the direct WebRTC connection, so this transcript is suitable for learner
+ * notes but is never authoritative for billing, entitlement, or safety.
  */
 import { proficiencyToCefr } from '../_shared/cefr.ts';
 import { getEffectiveLimits } from '../_shared/plan-limits.ts';
 import { settlement } from '../_shared/tutor-pricing.ts';
-import { readTranscript, dropTranscript } from '../_shared/tutor-transcript-buffer.ts';
+import { recordTutorAnalysisFailure, settleTutorSession } from '../_shared/tutor-ledger.ts';
+import { dropTranscript, readTranscript } from '../_shared/tutor-transcript-buffer.ts';
 import { analyzeTutorSession } from '../_shared/tutor-analysis.ts';
 import { writeBackTutorSession } from '../_shared/tutor-writeback.ts';
 
 // deno-lint-ignore no-explicit-any
 type Client = any;
 
-export type TutorEndReason = 'learner' | 'budget' | 'safety' | 'timeout' | 'error';
+export type TutorEndReason =
+  | 'learner'
+  | 'budget'
+  | 'safety'
+  | 'timeout'
+  | 'error';
 
 export interface EndRequest {
   sessionId: string;
@@ -53,7 +59,10 @@ export async function handleEnd(
   env: { anthropicKey: string | null },
 ): Promise<EndResult> {
   if (!req.sessionId) {
-    return { status: 400, body: { error: 'sessionId is required', code: 'BAD_REQUEST' } };
+    return {
+      status: 400,
+      body: { error: 'sessionId is required', code: 'BAD_REQUEST' },
+    };
   }
 
   const { data: session, error } = await supabase
@@ -67,12 +76,18 @@ export async function handleEnd(
     .maybeSingle();
 
   if (error || !session) {
-    return { status: 404, body: { error: 'Session not found.', code: 'SESSION_NOT_FOUND' } };
+    return {
+      status: 404,
+      body: { error: 'Session not found.', code: 'SESSION_NOT_FOUND' },
+    };
   }
   // Never trust the sessionId alone: without this any authenticated learner
   // could settle — and read the debrief of — somebody else's session.
   if (session.user_id !== userId) {
-    return { status: 404, body: { error: 'Session not found.', code: 'SESSION_NOT_FOUND' } };
+    return {
+      status: 404,
+      body: { error: 'Session not found.', code: 'SESSION_NOT_FOUND' },
+    };
   }
 
   // A second `end` is not an error. The client retries, and the reaper may have
@@ -83,7 +98,10 @@ export async function handleEnd(
       body: {
         sessionId: session.id,
         alreadyEnded: true,
-        minutesSpoken: Math.max(1, Math.round((session.observed_seconds ?? 0) / 60)),
+        minutesSpoken: Math.max(
+          1,
+          Math.round((session.observed_seconds ?? 0) / 60),
+        ),
         debrief: session.debrief ?? null,
         savedWords: [],
       },
@@ -93,28 +111,33 @@ export async function handleEnd(
   // ── 1. settle ───────────────────────────────────────────────────────
   const startedAt = new Date(session.started_at).getTime();
   const observedRaw = Math.ceil((Date.now() - startedAt) / 1000);
-  const settled = settlement(session.granted_seconds, session.granted_cents, observedRaw);
-
-  if (settled.refundSeconds > 0 || settled.refundCents > 0) {
-    const results = await Promise.allSettled([
-      settled.refundSeconds > 0
-        ? supabase.rpc('refund_daily_quota', {
-            p_user_id: userId, p_counter: 'tutor_seconds', p_amount: settled.refundSeconds,
-          })
-        : Promise.resolve(null),
-      settled.refundCents > 0
-        ? supabase.rpc('refund_monthly_quota', {
-            p_user_id: userId, p_counter: 'tutor_cents', p_amount: settled.refundCents,
-          })
-        : Promise.resolve(null),
-    ]);
-    for (const r of results) {
-      if (r.status === 'rejected') {
-        // A refund that does not land is a learner charged for time they did
-        // not use, and it surfaces nowhere else.
-        console.error('[tutor-session] REFUND FAILED on end:', r.reason);
-      }
-    }
+  const wanted = settlement(
+    session.granted_seconds,
+    session.granted_cents,
+    observedRaw,
+  );
+  let settled: Awaited<ReturnType<typeof settleTutorSession>>;
+  try {
+    settled = await settleTutorSession(supabase, {
+      sessionId: session.id,
+      userId,
+      settlement: wanted,
+    });
+  } catch (err) {
+    // The RPC records observed use and both refunds in one transaction. If it
+    // fails, none of those writes committed and the open row remains eligible
+    // for the reaper to retry.
+    console.error(
+      '[tutor-session] atomic settlement failed:',
+      err instanceof Error ? err.message : err,
+    );
+    return {
+      status: 503,
+      body: {
+        error: 'Your session is still being finalized. Please retry.',
+        code: 'SETTLEMENT_PENDING',
+      },
+    };
   }
 
   // ── 2. analyse and write back (best effort) ─────────────────────────
@@ -122,12 +145,17 @@ export async function handleEnd(
   let savedWords: string[] = [];
   let analyzed = false;
   let transcriptLost = false;
+  let recoveryPending = false;
 
   try {
     const buffered = await readTranscript(session.id);
     transcriptLost = !buffered.available;
 
-    if (buffered.available && buffered.turns.length > 0 && env.anthropicKey) {
+    if (buffered.available && buffered.turns.length > 0 && !env.anthropicKey) {
+      recoveryPending = true;
+    } else if (
+      buffered.available && buffered.turns.length > 0 && env.anthropicKey
+    ) {
       const cefrLevel = session.cefr_level || proficiencyToCefr(session.level);
       const analysis = await analyzeTutorSession({
         transcript: buffered.turns,
@@ -139,7 +167,14 @@ export async function handleEnd(
         apiKey: env.anthropicKey,
       });
 
-      const limits = await getEffectiveLimits(userId, supabase);
+      const { data: subscription } = await supabase
+        .from('subscriptions')
+        .select('tier, is_active')
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .maybeSingle();
+      const tier = (subscription?.tier as string | undefined) ?? 'starter';
+      const limits = await getEffectiveLimits(userId, supabase, tier);
       const written = await writeBackTutorSession(supabase, {
         userId,
         sessionId: session.id,
@@ -153,34 +188,54 @@ export async function handleEnd(
       });
 
       debrief = written.debrief;
-      savedWords = analysis.vocabulary.map((v) => v.word).slice(0, written.cardsSaved);
+      savedWords = analysis.vocabulary.map((v) => v.word).slice(
+        0,
+        written.cardsSaved,
+      );
       analyzed = !written.alreadyAnalyzed;
     }
   } catch (err) {
     // Never fatal. The money is already settled correctly, and a lost debrief
     // is recoverable by the reaper; failing the request here would tell the
     // learner their session broke when in fact it did not.
-    console.error('[tutor-session] write-back failed:', err instanceof Error ? err.message : err);
+    console.error(
+      '[tutor-session] write-back failed:',
+      err instanceof Error ? err.message : err,
+    );
+    await recordTutorAnalysisFailure(supabase, {
+      sessionId: session.id,
+      userId,
+      error: err,
+    }).catch((recordErr) => {
+      console.error(
+        '[tutor-session] failed to record analysis retry:',
+        recordErr instanceof Error ? recordErr.message : recordErr,
+      );
+    });
+    recoveryPending = true;
   }
 
   // ── 3. close, LAST ──────────────────────────────────────────────────
-  const { error: closeErr } = await supabase
-    .from('tutor_sessions')
-    .update({
-      ended_at: new Date().toISOString(),
-      end_reason: req.endReason ?? 'learner',
-      observed_seconds: settled.observedSeconds,
-    })
-    .eq('id', session.id)
-    // Only close a session that is still open, so a race with the reaper
-    // resolves to one writer rather than two.
-    .is('ended_at', null);
+  let closeErr: { message: string } | null = null;
+  if (!recoveryPending) {
+    const closed = await supabase
+      .from('tutor_sessions')
+      .update({
+        ended_at: new Date().toISOString(),
+        end_reason: req.endReason ?? 'learner',
+      })
+      .eq('id', session.id)
+      // Only close a session that is still open, so a race with the reaper
+      // resolves to one writer rather than two.
+      .is('ended_at', null);
+    closeErr = closed.error;
+  }
 
   if (closeErr) {
     console.error('[tutor-session] close failed:', closeErr.message);
   }
 
-  await dropTranscript(session.id);
+  if (!recoveryPending && !closeErr) await dropTranscript(session.id);
 
   return {
     status: 200,
@@ -190,6 +245,7 @@ export async function handleEnd(
       debrief,
       savedWords,
       analyzed,
+      recoveryPending: recoveryPending || Boolean(closeErr),
       // Surfaced so the client can say "your notes are still being written"
       // rather than showing an empty debrief as though nothing happened.
       transcriptLost,

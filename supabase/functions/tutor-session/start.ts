@@ -19,19 +19,19 @@
  * charged for a session that never happened.
  */
 import { getEffectiveLimits, type PlanLimits } from '../_shared/plan-limits.ts';
-import { fetchLearnerContext, serializeLearnerContext, isEntitledToLearnerContext } from '../_shared/learner-context.ts';
+import {
+  fetchLearnerContext,
+  isEntitledToLearnerContext,
+  serializeLearnerContext,
+} from '../_shared/learner-context.ts';
 import { fetchTutorMemory, serializeTutorMemory } from '../_shared/tutor-memory.ts';
 import { proficiencyToCefr } from '../_shared/cefr.ts';
-import { providerFetch, PROVIDER_TIMEOUT_MS } from '../_shared/provider-fetch.ts';
-import {
-  TUTOR_MODEL,
-  TUTOR_HEARTBEAT_SECONDS,
-  centsForSeconds,
-  resolveGrant,
-} from '../_shared/tutor-pricing.ts';
-import { buildTutorInstructions, turnDetectionForLevel, type CorrectionMode } from './instructions.ts';
+import { PROVIDER_TIMEOUT_MS, providerFetch } from '../_shared/provider-fetch.ts';
+import { resolveGrant, settlement, TUTOR_HEARTBEAT_SECONDS, TUTOR_MODEL } from '../_shared/tutor-pricing.ts';
+import { reserveTutorSession, settleTutorSession } from '../_shared/tutor-ledger.ts';
+import { buildTutorInstructions, type CorrectionMode, turnDetectionForLevel } from './instructions.ts';
 import { resolvePersona, speechSpeedForLevel } from './personas.ts';
-import { selectPushStance, type PushSignal } from '../ai-chat/turn-policy.ts';
+import { type PushSignal, selectPushStance } from '../ai-chat/turn-policy.ts';
 
 const CLIENT_SECRETS_URL = 'https://api.openai.com/v1/realtime/client_secrets';
 
@@ -77,8 +77,10 @@ async function readMeters(
     ]);
 
     const [dayRow, monthRow] = await Promise.all([
-      supabase.from('daily_usage').select('tutor_seconds').eq('user_id', userId).eq('date', day).maybeSingle(),
-      supabase.from('monthly_usage').select('tutor_cents').eq('user_id', userId).eq('month', month).maybeSingle(),
+      supabase.from('daily_usage').select('tutor_seconds').eq('user_id', userId)
+        .eq('date', day).maybeSingle(),
+      supabase.from('monthly_usage').select('tutor_cents').eq('user_id', userId)
+        .eq('month', month).maybeSingle(),
     ]);
 
     return {
@@ -86,7 +88,10 @@ async function readMeters(
       tutorCentsThisMonth: Number(monthRow?.data?.tutor_cents ?? 0) || 0,
     };
   } catch (err) {
-    console.warn('[tutor-session] meter read failed:', err instanceof Error ? err.message : err);
+    console.warn(
+      '[tutor-session] meter read failed:',
+      err instanceof Error ? err.message : err,
+    );
     return { tutorSecondsToday: 0, tutorCentsThisMonth: 0 };
   }
 }
@@ -100,7 +105,10 @@ async function readMeters(
  * correlate abuse from one account without being reversible or cross-referenceable.
  */
 async function safetyIdentifier(userId: string, salt: string): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${userId}:${salt}`));
+  const digest = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(`${userId}:${salt}`),
+  );
   return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
@@ -125,7 +133,8 @@ async function fetchPushSignal(
       .limit(30);
     const rows = Array.isArray(data) ? data : [];
     if (rows.length === 0) return { sampleSize: 0, recentAccuracy: null };
-    const acc = rows.map((r: { accuracy: number | null }) => Number(r.accuracy)).filter((n) => Number.isFinite(n));
+    const acc = rows.map((r: { accuracy: number | null }) => Number(r.accuracy))
+      .filter((n) => Number.isFinite(n));
     return {
       sampleSize: acc.length,
       recentAccuracy: acc.length > 0 ? acc.reduce((a, b) => a + b, 0) / acc.length : null,
@@ -172,8 +181,10 @@ export async function handleStart(
   // ── how long may this session run ───────────────────────────────────
   const meters = await readMeters(supabase, userId);
   const grant = resolveGrant({
-    dailySecondsRemaining: limits.dailyTutorMinutes * 60 - meters.tutorSecondsToday,
-    monthlyCentsRemaining: limits.monthlyTutorCents - meters.tutorCentsThisMonth,
+    dailySecondsRemaining: limits.dailyTutorMinutes * 60 -
+      meters.tutorSecondsToday,
+    monthlyCentsRemaining: limits.monthlyTutorCents -
+      meters.tutorCentsThisMonth,
     requestedSeconds: req.requestedMinutes ? Math.round(req.requestedMinutes * 60) : undefined,
   });
 
@@ -192,46 +203,19 @@ export async function handleStart(
     };
   }
 
-  // ── reserve, monthly FIRST ──────────────────────────────────────────
-  // Monthly is the margin guarantee, and a daily failure must not strand a
-  // monthly charge. Every early return past this point refunds what it took.
+  // The database reserves both counters atomically after the pending session
+  // row exists. No counter can move on its own.
   const cents = grant.cents;
-  const { data: monthlyOk, error: monthlyErr } = await supabase.rpc('consume_monthly_quota', {
-    p_user_id: userId,
-    p_counter: 'tutor_cents',
-    p_limit: limits.monthlyTutorCents,
-    p_amount: cents,
-  });
-  if (monthlyErr || monthlyOk !== true) {
-    return {
-      status: 429,
-      body: { error: 'You have used all your live tutor minutes this month.', code: 'MONTHLY_TUTOR_BUDGET_REACHED' },
-    };
-  }
-
-  const { data: dailyOk, error: dailyErr } = await supabase.rpc('consume_daily_quota', {
-    p_user_id: userId,
-    p_counter: 'tutor_seconds',
-    p_limit: limits.dailyTutorMinutes * 60,
-    p_amount: grant.seconds,
-  });
-  if (dailyErr || dailyOk !== true) {
-    await refundBoth(supabase, userId, grant.seconds, cents, 'daily quota refused');
-    return {
-      status: 429,
-      body: { error: 'You have used your live tutor time for today.', code: 'DAILY_TUTOR_LIMIT_REACHED' },
-    };
-  }
 
   // ── assemble the instructions ───────────────────────────────────────
   const persona = resolvePersona(req.personaId);
   const [learnerCtx, memoryNotes, pushSignal] = await Promise.all([
     isEntitledToLearnerContext(tier)
       ? fetchLearnerContext(supabase, {
-          userId,
-          targetLanguage,
-          include: ['goal', 'goal_track', 'pronunciation'],
-        })
+        userId,
+        targetLanguage,
+        include: ['goal', 'goal_track', 'pronunciation'],
+      })
       : Promise.resolve(null),
     fetchTutorMemory(supabase, { userId, targetLanguage }),
     fetchPushSignal(supabase, userId, targetLanguage, cefrLevel),
@@ -265,14 +249,69 @@ export async function handleStart(
       model: TUTOR_MODEL,
       granted_seconds: grant.seconds,
       granted_cents: cents,
+      // Pending rows are terminal until reserve_tutor_session atomically
+      // charges both counters and opens them. A crashed start cannot become a
+      // phantom open session for the reaper.
+      ended_at: new Date().toISOString(),
+      end_reason: 'error',
+      observed_seconds: 0,
     })
     .select('id')
     .single();
 
   if (sessionErr || !session) {
-    await refundBoth(supabase, userId, grant.seconds, cents, 'session insert failed');
-    console.error('[tutor-session] session insert failed:', sessionErr?.message);
-    return { status: 500, body: { error: 'Could not start a session. Please try again.', code: 'SESSION_INSERT_FAILED' } };
+    console.error(
+      '[tutor-session] session insert failed:',
+      sessionErr?.message,
+    );
+    return {
+      status: 500,
+      body: {
+        error: 'Could not start a session. Please try again.',
+        code: 'SESSION_INSERT_FAILED',
+      },
+    };
+  }
+
+  let reserveStatus;
+  try {
+    reserveStatus = await reserveTutorSession(supabase, {
+      sessionId: session.id,
+      userId,
+      dailyLimit: limits.dailyTutorMinutes * 60,
+      monthlyLimit: limits.monthlyTutorCents,
+    });
+  } catch (err) {
+    console.error(
+      '[tutor-session] atomic reservation failed:',
+      err instanceof Error ? err.message : err,
+    );
+    return {
+      status: 500,
+      body: {
+        error: 'Could not reserve tutor time. Please try again.',
+        code: 'RESERVATION_FAILED',
+      },
+    };
+  }
+
+  if (reserveStatus === 'monthly_limit') {
+    return {
+      status: 429,
+      body: {
+        error: 'You have used all your live tutor minutes this month.',
+        code: 'MONTHLY_TUTOR_BUDGET_REACHED',
+      },
+    };
+  }
+  if (reserveStatus === 'daily_limit') {
+    return {
+      status: 429,
+      body: {
+        error: 'You have used your live tutor time for today.',
+        code: 'DAILY_TUTOR_LIMIT_REACHED',
+      },
+    };
   }
 
   // ── mint ────────────────────────────────────────────────────────────
@@ -284,7 +323,10 @@ export async function handleStart(
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${env.openaiKey}`,
-          'OpenAI-Safety-Identifier': await safetyIdentifier(userId, env.safetySalt),
+          'OpenAI-Safety-Identifier': await safetyIdentifier(
+            userId,
+            env.safetySalt,
+          ),
         },
         body: JSON.stringify({
           session: {
@@ -292,7 +334,10 @@ export async function handleStart(
             model: TUTOR_MODEL,
             instructions,
             audio: {
-              output: { voice: persona.voice, speed: speechSpeedForLevel(level) },
+              output: {
+                voice: persona.voice,
+                speed: speechSpeedForLevel(level),
+              },
               input: {
                 turn_detection: turnDetectionForLevel(level),
                 transcription: { model: 'whisper-1' },
@@ -310,7 +355,11 @@ export async function handleStart(
       const detail = await res.text().catch(() => '');
       // Never return the provider's text to the client — it can echo the
       // instructions back, which would leak the system prompt.
-      console.error('[tutor-session] mint failed:', res.status, detail.slice(0, 300));
+      console.error(
+        '[tutor-session] mint failed:',
+        res.status,
+        detail.slice(0, 300),
+      );
       throw new Error(`mint ${res.status}`);
     }
 
@@ -318,8 +367,10 @@ export async function handleStart(
     // The response shape has moved between API revisions; accept the secret at
     // the top level or nested, and fail loudly rather than handing the client
     // an undefined token it would spend a round trip discovering.
-    const clientSecret: string | undefined = minted?.value ?? minted?.client_secret?.value;
-    const expiresAt: number | undefined = minted?.expires_at ?? minted?.client_secret?.expires_at;
+    const clientSecret: string | undefined = minted?.value ??
+      minted?.client_secret?.value;
+    const expiresAt: number | undefined = minted?.expires_at ??
+      minted?.client_secret?.expires_at;
     if (typeof clientSecret !== 'string' || clientSecret.length === 0) {
       throw new Error('mint returned no client secret');
     }
@@ -338,7 +389,10 @@ export async function handleStart(
         personaId: persona.id,
         remainingTutorMinutesToday: Math.max(
           0,
-          Math.floor((limits.dailyTutorMinutes * 60 - meters.tutorSecondsToday - grant.seconds) / 60),
+          Math.floor(
+            (limits.dailyTutorMinutes * 60 - meters.tutorSecondsToday -
+              grant.seconds) / 60,
+          ),
         ),
       },
     };
@@ -346,32 +400,36 @@ export async function handleStart(
     // THE important error path. We have charged for a session that will not
     // happen; give it all back and mark the row so the reaper does not later
     // try to settle a session that never opened.
-    await refundBoth(supabase, userId, grant.seconds, cents, 'mint failed');
-    await supabase
-      .from('tutor_sessions')
-      .update({ ended_at: new Date().toISOString(), end_reason: 'error', observed_seconds: 0 })
-      .eq('id', session.id);
-    console.error('[tutor-session] mint threw:', err instanceof Error ? err.message : err);
-    return { status: 502, body: { error: 'The tutor is unavailable right now. Please try again.', code: 'TUTOR_UNAVAILABLE' } };
-  }
-}
-
-/** Give back both reservations. Logged loudly on failure: a refund that does not
- *  land is a learner charged for nothing, and it will not show up anywhere else. */
-async function refundBoth(
-  supabase: Client,
-  userId: string,
-  seconds: number,
-  cents: number,
-  why: string,
-): Promise<void> {
-  const results = await Promise.allSettled([
-    supabase.rpc('refund_daily_quota', { p_user_id: userId, p_counter: 'tutor_seconds', p_amount: seconds }),
-    supabase.rpc('refund_monthly_quota', { p_user_id: userId, p_counter: 'tutor_cents', p_amount: cents }),
-  ]);
-  for (const r of results) {
-    if (r.status === 'rejected') {
-      console.error(`[tutor-session] REFUND FAILED (${why}):`, r.reason);
+    try {
+      await settleTutorSession(supabase, {
+        sessionId: session.id,
+        userId,
+        settlement: settlement(grant.seconds, cents, 0),
+      });
+      await supabase
+        .from('tutor_sessions')
+        .update({ ended_at: new Date().toISOString(), end_reason: 'error' })
+        .eq('id', session.id)
+        .is('ended_at', null);
+    } catch (settleErr) {
+      // Keep the reserved row open: the reaper will retry the atomic
+      // settlement. Closing it here would hide a charge that still needs its
+      // refund.
+      console.error(
+        '[tutor-session] MINT REFUND FAILED:',
+        settleErr instanceof Error ? settleErr.message : settleErr,
+      );
     }
+    console.error(
+      '[tutor-session] mint threw:',
+      err instanceof Error ? err.message : err,
+    );
+    return {
+      status: 502,
+      body: {
+        error: 'The tutor is unavailable right now. Please try again.',
+        code: 'TUTOR_UNAVAILABLE',
+      },
+    };
   }
 }

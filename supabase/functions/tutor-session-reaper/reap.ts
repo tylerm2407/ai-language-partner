@@ -33,19 +33,13 @@
  * The refund is computed from `last_heartbeat_at - started_at`, both already on
  * the row, so deferring phase B by a tick changes nothing about the amount.
  *
- * ── Replay safety, and the one hole it leaves ─────────────────────────────
+ * ── Replay safety ──────────────────────────────────────────────────────────
  *
  * `ended_at IS NULL` is this function's own queue predicate, so the close is
- * written LAST and everything before it is replayable: the money is claimed by
- * a conditional `observed_seconds IS NULL` update before either refund, and the
- * analysis is claimed by `writeBackTutorSession` on `analyzed_at IS NULL`.
- *
- * The hole, stated rather than hidden: if the settle claim lands and the refund
- * RPC then fails, the next tick sees the session as already settled and does
- * NOT retry the refund. That learner has been charged for time they did not
- * spend and no other system will notice — which is why a refund failure is
- * logged at `error` and counted on its own rather than folded into the generic
- * error count. That log line is the only evidence it happened.
+ * written LAST and everything before it is replayable. Migration 120 makes the
+ * observed-use claim and both refunds one Postgres transaction; a failure
+ * rolls the complete settlement back. Analysis has its own `analyzed_at`
+ * idempotency claim in `writeBackTutorSession`.
  *
  * ── Everything here is injected ───────────────────────────────────────────
  *
@@ -93,6 +87,7 @@ export const SAFETY_EVENT_RETENTION_DAYS = 90;
  * the next tick with their money already refunded.
  */
 export const DEFAULT_ANALYSIS_BUDGET_MS = 45_000;
+export const MAX_ANALYSIS_ATTEMPTS = 3;
 
 // ─── The row ──────────────────────────────────────────────────────────────
 
@@ -115,7 +110,9 @@ export interface ReapableSession {
 }
 
 /** Outcome of the conditional `observed_seconds IS NULL` update. */
-export type SettleClaim = 'claimed' | 'already' | 'error';
+export type SettleClaim =
+  | { status: 'settled' | 'already'; observedSeconds: number }
+  | { status: 'error' };
 
 // ─── Injected effects ─────────────────────────────────────────────────────
 
@@ -132,22 +129,24 @@ export interface ReaperDeps {
    *  ORDER BY last_heartbeat_at LIMIT n`. */
   listStale(cutoffIso: string, limit: number): Promise<ReapableSession[]>;
 
-  /** Conditional `UPDATE ... SET observed_seconds = $2 WHERE id = $1 AND
-   *  observed_seconds IS NULL`. The money's idempotency guard. */
-  claimSettlement(sessionId: string, observedSeconds: number): Promise<SettleClaim>;
-
-  /** `refund_daily_quota(user, 'tutor_seconds', n)`. Rejects on failure. */
-  refundSeconds(userId: string, seconds: number): Promise<void>;
-
-  /** `refund_monthly_quota(user, 'tutor_cents', n)`. Rejects on failure. */
-  refundCents(userId: string, cents: number): Promise<void>;
+  /** Atomically records observed use and applies both quota refunds. */
+  settleSession(
+    sessionId: string,
+    userId: string,
+    settlement: SessionSettlement,
+  ): Promise<SettleClaim>;
 
   /** `available: false` means the buffer was LOST, not that nobody spoke. */
-  readTranscript(sessionId: string): Promise<{ turns: BufferedTurn[]; available: boolean }>;
+  readTranscript(
+    sessionId: string,
+  ): Promise<{ turns: BufferedTurn[]; available: boolean }>;
 
   /** `analyzeTutorSession`. Never throws in production; the reaper does not
    *  rely on that and catches anyway. */
-  analyze(session: ReapableSession, turns: BufferedTurn[]): Promise<TutorAnalysis>;
+  analyze(
+    session: ReapableSession,
+    turns: BufferedTurn[],
+  ): Promise<TutorAnalysis>;
 
   /** `writeBackTutorSession`, which owns its own `analyzed_at` claim. */
   writeBack(
@@ -155,6 +154,13 @@ export interface ReaperDeps {
     analysis: TutorAnalysis,
     observedSeconds: number,
   ): Promise<{ alreadyAnalyzed: boolean }>;
+
+  /** Atomically increments the durable analysis attempt counter. */
+  recordAnalysisFailure(
+    sessionId: string,
+    userId: string,
+    error: unknown,
+  ): Promise<number>;
 
   /** Conditional `UPDATE ... SET ended_at = now(), end_reason = 'abandoned',
    *  observed_seconds = $2 WHERE id = $1 AND ended_at IS NULL`. */
@@ -174,9 +180,9 @@ export interface ReapOptions {
   /** Defaults to `DEFAULT_ANALYSIS_BUDGET_MS`. */
   analysisBudgetMs?: number;
   /**
-   * Settle and close, but do not analyse. Set by `index.ts` when
-   * `ANTHROPIC_API_KEY` is absent: the money still has to move, and pretending
-   * the transcript buffer was lost would put a false line in the log.
+   * Settle but leave open without analysing. Set by `index.ts` when
+   * `ANTHROPIC_API_KEY` is absent: money still moves, while the transcript
+   * remains queued until the configuration is repaired.
    */
   skipAnalysis?: boolean;
 }
@@ -186,7 +192,7 @@ export interface ReapOptions {
  *
  * The counts are deliberately not collapsed into "succeeded / failed". Each of
  * these means something different operationally: `lostBuffer` climbing is a
- * Redis problem, `refundFailures` above zero is a learner owed money,
+ * Redis problem, `settlementFailures` above zero needs a retry,
  * `deferred` climbing means the batch is bigger than a tick can carry, and
  * `errors` is the only one that means "something is broken in here".
  */
@@ -197,9 +203,8 @@ export interface ReapSummary {
   settled: number;
   /** Sessions a previous tick (or the `end` action) had already settled. */
   alreadySettled: number;
-  /** Refund RPCs that failed AFTER the settle claim landed. See the header:
-   *  each one is a learner charged for time they did not use. */
-  refundFailures: number;
+  /** Atomic settlement transactions that rolled back and remain retryable. */
+  settlementFailures: number;
   /** Sessions closed with `end_reason = 'abandoned'` this run. */
   reaped: number;
   /** Sessions whose transcript was analysed and written back this run. */
@@ -214,6 +219,8 @@ export interface ReapSummary {
   emptyTranscript: number;
   /** Analysis suppressed by `skipAnalysis`. */
   analysisSkipped: number;
+  /** Analysis failures left open for a bounded retry. */
+  analysisRetries: number;
   /** Settled but left open by the wall-clock budget. Next tick finishes them. */
   deferred: number;
   /** Sessions that threw. Each is isolated; the rest of the batch continues. */
@@ -227,13 +234,14 @@ function emptySummary(): ReapSummary {
     scanned: 0,
     settled: 0,
     alreadySettled: 0,
-    refundFailures: 0,
+    settlementFailures: 0,
     reaped: 0,
     analyzed: 0,
     alreadyAnalyzed: 0,
     lostBuffer: 0,
     emptyTranscript: 0,
     analysisSkipped: 0,
+    analysisRetries: 0,
     deferred: 0,
     errors: 0,
     safetyEventsDeleted: 0,
@@ -257,7 +265,8 @@ export function staleCutoffIso(nowMs: number): string {
 
 /** The instant a safety flag has to predate to be swept. */
 export function safetyCutoffIso(nowMs: number): string {
-  return new Date(nowMs - SAFETY_EVENT_RETENTION_DAYS * 86_400_000).toISOString();
+  return new Date(nowMs - SAFETY_EVENT_RETENTION_DAYS * 86_400_000)
+    .toISOString();
 }
 
 /**
@@ -325,67 +334,36 @@ export function settleFor(session: ReapableSession): SessionSettlement | null {
 /**
  * Settle one session and refund what it did not use.
  *
- * The claim comes FIRST, before either refund — see the file header. An
- * errored claim is treated as "unknown" and the session is left entirely
- * alone: the next tick retries it, whereas refunding against a claim we could
- * not confirm is the one mistake here that cannot be undone.
- *
- * The two refunds are independent on purpose. They meter different things in
- * different tables (`daily_usage.tutor_seconds`, `monthly_usage.tutor_cents`),
- * so a failure of one must not skip the other — the monthly cents ceiling is
- * the one the plans are actually sold on.
+ * The database changes observed_seconds and both quota rows atomically. An error
+ * leaves the session entirely untouched for the next tick. An idempotent retry
+ * returns the stored winning observation so a competing worker cannot
+ * overwrite it with a later estimate.
  */
 async function settleOne(
   deps: ReaperDeps,
   session: ReapableSession,
   owed: SessionSettlement,
   summary: ReapSummary,
-): Promise<boolean> {
-  const claim = await deps.claimSettlement(session.id, owed.observedSeconds);
+): Promise<number | null> {
+  const claim = await deps.settleSession(session.id, session.user_id, owed);
 
-  if (claim === 'already') {
+  if (claim.status === 'already') {
     summary.alreadySettled += 1;
-    return true;
+    return claim.observedSeconds;
   }
-  if (claim === 'error') {
-    // Not counted as a settlement in either direction: we genuinely do not
-    // know. Leaving the row open costs one tick of delay and nothing else.
-    console.error(`[${FN}] settle claim failed for ${session.id}; leaving it for the next tick`);
+  if (claim.status === 'error') {
+    // The database transaction rolled back, so leaving the row open makes the
+    // complete settlement retryable on the next tick.
+    console.error(
+      `[${FN}] atomic settlement failed for ${session.id}; leaving it for the next tick`,
+    );
+    summary.settlementFailures += 1;
     summary.errors += 1;
-    return false;
+    return null;
   }
 
   summary.settled += 1;
-
-  if (owed.refundSeconds > 0) {
-    try {
-      await deps.refundSeconds(session.user_id, owed.refundSeconds);
-    } catch (err) {
-      // LOUD on purpose. Nothing downstream re-derives this: the settle claim
-      // has already landed, so no later tick will retry the refund, and the
-      // learner's daily tutor allowance stays spent on time they did not use.
-      // This log line is the only trace it happened.
-      summary.refundFailures += 1;
-      console.error(
-        `[${FN}] REFUND FAILED (daily tutor_seconds) session=${session.id} amount=${owed.refundSeconds}:`,
-        err instanceof Error ? err.message : err,
-      );
-    }
-  }
-
-  if (owed.refundCents > 0) {
-    try {
-      await deps.refundCents(session.user_id, owed.refundCents);
-    } catch (err) {
-      summary.refundFailures += 1;
-      console.error(
-        `[${FN}] REFUND FAILED (monthly tutor_cents) session=${session.id} amount=${owed.refundCents}:`,
-        err instanceof Error ? err.message : err,
-      );
-    }
-  }
-
-  return true;
+  return claim.observedSeconds;
 }
 
 // ─── Phase B: the learning, then the close ────────────────────────────────
@@ -404,11 +382,9 @@ async function settleOne(
  * a conversation we simply failed to keep, and the learner would have no way
  * to tell that from a session where they said nothing.
  *
- * The close runs even when the analysis threw. The money is already settled by
- * then, so leaving the row open would re-queue a session that fails the same
- * way next tick — and because the query is ordered oldest heartbeat first, one
- * poisoned row would sit at the head of the queue starving everything behind
- * it.
+ * Analysis failures are durably counted and retried. The third failure closes
+ * the session but retains the transcript for manual recovery, bounding poison
+ * rows without turning a transient provider outage into immediate data loss.
  */
 async function recoverOne(
   deps: ReaperDeps,
@@ -422,7 +398,10 @@ async function recoverOne(
   try {
     if (skipAnalysis) {
       summary.analysisSkipped += 1;
-      console.warn(`[${FN}] analysis disabled; settling and closing ${session.id} without a write-back`);
+      console.warn(
+        `[${FN}] analysis disabled; leaving ${session.id} open with its transcript retained`,
+      );
+      return;
     } else {
       const buffer = await deps.readTranscript(session.id);
 
@@ -433,7 +412,9 @@ async function recoverOne(
         );
       } else if (buffer.turns.length === 0) {
         summary.emptyTranscript += 1;
-        console.log(`[${FN}] transcript for ${session.id} is empty; nothing to analyse`);
+        console.log(
+          `[${FN}] transcript for ${session.id} is empty; nothing to analyse`,
+        );
       } else {
         const analysis = await deps.analyze(session, buffer.turns);
         const written = await deps.writeBack(session, analysis, observed);
@@ -448,9 +429,33 @@ async function recoverOne(
   } catch (err) {
     summary.errors += 1;
     console.error(
-      `[${FN}] learning recovery failed for ${session.id}; closing anyway:`,
+      `[${FN}] learning recovery failed for ${session.id}:`,
       err instanceof Error ? err.message : err,
     );
+    try {
+      const attempts = await deps.recordAnalysisFailure(
+        session.id,
+        session.user_id,
+        err,
+      );
+      if (attempts < MAX_ANALYSIS_ATTEMPTS) {
+        summary.analysisRetries += 1;
+        console.warn(
+          `[${FN}] leaving ${session.id} open for analysis retry ${attempts}/${MAX_ANALYSIS_ATTEMPTS}`,
+        );
+        return;
+      }
+      console.error(
+        `[${FN}] analysis exhausted ${attempts} attempts for ${session.id}; closing with transcript retained`,
+      );
+    } catch (recordErr) {
+      summary.errors += 1;
+      console.error(
+        `[${FN}] could not record analysis failure for ${session.id}; leaving it open:`,
+        recordErr instanceof Error ? recordErr.message : recordErr,
+      );
+      return;
+    }
   }
 
   // The close is last. See the file header: `ended_at IS NULL` is the queue
@@ -502,7 +507,10 @@ export async function reapAbandonedSessions(
     // A failed scan is not a failed run: the safety sweep below is independent
     // of it and there is no reason to skip it too.
     summary.errors += 1;
-    console.error(`[${FN}] stale-session scan failed:`, err instanceof Error ? err.message : err);
+    console.error(
+      `[${FN}] stale-session scan failed:`,
+      err instanceof Error ? err.message : err,
+    );
     sessions = [];
   }
   summary.scanned = sessions.length;
@@ -519,19 +527,24 @@ export async function reapAbandonedSessions(
         // direction: a live session settled early is a learner cut off
         // mid-sentence and billed for a conversation they are still having.
         summary.errors += 1;
-        console.error(`[${FN}] listStale returned a session that is not stale: ${session.id}`);
+        console.error(
+          `[${FN}] listStale returned a session that is not stale: ${session.id}`,
+        );
         continue;
       }
 
       const owed = settleFor(session);
       if (owed === null) {
         summary.errors += 1;
-        console.error(`[${FN}] session ${session.id} has unreadable timestamps; not settling`);
+        console.error(
+          `[${FN}] session ${session.id} has unreadable timestamps; not settling`,
+        );
         continue;
       }
 
-      if (await settleOne(deps, session, owed, summary)) {
-        settled.push({ session, observed: owed.observedSeconds });
+      const observed = await settleOne(deps, session, owed, summary);
+      if (observed !== null) {
+        settled.push({ session, observed });
       }
     } catch (err) {
       summary.errors += 1;
@@ -549,7 +562,9 @@ export async function reapAbandonedSessions(
       // tick picks them up with their money already refunded and only the
       // learning half left to do.
       summary.deferred = settled.length - i;
-      console.warn(`[${FN}] analysis budget exhausted; deferring ${summary.deferred} session(s)`);
+      console.warn(
+        `[${FN}] analysis budget exhausted; deferring ${summary.deferred} session(s)`,
+      );
       break;
     }
 
@@ -573,10 +588,15 @@ export async function reapAbandonedSessions(
   // that has nothing to do with which sessions happened to be abandoned, and
   // running it fifty times a tick would be fifty identical deletes.
   try {
-    summary.safetyEventsDeleted = await deps.sweepSafetyEvents(safetyCutoffIso(startedAt));
+    summary.safetyEventsDeleted = await deps.sweepSafetyEvents(
+      safetyCutoffIso(startedAt),
+    );
   } catch (err) {
     summary.safetySweepFailed = true;
-    console.error(`[${FN}] safety-event sweep failed:`, err instanceof Error ? err.message : err);
+    console.error(
+      `[${FN}] safety-event sweep failed:`,
+      err instanceof Error ? err.message : err,
+    );
   }
 
   return summary;

@@ -33,6 +33,7 @@ import { corsHeaders, corsResponse } from '../_shared/cors.ts';
 import { getEffectiveLimits } from '../_shared/plan-limits.ts';
 import { analyzeTutorSession } from '../_shared/tutor-analysis.ts';
 import { writeBackTutorSession } from '../_shared/tutor-writeback.ts';
+import { recordTutorAnalysisFailure, settleTutorSession } from '../_shared/tutor-ledger.ts';
 import { dropTranscript, readTranscript } from '../_shared/tutor-transcript-buffer.ts';
 import type { CEFR } from '../_shared/level-checker.ts';
 import {
@@ -49,8 +50,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const FN = 'tutor-session-reaper';
 
 /** Exactly the columns ./reap.ts declares in `ReapableSession`. */
-const SESSION_COLUMNS =
-  'id, user_id, target_language, native_language, level, cefr_level, correction_mode, ' +
+const SESSION_COLUMNS = 'id, user_id, target_language, native_language, level, cefr_level, correction_mode, ' +
   'granted_seconds, granted_cents, started_at, last_heartbeat_at, observed_seconds';
 
 function json(body: unknown, status = 200): Response {
@@ -69,8 +69,11 @@ function json(body: unknown, status = 200): Response {
  * every paying learner's recovered session down to the free tier's three
  * cards — punishing exactly the learners whose app crashed.
  */
-// deno-lint-ignore no-explicit-any
-async function chatCardLimitFor(supabase: any, userId: string): Promise<number> {
+async function chatCardLimitFor(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  userId: string,
+): Promise<number> {
   const { data: sub } = await supabase
     .from('subscriptions')
     .select('tier, is_active')
@@ -112,37 +115,20 @@ function buildDeps(supabase: any, anthropicKey: string): ReaperDeps {
       return (data ?? []) as ReapableSession[];
     },
 
-    async claimSettlement(sessionId, observedSeconds): Promise<SettleClaim> {
-      // `observed_seconds IS NULL` is migration 107's stated double-settle
-      // detector. Postgres evaluates the predicate under the row lock, so of
-      // two concurrent callers exactly one gets a row back.
-      const { data, error } = await supabase
-        .from('tutor_sessions')
-        .update({ observed_seconds: observedSeconds })
-        .eq('id', sessionId)
-        .is('observed_seconds', null)
-        .select('id');
-      if (error) return 'error';
-      if (Array.isArray(data) && data.length === 0) return 'already';
-      return 'claimed';
-    },
-
-    async refundSeconds(userId, seconds) {
-      const { error } = await supabase.rpc('refund_daily_quota', {
-        p_user_id: userId,
-        p_counter: 'tutor_seconds',
-        p_amount: seconds,
-      });
-      if (error) throw new Error(error.message);
-    },
-
-    async refundCents(userId, cents) {
-      const { error } = await supabase.rpc('refund_monthly_quota', {
-        p_user_id: userId,
-        p_counter: 'tutor_cents',
-        p_amount: cents,
-      });
-      if (error) throw new Error(error.message);
+    async settleSession(sessionId, userId, wanted): Promise<SettleClaim> {
+      try {
+        const result = await settleTutorSession(supabase, {
+          sessionId,
+          userId,
+          settlement: wanted,
+        });
+        return {
+          status: result.status === 'already_settled' ? 'already' : 'settled',
+          observedSeconds: result.observedSeconds,
+        };
+      } catch {
+        return { status: 'error' };
+      }
     },
 
     readTranscript: (sessionId) => readTranscript(sessionId),
@@ -175,6 +161,9 @@ function buildDeps(supabase: any, anthropicKey: string): ReaperDeps {
       });
       return { alreadyAnalyzed: result.alreadyAnalyzed };
     },
+
+    recordAnalysisFailure: (sessionId, userId, error) =>
+      recordTutorAnalysisFailure(supabase, { sessionId, userId, error }),
 
     async closeSession(sessionId, observedSeconds) {
       // Guarded on `ended_at IS NULL` so a close can never overwrite an honest
@@ -217,14 +206,21 @@ serve(async (req: Request) => {
   // Copied from daily-news-audio-cron. The secret lives ONLY in Vault
   // (migration 020 + the get_cron_secret RPC); both pg_cron and this function
   // read the same value, so there is no separate env var to drift.
-  const { data: secretData, error: secretErr } = await supabase.rpc('get_cron_secret');
+  const { data: secretData, error: secretErr } = await supabase.rpc(
+    'get_cron_secret',
+  );
   if (secretErr || !secretData) {
-    return json({ error: 'Cron secret unavailable — Vault entry missing' }, 500);
+    return json(
+      { error: 'Cron secret unavailable — Vault entry missing' },
+      500,
+    );
   }
   const cronSecret = secretData as string;
 
   if (!cronSecret || cronSecret.length < 16) {
-    console.error('[SECURITY] CRON_SECRET is missing or too short. Set a 32+ byte random value in Vault.');
+    console.error(
+      '[SECURITY] CRON_SECRET is missing or too short. Set a 32+ byte random value in Vault.',
+    );
     return json({ error: 'Cron secret is not configured securely' }, 500);
   }
 
@@ -256,18 +252,23 @@ serve(async (req: Request) => {
   // never happened.
   const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY') ?? '';
   if (!anthropicKey) {
-    console.error(`[${FN}] ANTHROPIC_API_KEY is not set; settling and closing without analysis`);
+    console.error(
+      `[${FN}] ANTHROPIC_API_KEY is not set; settling money and retaining transcripts for retry`,
+    );
   }
 
-  const summary = await reapAbandonedSessions(buildDeps(supabase, anthropicKey), {
-    limit: REAP_BATCH_LIMIT,
-    skipAnalysis: !anthropicKey,
-  });
+  const summary = await reapAbandonedSessions(
+    buildDeps(supabase, anthropicKey),
+    {
+      limit: REAP_BATCH_LIMIT,
+      skipAnalysis: !anthropicKey,
+    },
+  );
 
   const elapsedMs = Date.now() - startedAt;
 
-  // One line, every count. `refundFailures > 0` is the one that means a
-  // learner is owed money and nothing else will say so.
+  // One line, every count. Atomic settlement failures remain open and are
+  // retried on the next scheduled run.
   console.log(`[${FN}] ${JSON.stringify({ ...summary, elapsedMs })}`);
 
   return json({ ...summary, elapsedMs });
