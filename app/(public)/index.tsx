@@ -9,9 +9,11 @@ import { useMotion } from '../../hooks/useMotion';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
 
 /**
- * Welcome — the first screen of UI 2.0. Sol is curled up asleep (the sleep
- * loop, breathing only), the headline and subline fade up in sequence, then
- * the two actions. No progress bar: nothing has been answered yet.
+ * Welcome — the first screen of UI 2.0. Sol plays his bedtime (circles,
+ * fire, curls up) and settles into the sleep loop; the sequence starts over
+ * on every launch and every return to the foreground. The headline and
+ * subline fade up in sequence, then the two actions. No progress bar:
+ * nothing has been answered yet.
  */
 export default function WelcomeScreen() {
   const router = useRouter();
@@ -38,7 +40,7 @@ export default function WelcomeScreen() {
       }
     >
       <View style={styles.body}>
-        <MascotSol size={150} mood="asleep" />
+        <MascotSol size={150} mood="bedtime" />
         <Animated.View entering={enter(0)} style={styles.block}>
           <Text
             accessibilityRole="header"

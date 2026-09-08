@@ -17,6 +17,10 @@
  *   - `sleepy` is the exception: bedtime plays once and then hands over to
  *     the sleep loop, and Sol stays asleep until the parent asks for
  *     something else. `asleep` skips the bedtime and starts in the loop.
+ *   - Every time the app comes back to the foreground the current state's
+ *     clip starts over from its first frame (a mount does the same), so a
+ *     screen left on `sleepy` shows the whole bedtime again on each return
+ *     rather than resuming mid-loop.
  *   - Reduce Motion, Android, and the moment before the first frame decodes
  *     all show the transparent still.
  *   - The iOS SIMULATOR decodes only the base layer of an HEVC-with-alpha
@@ -31,7 +35,7 @@
  * When the Rive rig lands it replaces the Video element behind this same API.
  */
 import { useEffect, useRef, useState } from 'react';
-import { Image, Platform, StyleSheet, View, type ViewStyle } from 'react-native';
+import { AppState, Image, Platform, StyleSheet, View, type ViewStyle } from 'react-native';
 import { ResizeMode, Video, type AVPlaybackStatus } from 'expo-av';
 import { useMotion } from '../../hooks/useMotion';
 
@@ -98,6 +102,9 @@ export function Mascot({ state = 'idle', size = 'md', style, accessibilityVisibl
   const wanted = CLIP_FOR[state];
   const [clip, setClip] = useState<Clip>(wanted);
   const [ready, setReady] = useState(false);
+  // Bumped on every return to the foreground; part of the Video key, so the
+  // player remounts and the sequence starts from frame one.
+  const [run, setRun] = useState(0);
   const busyRef = useRef(false);
 
   // Latch: a one-shot runs to its end even if the parent has already gone
@@ -110,6 +117,16 @@ export function Mascot({ state = 'idle', size = 'md', style, accessibilityVisibl
     }
     busyRef.current = !LOOPS.has(wanted);
     setClip(wanted);
+  }, [wanted]);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next !== 'active') return;
+      busyRef.current = !LOOPS.has(wanted);
+      setClip(wanted);
+      setRun((n) => n + 1);
+    });
+    return () => sub.remove();
   }, [wanted]);
 
   const onStatus = (s: AVPlaybackStatus) => {
@@ -143,7 +160,7 @@ export function Mascot({ state = 'idle', size = 'md', style, accessibilityVisibl
           there is never an empty box on mount or on a source swap. */}
       {!ready && <Image source={STILL} style={[styles.fill, StyleSheet.absoluteFill]} resizeMode="contain" />}
       <Video
-        key={clip}
+        key={`${clip}-${run}`}
         source={CLIPS[clip]}
         style={[styles.fill, styles.clear]}
         resizeMode={ResizeMode.CONTAIN}
