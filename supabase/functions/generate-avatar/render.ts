@@ -59,9 +59,19 @@ interface RenderArgs {
   usingFreeGrant: boolean;
 }
 
+/**
+ * Settle a job as failed and, for a paid caller, hand back the monthly slot.
+ *
+ * The slot is consumed BEFORE the render (index.ts), because that is the only
+ * order that cannot hand out unmetered images. The cost of that order is that
+ * a provider timeout or a rejected photo would otherwise burn one of three
+ * monthly generations on a portrait the learner never got — which is exactly
+ * what happened on 2026-09-08 — so every failure path refunds here. The free
+ * grant needs no refund: it is spent only after success (migration 077).
+ */
 export async function failJob(
   supabase: SupabaseClient,
-  jobId: string,
+  job: { jobId: string; userId: string; refundMonthlySlot: boolean },
   code: string,
   message: string
 ): Promise<void> {
@@ -73,8 +83,19 @@ export async function failJob(
       error_message: message,
       updated_at: new Date().toISOString(),
     })
-    .eq('id', jobId);
+    .eq('id', job.jobId);
   if (error) console.error('[generate-avatar] could not mark job failed:', error.message);
+
+  if (job.refundMonthlySlot) {
+    const { error: refundErr } = await supabase.rpc('refund_monthly_quota', {
+      p_user_id: job.userId,
+      p_counter: 'avatars_generated',
+      p_amount: 1,
+    });
+    if (refundErr) {
+      console.error('[generate-avatar] refund_monthly_quota failed:', refundErr.message);
+    }
+  }
 }
 
 /**
@@ -86,6 +107,7 @@ export async function failJob(
 export async function renderAvatar(args: RenderArgs): Promise<void> {
   const { supabase, req, userId, jobId, styleKey, prompt, imageBase64, mimeType, tier, usingFreeGrant } =
     args;
+  const job = { jobId, userId, refundMonthlySlot: !usingFreeGrant };
 
   // The photo lives only in this buffer. It is never written anywhere.
   const photoBytes = base64ToBytes(imageBase64);
@@ -133,15 +155,13 @@ export async function renderAvatar(args: RenderArgs): Promise<void> {
       // Never echo the provider body to the client — it can quote the prompt.
       console.error(`[generate-avatar] image API ${res.status}:`, detail.slice(0, 500));
       if (res.status === 400) {
-        await failJob(
-          supabase,
-          jobId,
+        await failJob(supabase, job,
           'IMAGE_REJECTED',
           "That photo couldn't be used. Try a clear, well-lit photo of your face."
         );
         return;
       }
-      await failJob(supabase, jobId, 'GENERATION_FAILED', 'Avatar generation failed. Please try again.');
+      await failJob(supabase, job, 'GENERATION_FAILED', 'Avatar generation failed. Please try again.');
       return;
     }
 
@@ -149,16 +169,14 @@ export async function renderAvatar(args: RenderArgs): Promise<void> {
     const b64 = payload?.data?.[0]?.b64_json;
     if (typeof b64 !== 'string' || !b64) {
       console.error('[generate-avatar] image API returned no b64_json');
-      await failJob(supabase, jobId, 'GENERATION_FAILED', 'Avatar generation failed. Please try again.');
+      await failJob(supabase, job, 'GENERATION_FAILED', 'Avatar generation failed. Please try again.');
       return;
     }
     generatedBase64 = b64;
   } catch (err) {
     const aborted = err instanceof Error && err.name === 'AbortError';
     console.error('[generate-avatar] image API call failed:', aborted ? 'timeout' : err);
-    await failJob(
-      supabase,
-      jobId,
+    await failJob(supabase, job,
       aborted ? 'GENERATION_TIMEOUT' : 'GENERATION_FAILED',
       aborted
         ? 'Avatar generation timed out. Please try again.'
@@ -179,7 +197,7 @@ export async function renderAvatar(args: RenderArgs): Promise<void> {
 
   if (upload.error) {
     console.error('[generate-avatar] upload failed:', upload.error.message);
-    await failJob(supabase, jobId, 'SAVE_FAILED', 'Could not save your new avatar. Please try again.');
+    await failJob(supabase, job, 'SAVE_FAILED', 'Could not save your new avatar. Please try again.');
     return;
   }
 
@@ -196,7 +214,7 @@ export async function renderAvatar(args: RenderArgs): Promise<void> {
     console.error('[generate-avatar] profile update failed:', profileErr.message);
     // Roll back the orphaned object rather than leaving storage inconsistent.
     await supabase.storage.from(BUCKET).remove([path]).catch(() => {});
-    await failJob(supabase, jobId, 'SAVE_FAILED', 'Could not save your new avatar. Please try again.');
+    await failJob(supabase, job, 'SAVE_FAILED', 'Could not save your new avatar. Please try again.');
     return;
   }
 

@@ -285,7 +285,12 @@ serve(async (req: Request) => {
       // knows about, so reaching here means a bug, and the client must still
       // stop polling.
       console.error('[generate-avatar] render crashed:', err);
-      await failJob(supabase, jobId, 'GENERATION_FAILED', 'Avatar generation failed. Please try again.');
+      await failJob(
+        supabase,
+        { jobId, userId, refundMonthlySlot: !usingFreeGrant },
+        'GENERATION_FAILED',
+        'Avatar generation failed. Please try again.'
+      );
     })
   );
 
