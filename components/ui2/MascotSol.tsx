@@ -7,7 +7,16 @@
  */
 import { Mascot, type MascotState } from '../mascot/Mascot';
 
-export type MascotMood = 'idle' | 'think' | 'cheer' | 'listening' | 'thinking' | 'approving' | 'surprised' | 'bedtime';
+export type MascotMood =
+  | 'idle'
+  | 'think'
+  | 'cheer'
+  | 'listening'
+  | 'thinking'
+  | 'approving'
+  | 'surprised'
+  | 'bedtime'
+  | 'asleep';
 
 const STATE_FOR: Record<MascotMood, MascotState> = {
   idle: 'idle',
@@ -18,6 +27,7 @@ const STATE_FOR: Record<MascotMood, MascotState> = {
   listening: 'listening',
   surprised: 'surprised',
   bedtime: 'sleepy',
+  asleep: 'asleep',
 };
 
 interface MascotSolProps {

@@ -3,15 +3,20 @@
  *
  * Plays the interim clips in assets/mascot/video: five moods generated from
  * the master still with the same frame at both ends (so they return to the
- * drawing) plus a ten-second bedtime piece. Each is an HEVC-with-alpha .mov,
+ * drawing), a fifteen-second bedtime piece, and an eight-second sleep loop
+ * whose first and last frames are the bedtime clip's final frame, so bedtime
+ * runs straight into it with no cut. Each is an HEVC-with-alpha .mov,
  * which AVPlayer composites with true transparency, so Sol sits on any card,
  * tint or text without a square behind him.
  *
  * Behaviour:
- *   - `idle` loops. Every other state is a one-shot: it plays through, then
- *     the component returns to idle on its own. A parent that flips back to
- *     `idle` mid-clip is ignored until the clip finishes, so a 700ms "cheer"
- *     tick from a picker still shows the whole nod.
+ *   - `idle` and `asleep` loop. Every other state is a one-shot: it plays
+ *     through, then the component returns to idle on its own. A parent that
+ *     flips back to `idle` mid-clip is ignored until the clip finishes, so a
+ *     700ms "cheer" tick from a picker still shows the whole nod.
+ *   - `sleepy` is the exception: bedtime plays once and then hands over to
+ *     the sleep loop, and Sol stays asleep until the parent asks for
+ *     something else. `asleep` skips the bedtime and starts in the loop.
  *   - Reduce Motion, Android, and the moment before the first frame decodes
  *     all show the transparent still.
  *   - The iOS SIMULATOR decodes only the base layer of an HEVC-with-alpha
@@ -38,6 +43,7 @@ export type MascotState =
   | 'listening'
   | 'surprised'
   | 'sleepy'
+  | 'asleep'
   | 'sad'
   | 'disappointed';
 
@@ -53,7 +59,10 @@ interface MascotProps {
 
 const SIZE_PX: Record<Exclude<MascotSize, number>, number> = { xs: 32, sm: 48, md: 80, lg: 128 };
 
-type Clip = 'idle' | 'listening' | 'thinking' | 'approving' | 'surprised' | 'bedtime';
+type Clip = 'idle' | 'listening' | 'thinking' | 'approving' | 'surprised' | 'bedtime' | 'sleep';
+
+/** Clips that repeat until the parent changes state. */
+const LOOPS: ReadonlySet<Clip> = new Set<Clip>(['idle', 'sleep']);
 
 /** Which clip a state plays. Sad/disappointed have no clip of their own yet: Sol just watches. */
 const CLIP_FOR: Record<MascotState, Clip> = {
@@ -64,6 +73,7 @@ const CLIP_FOR: Record<MascotState, Clip> = {
   listening: 'listening',
   surprised: 'surprised',
   sleepy: 'bedtime',
+  asleep: 'sleep',
   sad: 'listening',
   disappointed: 'listening',
 };
@@ -75,6 +85,7 @@ const CLIPS: Record<Clip, number> = {
   approving: require('../../assets/mascot/video/sol-approving.mov'),
   surprised: require('../../assets/mascot/video/sol-surprised.mov'),
   bedtime: require('../../assets/mascot/video/sol-bedtime.mov'),
+  sleep: require('../../assets/mascot/video/sol-sleep.mov'),
 };
 
 const STILL = require('../../assets/mascot/sol-still.png');
@@ -90,23 +101,25 @@ export function Mascot({ state = 'idle', size = 'md', style, accessibilityVisibl
   const busyRef = useRef(false);
 
   // Latch: a one-shot runs to its end even if the parent has already gone
-  // back to idle. A new one-shot request replaces whatever is playing.
+  // back to idle. A new request replaces whatever is playing. Loops never
+  // latch, so a parent can always move Sol out of idle or sleep.
   useEffect(() => {
     if (wanted === 'idle') {
       if (!busyRef.current) setClip('idle');
       return;
     }
-    busyRef.current = true;
+    busyRef.current = !LOOPS.has(wanted);
     setClip(wanted);
   }, [wanted]);
 
   const onStatus = (s: AVPlaybackStatus) => {
     if (!s.isLoaded) return;
     if (!ready) setReady(true);
-    if (s.didJustFinish && clip !== 'idle') {
+    if (s.didJustFinish && !LOOPS.has(clip)) {
       busyRef.current = false;
-      // Bedtime ends asleep on purpose; everything else wakes back up.
-      if (clip !== 'bedtime') setClip('idle');
+      // Bedtime ends asleep on purpose and keeps sleeping; everything else
+      // wakes back up.
+      setClip(clip === 'bedtime' ? 'sleep' : 'idle');
     }
   };
 
@@ -136,7 +149,7 @@ export function Mascot({ state = 'idle', size = 'md', style, accessibilityVisibl
         resizeMode={ResizeMode.CONTAIN}
         shouldPlay
         isMuted
-        isLooping={clip === 'idle'}
+        isLooping={LOOPS.has(clip)}
         useNativeControls={false}
         onPlaybackStatusUpdate={onStatus}
         progressUpdateIntervalMillis={250}
