@@ -18,7 +18,6 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { isRedisConfigured, redisSetNx } from '../_shared/redis.ts';
 import { checkAuthorization, isPlausibleUuid, verifyWebhookSignature } from './auth.ts';
 import { classifyEvent, INACTIVE_EVENTS } from './tier.ts';
 
@@ -26,11 +25,6 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const WEBHOOK_AUTH = Deno.env.get('REVENUECAT_WEBHOOK_AUTH');
 const WEBHOOK_HMAC_SECRET = Deno.env.get('REVENUECAT_WEBHOOK_HMAC_SECRET');
-
-/** How long a processed event id is remembered. RevenueCat retries a failed
- *  delivery for hours, not days, so a day covers every legitimate redelivery
- *  with room to spare. */
-const EVENT_DEDUPE_TTL_SECONDS = 86_400;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
@@ -120,26 +114,43 @@ serve(async (req: Request) => {
   }
   const { tier, isActive, cancelAtPeriodEnd } = decision;
 
-  // ── At-most-once, best effort ──────────────────────────────────────────
-  // RevenueCat retries any delivery it does not see a 2xx for, so the same
-  // event id arrives more than once as a matter of course. Claiming the id
-  // short-circuits the repeat. It is deliberately NOT the thing that makes
-  // redelivery safe — Redis can be unconfigured, cold, or evicted, and the
-  // claim is simply skipped then. What makes it safe is the ordering guard
-  // below plus the upsert being idempotent.
   const eventId = typeof event.id === 'string' ? event.id : null;
-  if (eventId && isRedisConfigured()) {
-    try {
-      const claimed = await redisSetNx(`rc:event:${eventId}`, '1', EVENT_DEDUPE_TTL_SECONDS);
-      if (!claimed) {
-        console.log(`[revenuecat-webhook] duplicate delivery of event ${eventId} (${type}) — ignored`);
-        return new Response(JSON.stringify({ ok: true, duplicate: true }), { status: 200 });
-      }
-    } catch (err) {
-      // Never fail a subscription write because the cache is down. Dropping a
-      // real purchase is far worse than handling a duplicate.
-      console.warn('[revenuecat-webhook] dedupe claim failed (non-fatal):', err);
-    }
+  if (!eventId) {
+    console.error('[revenuecat-webhook] actionable event missing id', type);
+    return new Response(JSON.stringify({ error: 'invalid_event' }), { status: 400 });
+  }
+
+  const { data: claim, error: claimError } = await supabase.rpc(
+    'claim_revenuecat_event',
+    {
+      p_event_id: eventId,
+      p_event_type: type,
+      p_user_id: userId,
+      p_event_data: {
+        product_id: productId,
+        entitlement_ids: entitlementIds,
+        expiration_at_ms: expirationMs ?? null,
+      },
+      p_lease_seconds: 60,
+    },
+  );
+  if (claimError) {
+    console.error('[revenuecat-webhook] durable event claim failed:', claimError.message);
+    return new Response(JSON.stringify({ error: 'internal_error' }), { status: 500 });
+  }
+  const claimStatus = claim && typeof claim === 'object' && !Array.isArray(claim)
+    ? String((claim as Record<string, unknown>).status ?? '')
+    : '';
+  if (claimStatus === 'completed') {
+    return new Response(JSON.stringify({ ok: true, duplicate: true }), { status: 200 });
+  }
+  if (claimStatus !== 'claimed') {
+    return new Response(JSON.stringify({ error: 'event_busy' }), { status: 503 });
+  }
+  const leaseToken = String((claim as Record<string, unknown>).lease_token ?? '');
+  if (!isPlausibleUuid(leaseToken)) {
+    console.error('[revenuecat-webhook] event claim returned an invalid lease token');
+    return new Response(JSON.stringify({ error: 'internal_error' }), { status: 500 });
   }
 
   // ── Ordering guard ─────────────────────────────────────────────────────
@@ -153,11 +164,15 @@ serve(async (req: Request) => {
   // against the stored `current_period_end`, rather than a sequence number we
   // would have to store: an event describing a period that ends no later than
   // the one already recorded is describing the past.
-  const { data: existing } = await supabase
+  const { data: existing, error: existingError } = await supabase
     .from('subscriptions')
     .select('current_period_end, is_active')
     .eq('user_id', userId)
     .maybeSingle();
+  if (existingError) {
+    await markEventFailed(eventId, leaseToken, 'subscription state lookup failed');
+    return new Response(JSON.stringify({ error: 'internal_error' }), { status: 500 });
+  }
 
   const storedEndMs = existing?.current_period_end
     ? Date.parse(existing.current_period_end as string)
@@ -193,6 +208,14 @@ serve(async (req: Request) => {
         `${new Date(expirationMs as number).toISOString()}, but an active entitlement is ` +
         `already recorded through ${existing?.current_period_end}`,
     );
+    const { error: completeError } = await supabase.rpc(
+      'complete_revenuecat_event',
+      { p_event_id: eventId, p_lease_token: leaseToken },
+    );
+    if (completeError) {
+      await markEventFailed(eventId, leaseToken, 'stale event completion failed');
+      return new Response(JSON.stringify({ error: 'internal_error' }), { status: 500 });
+    }
     return new Response(JSON.stringify({ ok: true, stale: true }), { status: 200 });
   }
 
@@ -214,27 +237,40 @@ serve(async (req: Request) => {
         'RevenueCat entitlement ids contain basic/premium/vip. entitlements=' +
         JSON.stringify(entitlementIds) + ' product=' + String(productId),
     );
+    await markEventFailed(eventId, leaseToken, 'unmapped active entitlement tier');
+    return new Response(JSON.stringify({ error: 'configuration_error' }), { status: 500 });
   }
 
-  const { error } = await supabase.from('subscriptions').upsert(
+  const { error } = await supabase.rpc(
+    'apply_revenuecat_entitlement_event',
     {
-      user_id: userId,
-      tier,
-      is_active: isActive,
-      subscription_status: isActive ? 'active' : 'inactive',
-      current_period_end: effectivePeriodEnd,
-      cancel_at_period_end: cancelAtPeriodEnd,
-      updated_at: new Date().toISOString(),
+      p_event_id: eventId,
+      p_lease_token: leaseToken,
+      p_user_id: userId,
+      p_tier: tier,
+      p_is_active: isActive,
+      p_subscription_status: isActive ? 'active' : 'inactive',
+      p_current_period_end: effectivePeriodEnd,
+      p_cancel_at_period_end: cancelAtPeriodEnd,
     },
-    { onConflict: 'user_id' }
   );
 
   if (error) {
-    // Return 500 so RevenueCat retries (it retries non-2xx). Log the detail
-    // server-side only — never echo internal error messages to the caller.
-    console.error('[revenuecat-webhook] subscriptions upsert failed:', error.message);
+    console.error('[revenuecat-webhook] atomic event application failed:', error.message);
+    await markEventFailed(eventId, leaseToken, 'atomic entitlement application failed');
     return new Response(JSON.stringify({ error: 'internal_error' }), { status: 500 });
   }
 
   return new Response(JSON.stringify({ ok: true }), { status: 200 });
 });
+
+async function markEventFailed(eventId: string, leaseToken: string, reason: string): Promise<void> {
+  const { error } = await supabase.rpc('fail_revenuecat_event', {
+    p_event_id: eventId,
+    p_lease_token: leaseToken,
+    p_error: reason,
+  });
+  if (error) {
+    console.error('[revenuecat-webhook] failed to release event lease:', error.message);
+  }
+}
