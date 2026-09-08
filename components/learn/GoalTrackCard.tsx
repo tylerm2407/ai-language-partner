@@ -55,9 +55,7 @@ export function GoalTrackCard({ track, onOpenLesson, onNavigate }: Props) {
       style={{
         backgroundColor: c.card,
         borderRadius: radii.lg,
-        borderWidth: 1,
-        borderColor: c.cardBorder,
-        padding: spacing.md,
+        padding: spacing.sm + 2,
         marginBottom: spacing.sm,
       }}
     >
@@ -178,9 +176,7 @@ export function GoalTrackPrompt({
       style={{
         backgroundColor: c.card,
         borderRadius: radii.lg,
-        borderWidth: 1,
-        borderColor: c.cardBorder,
-        padding: spacing.md,
+        padding: spacing.sm + 2,
         marginBottom: spacing.sm,
       }}
     >

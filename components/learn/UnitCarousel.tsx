@@ -24,7 +24,7 @@ import { Body } from '../ui2/Ui2Text';
 import { Mono } from './Mono';
 import { usePressed } from '../../hooks/usePressed';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
-import { radii, spacing, typography } from '../../config/theme';
+import { radii, spacing } from '../../config/theme';
 import type { UnitProgress } from '../../lib/learn-progress';
 
 interface UnitCarouselProps {
@@ -34,12 +34,14 @@ interface UnitCarouselProps {
 }
 
 const CARD_GAP = spacing.sm;
-const CARD_HEIGHT = 148;
+const CARD_HEIGHT = 64;
 
 /** Card width as a fraction of the window, bounded so the peek survives on
  *  both a small phone and a tablet. */
 function cardWidth(windowWidth: number): number {
-  return Math.round(Math.min(272, Math.max(196, windowWidth * 0.56)));
+  // Dense strip (canvas "Learn · variations", L2): two and a bit units per
+  // screen, so the course's shape is visible without scrolling the strip.
+  return Math.round(Math.min(232, Math.max(176, windowWidth * 0.5)));
 }
 
 export function UnitCarousel({ units, selectedIndex, onSelect }: UnitCarouselProps) {
@@ -139,55 +141,40 @@ const UnitCard = React.memo(function UnitCard({
       style={[
         styles.card,
         { width },
-        selected
-          ? { backgroundColor: c.primaryTint, borderColor: c.primaryTintBorder }
-          : { backgroundColor: c.card, borderColor: c.cardBorder },
+        { backgroundColor: selected ? c.primary : c.card },
         pressed && styles.cardPressed,
       ]}
     >
-      <Body
-        style={[
-          styles.number,
-          { color: selected ? c.primary : c.idle },
-        ]}
-      >
-        {String(unit.index + 1).padStart(2, '0')}
-      </Body>
-
-      <Body
-        size="lg"
-        weight="extrabold"
-        tone={selected ? 'primary' : 'tertiary'}
-        numberOfLines={2}
-        style={styles.title}
-      >
-        {unit.unit.title}
-      </Body>
+      <View style={styles.titleRow}>
+        <Mono size={11} medium color={selected ? c.onPrimaryMuted : c.idle}>
+          {String(unit.index + 1).padStart(2, '0')}
+        </Mono>
+        <Body
+          size="sm"
+          weight="extrabold"
+          tone={selected ? 'onPrimary' : 'primary'}
+          numberOfLines={1}
+          style={styles.title}
+        >
+          {unit.unit.title}
+        </Body>
+        <Mono size={11} medium color={selected ? c.onPrimaryMuted : c.idle} style={styles.count}>
+          {`${completedCount}/${totalCount}`}
+        </Mono>
+      </View>
 
       <View style={styles.progressRow}>
-        <View style={[styles.track, { backgroundColor: c.track }]}>
+        <View style={[styles.track, { backgroundColor: selected ? c.slab : c.track }]}>
           <View
             style={[
               styles.fill,
               {
                 width: `${Math.round(progress * 100)}%`,
-                backgroundColor: finished
-                  ? c.green
-                  : selected
-                    ? c.primary
-                    : c.idle,
+                backgroundColor: finished ? c.green : selected ? c.onPrimary : c.idle,
               },
             ]}
           />
         </View>
-        <Mono
-          size={11}
-          medium
-          color={selected ? c.muted : c.idle}
-          style={styles.count}
-        >
-          {`${completedCount}/${totalCount}`}
-        </Mono>
       </View>
     </Pressable>
   );
@@ -200,24 +187,21 @@ const styles = StyleSheet.create({
   },
   card: {
     height: CARD_HEIGHT,
-    borderRadius: radii.xl,
-    borderWidth: 1,
-    padding: spacing.md,
+    borderRadius: radii.lg,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: spacing.xs + 2,
     justifyContent: 'space-between',
   },
   cardPressed: {
     opacity: 0.8,
   },
-  number: {
-    // Fraunces carries its own weight — never pair it with fontWeight, which
-    // makes Android synthesize a second bolding pass.
-    fontFamily: typography.family.display,
-    fontSize: 38,
-    lineHeight: 47, // >= 38 * leading.display (1.233)
-    letterSpacing: -1,
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   title: {
-    marginTop: spacing.xxs,
+    flex: 1,
   },
   progressRow: {
     flexDirection: 'row',

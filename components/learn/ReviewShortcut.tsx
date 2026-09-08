@@ -35,7 +35,7 @@ export function ReviewShortcut({ count, onPress }: ReviewShortcutProps) {
       {...pressHandlers}
       accessibilityRole="button"
       accessibilityLabel={`Review cards. ${count} ${count === 1 ? 'card' : 'cards'} due.`}
-      style={[styles.row, { borderColor: c.greenBorder, backgroundColor: c.greenTint }, pressed && styles.pressed]}
+      style={[styles.row, { backgroundColor: c.greenTint }, pressed && styles.pressed]}
     >
       <View style={[styles.iconWell, { backgroundColor: c.greenBorder }]}>
         <Ionicons name="refresh" size={18} color={c.green} />
@@ -60,11 +60,10 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 56,
+    minHeight: 52,
     marginTop: spacing.xs,
     paddingHorizontal: spacing.sm,
     borderRadius: radii.lg,
-    borderWidth: 1,
   },
   pressed: {
     opacity: 0.75,

@@ -931,6 +931,12 @@ scheme (`app.json` `userInterfaceStyle: "automatic"`).
   "Ready", bio and level as captions, the last-session card, and a round mic
   as the single control — so starting a call changes the state of the screen
   the learner is already on.
+- **Learn tab** (2026-09-08, canvas page "Learn · variations", L2 "Dense"):
+  title and course pills on one line with the can-do caption under the row,
+  compact 34pt pills (hitSlop restores the 44pt target), unit strip as 64pt
+  chips (index · title · count, thin bar; selected is solid violet), 52pt
+  lesson rows, no outlines anywhere. Home was offered five variations the
+  same day and Tyler kept it as it is.
 - **Motion vocabulary** (all gated on `useMotion().shouldReduce`): step change =
   the hero block arrives with a per-step entrance (slide / rise / pop / meet /
   drop), the done segments light up 70ms apart, the question fades up, Sol

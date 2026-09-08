@@ -1,4 +1,4 @@
-import { View, ScrollView, Pressable, FlatList, ActivityIndicator } from 'react-native';
+import { View, ScrollView, Pressable, FlatList, ActivityIndicator, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useEffect, useState, useCallback } from 'react';
@@ -328,29 +328,38 @@ export default function LearnScreen() {
   }
 
   const courseUnits = selectedCourseId ? units[selectedCourseId] : undefined;
+  const selectedCourseCanDo = cefrCanDo(courses.find((k) => k.id === selectedCourseId)?.cefrLevel);
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <SafeAreaView className="flex-1" edges={['top']}>
         {/* Header — title, course level, content tab. Fixed above the
             scrolling tab content so switching tabs never moves it. */}
-        <View style={{ paddingTop: spacing.xxs }}>
-          <Hero
-            accessibilityRole="header"
-            style={{ marginBottom: spacing.sm, marginHorizontal: spacing.md }}
-          >
-            Learn
-          </Hero>
+        {/* Dense header (canvas "Learn · variations", L2, 2026-09-08): the
+            title and the course pills share one line, the selected course's
+            can-do line sits under the whole row, and the content tabs are
+            the compact pills. Nothing moved out: same title, same courses,
+            same caption, same three tabs. */}
+        <View style={{ paddingTop: spacing.xxs, gap: spacing.xs }}>
+          <View style={styles.headerRow}>
+            <Hero accessibilityRole="header">Learn</Hero>
+            <View style={styles.headerPills}>
+              <CoursePills
+                courses={courses}
+                selectedCourseId={selectedCourseId}
+                onSelect={setSelectedCourseId}
+                compact
+              />
+            </View>
+          </View>
 
-          <CoursePills
-            courses={courses}
-            selectedCourseId={selectedCourseId}
-            onSelect={setSelectedCourseId}
-          />
+          {selectedCourseCanDo ? (
+            <Caption size="sm" tone="tertiary" style={styles.headerCaption}>
+              {selectedCourseCanDo}
+            </Caption>
+          ) : null}
 
-          <View style={{ height: spacing.xs }} />
-
-          <TabPills tabs={TAB_CONFIG} activeKey={activeTab} onSelect={selectTab} />
+          <TabPills tabs={TAB_CONFIG} activeKey={activeTab} onSelect={selectTab} compact />
         </View>
 
         {/* Content area */}
@@ -675,3 +684,19 @@ export default function LearnScreen() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingLeft: spacing.md,
+  },
+  headerPills: {
+    flex: 1,
+    minWidth: 0,
+  },
+  headerCaption: {
+    paddingHorizontal: spacing.md,
+  },
+});

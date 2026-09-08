@@ -261,16 +261,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     // 44pt Apple HIG minimum with room to spare; the gutter + glyph + trailing
     // label all sit on one baseline at this height.
-    minHeight: 64,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    // 52, not 64 (canvas "Learn · variations", L2): still 8pt over the HIG
+    // minimum, and six lessons fit above the fold.
+    minHeight: 52,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: spacing.xs,
     marginBottom: spacing.xs,
     borderRadius: ROW_RADIUS,
-    borderWidth: 1,
-    borderColor: 'transparent',
   },
   rowActiveTall: {
-    minHeight: 84,
+    minHeight: 72,
   },
   rowPressed: {
     opacity: 0.72,

@@ -143,7 +143,7 @@ export function UnitPath({ units, courseId, header }: UnitPathProps) {
       />
 
       <View style={styles.listHeader}>
-        <Heading level={2} style={styles.listTitle}>
+        <Heading level={3} style={styles.listTitle}>
           {`Unit ${selected.index + 1} lessons`}
         </Heading>
         <Mono
@@ -202,15 +202,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
     paddingTop: spacing.xs,
-    paddingBottom: spacing.sm,
+    paddingBottom: spacing.xs,
   },
   listHeader: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.sm,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xs,
   },
   listTitle: {
     flexShrink: 1,
