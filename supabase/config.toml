@@ -156,6 +156,13 @@ verify_jwt = true
 [functions.score-pronunciation]
 verify_jwt = true
 
+# ─── generate-avatar ──────────────────────────────────────────────────────
+# Deployed verify_jwt = true (matches the CLI default) and authenticates again
+# in the body via getAuthenticatedUser. Since migration 112 it answers 202 with
+# a job id and renders in EdgeRuntime.waitUntil; the client polls avatar_jobs.
+[functions.generate-avatar]
+verify_jwt = true
+
 # ─── tutor-session ────────────────────────────────────────────────────────
 # MUST be false, for the same reason as ai-chat: the function authenticates
 # every request itself with supabase.auth.getUser(token), which works whatever

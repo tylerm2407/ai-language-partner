@@ -840,6 +840,23 @@ export interface GoalTrack {
 export type AvatarKind = 'procedural' | 'preset' | 'generated';
 
 /**
+ * A photo-to-avatar generation in flight (avatar_jobs, migration 112).
+ *
+ * The render takes minutes at the quality we ship, so `generate-avatar`
+ * answers with a job id and the client polls this row until it settles.
+ * Written only by the edge function; the client can only read its own rows.
+ */
+export interface AvatarJob {
+  id: string;
+  status: 'pending' | 'done' | 'failed';
+  styleKey: string;
+  /** Storage path in the private `avatars` bucket once status is 'done'. */
+  avatarPath: string | null;
+  errorCode: string | null;
+  errorMessage: string | null;
+}
+
+/**
  * A photo-to-avatar art style, as surfaced to the client. The hidden image
  * prompt for each style lives server-side only, in
  * `supabase/functions/_shared/avatar-styles.ts` — never ship it to the client.

@@ -3,7 +3,12 @@
  *
  * The device captures or picks a photo, downscales it here, and hands the
  * bytes to the `generate-avatar` Edge Function, which owns the art-direction
- * prompt, the paid-tier check, the daily quota, and the image-model call.
+ * prompt, the paid-tier check, the monthly quota, and the image-model call.
+ *
+ * The render takes minutes, not seconds — longer than any request a phone can
+ * hold open — so the function answers with a job id the moment entitlement
+ * clears and finishes in the background. `generateAvatar` then polls the
+ * `avatar_jobs` row (migration 112) until it settles.
  *
  * Nothing in this file decides entitlement. The tier gate lives server-side
  * (CLAUDE.md §1.2); `AVATAR_REQUIRES_PLAN` coming back from the function is
@@ -16,6 +21,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { supabase } from './supabase';
+import { getAvatarJob } from './supabase-queries';
 import type { AvatarStyleOption } from '../types';
 
 /**
@@ -236,13 +242,29 @@ export async function pickFile(): Promise<PreparedPhoto | null> {
   return prepare(asset.uri);
 }
 
+/** How often to ask whether the job has settled. */
+const JOB_POLL_INTERVAL_MS = 3_000;
+
+/**
+ * How long to wait for a job before giving up on the client. The server
+ * abandons the provider call at 300s and settles the row failed, so this only
+ * fires if the function instance died mid-render (wall clock, OOM) and never
+ * wrote back.
+ */
+const JOB_POLL_DEADLINE_MS = 6 * 60 * 1000;
+
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
 /**
  * Generate the avatar. On success the user's profile already points at the new
  * image server-side, so the caller only needs to refresh the profile.
  *
- * Mirrors the error unwrapping in `lib/ai.ts`: supabase-js collapses any non-2xx
- * into a generic message, and the real cause (AVATAR_REQUIRES_PLAN,
- * DAILY_AVATAR_LIMIT_REACHED, IMAGE_REJECTED) is only in `error.context`.
+ * Two phases. The invoke is quick: it either refuses (and the real reason —
+ * AVATAR_REQUIRES_PLAN, MONTHLY_AVATAR_LIMIT_REACHED — is only in
+ * `error.context`, mirroring the unwrapping in `lib/ai.ts`) or hands back a
+ * job id with a 202. The wait is the poll loop below: a settled row carries
+ * either the stored path or the same learner-facing message the synchronous
+ * response used to.
  */
 export async function generateAvatar(
   photo: PreparedPhoto,
@@ -272,9 +294,66 @@ export async function generateAvatar(
     throw new AvatarGenerationError(detail, code, status);
   }
 
-  if (!data?.path) {
+  // A server that still answers synchronously (or a future fast path) returns
+  // the path directly; honour it rather than polling for a job that never was.
+  if (typeof data?.path === 'string' && data.path) {
+    return { path: data.path as string, styleKey: (data.styleKey as string) ?? styleKey };
+  }
+
+  const jobId = typeof data?.jobId === 'string' ? (data.jobId as string) : '';
+  if (!jobId) {
     throw new AvatarGenerationError('Avatar generation did not return an image.');
   }
 
-  return { path: data.path as string, styleKey: data.styleKey as string };
+  return waitForAvatarJob(jobId, styleKey);
+}
+
+/** Poll one job until it settles. Exported for the sheet's resume path and tests. */
+export async function waitForAvatarJob(
+  jobId: string,
+  styleKey: string,
+  { intervalMs = JOB_POLL_INTERVAL_MS, deadlineMs = JOB_POLL_DEADLINE_MS } = {}
+): Promise<GeneratedAvatar> {
+  const startedAt = Date.now();
+  // Tolerate a few consecutive read failures (lie-fi, a token refresh) rather
+  // than abandoning a render we have already paid for.
+  let consecutiveReadFailures = 0;
+
+  while (Date.now() - startedAt < deadlineMs) {
+    await sleep(intervalMs);
+
+    let job;
+    try {
+      job = await getAvatarJob(jobId);
+      consecutiveReadFailures = 0;
+    } catch (err) {
+      consecutiveReadFailures += 1;
+      if (consecutiveReadFailures >= 5) {
+        throw new AvatarGenerationError(
+          'Lost the connection while drawing your avatar. Check your profile in a minute — it may have finished.',
+          'NETWORK'
+        );
+      }
+      console.warn('[avatar] job poll failed, retrying:', err);
+      continue;
+    }
+
+    if (!job) {
+      throw new AvatarGenerationError('Avatar generation did not return an image.', 'JOB_MISSING');
+    }
+    if (job.status === 'done' && job.avatarPath) {
+      return { path: job.avatarPath, styleKey: job.styleKey || styleKey };
+    }
+    if (job.status === 'failed') {
+      throw new AvatarGenerationError(
+        job.errorMessage ?? 'Avatar generation failed. Please try again.',
+        job.errorCode ?? 'GENERATION_FAILED'
+      );
+    }
+  }
+
+  throw new AvatarGenerationError(
+    'Avatar generation is taking longer than expected. Please try again.',
+    'GENERATION_TIMEOUT'
+  );
 }

@@ -9,6 +9,15 @@
 // storage, not written to any table, and never logged. Only the generated
 // image survives the request. Account deletion purges that via delete-account.
 //
+// ASYNC, since 2026-09-08. gpt-image-2 at quality 'high' takes 100–235s for
+// a 1024px edit — longer than the client's 60s function budget and longer than
+// the 120s this function used to allow the provider. Every 'high' render died
+// twice: the phone gave up at 60s ("Failed to send a request to the Edge
+// Function") and this function aborted at 120s ("image API call failed:
+// timeout"). So the request now returns a job id as soon as entitlement
+// clears, the render runs in EdgeRuntime.waitUntil inside the Pro plan's 400s
+// wall clock, and the client polls `avatar_jobs` (migration 112) under RLS.
+//
 // Paid tiers, plus ONE lifetime free generation per account — and that check
 // happens HERE rather than in the client (CLAUDE.md §1.2), because the
 // function is directly invokable by any signed-in user. The free grant is a
@@ -27,16 +36,10 @@ import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { checkBurstLimit } from '../_shared/burst-limit.ts';
 import { getPlanLimits, type PlanTier } from '../_shared/plan-limits.ts';
 import { getAvatarStyle, listAvatarStyles } from '../_shared/avatar-styles.ts';
-import { logAudit, getClientIp } from '../_shared/audit.ts';
+import { OPENAI_API_KEY, renderAvatar, failJob, runInBackground } from './render.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const OPENAI_API_KEY = Deno.env.get('OPENAI_KEY');
-
-/** Image model. Env-overridable so the model can change without a redeploy. */
-const IMAGE_MODEL = Deno.env.get('AVATAR_IMAGE_MODEL') ?? 'gpt-image-2';
-
-const BUCKET = 'avatars';
 
 /** Tiers with an ongoing daily allowance. `starter` gets one free, once. */
 const PAID_TIERS: PlanTier[] = ['basic', 'premium', 'vip'];
@@ -50,22 +53,17 @@ const MAX_IMAGE_BASE64_BYTES = 8 * 1024 * 1024;
 
 const ACCEPTED_MIME = ['image/png', 'image/jpeg', 'image/webp'];
 
-/** Image generation is slow; cap it below the platform wall-clock limit. */
-const GENERATION_TIMEOUT_MS = 120_000;
+/** Jobs older than this are pruned when the same user starts a new one. */
+const JOB_RETENTION_MS = 24 * 60 * 60 * 1000;
+
+/** The client polls at most this long, so anything still pending after it is dead. */
+const JOB_STALE_MS = 10 * 60 * 1000;
 
 function json(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
-}
-
-/** Decode base64 to bytes without building an intermediate giant string copy. */
-function base64ToBytes(b64: string): Uint8Array {
-  const binary = atob(b64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes;
 }
 
 interface GenerateAvatarRequest {
@@ -226,154 +224,70 @@ serve(async (req: Request) => {
     }
   }
 
-  // ── Generate ────────────────────────────────────────────────────────────
-  // The photo lives only in this buffer. It is never written anywhere.
-  const photoBytes = base64ToBytes(imageBase64);
-
-  const form = new FormData();
-  form.append('model', IMAGE_MODEL);
-  form.append('image', new Blob([photoBytes], { type: mimeType }), 'source.png');
-  form.append('prompt', style.prompt);
-  form.append('size', '1024x1024');
-  // 'high', deliberately, paired with a hard 1/day cap.
+  // ── Create the job, answer, render in the background ────────────────────
+  // Entitlement is settled above, synchronously, so a refused caller still
+  // gets the real reason (AVATAR_REQUIRES_PLAN, MONTHLY_AVATAR_LIMIT_REACHED)
+  // as an HTTP status. Only the slow part moves off the request.
   //
-  // This is a considered reversal of the 2026-08-31 cut to 'medium'. That
-  // change optimised the wrong variable: it made every avatar cheaper but
-  // left the door open to several a day, which is backwards for what this
-  // feature actually is. Nobody wants four mediocre portraits; they want one
-  // good one. Quality is the product here, quantity is the cost.
-  //
-  // The price is real and worth stating plainly: ~$0.211 per image at 1024px
-  // 'high' against ~$0.053 at 'medium' (verified 2026-08-31). At one a day
-  // that is ~$6.33/month of worst-case cost, which on the $9.99 basic tier is
-  // most of the net revenue — so the 1/day cap is not a nicety, it is the
-  // only thing making this affordable. Do not raise the cap without
-  // re-pricing the tier.
-  form.append('quality', 'high');
-  form.append('n', '1');
-  form.append('output_format', 'png');
-  // `auto` is the stricter setting. This ships to students, so we keep the
-  // provider's default moderation rather than relaxing it to 'low'.
-  form.append('moderation', 'auto');
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), GENERATION_TIMEOUT_MS);
-
-  let generatedBase64: string;
-  try {
-    const res = await fetch('https://api.openai.com/v1/images/edits', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${OPENAI_API_KEY}` },
-      body: form,
-      signal: controller.signal,
-    });
-
-    if (!res.ok) {
-      const detail = await res.text().catch(() => '');
-      // Never echo the provider body to the client — it can quote the prompt.
-      console.error(`[generate-avatar] image API ${res.status}:`, detail.slice(0, 500));
-      if (res.status === 400) {
-        return json(
-          {
-            error: "That photo couldn't be used. Try a clear, well-lit photo of your face.",
-            code: 'IMAGE_REJECTED',
-          },
-          400
-        );
-      }
-      return json({ error: 'Avatar generation failed. Please try again.' }, 502);
-    }
-
-    const payload = await res.json();
-    const b64 = payload?.data?.[0]?.b64_json;
-    if (typeof b64 !== 'string' || !b64) {
-      console.error('[generate-avatar] image API returned no b64_json');
-      return json({ error: 'Avatar generation failed. Please try again.' }, 502);
-    }
-    generatedBase64 = b64;
-  } catch (err) {
-    const aborted = err instanceof Error && err.name === 'AbortError';
-    console.error('[generate-avatar] image API call failed:', aborted ? 'timeout' : err);
-    return json(
-      { error: aborted ? 'Avatar generation timed out. Please try again.' : 'Avatar generation failed. Please try again.' },
-      504
-    );
-  } finally {
-    clearTimeout(timeout);
-  }
-
-  // ── Store and attach ────────────────────────────────────────────────────
-  // Path is `<user_id>/...` so the storage RLS policy in migration 067
-  // (owner = first path segment) grants read to exactly this user.
-  const path = `${userId}/${styleKey}_${Date.now()}.png`;
-  const upload = await supabase.storage
-    .from(BUCKET)
-    .upload(path, base64ToBytes(generatedBase64), { contentType: 'image/png', upsert: true });
-
-  if (upload.error) {
-    console.error('[generate-avatar] upload failed:', upload.error.message);
-    return json({ error: 'Could not save your new avatar. Please try again.' }, 500);
-  }
-
-  const { error: profileErr } = await supabase
-    .from('user_profiles')
+  // Housekeeping first: a stuck 'pending' row from a previous instance that
+  // hit the wall clock is marked failed so the client never polls it, and
+  // settled rows past retention go. Best-effort — a failure here must not
+  // block a generation the caller is entitled to.
+  const now = Date.now();
+  await supabase
+    .from('avatar_jobs')
     .update({
-      avatar_kind: 'generated',
-      avatar_image_path: path,
-      updated_at: new Date().toISOString(),
+      status: 'failed',
+      error_code: 'GENERATION_TIMEOUT',
+      error_message: 'Avatar generation timed out. Please try again.',
+      updated_at: new Date(now).toISOString(),
     })
-    .eq('user_id', userId);
-
-  if (profileErr) {
-    console.error('[generate-avatar] profile update failed:', profileErr.message);
-    // Roll back the orphaned object rather than leaving storage inconsistent.
-    await supabase.storage.from(BUCKET).remove([path]).catch(() => {});
-    return json({ error: 'Could not save your new avatar. Please try again.' }, 500);
-  }
-
-  // ── Spend the free grant ────────────────────────────────────────────────
-  // Only now, with an image generated, stored, and attached to the profile.
-  // The RPC is atomic and one-shot (migration 077), so this is what makes the
-  // second free request fail the check above.
-  //
-  // A failure here is logged, not surfaced: the learner has their avatar and
-  // must not be told otherwise. What it costs is one un-spent grant, bounded
-  // by the burst limit — the same trade as claiming it late in the first place.
-  if (usingFreeGrant) {
-    const { data: claimed, error: claimErr } = await supabase.rpc('consume_free_avatar', {
-      p_user_id: userId,
+    .eq('user_id', userId)
+    .eq('status', 'pending')
+    .lt('created_at', new Date(now - JOB_STALE_MS).toISOString())
+    .then(({ error }) => {
+      if (error) console.warn('[generate-avatar] stale job sweep failed:', error.message);
     });
-    if (claimErr) {
-      console.error('[generate-avatar] consume_free_avatar failed:', claimErr.message);
-    } else if (claimed !== true) {
-      // Lost a race with a concurrent request inside the burst window. Both
-      // callers got an image; only one grant existed. Worth knowing about if
-      // it stops being rare.
-      console.warn('[generate-avatar] free grant already spent for', userId);
-    }
+  await supabase
+    .from('avatar_jobs')
+    .delete()
+    .eq('user_id', userId)
+    .lt('created_at', new Date(now - JOB_RETENTION_MS).toISOString())
+    .then(({ error }) => {
+      if (error) console.warn('[generate-avatar] job prune failed:', error.message);
+    });
+
+  const { data: job, error: jobErr } = await supabase
+    .from('avatar_jobs')
+    .insert({ user_id: userId, style_key: styleKey, status: 'pending' })
+    .select('id')
+    .single();
+  if (jobErr || !job?.id) {
+    console.error('[generate-avatar] job insert failed:', jobErr?.message);
+    return json({ error: 'Could not start your avatar. Try again shortly.' }, 503);
   }
+  const jobId = job.id as string;
 
-  // Prune superseded generations. Best-effort: a failure here costs storage,
-  // not correctness, so it must not fail the request.
-  try {
-    const { data: existing } = await supabase.storage.from(BUCKET).list(userId);
-    const stale = (existing ?? [])
-      .map((o: { name: string }) => `${userId}/${o.name}`)
-      .filter((p: string) => p !== path);
-    if (stale.length > 0) await supabase.storage.from(BUCKET).remove(stale);
-  } catch (err) {
-    console.warn('[generate-avatar] prune of previous avatars failed:', err);
-  }
+  runInBackground(
+    renderAvatar({
+      supabase,
+      req,
+      userId,
+      jobId,
+      styleKey,
+      prompt: style.prompt,
+      imageBase64,
+      mimeType,
+      tier,
+      usingFreeGrant,
+    }).catch(async (err: unknown) => {
+      // Last line of defence: renderAvatar settles the job on every path it
+      // knows about, so reaching here means a bug, and the client must still
+      // stop polling.
+      console.error('[generate-avatar] render crashed:', err);
+      await failJob(supabase, jobId, 'GENERATION_FAILED', 'Avatar generation failed. Please try again.');
+    })
+  );
 
-  await logAudit(supabase, {
-    actorId: userId,
-    action: 'update',
-    resourceType: 'avatar',
-    resourceId: path,
-    // Deliberately records the style and model, never the source photo.
-    metadata: { styleKey, model: IMAGE_MODEL, tier, freeGrant: usingFreeGrant },
-    ipAddress: getClientIp(req),
-  });
-
-  return json({ path, styleKey }, 200);
+  return json({ jobId, status: 'pending' }, 202);
 });

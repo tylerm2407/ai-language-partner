@@ -3,6 +3,7 @@ import {
   AVATAR_STYLE_OPTIONS,
   fetchAvatarStyles,
   generateAvatar,
+  waitForAvatarJob,
 } from './avatar-generation';
 import { AVATAR_STYLES } from '../supabase/functions/_shared/avatar-styles';
 import type { PreparedPhoto } from './avatar-generation';
@@ -27,6 +28,11 @@ jest.mock('./supabase', () => ({
   supabase: { functions: { invoke: (...args: unknown[]) => mockInvoke(...args) } },
 }));
 
+const mockGetAvatarJob = jest.fn();
+jest.mock('./supabase-queries', () => ({
+  getAvatarJob: (...args: unknown[]) => mockGetAvatarJob(...args),
+}));
+
 const photo: PreparedPhoto = {
   base64: 'ZmFrZQ==',
   uri: 'file:///tmp/selfie.jpg',
@@ -41,7 +47,10 @@ function functionError(status: number, body: Record<string, unknown>) {
   };
 }
 
-beforeEach(() => mockInvoke.mockReset());
+beforeEach(() => {
+  mockInvoke.mockReset();
+  mockGetAvatarJob.mockReset();
+});
 
 describe('generateAvatar', () => {
   it('returns the stored path on success', async () => {
@@ -112,10 +121,85 @@ describe('generateAvatar', () => {
     await expect(generateAvatar(photo, 'anime_pop')).rejects.toBeInstanceOf(AvatarGenerationError);
   });
 
-  it('rejects a success response with no path rather than returning undefined', async () => {
+  it('rejects a success response with neither a path nor a job', async () => {
     mockInvoke.mockResolvedValue({ data: {}, error: null });
 
     await expect(generateAvatar(photo, 'anime_pop')).rejects.toBeInstanceOf(AvatarGenerationError);
+    expect(mockGetAvatarJob).not.toHaveBeenCalled();
+  });
+
+  it('polls the job a 202 points at and resolves with its path', async () => {
+    jest.useFakeTimers();
+    mockInvoke.mockResolvedValue({ data: { jobId: 'job-1', status: 'pending' }, error: null });
+    const pending = { id: 'job-1', status: 'pending', styleKey: 'anime_pop', avatarPath: null, errorCode: null, errorMessage: null };
+    mockGetAvatarJob
+      .mockResolvedValueOnce(pending)
+      .mockResolvedValueOnce({ ...pending, status: 'done', avatarPath: 'u1/anime_pop_2.png' });
+
+    const result = generateAvatar(photo, 'anime_pop');
+    await jest.advanceTimersByTimeAsync(3_000);
+    await jest.advanceTimersByTimeAsync(3_000);
+
+    await expect(result).resolves.toEqual({ path: 'u1/anime_pop_2.png', styleKey: 'anime_pop' });
+    expect(mockGetAvatarJob).toHaveBeenCalledWith('job-1');
+    jest.useRealTimers();
+  });
+});
+
+describe('waitForAvatarJob', () => {
+  const settled = (status: 'done' | 'failed', extra: Record<string, unknown> = {}) => ({
+    id: 'job-1',
+    status,
+    styleKey: 'anime_pop',
+    avatarPath: null,
+    errorCode: null,
+    errorMessage: null,
+    ...extra,
+  });
+
+  it('relays the server-side failure code and message', async () => {
+    mockGetAvatarJob.mockResolvedValue(
+      settled('failed', { errorCode: 'IMAGE_REJECTED', errorMessage: "That photo couldn't be used." })
+    );
+
+    await expect(waitForAvatarJob('job-1', 'anime_pop', { intervalMs: 0 })).rejects.toMatchObject({
+      code: 'IMAGE_REJECTED',
+      message: "That photo couldn't be used.",
+    });
+  });
+
+  it('gives up with GENERATION_TIMEOUT when the row never settles', async () => {
+    mockGetAvatarJob.mockResolvedValue(settled('done', { status: 'pending' }));
+
+    await expect(
+      waitForAvatarJob('job-1', 'anime_pop', { intervalMs: 0, deadlineMs: 5 })
+    ).rejects.toMatchObject({ code: 'GENERATION_TIMEOUT' });
+  });
+
+  it('survives a few read failures but not a run of them', async () => {
+    mockGetAvatarJob
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce(settled('done', { avatarPath: 'u1/a.png' }));
+
+    await expect(waitForAvatarJob('job-1', 'anime_pop', { intervalMs: 0 })).resolves.toEqual({
+      path: 'u1/a.png',
+      styleKey: 'anime_pop',
+    });
+
+    mockGetAvatarJob.mockReset();
+    mockGetAvatarJob.mockRejectedValue(new Error('offline'));
+    await expect(waitForAvatarJob('job-1', 'anime_pop', { intervalMs: 0 })).rejects.toMatchObject({
+      code: 'NETWORK',
+    });
+  });
+
+  it('treats a vanished row as a failure rather than polling forever', async () => {
+    mockGetAvatarJob.mockResolvedValue(null);
+
+    await expect(waitForAvatarJob('job-1', 'anime_pop', { intervalMs: 0 })).rejects.toMatchObject({
+      code: 'JOB_MISSING',
+    });
   });
 });
 

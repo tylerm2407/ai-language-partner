@@ -277,7 +277,9 @@ export const AvatarGeneratorSheet = React.memo(
             <View style={styles.working}>
               <ActivityIndicator size="large" color={c.primary} />
               <Body style={styles.workingText}>Drawing your avatar…</Body>
-              <Caption style={styles.workingHint}>This usually takes under a minute.</Caption>
+              <Caption style={styles.workingHint}>
+                This takes a few minutes — we draw it at full quality. Keep the app open.
+              </Caption>
             </View>
           )}
         </ScrollView>

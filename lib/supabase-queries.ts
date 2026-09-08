@@ -69,6 +69,7 @@ import type {
   SubmissionStatus,
   TutorDebrief,
   TutorSessionSummary,
+  AvatarJob,
 } from '../types';
 
 // ─── User Profile ───────────────────────────────────────────────
@@ -2562,6 +2563,29 @@ export async function getAvatarImageUrl(path: string, expiresInSeconds = 3600): 
     return null;
   }
   return data?.signedUrl ?? null;
+}
+
+/**
+ * One poll of an avatar generation job. Null when the row is not visible —
+ * which under RLS means it is not this user's, or was pruned.
+ */
+export async function getAvatarJob(jobId: string): Promise<AvatarJob | null> {
+  const { data, error } = await supabase
+    .from('avatar_jobs')
+    .select('id, status, style_key, avatar_path, error_code, error_message')
+    .eq('id', jobId)
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  return {
+    id: data.id as string,
+    status: data.status as AvatarJob['status'],
+    styleKey: data.style_key as string,
+    avatarPath: (data.avatar_path as string | null) ?? null,
+    errorCode: (data.error_code as string | null) ?? null,
+    errorMessage: (data.error_message as string | null) ?? null,
+  };
 }
 
 /** Switch the account back to the procedural SVG avatar or a bundled preset. */
