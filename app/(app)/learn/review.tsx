@@ -2,9 +2,10 @@ import { View, Pressable, ScrollView, Alert, ActivityIndicator } from 'react-nat
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useSafeBack } from '../../../hooks/useSafeBack';
+import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState, useRef } from 'react';
 import { haptic } from '../../../lib/haptics';
-import { useReviewQueue } from '../../../hooks/useReviewQueue';
+import { useReviewQueue, type ReviewQueueMode } from '../../../hooks/useReviewQueue';
 import { useDailyStats } from '../../../hooks/useDailyStats';
 import { Ui2ProgressBar } from '../../../components/ui2/Ui2ProgressBar';
 import { SlabButton } from '../../../components/ui2/SlabButton';
@@ -23,7 +24,12 @@ export default function ReviewScreen() {
   useScreenView('review');
   const { c, shape } = useUi2Theme();
   const goBack = useSafeBack('/(app)');
-  const { items, cards, loading, loadQueue, submitReview } = useReviewQueue();
+  // `?mode=struggling` deals only the words the learner keeps failing (Home's
+  // "Your patterns" card and the patterns screen link here). Anything else
+  // is the ordinary due queue.
+  const params = useLocalSearchParams<{ mode?: string }>();
+  const mode: ReviewQueueMode = params.mode === 'struggling' ? 'struggling' : 'due';
+  const { items, cards, loading, loadQueue, submitReview } = useReviewQueue(mode);
   const { addStats } = useDailyStats();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
@@ -64,15 +70,17 @@ export default function ReviewScreen() {
   useEffect(() => {
     if (loading || items.length === 0 || sessionStartedRef.current) return;
     sessionStartedRef.current = true;
-    trackEvent('review_started', { count: items.length });
-  }, [loading, items.length]);
+    // The struggling entry points fire their own `review_started` with
+    // `source: 'struggling'` before navigating; this one covers the due queue.
+    if (mode === 'due') trackEvent('review_started', { count: items.length });
+  }, [loading, items.length, mode]);
 
   const completedRef = useRef(false);
   useEffect(() => {
     if (!isComplete || completedRef.current) return;
     completedRef.current = true;
-    trackEvent('review_completed', { count: reviewed });
-  }, [isComplete, reviewed]);
+    trackEvent('review_completed', { count: reviewed, source: mode });
+  }, [isComplete, reviewed, mode]);
 
   const handleRate = async (rating: ReviewRating) => {
     if (submitting) return; // Prevent double-tap
@@ -113,8 +121,12 @@ export default function ReviewScreen() {
       <SafeAreaView className="flex-1" style={{ backgroundColor: c.bg }}>
         <Ui2EmptyState
           icon="checkmark-circle"
-          title="All caught up!"
-          description="No cards due for review. Keep learning to add more cards."
+          title={mode === 'struggling' ? 'Nothing is fighting you' : 'All caught up!'}
+          description={
+            mode === 'struggling'
+              ? 'No words are slipping right now. Keep reviewing and this list stays empty.'
+              : 'No cards due for review. Keep learning to add more cards.'
+          }
           actionLabel="Back to Learn"
           onAction={() => goBack()}
         />
@@ -134,10 +146,12 @@ export default function ReviewScreen() {
           <Heading level={1}>{reviewed}</Heading>
         </View>
         <Heading level={2} style={{ marginBottom: spacing.xs }} accessibilityRole="header">
-          Review Complete!
+          {mode === 'struggling' ? 'Faced them down' : 'Review Complete!'}
         </Heading>
         <Body tone="secondary" style={{ marginBottom: spacing.xl }}>
-          You reviewed {reviewed} cards.
+          {mode === 'struggling'
+            ? `You went back over ${reviewed} ${reviewed === 1 ? 'word that kept slipping' : 'words that kept slipping'}.`
+            : `You reviewed ${reviewed} cards.`}
         </Body>
         <SlabButton label="Done" arrow={false} onPress={() => goBack()} style={{ alignSelf: 'stretch' }} />
       </SafeAreaView>
@@ -154,7 +168,7 @@ export default function ReviewScreen() {
         <View className="flex-row items-center justify-between mb-3">
           <SlabButton label="Exit" variant="ghost" arrow={false} onPress={() => goBack()} style={{ paddingHorizontal: 16, paddingVertical: 8 }} />
           <Body size="sm" tone="secondary">
-            {currentIndex + 1} / {items.length}
+            {mode === 'struggling' ? 'Struggling words · ' : ''}{currentIndex + 1} / {items.length}
           </Body>
         </View>
         <Ui2ProgressBar progress={progress} />

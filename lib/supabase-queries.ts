@@ -8,6 +8,7 @@ import { localToday } from './dates';
 import { trackEvent, trackRefusal } from './analytics';
 import { asTutorDebrief } from './tutor-api';
 import { wordTokens } from './reading-text';
+import { languageVariants, type CorrectionLogRow } from './insights';
 import type {
   ProficiencyEvidence,
   VocabEvidenceItem,
@@ -70,6 +71,8 @@ import type {
   TutorDebrief,
   TutorSessionSummary,
   AvatarJob,
+  TutorMemory,
+  TutorMemoryKind,
 } from '../types';
 
 // ─── User Profile ───────────────────────────────────────────────
@@ -558,27 +561,42 @@ export async function insertReviewLog(log: Omit<ReviewLog, 'id'>): Promise<void>
  * duplicate is dropped by the database rather than by hoping the client only
  * ever sends once.
  */
+/**
+ * Record one review exactly once, keyed on the client-minted `clientLogId`.
+ *
+ * A plain INSERT that treats a duplicate-key rejection as success — NOT an
+ * upsert. The uniqueness this relies on is `review_logs_user_client_log_id_idx`
+ * (migration 059), which is a PARTIAL unique index (`WHERE client_log_id IS
+ * NOT NULL`), and Postgres cannot infer a partial index from a bare
+ * `ON CONFLICT (user_id, client_log_id)` clause: PostgREST's `on_conflict=`
+ * upsert failed on every call with 42P10 "there is no unique or exclusion
+ * constraint matching the ON CONFLICT specification". That was live from
+ * 2026-08-06 to 2026-09-08 — every review rated in that window updated its
+ * `review_items` row and then showed "Failed to save review", and wrote no
+ * log. The partial index still raises 23505 on a genuine replay, which is the
+ * only signal idempotency needs.
+ */
 export async function insertReviewLogIdempotent(
   log: Omit<ReviewLog, 'id'> & { clientLogId: string },
 ): Promise<void> {
   const { error } = await supabase
     .from('review_logs')
-    .upsert(
-      {
-        user_id: log.userId,
-        card_id: log.cardId,
-        review_item_id: log.reviewItemId,
-        rating: log.rating,
-        response_time_ms: log.responseTimeMs,
-        user_answer: log.userAnswer,
-        was_correct: log.wasCorrect,
-        reviewed_at: log.reviewedAt,
-        client_log_id: log.clientLogId,
-      },
-      { onConflict: 'user_id,client_log_id', ignoreDuplicates: true },
-    );
+    .insert({
+      user_id: log.userId,
+      card_id: log.cardId,
+      review_item_id: log.reviewItemId,
+      rating: log.rating,
+      response_time_ms: log.responseTimeMs,
+      user_answer: log.userAnswer,
+      was_correct: log.wasCorrect,
+      reviewed_at: log.reviewedAt,
+      client_log_id: log.clientLogId,
+    });
 
-  if (error) throw error;
+  // 23505 = unique_violation: this exact review was already recorded (an
+  // offline replay landing after the online attempt did). That is the
+  // idempotent outcome, not a failure.
+  if (error && error.code !== '23505') throw error;
 }
 
 // ─── Hands-Free Sessions ───────────────────────
@@ -2588,6 +2606,81 @@ export async function getAvatarJob(jobId: string): Promise<AvatarJob | null> {
   };
 }
 
+/**
+ * Every photo avatar this learner has generated and still owns, newest first,
+ * as storage paths for `useAvatarImage` to sign.
+ *
+ * Read from the bucket, not from `avatar_jobs`: job rows are retention-pruned
+ * by the edge function, while the objects are the thing itself. The listing is
+ * scoped to the learner's folder, which is exactly what the storage SELECT
+ * policy (migration 067) grants. Throws on failure — an empty gallery and an
+ * unreachable one must not look alike (CLAUDE.md §5).
+ */
+export async function listGeneratedAvatars(userId: string): Promise<string[]> {
+  const { data, error } = await supabase.storage
+    .from('avatars')
+    .list(userId, { limit: 50, sortBy: { column: 'created_at', order: 'desc' } });
+  if (error) throw error;
+  return (data ?? [])
+    // Folder placeholders and anything that is not a rendered image are skipped.
+    .filter((o) => typeof o.name === 'string' && /\.(png|jpe?g|webp)$/i.test(o.name))
+    .map((o) => `${userId}/${o.name}`);
+}
+
+/**
+ * Put a previously generated avatar back on the profile.
+ *
+ * The client may write this because the path only ever resolves through the
+ * owner-scoped storage policy: a path into someone else's folder cannot be
+ * signed, so the worst a forged write achieves is the initials fallback.
+ */
+export async function setGeneratedAvatar(userId: string, path: string): Promise<void> {
+  const { error } = await supabase
+    .from('user_profiles')
+    .update({
+      avatar_kind: 'generated',
+      avatar_image_path: path,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('user_id', userId);
+  if (error) throw error;
+}
+
+/**
+ * Delete one generated portrait for good.
+ *
+ * Owner-scoped by the storage DELETE policy on the `avatars` bucket (the first
+ * path segment must be the caller's uid), so the path is checked here only to
+ * fail fast on a programming error, not as the security boundary. The remove
+ * call resolves without error for a path that is already gone, which is the
+ * idempotent outcome a double-tap needs.
+ */
+export async function deleteGeneratedAvatar(userId: string, path: string): Promise<void> {
+  if (!path.startsWith(`${userId}/`)) {
+    throw new Error('Refusing to delete an avatar outside the caller’s folder');
+  }
+  const { error } = await supabase.storage.from('avatars').remove([path]);
+  if (error) throw error;
+}
+
+/**
+ * Detach a generated portrait from the profile without choosing anything else
+ * — the learner falls back to initials until they pick again. Used after the
+ * portrait on the profile is deleted, so `avatar_image_path` never points at
+ * an object that no longer exists.
+ */
+export async function clearGeneratedAvatar(userId: string): Promise<void> {
+  const { error } = await supabase
+    .from('user_profiles')
+    .update({
+      avatar_kind: 'procedural',
+      avatar_image_path: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('user_id', userId);
+  if (error) throw error;
+}
+
 /** Switch the account back to the procedural SVG avatar or a bundled preset. */
 export async function setAvatarKind(
   userId: string,
@@ -3848,4 +3941,184 @@ function tutorHeadline(debrief: unknown): string | null {
   const parsed: TutorDebrief | null = asTutorDebrief(debrief);
   const headline = parsed?.highlight.trim() ?? '';
   return headline.length > 0 ? headline : null;
+}
+
+// ─── Learner Insights ───────────────────────────────────────────
+// The learner's own view of what the tutor already knows about them. Every
+// read here mirrors a fetch in `supabase/functions/_shared/learner-context.ts`
+// — same tables, same windows — so Home shows the list the tutor was told,
+// not a second opinion. Ranking lives in `lib/insights.ts` (pure, tested);
+// this section only fetches rows under the learner's own RLS scope.
+//
+// `correction_log` grows one row per correction forever and `review_items` one
+// per card, so every query here carries a `.limit()` (CLAUDE.md §4).
+
+/** How far back a mistake counts as "recurring". Same as the server. */
+export const INSIGHTS_WINDOW_DAYS = 30;
+
+/**
+ * Recent correction rows for one language, newest first, capped. Aggregation
+ * happens in memory (`rankRecurringMistakes`) because supabase-js has no
+ * GROUP BY and the `(user_id, short_label, created_at)` index keeps this a
+ * narrow scan.
+ */
+export async function fetchRecentCorrections(
+  userId: string,
+  targetLanguage: string,
+  opts: { days?: number; limit?: number } = {},
+): Promise<CorrectionLogRow[]> {
+  const days = opts.days ?? INSIGHTS_WINDOW_DAYS;
+  const since = new Date();
+  since.setDate(since.getDate() - days);
+
+  const { data, error } = await supabase
+    .from('correction_log')
+    .select('short_label, error_type, original, corrected, explanation, created_at')
+    .eq('user_id', userId)
+    .in('target_language', languageVariants(targetLanguage))
+    .gte('created_at', since.toISOString())
+    .not('short_label', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(opts.limit ?? 400);
+
+  if (error) throw error;
+  return (data ?? []).map((row: Record<string, unknown>) => ({
+    shortLabel: (row.short_label as string | null) ?? null,
+    errorType: (row.error_type as string) ?? 'other',
+    original: (row.original as string | null) ?? null,
+    corrected: (row.corrected as string | null) ?? null,
+    explanation: (row.explanation as string | null) ?? null,
+    createdAt: row.created_at as string,
+  }));
+}
+
+/**
+ * Review items the learner keeps failing, with their cards. Two bounded
+ * queries on two index paths rather than one nested `.or(and(...))` — the same
+ * call the server makes, for the same reason: a mistyped PostgREST boolean
+ * fails the whole read. The candidate set is filtered and ranked in memory by
+ * `rankStrugglingWords`, which also drops never-reviewed cards.
+ */
+export async function fetchStrugglingReviewItems(
+  userId: string,
+  limit = 40,
+): Promise<{ item: ReviewItem; card: Card }[]> {
+  const columns = '*, cards!inner(*)';
+  const [lowEase, stalled, leeches] = await Promise.all([
+    supabase
+      .from('review_items')
+      .select(columns)
+      .eq('user_id', userId)
+      .lt('ease_factor', 2.2)
+      .not('last_reviewed_at', 'is', null)
+      .order('ease_factor', { ascending: true })
+      .limit(limit),
+    supabase
+      .from('review_items')
+      .select(columns)
+      .eq('user_id', userId)
+      .eq('status', 'learning')
+      .eq('repetitions', 0)
+      .not('last_reviewed_at', 'is', null)
+      .order('last_reviewed_at', { ascending: false })
+      .limit(limit),
+    supabase
+      .from('review_items')
+      .select(columns)
+      .eq('user_id', userId)
+      .eq('status', 'leech')
+      .limit(limit),
+  ]);
+
+  for (const result of [lowEase, stalled, leeches]) {
+    if (result.error) throw result.error;
+  }
+
+  const seen = new Set<string>();
+  const out: { item: ReviewItem; card: Card }[] = [];
+  for (const result of [leeches, stalled, lowEase]) {
+    for (const row of (result.data ?? []) as Record<string, unknown>[]) {
+      const id = row.id as string;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      out.push({ item: mapReviewItem(row), card: mapCard(row.cards as Record<string, unknown>) });
+    }
+  }
+  return out;
+}
+
+/**
+ * Cards the learner has answered correctly at least once since learning them
+ * (`review` or `graduated`). A count, not a score: it is the "you know 412
+ * words" number, and it only ever goes up.
+ */
+export async function fetchLearnedCardCount(userId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from('review_items')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .in('status', ['review', 'graduated']);
+
+  if (error) throw error;
+  return count ?? 0;
+}
+
+// ─── Tutor Memory ───────────────────────────────────────────────
+// `tutor_memory` (migration 108): what the live tutor remembers about a
+// learner between sessions. Read and DELETE belong to the learner; there is
+// deliberately no client insert or update, because a note is injected into a
+// future system prompt and a learner who could author one could steer the
+// tutor. Pruned server-side to 24 notes per language, so the limit below is a
+// ceiling, not a page.
+
+const TUTOR_MEMORY_KINDS: ReadonlySet<string> = new Set<TutorMemoryKind>([
+  'personal_fact', 'goal', 'recurring_error', 'preference', 'topic_thread',
+]);
+
+function mapTutorMemory(row: Record<string, unknown>): TutorMemory {
+  const kind = row.kind as string;
+  return {
+    id: row.id as string,
+    targetLanguage: row.target_language as string,
+    kind: TUTOR_MEMORY_KINDS.has(kind) ? (kind as TutorMemoryKind) : 'topic_thread',
+    content: row.content as string,
+    mentionCount: (row.mention_count as number) ?? 1,
+    firstSeenAt: row.first_seen_at as string,
+    lastSeenAt: row.last_seen_at as string,
+  };
+}
+
+/** Every note the tutor holds for this learner in one language, most-mentioned first. */
+export async function fetchTutorMemories(userId: string, targetLanguage: string): Promise<TutorMemory[]> {
+  const { data, error } = await supabase
+    .from('tutor_memory')
+    .select('id, target_language, kind, content, mention_count, first_seen_at, last_seen_at')
+    .eq('user_id', userId)
+    .in('target_language', languageVariants(targetLanguage))
+    .order('mention_count', { ascending: false })
+    .order('last_seen_at', { ascending: false })
+    .limit(50);
+
+  if (error) throw error;
+  return (data ?? []).map(mapTutorMemory);
+}
+
+/** Make the tutor forget one note. The row is derived, so nothing else is lost. */
+export async function deleteTutorMemory(userId: string, id: string): Promise<void> {
+  const { error } = await supabase
+    .from('tutor_memory')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', userId);
+  if (error) throw error;
+}
+
+/** Make the tutor forget everything it holds for this learner in one language. */
+export async function deleteAllTutorMemories(userId: string, targetLanguage: string): Promise<void> {
+  const { error } = await supabase
+    .from('tutor_memory')
+    .delete()
+    .eq('user_id', userId)
+    .in('target_language', languageVariants(targetLanguage));
+  if (error) throw error;
 }

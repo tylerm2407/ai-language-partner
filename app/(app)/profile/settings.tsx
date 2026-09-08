@@ -26,6 +26,9 @@ import { cefrCanDo } from '../../../lib/cefr-labels';
 import type { LanguageCode, ProficiencyLevel } from '../../../types';
 import { SentrySmokeTrigger } from '../../../components/debug/SentrySmokeTrigger';
 
+/** Matches the `ideal_l2_self` column check (migration 028) and onboarding. */
+const IDEAL_SELF_MAX = 300;
+
 const LEVELS: { value: ProficiencyLevel; label: string }[] = [
   { value: 'beginner', label: 'Beginner' },
   { value: 'elementary', label: 'Elementary' },
@@ -53,6 +56,10 @@ export default function SettingsScreen() {
   const [targetLanguage, setTargetLanguage] = useState<LanguageCode | null>(getTargetLanguage(profile));
   const [level, setLevel] = useState<ProficiencyLevel>(profile?.level ?? 'beginner');
   const [dailyGoal, setDailyGoal] = useState(profile?.dailyGoalMinutes ?? 10);
+  // The onboarding "picture a moment" answer. Until now it was write-once: the
+  // goal-track error copy on the Learn tab has pointed learners here to
+  // rewrite it for months, at a control that did not exist.
+  const [idealSelf, setIdealSelf] = useState(profile?.idealL2Self ?? '');
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -84,7 +91,8 @@ export default function SettingsScreen() {
     displayName !== (profile?.displayName ?? '') ||
     targetLanguage !== getTargetLanguage(profile) ||
     level !== profile?.level ||
-    dailyGoal !== profile?.dailyGoalMinutes;
+    dailyGoal !== profile?.dailyGoalMinutes ||
+    idealSelf.trim() !== (profile?.idealL2Self ?? '');
 
   const handleSave = async () => {
     setSaving(true);
@@ -95,6 +103,9 @@ export default function SettingsScreen() {
         ...(targetLanguage ? { targetLanguage } : {}),
         level,
         dailyGoalMinutes: dailyGoal,
+        // Empty clears it: a learner is allowed to have no stated goal, and the
+        // reminder and hero copy fall back to their generic lines.
+        idealL2Self: idealSelf.trim() || null,
       });
       goBack();
     } catch {
@@ -211,6 +222,25 @@ export default function SettingsScreen() {
             </Pressable>
           ))}
         </View>
+
+        {/* Your goal — the Ideal L2 Self (Dörnyei). Drives the session hero
+            line, the daily reminder and the generated goal track, so editing
+            it is the single most personal control in the app. */}
+        <Text className="text-sm font-semibold mb-2 uppercase tracking-wide" style={{ color: c.muted }}>Your Goal</Text>
+        <Ui2Input
+          containerStyle={{ marginBottom: spacing.lg }}
+          value={idealSelf}
+          onChangeText={(t) => setIdealSelf(t.slice(0, IDEAL_SELF_MAX))}
+          placeholder="Picture a moment you'd love to have in this language…"
+          helper={`${idealSelf.length}/${IDEAL_SELF_MAX} · Shapes your session line, your reminders and your goal lessons.`}
+          multiline
+          numberOfLines={3}
+          maxLength={IDEAL_SELF_MAX}
+          textAlignVertical="top"
+          inputStyle={{ minHeight: 88 }}
+          accessibilityLabel="Your goal"
+          accessibilityHint="A sentence about the moment you are learning for. Used to personalise your practice."
+        />
 
         {/* Motion — WCAG 2.2 SC 2.2.2 (Level A) asks for a mechanism to stop
             auto-starting motion. The OS Reduce Motion switch is honored too;

@@ -27,6 +27,14 @@ const BUCKET = 'avatars';
 const GENERATION_TIMEOUT_MS = 300_000;
 
 /**
+ * How many generated portraits a learner keeps. Paid plans allow a handful of
+ * renders a month, so a year of steady use stays inside this; at ~1.4MB each
+ * the ceiling is ~17MB per account, which is the price of never deleting a
+ * portrait someone might want back.
+ */
+const KEEP_GENERATED_AVATARS = 12;
+
+/**
  * Supabase's edge runtime exposes EdgeRuntime.waitUntil to keep the instance
  * alive after the response is sent. It is absent under plain `deno test`, so
  * the fallback just lets the promise run detached.
@@ -251,13 +259,21 @@ export async function renderAvatar(args: RenderArgs): Promise<void> {
     console.error('[generate-avatar] could not mark job done:', doneErr.message);
   }
 
-  // Prune superseded generations. Best-effort: a failure here costs storage,
-  // not correctness, so it must not fail the request.
+  // Keep the learner's recent generations as a gallery they can switch back
+  // to (the client lists this folder — `listGeneratedAvatars`), and prune only
+  // past the cap. This used to delete every object but the newest, which meant
+  // choosing a preset and then regenerating lost the previous portrait for
+  // good; each one cost a paid render. Best-effort: a failure here costs
+  // storage, not correctness, so it must not fail the request.
   try {
-    const { data: existing } = await supabase.storage.from(BUCKET).list(userId);
+    const { data: existing } = await supabase.storage.from(BUCKET).list(userId, {
+      limit: 200,
+      sortBy: { column: 'created_at', order: 'desc' },
+    });
     const stale = (existing ?? [])
       .map((o: { name: string }) => `${userId}/${o.name}`)
-      .filter((p: string) => p !== path);
+      .filter((p: string) => p !== path)
+      .slice(KEEP_GENERATED_AVATARS - 1);
     if (stale.length > 0) await supabase.storage.from(BUCKET).remove(stale);
   } catch (err) {
     console.warn('[generate-avatar] prune of previous avatars failed:', err);

@@ -80,6 +80,11 @@ type EventName =
    *  how someone copes with being interrupted, and which way people move is
    *  worth knowing before the default is chosen for them. */
   | 'tutor_correction_mode_changed'
+  /** The learner made the tutor forget a note (or all of them — `count` says
+   *  how many). The only privacy control on the tutor's memory; how often it
+   *  is used is the measure of whether the memory feels like attention or
+   *  like surveillance. Never the note's text. */
+  | 'tutor_memory_forgotten'
 
   // ── The wall: every place the product says no. The churn events.
   | 'quota_exhausted'

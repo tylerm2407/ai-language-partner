@@ -24,6 +24,10 @@ import { unitTilesToLessonTiles } from '../../components/magazine/LessonTile';
 import { useUnitProgressTiles } from '../../hooks/useUnitProgressTiles';
 import { useDailyChallenges } from '../../hooks/useDailyChallenges';
 import { HomeHeader, LevelDueRow, SessionHero, ReadRow } from '../../components/ui2/home/HomeSections';
+import { PatternsCard } from '../../components/ui2/home/HomeInsights';
+import { useLearnerInsights } from '../../hooks/useLearnerInsights';
+import { heroSubtitle } from '../../lib/insights';
+import { trackEvent } from '../../lib/analytics';
 import { UnitRows, DailyThree, WeekStrip, ActionRow, SectionTitle } from '../../components/ui2/home/HomeProgress';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { loadErrorCopy, type ErrorCopy } from '../../lib/error-copy';
@@ -83,6 +87,9 @@ export default function HomeScreen() {
   const { c, scheme } = useUi2Theme();
   const { challenges } = useDailyChallenges();
   const band = cefrBandForProficiencyLevel(profile?.level ?? 'beginner');
+  // What the tutor already knows about this learner — recurring mistakes and
+  // words the SRS says keep failing. Same rows the paid tutor prompt reads.
+  const insights = useLearnerInsights(user?.id, getTargetLanguage(profile));
   // The session hero points at the first unit with an unfinished lesson; the
   // rollup is ordered by curriculum position, so that is the learner's next.
   const nextTile = lessonTiles?.find((t) => t.nextLessonId) ?? null;
@@ -121,6 +128,8 @@ export default function HomeScreen() {
           xpEarnedToday: dailyStats?.xpEarned ?? 0,
           preferredHour: 21,
           idealL2Self: profile.idealL2Self ?? null,
+          dueCount: reviewCount,
+          topMistakeLabel: insights.mistakes[0]?.label ?? null,
         });
       }
     } finally {
@@ -202,7 +211,10 @@ export default function HomeScreen() {
           <SessionHero
             title={nextTile?.title ?? 'Your next lesson'}
             minutes={profile?.dailyGoalMinutes ?? 15}
-            subtitle={cefrCanDo(band)}
+            // The learner's own goal when they gave one; the band's can-do
+            // line otherwise. The level card above keeps the can-do pairing
+            // either way, so a bare band never stands alone on the page.
+            subtitle={heroSubtitle(profile?.idealL2Self, cefrCanDo(band))}
             onStart={() =>
               router.push((nextTile?.nextLessonId ? `/learn/${nextTile.nextLessonId}` : '/learn') as any)
             }
@@ -228,6 +240,19 @@ export default function HomeScreen() {
             onRetry={refetchTiles}
             onOpen={(tile) => router.push((tile.nextLessonId ? `/learn/${tile.nextLessonId}` : '/learn') as any)}
             onAll={() => router.push('/learn' as any)}
+          />
+
+          <PatternsCard
+            mistakes={insights.mistakes}
+            words={insights.words}
+            loading={insights.loading}
+            error={insights.error}
+            onRetry={insights.retry}
+            onOpen={() => router.push('/profile/patterns' as any)}
+            onReviewWords={() => {
+              trackEvent('review_started', { count: insights.words.length, source: 'struggling' });
+              router.push({ pathname: '/learn/review', params: { mode: 'struggling' } } as any);
+            }}
           />
 
           <DailyThree items={challenges} />

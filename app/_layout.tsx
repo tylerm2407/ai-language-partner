@@ -10,6 +10,7 @@ import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 import { useSchoolStore } from '../stores/useSchoolStore';
 import { SCHOOL_ENABLED } from '../config/app';
 import { useNotifications, scheduleDailyPracticeReminder } from '../hooks/useNotifications';
+import { readCachedTopMistake } from '../hooks/useLearnerInsights';
 import {
   configurePurchases,
   identifyPurchaser,
@@ -67,7 +68,7 @@ Sentry.init({
 function RootLayout() {
   const { c, scheme } = useUi2Theme();
   const { session, loading: authLoading } = useAuth();
-  const { profile, dailyStats, loadUserData, setEntitledTier, error: profileError } = useAppStore();
+  const { profile, dailyStats, reviewCount, loadUserData, setEntitledTier, error: profileError } = useAppStore();
   const { roles, activeRole, loadRoles } = useSchoolStore();
   const segments = useSegments() as string[];
   const router = useRouter();
@@ -104,29 +105,48 @@ function RootLayout() {
   // Re-arm the daily practice reminder whenever the inputs change
   // (xp/permission). Silent no-op if permission isn't granted yet
   // or if XP was already earned today.
+  //
+  // The body rotates through the learner's goal, the mistake they keep making
+  // and the cards due. The mistake comes from the insights READ CACHE — Home
+  // loads it; the root layout must not run those queries just to word a
+  // notification.
   useEffect(() => {
     if (!profile || !permissionGranted) return;
-    scheduleDailyPracticeReminder({
-      xpEarnedToday: dailyStats?.xpEarned ?? 0,
-      preferredHour: 21,
-      idealL2Self: profile.idealL2Self ?? null,
-    }).catch(() => {});
-  }, [profile, dailyStats?.xpEarned, permissionGranted]);
+    readCachedTopMistake(profile.userId, profile.targetLanguage)
+      .catch(() => null)
+      .then((topMistakeLabel) =>
+        scheduleDailyPracticeReminder({
+          xpEarnedToday: dailyStats?.xpEarned ?? 0,
+          preferredHour: 21,
+          idealL2Self: profile.idealL2Self ?? null,
+          dueCount: reviewCount,
+          topMistakeLabel,
+        }),
+      )
+      .catch(() => {});
+  }, [profile, dailyStats?.xpEarned, permissionGranted, reviewCount]);
 
   // Also re-arm on background — covers edge cases where the user
   // backgrounds before the schedule-on-change useEffect has resolved.
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'background' && profile && permissionGranted) {
-        scheduleDailyPracticeReminder({
-          xpEarnedToday: dailyStats?.xpEarned ?? 0,
-          preferredHour: 21,
-          idealL2Self: profile.idealL2Self ?? null,
-        }).catch(() => {});
+        readCachedTopMistake(profile.userId, profile.targetLanguage)
+          .catch(() => null)
+          .then((topMistakeLabel) =>
+            scheduleDailyPracticeReminder({
+              xpEarnedToday: dailyStats?.xpEarned ?? 0,
+              preferredHour: 21,
+              idealL2Self: profile.idealL2Self ?? null,
+              dueCount: reviewCount,
+              topMistakeLabel,
+            }),
+          )
+          .catch(() => {});
       }
     });
     return () => sub.remove();
-  }, [profile, dailyStats?.xpEarned, permissionGranted]);
+  }, [profile, dailyStats?.xpEarned, permissionGranted, reviewCount]);
 
   // Register the analytics provider once, before anything tries to track.
   // No-ops without EXPO_PUBLIC_POSTHOG_KEY, which is the normal state for a

@@ -947,6 +947,25 @@ scheme (`app.json` `userInterfaceStyle: "automatic"`).
   API (`idle` / `think` / `cheer` / …). A Rive rig would replace the video
   behind the same props.
 
+- **Your patterns** (2026-09-08): Home gains one section between "Continue
+  learning" and "Your daily three" — `components/ui2/home/HomeInsights.tsx`.
+  A neutral `SlabCard` with a headline, up to 3 recurring-mistake rows
+  (icon tile on `primaryTint`, label, `type · N× in 30 days`), up to 4
+  `error` chips of struggling words plus a `neutral` `+N` chip, an inline
+  primary text action ("Review them now") and an `idle` footnote. It renders
+  NOTHING for a learner with no history and an error-with-retry card when the
+  read failed — an empty card and a failed one must never look alike. The
+  section title's "See all" opens `app/(app)/profile/patterns.tsx` (stat row:
+  `primary` words-learned + `pink`/`green` slipping count; one card per
+  mistake with the original struck through beside a `close-circle` and the
+  correction beside a `checkmark-circle`, never colour alone). Its sibling
+  `app/(app)/profile/memory.tsx` lists the live tutor's notes grouped by kind
+  with a 36pt `pinkTint` forget button per row and a destructive
+  `Ui2ListRow` to forget everything. Both are reached from Profile rows
+  directly under the proficiency report. The session hero's second line is
+  now the learner's own goal (`Toward: …`) when they gave one; the level card
+  keeps the can-do pairing, so a bare band still never stands alone.
+
 ### Migrating a Dark Glow screen to UI 2.0
 
 Rollout COMPLETED 2026-09-07: every screen is on UI 2.0, in both schemes, and

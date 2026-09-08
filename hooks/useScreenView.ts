@@ -41,7 +41,11 @@ export type ScreenName =
   // and never reading what came out of it.
   | 'tutor'
   | 'tutor_call'
-  | 'tutor_debrief';
+  | 'tutor_debrief'
+  // What the tutor knows about the learner, made visible: recurring mistakes
+  // and struggling words, and the tutor's between-session notes.
+  | 'patterns'
+  | 'tutor_memory';
 
 export function useScreenView(screen: ScreenName, props: EventProperties = {}): void {
   // Only the primitive fields are dependencies: depending on the object itself

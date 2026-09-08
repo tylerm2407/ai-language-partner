@@ -4,10 +4,12 @@ import { useAppStore } from '../stores/useAppStore';
 import {
   fetchDueReviewItems,
   fetchCardsByIds,
+  fetchStrugglingReviewItems,
   upsertReviewItem,
   insertReviewLogIdempotent,
 } from '../lib/supabase-queries';
 import { calculateNextReview } from '../lib/srs';
+import { rankStrugglingWords } from '../lib/insights';
 import { enqueue, isNetworkError, newClientLogId } from '../lib/offline-queue';
 import { cachedFetch, readCacheKey } from '../lib/read-cache';
 import type { ReviewItem, Card, ReviewRating } from '../types';
@@ -18,7 +20,18 @@ interface ReviewQueuePayload {
   cards: Record<string, Card>;
 }
 
-export function useReviewQueue() {
+/**
+ * Which cards a session is made of.
+ *  - `due`: everything SM-2 says is due today. The default, and the only mode
+ *    that touches the shared review-queue cache.
+ *  - `struggling`: the words the learner keeps failing (see `lib/insights.ts`),
+ *    due or not. Reviewing a card early is ordinary SM-2 — the same grading
+ *    runs, the interval just restarts from today — so nothing in the scoring
+ *    path changes; only which cards are dealt.
+ */
+export type ReviewQueueMode = 'due' | 'struggling';
+
+export function useReviewQueue(mode: ReviewQueueMode = 'due') {
   const { user } = useAuth();
   const { reviewCount, refreshReviewCount } = useAppStore();
   const [items, setItems] = useState<ReviewItem[]>([]);
@@ -29,6 +42,17 @@ export function useReviewQueue() {
     if (!user) return;
     setLoading(true);
     try {
+      if (mode === 'struggling') {
+        // Not cached: this list changes with every card the learner rates,
+        // and a stale copy would deal a word they fixed ten minutes ago.
+        const language = useAppStore.getState().profile?.targetLanguage ?? null;
+        const ranked = rankStrugglingWords(await fetchStrugglingReviewItems(user.id), { limit: 20, language });
+        const map: Record<string, Card> = {};
+        ranked.forEach((w) => { map[w.card.id] = w.card; });
+        setItems(ranked.map((w) => w.item));
+        setCards(map);
+        return;
+      }
       // Stale-while-revalidate: a cached queue paints immediately; a fetch
       // failure with a cache resolves stale instead of throwing, so callers
       // only see an error when there's nothing to show (same as before).
@@ -56,7 +80,7 @@ export function useReviewQueue() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, mode]);
 
   const submitReview = useCallback(async (
     item: ReviewItem,

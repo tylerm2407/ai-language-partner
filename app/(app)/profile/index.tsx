@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { View, Text, Pressable, ScrollView, Alert, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -27,7 +27,14 @@ import { FourStrandsCard } from '../../../components/stats/FourStrandsCard';
 import { useDailyStats } from '../../../hooks/useDailyStats';
 import { strandMinutesFromDailyStats } from '../../../lib/four-strands';
 import { CompletedLessonsSection } from '../../../components/profile/CompletedLessonsSection';
-import { setAvatarKind, joinClassroom } from '../../../lib/supabase-queries';
+import {
+  setAvatarKind,
+  setGeneratedAvatar,
+  listGeneratedAvatars,
+  deleteGeneratedAvatar,
+  clearGeneratedAvatar,
+  joinClassroom,
+} from '../../../lib/supabase-queries';
 import { presetUrlFromId, type AvatarPreset } from '../../../lib/avatar-presets';
 import JoinClassModal from '../../../components/school/JoinClassModal';
 import RoleSwitcher from '../../../components/school/RoleSwitcher';
@@ -68,6 +75,24 @@ export default function ProfileScreen() {
   const router = useRouter();
   const [customizerVisible, setCustomizerVisible] = useState(false);
   const [generatorVisible, setGeneratorVisible] = useState(false);
+  // Every portrait the learner has generated and still owns. Loaded when the
+  // picker opens so a portrait is never lost by choosing something else — it
+  // just moves to the top row of the picker.
+  const [generated, setGenerated] = useState<string[] | null>(null);
+  const [generatedError, setGeneratedError] = useState(false);
+  const loadGenerated = useCallback(async () => {
+    if (!user?.id) return;
+    setGeneratedError(false);
+    try {
+      setGenerated(await listGeneratedAvatars(user.id));
+    } catch (err) {
+      console.error('[profile] generated avatars list failed:', err);
+      setGeneratedError(true);
+    }
+  }, [user?.id]);
+  useEffect(() => {
+    if (customizerVisible) loadGenerated();
+  }, [customizerVisible, loadGenerated]);
   // A generated avatar is private and needs a signed URL; a preset is public
   // artwork whose URL is derived from its id, so only the first costs a round
   // trip. Anything else (including legacy 'procedural' rows) falls through to
@@ -106,7 +131,59 @@ export default function ProfileScreen() {
     // mirrors that into the store rather than issuing a second write.
     invalidateAvatarImage(path);
     setProfile({ ...profile, avatarKind: 'generated', avatarImagePath: path });
+    // The new portrait joins the gallery immediately; the list is re-read on
+    // the next picker open anyway.
+    setGenerated((g) => [path, ...(g ?? []).filter((p) => p !== path)]);
     setGeneratorVisible(false);
+  };
+
+  const handleDeleteGenerated = (path: string) => {
+    if (!user || !profile) return;
+    const isCurrent = profile.avatarKind === 'generated' && profile.avatarImagePath === path;
+    Alert.alert(
+      'Delete this avatar?',
+      isCurrent
+        ? 'This is your current avatar. It will be removed for good and you will show your initials until you choose another.'
+        : 'It will be removed for good. Generating it again would use another avatar from your plan.',
+      [
+        { text: 'Keep', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            const previousGallery = generated;
+            const previousProfile = profile;
+            // Optimistic: the tile leaves the row at once; a failure puts it back.
+            setGenerated((g) => (g ?? []).filter((p) => p !== path));
+            if (isCurrent) setProfile({ ...profile, avatarKind: 'procedural', avatarImagePath: null });
+            try {
+              await deleteGeneratedAvatar(user.id, path);
+              if (isCurrent) await clearGeneratedAvatar(user.id);
+              invalidateAvatarImage(path);
+            } catch (err) {
+              console.error('Failed to delete avatar:', err);
+              setGenerated(previousGallery);
+              setProfile(previousProfile);
+              Alert.alert('Could not delete avatar', 'Nothing was removed. Please try again.');
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const handleSelectGenerated = async (path: string) => {
+    if (!user || !profile) return;
+    const previous = profile;
+    setProfile({ ...profile, avatarKind: 'generated', avatarImagePath: path });
+    setCustomizerVisible(false);
+    try {
+      await setGeneratedAvatar(user.id, path);
+    } catch (err) {
+      console.error('Failed to restore avatar:', err);
+      setProfile(previous);
+      Alert.alert('Could not save avatar', 'Your avatar was not changed. Please try again.');
+    }
   };
 
   const handleSelectPreset = async (preset: AvatarPreset) => {
@@ -208,6 +285,29 @@ export default function ProfileScreen() {
           onPress={() => router.push('/profile/proficiency' as any)}
           accessibilityLabel="View your proficiency report"
           accessibilityHint="Shows your estimated level per skill, what it means, and the evidence behind it"
+        />
+
+        {/* What the tutor already knows, made visible. Both lists have been
+            computed on every paid tutor turn since migration 026/108 and shown
+            to nobody; a memory the learner cannot see and delete is
+            surveillance, so the second row is also the privacy control. */}
+        <Ui2ListRow
+          style={{ marginBottom: spacing.sm }}
+          icon="analytics-outline"
+          title="Your patterns"
+          subtitle="Mistakes that keep coming back, words that keep slipping"
+          onPress={() => router.push('/profile/patterns' as any)}
+          accessibilityLabel="Your patterns"
+          accessibilityHint="Shows the mistakes you repeat and the words you keep failing, with a review of just those"
+        />
+        <Ui2ListRow
+          style={{ marginBottom: spacing.md }}
+          icon="sparkles-outline"
+          title="What Sol remembers"
+          subtitle="Notes from your live tutor sessions — see and delete them"
+          onPress={() => router.push('/profile/memory' as any)}
+          accessibilityLabel="What Sol remembers"
+          accessibilityHint="Lists what the live tutor remembers about you between sessions, and lets you delete any of it"
         />
 
         {/* Four Strands balance (Nation, research.md §14.3) */}
@@ -333,8 +433,14 @@ export default function ProfileScreen() {
     <AvatarPresetPicker
       visible={customizerVisible}
       onClose={() => setCustomizerVisible(false)}
-      selectedId={profile?.avatarPresetId}
+      selectedId={profile?.avatarKind === 'preset' ? profile.avatarPresetId : null}
       onSelect={handleSelectPreset}
+      generated={generated}
+      generatedError={generatedError}
+      onRetryGenerated={loadGenerated}
+      selectedGeneratedPath={profile?.avatarKind === 'generated' ? profile.avatarImagePath : null}
+      onSelectGenerated={handleSelectGenerated}
+      onDeleteGenerated={handleDeleteGenerated}
       onUsePhoto={() => {
         setCustomizerVisible(false);
         setGeneratorVisible(true);

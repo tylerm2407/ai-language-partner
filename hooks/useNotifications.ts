@@ -29,6 +29,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { reminderCopy } from '../lib/insights';
 
 // Configure how notifications are displayed when the app is in the foreground
 Notifications.setNotificationHandler({
@@ -158,37 +159,19 @@ interface ScheduleDailyPracticeReminderParams {
    * reminder body with a concrete, personalized reason to practice —
    * the strongest predictor of sustained effort per the research. */
   idealL2Self?: string | null;
+  /** SRS cards due right now. One of the rotating personal hooks. */
+  dueCount?: number;
+  /** The mistake the learner keeps making, from `useLearnerInsights`. */
+  topMistakeLabel?: string | null;
 }
 
 /**
- * Trim an ideal-self sentence to a fragment safe for notification body.
- * Push notifications cap around 178 chars; we budget ~60 for the user's
- * fragment after the enclosing copy. Word-boundary ellipsis.
+ * Reminder copy lives in `lib/insights.ts` (`reminderCopy`) with the rest of
+ * the personal-hook wording, and rotates by calendar day through whichever
+ * hooks are known: the learner's goal, the mistake they keep making, the
+ * cards that are due. Push bodies cap around 178 chars; each variant budgets
+ * for that.
  */
-function idealSelfFragment(idealL2Self: string, maxLen = 60): string {
-  const cleaned = idealL2Self.trim().replace(/\.$/, '');
-  if (cleaned.length <= maxLen) return cleaned;
-  const cut = cleaned.slice(0, maxLen);
-  const lastSpace = cut.lastIndexOf(' ');
-  return `${cut.slice(0, lastSpace > 20 ? lastSpace : maxLen).trimEnd()}…`;
-}
-
-function dailyPracticeContent(
-  idealL2Self?: string | null,
-): { title: string; body: string } {
-  const hasVision = typeof idealL2Self === 'string' && idealL2Self.trim().length > 0;
-
-  if (hasVision) {
-    return {
-      title: "Time for today's practice",
-      body: `A few minutes toward being the you who will ${idealSelfFragment(idealL2Self as string)}.`,
-    };
-  }
-  return {
-    title: "Time for today's practice",
-    body: '5 minutes is enough to keep moving.',
-  };
-}
 
 /**
  * Schedule the DAILY practice reminder. Idempotent: replaces only its own
@@ -201,6 +184,8 @@ export async function scheduleDailyPracticeReminder({
   xpEarnedToday,
   preferredHour = 21,
   idealL2Self,
+  dueCount,
+  topMistakeLabel,
 }: ScheduleDailyPracticeReminderParams): Promise<void> {
   if (Platform.OS === 'web') return;
 
@@ -217,7 +202,7 @@ export async function scheduleDailyPracticeReminder({
   if (xpEarnedToday > 0) return;
 
   const hour = Math.max(18, Math.min(preferredHour, 22));
-  const { title, body } = dailyPracticeContent(idealL2Self);
+  const { title, body } = reminderCopy({ idealL2Self, dueCount, topMistakeLabel });
 
   await Notifications.scheduleNotificationAsync({
     identifier: NOTIFICATION_ID_DAILY_PRACTICE,

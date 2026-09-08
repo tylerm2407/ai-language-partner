@@ -1055,3 +1055,30 @@ export interface TutorSessionSummary {
   debrief: TutorDebrief | null;
   endedAt: string | null;
 }
+
+// ─── Tutor Memory ────────────────────────────────────────────
+
+/** What the live tutor remembers about a learner between sessions (migration 108). */
+export type TutorMemoryKind =
+  | 'personal_fact'
+  | 'goal'
+  | 'recurring_error'
+  | 'preference'
+  | 'topic_thread';
+
+/**
+ * One note. Owner-readable and owner-DELETABLE via RLS — never writable from
+ * the client, because a note is injected verbatim into a future system prompt
+ * and a learner who could author one could steer the tutor.
+ */
+export interface TutorMemory {
+  id: string;
+  targetLanguage: string;
+  kind: TutorMemoryKind;
+  /** The note itself, ≤200 chars, written in the learner's native language. */
+  content: string;
+  /** How many sessions have surfaced this note. */
+  mentionCount: number;
+  firstSeenAt: string;
+  lastSeenAt: string;
+}
