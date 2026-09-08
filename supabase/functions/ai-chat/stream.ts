@@ -235,7 +235,11 @@ export function chatStreamResponse(opts: ChatStreamOpts): Response {
           body: response.body,
           onSentence: (text) => send('chunk', { text }),
           validate: async (text) => {
-            const check = await validateContentSafety(text, { language, fn: 'ai-chat' });
+            const check = await validateContentSafety(text, {
+              language,
+              fn: 'ai-chat',
+              moderation: 'required',
+            });
             return { safe: check.safe, reasons: check.reasons };
           },
         });
@@ -252,7 +256,10 @@ export function chatStreamResponse(opts: ChatStreamOpts): Response {
           // actually saw canned text. The non-streaming path emits the same
           // pair, so the two transports are comparable in the same query.
           log({ evt: 'safety_reject', attempt: 1, reasons: outcome.reasons });
-          log({ evt: 'used_fallback', reason: 'safety' });
+          log({
+            evt: 'used_fallback',
+            reason: outcome.reasons.includes('moderation_unavailable') ? 'provider' : 'safety',
+          });
           send('fallback', { reply: opts.fallbackReply });
           await opts.finalizeFallback();
           return;

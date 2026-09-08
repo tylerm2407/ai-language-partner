@@ -4,6 +4,18 @@
 import { assert, assertEquals } from 'https://deno.land/std@0.168.0/testing/asserts.ts';
 import { generateValidated } from './validated-generate.ts';
 
+// Generation is fail-closed on model moderation. Unit tests isolate the
+// orchestration by providing the same successful moderation response every
+// clean generated string would receive in production.
+Deno.env.set('OPENAI_KEY', 'sk-test');
+const providerFetchForTest = globalThis.fetch;
+globalThis.fetch = ((input: string | URL | Request, init?: RequestInit) =>
+  String(input) === 'https://api.openai.com/v1/moderations'
+    ? Promise.resolve(new Response(JSON.stringify({
+        results: [{ flagged: false, categories: {} }],
+      }), { status: 200 }))
+    : providerFetchForTest(input, init)) as typeof fetch;
+
 Deno.test('safe content returns on first attempt, no fallback', async () => {
   let attempts = 0;
   let fallbackCalls = 0;
@@ -128,4 +140,17 @@ Deno.test('skipLevelCheck omits the level validation', async () => {
     skipLevelCheck: true,
   });
   assertEquals(res.validations.level, undefined);
+});
+
+Deno.test('an unsafe authored fallback is never returned to the learner', async () => {
+  const res = await generateValidated({
+    fn: 'test',
+    generate: () => Promise.reject(new Error('provider unavailable')),
+    fallback: () => Promise.resolve('this fallback is fucking unsafe'),
+    language: 'en',
+    safetyRetries: 0,
+  });
+  assertEquals(res.usedFallback, true);
+  assertEquals(res.text, '');
+  assertEquals(res.validations.safety.safe, false);
 });

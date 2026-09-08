@@ -770,7 +770,11 @@ async function stripUnsafeMetadata(
   ].filter((s): s is string => typeof s === 'string' && s.length > 0);
   if (parts.length === 0) return parsed;
 
-  const check = await validateContentSafety(parts.join('\n'), { language, fn: 'ai-chat' });
+  const check = await validateContentSafety(parts.join('\n'), {
+    language,
+    fn: 'ai-chat',
+    moderation: 'required',
+  });
   if (check.safe) return parsed;
 
   // Same event name the non-streaming path logs, plus a scope so the two are

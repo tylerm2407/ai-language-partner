@@ -80,10 +80,14 @@ export async function translateWithValidation(
       continue;
     }
 
-    const safety = await validateContentSafety(text, { language, fn: 'translate' });
+    const safety = await validateContentSafety(text, {
+      language,
+      fn: 'translate',
+      moderation: 'required',
+    });
     if (safety.safe) return { ok: true, translation: text };
 
-    lastReason = 'unsafe';
+    lastReason = safety.reasons.includes('moderation_unavailable') ? 'api_error' : 'unsafe';
     log({ evt: 'safety_reject', fn: 'translate', attempt, reasons: safety.reasons, language });
   }
 

@@ -98,6 +98,7 @@ export async function generateValidated(
       userAge,
       language,
       fn,
+      moderation: 'required',
     });
 
     if (lastSafety.safe) {
@@ -113,7 +114,7 @@ export async function generateValidated(
       return buildResult(lastText, undefined, lastSafety, fn, language, targetLevel, opts.skipLevelCheck);
     }
 
-    lastFailure = 'safety';
+    lastFailure = lastSafety.reasons.includes('moderation_unavailable') ? 'provider' : 'safety';
     console.log(JSON.stringify({
       evt: 'safety_reject',
       fn,
@@ -132,6 +133,10 @@ export async function generateValidated(
     userAge,
     language,
     fn,
+    // Fallbacks are authored or explicit empty sentinels. They still pass the
+    // deterministic minor-safe gate, but must remain available during a
+    // moderation-provider outage.
+    moderation: 'skip',
   });
 
   console.log(JSON.stringify({
@@ -141,6 +146,17 @@ export async function generateValidated(
     language,
     ts: new Date().toISOString(),
   }));
+
+  if (!fallbackSafety.safe) {
+    console.error(JSON.stringify({
+      evt: 'unsafe_fallback',
+      fn,
+      reasons: fallbackSafety.reasons,
+      language,
+      ts: new Date().toISOString(),
+    }));
+    return buildResult('', lastFailure, fallbackSafety, fn, language, targetLevel, opts.skipLevelCheck);
+  }
 
   return buildResult(fallbackText, lastFailure, fallbackSafety, fn, language, targetLevel, opts.skipLevelCheck);
 }
