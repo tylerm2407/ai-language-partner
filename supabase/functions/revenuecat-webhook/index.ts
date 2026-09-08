@@ -6,6 +6,8 @@
 // Auth: RevenueCat lets you set a custom Authorization header on the webhook.
 // Set REVENUECAT_WEBHOOK_AUTH as a function secret and paste the SAME value
 // into the RevenueCat dashboard webhook "Authorization header value" field.
+// TRANSFER reconciliation additionally requires a secret RevenueCat API v1
+// key in REVENUECAT_SECRET_API_KEY (never a public appl_/goog_ SDK key).
 //
 // Optional, stronger: enable "HMAC webhook signing" on the integration in the
 // RevenueCat dashboard and store the signing secret as the
@@ -20,11 +22,13 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { checkAuthorization, isPlausibleUuid, verifyWebhookSignature } from './auth.ts';
 import { classifyEvent, INACTIVE_EVENTS } from './tier.ts';
+import { fetchRevenueCatSubscription, transferUserIds } from './reconcile.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const WEBHOOK_AUTH = Deno.env.get('REVENUECAT_WEBHOOK_AUTH');
 const WEBHOOK_HMAC_SECRET = Deno.env.get('REVENUECAT_WEBHOOK_HMAC_SECRET');
+const REVENUECAT_SECRET_API_KEY = Deno.env.get('REVENUECAT_SECRET_API_KEY');
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
@@ -89,6 +93,9 @@ serve(async (req: Request) => {
   if (!event) return new Response(JSON.stringify({ ok: true }), { status: 200 });
 
   const type = String(event.type ?? '');
+  if (type === 'TRANSFER') {
+    return handleTransfer(event);
+  }
   // app_user_id is the Supabase user id we set via Purchases.configure/logIn.
   const userId = (event.app_user_id as string) ?? null;
   if (!userId) {
@@ -115,7 +122,7 @@ serve(async (req: Request) => {
   const { tier, isActive, cancelAtPeriodEnd } = decision;
 
   const eventId = typeof event.id === 'string' ? event.id : null;
-  if (!eventId) {
+  if (!eventId || eventId.length > 255) {
     console.error('[revenuecat-webhook] actionable event missing id', type);
     return new Response(JSON.stringify({ error: 'invalid_event' }), { status: 400 });
   }
@@ -273,4 +280,78 @@ async function markEventFailed(eventId: string, leaseToken: string, reason: stri
   if (error) {
     console.error('[revenuecat-webhook] failed to release event lease:', error.message);
   }
+}
+
+async function handleTransfer(event: Record<string, unknown>): Promise<Response> {
+  const eventId = typeof event.id === 'string' ? event.id : null;
+  if (!eventId || eventId.length > 255) {
+    return new Response(JSON.stringify({ error: 'invalid_event' }), { status: 400 });
+  }
+
+  const userIds = transferUserIds(event);
+  // A transfer can involve RevenueCat anonymous aliases only. Those do not
+  // map to auth.users and therefore require no application-side mutation.
+  if (userIds.length === 0) {
+    return new Response(JSON.stringify({ ok: true, no_app_users: true }), { status: 200 });
+  }
+  if (!REVENUECAT_SECRET_API_KEY) {
+    console.error('[revenuecat-webhook] REVENUECAT_SECRET_API_KEY is required for TRANSFER');
+    return new Response(JSON.stringify({ error: 'server_configuration_error' }), { status: 500 });
+  }
+
+  const eventData = {
+    transferred_from: Array.isArray(event.transferred_from) ? event.transferred_from : [],
+    transferred_to: Array.isArray(event.transferred_to) ? event.transferred_to : [],
+  };
+  const { data: claim, error: claimError } = await supabase.rpc('claim_revenuecat_event', {
+    p_event_id: eventId,
+    p_event_type: 'TRANSFER',
+    p_user_id: null,
+    p_event_data: eventData,
+    p_lease_seconds: 60,
+  });
+  if (claimError) {
+    console.error('[revenuecat-webhook] transfer event claim failed:', claimError.message);
+    return new Response(JSON.stringify({ error: 'internal_error' }), { status: 500 });
+  }
+  const claimRecord = claim && typeof claim === 'object' && !Array.isArray(claim)
+    ? claim as Record<string, unknown>
+    : {};
+  const claimStatus = String(claimRecord.status ?? '');
+  if (claimStatus === 'completed') {
+    return new Response(JSON.stringify({ ok: true, duplicate: true }), { status: 200 });
+  }
+  if (claimStatus !== 'claimed') {
+    return new Response(JSON.stringify({ error: 'event_busy' }), { status: 503 });
+  }
+  const leaseToken = String(claimRecord.lease_token ?? '');
+  if (!isPlausibleUuid(leaseToken)) {
+    return new Response(JSON.stringify({ error: 'internal_error' }), { status: 500 });
+  }
+
+  let states;
+  try {
+    states = await Promise.all(
+      userIds.map((userId) =>
+        fetchRevenueCatSubscription(userId, REVENUECAT_SECRET_API_KEY)
+      ),
+    );
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : 'RevenueCat reconciliation failed';
+    console.error('[revenuecat-webhook] transfer reconciliation failed:', reason);
+    await markEventFailed(eventId, leaseToken, reason);
+    return new Response(JSON.stringify({ error: 'provider_reconciliation_failed' }), { status: 502 });
+  }
+
+  const { error: applyError } = await supabase.rpc('apply_revenuecat_transfer_event', {
+    p_event_id: eventId,
+    p_lease_token: leaseToken,
+    p_states: states,
+  });
+  if (applyError) {
+    console.error('[revenuecat-webhook] atomic transfer application failed:', applyError.message);
+    await markEventFailed(eventId, leaseToken, 'atomic transfer application failed');
+    return new Response(JSON.stringify({ error: 'internal_error' }), { status: 500 });
+  }
+  return new Response(JSON.stringify({ ok: true, reconciled_users: userIds.length }), { status: 200 });
 }
