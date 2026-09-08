@@ -4,13 +4,14 @@
 // Deploy: npx supabase functions deploy delete-account
 //
 // Ordering matters and is deliberate:
-//   1. Cancel billing FIRST — once the rows are gone we no longer know what to cancel.
+//   1. Perform every non-mutating eligibility/configuration check.
 //   2. Refuse if the user still owns an organization (organizations.created_by is
 //      ON DELETE RESTRICT, so the auth delete would fail anyway, but with an opaque error).
-//   3. Delete the rows that do NOT cascade.
-//   4. Delete the auth user — every other user table is ON DELETE CASCADE to auth.users,
+//   3. Record each completed mutation in the deletion-job ledger.
+//   4. Delete the rows that do NOT cascade.
+//   5. Delete the auth user — every other user table is ON DELETE CASCADE to auth.users,
 //      so this removes the rest atomically inside Postgres.
-//   5. Verify nothing is left behind before reporting success.
+//   6. Verify nothing is left behind before reporting success.
 // Every step fails CLOSED: if we cannot complete deletion we abort and report it,
 // rather than destroying the identity and orphaning the data.
 
@@ -36,12 +37,29 @@ const STRIPE_SECRET_KEY = Deno.env.get('STRIPE_SECRET_KEY');
 // entry but removing the person). Everything else cascades.
 const NON_CASCADING_TABLES = [{ table: 'client_events', column: 'user_id' }];
 
+type DeletionStage =
+  | 'started'
+  | 'billing_cancelled'
+  | 'auxiliary_deleted'
+  | 'storage_deleted'
+  | 'audit_scrubbed'
+  | 'auth_deleted';
+
+function partialError(message: string, completedStages: DeletionStage[]) {
+  return {
+    error: message,
+    deletionStarted: completedStages.length > 1,
+    completedStages,
+  };
+}
+
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return corsResponse();
   }
 
   const headers = { ...corsHeaders, 'Content-Type': 'application/json' };
+  let completedStages: DeletionStage[] = [];
 
   try {
     const authUser = await getAuthenticatedUser(req);
@@ -52,66 +70,7 @@ serve(async (req: Request) => {
     const userId = authUser.userId;
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // --- 1. Cancel billing before anything is destroyed -------------------
-    const { data: subscription, error: subReadError } = await supabase
-      .from('subscriptions')
-      .select('stripe_subscription_id, tier, is_active')
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    if (subReadError) {
-      console.error(`[delete-account] could not read subscription for ${userId}:`, subReadError.message);
-      return new Response(
-        JSON.stringify({
-          error: 'Could not verify your subscription status. Nothing was deleted. Please try again.',
-        }),
-        { status: 500, headers }
-      );
-    }
-
-    if (subscription?.stripe_subscription_id) {
-      if (!STRIPE_SECRET_KEY) {
-        console.error('[delete-account] STRIPE_SECRET_KEY not configured; refusing to delete a Stripe subscriber');
-        return new Response(
-          JSON.stringify({
-            error: 'Could not cancel your subscription. Nothing was deleted. Please contact support.',
-          }),
-          { status: 500, headers }
-        );
-      }
-
-      const stripe = new Stripe(STRIPE_SECRET_KEY, {
-        apiVersion: '2023-10-16',
-        httpClient: Stripe.createFetchHttpClient(),
-      });
-
-      try {
-        await stripe.subscriptions.cancel(subscription.stripe_subscription_id);
-      } catch (err: unknown) {
-        // A subscription that is already gone is not a failure — anything else is.
-        const code = (err as { code?: string })?.code;
-        const status = (err as { statusCode?: number })?.statusCode;
-        const alreadyGone = code === 'resource_missing' || status === 404;
-        if (!alreadyGone) {
-          const message = err instanceof Error ? err.message : String(err);
-          console.error(`[delete-account] Stripe cancel failed for ${userId}:`, message);
-          return new Response(
-            JSON.stringify({
-              error:
-                'Could not cancel your subscription, so your account was not deleted. Please contact support.',
-            }),
-            { status: 500, headers }
-          );
-        }
-      }
-    }
-
-    // Store-billed subscriptions (RevenueCat / StoreKit / Play Billing) cannot be
-    // cancelled server-side — only the user can, in their store account. Tell them.
-    const hasStoreSubscription =
-      !!subscription?.is_active && !subscription?.stripe_subscription_id && subscription?.tier !== 'starter';
-
-    // --- 2. Refuse while the user still owns an organization --------------
+    // --- 1. Eligibility preflight: no mutations before every check passes --
     const { data: ownedOrgs, error: orgError } = await supabase
       .from('organizations')
       .select('id, name')
@@ -138,19 +97,103 @@ serve(async (req: Request) => {
       );
     }
 
+    const { data: subscription, error: subReadError } = await supabase
+      .from('subscriptions')
+      .select('stripe_subscription_id, tier, is_active')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (subReadError) {
+      console.error(`[delete-account] could not read subscription for ${userId}:`, subReadError.message);
+      return new Response(
+        JSON.stringify({
+          error: 'Could not verify your subscription status. Nothing was deleted. Please try again.',
+        }),
+        { status: 500, headers }
+      );
+    }
+
+    if (subscription?.stripe_subscription_id && !STRIPE_SECRET_KEY) {
+      console.error('[delete-account] STRIPE_SECRET_KEY not configured; refusing preflight');
+      return new Response(
+        JSON.stringify({
+          error: 'Could not prepare subscription cancellation. Nothing was deleted. Please contact support.',
+        }),
+        { status: 500, headers }
+      );
+    }
+
+    // Store-billed subscriptions (RevenueCat / StoreKit / Play Billing) cannot be
+    // cancelled server-side — only the user can, in their store account. Tell them.
+    const hasStoreSubscription =
+      !!subscription?.is_active && !subscription?.stripe_subscription_id && subscription?.tier !== 'starter';
+
+    completedStages = ['started'];
+    const { error: jobError } = await supabase
+      .from('fluenci_account_deletion_jobs')
+      .upsert({ user_id: userId, stage: 'started', last_error: null, updated_at: new Date().toISOString() });
+    if (jobError) {
+      console.error(`[delete-account] could not initialize deletion job for ${userId}:`, jobError.message);
+      return new Response(
+        JSON.stringify({ error: 'Could not start account deletion. Nothing was deleted. Please try again.' }),
+        { status: 500, headers }
+      );
+    }
+
+    const recordStage = async (stage: DeletionStage, lastError: string | null = null) => {
+      if (!completedStages.includes(stage)) completedStages.push(stage);
+      const { error } = await supabase
+        .from('fluenci_account_deletion_jobs')
+        .update({ stage, last_error: lastError, updated_at: new Date().toISOString() })
+        .eq('user_id', userId);
+      if (error) console.error(`[delete-account] failed to record ${stage} for ${userId}:`, error.message);
+    };
+
+    // --- 2. Cancel billing after preflight -------------------------------
+
+    if (subscription?.stripe_subscription_id) {
+      const stripe = new Stripe(STRIPE_SECRET_KEY!, {
+        apiVersion: '2023-10-16',
+        httpClient: Stripe.createFetchHttpClient(),
+      });
+
+      try {
+        await stripe.subscriptions.cancel(subscription.stripe_subscription_id);
+      } catch (err: unknown) {
+        // A subscription that is already gone is not a failure — anything else is.
+        const code = (err as { code?: string })?.code;
+        const status = (err as { statusCode?: number })?.statusCode;
+        const alreadyGone = code === 'resource_missing' || status === 404;
+        if (!alreadyGone) {
+          const message = err instanceof Error ? err.message : String(err);
+          console.error(`[delete-account] Stripe cancel failed for ${userId}:`, message);
+          return new Response(
+            JSON.stringify(partialError(
+              'Account deletion started, but subscription cancellation failed. Please retry or contact support.',
+              completedStages,
+            )),
+            { status: 500, headers }
+          );
+        }
+      }
+    }
+    await recordStage('billing_cancelled');
+
     // --- 3. Delete rows that do not cascade -------------------------------
     for (const { table, column } of NON_CASCADING_TABLES) {
       const { error } = await supabase.from(table).delete().eq(column, userId);
       if (error) {
         console.error(`[delete-account] failed to delete from ${table} for ${userId}:`, error.message);
         return new Response(
-          JSON.stringify({
-            error: 'Account deletion could not be completed. Nothing was deleted. Please contact support.',
-          }),
+          JSON.stringify(partialError(
+            'Account deletion is partially complete. Please retry so we can finish it.',
+            completedStages,
+          )),
           { status: 500, headers }
         );
       }
     }
+    await recordStage('auxiliary_deleted');
 
     // --- 3b. Purge generated avatars from storage -------------------------
     // Storage is not covered by the auth-user cascade, so a stylised portrait
@@ -164,9 +207,10 @@ serve(async (req: Request) => {
       if (listError) {
         console.error(`[delete-account] failed to list avatars for ${userId}:`, listError.message);
         return new Response(
-          JSON.stringify({
-            error: 'Account deletion could not be completed. Nothing was deleted. Please contact support.',
-          }),
+          JSON.stringify(partialError(
+            'Account deletion is partially complete. Avatar cleanup failed; please retry.',
+            completedStages,
+          )),
           { status: 500, headers }
         );
       }
@@ -177,14 +221,16 @@ serve(async (req: Request) => {
         if (removeError) {
           console.error(`[delete-account] failed to remove avatars for ${userId}:`, removeError.message);
           return new Response(
-            JSON.stringify({
-              error: 'Account deletion could not be completed. Nothing was deleted. Please contact support.',
-            }),
+            JSON.stringify(partialError(
+              'Account deletion is partially complete. Avatar cleanup failed; please retry.',
+              completedStages,
+            )),
             { status: 500, headers }
           );
         }
       }
     }
+    await recordStage('storage_deleted');
 
     // --- 3c. Pseudonymise the audit trail ---------------------------------
     // audit_log deliberately SURVIVES deletion — the rows are evidence a
@@ -208,23 +254,29 @@ serve(async (req: Request) => {
       if (auditError) {
         console.error(`[delete-account] failed to scrub audit_log for ${userId}:`, auditError.message);
         return new Response(
-          JSON.stringify({
-            error: 'Account deletion could not be completed. Nothing was deleted. Please contact support.',
-          }),
+          JSON.stringify(partialError(
+            'Account deletion is partially complete. Audit-log anonymization failed; please retry.',
+            completedStages,
+          )),
           { status: 500, headers }
         );
       }
     }
+    await recordStage('audit_scrubbed');
 
     // --- 4. Delete the auth user (cascades every remaining user table) ----
     const { error: deleteError } = await supabase.auth.admin.deleteUser(userId);
     if (deleteError) {
       console.error(`[delete-account] failed to delete auth user ${userId}:`, deleteError.message);
       return new Response(
-        JSON.stringify({ error: 'Failed to delete account. Please contact support.' }),
+        JSON.stringify(partialError(
+          'Account deletion is partially complete, but the login could not be removed. Please retry or contact support.',
+          completedStages,
+        )),
         { status: 500, headers }
       );
     }
+    await recordStage('auth_deleted');
 
     // --- 5. Verify the erasure actually happened --------------------------
     const { count: remainingProfiles, error: verifyError } = await supabase
@@ -239,18 +291,41 @@ serve(async (req: Request) => {
         verifyError?.message ?? ''
       );
       return new Response(
-        JSON.stringify({
-          error: 'Your account was removed but some data may remain. Please contact support so we can finish.',
-        }),
+        JSON.stringify(partialError(
+          'Your login was removed, but some data may remain. Please contact support so we can finish.',
+          completedStages,
+        )),
         { status: 500, headers }
       );
+    }
+
+    const { error: cleanupJobError } = await supabase
+      .from('fluenci_account_deletion_jobs')
+      .delete()
+      .eq('user_id', userId);
+    if (cleanupJobError) {
+      // Erasure succeeded. Do not turn success into a false failure because a
+      // service-only progress row needs asynchronous cleanup; make it visible.
+      console.error(`[delete-account] deletion succeeded but job cleanup failed for ${userId}:`, cleanupJobError.message);
+      return new Response(JSON.stringify({
+        success: true,
+        hasStoreSubscription,
+        cleanupPending: true,
+      }), { headers });
     }
 
     return new Response(JSON.stringify({ success: true, hasStoreSubscription }), { headers });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     console.error('[delete-account] unexpected error:', message);
-    return new Response(JSON.stringify({ error: 'An unexpected error occurred' }), {
+    return new Response(JSON.stringify(
+      completedStages.length > 0
+        ? partialError(
+          'Account deletion is partially complete. Please retry or contact support.',
+          completedStages,
+        )
+        : { error: 'An unexpected error occurred' },
+    ), {
       status: 500,
       headers,
     });
