@@ -926,7 +926,11 @@ scheme (`app.json` `userInterfaceStyle: "automatic"`).
   pattern when one exists. Transcript is captions (speaker label in the
   speaker's colour, live turn in ink), controls are two round tint buttons
   (Mute, Type — the composer opens under them) with End call last on its own
-  line. The lobby shows the same analyser at rest under the portrait.
+  line. The Talk tab itself is this screen at rest — centred name, compact
+  correction pills (the question stays asked until answered), the stage with
+  "Ready", bio and level as captions, the last-session card, and a round mic
+  as the single control — so starting a call changes the state of the screen
+  the learner is already on.
 - **Motion vocabulary** (all gated on `useMotion().shouldReduce`): step change =
   the hero block arrives with a per-step entrance (slide / rise / pop / meet /
   drop), the done segments light up 70ms apart, the question fades up, Sol

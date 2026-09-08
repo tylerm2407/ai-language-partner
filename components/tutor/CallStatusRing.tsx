@@ -213,9 +213,11 @@ export function CallStatusRing({ phase, portraitId, name, level }: CallStatusRin
   const presentation = phasePresentation(phase);
   const color = c[presentation.tone];
   const state = ringState(phase);
-  // A finished call's bars rest in the idle colour, whatever tone the label
-  // takes: a red analyser under "Call ended" would read as an alarm.
-  const barColor = state === 'stopped' ? c.idle : color;
+  // The bars take the phase colour while the call runs. Before it starts they
+  // rest in violet (the lobby is the conversation screen at rest, not a grey
+  // one), and after it ends they rest in the idle grey whatever the label's
+  // tone — a red analyser under "Call ended" would read as an alarm.
+  const barColor = state === 'stopped' ? c.idle : phase === 'idle' ? c.primary : color;
 
   return (
     <View style={styles.root}>
@@ -224,6 +226,7 @@ export function CallStatusRing({ phase, portraitId, name, level }: CallStatusRin
       <Spectrum
         state={spectrumState(phase)}
         color={barColor}
+        height={96}
         level={typeof level === 'number' ? clampLevel(level) : undefined}
       />
 
@@ -269,7 +272,7 @@ export function CallStatusRing({ phase, portraitId, name, level }: CallStatusRin
 const styles = StyleSheet.create({
   root: {
     alignItems: 'center',
-    gap: spacing.md,
+    gap: spacing.sm,
   },
   statusRow: {
     flexDirection: 'row',

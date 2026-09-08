@@ -50,8 +50,7 @@ import { useAuth } from '../../../hooks/useAuth';
 import { useAiConsent } from '../../../hooks/useAiConsent';
 import { useScreenView } from '../../../hooks/useScreenView';
 import { useAppStore, effectiveTier } from '../../../stores/useAppStore';
-import { TutorPortrait } from '../../../components/tutor/TutorPortrait';
-import { Spectrum } from '../../../components/tutor/Spectrum';
+import { CallStatusRing } from '../../../components/tutor/CallStatusRing';
 import { CorrectionModeToggle } from '../../../components/tutor/CorrectionModeToggle';
 import { LastSessionCard } from '../../../components/tutor/LastSessionCard';
 import { SlabButton } from '../../../components/ui2/SlabButton';
@@ -279,27 +278,60 @@ export default function TutorLobbyScreen() {
   }
 
   const budgetLine = lowBudgetLine(remainingMinutes);
+  const mode = prefs?.correctionMode ?? null;
 
+  // The tab IS the conversation screen, at rest (Talk C1, 2026-09-08). Same
+  // frame as app/(app)/tutor/call.tsx — centred name, compact correction
+  // pills, the stage (portrait over the analyser, "Ready"), captions, then the
+  // controls row — so starting a call changes the state of the screen the
+  // learner is already looking at rather than swapping in a new one. Every
+  // lobby feature is still here: persona bio and level, last session, the
+  // correction question (unanswered stays unanswered), minutes left, limit
+  // card, errors, consent, and the Starter plan wall above.
   return (
     <View style={[styles.flex, { backgroundColor: c.bg }]}>
       <SafeAreaView style={styles.flex} edges={['top']}>
+        <View style={styles.header}>
+          <View style={styles.headerTop}>
+            <View style={styles.headerSide} />
+            <Heading level={2} style={styles.headerName} accessibilityRole="header" numberOfLines={1}>
+              {persona?.name ?? 'Your tutor'}
+            </Heading>
+            <View style={styles.headerSide}>
+              {remainingMinutes !== null ? (
+                <Caption tone="tertiary" accessibilityLabel={`${remainingMinutes} minutes left today`}>
+                  {remainingMinutes} min left
+                </Caption>
+              ) : null}
+            </View>
+          </View>
+
+          {/* Unanswered stays a real question: the compact row drops the
+              question text, so it is asked here until one pill is chosen. */}
+          {mode === null ? (
+            <Caption tone="secondary" style={styles.question}>
+              How should I correct you?
+            </Caption>
+          ) : null}
+          <CorrectionModeToggle mode={mode} onChange={handleCorrectionMode} compact />
+
+          {budgetLine ? (
+            <Caption tone="tertiary" style={styles.centeredText} accessibilityLiveRegion="polite">
+              {budgetLine}
+            </Caption>
+          ) : null}
+        </View>
+
         <ScrollView
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* ── Who is on the other end ── */}
-          <View style={styles.hero}>
+          <View style={styles.stage}>
             {persona ? (
               <>
-                <TutorPortrait portraitId={persona.portraitId} name={persona.name} size="hero" />
-                {/* The call's sound picture, resting: a low shimmer that says
-                    the line is quiet, not dead (Talk C1). */}
-                <Spectrum state="idle" color={c.primary} bars={24} height={56} />
-                <Heading level={1} style={styles.heroName} accessibilityRole="header">
-                  {persona.name}
-                </Heading>
-                <Body tone="secondary" style={styles.heroBio}>
+                <CallStatusRing phase="idle" portraitId={persona.portraitId} name={persona.name} />
+                <Body tone="secondary" style={styles.centeredText}>
                   {persona.bio}
                 </Body>
               </>
@@ -309,11 +341,7 @@ export default function TutorLobbyScreen() {
 
             {/* Never a bare band code — see lib/cefr-labels.ts. */}
             {band ? (
-              <Caption
-                tone="tertiary"
-                style={styles.level}
-                accessibilityLabel={cefrAccessibilityLabel(band)}
-              >
+              <Caption tone="tertiary" style={styles.centeredText} accessibilityLabel={cefrAccessibilityLabel(band)}>
                 {cefrLabel(band)}
               </Caption>
             ) : null}
@@ -324,20 +352,6 @@ export default function TutorLobbyScreen() {
             headline={lastSession?.headline ?? null}
             loading={loadingLast}
           />
-
-          {/* ── How they want to be corrected ── */}
-          <View style={styles.section}>
-            <CorrectionModeToggle
-              mode={prefs?.correctionMode ?? null}
-              onChange={handleCorrectionMode}
-            />
-          </View>
-
-          {budgetLine ? (
-            <Caption tone="tertiary" style={styles.budget} accessibilityLiveRegion="polite">
-              {budgetLine}
-            </Caption>
-          ) : null}
 
           {/* A ceiling is a settled state with an upgrade path, never a retry. */}
           {limit ? (
@@ -351,9 +365,6 @@ export default function TutorLobbyScreen() {
               {limit.upgrade ? (
                 <Pressable
                   style={styles.tertiaryButton}
-                  // The literal rather than `limit.upgrade.route`, which is a
-                  // plain string and would need a cast past expo-router's typed
-                  // routes. Same destination, checked at build time.
                   onPress={() => router.push('/(app)/profile/subscription')}
                   accessibilityRole="button"
                   accessibilityLabel={limit.upgrade.label}
@@ -369,28 +380,38 @@ export default function TutorLobbyScreen() {
           {error ? <Ui2InlineError copy={error} onRetry={() => void handleStart()} /> : null}
         </ScrollView>
 
-        {/* ── Start ── */}
+        {/* ── Start: the call screen's controls row, with one control ── */}
         <View style={styles.footer}>
           {blocked === 'needs_correction_mode' ? (
-            <Caption tone="tertiary" style={styles.blockedHint}>
+            <Caption tone="tertiary" style={styles.centeredText}>
               Choose how you want to be corrected first.
             </Caption>
           ) : null}
-          {/* SlabButton owns the button role, the disabled/busy state and the
-              spinner. The label is still switched by hand so VoiceOver hears
-              "Starting your call" while the spinner is up — the label text is
-              not drawn in that state, so nothing visible changes with it. */}
-          <SlabButton
-            label={starting ? 'Starting your call' : 'Start call'}
+          <Pressable
             onPress={() => void handleStart()}
             disabled={blocked !== null}
-            loading={starting}
+            accessibilityRole="button"
+            accessibilityLabel={starting ? 'Starting your call' : 'Start call'}
             accessibilityHint={
               blocked === 'needs_correction_mode'
                 ? 'Choose how you want to be corrected to enable this.'
                 : 'Starts a live voice conversation with your tutor.'
             }
-          />
+            accessibilityState={{ disabled: blocked !== null, busy: starting }}
+            style={[
+              styles.startButton,
+              { backgroundColor: c.primary, opacity: blocked !== null && !starting ? 0.5 : 1 },
+            ]}
+          >
+            {starting ? (
+              <ActivityIndicator color={c.onPrimary} />
+            ) : (
+              <Ionicons name="mic" size={30} color={c.onPrimary} />
+            )}
+          </Pressable>
+          <Body weight="bold" style={styles.centeredText}>
+            {starting ? 'Starting your call' : 'Start call'}
+          </Body>
         </View>
 
         {consentSheet}
@@ -401,31 +422,42 @@ export default function TutorLobbyScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
+  header: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.xs,
+    gap: spacing.xs,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.xs,
+    minHeight: 44,
+  },
+  headerName: {
+    flex: 1,
+    textAlign: 'center',
+  },
+  headerSide: {
+    width: 88,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  question: {
+    textAlign: 'center',
+  },
   content: {
     paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
     paddingBottom: spacing.md,
     gap: spacing.md,
   },
-  hero: {
+  stage: {
     alignItems: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.md,
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
   },
-  heroName: {
-    marginTop: spacing.xs,
-  },
-  heroBio: {
-    textAlign: 'center',
-  },
-  level: {
-    textAlign: 'center',
-    marginTop: spacing.xxs,
-  },
-  section: {
-    marginTop: spacing.xxs,
-  },
-  budget: {
+  centeredText: {
     textAlign: 'center',
   },
   limit: {
@@ -436,13 +468,17 @@ const styles = StyleSheet.create({
     marginTop: spacing.xxs,
   },
   footer: {
+    alignItems: 'center',
     paddingHorizontal: spacing.md,
-    // The tab bar is absolutely positioned over every tab route.
     paddingBottom: floatingTabBarSpace(),
     gap: spacing.xs,
   },
-  blockedHint: {
-    textAlign: 'center',
+  startButton: {
+    width: 72,
+    height: 72,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   tertiaryButton: {
     minHeight: 44,
