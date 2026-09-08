@@ -44,7 +44,7 @@ export default function InviteCodeDisplay({ code, active, onRegenerate }: Invite
           style={{
             color: active ? c.ink : c.muted,
             fontSize: 12,
-            fontFamily: 'Nunito_500Medium',
+            fontFamily: 'Manrope_500Medium',
           }}
         >
           {active ? 'Active' : 'Inactive'}
@@ -97,7 +97,7 @@ export default function InviteCodeDisplay({ code, active, onRegenerate }: Invite
             style={{
               color: c.onTint,
               fontSize: 14,
-              fontFamily: 'Nunito_600SemiBold',
+              fontFamily: 'Manrope_600SemiBold',
               marginLeft: 6,
             }}
           >
@@ -123,7 +123,7 @@ export default function InviteCodeDisplay({ code, active, onRegenerate }: Invite
             style={{
               color: c.onTint,
               fontSize: 14,
-              fontFamily: 'Nunito_600SemiBold',
+              fontFamily: 'Manrope_600SemiBold',
               marginLeft: 6,
             }}
           >
@@ -150,7 +150,7 @@ export default function InviteCodeDisplay({ code, active, onRegenerate }: Invite
               style={{
                 color: c.error,
                 fontSize: 14,
-                fontFamily: 'Nunito_600SemiBold',
+                fontFamily: 'Manrope_600SemiBold',
                 marginLeft: 6,
               }}
             >

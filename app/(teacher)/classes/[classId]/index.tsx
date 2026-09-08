@@ -118,13 +118,13 @@ export default function ClassDetailScreen() {
             <View className="ml-3 flex-1">
               <Text
                 className="text-base"
-                style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
+                style={{ fontFamily: 'Manrope_600SemiBold', color: c.ink }}
               >
                 {item.name}
               </Text>
               <Text
                 className="text-xs"
-                style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
+                style={{ fontFamily: 'Manrope_400Regular', color: c.muted }}
               >
                 Enrolled{' '}
                 {new Date(item.enrolledAt).toLocaleDateString(undefined, {
@@ -177,7 +177,7 @@ export default function ClassDetailScreen() {
             <Ionicons name="chevron-back" size={24} color={c.primary} />
             <Text
               className="text-base ml-1"
-              style={{ fontFamily: 'Nunito_600SemiBold', color: c.primary }}
+              style={{ fontFamily: 'Manrope_600SemiBold', color: c.primary }}
             >
               Back
             </Text>
@@ -185,7 +185,7 @@ export default function ClassDetailScreen() {
 
           <Text
             className="text-[28px] mb-2"
-            style={{ fontFamily: 'Nunito_800ExtraBold', color: c.ink }}
+            style={{ fontFamily: 'Manrope_800ExtraBold', color: c.ink }}
             accessibilityRole="header"
           >
             {classroom?.name ?? 'Class'}
@@ -205,13 +205,13 @@ export default function ClassDetailScreen() {
               <View>
                 <Text
                   className="text-xs"
-                  style={{ fontFamily: 'Nunito_500Medium', color: c.muted }}
+                  style={{ fontFamily: 'Manrope_500Medium', color: c.muted }}
                 >
                   Invite Code
                 </Text>
                 <Text
                   className="text-lg"
-                  style={{ fontFamily: 'Nunito_700Bold', letterSpacing: 2, color: c.primary }}
+                  style={{ fontFamily: 'Manrope_700Bold', letterSpacing: 2, color: c.primary }}
                 >
                   {classroom.inviteCode}
                 </Text>
@@ -226,7 +226,7 @@ export default function ClassDetailScreen() {
               >
                 {copied && (
                   <Text
-                    style={{ color: c.green, fontSize: 12, fontFamily: 'Nunito_600SemiBold' }}
+                    style={{ color: c.green, fontSize: 12, fontFamily: 'Manrope_600SemiBold' }}
                   >
                     Copied
                   </Text>
@@ -271,7 +271,7 @@ export default function ClassDetailScreen() {
                   style={{
                     color: tab === t ? c.onTint : c.muted,
                     fontSize: 14,
-                    fontFamily: 'Nunito_600SemiBold',
+                    fontFamily: 'Manrope_600SemiBold',
                   }}
                 >
                   {t.charAt(0).toUpperCase() + t.slice(1)}
@@ -286,13 +286,13 @@ export default function ClassDetailScreen() {
               <Ionicons name="warning-outline" size={48} color={c.error} />
               <Text
                 className="text-base mt-3"
-                style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
+                style={{ fontFamily: 'Manrope_600SemiBold', color: c.ink }}
               >
                 Couldn't load class data
               </Text>
               <Text
                 className="text-sm mt-1 text-center px-8"
-                style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
+                style={{ fontFamily: 'Manrope_400Regular', color: c.muted }}
               >
                 {error}
               </Text>
@@ -316,13 +316,13 @@ export default function ClassDetailScreen() {
                   <Ionicons name="people-outline" size={48} color={c.idle} />
                   <Text
                     className="text-base mt-3"
-                    style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
+                    style={{ fontFamily: 'Manrope_600SemiBold', color: c.ink }}
                   >
                     No students enrolled
                   </Text>
                   <Text
                     className="text-sm mt-1 text-center px-8"
-                    style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
+                    style={{ fontFamily: 'Manrope_400Regular', color: c.muted }}
                   >
                     Share the invite code with students so they can join this class.
                   </Text>
@@ -350,13 +350,13 @@ export default function ClassDetailScreen() {
                   <Ionicons name="document-text-outline" size={48} color={c.idle} />
                   <Text
                     className="text-base mt-3"
-                    style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
+                    style={{ fontFamily: 'Manrope_600SemiBold', color: c.ink }}
                   >
                     No assignments yet
                   </Text>
                   <Text
                     className="text-sm mt-1 text-center px-8"
-                    style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
+                    style={{ fontFamily: 'Manrope_400Regular', color: c.muted }}
                   >
                     Create an assignment to give your students conversation practice.
                   </Text>

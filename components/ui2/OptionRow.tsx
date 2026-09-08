@@ -1,10 +1,14 @@
 /**
  * OptionRow — a selectable slab card for pickers.
  *
- * Selected state is "pressed in": the card sits 3px lower on a 2px slab
- * instead of 5px, tinted, with a check that pops in with overshoot. Rows
- * cascade in 40ms apart on mount (`index`), which is the Duolingo/Speak
- * rhythm the onboarding boards specified. Every motion gates on Reduce Motion.
+ * Selected state inverts the block: solid primary fill, white text, and a
+ * white check that pops in with overshoot (Tint blocks, 2026-09-07 — it used
+ * to sink onto a slab, which read as Duolingo). Rows cascade in 40ms apart on
+ * mount (`index`). Every motion gates on Reduce Motion.
+ *
+ * The `lead` slot renders as given: a lead that paints in `c.primary` will
+ * vanish on the selected fill, so pass it `selected` and let it swap to
+ * `c.onPrimary` (see `LevelBars` in onboarding).
  */
 import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
@@ -34,7 +38,6 @@ interface OptionRowProps {
   style?: ViewStyle;
 }
 
-const SELECT_SPRING = { damping: 16, stiffness: 300, mass: 0.7 };
 const POP_SPRING = { damping: 12, stiffness: 420, mass: 0.6 };
 export const ROW_STAGGER_MS = 40;
 
@@ -51,24 +54,16 @@ export function OptionRow({
 }: OptionRowProps) {
   const { c, type, shape } = useUi2Theme();
   const { shouldReduce } = useMotion();
-  const sel = useSharedValue(selected ? 1 : 0);
   const pop = useSharedValue(selected ? 1 : 0);
 
   useEffect(() => {
     if (shouldReduce) {
-      sel.value = selected ? 1 : 0;
       pop.value = selected ? 1 : 0;
       return;
     }
-    sel.value = withSpring(selected ? 1 : 0, SELECT_SPRING);
     pop.value = selected ? withSpring(1, POP_SPRING) : 0;
-  }, [selected, shouldReduce, sel, pop]);
+  }, [selected, shouldReduce, pop]);
 
-  const sink = shape.slab - shape.slabPressed;
-  const cardStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: sel.value * sink }],
-    borderBottomWidth: shape.slab - sel.value * sink,
-  }));
   const checkStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pop.value }],
     opacity: pop.value > 0.05 ? 1 : 0,
@@ -87,36 +82,34 @@ export function OptionRow({
         accessibilityLabel={accessibilityLabel ?? (subtitle ? `${title}: ${subtitle}` : title)}
         accessibilityState={{ selected }}
       >
-        <View style={{ paddingBottom: shape.slab }}>
-          <Animated.View
-            style={[
-              styles.row,
-              {
-                backgroundColor: selected ? c.primaryTint : c.card,
-                borderColor: selected ? c.primary : c.cardBorder,
-                borderWidth: shape.border,
-                borderRadius: shape.radiusCard,
-                marginBottom: -shape.slab,
-              },
-              cardStyle,
-            ]}
-          >
-            {lead}
-            <View style={styles.text}>
-              <Text style={{ fontFamily: type.uiHeavy, fontSize: 16, lineHeight: 22, color: c.ink }}>{title}</Text>
-              {subtitle ? (
-                <Text style={{ fontFamily: type.ui, fontSize: 13, lineHeight: 18, color: c.muted }}>{subtitle}</Text>
-              ) : null}
-            </View>
-            {selected ? (
-              <Animated.View style={[styles.check, { backgroundColor: c.primary }, checkStyle]}>
-                <Ionicons name="checkmark" size={16} color={c.onPrimary} />
-              </Animated.View>
-            ) : (
-              trail
-            )}
-          </Animated.View>
-        </View>
+        <Animated.View
+          style={[
+            styles.row,
+            {
+              backgroundColor: selected ? c.primary : c.card,
+              borderRadius: shape.radiusCard,
+            },
+          ]}
+        >
+          {lead}
+          <View style={styles.text}>
+            <Text style={{ fontFamily: type.uiHeavy, fontSize: 16, lineHeight: 22, color: selected ? c.onPrimary : c.ink }}>
+              {title}
+            </Text>
+            {subtitle ? (
+              <Text style={{ fontFamily: type.ui, fontSize: 13, lineHeight: 18, color: selected ? c.onPrimaryMuted : c.muted }}>
+                {subtitle}
+              </Text>
+            ) : null}
+          </View>
+          {selected ? (
+            <Animated.View style={[styles.check, { backgroundColor: c.onPrimary }, checkStyle]}>
+              <Ionicons name="checkmark" size={16} color={c.primary} />
+            </Animated.View>
+          ) : (
+            trail
+          )}
+        </Animated.View>
       </Pressable>
     </Animated.View>
   );

@@ -117,23 +117,23 @@ export default function DataManagementScreen() {
             className="flex-row items-center mb-4"
           >
             <Ionicons name="chevron-back" size={24} color={c.primary} />
-            <Text className="text-base ml-1" style={{ fontFamily: 'Nunito_600SemiBold', color: c.primary }}>Back</Text>
+            <Text className="text-base ml-1" style={{ fontFamily: 'Manrope_600SemiBold', color: c.primary }}>Back</Text>
           </Pressable>
 
           <Text
             className="text-[28px] mb-6"
-            style={{ fontFamily: 'Nunito_800ExtraBold', color: c.ink }}
+            style={{ fontFamily: 'Manrope_800ExtraBold', color: c.ink }}
             accessibilityRole="header"
           >
             Data Management
           </Text>
 
           {/* Export Section */}
-          <Text className="text-xl mb-3" style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}>
+          <Text className="text-xl mb-3" style={{ fontFamily: 'Manrope_600SemiBold', color: c.ink }}>
             Export All Data
           </Text>
           <SlabCard style={{ marginBottom: 24 }}>
-            <Text className="text-sm mb-4" style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}>
+            <Text className="text-sm mb-4" style={{ fontFamily: 'Manrope_400Regular', color: c.muted }}>
               Generate a complete export of all organization data including students, assignments, submissions, and chat transcripts in JSON format. You can then copy or share the exported data.
             </Text>
             <SlabButton
@@ -146,11 +146,11 @@ export default function DataManagementScreen() {
               <View className="mt-4">
                 <View className="flex-row items-center mb-2" style={{ gap: 6 }}>
                   <Ionicons name="checkmark-circle" size={16} color={c.green} />
-                  <Text style={{ color: c.green, fontSize: 13, fontFamily: 'Nunito_500Medium' }}>
+                  <Text style={{ color: c.green, fontSize: 13, fontFamily: 'Manrope_500Medium' }}>
                     Export ready
                   </Text>
                 </View>
-                <Text className="text-sm mb-3" style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}>
+                <Text className="text-sm mb-3" style={{ fontFamily: 'Manrope_400Regular', color: c.muted }}>
                   {exportCount('classrooms')} classrooms · {exportCount('members')} members ·{' '}
                   {exportCount('assignments')} assignments · {exportCount('submissions')} submissions ·{' '}
                   {exportCount('chatMessages')} chat messages
@@ -178,7 +178,7 @@ export default function DataManagementScreen() {
                       style={{
                         color: copiedExport ? c.green : c.onTint,
                         fontSize: 14,
-                        fontFamily: 'Nunito_600SemiBold',
+                        fontFamily: 'Manrope_600SemiBold',
                       }}
                     >
                       {copiedExport ? 'Copied' : 'Copy JSON'}
@@ -198,7 +198,7 @@ export default function DataManagementScreen() {
                     }}
                   >
                     <Ionicons name="share-outline" size={16} color={c.onTint} />
-                    <Text style={{ color: c.onTint, fontSize: 14, fontFamily: 'Nunito_600SemiBold' }}>
+                    <Text style={{ color: c.onTint, fontSize: 14, fontFamily: 'Manrope_600SemiBold' }}>
                       Share
                     </Text>
                   </Pressable>
@@ -208,7 +208,7 @@ export default function DataManagementScreen() {
           </SlabCard>
 
           {/* Danger Zone */}
-          <Text className="text-xl mb-3" style={{ fontFamily: 'Nunito_600SemiBold', color: c.error }}>
+          <Text className="text-xl mb-3" style={{ fontFamily: 'Manrope_600SemiBold', color: c.error }}>
             Danger Zone
           </Text>
           <SlabCard
@@ -216,15 +216,15 @@ export default function DataManagementScreen() {
           >
             <View className="flex-row items-center mb-3" style={{ gap: 8 }}>
               <Ionicons name="warning-outline" size={20} color={c.error} />
-              <Text className="text-base" style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}>
+              <Text className="text-base" style={{ fontFamily: 'Manrope_600SemiBold', color: c.ink }}>
                 Permanently Delete All Data
               </Text>
             </View>
-            <Text className="text-sm mb-4" style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}>
+            <Text className="text-sm mb-4" style={{ fontFamily: 'Manrope_400Regular', color: c.muted }}>
               This will permanently delete all organization data including classrooms, enrollments, assignments, submissions, and chat messages. This action cannot be undone.
             </Text>
 
-            <Text className="text-sm mb-2" style={{ fontFamily: 'Nunito_500Medium', color: c.muted }}>
+            <Text className="text-sm mb-2" style={{ fontFamily: 'Manrope_500Medium', color: c.muted }}>
               Type "{organization?.name}" to confirm:
             </Text>
             <Ui2Input
@@ -252,7 +252,7 @@ export default function DataManagementScreen() {
               {deleting ? (
                 <ActivityIndicator color={c.onPrimary} />
               ) : (
-                <Text style={{ color: confirmText === organization?.name ? c.onPrimary : c.error, fontSize: 16, fontFamily: 'Nunito_600SemiBold' }}>
+                <Text style={{ color: confirmText === organization?.name ? c.onPrimary : c.error, fontSize: 16, fontFamily: 'Manrope_600SemiBold' }}>
                   Permanently Delete
                 </Text>
               )}

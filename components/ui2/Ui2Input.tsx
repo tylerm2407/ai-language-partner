@@ -125,8 +125,9 @@ export const Ui2Input = forwardRef<TextInput, Ui2InputProps>(function Ui2Input(
           {
             backgroundColor: bg,
             borderColor: border,
-            borderWidth: shape.border,
-            borderBottomWidth: shape.slab,
+            // Constant width so focus does not reflow; idle `border` equals
+            // the fill, so only focused/invalid actually draw a ring.
+            borderWidth: 1.5,
             borderRadius: shape.radiusCard,
           },
           multiline && styles.boxMultiline,

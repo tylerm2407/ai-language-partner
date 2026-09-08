@@ -69,8 +69,8 @@ export function UnitRows({ tiles, loading, error, onRetry, onOpen, onAll }: Unit
           <SlabCard key={i} style={styles.unitRow}>
             <View style={[styles.pctTile, { backgroundColor: c.surface2 }]} />
             <View style={{ flex: 1, gap: 8 }}>
-              <View style={[styles.skeleton, { backgroundColor: c.track, width: '55%' }]} />
-              <View style={[styles.bar, { backgroundColor: c.track }]} />
+              <View style={[styles.skeleton, { backgroundColor: c.trackOnCard, width: '55%' }]} />
+              <View style={[styles.bar, { backgroundColor: c.trackOnCard }]} />
             </View>
           </SlabCard>
         ))}
@@ -112,7 +112,7 @@ export function UnitRows({ tiles, loading, error, onRetry, onOpen, onAll }: Unit
                     {tile.completedCount} / {tile.lessonCount}
                   </Text>
                 </View>
-                <View style={[styles.bar, { backgroundColor: c.track }]}>
+                <View style={[styles.bar, { backgroundColor: c.trackOnCard }]}>
                   <View style={[styles.barFill, { width: `${pct}%`, backgroundColor: color }]} />
                 </View>
               </View>
@@ -146,7 +146,7 @@ export function DailyThree({ items }: { items: DailyThreeItem[] }) {
           const pct = it.target > 0 ? Math.min(it.current / it.target, 1) * 100 : 0;
           return (
             <View key={it.type} style={styles.dailyRow} accessibilityLabel={`${it.title}: ${it.current} of ${it.target}${done ? ', done' : ''}`}>
-              <View style={[styles.dot, { backgroundColor: done ? c.green : c.track }]}>
+              <View style={[styles.dot, { backgroundColor: done ? c.green : c.trackOnCard }]}>
                 {done && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}
               </View>
               <View style={{ flex: 1, gap: 6 }}>
@@ -158,7 +158,7 @@ export function DailyThree({ items }: { items: DailyThreeItem[] }) {
                     {Math.min(it.current, it.target)} / {it.target}
                   </Text>
                 </View>
-                <View style={[styles.bar, { backgroundColor: c.track, height: 6 }]}>
+                <View style={[styles.bar, { backgroundColor: c.trackOnCard, height: 6 }]}>
                   <View style={[styles.barFill, { width: `${pct}%`, backgroundColor: c.green }]} />
                 </View>
               </View>
@@ -217,7 +217,7 @@ export function WeekStrip({ stats, error, onRetry }: { stats: DailyStats[]; erro
             <View style={styles.week} accessibilityLabel={`Minutes practised this week: ${days.map((d) => `${d.label} ${d.minutes}`).join(', ')}`}>
               {days.map((d) => (
                 <View key={d.key} style={styles.dayCol}>
-                  <View style={[styles.dayTrack, { backgroundColor: c.track }]}>
+                  <View style={[styles.dayTrack, { backgroundColor: c.trackOnCard }]}>
                     <View
                       style={[
                         styles.dayFill,

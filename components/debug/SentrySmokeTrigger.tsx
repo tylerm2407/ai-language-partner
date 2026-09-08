@@ -60,7 +60,7 @@ export function SentrySmokeTrigger() {
       accessibilityLabel={label}
       style={{ alignItems: 'center', paddingVertical: spacing.lg }}
     >
-      <Text style={{ color: c.idle, fontSize: 12, fontFamily: 'Nunito_500Medium' }}>{label}</Text>
+      <Text style={{ color: c.idle, fontSize: 12, fontFamily: 'Manrope_500Medium' }}>{label}</Text>
     </Pressable>
   );
 }

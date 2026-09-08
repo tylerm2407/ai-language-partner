@@ -65,7 +65,7 @@ export function LevelBadge({ level }: LevelBadgeProps) {
           }}
         >
           <Ionicons name="trophy" size={14} color={config.color} />
-          <Caption numberOfLines={1} style={{ color: config.color, fontFamily: 'Nunito_700Bold', marginLeft: 4, flexShrink: 1 }}>
+          <Caption numberOfLines={1} style={{ color: config.color, fontFamily: 'Manrope_700Bold', marginLeft: 4, flexShrink: 1 }}>
             {config.label}
           </Caption>
         </View>

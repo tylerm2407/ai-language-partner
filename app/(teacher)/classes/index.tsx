@@ -57,7 +57,7 @@ export default function ClassListScreen() {
         <View className="flex-1 px-4 pt-2">
           <Text
             className="text-[28px] mb-4"
-            style={{ fontFamily: 'Nunito_800ExtraBold', color: c.ink }}
+            style={{ fontFamily: 'Manrope_800ExtraBold', color: c.ink }}
             accessibilityRole="header"
           >
             My Classes
@@ -79,13 +79,13 @@ export default function ClassListScreen() {
               <Ionicons name="school-outline" size={56} color={c.idle} />
               <Text
                 className="text-lg mt-4"
-                style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
+                style={{ fontFamily: 'Manrope_600SemiBold', color: c.ink }}
               >
                 No classes yet
               </Text>
               <Text
                 className="text-sm mt-1 text-center px-8"
-                style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
+                style={{ fontFamily: 'Manrope_400Regular', color: c.muted }}
               >
                 Create your first class to start assigning conversation practice to students.
               </Text>

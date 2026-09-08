@@ -45,7 +45,7 @@ export default function RoleSwitcher({ activeRole, onSwitch }: RoleSwitcherProps
           style={{
             color: activeRole === 'learner' ? c.onPrimary : c.muted,
             fontSize: 14,
-            fontFamily: 'Nunito_600SemiBold',
+            fontFamily: 'Manrope_600SemiBold',
             marginLeft: 6,
           }}
         >
@@ -78,7 +78,7 @@ export default function RoleSwitcher({ activeRole, onSwitch }: RoleSwitcherProps
           style={{
             color: activeRole === 'teacher' ? c.onPrimary : c.muted,
             fontSize: 14,
-            fontFamily: 'Nunito_600SemiBold',
+            fontFamily: 'Manrope_600SemiBold',
             marginLeft: 6,
           }}
         >

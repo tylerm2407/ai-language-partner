@@ -30,14 +30,14 @@ export default function AdminHubScreen() {
         <View className="flex-1 px-4 pt-2">
           <Text
             className="text-[28px] mb-1"
-            style={{ fontFamily: 'Nunito_800ExtraBold', color: c.ink }}
+            style={{ fontFamily: 'Manrope_800ExtraBold', color: c.ink }}
             accessibilityRole="header"
           >
             Admin
           </Text>
           <Text
             className="text-base mb-6"
-            style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
+            style={{ fontFamily: 'Manrope_400Regular', color: c.muted }}
           >
             {organization?.name ?? 'Organization'}
           </Text>
@@ -46,13 +46,13 @@ export default function AdminHubScreen() {
           <SlabCard style={{ marginBottom: 20 }}>
             <Text
               className="text-sm mb-2"
-              style={{ fontFamily: 'Nunito_600SemiBold', color: c.muted }}
+              style={{ fontFamily: 'Manrope_600SemiBold', color: c.muted }}
             >
               Organization Details
             </Text>
             <View className="flex-row items-center justify-between mb-1">
-              <Text className="text-sm" style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}>Status</Text>
-              <Text style={{ color: c.green, fontSize: 14, fontFamily: 'Nunito_600SemiBold' }}>Active</Text>
+              <Text className="text-sm" style={{ fontFamily: 'Manrope_400Regular', color: c.muted }}>Status</Text>
+              <Text style={{ color: c.green, fontSize: 14, fontFamily: 'Manrope_600SemiBold' }}>Active</Text>
             </View>
           </SlabCard>
 
@@ -82,8 +82,8 @@ export default function AdminHubScreen() {
                   />
                 </View>
                 <View className="ml-3 flex-1">
-                  <Text className="text-base" style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}>{action.title}</Text>
-                  <Text className="text-xs" style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}>{action.subtitle}</Text>
+                  <Text className="text-base" style={{ fontFamily: 'Manrope_600SemiBold', color: c.ink }}>{action.title}</Text>
+                  <Text className="text-xs" style={{ fontFamily: 'Manrope_400Regular', color: c.muted }}>{action.subtitle}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={c.idle} />
               </SlabCard>

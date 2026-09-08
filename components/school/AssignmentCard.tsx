@@ -66,7 +66,7 @@ export default function AssignmentCard({ assignment, onPress, submission }: Assi
         <View className="flex-row items-center justify-between mb-1">
           <Text
             className="text-lg flex-1 mr-2"
-            style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
+            style={{ fontFamily: 'Manrope_600SemiBold', color: c.ink }}
             numberOfLines={1}
           >
             {assignment.title}
@@ -79,7 +79,7 @@ export default function AssignmentCard({ assignment, onPress, submission }: Assi
           <Text
             className="text-sm mb-3"
             numberOfLines={2}
-            style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
+            style={{ fontFamily: 'Manrope_400Regular', color: c.muted }}
           >
             {assignment.description}
           </Text>
@@ -97,7 +97,7 @@ export default function AssignmentCard({ assignment, onPress, submission }: Assi
               style={{
                 color: getDueColor(assignment.dueAt, c),
                 fontSize: 12,
-                fontFamily: 'Nunito_500Medium',
+                fontFamily: 'Manrope_500Medium',
                 marginLeft: 4,
               }}
             >
@@ -116,7 +116,7 @@ export default function AssignmentCard({ assignment, onPress, submission }: Assi
               style={{
                 color: c.muted,
                 fontSize: 12,
-                fontFamily: 'Nunito_500Medium',
+                fontFamily: 'Manrope_500Medium',
                 marginLeft: 4,
               }}
             >
@@ -132,7 +132,7 @@ export default function AssignmentCard({ assignment, onPress, submission }: Assi
                 style={{
                   color: c.muted,
                   fontSize: 12,
-                  fontFamily: 'Nunito_500Medium',
+                  fontFamily: 'Manrope_500Medium',
                   marginLeft: 4,
                 }}
               >

@@ -97,7 +97,7 @@ export default function JoinClassModal({ visible, onClose, onJoin }: JoinClassMo
               style={{
                 color: c.ink,
                 fontSize: 20,
-                fontFamily: 'Nunito_800ExtraBold',
+                fontFamily: 'Manrope_800ExtraBold',
                 textAlign: 'center',
                 marginBottom: 8,
               }}
@@ -108,7 +108,7 @@ export default function JoinClassModal({ visible, onClose, onJoin }: JoinClassMo
               style={{
                 color: c.muted,
                 fontSize: 14,
-                fontFamily: 'Nunito_400Regular',
+                fontFamily: 'Manrope_400Regular',
                 textAlign: 'center',
                 marginBottom: 20,
               }}
@@ -124,7 +124,7 @@ export default function JoinClassModal({ visible, onClose, onJoin }: JoinClassMo
                   style={{
                     color: c.ink,
                     fontSize: 16,
-                    fontFamily: 'Nunito_600SemiBold',
+                    fontFamily: 'Manrope_600SemiBold',
                     marginTop: 12,
                   }}
                 >
@@ -151,7 +151,7 @@ export default function JoinClassModal({ visible, onClose, onJoin }: JoinClassMo
                     backgroundColor: c.surface2,
                     color: c.ink,
                     fontSize: 22,
-                    fontFamily: 'Nunito_600SemiBold',
+                    fontFamily: 'Manrope_600SemiBold',
                     textAlign: 'center',
                     letterSpacing: 4,
                     paddingVertical: 14,
@@ -169,7 +169,7 @@ export default function JoinClassModal({ visible, onClose, onJoin }: JoinClassMo
                     style={{
                       color: c.error,
                       fontSize: 13,
-                      fontFamily: 'Nunito_500Medium',
+                      fontFamily: 'Manrope_500Medium',
                       textAlign: 'center',
                       marginBottom: 8,
                     }}

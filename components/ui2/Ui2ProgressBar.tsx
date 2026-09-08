@@ -31,6 +31,8 @@ interface Ui2ProgressBarProps {
   height?: number;
   /** Screen-reader name. Without one the bar announces only its percentage. */
   accessibilityLabel?: string;
+  /** The bar sits on a tinted card, so the groove uses `c.trackOnCard`. */
+  onCard?: boolean;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -50,7 +52,7 @@ export function clampProgress(progress: number): number {
 
 const PROGRESS_SPRING = { damping: 18, stiffness: 140 };
 
-export function Ui2ProgressBar({ progress, height = 8, accessibilityLabel, style }: Ui2ProgressBarProps) {
+export function Ui2ProgressBar({ progress, height = 8, accessibilityLabel, onCard, style }: Ui2ProgressBarProps) {
   const { c } = useUi2Theme();
   const { shouldReduce } = useMotion();
   const clamped = clampProgress(progress);
@@ -64,7 +66,7 @@ export function Ui2ProgressBar({ progress, height = 8, accessibilityLabel, style
 
   return (
     <View
-      style={[styles.track, { backgroundColor: c.track, height, borderRadius: height / 2 }, style]}
+      style={[styles.track, { backgroundColor: onCard ? c.trackOnCard : c.track, height, borderRadius: height / 2 }, style]}
       accessibilityRole="progressbar"
       accessibilityLabel={accessibilityLabel}
       accessibilityValue={{ min: 0, max: 100, now: Math.round(clamped * 100) }}

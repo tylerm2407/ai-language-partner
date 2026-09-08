@@ -54,7 +54,7 @@ export default function StatusBadge({ status, size = 'medium' }: StatusBadgeProp
         style={{
           color: styles.text,
           fontSize: isSmall ? 10 : 12,
-          fontFamily: 'Nunito_600SemiBold',
+          fontFamily: 'Manrope_600SemiBold',
         }}
       >
         {formatLabel(status)}

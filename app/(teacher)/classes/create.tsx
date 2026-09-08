@@ -84,7 +84,7 @@ export default function CreateClassScreen() {
             <Ionicons name="chevron-back" size={24} color={c.primary} />
             <Text
               className="text-base ml-1"
-              style={{ fontFamily: 'Nunito_600SemiBold', color: c.primary }}
+              style={{ fontFamily: 'Manrope_600SemiBold', color: c.primary }}
             >
               Back
             </Text>
@@ -92,7 +92,7 @@ export default function CreateClassScreen() {
 
           <Text
             className="text-[28px] mb-6"
-            style={{ fontFamily: 'Nunito_800ExtraBold', color: c.ink }}
+            style={{ fontFamily: 'Manrope_800ExtraBold', color: c.ink }}
             accessibilityRole="header"
           >
             Create Class
@@ -101,7 +101,7 @@ export default function CreateClassScreen() {
           {/* Class Name */}
           <Text
             className="text-sm mb-2"
-            style={{ fontFamily: 'Nunito_600SemiBold', color: c.muted }}
+            style={{ fontFamily: 'Manrope_600SemiBold', color: c.muted }}
           >
             Class Name *
           </Text>
@@ -116,7 +116,7 @@ export default function CreateClassScreen() {
           {/* Language Picker */}
           <Text
             className="text-sm mb-2"
-            style={{ fontFamily: 'Nunito_600SemiBold', color: c.muted }}
+            style={{ fontFamily: 'Manrope_600SemiBold', color: c.muted }}
           >
             Target Language
           </Text>
@@ -129,7 +129,7 @@ export default function CreateClassScreen() {
               <View className="flex-row items-center justify-between">
                 <Text
                   className="text-base"
-                  style={{ fontFamily: 'Nunito_400Regular', color: c.ink }}
+                  style={{ fontFamily: 'Manrope_400Regular', color: c.ink }}
                 >
                   {selectedLang ? `${selectedLang.flag} ${selectedLang.name}` : language}
                 </Text>
@@ -185,7 +185,7 @@ export default function CreateClassScreen() {
                         style={{
                           color: lang.code === language ? c.onTint : c.ink,
                           fontSize: 16,
-                          fontFamily: 'Nunito_500Medium',
+                          fontFamily: 'Manrope_500Medium',
                         }}
                       >
                         {lang.flag} {lang.name}
@@ -200,7 +200,7 @@ export default function CreateClassScreen() {
           {/* Level Picker */}
           <Text
             className="text-sm mb-2"
-            style={{ fontFamily: 'Nunito_600SemiBold', color: c.muted }}
+            style={{ fontFamily: 'Manrope_600SemiBold', color: c.muted }}
           >
             Proficiency Level
           </Text>
@@ -231,7 +231,7 @@ export default function CreateClassScreen() {
                   style={{
                     color: level === lvl.value ? c.onTint : c.muted,
                     fontSize: 13,
-                    fontFamily: 'Nunito_600SemiBold',
+                    fontFamily: 'Manrope_600SemiBold',
                   }}
                 >
                   {lvl.label}
@@ -254,7 +254,7 @@ export default function CreateClassScreen() {
               <Ionicons name="warning-outline" size={18} color={c.error} />
               <Text
                 className="text-sm flex-1"
-                style={{ color: c.error, fontFamily: 'Nunito_500Medium' }}
+                style={{ color: c.error, fontFamily: 'Manrope_500Medium' }}
               >
                 {error}
               </Text>
@@ -265,7 +265,7 @@ export default function CreateClassScreen() {
                 style={{ paddingVertical: 4, paddingHorizontal: 8 }}
               >
                 <Text
-                  style={{ color: c.primary, fontSize: 13, fontFamily: 'Nunito_600SemiBold' }}
+                  style={{ color: c.primary, fontSize: 13, fontFamily: 'Manrope_600SemiBold' }}
                 >
                   Retry
                 </Text>
@@ -305,13 +305,13 @@ export default function CreateClassScreen() {
             <Ionicons name="checkmark-circle" size={48} color={c.green} />
             <Text
               className="text-xl mt-4 mb-2"
-              style={{ fontFamily: 'Nunito_700Bold', color: c.ink }}
+              style={{ fontFamily: 'Manrope_700Bold', color: c.ink }}
             >
               Class Created
             </Text>
             <Text
               className="text-sm mb-4 text-center"
-              style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
+              style={{ fontFamily: 'Manrope_400Regular', color: c.muted }}
             >
               Share this invite code with your students
             </Text>
@@ -328,7 +328,7 @@ export default function CreateClassScreen() {
                 style={{
                   color: c.onTint,
                   fontSize: 28,
-                  fontFamily: 'Nunito_800ExtraBold',
+                  fontFamily: 'Manrope_800ExtraBold',
                   letterSpacing: 4,
                 }}
               >

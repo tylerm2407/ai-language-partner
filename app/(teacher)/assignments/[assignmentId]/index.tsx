@@ -122,7 +122,7 @@ export default function SubmissionsListScreen() {
             <Ionicons name="chevron-back" size={24} color={c.primary} />
             <Text
               className="text-base ml-1"
-              style={{ fontFamily: 'Nunito_600SemiBold', color: c.primary }}
+              style={{ fontFamily: 'Manrope_600SemiBold', color: c.primary }}
             >
               Back
             </Text>
@@ -130,7 +130,7 @@ export default function SubmissionsListScreen() {
 
           <Text
             className="text-[28px] mb-2"
-            style={{ fontFamily: 'Nunito_800ExtraBold', color: c.ink }}
+            style={{ fontFamily: 'Manrope_800ExtraBold', color: c.ink }}
             accessibilityRole="header"
           >
             {assignment?.title ?? 'Assignment'}
@@ -147,7 +147,7 @@ export default function SubmissionsListScreen() {
                       style={{
                         color: c.muted,
                         fontSize: 12,
-                        fontFamily: 'Nunito_500Medium',
+                        fontFamily: 'Manrope_500Medium',
                         marginLeft: 4,
                       }}
                     >
@@ -161,7 +161,7 @@ export default function SubmissionsListScreen() {
                     style={{
                       color: c.muted,
                       fontSize: 12,
-                      fontFamily: 'Nunito_500Medium',
+                      fontFamily: 'Manrope_500Medium',
                       marginLeft: 4,
                     }}
                   >
@@ -174,7 +174,7 @@ export default function SubmissionsListScreen() {
                     style={{
                       color: c.muted,
                       fontSize: 12,
-                      fontFamily: 'Nunito_500Medium',
+                      fontFamily: 'Manrope_500Medium',
                       marginLeft: 4,
                     }}
                   >
@@ -188,7 +188,7 @@ export default function SubmissionsListScreen() {
                       style={{
                         color: c.muted,
                         fontSize: 12,
-                        fontFamily: 'Nunito_500Medium',
+                        fontFamily: 'Manrope_500Medium',
                         marginLeft: 4,
                       }}
                     >
@@ -205,13 +205,13 @@ export default function SubmissionsListScreen() {
             <SlabCard style={{ flex: 1, padding: 12, alignItems: 'center' }}>
               <Text
                 className="text-lg"
-                style={{ fontFamily: 'Nunito_700Bold', color: c.ink }}
+                style={{ fontFamily: 'Manrope_700Bold', color: c.ink }}
               >
                 {totalSubmissions}
               </Text>
               <Text
                 className="text-xs"
-                style={{ fontFamily: 'Nunito_500Medium', color: c.muted }}
+                style={{ fontFamily: 'Manrope_500Medium', color: c.muted }}
               >
                 Total
               </Text>
@@ -219,13 +219,13 @@ export default function SubmissionsListScreen() {
             <SlabCard style={{ flex: 1, padding: 12, alignItems: 'center' }}>
               <Text
                 className="text-lg"
-                style={{ fontFamily: 'Nunito_700Bold', color: c.ink }}
+                style={{ fontFamily: 'Manrope_700Bold', color: c.ink }}
               >
                 {completed}
               </Text>
               <Text
                 className="text-xs"
-                style={{ fontFamily: 'Nunito_500Medium', color: c.muted }}
+                style={{ fontFamily: 'Manrope_500Medium', color: c.muted }}
               >
                 Completed
               </Text>
@@ -233,13 +233,13 @@ export default function SubmissionsListScreen() {
             <SlabCard style={{ flex: 1, padding: 12, alignItems: 'center' }}>
               <Text
                 className="text-lg"
-                style={{ fontFamily: 'Nunito_700Bold', color: c.ink }}
+                style={{ fontFamily: 'Manrope_700Bold', color: c.ink }}
               >
                 {avgScore !== null ? `${avgScore}%` : '—'}
               </Text>
               <Text
                 className="text-xs"
-                style={{ fontFamily: 'Nunito_500Medium', color: c.muted }}
+                style={{ fontFamily: 'Manrope_500Medium', color: c.muted }}
               >
                 Avg Score
               </Text>
@@ -252,13 +252,13 @@ export default function SubmissionsListScreen() {
               <Ionicons name="people-outline" size={48} color={c.idle} />
               <Text
                 className="text-base mt-3"
-                style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
+                style={{ fontFamily: 'Manrope_600SemiBold', color: c.ink }}
               >
                 No submissions yet
               </Text>
               <Text
                 className="text-sm mt-1 text-center px-8"
-                style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
+                style={{ fontFamily: 'Manrope_400Regular', color: c.muted }}
               >
                 Submissions will appear here as students complete the assignment.
               </Text>
@@ -283,7 +283,7 @@ export default function SubmissionsListScreen() {
                     <View className="flex-row items-center justify-between mb-1">
                       <Text
                         className="text-base flex-1 mr-2"
-                        style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
+                        style={{ fontFamily: 'Manrope_600SemiBold', color: c.ink }}
                         numberOfLines={1}
                       >
                         {item.studentName ?? 'Student'}
@@ -299,7 +299,7 @@ export default function SubmissionsListScreen() {
                           style={{
                             color: c.green,
                             fontSize: 13,
-                            fontFamily: 'Nunito_600SemiBold',
+                            fontFamily: 'Manrope_600SemiBold',
                           }}
                         >
                           {item.finalScore}/{assignment?.maxPoints ?? 100}
@@ -308,7 +308,7 @@ export default function SubmissionsListScreen() {
                       {item.submittedAt && (
                         <Text
                           className="text-xs"
-                          style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
+                          style={{ fontFamily: 'Manrope_400Regular', color: c.muted }}
                         >
                           {formatDate(item.submittedAt)}
                         </Text>
@@ -318,7 +318,7 @@ export default function SubmissionsListScreen() {
                           style={{
                             color: c.error,
                             fontSize: 11,
-                            fontFamily: 'Nunito_600SemiBold',
+                            fontFamily: 'Manrope_600SemiBold',
                           }}
                         >
                           LATE

@@ -100,12 +100,12 @@ export default function AuditLogScreen() {
             className="flex-row items-center mb-4"
           >
             <Ionicons name="chevron-back" size={24} color={c.primary} />
-            <Text className="text-base ml-1" style={{ fontFamily: 'Nunito_600SemiBold', color: c.primary }}>Back</Text>
+            <Text className="text-base ml-1" style={{ fontFamily: 'Manrope_600SemiBold', color: c.primary }}>Back</Text>
           </Pressable>
 
           <Text
             className="text-[28px] mb-4"
-            style={{ fontFamily: 'Nunito_800ExtraBold', color: c.ink }}
+            style={{ fontFamily: 'Manrope_800ExtraBold', color: c.ink }}
             accessibilityRole="header"
           >
             Audit Log
@@ -130,7 +130,7 @@ export default function AuditLogScreen() {
                   style={{
                     color: filter === opt ? c.onTint : c.muted,
                     fontSize: 13,
-                    fontFamily: 'Nunito_600SemiBold',
+                    fontFamily: 'Manrope_600SemiBold',
                   }}
                 >
                   {opt.charAt(0).toUpperCase() + opt.slice(1)}
@@ -164,23 +164,23 @@ export default function AuditLogScreen() {
                           backgroundColor: actionTone(c, item.action).bg,
                         }}
                       >
-                        <Text style={{ color: actionTone(c, item.action).fg, fontSize: 11, fontFamily: 'Nunito_600SemiBold' }}>
+                        <Text style={{ color: actionTone(c, item.action).fg, fontSize: 11, fontFamily: 'Manrope_600SemiBold' }}>
                           {item.action.toUpperCase()}
                         </Text>
                       </View>
-                      <Text className="text-xs" style={{ fontFamily: 'Nunito_500Medium', color: c.muted }}>
+                      <Text className="text-xs" style={{ fontFamily: 'Manrope_500Medium', color: c.muted }}>
                         {item.actorRole}
                       </Text>
                     </View>
-                    <Text className="text-xs" style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}>
+                    <Text className="text-xs" style={{ fontFamily: 'Manrope_400Regular', color: c.muted }}>
                       {formatTimestamp(item.createdAt)}
                     </Text>
                   </View>
-                  <Text className="text-sm" style={{ fontFamily: 'Nunito_400Regular', color: c.ink }}>
+                  <Text className="text-sm" style={{ fontFamily: 'Manrope_400Regular', color: c.ink }}>
                     {item.resourceType}{item.resourceId ? ` (${item.resourceId.slice(0, 8)}...)` : ''}
                   </Text>
                   {item.ipAddress && (
-                    <Text className="text-xs mt-1" style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}>
+                    <Text className="text-xs mt-1" style={{ fontFamily: 'Manrope_400Regular', color: c.muted }}>
                       IP: {item.ipAddress}
                     </Text>
                   )}
@@ -189,7 +189,7 @@ export default function AuditLogScreen() {
               ListEmptyComponent={
                 <View className="items-center mt-8">
                   <Ionicons name="document-text-outline" size={48} color={c.idle} />
-                  <Text className="text-base mt-3" style={{ fontFamily: 'Nunito_500Medium', color: c.muted }}>
+                  <Text className="text-base mt-3" style={{ fontFamily: 'Manrope_500Medium', color: c.muted }}>
                     No audit entries found
                   </Text>
                 </View>

@@ -32,7 +32,7 @@ export default function ClassCard({ classroom, onPress, showStudentCount }: Clas
         {/* Name */}
         <Text
           className="text-lg mb-1"
-          style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
+          style={{ fontFamily: 'Manrope_600SemiBold', color: c.ink }}
           numberOfLines={1}
         >
           {classroom.name}
@@ -44,7 +44,7 @@ export default function ClassCard({ classroom, onPress, showStudentCount }: Clas
             style={{
               color: c.muted,
               fontSize: 13,
-              fontFamily: 'Nunito_500Medium',
+              fontFamily: 'Manrope_500Medium',
               textTransform: 'uppercase',
             }}
           >
@@ -62,7 +62,7 @@ export default function ClassCard({ classroom, onPress, showStudentCount }: Clas
               style={{
                 color: c.onTint,
                 fontSize: 11,
-                fontFamily: 'Nunito_600SemiBold',
+                fontFamily: 'Manrope_600SemiBold',
               }}
             >
               {levelLabel(classroom.level)}
@@ -79,7 +79,7 @@ export default function ClassCard({ classroom, onPress, showStudentCount }: Clas
                 style={{
                   color: c.muted,
                   fontSize: 12,
-                  fontFamily: 'Nunito_500Medium',
+                  fontFamily: 'Manrope_500Medium',
                   marginLeft: 4,
                 }}
               >
@@ -95,7 +95,7 @@ export default function ClassCard({ classroom, onPress, showStudentCount }: Clas
                 style={{
                   color: c.onTint,
                   fontSize: 12,
-                  fontFamily: 'Nunito_500Medium',
+                  fontFamily: 'Manrope_500Medium',
                   marginLeft: 4,
                 }}
               >

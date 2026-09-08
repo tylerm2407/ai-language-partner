@@ -39,7 +39,7 @@ export default function AssignmentTimer({ elapsedSeconds, requiredMinutes }: Ass
         style={{
           color: met ? c.green : c.muted,
           fontSize: 14,
-          fontFamily: 'Nunito_600SemiBold',
+          fontFamily: 'Manrope_600SemiBold',
           fontVariant: ['tabular-nums'],
         }}
         accessibilityLabel={`Timer: ${formatTime(elapsedSeconds)} of ${formatTime(requiredSeconds)}`}

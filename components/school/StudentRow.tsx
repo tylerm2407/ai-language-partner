@@ -48,7 +48,7 @@ export default function StudentRow({
           style={{
             color: c.onTint,
             fontSize: 16,
-            fontFamily: 'Nunito_700Bold',
+            fontFamily: 'Manrope_700Bold',
           }}
         >
           {initial}
@@ -61,7 +61,7 @@ export default function StudentRow({
           style={{
             color: c.ink,
             fontSize: 15,
-            fontFamily: 'Nunito_600SemiBold',
+            fontFamily: 'Manrope_600SemiBold',
           }}
           numberOfLines={1}
         >
@@ -71,7 +71,7 @@ export default function StudentRow({
           style={{
             color: c.muted,
             fontSize: 12,
-            fontFamily: 'Nunito_400Regular',
+            fontFamily: 'Manrope_400Regular',
             marginTop: 2,
           }}
         >
@@ -110,7 +110,7 @@ export default function StudentRow({
             style={{
               color: c.muted,
               fontSize: 10,
-              fontFamily: 'Nunito_500Medium',
+              fontFamily: 'Manrope_500Medium',
               textAlign: 'center',
               marginTop: 2,
             }}

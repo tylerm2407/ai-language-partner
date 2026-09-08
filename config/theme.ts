@@ -197,7 +197,7 @@ export const radii = {
  * here equal hhea — and NOT the larger usWin* pair:
  *
  *   face            typo/hhea   usWin*   capHeight
- *   Nunito            1.364     1.377      0.705
+ *   Manrope           1.366     1.366      0.720
  *   Fraunces          1.233     1.474      0.700
  *   JetBrains Mono    1.320     1.320        —
  *
@@ -205,9 +205,9 @@ export const radii = {
  * clipped every heading by 1-5px after the font swap.
  */
 export const leading = {
-  /** Nunito — body, headings, CTA labels. */
-  sans: 1.364,
-  /** Fraunces — display face. Tighter than Nunito despite being larger on screen. */
+  /** Manrope — body, headings, CTA labels (replaced Nunito 2026-09-07; same box). */
+  sans: 1.366,
+  /** Fraunces — display face. Tighter than Manrope despite being larger on screen. */
   display: 1.233,
   /** JetBrains Mono — meta rows, eyebrows. */
   mono: 1.32,
@@ -226,11 +226,11 @@ export function minLineHeight(fontSize: number, face: keyof typeof leading = 'sa
 
 export const typography = {
   family: {
-    regular: 'Nunito_400Regular',
-    medium: 'Nunito_500Medium',
-    semibold: 'Nunito_600SemiBold',
-    bold: 'Nunito_700Bold',
-    extrabold: 'Nunito_800ExtraBold', // headings, CTA labels
+    regular: 'Manrope_400Regular',
+    medium: 'Manrope_500Medium',
+    semibold: 'Manrope_600SemiBold',
+    bold: 'Manrope_700Bold',
+    extrabold: 'Manrope_800ExtraBold', // headings, CTA labels
     display: 'Fraunces_700Bold', // celebration / hero only
     serif: 'Fraunces_600SemiBold', // magazine editorial headlines
     mono: 'JetBrainsMono_400Regular',
@@ -350,8 +350,11 @@ export type Theme = typeof theme;
 export const ui2Light = {
   bg: '#FFFFFF',
   surface2: '#F5F4FA',
-  card: '#FFFFFF',
-  cardBorder: '#E9E7F3',
+  /** Tint blocks (2026-09-07): a card is a solid tinted fill on the ground, no
+   *  outline. `cardBorder` equals `card` so any leftover hardcoded border
+   *  disappears into the fill instead of drawing a Duolingo-style stroke. */
+  card: '#F3F1F9',
+  cardBorder: '#F3F1F9',
   ink: '#23203A',
   muted: '#6E6A88',
   idle: '#8C88A6',
@@ -375,6 +378,9 @@ export const ui2Light = {
   pink: '#FF5C8A',
   pinkTint: '#FFE9F1',
   track: '#EFEBFF',
+  /** Unfilled progress when the bar sits ON a card: the card is already a tint,
+   *  so the groove goes to the ground colour to stay visible. */
+  trackOnCard: '#FFFFFF',
   error: '#E5484D',
 } as const;
 
@@ -384,7 +390,7 @@ export const ui2Dark: Ui2Palette = {
   bg: '#0C0B14',
   surface2: '#100E1C',
   card: '#17152A',
-  cardBorder: '#27243F',
+  cardBorder: '#17152A',
   ink: '#F4F2FF',
   muted: '#A6A2C2',
   idle: '#6C6890',
@@ -408,26 +414,38 @@ export const ui2Dark: Ui2Palette = {
   pink: '#FF5C8A',
   pinkTint: '#3A2230',
   track: '#26224A',
+  trackOnCard: '#26224A',
   error: '#FF6B70',
 };
 
 
-/** UI 2.0 type: Plus Jakarta Sans for headings, Nunito for everything else. */
+/**
+ * UI 2.0 type: Manrope for everything (canvas page "Slab-free · A/B/C",
+ * variant C, picked 2026-09-07). Nunito went because it is the free stand-in
+ * for Duolingo's rounded Feather Bold and carried every label; Plus Jakarta
+ * went with it so the app has one voice.
+ */
 export const ui2Type = {
-  heading: 'PlusJakartaSans_800ExtraBold',
-  headingBold: 'PlusJakartaSans_700Bold',
-  ui: 'Nunito_600SemiBold',
-  uiBold: 'Nunito_700Bold',
-  uiHeavy: 'Nunito_800ExtraBold',
+  heading: 'Manrope_800ExtraBold',
+  headingBold: 'Manrope_700Bold',
+  ui: 'Manrope_600SemiBold',
+  uiBold: 'Manrope_700Bold',
+  uiHeavy: 'Manrope_800ExtraBold',
 } as const;
 
-/** UI 2.0 shape: slab cards are 2px border + a thicker bottom edge. */
+/**
+ * UI 2.0 shape: Tint blocks. No outline and no bottom slab anywhere — a card
+ * is a filled block, a button is a filled pill. The slab keys are kept at 0 so
+ * every `borderBottomWidth: shape.slab` in the tree collapses without a
+ * per-file edit; do not raise them again (the slab was the strongest single
+ * Duolingo tell, see DESIGN.md "UI 2.0 › Shape and type").
+ */
 export const ui2Shape = {
-  radiusCard: 18,
-  radiusHero: 24,
-  radiusButton: 18,
-  border: 2,
-  slab: 5,
-  slabPressed: 2,
-  buttonSlab: 6,
+  radiusCard: 22,
+  radiusHero: 28,
+  radiusButton: 999,
+  border: 0,
+  slab: 0,
+  slabPressed: 0,
+  buttonSlab: 0,
 } as const;

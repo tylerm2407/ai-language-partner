@@ -867,25 +867,36 @@ scheme (`app.json` `userInterfaceStyle: "automatic"`).
 | Token | Light | Dark | Usage |
 |---|---|---|---|
 | `bg` | `#FFFFFF` | `#0C0B14` | Screen ground. Dark is near-black with a violet cast, never pure black |
-| `card` / `cardBorder` | `#FFFFFF` / `#E9E7F3` | `#17152A` / `#27243F` | Slab cards |
+| `card` / `cardBorder` | `#F3F1F9` / `#F3F1F9` | `#17152A` / `#17152A` | Tint-block cards. `cardBorder` equals `card` on purpose: any stray hardcoded border melts into the fill |
 | `ink` / `muted` / `idle` | `#23203A` / `#6E6A88` / `#8C88A6` | `#F4F2FF` / `#A6A2C2` / `#6C6890` | Text: primary / helper (AA) / placeholders and inactive icons |
-| `primary` / `slab` | `#6A4CFF` / `#4D33D6` | `#7057FF` / `#5641D9` | CTA fill and its bottom edge; white on it clears AA both schemes |
+| `primary` / `slab` | `#6A4CFF` / `#4D33D6` | `#7057FF` / `#5641D9` | CTA fill; white on it clears AA both schemes. `slab` is a retired shim (edge width is 0) |
 | `onTint` | `#4D33D6` | `#C4B5FD` | Text on `primaryTint` (chips, eyebrows). `primary` itself is 4.4:1 there |
 | `primaryTint` / `primaryTintBorder` | `#EFEBFF` / `#D9D1FF` | `#2A2450` / `#3E3670` | Selected rows, level card, chips |
 | `yellow` / `green` / `pink` + `*Tint` | see `config/theme.ts` | deepened | Read / review / unit colour coding |
-| `track` | `#EFEBFF` | `#26224A` | Unfilled progress |
+| `track` / `trackOnCard` | `#EFEBFF` / `#FFFFFF` | `#26224A` / `#26224A` | Unfilled progress on the ground / on a tinted card (`Ui2ProgressBar onCard`) |
 
 `hooks/useUi2Theme.test.ts` pins the contrast floors.
 
 ### Shape and type
 
-- **Slab card**: 2px border, 5px bottom edge (`ui2Shape.slab`), radius 18; hero
-  cards radius 24. **Selected** = pressed in: card drops 3px, edge thins to 2px,
-  tint fill, check pops in with overshoot (`components/ui2/OptionRow.tsx`).
-- **Slab button**: 6px edge; pressing sinks the block 4px on a spring, haptic on
-  the way down (`components/ui2/SlabButton.tsx`).
-- **Type**: Plus Jakarta Sans 800 for headings, Nunito 600/700/800 for UI. No
-  serif in UI 2.0.
+- **Tint blocks** (2026-09-07, canvas page "Slab-free · A/B/C", variant C).
+  A card is a solid tinted fill on the ground with **no outline and no bottom
+  slab**: neutral `card`, or a semantic tint. Radius 22; hero cards 28. Progress
+  grooves on a card use `trackOnCard`. **Selected** row inverts to solid
+  `primary` with `onPrimary` text and a white check that pops in
+  (`components/ui2/OptionRow.tsx`).
+  The 2px-outline-plus-slab card, the sinking slab button and the pressed-in
+  selected row were the D3 originals; they went because together with Nunito
+  they made the screens read as Duolingo. `ui2Shape.border/slab/buttonSlab`
+  are pinned at 0 rather than removed so nothing in the tree had to change
+  call shape; do not raise them.
+- **Button**: filled pill (`radiusButton: 999`), 56 high; pressing scales to
+  0.97 on a spring, haptic on the way down (`components/ui2/SlabButton.tsx`,
+  name kept for the call sites).
+- **Type**: Manrope for everything, 400–800 (`ui2Type` and the legacy
+  `typography.family` both point at it). Nunito and Plus Jakarta Sans are gone
+  from the binary. Line box 1.366em, same as Nunito's, so `leading.sans` and
+  the type scale did not move. No serif in UI 2.0.
 - **Motion vocabulary** (all gated on `useMotion().shouldReduce`): step change =
   bubble slides in from the right, rows cascade 40ms apart (`FadeInDown`);
   progress bar springs to its new width; the plan-building loader runs ~2.4s.

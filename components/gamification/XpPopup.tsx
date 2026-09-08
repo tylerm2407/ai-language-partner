@@ -73,7 +73,7 @@ export function XpPopup({ xp, visible, onDone }: XpPopupProps) {
         style={{
           color: c.onPrimary,
           fontSize: 24,
-          fontFamily: 'Nunito_800ExtraBold',
+          fontFamily: 'Manrope_800ExtraBold',
           fontWeight: '800',
           textAlign: 'center',
         }}

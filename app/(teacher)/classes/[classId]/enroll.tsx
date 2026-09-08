@@ -93,19 +93,19 @@ export default function BulkEnrollScreen() {
             className="flex-row items-center mb-4 min-h-11 -ml-1 pl-1"
           >
             <Ionicons name="chevron-back" size={24} color={c.primary} />
-            <Text className="text-base ml-1" style={{ fontFamily: 'Nunito_600SemiBold', color: c.primary }}>Back</Text>
+            <Text className="text-base ml-1" style={{ fontFamily: 'Manrope_600SemiBold', color: c.primary }}>Back</Text>
           </Pressable>
 
           <Text
             className="text-[28px] mb-2"
-            style={{ fontFamily: 'Nunito_800ExtraBold', color: c.ink }}
+            style={{ fontFamily: 'Manrope_800ExtraBold', color: c.ink }}
             accessibilityRole="header"
           >
             Bulk Enroll Students
           </Text>
           <Text
             className="text-sm mb-4"
-            style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
+            style={{ fontFamily: 'Manrope_400Regular', color: c.muted }}
           >
             Enter student email addresses, one per line
           </Text>
@@ -125,14 +125,14 @@ export default function BulkEnrollScreen() {
           <View className="flex-row items-center mb-4" style={{ gap: 12 }}>
             <View className="flex-row items-center" style={{ gap: 4 }}>
               <Ionicons name="checkmark-circle" size={16} color={c.green} />
-              <Text style={{ color: c.green, fontSize: 13, fontFamily: 'Nunito_600SemiBold' }}>
+              <Text style={{ color: c.green, fontSize: 13, fontFamily: 'Manrope_600SemiBold' }}>
                 {validEmails.length} valid
               </Text>
             </View>
             {invalidEmails.length > 0 && (
               <View className="flex-row items-center" style={{ gap: 4 }}>
                 <Ionicons name="alert-circle" size={16} color={c.error} />
-                <Text style={{ color: c.error, fontSize: 13, fontFamily: 'Nunito_600SemiBold' }}>
+                <Text style={{ color: c.error, fontSize: 13, fontFamily: 'Manrope_600SemiBold' }}>
                   {invalidEmails.length} invalid
                 </Text>
               </View>
@@ -155,7 +155,7 @@ export default function BulkEnrollScreen() {
                 {successCount > 0 && (
                   <View className="flex-row items-center" style={{ gap: 4 }}>
                     <Ionicons name="checkmark-circle" size={18} color={c.green} />
-                    <Text style={{ color: c.green, fontSize: 14, fontFamily: 'Nunito_600SemiBold' }}>
+                    <Text style={{ color: c.green, fontSize: 14, fontFamily: 'Manrope_600SemiBold' }}>
                       {successCount} enrolled
                     </Text>
                   </View>
@@ -163,7 +163,7 @@ export default function BulkEnrollScreen() {
                 {errorCount > 0 && (
                   <View className="flex-row items-center" style={{ gap: 4 }}>
                     <Ionicons name="close-circle" size={18} color={c.error} />
-                    <Text style={{ color: c.error, fontSize: 14, fontFamily: 'Nunito_600SemiBold' }}>
+                    <Text style={{ color: c.error, fontSize: 14, fontFamily: 'Manrope_600SemiBold' }}>
                       {errorCount} failed
                     </Text>
                   </View>
@@ -179,8 +179,8 @@ export default function BulkEnrollScreen() {
                   <SlabCard style={{ marginBottom: 6, padding: 10, flexDirection: 'row', alignItems: 'center' }}>
                     <Ionicons name="close-circle" size={16} color={c.error} style={{ marginRight: 8 }} />
                     <View className="flex-1">
-                      <Text className="text-sm" style={{ fontFamily: 'Nunito_500Medium', color: c.ink }}>{item.email}</Text>
-                      <Text className="text-xs" style={{ color: c.error, fontFamily: 'Nunito_400Regular' }}>{item.error}</Text>
+                      <Text className="text-sm" style={{ fontFamily: 'Manrope_500Medium', color: c.ink }}>{item.email}</Text>
+                      <Text className="text-xs" style={{ color: c.error, fontFamily: 'Manrope_400Regular' }}>{item.error}</Text>
                     </View>
                   </SlabCard>
                 )}

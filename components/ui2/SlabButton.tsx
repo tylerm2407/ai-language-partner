@@ -1,8 +1,12 @@
 /**
- * SlabButton — the UI 2.0 primary action. A filled block with a thicker bottom
- * edge; pressing sinks the block into the edge (translateY + thinner slab), so
- * the button reads as a physical key. The haptic fires on the way down, the
- * `onPress` on release, like the rest of the app.
+ * SlabButton — the UI 2.0 primary action. A filled pill; pressing scales it to
+ * 0.97 on a spring. The haptic fires on the way down, the `onPress` on
+ * release, like the rest of the app.
+ *
+ * The name is historical: until 2026-09-07 this was a block on a 6px bottom
+ * slab that sank on press. The slab was the strongest single Duolingo tell in
+ * the app and went with the Tint blocks pass (DESIGN.md "UI 2.0 › Shape and
+ * type"); the component name stayed so 30-odd call sites did not churn.
  */
 import { useCallback } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
@@ -27,6 +31,8 @@ interface SlabButtonProps {
 }
 
 const PRESS_SPRING = { damping: 18, stiffness: 320, mass: 0.6 };
+/** How far the pill shrinks at full press (1 - scale). */
+const PRESS_SCALE = 0.03;
 
 export function SlabButton({
   label,
@@ -50,18 +56,16 @@ export function SlabButton({
     pressed.value = shouldReduce ? 0 : withSpring(0, PRESS_SPRING);
   }, [pressed, shouldReduce]);
 
-  const sink = shape.buttonSlab - shape.slabPressed;
   const animated = useAnimatedStyle(() => ({
-    transform: [{ translateY: pressed.value * sink }],
-    borderBottomWidth: shape.buttonSlab - pressed.value * sink,
+    transform: [{ scale: 1 - pressed.value * PRESS_SCALE }],
   }));
 
   const fill =
     variant === 'primary'
-      ? { bg: c.primary, slab: c.slab, text: c.onPrimary }
+      ? { bg: c.primary, text: c.onPrimary }
       : variant === 'onPrimary'
-        ? { bg: c.ctaOnPrimaryBg, slab: c.ctaOnPrimarySlab, text: c.ctaOnPrimaryText }
-        : { bg: 'transparent', slab: 'transparent', text: c.muted };
+        ? { bg: c.ctaOnPrimaryBg, text: c.ctaOnPrimaryText }
+        : { bg: 'transparent', text: c.muted };
   const inactive = disabled || loading;
 
   if (variant === 'ghost') {
@@ -92,33 +96,28 @@ export function SlabButton({
       accessibilityState={{ disabled: !!inactive, busy: !!loading }}
       style={style}
     >
-      {/* The slab lives in a wrapper so the sink does not shift the label. */}
-      <View style={{ paddingBottom: shape.buttonSlab }}>
-        <Animated.View
-          style={[
-            styles.block,
-            {
-              backgroundColor: fill.bg,
-              borderBottomColor: fill.slab,
-              borderRadius: shape.radiusButton,
-              opacity: inactive ? 0.6 : 1,
-              marginBottom: -shape.buttonSlab,
-            },
-            animated,
-          ]}
-        >
-          {loading ? (
-            <ActivityIndicator color={fill.text} />
-          ) : (
-            <View style={styles.labelRow}>
-              <Text style={{ fontFamily: type.uiHeavy, fontSize: 16, color: fill.text, letterSpacing: 0.2 }}>
-                {label}
-              </Text>
-              {arrow && <Ionicons name="chevron-forward" size={18} color={fill.text} />}
-            </View>
-          )}
-        </Animated.View>
-      </View>
+      <Animated.View
+        style={[
+          styles.block,
+          {
+            backgroundColor: fill.bg,
+            borderRadius: shape.radiusButton,
+            opacity: inactive ? 0.6 : 1,
+          },
+          animated,
+        ]}
+      >
+        {loading ? (
+          <ActivityIndicator color={fill.text} />
+        ) : (
+          <View style={styles.labelRow}>
+            <Text style={{ fontFamily: type.uiHeavy, fontSize: 16, color: fill.text, letterSpacing: 0.2 }}>
+              {label}
+            </Text>
+            {arrow && <Ionicons name="chevron-forward" size={18} color={fill.text} />}
+          </View>
+        )}
+      </Animated.View>
     </Pressable>
   );
 }

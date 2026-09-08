@@ -642,7 +642,7 @@ const makeStyles = (c: Ui2Palette) => StyleSheet.create({
   itemLabel: {
     flex: 1,
     fontSize: 15,
-    fontFamily: 'Nunito_500Medium',
+    fontFamily: 'Manrope_500Medium',
   },
 });
 

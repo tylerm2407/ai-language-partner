@@ -124,7 +124,7 @@ export default function TeacherDashboardScreen() {
           <Ionicons name="school-outline" size={64} color={c.idle} />
           <Text
             className="text-xl mt-4 text-center"
-            style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
+            style={{ fontFamily: 'Manrope_600SemiBold', color: c.ink }}
           >
             Not linked to a school
           </Text>
@@ -150,14 +150,14 @@ export default function TeacherDashboardScreen() {
           {/* Header */}
           <Text
             className="text-[28px] mb-1"
-            style={{ fontFamily: 'Nunito_800ExtraBold', color: c.ink }}
+            style={{ fontFamily: 'Manrope_800ExtraBold', color: c.ink }}
             accessibilityRole="header"
           >
             Dashboard
           </Text>
           <Text
             className="text-base mb-6"
-            style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
+            style={{ fontFamily: 'Manrope_400Regular', color: c.muted }}
           >
             {organization.name}
           </Text>
@@ -174,7 +174,7 @@ export default function TeacherDashboardScreen() {
                   <Ionicons name="warning-outline" size={18} color={c.yellow} />
                   <Text
                     className="text-sm flex-1 ml-2"
-                    style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
+                    style={{ fontFamily: 'Manrope_400Regular', color: c.muted }}
                   >
                     {error}
                   </Text>
@@ -185,7 +185,7 @@ export default function TeacherDashboardScreen() {
                     style={{ paddingVertical: 6, paddingHorizontal: 12 }}
                   >
                     <Text
-                      style={{ color: c.primary, fontSize: 13, fontFamily: 'Nunito_600SemiBold' }}
+                      style={{ color: c.primary, fontSize: 13, fontFamily: 'Manrope_600SemiBold' }}
                     >
                       Retry
                     </Text>
@@ -205,13 +205,13 @@ export default function TeacherDashboardScreen() {
                     <Ionicons name={stat.icon} size={22} color={stat.color} />
                     <Text
                       className="text-xl mt-2"
-                      style={{ fontFamily: 'Nunito_700Bold', color: c.ink }}
+                      style={{ fontFamily: 'Manrope_700Bold', color: c.ink }}
                     >
                       {stat.value}
                     </Text>
                     <Text
                       className="text-xs mt-1 text-center"
-                      style={{ fontFamily: 'Nunito_500Medium', color: c.muted }}
+                      style={{ fontFamily: 'Manrope_500Medium', color: c.muted }}
                       numberOfLines={1}
                     >
                       {stat.label}
@@ -223,7 +223,7 @@ export default function TeacherDashboardScreen() {
               {/* Upcoming Due Dates */}
               <Text
                 className="text-xl mb-3"
-                style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
+                style={{ fontFamily: 'Manrope_600SemiBold', color: c.ink }}
               >
                 Upcoming
               </Text>
@@ -232,7 +232,7 @@ export default function TeacherDashboardScreen() {
                   <Ionicons name="calendar-outline" size={28} color={c.idle} />
                   <Text
                     className="text-sm mt-2"
-                    style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
+                    style={{ fontFamily: 'Manrope_400Regular', color: c.muted }}
                   >
                     No upcoming assignments
                   </Text>
@@ -250,7 +250,7 @@ export default function TeacherDashboardScreen() {
                     <SlabCard style={{ marginBottom: 10, padding: 14 }}>
                       <Text
                         className="text-base"
-                        style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
+                        style={{ fontFamily: 'Manrope_600SemiBold', color: c.ink }}
                         numberOfLines={1}
                       >
                         {item.title}
@@ -261,7 +261,7 @@ export default function TeacherDashboardScreen() {
                       >
                         <Text
                           className="text-xs"
-                          style={{ fontFamily: 'Nunito_500Medium', color: c.muted }}
+                          style={{ fontFamily: 'Manrope_500Medium', color: c.muted }}
                         >
                           {item.classroomName}
                         </Text>
@@ -269,7 +269,7 @@ export default function TeacherDashboardScreen() {
                           <Text
                             className="text-xs"
                             style={{
-                              fontFamily: 'Nunito_500Medium',
+                              fontFamily: 'Manrope_500Medium',
                               color: c.yellow,
                             }}
                           >
@@ -278,7 +278,7 @@ export default function TeacherDashboardScreen() {
                         )}
                         <Text
                           className="text-xs"
-                          style={{ fontFamily: 'Nunito_500Medium', color: c.muted }}
+                          style={{ fontFamily: 'Manrope_500Medium', color: c.muted }}
                         >
                           {item.submissionCount}/{item.totalStudents} submitted
                         </Text>
@@ -291,7 +291,7 @@ export default function TeacherDashboardScreen() {
               {/* Recent Activity */}
               <Text
                 className="text-xl mt-4 mb-3"
-                style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
+                style={{ fontFamily: 'Manrope_600SemiBold', color: c.ink }}
               >
                 Recent Activity
               </Text>
@@ -300,7 +300,7 @@ export default function TeacherDashboardScreen() {
                   <Ionicons name="pulse-outline" size={28} color={c.idle} />
                   <Text
                     className="text-sm mt-2"
-                    style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
+                    style={{ fontFamily: 'Manrope_400Regular', color: c.muted }}
                   >
                     No recent activity
                   </Text>
@@ -315,14 +315,14 @@ export default function TeacherDashboardScreen() {
                     <Ionicons name={event.icon} size={18} color={c.idle} />
                     <Text
                       className="text-sm flex-1"
-                      style={{ fontFamily: 'Nunito_400Regular', color: c.ink }}
+                      style={{ fontFamily: 'Manrope_400Regular', color: c.ink }}
                       numberOfLines={1}
                     >
                       {event.text}
                     </Text>
                     <Text
                       className="text-xs"
-                      style={{ fontFamily: 'Nunito_500Medium', color: c.muted }}
+                      style={{ fontFamily: 'Manrope_500Medium', color: c.muted }}
                     >
                       {formatRelativeTime(event.timestamp)}
                     </Text>

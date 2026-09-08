@@ -73,7 +73,7 @@ export default function AssignmentsListScreen() {
         <View className="flex-1 px-4 pt-2">
           <Text
             className="text-[28px] mb-4"
-            style={{ fontFamily: 'Nunito_800ExtraBold', color: c.ink }}
+            style={{ fontFamily: 'Manrope_800ExtraBold', color: c.ink }}
             accessibilityRole="header"
           >
             Assignments
@@ -100,13 +100,13 @@ export default function AssignmentsListScreen() {
               <Ionicons name="document-text-outline" size={56} color={c.idle} />
               <Text
                 className="text-lg mt-4"
-                style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
+                style={{ fontFamily: 'Manrope_600SemiBold', color: c.ink }}
               >
                 No assignments yet
               </Text>
               <Text
                 className="text-sm mt-1 text-center px-8"
-                style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
+                style={{ fontFamily: 'Manrope_400Regular', color: c.muted }}
               >
                 Create your first assignment to give students conversation practice.
               </Text>

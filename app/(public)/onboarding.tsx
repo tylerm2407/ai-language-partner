@@ -197,14 +197,17 @@ function useMascotMood(base: MascotMood): [MascotMood, () => void] {
   return [cheering ? 'cheer' : base, cheer];
 }
 
-function LevelBars({ lit }: { lit: number }) {
+function LevelBars({ lit, selected }: { lit: number; selected: boolean }) {
   const { c } = useUi2Theme();
+  // On the selected row the block is solid primary, so the lit bars go white.
+  const on = selected ? c.onPrimary : c.primary;
+  const off = selected ? c.onPrimary : c.idle;
   return (
     <View style={styles.bars} accessibilityElementsHidden importantForAccessibility="no">
       {[0, 1, 2, 3, 4].map((k) => (
         <View
           key={k}
-          style={[styles.bar, { height: 6 + k * 4, backgroundColor: k < lit ? c.primary : c.idle, opacity: k < lit ? 1 : 0.45 }]}
+          style={[styles.bar, { height: 6 + k * 4, backgroundColor: k < lit ? on : off, opacity: k < lit ? 1 : 0.4 }]}
         />
       ))}
     </View>
@@ -787,7 +790,7 @@ export default function OnboardingScreen() {
                 setLevel(l.value);
                 cheer();
               }}
-              lead={<LevelBars lit={LEVEL_BARS[l.value]} />}
+              lead={<LevelBars lit={LEVEL_BARS[l.value]} selected={level === l.value} />}
               trail={<Chip label={cefrBandForProficiencyLevel(l.value)} />}
             />
           ))}

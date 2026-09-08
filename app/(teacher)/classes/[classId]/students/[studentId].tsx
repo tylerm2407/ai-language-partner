@@ -129,7 +129,7 @@ export default function StudentProgressScreen() {
             <Ionicons name="chevron-back" size={24} color={c.primary} />
             <Text
               className="text-base ml-1"
-              style={{ fontFamily: 'Nunito_600SemiBold', color: c.primary }}
+              style={{ fontFamily: 'Manrope_600SemiBold', color: c.primary }}
             >
               Back
             </Text>
@@ -137,7 +137,7 @@ export default function StudentProgressScreen() {
 
           <Text
             className="text-[28px] mb-4"
-            style={{ fontFamily: 'Nunito_800ExtraBold', color: c.ink }}
+            style={{ fontFamily: 'Manrope_800ExtraBold', color: c.ink }}
             accessibilityRole="header"
           >
             {student?.name ?? 'Student'}
@@ -151,7 +151,7 @@ export default function StudentProgressScreen() {
               <Ionicons name="warning-outline" size={32} color={c.error} />
               <Text
                 className="text-sm mt-2 text-center"
-                style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
+                style={{ fontFamily: 'Manrope_400Regular', color: c.muted }}
               >
                 {error}
               </Text>
@@ -184,13 +184,13 @@ export default function StudentProgressScreen() {
               <View className="ml-4">
                 <Text
                   className="text-lg"
-                  style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
+                  style={{ fontFamily: 'Manrope_600SemiBold', color: c.ink }}
                 >
                   {student?.name ?? 'Unknown'}
                 </Text>
                 <Text
                   className="text-sm"
-                  style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
+                  style={{ fontFamily: 'Manrope_400Regular', color: c.muted }}
                 >
                   Enrolled{' '}
                   {student?.enrolledAt
@@ -207,7 +207,7 @@ export default function StudentProgressScreen() {
           {/* Assignment History */}
           <Text
             className="text-xl mb-3"
-            style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
+            style={{ fontFamily: 'Manrope_600SemiBold', color: c.ink }}
           >
             Assignment History
           </Text>
@@ -219,7 +219,7 @@ export default function StudentProgressScreen() {
               <Ionicons name="document-text-outline" size={32} color={c.idle} />
               <Text
                 className="text-sm mt-2"
-                style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
+                style={{ fontFamily: 'Manrope_400Regular', color: c.muted }}
               >
                 No submissions yet
               </Text>
@@ -233,7 +233,7 @@ export default function StudentProgressScreen() {
                 <View className="flex-row items-center justify-between mb-1">
                   <Text
                     className="text-base flex-1 mr-2"
-                    style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
+                    style={{ fontFamily: 'Manrope_600SemiBold', color: c.ink }}
                     numberOfLines={1}
                   >
                     {sub.assignmentTitle}
@@ -246,7 +246,7 @@ export default function StudentProgressScreen() {
                       style={{
                         color: c.green,
                         fontSize: 13,
-                        fontFamily: 'Nunito_600SemiBold',
+                        fontFamily: 'Manrope_600SemiBold',
                       }}
                     >
                       {sub.score}/100
@@ -255,7 +255,7 @@ export default function StudentProgressScreen() {
                   {sub.submittedAt && (
                     <Text
                       className="text-xs"
-                      style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
+                      style={{ fontFamily: 'Manrope_400Regular', color: c.muted }}
                     >
                       {new Date(sub.submittedAt).toLocaleDateString(undefined, {
                         month: 'short',

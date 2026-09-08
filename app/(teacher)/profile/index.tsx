@@ -39,7 +39,7 @@ export default function TeacherProfileScreen() {
         >
           <Text
             className="text-[28px] mb-6"
-            style={{ fontFamily: 'Nunito_800ExtraBold', color: c.ink }}
+            style={{ fontFamily: 'Manrope_800ExtraBold', color: c.ink }}
             accessibilityRole="header"
           >
             Profile
@@ -73,14 +73,14 @@ export default function TeacherProfileScreen() {
               <View className="ml-4">
                 <Text
                   className="text-lg"
-                  style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
+                  style={{ fontFamily: 'Manrope_600SemiBold', color: c.ink }}
                 >
                   {profile?.displayName ?? user?.email}
                 </Text>
                 {profile?.displayName && (
                   <Text
                     className="text-sm"
-                    style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
+                    style={{ fontFamily: 'Manrope_400Regular', color: c.muted }}
                   >
                     {user?.email}
                   </Text>
@@ -94,7 +94,7 @@ export default function TeacherProfileScreen() {
             <>
               <Text
                 className="text-xl mb-3"
-                style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
+                style={{ fontFamily: 'Manrope_600SemiBold', color: c.ink }}
               >
                 School
               </Text>
@@ -104,13 +104,13 @@ export default function TeacherProfileScreen() {
                   <View className="ml-4 flex-1">
                     <Text
                       className="text-base"
-                      style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
+                      style={{ fontFamily: 'Manrope_600SemiBold', color: c.ink }}
                     >
                       {organization.name}
                     </Text>
                     <Text
                       className="text-sm capitalize"
-                      style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
+                      style={{ fontFamily: 'Manrope_400Regular', color: c.muted }}
                     >
                       {activeRole ?? 'Teacher'}
                     </Text>
@@ -123,7 +123,7 @@ export default function TeacherProfileScreen() {
           {/* Settings Links */}
           <Text
             className="text-xl mb-3"
-            style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
+            style={{ fontFamily: 'Manrope_600SemiBold', color: c.ink }}
           >
             Settings
           </Text>

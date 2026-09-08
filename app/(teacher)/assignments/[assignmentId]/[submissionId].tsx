@@ -45,7 +45,7 @@ function RubricRow({ label, score }: { label: string; score: number }) {
     <View className="flex-row items-center justify-between mb-2">
       <Text
         className="text-sm"
-        style={{ fontFamily: 'Nunito_500Medium', color: c.muted }}
+        style={{ fontFamily: 'Manrope_500Medium', color: c.muted }}
       >
         {label}
       </Text>
@@ -53,7 +53,7 @@ function RubricRow({ label, score }: { label: string; score: number }) {
         style={{
           color: score >= 80 ? c.green : score >= 60 ? c.yellow : c.error,
           fontSize: 14,
-          fontFamily: 'Nunito_700Bold',
+          fontFamily: 'Manrope_700Bold',
         }}
       >
         {score}%
@@ -169,7 +169,7 @@ export default function GradingScreen() {
             <Ionicons name="chevron-back" size={24} color={c.primary} />
             <Text
               className="text-base ml-1"
-              style={{ fontFamily: 'Nunito_600SemiBold', color: c.primary }}
+              style={{ fontFamily: 'Manrope_600SemiBold', color: c.primary }}
             >
               Back
             </Text>
@@ -177,7 +177,7 @@ export default function GradingScreen() {
 
           <Text
             className="text-[28px] mb-4"
-            style={{ fontFamily: 'Nunito_800ExtraBold', color: c.ink }}
+            style={{ fontFamily: 'Manrope_800ExtraBold', color: c.ink }}
             accessibilityRole="header"
           >
             Review Submission
@@ -202,13 +202,13 @@ export default function GradingScreen() {
                 <View className="ml-3">
                   <Text
                     className="text-base"
-                    style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
+                    style={{ fontFamily: 'Manrope_600SemiBold', color: c.ink }}
                   >
                     {submission?.studentName ?? 'Student'}
                   </Text>
                   <Text
                     className="text-xs"
-                    style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
+                    style={{ fontFamily: 'Manrope_400Regular', color: c.muted }}
                   >
                     Submitted {formatDate(submission?.submittedAt ?? null)}
                   </Text>
@@ -226,7 +226,7 @@ export default function GradingScreen() {
                     style={{
                       color: c.muted,
                       fontSize: 12,
-                      fontFamily: 'Nunito_500Medium',
+                      fontFamily: 'Manrope_500Medium',
                       marginLeft: 4,
                     }}
                   >
@@ -248,7 +248,7 @@ export default function GradingScreen() {
                     style={{
                       color: c.error,
                       fontSize: 11,
-                      fontFamily: 'Nunito_600SemiBold',
+                      fontFamily: 'Manrope_600SemiBold',
                     }}
                   >
                     Late
@@ -261,7 +261,7 @@ export default function GradingScreen() {
           {/* AI Rubric */}
           <Text
             className="text-xl mb-3"
-            style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
+            style={{ fontFamily: 'Manrope_600SemiBold', color: c.ink }}
           >
             AI Evaluation
           </Text>
@@ -288,7 +288,7 @@ export default function GradingScreen() {
                 <View className="flex-row items-center justify-between">
                   <Text
                     className="text-base"
-                    style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
+                    style={{ fontFamily: 'Manrope_600SemiBold', color: c.ink }}
                   >
                     Total Score
                   </Text>
@@ -296,7 +296,7 @@ export default function GradingScreen() {
                     style={{
                       color: c.primary,
                       fontSize: 20,
-                      fontFamily: 'Nunito_800ExtraBold',
+                      fontFamily: 'Manrope_800ExtraBold',
                     }}
                   >
                     {aiFeedback.totalScore}%
@@ -308,7 +308,7 @@ export default function GradingScreen() {
               {aiFeedback.summary ? (
                 <Text
                   className="text-sm mt-3"
-                  style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
+                  style={{ fontFamily: 'Manrope_400Regular', color: c.muted }}
                 >
                   {aiFeedback.summary}
                 </Text>
@@ -319,7 +319,7 @@ export default function GradingScreen() {
                 <View className="mt-3">
                   <Text
                     className="text-xs mb-1"
-                    style={{ fontFamily: 'Nunito_600SemiBold', color: c.muted }}
+                    style={{ fontFamily: 'Manrope_600SemiBold', color: c.muted }}
                   >
                     Strengths
                   </Text>
@@ -333,7 +333,7 @@ export default function GradingScreen() {
                       />
                       <Text
                         className="text-sm flex-1"
-                        style={{ fontFamily: 'Nunito_400Regular', color: c.ink }}
+                        style={{ fontFamily: 'Manrope_400Regular', color: c.ink }}
                       >
                         {s}
                       </Text>
@@ -347,7 +347,7 @@ export default function GradingScreen() {
                 <View className="mt-3">
                   <Text
                     className="text-xs mb-1"
-                    style={{ fontFamily: 'Nunito_600SemiBold', color: c.muted }}
+                    style={{ fontFamily: 'Manrope_600SemiBold', color: c.muted }}
                   >
                     Areas for Improvement
                   </Text>
@@ -361,7 +361,7 @@ export default function GradingScreen() {
                       />
                       <Text
                         className="text-sm flex-1"
-                        style={{ fontFamily: 'Nunito_400Regular', color: c.ink }}
+                        style={{ fontFamily: 'Manrope_400Regular', color: c.ink }}
                       >
                         {s}
                       </Text>
@@ -375,7 +375,7 @@ export default function GradingScreen() {
               <Ionicons name="analytics-outline" size={28} color={c.idle} />
               <Text
                 className="text-sm mt-2"
-                style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
+                style={{ fontFamily: 'Manrope_400Regular', color: c.muted }}
               >
                 AI evaluation not available
               </Text>
@@ -385,7 +385,7 @@ export default function GradingScreen() {
           {/* Transcript placeholder */}
           <Text
             className="text-xl mb-3"
-            style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
+            style={{ fontFamily: 'Manrope_600SemiBold', color: c.ink }}
           >
             Conversation Transcript
           </Text>
@@ -399,7 +399,7 @@ export default function GradingScreen() {
               <Ionicons name="chatbox-outline" size={28} color={c.idle} />
               <Text
                 className="text-sm mt-2"
-                style={{ fontFamily: 'Nunito_400Regular', color: c.muted }}
+                style={{ fontFamily: 'Manrope_400Regular', color: c.muted }}
               >
                 No transcript available
               </Text>
@@ -409,14 +409,14 @@ export default function GradingScreen() {
           {/* Teacher Feedback */}
           <Text
             className="text-xl mb-3"
-            style={{ fontFamily: 'Nunito_600SemiBold', color: c.ink }}
+            style={{ fontFamily: 'Manrope_600SemiBold', color: c.ink }}
           >
             Teacher Feedback
           </Text>
 
           <Text
             className="text-sm mb-2"
-            style={{ fontFamily: 'Nunito_600SemiBold', color: c.muted }}
+            style={{ fontFamily: 'Manrope_600SemiBold', color: c.muted }}
           >
             Score Override (0-100)
           </Text>
@@ -431,7 +431,7 @@ export default function GradingScreen() {
 
           <Text
             className="text-sm mb-2"
-            style={{ fontFamily: 'Nunito_600SemiBold', color: c.muted }}
+            style={{ fontFamily: 'Manrope_600SemiBold', color: c.muted }}
           >
             Comments
           </Text>

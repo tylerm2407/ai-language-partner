@@ -23,12 +23,12 @@ import { View, ActivityIndicator, AppState, Text, Pressable } from 'react-native
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
   useFonts,
-  Nunito_400Regular,
-  Nunito_500Medium,
-  Nunito_600SemiBold,
-  Nunito_700Bold,
-  Nunito_800ExtraBold,
-} from '@expo-google-fonts/nunito';
+  Manrope_400Regular,
+  Manrope_500Medium,
+  Manrope_600SemiBold,
+  Manrope_700Bold,
+  Manrope_800ExtraBold,
+} from '@expo-google-fonts/manrope';
 import {
   Fraunces_600SemiBold,
   Fraunces_700Bold,
@@ -37,10 +37,6 @@ import {
   JetBrainsMono_400Regular,
   JetBrainsMono_500Medium,
 } from '@expo-google-fonts/jetbrains-mono';
-import {
-  PlusJakartaSans_700Bold,
-  PlusJakartaSans_800ExtraBold,
-} from '@expo-google-fonts/plus-jakarta-sans';
 import { redactTutorSecrets } from '../lib/tutor-api';
 import { useUi2Theme } from '../hooks/useUi2Theme';
 
@@ -89,18 +85,15 @@ function RootLayout() {
   }, []);
 
   const [fontsLoaded] = useFonts({
-    Nunito_400Regular,
-    Nunito_500Medium,
-    Nunito_600SemiBold,
-    Nunito_700Bold,
-    Nunito_800ExtraBold,
+    Manrope_400Regular,
+    Manrope_500Medium,
+    Manrope_600SemiBold,
+    Manrope_700Bold,
+    Manrope_800ExtraBold,
     Fraunces_600SemiBold,
     Fraunces_700Bold,
     JetBrainsMono_400Regular,
     JetBrainsMono_500Medium,
-    // UI 2.0 heading face (config/theme.ts §ui2Type).
-    PlusJakartaSans_700Bold,
-    PlusJakartaSans_800ExtraBold,
   });
 
   // Mount notification listeners + read current permission status.

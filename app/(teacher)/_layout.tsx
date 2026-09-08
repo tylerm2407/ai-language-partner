@@ -41,7 +41,7 @@ export default function TeacherLayout() {
           tabBarBackground: () => <TabBarBackground />,
           tabBarLabelStyle: {
             fontSize: 12,
-            fontFamily: 'Nunito_600SemiBold',
+            fontFamily: 'Manrope_600SemiBold',
           },
         }}
       >

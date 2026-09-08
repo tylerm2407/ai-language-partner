@@ -261,7 +261,7 @@ export default function CreateAssignmentScreen() {
             <Ionicons name="chevron-back" size={24} color={c.primary} />
             <Text
               className="text-base ml-1"
-              style={{ fontFamily: 'Nunito_600SemiBold', color: c.primary }}
+              style={{ fontFamily: 'Manrope_600SemiBold', color: c.primary }}
             >
               Back
             </Text>
@@ -269,7 +269,7 @@ export default function CreateAssignmentScreen() {
 
           <Text
             className="text-[28px] mb-6"
-            style={{ fontFamily: 'Nunito_800ExtraBold', color: c.ink }}
+            style={{ fontFamily: 'Manrope_800ExtraBold', color: c.ink }}
             accessibilityRole="header"
           >
             Create Assignment
@@ -280,7 +280,7 @@ export default function CreateAssignmentScreen() {
             <>
               <Text
                 className="text-sm mb-2"
-                style={{ fontFamily: 'Nunito_600SemiBold', color: c.muted }}
+                style={{ fontFamily: 'Manrope_600SemiBold', color: c.muted }}
               >
                 Class
               </Text>
@@ -293,7 +293,7 @@ export default function CreateAssignmentScreen() {
                   <View className="flex-row items-center justify-between">
                     <Text
                       className="text-base"
-                      style={{ fontFamily: 'Nunito_400Regular', color: c.ink }}
+                      style={{ fontFamily: 'Manrope_400Regular', color: c.ink }}
                     >
                       {selectedClass?.name ?? 'Select a class'}
                     </Text>
@@ -354,7 +354,7 @@ export default function CreateAssignmentScreen() {
                           color:
                             room.id === selectedClassId ? c.onTint : c.ink,
                           fontSize: 16,
-                          fontFamily: 'Nunito_500Medium',
+                          fontFamily: 'Manrope_500Medium',
                         }}
                       >
                         {room.name}
@@ -369,7 +369,7 @@ export default function CreateAssignmentScreen() {
           {/* Title */}
           <Text
             className="text-sm mb-2"
-            style={{ fontFamily: 'Nunito_600SemiBold', color: c.muted }}
+            style={{ fontFamily: 'Manrope_600SemiBold', color: c.muted }}
           >
             Title *
           </Text>
@@ -384,7 +384,7 @@ export default function CreateAssignmentScreen() {
           {/* Scenario Picker */}
           <Text
             className="text-sm mb-2"
-            style={{ fontFamily: 'Nunito_600SemiBold', color: c.muted }}
+            style={{ fontFamily: 'Manrope_600SemiBold', color: c.muted }}
           >
             Scenario *
           </Text>
@@ -419,7 +419,7 @@ export default function CreateAssignmentScreen() {
                   style={{
                     color: selectedScenario === s.key ? c.onTint : c.muted,
                     fontSize: 11,
-                    fontFamily: 'Nunito_600SemiBold',
+                    fontFamily: 'Manrope_600SemiBold',
                     marginTop: 6,
                     textAlign: 'center',
                   }}
@@ -458,7 +458,7 @@ export default function CreateAssignmentScreen() {
                 style={{
                   color: selectedScenario === 'custom' ? c.onTint : c.muted,
                   fontSize: 11,
-                  fontFamily: 'Nunito_600SemiBold',
+                  fontFamily: 'Manrope_600SemiBold',
                   marginTop: 6,
                   textAlign: 'center',
                 }}
@@ -500,7 +500,7 @@ export default function CreateAssignmentScreen() {
           {/* Level */}
           <Text
             className="text-sm mb-2"
-            style={{ fontFamily: 'Nunito_600SemiBold', color: c.muted }}
+            style={{ fontFamily: 'Manrope_600SemiBold', color: c.muted }}
           >
             Level
           </Text>
@@ -527,7 +527,7 @@ export default function CreateAssignmentScreen() {
                   style={{
                     color: level === lvl.value ? c.onTint : c.muted,
                     fontSize: 13,
-                    fontFamily: 'Nunito_600SemiBold',
+                    fontFamily: 'Manrope_600SemiBold',
                   }}
                 >
                   {lvl.label}
@@ -539,7 +539,7 @@ export default function CreateAssignmentScreen() {
           {/* Minimum Duration */}
           <Text
             className="text-sm mb-2"
-            style={{ fontFamily: 'Nunito_600SemiBold', color: c.muted }}
+            style={{ fontFamily: 'Manrope_600SemiBold', color: c.muted }}
           >
             Minimum Duration
           </Text>
@@ -566,7 +566,7 @@ export default function CreateAssignmentScreen() {
                   style={{
                     color: minDuration === d ? c.onTint : c.muted,
                     fontSize: 13,
-                    fontFamily: 'Nunito_600SemiBold',
+                    fontFamily: 'Manrope_600SemiBold',
                   }}
                 >
                   {d} min
@@ -578,7 +578,7 @@ export default function CreateAssignmentScreen() {
           {/* Mode */}
           <Text
             className="text-sm mb-2"
-            style={{ fontFamily: 'Nunito_600SemiBold', color: c.muted }}
+            style={{ fontFamily: 'Manrope_600SemiBold', color: c.muted }}
           >
             Mode
           </Text>
@@ -610,7 +610,7 @@ export default function CreateAssignmentScreen() {
                   style={{
                     color: mode === m.value ? c.onTint : c.muted,
                     fontSize: 14,
-                    fontFamily: 'Nunito_600SemiBold',
+                    fontFamily: 'Manrope_600SemiBold',
                   }}
                 >
                   {m.label}
@@ -622,7 +622,7 @@ export default function CreateAssignmentScreen() {
           {/* Vocabulary Focus */}
           <Text
             className="text-sm mb-2"
-            style={{ fontFamily: 'Nunito_600SemiBold', color: c.muted }}
+            style={{ fontFamily: 'Manrope_600SemiBold', color: c.muted }}
           >
             Vocabulary Focus (comma-separated)
           </Text>
@@ -637,7 +637,7 @@ export default function CreateAssignmentScreen() {
           {/* Grammar Focus */}
           <Text
             className="text-sm mb-2"
-            style={{ fontFamily: 'Nunito_600SemiBold', color: c.muted }}
+            style={{ fontFamily: 'Manrope_600SemiBold', color: c.muted }}
           >
             Grammar Focus (comma-separated)
           </Text>
@@ -652,7 +652,7 @@ export default function CreateAssignmentScreen() {
           {/* Instructions */}
           <Text
             className="text-sm mb-2"
-            style={{ fontFamily: 'Nunito_600SemiBold', color: c.muted }}
+            style={{ fontFamily: 'Manrope_600SemiBold', color: c.muted }}
           >
             Instructions
           </Text>
@@ -668,7 +668,7 @@ export default function CreateAssignmentScreen() {
           {/* Due Date */}
           <Text
             className="text-sm mb-2"
-            style={{ fontFamily: 'Nunito_600SemiBold', color: c.muted }}
+            style={{ fontFamily: 'Manrope_600SemiBold', color: c.muted }}
           >
             Due Date
           </Text>
@@ -696,7 +696,7 @@ export default function CreateAssignmentScreen() {
               <Ionicons name="warning-outline" size={18} color={c.error} />
               <Text
                 className="text-sm flex-1"
-                style={{ color: c.error, fontFamily: 'Nunito_500Medium' }}
+                style={{ color: c.error, fontFamily: 'Manrope_500Medium' }}
               >
                 {error}
               </Text>
@@ -725,7 +725,7 @@ export default function CreateAssignmentScreen() {
                 style={{
                   color: c.muted,
                   fontSize: 16,
-                  fontFamily: 'Nunito_600SemiBold',
+                  fontFamily: 'Manrope_600SemiBold',
                 }}
               >
                 Save Draft
