@@ -171,10 +171,9 @@ serve(async (req: Request) => {
   // Only EXPIRATION is dropped outright, and only when the stored entitlement
   // runs well past now. Two deliberate narrowings:
   //
-  //   • Not the other INACTIVE_EVENTS. BILLING_ISSUE and SUBSCRIPTION_PAUSED
-  //     legitimately arrive MID-period carrying a grace-period end that is at
-  //     or before the stored one; treating those as stale would silently turn
-  //     a failed payment into continued access.
+  //   • BILLING_ISSUE and SUBSCRIPTION_PAUSED are classified as non-terminal
+  //     and never reach this mutation path. RevenueCat sends EXPIRATION when
+  //     grace or the paid term actually ends.
   //   • A five-minute skew allowance, because an on-time EXPIRATION fires
   //     around the instant the period ends. Without it, delivery latency or a
   //     clock difference of seconds would make a genuine expiry look stale —
