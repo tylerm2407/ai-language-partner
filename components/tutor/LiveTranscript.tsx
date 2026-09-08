@@ -21,10 +21,12 @@
  * a model call per turn mid-conversation. Adapting it would mean threading a
  * "live" flag through 800 lines to switch most of it off.
  *
- * The visual language is still ChatBubble's, taken from DESIGN.md §Message
- * bubbles rather than reinvented: learner turns are the `primary` fill with a
- * squared bottom-right corner, tutor turns are `card` with a slab outline and
- * a squared bottom-left, both capped at 84% width.
+ * Since the Talk redesign (canvas "Talk · C variations", C1, 2026-09-08) the
+ * turns are CAPTIONS, not bubbles: a small speaker label in the speaker's
+ * colour (tutor violet, you green), then the words. The turn still being
+ * spoken is in ink and heavy; finished turns fall back to the helper tone, so
+ * the eye lands on what is being said now. Same grouping, same labels, same
+ * autoscroll, same interrupted-turn note.
  *
  * ── AN INTERRUPTED TURN IS NOT A SHORT TURN ──
  *
@@ -112,7 +114,7 @@ interface LiveTranscriptProps {
 }
 
 export function LiveTranscript({ transcript }: LiveTranscriptProps) {
-  const { c, shape } = useUi2Theme();
+  const { c, type } = useUi2Theme();
   const scrollRef = useRef<ScrollView>(null);
 
   // Follow the conversation. `animated: false` because the content grows on
@@ -124,24 +126,7 @@ export function LiveTranscript({ transcript }: LiveTranscriptProps) {
 
   const groups = groupTurns(transcript.turns);
 
-  const learnerFill = { backgroundColor: c.primary };
-  const tutorFill = {
-    backgroundColor: c.card,
-    borderWidth: shape.border,
-    borderColor: c.cardBorder,
-  };
-  // "Cut off" is carried by the SURFACE, not by coloured text. UI 2.0's yellow
-  // is a fill token — yellow words on a white card are 1.7:1 and vanish on a
-  // phone in light mode — so an interrupted tutor turn is a yellow-tinted
-  // bubble with ordinary ink text on it. A learner turn keeps its indigo fill
-  // and takes the dashed edge in the on-primary tint instead, because tinting
-  // it yellow would lose which side of the conversation it was.
-  const interruptedTutor = {
-    backgroundColor: c.yellowTint,
-    borderWidth: shape.border,
-    borderColor: c.yellowBorder,
-  };
-  const interruptedLearner = { borderWidth: shape.border, borderColor: c.onPrimaryMuted };
+  const speakerColor = (role: TranscriptRole) => (role === 'learner' ? c.green : c.primary);
 
   if (groups.length === 0) {
     return (
@@ -164,34 +149,29 @@ export function LiveTranscript({ transcript }: LiveTranscriptProps) {
       keyboardShouldPersistTaps="handled"
     >
       {groups.map((group) => {
-        const learner = group.role === 'learner';
         return (
-          <View key={group.key} style={[styles.group, learner ? styles.groupRight : styles.groupLeft]}>
-            <Caption tone="tertiary" size="sm">
-              {speakerLabel(group.role)}
+          <View key={group.key} style={styles.group}>
+            <Caption
+              size="sm"
+              style={{ color: speakerColor(group.role), fontFamily: type.uiHeavy, letterSpacing: 0.8 }}
+            >
+              {speakerLabel(group.role).toUpperCase()}
             </Caption>
 
             {group.turns.map((turn) => {
               const note = turnStatusNote(turn.status);
+              const live = turn.status === 'streaming';
               return (
                 <View
                   key={turn.id}
                   accessibilityRole="text"
                   accessibilityLabel={turnAccessibilityLabel(turn)}
-                  style={[
-                    styles.bubble,
-                    learner ? styles.bubbleLearner : styles.bubbleTutor,
-                    learner ? learnerFill : tutorFill,
-                    turn.status === 'interrupted' && styles.bubbleInterrupted,
-                    turn.status === 'interrupted' &&
-                      (learner ? interruptedLearner : interruptedTutor),
-                  ]}
+                  style={styles.turn}
                 >
                   <Body
-                    size="sm"
-                    tone={learner ? 'onPrimary' : 'primary'}
-                    // The bubble carries the accessible label for the whole
-                    // turn; without this the text is announced a second time.
+                    size={live ? 'md' : 'sm'}
+                    weight={live ? 'bold' : 'medium'}
+                    tone={live ? 'primary' : 'secondary'}
                     accessibilityElementsHidden
                     importantForAccessibility="no"
                   >
@@ -200,14 +180,10 @@ export function LiveTranscript({ transcript }: LiveTranscriptProps) {
 
                   {note ? (
                     <View style={styles.note}>
-                      <Ionicons
-                        name="cut-outline"
-                        size={12}
-                        color={learner ? c.onPrimary : c.ink}
-                      />
+                      <Ionicons name="cut-outline" size={12} color={c.muted} />
                       <Caption
                         size="sm"
-                        tone={learner ? 'onPrimary' : 'primary'}
+                        tone="tertiary"
                         accessibilityElementsHidden
                         importantForAccessibility="no"
                       >
@@ -226,9 +202,6 @@ export function LiveTranscript({ transcript }: LiveTranscriptProps) {
 }
 
 /** DESIGN.md §Message bubbles: r18 with the speaker's own corner squared. */
-const BUBBLE_RADIUS = 18;
-const BUBBLE_TAIL = 4;
-
 const styles = StyleSheet.create({
   scroll: {
     flex: 1,
@@ -248,36 +221,9 @@ const styles = StyleSheet.create({
   },
   group: {
     gap: spacing.xxs,
-    maxWidth: '84%',
   },
-  groupLeft: {
-    alignSelf: 'flex-start',
-    alignItems: 'flex-start',
-  },
-  groupRight: {
-    alignSelf: 'flex-end',
-    alignItems: 'flex-end',
-  },
-  bubble: {
-    padding: spacing.sm,
+  turn: {
     gap: spacing.xxs,
-  },
-  bubbleLearner: {
-    borderTopLeftRadius: BUBBLE_RADIUS,
-    borderTopRightRadius: BUBBLE_RADIUS,
-    borderBottomLeftRadius: BUBBLE_RADIUS,
-    borderBottomRightRadius: BUBBLE_TAIL,
-  },
-  bubbleTutor: {
-    borderTopLeftRadius: BUBBLE_RADIUS,
-    borderTopRightRadius: BUBBLE_RADIUS,
-    borderBottomLeftRadius: BUBBLE_TAIL,
-    borderBottomRightRadius: BUBBLE_RADIUS,
-  },
-  bubbleInterrupted: {
-    // Dashed, not just tinted: the shape of the edge survives being
-    // photographed in greyscale, and survives colour blindness.
-    borderStyle: 'dashed',
   },
   note: {
     flexDirection: 'row',

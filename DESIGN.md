@@ -918,6 +918,15 @@ scheme (`app.json` `userInterfaceStyle: "automatic"`).
   pills with no rules; the row says only what the block does not.
   Multiple-choice rows are filled blocks: ground tint unanswered, solid green
   for the answer, solid error for a wrong pick.
+- **Talk tab** (2026-09-08, canvas page "Talk · C variations", C1 "Spectrum"):
+  the live call's stage is the persona disc over a 28-bar mirrored analyser
+  (`components/tutor/Spectrum.tsx`) in the phase's colour, then icon + label +
+  detail. The bars are a talking indicator keyed to the server-reported phase,
+  not a meter — the session exposes no amplitude yet; `level` scales the
+  pattern when one exists. Transcript is captions (speaker label in the
+  speaker's colour, live turn in ink), controls are two round tint buttons
+  (Mute, Type — the composer opens under them) with End call last on its own
+  line. The lobby shows the same analyser at rest under the portrait.
 - **Motion vocabulary** (all gated on `useMotion().shouldReduce`): step change =
   the hero block arrives with a per-step entrance (slide / rise / pop / meet /
   drop), the done segments light up 70ms apart, the question fades up, Sol

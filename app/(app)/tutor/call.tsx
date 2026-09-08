@@ -346,7 +346,9 @@ export default function TutorCallScreen() {
       <SafeAreaView style={styles.flex} edges={['top', 'bottom']}>
         <View style={styles.header}>
           <View style={styles.headerTop}>
-            <Body weight="semibold" numberOfLines={1} style={styles.headerName}>
+            {/* Centred, with the clock and mute pinned right (Talk C1). */}
+            <View style={styles.headerSpacer} />
+            <Body weight="extrabold" numberOfLines={1} style={styles.headerName}>
               {persona?.name ?? 'Your tutor'}
             </Body>
 
@@ -438,12 +440,20 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   headerName: {
-    flexShrink: 1,
+    flex: 1,
+    textAlign: 'center',
+  },
+  headerSpacer: {
+    // Mirrors headerActions' width so the name is centred on the screen,
+    // not on the space left of the clock.
+    width: 44 + spacing.sm + 44,
   },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+    width: 44 + spacing.sm + 44,
+    justifyContent: 'flex-end',
   },
   iconButton: {
     // 44pt: the HIG minimum, and this one is pressed mid-conversation.
@@ -458,7 +468,7 @@ const styles = StyleSheet.create({
   },
   ring: {
     alignItems: 'center',
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.lg,
   },
   transcript: {
     flex: 1,

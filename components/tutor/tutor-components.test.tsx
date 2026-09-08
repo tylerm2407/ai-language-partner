@@ -488,6 +488,8 @@ describe('CallControls', () => {
   it('sends a typed turn once, cleaned, and clears the box', () => {
     const onSendText = jest.fn();
     const renderer = render(<CallControls {...props} onSendText={onSendText} />);
+    // The composer opens from the Type control (Talk C1); one tap, then the box.
+    press(renderer, 'Type instead of speaking');
     const input = hostNodes(renderer, (node) => node.props?.accessibilityLabel === 'Type your turn')[0];
     TestRenderer.act(() => {
       input.props.onChangeText('  hola   ');

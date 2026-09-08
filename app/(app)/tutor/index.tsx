@@ -51,6 +51,7 @@ import { useAiConsent } from '../../../hooks/useAiConsent';
 import { useScreenView } from '../../../hooks/useScreenView';
 import { useAppStore, effectiveTier } from '../../../stores/useAppStore';
 import { TutorPortrait } from '../../../components/tutor/TutorPortrait';
+import { Spectrum } from '../../../components/tutor/Spectrum';
 import { CorrectionModeToggle } from '../../../components/tutor/CorrectionModeToggle';
 import { LastSessionCard } from '../../../components/tutor/LastSessionCard';
 import { SlabButton } from '../../../components/ui2/SlabButton';
@@ -292,6 +293,9 @@ export default function TutorLobbyScreen() {
             {persona ? (
               <>
                 <TutorPortrait portraitId={persona.portraitId} name={persona.name} size="hero" />
+                {/* The call's sound picture, resting: a low shimmer that says
+                    the line is quiet, not dead (Talk C1). */}
+                <Spectrum state="idle" color={c.primary} bars={24} height={56} />
                 <Heading level={1} style={styles.heroName} accessibilityRole="header">
                   {persona.name}
                 </Heading>

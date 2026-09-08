@@ -27,7 +27,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { spacing } from '../../config/theme';
+import { radii, spacing } from '../../config/theme';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { Body, Caption } from '../ui2/Ui2Text';
 import type { CorrectionMode } from '../../lib/tutor-storage';
@@ -92,22 +92,16 @@ interface CorrectionModeToggleProps {
 export function CorrectionModeToggle({ mode, onChange, compact = false }: CorrectionModeToggleProps) {
   const { c, shape } = useUi2Theme();
 
-  // The slab shape carries selection: a chosen row is pressed IN — tint fill,
-  // tint border, and the bottom edge thinned to `slabPressed` — which is the
-  // same "selected = pressed in" language OptionRow uses. The checkmark below
-  // is still the non-colour cue; this is the shape half of the same signal.
+  // Tint blocks: filled surfaces, no outline. The fill carries selection and
+  // the checkmark below is still the non-colour cue. The compact in-call row is two
+  // pills and the chosen one goes solid; the lobby's full cards stay on the
+  // tint so their descriptions keep reading.
   const surface = {
     backgroundColor: c.card,
-    borderColor: c.cardBorder,
-    borderWidth: shape.border,
-    borderBottomWidth: compact ? shape.border : shape.slab,
-    borderRadius: compact ? shape.radiusCard : shape.radiusHero,
+    borderRadius: compact ? radii.pill : shape.radiusCard,
   };
-  const selectedSurface = {
-    backgroundColor: c.primaryTint,
-    borderColor: c.primaryTintBorder,
-    borderBottomWidth: shape.slabPressed,
-  };
+  const selectedSurface = compact ? { backgroundColor: c.primary } : { backgroundColor: c.primaryTint };
+  const selectedFg = compact ? c.onPrimary : c.onTint;
 
   return (
     <View
@@ -143,13 +137,14 @@ export function CorrectionModeToggle({ mode, onChange, compact = false }: Correc
             <Ionicons
               name={option.icon}
               size={compact ? 16 : 20}
-              color={selected ? c.onTint : c.idle}
+              color={selected ? selectedFg : c.idle}
             />
             <View style={styles.optionText}>
               <Body
                 size={compact ? 'sm' : 'md'}
                 weight={selected ? 'extrabold' : 'medium'}
                 numberOfLines={compact ? 1 : undefined}
+                style={selected && compact ? { color: selectedFg } : undefined}
               >
                 {option.label}
               </Body>
@@ -159,7 +154,7 @@ export function CorrectionModeToggle({ mode, onChange, compact = false }: Correc
                 the non-colour cue §Accessibility requires, and it is the same
                 rule the correct/incorrect feedback follows. */}
             {selected ? (
-              <Ionicons name="checkmark-circle" size={compact ? 16 : 22} color={c.onTint} />
+              <Ionicons name="checkmark-circle" size={compact ? 16 : 22} color={selectedFg} />
             ) : null}
           </Pressable>
         );

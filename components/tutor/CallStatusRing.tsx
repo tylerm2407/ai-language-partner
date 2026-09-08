@@ -29,15 +29,15 @@
  * except the animation.
  */
 
-import { useEffect, useRef } from 'react';
-import { Animated, Easing, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { radii, spacing, type Ui2Palette } from '../../config/theme';
 import { useMotion } from '../../hooks/useMotion';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { Body, Caption } from '../ui2/Ui2Text';
-import { TutorPortrait, PORTRAIT_DIAMETER } from './TutorPortrait';
+import { TutorPortrait } from './TutorPortrait';
+import { Spectrum, type SpectrumState } from './Spectrum';
 import type { TutorPhase } from '../../lib/realtime-session';
 
 export interface PhasePresentation {
@@ -180,80 +180,60 @@ export function phasePresentation(phase: TutorPhase): PhasePresentation {
  * Small on purpose. The ring sits under the learner's eyes for the whole call;
  * a 20% throb is a distraction, and a 6% one is peripheral feedback.
  */
-const MAX_PULSE = 0.06;
 
-/** States where amplitude means anything. A pulse while connecting would be
- *  reporting a microphone nobody is listening to. */
-function pulses(phase: TutorPhase): boolean {
-  return phase === 'listening' || phase === 'tutor_speaking' || phase === 'greeting';
-}
-
-/** Clamp, and treat a missing or non-finite level as silence rather than
- *  letting `NaN` reach the animation driver, which freezes it. */
 export function clampLevel(level: number | undefined): number {
   if (typeof level !== 'number' || !Number.isFinite(level)) return 0;
   return Math.min(1, Math.max(0, level));
 }
 
-const RING_PADDING = spacing.sm;
-const RING_DIAMETER = PORTRAIT_DIAMETER.hero + RING_PADDING * 2;
+/** The sound picture's state for a phase: the four ring buckets, with the
+ *  never-started call resting rather than preparing. */
+export function spectrumState(phase: TutorPhase): SpectrumState {
+  if (phase === 'idle') return 'idle';
+  return ringState(phase);
+}
 
 interface CallStatusRingProps {
   phase: TutorPhase;
   portraitId: string;
   name: string;
-  /** 0..1 amplitude. Ignored entirely under reduce-motion. */
   level?: number;
 }
 
+/**
+ * The call's stage (Talk direction C1 "Spectrum", 2026-09-08): the portrait,
+ * the bar analyser under it in the phase's colour, then the three agreeing
+ * cues — icon, label, detail. The name is historical; the pulsing ring it
+ * drew was never fed a level by the call screen (see Spectrum.tsx for what
+ * drives the bars instead), and the exports above are what the tests pin.
+ */
 export function CallStatusRing({ phase, portraitId, name, level }: CallStatusRingProps) {
   const { c } = useUi2Theme();
-  const { shouldReduce, duration, easing } = useMotion();
+  const { shouldReduce } = useMotion();
   const presentation = phasePresentation(phase);
   const color = c[presentation.tone];
-  const scale = useRef(new Animated.Value(1)).current;
-
-  const target = pulses(phase) && !shouldReduce ? 1 + clampLevel(level) * MAX_PULSE : 1;
-
-  useEffect(() => {
-    // `instant` (100ms) is the tap-feedback token and it is the right one here:
-    // the ring has to keep up with speech, and anything slower reads as lag
-    // between the learner's voice and the screen rather than as smoothing.
-    const animation = Animated.timing(scale, {
-      toValue: target,
-      duration: shouldReduce ? 0 : duration.instant,
-      easing: Easing.bezier(...easing.standard),
-      useNativeDriver: true,
-    });
-    animation.start();
-    return () => animation.stop();
-  }, [target, scale, shouldReduce, duration.instant, easing.standard]);
-
   const state = ringState(phase);
+  // A finished call's bars rest in the idle colour, whatever tone the label
+  // takes: a red analyser under "Call ended" would read as an alarm.
+  const barColor = state === 'stopped' ? c.idle : color;
 
   return (
     <View style={styles.root}>
-      <Animated.View
-        style={[
-          styles.ring,
-          { borderColor: color },
-          // Under reduce-motion `target` is pinned to 1, so this is a no-op
-          // transform rather than a second code path.
-          { transform: [{ scale }] },
-        ]}
-      >
-        <TutorPortrait portraitId={portraitId} name={name} size="hero" />
-      </Animated.View>
+      <TutorPortrait portraitId={portraitId} name={name} size="hero" />
+
+      <Spectrum
+        state={spectrumState(phase)}
+        color={barColor}
+        level={typeof level === 'number' ? clampLevel(level) : undefined}
+      />
 
       <View style={styles.statusRow}>
         <Ionicons name={presentation.icon} size={18} color={color} />
         <Body
           weight="extrabold"
-          // One live region for the whole call: a screen-reader user hears the
-          // phase change without touching anything, which is the same
-          // affordance the hands-free screen gives.
           accessibilityLiveRegion="polite"
           accessibilityRole="text"
+          style={{ color }}
         >
           {presentation.label}
         </Body>
@@ -266,10 +246,6 @@ export function CallStatusRing({ phase, portraitId, name, level }: CallStatusRin
       ) : null}
 
       {shouldReduce ? (
-        // The static substitute for the pulse: three filled dots for the three
-        // live states, none filled once the call is over. Same information, no
-        // motion. It is `accessibilityElementsHidden` because the label above
-        // already said it — this is a redundant visual cue, not a second fact.
         <View
           style={styles.dots}
           accessibilityElementsHidden
@@ -293,15 +269,7 @@ export function CallStatusRing({ phase, portraitId, name, level }: CallStatusRin
 const styles = StyleSheet.create({
   root: {
     alignItems: 'center',
-    gap: spacing.sm,
-  },
-  ring: {
-    width: RING_DIAMETER,
-    height: RING_DIAMETER,
-    borderRadius: RING_DIAMETER / 2,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
+    gap: spacing.md,
   },
   statusRow: {
     flexDirection: 'row',
