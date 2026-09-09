@@ -124,6 +124,11 @@ export function ScenarioPicker({
       <ScrollView
         contentContainerStyle={[styles.content, { paddingBottom: floatingTabBarSpace() + spacing.sm }]}
         showsVerticalScrollIndicator={false}
+        // The SafeAreaView above already pays the status-bar inset; without
+        // these iOS adds it again inside the scroll view and the header
+        // floats ~40pt too low.
+        contentInsetAdjustmentBehavior="never"
+        automaticallyAdjustContentInsets={false}
       >
         <View style={styles.header}>
           <View style={styles.eyebrowRow}>
@@ -230,7 +235,7 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   content: {
     paddingHorizontal: spacing.md,
-    paddingTop: spacing.xs,
+    paddingTop: spacing.xxs,
     gap: spacing.md,
   },
   header: {
