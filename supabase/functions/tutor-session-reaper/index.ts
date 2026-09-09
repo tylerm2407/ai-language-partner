@@ -30,13 +30,16 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, corsResponse } from '../_shared/cors.ts';
-import { getEffectiveLimits } from '../_shared/plan-limits.ts';
+import { resolveEntitlement } from '../_shared/entitlement.ts';
+import { hangupCall } from '../_shared/tutor-calls.ts';
+import { TUTOR_MAX_SESSION_SECONDS } from '../_shared/tutor-pricing.ts';
 import { analyzeTutorSession } from '../_shared/tutor-analysis.ts';
 import { writeBackTutorSession } from '../_shared/tutor-writeback.ts';
 import { dropTranscript, readTranscript } from '../_shared/tutor-transcript-buffer.ts';
 import type { CEFR } from '../_shared/level-checker.ts';
 import {
   REAP_BATCH_LIMIT,
+  OVERRUN_SLACK_SECONDS,
   reapAbandonedSessions,
   type ReapableSession,
   type ReaperDeps,
@@ -45,13 +48,16 @@ import {
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+// Same secret name as tutor-session: needed here to hang calls up.
+const OPENAI_KEY = Deno.env.get('OPENAI_KEY') ?? '';
 
 const FN = 'tutor-session-reaper';
 
 /** Exactly the columns ./reap.ts declares in `ReapableSession`. */
 const SESSION_COLUMNS =
   'id, user_id, target_language, native_language, level, cefr_level, correction_mode, ' +
-  'granted_seconds, granted_cents, started_at, last_heartbeat_at, observed_seconds';
+  'granted_seconds, granted_cents, started_at, last_heartbeat_at, observed_seconds, ' +
+  'call_id, connected_at';
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -71,14 +77,7 @@ function json(body: unknown, status = 200): Response {
  */
 // deno-lint-ignore no-explicit-any
 async function chatCardLimitFor(supabase: any, userId: string): Promise<number> {
-  const { data: sub } = await supabase
-    .from('subscriptions')
-    .select('tier, is_active')
-    .eq('user_id', userId)
-    .eq('is_active', true)
-    .maybeSingle();
-  const tier = (sub?.tier as string | undefined) ?? 'starter';
-  const limits = await getEffectiveLimits(userId, supabase, tier);
+  const { limits } = await resolveEntitlement(supabase, userId);
   return limits.dailyChatCards;
 }
 
@@ -111,6 +110,24 @@ function buildDeps(supabase: any, anthropicKey: string): ReaperDeps {
       if (error) throw new Error(error.message);
       return (data ?? []) as ReapableSession[];
     },
+
+    async listOverrun(nowMs, limit) {
+      // Served by `idx_tutor_sessions_open_started` (migration 113). The grant
+      // varies per row, so the filter is on started_at against the LONGEST
+      // possible grant and reap.ts re-checks each row's own grant.
+      const oldest = new Date(nowMs - (TUTOR_MAX_SESSION_SECONDS + OVERRUN_SLACK_SECONDS) * 1000);
+      const { data, error } = await supabase
+        .from('tutor_sessions')
+        .select(SESSION_COLUMNS)
+        .is('ended_at', null)
+        .lt('started_at', oldest.toISOString())
+        .order('started_at', { ascending: true })
+        .limit(limit);
+      if (error) throw new Error(error.message);
+      return (data ?? []) as ReapableSession[];
+    },
+
+    hangup: (callId) => hangupCall(OPENAI_KEY, callId),
 
     async claimSettlement(sessionId, observedSeconds): Promise<SettleClaim> {
       // `observed_seconds IS NULL` is migration 107's stated double-settle

@@ -217,7 +217,7 @@ const SAFETY_ERROR_CODES: ReadonlySet<string> = new Set([
 export type TutorEffect =
   | { readonly kind: 'acquire_mic' }
   /** Discard any existing peer connection and dial. `attempt` starts at 1. */
-  | { readonly kind: 'connect'; readonly clientSecret: string; readonly model: string; readonly attempt: number }
+  | { readonly kind: 'connect'; readonly sessionId: string; readonly model: string; readonly attempt: number }
   | { readonly kind: 'send'; readonly event: RealtimeClientEvent }
   | { readonly kind: 'set_mic_enabled'; readonly enabled: boolean }
   /** Maps to the WebRTC-only `output_audio_buffer.clear` client event. */
@@ -264,7 +264,6 @@ export interface TutorSessionState {
   /** OpenAI's id, from `session.created`. Logging only. */
   readonly realtimeSessionId: string | null;
   readonly model: string;
-  readonly clientSecret: string | null;
   readonly correctionMode: TutorCorrectionMode;
 
   /** Milliseconds of conversation the server authorised. */
@@ -310,7 +309,6 @@ export type TutorCommand =
       type: 'start';
       now: number;
       sessionId: string;
-      clientSecret: string;
       model: string;
       grantedMs: number;
       correctionMode: TutorCorrectionMode;
@@ -375,7 +373,6 @@ export function createTutorSession(
     sessionId: null,
     realtimeSessionId: null,
     model: '',
-    clientSecret: null,
     correctionMode: 'debrief',
     grantedMs: 0,
     startedAt: null,
@@ -530,7 +527,7 @@ function endSession(
 
 /** Enter `reconnecting`, or give up if the one attempt is already spent. */
 function reconnectOrEnd(state: TutorSessionState, prior: TutorEffect[] = []): Reduced {
-  if (state.reconnectsUsed >= state.config.maxReconnects || state.clientSecret === null) {
+  if (state.reconnectsUsed >= state.config.maxReconnects || state.sessionId === null) {
     return endSession(state, 'network_lost', prior);
   }
   const reconnectsUsed = state.reconnectsUsed + 1;
@@ -558,7 +555,7 @@ function reconnectOrEnd(state: TutorSessionState, prior: TutorEffect[] = []): Re
     effects: [
       ...prior,
       { kind: 'set_mic_enabled', enabled: false },
-      { kind: 'connect', clientSecret: state.clientSecret, model: state.model, attempt },
+      { kind: 'connect', sessionId: state.sessionId, model: state.model, attempt },
       timer.effect,
     ],
   };
@@ -881,7 +878,6 @@ function handleCommand(state: TutorSessionState, command: TutorCommand): Reduced
           ...state,
           phase: 'preflight',
           sessionId: command.sessionId,
-          clientSecret: command.clientSecret,
           model: command.model,
           grantedMs: command.grantedMs,
           correctionMode: command.correctionMode,
@@ -891,13 +887,13 @@ function handleCommand(state: TutorSessionState, command: TutorCommand): Reduced
     }
 
     case 'mic_granted': {
-      if (state.phase !== 'preflight' || state.clientSecret === null) return none(state);
+      if (state.phase !== 'preflight' || state.sessionId === null) return none(state);
       const at = state.now + state.config.connectTimeoutMs;
       const timer = withTimer({ ...state, phase: 'connecting' }, 'connect', at);
       return {
         state: { ...timer.state, connectDeadline: at },
         effects: [
-          { kind: 'connect', clientSecret: state.clientSecret, model: state.model, attempt: 1 },
+          { kind: 'connect', sessionId: state.sessionId, model: state.model, attempt: 1 },
           timer.effect,
         ],
       };

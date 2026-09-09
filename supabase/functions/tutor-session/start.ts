@@ -18,7 +18,9 @@
  * mint. If we have reserved and the mint then fails, the learner has been
  * charged for a session that never happened.
  */
-import { getEffectiveLimits, type PlanLimits } from '../_shared/plan-limits.ts';
+import { type PlanLimits } from '../_shared/plan-limits.ts';
+import { resolveEntitlement } from '../_shared/entitlement.ts';
+import { stashEphemeralKey } from '../_shared/tutor-calls.ts';
 import { fetchLearnerContext, serializeLearnerContext, isEntitledToLearnerContext } from '../_shared/learner-context.ts';
 import { fetchTutorMemory, serializeTutorMemory } from '../_shared/tutor-memory.ts';
 import { proficiencyToCefr } from '../_shared/cefr.ts';
@@ -139,7 +141,12 @@ export async function handleStart(
   supabase: Client,
   userId: string,
   req: StartRequest,
-  env: { openaiKey: string; safetySalt: string },
+  env: {
+    openaiKey: string;
+    safetySalt: string;
+    /** Where the ephemeral key waits for `connect`. Injected for tests. */
+    stashKey?: (sessionId: string, secret: string, expiresAt: number | null) => Promise<void>;
+  },
 ): Promise<StartResult> {
   const targetLanguage = req.targetLanguage;
   const nativeLanguage = req.nativeLanguage || 'en';
@@ -147,17 +154,11 @@ export async function handleStart(
   const cefrLevel = proficiencyToCefr(level);
 
   // ── tier and entitlement ────────────────────────────────────────────
-  const { data: sub } = await supabase
-    .from('subscriptions')
-    .select('tier, is_active')
-    .eq('user_id', userId)
-    .eq('is_active', true)
-    .maybeSingle();
-  const tier = (sub?.tier as string | undefined) ?? 'starter';
-
-  // Pass the tier. Omitting it is the documented footgun in plan-limits.ts and
-  // here it would resolve every paying learner to dailyTutorMinutes: 0.
-  const limits: PlanLimits = await getEffectiveLimits(userId, supabase, tier);
+  // One definition of "paid" (_shared/entitlement.ts): active AND unexpired.
+  // The tier is passed into the limits lookup — omitting it is the documented
+  // footgun in plan-limits.ts and here it would resolve every paying learner
+  // to dailyTutorMinutes: 0.
+  const { tier, limits }: { tier: string; limits: PlanLimits } = await resolveEntitlement(supabase, userId);
 
   if (!limits.dailyTutorMinutes || limits.dailyTutorMinutes <= 0) {
     return {
@@ -324,14 +325,17 @@ export async function handleStart(
       throw new Error('mint returned no client secret');
     }
 
+    // The key NEVER reaches the device. It waits in Redis for the `connect`
+    // action, which does the SDP exchange server-side so the resulting call
+    // id is ours — see _shared/tutor-calls.ts for why that is the whole spend
+    // ceiling. A stash failure is a mint failure: refund and refuse.
+    await (env.stashKey ?? stashEphemeralKey)(session.id, clientSecret, typeof expiresAt === 'number' ? expiresAt : null);
+
     return {
       status: 200,
       body: {
         sessionId: session.id,
-        clientSecret,
-        clientSecretExpiresAt: expiresAt ?? null,
         model: TUTOR_MODEL,
-        callsUrl: 'https://api.openai.com/v1/realtime/calls',
         grantedSeconds: grant.seconds,
         heartbeatIntervalSeconds: TUTOR_HEARTBEAT_SECONDS,
         correctionMode: req.correctionMode,

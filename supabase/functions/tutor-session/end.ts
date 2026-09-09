@@ -25,6 +25,7 @@
  */
 import { proficiencyToCefr } from '../_shared/cefr.ts';
 import { getEffectiveLimits } from '../_shared/plan-limits.ts';
+import { hangupCall, refundAllowed, type HangupOutcome } from '../_shared/tutor-calls.ts';
 import { settlement } from '../_shared/tutor-pricing.ts';
 import { readTranscript, dropTranscript } from '../_shared/tutor-transcript-buffer.ts';
 import { analyzeTutorSession } from '../_shared/tutor-analysis.ts';
@@ -50,7 +51,7 @@ export async function handleEnd(
   supabase: Client,
   userId: string,
   req: EndRequest,
-  env: { anthropicKey: string | null },
+  env: { anthropicKey: string | null; openaiKey: string | null },
 ): Promise<EndResult> {
   if (!req.sessionId) {
     return { status: 400, body: { error: 'sessionId is required', code: 'BAD_REQUEST' } };
@@ -61,7 +62,7 @@ export async function handleEnd(
     .select(
       'id, user_id, target_language, native_language, level, cefr_level, started_at, ' +
         'last_heartbeat_at, granted_seconds, granted_cents, ended_at, observed_seconds, ' +
-        'correction_mode, debrief',
+        'correction_mode, debrief, call_id, connected_at',
     )
     .eq('id', req.sessionId)
     .maybeSingle();
@@ -95,7 +96,60 @@ export async function handleEnd(
   const observedRaw = Math.ceil((Date.now() - startedAt) / 1000);
   const settled = settlement(session.granted_seconds, session.granted_cents, observedRaw);
 
-  if (settled.refundSeconds > 0 || settled.refundCents > 0) {
+  // The CLAIM comes before any money moves. `observed_seconds IS NULL` is the
+  // double-settle detector (migration 107) and the predicate is evaluated
+  // under the row lock, so of N concurrent `end` calls exactly one gets a row
+  // back. Before this, thirty parallel ends each refunded the same session
+  // and floored both counters at zero — a month of tutor budget, wiped.
+  const { data: claimed, error: claimErr } = await supabase
+    .from('tutor_sessions')
+    .update({ observed_seconds: settled.observedSeconds })
+    .eq('id', session.id)
+    .is('observed_seconds', null)
+    .is('ended_at', null)
+    .select('id');
+  if (claimErr) {
+    console.error('[tutor-session] settle claim failed:', claimErr.message);
+    return { status: 503, body: { error: 'Could not end the session. Please try again.', code: 'SETTLE_UNAVAILABLE' } };
+  }
+  if (!claimed || claimed.length === 0) {
+    // Someone else — a concurrent end, or the reaper — holds the settlement.
+    return {
+      status: 200,
+      body: {
+        sessionId: session.id,
+        alreadyEnded: true,
+        minutesSpoken: Math.max(1, Math.round((session.observed_seconds ?? settled.observedSeconds) / 60)),
+        debrief: session.debrief ?? null,
+        savedWords: [],
+      },
+    };
+  }
+
+  // Hang the call up BEFORE refunding. A refund is a statement that the
+  // unused minutes were not spent, and the only way to know that is to have
+  // ended the call ourselves. See refundAllowed for the three cases.
+  let hangup: HangupOutcome | null = null;
+  if (typeof session.call_id === 'string' && session.call_id && env.openaiKey) {
+    hangup = await hangupCall(env.openaiKey, session.call_id);
+  }
+  const mayRefund = refundAllowed(
+    { connected_at: session.connected_at ?? null, call_id: session.call_id ?? null },
+    hangup,
+  );
+
+  if (!mayRefund) {
+    console.error(JSON.stringify({
+      evt: 'tutor_refund_forfeited',
+      fn: 'tutor-session',
+      sessionId: session.id,
+      callId: session.call_id ?? null,
+      hangup,
+      refundSeconds: settled.refundSeconds,
+      refundCents: settled.refundCents,
+      ts: new Date().toISOString(),
+    }));
+  } else if (settled.refundSeconds > 0 || settled.refundCents > 0) {
     const results = await Promise.allSettled([
       settled.refundSeconds > 0
         ? supabase.rpc('refund_daily_quota', {

@@ -37,10 +37,7 @@ const SECRET = 'ek_super_secret_ephemeral_value_do_not_leak';
 
 const START_OK = {
   sessionId: 'sess-1',
-  clientSecret: SECRET,
-  clientSecretExpiresAt: 1_800_000_000,
   model: 'gpt-realtime',
-  callsUrl: 'https://api.openai.com/v1/realtime/calls',
   grantedSeconds: 600,
   heartbeatIntervalSeconds: 20,
   correctionMode: 'as_you_go',
@@ -126,10 +123,7 @@ describe('startTutorSession', () => {
     const result = await startTutorSession(START_INPUT);
     expect(result).toEqual({
       sessionId: 'sess-1',
-      clientSecret: SECRET,
-      clientSecretExpiresAt: 1_800_000_000,
       model: 'gpt-realtime',
-      callsUrl: 'https://api.openai.com/v1/realtime/calls',
       grantedMs: 600_000,
       heartbeatIntervalSeconds: 20,
       correctionMode: 'as_you_go',
@@ -154,9 +148,17 @@ describe('startTutorSession', () => {
     expect((await startTutorSession(START_INPUT)).heartbeatIntervalSeconds).toBe(20);
   });
 
-  it('refuses a response with no secret rather than returning an empty one', async () => {
-    mockInvoke.mockResolvedValue({ data: { sessionId: 'sess-1' }, error: null });
+  it('refuses a response with no session id rather than returning an empty one', async () => {
+    mockInvoke.mockResolvedValue({ data: { model: 'gpt-realtime', grantedSeconds: 600 }, error: null });
     await expect(startTutorSession(START_INPUT)).rejects.toThrow(/incomplete/);
+  });
+
+  it('does not require, and does not surface, a credential on the start response', async () => {
+    // Since migration 113 the ephemeral key never leaves the server. A server
+    // that still sent one is redacted (see redactTutorSecrets) and ignored.
+    mockInvoke.mockResolvedValue({ data: { ...START_OK, clientSecret: SECRET }, error: null });
+    const result = await startTutorSession(START_INPUT);
+    expect(JSON.stringify(result)).not.toContain(SECRET);
   });
 
   it.each([

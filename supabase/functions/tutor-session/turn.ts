@@ -23,6 +23,7 @@
 import { checkBurstLimit } from '../_shared/burst-limit.ts';
 import { appendTurns, BUFFER_GRACE_SECONDS } from '../_shared/tutor-transcript-buffer.ts';
 import { checkTutorOutput, TUTOR_MAX_SAFETY_CUTS } from './safety.ts';
+import { hangupCall } from '../_shared/tutor-calls.ts';
 
 // deno-lint-ignore no-explicit-any
 type Client = any;
@@ -67,7 +68,7 @@ export async function handleTurn(
 
   const { data: session, error } = await supabase
     .from('tutor_sessions')
-    .select('id, user_id, target_language, started_at, granted_seconds, ended_at, safety_cuts')
+    .select('id, user_id, target_language, started_at, granted_seconds, ended_at, safety_cuts, call_id')
     .eq('id', req.sessionId)
     .maybeSingle();
 
@@ -180,6 +181,17 @@ export async function handleTurn(
     : safetyCuts >= TUTOR_MAX_SAFETY_CUTS
       ? 'safety'
       : undefined;
+
+  // `terminate` used to be advice the device could ignore. With the call id
+  // on the row it is an instruction we carry out: the third safety cut and
+  // the end of the budget both hang the call up here, whatever the device
+  // does next. Best-effort — `end` and the reaper repeat it.
+  if (terminate && typeof session.call_id === 'string' && session.call_id && env.openaiKey) {
+    const outcome = await hangupCall(env.openaiKey, session.call_id);
+    if (outcome !== 'ended') {
+      console.error(`[tutor-session] hangup on ${reason} failed for ${session.id}`);
+    }
+  }
 
   return {
     status: 200,

@@ -81,7 +81,7 @@ const request = {
   level: 'intermediate',
   correctionMode: 'as_you_go' as const,
 };
-const env = { openaiKey: 'sk-test', safetySalt: 'salt' };
+const env = { openaiKey: 'sk-test', safetySalt: 'salt', stashKey: () => Promise.resolve() };
 
 const realFetch = globalThis.fetch;
 function stubMint(handler: () => Response | Promise<Response>) {
@@ -209,7 +209,10 @@ Deno.test('a successful start never returns the instructions or the voice', asyn
   try {
     const res = await handleStart(supabase, 'user-1', request, env);
     assertEquals(res.status, 200);
-    assertEquals(res.body.clientSecret, 'ek_abc123');
+    // The ephemeral key stays server-side (migration 113): the device connects
+    // through the `connect` action, never with a credential of its own.
+    assert(!('clientSecret' in res.body), 'the ephemeral key must never reach the client');
+    assert(!JSON.stringify(res.body).includes('ek_abc123'), 'the ephemeral key leaked into the response');
     assert(!('instructions' in res.body), 'instructions must never reach the client');
     assert(!('voice' in res.body), 'the voice id must never reach the client');
     assert(!('turn_detection' in res.body));

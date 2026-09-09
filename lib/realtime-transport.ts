@@ -56,6 +56,7 @@ import type { TutorCommand, TutorIceState } from './realtime-session';
 // ─── Constants ──────────────────────────────────────────────────────────
 
 /** OpenAI's SDP exchange endpoint. The model is a query parameter. */
+/** Where the SERVER posts offers. Kept for reference; the device never dials it. */
 export const DEFAULT_CALLS_URL = 'https://api.openai.com/v1/realtime/calls';
 
 /** The channel name OpenAI expects. Not configurable at the far end. */
@@ -110,10 +111,17 @@ export type TransportEvent =
   | { readonly kind: 'error'; readonly stage: TransportStage; readonly message: string };
 
 export interface RealtimeConnectOptions {
-  /** The ephemeral client secret minted server-side. Never a real API key. */
-  clientSecret: string;
   model: string;
-  callsUrl: string;
+  /**
+   * The SDP exchange. Given the local offer, returns the remote answer.
+   *
+   * A callback rather than a URL and a credential, because the device holds
+   * NO OpenAI credential any more: the server does the exchange (tutor-session
+   * `connect`) and keeps the call id, so the call is the server's to end. The
+   * transport neither knows nor cares who answers, which is also what makes
+   * it testable without a network.
+   */
+  signal: (offerSdp: string, abort: AbortSignal) => Promise<string>;
 }
 
 export interface RealtimeTransport {
@@ -456,40 +464,34 @@ export function createWebRtcTransport(
     return { done, poll };
   }
 
-  /** POST the offer, get the answer SDP back as plain text. */
+  /** Hand the offer to the signaller, get the answer SDP back as plain text. */
   async function exchangeSdp(
     offerSdp: string,
     opts: RealtimeConnectOptions,
     abort: AbortController,
   ): Promise<string> {
     const timer = setTimeout(() => abort.abort(), sdpTimeoutMs);
+    // The signaller may not honour the abort signal (a Supabase invoke does
+    // not take one), so the deadline is raced here as well.
+    const aborted = new Promise<never>((_, reject) => {
+      const fail = () => reject(new TransportError('signal', 'SDP exchange timed out'));
+      if (abort.signal.aborted) fail();
+      else abort.signal.addEventListener('abort', fail, { once: true });
+    });
     try {
-      const response = await fetch(`${opts.callsUrl}?model=${encodeURIComponent(opts.model)}`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${opts.clientSecret}`,
-          'Content-Type': 'application/sdp',
-        },
-        body: offerSdp,
-        signal: abort.signal,
-      });
-
-      if (!response.ok) {
-        // Read the body for the log, but never surface it: an SDP-exchange
-        // error body can echo the request, and the request carries the client
-        // secret. Callers get the status and a fixed phrase.
-        const detail = await response.text().catch(() => '');
-        console.warn(`[realtime-transport] SDP exchange ${response.status}: ${detail.slice(0, 200)}`);
-        throw new TransportError(
-          'signal',
-          `SDP exchange failed with status ${response.status}`,
-          response.status,
-        );
+      let answer: string;
+      try {
+        answer = await Promise.race([opts.signal(offerSdp, abort.signal), aborted]);
+      } catch (err) {
+        if (err instanceof TransportError) throw err;
+        // Never surface the signaller's own message: it can carry the server's
+        // error body. Callers get a fixed phrase and, where known, a status.
+        const status = (err as { status?: number })?.status;
+        console.warn('[realtime-transport] SDP exchange failed:', err instanceof Error ? err.message : err);
+        throw new TransportError('signal', 'SDP exchange failed', typeof status === 'number' ? status : undefined);
       }
-
-      const answer = await response.text();
       if (answer.trim().length === 0) {
-        throw new TransportError('signal', 'SDP exchange returned an empty answer', response.status);
+        throw new TransportError('signal', 'SDP exchange returned an empty answer');
       }
       return answer;
     } finally {

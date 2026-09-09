@@ -110,3 +110,22 @@ export function parseEndRequest(body: Record<string, unknown>): ParseResult<EndR
     },
   };
 }
+
+// ── connect ─────────────────────────────────────────────────────────────
+
+export interface ConnectRequest {
+  sessionId: string;
+  sdp: string;
+}
+
+/** Longest SDP offer accepted. A real offer is a few KB. */
+export const MAX_SDP_BYTES = 64 * 1024;
+
+export function parseConnectRequest(body: Record<string, unknown>): ParseResult<ConnectRequest> {
+  const sessionId = String(body.sessionId ?? '');
+  if (!sessionId) return bad('sessionId is required');
+  const sdp = typeof body.sdp === 'string' ? body.sdp : '';
+  if (!sdp.startsWith('v=0')) return bad('sdp must be an SDP offer');
+  if (sdp.length > MAX_SDP_BYTES) return bad('sdp is too large');
+  return { ok: true, value: { sessionId, sdp } };
+}

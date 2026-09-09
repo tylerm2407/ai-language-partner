@@ -3,15 +3,17 @@
  *
  * Three actions on one endpoint, dispatched on `body.action`:
  *
- *   start  reserve the budget and mint an ephemeral OpenAI credential
- *   turn   safety guard + liveness heartbeat, once per tutor turn and on a timer
- *   end    settle the budget, analyse the transcript, write the learning record
+ *   start    reserve the budget and mint an ephemeral OpenAI credential (kept here)
+ *   connect  the SDP exchange, done server-side so the call id is ours to hang up
+ *   turn     safety guard + liveness heartbeat, once per tutor turn and on a timer
+ *   end      hang up, settle the budget, analyse the transcript, write the record
  *
- * The AUDIO never comes through here. Once `start` hands back an ephemeral
- * secret, the learner's device holds a WebRTC peer connection straight to
- * OpenAI. This function is the only thing that knows what that session costs,
- * how long it may run, and what it produced — which is why every one of these
- * actions re-checks that the caller owns the session it names.
+ * The AUDIO never comes through here. After `connect` the learner's device
+ * holds a WebRTC peer connection straight to OpenAI. This function is the only
+ * thing that knows what that session costs, how long it may run, and what it
+ * produced — and, since migration 113, the only thing that can END it — which
+ * is why every one of these actions re-checks that the caller owns the session
+ * it names.
  *
  * `verify_jwt = false` in config.toml is MANDATORY. Without an entry the
  * Supabase CLI defaults it to true and every call from the app 401s before
@@ -22,8 +24,9 @@ import { corsHeaders, corsResponse } from '../_shared/cors.ts';
 import { handleStart } from './start.ts';
 import { handleTurn } from './turn.ts';
 import { handleEnd } from './end.ts';
+import { handleConnect } from './connect.ts';
 import { checkBurstLimit } from '../_shared/burst-limit.ts';
-import { parseStartRequest, parseTurnRequest, parseEndRequest } from './parse-request.ts';
+import { parseStartRequest, parseTurnRequest, parseEndRequest, parseConnectRequest } from './parse-request.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -109,11 +112,32 @@ Deno.serve(async (req: Request): Promise<Response> => {
       return json(result.status, result.body);
     }
 
+    if (action === 'connect') {
+      // One dial plus a couple of redials is all a session ever needs.
+      const ok = await checkBurstLimit(supabase, userId, 'tutor-connect', 10, 300);
+      if (!ok) return json(429, { error: 'Too many requests.', code: 'RATE_LIMITED' });
+
+      const parsed = parseConnectRequest(body);
+      if (!parsed.ok) return json(400, { error: parsed.error, code: parsed.code });
+
+      const result = await handleConnect(supabase, userId, parsed.value, { openaiKey: OPENAI_KEY });
+      return json(result.status, result.body);
+    }
+
     if (action === 'end') {
+      // `end` refunds money. Concurrent ends used to each compute and apply
+      // the same refund; the settlement claim in end.ts closes that, and this
+      // keeps a misbehaving client from hammering the claim.
+      const ok = await checkBurstLimit(supabase, userId, 'tutor-end', 10, 60);
+      if (!ok) return json(429, { error: 'Too many requests.', code: 'RATE_LIMITED' });
+
       const parsed = parseEndRequest(body);
       if (!parsed.ok) return json(400, { error: parsed.error, code: parsed.code });
 
-      const result = await handleEnd(supabase, userId, parsed.value, { anthropicKey: ANTHROPIC_KEY });
+      const result = await handleEnd(supabase, userId, parsed.value, {
+        anthropicKey: ANTHROPIC_KEY,
+        openaiKey: OPENAI_KEY,
+      });
       return json(result.status, result.body);
     }
 

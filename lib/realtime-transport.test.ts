@@ -21,7 +21,6 @@ import {
   __webrtcMock,
 } from '../__mocks__/react-native-webrtc';
 import {
-  DEFAULT_CALLS_URL,
   TransportError,
   createWebRtcTransport,
   iceStateFrom,
@@ -32,38 +31,31 @@ import {
 
 const ANSWER_SDP = 'v=0\r\no=- answer\r\n';
 
+/** The signaller the tests hand the transport: records offers, answers from
+ *  `signalResponse`. Stands in for the server-side SDP exchange. */
+let signalCalls: string[] = [];
+let signalResponse: { ok: true; answer: string } | { ok: false; status?: number };
 const CONNECT = {
-  clientSecret: 'ek_test_secret',
   model: 'gpt-realtime',
-  callsUrl: DEFAULT_CALLS_URL,
+  signal: async (offerSdp: string) => {
+    signalCalls.push(offerSdp);
+    if (!signalResponse.ok) {
+      const err = new Error('signal failed') as Error & { status?: number };
+      err.status = signalResponse.status;
+      throw err;
+    }
+    return signalResponse.answer;
+  },
 };
 
-interface FetchCall {
-  url: string;
-  init: RequestInit;
-}
-
-let fetchCalls: FetchCall[] = [];
-let fetchResponse: { ok: boolean; status: number; body: string };
-const originalFetch = global.fetch;
 
 beforeEach(() => {
   __resetWebRtcMock();
-  fetchCalls = [];
-  fetchResponse = { ok: true, status: 200, body: ANSWER_SDP };
-  global.fetch = jest.fn(async (url: string, init: RequestInit) => {
-    fetchCalls.push({ url, init });
-    return {
-      ok: fetchResponse.ok,
-      status: fetchResponse.status,
-      text: async () => fetchResponse.body,
-    };
-    // The transport only ever reads `ok`, `status` and `text()`.
-  }) as unknown as typeof global.fetch;
+  signalCalls = [];
+  signalResponse = { ok: true, answer: ANSWER_SDP };
 });
 
 afterEach(() => {
-  global.fetch = originalFetch;
 });
 
 function collect(transport: ReturnType<typeof createWebRtcTransport>): TransportEvent[] {
@@ -153,30 +145,35 @@ describe('connect', () => {
     const transport = createWebRtcTransport();
     await transport.connect(CONNECT);
 
-    expect(fetchCalls).toHaveLength(1);
+    expect(signalCalls).toHaveLength(1);
     // The mock appends a candidate line during setLocalDescription, exactly as
-    // a real peer connection folds gathered candidates in. Posting the object
-    // returned by createOffer would miss it — and would produce a call that
-    // negotiates and then carries no audio.
-    expect(fetchCalls[0].init.body).toContain('a=candidate:host');
+    // a real peer connection folds gathered candidates in. Handing over the
+    // object returned by createOffer would miss it — and would produce a call
+    // that negotiates and then carries no audio.
+    expect(signalCalls[0]).toContain('a=candidate:host');
   });
 
-  it('sends the model as a query parameter and the secret as a bearer token', async () => {
-    const transport = createWebRtcTransport();
-    await transport.connect(CONNECT);
-
-    expect(fetchCalls[0].url).toBe(`${DEFAULT_CALLS_URL}?model=gpt-realtime`);
-    const headers = fetchCalls[0].init.headers as Record<string, string>;
-    expect(headers.Authorization).toBe('Bearer ek_test_secret');
-    expect(headers['Content-Type']).toBe('application/sdp');
-    expect(fetchCalls[0].init.method).toBe('POST');
+  it('never dials OpenAI itself: the offer goes to the signaller and nowhere else', async () => {
+    // The device holds no OpenAI credential. The server does the exchange and
+    // keeps the call id, which is what lets it hang the call up.
+    const fetchSpy = jest.spyOn(global, 'fetch').mockImplementation(() => {
+      throw new Error('the transport must not call fetch');
+    });
+    try {
+      const transport = createWebRtcTransport();
+      await transport.connect(CONNECT);
+      expect(signalCalls).toHaveLength(1);
+      expect(fetchSpy).not.toHaveBeenCalled();
+    } finally {
+      fetchSpy.mockRestore();
+    }
   });
 
   it('waits for gathering signalled by the state change', async () => {
     __webrtcMock.gathering = 'microtask';
     const transport = createWebRtcTransport();
     await transport.connect(CONNECT);
-    expect(fetchCalls).toHaveLength(1);
+    expect(signalCalls).toHaveLength(1);
   });
 
   it('waits for gathering signalled by a null candidate instead', async () => {
@@ -186,7 +183,7 @@ describe('connect', () => {
     __webrtcMock.gathering = 'null-candidate';
     const transport = createWebRtcTransport();
     await transport.connect(CONNECT);
-    expect(fetchCalls).toHaveLength(1);
+    expect(signalCalls).toHaveLength(1);
   });
 
   it('posts anyway when gathering never completes', async () => {
@@ -197,13 +194,13 @@ describe('connect', () => {
 
     // Proceeding, not failing. An offer carrying only host candidates usually
     // still connects; a call that never started never does.
-    expect(fetchCalls).toHaveLength(1);
+    expect(signalCalls).toHaveLength(1);
     expect(__webrtcMock.calls).toContain('setRemoteDescription:answer');
   });
 
   it('surfaces a non-2xx SDP exchange as an error rather than hanging', async () => {
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
-    fetchResponse = { ok: false, status: 401, body: 'invalid ephemeral key' };
+    signalResponse = { ok: false, status: 401 };
     const transport = createWebRtcTransport();
 
     await expect(transport.connect(CONNECT)).rejects.toThrow(TransportError);
@@ -216,16 +213,16 @@ describe('connect', () => {
 
   it('carries the HTTP status on the error and never the response body', async () => {
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
-    fetchResponse = { ok: false, status: 429, body: 'Bearer ek_test_secret was rejected' };
+    signalResponse = { ok: false, status: 429 };
     const transport = createWebRtcTransport();
 
     await expect(transport.connect(CONNECT)).rejects.toMatchObject({
       stage: 'signal',
       status: 429,
     });
-    // The body can echo the request, and the request carries the client
-    // secret. It goes to the log, never into a thrown message a screen renders.
-    await expect(transport.connect(CONNECT)).rejects.not.toThrow(/ek_test_secret/);
+    // The signaller's own message can carry the server's error body. It goes
+    // to the log, never into a thrown message a screen renders.
+    await expect(transport.connect(CONNECT)).rejects.not.toThrow(/signal failed/);
     warn.mockRestore();
   });
 

@@ -235,15 +235,7 @@ export interface StartTutorSessionInput {
 export interface StartTutorSessionResult {
   /** `tutor_sessions.id`. The handle for every later call, and safe to log. */
   sessionId: string;
-  /**
-   * OpenAI ephemeral credential. READ THE MODULE HEADER BEFORE TOUCHING THIS.
-   * Hold it in memory for the length of the SDP exchange and drop it.
-   */
-  clientSecret: string;
-  /** Unix seconds, or null when the provider did not say. */
-  clientSecretExpiresAt: number | null;
   model: string;
-  callsUrl: string;
   /**
    * MILLISECONDS reserved and CHARGED IN FULL up front. The client is expected
    * to hang up at it; what is not used is refunded on `end`. It is not a
@@ -298,22 +290,16 @@ export async function startTutorSession(
     );
   }
 
-  const secret = typeof data?.clientSecret === 'string' ? data.clientSecret : '';
   const sessionId = typeof data?.sessionId === 'string' ? data.sessionId : '';
-  if (!sessionId || !secret) {
-    // Deliberately says nothing about what DID come back. The one field worth
-    // dumping here is the one that must never be in a message.
+  if (!sessionId) {
+    // Deliberately says nothing about what DID come back. If a misconfigured
+    // server ever put a credential in here, it must not end up in a message.
     throw new Error('Could not start the tutor: the session response was incomplete.');
   }
 
-  const expires = data?.clientSecretExpiresAt;
-
   return {
     sessionId,
-    clientSecret: secret,
-    clientSecretExpiresAt: typeof expires === 'number' ? expires : null,
     model: typeof data?.model === 'string' ? data.model : '',
-    callsUrl: typeof data?.callsUrl === 'string' ? data.callsUrl : '',
     // THE ONLY seconds-to-milliseconds conversion for the grant, on purpose.
     // If each screen converted for itself, one of them would eventually be off
     // by a factor of 1000 — and that does not present as a rounding error, it
@@ -326,6 +312,43 @@ export async function startTutorSession(
     personaId: typeof data?.personaId === 'string' ? data.personaId : (input.personaId ?? ''),
     remainingTutorMinutesToday: Number(data?.remainingTutorMinutesToday ?? 0) || 0,
   };
+}
+
+/**
+ * The SDP exchange, done by the server.
+ *
+ * The device never holds an OpenAI credential. It builds its WebRTC offer,
+ * sends it here, and gets the answer back; `tutor-session` posts the offer to
+ * OpenAI with the ephemeral key it kept, and records the resulting call id so
+ * that it — not the device — decides when the call ends. See the server's
+ * `_shared/tutor-calls.ts` for why that is the whole spend ceiling.
+ *
+ * Throws a plain `Error` on any failure; the transport turns that into a
+ * `data_channel_closed` for the reducer, exactly as a failed dial always has.
+ */
+export async function connectTutorCall(input: {
+  sessionId: string;
+  offerSdp: string;
+}): Promise<string> {
+  const { data, error } = await invokeTutor<Record<string, unknown>>({
+    action: 'connect',
+    sessionId: input.sessionId,
+    sdp: input.offerSdp,
+  });
+  if (error) {
+    throwFailure(await readFailure(error, 'Could not connect to the tutor'), 'Could not connect to the tutor');
+  }
+  if (data && typeof data.error === 'string') {
+    throwFailure(
+      { detail: data.error, code: typeof data.code === 'string' ? data.code : undefined },
+      'Could not connect to the tutor',
+    );
+  }
+  const answer = typeof data?.sdp === 'string' ? data.sdp : '';
+  if (!answer.startsWith('v=0')) {
+    throw new Error('Could not connect to the tutor: the answer was incomplete.');
+  }
+  return answer;
 }
 
 // ─── turn / heartbeat ─────────────────────────────────────────────────────

@@ -84,7 +84,6 @@ function boot(opts: { grantedMs?: number; cfg?: TutorSessionConfig; now?: number
       type: 'start',
       now,
       sessionId: 'sess-1',
-      clientSecret: 'ek_secret',
       model: 'gpt-realtime',
       grantedMs: opts.grantedMs ?? GRANT,
       correctionMode: 'debrief',
@@ -117,8 +116,7 @@ describe('preflight', () => {
         type: 'start',
         now: T0,
         sessionId: 'sess-1',
-        clientSecret: 'ek_secret',
-        model: 'gpt-realtime',
+          model: 'gpt-realtime',
         grantedMs: GRANT,
         correctionMode: 'live',
       },
@@ -138,7 +136,6 @@ describe('preflight', () => {
         type: 'start',
         now: T0 + 10,
         sessionId: 'sess-2',
-        clientSecret: 'other',
         model: 'gpt-realtime',
         grantedMs: 1,
         correctionMode: 'live',
@@ -152,7 +149,7 @@ describe('preflight', () => {
     const run = boot();
     const connects = of(run.effects, 'connect');
     expect(connects).toEqual([
-      { kind: 'connect', clientSecret: 'ek_secret', model: 'gpt-realtime', attempt: 1 },
+      { kind: 'connect', sessionId: 'sess-1', model: 'gpt-realtime', attempt: 1 },
     ]);
     expect(of(run.effects, 'schedule').length).toBeGreaterThan(0);
   });
@@ -174,8 +171,7 @@ describe('preflight', () => {
         type: 'start',
         now: T0,
         sessionId: 'sess-1',
-        clientSecret: 'ek_secret',
-        model: 'gpt-realtime',
+          model: 'gpt-realtime',
         grantedMs: GRANT,
         correctionMode: 'live',
       },
@@ -463,7 +459,7 @@ describe('reconnect', () => {
     run = step(run, [{ type: 'tick', now: T0 + 104_000 }]);
     expect(run.state.phase).toBe('reconnecting');
     expect(of(run.effects, 'connect')).toEqual([
-      { kind: 'connect', clientSecret: 'ek_secret', model: 'gpt-realtime', attempt: 2 },
+      { kind: 'connect', sessionId: 'sess-1', model: 'gpt-realtime', attempt: 2 },
     ]);
     expect(run.effects).toContainEqual({ kind: 'set_mic_enabled', enabled: false });
 
@@ -615,7 +611,6 @@ describe('correction mode', () => {
         type: 'start',
         now: T0,
         sessionId: 'sess-1',
-        clientSecret: 'ek',
         model: 'gpt-realtime',
         grantedMs: GRANT,
         correctionMode: 'debrief',
@@ -754,7 +749,6 @@ describe('end reasons', () => {
           type: 'start',
           now: T0,
           sessionId: 'sess-1',
-          clientSecret: 'ek',
           model: 'gpt-realtime',
           grantedMs: GRANT,
           correctionMode: 'live',

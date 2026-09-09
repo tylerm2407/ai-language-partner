@@ -56,6 +56,7 @@
  */
 
 import { settlement, TUTOR_REAP_AFTER_SECONDS } from '../_shared/tutor-pricing.ts';
+import { refundAllowed, type HangupOutcome } from '../_shared/tutor-calls.ts';
 import type { BufferedTurn } from '../_shared/tutor-transcript-buffer.ts';
 import type { TutorAnalysis } from '../_shared/tutor-analysis.ts';
 
@@ -112,6 +113,10 @@ export interface ReapableSession {
   /** Non-null when a previous tick already settled the money and only the
    *  learning half is outstanding. */
   observed_seconds: number | null;
+  /** OpenAI call id (migration 113). Null: never connected, or unhangable. */
+  call_id: string | null;
+  /** When the SDP exchange completed. Null: no call was ever created. */
+  connected_at: string | null;
 }
 
 /** Outcome of the conditional `observed_seconds IS NULL` update. */
@@ -131,6 +136,15 @@ export interface ReaperDeps {
   /** `SELECT ... WHERE ended_at IS NULL AND last_heartbeat_at < cutoff
    *  ORDER BY last_heartbeat_at LIMIT n`. */
   listStale(cutoffIso: string, limit: number): Promise<ReapableSession[]>;
+
+  /** `SELECT ... WHERE ended_at IS NULL AND started_at < now - granted -
+   *  slack`, i.e. sessions still open past their whole grant. A device that
+   *  keeps heartbeating past its budget is not stale and would never be
+   *  listed by `listStale`; this is what catches it. */
+  listOverrun(nowMs: number, limit: number): Promise<ReapableSession[]>;
+
+  /** `POST /v1/realtime/calls/{id}/hangup`. Never throws. */
+  hangup(callId: string): Promise<HangupOutcome>;
 
   /** Conditional `UPDATE ... SET observed_seconds = $2 WHERE id = $1 AND
    *  observed_seconds IS NULL`. The money's idempotency guard. */
@@ -200,6 +214,11 @@ export interface ReapSummary {
   /** Refund RPCs that failed AFTER the settle claim landed. See the header:
    *  each one is a learner charged for time they did not use. */
   refundFailures: number;
+  /** Sessions settled WITHOUT a refund because the call could not be
+   *  confirmed ended (hangup failed, or no call id). The reservation stands. */
+  forfeited: number;
+  /** Sessions listed by the overrun sweep: open past their grant. */
+  overrun: number;
   /** Sessions closed with `end_reason = 'abandoned'` this run. */
   reaped: number;
   /** Sessions whose transcript was analysed and written back this run. */
@@ -224,6 +243,8 @@ export interface ReapSummary {
 
 function emptySummary(): ReapSummary {
   return {
+    forfeited: 0,
+    overrun: 0,
     scanned: 0,
     settled: 0,
     alreadySettled: 0,
@@ -251,6 +272,17 @@ function emptySummary(): ReapSummary {
  * `TUTOR_REAP_AFTER_SECONDS`. Exported so the boundary is testable directly
  * rather than only through a stubbed query.
  */
+/** Slack past the grant before a still-open session counts as overrun. The
+ *  device ends at its budget and posts `end`; this is how long that gets. */
+export const OVERRUN_SLACK_SECONDS = 60;
+
+/** True when `nowMs` is past the session's whole grant plus slack. */
+export function isOverrunAt(session: ReapableSession, nowMs: number): boolean {
+  const start = Date.parse(session.started_at);
+  if (!Number.isFinite(start)) return false;
+  return nowMs > start + (session.granted_seconds + OVERRUN_SLACK_SECONDS) * 1000;
+}
+
 export function staleCutoffIso(nowMs: number): string {
   return new Date(nowMs - TUTOR_REAP_AFTER_SECONDS * 1000).toISOString();
 }
@@ -356,6 +388,21 @@ async function settleOne(
   }
 
   summary.settled += 1;
+
+  // Hang up BEFORE refunding. The refund below asserts the unused seconds
+  // were not spent, and the only way to know that is to have ended the call.
+  // `refundAllowed` holds the three cases; a forfeited session keeps its
+  // reservation charged and says so in the log.
+  let hangup: HangupOutcome | null = null;
+  if (session.call_id) hangup = await deps.hangup(session.call_id);
+  if (!refundAllowed(session, hangup)) {
+    summary.forfeited += 1;
+    console.error(
+      `[${FN}] refund forfeited for ${session.id}: call ${session.call_id ?? '(none)'} ` +
+        `hangup=${hangup ?? 'n/a'} seconds=${owed.refundSeconds} cents=${owed.refundCents}`,
+    );
+    return true;
+  }
 
   if (owed.refundSeconds > 0) {
     try {
@@ -505,7 +552,25 @@ export async function reapAbandonedSessions(
     console.error(`[${FN}] stale-session scan failed:`, err instanceof Error ? err.message : err);
     sessions = [];
   }
+
+  // Overruns: still heartbeating, but past the whole grant. Until migration
+  // 113 nothing ended these — the device was trusted to hang up at its
+  // budget, and settlement merely clamped what it was charged. Now they are
+  // hung up and settled at the full grant.
+  const overrun = new Set<string>();
+  try {
+    const seen = new Set(sessions.map((s) => s.id));
+    for (const s of await deps.listOverrun(startedAt, limit)) {
+      if (seen.has(s.id)) continue;
+      overrun.add(s.id);
+      sessions.push(s);
+    }
+  } catch (err) {
+    summary.errors += 1;
+    console.error(`[${FN}] overrun scan failed:`, err instanceof Error ? err.message : err);
+  }
   summary.scanned = sessions.length;
+  summary.overrun = overrun.size;
 
   // ── Phase A ────────────────────────────────────────────────────────────
   // Every session in the batch gets its money back before any of them get
@@ -514,7 +579,8 @@ export async function reapAbandonedSessions(
 
   for (const session of sessions) {
     try {
-      if (!isStale(session, startedAt)) {
+      const isOverrun = overrun.has(session.id);
+      if (!isOverrun && !isStale(session, startedAt)) {
         // The query should not have returned this. Skipping is the safe
         // direction: a live session settled early is a learner cut off
         // mid-sentence and billed for a conversation they are still having.
@@ -522,8 +588,17 @@ export async function reapAbandonedSessions(
         console.error(`[${FN}] listStale returned a session that is not stale: ${session.id}`);
         continue;
       }
+      if (isOverrun && !isOverrunAt(session, startedAt)) {
+        summary.errors += 1;
+        console.error(`[${FN}] listOverrun returned a session inside its grant: ${session.id}`);
+        continue;
+      }
 
-      const owed = settleFor(session);
+      // An overrun is settled at its whole grant: `settlement` clamps observed
+      // time to `granted_seconds`, so the refund is zero by construction.
+      const owed = isOverrun
+        ? settlement(session.granted_seconds, session.granted_cents, session.granted_seconds)
+        : settleFor(session);
       if (owed === null) {
         summary.errors += 1;
         console.error(`[${FN}] session ${session.id} has unreadable timestamps; not settling`);

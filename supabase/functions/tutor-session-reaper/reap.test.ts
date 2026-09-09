@@ -53,11 +53,14 @@ function session(over: Partial<ReapableSession> = {}): ReapableSession {
     started_at: agoIso(400),
     last_heartbeat_at: agoIso(100),
     observed_seconds: null,
+    call_id: null,
+    connected_at: null,
     ...over,
   };
 }
 
 interface Calls {
+  hangups: string[];
   claims: { id: string; observed: number }[];
   refundSeconds: { userId: string; seconds: number }[];
   refundCents: { userId: string; cents: number }[];
@@ -71,6 +74,10 @@ interface Calls {
 
 interface FakeOptions {
   rows?: ReapableSession[];
+  /** Rows the overrun sweep returns. */
+  overrunRows?: ReapableSession[];
+  /** Hangup outcome per call id; defaults to 'ended'. */
+  hangup?: (callId: string) => 'ended' | 'failed';
   /**
    * When false the fake returns every row regardless of the cutoff, which is
    * how the defensive `isStale` re-check gets exercised. Defaults to true: the
@@ -94,6 +101,7 @@ interface FakeOptions {
 
 function fakeDeps(opts: FakeOptions = {}): { deps: ReaperDeps; calls: Calls } {
   const calls: Calls = {
+    hangups: [],
     claims: [],
     refundSeconds: [],
     refundCents: [],
@@ -112,6 +120,15 @@ function fakeDeps(opts: FakeOptions = {}): { deps: ReaperDeps; calls: Calls } {
       const t = NOW + ticks * (opts.clockStepMs ?? 0);
       ticks += 1;
       return t;
+    },
+
+    listOverrun(_nowMs, limit) {
+      return Promise.resolve((opts.overrunRows ?? []).slice(0, limit));
+    },
+
+    hangup(callId) {
+      calls.hangups.push(callId);
+      return Promise.resolve(opts.hangup ? opts.hangup(callId) : 'ended');
     },
 
     listStale(cutoffIso, limit) {
@@ -577,4 +594,63 @@ Deno.test('the batch limit is passed through to the query', async () => {
 
   assertEquals(summary.scanned, 2);
   assertEquals(calls.closes.length, 2);
+});
+
+// ─── Hangup gating (migration 113) ────────────────────────────────────────
+
+Deno.test('a connected session is hung up before its refund, and refunded when the hangup lands', async () => {
+  const row = session({ call_id: 'rtc_1', connected_at: '2026-09-08T10:00:01Z' });
+  const { deps, calls } = fakeDeps({ rows: [row] });
+  const summary = await reapAbandonedSessions(deps, { skipAnalysis: true });
+  assertEquals(calls.hangups, ['rtc_1']);
+  assertEquals(summary.settled, 1);
+  assertEquals(summary.forfeited, 0);
+  assertEquals(calls.refundSeconds.length, 1);
+});
+
+Deno.test('a failed hangup FORFEITS the refund: the call may still be running', async () => {
+  const row = session({ call_id: 'rtc_2', connected_at: '2026-09-08T10:00:01Z' });
+  const { deps, calls } = fakeDeps({ rows: [row], hangup: () => 'failed' });
+  const summary = await reapAbandonedSessions(deps, { skipAnalysis: true });
+  assertEquals(summary.forfeited, 1);
+  assertEquals(calls.refundSeconds.length, 0);
+  assertEquals(calls.refundCents.length, 0);
+  // Still closed: the money question is answered (kept), the row is done.
+  assertEquals(calls.closes.length, 1);
+});
+
+Deno.test('a connected session with no call id cannot be ended, so it is forfeited', async () => {
+  const row = session({ call_id: null, connected_at: '2026-09-08T10:00:01Z' });
+  const { deps, calls } = fakeDeps({ rows: [row] });
+  const summary = await reapAbandonedSessions(deps, { skipAnalysis: true });
+  assertEquals(calls.hangups, []);
+  assertEquals(summary.forfeited, 1);
+  assertEquals(calls.refundSeconds.length, 0);
+});
+
+Deno.test('a session that never connected is refunded in full with no hangup', async () => {
+  const row = session({ call_id: null, connected_at: null });
+  const { deps, calls } = fakeDeps({ rows: [row] });
+  await reapAbandonedSessions(deps, { skipAnalysis: true });
+  assertEquals(calls.hangups, []);
+  assertEquals(calls.refundSeconds.length, 1);
+});
+
+Deno.test('an overrun session is hung up and settled at its whole grant: nothing refunded', async () => {
+  // Started long ago, still heartbeating (not stale), grant long exceeded.
+  const row = session({
+    call_id: 'rtc_over',
+    connected_at: '2026-09-08T09:00:01Z',
+    started_at: agoIso(2000),
+    last_heartbeat_at: agoIso(1),
+    granted_seconds: 600,
+  });
+  const { deps, calls } = fakeDeps({ overrunRows: [row] });
+  const summary = await reapAbandonedSessions(deps, { skipAnalysis: true });
+  assertEquals(summary.overrun, 1);
+  assertEquals(calls.hangups, ['rtc_over']);
+  assertEquals(summary.settled, 1);
+  assertEquals(calls.refundSeconds.length, 0);
+  assertEquals(calls.refundCents.length, 0);
+  assertEquals(calls.claims[0]?.observed, 600);
 });

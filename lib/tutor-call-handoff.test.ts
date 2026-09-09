@@ -18,10 +18,7 @@ import type { StartTutorSessionResult } from './tutor-api';
 function session(overrides: Partial<StartTutorSessionResult> = {}): StartTutorSessionResult {
   return {
     sessionId: 'sess-1',
-    clientSecret: 'ek_test',
-    clientSecretExpiresAt: null,
     model: 'gpt-realtime',
-    callsUrl: 'https://api.openai.com/v1/realtime/calls',
     grantedMs: 600_000,
     heartbeatIntervalSeconds: 20,
     correctionMode: 'as_you_go',

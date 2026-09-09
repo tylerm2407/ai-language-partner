@@ -5,7 +5,6 @@ import { useAudioInterruptions } from './useAudioInterruptions';
 import { enterTutorCallSession, releaseTutorCallSession } from '../lib/audio-session';
 import { responseCreateEvent, type RealtimeServerEvent } from '../lib/realtime-events';
 import {
-  DEFAULT_CALLS_URL,
   createWebRtcTransport,
   mapTransportEvent,
   outputAudioBufferClearEvent,
@@ -38,7 +37,7 @@ import {
   truncateCurrentTutorTurn,
   type TranscriptState,
 } from '../lib/tutor-transcript';
-import { reportTutorTurn, type TutorTurnResult } from '../lib/tutor-api';
+import { connectTutorCall, reportTutorTurn, type TutorTurnResult } from '../lib/tutor-api';
 import {
   NO_PENDING_TURNS,
   TUTOR_SAFETY_RECOVERY_NOTICE,
@@ -134,15 +133,7 @@ import {
 export interface TutorCallSession {
   /** Our own session row id, for the debrief screen. */
   sessionId: string;
-  /**
-   * OpenAI ephemeral credential. Held only for the SDP exchange. It is never
-   * logged, never persisted, and never interpolated into an error message —
-   * see the header of `lib/tutor-api.ts`.
-   */
-  clientSecret: string;
   model: string;
-  /** The SDP exchange endpoint the server named. */
-  callsUrl: string;
   /**
    * MILLISECONDS reserved and charged up front; the unused part is refunded on
    * `end`. Already converted by the parser in `lib/tutor-api.ts` — seconds are
@@ -164,9 +155,9 @@ export interface TutorCallSession {
    * is not a failure, whereas not heartbeating at all is three of them.
    *
    * It was excluded from this interface originally to keep the credential
-   * surface minimal, which was the wrong instinct applied to the wrong field:
-   * an integer nobody can spend is not part of that surface. `clientSecret`
-   * is, and the rules for it are in the header of `lib/tutor-api.ts`.
+   * surface minimal — a surface that no longer exists on the device: since
+   * migration 113 the server does the SDP exchange and no OpenAI credential
+   * ever reaches this hook.
    */
   heartbeatIntervalSeconds?: number;
 }
@@ -410,13 +401,6 @@ export function useRealtimeTutor(
   const endNotifiedRef = useRef(false);
   const startingRef = useRef(false);
   const localTurnRef = useRef(0);
-  /**
-   * The SDP endpoint the SERVER named for this call, pinned when it started.
-   * Not a constant: the edge function is the one thing that knows which
-   * provider and API version the ephemeral credential was minted against, and
-   * a client-side default that drifts from it produces a 401 nobody can read.
-   */
-  const callsUrlRef = useRef(DEFAULT_CALLS_URL);
 
   // ── Heartbeat bookkeeping ──────────────────────────────────────────────
   //
@@ -677,9 +661,14 @@ export function useRealtimeTutor(
   }, [dispatch]);
 
   const dial = useCallback(
-    async (clientSecret: string, model: string) => {
+    async (sessionId: string, model: string) => {
       try {
-        await ensureTransport().connect({ clientSecret, model, callsUrl: callsUrlRef.current });
+        await ensureTransport().connect({
+          model,
+          // The server does the SDP exchange and keeps the call id, so the
+          // device never holds an OpenAI credential. See lib/tutor-api.ts.
+          signal: (offerSdp) => connectTutorCall({ sessionId, offerSdp }),
+        });
       } catch (err) {
         console.warn('[tutor] connect failed:', err);
         setError('Could not connect to your tutor.');
@@ -701,7 +690,7 @@ export function useRealtimeTutor(
           void acquireMic();
           return;
         case 'connect':
-          void dial(effect.clientSecret, effect.model);
+          void dial(effect.sessionId, effect.model);
           return;
         case 'send':
           transportRef.current?.send(effect.event);
@@ -961,13 +950,12 @@ export function useRealtimeTutor(
       // Guards I/O, not the state machine: the reducer already ignores `start`
       // unless it is idle, but the screen's mount effect fires on remount too
       // and a second dial would open a second microphone capture against a
-      // credential that is already in use.
+      // session that is already connected.
       if (startingRef.current || stateRef.current.phase !== 'idle') return;
       startingRef.current = true;
       setStarting(true);
       setError(null);
       try {
-        callsUrlRef.current = session.callsUrl || DEFAULT_CALLS_URL;
         // Pinned here, not read on every heartbeat: the cadence belongs to the
         // session the server minted, and a mid-call change would mean the
         // reaper's staleness window and our reporting rate had silently
@@ -977,7 +965,6 @@ export function useRealtimeTutor(
           type: 'start',
           now: Date.now(),
           sessionId: session.sessionId,
-          clientSecret: session.clientSecret,
           model: session.model,
           grantedMs: Math.max(0, session.grantedMs),
           correctionMode: toSessionCorrectionMode(session.correctionMode),
