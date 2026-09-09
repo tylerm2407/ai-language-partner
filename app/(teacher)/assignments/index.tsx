@@ -55,7 +55,7 @@ export default function AssignmentsListScreen() {
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
   const renderItem = useCallback(
     ({ item }: { item: Assignment }) => (

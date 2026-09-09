@@ -12,6 +12,11 @@ import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { updateOnboardingChecklist } from '../../lib/supabase-queries';
+import { useAppStore } from '../../stores/useAppStore';
+import { OnboardingChecklistFab } from './OnboardingChecklistFab';
+import type { OnboardingChecklist, UserProfile } from '../../types';
+
 jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Ionicons' }));
 jest.mock('expo-haptics', () => ({
   selectionAsync: jest.fn(async () => {}),
@@ -52,11 +57,6 @@ jest.mock('../../hooks/useAuth', () => ({ useAuth: () => ({ user: { id: 'user-1'
 jest.mock('../../hooks/useMotion', () => ({
   useMotion: () => ({ shouldReduce: true, duration: {}, easing: {}, durationOr0: () => 0 }),
 }));
-
-import { updateOnboardingChecklist } from '../../lib/supabase-queries';
-import { useAppStore } from '../../stores/useAppStore';
-import { OnboardingChecklistFab } from './OnboardingChecklistFab';
-import type { OnboardingChecklist, UserProfile } from '../../types';
 
 const mockUpdate = updateOnboardingChecklist as jest.Mock;
 

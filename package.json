@@ -10,7 +10,7 @@
     "ios": "expo run:ios",
     "android": "expo run:android",
     "eas-build-pre-install": "node scripts/validate-build-environment.cjs",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings 0",
     "test": "jest",
     "test:functions": "deno test --allow-read --allow-env supabase/functions",
     "typecheck": "tsc --noEmit",

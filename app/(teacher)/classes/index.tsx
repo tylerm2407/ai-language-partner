@@ -38,7 +38,7 @@ export default function ClassListScreen() {
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
   const renderItem = useCallback(
     ({ item }: { item: Classroom }) => (

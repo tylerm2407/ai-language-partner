@@ -39,7 +39,7 @@ import {
   reportPurchaseFailure,
 } from '../../lib/purchases';
 import { type PlanId } from '../../lib/plans';
-import { STEP_ORDER, ctaLabel, renewalLine, trialOffer } from '../../lib/plan-pricing';
+import { STEP_ORDER, ctaLabel, renewalLine } from '../../lib/plan-pricing';
 import { trackEvent } from '../../lib/analytics';
 import { PlanStepCard } from '../../components/subscription/PlanStepCard';
 import { SlabButton } from '../../components/ui2/SlabButton';

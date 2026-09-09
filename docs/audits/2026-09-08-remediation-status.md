@@ -4,7 +4,7 @@
 
 **Branch:** `fix/audit-remediation`
 
-**Status date:** 2026-09-08
+**Status date:** 2026-09-09
 
 ## Executive status
 
@@ -59,7 +59,7 @@ Commit `2a61c81` updates Expo SDK 54-compatible patches and pins patched transit
 The final resolved graph passed:
 
 - TypeScript: `tsc --noEmit`
-- ESLint: 0 errors; 56 existing warnings
+- ESLint: 0 errors and 0 warnings; warnings now fail the lint gate.
 - Build environment policy: 5/5 tests
 - Frontend: 102 suites, 1,700/1,700 tests; clean process exit
 - Edge functions: 694/694 Deno tests

@@ -19,7 +19,6 @@ import { Ui2Input } from '../../../../components/ui2/Ui2Input';
 import StatusBadge from '../../../../components/school/StatusBadge';
 import TranscriptViewer from '../../../../components/school/TranscriptViewer';
 import { fetchSubmissionDetail, fetchSubmissionTranscript, fetchAssignmentById, gradeSubmission } from '../../../../lib/supabase-queries';
-import { useSchoolStore } from '../../../../stores/useSchoolStore';
 import type { Assignment, AssignmentSubmission, ConversationMessage } from '../../../../types';
 import { Ui2InlineError } from '../../../../components/ui2/Ui2InlineError';
 import { loadErrorCopy, type ErrorCopy } from '../../../../lib/error-copy';

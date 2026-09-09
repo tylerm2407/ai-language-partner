@@ -31,7 +31,7 @@ import type { VoiceGender } from './voice-preference';
  * will wait, and these calls already carry a 60s ceiling.
  */
 async function invokeWithRetry<
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mirrors
+
   // FunctionsClient.invoke<T = any>. Narrowing the default here would retype
   // all eight call sites, and this change is meant to add a retry, nothing else.
   T = any,
@@ -1152,4 +1152,3 @@ export async function generateContent(request: GenerateContentRequest): Promise<
   if (error) throw new Error(`Content generation error: ${error.message}`);
   return data;
 }
-

@@ -1,6 +1,5 @@
 import { supabase } from './supabase';
 import { escapeSpreadsheetCsvCell } from './csv';
-import { SRS_DEFAULTS } from '../config/app';
 import { PLANS } from './plans';
 import { CEFR_BAND_BY_LEVEL, CEFR_LADDER,
   combineConversationScore,
@@ -35,9 +34,7 @@ import type {
   DailyStats,
   DailyUsage,
   Subscription,
-  ReviewRating,
   DailyChallengesRecord,
-  LeagueTier,
   ReadingPassage,
   ReadingQuestion,
   WritingPrompt,
@@ -72,6 +69,8 @@ import type {
   TutorSessionSummary,
   AvatarJob,
 } from '../types';
+
+import type { NewsTier } from '../config/app';
 
 // ─── User Profile ───────────────────────────────────────────────
 
@@ -1234,20 +1233,6 @@ function mapDailyStats(row: Record<string, unknown>): DailyStats {
   };
 }
 
-function mapReviewLog(row: Record<string, unknown>): ReviewLog {
-  return {
-    id: row.id as string,
-    userId: row.user_id as string,
-    cardId: row.card_id as string,
-    reviewItemId: row.review_item_id as string,
-    rating: row.rating as ReviewRating,
-    responseTimeMs: row.response_time_ms as number,
-    userAnswer: row.user_answer as string,
-    wasCorrect: row.was_correct as boolean,
-    reviewedAt: row.reviewed_at as string,
-  };
-}
-
 
 function mapSubscription(row: Record<string, unknown>): Subscription {
   return {
@@ -1850,8 +1835,6 @@ export async function updateWritingFeedback(
 // Shared daily articles — one per (language × tier × date). Written by
 // the `daily-news-cron` service-role function on a 5 AM ET schedule. All
 // users at the same language+tier see the same article that day.
-
-import type { NewsTier } from '../config/app';
 
 export async function fetchDailyNews(
   language: string,

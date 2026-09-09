@@ -49,7 +49,7 @@ const DISPLAY_TIER_ORDER: PlanId[] = ['vip', 'premium', 'basic'];
 export default function SubscriptionScreen() {
   const { c } = useUi2Theme();
   const { user } = useAuth();
-  const { profile, subscription, entitledTier, refreshSubscription, setEntitledTier } = useAppStore();
+  const { subscription, entitledTier, refreshSubscription, setEntitledTier } = useAppStore();
   const goBack = useSafeBack('/(app)');
 
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);

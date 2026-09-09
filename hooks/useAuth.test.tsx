@@ -15,6 +15,14 @@
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
 
+import { useAuth, tearDownSession, __resetAuthStoreForTests } from './useAuth';
+import * as Notifications from 'expo-notifications';
+import { clearTtsCache } from '../lib/tts-cache';
+import { clearPendingOnboarding } from '../lib/pending-onboarding';
+import { useAppStore } from '../stores/useAppStore';
+import { useLessonProgressStore } from '../stores/useLessonProgressStore';
+import { useSchoolStore } from '../stores/useSchoolStore';
+
 const mockGetSession = jest.fn();
 const mockOnAuthStateChange = jest.fn();
 const mockUnsubscribe = jest.fn();
@@ -59,14 +67,6 @@ jest.mock('../lib/pending-onboarding', () => ({
   clearPendingOnboarding: jest.fn(async () => {}),
 }));
 jest.mock('../lib/read-cache', () => ({ clearReadCache: jest.fn().mockResolvedValue(undefined) }));
-
-import { useAuth, tearDownSession, __resetAuthStoreForTests } from './useAuth';
-import * as Notifications from 'expo-notifications';
-import { clearTtsCache } from '../lib/tts-cache';
-import { clearPendingOnboarding } from '../lib/pending-onboarding';
-import { useAppStore } from '../stores/useAppStore';
-import { useLessonProgressStore } from '../stores/useLessonProgressStore';
-import { useSchoolStore } from '../stores/useSchoolStore';
 
 /** A consumer that does nothing but call the hook, like most real ones. */
 function Consumer() {

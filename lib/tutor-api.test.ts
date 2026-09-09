@@ -15,13 +15,6 @@
  *      That one cannot be un-leaked once it has happened.
  */
 
-const mockInvoke = jest.fn();
-
-jest.mock('./supabase', () => ({
-  supabase: { functions: { invoke: (...args: unknown[]) => mockInvoke(...args) } },
-  AI_REQUEST_TIMEOUT_MS: 60_000,
-}));
-
 import {
   startTutorSession,
   reportTutorTurn,
@@ -31,6 +24,13 @@ import {
   TutorLimitError,
   type StartTutorSessionInput,
 } from './tutor-api';
+
+const mockInvoke = jest.fn();
+
+jest.mock('./supabase', () => ({
+  supabase: { functions: { invoke: (...args: unknown[]) => mockInvoke(...args) } },
+  AI_REQUEST_TIMEOUT_MS: 60_000,
+}));
 
 /** The one string that must never escape this module. */
 const SECRET = 'ek_super_secret_ephemeral_value_do_not_leak';

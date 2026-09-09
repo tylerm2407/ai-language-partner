@@ -22,6 +22,8 @@
 import React from 'react';
 import TestRenderer, { type ReactTestInstance } from 'react-test-renderer';
 
+import PlansScreen from '../app/(app)/plans';
+
 jest.mock('react-native-purchases', () => ({ __esModule: true, default: {}, LOG_LEVEL: { WARN: 1 } }));
 jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Ionicons' }));
 jest.mock('expo-linear-gradient', () => ({ LinearGradient: 'LinearGradient' }));
@@ -90,8 +92,6 @@ jest.mock('../lib/purchases', () => ({
   annualSavingsPercent: () => 0,
   reportPurchaseFailure: jest.fn(),
 }));
-
-import PlansScreen from '../app/(app)/plans';
 
 function texts(renderer: TestRenderer.ReactTestRenderer): string {
   return renderer.root

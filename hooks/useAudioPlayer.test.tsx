@@ -14,6 +14,8 @@
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
 
+import { useAudioPlayer } from './useAudioPlayer';
+
 const mockUnloadAsync = jest.fn().mockResolvedValue(undefined);
 const mockStopAsync = jest.fn().mockResolvedValue(undefined);
 const mockSetOnPlaybackStatusUpdate = jest.fn();
@@ -29,8 +31,6 @@ jest.mock('expo-av', () => ({
 jest.mock('../lib/audio-session', () => ({
   setAudioSessionMode: jest.fn().mockResolvedValue(undefined),
 }));
-
-import { useAudioPlayer } from './useAudioPlayer';
 
 /** Exposes the hook's api to the test without rendering anything. */
 function Harness({ onReady }: { onReady: (api: ReturnType<typeof useAudioPlayer>) => void }) {

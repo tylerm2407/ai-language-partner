@@ -6,6 +6,8 @@
  * the `generation_state` that decides whether a lesson can be opened at all.
  * A lesson shown as ready when it is still pending opens an empty lesson.
  */
+import { fetchGoalTrack } from './supabase-queries';
+
 const mockMaybeSingle = jest.fn();
 
 jest.mock('./supabase', () => ({
@@ -21,8 +23,6 @@ jest.mock('./supabase', () => ({
     }),
   },
 }));
-
-import { fetchGoalTrack } from './supabase-queries';
 
 function row(lessons: { id: string; order_index: number; generation_state: string | null }[]) {
   return {

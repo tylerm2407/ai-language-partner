@@ -15,6 +15,10 @@
  * The module is mocked at its data-layer boundary so importing the store does
  * not pull in the Supabase client.
  */
+import * as queries from '../lib/supabase-queries';
+import { effectiveTier, useAppStore } from './useAppStore';
+import type { Subscription, SubscriptionTier, UserProfile } from '../types';
+
 jest.mock('../lib/supabase-queries', () => ({
   fetchProfile: jest.fn(),
   fetchTodayStats: jest.fn(),
@@ -24,10 +28,6 @@ jest.mock('../lib/supabase-queries', () => ({
   fetchHasCompletedLesson: jest.fn(),
   fetchHasAiConversation: jest.fn(),
 }));
-
-import * as queries from '../lib/supabase-queries';
-import { effectiveTier, useAppStore } from './useAppStore';
-import type { Subscription, SubscriptionTier, UserProfile } from '../types';
 
 function row(tier: SubscriptionTier): Subscription {
   return {
