@@ -31,6 +31,7 @@ import {
 import { ui2ReaderType, spacing } from '../../config/theme';
 import { haptic } from '../../lib/haptics';
 import { trackEvent } from '../../lib/analytics';
+import { isReaderBrightnessAvailable } from '../../lib/reader-brightness';
 
 interface Props {
   visible: boolean;
@@ -214,6 +215,7 @@ export function ReaderDisplaySheet({ visible, onDismiss }: Props) {
       {/* Brightness — five steps plus "Auto", which hands the phone its own
           setting back. Steps rather than a slider: no slider dependency, and
           each step is a 44pt radio a screen reader can name. */}
+      {isReaderBrightnessAvailable() && (
       <View style={styles.row}>
         <Body size="sm" weight="semibold" tone="secondary" style={styles.rowLabel}>Brightness</Body>
         <View
@@ -244,6 +246,7 @@ export function ReaderDisplaySheet({ visible, onDismiss }: Props) {
           })}
         </View>
       </View>
+      )}
 
       {/* Night reading — the Settings checked-row pattern (Motion, Vibration). */}
       <Pressable

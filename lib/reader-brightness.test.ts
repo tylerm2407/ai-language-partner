@@ -4,21 +4,32 @@
  * what, which is the part that leaves a phone dimmed if it is wrong.
  */
 import { AppState } from 'react-native';
-import * as Brightness from 'expo-brightness';
+import { requireOptionalNativeModule } from 'expo-modules-core';
 import {
   RELEASE_GRACE_MS,
   acquireReaderBrightness,
+  isReaderBrightnessAvailable,
   resetReaderBrightnessForTests,
   setReaderBrightnessStep,
 } from './reader-brightness';
 
-jest.mock('expo-brightness', () => ({
-  getBrightnessAsync: jest.fn(async () => 0.9),
-  setBrightnessAsync: jest.fn(async () => {}),
-}));
+// Built inside the factory: the module under test resolves the native module
+// at import time, which runs before any top-level const in this file exists.
+jest.mock('expo-modules-core', () => {
+  const native = {
+    getBrightnessAsync: jest.fn(async () => 0.9),
+    setBrightnessAsync: jest.fn(async () => {}),
+  };
+  return {
+    requireOptionalNativeModule: jest.fn((name: string) => (name === 'ExpoBrightness' ? native : null)),
+  };
+});
 
-const get = Brightness.getBrightnessAsync as jest.Mock;
-const set = Brightness.setBrightnessAsync as jest.Mock;
+const native = requireOptionalNativeModule<{ getBrightnessAsync: jest.Mock; setBrightnessAsync: jest.Mock }>(
+  'ExpoBrightness',
+)!;
+const get = native.getBrightnessAsync;
+const set = native.setBrightnessAsync;
 
 let appStateHandler: ((s: string) => void) | null = null;
 const remove = jest.fn();
@@ -41,6 +52,13 @@ afterEach(() => {
 });
 
 describe('reader brightness', () => {
+  it('resolves the mockNative module through the optional form', () => {
+    // The non-optional form throws at import on a build without the module,
+    // which would take the whole reader down with it.
+    expect(requireOptionalNativeModule).toHaveBeenCalledWith('ExpoBrightness');
+    expect(isReaderBrightnessAvailable()).toBe(true);
+  });
+
   it('writes nothing when the step is null', async () => {
     const release = acquireReaderBrightness(null);
     await jest.advanceTimersByTimeAsync(0);

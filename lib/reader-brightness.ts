@@ -24,8 +24,22 @@
  * must never take the page down with it.
  */
 import { AppState, type AppStateStatus, type NativeEventSubscription } from 'react-native';
-import * as Brightness from 'expo-brightness';
+import { requireOptionalNativeModule } from 'expo-modules-core';
 import type { ReaderBrightness } from './reading-preferences';
+
+/**
+ * The native module, or null. `expo-brightness`'s own JS entry calls
+ * `requireNativeModule`, which THROWS at import time when the module is not
+ * in the binary — and the reader imports this file. A dev client built
+ * before expo-brightness was added would then fail to open any book. The
+ * optional form answers null instead, and every call below treats null as
+ * "no brightness control on this build".
+ */
+interface BrightnessNativeModule {
+  getBrightnessAsync(): Promise<number>;
+  setBrightnessAsync(value: number): Promise<void>;
+}
+const Brightness = requireOptionalNativeModule<BrightnessNativeModule>('ExpoBrightness');
 
 /** How long a release waits before restoring, so a surface handoff that
  *  releases and re-acquires in the same commit is not a flicker. */
@@ -38,6 +52,7 @@ let releaseTimer: ReturnType<typeof setTimeout> | null = null;
 let appStateSub: NativeEventSubscription | null = null;
 
 async function write(value: number): Promise<void> {
+  if (!Brightness) return;
   try {
     await Brightness.setBrightnessAsync(value);
   } catch {
@@ -46,7 +61,7 @@ async function write(value: number): Promise<void> {
 }
 
 async function captureOriginal(): Promise<void> {
-  if (original !== null) return;
+  if (original !== null || !Brightness) return;
   try {
     original = await Brightness.getBrightnessAsync();
   } catch {
@@ -108,6 +123,12 @@ export function setReaderBrightnessStep(step: ReaderBrightness): void {
   if (holders === 0) return;
   if (step === null) void restore();
   else void apply();
+}
+
+/** Whether this build can change brightness at all. The sheet hides the
+ *  row when it cannot, rather than offering steps that do nothing. */
+export function isReaderBrightnessAvailable(): boolean {
+  return Brightness !== null;
 }
 
 /** Test-only: drop all state, including a pending release. */

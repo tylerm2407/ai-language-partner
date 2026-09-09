@@ -24,6 +24,9 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   },
 }));
 jest.mock('../../lib/analytics', () => ({ trackEvent: jest.fn() }));
+jest.mock('expo-modules-core', () => ({
+  requireOptionalNativeModule: () => ({ getBrightnessAsync: async () => 1, setBrightnessAsync: async () => {} }),
+}));
 jest.mock('../../lib/haptics', () => ({ haptic: jest.fn() }));
 
 function render(warm = false) {
