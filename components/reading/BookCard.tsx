@@ -1,8 +1,14 @@
-import { View, Text, Pressable, Image } from 'react-native';
+import { View, Pressable } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import type { ReadingBook, UserBookProgress } from '../../types';
 import { cefrBandColors, cefrAccessibilityLabel } from '../../lib/cefr-labels';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
+import { useMotion } from '../../hooks/useMotion';
+import { Ui2ProgressBar } from '../ui2/Ui2ProgressBar';
+import { Chip } from '../ui2/Chip';
+import { Body, Caption } from '../ui2/Ui2Text';
+import { spacing } from '../../config/theme';
 
 interface BookCardProps {
   book: ReadingBook;
@@ -10,8 +16,21 @@ interface BookCardProps {
   onPress: () => void;
 }
 
+/** Cover height for the two-column grid. */
+const COVER_HEIGHT = 140;
+
+/**
+ * A library tile. UI 2.0 tint block: no outline, card radius, type from
+ * `Ui2Text`, the cover through expo-image so a 10,000-book shelf caches to
+ * disk and does not re-decode on every scroll.
+ *
+ * The CEFR band tint still comes from `lib/cefr-labels.ts`, which reads the
+ * fixed Dark Glow palette; moving those six hues onto the scheme-aware
+ * tokens is its own change (they are shared with the Learn hub).
+ */
 export function BookCard({ book, progress, onPress }: BookCardProps) {
-  const { c } = useUi2Theme();
+  const { c, shape, type } = useUi2Theme();
+  const { shouldReduce, duration } = useMotion();
   const cefrColor = cefrBandColors(book.cefrLevel);
   const isCompleted = !!progress?.completedAt;
   const hasProgress = progress && progress.percentComplete > 0;
@@ -27,29 +46,31 @@ export function BookCard({ book, progress, onPress }: BookCardProps) {
       style={{
         flex: 1,
         backgroundColor: c.card,
-        // A white card on a white ground is only a card if it is outlined.
-        borderWidth: 1,
+        borderWidth: shape.border,
         borderColor: c.cardBorder,
-        borderRadius: 14,
+        borderRadius: shape.radiusCard,
         overflow: 'hidden',
-        marginBottom: 12,
+        marginBottom: spacing.sm,
       }}
     >
       {/* Cover area */}
       <View
         style={{
-          height: 140,
+          height: COVER_HEIGHT,
           backgroundColor: cefrColor.bg,
           alignItems: 'center',
           justifyContent: 'center',
-          padding: 12,
+          padding: spacing.sm,
         }}
       >
         {book.imageUrl ? (
           <Image
             source={{ uri: book.imageUrl }}
-            style={{ width: '100%', height: '100%', borderTopLeftRadius: 14, borderTopRightRadius: 14 }}
-            resizeMode="cover"
+            style={{ width: '100%', height: '100%' }}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={shouldReduce ? 0 : duration.micro}
+            accessibilityIgnoresInvertColors
           />
         ) : (
           <>
@@ -58,28 +79,24 @@ export function BookCard({ book, progress, onPress }: BookCardProps) {
               size={32}
               color={cefrColor.text}
             />
-            <Text
+            <Body
+              size="sm"
+              weight="semibold"
               numberOfLines={2}
-              style={{
-                fontSize: 13,
-                fontWeight: '600',
-                color: cefrColor.text,
-                textAlign: 'center',
-                marginTop: 8,
-              }}
+              style={{ color: cefrColor.text, textAlign: 'center', marginTop: spacing.xs }}
             >
               {book.title}
-            </Text>
+            </Body>
           </>
         )}
 
-        {/* Completed badge */}
+        {/* Completed badge: glyph AND the word "completed" in the card's label. */}
         {isCompleted && (
           <View
             style={{
               position: 'absolute',
-              top: 8,
-              right: 8,
+              top: spacing.xs,
+              right: spacing.xs,
               width: 24,
               height: 24,
               borderRadius: 12,
@@ -88,24 +105,17 @@ export function BookCard({ book, progress, onPress }: BookCardProps) {
               justifyContent: 'center',
             }}
           >
-            <Ionicons name="checkmark" size={16} color={c.onPrimary} />
+            <Ionicons name="checkmark" size={16} color={c.onGreen} />
           </View>
         )}
       </View>
 
       {/* Info area */}
-      <View style={{ padding: 10 }}>
-        <Text
-          numberOfLines={1}
-          style={{ fontSize: 14, fontWeight: '600', color: c.ink }}
-        >
-          {book.title}
-        </Text>
+      <View style={{ padding: spacing.sm }}>
+        <Body size="sm" weight="semibold" numberOfLines={1}>{book.title}</Body>
 
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 6 }}>
-          <Text style={{ fontSize: 12, fontWeight: '400', color: c.muted }}>
-            {book.wordCount} words
-          </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.xxs, gap: 6 }}>
+          <Caption tone="secondary">{book.wordCount} words</Caption>
           <View
             style={{
               backgroundColor: cefrColor.bg,
@@ -114,49 +124,18 @@ export function BookCard({ book, progress, onPress }: BookCardProps) {
               paddingVertical: 2,
             }}
           >
-            <Text style={{ fontSize: 11, fontWeight: '700', color: cefrColor.text }}>
-              {book.cefrLevel}
-            </Text>
+            <Caption size="sm" style={{ color: cefrColor.text, fontFamily: type.uiBold }}>{book.cefrLevel}</Caption>
           </View>
         </View>
 
         {/* Progress bar or "New" label */}
         {hasProgress ? (
-          <View style={{ marginTop: 8 }}>
-            <View
-              style={{
-                height: 4,
-                backgroundColor: c.track,
-                borderRadius: 2,
-                overflow: 'hidden',
-              }}
-            >
-              <View
-                style={{
-                  height: 4,
-                  width: `${Math.min(percent, 100)}%`,
-                  backgroundColor: c.primary,
-                  borderRadius: 2,
-                }}
-              />
-            </View>
-            <Text style={{ fontSize: 11, fontWeight: '400', color: c.muted, marginTop: 2 }}>
-              {Math.round(percent)}%
-            </Text>
+          <View style={{ marginTop: spacing.xs }}>
+            <Ui2ProgressBar progress={percent / 100} height={4} onCard accessibilityLabel={`${Math.round(percent)} percent read`} />
+            <Caption size="sm" tone="secondary" style={{ marginTop: 2 }}>{Math.round(percent)}%</Caption>
           </View>
         ) : (
-          <View
-            style={{
-              marginTop: 8,
-              backgroundColor: c.primaryTint,
-              borderRadius: 4,
-              paddingHorizontal: 6,
-              paddingVertical: 2,
-              alignSelf: 'flex-start',
-            }}
-          >
-            <Text style={{ fontSize: 11, fontWeight: '600', color: c.onTint }}>New</Text>
-          </View>
+          <Chip label="New" style={{ marginTop: spacing.xs, alignSelf: 'flex-start' }} />
         )}
       </View>
     </Pressable>
