@@ -1020,6 +1020,8 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
             scenarios={SCENARIOS}
             languageName={languageName}
             levelLine={cefrLabel(CEFR_FOR_LEVEL[level])}
+            levelBand={CEFR_FOR_LEVEL[level]}
+            levelAccessibilityLabel={cefrAccessibilityLabel(CEFR_FOR_LEVEL[level])}
             resumable={resumable}
             onStart={(picked) => {
               const scenario = SCENARIOS.find((sc) => scenarioIdentity(sc) === scenarioIdentity(picked));

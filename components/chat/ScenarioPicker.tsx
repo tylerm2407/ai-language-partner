@@ -24,15 +24,25 @@
  *
  * Every scene keeps its description: it moved from the card to the sheet, one
  * tap away, instead of being printed nine times on the screen.
+ *
+ * ── THE HEADER (S1 "Question", canvas "Situations · header", 2026-09-08) ──
+ *
+ * The screen name is a small violet eyebrow with the language + level pill on
+ * its line, and the headline is a question. The question rotates by day so a
+ * daily screen does not read the same sentence forever. The tiles are sized
+ * so all nine clear the app's floating tab bar without scrolling on a
+ * current phone; the scroll padding is the tab bar's own clearance, not a
+ * guess, so nothing peeks out from under it.
  */
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { spacing } from '../../config/theme';
+import { floatingTabBarSpace } from '../navigation/FloatingTabBar';
 import { SlabButton } from '../ui2/SlabButton';
 import { Ui2Sheet } from '../ui2/Ui2Sheet';
-import { Body, Caption, Heading, Hero } from '../ui2/Ui2Text';
+import { Body, Caption, Heading } from '../ui2/Ui2Text';
 import type { Ui2Palette } from '../../config/theme';
 
 export interface PickerScenario {
@@ -49,6 +59,11 @@ interface ScenarioPickerProps {
   languageName: string;
   /** The learner's CEFR line, never a bare code — see lib/cefr-labels.ts. */
   levelLine: string;
+  /** The bare band for the header pill ("A2"). Its meaning is carried by
+   *  `levelAccessibilityLabel` and by `levelLine` in the sheet — the same
+   *  two-place rule CoursePills follows. */
+  levelBand: string;
+  levelAccessibilityLabel: string;
   /** Scenario keys (or labels for keyless scenes) with a saved conversation. */
   resumable: ReadonlySet<string>;
   onStart: (scenario: PickerScenario) => void;
@@ -75,20 +90,61 @@ export function resumeHint(hasHistory: boolean): string {
   return hasHistory ? 'Picks up where you left off.' : 'A new conversation.';
 }
 
-export function ScenarioPicker({ scenarios, languageName, levelLine, resumable, onStart }: ScenarioPickerProps) {
-  const { c, shape } = useUi2Theme();
+const QUESTIONS = [
+  'Where do you want to find yourself today?',
+  'What would you like to be able to say today?',
+  'Which moment shall we rehearse today?',
+] as const;
+
+/** The headline for a given day. Pure: the same day always asks the same question. */
+export function questionForDay(date: Date): string {
+  const start = Date.UTC(date.getUTCFullYear(), 0, 1);
+  const day = Math.floor((date.getTime() - start) / 86_400_000);
+  return QUESTIONS[day % QUESTIONS.length];
+}
+
+export function ScenarioPicker({
+  scenarios,
+  languageName,
+  levelLine,
+  levelBand,
+  levelAccessibilityLabel,
+  resumable,
+  onStart,
+}: ScenarioPickerProps) {
+  const { c, type, shape } = useUi2Theme();
   const [open, setOpen] = useState<PickerScenario | null>(null);
+  const [question] = useState(() => questionForDay(new Date()));
 
   const openTone = open ? tileTone(scenarios.indexOf(open), c) : null;
   const hasHistory = open ? resumable.has(scenarioIdentity(open)) : false;
 
   return (
     <View style={styles.root}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Hero accessibilityRole="header">Situations</Hero>
-        <Body tone="secondary" style={styles.subtitle}>
-          Pick a scene to practise in {languageName}. Type or speak, your call.
-        </Body>
+      <ScrollView
+        contentContainerStyle={[styles.content, { paddingBottom: floatingTabBarSpace() + spacing.sm }]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.header}>
+          <View style={styles.eyebrowRow}>
+            <Text style={[styles.eyebrow, { fontFamily: type.uiHeavy, color: c.primary }]} accessibilityRole="header">
+              Situations
+            </Text>
+            <View
+              style={[styles.levelPill, { backgroundColor: c.primaryTint }]}
+              accessibilityRole="text"
+              accessibilityLabel={`${languageName}. ${levelAccessibilityLabel}`}
+            >
+              <View style={[styles.levelDot, { backgroundColor: c.green }]} />
+              <Text style={[styles.levelText, { fontFamily: type.uiHeavy, color: c.onTint }]}>
+                {languageName} · {levelBand}
+              </Text>
+            </View>
+          </View>
+          <Heading level={1} style={styles.question}>
+            {question}
+          </Heading>
+        </View>
 
         <View style={styles.grid}>
           {scenarios.map((scenario, index) => {
@@ -110,7 +166,12 @@ export function ScenarioPicker({ scenarios, languageName, levelLine, resumable, 
                 <View style={[styles.iconWell, { backgroundColor: tone.bg }]}>
                   <Ionicons name={scenario.icon} size={22} color={tone.fg} />
                 </View>
-                <Body weight="extrabold" style={styles.tileLabel} numberOfLines={2}>
+                <Body
+                  size="sm"
+                  weight="extrabold"
+                  style={[styles.tileLabel, wide && styles.tileLabelWide]}
+                  numberOfLines={2}
+                >
                   {scenario.label}
                 </Body>
                 {wide ? (
@@ -170,11 +231,41 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: spacing.md,
     paddingTop: spacing.xs,
-    paddingBottom: 120,
+    gap: spacing.md,
+  },
+  header: {
+    gap: spacing.xs + 2,
+  },
+  eyebrowRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     gap: spacing.sm,
   },
-  subtitle: {
-    marginBottom: spacing.xs,
+  eyebrow: {
+    fontSize: 12,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  levelPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    height: 32,
+    paddingHorizontal: spacing.sm,
+    borderRadius: 999,
+  },
+  levelDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  levelText: {
+    fontSize: 12,
+  },
+  question: {
+    letterSpacing: -0.6,
+    paddingRight: spacing.lg,
   },
   grid: {
     flexDirection: 'row',
@@ -182,10 +273,14 @@ const styles = StyleSheet.create({
     gap: TILE_GAP,
   },
   tile: {
-    padding: spacing.md,
-    gap: spacing.sm,
-    minHeight: 128,
-    justifyContent: 'flex-start',
+    // Icon well top, label pinned to the bottom, so a two-line label and a
+    // one-line label make the same tile. Nine tiles plus the header clear the
+    // floating tab bar on a 6.1" phone without a scroll.
+    // 116 leaves 46pt under a 36pt icon well: two lines of the 14pt label.
+    padding: spacing.sm + 2,
+    gap: spacing.xxs,
+    height: 116,
+    justifyContent: 'space-between',
   },
   tileHalf: {
     // Two per row: half the width less half the gap.
@@ -194,14 +289,15 @@ const styles = StyleSheet.create({
   },
   tileWide: {
     flexBasis: '100%',
-    minHeight: 72,
+    height: 64,
     flexDirection: 'row',
     alignItems: 'center',
+    gap: spacing.sm,
   },
   iconWell: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: 36,
+    height: 36,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -214,6 +310,9 @@ const styles = StyleSheet.create({
   },
   tileLabel: {
     flexShrink: 1,
+  },
+  tileLabelWide: {
+    flex: 1,
   },
   sheet: {
     gap: spacing.sm + 2,

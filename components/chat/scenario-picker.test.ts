@@ -16,7 +16,7 @@ jest.mock('expo-haptics', () => ({
 }));
 jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Ionicons' }));
 
-import { resumeHint, scenarioIdentity, tileTone } from './ScenarioPicker';
+import { questionForDay, resumeHint, scenarioIdentity, tileTone } from './ScenarioPicker';
 import { paletteForScheme } from '../../hooks/useUi2Theme';
 
 const c = paletteForScheme('light');
@@ -35,6 +35,17 @@ describe('scenarioIdentity', () => {
   it('keys built-in scenes on their key and custom scenes on their label', () => {
     expect(scenarioIdentity({ key: 'restaurant', label: 'Ordering at a Restaurant' })).toBe('restaurant');
     expect(scenarioIdentity({ key: null, label: 'Bryant pilot: campus tour' })).toBe('Bryant pilot: campus tour');
+  });
+});
+
+describe('questionForDay', () => {
+  it('asks the same question all day and a different one the next', () => {
+    const a = questionForDay(new Date(Date.UTC(2026, 8, 8, 9)));
+    const b = questionForDay(new Date(Date.UTC(2026, 8, 8, 22)));
+    const c2 = questionForDay(new Date(Date.UTC(2026, 8, 9, 9)));
+    expect(a).toBe(b);
+    expect(c2).not.toBe(a);
+    expect(a.endsWith('?')).toBe(true);
   });
 });
 

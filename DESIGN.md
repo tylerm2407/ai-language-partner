@@ -944,7 +944,11 @@ scheme (`app.json` `userInterfaceStyle: "automatic"`).
   Chat last and full width; tapping a tile opens `Ui2Sheet` with the icon,
   title, "Language · CEFR line", description, a resume hint, and ONE
   Continue that opens the chat as text with the mic ready
-  (`components/chat/ScenarioPicker.tsx`). The old Text Chat / Live Voice pair
+  (`components/chat/ScenarioPicker.tsx`). Header (S1 "Question", canvas
+  "Situations · header"): a 12px violet uppercase eyebrow "Situations" with a
+  "Language · band" pill on its line, then a level-1 heading that asks a
+  question rotating by day. Tiles are 104pt with the label pinned to the
+  bottom, so nine clear the floating tab bar without scrolling. The old Text Chat / Live Voice pair
   is gone from the picker: spoken replies and hands-free are toggles inside
   the chat, and the real-time voice call is the Talk tab.
 - **Motion vocabulary** (all gated on `useMotion().shouldReduce`): step change =
