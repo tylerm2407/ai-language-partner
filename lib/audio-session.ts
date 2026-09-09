@@ -28,6 +28,33 @@
 import { Platform } from 'react-native';
 import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av';
 import type { AudioMode } from 'expo-av';
+import type { RecordingOptions } from 'expo-av/build/Audio';
+
+/**
+ * Recording preset for anything that is sent to speech-to-text.
+ *
+ * Every recorder in the app used expo-av's HIGH_QUALITY preset: 44.1 kHz,
+ * stereo, 128 kbps. None of that survives contact with the transcriber — it
+ * resamples to 16 kHz mono before it listens — so the extra bytes were pure
+ * cost: a four-times-larger file to read, base64-encode, ship over cellular,
+ * decode again on the edge, and hand to the model. On a speaking exercise all
+ * of that sits between "stop" and the verdict.
+ *
+ * 16 kHz mono AAC at 48 kbps is more than the model can use and a fraction of
+ * the bytes. Metering stays on: the hands-free endpointer reads it.
+ */
+export function speechRecordingOptions(): RecordingOptions {
+  // Built on demand rather than at module load: test doubles for expo-av do
+  // not always carry the presets, and nothing needs this before a recording
+  // starts.
+  const base = Audio.RecordingOptionsPresets.HIGH_QUALITY;
+  return {
+    ...base,
+    isMeteringEnabled: true,
+    android: { ...base.android, sampleRate: 16000, numberOfChannels: 1, bitRate: 48000 },
+    ios: { ...base.ios, sampleRate: 16000, numberOfChannels: 1, bitRate: 48000 },
+  };
+}
 
 export type AudioSessionMode =
   /** Nothing playing or recording. Mixes with other apps; does not hold the session. */

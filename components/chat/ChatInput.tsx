@@ -6,7 +6,7 @@ import { Audio } from 'expo-av';
 import { File } from 'expo-file-system/next';
 import { spacing } from '../../config/theme';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
-import { setAudioSessionMode, recordingModeFor } from '../../lib/audio-session';
+import { setAudioSessionMode, recordingModeFor, speechRecordingOptions } from '../../lib/audio-session';
 import { chatVadForLevel, createVadState, feedVadSample, type VadState } from '../../lib/vad';
 import { LiveComposer } from './LiveComposer';
 import type { VoiceGender } from '../../lib/voice-preference';
@@ -188,12 +188,7 @@ export function ChatInput({
 
       await setAudioSessionMode(recordingModeFor(withSilenceDetection));
 
-      const recordingOptions = {
-        ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
-        isMeteringEnabled: true,
-      };
-
-      const { recording } = await Audio.Recording.createAsync(recordingOptions);
+      const { recording } = await Audio.Recording.createAsync(speechRecordingOptions());
       recordingRef.current = recording;
       recordingStartTimeRef.current = Date.now();
       setIsRecording(true);

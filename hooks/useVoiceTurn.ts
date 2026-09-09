@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Audio } from 'expo-av';
-import { setAudioSessionMode } from '../lib/audio-session';
+import { setAudioSessionMode, speechRecordingOptions } from '../lib/audio-session';
 import {
   createVadState,
   feedVadSample,
@@ -136,12 +136,10 @@ export function useVoiceTurn(opts: VoiceTurnOptions): UseVoiceTurnReturn {
         optsRef.current.background ? 'handsfree-record' : 'record',
       );
 
-      const { recording } = await Audio.Recording.createAsync({
-        ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
-        // Without this, status.metering is undefined and the endpointer is
-        // blind — the turn would only ever end at the max window.
-        isMeteringEnabled: true,
-      });
+      // speechRecordingOptions keeps metering on. Without it status.metering
+      // is undefined and the endpointer is blind — the turn would only ever
+      // end at the max window.
+      const { recording } = await Audio.Recording.createAsync(speechRecordingOptions());
 
       recordingRef.current = recording;
       startedAtRef.current = Date.now();
