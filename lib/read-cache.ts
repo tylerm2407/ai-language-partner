@@ -23,7 +23,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const READ_CACHE_SCHEMA_VERSION = 1;
-export const READ_CACHE_TTL_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
+// 30 days, matching offline-pack retention (lib/offline-packs.ts): a pack the
+// learner downloaded must not expire out from under them before the pack does.
+export const READ_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 export const READ_CACHE_PREFIX = 'read-cache:';
 
 interface CacheEntry<T> {

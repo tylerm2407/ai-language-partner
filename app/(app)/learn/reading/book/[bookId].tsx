@@ -21,7 +21,9 @@ import {
   type AnnotationCardSource,
 } from '../../../../../lib/supabase-queries';
 import { BookReader } from '../../../../../components/reading/BookReader';
-import { getCached, readCacheKey, setCached } from '../../../../../lib/read-cache';
+import { cachedFetch, getCached, readCacheKey, setCached } from '../../../../../lib/read-cache';
+import { touchPack } from '../../../../../lib/offline-packs';
+import { OfflineDownloadControl } from '../../../../../components/learn/OfflineDownloadControl';
 import { supabase } from '../../../../../lib/supabase';
 import { loadErrorCopy, saveErrorCopy, type ErrorCopy } from '../../../../../lib/error-copy';
 import { bookXpKey } from '../../../../../lib/offline-queue';
@@ -65,17 +67,22 @@ export default function BookDetailScreen() {
       // Metadata only. `content` is fetched behind the Read button below —
       // it averages 211 kB and reaches 1.8 MB, and making the cover screen
       // wait on the whole book was the slowest thing in the reader.
-      const [bookData, annData, progressData, sub] = await Promise.all([
-        fetchBookMeta(bookId),
-        fetchBookAnnotations(bookId),
-        fetchUserBookProgress(user.id, bookId),
-        fetchSubscription(user.id),
+      // Meta and annotations under the keys an offline pack warms, so a
+      // downloaded book opens with no connection; progress and the plan are
+      // best-effort there (the reader shows the book, the CTA copy may be
+      // conservative until the next online open).
+      const [{ data: bookData }, { data: annData }, progressData, sub] = await Promise.all([
+        cachedFetch<ReadingBook | null>(readCacheKey('book-meta', bookId), () => fetchBookMeta(bookId)),
+        cachedFetch<BookAnnotation[]>(readCacheKey('book-annotations', bookId), () => fetchBookAnnotations(bookId)),
+        fetchUserBookProgress(user.id, bookId).catch(() => [] as UserBookProgress[]),
+        fetchSubscription(user.id).catch(() => null),
       ]);
 
       setBook(bookData);
-      setAnnotations(annData);
+      setAnnotations(annData ?? []);
       setProgress(progressData[0] ?? null);
       setSubscription(sub);
+      if (bookData) void touchPack(user.id, 'book', bookId);
     } catch (e) {
       // Was `setError(e.message)`, which rendered the raw Supabase/Postgres
       // string straight into the UI. See lib/error-copy.ts.
@@ -470,6 +477,14 @@ export default function BookDetailScreen() {
 
       {/* CTA Button */}
       <View style={{ padding: 20, paddingBottom: 100, borderTopWidth: 1, borderTopColor: c.cardBorder }}>
+        {book && (
+          <View style={{ alignItems: 'flex-start', marginBottom: 12 }}>
+            <OfflineDownloadControl
+              what={book.title}
+              spec={{ kind: 'book', target: { bookId: book.id, title: book.title, language: book.language } }}
+            />
+          </View>
+        )}
         {/* The book's text is fetched here, not with the cover — so this is
             the one button in the app that can legitimately sit spinning for a
             moment on a long novel. */}

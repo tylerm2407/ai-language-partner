@@ -5,6 +5,8 @@ import { Body, Caption } from '../ui2/Ui2Text';
 import { AudioScrubber } from './AudioScrubber';
 import { useArticlePlayer, SKIP_SECONDS } from '../../hooks/useArticlePlayer';
 import { fetchNewsAudio } from '../../lib/supabase-queries';
+import { localNewsAudioUri } from '../../lib/offline-packs';
+import { useAuth } from '../../hooks/useAuth';
 import { loadErrorCopy } from '../../lib/error-copy';
 import { spacing, radii, typography } from '../../config/theme';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
@@ -33,6 +35,7 @@ interface ArticleAudioPlayerProps {
  */
 export function ArticleAudioPlayer({ article }: ArticleAudioPlayerProps) {
   const { c } = useUi2Theme();
+  const { user } = useAuth();
   const player = useArticlePlayer();
   const [fetching, setFetching] = useState(false);
   const [fetchError, setFetchError] = useState<{ title: string; message: string } | null>(null);
@@ -42,7 +45,12 @@ export function ArticleAudioPlayer({ article }: ArticleAudioPlayerProps) {
     setFetching(true);
     setFetchError(null);
     try {
-      const audio = await fetchNewsAudio(article.id);
+      // A downloaded narration (Settings › Offline downloads, or the Wi-Fi
+      // top-up) plays from the device — no network, no news-audio call.
+      const local = user?.id ? await localNewsAudioUri(user.id, article.id) : null;
+      const audio = local
+        ? { url: local, durationMs: null as number | null }
+        : await fetchNewsAudio(article.id);
       if (!audio) {
         // The narration is still rendering. Not an error — say so plainly
         // rather than showing a failure for something that is simply not ready.
@@ -67,7 +75,7 @@ export function ArticleAudioPlayer({ article }: ArticleAudioPlayerProps) {
     } finally {
       setFetching(false);
     }
-  }, [article, player]);
+  }, [article, player, user?.id]);
 
   const busy = fetching || player.status === 'loading';
   const playing = player.status === 'playing';

@@ -22,6 +22,7 @@ import { trackEvent, type EventProperties } from '../lib/analytics';
  */
 export type ScreenName =
   | 'home'
+  | 'offline_downloads'
   | 'learn'
   | 'lesson'
   | 'review'

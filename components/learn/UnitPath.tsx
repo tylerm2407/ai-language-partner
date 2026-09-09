@@ -23,6 +23,7 @@ import { SlabButton } from '../ui2/SlabButton';
 import { Mono } from './Mono';
 import { UnitCarousel } from './UnitCarousel';
 import { LessonRow } from './LessonRow';
+import { OfflineDownloadControl } from './OfflineDownloadControl';
 import {
   buildUnitProgress,
   findFocusUnitIndex,
@@ -36,11 +37,13 @@ import { spacing } from '../../config/theme';
 interface UnitPathProps {
   units: UnitWithLessons[];
   courseId: string;
+  /** The course's target language; names the offline pack. */
+  language: string;
   /** Rendered above the unit strip — the review-cards shortcut. */
   header?: React.ReactNode;
 }
 
-export function UnitPath({ units, courseId, header }: UnitPathProps) {
+export function UnitPath({ units, courseId, language, header }: UnitPathProps) {
   const { c } = useUi2Theme();
   const router = useRouter();
   const { getLessonState, getScore, loading, error, retry, refresh } = useLessonProgress(courseId);
@@ -146,14 +149,25 @@ export function UnitPath({ units, courseId, header }: UnitPathProps) {
         <Heading level={3} style={styles.listTitle}>
           {`Unit ${selected.index + 1} lessons`}
         </Heading>
-        <Mono
-          size={12}
-          medium
-          color={selected.mastery > 0 ? c.primary : c.idle}
-          accessibilityLabel={`${toPercent(selected.mastery)} percent of this unit mastered`}
-        >
-          {`${toPercent(selected.mastery)}% MASTERED`}
-        </Mono>
+        <View style={styles.listHeaderRight}>
+          <Mono
+            size={12}
+            medium
+            color={selected.mastery > 0 ? c.primary : c.idle}
+            accessibilityLabel={`${toPercent(selected.mastery)} percent of this unit mastered`}
+          >
+            {`${toPercent(selected.mastery)}% MASTERED`}
+          </Mono>
+          {/* Offline packs (Premium): the whole unit with every exercise. */}
+          <OfflineDownloadControl
+            compact
+            what={`Unit ${selected.index + 1}`}
+            spec={{
+              kind: 'unit',
+              target: { courseId, unitId: selected.unit.id, title: selected.unit.title, language },
+            }}
+          />
+        </View>
       </View>
 
       <View style={styles.list}>
@@ -212,6 +226,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     paddingBottom: spacing.xs,
   },
+  listHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   listTitle: {
     flexShrink: 1,
     paddingRight: spacing.xs,

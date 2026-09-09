@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { fetchLessonWithExercises } from '../../../lib/supabase-queries';
 import { cachedFetch, readCacheKey } from '../../../lib/read-cache';
+import { touchPack } from '../../../lib/offline-packs';
 import { orderExercisesForCognitiveLoad, lessonIsAlreadyOrdered } from '../../../lib/lesson-ordering';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAppStore } from '../../../stores/useAppStore';
@@ -65,11 +66,12 @@ export default function LessonScreen() {
     ).then(({ data }) => {
       setLesson(data);
       setLoading(false);
+      if (data && user?.id) void touchPack(user.id, 'unit', data.unitId);
     }).catch((err) => {
       setLoadError(err instanceof Error ? err.message : 'Failed to load lesson');
       setLoading(false);
     });
-  }, [lessonId]);
+  }, [lessonId, user?.id]);
 
   useEffect(() => {
     loadLesson();

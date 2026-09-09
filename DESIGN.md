@@ -878,6 +878,19 @@ scheme (`app.json` `userInterfaceStyle: "automatic"`).
 
 `hooks/useUi2Theme.test.ts` pins the contrast floors.
 
+### Offline downloads (2026-09-09)
+
+One control, `components/learn/OfflineDownloadControl.tsx`, wherever content
+can be put on the device: the selected unit's header on Learn, the book cover
+above Start Reading, and under the article's audio player. It is a tint pill
+(`primaryTint`, `greenTint` when done) with an icon AND a word — "Download",
+"3 of 6", "Offline", or "Offline · Premium" with a lock that opens Plans —
+so the state is never colour-only. Management lives in Settings › Offline
+downloads (`app/(app)/profile/downloads.tsx`): a storage card with a
+`Ui2ProgressBar onCard`, the Wi-Fi auto-download row (same checked-row
+pattern as Motion and Vibration in Settings), and one `Ui2ListRow` per pack
+with a trash icon on the right. Nothing new was added to the token set.
+
 ### Shape and type
 
 - **Tint blocks** (2026-09-07, canvas page "Slab-free · A/B/C", variant C).

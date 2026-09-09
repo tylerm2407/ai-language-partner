@@ -21,6 +21,9 @@ import type { DailyNewsArticle, VocabularyHighlight } from '../../../types';
 import { spacing } from '../../../config/theme';
 import { useUi2Theme } from '../../../hooks/useUi2Theme';
 import { ArticleAudioPlayer } from '../../../components/news/ArticleAudioPlayer';
+import { OfflineDownloadControl } from '../../../components/learn/OfflineDownloadControl';
+import { cachedFetch } from '../../../lib/read-cache';
+import { newsCacheKey, touchPack } from '../../../lib/offline-packs';
 import { useScreenView } from '../../../hooks/useScreenView';
 
 export default function NewsReaderScreen() {
@@ -47,9 +50,14 @@ export default function NewsReaderScreen() {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await fetchDailyNews(targetLanguage, tier, date);
+      const { data } = await cachedFetch<DailyNewsArticle | null>(
+        newsCacheKey(targetLanguage, tier, date),
+        () => fetchDailyNews(targetLanguage, tier, date),
+        { onCached: (cached) => { setArticle(cached); setIsLoading(false); } },
+      );
       setArticle(data);
       if (data) {
+        void touchPack(user.id, 'news', data.id);
         const existing = await fetchNewsReadStatus(user.id, data.id).catch(() => null);
         setReadAt(existing);
       }
@@ -168,6 +176,14 @@ export default function NewsReaderScreen() {
               {/* Listen. Sits between the summary and the body because that is
                   where a reader decides whether to read this or hear it. */}
               <ArticleAudioPlayer article={article} />
+              {targetLanguage ? (
+                <View style={{ alignItems: 'flex-start', marginTop: spacing.sm }}>
+                  <OfflineDownloadControl
+                    what="This article"
+                    spec={{ kind: 'news', target: { language: targetLanguage, tier, date } }}
+                  />
+                </View>
+              ) : null}
 
               {/* Content */}
               <Body style={{ lineHeight: 28, marginBottom: spacing.lg }}>

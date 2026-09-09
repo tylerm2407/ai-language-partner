@@ -5,6 +5,7 @@ import { View } from 'react-native';
 import { FloatingTabBar } from '../../components/navigation/FloatingTabBar';
 import { useOfflineQueueFlush } from '../../hooks/useOfflineQueueFlush';
 import { useLessonSessionSweep } from '../../hooks/useLessonSessionSweep';
+import { useOfflineAutoTopUp } from '../../hooks/useOfflineAutoTopUp';
 import { useOnboardingReconciliation } from '../../hooks/useOnboardingReconciliation';
 import { useTimezoneSync } from '../../hooks/useProfile';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
@@ -14,6 +15,7 @@ export default function AppLayout() {
   // Replay queued offline writes on mount / reconnect / foreground.
   useOfflineQueueFlush();
   useLessonSessionSweep();
+  useOfflineAutoTopUp();
   // Reconcile the onboarding checklist against what the learner actually did.
   // Lives here rather than in the FAB because the FAB only exists on Home, and
   // someone who finishes a lesson and never opens Home still finished it.

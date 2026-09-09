@@ -35,6 +35,7 @@ import { loadErrorCopy, saveErrorCopy, type ErrorCopy } from '../../../lib/error
 // `spacing` are plain scheme-independent numbers and carry over unchanged.
 import { spacing, radii } from '../../../config/theme';
 import { useUi2Theme } from '../../../hooks/useUi2Theme';
+import { getTargetLanguage } from '../../../lib/language';
 import type { Course, Unit, Lesson, ReadingPassage, WritingPrompt, ReadingBook, UserBookProgress, GoalTrack } from '../../../types';
 import { Ionicons } from '@expo/vector-icons';
 import { BookCard } from '../../../components/reading/BookCard';
@@ -385,6 +386,7 @@ export default function LearnScreen() {
             <UnitPath
               units={courseUnits}
               courseId={selectedCourseId}
+              language={getTargetLanguage(profile) ?? 'en'}
               header={
                 <>
                   <ReviewShortcut count={reviewCount} onPress={goToReview} />

@@ -3,6 +3,9 @@ import { View, Text, Pressable, ScrollView, Alert, Linking, KeyboardAvoidingView
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useSafeBack } from '../../../hooks/useSafeBack';
+import { useRouter } from 'expo-router';
+import { useOfflinePacks } from '../../../hooks/useOfflinePacks';
+import { formatBytes } from '../../../lib/offline-packs';
 import { Ionicons } from '@expo/vector-icons';
 import { useProfile } from '../../../hooks/useProfile';
 import { useAuth } from '../../../hooks/useAuth';
@@ -46,7 +49,9 @@ function levelCanDo(level: ProficiencyLevel): string {
 
 export default function SettingsScreen() {
   const { c } = useUi2Theme();
-  const goBack = useSafeBack('/(app)');
+  const goBack = useSafeBack('/(app)/profile');
+  const router = useRouter();
+  const offlinePacks = useOfflinePacks();
   const { profile, updateProfile } = useProfile();
   const { signOut, user } = useAuth();
 
@@ -323,6 +328,23 @@ export default function SettingsScreen() {
           loading={saving}
           disabled={!hasChanges || saving}
         />
+
+        {/* Offline downloads (Premium) */}
+        <View className="mt-10">
+          <Text className="text-sm font-semibold mb-2 uppercase tracking-wide" style={{ color: c.muted }}>Offline</Text>
+          <Ui2ListRow
+            style={{ marginBottom: spacing.sm }}
+            icon="cloud-download-outline"
+            title="Offline downloads"
+            subtitle={
+              offlinePacks.entitled
+                ? `${formatBytes(offlinePacks.totalBytes)} of ${formatBytes(offlinePacks.maxBytes)} used`
+                : 'Part of Premium — lessons, books and the news, without a connection'
+            }
+            onPress={() => router.push('/profile/downloads' as never)}
+            accessibilityLabel="Offline downloads"
+          />
+        </View>
 
         {/* Legal */}
         <View className="mt-10 mb-6">
