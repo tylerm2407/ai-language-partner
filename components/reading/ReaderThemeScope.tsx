@@ -11,17 +11,30 @@
  * The StatusBar is tied to the PREFERENCE, not to whether the display sheet
  * is open, so opening the sheet does not flap the glyphs.
  *
+ * It also holds the reader's in-app brightness step for as long as it is
+ * mounted; `lib/reader-brightness.ts` restores the phone's own value when the
+ * last surface goes. A `null` step touches nothing.
+ *
  * Nothing outside this boundary ever renders from `ui2Warm`. That is the
  * scope Tyler chose on 2026-09-09: the reader only, not the tab or the app.
  */
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { Ui2VariantProvider } from '../../hooks/useUi2Theme';
 import { useReadingPreferences } from '../../hooks/useReadingPreferences';
+import { acquireReaderBrightness, setReaderBrightnessStep } from '../../lib/reader-brightness';
 
 export function ReaderThemeScope({ children }: { children: ReactNode }) {
   const { prefs } = useReadingPreferences();
   const warm = prefs.nightReading;
+
+  // Acquire once per mount; follow the step separately so changing it in the
+  // sheet does not release and re-acquire (which would restore-then-dim).
+  useEffect(() => acquireReaderBrightness(prefs.brightness), []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    setReaderBrightnessStep(prefs.brightness);
+  }, [prefs.brightness]);
+
   return (
     <Ui2VariantProvider variant={warm ? 'warm' : 'system'}>
       {warm ? <StatusBar style="light" /> : null}

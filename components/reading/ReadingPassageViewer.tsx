@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
+import { SlabButton } from '../ui2/SlabButton';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { AudioPlayButton } from '../audio/AudioPlayButton';
@@ -119,27 +120,20 @@ function ReadingPassageViewerBody({
 
       {/* Passage Content */}
       <ScrollView
-        contentContainerStyle={{ padding: 20, paddingBottom: footerHeight }}
+        contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.md, paddingBottom: footerHeight }}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={{
-          backgroundColor: c.card,
-          borderWidth: 1,
-          borderColor: c.cardBorder,
-          borderRadius: 16,
-          padding: 20,
-          minHeight: 200,
-        }}>
-          <TappableText
-            paragraphs={paragraphs}
-            fontSize={fontSize}
-            lineHeightMultiplier={lineHeightMultiplier}
-            fontFamily={fontFamily}
-            selectedRef={selectedRef}
-            onWordPress={onWordPress}
-            onExplain={onExplain}
-          />
-        </View>
+        {/* Full-bleed on the ground, the same surface as a book page. The old
+            card-in-a-card made a passage look like a form field. */}
+        <TappableText
+          paragraphs={paragraphs}
+          fontSize={fontSize}
+          lineHeightMultiplier={lineHeightMultiplier}
+          fontFamily={fontFamily}
+          selectedRef={selectedRef}
+          onWordPress={onWordPress}
+          onExplain={onExplain}
+        />
 
         <ReadingHelp
           lookup={lookup}
@@ -162,18 +156,12 @@ function ReadingPassageViewerBody({
       <View style={{
         position: 'absolute', bottom: 0, left: 0, right: 0,
         padding: 20, paddingBottom: 20 + insets.bottom + floatingTabBarSpace(), backgroundColor: c.bg,
-        borderTopWidth: 1, borderTopColor: c.cardBorder,
       }}>
-        <Pressable
+        <SlabButton
+          label="Continue to Questions"
           onPress={onContinue}
-          style={{
-            backgroundColor: c.primary, paddingVertical: 16, borderRadius: 14, alignItems: 'center',
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Continue to questions"
-        >
-          <Text style={{ color: c.onPrimary, fontSize: 18, fontWeight: '600' }}>Continue to Questions</Text>
-        </Pressable>
+          accessibilityHint="Opens the comprehension questions for this passage"
+        />
       </View>
 
       <ReaderDisplaySheet visible={displayOpen} onDismiss={() => setDisplayOpen(false)} />

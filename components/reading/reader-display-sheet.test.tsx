@@ -63,7 +63,7 @@ beforeEach(() => {
 describe('ReaderDisplaySheet', () => {
   it('exposes one checked radio per group and a switch for Night reading', () => {
     const tree = render();
-    expect(checkedIn(tree, 'radio')).toEqual(['Normal', 'Sans font']);
+    expect(checkedIn(tree, 'radio')).toEqual(['Normal', 'Sans font', 'Automatic brightness']);
     const night = pressable(tree, 'Night reading');
     expect(night.props.accessibilityRole).toBe('switch');
     expect(night.props.accessibilityState.checked).toBe(false);
@@ -74,15 +74,16 @@ describe('ReaderDisplaySheet', () => {
     press(pressable(tree, 'Larger text'));
     press(pressable(tree, 'Relaxed'));
     press(pressable(tree, 'Serif font'));
+    press(pressable(tree, 'Brightness 40 percent'));
     press(pressable(tree, 'Night reading'));
     expect(getReadingPreferences()).toEqual({
       nightReading: true,
       fontSizeIndex: 2,
       lineSpacing: 'relaxed',
       font: 'serif',
-      brightness: null,
+      brightness: 0.4,
     });
-    expect(checkedIn(tree, 'radio')).toEqual(['Relaxed', 'Serif font']);
+    expect(checkedIn(tree, 'radio')).toEqual(['Relaxed', 'Serif font', 'Brightness 40 percent']);
   });
 
   it('disables the size step at either end', async () => {

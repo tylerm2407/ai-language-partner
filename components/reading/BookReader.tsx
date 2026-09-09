@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { View, Text, Pressable, ScrollView } from 'react-native';
+import { View, Pressable, ScrollView } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { usePageNarrator } from '../../hooks/usePageNarrator';
@@ -13,10 +13,14 @@ import {
   splitParagraphs,
   type Paragraph,
 } from '../../lib/reading-text';
-import { radii, spacing } from '../../config/theme';
+import { spacing } from '../../config/theme';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { useReadingPreferences } from '../../hooks/useReadingPreferences';
 import { ReaderDisplaySheet } from './ReaderDisplaySheet';
+import { NarrationBar } from './NarrationBar';
+import { SlabButton } from '../ui2/SlabButton';
+import { Ui2ProgressBar } from '../ui2/Ui2ProgressBar';
+import { Body, Caption } from '../ui2/Ui2Text';
 import { ReaderThemeScope } from './ReaderThemeScope';
 import { DEFAULT_LINE_HEIGHT_MULTIPLIER } from './TappableText';
 import { floatingTabBarSpace } from '../navigation/FloatingTabBar';
@@ -46,6 +50,8 @@ interface Props {
 }
 
 const CHARS_PER_PAGE_BASE = 1200; // at 16pt, normal spacing
+/** ~200 words a minute at ~6 characters a word, spaces included. */
+const CHARS_PER_MINUTE = 1200;
 
 /**
  * The shell mounts the theme boundary ABOVE the body, because the body reads
@@ -82,7 +88,7 @@ function BookReaderBody({
   const { fontSize, lineHeightMultiplier, fontFamily } = useReadingPreferences();
   const [currentPage, setCurrentPage] = useState(0);
   const [displayOpen, setDisplayOpen] = useState(false);
-  const [autoAdvance] = useState(true);
+  const [autoAdvance, setAutoAdvance] = useState(true);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const narrator = usePageNarrator();
   const insets = useSafeAreaInsets();
@@ -149,7 +155,16 @@ function BookReaderBody({
     () => currentPageParagraphs.map((p) => p.text).join('\n\n'),
     [currentPageParagraphs],
   );
-  const progressPercent = totalPages > 0 ? ((currentPage + 1) / totalPages) * 100 : 0;
+  const progress = totalPages > 0 ? (currentPage + 1) / totalPages : 0;
+  // Time left at a comfortable 200 words per minute, from the characters
+  // still ahead. Rounded up so the last page never says "0 min".
+  const minutesLeft = useMemo(() => {
+    const remaining = pages.slice(currentPage + 1).reduce(
+      (sum, page) => sum + page.paragraphs.reduce((n, p) => n + p.text.length, 0),
+      0,
+    );
+    return Math.ceil(remaining / CHARS_PER_MINUTE);
+  }, [pages, currentPage]);
 
   // Track whether we should auto-play the next page after navigation
   const shouldAutoPlayRef = useRef(false);
@@ -202,63 +217,49 @@ function BookReaderBody({
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
-      {/* Header */}
-      <View style={{ paddingHorizontal: spacing.md, paddingVertical: spacing.xs, flexDirection: 'row', alignItems: 'center' }}>
-        <Pressable onPress={handleExit} style={{ padding: spacing.xs }} accessibilityRole="button" accessibilityLabel="Exit reading">
+      {/* Header: close, title and meta, display settings. Narration lives in
+          its own bar above the pager now, where a thumb can reach it. */}
+      <View style={{ paddingHorizontal: spacing.xs, flexDirection: 'row', alignItems: 'center' }}>
+        <Pressable
+          onPress={handleExit}
+          style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}
+          accessibilityRole="button"
+          accessibilityLabel="Exit reading"
+        >
           <Ionicons name="close" size={24} color={c.muted} />
         </Pressable>
-        <View style={{ flex: 1, marginLeft: spacing.xs }}>
-          <Text style={{ fontSize: 16, fontWeight: '600', color: c.ink }} numberOfLines={1}>
-            {book.title}
-          </Text>
-          <Text style={{ fontSize: 12, color: c.muted }}>
+        <View style={{ flex: 1, marginHorizontal: spacing.xxs }}>
+          <Body weight="semibold" numberOfLines={1}>{book.title}</Body>
+          <Caption
+            tone="secondary"
+            accessibilityLabel={`Page ${currentPage + 1} of ${totalPages}. About ${minutesLeft} minutes left`}
+          >
             Page {currentPage + 1} of {totalPages}
-          </Text>
+            {minutesLeft > 0 ? ` · about ${minutesLeft} min left` : ''}
+          </Caption>
         </View>
-        {isUnlimitedPlan && (
-          <>
-            <Pressable
-              onPress={narrator.cycleSpeed}
-              style={{ paddingHorizontal: 6, paddingVertical: spacing.xxs, marginRight: spacing.xxs }}
-              accessibilityRole="button"
-              accessibilityLabel={`Playback speed ${narrator.speed}x`}
-            >
-              <Text style={{ fontSize: 13, fontWeight: '600', color: c.primary }}>{narrator.speed}x</Text>
-            </Pressable>
-            <Pressable
-              onPress={handlePlayPause}
-              style={{ padding: spacing.xs }}
-              accessibilityRole="button"
-              accessibilityLabel={narrator.isPlaying && !narrator.isPaused ? 'Pause narration' : 'Play narration'}
-            >
-              <Ionicons
-                name={narrator.isPlaying && !narrator.isPaused ? 'pause-circle' : 'play-circle'}
-                size={28}
-                color={c.primary}
-              />
-            </Pressable>
-          </>
-        )}
         <Pressable
           onPress={() => setDisplayOpen(true)}
           style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}
           accessibilityRole="button"
           accessibilityLabel="Display settings"
-          accessibilityHint="Text size, spacing, font and night reading"
+          accessibilityHint="Text size, spacing, font, brightness and night reading"
         >
           <Ionicons name="text-outline" size={22} color={c.primary} />
         </Pressable>
       </View>
 
-      {/* Progress Bar */}
-      <View style={{ height: 3, backgroundColor: c.track, marginHorizontal: spacing.md }}>
-        <View style={{ height: 3, backgroundColor: c.primary, width: `${progressPercent}%` }} />
-      </View>
+      <Ui2ProgressBar
+        progress={progress}
+        height={3}
+        accessibilityLabel="Progress through the book"
+        style={{ marginHorizontal: spacing.md }}
+      />
 
       {/* Page Content */}
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ padding: spacing.xl, paddingBottom: spacing.xl }}
+        contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.lg }}
         keyboardShouldPersistTaps="handled"
       >
         <TappableText
@@ -281,40 +282,43 @@ function BookReaderBody({
         />
       </ScrollView>
 
-      {/* Page Navigation — always visible at bottom */}
+      {isUnlimitedPlan && (
+        <NarrationBar
+          isPlaying={narrator.isPlaying}
+          isPaused={narrator.isPaused}
+          speed={narrator.speed}
+          page={currentPage + 1}
+          autoAdvance={autoAdvance}
+          onPlayPause={handlePlayPause}
+          onCycleSpeed={narrator.cycleSpeed}
+          onToggleAutoAdvance={() => setAutoAdvance((v) => !v)}
+        />
+      )}
+
+      {/* Pager — always visible at the bottom. */}
       <View style={{
-        flexDirection: 'row', paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.sm + insets.bottom + floatingTabBarSpace(), gap: spacing.sm,
-        borderTopWidth: 1, borderTopColor: c.cardBorder, backgroundColor: c.bg,
+        flexDirection: 'row',
+        paddingHorizontal: spacing.md,
+        paddingTop: spacing.xs,
+        paddingBottom: spacing.sm + insets.bottom + floatingTabBarSpace(),
+        gap: spacing.sm,
+        backgroundColor: c.bg,
       }}>
-        <Pressable
-          onPress={() => goToPage(currentPage - 1)}
+        <SlabButton
+          label="Previous"
+          variant="tint"
+          arrow={false}
           disabled={currentPage === 0}
-          style={{
-            flex: 1, paddingVertical: 14, borderRadius: radii.lg, alignItems: 'center',
-            backgroundColor: currentPage === 0 ? c.surface2 : c.card,
-            borderWidth: 1, borderColor: c.cardBorder,
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Previous page"
-        >
-          <Text style={{ fontSize: 16, fontWeight: '600', color: currentPage === 0 ? c.idle : c.ink }}>
-            Previous
-          </Text>
-        </Pressable>
-        <Pressable
+          onPress={() => goToPage(currentPage - 1)}
+          style={{ flex: 1 }}
+        />
+        <SlabButton
+          label={currentPage >= totalPages - 1 ? 'Finish' : 'Next'}
+          variant="primary"
+          arrow={currentPage < totalPages - 1}
           onPress={() => goToPage(currentPage + 1)}
-          disabled={currentPage >= totalPages - 1}
-          style={{
-            flex: 1, paddingVertical: 14, borderRadius: radii.lg, alignItems: 'center',
-            backgroundColor: currentPage >= totalPages - 1 ? c.track : c.primary,
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Next page"
-        >
-          <Text style={{ fontSize: 16, fontWeight: '600', color: currentPage >= totalPages - 1 ? c.idle : c.onPrimary }}>
-            {currentPage >= totalPages - 1 ? 'Finish' : 'Next'}
-          </Text>
-        </Pressable>
+          style={{ flex: 1 }}
+        />
       </View>
 
       <ReaderDisplaySheet visible={displayOpen} onDismiss={() => setDisplayOpen(false)} />
