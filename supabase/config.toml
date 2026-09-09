@@ -156,6 +156,15 @@ verify_jwt = true
 [functions.score-pronunciation]
 verify_jwt = true
 
+# grade-writing and generate-story: live with the platform gate ON (prod
+# v37 / v22, checked 2026-09-08) and authenticate in-body as well. Recorded
+# so the CLI default stops being the only thing keeping them consistent.
+[functions.grade-writing]
+verify_jwt = true
+
+[functions.generate-story]
+verify_jwt = true
+
 # ─── generate-avatar ──────────────────────────────────────────────────────
 # Deployed verify_jwt = true (matches the CLI default) and authenticates again
 # in the body via getAuthenticatedUser. Since migration 112 it answers 202 with

@@ -24,6 +24,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, corsResponse } from '../_shared/cors.ts';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { checkBurstLimit } from '../_shared/burst-limit.ts';
+import { resolveEntitlement } from '../_shared/entitlement.ts';
 import { generateValidated } from '../_shared/validated-generate.ts';
 import { isValidCefrLevel, isValidLanguage, isValidUUID, sanitizeText } from '../_shared/validation.ts';
 import { PROVIDER_TIMEOUT_MS, providerFetch } from '../_shared/provider-fetch.ts';
@@ -93,7 +94,9 @@ function json(body: unknown, status = 200): Response {
  */
 type JsonAnswer =
   | { ok: true; data: unknown }
-  | { ok: false; reason: 'unavailable' };
+  /** `provider`: no usable answer came back. `safety`: an answer came back
+   *  that we would not use — paid for, and driven by the learner's text. */
+  | { ok: false; reason: 'provider' | 'safety' };
 
 async function askForJson(
   fn: string,
@@ -139,7 +142,9 @@ async function askForJson(
     },
   });
 
-  if (result.usedFallback || !result.text) return { ok: false, reason: 'unavailable' };
+  if (result.usedFallback || !result.text) {
+    return { ok: false, reason: result.fallbackReason === 'safety' ? 'safety' : 'provider' };
+  }
   return { ok: true, data: extractJson(result.text) };
 }
 
@@ -216,26 +221,22 @@ serve(async (req: Request) => {
   }
 
   // Paid feature. Checked before anything is generated, and before the free
-  // text is even looked at.
-  const { data: sub } = await supabase
-    .from('subscriptions')
-    .select('tier, is_active, current_period_end')
-    .eq('user_id', authUser.userId)
-    .eq('is_active', true)
-    .maybeSingle();
-  const tier = sub?.tier ?? 'starter';
-  const expired = sub?.current_period_end
-    ? new Date(sub.current_period_end as string).getTime() < Date.now()
-    : false;
-  if (!ENTITLED_TIERS.has(tier) || expired) {
+  // text is even looked at. `resolveEntitlement` is the one definition of
+  // "paid" (active AND unexpired) and carries the daily track allowance.
+  const { tier, limits } = await resolveEntitlement(supabase, authUser.userId);
+  if (!ENTITLED_TIERS.has(tier)) {
     return json(
       { error: 'Goal tracks are part of a paid plan.', code: 'UPGRADE_REQUIRED' },
       403,
     );
   }
 
-  if (body.action === 'lesson') return handleLesson(supabase, body);
-  if (body.action === 'resolve') return handleResolve(supabase, authUser.userId, body);
+  if (body.action === 'lesson') {
+    return handleLesson(supabase, authUser.userId, body, limits.dailyTextMessages);
+  }
+  if (body.action === 'resolve') {
+    return handleResolve(supabase, authUser.userId, body, limits.dailyGoalTracks);
+  }
   return json({ error: 'Unknown action' }, 400);
 });
 
@@ -244,6 +245,7 @@ async function handleResolve(
   supabase: any,
   userId: string,
   body: ResolveRequest,
+  dailyGoalTracks: number,
 ): Promise<Response> {
   const { language, cefrLevel, nativeLanguage } = body;
   // These three interpolate into system prompts and into the goal key, so they
@@ -298,6 +300,35 @@ async function handleResolve(
     return json({ courseId: existing.id, goalKey: existing.goal_key, generated: false });
   }
 
+  // ── Daily ceiling, charged at the first expensive call ─────────────────
+  // Migration 103 added the `goal_tracks` counter and `dailyGoalTracks` for
+  // exactly this, and this function never called it — the only ceiling on
+  // the 1,500-token planner was the 4-per-5-minutes burst limit. Charged
+  // here, after the reuse check, so joining a shared track costs nothing;
+  // the 200-token mapper above stays under the burst limit alone.
+  const { data: trackOk, error: trackErr } = await supabase.rpc('consume_daily_quota', {
+    p_user_id: userId,
+    p_counter: 'goal_tracks',
+    p_limit: dailyGoalTracks,
+  });
+  if (trackErr) {
+    // Fail CLOSED: an outage in the meter is not a reason to build unmetered.
+    console.error('[goal-track] consume_daily_quota failed:', trackErr.message);
+    return json({ error: 'Building your track is unavailable right now.', code: 'QUOTA_UNAVAILABLE' }, 503);
+  }
+  if (trackOk !== true) {
+    return json(
+      { error: "You've built your track for today. Come back tomorrow to change it.", code: 'DAILY_GOAL_TRACK_LIMIT_REACHED' },
+      429,
+    );
+  }
+  /** Give the unit back — only when nothing was delivered AND the provider,
+   *  not the learner's text, is why. Best-effort. */
+  const refundTrack = async (): Promise<void> => {
+    const { error } = await supabase.rpc('refund_daily_quota', { p_user_id: userId, p_counter: 'goal_tracks' });
+    if (error) console.error('[goal-track] refund_daily_quota failed:', error.message);
+  };
+
   // ── Build it ───────────────────────────────────────────────────────────
   const planned = await askForJson(
     'goal-planner',
@@ -308,6 +339,7 @@ async function handleResolve(
     cefrLevel,
   );
   if (!planned.ok) {
+    if (planned.reason === 'provider') await refundTrack();
     return json(
       { error: 'Building your track is unavailable right now. Please try again.', code: 'GOAL_TRACK_UNAVAILABLE' },
       503,
@@ -315,6 +347,7 @@ async function handleResolve(
   }
   const plan = parseUnitPlan(planned.data);
   if (!plan) {
+    await refundTrack();
     return json(
       { error: 'Building your track failed. Please try again.', code: 'PLAN_FAILED' },
       502,
@@ -349,6 +382,7 @@ async function handleResolve(
       return json({ courseId: raced.id, goalKey: raced.goal_key, generated: false });
     }
     console.error('[goal-track] course insert failed:', courseError.message);
+    await refundTrack();
     return json({ error: 'Building your track failed. Please try again.', code: 'PLAN_FAILED' }, 502);
   }
 
@@ -416,7 +450,9 @@ async function enrol(
 async function handleLesson(
   // deno-lint-ignore no-explicit-any
   supabase: any,
+  userId: string,
   body: LessonRequest,
+  dailyTextMessages: number,
 ): Promise<Response> {
   if (!isValidUUID(body.lessonId) || !isValidLanguage(body.nativeLanguage)) {
     return json({ error: 'Invalid request' }, 400);
@@ -440,6 +476,37 @@ async function handleLesson(
     return json({ error: 'Lesson not found' }, 404);
   }
 
+  // Only a learner ENROLLED in this track may trigger its generation. Without
+  // this any paid account could walk every pending lesson shell in the
+  // catalogue and fire a 3,000-token call per lesson.
+  const { data: enrolled } = await supabase
+    .from('user_goal_tracks')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('course_id', lesson.units?.course_id)
+    .maybeSingle();
+  if (!enrolled) return json({ error: 'Lesson not found' }, 404);
+
+  // A generation is an AI call on the learner's behalf; it draws one unit of
+  // the daily text-message budget, charged before the claim so a refused
+  // learner never holds the lesson in 'generating'.
+  const { data: msgOk, error: msgErr } = await supabase.rpc('consume_daily_quota', {
+    p_user_id: userId,
+    p_counter: 'text_messages',
+    p_limit: dailyTextMessages,
+  });
+  if (msgErr) {
+    console.error('[goal-track] consume_daily_quota failed:', msgErr.message);
+    return json({ error: 'Preparing this lesson is unavailable right now.', code: 'QUOTA_UNAVAILABLE' }, 503);
+  }
+  if (msgOk !== true) {
+    return json({ error: "You've reached your daily AI usage limit.", code: 'DAILY_TEXT_LIMIT_REACHED' }, 429);
+  }
+  const refundMessage = async (): Promise<void> => {
+    const { error } = await supabase.rpc('refund_daily_quota', { p_user_id: userId, p_counter: 'text_messages' });
+    if (error) console.error('[goal-track] refund_daily_quota failed:', error.message);
+  };
+
   // Claim it, so two learners opening lesson 3 at once do not both pay.
   const { data: claimed } = await supabase
     .from('lessons')
@@ -448,7 +515,10 @@ async function handleLesson(
     .eq('generation_state', 'pending')
     .select('id')
     .maybeSingle();
-  if (!claimed) return json({ ready: false, generating: true }, 202);
+  if (!claimed) {
+    await refundMessage();
+    return json({ ready: false, generating: true }, 202);
+  }
 
   const generated = await askForJson(
     'goal-lesson',
@@ -467,8 +537,9 @@ async function handleLesson(
 
   if (!generated.ok) {
     // Hand the claim back before returning, or the lesson stays 'generating'
-    // forever and nobody can retry it.
+    // forever and nobody can retry it. Refund only a provider failure.
     await supabase.from('lessons').update({ generation_state: 'pending' }).eq('id', lesson.id);
+    if (generated.reason === 'provider') await refundMessage();
     return json(
       { error: 'Preparing this lesson is unavailable right now. Please try again.', code: 'GOAL_TRACK_UNAVAILABLE' },
       503,

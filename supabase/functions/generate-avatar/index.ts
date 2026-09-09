@@ -34,6 +34,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, corsResponse } from '../_shared/cors.ts';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { checkBurstLimit } from '../_shared/burst-limit.ts';
+import { resolveTier } from '../_shared/entitlement.ts';
 import { getPlanLimits, type PlanTier } from '../_shared/plan-limits.ts';
 import { getAvatarStyle, listAvatarStyles } from '../_shared/avatar-styles.ts';
 import { OPENAI_API_KEY, renderAvatar, failJob, runInBackground } from './render.ts';
@@ -135,13 +136,7 @@ serve(async (req: Request) => {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
   // ── Entitlement: paid tiers only, enforced server-side ──────────────────
-  const { data: sub } = await supabase
-    .from('subscriptions')
-    .select('tier, is_active')
-    .eq('user_id', userId)
-    .maybeSingle();
-
-  const tier: PlanTier = (sub?.is_active && sub.tier ? sub.tier : 'starter') as PlanTier;
+  const tier: PlanTier = await resolveTier(supabase, userId);
   const isPaid = PAID_TIERS.includes(tier);
 
   // ── Abuse control ───────────────────────────────────────────────────────
@@ -198,22 +193,21 @@ serve(async (req: Request) => {
       );
     }
   } else {
-    // Free tier: allowed exactly once, ever. Read the flag without spending it
-    // so a failed generation stays retryable, and refuse early when it is
-    // already gone — that is the whole point of checking before we pay a
-    // provider for an image this caller is not entitled to.
-    const { data: profile, error: profileErr } = await supabase
-      .from('user_profiles')
-      .select('free_avatar_used_at')
-      .eq('user_id', userId)
-      .maybeSingle();
+    // Free tier: allowed exactly once, ever. SPENT here, atomically, before
+    // any provider is paid — a read-then-spend-after-success let a burst of
+    // three requests all see the grant unspent and all render. A failed
+    // render gives it back (release_free_avatar in failJob), so the learner
+    // still gets their one image.
+    const { data: claimed, error: claimErr } = await supabase.rpc('consume_free_avatar', {
+      p_user_id: userId,
+    });
 
-    if (profileErr) {
+    if (claimErr) {
       // Fail closed for the same reason as the quota branch above.
-      console.error('[generate-avatar] free-grant lookup failed:', profileErr.message);
+      console.error('[generate-avatar] consume_free_avatar failed:', claimErr.message);
       return json({ error: 'Could not verify your plan. Try again shortly.' }, 503);
     }
-    if (!profile || profile.free_avatar_used_at !== null) {
+    if (claimed !== true) {
       return json(
         {
           error: "You've used your free avatar. More are included with a paid plan.",

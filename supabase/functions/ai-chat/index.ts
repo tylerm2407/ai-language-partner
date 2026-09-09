@@ -282,11 +282,30 @@ serve(async (req: Request) => {
 
     let topic = rawTopic ? sanitizeText(rawTopic, MAX_TOPIC_CHARS) : rawTopic;
     if (assignmentId) {
-      const { data: assignment } = await supabase
+      const { data: assignmentRow } = await supabase
         .from('assignments')
-        .select('title, custom_scenario, scenario_key, instructions, vocabulary_focus, grammar_focus')
+        .select('title, custom_scenario, scenario_key, instructions, vocabulary_focus, grammar_focus, classroom_id, teacher_id')
         .eq('id', assignmentId)
         .single();
+
+      // Teacher-authored content is only folded in for the people it was
+      // written for: the assignment's teacher, or a learner currently enrolled
+      // in its classroom. Anyone else holding the UUID gets a plain chat.
+      let assignment = null;
+      if (assignmentRow) {
+        if (assignmentRow.teacher_id === authenticatedUserId) {
+          assignment = assignmentRow;
+        } else {
+          const { data: enrolment } = await supabase
+            .from('classroom_enrollments')
+            .select('id')
+            .eq('classroom_id', assignmentRow.classroom_id)
+            .eq('student_id', authenticatedUserId)
+            .is('dropped_at', null)
+            .maybeSingle();
+          if (enrolment) assignment = assignmentRow;
+        }
+      }
 
       if (assignment) {
         const scenarioDesc =

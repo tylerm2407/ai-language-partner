@@ -94,19 +94,34 @@ Deno.test('shouldRefundQuota: false for a real grade (graded: true), even a low 
 });
 
 Deno.test('shouldRefundQuota: fallback from the orchestration path triggers a refund', async () => {
-  const result = await gradeWithValidation(
+  const { feedback, fallbackReason } = await gradeWithValidation(
     () => Promise.resolve('not json at all'),
     noopLog,
   );
-  assertEquals(result.graded, false);
-  assertEquals(shouldRefundQuota(result), true);
+  assertEquals(feedback.graded, false);
+  assertEquals(fallbackReason, 'parse');
+  assertEquals(shouldRefundQuota(feedback, fallbackReason), true);
+});
+
+Deno.test('shouldRefundQuota: a safety fallback is NOT refunded — the submission drove it', async () => {
+  // Every attempt echoes a flagged token back, so the safety budget is
+  // exhausted and the honest fallback ships. Three paid calls happened.
+  let calls = 0;
+  const { feedback, fallbackReason } = await gradeWithValidation(() => {
+    calls++;
+    return Promise.resolve('{"correctedVersion":"visit http://example.com"}');
+  }, noopLog);
+  assertEquals(calls, 3);
+  assertEquals(feedback.graded, false);
+  assertEquals(fallbackReason, 'safety');
+  assertEquals(shouldRefundQuota(feedback, fallbackReason), false);
 });
 
 // ─── gradeWithValidation orchestration ───────────────────────────────
 
 Deno.test('gradeWithValidation: valid first response is returned as a real grade', async () => {
   let calls = 0;
-  const result = await gradeWithValidation(() => {
+  const { feedback: result } = await gradeWithValidation(() => {
     calls++;
     return Promise.resolve(VALID_GRADE);
   }, noopLog);
@@ -117,7 +132,7 @@ Deno.test('gradeWithValidation: valid first response is returned as a real grade
 
 Deno.test('gradeWithValidation: parse failure retries once, then honest fallback', async () => {
   let calls = 0;
-  const result = await gradeWithValidation(() => {
+  const { feedback: result } = await gradeWithValidation(() => {
     calls++;
     return Promise.resolve('I could not produce JSON, sorry.');
   }, noopLog);
@@ -131,7 +146,7 @@ Deno.test('gradeWithValidation: parse failure retries once, then honest fallback
 
 Deno.test('gradeWithValidation: parse failure then valid retry returns the real grade', async () => {
   let calls = 0;
-  const result = await gradeWithValidation(() => {
+  const { feedback: result } = await gradeWithValidation(() => {
     calls++;
     return Promise.resolve(calls === 1 ? 'not json' : VALID_GRADE);
   }, noopLog);
@@ -142,7 +157,7 @@ Deno.test('gradeWithValidation: parse failure then valid retry returns the real 
 
 Deno.test('gradeWithValidation: unsafe output exhausts safety retries, then fallback', async () => {
   let calls = 0;
-  const result = await gradeWithValidation(() => {
+  const { feedback: result, fallbackReason } = await gradeWithValidation(() => {
     calls++;
     return Promise.resolve('this essay is fucking terrible');
   }, noopLog);
@@ -150,4 +165,5 @@ Deno.test('gradeWithValidation: unsafe output exhausts safety retries, then fall
   assertEquals(calls, 3);
   assertEquals(result.graded, false);
   assertEquals(result.grammarScore, 0);
+  assertEquals(fallbackReason, 'safety');
 });

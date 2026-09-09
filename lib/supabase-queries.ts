@@ -731,11 +731,22 @@ export async function upsertDailyStats(
  * both pass a separate read-then-write check. Returns true iff a slot was
  * consumed; callers should only introduce the new card when it did.
  */
-export async function tryConsumeNewCardSlot(): Promise<boolean> {
+export async function tryConsumeNewCardSlot(cardId?: string): Promise<boolean> {
   // No cap argument. It used to take one, which meant the number deciding what
   // a free plan is worth was asserted by the client — a patched build could
-  // hand itself the maximum. The RPC now reads it from get_effective_limits.
-  const { data, error } = await supabase.rpc('try_consume_new_card_slot');
+  // hand itself the maximum. The RPC reads it from get_effective_limits.
+  //
+  // The card id is passed so the slot is RESERVED for that card (migration
+  // 114): the review_items insert trigger — which is what actually enforces
+  // the cap now, so a client that skips this call is still capped — charges
+  // nothing for a reserved card. That keeps the honest path (reserve here,
+  // insert now or from the offline queue later) at exactly one slot.
+  //
+  // Without a card id (a card that does not exist yet — an annotation or a
+  // correction being turned into one) this only PEEKS: true if a slot is
+  // free, nothing consumed. The insert trigger charges the slot when the
+  // review item lands, so the answer here is advisory and cannot double-bill.
+  const { data, error } = await supabase.rpc('try_consume_new_card_slot', { p_card_id: cardId ?? null });
   if (error) throw error;
   return data === true;
 }

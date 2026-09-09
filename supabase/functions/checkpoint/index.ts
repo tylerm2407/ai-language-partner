@@ -408,12 +408,33 @@ async function handleStart(supabase: Db, userId: string, body: Record<string, un
 
 // ─── submit ────────────────────────────────────────────────────────────────
 
+/** Writing grades per learner per day, every tier. One Haiku call each; a
+ *  placement test needs a handful, and this was the only paid call in the
+ *  app with no daily ceiling at all. */
+const DAILY_CHECKPOINT_GRADES = 30;
+
 async function gradeWriting(
+  supabase: Db,
+  userId: string,
   response: string,
   language: string,
   band: string,
 ): Promise<number | null> {
   if (!ANTHROPIC_API_KEY) return null;
+  const { data: allowed, error: quotaErr } = await supabase.rpc('consume_daily_quota', {
+    p_user_id: userId,
+    p_counter: 'checkpoint_grades',
+    p_limit: DAILY_CHECKPOINT_GRADES,
+  });
+  if (quotaErr) {
+    // Fail CLOSED: an outage in the meter is not a reason to grade unmetered.
+    console.error('[checkpoint] consume_daily_quota failed:', quotaErr.message);
+    return null;
+  }
+  if (allowed !== true) {
+    console.warn(`[checkpoint] daily writing-grade cap reached for ${userId}; writing left ungraded`);
+    return null;
+  }
   const result = await generateValidated({
     fn: 'checkpoint-writing',
     targetLevel: band as CEFR,
@@ -572,7 +593,7 @@ async function handleSubmit(supabase: Db, userId: string, body: Record<string, u
     if (item.strand === 'listening' || item.strand === 'reading') {
       scores[item.strand] = isCorrect(answer, item) ? 1 : 0;
     } else if (item.strand === 'writing') {
-      const score = await gradeWriting(answer, attempt.language as string, attempt.band as string);
+      const score = await gradeWriting(supabase, userId, answer, attempt.language as string, attempt.band as string);
       if (score !== null) scores.writing = score;
     }
   }

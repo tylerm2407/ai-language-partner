@@ -12,7 +12,7 @@
 // `starter`. There is no error to notice.
 
 import { assertEquals } from 'https://deno.land/std@0.168.0/testing/asserts.ts';
-import { resolveTier, classifyEvent } from './tier.ts';
+import { resolveTier, classifyEvent, isRevocation } from './tier.ts';
 
 // ------------------------------------------------------------ resolveTier
 
@@ -139,4 +139,25 @@ Deno.test('classifyEvent: an active event with no readable tier stays inactive',
     isActive: false,
     cancelAtPeriodEnd: false,
   });
+});
+
+// ------------------------------------------------------------ revocations
+
+Deno.test('a refund (CANCELLATION with CUSTOMER_SUPPORT) is inactive NOW, not at period end', () => {
+  const d = classifyEvent('CANCELLATION', ['vip'], 'fluenci_vip_yearly', 'CUSTOMER_SUPPORT');
+  assertEquals(d, { tier: 'starter', isActive: false, cancelAtPeriodEnd: false });
+});
+
+Deno.test('a developer revoke is a revocation on either event type', () => {
+  assertEquals(isRevocation('CANCELLATION', 'DEVELOPER_INITIATED'), true);
+  assertEquals(isRevocation('EXPIRATION', 'DEVELOPER_INITIATED'), true);
+  assertEquals(isRevocation('EXPIRATION', 'CUSTOMER_SUPPORT'), true);
+});
+
+Deno.test('an ordinary unsubscribe is NOT a revocation: still entitled until the period end', () => {
+  assertEquals(isRevocation('CANCELLATION', 'UNSUBSCRIBE'), false);
+  assertEquals(isRevocation('EXPIRATION', 'BILLING_ERROR'), false);
+  assertEquals(isRevocation('RENEWAL', 'CUSTOMER_SUPPORT'), false);
+  const d = classifyEvent('CANCELLATION', ['vip'], null, 'UNSUBSCRIBE');
+  assertEquals(d, { tier: 'vip', isActive: true, cancelAtPeriodEnd: true });
 });

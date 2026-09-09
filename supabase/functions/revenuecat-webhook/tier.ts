@@ -58,6 +58,21 @@ export const INACTIVE_EVENTS = new Set(['EXPIRATION', 'SUBSCRIPTION_PAUSED', 'BI
  *  "Send test webhook" button. */
 export const IGNORED_EVENTS = new Set(['TRANSFER', 'TEST']);
 
+/**
+ * Reasons that mean the store took the money back or the developer pulled
+ * the entitlement: a refund, a chargeback, a revoke. RevenueCat delivers
+ * these as CANCELLATION and EXPIRATION carrying a `cancel_reason` /
+ * `expiration_reason`, with an `expiration_at_ms` that is EARLIER than the
+ * period end already stored. The ordering guard in index.ts reads "earlier
+ * than stored" as "stale" and would drop them — which is a free year for
+ * anyone who buys annual and refunds inside the store's window.
+ */
+export const REVOCATION_REASONS = new Set(['CUSTOMER_SUPPORT', 'DEVELOPER_INITIATED']);
+
+export function isRevocation(type: string, reason: string | null | undefined): boolean {
+  return (type === 'CANCELLATION' || type === 'EXPIRATION') && REVOCATION_REASONS.has(reason ?? '');
+}
+
 export interface TierDecision {
   tier: Tier;
   isActive: boolean;
@@ -75,8 +90,16 @@ export function classifyEvent(
   type: string,
   entitlementIds: string[],
   productId: string | null,
+  reason: string | null = null,
 ): TierDecision | null {
   if (IGNORED_EVENTS.has(type)) return null;
+
+  // A revocation is inactive NOW, whatever the event type says about
+  // auto-renew. Checked before the CANCELLATION branch below, which would
+  // otherwise keep a refunded learner entitled until the period end.
+  if (isRevocation(type, reason)) {
+    return { tier: 'starter', isActive: false, cancelAtPeriodEnd: false };
+  }
 
   if (INACTIVE_EVENTS.has(type)) {
     return { tier: 'starter', isActive: false, cancelAtPeriodEnd: false };

@@ -144,7 +144,7 @@ export async function recordLessonSrsResult(
   if (!introducedThisSession.has(cardId)) {
     let slotConsumed: boolean;
     try {
-      slotConsumed = await tryConsumeNewCardSlot();
+      slotConsumed = await tryConsumeNewCardSlot(cardId);
     } catch (err) {
       if (!isNetworkError(err)) throw err;
       // Offline: the atomic cap RPC can't run, so a brand-new card can't be

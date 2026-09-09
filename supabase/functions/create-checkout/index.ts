@@ -55,7 +55,18 @@ serve(async (req: Request) => {
       httpClient: Stripe.createFetchHttpClient(),
     });
 
-    const { userId, email, priceKey, successUrl, cancelUrl } = (await req.json()) as CheckoutRequest;
+    const { userId, priceKey, successUrl, cancelUrl } = (await req.json()) as CheckoutRequest;
+    // The Stripe customer is found by the AUTHENTICATED email, never by a
+    // body field: a client-supplied email let a caller attach their new
+    // subscription to whichever existing Stripe customer had that address —
+    // the victim's invoices, billing portal and saved payment methods.
+    const email = authUser.email;
+    if (!email) {
+      return new Response(
+        JSON.stringify({ error: 'Account has no email address' }),
+        { status: 400, headers }
+      );
+    }
 
     if (userId !== authUser.userId) {
       return new Response(

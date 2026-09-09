@@ -76,6 +76,23 @@ serve(async (req: Request) => {
         break;
       }
 
+      // Money went back: the entitlement goes with it. Stripe does NOT cancel
+      // the subscription on a refund or a dispute by itself, so without these
+      // a refunded customer kept the tier until the period ran out.
+      case 'charge.refunded': {
+        const charge = event.data.object as Stripe.Charge;
+        await handleChargeReversed(charge, 'charge.refunded');
+        break;
+      }
+      case 'charge.dispute.created': {
+        const dispute = event.data.object as Stripe.Dispute;
+        const charge = typeof dispute.charge === 'string'
+          ? await stripe.charges.retrieve(dispute.charge)
+          : dispute.charge;
+        await handleChargeReversed(charge, 'charge.dispute.created');
+        break;
+      }
+
       default:
         console.log(`Unhandled event type: ${event.type}`);
     }
@@ -182,6 +199,27 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
     .update({ is_active: false })
     .eq('stripe_subscription_id', subscriptionId);
   if (error) throw new Error(`subscriptions deactivate failed for ${subscriptionId}: ${error.message}`);
+}
+
+/**
+ * A refund or a chargeback on a subscription charge revokes access now. Keyed
+ * on the Stripe customer, which is the one id every charge carries; a partial
+ * refund is treated the same way — a partially refunded period is not one we
+ * can meter, and support can re-provision by hand.
+ */
+async function handleChargeReversed(charge: Stripe.Charge, why: string) {
+  const customerId = typeof charge.customer === 'string' ? charge.customer : charge.customer?.id;
+  if (!customerId) {
+    console.warn(`[stripe-webhook] ${why} ${charge.id} has no customer; nothing to revoke`);
+    return;
+  }
+  const { data, error } = await supabase
+    .from('subscriptions')
+    .update({ tier: 'starter', is_active: false, cancel_at_period_end: false })
+    .eq('stripe_customer_id', customerId)
+    .select('user_id');
+  if (error) throw new Error(`subscriptions revoke failed for customer ${customerId}: ${error.message}`);
+  console.log(`[stripe-webhook] ${why}: revoked ${data?.length ?? 0} subscription row(s) for customer ${customerId}`);
 }
 
 function determineTier(priceId: string | undefined): string {

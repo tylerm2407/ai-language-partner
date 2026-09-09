@@ -1,12 +1,12 @@
 // Supabase Edge Function: Pronunciation Scoring
 // Accepts base64 audio and expected text, returns a pronunciation score.
 // Enforces per-plan daily voice minute limits before processing.
-// Uses OpenAI Whisper for real speech-to-text transcription.
+// Uses OpenAI speech-to-text (STT_MODEL below) for real transcription.
 // Deploy: npx supabase functions deploy score-pronunciation
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
-import { getPlanLimits } from '../_shared/plan-limits.ts';
+import { resolveEntitlement } from '../_shared/entitlement.ts';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { corsHeaders, corsResponse } from '../_shared/cors.ts';
 import { checkBurstLimit } from '../_shared/burst-limit.ts';
@@ -18,23 +18,21 @@ import {
 } from '../_shared/validation.ts';
 import { validateContentSafety } from '../_shared/content-safety.ts';
 import { PROVIDER_TIMEOUT_MS, providerFetch } from '../_shared/provider-fetch.ts';
+import { runInBackground } from '../_shared/background.ts';
 import { calculatePronunciationScore } from './scoring.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const OPENAI_API_KEY = Deno.env.get('OPENAI_KEY');
 
-// deno-lint-ignore no-explicit-any
-async function getUserTier(supabase: any, userId: string): Promise<string> {
-  const { data } = await supabase
-    .from('subscriptions')
-    .select('tier, is_active')
-    .eq('user_id', userId)
-    .single();
-
-  if (data?.is_active && data.tier) return data.tier;
-  return 'starter';
-}
+/**
+ * Speech-to-text model. `gpt-4o-mini-transcribe` answers a few-second clip
+ * noticeably faster than `whisper-1` and is what the learner is waiting on,
+ * so latency decides this. Env-overridable so a regression in what it hears
+ * (it is an LLM-backed model and may tidy a mispronunciation that Whisper
+ * would have transcribed literally) can be rolled back without a deploy.
+ */
+const STT_MODEL = Deno.env.get('PRONUNCIATION_STT_MODEL') ?? 'gpt-4o-mini-transcribe';
 
 interface ScoreRequest {
   audioBase64: string;
@@ -58,10 +56,18 @@ serve(async (req: Request) => {
   }
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  // Per-phase timings, logged on success. The learner is staring at a
+  // spinner for the whole of this, so where the time goes is worth knowing.
+  const startedAt = performance.now();
+  const timing: Record<string, number> = {};
+  const mark = (phase: string, from: number) => {
+    timing[phase] = Math.round(performance.now() - from);
+  };
 
   try {
     // Verify authentication
     const authUser = await getAuthenticatedUser(req);
+    mark('auth', startedAt);
     if (!authUser) {
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
@@ -105,14 +111,21 @@ serve(async (req: Request) => {
     }
     const attemptSource = source ?? 'practice';
 
-    // Cost/abuse guard: cap audio size and burst rate before Whisper.
+    // Cost/abuse guard: cap audio size and burst rate before the STT call.
     if (audioBase64.length > MAX_AUDIO_BASE64_SIZE) {
       return new Response(
         JSON.stringify({ error: 'Audio too large.' }),
         { status: 413, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    const burstOk = await checkBurstLimit(supabase, authenticatedUserId, 'score-pronunciation', 20, 60);
+    // The burst counter (Redis) and the tier lookup (Postgres) are independent
+    // round trips, so they run together; only the quota consume below needs
+    // the tier. Serially this was two waits on the learner's critical path.
+    const gatesAt = performance.now();
+    const [burstOk, { limits }] = await Promise.all([
+      checkBurstLimit(supabase, authenticatedUserId, 'score-pronunciation', 20, 60),
+      resolveEntitlement(supabase, authenticatedUserId),
+    ]);
     if (!burstOk) {
       return new Response(
         JSON.stringify({ error: 'Too many requests. Please slow down.', code: 'RATE_LIMITED' }),
@@ -121,8 +134,6 @@ serve(async (req: Request) => {
     }
 
     // ── Enforce daily pronunciation score limit ───────────────
-    const tier = await getUserTier(supabase, authenticatedUserId);
-    const limits = getPlanLimits(tier);
 
     // Atomic check-and-consume (migration 037) — race-free under
     // concurrent requests, replaces read-then-increment.
@@ -144,8 +155,12 @@ serve(async (req: Request) => {
       );
     }
 
-    // Step 1: Transcribe audio using OpenAI Whisper
+    mark('gates', gatesAt);
+
+    // Step 1: Transcribe audio
+    const sttAt = performance.now();
     const transcription = await transcribeAudio(audioBase64, language);
+    mark('stt', sttAt);
 
     // Step 2: Score the transcription against expected text and accepted variants
     const score = calculatePronunciationScore(transcription, expectedText, acceptedVariants ?? []);
@@ -156,7 +171,7 @@ serve(async (req: Request) => {
       (targetWord ? normalizedTranscription.includes(targetWord.toLowerCase().trim()) : false) ||
       (targetGrammar ? normalizedTranscription.includes(targetGrammar.toLowerCase().trim()) : false);
 
-    // Step 4: Whisper output is user-audio-derived and unfiltered — safety
+    // Step 4: STT output is user-audio-derived and unfiltered — safety
     // check before echoing it back. The score (computed above from the raw
     // transcription) is still returned; only the echoed text is replaced.
     // phonemeErrors quote transcribed words, so they are suppressed too.
@@ -186,40 +201,41 @@ serve(async (req: Request) => {
     // show speaking as `not_assessed`.
     //
     // Non-fatal, exactly like ai-chat's correction_log write: a learner who
-    // recorded audio and waited for Whisper gets their score even if the
+    // recorded audio and waited for transcription gets their score even if the
     // insert fails. The write is service-role — there is no client INSERT
     // policy on the table, by design.
     //
     // What is stored is the *safe* transcription, not the raw one: if the
-    // safety pipeline rejected what Whisper heard, we do not tell the learner
+    // safety pipeline rejected what the model heard, we do not tell the learner
     // and we do not keep it either. The score, computed from the raw text
     // above, is unaffected.
-    try {
-      const { error: persistErr } = await supabase.from('pronunciation_scores').insert({
-        user_id: authenticatedUserId,
-        // Bounded rather than rejected: `language` is already accepted as free
-        // text by the Whisper call above and changing that is out of scope here.
-        target_language: sanitizeText(language ?? '', 32),
-        expected_text: sanitizeText(expectedText, MAX_STORED_TEXT),
-        transcription: sanitizeText(safeTranscription, MAX_STORED_TEXT),
-        score: score.score,
-        is_correct: isCorrect,
-        phoneme_errors: safePhonemeErrors,
-        source: attemptSource,
-        card_id: cardId ?? null,
-      });
-      if (persistErr) {
-        console.warn(
-          '[score-pronunciation] pronunciation_scores write failed (non-fatal):',
-          persistErr.message
-        );
-      }
-    } catch (persistErr) {
-      console.warn(
-        '[score-pronunciation] pronunciation_scores write threw (non-fatal):',
-        persistErr
-      );
-    }
+    //
+    // Written after the response goes out (EdgeRuntime.waitUntil): the verdict
+    // is already final, nothing in the reply depends on the row, and the
+    // insert is one more Postgres round trip the learner would otherwise wait
+    // through. Being non-fatal already, it loses nothing by being deferred.
+    runInBackground(persistAttempt(supabase, {
+      user_id: authenticatedUserId,
+      // Bounded rather than rejected: `language` is already accepted as free
+      // text by the transcription call above and changing that is out of scope here.
+      target_language: sanitizeText(language ?? '', 32),
+      expected_text: sanitizeText(expectedText, MAX_STORED_TEXT),
+      transcription: sanitizeText(safeTranscription, MAX_STORED_TEXT),
+      score: score.score,
+      is_correct: isCorrect,
+      phoneme_errors: safePhonemeErrors,
+      source: attemptSource,
+      card_id: cardId ?? null,
+    }));
+
+    mark('total', startedAt);
+    console.log(JSON.stringify({
+      evt: 'score_timing',
+      fn: 'score-pronunciation',
+      model: STT_MODEL,
+      audioBytes: Math.round(audioBase64.length * 0.75),
+      ...timing,
+    }));
 
     return new Response(
       JSON.stringify({
@@ -243,9 +259,24 @@ serve(async (req: Request) => {
   }
 });
 
+/** The deferred pronunciation_scores write. Never throws: it runs after the response. */
+// deno-lint-ignore no-explicit-any
+async function persistAttempt(supabase: any, row: Record<string, unknown>): Promise<void> {
+  try {
+    const { error } = await supabase.from('pronunciation_scores').insert(row);
+    if (error) {
+      console.warn('[score-pronunciation] pronunciation_scores write failed (non-fatal):', error.message);
+    }
+  } catch (err) {
+    console.warn('[score-pronunciation] pronunciation_scores write threw (non-fatal):', err);
+  }
+}
+
 /**
- * Transcribe audio using OpenAI Whisper STT.
- * Pattern copied from supabase/functions/transcribe/index.ts.
+ * Transcribe audio with OpenAI speech-to-text (see STT_MODEL).
+ * Pattern copied from supabase/functions/transcribe/index.ts, minus
+ * `verbose_json`: only the text is used here, and the plain `json` shape is
+ * the one every current model supports.
  */
 async function transcribeAudio(audioBase64: string, language: string): Promise<string> {
   if (!OPENAI_API_KEY) {
@@ -259,11 +290,12 @@ async function transcribeAudio(audioBase64: string, language: string): Promise<s
     bytes[i] = binaryString.charCodeAt(i);
   }
 
-  // Build multipart form data for Whisper API
+  // Build multipart form data for the transcription API
   const formData = new FormData();
   const audioBlob = new Blob([bytes], { type: 'audio/m4a' });
   formData.append('file', audioBlob, 'audio.m4a');
-  formData.append('model', 'whisper-1');
+  formData.append('model', STT_MODEL);
+  formData.append('response_format', 'json');
   if (language) {
     formData.append('language', language);
   }
@@ -277,12 +309,12 @@ async function transcribeAudio(audioBase64: string, language: string): Promise<s
       },
       body: formData,
     },
-    { provider: 'openai-whisper', timeoutMs: PROVIDER_TIMEOUT_MS.transcription },
+    { provider: 'openai-stt', timeoutMs: PROVIDER_TIMEOUT_MS.transcription },
   );
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Whisper API error: ${response.status} - ${errorText}`);
+    throw new Error(`STT API error (${STT_MODEL}): ${response.status} - ${errorText}`);
   }
 
   const data = await response.json();

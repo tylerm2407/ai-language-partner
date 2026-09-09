@@ -6,6 +6,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, corsResponse } from '../_shared/cors.ts';
+import { checkBurstLimit } from '../_shared/burst-limit.ts';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { isValidUUID } from '../_shared/validation.ts';
 import { logAudit, getClientIp } from '../_shared/audit.ts';
@@ -206,6 +207,12 @@ async function createClassroom(supabase: any, userId: string, body: SchoolReques
 async function joinClassroom(supabase: any, userId: string, email: string, body: SchoolRequest, ip?: string): Promise<Response> {
   const { inviteCode } = body as any;
   if (!inviteCode) return errorResponse('Missing inviteCode');
+
+  // Nobody joins ten classrooms in five minutes. An invite code is eight hex
+  // characters; this is what makes guessing them impractical in practice
+  // rather than merely in arithmetic.
+  const joinOk = await checkBurstLimit(supabase, userId, 'school-join', 10, 300);
+  if (!joinOk) return errorResponse('Too many attempts. Try again shortly.', 429);
 
   // Look up classroom by invite code
   const { data: classroom, error: lookupErr } = await supabase

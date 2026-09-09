@@ -15,6 +15,19 @@ import { validateContentSafety } from '../_shared/content-safety.ts';
  */
 export const MAX_WORD_LOOKUP_CHARS = 40;
 
+/** Longest single token accepted from a script that does not space words
+ *  (CJK, kana, hangul). Long enough for 四字熟語 and a conjugated verb. */
+export const MAX_UNSPACED_WORD_CHARS = 8;
+
+/** Whitespace PLUS the invisible separators `\s` misses — zero-width space,
+ *  joiners, word joiner, BOM. Any of these between two words is a phrase
+ *  wearing a word's clothes. */
+const HIDDEN_BREAK = /[\s\u200B-\u200D\u2060\uFEFF]/;
+
+/** Han, kana, hangul: the scripts a learner can write a sentence in with no
+ *  separator at all. */
+const UNSPACED_SCRIPT = /[\u3040-\u30FF\u3400-\u4DBF\u4E00-\u9FFF\uAC00-\uD7AF]/;
+
 export type QuotaCounter = 'translations' | 'word_lookups';
 
 export type CounterDecision =
@@ -40,7 +53,12 @@ export function resolveQuotaCounter(text: string, purpose: unknown): CounterDeci
   if (purpose !== 'word_lookup') return { ok: true, counter: 'translations' };
 
   const word = text.trim();
-  if (!word || word.length > MAX_WORD_LOOKUP_CHARS || /\s/.test(word)) {
+  if (!word || word.length > MAX_WORD_LOOKUP_CHARS || HIDDEN_BREAK.test(word)) {
+    return { ok: false, code: 'NOT_A_WORD' };
+  }
+  // Scripts written without spaces: a 40-character run of kanji or hangul is
+  // a sentence, not a word, and `\s` cannot tell. Cap those far lower.
+  if (UNSPACED_SCRIPT.test(word) && word.length > MAX_UNSPACED_WORD_CHARS) {
     return { ok: false, code: 'NOT_A_WORD' };
   }
   return { ok: true, counter: 'word_lookups' };

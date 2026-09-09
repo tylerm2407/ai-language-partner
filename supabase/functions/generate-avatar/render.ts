@@ -34,16 +34,7 @@ const GENERATION_TIMEOUT_MS = 300_000;
  */
 const KEEP_GENERATED_AVATARS = 12;
 
-/**
- * Supabase's edge runtime exposes EdgeRuntime.waitUntil to keep the instance
- * alive after the response is sent. It is absent under plain `deno test`, so
- * the fallback just lets the promise run detached.
- */
-export function runInBackground(task: Promise<unknown>): void {
-  const runtime = (globalThis as { EdgeRuntime?: { waitUntil(p: Promise<unknown>): void } })
-    .EdgeRuntime;
-  if (runtime?.waitUntil) runtime.waitUntil(task);
-}
+export { runInBackground } from '../_shared/background.ts';
 
 
 /** Decode base64 to bytes without building an intermediate giant string copy. */
@@ -75,7 +66,7 @@ interface RenderArgs {
  * a provider timeout or a rejected photo would otherwise burn one of three
  * monthly generations on a portrait the learner never got — which is exactly
  * what happened on 2026-09-08 — so every failure path refunds here. The free
- * grant needs no refund: it is spent only after success (migration 077).
+ * grant is spent before the render too (migration 113) and is released here.
  */
 export async function failJob(
   supabase: SupabaseClient,
@@ -102,6 +93,13 @@ export async function failJob(
     });
     if (refundErr) {
       console.error('[generate-avatar] refund_monthly_quota failed:', refundErr.message);
+    }
+  } else {
+    // The free grant was spent before the render (index.ts, migration 113);
+    // this render did not deliver, so it goes back.
+    const { error: releaseErr } = await supabase.rpc('release_free_avatar', { p_user_id: job.userId });
+    if (releaseErr) {
+      console.error('[generate-avatar] release_free_avatar failed:', releaseErr.message);
     }
   }
 }
@@ -226,27 +224,8 @@ export async function renderAvatar(args: RenderArgs): Promise<void> {
     return;
   }
 
-  // ── Spend the free grant ────────────────────────────────────────────────
-  // Only now, with an image generated, stored, and attached to the profile.
-  // The RPC is atomic and one-shot (migration 077), so this is what makes the
-  // second free request fail the check above.
-  //
-  // A failure here is logged, not surfaced: the learner has their avatar and
-  // must not be told otherwise. What it costs is one un-spent grant, bounded
-  // by the burst limit — the same trade as claiming it late in the first place.
-  if (usingFreeGrant) {
-    const { data: claimed, error: claimErr } = await supabase.rpc('consume_free_avatar', {
-      p_user_id: userId,
-    });
-    if (claimErr) {
-      console.error('[generate-avatar] consume_free_avatar failed:', claimErr.message);
-    } else if (claimed !== true) {
-      // Lost a race with a concurrent request inside the burst window. Both
-      // callers got an image; only one grant existed. Worth knowing about if
-      // it stops being rare.
-      console.warn('[generate-avatar] free grant already spent for', userId);
-    }
-  }
+  // The free grant was spent BEFORE the render (index.ts, migration 113).
+  // Nothing to do here on success.
 
   // Settle the job BEFORE the housekeeping below: the learner is waiting on
   // this row, and a slow storage listing must not hold the spinner.

@@ -20,7 +20,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { isRedisConfigured, redisSetNx } from '../_shared/redis.ts';
 import { checkAuthorization, isPlausibleUuid, verifyWebhookSignature } from './auth.ts';
-import { classifyEvent, INACTIVE_EVENTS } from './tier.ts';
+import { classifyEvent, isRevocation, INACTIVE_EVENTS } from './tier.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -30,6 +30,17 @@ const WEBHOOK_HMAC_SECRET = Deno.env.get('REVENUECAT_WEBHOOK_HMAC_SECRET');
 /** How long a processed event id is remembered. RevenueCat retries a failed
  *  delivery for hours, not days, so a day covers every legitimate redelivery
  *  with room to spare. */
+/** See the SANDBOX block below. Defaults to accepting sandbox events. */
+const ALLOW_SANDBOX_EVENTS = Deno.env.get('REVENUECAT_ALLOW_SANDBOX') !== 'false';
+/** Comma-separated Supabase user ids whose SANDBOX events are honoured even
+ *  when REVENUECAT_ALLOW_SANDBOX is 'false' — the founder's own test logins. */
+const SANDBOX_TESTER_IDS: ReadonlySet<string> = new Set(
+  (Deno.env.get('REVENUECAT_SANDBOX_USER_IDS') ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0),
+);
+
 const EVENT_DEDUPE_TTL_SECONDS = 86_400;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -112,13 +123,73 @@ serve(async (req: Request) => {
   const productId = (event.product_id as string) ?? null;
   const expirationMs = event.expiration_at_ms as number | null | undefined;
   const currentPeriodEnd = expirationMs ? new Date(expirationMs).toISOString() : null;
+  const reason = typeof event.cancel_reason === 'string'
+    ? event.cancel_reason
+    : typeof event.expiration_reason === 'string'
+      ? event.expiration_reason
+      : null;
 
-  // TRANSFER/TEST and any unrecognised event type: acknowledge, change nothing.
-  const decision = classifyEvent(type, entitlementIds, productId);
+  // ── Sandbox ────────────────────────────────────────────────────────────
+  // A sandbox purchase is a TestFlight or dev-build purchase that cost
+  // nothing. Pre-launch every purchase is one, so they are accepted unless
+  // REVENUECAT_ALLOW_SANDBOX is explicitly 'false' — SET IT BEFORE LAUNCH, or
+  // anyone with a sandbox Apple ID buys VIP for free against production.
+  if (event.environment === 'SANDBOX') {
+    if (ALLOW_SANDBOX_EVENTS) {
+      console.warn(`[revenuecat-webhook] accepting SANDBOX ${type} for ${userId} (REVENUECAT_ALLOW_SANDBOX is not 'false')`);
+    } else if (SANDBOX_TESTER_IDS.has(userId)) {
+      // A named tester account keeps working after launch; everyone else's
+      // sandbox purchase is acknowledged and discarded.
+      console.log(`[revenuecat-webhook] accepting SANDBOX ${type} for allow-listed tester ${userId}`);
+    } else {
+      console.log(`[revenuecat-webhook] ignoring SANDBOX ${type} for ${userId}`);
+      return new Response(JSON.stringify({ ok: true, sandbox: true }), { status: 200 });
+    }
+  }
+
+  // ── TRANSFER ───────────────────────────────────────────────────────────
+  // The store subscription moved to another account (Restore Purchases on a
+  // second login). Every later RENEWAL/EXPIRATION is addressed to the new
+  // owner, so the OLD rows would otherwise stay active forever — one paid
+  // subscription keeping an unbounded number of accounts entitled. Deactivate
+  // every source account that is not also a destination.
+  if (type === 'TRANSFER') {
+    const from = Array.isArray(event.transferred_from) ? (event.transferred_from as unknown[]) : [];
+    const to = new Set(
+      (Array.isArray(event.transferred_to) ? (event.transferred_to as unknown[]) : [])
+        .filter((id): id is string => typeof id === 'string'),
+    );
+    const losers = from.filter(
+      (id): id is string => typeof id === 'string' && isPlausibleUuid(id) && !to.has(id) && id !== userId,
+    );
+    for (const loser of losers) {
+      const { error } = await supabase
+        .from('subscriptions')
+        .update({
+          tier: 'starter',
+          is_active: false,
+          subscription_status: 'inactive',
+          current_period_end: null,
+          cancel_at_period_end: false,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', loser);
+      if (error) {
+        console.error(`[revenuecat-webhook] TRANSFER: could not deactivate ${loser}:`, error.message);
+        return new Response(JSON.stringify({ error: 'internal' }), { status: 500 });
+      }
+      console.log(`[revenuecat-webhook] TRANSFER: deactivated ${loser} (entitlement moved to ${userId})`);
+    }
+    return new Response(JSON.stringify({ ok: true, transferred: losers.length }), { status: 200 });
+  }
+
+  // TEST and any unrecognised event type: acknowledge, change nothing.
+  const decision = classifyEvent(type, entitlementIds, productId, reason);
   if (!decision) {
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
   }
   const { tier, isActive, cancelAtPeriodEnd } = decision;
+  const revocation = isRevocation(type, reason);
 
   // ── At-most-once, best effort ──────────────────────────────────────────
   // RevenueCat retries any delivery it does not see a 2xx for, so the same
@@ -182,9 +253,14 @@ serve(async (req: Request) => {
   //     this guards (a retried EXPIRATION landing after the RENEWAL that
   //     replaced it) leaves the stored end a whole billing period ahead, so
   //     the allowance costs nothing there.
+  // A REVOCATION is never stale. Its whole meaning is "the period ends
+  // earlier than you were told" — a refund, a chargeback, a developer revoke —
+  // and reading that as a retried old event kept refunded subscribers
+  // entitled until the original period end.
   const STALE_SKEW_MS = 5 * 60 * 1000;
   if (
     type === 'EXPIRATION' &&
+    !revocation &&
     staleAgainstStored &&
     existing?.is_active === true &&
     (storedEndMs as number) > Date.now() + STALE_SKEW_MS

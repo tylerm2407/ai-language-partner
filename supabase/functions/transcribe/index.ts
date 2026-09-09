@@ -15,8 +15,8 @@ import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { checkBurstLimit } from '../_shared/burst-limit.ts';
 import { MAX_AUDIO_BASE64_SIZE } from '../_shared/validation.ts';
 import { toLanguageCode } from '../_shared/language.ts';
-import { getEffectiveLimits } from '../_shared/plan-limits.ts';
-import { getUserToday } from '../_shared/user-day.ts';
+import { resolveEntitlement } from '../_shared/entitlement.ts';
+import { maxSecondsForBytes, parseMp4DurationSeconds } from '../_shared/mp4-duration.ts';
 import { PROVIDER_TIMEOUT_MS, providerFetch } from '../_shared/provider-fetch.ts';
 import { summarizeSegments } from './confidence.ts';
 
@@ -95,30 +95,43 @@ serve(async (req: Request) => {
     // set: none of those describe seconds of audio, and Whisper bills by the
     // second. Charging real duration after the call (below) is what makes this
     // check converge instead of reading a number this path never moves.
-    const { data: sub } = await supabase
-      .from('subscriptions')
-      .select('tier, is_active')
-      .eq('user_id', authUser.userId)
-      .single();
     // Effective, not personal: the other half of a spoken turn (`tts`) honours
     // the school's dailyVoiceMinutes override, and both halves bill the same
     // counter, so reading a different limit here would gate a classroom
     // learner's microphone against a cap their playback never applied.
-    const tier = sub?.is_active && sub.tier ? sub.tier : 'starter';
-    const limits = await getEffectiveLimits(authUser.userId, supabase, tier);
+    const { limits } = await resolveEntitlement(supabase, authUser.userId);
 
-    // Day key must match what increment_daily_usage writes (user-local
-    // midnight rollover, migration 044) — not UTC.
-    const userDay = await getUserToday(supabase, authUser.userId);
-    const { data: usageRow } = await supabase
-      .from('daily_usage')
-      .select('voice_minutes')
-      .eq('user_id', authUser.userId)
-      .eq('date', userDay)
-      .single();
+    // Decode base64 to binary
+    const binaryString = atob(audioBase64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
 
-    const usedVoiceMinutes = parseFloat(usageRow?.voice_minutes as string) || 0;
-    if (usedVoiceMinutes >= limits.dailyVoiceMinutes) {
+    // ── Reserve, atomically, BEFORE Whisper ──────────────────────────────
+    // This was a read-then-increment: thirty concurrent requests all read the
+    // same total and all passed, and the byte cap did not bound duration — at
+    // 8 kbps a 7.5 MB file is two hours of Whisper against a six-minute plan.
+    // The container header carries the duration, so it is reserved up front
+    // (consume_voice_seconds, migration 113) and settled to what OpenAI
+    // actually billed once the answer is back. A file whose duration cannot
+    // be read is reserved at the most audio its bytes could hold.
+    const containerSeconds = parseMp4DurationSeconds(bytes);
+    const reservedSeconds = Math.max(1, Math.ceil(containerSeconds ?? maxSecondsForBytes(bytes.length)));
+    const { data: reserved, error: reserveErr } = await supabase.rpc('consume_voice_seconds', {
+      p_user_id: authUser.userId,
+      p_limit_minutes: limits.dailyVoiceMinutes,
+      p_seconds: reservedSeconds,
+    });
+    if (reserveErr) {
+      // Fail CLOSED: an outage in the meter is not a reason to transcribe unmetered.
+      console.error('[transcribe] consume_voice_seconds failed:', reserveErr.message);
+      return new Response(
+        JSON.stringify({ error: 'Could not verify your daily limit. Try again shortly.', code: 'QUOTA_UNAVAILABLE' }),
+        { status: 503, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    if (reserved !== true) {
       return new Response(
         JSON.stringify({
           error: "You've reached your daily voice limit. Upgrade your plan for more.",
@@ -127,13 +140,16 @@ serve(async (req: Request) => {
         { status: 429, headers: { 'Content-Type': 'application/json' } }
       );
     }
-
-    // Decode base64 to binary
-    const binaryString = atob(audioBase64);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
+    /** Settle the reservation to what was actually billed. Best-effort. */
+    const settleVoice = async (actualSeconds: number | null): Promise<void> => {
+      const delta = (actualSeconds ?? reservedSeconds) - reservedSeconds;
+      if (delta === 0) return;
+      const { error } = await supabase.rpc('adjust_voice_seconds', {
+        p_user_id: authUser.userId,
+        p_delta_seconds: delta,
+      });
+      if (error) console.error('[transcribe] adjust_voice_seconds failed:', error.message);
+    };
 
     // Build multipart form data for Whisper API
     const formData = new FormData();
@@ -146,7 +162,9 @@ serve(async (req: Request) => {
     // confidence the caller gates on.
     formData.append('response_format', 'verbose_json');
 
-    const response = await providerFetch(
+    let response: Response;
+    try {
+      response = await providerFetch(
       'https://api.openai.com/v1/audio/transcriptions',
       {
         method: 'POST',
@@ -156,31 +174,27 @@ serve(async (req: Request) => {
         body: formData,
       },
       { provider: 'openai-whisper', timeoutMs: PROVIDER_TIMEOUT_MS.transcription },
-    );
+      );
+    } catch (err) {
+      await settleVoice(0);
+      throw err;
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
+      // Nothing was billed by the provider; give the whole reservation back.
+      await settleVoice(0);
       throw new Error(`Whisper API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
 
-    // Charge what was actually transcribed. verbose_json reports the audio's
-    // duration in seconds, which is exactly what OpenAI bills on — so a normal
-    // ten-second turn costs ~0.17 of a minute and is invisible, while a caller
-    // pushing the 10MB cap spends most of a day's allowance in one request.
-    // Best-effort: the learner already has their transcript, so a metering
-    // failure is logged, not surfaced.
-    const durationSeconds = typeof data.duration === 'number' ? data.duration : 0;
-    if (durationSeconds > 0) {
-      const { error: usageErr } = await supabase.rpc('increment_daily_usage', {
-        p_user_id: authUser.userId,
-        p_voice_minutes: durationSeconds / 60,
-      });
-      if (usageErr) {
-        console.error('[transcribe] failed to increment voice_minutes:', usageErr.message);
-      }
-    }
+    // Settle to what was actually transcribed. verbose_json reports the
+    // audio's duration in seconds, which is exactly what OpenAI bills on. A
+    // missing duration leaves the reservation as charged — the conservative
+    // side. Best-effort: the learner already has their transcript.
+    const durationSeconds = typeof data.duration === 'number' && data.duration > 0 ? data.duration : null;
+    await settleVoice(durationSeconds);
 
     // Whisper's own read on whether it heard the learner. Returned, not just
     // logged: `lib/handsfree-grading.ts` has a calibrated `sttConfidence()`

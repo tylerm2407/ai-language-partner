@@ -89,8 +89,25 @@ function isGradingObject(value: unknown): boolean {
  * the honest no-grade fallback shipped (graded: false). A real grade —
  * however low — keeps the quota consumed.
  */
-export function shouldRefundQuota(feedback: GradingFeedback): boolean {
-  return feedback.graded === false;
+export function shouldRefundQuota(
+  feedback: GradingFeedback,
+  fallbackReason?: GradeFallbackReason,
+): boolean {
+  // A safety rejection is not refundable: the model was called, up to three
+  // times, and the submission is what the corrected version echoes back. A
+  // refund there made "kill" or a URL in the text a free grade, forever.
+  return feedback.graded === false && fallbackReason !== 'safety';
+}
+
+/** Why the no-grade fallback shipped. `parse` is a model that answered but
+ *  not in JSON; `provider` is no answer; `safety` is an answer we would not
+ *  show, which the learner's own text drove. */
+export type GradeFallbackReason = 'safety' | 'provider' | 'parse';
+
+export interface GradeOutcome {
+  feedback: GradingFeedback;
+  /** Present only when `feedback.graded` is false. */
+  fallbackReason?: GradeFallbackReason;
 }
 
 /**
@@ -108,7 +125,7 @@ export async function gradeWithValidation(
   callModel: () => Promise<string>,
   log: (evt: Record<string, unknown>) => void = (e) =>
     console.log(JSON.stringify({ ...e, ts: new Date().toISOString() })),
-): Promise<GradingFeedback> {
+): Promise<GradeOutcome> {
   const fallbackFeedback = buildFallbackFeedback();
 
   for (let parseAttempt = 1; parseAttempt <= 2; parseAttempt++) {
@@ -124,14 +141,16 @@ export async function gradeWithValidation(
     });
 
     // Safety retries exhausted — generateValidated already logged used_fallback.
-    if (result.usedFallback) return fallbackFeedback;
+    if (result.usedFallback) {
+      return { feedback: fallbackFeedback, fallbackReason: result.fallbackReason ?? 'provider' };
+    }
 
     const parsed = parseGradingResponse(result.text);
-    if (parsed) return parsed;
+    if (parsed) return { feedback: parsed };
 
     log({ evt: 'parse_failure', fn: 'grade-writing', attempt: parseAttempt });
   }
 
   log({ evt: 'used_fallback', fn: 'grade-writing', reason: 'parse' });
-  return fallbackFeedback;
+  return { feedback: fallbackFeedback, fallbackReason: 'parse' };
 }

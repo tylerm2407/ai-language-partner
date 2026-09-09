@@ -7,7 +7,8 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsResponse, corsHeaders } from '../_shared/cors.ts';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
-import { getPlanLimits } from '../_shared/plan-limits.ts';
+import { resolveEntitlement } from '../_shared/entitlement.ts';
+import { checkBurstLimit } from '../_shared/burst-limit.ts';
 import { isValidUUID, isValidCefrLevel, isValidLanguage, sanitizeText } from '../_shared/validation.ts';
 import { PROVIDER_TIMEOUT_MS, providerFetch } from '../_shared/provider-fetch.ts';
 import { gradeWithValidation, shouldRefundQuota } from './grading.ts';
@@ -75,14 +76,18 @@ serve(async (req: Request) => {
     }
 
     // ── Rate limit: check BEFORE calling AI ──────────────────
-    const { data: sub } = await supabase
-      .from('subscriptions')
-      .select('tier, is_active')
-      .eq('user_id', userId)
-      .single();
+    // Up to three Haiku calls per request, and until now no burst limit at
+    // all — the daily quota was the only ceiling, and the refund path could
+    // hand it back.
+    const burstOk = await checkBurstLimit(supabase, userId, 'grade-writing', 6, 60);
+    if (!burstOk) {
+      return new Response(
+        JSON.stringify({ error: 'Too many requests. Please slow down.', code: 'RATE_LIMITED' }),
+        { status: 429, headers }
+      );
+    }
 
-    const tier = sub?.is_active && sub.tier ? sub.tier : 'starter';
-    const limits = getPlanLimits(tier);
+    const { limits } = await resolveEntitlement(supabase, userId);
 
     // Atomic check-and-consume (migration 037) — race-free under
     // concurrent requests, replaces read-then-increment.
@@ -123,7 +128,7 @@ serve(async (req: Request) => {
     // Safety + parse orchestration (retry → safety-retry → parse-retry →
     // honest fallback). See grading.ts. Never fabricates scores: on
     // unrecoverable failure the response carries graded: false and zeros.
-    const feedback = await gradeWithValidation(async () => {
+    const { feedback, fallbackReason } = await gradeWithValidation(async () => {
       const response = await providerFetch(
         'https://api.anthropic.com/v1/messages',
         {
@@ -157,7 +162,7 @@ serve(async (req: Request) => {
     // no-grade fallback shipped (graded: false), the user paid for nothing —
     // refund the writing_grades unit (migration 045, service-role only).
     // A refund failure never blocks the response: the fallback still ships.
-    if (shouldRefundQuota(feedback)) {
+    if (shouldRefundQuota(feedback, fallbackReason)) {
       const { error: refundErr } = await supabase.rpc('refund_daily_quota', {
         p_user_id: userId,
         p_counter: 'writing_grades',

@@ -228,20 +228,28 @@ serve(async (req: Request) => {
   }, targetLanguage);
 
   if (!outcome.ok) {
-    // Give the quota back. It was consumed before the paid call — the only
-    // way to bound spend — but a quota is a charge for a delivered thing, and
-    // nothing was delivered. Without this a learner loses an allowance every
-    // time the provider has a bad minute, and the client retries, so they
-    // lose two.
+    // Give the quota back ONLY when the provider failed to answer. A quota is
+    // a charge for a delivered thing, and a provider outage delivered nothing
+    // — without the refund a learner loses an allowance every time the
+    // provider has a bad minute, and the client retries, so they lose two.
+    //
+    // A safety rejection of the OUTPUT is different: the model was called,
+    // twice, and the input is what made the output unsafe (the prompt
+    // preserves URLs, numbers and words like "matar"). Refunding that turned
+    // the daily ceiling into no ceiling: a URL in the text made every call
+    // free, and only the burst limit stood between one account and ~86,000
+    // Haiku calls a day. The spend happened; the unit stays spent.
     //
     // Best-effort: a failed refund must not turn a 502 into a 500. The
     // counter self-clears at the learner's next local midnight either way.
-    const { error: refundErr } = await supabase.rpc('refund_daily_quota', {
-      p_user_id: authUser.userId,
-      p_counter: counter,
-    });
-    if (refundErr) {
-      console.error('[translate] refund_daily_quota failed:', refundErr.message);
+    if (outcome.reason === 'api_error') {
+      const { error: refundErr } = await supabase.rpc('refund_daily_quota', {
+        p_user_id: authUser.userId,
+        p_counter: counter,
+      });
+      if (refundErr) {
+        console.error('[translate] refund_daily_quota failed:', refundErr.message);
+      }
     }
 
     return json(
