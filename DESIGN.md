@@ -878,6 +878,42 @@ scheme (`app.json` `userInterfaceStyle: "automatic"`).
 
 `hooks/useUi2Theme.test.ts` pins the contrast floors.
 
+### Night reading — the warm palette (2026-09-09)
+
+A third palette, `ui2Warm`, for the reader only. It is not a third scheme.
+
+**Why.** iOS gives an app no access to Night Shift, so the only lever we have
+over blue light is the colour of the pixels we paint. On OLED a `#000000` pixel
+is off and emits nothing; a pixel with a blue byte of `00` emits no blue. So the
+palette is amber on true black with a zero blue channel on every one of its 30
+keys, and `hooks/useUi2Theme.test.ts` asserts that byte per key. A tinted
+overlay was rejected: alpha blending only scales blue down, and it dims
+contrast with it. On an LCD (most Android) the black ground still leaks
+backlight, so the copy says "removes blue light on OLED screens and cuts it
+sharply on others" — never "no blue light".
+
+**Where.** `useUi2Theme()` reads an optional `Ui2VariantProvider` (variant
+`'system' | 'warm'`). The reader mounts `variant="warm"` around itself when the
+learner's Night reading preference is on (`lib/reading-preferences.ts`);
+nothing outside the reader ever renders from `ui2Warm`. Under it the hook
+reports `scheme: 'dark'`, because every `scheme === 'dark'` branch in the app
+(sheet scrim, status bar, splash) is asking whether the ground is dark. Context
+crosses `Modal`, so `Ui2Sheet`, the word tooltip and the audio button re-skin
+without edits.
+
+| Token | Warm | Note |
+|---|---|---|
+| `bg` / `surface2` / `card` | `#000000` / `#0A0700` / `#161100` | True black ground; cards a hair of amber |
+| `ink` / `muted` / `idle` | `#F5AE00` / `#B88000` / `#7A5500` | 10.9:1 / 6.1:1 / 3.1:1 on `bg` |
+| `primary` / `onPrimary` | `#E09A00` / `#1A1000` | Amber fill, dark ink on it (7.9:1). White is one third blue, so it never appears |
+| `primaryTint` / `onTint` | `#2A1E00` / `#FFC000` | 10.0:1 |
+| `green` / `pink` / `error` | `#9CB000` / `#FF7A00` / `#FF4A00` | Olive, orange and red-orange stand in. Safe only because feedback is never colour-only |
+| `yellow` | `#FFCC00` | Already amber |
+
+**Reader faces.** `ui2ReaderType = { sans: Manrope 400, serif: Fraunces 400 }`.
+The serif is a long-form reading option chosen in the reader's display sheet;
+it is still not a UI face.
+
 ### Offline downloads (2026-09-09)
 
 One control, `components/learn/OfflineDownloadControl.tsx`, wherever content

@@ -427,6 +427,79 @@ export const ui2Dark: Ui2Palette = {
   error: '#FF6B70',
 };
 
+/**
+ * Night reading — the reader's amber-on-true-black palette (2026-09-09).
+ *
+ * WHY IT EXISTS. iOS gives an app no access to Night Shift, so the only lever
+ * an app has over blue light is the colour of the pixels it paints. On an OLED
+ * panel a `#000000` pixel is switched off and emits nothing, and a pixel whose
+ * blue byte is `00` emits no blue at all. So the palette below is the practical
+ * floor: black ground, amber foregrounds, and a blue channel of zero on every
+ * one of the 30 keys — `hooks/useUi2Theme.test.ts` asserts that byte on each.
+ * A tinted overlay could not do this: alpha blending only scales blue down,
+ * and it dims contrast with it.
+ *
+ * WHERE IT APPLIES. Only inside a `<Ui2VariantProvider variant="warm">`, which
+ * the reader mounts around itself when the learner's Night reading preference
+ * is on. Nothing outside the reader ever renders from it. It is not a third
+ * scheme: `useUi2Theme()` reports `scheme: 'dark'` under it, because every
+ * `scheme === 'dark'` branch in the app asks "is the ground dark?", and here
+ * it is.
+ *
+ * SEMANTIC HUES ARE REMAPPED, not kept. Violet, green, pink and the error red
+ * all carry blue, so `primary` becomes amber, `green` olive, `pink` orange and
+ * `error` red-orange. That is only acceptable because the design rules already
+ * forbid colour-only feedback — every verdict pairs an icon and a label — so a
+ * shifted hue changes nothing a learner relies on. White is never used
+ * either (`onPrimary` is dark ink on amber): white is one third blue.
+ *
+ * Contrast against `bg`: ink 10.9:1, muted 6.1:1, primary 8.8:1; onPrimary on
+ * primary 7.9:1; onTint on primaryTint 10.0:1; muted on card 5.5:1. `idle` is
+ * 3.1:1, the same non-text role it has in the other two palettes.
+ */
+export const ui2Warm: Ui2Palette = {
+  bg: '#000000',
+  surface2: '#0A0700',
+  card: '#161100',
+  cardBorder: '#161100',
+  ink: '#F5AE00',
+  muted: '#B88000',
+  idle: '#7A5500',
+  primary: '#E09A00',
+  slab: '#B87E00',
+  primaryTint: '#2A1E00',
+  primaryTintBorder: '#3D2C00',
+  onTint: '#FFC000',
+  onPrimary: '#1A1000',
+  onPrimaryMuted: '#4A3000',
+  ctaOnPrimaryBg: '#1A1000',
+  ctaOnPrimarySlab: '#000000',
+  ctaOnPrimaryText: '#FFC000',
+  yellow: '#FFCC00',
+  yellowTint: '#2E2400',
+  yellowBorder: '#4A3A00',
+  green: '#9CB000',
+  greenTint: '#161A00',
+  greenBorder: '#2E3400',
+  onGreen: '#101400',
+  onError: '#1A0600',
+  pink: '#FF7A00',
+  pinkTint: '#2E1600',
+  track: '#1F1800',
+  trackOnCard: '#2A2000',
+  error: '#FF4A00',
+};
+
+/**
+ * Reader body faces. Manrope is the UI voice everywhere else; Fraunces is the
+ * one serif in the binary, and its 400 weight is loaded for exactly this — a
+ * long-form reading option, never UI chrome (DESIGN.md: "No serif in UI 2.0").
+ */
+export const ui2ReaderType = {
+  sans: 'Manrope_400Regular',
+  serif: 'Fraunces_400Regular',
+} as const;
+
 
 /**
  * UI 2.0 type: Manrope for everything (canvas page "Slab-free · A/B/C",
