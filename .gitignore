@@ -55,3 +55,9 @@ expo-env.d.ts
 # tarball fail to upload.
 ios/build/
 ios/build-debug/
+
+# Design mockups and local prebuilt artefacts — never source
+Fluenci-UI-Mockups-2.0.pptx
+Fluenci-UI-Mockups-2.0.pptx.inspect.ndjson
+Fluenci-UI-Mockups-2.0/
+React-Core-prebuilt/
