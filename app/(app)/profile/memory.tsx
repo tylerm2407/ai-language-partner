@@ -48,7 +48,7 @@ export default function TutorMemoryScreen() {
   useScreenView('tutor_memory');
   const { c, type } = useUi2Theme();
   const router = useRouter();
-  const goBack = useSafeBack('/(app)');
+  const goBack = useSafeBack('/(app)/profile');
   const { user } = useAuth();
   const { profile } = useAppStore();
   const language = getTargetLanguage(profile);

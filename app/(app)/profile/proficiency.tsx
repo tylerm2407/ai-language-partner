@@ -91,7 +91,7 @@ function bandStatusLabel(status: BandBreakdown['status']): string {
  */
 export default function ProficiencyScreen() {
   const { c } = useUi2Theme();
-  const goBack = useSafeBack('/(app)');
+  const goBack = useSafeBack('/(app)/profile');
   const { report, isLoading, error, refresh } = useProficiencyReport();
 
   return (

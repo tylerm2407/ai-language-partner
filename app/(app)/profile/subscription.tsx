@@ -50,7 +50,7 @@ export default function SubscriptionScreen() {
   const { c } = useUi2Theme();
   const { user } = useAuth();
   const { profile, subscription, entitledTier, refreshSubscription, setEntitledTier } = useAppStore();
-  const goBack = useSafeBack('/(app)');
+  const goBack = useSafeBack('/(app)/profile');
 
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);
   const [loadingOfferings, setLoadingOfferings] = useState(true);
