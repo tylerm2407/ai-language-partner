@@ -20,6 +20,7 @@ import {
 import { identifyUser, resetAnalytics } from '../lib/analytics';
 import { startAnalytics } from '../lib/analytics-posthog';
 import { hydrateMotionPreference } from '../lib/motion-preference';
+import { hydrateReadingPreferences } from '../lib/reading-preferences';
 import { View, ActivityIndicator, AppState, Text, Pressable } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
@@ -31,6 +32,7 @@ import {
   Manrope_800ExtraBold,
 } from '@expo-google-fonts/manrope';
 import {
+  Fraunces_400Regular,
   Fraunces_600SemiBold,
   Fraunces_700Bold,
 } from '@expo-google-fonts/fraunces';
@@ -95,6 +97,7 @@ function RootLayout() {
   // still propagates.
   useEffect(() => {
     hydrateMotionPreference().catch(() => {});
+    hydrateReadingPreferences().catch(() => {});
   }, []);
 
   const [fontsLoaded] = useFonts({
@@ -103,6 +106,7 @@ function RootLayout() {
     Manrope_600SemiBold,
     Manrope_700Bold,
     Manrope_800ExtraBold,
+    Fraunces_400Regular,
     Fraunces_600SemiBold,
     Fraunces_700Bold,
     JetBrainsMono_400Regular,

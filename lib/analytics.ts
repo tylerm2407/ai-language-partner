@@ -67,6 +67,13 @@ type EventName =
   | 'chat_message_sent'
   /** A learner saved a word from reading into their SRS deck. */
   | 'card_saved'
+  /** The learner changed a reader display setting. Which one travels in
+   *  `source` ('size' | 'spacing' | 'font' | 'night' | 'brightness'), the new
+   *  step in `count` where there is one, and `ok` for the Night reading
+   *  switch. Night reading is the one to watch: it is the app's only
+   *  blue-light control, and how many people find it decides whether it
+   *  earns a place in Settings too. */
+  | 'reading_display_changed'
 
   // ── The live voice tutor. Reach and retention for the most expensive thing
   //    the product does — a session nobody starts twice is a pricing problem.

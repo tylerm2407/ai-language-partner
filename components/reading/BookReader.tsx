@@ -15,6 +15,11 @@ import {
 } from '../../lib/reading-text';
 import { radii, spacing } from '../../config/theme';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
+import { useReadingPreferences } from '../../hooks/useReadingPreferences';
+import { ReaderDisplaySheet } from './ReaderDisplaySheet';
+import { ReaderThemeScope } from './ReaderThemeScope';
+import { DEFAULT_LINE_HEIGHT_MULTIPLIER } from './TappableText';
+import { floatingTabBarSpace } from '../navigation/FloatingTabBar';
 import type { ReadingBook, ReviewItem } from '../../types';
 
 interface Props {
@@ -40,10 +45,22 @@ interface Props {
   onExit: () => void;
 }
 
-const FONT_SIZES = [14, 16, 18, 20, 22];
-const CHARS_PER_PAGE_BASE = 1200; // at default font size
+const CHARS_PER_PAGE_BASE = 1200; // at 16pt, normal spacing
 
-export function BookReader({
+/**
+ * The shell mounts the theme boundary ABOVE the body, because the body reads
+ * `useUi2Theme()` at its own top level and a provider rendered inside it
+ * would arrive one level too late for its own chrome.
+ */
+export function BookReader(props: Props) {
+  return (
+    <ReaderThemeScope>
+      <BookReaderBody {...props} />
+    </ReaderThemeScope>
+  );
+}
+
+function BookReaderBody({
   book,
   content,
   initialPosition,
@@ -62,18 +79,19 @@ export function BookReader({
   onExit,
 }: Props) {
   const { c } = useUi2Theme();
-  const [fontSizeIndex, setFontSizeIndex] = useState(1); // default 16px
+  const { fontSize, lineHeightMultiplier, fontFamily } = useReadingPreferences();
   const [currentPage, setCurrentPage] = useState(0);
-  const [showFontControls, setShowFontControls] = useState(false);
+  const [displayOpen, setDisplayOpen] = useState(false);
   const [autoAdvance] = useState(true);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const narrator = usePageNarrator();
   const insets = useSafeAreaInsets();
 
-  const fontSize = FONT_SIZES[fontSizeIndex];
-
-  // Scale chars per page based on font size
-  const charsPerPage = Math.round(CHARS_PER_PAGE_BASE * (16 / fontSize));
+  // Scale chars per page with the type: bigger or looser text packs fewer
+  // paragraphs per screen.
+  const charsPerPage = Math.round(
+    CHARS_PER_PAGE_BASE * (16 / fontSize) * (DEFAULT_LINE_HEIGHT_MULTIPLIER / lineHeightMultiplier),
+  );
 
   // Paragraphs are computed ONCE for the book and do not depend on font size.
   // That is what gives a paragraph a stable identity, which the shared
@@ -222,12 +240,13 @@ export function BookReader({
           </>
         )}
         <Pressable
-          onPress={() => setShowFontControls(!showFontControls)}
-          style={{ padding: spacing.xs }}
+          onPress={() => setDisplayOpen(true)}
+          style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}
           accessibilityRole="button"
-          accessibilityLabel="Font size"
+          accessibilityLabel="Display settings"
+          accessibilityHint="Text size, spacing, font and night reading"
         >
-          <Ionicons name="text" size={20} color={c.primary} />
+          <Ionicons name="text-outline" size={22} color={c.primary} />
         </Pressable>
       </View>
 
@@ -235,31 +254,6 @@ export function BookReader({
       <View style={{ height: 3, backgroundColor: c.track, marginHorizontal: spacing.md }}>
         <View style={{ height: 3, backgroundColor: c.primary, width: `${progressPercent}%` }} />
       </View>
-
-      {/* Font Size Controls */}
-      {showFontControls && (
-        <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingVertical: spacing.xs, gap: spacing.sm }}>
-          <Pressable
-            onPress={() => setFontSizeIndex(Math.max(0, fontSizeIndex - 1))}
-            disabled={fontSizeIndex === 0}
-            style={{ padding: spacing.xs, opacity: fontSizeIndex === 0 ? 0.3 : 1 }}
-            accessibilityRole="button"
-            accessibilityLabel="Decrease font size"
-          >
-            <Text style={{ fontSize: 14, color: c.primary, fontWeight: '600' }}>A-</Text>
-          </Pressable>
-          <Text style={{ fontSize: 14, color: c.muted }}>{fontSize}px</Text>
-          <Pressable
-            onPress={() => setFontSizeIndex(Math.min(FONT_SIZES.length - 1, fontSizeIndex + 1))}
-            disabled={fontSizeIndex === FONT_SIZES.length - 1}
-            style={{ padding: spacing.xs, opacity: fontSizeIndex === FONT_SIZES.length - 1 ? 0.3 : 1 }}
-            accessibilityRole="button"
-            accessibilityLabel="Increase font size"
-          >
-            <Text style={{ fontSize: 18, color: c.primary, fontWeight: '600' }}>A+</Text>
-          </Pressable>
-        </View>
-      )}
 
       {/* Page Content */}
       <ScrollView
@@ -270,6 +264,8 @@ export function BookReader({
         <TappableText
           paragraphs={currentPageParagraphs}
           fontSize={fontSize}
+          lineHeightMultiplier={lineHeightMultiplier}
+          fontFamily={fontFamily}
           selectedRef={selectedRef}
           onWordPress={onWordPress}
           onExplain={onExplain}
@@ -287,7 +283,7 @@ export function BookReader({
 
       {/* Page Navigation — always visible at bottom */}
       <View style={{
-        flexDirection: 'row', paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.sm + insets.bottom + 60, gap: spacing.sm,
+        flexDirection: 'row', paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.sm + insets.bottom + floatingTabBarSpace(), gap: spacing.sm,
         borderTopWidth: 1, borderTopColor: c.cardBorder, backgroundColor: c.bg,
       }}>
         <Pressable
@@ -320,6 +316,8 @@ export function BookReader({
           </Text>
         </Pressable>
       </View>
+
+      <ReaderDisplaySheet visible={displayOpen} onDismiss={() => setDisplayOpen(false)} />
     </SafeAreaView>
   );
 }

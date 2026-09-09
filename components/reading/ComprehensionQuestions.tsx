@@ -6,6 +6,7 @@ import { Ui2ProgressBar } from '../ui2/Ui2ProgressBar';
 import { gradeAnswer } from '../../lib/grading';
 import type { ReadingQuestion } from '../../types';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
+import { ReaderThemeScope } from './ReaderThemeScope';
 
 interface Props {
   questions: ReadingQuestion[];
@@ -13,7 +14,17 @@ interface Props {
   onExit: () => void;
 }
 
-export function ComprehensionQuestions({ questions, onComplete, onExit }: Props) {
+/** Stays inside the reader's theme boundary so a passage read under Night
+ *  reading does not snap back to white for its questions. */
+export function ComprehensionQuestions(props: Props) {
+  return (
+    <ReaderThemeScope>
+      <ComprehensionQuestionsBody {...props} />
+    </ReaderThemeScope>
+  );
+}
+
+function ComprehensionQuestionsBody({ questions, onComplete, onExit }: Props) {
   const { c } = useUi2Theme();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [correctCount, setCorrectCount] = useState(0);

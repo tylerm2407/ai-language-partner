@@ -35,6 +35,13 @@ export interface SelectedRef {
 interface Props {
   paragraphs: Paragraph[];
   fontSize: number;
+  /** Line height as a multiple of fontSize. Defaults to the 1.7 the reader
+   *  has always used; the display sheet offers 1.45 and 1.95 around it. */
+  lineHeightMultiplier?: number;
+  /** Body face. Omitted = the platform default, which is how the reader
+   *  rendered before the display sheet. Never pair this with `fontWeight`:
+   *  Android substitutes a different family when both are set. */
+  fontFamily?: string;
   selectedRef: SelectedRef | null;
   onWordPress: (raw: string, ref: SelectedRef) => void;
   /** Omitted where explanations are not offered (e.g. no entitlement). */
@@ -50,14 +57,17 @@ interface Props {
  * carry colour; it is one of two module-level palette constants, so it changes
  * only when the phone's scheme does and the memo still holds across renders.
  */
-function useWordStyles(fontSize: number) {
+export const DEFAULT_LINE_HEIGHT_MULTIPLIER = 1.7;
+
+function useWordStyles(fontSize: number, lineHeightMultiplier: number, fontFamily: string | undefined) {
   const { c } = useUi2Theme();
   return useMemo(
     () => ({
       paragraph: {
         fontSize,
-        lineHeight: fontSize * 1.7,
+        lineHeight: fontSize * lineHeightMultiplier,
         color: c.ink,
+        ...(fontFamily ? { fontFamily } : null),
       },
       selected: {
         backgroundColor: c.primaryTint,
@@ -65,7 +75,7 @@ function useWordStyles(fontSize: number) {
         textDecorationLine: 'underline' as const,
       },
     }),
-    [fontSize, c],
+    [fontSize, lineHeightMultiplier, fontFamily, c],
   );
 }
 
@@ -151,11 +161,13 @@ const block = StyleSheet.create({
 export function TappableText({
   paragraphs,
   fontSize,
+  lineHeightMultiplier = DEFAULT_LINE_HEIGHT_MULTIPLIER,
+  fontFamily,
   selectedRef,
   onWordPress,
   onExplain,
 }: Props) {
-  const styles = useWordStyles(fontSize);
+  const styles = useWordStyles(fontSize, lineHeightMultiplier, fontFamily);
 
   return (
     <View>

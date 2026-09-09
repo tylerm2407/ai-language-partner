@@ -8,6 +8,7 @@ import { useReadingPassage } from '../../../../hooks/useReadingPassage';
 import { useWordLookup } from '../../../../hooks/useWordLookup';
 import { ReadingPassageViewer } from '../../../../components/reading/ReadingPassageViewer';
 import { ComprehensionQuestions } from '../../../../components/reading/ComprehensionQuestions';
+import { ReaderThemeScope } from '../../../../components/reading/ReaderThemeScope';
 import { haptic } from '../../../../lib/haptics';
 // `colors` is deliberately NOT imported: it is the fixed DARK palette, and a
 // screen that reads it stays dark whatever the phone is set to.
@@ -70,7 +71,10 @@ export default function ReadingPassageScreen() {
     const scoreBorder = scorePercent >= 80 ? c.greenBorder : scorePercent >= 60 ? c.yellowBorder : c.pinkTint;
     const scoreBg = scorePercent >= 80 ? c.greenTint : scorePercent >= 60 ? c.yellowTint : c.pinkTint;
 
+    // Inside the reader's theme boundary: a passage read under Night reading
+    // should not end on a white flash.
     return (
+      <ReaderThemeScope>
       <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
           <Heading level={2} style={{ marginBottom: 8 }} accessibilityRole="header">
@@ -103,6 +107,7 @@ export default function ReadingPassageScreen() {
           </Pressable>
         </View>
       </SafeAreaView>
+      </ReaderThemeScope>
     );
   }
 

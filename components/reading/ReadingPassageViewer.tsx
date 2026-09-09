@@ -1,7 +1,13 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { AudioPlayButton } from '../audio/AudioPlayButton';
+import { ReaderDisplaySheet } from './ReaderDisplaySheet';
+import { ReaderThemeScope } from './ReaderThemeScope';
+import { floatingTabBarSpace } from '../navigation/FloatingTabBar';
+import { useReadingPreferences } from '../../hooks/useReadingPreferences';
+import { spacing } from '../../config/theme';
 import { ReadingHelp } from './ReadingHelp';
 import { TappableText, type SelectedRef } from './TappableText';
 import type { ExplanationState } from '../../hooks/useWordLookup';
@@ -10,8 +16,6 @@ import { splitParagraphs, type Paragraph } from '../../lib/reading-text';
 import type { ReadingPassage, ReviewItem } from '../../types';
 import { cefrCanDo, cefrAccessibilityLabel } from '../../lib/cefr-labels';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
-
-const PASSAGE_FONT_SIZE = 16;
 
 interface Props {
   passage: ReadingPassage;
@@ -29,7 +33,16 @@ interface Props {
   onExit: () => void;
 }
 
-export function ReadingPassageViewer({
+/** Theme boundary above the body — see BookReader for why. */
+export function ReadingPassageViewer(props: Props) {
+  return (
+    <ReaderThemeScope>
+      <ReadingPassageViewerBody {...props} />
+    </ReaderThemeScope>
+  );
+}
+
+function ReadingPassageViewerBody({
   passage,
   selectedRef,
   lookup,
@@ -44,6 +57,11 @@ export function ReadingPassageViewer({
   onExit,
 }: Props) {
   const { c } = useUi2Theme();
+  const { fontSize, lineHeightMultiplier, fontFamily } = useReadingPreferences();
+  const insets = useSafeAreaInsets();
+  const [displayOpen, setDisplayOpen] = useState(false);
+  // The fixed footer covers this much of the scroll; the tab bar floats under it.
+  const footerHeight = spacing.lg * 2 + 56 + insets.bottom + floatingTabBarSpace();
 
   // A passage is short enough to render in one scroll, so it needs paragraphs
   // but not pagination. Splitting still matters: it is what gives a span the
@@ -53,8 +71,13 @@ export function ReadingPassageViewer({
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
       {/* Header */}
       <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12, flexDirection: 'row', alignItems: 'center' }}>
-        <Pressable onPress={onExit} style={{ padding: 8 }} accessibilityRole="button" accessibilityLabel="Exit reading">
-          <Text style={{ fontSize: 24, color: c.muted }}>x</Text>
+        <Pressable
+          onPress={onExit}
+          style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}
+          accessibilityRole="button"
+          accessibilityLabel="Exit reading"
+        >
+          <Ionicons name="close" size={24} color={c.muted} />
         </Pressable>
         <View style={{ flex: 1, marginLeft: 8 }}>
           {/* Pre-existing: this carried no color at all, so it rendered in RN's
@@ -83,11 +106,20 @@ export function ReadingPassageViewer({
         {passage.audioUrl && (
           <AudioPlayButton audioUrl={passage.audioUrl} size={40} />
         )}
+        <Pressable
+          onPress={() => setDisplayOpen(true)}
+          style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center', marginLeft: spacing.xxs }}
+          accessibilityRole="button"
+          accessibilityLabel="Display settings"
+          accessibilityHint="Text size, spacing, font and night reading"
+        >
+          <Ionicons name="text-outline" size={22} color={c.primary} />
+        </Pressable>
       </View>
 
       {/* Passage Content */}
       <ScrollView
-        contentContainerStyle={{ padding: 20, paddingBottom: 120 }}
+        contentContainerStyle={{ padding: 20, paddingBottom: footerHeight }}
         keyboardShouldPersistTaps="handled"
       >
         <View style={{
@@ -100,7 +132,9 @@ export function ReadingPassageViewer({
         }}>
           <TappableText
             paragraphs={paragraphs}
-            fontSize={PASSAGE_FONT_SIZE}
+            fontSize={fontSize}
+            lineHeightMultiplier={lineHeightMultiplier}
+            fontFamily={fontFamily}
             selectedRef={selectedRef}
             onWordPress={onWordPress}
             onExplain={onExplain}
@@ -127,7 +161,7 @@ export function ReadingPassageViewer({
       {/* Continue Button */}
       <View style={{
         position: 'absolute', bottom: 0, left: 0, right: 0,
-        padding: 20, backgroundColor: c.bg,
+        padding: 20, paddingBottom: 20 + insets.bottom + floatingTabBarSpace(), backgroundColor: c.bg,
         borderTopWidth: 1, borderTopColor: c.cardBorder,
       }}>
         <Pressable
@@ -141,6 +175,8 @@ export function ReadingPassageViewer({
           <Text style={{ color: c.onPrimary, fontSize: 18, fontWeight: '600' }}>Continue to Questions</Text>
         </Pressable>
       </View>
+
+      <ReaderDisplaySheet visible={displayOpen} onDismiss={() => setDisplayOpen(false)} />
     </SafeAreaView>
   );
 }
