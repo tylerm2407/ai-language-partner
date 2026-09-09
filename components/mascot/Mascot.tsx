@@ -5,9 +5,21 @@
  * the master still with the same frame at both ends (so they return to the
  * drawing), a fifteen-second bedtime piece, and an eight-second sleep loop
  * whose first and last frames are the bedtime clip's final frame, so bedtime
- * runs straight into it with no cut. Each is an HEVC-with-alpha .mov,
- * which AVPlayer composites with true transparency, so Sol sits on any card,
- * tint or text without a square behind him.
+ * runs straight into it with no cut. Each clip is an animated WebP with a
+ * real alpha channel, decoded by expo-image (SDWebImage on iOS, Glide on
+ * Android), so Sol sits on any card, tint or text without a square behind
+ * him — on a device, in the iOS Simulator, and on Android alike.
+ *
+ * ── WHY WEBP AND NOT THE HEVC .MOV (2026-09-09) ──
+ *
+ * The first cut played HEVC-with-alpha .mov files through expo-av. Those
+ * files are correct (a Mac decode returns a transparent corner pixel) and a
+ * device composites them, but the iOS Simulator decodes only the base layer,
+ * so Sol appeared in a white square everywhere the simulator was used —
+ * glaring in dark mode. A "show the still on the simulator" workaround
+ * followed, and Tyler rightly did not want a still. One asset that animates
+ * with alpha everywhere beats two paths, and the WebPs were already shipped
+ * as the Android path, so this is where it was heading anyway.
  *
  * Behaviour:
  *   - `idle` and `asleep` loop. Every other state is a one-shot: it plays
@@ -21,25 +33,16 @@
  *     clip starts over from its first frame (a mount does the same), so a
  *     screen left on `sleepy` shows the whole bedtime again on each return
  *     rather than resuming mid-loop.
- *   - Reduce Motion, Android, and the moment before the first frame decodes
- *     all show the transparent still.
- *   - The iOS SIMULATOR decodes only the base layer of an HEVC-with-alpha
- *     clip, so there Sol would sit in a white square — invisible on a white
- *     screen, glaring in dark mode. That is the simulator, not the asset: a
- *     Mac decode of the same file (AVAssetImageGenerator) returns a fully
- *     transparent corner pixel, and a device composites it. So the simulator
- *     gets the transparent still, detected without a new dependency: only
- *     the simulator's document directory lives under /CoreSimulator/. Android gets the still because
- *     ExoPlayer does not composite HEVC alpha; the animated WebPs in the same
- *     folder are the Android path once Fresco's animated-webp module is added.
+ *   - An animated image reports no end-of-animation event, so the measured
+ *     clip lengths (`CLIP_MS`) drive the hand-over from a one-shot.
+ *   - Reduce Motion shows the transparent still.
  *
  * The state names are the old star mascot's, so nothing upstream changes.
- * When the Rive rig lands it replaces the Video element behind this same API.
+ * When the Rive rig lands it replaces the Image element behind this same API.
  */
 import { useEffect, useRef, useState } from 'react';
-import { AppState, Image, Platform, StyleSheet, View, type ViewStyle } from 'react-native';
-import { ResizeMode, Video, type AVPlaybackStatus } from 'expo-av';
-import { Paths } from 'expo-file-system';
+import { AppState, StyleSheet, View, type ViewStyle } from 'react-native';
+import { Image } from 'expo-image';
 import { useMotion } from '../../hooks/useMotion';
 
 export type MascotState =
@@ -86,42 +89,64 @@ const CLIP_FOR: Record<MascotState, Clip> = {
 };
 
 const CLIPS: Record<Clip, number> = {
-  idle: require('../../assets/mascot/video/sol-idle.mov'),
-  listening: require('../../assets/mascot/video/sol-listening.mov'),
-  thinking: require('../../assets/mascot/video/sol-thinking.mov'),
-  approving: require('../../assets/mascot/video/sol-approving.mov'),
-  surprised: require('../../assets/mascot/video/sol-surprised.mov'),
-  bedtime: require('../../assets/mascot/video/sol-bedtime.mov'),
-  sleep: require('../../assets/mascot/video/sol-sleep.mov'),
+  idle: require('../../assets/mascot/video/sol-idle.webp'),
+  listening: require('../../assets/mascot/video/sol-listening.webp'),
+  thinking: require('../../assets/mascot/video/sol-thinking.webp'),
+  approving: require('../../assets/mascot/video/sol-approving.webp'),
+  surprised: require('../../assets/mascot/video/sol-surprised.webp'),
+  bedtime: require('../../assets/mascot/video/sol-bedtime.webp'),
+  sleep: require('../../assets/mascot/video/sol-sleep.webp'),
 };
 
+/**
+ * Clip lengths in ms, read from the files with `webpmux -info` (frame delays
+ * summed). Re-measure if a clip is regenerated: too short and Sol snaps back
+ * to idle mid-nod, too long and he holds the last frame.
+ */
+export const CLIP_MS: Record<Clip, number> = {
+  idle: 16375,
+  listening: 5146,
+  thinking: 5146,
+  approving: 5146,
+  surprised: 5146,
+  bedtime: 15023,
+  sleep: 7968,
+};
+
+/** What a finished one-shot hands over to. Pure so the chain can be asserted. */
+export function afterClip(clip: Clip): Clip {
+  // Bedtime ends asleep on purpose and keeps sleeping; everything else wakes.
+  return clip === 'bedtime' ? 'sleep' : 'idle';
+}
+
 const STILL = require('../../assets/mascot/sol-still.png');
-
-/** True only in the iOS Simulator, whose app sandbox lives under CoreSimulator. */
-export function isIosSimulator(documentUri: string | null | undefined): boolean {
-  return Platform.OS === 'ios' && (documentUri ?? '').includes('/CoreSimulator/');
-}
-
-function documentUri(): string | null {
-  try {
-    return Paths.document.uri;
-  } catch {
-    return null;
-  }
-}
-
-const CAN_PLAY = Platform.OS === 'ios' && !isIosSimulator(documentUri());
 
 export function Mascot({ state = 'idle', size = 'md', style, accessibilityVisible = false }: MascotProps) {
   const px = typeof size === 'number' ? size : SIZE_PX[size];
   const { shouldReduce } = useMotion();
   const wanted = CLIP_FOR[state];
   const [clip, setClip] = useState<Clip>(wanted);
-  const [ready, setReady] = useState(false);
-  // Bumped on every return to the foreground; part of the Video key, so the
-  // player remounts and the sequence starts from frame one.
+  // Bumped on every fresh request and on every return to the foreground;
+  // part of the Image key, so the animation remounts and starts from frame
+  // one instead of sitting on the last frame it reached.
   const [run, setRun] = useState(0);
   const busyRef = useRef(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const play = (next: Clip) => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = null;
+    busyRef.current = !LOOPS.has(next);
+    setClip(next);
+    setRun((n) => n + 1);
+    if (LOOPS.has(next)) return;
+    timerRef.current = setTimeout(() => {
+      busyRef.current = false;
+      const after = afterClip(next);
+      setClip(after);
+      setRun((n) => n + 1);
+    }, CLIP_MS[next]);
+  };
 
   // Latch: a one-shot runs to its end even if the parent has already gone
   // back to idle. A new request replaces whatever is playing. Loops never
@@ -131,30 +156,25 @@ export function Mascot({ state = 'idle', size = 'md', style, accessibilityVisibl
       if (!busyRef.current) setClip('idle');
       return;
     }
-    busyRef.current = !LOOPS.has(wanted);
-    setClip(wanted);
+    play(wanted);
+    // Re-running on the wanted clip alone is the intended trigger; `play`
+    // closes over refs and setters only.
   }, [wanted]);
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next) => {
       if (next !== 'active') return;
-      busyRef.current = !LOOPS.has(wanted);
-      setClip(wanted);
-      setRun((n) => n + 1);
+      play(wanted);
     });
     return () => sub.remove();
   }, [wanted]);
 
-  const onStatus = (s: AVPlaybackStatus) => {
-    if (!s.isLoaded) return;
-    if (!ready) setReady(true);
-    if (s.didJustFinish && !LOOPS.has(clip)) {
-      busyRef.current = false;
-      // Bedtime ends asleep on purpose and keeps sleeping; everything else
-      // wakes back up.
-      setClip(clip === 'bedtime' ? 'sleep' : 'idle');
-    }
-  };
+  useEffect(
+    () => () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    },
+    [],
+  );
 
   const a11y = {
     accessibilityElementsHidden: !accessibilityVisible,
@@ -162,31 +182,25 @@ export function Mascot({ state = 'idle', size = 'md', style, accessibilityVisibl
     accessibilityLabel: accessibilityVisible ? `Sol, ${state}` : undefined,
   };
 
-  if (shouldReduce || !CAN_PLAY) {
-    return (
-      <View style={[{ width: px, height: px }, style]} {...a11y}>
-        <Image source={STILL} style={styles.fill} resizeMode="contain" />
-      </View>
-    );
-  }
-
   return (
     <View style={[{ width: px, height: px }, style]} {...a11y}>
-      {/* The still paints under the video until the first frame decodes, so
-          there is never an empty box on mount or on a source swap. */}
-      {!ready && <Image source={STILL} style={[styles.fill, StyleSheet.absoluteFill]} resizeMode="contain" />}
-      <Video
-        key={`${clip}-${run}`}
-        source={CLIPS[clip]}
-        style={[styles.fill, styles.clear]}
-        resizeMode={ResizeMode.CONTAIN}
-        shouldPlay
-        isMuted
-        isLooping={LOOPS.has(clip)}
-        useNativeControls={false}
-        onPlaybackStatusUpdate={onStatus}
-        progressUpdateIntervalMillis={250}
-      />
+      {shouldReduce ? (
+        <Image source={STILL} style={styles.fill} contentFit="contain" />
+      ) : (
+        <Image
+          key={`${clip}-${run}`}
+          source={CLIPS[clip]}
+          style={styles.fill}
+          contentFit="contain"
+          autoplay
+          // The still shows until the first frame decodes, so there is never
+          // an empty box on mount or on a clip swap.
+          placeholder={STILL}
+          placeholderContentFit="contain"
+          transition={0}
+          cachePolicy="memory"
+        />
+      )}
     </View>
   );
 }
@@ -206,8 +220,5 @@ export function mascotForOutcome(outcome: 'correct' | 'wrong' | 'complete'): Mas
 }
 
 const styles = StyleSheet.create({
-  // The player view must not paint its own ground, or the alpha clip sits in
-  // a box wherever Sol overlaps a coloured surface (the onboarding hero).
-  clear: { backgroundColor: 'transparent' },
   fill: { width: '100%', height: '100%', backgroundColor: 'transparent' },
 });

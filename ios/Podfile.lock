@@ -235,6 +235,13 @@ PODS:
     - EXImageLoader
     - ExpoModulesCore
     - SDWebImageWebPCoder
+  - ExpoImage (3.0.11):
+    - ExpoModulesCore
+    - libavif/libdav1d
+    - SDWebImage (~> 5.21.0)
+    - SDWebImageAVIFCoder (~> 0.11.0)
+    - SDWebImageSVGCoder (~> 1.7.0)
+    - SDWebImageWebPCoder (~> 0.14.6)
   - ExpoImagePicker (17.0.11):
     - ExpoModulesCore
   - ExpoKeepAwake (15.0.8):
@@ -312,6 +319,11 @@ PODS:
     - libwebp/demux (= 1.6.0)
     - libwebp/mux (= 1.6.0)
     - libwebp/sharpyuv (= 1.6.0)
+  - libavif/core (1.0.0)
+  - libavif/libdav1d (1.0.0):
+    - libavif/core
+    - libdav1d (>= 0.6.0)
+  - libdav1d (1.2.0)
     - libwebp/webp (= 1.6.0)
   - libwebp/demux (1.6.0):
     - libwebp/webp
@@ -2339,9 +2351,16 @@ PODS:
     - ReactNativeDependencies
     - Yoga
   - SDWebImage/Core (5.21.7)
-  - SDWebImageWebPCoder (0.15.0):
+  - SDWebImageAVIFCoder (0.11.1):
+    - libavif/core (>= 0.11.0)
+    - SDWebImage (~> 5.10)
+  - SDWebImageSVGCoder (1.7.0):
+    - SDWebImage/Core (~> 5.6)
+  - SDWebImageWebPCoder (0.14.6):
     - libwebp (~> 1.0)
     - SDWebImage/Core (~> 5.17)
+  - SDWebImage (5.21.7):
+    - SDWebImage/Core (= 5.21.7)
   - Sentry (9.13.0):
     - Sentry/Core (= 9.13.0)
   - Sentry/Core (9.13.0)
@@ -2381,6 +2400,7 @@ DEPENDENCIES:
   - ExpoSpeech (from `../node_modules/expo-speech/ios`)
   - ExpoWebBrowser (from `../node_modules/expo-web-browser/ios`)
   - EXStructuredHeaders (from `../node_modules/expo-structured-headers/ios`)
+  - ExpoImage (from `../node_modules/expo-image/ios`)
   - EXUpdates (from `../node_modules/expo-updates/ios`)
   - EXUpdatesInterface (from `../node_modules/expo-updates-interface/ios`)
   - FBLazyVector (from `../node_modules/react-native/Libraries/FBLazyVector`)
@@ -2477,11 +2497,15 @@ SPEC REPOS:
     - SwiftAudioEx
 
 EXTERNAL SOURCES:
+    - libavif
+    - libdav1d
   EASClient:
     :path: "../node_modules/expo-eas-client/ios"
   EXApplication:
     :path: "../node_modules/expo-application/ios"
   EXAV:
+    - SDWebImageAVIFCoder
+    - SDWebImageSVGCoder
     :path: "../node_modules/expo-av/ios"
   EXConstants:
     :path: "../node_modules/expo-constants/ios"
@@ -2534,6 +2558,8 @@ EXTERNAL SOURCES:
   ExpoModulesCore:
     :path: "../node_modules/expo-modules-core"
   ExpoNetwork:
+  ExpoImage:
+    :path: "../node_modules/expo-image/ios"
     :path: "../node_modules/expo-network/ios"
   ExpoSpeech:
     :path: "../node_modules/expo-speech/ios"
@@ -2742,6 +2768,7 @@ SPEC CHECKSUMS:
   EXUpdatesInterface: 5adf50cb41e079c861da6d9b4b954c3db9a50734
   FBLazyVector: e95a291ad2dadb88e42b06e0c5fb8262de53ec12
   hermes-engine: 9f4dfe93326146a1c99eb535b1cb0b857a3cd172
+  ExpoImage: 686f972bff29525733aa13357f6691dc90aa03d8
   JitsiWebRTC: b47805ab5668be38e7ee60e2258f49badfe8e1d0
   libwebp: af5937a13536ef73f3784d69cc342b98961acf33
   PurchasesHybridCommon: eed735a411c1aee8c05d62933fa7c4a40ede4009
@@ -2757,6 +2784,8 @@ SPEC CHECKSUMS:
   React-cxxreact: 3af79478e8187b63ffc22b794cd42d3fc1f1f2da
   React-debug: 6328c2228e268846161f10082e80dc69eac2e90a
   React-defaultsnativemodule: d635ef36d755321e5d6fc065bd166b2c5a0e9833
+  libavif: 5f8e715bea24debec477006f21ef9e95432e254d
+  libdav1d: 23581a4d8ec811ff171ed5e2e05cd27bad64c39f
   React-domnativemodule: dd28f6d96cd21236e020be2eff6fe0b7d4ec3b66
   React-Fabric: 2e32c3fdbb1fbcf5fde54607e3abe453c6652ce2
   React-FabricComponents: 5ed0cdb81f6b91656cb4d3be432feaa28a58071a
@@ -2824,7 +2853,9 @@ SPEC CHECKSUMS:
   RNSVG: 31d6639663c249b7d5abc9728dde2041eb2a3c34
   RNWorklets: 43cd6af94c18f89cbca10ea83fee281b69d75da5
   SDWebImage: e9fc87c1aab89a8ab1bbd74eba378c6f53be8abf
-  SDWebImageWebPCoder: 0e06e365080397465cc73a7a9b472d8a3bd0f377
+  SDWebImageAVIFCoder: afe194a084e851f70228e4be35ef651df0fc5c57
+  SDWebImageSVGCoder: 15a300a97ec1c8ac958f009c02220ac0402e936c
+  SDWebImageWebPCoder: e38c0a70396191361d60c092933e22c20d5b1380
   Sentry: 5c3f67235d4c16fcfab43158a8c1502a18fece9a
   SwiftAudioEx: f6aa653770f3a0d3851edaf8d834a30aee4a7646
   Yoga: 5934998fbeaef7845dbf698f698518695ab4cd1a
