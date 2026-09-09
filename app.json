@@ -8,11 +8,6 @@
     "scheme": "fluenci",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0C0F14"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.fluenci.app",
@@ -46,6 +41,19 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 132,
+          "resizeMode": "contain",
+          "backgroundColor": "#FFFFFF",
+          "dark": {
+            "image": "./assets/splash-icon-dark.png",
+            "backgroundColor": "#0C0B14"
+          }
+        }
+      ],
       [
         "expo-av",
         {

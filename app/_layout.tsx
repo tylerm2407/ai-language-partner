@@ -40,6 +40,14 @@ import {
 } from '@expo-google-fonts/jetbrains-mono';
 import { redactTutorSecrets } from '../lib/tutor-api';
 import { useUi2Theme } from '../hooks/useUi2Theme';
+import * as SplashScreen from 'expo-splash-screen';
+import { LaunchSplash } from '../components/splash/LaunchSplash';
+
+// Keep the native launch screen up until LaunchSplash has drawn the same
+// frame over the app (lib/launch-splash.ts); it hides the storyboard itself.
+// The promise only rejects when the storyboard is already gone, in which case
+// there is nothing left to hold.
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN;
 Sentry.init({
@@ -74,6 +82,10 @@ function RootLayout() {
   const router = useRouter();
   const [dataLoaded, setDataLoaded] = useState(false);
   const [rolesLoaded, setRolesLoaded] = useState(false);
+  // Cold start only: the root layout mounts once per JS load. The overlay
+  // waits for fonts (the wordmark is Manrope) and covers whichever state below
+  // is rendering — spinner, retry, or the first screen — until it fades.
+  const [launching, setLaunching] = useState(true);
 
   // Supabase auth deep links: password recovery + email confirmation.
   useAuthDeepLinks();
@@ -96,6 +108,9 @@ function RootLayout() {
     JetBrainsMono_400Regular,
     JetBrainsMono_500Medium,
   });
+  const launchSplash = fontsLoaded && launching ? (
+    <LaunchSplash onDone={() => setLaunching(false)} />
+  ) : null;
 
   // Mount notification listeners + read current permission status.
   // No system prompt is fired here — that's deferred to the
@@ -254,6 +269,7 @@ function RootLayout() {
           <ActivityIndicator size="large" color={c.primary} />
           <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
         </View>
+        {launchSplash}
       </GestureHandlerRootView>
     );
   }
@@ -281,6 +297,7 @@ function RootLayout() {
           </Pressable>
           <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
         </View>
+        {launchSplash}
       </GestureHandlerRootView>
     );
   }
@@ -291,6 +308,7 @@ function RootLayout() {
         <Slot />
       </ErrorBoundary>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+      {launchSplash}
     </GestureHandlerRootView>
   );
 }
