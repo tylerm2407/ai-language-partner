@@ -299,7 +299,8 @@ function BookReaderBody({
         flexDirection: 'row',
         paddingHorizontal: spacing.md,
         paddingTop: spacing.xs,
-        // The tab bar is hidden on this route (FULL_SCREEN_ROUTES).
+        // The tab bar is hidden while this surface is mounted (immersive flag),
+        // so the pager sits on the home indicator.
         paddingBottom: spacing.sm + insets.bottom,
         gap: spacing.sm,
         backgroundColor: c.bg,

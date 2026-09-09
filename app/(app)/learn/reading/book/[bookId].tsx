@@ -24,6 +24,7 @@ import { BookReader } from '../../../../../components/reading/BookReader';
 import { cachedFetch, getCached, readCacheKey, setCached } from '../../../../../lib/read-cache';
 import { touchPack } from '../../../../../lib/offline-packs';
 import { OfflineDownloadControl } from '../../../../../components/learn/OfflineDownloadControl';
+import { floatingTabBarSpace } from '../../../../../components/navigation/FloatingTabBar';
 import { supabase } from '../../../../../lib/supabase';
 import { loadErrorCopy, saveErrorCopy, type ErrorCopy } from '../../../../../lib/error-copy';
 import { bookXpKey } from '../../../../../lib/offline-queue';
@@ -477,8 +478,9 @@ export default function BookDetailScreen() {
       </View>
 
       {/* CTA Button */}
-      {/* No tab-bar reservation: the bar is hidden on this route. */}
-      <View style={{ padding: 20, paddingBottom: 20 + insets.bottom, borderTopWidth: 1, borderTopColor: c.cardBorder }}>
+      {/* The cover keeps the tab bar (only the pages hide it), so the CTA
+          reserves the bar's height instead of a guessed 100. */}
+      <View style={{ padding: 20, paddingBottom: 20 + insets.bottom + floatingTabBarSpace(), borderTopWidth: 1, borderTopColor: c.cardBorder }}>
         {book && (
           <View style={{ alignItems: 'flex-start', marginBottom: 12 }}>
             <OfflineDownloadControl

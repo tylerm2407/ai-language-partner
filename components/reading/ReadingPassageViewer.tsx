@@ -61,7 +61,7 @@ function ReadingPassageViewerBody({
   const insets = useSafeAreaInsets();
   const [displayOpen, setDisplayOpen] = useState(false);
   // The fixed footer covers this much of the scroll. No tab-bar reservation:
-  // the bar is hidden on this route (FULL_SCREEN_ROUTES).
+  // the bar is hidden while this surface is mounted (immersive flag).
   const footerHeight = spacing.lg * 2 + 56 + insets.bottom;
 
   // A passage is short enough to render in one scroll, so it needs paragraphs

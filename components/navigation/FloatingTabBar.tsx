@@ -26,6 +26,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { radii, ui2Shape } from '../../config/theme';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
+import { useImmersive } from '../../hooks/useImmersive';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 
 export const TAB_ICONS: Record<string, { active: string; inactive: string }> = {
@@ -121,15 +122,7 @@ export function floatingTabBarSpace(): number {
  *      a live one — the user has to leave deliberately, through the call
  *      screen's own hang-up.
  */
-export const FULL_SCREEN_ROUTES: readonly string[] = [
-  'tutor/call',
-  // The reader (2026-09-09). A page of a book is the one place in the app
-  // where a floating pill under the text is only clutter, and under Night
-  // reading it would be a white strip on a black page. The book route is
-  // hidden whole — its cover screen has its own back arrow.
-  'learn/reading/[passageId]',
-  'learn/reading/book/[bookId]',
-];
+export const FULL_SCREEN_ROUTES: readonly string[] = ['tutor/call'];
 
 /**
  * The shape `hidesTabBar` reads out of a navigation state.
@@ -165,12 +158,25 @@ export function hidesTabBar(state: FocusedRouteState | undefined): boolean {
   return FULL_SCREEN_ROUTES.includes(focusedRoutePath(state));
 }
 
+/**
+ * The full rule: a full-screen ROUTE, or an immersive SURFACE. The reader is
+ * the second kind (2026-09-09): a page of a book is the one place in the app
+ * where a floating pill under the text is only clutter, and under Night
+ * reading it would be a white strip across a black page. It raises the flag
+ * in lib/immersive-mode.ts on mount because its pages are component state
+ * inside the cover route, not a route the first rule could match.
+ */
+export function shouldHideTabBar(state: FocusedRouteState | undefined, immersive: boolean): boolean {
+  return immersive || hidesTabBar(state);
+}
+
 export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
-  // The theme hook is called FIRST and unconditionally — the early return below
+  // Both hooks are called FIRST and unconditionally — the early return below
   // must never sit above a hook, or the hook order changes the moment the tutor
   // call is focused and React tears the tree down.
   const { c } = useUi2Theme();
-  if (hidesTabBar(state)) return null;
+  const immersive = useImmersive();
+  if (shouldHideTabBar(state, immersive)) return null;
 
   const bottomOffset = TAB_BAR_BOTTOM_GAP;
   const visibleRoutes = state.routes.filter((route) => VISIBLE_TABS.includes(route.name));

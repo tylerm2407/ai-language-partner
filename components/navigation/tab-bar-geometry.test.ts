@@ -11,6 +11,7 @@ import {
   tabPillWidth,
   floatingTabBarSpace,
   hidesTabBar,
+  shouldHideTabBar,
   VISIBLE_TABS,
   TAB_ICONS,
   FULL_SCREEN_ROUTES,
@@ -116,22 +117,18 @@ describe('hidesTabBar', () => {
     expect(hidesTabBar(tabsState('tutor', 'history'))).toBe(false);
   });
 
-  it('hides the bar on both reader routes, cover screen included', () => {
-    // learn -> reading (its own Stack) -> [passageId] | book (its own Stack) -> [bookId]
-    const reading = (leaf: { name: string; state?: FocusedRouteState }) => ({
-      index: VISIBLE_TABS.indexOf('learn'),
-      routes: VISIBLE_TABS.map((name) => ({
-        name,
-        state: name === 'learn' ? { index: 0, routes: [{ name: 'reading', state: { index: 0, routes: [leaf] } }] } : undefined,
-      })),
-    });
-    expect(hidesTabBar(reading({ name: '[passageId]' }))).toBe(true);
-    expect(hidesTabBar(reading({ name: 'book', state: { index: 0, routes: [{ name: '[bookId]' }] } }))).toBe(true);
-  });
-
   it('keeps the bar on the Learn hub and on a lesson', () => {
     expect(hidesTabBar(tabsState('learn', 'index'))).toBe(false);
     expect(hidesTabBar(tabsState('learn', '[lessonId]'))).toBe(false);
+  });
+
+  it('hides for an immersive surface on any route, and otherwise defers to the route rule', () => {
+    // The reader raises the immersive flag; its route names are not matched.
+    for (const name of VISIBLE_TABS) {
+      expect(shouldHideTabBar(tabsState(name), true)).toBe(true);
+      expect(shouldHideTabBar(tabsState(name), false)).toBe(false);
+    }
+    expect(shouldHideTabBar(tabsState('tutor', 'call'), false)).toBe(true);
   });
 
   it('falls back to the first route when a nested navigator has no index yet', () => {
@@ -146,9 +143,8 @@ describe('hidesTabBar', () => {
     expect(hidesTabBar({ index: 0, routes: [] })).toBe(false);
   });
 
-  it('lists exactly the call screen and the two reader routes as full-screen', () => {
-    // Every entry here is a screen where the bar is clutter or a hazard.
-    // Adding one is a product decision, so the list is pinned.
-    expect(FULL_SCREEN_ROUTES).toEqual(['tutor/call', 'learn/reading/[passageId]', 'learn/reading/book/[bookId]']);
+  it('lists the call screen as the only full-screen route', () => {
+    // The reader hides the bar through the immersive flag, not this list.
+    expect(FULL_SCREEN_ROUTES).toEqual(['tutor/call']);
   });
 });
