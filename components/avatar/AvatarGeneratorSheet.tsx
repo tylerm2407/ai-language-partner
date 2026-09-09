@@ -2,13 +2,13 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Sheet } from '../ui/Sheet';
+import { AvatarCameraView } from './AvatarCameraView';
 import { Body, Caption } from '../ui/Text';
 import { radii, spacing, ui2Dark, ui2Light, type Ui2Palette } from '../../config/theme';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
 import {
   AVATAR_STYLE_OPTIONS,
   AvatarGenerationError,
-  capturePhoto,
   fetchAvatarStyles,
   generateAvatar,
   pickFile,
@@ -26,7 +26,7 @@ interface AvatarGeneratorSheetProps {
   onUpgrade?: () => void;
 }
 
-type Step = 'consent' | 'compose' | 'working';
+type Step = 'consent' | 'compose' | 'camera' | 'working';
 
 /**
  * Photo-to-avatar flow.
@@ -35,6 +35,11 @@ type Step = 'consent' | 'compose' | 'working';
  * image model, and Apple requires that be disclosed and agreed to before the
  * data is transmitted, not buried in a policy document. The user cannot reach
  * the camera without passing through it.
+ *
+ * The camera step is in-app (`AvatarCameraView`): the sheet stays on screen
+ * and the live preview renders inside it, so the learner never leaves for the
+ * system camera. Library and Files still use the system pickers, which iOS
+ * already presents in-app.
  */
 export const AvatarGeneratorSheet = React.memo(
   ({ visible, onClose, onGenerated, onUpgrade }: AvatarGeneratorSheetProps) => {
@@ -49,7 +54,9 @@ export const AvatarGeneratorSheet = React.memo(
     // iOS cannot present the native image picker while a React Native <Modal>
     // is on screen (Sheet renders inside one) — the picker has no view
     // controller to present from and the call fails silently. So the sheet is
-    // unmounted for the duration of the pick and restored afterwards.
+    // unmounted for the duration of the pick and restored afterwards. The
+    // camera does not need this: it is a view inside the sheet, not a
+    // presented controller.
     const [picking, setPicking] = useState(false);
 
     useEffect(() => {
@@ -84,18 +91,14 @@ export const AvatarGeneratorSheet = React.memo(
       };
     }, [visible]);
 
-    const choose = useCallback(async (source: 'camera' | 'library' | 'file') => {
+    const choose = useCallback(async (source: 'library' | 'file') => {
       setError(null);
+      setStep('compose');
       setPicking(true);
       // Let the modal dismissal actually land before the picker is presented.
       await new Promise((resolve) => setTimeout(resolve, 300));
       try {
-        const picked =
-          source === 'camera'
-            ? await capturePhoto()
-            : source === 'file'
-              ? await pickFile()
-              : await pickPhoto();
+        const picked = source === 'file' ? await pickFile() : await pickPhoto();
         if (picked) setPhoto(picked);
       } catch (err) {
         setError(
@@ -217,7 +220,10 @@ export const AvatarGeneratorSheet = React.memo(
                 <View style={styles.photoActions}>
                   <Pressable
                     style={styles.choiceButton}
-                    onPress={() => choose('camera')}
+                    onPress={() => {
+                      setError(null);
+                      setStep('camera');
+                    }}
                     accessibilityRole="button"
                     accessibilityLabel="Take a photo"
                   >
@@ -271,6 +277,17 @@ export const AvatarGeneratorSheet = React.memo(
                 <Body style={styles.secondaryButtonText}>Cancel</Body>
               </Pressable>
             </>
+          )}
+
+          {step === 'camera' && (
+            <AvatarCameraView
+              onCaptured={(picked) => {
+                setPhoto(picked);
+                setStep('compose');
+              }}
+              onCancel={() => setStep('compose')}
+              onChoosePhotoInstead={() => choose('library')}
+            />
           )}
 
           {step === 'working' && (

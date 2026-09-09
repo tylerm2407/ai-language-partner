@@ -1,8 +1,9 @@
 /**
  * Photo-to-avatar generation (client half).
  *
- * The device captures or picks a photo, downscales it here, and hands the
- * bytes to the `generate-avatar` Edge Function, which owns the art-direction
+ * The device captures (in-app camera, `components/avatar/AvatarCameraView`)
+ * or picks a photo, downscales it here, and hands the bytes to the
+ * `generate-avatar` Edge Function, which owns the art-direction
  * prompt, the paid-tier check, the monthly quota, and the image-model call.
  *
  * The render takes minutes, not seconds — longer than any request a phone can
@@ -143,39 +144,55 @@ async function prepare(uri: string): Promise<PreparedPhoto> {
   return { base64: result.base64, uri: result.uri, mimeType: 'image/jpeg' };
 }
 
+/** A rectangle in image pixels, as `expo-image-manipulator`'s `crop` expects it. */
+export interface CropRect {
+  originX: number;
+  originY: number;
+  width: number;
+  height: number;
+}
+
 /**
- * Take a photo with the camera. Returns null if the user cancels.
- * Throws if permission is denied, so the caller can explain why.
+ * The square of the captured image that sat under a centred guide when the
+ * live preview was drawn with `cover` scaling (expo-camera's default FILL).
+ *
+ * Under `cover` the image is scaled so its smaller side fills the view, so one
+ * view point equals `min(imageW / viewW, imageH / viewH)` image pixels. The
+ * guide is centred, so the crop is too. Clamped to the image bounds so a
+ * swapped width/height from the native side (orientation quirks) can only make
+ * the crop slightly smaller, never invalid.
  */
-export async function capturePhoto(): Promise<PreparedPhoto | null> {
-  const permission = await ImagePicker.requestCameraPermissionsAsync();
-  if (!permission.granted) {
-    throw new AvatarGenerationError(
-      'Fluenci needs camera access to take your avatar photo. You can enable it in Settings.',
-      'PERMISSION_DENIED'
-    );
+export function coverCropRect(
+  image: { width: number; height: number },
+  view: { width: number; height: number },
+  guideSize: number,
+): CropRect {
+  const pxPerPt = Math.min(image.width / view.width, image.height / view.height);
+  const side = Math.floor(Math.min(guideSize * pxPerPt, image.width, image.height));
+  return {
+    originX: Math.max(0, Math.floor((image.width - side) / 2)),
+    originY: Math.max(0, Math.floor((image.height - side) / 2)),
+    width: side,
+    height: side,
+  };
+}
+
+/**
+ * Crop a photo taken by the in-app camera to `rect`, then downscale and
+ * encode it like any other picked photo.
+ */
+export async function prepareCapturedPhoto(uri: string, rect: CropRect): Promise<PreparedPhoto> {
+  const result = await manipulateAsync(
+    uri,
+    [{ crop: rect }, { resize: { width: MAX_UPLOAD_EDGE } }],
+    { compress: UPLOAD_QUALITY, format: SaveFormat.JPEG, base64: true }
+  );
+
+  if (!result.base64) {
+    throw new AvatarGenerationError('Could not read that photo. Please try again.');
   }
 
-  // The iOS Simulator has no camera, and some devices refuse the capture UI.
-  // Both surface here as a throw, which reads to the user as "nothing
-  // happened" unless it is turned into an actionable message.
-  let result;
-  try {
-    result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 1,
-    });
-  } catch {
-    throw new AvatarGenerationError(
-      'The camera is not available on this device. Choose an existing photo instead.',
-      'CAMERA_UNAVAILABLE'
-    );
-  }
-
-  if (result.canceled || !result.assets?.[0]) return null;
-  return prepare(result.assets[0].uri);
+  return { base64: result.base64, uri: result.uri, mimeType: 'image/jpeg' };
 }
 
 /**

@@ -1,6 +1,7 @@
 import {
   AvatarGenerationError,
   AVATAR_STYLE_OPTIONS,
+  coverCropRect,
   fetchAvatarStyles,
   generateAvatar,
   waitForAvatarJob,
@@ -12,9 +13,7 @@ import type { PreparedPhoto } from './avatar-generation';
 // test. Mocking them keeps the module importable under jest.
 // (babel-plugin-jest-hoist lifts these above the imports at transform time.)
 jest.mock('expo-image-picker', () => ({
-  requestCameraPermissionsAsync: jest.fn(),
   requestMediaLibraryPermissionsAsync: jest.fn(),
-  launchCameraAsync: jest.fn(),
   launchImageLibraryAsync: jest.fn(),
 }));
 
@@ -261,5 +260,30 @@ describe('offline fallback stays in sync with the server catalogue', () => {
     for (const option of AVATAR_STYLE_OPTIONS) {
       expect(Object.keys(AVATAR_STYLES)).toContain(option.key);
     }
+  });
+});
+
+describe('coverCropRect', () => {
+  // A 4:3 portrait capture shown `cover` in a 320pt square: the short side
+  // (3000px) fills the 320pt view, so 1pt = 9.375px. A 250pt guide is 2343px,
+  // centred in both axes.
+  it('maps a centred guide to a centred square in image pixels', () => {
+    const rect = coverCropRect({ width: 3000, height: 4000 }, { width: 320, height: 320 }, 250);
+    expect(rect).toEqual({ originX: 328, originY: 828, width: 2343, height: 2343 });
+    expect(rect.originX + rect.width).toBeLessThanOrEqual(3000);
+    expect(rect.originY + rect.height).toBeLessThanOrEqual(4000);
+  });
+
+  it('is unchanged when the native side reports width and height swapped', () => {
+    const a = coverCropRect({ width: 3000, height: 4000 }, { width: 320, height: 320 }, 250);
+    const b = coverCropRect({ width: 4000, height: 3000 }, { width: 320, height: 320 }, 250);
+    expect(b.width).toBe(a.width);
+    expect(b.originX).toBe(a.originY);
+    expect(b.originY).toBe(a.originX);
+  });
+
+  it('never exceeds the image bounds when the guide covers the whole view', () => {
+    const rect = coverCropRect({ width: 640, height: 480 }, { width: 320, height: 320 }, 320);
+    expect(rect).toEqual({ originX: 80, originY: 0, width: 480, height: 480 });
   });
 });
