@@ -121,7 +121,15 @@ export function floatingTabBarSpace(): number {
  *      a live one — the user has to leave deliberately, through the call
  *      screen's own hang-up.
  */
-export const FULL_SCREEN_ROUTES: readonly string[] = ['tutor/call'];
+export const FULL_SCREEN_ROUTES: readonly string[] = [
+  'tutor/call',
+  // The reader (2026-09-09). A page of a book is the one place in the app
+  // where a floating pill under the text is only clutter, and under Night
+  // reading it would be a white strip on a black page. The book route is
+  // hidden whole — its cover screen has its own back arrow.
+  'learn/reading/[passageId]',
+  'learn/reading/book/[bookId]',
+];
 
 /**
  * The shape `hidesTabBar` reads out of a navigation state.

@@ -116,6 +116,24 @@ describe('hidesTabBar', () => {
     expect(hidesTabBar(tabsState('tutor', 'history'))).toBe(false);
   });
 
+  it('hides the bar on both reader routes, cover screen included', () => {
+    // learn -> reading (its own Stack) -> [passageId] | book (its own Stack) -> [bookId]
+    const reading = (leaf: { name: string; state?: FocusedRouteState }) => ({
+      index: VISIBLE_TABS.indexOf('learn'),
+      routes: VISIBLE_TABS.map((name) => ({
+        name,
+        state: name === 'learn' ? { index: 0, routes: [{ name: 'reading', state: { index: 0, routes: [leaf] } }] } : undefined,
+      })),
+    });
+    expect(hidesTabBar(reading({ name: '[passageId]' }))).toBe(true);
+    expect(hidesTabBar(reading({ name: 'book', state: { index: 0, routes: [{ name: '[bookId]' }] } }))).toBe(true);
+  });
+
+  it('keeps the bar on the Learn hub and on a lesson', () => {
+    expect(hidesTabBar(tabsState('learn', 'index'))).toBe(false);
+    expect(hidesTabBar(tabsState('learn', '[lessonId]'))).toBe(false);
+  });
+
   it('falls back to the first route when a nested navigator has no index yet', () => {
     // Nested state is partial while the child navigator is still mounting.
     expect(
@@ -128,7 +146,9 @@ describe('hidesTabBar', () => {
     expect(hidesTabBar({ index: 0, routes: [] })).toBe(false);
   });
 
-  it('lists the call screen as the only full-screen route', () => {
-    expect(FULL_SCREEN_ROUTES).toEqual(['tutor/call']);
+  it('lists exactly the call screen and the two reader routes as full-screen', () => {
+    // Every entry here is a screen where the bar is clutter or a hazard.
+    // Adding one is a product decision, so the list is pinned.
+    expect(FULL_SCREEN_ROUTES).toEqual(['tutor/call', 'learn/reading/[passageId]', 'learn/reading/book/[bookId]']);
   });
 });

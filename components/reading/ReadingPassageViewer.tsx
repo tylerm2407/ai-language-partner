@@ -6,7 +6,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { AudioPlayButton } from '../audio/AudioPlayButton';
 import { ReaderDisplaySheet } from './ReaderDisplaySheet';
 import { ReaderThemeScope } from './ReaderThemeScope';
-import { floatingTabBarSpace } from '../navigation/FloatingTabBar';
 import { useReadingPreferences } from '../../hooks/useReadingPreferences';
 import { spacing } from '../../config/theme';
 import { ReadingHelp } from './ReadingHelp';
@@ -61,8 +60,9 @@ function ReadingPassageViewerBody({
   const { fontSize, lineHeightMultiplier, fontFamily } = useReadingPreferences();
   const insets = useSafeAreaInsets();
   const [displayOpen, setDisplayOpen] = useState(false);
-  // The fixed footer covers this much of the scroll; the tab bar floats under it.
-  const footerHeight = spacing.lg * 2 + 56 + insets.bottom + floatingTabBarSpace();
+  // The fixed footer covers this much of the scroll. No tab-bar reservation:
+  // the bar is hidden on this route (FULL_SCREEN_ROUTES).
+  const footerHeight = spacing.lg * 2 + 56 + insets.bottom;
 
   // A passage is short enough to render in one scroll, so it needs paragraphs
   // but not pagination. Splitting still matters: it is what gives a span the
@@ -155,7 +155,7 @@ function ReadingPassageViewerBody({
       {/* Continue Button */}
       <View style={{
         position: 'absolute', bottom: 0, left: 0, right: 0,
-        padding: 20, paddingBottom: 20 + insets.bottom + floatingTabBarSpace(), backgroundColor: c.bg,
+        padding: 20, paddingBottom: 20 + insets.bottom, backgroundColor: c.bg,
       }}>
         <SlabButton
           label="Continue to Questions"

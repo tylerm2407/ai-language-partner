@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Pressable, ActivityIndicator, Alert, Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeBack } from '../../../../../hooks/useSafeBack';
 import { Ionicons } from '@expo/vector-icons';
@@ -39,6 +39,7 @@ import { useScreenView } from '../../../../../hooks/useScreenView';
 export default function BookDetailScreen() {
   useScreenView('book');
   const { c, shape } = useUi2Theme();
+  const insets = useSafeAreaInsets();
   const { bookId } = useLocalSearchParams<{ bookId: string }>();
   const router = useRouter();
   const goBack = useSafeBack('/(app)');
@@ -476,7 +477,8 @@ export default function BookDetailScreen() {
       </View>
 
       {/* CTA Button */}
-      <View style={{ padding: 20, paddingBottom: 100, borderTopWidth: 1, borderTopColor: c.cardBorder }}>
+      {/* No tab-bar reservation: the bar is hidden on this route. */}
+      <View style={{ padding: 20, paddingBottom: 20 + insets.bottom, borderTopWidth: 1, borderTopColor: c.cardBorder }}>
         {book && (
           <View style={{ alignItems: 'flex-start', marginBottom: 12 }}>
             <OfflineDownloadControl

@@ -23,7 +23,6 @@ import { Ui2ProgressBar } from '../ui2/Ui2ProgressBar';
 import { Body, Caption } from '../ui2/Ui2Text';
 import { ReaderThemeScope } from './ReaderThemeScope';
 import { DEFAULT_LINE_HEIGHT_MULTIPLIER } from './TappableText';
-import { floatingTabBarSpace } from '../navigation/FloatingTabBar';
 import type { ReadingBook, ReviewItem } from '../../types';
 
 interface Props {
@@ -300,7 +299,8 @@ function BookReaderBody({
         flexDirection: 'row',
         paddingHorizontal: spacing.md,
         paddingTop: spacing.xs,
-        paddingBottom: spacing.sm + insets.bottom + floatingTabBarSpace(),
+        // The tab bar is hidden on this route (FULL_SCREEN_ROUTES).
+        paddingBottom: spacing.sm + insets.bottom,
         gap: spacing.sm,
         backgroundColor: c.bg,
       }}>
