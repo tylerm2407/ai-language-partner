@@ -27,8 +27,6 @@ jest.spyOn(AppState, 'addEventListener').mockImplementation(((_: string, h: (s: 
   return { remove };
 }) as never);
 
-const flush = () => new Promise((r) => setTimeout(r, 0));
-
 beforeEach(() => {
   jest.useFakeTimers();
   resetReaderBrightnessForTests();
@@ -109,7 +107,3 @@ describe('reader brightness', () => {
     await expect(jest.advanceTimersByTimeAsync(RELEASE_GRACE_MS + 1)).resolves.toBeUndefined();
   });
 });
-
-// `flush` is kept for readers of this file: real timers would need it, fake
-// timers advance the microtask queue through advanceTimersByTimeAsync.
-void flush;
