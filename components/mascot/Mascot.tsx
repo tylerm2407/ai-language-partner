@@ -24,10 +24,12 @@
  *   - Reduce Motion, Android, and the moment before the first frame decodes
  *     all show the transparent still.
  *   - The iOS SIMULATOR decodes only the base layer of an HEVC-with-alpha
- *     clip, so there Sol sits in a white square wherever he overlaps colour
- *     (the onboarding hero). That is the simulator, not the asset: the
- *     .mov reports "HEVC with Alpha" and a device composites it. Judge the
- *     overlap on a device. Android gets the still because
+ *     clip, so there Sol would sit in a white square — invisible on a white
+ *     screen, glaring in dark mode. That is the simulator, not the asset: a
+ *     Mac decode of the same file (AVAssetImageGenerator) returns a fully
+ *     transparent corner pixel, and a device composites it. So the simulator
+ *     gets the transparent still, detected without a new dependency: only
+ *     the simulator's document directory lives under /CoreSimulator/. Android gets the still because
  *     ExoPlayer does not composite HEVC alpha; the animated WebPs in the same
  *     folder are the Android path once Fresco's animated-webp module is added.
  *
@@ -37,6 +39,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AppState, Image, Platform, StyleSheet, View, type ViewStyle } from 'react-native';
 import { ResizeMode, Video, type AVPlaybackStatus } from 'expo-av';
+import { Paths } from 'expo-file-system';
 import { useMotion } from '../../hooks/useMotion';
 
 export type MascotState =
@@ -94,7 +97,20 @@ const CLIPS: Record<Clip, number> = {
 
 const STILL = require('../../assets/mascot/sol-still.png');
 
-const CAN_PLAY = Platform.OS === 'ios';
+/** True only in the iOS Simulator, whose app sandbox lives under CoreSimulator. */
+export function isIosSimulator(documentUri: string | null | undefined): boolean {
+  return Platform.OS === 'ios' && (documentUri ?? '').includes('/CoreSimulator/');
+}
+
+function documentUri(): string | null {
+  try {
+    return Paths.document.uri;
+  } catch {
+    return null;
+  }
+}
+
+const CAN_PLAY = Platform.OS === 'ios' && !isIosSimulator(documentUri());
 
 export function Mascot({ state = 'idle', size = 'md', style, accessibilityVisible = false }: MascotProps) {
   const px = typeof size === 'number' ? size : SIZE_PX[size];
