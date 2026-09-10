@@ -26,6 +26,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { radii, ui2Shape } from '../../config/theme';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
+import { brandRamp } from '../ui2/BrandRamp';
 import { useImmersive } from '../../hooks/useImmersive';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 
@@ -211,7 +212,9 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
           >
             {isFocused ? (
               <LinearGradient
-                colors={[c.primary, c.slab]}
+                // The active disc is the app icon's ramp (Home board G1, kept
+                // when Tyler picked S1 for the rest of Home, 2026-09-10).
+                colors={brandRamp(c)}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.activeCircle}

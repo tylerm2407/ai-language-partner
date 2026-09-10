@@ -102,7 +102,7 @@ export function PatternsCard({ mistakes, words, loading, error, onRetry, onOpen,
               </Text>
               <View style={styles.chips} accessibilityLabel={`Words: ${words.map((w) => w.card.targetText).join(', ')}`}>
                 {shownWords.map((w) => (
-                  <Chip key={w.card.id} label={w.card.targetText} variant="error" />
+                  <Chip key={w.card.id} label={w.card.targetText} variant="neutral" />
                 ))}
                 {moreWords > 0 && <Chip label={`+${moreWords}`} variant="neutral" />}
               </View>
