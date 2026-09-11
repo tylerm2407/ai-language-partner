@@ -21,10 +21,16 @@ jest.mock('react-native-reanimated', () => {
   const { View } = jest.requireActual('react-native');
   return {
     __esModule: true,
-    default: { View },
+    // `createAnimatedComponent` is here because this file imports HomeSections
+    // (for `useHomeEnter`), and the session hero's goal ring builds an animated
+    // SVG circle at module scope. Without it the whole suite fails to load, a
+    // long way from anything it is testing.
+    default: { View, createAnimatedComponent: (C: unknown) => C },
     useSharedValue: (initial: number) => ({ value: initial }),
     useAnimatedStyle: (factory: () => unknown) => factory(),
+    useAnimatedProps: (factory: () => unknown) => factory(),
     withSpring: (to: number) => to,
+    withTiming: (to: number) => to,
     FadeInDown: { delay: () => ({ duration: () => ({}) }) },
   };
 });

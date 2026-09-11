@@ -15,7 +15,7 @@ import { cefrBandForProficiencyLevel } from '../../lib/cefr-proficiency';
 import { cefrCanDo } from '../../lib/cefr-labels';
 import { useLevel } from '../../hooks/useLevel';
 import { useDailyNews } from '../../hooks/useDailyNews';
-import { useNotifications, scheduleDailyPracticeReminder } from '../../hooks/useNotifications';
+import { useNotifications, syncScheduledNotifications, cacheWeekSummary } from '../../hooks/useNotifications';
 import { useOnboardingChecklist } from '../../hooks/useOnboardingChecklist';
 import { useReviewCountSync } from '../../hooks/useReviewCountSync';
 import { PrePermissionSheet } from '../../components/gamification/PrePermissionSheet';
@@ -27,6 +27,7 @@ import { HomeHeader, LevelDueRow, SessionHero, ReadRow } from '../../components/
 import { PatternsCard } from '../../components/ui2/home/HomeInsights';
 import { useLearnerInsights } from '../../hooks/useLearnerInsights';
 import { heroSubtitle } from '../../lib/insights';
+import { DEFAULT_DAILY_GOAL_MINUTES } from '../../lib/active-time';
 import { trackEvent } from '../../lib/analytics';
 import { UnitRows, DailyThree, WeekStrip, ActionRow, SectionTitle } from '../../components/ui2/home/HomeProgress';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
@@ -124,12 +125,17 @@ export default function HomeScreen() {
     try {
       status = await requestPermissionsExplicit();
       if (status === 'granted' && profile) {
-        await scheduleDailyPracticeReminder({
-          practiceMinutesToday: dailyStats?.minutesPracticed ?? 0,
-          preferredHour: 21,
-          idealL2Self: profile.idealL2Self ?? null,
+        // The root layout re-arms on every foreground, but not in response to
+        // THIS grant — its own `permissionGranted` is a different hook instance
+        // and is only read on mount. So arm them here too, from the prefs the
+        // learner (or onboarding) chose.
+        await syncScheduledNotifications({
+          minutesToday: dailyStats?.minutesPracticed ?? 0,
+          goalMinutes: profile.dailyGoalMinutes ?? DEFAULT_DAILY_GOAL_MINUTES,
           dueCount: reviewCount,
+          idealL2Self: profile.idealL2Self ?? null,
           topMistakeLabel: insights.mistakes[0]?.label ?? null,
+          band,
         });
       }
     } finally {
@@ -163,6 +169,12 @@ export default function HomeScreen() {
     try {
       const stats = await fetchStatsRange(userId, startDate, endDate);
       setWeeklyStats(stats);
+      // Publish the totals for the reminder scheduler in the root layout, which
+      // words the weekly notifications and must not run this query itself.
+      cacheWeekSummary({
+        minutes: stats.reduce((n, s) => n + s.minutesPracticed, 0),
+        words: stats.reduce((n, s) => n + s.cardsLearned, 0),
+      });
     } catch (err) {
       // An empty week and a failed fetch render identically, so this has to be
       // stated rather than swallowed (CLAUDE.md §5).
@@ -210,7 +222,10 @@ export default function HomeScreen() {
 
           <SessionHero
             title={nextTile?.title ?? 'Your next lesson'}
-            minutes={profile?.dailyGoalMinutes ?? 15}
+            // Real minutes against the learner's own goal. `minutes_practiced`
+            // is written by `hooks/useActiveTime.ts` from every practice screen.
+            minutesToday={dailyStats?.minutesPracticed ?? 0}
+            goalMinutes={profile?.dailyGoalMinutes ?? DEFAULT_DAILY_GOAL_MINUTES}
             // The learner's own goal when they gave one; the band's can-do
             // line otherwise. The level card above keeps the can-do pairing
             // either way, so a bare band never stands alone on the page.

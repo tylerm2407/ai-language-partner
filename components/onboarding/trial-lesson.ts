@@ -19,19 +19,26 @@
  * These sentences deliberately overlap the opening unit of each published
  * course, so the trial is a preview of the real thing rather than a separate
  * demo. When a course's first unit changes materially, change this too.
+ *
+ * SUPERSEDED, BUT NOT YET DEAD — `./topic-packs` now carries a MICRO lesson
+ * (3 words, then the sentence they build, ~90 seconds) for every supported
+ * language AND every onboarding topic, which is what the flow should be
+ * showing: a learner who tapped "Moving abroad" should not be taught
+ * "¿Cómo te llamas?". The functions below delegate to the `travel` pack
+ * wherever one exists so that callers which have not yet been switched over
+ * to `topicPackFor` get the better lesson without changing a line — and the
+ * eight-exercise content below stays as the fallback for nothing, today,
+ * since packs cover all nine languages. It is kept for one release as the
+ * escape hatch if a pack turns out to be wrong in a way a device only shows.
+ *
+ * `TRIAL_LESSON_XP` and `TRIAL_LESSON_ID` now live in `./topic-packs/spec`
+ * and are re-exported here: two modules owning the same lesson id is how a
+ * resume snapshot ends up keyed on a string nothing else recognises.
  */
 import type { Exercise, LanguageCode } from '../../types';
+import { topicPackFor, TRIAL_LESSON_ID, TRIAL_LESSON_XP } from './topic-packs';
 
-/** Legacy scoring weight used by the shared lesson summarizer. Not awarded. */
-export const TRIAL_LESSON_XP = 20;
-
-/**
- * Stable id for the trial run. LessonRunner keys its resume snapshot on
- * (userId, lessonId) and skips persistence entirely when `userId` is empty,
- * which is always the case here — so this id never reaches storage. It exists
- * because the runner requires one.
- */
-export const TRIAL_LESSON_ID = 'trial-lesson';
+export { TRIAL_LESSON_ID, TRIAL_LESSON_XP };
 
 /** Shorthand for the fields every trial exercise leaves empty. */
 function ex(
@@ -255,21 +262,27 @@ const TRIAL_LESSONS: Partial<Record<LanguageCode, Exercise[]>> = {
 };
 
 /**
- * Exercises for the trial lesson in `language`, or an empty array for the six
- * languages with no bundled trial yet.
+ * Exercises for the trial lesson in `language`, or an empty array when the
+ * language has neither a topic pack nor legacy content.
+ *
+ * Delegates to the `travel` pack, which is the closest thing to a neutral
+ * topic: every learner has ordered something. A caller that knows which chip
+ * the learner tapped should be calling `topicPackFor` directly instead — this
+ * function cannot know, so it picks the least wrong default.
  *
  * Deliberately does NOT fall back to Spanish. A learner who picked Korean and
  * is handed a Spanish lesson has been shown the wrong product at the exact
  * moment the flow is meant to prove it works. Callers check `hasTrialLesson`
  * and skip straight to the sign-up ask instead — a shorter flow beats a
  * confusing one.
- *
- * When a language gains a trial, that skip disappears on its own.
  */
 export function trialExercisesFor(language: LanguageCode): Exercise[] {
+  const pack = topicPackFor(language, 'travel');
+  if (pack) return pack.exercises;
   return TRIAL_LESSONS[language] ?? [];
 }
 
 export function hasTrialLesson(language: LanguageCode): boolean {
+  if (topicPackFor(language, 'travel')) return true;
   return (TRIAL_LESSONS[language]?.length ?? 0) > 0;
 }

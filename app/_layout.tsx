@@ -2,15 +2,17 @@ import '../global.css';
 import * as Sentry from '@sentry/react-native';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useAuthDeepLinks } from '../hooks/useAuthDeepLinks';
 import { useAppStore } from '../stores/useAppStore';
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 import { useSchoolStore } from '../stores/useSchoolStore';
 import { SCHOOL_ENABLED } from '../config/app';
-import { useNotifications, scheduleDailyPracticeReminder } from '../hooks/useNotifications';
+import { useNotifications, syncScheduledNotifications } from '../hooks/useNotifications';
 import { readCachedTopMistake } from '../hooks/useLearnerInsights';
+import { DEFAULT_DAILY_GOAL_MINUTES } from '../lib/active-time';
+import { cefrBandForProficiencyLevel } from '../lib/cefr-proficiency';
 import {
   configurePurchases,
   identifyPurchaser,
@@ -121,55 +123,45 @@ function RootLayout() {
   // PrePermissionSheet post-first-lesson.
   const { permissionGranted } = useNotifications();
 
-  // Re-arm the daily practice reminder whenever the inputs change
-  // (practice/permission). Silent no-op if permission isn't granted yet
-  // or if the learner already practised today.
+  // Re-arm every reminder whenever its inputs change. Cancel-and-reschedule is
+  // idempotent per kind, so running this often converges on one correct set
+  // rather than accumulating duplicates; it is a silent no-op without
+  // permission. Which kinds fire at all is the learner's choice
+  // (`lib/notification-prefs.ts`), and the daily one is now gated on minutes
+  // practised against their goal rather than on XP they are never shown.
   //
-  // The body rotates through the learner's goal, the mistake they keep making
-  // and the cards due. The mistake comes from the insights READ CACHE — Home
-  // loads it; the root layout must not run those queries just to word a
-  // notification.
-  useEffect(() => {
+  // The mistake label comes from the insights READ CACHE and the week totals
+  // from `cacheWeekSummary` — Home loads both; the root layout must not run
+  // those queries just to word a notification.
+  const armReminders = useCallback(() => {
     if (!profile || !permissionGranted) return;
     readCachedTopMistake(profile.userId, profile.targetLanguage)
       .catch(() => null)
       .then((topMistakeLabel) =>
-        scheduleDailyPracticeReminder({
-          practiceMinutesToday: dailyStats?.minutesPracticed ?? 0,
-          lessonsCompletedToday: dailyStats?.lessonsCompleted ?? 0,
-          cardsReviewedToday: dailyStats?.cardsReviewed ?? 0,
-          preferredHour: 21,
-          idealL2Self: profile.idealL2Self ?? null,
+        syncScheduledNotifications({
+          minutesToday: dailyStats?.minutesPracticed ?? 0,
+          goalMinutes: profile.dailyGoalMinutes ?? DEFAULT_DAILY_GOAL_MINUTES,
           dueCount: reviewCount,
+          idealL2Self: profile.idealL2Self ?? null,
           topMistakeLabel,
+          band: cefrBandForProficiencyLevel(profile.level ?? 'beginner'),
         }),
       )
       .catch(() => {});
-  }, [profile, dailyStats?.minutesPracticed, dailyStats?.lessonsCompleted, dailyStats?.cardsReviewed, permissionGranted, reviewCount]);
+  }, [profile, dailyStats?.minutesPracticed, permissionGranted, reviewCount]);
 
-  // Also re-arm on background — covers edge cases where the user
-  // backgrounds before the schedule-on-change useEffect has resolved.
+  useEffect(() => {
+    armReminders();
+  }, [armReminders]);
+
+  // Also re-arm on the way out and back — covers the user backgrounding before
+  // the effect above resolved, and a foreground after a day boundary.
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'background' && profile && permissionGranted) {
-        readCachedTopMistake(profile.userId, profile.targetLanguage)
-          .catch(() => null)
-          .then((topMistakeLabel) =>
-            scheduleDailyPracticeReminder({
-              practiceMinutesToday: dailyStats?.minutesPracticed ?? 0,
-              lessonsCompletedToday: dailyStats?.lessonsCompleted ?? 0,
-              cardsReviewedToday: dailyStats?.cardsReviewed ?? 0,
-              preferredHour: 21,
-              idealL2Self: profile.idealL2Self ?? null,
-              dueCount: reviewCount,
-              topMistakeLabel,
-            }),
-          )
-          .catch(() => {});
-      }
+      if (state === 'background' || state === 'active') armReminders();
     });
     return () => sub.remove();
-  }, [profile, dailyStats?.minutesPracticed, dailyStats?.lessonsCompleted, dailyStats?.cardsReviewed, permissionGranted, reviewCount]);
+  }, [armReminders]);
 
   // Register the analytics provider once, before anything tries to track.
   // No-ops without EXPO_PUBLIC_POSTHOG_KEY, which is the normal state for a

@@ -40,8 +40,8 @@ function refIdOf(spec: PackTarget): string {
 
 export function OfflineDownloadControl({ spec, what, compact = false }: OfflineDownloadControlProps) {
   const { c } = useUi2Theme();
-  // Plain boolean, not the callback `style` form: NativeWind drops that form
-  // silently (see hooks/usePressed.ts).
+  // Boolean + array style, never the function form: NativeWind's Pressable
+  // wrapper drops a function-valued style prop silently (see lib/no-callback-style.test.ts).
   const { pressed, pressHandlers } = usePressed();
   const router = useRouter();
   const packs = useOfflinePacks();

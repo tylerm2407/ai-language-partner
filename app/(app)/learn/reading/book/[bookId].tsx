@@ -8,6 +8,7 @@ import * as Sentry from '@sentry/react-native';
 import { useAuth } from '../../../../../hooks/useAuth';
 import { useProfile } from '../../../../../hooks/useProfile';
 import { useWordLookup } from '../../../../../hooks/useWordLookup';
+import { useActiveTime } from '../../../../../hooks/useActiveTime';
 import {
   fetchBookMeta,
   fetchBookContent,
@@ -56,6 +57,10 @@ export default function BookDetailScreen() {
   // Guards against re-awarding XP when the reader re-fires onComplete (paging
   // back and forth across the last page, narration auto-advance, etc.).
   const hasCompletedRef = useRef(false);
+
+  // Only while the reader itself is open — the cover screen is browsing, not
+  // reading. See hooks/useActiveTime.ts.
+  useActiveTime({ kind: 'reading', enabled: isReading && !!content });
 
   const isUnlimitedPlan = subscription?.tier === 'vip' && subscription?.isActive;
 

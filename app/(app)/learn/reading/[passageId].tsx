@@ -6,6 +6,7 @@ import { useSafeBack } from '../../../../hooks/useSafeBack';
 import { useProfile } from '../../../../hooks/useProfile';
 import { useReadingPassage } from '../../../../hooks/useReadingPassage';
 import { useWordLookup } from '../../../../hooks/useWordLookup';
+import { useActiveTime } from '../../../../hooks/useActiveTime';
 import { ReadingPassageViewer } from '../../../../components/reading/ReadingPassageViewer';
 import { ComprehensionQuestions } from '../../../../components/reading/ComprehensionQuestions';
 import { ReaderThemeScope } from '../../../../components/reading/ReaderThemeScope';
@@ -39,6 +40,10 @@ export default function ReadingPassageScreen() {
     targetLanguage: profile?.nativeLanguage ?? 'en',
     cefrLevel: passage?.cefrLevel ?? 'A1',
   });
+
+  // Reading time is the one skill column a screen-level clock measures well:
+  // the whole screen is reading. See hooks/useActiveTime.ts.
+  useActiveTime({ kind: 'reading', enabled: !isLoading && !error });
 
   const [phase, setPhase] = useState<'reading' | 'questions' | 'complete'>('reading');
   const [score, setScore] = useState(0);

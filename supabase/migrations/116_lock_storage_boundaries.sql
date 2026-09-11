@@ -1,10 +1,12 @@
 -- 116 — Close the two live Storage authorization gaps found by the final audit.
 --
--- DEPLOYMENT PRECONDITION:
--- The production Supabase project is shared. Before applying this migration,
--- confirm from the live catalog and Storage usage logs that podcast-audio
--- belongs to Fluenci or that its owning application has approved this policy
--- correction. Do not infer ownership from the bucket name.
+-- The project has not been shared with other apps since 2026-08-06 (see
+-- CLAUDE.md §4); podcast-audio is Fluenci's. Verified against the live
+-- catalog 2026-09-11 before applying: the two "Service role can ... podcast
+-- audio" policies were still present and applied TO public, and
+-- "Avatars are publicly accessible" had already been dropped by migration 114.
+--
+-- Applied to production 2026-09-11.
 --
 -- Service-role Storage clients bypass RLS. A policy whose name says service
 -- role but applies TO public grants access to anon/authenticated callers.
