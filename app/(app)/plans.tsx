@@ -21,6 +21,7 @@
  * but a paywall with nothing to buy and no way out is still a 3.1.1 rejection.
  */
 import { View, Text, Pressable, ScrollView, Alert, ActivityIndicator, Linking } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
@@ -39,7 +40,14 @@ import {
   reportPurchaseFailure,
 } from '../../lib/purchases';
 import { type PlanId } from '../../lib/plans';
-import { STEP_ORDER, ctaLabel, renewalLine } from '../../lib/plan-pricing';
+import {
+  STEP_ORDER,
+  ctaLabel,
+  renewalLine,
+  learnerMoment,
+  PLAN_PROOF,
+  FREE_EXIT_LINE,
+} from '../../lib/plan-pricing';
 import { trackEvent } from '../../lib/analytics';
 import { PlanStepCard } from '../../components/subscription/PlanStepCard';
 import { SlabButton } from '../../components/ui2/SlabButton';
@@ -60,7 +68,7 @@ export default function PlansScreen() {
   const { c, type } = useUi2Theme();
   useScreenView('paywall');
   const { user } = useAuth();
-  const { subscription, refreshSubscription, setEntitledTier } = useAppStore();
+  const { subscription, profile, refreshSubscription, setEntitledTier } = useAppStore();
   const router = useRouter();
 
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);
@@ -76,6 +84,19 @@ export default function PlansScreen() {
   const restoreInFlight = useRef(false);
 
   const currentTier = subscription?.tier ?? 'starter';
+
+  /**
+   * The learner's own sentence from onboarding, sanitised — or null.
+   *
+   * When it exists it BECOMES the headline. That is the whole of design board
+   * P6: the ask is easier to weigh against the thing they said they wanted
+   * than against a stock line about commuting, and it is their words rather
+   * than a claim of ours, so there is nothing here to overstate. When it does
+   * not exist (an account from before migration 028, or someone who skipped
+   * the question) the generic advertising line stands unchanged — the screen
+   * has two copy paths, not one with a hole in it.
+   */
+  const moment = useMemo(() => learnerMoment(profile?.idealL2Self), [profile?.idealL2Self]);
 
   /**
    * Leave the paywall — after a purchase, a restore, an offerings failure, or
@@ -258,7 +279,11 @@ export default function PlansScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
       <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.md + 4, paddingBottom: spacing.lg }}>
-        {/* The advertising line is the headline — unquoted, in the display face. */}
+        {/* The headline — unquoted, in the display face. It is the learner's own
+            answer when they gave one, and the advertising line when they did
+            not. Deliberately NOT wrapped in quotation marks: quoting it back
+            would frame their sentence as evidence we collected, which reads as
+            a sales tactic; set plainly it reads as the subject of the screen. */}
         <Text
           style={{
             fontFamily: type.heading,
@@ -269,7 +294,7 @@ export default function PlansScreen() {
             marginTop: spacing.lg + 2,
           }}
         >
-          Learning a language can now be done during your drive to work.
+          {moment ?? 'Learning a language can now be done during your drive to work.'}
         </Text>
         <Text
           style={{
@@ -281,7 +306,7 @@ export default function PlansScreen() {
             marginTop: spacing.sm,
           }}
         >
-          HANDS-FREE VOICE PRACTICE
+          {moment ? 'YOUR PLAN IS READY' : 'HANDS-FREE VOICE PRACTICE'}
         </Text>
 
         {loading ? (
@@ -413,18 +438,72 @@ export default function PlansScreen() {
               })}
             </View>
 
-            <SlabCard style={{ marginTop: spacing.sm + 1, padding: spacing.md - 2 }}>
-              <Text
-                style={{
-                  fontFamily: type.ui,
-                  fontSize: 15,
-                  lineHeight: 22,
-                  color: c.muted,
-                }}
+            {moment ? (
+              /* Three things a paid plan does with the sentence above, each one
+                 true of the app as it ships — the claims and the reasoning for
+                 each live with the numbers in lib/plan-pricing.ts. This replaces
+                 a bare "has never been this easy", which asserted nothing and
+                 so could not be checked against anything. */
+              <SlabCard
+                tint="primary"
+                style={{ marginTop: spacing.sm + 1, padding: spacing.md - 2, gap: spacing.sm }}
               >
-                Learning a language has never been this easy.
-              </Text>
-            </SlabCard>
+                {PLAN_PROOF.map((row) => (
+                  <View
+                    key={row.title}
+                    accessible
+                    accessibilityLabel={`${row.title}. ${row.detail}`}
+                    style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm - 2 }}
+                  >
+                    {/* The tick is decorative: the row above reads both lines as
+                        one label, so a second announcement would be noise. */}
+                    <Ionicons
+                      name="checkmark"
+                      size={16}
+                      color={c.onTint}
+                      style={{ marginTop: 2 }}
+                      accessibilityElementsHidden
+                      importantForAccessibility="no-hide-descendants"
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={{
+                          fontFamily: type.uiBold,
+                          fontSize: 14,
+                          lineHeight: 20,
+                          color: c.ink,
+                        }}
+                      >
+                        {row.title}
+                      </Text>
+                      <Text
+                        style={{
+                          fontFamily: type.ui,
+                          fontSize: 12,
+                          lineHeight: 17,
+                          color: c.muted,
+                        }}
+                      >
+                        {row.detail}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+              </SlabCard>
+            ) : (
+              <SlabCard style={{ marginTop: spacing.sm + 1, padding: spacing.md - 2 }}>
+                <Text
+                  style={{
+                    fontFamily: type.ui,
+                    fontSize: 15,
+                    lineHeight: 22,
+                    color: c.muted,
+                  }}
+                >
+                  Learning a language has never been this easy.
+                </Text>
+              </SlabCard>
+            )}
 
             {/* CTA */}
             <SlabButton
@@ -521,8 +600,7 @@ export default function PlansScreen() {
                 marginTop: 2,
               }}
             >
-              Lessons, reviews, reading and the daily news stay free. The AI tutor and voice
-              practice don’t.
+              {FREE_EXIT_LINE}
             </Text>
           </>
         )}

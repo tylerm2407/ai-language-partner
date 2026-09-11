@@ -63,12 +63,25 @@ jest.mock('expo-router', () => ({
 }));
 
 jest.mock('../hooks/useAuth', () => ({ useAuth: () => ({ user: { id: 'u1' } }) }));
+
+/**
+ * `idealL2Self` on the mocked profile is what picks between the screen's two
+ * copy paths, so it is mutable per test rather than baked into the factory.
+ * `null` — every account before migration 028, and anyone who skipped the
+ * onboarding question — is the default, because that is the path that must
+ * keep working unchanged.
+ */
+let mockIdealL2Self: string | null = null;
+
 // The screen destructures the whole store; the selector form is supported too
 // so this mock keeps working if that changes.
 jest.mock('../stores/useAppStore', () => {
   const state = {
     subscription: null,
     entitledTier: null,
+    get profile() {
+      return { idealL2Self: mockIdealL2Self };
+    },
     refreshSubscription: jest.fn(),
     setEntitledTier: jest.fn(),
   };
@@ -92,6 +105,11 @@ jest.mock('../lib/purchases', () => ({
   annualSavingsPercent: () => 0,
   reportPurchaseFailure: jest.fn(),
 }));
+
+// The copy itself — and the numbers inside it — is pinned against `PLANS` in
+// lib/plan-pricing.test.ts. Importing rather than retyping it here keeps this
+// file about WHERE the copy renders and on which path, not about its wording.
+import { PLAN_PROOF, FREE_EXIT_LINE } from '../lib/plan-pricing';
 
 function texts(renderer: TestRenderer.ReactTestRenderer): string {
   return renderer.root
@@ -124,6 +142,7 @@ function byLabel(renderer: TestRenderer.ReactTestRenderer, label: string) {
 beforeEach(() => {
   jest.clearAllMocks();
   mockCanGoBack.mockReturnValue(false);
+  mockIdealL2Self = null;
 });
 
 describe('free-plan exit', () => {
@@ -167,10 +186,132 @@ describe('free-plan exit', () => {
     const renderer = await render();
 
     // Declining has to be an informed choice, so the trade is stated next to
-    // the link rather than discovered later on a locked screen.
+    // the link rather than discovered later on a locked screen. The exact
+    // wording — and the fact that its one number is the real free-tier cap —
+    // is pinned in lib/plan-pricing.test.ts; here we only check it is on
+    // screen, whole, beside the dismiss.
+    expect(texts(renderer)).toContain(FREE_EXIT_LINE);
+  });
+
+  it('keeps the dismiss label neutral', async () => {
+    mockIsPurchasesAvailable.mockReturnValue(true);
+    mockGetOfferingPackages.mockResolvedValue([pkg]);
+    mockIdealL2Self = 'Order dinner in Lyon without switching to English';
+
+    const renderer = await render();
+
+    // DESIGN.md §UX Psychology Principles §5 is binding: no guilt-labelled
+    // escape hatch, on either copy path. Personalising the ask above must not
+    // turn the way out into "I'll risk it".
     const all = texts(renderer);
-    expect(all).toMatch(/Lessons, reviews, reading and the daily news stay free/);
-    expect(all).toMatch(/AI tutor and voice practice don’t/);
+    expect(all).toContain('Continue on the free plan');
+    expect(all).not.toMatch(/risk|give up|lose your|miss out/i);
+  });
+});
+
+/**
+ * The two copy paths of the ask itself (design board P6).
+ *
+ * With an onboarding answer the screen leads with the learner's own sentence
+ * and backs it with three claims about what a paid plan does WITH that
+ * sentence. Without one — a pre-migration-028 account, or someone who skipped
+ * the question — the generic advertising line has to survive untouched, which
+ * is the half of this that a personalisation change quietly breaks.
+ */
+describe('headline and proof', () => {
+  const pkg = {
+    identifier: 'premium_annual',
+    product: { price: 99.99, priceString: '$99.99', title: 'Premium' },
+  };
+
+  beforeEach(() => {
+    mockIsPurchasesAvailable.mockReturnValue(true);
+    mockGetOfferingPackages.mockResolvedValue([pkg]);
+  });
+
+  it('keeps the stock headline when there is no ideal-self answer', async () => {
+    const renderer = await render();
+    const all = texts(renderer);
+
+    expect(all).toContain('Learning a language can now be done during your drive to work.');
+    expect(all).toContain('HANDS-FREE VOICE PRACTICE');
+    expect(all).not.toContain('YOUR PLAN IS READY');
+  });
+
+  it('keeps the old quote card when there is no ideal-self answer', async () => {
+    const renderer = await render();
+    const all = texts(renderer);
+
+    expect(all).toContain('Learning a language has never been this easy.');
+    expect(all).not.toContain(PLAN_PROOF[0].title);
+  });
+
+  it('leads with the learner’s own sentence when they gave one', async () => {
+    mockIdealL2Self = 'Order dinner in Lyon without switching to English';
+
+    const renderer = await render();
+    const all = texts(renderer);
+
+    expect(all).toContain('Order dinner in Lyon without switching to English');
+    expect(all).toContain('YOUR PLAN IS READY');
+    // The stock line is replaced, not pushed below.
+    expect(all).not.toContain('Learning a language can now be done during your drive to work.');
+  });
+
+  it('sanitises the sentence before setting it as a headline', async () => {
+    // 300 chars is what the column allows, and it arrives as free text with
+    // whatever newlines the learner typed. Neither may reach the display face
+    // raw — see learnerMoment.
+    mockIdealL2Self = `Talk to my\n\npartner’s   family ${'x'.repeat(300)}`;
+
+    const renderer = await render();
+    const all = texts(renderer);
+
+    expect(all).toContain('Talk to my partner’s family');
+    expect(all).not.toContain('\n\n');
+    expect(all).toContain('…');
+  });
+
+  it('swaps the quote card for the three proof rows', async () => {
+    mockIdealL2Self = 'Order dinner in Lyon without switching to English';
+
+    const renderer = await render();
+    const all = texts(renderer);
+
+    for (const row of PLAN_PROOF) {
+      expect(all).toContain(row.title);
+      expect(all).toContain(row.detail);
+    }
+    expect(all).not.toContain('Learning a language has never been this easy.');
+  });
+
+  it('reads each proof row as one label, with the tick silent', async () => {
+    mockIdealL2Self = 'Order dinner in Lyon without switching to English';
+
+    const renderer = await render();
+
+    for (const row of PLAN_PROOF) {
+      expect(
+        renderer.root.findAll(
+          (n: ReactTestInstance) =>
+            n.props?.accessibilityLabel === `${row.title}. ${row.detail}`,
+          { deep: true },
+        ).length,
+      ).toBeGreaterThan(0);
+    }
+  });
+
+  it('adds no countdown, timer or delayed skip on either path', async () => {
+    // Explicitly out of scope for this screen, and the pattern App Review
+    // rejects under 3.1.1. Checked on the personalised path because that is
+    // the one where urgency copy would be tempting.
+    mockIdealL2Self = 'Order dinner in Lyon without switching to English';
+
+    const renderer = await render();
+    const all = texts(renderer);
+
+    expect(all).not.toMatch(/\bends in\b|\bexpires\b|left today|limited time|\bhurry\b/i);
+    expect(byLabel(renderer, 'Continue on the free plan')).toBeTruthy();
   });
 });
 
