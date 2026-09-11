@@ -878,6 +878,34 @@ scheme (`app.json` `userInterfaceStyle: "automatic"`).
 
 `hooks/useUi2Theme.test.ts` pins the contrast floors.
 
+### Home — the Tint-blocks standard, with the level ring (2026-09-11)
+
+The Tint-blocks Home (violet-tint level card, green due tile, violet hero,
+amber read row, unit rows with a coloured % badge) is the standard for the
+screen. A day of logo-colour work (the icon's cyan→magenta ramp on the tab
+disc and as progress lines, and a drift/swell motion) was reverted at
+Tyler's ask: it read as vibe-coded and is a competitor's colourway. **Do not
+reintroduce the ramp.** The tab disc is the still `primary` → `slab` gradient.
+
+One improvement was picked from the variations (canvas Part 2, "Home ·
+standard, variations", N3 · Ring):
+
+- **The level card carries a ring** toward the next band. The number is
+  `lib/next-band-progress.ts` over the proficiency report's band breakdown —
+  the same three gates that promote a band (items seen, items matured, items
+  retained), a third each, floored, and capped at 99 while the learner is
+  still in the band because vocabulary leads the assessment but does not
+  finish it. Eyebrow states: `Level` (report not loaded — the ring is empty,
+  no number is invented), `Level · 62% to B1`, `Level · top band` at C2.
+- **The band shown is the measured one** (`report.overallLevel`) once the
+  report can assess; the profile's self-declared level stands in only before
+  that. `hooks/useNextBandProgress.ts` rebuilds both on focus, at most once a
+  minute.
+- **The due tile is a Review button.** Count on top, a green pill below;
+  `Caught up`, disabled, at zero. The count re-reads on every focus
+  (`useReviewCountSync`), so a warm-up review or another device cannot leave
+  it stale.
+
 ### Night reading — the warm palette (2026-09-09)
 
 A third palette, `ui2Warm`, for the reader only. It is not a third scheme.

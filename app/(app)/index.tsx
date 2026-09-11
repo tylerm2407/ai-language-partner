@@ -12,6 +12,7 @@ import { fetchStatsRange } from '../../lib/supabase-queries';
 import { localDayKey } from '../../lib/dates';
 import { getTargetLanguage, targetLanguageGreeting } from '../../lib/language';
 import { cefrBandForProficiencyLevel } from '../../lib/cefr-proficiency';
+import { useNextBandProgress } from '../../hooks/useNextBandProgress';
 import { cefrCanDo } from '../../lib/cefr-labels';
 import { useLevel } from '../../hooks/useLevel';
 import { useDailyNews } from '../../hooks/useDailyNews';
@@ -87,7 +88,11 @@ export default function HomeScreen() {
   const [showPrePermission, setShowPrePermission] = useState(false);
   const { c, scheme } = useUi2Theme();
   const { challenges } = useDailyChallenges();
-  const band = cefrBandForProficiencyLevel(profile?.level ?? 'beginner');
+  // The level card shows the MEASURED band once the proficiency report can
+  // assess one; the profile's self-declared level only stands in before that.
+  // Both it and the ring toward the next band are rebuilt on focus.
+  const level = useNextBandProgress(cefrBandForProficiencyLevel(profile?.level ?? 'beginner'));
+  const band = level.band;
   // What the tutor already knows about this learner — recurring mistakes and
   // words the SRS says keep failing. Same rows the paid tutor prompt reads.
   const insights = useLearnerInsights(user?.id, getTargetLanguage(profile));
@@ -216,6 +221,9 @@ export default function HomeScreen() {
 
           <LevelDueRow
             band={band}
+            nextBand={level.progress?.next ?? null}
+            progressPercent={level.progress?.percent ?? null}
+            measured={level.measured}
             dueCount={reviewCount}
             onReview={() => router.push('/learn/review' as any)}
           />

@@ -2,8 +2,16 @@
  * Home, UI 2.0 — the top of the page: masthead, level + due cards, the
  * session hero, and today's read. Pure presentation; app/(app)/index.tsx
  * owns the data and routing.
+ *
+ * N3 · Ring (canvas "Home · standard, variations", picked 2026-09-11): the
+ * level card carries a ring showing how far the learner is toward the next
+ * band, and the cards-due tile is the Review button it always behaved as.
+ * Both numbers are live — see hooks/useNextBandProgress and
+ * hooks/useReviewCountSync — and the card never shows a percentage it does
+ * not have: while the report loads the ring is empty and the eyebrow reads
+ * "Level"; at C2 it reads "Top band" and the ring is full.
  */
-import { useEffect } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   FadeInDown,
@@ -54,52 +62,80 @@ export function HomeHeader({ greeting, name }: { greeting: string; name?: string
 // ─── Level + due ───────────────────────────────────────────────────────────
 interface LevelDueRowProps {
   band: string;
+  /** The band after this one; null at the top of the ladder. */
+  nextBand: string | null;
+  /** 0–99 toward `nextBand`, 100 at the top; null while unknown. */
+  progressPercent: number | null;
+  /** True when `band` is the measured assessment rather than the profile's claim. */
+  measured: boolean;
   dueCount: number;
   onReview: () => void;
 }
 
-export function LevelDueRow({ band, dueCount, onReview }: LevelDueRowProps) {
+/** The eyebrow beside the ring. Pure so the three states are asserted. */
+export function levelEyebrow(nextBand: string | null, progressPercent: number | null): string {
+  if (progressPercent === null) return 'Level';
+  if (nextBand === null) return 'Level · top band';
+  return `Level · ${progressPercent}% to ${nextBand}`;
+}
+
+export function LevelDueRow({ band, nextBand, progressPercent, measured, dueCount, onReview }: LevelDueRowProps) {
   const { c, type } = useUi2Theme();
   const enter = useHomeEnter();
+  const eyebrow = levelEyebrow(nextBand, progressPercent);
+  const ringPct = progressPercent === null ? 0 : progressPercent / 100;
+  const dueLabel = dueCount === 1 ? 'card due' : 'cards due';
   return (
     <Animated.View entering={enter(1)} style={styles.statRow}>
       <SlabCard
         tint="primary"
         style={styles.levelCard}
-        accessibilityRole="text"
-        accessibilityLabel={`Level ${band}. ${cefrCanDo(band)}`}
+        accessible
+        accessibilityRole="progressbar"
+        accessibilityLabel={`${measured ? 'Measured level' : 'Level'} ${band}. ${cefrCanDo(band)}`}
+        accessibilityValue={
+          progressPercent === null
+            ? undefined
+            : { min: 0, max: 100, now: progressPercent, text: nextBand ? `${progressPercent} percent of the way to ${nextBand}` : 'Top band' }
+        }
       >
-        <View style={styles.levelTop}>
-          <Text style={{ fontFamily: type.heading, fontSize: 30, lineHeight: 32, color: c.onTint }}>{band}</Text>
-          <Text style={[styles.eyebrow, { fontFamily: type.uiHeavy, color: c.onTint }]}>Level</Text>
+        <View style={styles.levelRing}>
+          <ProgressRing pct={ringPct} color={c.primary} track={c.primaryTintBorder}>
+            <Text style={{ fontFamily: type.heading, fontSize: 17, lineHeight: 20, color: c.onTint }}>{band}</Text>
+          </ProgressRing>
         </View>
-        <Text style={{ fontFamily: type.ui, fontSize: 12, lineHeight: 16, color: c.muted }} numberOfLines={3}>
-          {cefrCanDo(band)}
-        </Text>
+        <View style={styles.levelText}>
+          <Text style={[styles.eyebrow, { fontFamily: type.uiHeavy, color: c.onTint, fontSize: 11 }]} numberOfLines={1}>
+            {eyebrow}
+          </Text>
+          <Text style={{ fontFamily: type.ui, fontSize: 12, lineHeight: 16, color: c.muted }} numberOfLines={3}>
+            {cefrCanDo(band)}
+          </Text>
+        </View>
       </SlabCard>
 
-      <Pressable
-        onPress={() => {
-          haptic('select');
-          onReview();
-        }}
-        disabled={dueCount === 0}
-        accessibilityRole="button"
-        accessibilityLabel={dueCount > 0 ? `Review ${dueCount} cards due` : 'No cards due'}
-        style={styles.dueCard}
-      >
-        <SlabCard tint="green" style={styles.dueInner}>
-          <View style={[styles.iconTile, { backgroundColor: c.green }]}>
-            <Ionicons name="albums-outline" size={18} color="#FFFFFF" />
-          </View>
-          <View>
-            <Text style={{ fontFamily: type.heading, fontSize: 26, lineHeight: 28, color: c.ink }}>{dueCount}</Text>
-            <Text style={{ fontFamily: type.uiBold, fontSize: 12, color: c.muted }}>
-              {dueCount === 1 ? 'card due' : 'cards due'}
-            </Text>
-          </View>
-        </SlabCard>
-      </Pressable>
+      <SlabCard tint="green" style={styles.dueInner}>
+        <View>
+          <Text style={{ fontFamily: type.heading, fontSize: 26, lineHeight: 28, color: c.ink }}>{dueCount}</Text>
+          <Text style={{ fontFamily: type.uiBold, fontSize: 12, color: c.muted }}>{dueLabel}</Text>
+        </View>
+        <Pressable
+          onPress={() => {
+            haptic('select');
+            onReview();
+          }}
+          disabled={dueCount === 0}
+          accessibilityRole="button"
+          accessibilityLabel={dueCount > 0 ? `Review ${dueCount} ${dueLabel}` : 'No cards due'}
+          accessibilityState={{ disabled: dueCount === 0 }}
+          style={[styles.reviewPill, { backgroundColor: dueCount > 0 ? c.green : c.greenBorder }]}
+        >
+          <Text style={{ fontFamily: type.uiHeavy, fontSize: 13, color: dueCount > 0 ? c.onGreen : c.muted }}>
+            {dueCount > 0 ? 'Review' : 'Caught up'}
+          </Text>
+          {dueCount > 0 ? <Ionicons name="chevron-forward" size={14} color={c.onGreen} /> : null}
+        </Pressable>
+      </SlabCard>
     </Animated.View>
   );
 }
@@ -114,20 +150,29 @@ const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
+interface ProgressRingProps {
+  /** 0–1. */
+  pct: number;
+  color: string;
+  /** The unfilled ring. */
+  track: string;
+  trackOpacity?: number;
+  /** Drawn in the ring's centre. */
+  children?: ReactNode;
+}
+
 /**
- * The daily-goal ring.
+ * A 56pt ring that animates to `pct`. Two callers: the hero's daily goal (the
+ * learner's own minutes against their own goal) and the level card's progress
+ * to the next band.
  *
- * The eyebrow used to read "Today's session · 15 min", which was the learner's
- * `daily_goal_minutes` printed as a label and compared against nothing —
- * `minutes_practiced` had no writer at all until `lib/active-time.ts`. This
- * draws the real comparison.
- *
- * Identical for every tier. The goal is the learner's own number, not a plan
- * feature, and a ring that behaves differently on free would turn their stated
- * intention into an upsell surface.
+ * The goal ring used to be a label — "Today's session · 15 min" — that was
+ * `daily_goal_minutes` printed and compared against nothing; `lib/active-time`
+ * gave it a real numerator. Identical for every tier: a ring that behaved
+ * differently on free would turn the learner's stated intention into an
+ * upsell surface.
  */
-function GoalRing({ pct }: { pct: number }) {
-  const { c } = useUi2Theme();
+function ProgressRing({ pct, color, track, trackOpacity = 1, children }: ProgressRingProps) {
   const { shouldReduce } = useMotion();
   const filled = useSharedValue(shouldReduce ? pct : 0);
 
@@ -140,31 +185,34 @@ function GoalRing({ pct }: { pct: number }) {
   }));
 
   return (
-    <Svg width={RING_SIZE} height={RING_SIZE} importantForAccessibility="no">
-      {/* -90° so the arc grows from 12 o'clock rather than 3. */}
-      <G rotation={-90} origin={`${RING_SIZE / 2}, ${RING_SIZE / 2}`}>
-        <Circle
-          cx={RING_SIZE / 2}
-          cy={RING_SIZE / 2}
-          r={RING_RADIUS}
-          stroke={c.onPrimary}
-          strokeOpacity={0.24}
-          strokeWidth={RING_STROKE}
-          fill="none"
-        />
-        <AnimatedCircle
-          cx={RING_SIZE / 2}
-          cy={RING_SIZE / 2}
-          r={RING_RADIUS}
-          stroke={c.onPrimary}
-          strokeWidth={RING_STROKE}
-          strokeLinecap="round"
-          fill="none"
-          strokeDasharray={RING_CIRCUMFERENCE}
-          animatedProps={arc}
-        />
-      </G>
-    </Svg>
+    <View style={styles.ringBox}>
+      <Svg width={RING_SIZE} height={RING_SIZE} importantForAccessibility="no">
+        {/* -90° so the arc grows from 12 o'clock rather than 3. */}
+        <G rotation={-90} origin={`${RING_SIZE / 2}, ${RING_SIZE / 2}`}>
+          <Circle
+            cx={RING_SIZE / 2}
+            cy={RING_SIZE / 2}
+            r={RING_RADIUS}
+            stroke={track}
+            strokeOpacity={trackOpacity}
+            strokeWidth={RING_STROKE}
+            fill="none"
+          />
+          <AnimatedCircle
+            cx={RING_SIZE / 2}
+            cy={RING_SIZE / 2}
+            r={RING_RADIUS}
+            stroke={color}
+            strokeWidth={RING_STROKE}
+            strokeLinecap="round"
+            fill="none"
+            strokeDasharray={RING_CIRCUMFERENCE}
+            animatedProps={arc}
+          />
+        </G>
+      </Svg>
+      {children ? <View style={styles.ringCentre}>{children}</View> : null}
+    </View>
   );
 }
 
@@ -222,7 +270,7 @@ export function SessionHero({ title, minutesToday, goalMinutes, subtitle, onStar
           accessibilityLabel="Daily goal"
           accessibilityValue={{ min: 0, max: goal, now: done, text: `${countLabel}. ${state}.` }}
         >
-          <GoalRing pct={pct} />
+          <ProgressRing pct={pct} color={c.onPrimary} track={c.onPrimary} trackOpacity={0.24} />
           <View style={styles.goalText}>
             <Text style={{ fontFamily: type.heading, fontSize: 20, lineHeight: 24, color: c.onPrimary }}>
               {countLabel}
@@ -291,10 +339,13 @@ const styles = StyleSheet.create({
   header: { gap: 4 },
   eyebrow: { fontSize: 12, letterSpacing: 1, textTransform: 'uppercase' },
   statRow: { flexDirection: 'row', gap: 12 },
-  levelCard: { flex: 1.4, gap: 8, padding: 14 },
-  levelTop: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
-  dueCard: { flex: 1 },
+  levelCard: { flex: 1.4, flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
+  levelRing: { flexShrink: 0 },
+  levelText: { flex: 1, gap: 4, minWidth: 0 },
   dueInner: { flex: 1, justifyContent: 'space-between', gap: 10, padding: 14 },
+  reviewPill: { minHeight: 36, borderRadius: 999, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 12 },
+  ringBox: { width: RING_SIZE, height: RING_SIZE },
+  ringCentre: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
   iconTile: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   hero: { padding: 20, gap: 12 },
   heroBottom: { flexDirection: 'row', alignItems: 'center', gap: 12 },
