@@ -266,28 +266,33 @@ export const PLAN_FEATURES: Record<PlanId, string[]> = {
     'All lessons, reading and daily news',
     'One photo avatar, free',
   ],
+  // Every number below is pinned against PLANS by lib/plans-features.test.ts.
+  // The strings drifted once (basic advertised 25 messages and 10 voice
+  // minutes against real caps of 20 and 6); the test is what stops a second
+  // drift. Use the plan's own name in the string, never a bare adjective.
   basic: [
     '20 new words a day',
     'Unlimited review — always',
-    '25 tutor messages per day',
-    '10 minutes of voice practice per day',
+    'Sol remembers your moment',
+    '20 tutor messages per day',
+    '6 minutes of voice practice per day',
     '3 writing grades per day',
   ],
   premium: [
     'Everything in Basic',
     'Unlimited new words',
     '50 tutor messages per day',
-    '20 minutes of voice practice per day',
+    '12 minutes of voice practice per day',
     '7 writing grades per day',
-    'Offline mode',
+    'Lessons and books offline',
   ],
   vip: [
     'Everything in Premium',
     '75 tutor messages per day',
-    '30 minutes of voice practice per day',
+    '18 minutes of voice practice per day',
     '12 writing grades per day',
+    'Unlimited hints',
     'Audiobook narration',
-    'Priority support',
   ],
 };
 
