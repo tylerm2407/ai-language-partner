@@ -18,11 +18,11 @@ describe('levelEyebrow', () => {
   });
 
   it('names the next band and the percentage once known', () => {
-    expect(levelEyebrow('B1', 62)).toBe('Level · 62% to B1');
-    expect(levelEyebrow('A2', 0)).toBe('Level · 0% to A2');
+    expect(levelEyebrow('B1', 62)).toBe('62% to B1');
+    expect(levelEyebrow('A2', 0)).toBe('0% to A2');
   });
 
   it('says top band at C2 instead of a percentage', () => {
-    expect(levelEyebrow(null, 100)).toBe('Level · top band');
+    expect(levelEyebrow(null, 100)).toBe('Top band');
   });
 });

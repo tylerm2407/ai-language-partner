@@ -74,9 +74,11 @@ interface LevelDueRowProps {
 
 /** The eyebrow beside the ring. Pure so the three states are asserted. */
 export function levelEyebrow(nextBand: string | null, progressPercent: number | null): string {
+  // The band itself sits inside the ring, so the eyebrow spends its ~110pt on
+  // the progress, not on the word "Level" — that word is in the a11y label.
   if (progressPercent === null) return 'Level';
-  if (nextBand === null) return 'Level · top band';
-  return `Level · ${progressPercent}% to ${nextBand}`;
+  if (nextBand === null) return 'Top band';
+  return `${progressPercent}% to ${nextBand}`;
 }
 
 export function LevelDueRow({ band, nextBand, progressPercent, measured, dueCount, onReview }: LevelDueRowProps) {
@@ -100,12 +102,12 @@ export function LevelDueRow({ band, nextBand, progressPercent, measured, dueCoun
         }
       >
         <View style={styles.levelRing}>
-          <ProgressRing pct={ringPct} color={c.primary} track={c.primaryTintBorder}>
-            <Text style={{ fontFamily: type.heading, fontSize: 17, lineHeight: 20, color: c.onTint }}>{band}</Text>
+          <ProgressRing pct={ringPct} size={48} stroke={5} color={c.primary} track={c.primaryTintBorder}>
+            <Text style={{ fontFamily: type.heading, fontSize: 15, lineHeight: 18, color: c.onTint }}>{band}</Text>
           </ProgressRing>
         </View>
         <View style={styles.levelText}>
-          <Text style={[styles.eyebrow, { fontFamily: type.uiHeavy, color: c.onTint, fontSize: 11 }]} numberOfLines={1}>
+          <Text style={[styles.eyebrow, { fontFamily: type.uiHeavy, color: c.onTint, fontSize: 11, letterSpacing: 0.6 }]} numberOfLines={1}>
             {eyebrow}
           </Text>
           <Text style={{ fontFamily: type.ui, fontSize: 12, lineHeight: 16, color: c.muted }} numberOfLines={3}>
@@ -142,17 +144,17 @@ export function LevelDueRow({ band, nextBand, progressPercent, measured, dueCoun
 
 // ─── Session hero ──────────────────────────────────────────────────────────
 
-/** Ring geometry. 56pt reads at a glance without crowding the hero. */
+/** Default ring geometry. 56pt reads at a glance without crowding the hero. */
 const RING_SIZE = 56;
 const RING_STROKE = 6;
-const RING_RADIUS = (RING_SIZE - RING_STROKE) / 2;
-const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 interface ProgressRingProps {
   /** 0–1. */
   pct: number;
+  size?: number;
+  stroke?: number;
   color: string;
   /** The unfilled ring. */
   track: string;
@@ -172,8 +174,10 @@ interface ProgressRingProps {
  * differently on free would turn the learner's stated intention into an
  * upsell surface.
  */
-function ProgressRing({ pct, color, track, trackOpacity = 1, children }: ProgressRingProps) {
+function ProgressRing({ pct, size = RING_SIZE, stroke = RING_STROKE, color, track, trackOpacity = 1, children }: ProgressRingProps) {
   const { shouldReduce } = useMotion();
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
   const filled = useSharedValue(shouldReduce ? pct : 0);
 
   useEffect(() => {
@@ -181,32 +185,24 @@ function ProgressRing({ pct, color, track, trackOpacity = 1, children }: Progres
   }, [pct, shouldReduce, filled]);
 
   const arc = useAnimatedProps(() => ({
-    strokeDashoffset: RING_CIRCUMFERENCE * (1 - filled.value),
+    strokeDashoffset: circumference * (1 - filled.value),
   }));
 
   return (
-    <View style={styles.ringBox}>
-      <Svg width={RING_SIZE} height={RING_SIZE} importantForAccessibility="no">
+    <View style={{ width: size, height: size }}>
+      <Svg width={size} height={size} importantForAccessibility="no">
         {/* -90° so the arc grows from 12 o'clock rather than 3. */}
-        <G rotation={-90} origin={`${RING_SIZE / 2}, ${RING_SIZE / 2}`}>
-          <Circle
-            cx={RING_SIZE / 2}
-            cy={RING_SIZE / 2}
-            r={RING_RADIUS}
-            stroke={track}
-            strokeOpacity={trackOpacity}
-            strokeWidth={RING_STROKE}
-            fill="none"
-          />
+        <G rotation={-90} origin={`${size / 2}, ${size / 2}`}>
+          <Circle cx={size / 2} cy={size / 2} r={radius} stroke={track} strokeOpacity={trackOpacity} strokeWidth={stroke} fill="none" />
           <AnimatedCircle
-            cx={RING_SIZE / 2}
-            cy={RING_SIZE / 2}
-            r={RING_RADIUS}
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
             stroke={color}
-            strokeWidth={RING_STROKE}
+            strokeWidth={stroke}
             strokeLinecap="round"
             fill="none"
-            strokeDasharray={RING_CIRCUMFERENCE}
+            strokeDasharray={circumference}
             animatedProps={arc}
           />
         </G>
@@ -339,12 +335,11 @@ const styles = StyleSheet.create({
   header: { gap: 4 },
   eyebrow: { fontSize: 12, letterSpacing: 1, textTransform: 'uppercase' },
   statRow: { flexDirection: 'row', gap: 12 },
-  levelCard: { flex: 1.4, flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
+  levelCard: { flex: 1.5, flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12 },
   levelRing: { flexShrink: 0 },
   levelText: { flex: 1, gap: 4, minWidth: 0 },
   dueInner: { flex: 1, justifyContent: 'space-between', gap: 10, padding: 14 },
   reviewPill: { minHeight: 36, borderRadius: 999, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 12 },
-  ringBox: { width: RING_SIZE, height: RING_SIZE },
   ringCentre: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
   iconTile: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   hero: { padding: 20, gap: 12 },
