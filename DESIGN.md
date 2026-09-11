@@ -878,39 +878,6 @@ scheme (`app.json` `userInterfaceStyle: "automatic"`).
 
 `hooks/useUi2Theme.test.ts` pins the contrast floors.
 
-### Home — S1 · Quiet, with the logo ramp (2026-09-10)
-
-Tyler: the Home cards "look basic"; keep the feel, lean into the app icon's
-colours. Picked board S1 from the canvas page "Home · logo colours", with the
-tab bar from G1.
-
-The icon's ramp is four fixed tokens on every palette — `logoAqua #0DEFFF`,
-`logoSky #47A7FC`, `logoViolet #855BFB`, `logoMagenta #C60EFA` — plus `onLogo
-#00021B`, the icon's navy, for text on cyan. They do not change with the
-scheme; the warm reader palette carries blue-free stand-ins because it never
-renders Home. `components/ui2/BrandRamp.tsx` turns them into gradients:
-`RampBar` (a 4px progress line filled with the ramp), `RampRule` (the full
-line, decoration), `RampMark` (a 4×36 warm-half mark).
-
-What changed on Home, and the rule behind it — the brand shows in the lines,
-not the blocks:
-
-- **One neutral card fill.** No tinted level card, no green/amber/pink rows,
-  no icon wells. Cards due folds into the level card as a tappable line
-  (`2 cards due`, primary; `No cards due`, muted, disabled) with the same
-  route to review.
-- **The ramp only as lines.** `RampRule` under the level (Home has no measured
-  "% to the next band", so it is a rule, not a bar), `RampBar` for each unit's
-  progress with `3 / 6 · 50%` on one line instead of a coloured badge,
-  `RampMark` beside today's read, the cool half for the week's bars.
-- **Cyan Start.** `SlabButton variant="brand"` — `logoAqua` fill, `onLogo`
-  type — on the still-violet hero. The only solid logo colour on the page.
-- **The tab bar's active disc is the full ramp** (from G1).
-- Daily three: a done item is `logoSky`; hands-free's well is `logoMagenta`
-  (`ActionRow tint="magenta"`); the struggling-word chips are neutral.
-
-Not built: the G1 gradient hero, the M1/M2 motion — Tyler chose the quiet one.
-
 ### Night reading — the warm palette (2026-09-09)
 
 A third palette, `ui2Warm`, for the reader only. It is not a third scheme.

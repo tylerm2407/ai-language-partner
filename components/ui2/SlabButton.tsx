@@ -18,8 +18,7 @@ import { useUi2Theme } from '../../hooks/useUi2Theme';
 
 /** `tint` is the quiet filled pill — a card-coloured block, muted label — for a
  *  secondary action that still needs a target (Previous beside Next). */
-/** `brand` is the logo-cyan pill with navy type — the Home hero's Start (S1 · Quiet, 2026-09-10). */
-type Variant = 'primary' | 'onPrimary' | 'ghost' | 'tint' | 'brand';
+type Variant = 'primary' | 'onPrimary' | 'ghost' | 'tint';
 
 interface SlabButtonProps {
   label: string;
@@ -70,9 +69,7 @@ export function SlabButton({
         ? { bg: c.ctaOnPrimaryBg, text: c.ctaOnPrimaryText }
         : variant === 'tint'
           ? { bg: c.card, text: c.muted }
-          : variant === 'brand'
-            ? { bg: c.logoAqua, text: c.onLogo }
-            : { bg: 'transparent', text: c.muted };
+          : { bg: 'transparent', text: c.muted };
   const inactive = disabled || loading;
 
   if (variant === 'ghost') {

@@ -387,15 +387,6 @@ export const ui2Light = {
   /** Unfilled progress when the bar sits ON a card: the card is already a tint,
    *  so the groove goes to the ground colour to stay visible. */
   trackOnCard: '#FFFFFF',
-  /** The app icon's ramp (Home "S1 · Quiet", 2026-09-10): cyan → sky → violet →
-   *  magenta on navy. Fixed — the logo does not change with the scheme — and
-   *  used only as the brand gradient (`components/ui2/BrandRamp`) and the
-   *  cyan Start pill. Text on `logoAqua` is `onLogo`, the icon's navy (14:1). */
-  logoAqua: '#0DEFFF',
-  logoSky: '#47A7FC',
-  logoViolet: '#855BFB',
-  logoMagenta: '#C60EFA',
-  onLogo: '#00021B',
   error: '#E5484D',
 } as const;
 
@@ -433,11 +424,6 @@ export const ui2Dark: Ui2Palette = {
   pinkTint: '#3A2230',
   track: '#26224A',
   trackOnCard: '#26224A',
-  logoAqua: '#0DEFFF',
-  logoSky: '#47A7FC',
-  logoViolet: '#855BFB',
-  logoMagenta: '#C60EFA',
-  onLogo: '#00021B',
   error: '#FF6B70',
 };
 
@@ -501,12 +487,6 @@ export const ui2Warm: Ui2Palette = {
   pinkTint: '#2E1600',
   track: '#1F1800',
   trackOnCard: '#2A2000',
-  // The reader never renders Home; these keep the key set whole and blue-free.
-  logoAqua: '#FFC000',
-  logoSky: '#F5AE00',
-  logoViolet: '#E09A00',
-  logoMagenta: '#FF7A00',
-  onLogo: '#1A1000',
   error: '#FF4A00',
 };
 

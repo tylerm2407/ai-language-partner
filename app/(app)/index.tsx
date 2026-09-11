@@ -296,7 +296,7 @@ export default function HomeScreen() {
               <ActionRow
                 index={1}
                 icon="headset-outline"
-                tint="magenta"
+                tint="pink"
                 title="Hands-free practice"
                 subtitle="Speak and listen — no screen needed"
                 onPress={() => router.push('/practice/handsfree' as any)}

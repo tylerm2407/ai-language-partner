@@ -1,13 +1,7 @@
 /**
- * Home, UI 2.0 — the top of the page: masthead, the level card, the
+ * Home, UI 2.0 — the top of the page: masthead, level + due cards, the
  * session hero, and today's read. Pure presentation; app/(app)/index.tsx
  * owns the data and routing.
- *
- * S1 · Quiet (canvas "Home · logo colours", picked 2026-09-10): one neutral
- * card fill, no icon wells, and the app icon's colour ramp only as thin
- * lines. Cards due folds into the level card as one tappable line — the same
- * route to review it had as a tile. The hero stays solid violet; its Start
- * is the logo's cyan.
  */
 import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -21,7 +15,6 @@ import Svg, { Circle, G } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { SlabCard } from '../SlabCard';
 import { SlabButton } from '../SlabButton';
-import { RampMark, RampRule } from '../BrandRamp';
 import { haptic } from '../../../lib/haptics';
 import { cefrCanDo } from '../../../lib/cefr-labels';
 import { displayMinutes, goalProgress } from '../../../lib/active-time';
@@ -68,41 +61,45 @@ interface LevelDueRowProps {
 export function LevelDueRow({ band, dueCount, onReview }: LevelDueRowProps) {
   const { c, type } = useUi2Theme();
   const enter = useHomeEnter();
-  const dueLabel = dueCount === 0 ? 'No cards due' : `${dueCount} ${dueCount === 1 ? 'card' : 'cards'} due`;
   return (
-    <Animated.View entering={enter(1)}>
-      <SlabCard style={styles.levelCard}>
+    <Animated.View entering={enter(1)} style={styles.statRow}>
+      <SlabCard
+        tint="primary"
+        style={styles.levelCard}
+        accessibilityRole="text"
+        accessibilityLabel={`Level ${band}. ${cefrCanDo(band)}`}
+      >
         <View style={styles.levelTop}>
-          <View
-            style={styles.levelBand}
-            accessible
-            accessibilityRole="text"
-            accessibilityLabel={`Level ${band}. ${cefrCanDo(band)}`}
-          >
-            <Text style={{ fontFamily: type.heading, fontSize: 34, lineHeight: 36, color: c.ink }}>{band}</Text>
-            <Text style={[styles.eyebrow, { fontFamily: type.uiHeavy, color: c.muted }]}>Level</Text>
-          </View>
-          <Pressable
-            onPress={() => {
-              haptic('select');
-              onReview();
-            }}
-            disabled={dueCount === 0}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={dueCount > 0 ? `Review ${dueLabel}` : dueLabel}
-            style={styles.dueLink}
-          >
-            <Text style={{ fontFamily: type.uiHeavy, fontSize: 13, color: dueCount > 0 ? c.primary : c.muted }}>{dueLabel}</Text>
-          </Pressable>
+          <Text style={{ fontFamily: type.heading, fontSize: 30, lineHeight: 32, color: c.onTint }}>{band}</Text>
+          <Text style={[styles.eyebrow, { fontFamily: type.uiHeavy, color: c.onTint }]}>Level</Text>
         </View>
-        {/* The ramp as a rule, not a bar: Home has no measured "% to the next
-            band" yet, so the line carries the brand and claims nothing. */}
-        <RampRule />
-        <Text style={{ fontFamily: type.uiBold, fontSize: 13, lineHeight: 17, color: c.muted }} numberOfLines={3} importantForAccessibility="no">
+        <Text style={{ fontFamily: type.ui, fontSize: 12, lineHeight: 16, color: c.muted }} numberOfLines={3}>
           {cefrCanDo(band)}
         </Text>
       </SlabCard>
+
+      <Pressable
+        onPress={() => {
+          haptic('select');
+          onReview();
+        }}
+        disabled={dueCount === 0}
+        accessibilityRole="button"
+        accessibilityLabel={dueCount > 0 ? `Review ${dueCount} cards due` : 'No cards due'}
+        style={styles.dueCard}
+      >
+        <SlabCard tint="green" style={styles.dueInner}>
+          <View style={[styles.iconTile, { backgroundColor: c.green }]}>
+            <Ionicons name="albums-outline" size={18} color="#FFFFFF" />
+          </View>
+          <View>
+            <Text style={{ fontFamily: type.heading, fontSize: 26, lineHeight: 28, color: c.ink }}>{dueCount}</Text>
+            <Text style={{ fontFamily: type.uiBold, fontSize: 12, color: c.muted }}>
+              {dueCount === 1 ? 'card due' : 'cards due'}
+            </Text>
+          </View>
+        </SlabCard>
+      </Pressable>
     </Animated.View>
   );
 }
@@ -240,7 +237,7 @@ export function SessionHero({ title, minutesToday, goalMinutes, subtitle, onStar
           <Text style={{ fontFamily: type.ui, fontSize: 13, lineHeight: 18, color: c.onPrimaryMuted, flex: 1 }} numberOfLines={2}>
             {subtitle}
           </Text>
-          <SlabButton label="Start" variant="brand" onPress={onStart} style={styles.heroCta} />
+          <SlabButton label="Start" variant="onPrimary" onPress={onStart} style={styles.heroCta} />
         </View>
       </View>
     </Animated.View>
@@ -271,16 +268,15 @@ export function ReadRow({ title, minutes, loading, error, hasRead, onPress }: Re
         }}
         disabled={!title || loading}
         accessibilityRole="button"
-        accessibilityLabel={`${label}${hasRead ? ', read' : ''}. ${body}`}
+        accessibilityLabel={`${label}. ${body}`}
       >
-        <SlabCard style={styles.readRow}>
-          <RampMark />
+        <SlabCard tint="yellow" style={styles.readRow}>
+          <View style={[styles.iconTile, { backgroundColor: c.yellow }]}>
+            <Ionicons name={hasRead ? 'checkmark' : 'book-outline'} size={18} color="#23203A" />
+          </View>
           <View style={styles.readText}>
-            <View style={styles.readTitle}>
-              <Text style={{ fontFamily: type.uiHeavy, fontSize: 15, color: c.ink }}>{label}</Text>
-              {hasRead ? <Ionicons name="checkmark-circle" size={16} color={c.logoSky} accessibilityLabel="Read" /> : null}
-            </View>
-            <Text style={{ fontFamily: type.uiBold, fontSize: 13, color: c.muted }} numberOfLines={1}>
+            <Text style={{ fontFamily: type.uiHeavy, fontSize: 14, color: c.ink }}>{label}</Text>
+            <Text style={{ fontFamily: type.uiBold, fontSize: 12, color: c.muted }} numberOfLines={1}>
               {body}
             </Text>
           </View>
@@ -294,16 +290,17 @@ export function ReadRow({ title, minutes, loading, error, hasRead, onPress }: Re
 const styles = StyleSheet.create({
   header: { gap: 4 },
   eyebrow: { fontSize: 12, letterSpacing: 1, textTransform: 'uppercase' },
-  levelCard: { gap: 12, padding: 16 },
-  levelTop: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 },
-  levelBand: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
-  dueLink: { minHeight: 44, justifyContent: 'center' },
+  statRow: { flexDirection: 'row', gap: 12 },
+  levelCard: { flex: 1.4, gap: 8, padding: 14 },
+  levelTop: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
+  dueCard: { flex: 1 },
+  dueInner: { flex: 1, justifyContent: 'space-between', gap: 10, padding: 14 },
+  iconTile: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   hero: { padding: 20, gap: 12 },
   heroBottom: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   heroCta: { minWidth: 104 },
   goal: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   goalText: { flex: 1, gap: 4 },
-  readRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 16 },
+  readRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 14 },
   readText: { flex: 1, gap: 1, minWidth: 0 },
-  readTitle: { flexDirection: 'row', alignItems: 'center', gap: 6 },
 });
