@@ -26,7 +26,6 @@ import {
 } from './offline-queue';
 import {
   fetchReviewItemsByCardIds,
-  incrementXpIdempotent,
   insertReviewLogIdempotent,
   upsertLessonCompletion,
   upsertReviewItem,
@@ -58,14 +57,12 @@ jest.mock('@sentry/react-native', () => ({
 
 jest.mock('./supabase-queries', () => ({
   fetchReviewItemsByCardIds: jest.fn(),
-  incrementXpIdempotent: jest.fn(),
   insertReviewLogIdempotent: jest.fn(),
   upsertLessonCompletion: jest.fn(),
   upsertReviewItem: jest.fn(),
 }));
 
 const mockFetchByCardIds = fetchReviewItemsByCardIds as jest.Mock;
-const mockIncrementXp = incrementXpIdempotent as jest.Mock;
 const mockUpsertCompletion = upsertLessonCompletion as jest.Mock;
 const mockUpsertReview = upsertReviewItem as jest.Mock;
 const mockInsertReviewLog = insertReviewLogIdempotent as jest.Mock;
@@ -121,7 +118,6 @@ beforeEach(async () => {
   errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
   // Default executor behavior: everything succeeds, no server review row.
   mockFetchByCardIds.mockResolvedValue([]);
-  mockIncrementXp.mockResolvedValue(undefined);
   mockUpsertCompletion.mockResolvedValue({});
   mockUpsertReview.mockResolvedValue({});
 });
@@ -219,9 +215,7 @@ describe('enqueue + flush FIFO', () => {
     expect(order).toEqual(['review', 'completion']);
     expect(mockUpsertReview).toHaveBeenCalledWith(reviewPayload());
     expect(mockUpsertCompletion).toHaveBeenCalledWith(USER, 'lesson-1', 'course-1', 0.9, 45, 0);
-    // Pre-upgrade XP items are deliberately drained without calling the
-    // authenticated RPC retired by migration 117.
-    expect(mockIncrementXp).not.toHaveBeenCalled();
+    // Pre-upgrade XP items are deliberately drained: no award RPC exists any more.
     expect(await AsyncStorage.getItem(KEY)).toBeNull();
   });
 
@@ -229,13 +223,11 @@ describe('enqueue + flush FIFO', () => {
     await flush(USER);
     expect(mockUpsertReview).not.toHaveBeenCalled();
     expect(mockUpsertCompletion).not.toHaveBeenCalled();
-    expect(mockIncrementXp).not.toHaveBeenCalled();
   });
 
   it('does not leak items across users', async () => {
     await enqueue(USER, xpInput());
     await flush('user-2');
-    expect(mockIncrementXp).not.toHaveBeenCalled();
     expect(await storedItems()).toHaveLength(1);
   });
 });
@@ -355,8 +347,6 @@ describe('TTL', () => {
     await AsyncStorage.setItem(KEY, JSON.stringify(envelope));
 
     await flush(USER);
-
-    expect(mockIncrementXp).not.toHaveBeenCalled();
     expect(await AsyncStorage.getItem(KEY)).toBeNull();
     expect(errorSpy).toHaveBeenCalled();
     // captureMessage, not addBreadcrumb: a breadcrumb only rides along with a
@@ -424,7 +414,6 @@ describe('invalid stored payloads', () => {
     await AsyncStorage.setItem(KEY, 'not-json{');
     await flush(USER);
     expect(await AsyncStorage.getItem(KEY)).toBeNull();
-    expect(mockIncrementXp).not.toHaveBeenCalled();
   });
 
   it('discards a queue from a different schema version', async () => {

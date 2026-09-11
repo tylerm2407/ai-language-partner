@@ -126,41 +126,6 @@ export async function upsertProfile(
   return mapProfile(data);
 }
 
-/**
- * XP is server-authoritative: increment_xp validates the caller, caps the
- * per-call amount, and derives xp_level/league_tier in the same statement.
- */
-export async function addXp(userId: string, xp: number): Promise<void> {
-  if (xp <= 0) return;
-  const { error } = await supabase.rpc('increment_xp', {
-    p_user_id: userId,
-    p_amount: Math.min(Math.round(xp), 500),
-  });
-  if (error) throw error;
-}
-
-/**
- * Idempotent XP award (migration 046) — same caller guard / 1-500 cap /
- * level derivation as increment_xp, but keyed: the server records `key`
- * in client_events and replays of the same key are no-ops. Used by
- * earnXp and offline-queue replays so a lost-response retry can never
- * double-award.
- *
- * Returns the learner's authoritative total XP *after* the call. On a replay
- * the server grants nothing and returns the unchanged total, which is what
- * makes it safe for the caller to render this instead of adding the amount
- * locally — otherwise a refused award still shows up as XP until next launch.
- */
-export async function incrementXpIdempotent(amount: number, key: string): Promise<number | null> {
-  if (amount <= 0) return null;
-  const { data, error } = await supabase.rpc('increment_xp_idempotent', {
-    p_amount: Math.min(Math.round(amount), 500),
-    p_key: key,
-  });
-  if (error) throw error;
-  return typeof data === 'number' ? data : null;
-}
-
 export async function markOnboardingComplete(userId: string): Promise<void> {
   const { error } = await supabase
     .from('user_profiles')
@@ -1562,18 +1527,6 @@ export async function upsertDailyChallenges(
 
   if (error) throw error;
   return mapDailyChallengesRecord(data);
-}
-
-/**
- * Atomically claim today's daily-challenge bonus XP server-side. The RPC
- * validates completion + double-claim and
- * grants the XP (migration 043) — clients cannot write XP directly.
- */
-export async function claimDailyChallengeBonus(): Promise<{ bonusXp: number; totalXp: number }> {
-  const { data, error } = await supabase.rpc('claim_daily_challenge_bonus');
-  if (error) throw error;
-  const row = Array.isArray(data) ? data[0] : data;
-  return { bonusXp: (row?.bonus_xp as number) ?? 0, totalXp: (row?.total_xp as number) ?? 0 };
 }
 
 function mapDailyChallengesRecord(row: Record<string, unknown>): DailyChallengesRecord {

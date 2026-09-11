@@ -193,3 +193,17 @@ verify_jwt = false
 # read from Vault, the same pattern daily-news-audio-cron uses.
 [functions.tutor-session-reaper]
 verify_jwt = false
+
+# ─── Functions that authenticate at the platform gate ─────────────────────
+# These three were deployed verify_jwt = true and, until this entry, unrecorded.
+# Each also re-checks the caller in its body via getAuthenticatedUser, so the
+# platform gate is belt-and-braces rather than the only lock. Recorded so a
+# deploy can never silently change it.
+[functions.delete-account]
+verify_jwt = true
+
+[functions.school]
+verify_jwt = true
+
+[functions.school-admin]
+verify_jwt = true

@@ -48,7 +48,6 @@ jest.mock('../../lib/supabase-queries', () => ({
   fetchHasCompletedLesson: jest.fn(),
   fetchHasAiConversation: jest.fn(),
   updateOnboardingChecklist: jest.fn(async () => {}),
-  incrementXpIdempotent: jest.fn(async () => {}),
 }));
 jest.mock('../../hooks/useAuth', () => ({ useAuth: () => ({ user: { id: 'user-1' } }) }));
 // Reduce Motion on: the FAB's idle pulse is an indefinite native-driver loop,
