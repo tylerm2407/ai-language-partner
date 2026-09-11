@@ -1,0 +1,105 @@
+/** German topic packs. A1, five topics, each sentence built from its words. */
+import type { LanguagePacks } from './spec';
+
+export const DE_PACKS: LanguagePacks = {
+  travel: {
+    words: [
+      { target: 'einen Kaffee', gloss: 'a coffee' },
+      { target: 'bitte', gloss: 'please' },
+      { target: 'die Rechnung', gloss: 'the bill' },
+    ],
+    sentence: { target: 'Ich möchte einen Kaffee, bitte.', gloss: 'I would like a coffee, please.' },
+    tiles: ['Ich', 'möchte', 'einen', 'Kaffee,', 'bitte'],
+    tileDistractors: ['Rechnung', 'die'],
+    foil: { target: 'der Bahnhof', gloss: 'the station' },
+    plan: [
+      { title: 'Ordering a coffee', words: ['einen Kaffee', 'bitte', 'danke'] },
+      { title: 'Asking for the bill', words: ['die Rechnung', 'zahlen', 'mit Karte'] },
+      { title: 'Finding the station', words: ['der Bahnhof', 'der Zug', 'die Fahrkarte'] },
+      { title: 'Checking into a hotel', words: ['das Hotel', 'das Zimmer', 'der Schlüssel'] },
+      { title: 'Asking the way', words: ['rechts', 'links', 'geradeaus'] },
+      { title: 'Ordering a meal', words: ['die Speisekarte', 'das Wasser', 'ein Tisch'] },
+    ],
+    solLine: 'Then we start where you will actually stand: at the counter, ordering.',
+  },
+  family: {
+    words: [
+      { target: 'meine Mutter', gloss: 'my mother' },
+      { target: 'mein Bruder', gloss: 'my brother' },
+      { target: 'zu Hause', gloss: 'at home' },
+    ],
+    sentence: { target: 'Meine Mutter ist zu Hause.', gloss: 'My mother is at home.' },
+    tiles: ['Meine', 'Mutter', 'ist', 'zu', 'Hause'],
+    tileDistractors: ['Bruder', 'sind'],
+    foil: { target: 'meine Schwester', gloss: 'my sister' },
+    plan: [
+      { title: 'Naming your people', words: ['meine Mutter', 'mein Vater', 'mein Bruder'] },
+      { title: 'Saying where they are', words: ['zu Hause', 'ist', 'hier'] },
+      { title: 'How old everyone is', words: ['Jahre alt', 'wie alt', 'er ist'] },
+      { title: 'At the family table', words: ['das Essen', 'sich setzen', 'probieren'] },
+      { title: 'Talking about your day', words: ['heute', 'ich habe gearbeitet', 'ausgeruht'] },
+      { title: 'Making plans together', words: ['am Sonntag', 'wir gehen', 'zusammen'] },
+    ],
+    solLine: 'Good — we will build the words you need at their table, not in a textbook.',
+  },
+  work: {
+    words: [
+      { target: 'die Arbeit', gloss: 'work' },
+      { target: 'eine Besprechung', gloss: 'a meeting' },
+      { target: 'morgen', gloss: 'tomorrow' },
+    ],
+    sentence: { target: 'Morgen habe ich eine Besprechung.', gloss: 'Tomorrow I have a meeting.' },
+    tiles: ['Morgen', 'habe', 'ich', 'eine', 'Besprechung'],
+    tileDistractors: ['Arbeit', 'heute'],
+    foil: { target: 'das Büro', gloss: 'the office' },
+    plan: [
+      { title: 'Talking about your job', words: ['die Arbeit', 'ich arbeite bei', 'ich bin'] },
+      { title: 'Arranging a meeting', words: ['eine Besprechung', 'morgen', 'um zehn'] },
+      { title: 'In the office', words: ['das Büro', 'die E-Mail', 'der Bericht'] },
+      { title: 'Meeting a client', words: ['der Kunde', 'freut mich', 'darf ich vorstellen'] },
+      { title: 'Saying what you think', words: ['ich denke', 'ich stimme zu', 'vielleicht'] },
+      { title: 'Wrapping up a call', words: ['bis bald', 'ich schicke Ihnen', 'wir machen aus'] },
+    ],
+    solLine: 'Right — we will aim at the meeting you have to sit through, not small talk.',
+  },
+  media_culture: {
+    words: [
+      { target: 'ein Film', gloss: 'a film' },
+      { target: 'die Musik', gloss: 'music' },
+      { target: 'ich mag', gloss: 'I like' },
+    ],
+    sentence: { target: 'Ich mag diesen Film sehr.', gloss: 'I like this film a lot.' },
+    tiles: ['Ich', 'mag', 'diesen', 'Film', 'sehr'],
+    tileDistractors: ['Musik', 'die'],
+    foil: { target: 'ein Buch', gloss: 'a book' },
+    plan: [
+      { title: 'Saying what you like', words: ['ich mag', 'sehr', 'ich mag nicht'] },
+      { title: 'Talking about films', words: ['ein Film', 'der Schauspieler', 'das Ende'] },
+      { title: 'Talking about music', words: ['die Musik', 'das Lied', 'der Text'] },
+      { title: 'What happened in it', words: ['es ist passiert', 'am Anfang', 'danach'] },
+      { title: 'Recommending something', words: ['du musst sehen', 'das gefällt dir', 'es ist toll'] },
+      { title: 'Disagreeing politely', words: ['ich bin nicht sicher', 'für mich', 'ich mag lieber'] },
+    ],
+    solLine: 'Then the subtitles come off sooner than you think. Start with one line.',
+  },
+  housing_admin: {
+    words: [
+      { target: 'eine Wohnung', gloss: 'an apartment' },
+      { target: 'die Miete', gloss: 'the rent' },
+      { target: 'die Stadtmitte', gloss: 'the city centre' },
+    ],
+    sentence: { target: 'Ich suche eine Wohnung in der Stadtmitte.', gloss: 'I am looking for an apartment in the city centre.' },
+    tiles: ['Ich', 'suche', 'eine', 'Wohnung', 'in', 'der', 'Stadtmitte'],
+    tileDistractors: ['Miete', 'das'],
+    foil: { target: 'der Schlüssel', gloss: 'the key' },
+    plan: [
+      { title: 'Looking for a flat', words: ['eine Wohnung', 'ich suche', 'die Stadtmitte'] },
+      { title: 'Talking about rent', words: ['die Miete', 'pro Monat', 'die Kaution'] },
+      { title: 'Viewing the place', words: ['die Küche', 'das Bad', 'das Licht'] },
+      { title: 'At the town hall', words: ['die Anmeldung', 'der Termin', 'das Dokument'] },
+      { title: 'Opening a bank account', words: ['das Konto', 'die Karte', 'unterschreiben'] },
+      { title: 'Calling the doctor', words: ['der Arzt', 'mir tut weh', 'ein Termin'] },
+    ],
+    solLine: 'Moving is mostly paperwork — so we will start with the words that open doors.',
+  },
+};

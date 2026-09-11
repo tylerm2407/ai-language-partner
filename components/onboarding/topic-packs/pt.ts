@@ -1,0 +1,105 @@
+/** Portuguese topic packs. A1, five topics, each sentence built from its words. */
+import type { LanguagePacks } from './spec';
+
+export const PT_PACKS: LanguagePacks = {
+  travel: {
+    words: [
+      { target: 'um café', gloss: 'a coffee' },
+      { target: 'por favor', gloss: 'please' },
+      { target: 'a conta', gloss: 'the bill' },
+    ],
+    sentence: { target: 'Um café, por favor.', gloss: 'A coffee, please.' },
+    tiles: ['Um', 'café,', 'por', 'favor'],
+    tileDistractors: ['a', 'conta'],
+    foil: { target: 'a estação', gloss: 'the station' },
+    plan: [
+      { title: 'Ordering a coffee', words: ['um café', 'por favor', 'obrigado'] },
+      { title: 'Asking for the bill', words: ['a conta', 'pagar', 'com cartão'] },
+      { title: 'Finding the station', words: ['a estação', 'o comboio', 'o bilhete'] },
+      { title: 'Checking into a hotel', words: ['o hotel', 'o quarto', 'a chave'] },
+      { title: 'Asking the way', words: ['à direita', 'à esquerda', 'sempre em frente'] },
+      { title: 'Ordering a meal', words: ['a ementa', 'a água', 'uma mesa'] },
+    ],
+    solLine: 'Then we start where you will actually stand: at the counter, ordering.',
+  },
+  family: {
+    words: [
+      { target: 'a minha mãe', gloss: 'my mother' },
+      { target: 'o meu irmão', gloss: 'my brother' },
+      { target: 'em casa', gloss: 'at home' },
+    ],
+    sentence: { target: 'A minha mãe está em casa.', gloss: 'My mother is at home.' },
+    tiles: ['A', 'minha', 'mãe', 'está', 'em', 'casa'],
+    tileDistractors: ['irmão', 'é'],
+    foil: { target: 'a minha irmã', gloss: 'my sister' },
+    plan: [
+      { title: 'Naming your people', words: ['a minha mãe', 'o meu pai', 'o meu irmão'] },
+      { title: 'Saying where they are', words: ['em casa', 'está', 'aqui'] },
+      { title: 'How old everyone is', words: ['anos', 'quantos', 'tem'] },
+      { title: 'At the family table', words: ['o almoço', 'sentar-se', 'provar'] },
+      { title: 'Talking about your day', words: ['hoje', 'trabalhei', 'descansei'] },
+      { title: 'Making plans together', words: ['no domingo', 'vamos', 'juntos'] },
+    ],
+    solLine: 'Good — we will build the words you need at their table, not in a textbook.',
+  },
+  work: {
+    words: [
+      { target: 'o trabalho', gloss: 'work' },
+      { target: 'uma reunião', gloss: 'a meeting' },
+      { target: 'amanhã', gloss: 'tomorrow' },
+    ],
+    sentence: { target: 'Amanhã tenho uma reunião.', gloss: 'Tomorrow I have a meeting.' },
+    tiles: ['Amanhã', 'tenho', 'uma', 'reunião'],
+    tileDistractors: ['trabalho', 'hoje'],
+    foil: { target: 'o escritório', gloss: 'the office' },
+    plan: [
+      { title: 'Talking about your job', words: ['o trabalho', 'trabalho na', 'sou'] },
+      { title: 'Arranging a meeting', words: ['uma reunião', 'amanhã', 'às dez'] },
+      { title: 'In the office', words: ['o escritório', 'o email', 'o relatório'] },
+      { title: 'Meeting a client', words: ['o cliente', 'muito prazer', 'apresento-lhe'] },
+      { title: 'Saying what you think', words: ['acho que', 'concordo', 'talvez'] },
+      { title: 'Wrapping up a call', words: ['até já', 'envio-lhe', 'combinado'] },
+    ],
+    solLine: 'Right — we will aim at the meeting you have to sit through, not small talk.',
+  },
+  media_culture: {
+    words: [
+      { target: 'um filme', gloss: 'a film' },
+      { target: 'a música', gloss: 'music' },
+      { target: 'eu gosto', gloss: 'I like' },
+    ],
+    sentence: { target: 'Eu gosto deste filme.', gloss: 'I like this film.' },
+    tiles: ['Eu', 'gosto', 'deste', 'filme'],
+    tileDistractors: ['música', 'muito'],
+    foil: { target: 'um livro', gloss: 'a book' },
+    plan: [
+      { title: 'Saying what you like', words: ['eu gosto', 'muito', 'não gosto'] },
+      { title: 'Talking about films', words: ['um filme', 'o ator', 'o final'] },
+      { title: 'Talking about music', words: ['a música', 'a canção', 'a letra'] },
+      { title: 'What happened in it', words: ['aconteceu', 'no início', 'depois'] },
+      { title: 'Recommending something', words: ['tens de ver', 'vais gostar', 'é ótimo'] },
+      { title: 'Disagreeing politely', words: ['não tenho a certeza', 'para mim', 'prefiro'] },
+    ],
+    solLine: 'Then the subtitles come off sooner than you think. Start with one line.',
+  },
+  housing_admin: {
+    words: [
+      { target: 'um apartamento', gloss: 'an apartment' },
+      { target: 'a renda', gloss: 'the rent' },
+      { target: 'o centro', gloss: 'the city centre' },
+    ],
+    sentence: { target: 'Procuro um apartamento no centro.', gloss: 'I am looking for an apartment in the city centre.' },
+    tiles: ['Procuro', 'um', 'apartamento', 'no', 'centro'],
+    tileDistractors: ['renda', 'a'],
+    foil: { target: 'a chave', gloss: 'the key' },
+    plan: [
+      { title: 'Looking for a flat', words: ['um apartamento', 'procuro', 'o centro'] },
+      { title: 'Talking about rent', words: ['a renda', 'por mês', 'a caução'] },
+      { title: 'Viewing the place', words: ['a cozinha', 'a casa de banho', 'a luz'] },
+      { title: 'At the town hall', words: ['a câmara', 'a marcação', 'o documento'] },
+      { title: 'Opening a bank account', words: ['a conta', 'o cartão', 'assinar'] },
+      { title: 'Calling the doctor', words: ['o médico', 'dói-me', 'uma consulta'] },
+    ],
+    solLine: 'Moving is mostly paperwork — so we will start with the words that open doors.',
+  },
+};

@@ -1,0 +1,105 @@
+/** Russian topic packs. A1, five topics, each sentence built from its words. */
+import type { LanguagePacks } from './spec';
+
+export const RU_PACKS: LanguagePacks = {
+  travel: {
+    words: [
+      { target: 'кофе', gloss: 'coffee' },
+      { target: 'пожалуйста', gloss: 'please' },
+      { target: 'счёт', gloss: 'the bill' },
+    ],
+    sentence: { target: 'Один кофе, пожалуйста.', gloss: 'One coffee, please.' },
+    tiles: ['Один', 'кофе,', 'пожалуйста'],
+    tileDistractors: ['счёт', 'вода'],
+    foil: { target: 'вокзал', gloss: 'the station' },
+    plan: [
+      { title: 'Ordering a coffee', words: ['кофе', 'пожалуйста', 'спасибо'] },
+      { title: 'Asking for the bill', words: ['счёт', 'сколько', 'картой'] },
+      { title: 'Finding the station', words: ['вокзал', 'поезд', 'билет'] },
+      { title: 'Checking into a hotel', words: ['отель', 'номер', 'ключ'] },
+      { title: 'Asking the way', words: ['направо', 'налево', 'прямо'] },
+      { title: 'Ordering a meal', words: ['меню', 'вода', 'столик'] },
+    ],
+    solLine: 'Then we start where you will actually stand: at the counter, ordering.',
+  },
+  family: {
+    words: [
+      { target: 'моя мама', gloss: 'my mum' },
+      { target: 'мой брат', gloss: 'my brother' },
+      { target: 'дома', gloss: 'at home' },
+    ],
+    sentence: { target: 'Моя мама дома.', gloss: 'My mum is at home.' },
+    tiles: ['Моя', 'мама', 'дома'],
+    tileDistractors: ['брат', 'мой'],
+    foil: { target: 'моя сестра', gloss: 'my sister' },
+    plan: [
+      { title: 'Naming your people', words: ['мама', 'папа', 'брат'] },
+      { title: 'Saying where they are', words: ['дома', 'здесь', 'на работе'] },
+      { title: 'How old everyone is', words: ['сколько лет', 'года', 'ему'] },
+      { title: 'At the family table', words: ['обед', 'садись', 'попробуй'] },
+      { title: 'Talking about your day', words: ['сегодня', 'я работал', 'я отдыхал'] },
+      { title: 'Making plans together', words: ['в воскресенье', 'пойдём', 'вместе'] },
+    ],
+    solLine: 'Good — we will build the words you need at their table, not in a textbook.',
+  },
+  work: {
+    words: [
+      { target: 'работа', gloss: 'work' },
+      { target: 'встреча', gloss: 'a meeting' },
+      { target: 'завтра', gloss: 'tomorrow' },
+    ],
+    sentence: { target: 'Завтра у меня встреча.', gloss: 'Tomorrow I have a meeting.' },
+    tiles: ['Завтра', 'у', 'меня', 'встреча'],
+    tileDistractors: ['работа', 'сегодня'],
+    foil: { target: 'офис', gloss: 'the office' },
+    plan: [
+      { title: 'Talking about your job', words: ['работа', 'я работаю', 'я'] },
+      { title: 'Arranging a meeting', words: ['встреча', 'завтра', 'в десять'] },
+      { title: 'In the office', words: ['офис', 'письмо', 'отчёт'] },
+      { title: 'Meeting a client', words: ['клиент', 'очень приятно', 'познакомьтесь'] },
+      { title: 'Saying what you think', words: ['я думаю', 'согласен', 'может быть'] },
+      { title: 'Wrapping up a call', words: ['до связи', 'я вам пришлю', 'договорились'] },
+    ],
+    solLine: 'Right — we will aim at the meeting you have to sit through, not small talk.',
+  },
+  media_culture: {
+    words: [
+      { target: 'фильм', gloss: 'a film' },
+      { target: 'музыка', gloss: 'music' },
+      { target: 'мне нравится', gloss: 'I like' },
+    ],
+    sentence: { target: 'Мне нравится этот фильм.', gloss: 'I like this film.' },
+    tiles: ['Мне', 'нравится', 'этот', 'фильм'],
+    tileDistractors: ['музыка', 'очень'],
+    foil: { target: 'книга', gloss: 'a book' },
+    plan: [
+      { title: 'Saying what you like', words: ['мне нравится', 'очень', 'не нравится'] },
+      { title: 'Talking about films', words: ['фильм', 'актёр', 'конец'] },
+      { title: 'Talking about music', words: ['музыка', 'песня', 'слова'] },
+      { title: 'What happened in it', words: ['сначала', 'потом', 'случилось'] },
+      { title: 'Recommending something', words: ['посмотри', 'тебе понравится', 'отлично'] },
+      { title: 'Disagreeing politely', words: ['не уверен', 'по-моему', 'я больше люблю'] },
+    ],
+    solLine: 'Then the subtitles come off sooner than you think. Start with one line.',
+  },
+  housing_admin: {
+    words: [
+      { target: 'квартира', gloss: 'an apartment' },
+      { target: 'аренда', gloss: 'the rent' },
+      { target: 'центр', gloss: 'the centre' },
+    ],
+    sentence: { target: 'Я ищу квартиру в центре.', gloss: 'I am looking for an apartment in the centre.' },
+    tiles: ['Я', 'ищу', 'квартиру', 'в', 'центре'],
+    tileDistractors: ['аренда', 'школа'],
+    foil: { target: 'ключ', gloss: 'the key' },
+    plan: [
+      { title: 'Looking for a flat', words: ['квартира', 'я ищу', 'центр'] },
+      { title: 'Talking about rent', words: ['аренда', 'в месяц', 'залог'] },
+      { title: 'Viewing the place', words: ['кухня', 'ванная', 'светло'] },
+      { title: 'At the local office', words: ['регистрация', 'запись', 'документы'] },
+      { title: 'Opening a bank account', words: ['банк', 'карта', 'подписать'] },
+      { title: 'Calling the doctor', words: ['врач', 'у меня болит', 'запись'] },
+    ],
+    solLine: 'Moving is mostly paperwork — so we will start with the words that open doors.',
+  },
+};
