@@ -20,6 +20,7 @@ import { useOfflinePacks, type PackTarget } from '../../hooks/useOfflinePacks';
 import { packId } from '../../lib/offline-packs';
 import { Caption } from '../ui2/Ui2Text';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
+import { usePressed } from '../../hooks/usePressed';
 import { haptic } from '../../lib/haptics';
 import { spacing } from '../../config/theme';
 
@@ -39,6 +40,9 @@ function refIdOf(spec: PackTarget): string {
 
 export function OfflineDownloadControl({ spec, what, compact = false }: OfflineDownloadControlProps) {
   const { c } = useUi2Theme();
+  // Boolean + array style, never the function form: NativeWind's Pressable
+  // wrapper drops a function-valued style prop silently (see lib/no-callback-style.test.ts).
+  const { pressed, pressHandlers } = usePressed();
   const router = useRouter();
   const packs = useOfflinePacks();
   const refId = refIdOf(spec);
@@ -101,7 +105,8 @@ export function OfflineDownloadControl({ spec, what, compact = false }: OfflineD
       }
       accessibilityState={{ busy: progress !== undefined, disabled: progress !== undefined }}
       hitSlop={8}
-      style={({ pressed }) => [
+      {...pressHandlers}
+      style={[
         styles.pill,
         { backgroundColor: done ? c.greenTint : c.primaryTint, opacity: pressed ? 0.8 : 1 },
       ]}
