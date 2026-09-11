@@ -16,7 +16,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, corsResponse } from '../_shared/cors.ts';
-import { getEffectiveLimits } from '../_shared/plan-limits.ts';
+import { resolveEntitlement } from '../_shared/entitlement.ts';
 import { getScenario } from '../_shared/scenarios.ts';
 import { buildSystemPrompt, buildTopicTurn, usesPromptFirstCorrection } from './prompt.ts';
 // parseAIResponse/normalizeCorrection/normalizeVocabulary moved to parse.ts so
@@ -40,6 +40,7 @@ import { proficiencyToCefr } from '../_shared/cefr.ts';
 import { checkBurstLimit } from '../_shared/burst-limit.ts';
 import { PROVIDER_TIMEOUT_MS, providerFetch } from '../_shared/provider-fetch.ts';
 import { fetchLearnerContext, serializeLearnerContext } from '../_shared/learner-context.ts';
+import { learnerContextIncludeFor } from './learner-context-policy.ts';
 import {
   isValidLanguage,
   isValidProficiencyLevel,
@@ -340,7 +341,18 @@ serve(async (req: Request) => {
       );
     }
 
-    const limits = await getEffectiveLimits(authenticatedUserId, supabase);
+    // `resolveEntitlement` rather than `getEffectiveLimits` alone: this
+    // function needs the tier string as well as the limits, and resolving it
+    // twice is two definitions of "paid" in one request. `limits` is the same
+    // `get_effective_limits` result it always was — school contract overrides
+    // included — with one difference: the keys the RPC does not return now
+    // fall back to this learner's own plan instead of the free tier's, which
+    // is what the third argument of `getEffectiveLimits` is documented to do.
+    // Of the two keys read here, `dailyTextMessages` is always returned by the
+    // RPC and `dailyChatCards` has been since migration 095; the change is
+    // therefore only visible on the RPC-failed path, where a paying learner
+    // used to be silently cut to the free tier's zero.
+    const { tier, limits } = await resolveEntitlement(supabase, authenticatedUserId);
     const allowed = await consumeDailyQuota(
       supabase,
       authenticatedUserId,
@@ -368,11 +380,21 @@ serve(async (req: Request) => {
     //
     // fetchLearnerContext never throws and never blocks: on any failure it
     // returns null and this turn generates exactly as it did before.
+    //
+    // The OPT-IN sections are gated more tightly than the base context, on the
+    // tier alone — see `learnerContextIncludeFor`. The base snapshot is what
+    // the learner's text allowance pays for and a school contract can grant;
+    // the onboarding goal (`user_profiles.ideal_l2_self`) is a paid feature and
+    // `starter` does not get it however their turns were funded. An empty
+    // include array is exactly equivalent to passing none: `fetchLearnerContext`
+    // reads `opts.include ?? []`, makes the same two queries, and returns the
+    // same three-key object it always did.
     const learnerContext =
       limits.dailyTextMessages > 0
         ? await fetchLearnerContext(supabase, {
             userId: authenticatedUserId,
             targetLanguage,
+            include: learnerContextIncludeFor(tier),
           })
         : null;
     const learnerBlock = serializeLearnerContext(learnerContext);
@@ -472,6 +494,14 @@ serve(async (req: Request) => {
       // there is. It is now a fenced user turn in `messages` below,
       // which restores a shared prefix AND puts caller text behind a
       // role boundary instead of a fence in our own voice.
+      //
+      // THE RULE, stated once: index 0 is the only block that may carry a
+      // cache breakpoint, and nothing that varies per learner or per turn may
+      // enter it. The learner's onboarding goal is the newest thing to obey
+      // it — it arrives inside the `<LEARNER_PROFILE>` fence, so it rides in
+      // `learnerNote` at index 1 and cannot reach index 0 by any path:
+      // `buildSystemPrompt` is handed only language, level, scenario key and
+      // native language, and cannot see a learner profile at all.
       system: [
         { type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } },
         ...(learnerNote ? [{ type: 'text', text: learnerNote }] : []),
