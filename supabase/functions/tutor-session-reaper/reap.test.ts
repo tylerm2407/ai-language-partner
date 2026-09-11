@@ -423,7 +423,10 @@ Deno.test("the write-back is handed the server-measured seconds, not the grant",
   assertEquals(calls.writeBacks, [{ id: "session-1", observed: 300 }]);
 });
 
-Deno.test("skipAnalysis settles money but retains the learning work", async () => {
+Deno.test("skipAnalysis settles money, closes the session, and keeps the transcript", async () => {
+  // An open row is what `reserve_tutor_session` counts as `active_session`,
+  // so a session parked "for later analysis" locked the learner out of the
+  // tutor for as long as the key stayed missing. Close it; keep the buffer.
   const { deps, calls } = fakeDeps({ rows: [session()] });
   const summary = await reapAbandonedSessions(deps, { skipAnalysis: true });
 
@@ -431,8 +434,9 @@ Deno.test("skipAnalysis settles money but retains the learning work", async () =
   assertEquals(calls.analyses.length, 0);
   assertEquals(summary.analysisSkipped, 1);
   assertEquals(summary.settled, 1);
-  assertEquals(summary.reaped, 0);
-  assertEquals(calls.closes.length, 0);
+  assertEquals(summary.reaped, 1);
+  assertEquals(calls.closes.length, 1);
+  assertEquals(calls.drops.length, 0);
 });
 
 // ─── Ordering ─────────────────────────────────────────────────────────────

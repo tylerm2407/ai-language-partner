@@ -81,9 +81,31 @@ export async function readReplyStream(opts: ReadReplyStreamOpts): Promise<Stream
   let buffer = '';
   let replyClosed = false;
 
-  /** Emit every sentence the buffer can prove complete. Returns the reasons a
-   *  sentence was refused, or null if all of them passed. */
-  const drain = async (final: boolean): Promise<string[] | null> => {
+  // ── The validation pipeline ──────────────────────────────────────────────
+  // Each sentence is validated and emitted on a chain that runs ALONGSIDE the
+  // provider read, not inside it. Validation includes a moderation round trip
+  // (content-safety.ts), and awaiting it in the read loop meant the model's
+  // next sentence was not even being read while the previous one was being
+  // checked — a four-sentence reply paid four serial round trips on top of
+  // generation. The chain keeps the two guarantees that matter: sentences are
+  // emitted in order, and nothing is emitted after a refused sentence.
+  let pending: Promise<void> = Promise.resolve();
+  let refused: string[] | null = null;
+
+  const enqueue = (piece: string) => {
+    pending = pending.then(async () => {
+      if (refused) return; // everything after a refusal is discarded
+      const check = await validate(piece);
+      if (!check.safe) {
+        refused = check.reasons;
+        return;
+      }
+      await onSentence(piece);
+    });
+  };
+
+  /** Queue every sentence the buffer can prove complete. */
+  const drain = (final: boolean): void => {
     const pieces: string[] = [];
     if (final) {
       // End of the value (or of the stream): whatever is left is the last
@@ -97,22 +119,24 @@ export async function readReplyStream(opts: ReadReplyStreamOpts): Promise<Stream
       buffer = out.rest;
       pieces.push(...out.sentences);
     }
-    for (const piece of pieces) {
-      const check = await validate(piece);
-      if (!check.safe) return check.reasons;
-      await onSentence(piece);
-    }
-    return null;
+    for (const piece of pieces) enqueue(piece);
   };
 
   try {
     for (;;) {
+      // A refusal discovered by the chain stops the read as soon as the loop
+      // comes round; the sentences already queued behind it never emit.
+      if (refused) {
+        await reader.cancel().catch(() => {});
+        return { kind: 'unsafe', reasons: refused };
+      }
       const { done, value } = await reader.read();
       if (done) break;
       for (const event of sse.push(bytes.decode(value, { stream: true }))) {
         const providerError = anthropicStreamError(event);
         if (providerError) {
           await reader.cancel().catch(() => {});
+          await pending;
           return { kind: 'provider_error', message: providerError };
         }
         const delta = anthropicDeltaText(event);
@@ -121,18 +145,10 @@ export async function readReplyStream(opts: ReadReplyStreamOpts): Promise<Stream
         if (replyClosed) continue; // still collecting, no longer emitting
 
         buffer += replyValue.push(delta);
-        const refused = await drain(false);
-        if (refused) {
-          await reader.cancel().catch(() => {});
-          return { kind: 'unsafe', reasons: refused };
-        }
+        drain(false);
         if (replyValue.done) {
           replyClosed = true;
-          const refusedTail = await drain(true);
-          if (refusedTail) {
-            await reader.cancel().catch(() => {});
-            return { kind: 'unsafe', reasons: refusedTail };
-          }
+          drain(true);
         }
       }
     }
@@ -140,10 +156,9 @@ export async function readReplyStream(opts: ReadReplyStreamOpts): Promise<Stream
     // The stream ended without the reply's closing quote — a truncated
     // completion (max_tokens) or a dropped connection. Flush what we have
     // rather than swallow it.
-    if (!replyClosed) {
-      const refused = await drain(true);
-      if (refused) return { kind: 'unsafe', reasons: refused };
-    }
+    if (!replyClosed) drain(true);
+    await pending;
+    if (refused) return { kind: 'unsafe', reasons: refused };
     return { kind: 'complete', rawText };
   } finally {
     reader.releaseLock();
@@ -256,10 +271,7 @@ export function chatStreamResponse(opts: ChatStreamOpts): Response {
           // actually saw canned text. The non-streaming path emits the same
           // pair, so the two transports are comparable in the same query.
           log({ evt: 'safety_reject', attempt: 1, reasons: outcome.reasons });
-          log({
-            evt: 'used_fallback',
-            reason: outcome.reasons.includes('moderation_unavailable') ? 'provider' : 'safety',
-          });
+          log({ evt: 'used_fallback', reason: 'safety' });
           send('fallback', { reply: opts.fallbackReply });
           await opts.finalizeFallback();
           return;

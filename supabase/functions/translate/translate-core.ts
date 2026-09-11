@@ -87,7 +87,7 @@ export async function translateWithValidation(
     });
     if (safety.safe) return { ok: true, translation: text };
 
-    lastReason = safety.reasons.includes('moderation_unavailable') ? 'api_error' : 'unsafe';
+    lastReason = 'unsafe';
     log({ evt: 'safety_reject', fn: 'translate', attempt, reasons: safety.reasons, language });
   }
 

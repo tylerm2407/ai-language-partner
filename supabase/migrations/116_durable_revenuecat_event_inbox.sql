@@ -50,8 +50,10 @@ BEGIN
 
   SELECT * INTO v_row FROM public.fluenci_revenuecat_events
    WHERE event_id=p_event_id FOR UPDATE;
+  -- user_id is ON DELETE SET NULL: a redelivery for a since-deleted account
+  -- must not raise forever, so a NULL stored user is not a mismatch.
   IF v_row.event_type IS DISTINCT FROM p_event_type
-     OR v_row.user_id IS DISTINCT FROM p_user_id
+     OR (v_row.user_id IS NOT NULL AND v_row.user_id IS DISTINCT FROM p_user_id)
      OR v_row.event_data IS DISTINCT FROM COALESCE(p_event_data,'{}'::jsonb) THEN
     RAISE EXCEPTION 'event identity mismatch' USING ERRCODE = '22023';
   END IF;

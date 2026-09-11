@@ -422,11 +422,15 @@ async function recoverOne(
 
   try {
     if (skipAnalysis) {
+      // Money is already settled. The session still has to CLOSE: an open
+      // row is what `reserve_tutor_session` counts as `active_session`, so
+      // leaving it open to wait for a missing ANTHROPIC_API_KEY locked the
+      // learner out of the tutor until someone noticed. The transcript is
+      // kept (not dropped below) so a manual replay stays possible.
       summary.analysisSkipped += 1;
       console.warn(
-        `[${FN}] analysis disabled; leaving ${session.id} open with its transcript retained`,
+        `[${FN}] analysis disabled; closing ${session.id} with its transcript retained`,
       );
-      return;
     } else {
       const buffer = await deps.readTranscript(session.id);
 

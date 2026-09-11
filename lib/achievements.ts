@@ -5,10 +5,6 @@ import type { UserProfile, DailyStats } from '../types';
 
 export type AchievementType =
   | 'first_lesson'
-  | 'xp_100'
-  | 'xp_500'
-  | 'xp_1000'
-  | 'xp_5000'
   | 'first_chat'
   | 'perfect_lesson'
   | 'cards_50'
@@ -45,34 +41,6 @@ export const ACHIEVEMENTS: Record<AchievementType, AchievementDefinition> = {
     description: 'Complete your first lesson',
     icon: 'book',
     color: '#38BDF8',
-  },
-  xp_100: {
-    type: 'xp_100',
-    title: 'XP Hunter',
-    description: 'Earn 100 total XP',
-    icon: 'star',
-    color: '#38BDF8',
-  },
-  xp_500: {
-    type: 'xp_500',
-    title: 'XP Collector',
-    description: 'Earn 500 total XP',
-    icon: 'star',
-    color: '#A78BFA',
-  },
-  xp_1000: {
-    type: 'xp_1000',
-    title: 'XP Master',
-    description: 'Earn 1,000 total XP',
-    icon: 'star',
-    color: '#38BDF8',
-  },
-  xp_5000: {
-    type: 'xp_5000',
-    title: 'XP Legend',
-    description: 'Earn 5,000 total XP',
-    icon: 'trophy',
-    color: '#FBBF24',
   },
   first_chat: {
     type: 'first_chat',
@@ -164,22 +132,6 @@ const ACHIEVEMENT_CONDITIONS: AchievementCondition[] = [
   {
     type: 'first_lesson',
     check: (_profile, stats) => (stats?.lessonsCompleted ?? 0) >= 1,
-  },
-  {
-    type: 'xp_100',
-    check: (profile) => profile.totalXp >= 100,
-  },
-  {
-    type: 'xp_500',
-    check: (profile) => profile.totalXp >= 500,
-  },
-  {
-    type: 'xp_1000',
-    check: (profile) => profile.totalXp >= 1000,
-  },
-  {
-    type: 'xp_5000',
-    check: (profile) => profile.totalXp >= 5000,
   },
   {
     type: 'perfect_lesson',
@@ -317,10 +269,15 @@ export async function fetchAchievements(userId: string): Promise<EarnedAchieveme
     return [];
   }
 
-  return (data ?? []).map((row: { id: string; user_id: string; type: string; earned_at: string }) => ({
-    id: row.id,
-    userId: row.user_id,
-    type: row.type as AchievementType,
-    earnedAt: row.earned_at,
-  }));
+  // Rows of retired types (the XP badges, removed 2026-09-11 when XP stopped
+  // accruing) still exist for early accounts. Drop them here so the grid's
+  // earned count can never exceed its total.
+  return (data ?? [])
+    .filter((row: { type: string }) => row.type in ACHIEVEMENTS)
+    .map((row: { id: string; user_id: string; type: string; earned_at: string }) => ({
+      id: row.id,
+      userId: row.user_id,
+      type: row.type as AchievementType,
+      earnedAt: row.earned_at,
+    }));
 }

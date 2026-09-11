@@ -7,7 +7,8 @@
 //   1. Perform every non-mutating eligibility/configuration check.
 //   2. Refuse if the user still owns an organization (organizations.created_by is
 //      ON DELETE RESTRICT, so the auth delete would fail anyway, but with an opaque error).
-//   3. Record each completed mutation in the deletion-job ledger.
+//   3. Record each completed mutation in the deletion-job ledger, and on a
+//      retry READ that ledger first so completed mutations are skipped.
 //   4. Delete the rows that do NOT cascade.
 //   5. Delete the auth user — every other user table is ON DELETE CASCADE to auth.users,
 //      so this removes the rest atomically inside Postgres.
@@ -20,6 +21,7 @@ import Stripe from 'https://esm.sh/stripe@13.0.0?target=deno';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsResponse, corsHeaders } from '../_shared/cors.ts';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
+import { type DeletionStage, stageDone, stagesThrough } from './workflow.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -36,14 +38,6 @@ const STRIPE_SECRET_KEY = Deno.env.get('STRIPE_SECRET_KEY');
 // and audit_log.actor_id is SET NULL (step 3c scrubs it, keeping the audit
 // entry but removing the person). Everything else cascades.
 const NON_CASCADING_TABLES = [{ table: 'client_events', column: 'user_id' }];
-
-type DeletionStage =
-  | 'started'
-  | 'billing_cancelled'
-  | 'auxiliary_deleted'
-  | 'storage_deleted'
-  | 'audit_scrubbed'
-  | 'auth_deleted';
 
 function partialError(message: string, completedStages: DeletionStage[]) {
   return {
@@ -128,16 +122,35 @@ serve(async (req: Request) => {
     const hasStoreSubscription =
       !!subscription?.is_active && !subscription?.stripe_subscription_id && subscription?.tier !== 'starter';
 
-    completedStages = ['started'];
-    const { error: jobError } = await supabase
+    // --- 1b. Resume: read what an earlier attempt already finished ---------
+    const { data: existingJob, error: jobReadError } = await supabase
       .from('fluenci_account_deletion_jobs')
-      .upsert({ user_id: userId, stage: 'started', last_error: null, updated_at: new Date().toISOString() });
-    if (jobError) {
-      console.error(`[delete-account] could not initialize deletion job for ${userId}:`, jobError.message);
+      .select('stage')
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (jobReadError) {
+      console.error(`[delete-account] could not read deletion job for ${userId}:`, jobReadError.message);
       return new Response(
         JSON.stringify({ error: 'Could not start account deletion. Nothing was deleted. Please try again.' }),
         { status: 500, headers }
       );
+    }
+    const resumedFrom: string | null = existingJob?.stage ?? null;
+    const done = (stage: DeletionStage) => stageDone(resumedFrom, stage);
+    completedStages = resumedFrom ? stagesThrough(resumedFrom) : ['started'];
+    if (resumedFrom) {
+      console.log(`[delete-account] resuming deletion for ${userId} after stage ${resumedFrom}`);
+    } else {
+      const { error: jobError } = await supabase
+        .from('fluenci_account_deletion_jobs')
+        .upsert({ user_id: userId, stage: 'started', last_error: null, updated_at: new Date().toISOString() });
+      if (jobError) {
+        console.error(`[delete-account] could not initialize deletion job for ${userId}:`, jobError.message);
+        return new Response(
+          JSON.stringify({ error: 'Could not start account deletion. Nothing was deleted. Please try again.' }),
+          { status: 500, headers }
+        );
+      }
     }
 
     const recordStage = async (stage: DeletionStage, lastError: string | null = null) => {
@@ -151,7 +164,7 @@ serve(async (req: Request) => {
 
     // --- 2. Cancel billing after preflight -------------------------------
 
-    if (subscription?.stripe_subscription_id) {
+    if (subscription?.stripe_subscription_id && !done('billing_cancelled')) {
       const stripe = new Stripe(STRIPE_SECRET_KEY!, {
         apiVersion: '2023-10-16',
         httpClient: Stripe.createFetchHttpClient(),
@@ -180,7 +193,7 @@ serve(async (req: Request) => {
     await recordStage('billing_cancelled');
 
     // --- 3. Delete rows that do not cascade -------------------------------
-    for (const { table, column } of NON_CASCADING_TABLES) {
+    for (const { table, column } of done('auxiliary_deleted') ? [] : NON_CASCADING_TABLES) {
       const { error } = await supabase.from(table).delete().eq(column, userId);
       if (error) {
         console.error(`[delete-account] failed to delete from ${table} for ${userId}:`, error.message);
@@ -199,7 +212,7 @@ serve(async (req: Request) => {
     // Storage is not covered by the auth-user cascade, so a stylised portrait
     // of the user would outlive their account. Runs BEFORE the irreversible
     // auth deletion so a failure can abort while the account still exists.
-    {
+    if (!done('storage_deleted')) {
       const { data: avatarObjects, error: listError } = await supabase.storage
         .from('avatars')
         .list(userId);
@@ -245,7 +258,7 @@ serve(async (req: Request) => {
     //
     // Fails closed like every other step: an audit row still naming a deleted
     // user is a compliance defect, not an acceptable partial success.
-    {
+    if (!done('audit_scrubbed')) {
       const { error: auditError } = await supabase
         .from('audit_log')
         .update({ actor_id: null, ip_address: null })
@@ -265,7 +278,12 @@ serve(async (req: Request) => {
     await recordStage('audit_scrubbed');
 
     // --- 4. Delete the auth user (cascades every remaining user table) ----
-    const { error: deleteError } = await supabase.auth.admin.deleteUser(userId);
+    // A job already past this stage can only be re-driven with a service
+    // credential (the user can no longer sign in); the verify step below is
+    // still worth running for it.
+    const { error: deleteError } = done('auth_deleted')
+      ? { error: null }
+      : await supabase.auth.admin.deleteUser(userId);
     if (deleteError) {
       console.error(`[delete-account] failed to delete auth user ${userId}:`, deleteError.message);
       return new Response(

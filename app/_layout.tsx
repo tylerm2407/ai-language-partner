@@ -108,10 +108,12 @@ function RootLayout() {
     if (!profile || !permissionGranted) return;
     scheduleDailyPracticeReminder({
       practiceMinutesToday: dailyStats?.minutesPracticed ?? 0,
+      lessonsCompletedToday: dailyStats?.lessonsCompleted ?? 0,
+      cardsReviewedToday: dailyStats?.cardsReviewed ?? 0,
       preferredHour: 21,
       idealL2Self: profile.idealL2Self ?? null,
     }).catch(() => {});
-  }, [profile, dailyStats?.minutesPracticed, permissionGranted]);
+  }, [profile, dailyStats?.minutesPracticed, dailyStats?.lessonsCompleted, dailyStats?.cardsReviewed, permissionGranted]);
 
   // Also re-arm on background — covers edge cases where the user
   // backgrounds before the schedule-on-change useEffect has resolved.
@@ -120,13 +122,15 @@ function RootLayout() {
       if (state === 'background' && profile && permissionGranted) {
         scheduleDailyPracticeReminder({
           practiceMinutesToday: dailyStats?.minutesPracticed ?? 0,
+          lessonsCompletedToday: dailyStats?.lessonsCompleted ?? 0,
+          cardsReviewedToday: dailyStats?.cardsReviewed ?? 0,
           preferredHour: 21,
           idealL2Self: profile.idealL2Self ?? null,
         }).catch(() => {});
       }
     });
     return () => sub.remove();
-  }, [profile, dailyStats?.minutesPracticed, permissionGranted]);
+  }, [profile, dailyStats?.minutesPracticed, dailyStats?.lessonsCompleted, dailyStats?.cardsReviewed, permissionGranted]);
 
   // Register the analytics provider once, before anything tries to track.
   // No-ops without EXPO_PUBLIC_POSTHOG_KEY, which is the normal state for a

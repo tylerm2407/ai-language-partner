@@ -288,14 +288,17 @@ serve(async (req: Request) => {
   }
 
   // Only the webhook can assert that provider state was accepted and written
-  // to the entitlement source of truth. Configured ingestion failures return
-  // a retryable response; the already-completed event is safe to replay and
-  // deterministic insert ids prevent duplicate analytics.
+  // to the entitlement source of truth. The entitlement is already committed
+  // by this point, so an analytics outage must NOT fail the delivery: a 5xx
+  // here made RevenueCat retry a purchase that had already been applied,
+  // paging on every PostHog incident for nothing. Log it and acknowledge.
   try {
     await captureRevenueCatAnalytics(event, tier);
   } catch (analyticsError) {
-    console.error('[revenuecat-webhook] authoritative analytics failed:', analyticsError);
-    return new Response(JSON.stringify({ error: 'analytics_unavailable' }), { status: 503 });
+    console.error(
+      '[revenuecat-webhook] analytics capture failed after entitlement commit (event acknowledged):',
+      analyticsError instanceof Error ? analyticsError.message : analyticsError,
+    );
   }
 
   return new Response(JSON.stringify({ ok: true }), { status: 200 });

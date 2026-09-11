@@ -104,13 +104,56 @@ Deno.test('educational discussion is not a deterministic violence false positive
   assertEquals(res.safe, true);
 });
 
-Deno.test('required moderation fails closed when its credential is unavailable', async () => {
+Deno.test('required moderation fails OPEN when its credential is unavailable', async () => {
+  // Product decision 2026-09-11: an OpenAI outage must not turn every AI
+  // feature into canned text. The deterministic pass still vouches for the
+  // text and the verdict is marked degraded so the outage is countable.
   const res = await validateContentSafety('A clean generated sentence.', {
     language: 'en',
     moderation: 'required',
     moderationApiKey: null,
   });
-  assertEquals(res, { safe: false, reasons: ['moderation_unavailable'] });
+  assertEquals(res, { safe: true, reasons: [], degraded: true });
+});
+
+Deno.test('required moderation fails OPEN when the provider errors', async () => {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = (() => Promise.resolve(new Response('down', { status: 503 }))) as typeof fetch;
+  try {
+    const res = await validateContentSafety('A clean generated sentence.', {
+      language: 'en',
+      moderation: 'required',
+      moderationApiKey: 'sk-test',
+    });
+    assertEquals(res, { safe: true, reasons: [], degraded: true });
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+Deno.test('the deterministic pass still rejects even when moderation is down', async () => {
+  const res = await validateContentSafety('kill yourself', {
+    language: 'en',
+    moderation: 'required',
+    moderationApiKey: null,
+  });
+  assertEquals(res.safe, false);
+});
+
+Deno.test('minor policy: ordinary drinking is not alcohol', async () => {
+  for (const text of ["Let's drink coffee.", 'You can drink water here.', 'Let us drink some tea.']) {
+    const res = await validateContentSafety(text, { language: 'en', ...offline });
+    assertEquals(res.safe, true, text);
+  }
+  const res = await validateContentSafety("Let's drink beer tonight.", { language: 'en', ...offline });
+  assertEquals(res.safe, false);
+});
+
+Deno.test('Korean idiom stems are not death threats', async () => {
+  const idiom = await validateContentSafety('배고파 죽어요.', { language: 'ko', ...offline });
+  assertEquals(idiom.safe, true);
+  const threat = await validateContentSafety('죽어라!', { language: 'ko', ...offline });
+  assertEquals(threat.safe, false);
 });
 
 Deno.test('best-effort moderation reports degradation without rejecting user text', async () => {

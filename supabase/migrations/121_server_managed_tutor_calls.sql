@@ -61,8 +61,10 @@ BEGIN
     FROM public.tutor_sessions
    WHERE id = v_connection.session_id
    FOR UPDATE;
-  IF NOT FOUND OR v_session.ended_at IS NOT NULL OR v_session.reserved_at IS NULL OR
-     v_session.provider_call_id IS NOT NULL THEN
+  -- settled_at: `end` settles before it closes, so a connect landing in that
+  -- window would attach a live call to a session nothing will ever hang up.
+  IF NOT FOUND OR v_session.ended_at IS NOT NULL OR v_session.settled_at IS NOT NULL OR
+     v_session.reserved_at IS NULL OR v_session.provider_call_id IS NOT NULL THEN
     RETURN jsonb_build_object('status', 'unavailable');
   END IF;
 
@@ -98,6 +100,7 @@ BEGIN
          last_heartbeat_at = now()
    WHERE id = p_session_id
      AND ended_at IS NULL
+     AND settled_at IS NULL
      AND provider_call_id IS NULL;
   v_changed := FOUND;
   IF v_changed THEN

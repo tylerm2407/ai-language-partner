@@ -4,9 +4,9 @@
 import { assert, assertEquals } from 'https://deno.land/std@0.168.0/testing/asserts.ts';
 import { generateValidated } from './validated-generate.ts';
 
-// Generation is fail-closed on model moderation. Unit tests isolate the
-// orchestration by providing the same successful moderation response every
-// clean generated string would receive in production.
+// Model moderation fails open, but these tests still stub a successful
+// moderation response so the orchestration is exercised on its normal path
+// rather than its degraded one.
 Deno.env.set('OPENAI_KEY', 'sk-test');
 const providerFetchForTest = globalThis.fetch;
 globalThis.fetch = ((input: string | URL | Request, init?: RequestInit) =>

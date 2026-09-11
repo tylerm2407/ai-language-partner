@@ -40,8 +40,10 @@
  * landed, not what was attempted, so the caller can log the difference.
  */
 
-import { saveChatVocabulary } from "./chat-vocabulary.ts";
-import type { TutorAnalysis, TutorDebrief } from "./tutor-analysis.ts";
+import { recordConversationEvidence } from './conversation-evidence.ts';
+import { saveChatVocabulary } from './chat-vocabulary.ts';
+import { normalizeMemoryNote, TUTOR_MEMORY_KEEP } from './tutor-memory.ts';
+import type { TutorAnalysis, TutorDebrief } from './tutor-analysis.ts';
 
 // ─── Client ───────────────────────────────────────────────────────────────
 
@@ -66,7 +68,7 @@ export type TutorWritebackClient = {
 
 /** Log prefix, so a failure is attributable to this stage rather than to
  *  whichever function invoked it. */
-const FN = "tutor-writeback";
+const FN = 'tutor-writeback';
 
 /**
  * Which surface taught the word. `chat-vocabulary.ts` writes this to
@@ -74,11 +76,7 @@ const FN = "tutor-writeback";
  * it is what any later "where did this card come from" question is answered
  * from. Distinct from ai-chat's `['chat','vocabulary']` on purpose.
  */
-const TUTOR_CARD_TAGS: readonly string[] = [
-  "tutor",
-  "vocabulary",
-  "client_reported",
-];
+const TUTOR_CARD_TAGS: readonly string[] = ['tutor', 'vocabulary'];
 
 /**
  * How many words one whole session may bank, against ai-chat's three per turn.
@@ -100,6 +98,8 @@ const MAX_TUTOR_CARDS = 6;
  * tutor to feel continuous, small enough that one talkative session cannot
  * evict everything that came before it in a single prune.
  */
+const MAX_MEMORY_NOTES = 5;
+
 // ─── Public shape ─────────────────────────────────────────────────────────
 
 export interface TutorWritebackInput {
@@ -159,9 +159,7 @@ export interface TutorWritebackResult {
  * rather than as a short session.
  */
 function minutesFrom(seconds: number): number {
-  if (
-    typeof seconds !== "number" || !Number.isFinite(seconds) || seconds <= 0
-  ) return 0;
+  if (typeof seconds !== 'number' || !Number.isFinite(seconds) || seconds <= 0) return 0;
   return Math.round((seconds / 60) * 10) / 10;
 }
 
@@ -214,17 +212,14 @@ async function claimSession(
 ): Promise<boolean> {
   try {
     const { data, error } = await supabase
-      .from("tutor_sessions")
+      .from('tutor_sessions')
       .update({ analyzed_at: new Date().toISOString() })
-      .eq("id", sessionId)
-      .is("analyzed_at", null)
-      .select("id");
+      .eq('id', sessionId)
+      .is('analyzed_at', null)
+      .select('id');
 
     if (error) {
-      console.warn(
-        `[${FN}] analysis claim failed, proceeding unguarded:`,
-        error.message,
-      );
+      console.warn(`[${FN}] analysis claim failed, proceeding unguarded:`, error.message);
       return true;
     }
     // An empty array is the one unambiguous answer: the row exists and someone
@@ -237,6 +232,125 @@ async function claimSession(
     console.warn(`[${FN}] analysis claim threw, proceeding unguarded:`, err);
     return true;
   }
+}
+
+// ─── Per-turn writes ──────────────────────────────────────────────────────
+
+/**
+ * Log one turn's correction.
+ *
+ * `chat_session_id` is null and always will be: that column is a foreign key
+ * into `chat_sessions`, and a tutor session is a row in `tutor_sessions`. There
+ * is no id to put there, and inventing one would break the FK.
+ *
+ * ai-chat follows its insert with a seven-day count of the same `short_label`.
+ * Deliberately not repeated here. That count exists to populate the repetition
+ * badge next to a live correction in the chat UI, and nothing in a post-session
+ * debrief displays one — so it would be N extra round trips per session
+ * producing a number no caller reads. The rows it counts are still being
+ * written, so ai-chat's own badge keeps seeing spoken practice.
+ *
+ * Guarded on `shortLabel` exactly as `finalizeTurn` is: the same analysis that
+ * omits a label is the one that has not really identified an error.
+ */
+async function logCorrection(
+  supabase: TutorWritebackClient,
+  input: TutorWritebackInput,
+  correction: NonNullable<TutorAnalysis['turns'][number]['correction']>,
+): Promise<boolean> {
+  try {
+    const { error } = await supabase.from('correction_log').insert({
+      user_id: input.userId,
+      chat_session_id: null,
+      target_language: input.targetLanguage,
+      error_type: correction.errorType,
+      severity: correction.severity,
+      short_label: correction.shortLabel,
+      original: correction.original || null,
+      corrected: correction.corrected || null,
+      explanation: correction.explanation || null,
+    });
+    if (error) {
+      console.warn(`[${FN}] correction_log insert failed (non-fatal):`, error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn(`[${FN}] correction_log write failed (non-fatal):`, err);
+    return false;
+  }
+}
+
+// ─── Memory ───────────────────────────────────────────────────────────────
+
+/**
+ * Write this session's notes, then prune.
+ *
+ * Every note is re-validated through `normalizeMemoryNote` even though the
+ * analyser has already run it once. Two reasons, and neither is paranoia: the
+ * note is model output travelling through a typed boundary that does not check
+ * it, and `tutor_memory.content` carries a `CHECK (char_length BETWEEN 3 AND
+ * 200)` that turns a bad note into a 23514 from the RPC. Dropping the one bad
+ * note is the right response — the alternative is a single malformed string
+ * costing the learner every other thing this session remembered.
+ *
+ * The prune runs ONCE, after the last note, and outside the per-note loop.
+ * Pruning per note would delete against a partially-written set, so the notes
+ * this session had not yet inserted would not be competing for the 24 slots
+ * they are entitled to compete for — the last note of a session would
+ * systematically survive at the expense of the first.
+ */
+async function writeMemory(
+  supabase: TutorWritebackClient,
+  input: TutorWritebackInput,
+): Promise<{ written: number; pruned: number }> {
+  const notes = Array.isArray(input.analysis.memoryNotes) ? input.analysis.memoryNotes : [];
+  let written = 0;
+
+  for (const raw of notes.slice(0, MAX_MEMORY_NOTES)) {
+    const note = normalizeMemoryNote(raw);
+    if (!note) {
+      console.warn(`[${FN}] dropped an unusable memory note`);
+      continue;
+    }
+    try {
+      const { error } = await supabase.rpc('upsert_tutor_memory', {
+        p_user_id: input.userId,
+        p_language: input.targetLanguage,
+        p_kind: note.kind,
+        p_content: note.content,
+        p_session_id: input.sessionId,
+      });
+      if (error) {
+        console.warn(`[${FN}] upsert_tutor_memory failed (non-fatal):`, error.message);
+        continue;
+      }
+      written += 1;
+    } catch (err) {
+      console.warn(`[${FN}] upsert_tutor_memory threw (non-fatal):`, err);
+    }
+  }
+
+  // Pruned even when nothing was written this session: the 180-day forgetting
+  // curve inside `prune_tutor_memory` is time-based, so a session that
+  // remembered nothing is still the occasion to let old notes expire.
+  let pruned = 0;
+  try {
+    const { data, error } = await supabase.rpc('prune_tutor_memory', {
+      p_user_id: input.userId,
+      p_language: input.targetLanguage,
+      p_keep: TUTOR_MEMORY_KEEP,
+    });
+    if (error) {
+      console.warn(`[${FN}] prune_tutor_memory failed (non-fatal):`, error.message);
+    } else if (typeof data === 'number' && Number.isFinite(data)) {
+      pruned = data;
+    }
+  } catch (err) {
+    console.warn(`[${FN}] prune_tutor_memory threw (non-fatal):`, err);
+  }
+
+  return { written, pruned };
 }
 
 // ─── The whole write-back ─────────────────────────────────────────────────
@@ -263,9 +377,7 @@ export async function writeBackTutorSession(
     // is this call's own, not a re-read of the stored one: they describe the
     // same session from the same transcript, and a round trip to fetch the
     // other copy would buy nothing a caller can act on.
-    console.log(
-      `[${FN}] session ${input.sessionId} already analysed; skipping write-back`,
-    );
+    console.log(`[${FN}] session ${input.sessionId} already analysed; skipping write-back`);
     return {
       correctionsLogged: 0,
       evidenceRows: 0,
@@ -297,16 +409,38 @@ export async function writeBackTutorSession(
   let correctionsLogged = 0;
   let evidenceRows = 0;
 
-  // Realtime transcript events currently arrive through the authenticated
-  // device control channel. Ownership is proven; audio provenance is not. Do
-  // not let a modified client turn arbitrary strings into correction history,
-  // measured CEFR evidence, or durable tutor memory. The debrief and optional
-  // cards remain useful learner-owned notes and are explicitly tagged
-  // `client_reported`. When a provider-observed sideband transcript is added,
-  // it can take a separate validated write path rather than weakening this one.
-  void turns;
-  correctionsLogged = 0;
-  evidenceRows = 0;
+  for (const turn of turns) {
+    const correction = turn.correction ?? null;
+
+    // (1) Correction first — same order as `finalizeTurn`.
+    if (correction && correction.shortLabel) {
+      if (await logCorrection(supabase, input, correction)) correctionsLogged += 1;
+    }
+
+    // (2) Then evidence, for EVERY turn — including the ones with nothing to
+    // correct. `analyzeTutorSession` emits a turn per analysed learner turn
+    // with `correction: null` on the clean ones precisely so this can happen:
+    // `conversation_evidence` measures accuracy per turn, so a feed of only
+    // errored turns would read as ~0% accuracy and the voice tutor would drive
+    // every learner's measured level down the more they practised.
+    //
+    // `recordConversationEvidence` returns false for turns `scoreTurn` refuses
+    // — under four words, or spoken below the recogniser-confidence floor. That
+    // refusal is the point and must not be worked around here: a live session
+    // is full of "sí" and "vale", and a level built partly out of those is a
+    // level that says something untrue about the learner.
+    const wrote = await recordConversationEvidence(supabase, {
+      userId: input.userId,
+      targetLanguage: input.targetLanguage,
+      cefrLevel: input.cefrLevel,
+      modality: 'speaking',
+      text: turn.learnerText,
+      correction,
+      recognizerConfidence: turn.recognizerConfidence,
+      fn: FN,
+    });
+    if (wrote) evidenceRows += 1;
+  }
 
   // (3) Cards last of the three, as in `finalizeTurn` — but once for the
   // session rather than once per turn, because the analysis chooses the
@@ -318,9 +452,7 @@ export async function writeBackTutorSession(
     userId: input.userId,
     targetLanguage: input.targetLanguage,
     cefrLevel: input.cefrLevel,
-    words: Array.isArray(input.analysis.vocabulary)
-      ? input.analysis.vocabulary
-      : [],
+    words: Array.isArray(input.analysis.vocabulary) ? input.analysis.vocabulary : [],
     limit: input.chatCardLimit,
     tags: TUTOR_CARD_TAGS,
     maxCandidates: MAX_TUTOR_CARDS,
@@ -328,15 +460,15 @@ export async function writeBackTutorSession(
   });
 
   // (4) Memory, then (5) the prune.
-  const memory = { written: 0, pruned: 0 };
+  const memory = await writeMemory(supabase, input);
 
   // (6) The debrief, last. `analyzed_at` was already stamped by the claim, so
   // this update carries only the payload.
   try {
     const { error } = await supabase
-      .from("tutor_sessions")
+      .from('tutor_sessions')
       .update({ debrief })
-      .eq("id", input.sessionId);
+      .eq('id', input.sessionId);
     if (error) {
       console.warn(`[${FN}] debrief write failed (non-fatal):`, error.message);
     }

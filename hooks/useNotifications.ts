@@ -152,6 +152,10 @@ async function cancelById(identifier: string): Promise<void> {
 
 interface ScheduleDailyPracticeReminderParams {
   practiceMinutesToday: number;
+  /** Lessons do not record minutes (only `lessonsCompleted`), so a learner
+   *  who finished a lesson still counts as having practised today. */
+  lessonsCompletedToday?: number;
+  cardsReviewedToday?: number;
   /** Local hour (0-23). Clamped to [18, 22] — evening-only, before quiet hours. */
   preferredHour?: number;
   /** Learner's Ideal L2 Self (Dörnyei L2MSS). When present, enriches the
@@ -199,6 +203,8 @@ function dailyPracticeContent(
  */
 export async function scheduleDailyPracticeReminder({
   practiceMinutesToday,
+  lessonsCompletedToday = 0,
+  cardsReviewedToday = 0,
   preferredHour = 21,
   idealL2Self,
 }: ScheduleDailyPracticeReminderParams): Promise<void> {
@@ -214,7 +220,7 @@ export async function scheduleDailyPracticeReminder({
   // Retire the streak-era reminder still scheduled on upgrading installs.
   await cancelById(LEGACY_ID_STREAK_SAVE);
 
-  if (practiceMinutesToday > 0) return;
+  if (practiceMinutesToday > 0 || lessonsCompletedToday > 0 || cardsReviewedToday > 0) return;
 
   const hour = Math.max(18, Math.min(preferredHour, 22));
   const { title, body } = dailyPracticeContent(idealL2Self);

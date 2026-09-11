@@ -111,6 +111,26 @@ describe('scheduleLessonExpiryReminder', () => {
   });
 });
 
+describe('daily practice reminder counts a finished lesson as practice', () => {
+  it('does not schedule when a lesson was completed but no minutes were recorded', async () => {
+    await AsyncStorage.setItem('notifications:legacy-cancelled:v1', '1');
+    await scheduleDailyPracticeReminder({ practiceMinutesToday: 0, lessonsCompletedToday: 1 });
+    expect(mockSchedule).not.toHaveBeenCalled();
+  });
+
+  it('does not schedule when cards were reviewed today', async () => {
+    await AsyncStorage.setItem('notifications:legacy-cancelled:v1', '1');
+    await scheduleDailyPracticeReminder({ practiceMinutesToday: 0, cardsReviewedToday: 3 });
+    expect(mockSchedule).not.toHaveBeenCalled();
+  });
+
+  it('still schedules when nothing was practised', async () => {
+    await AsyncStorage.setItem('notifications:legacy-cancelled:v1', '1');
+    await scheduleDailyPracticeReminder({ practiceMinutesToday: 0, lessonsCompletedToday: 0, cardsReviewedToday: 0 });
+    expect(mockSchedule).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('daily practice reminder no longer wipes other notifications', () => {
   it('cancels only its own identifier', async () => {
     await AsyncStorage.setItem('notifications:legacy-cancelled:v1', '1'); // migration already done

@@ -173,7 +173,12 @@ export async function handleEnd(
     transcriptLost = !buffered.available;
 
     if (buffered.available && buffered.turns.length > 0 && !env.anthropicKey) {
-      recoveryPending = true;
+      // No analysis possible, but the session must still close: an open row
+      // blocks the learner's next start (`active_session`). The transcript is
+      // retained for a manual replay.
+      console.error(
+        "[tutor-session] ANTHROPIC_API_KEY missing; closing without analysis",
+      );
     } else if (
       buffered.available && buffered.turns.length > 0 && env.anthropicKey
     ) {
