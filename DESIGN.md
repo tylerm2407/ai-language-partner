@@ -911,21 +911,6 @@ not the blocks:
 
 Not built: the G1 gradient hero, the M1/M2 motion — Tyler chose the quiet one.
 
-**Motion on the ramp (2026-09-11, canvas "Home · motion", T2 + W3 picked,
-both slowed at Tyler's ask).** Two loops, each one shared value on the UI
-thread, both still under Reduce Motion:
-
-- **The active tab disc drifts.** A gradient three discs wide slides across
-  the 40px circle and back over 5.5 s (`DRIFT_MS` in `FloatingTabBar`), so the
-  light passes over the disc without it ever reading as a spinner.
-- **Every ramp line swells.** A gradient twice the fill's width slides along
-  it and back over 5 s (`FLOW_MS` in `BrandRamp`); at the far end of each pass
-  the fill brightens under a white veil and throws a soft violet halo. Unit
-  rows are staggered by `phase` so a stack does not pulse in unison. The
-  halo is iOS-only (an animated shadow); Android gets the flow and the
-  brightening. The glow sits on an outer view because iOS clips a view's own
-  shadow under `overflow: hidden`.
-
 ### Night reading — the warm palette (2026-09-09)
 
 A third palette, `ui2Warm`, for the reader only. It is not a third scheme.
