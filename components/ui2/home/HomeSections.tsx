@@ -156,7 +156,7 @@ function GoalRing({ pct }: { pct: number }) {
           cx={RING_SIZE / 2}
           cy={RING_SIZE / 2}
           r={RING_RADIUS}
-          stroke={c.logoAqua}
+          stroke={c.onPrimary}
           strokeWidth={RING_STROKE}
           strokeLinecap="round"
           fill="none"
