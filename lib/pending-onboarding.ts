@@ -21,6 +21,12 @@ import type {
   LanguageCode,
   ProficiencyLevel,
 } from '../types';
+// Type-only, both of them. This module is the storage boundary for a draft and
+// must stay free of the packs (nine language files plus the audio manifest) and
+// of AsyncStorage-touching pref helpers — an `import type` is erased, so the
+// shape is shared without the dependency.
+import type { NotificationPrefs } from './notification-prefs';
+import type { TopicKey } from '../components/onboarding/topic-packs';
 
 export const PENDING_ONBOARDING_KEY = 'pending-onboarding';
 export const PENDING_ONBOARDING_SCHEMA_VERSION = 1;
@@ -100,7 +106,35 @@ export interface PendingOnboarding {
    * treated as unclaimed, which is the safe direction.
    */
   claimedByUserId?: string | null;
+  /**
+   * Which of the five onboarding topics the learner's ideal-self answer points
+   * at — the chip they tapped, or the one `topicFromIdealText` guessed from
+   * what they typed. Null means "could not tell", which is a real answer: the
+   * trial falls back to `travel` for the lesson while the draft keeps the null,
+   * so analytics never reports a guess as a choice.
+   */
+  topic?: TopicKey | null;
+  /**
+   * Which reminders the learner switched on, and when, from the notifications
+   * step. Device-local like everything else here; `saveNotificationPrefs` moves
+   * them to their real home on flush.
+   */
+  notificationPrefs?: NotificationPrefs | null;
 }
+
+/**
+ * WHY NEITHER NEW FIELD BUMPS `PENDING_ONBOARDING_SCHEMA_VERSION`.
+ *
+ * A bump discards every in-flight draft on upgrade, so it is only worth paying
+ * when the loader would otherwise MISREAD an old blob. Both fields above are
+ * optional and nullable, exactly like `claimedByUserId` before them: an older
+ * draft simply loads without them, `topic` reads as absent (the trial falls
+ * back to `travel`, the same lesson that build would have run), and
+ * `notificationPrefs` reads as absent — the onboarding screen and the flush
+ * both substitute `DEFAULT_NOTIFICATION_PREFS`, and `validateNotificationPrefs`
+ * would repair a partial blob field by field anyway. Nothing is misread, so
+ * nothing needs throwing away.
+ */
 
 export type PendingOnboardingDraft = Omit<PendingOnboarding, 'version' | 'startedAt'>;
 
@@ -115,6 +149,8 @@ export function emptyPendingOnboarding(): PendingOnboardingDraft {
     dailyGoalMinutes: null,
     completedAt: null,
     claimedByUserId: null,
+    topic: null,
+    notificationPrefs: null,
   };
 }
 

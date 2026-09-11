@@ -176,6 +176,17 @@ export interface EventProperties {
   provider?: string;
   /** Explicit analytics environment selected at initialization. */
   appEnvironment?: string;
+  /**
+   * Which onboarding topic the learner's answer pointed at: one of the five
+   * `TopicKey`s (`travel`, `family`, `work`, `media_culture`,
+   * `housing_admin`). A closed key, never the free text it was derived from —
+   * the ideal-self sentence itself is personal and stays on the device.
+   *
+   * Absent means "could not be told", which is a distinct answer from any of
+   * the five; the flow deliberately does not send its `travel` lesson fallback
+   * here, or every unreadable sentence would be counted as a choice.
+   */
+  topic?: string;
 }
 
 /**

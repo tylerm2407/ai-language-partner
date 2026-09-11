@@ -19,6 +19,11 @@ import {
   type PendingOnboarding,
   type PendingOnboardingDraft,
 } from './pending-onboarding';
+import {
+  DEFAULT_NOTIFICATION_PREFS,
+  validateNotificationPrefs,
+  type NotificationPrefs,
+} from './notification-prefs';
 
 jest.mock('@react-native-async-storage/async-storage', () => {
   let store: Record<string, string> = {};
@@ -325,5 +330,112 @@ describe('claimPendingOnboarding', () => {
 
     const loaded = await loadPendingOnboarding();
     expect(loaded?.claimedByUserId).toBe('user-a');
+  });
+});
+
+/**
+ * The two fields added with the notifications step and the topic packs
+ * (2026-09-11), and the compatibility claim that let them skip a schema bump.
+ *
+ * That claim is the thing worth pinning. `PENDING_ONBOARDING_SCHEMA_VERSION`
+ * stayed at 1 on the argument that an older draft still LOADS and still means
+ * what it meant — if either new field could make the loader throw the blob
+ * away, every learner mid-signup on the previous build would lose their
+ * answers on upgrade, and nothing in the app would say so.
+ */
+describe('topic and notificationPrefs', () => {
+  it('starts empty on a fresh draft', () => {
+    const draft = emptyPendingOnboarding();
+    expect(draft.topic).toBeNull();
+    expect(draft.notificationPrefs).toBeNull();
+  });
+
+  it('round-trips both through storage', async () => {
+    const prefs: NotificationPrefs = {
+      ...DEFAULT_NOTIFICATION_PREFS,
+      dailyGoal: { enabled: true, hour: 7, minute: 30 },
+      weeklyRecap: { enabled: true, hour: 20, minute: 0, weekday: 6 },
+    };
+    await savePendingOnboarding(makeDraft({ topic: 'housing_admin', notificationPrefs: prefs }));
+
+    const loaded = await loadPendingOnboarding();
+    expect(loaded?.topic).toBe('housing_admin');
+    expect(loaded?.notificationPrefs?.dailyGoal).toEqual({ enabled: true, hour: 7, minute: 30 });
+    expect(loaded?.notificationPrefs?.weeklyRecap.weekday).toBe(6);
+  });
+
+  it('loads a draft written before either field existed, rather than discarding it', async () => {
+    // Exactly what the previous build wrote: same version, same TTL reference,
+    // neither new key present.
+    await AsyncStorage.setItem(
+      PENDING_ONBOARDING_KEY,
+      JSON.stringify({
+        version: PENDING_ONBOARDING_SCHEMA_VERSION,
+        startedAt: Date.now(),
+        targetLanguage: 'fr',
+        idealL2Self: 'Reading a whole novel in French by next summer.',
+        level: 'beginner',
+        trial: null,
+        displayName: 'Ada',
+        avatarPresetId: null,
+        dailyGoalMinutes: 15,
+        completedAt: null,
+        claimedByUserId: null,
+      }),
+    );
+
+    const loaded = await loadPendingOnboarding();
+    // The answers survive…
+    expect(loaded?.displayName).toBe('Ada');
+    expect(loaded?.dailyGoalMinutes).toBe(15);
+    // …and the two new fields read as absent, which every consumer substitutes
+    // for: the trial falls back to `travel`, the flush to the default prefs.
+    expect(loaded?.topic).toBeUndefined();
+    expect(loaded?.notificationPrefs).toBeUndefined();
+    expect(loaded?.notificationPrefs ?? DEFAULT_NOTIFICATION_PREFS).toEqual(
+      DEFAULT_NOTIFICATION_PREFS,
+    );
+  });
+
+  it('repairs a half-written prefs blob field by field instead of dropping it', async () => {
+    // A draft whose prefs were mangled: an hour out of range, and three of the
+    // four kinds missing entirely. `validateNotificationPrefs` is what the
+    // onboarding screen runs on load, and the learner's one good answer
+    // (08:00 reviews) has to survive it.
+    await AsyncStorage.setItem(
+      PENDING_ONBOARDING_KEY,
+      JSON.stringify({
+        version: PENDING_ONBOARDING_SCHEMA_VERSION,
+        startedAt: Date.now(),
+        ...makeDraft(),
+        notificationPrefs: {
+          reviewsDue: { enabled: true, hour: 8, minute: 0 },
+          dailyGoal: { hour: 99 },
+        },
+      }),
+    );
+
+    const loaded = await loadPendingOnboarding();
+    const repaired = validateNotificationPrefs(loaded?.notificationPrefs);
+    expect(repaired.reviewsDue).toEqual({ enabled: true, hour: 8, minute: 0 });
+    expect(repaired.dailyGoal.hour).toBe(DEFAULT_NOTIFICATION_PREFS.dailyGoal.hour);
+    expect(repaired.idealMoment.weekday).toBe(DEFAULT_NOTIFICATION_PREFS.idealMoment.weekday);
+  });
+
+  it('is not what makes a draft flushable, with or without them', async () => {
+    const stamp = new Date().toISOString();
+    await savePendingOnboarding({
+      ...makeDraft({ topic: 'work', notificationPrefs: DEFAULT_NOTIFICATION_PREFS }),
+      completedAt: stamp,
+    });
+    await claimPendingOnboarding('user-a');
+    expect(isFlushable(await loadPendingOnboarding(), 'user-a')).toBe(true);
+
+    // A learner who skipped the ideal-self step has no topic, and that must
+    // not block the profile write.
+    await clearPendingOnboarding();
+    await savePendingOnboarding({ ...makeDraft(), completedAt: stamp });
+    await claimPendingOnboarding('user-b');
+    expect(isFlushable(await loadPendingOnboarding(), 'user-b')).toBe(true);
   });
 });

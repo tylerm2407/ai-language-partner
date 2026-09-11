@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -32,6 +32,7 @@ import {
   signInWithGoogle,
   SocialAuthCancelled,
 } from '../../lib/social-auth';
+import { topicPackFor } from '../../components/onboarding/topic-packs';
 import { SUPPORTED_LANGUAGES } from '../../config/app';
 // `colors` is deliberately NOT imported: it is the fixed DARK palette, so a
 // screen reading it renders dark whatever the phone is set to. `spacing`,
@@ -155,6 +156,20 @@ export default function AuthScreen() {
   const pendingLanguage = pending?.targetLanguage
     ? SUPPORTED_LANGUAGES.find((l) => l.code === pending.targetLanguage)?.name
     : null;
+
+  /**
+   * The sentence the learner can now say, from the topic pack their trial ran
+   * from. Null when the draft predates the packs, when the language has none,
+   * or when the trial never ran — the card then falls back to naming the
+   * lesson.
+   *
+   * `topicPackFor` builds the exercises too, which this screen has no use for,
+   * so it runs once per draft rather than once per keystroke in the email box.
+   */
+  const pendingSentence = useMemo(() => {
+    if (!pending?.trial || !pending.targetLanguage || !pending.topic) return null;
+    return topicPackFor(pending.targetLanguage, pending.topic)?.sentence.target ?? null;
+  }, [pending]);
 
   const handleSubmit = async () => {
     if (!email.trim()) return;
@@ -341,10 +356,18 @@ export default function AuthScreen() {
                       {pendingLanguage}
                     </Text>
                   ) : null}
-                  {/* The lesson they already finished, named in numbers. This
-                      card is the whole argument for the form beneath it: the
-                      account saves something that exists, rather than
-                      unlocking something that might. */}
+                  {/* What they already did, named as the thing it bought them.
+                      This card is the whole argument for the form beneath it:
+                      the account saves something that exists, rather than
+                      unlocking something that might.
+
+                      NOT XP. This line used to read "20 XP · 7/8 IN LESSON 1".
+                      XP is hidden by design in this product (CLAUDE.md §1) —
+                      progress is what the learner can do, never a score — and
+                      a number nobody ever sees again is a poor thing to be
+                      asked to protect anyway. The sentence they can now say is
+                      the same fact, in the only currency that means anything
+                      four minutes into a language app. */}
                   {pending?.trial ? (
                     <Text
                       style={{
@@ -355,7 +378,9 @@ export default function AuthScreen() {
                         marginTop: spacing.xs,
                       }}
                     >
-                      {`${pending.trial.correctCount}/${pending.trial.totalCount} CORRECT IN LESSON 1`}
+                      {pendingSentence
+                        ? `CAN SAY: ${pendingSentence.toUpperCase()}`
+                        : `LESSON 1 DONE · ${pending.trial.correctCount}/${pending.trial.totalCount}`}
                     </Text>
                   ) : null}
                 </View>

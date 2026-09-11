@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
 import {
@@ -28,17 +29,32 @@ import { OptionRow } from '../../components/ui2/OptionRow';
 import { StepHero, type StepHeroEntrance } from '../../components/ui2/StepHero';
 import { MascotSol, type MascotMood } from '../../components/ui2/MascotSol';
 import { Chip } from '../../components/ui2/Chip';
-import { PlanBuilder } from '../../components/ui2/PlanBuilder';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { useMotion } from '../../hooks/useMotion';
 import { cefrBandForProficiencyLevel } from '../../lib/cefr-proficiency';
 import { cefrCanDo } from '../../lib/cefr-labels';
+import { trialExercisesFor } from '../../components/onboarding/trial-lesson';
 import {
-  trialExercisesFor,
-  hasTrialLesson,
+  TOPIC_CHIPS,
+  hasTopicPack,
+  topicPackFor,
   TRIAL_LESSON_ID,
   TRIAL_LESSON_XP,
-} from '../../components/onboarding/trial-lesson';
+  type TopicKey,
+} from '../../components/onboarding/topic-packs';
+import { FALLBACK_TRIAL_TOPIC, resolveTrialTopic } from '../../components/onboarding/trial-topic';
+import {
+  NotificationBuilder,
+  formatPrefTime,
+} from '../../components/onboarding/NotificationBuilder';
+import { PlanReveal, planHeadline } from '../../components/onboarding/PlanReveal';
+import {
+  DEFAULT_NOTIFICATION_PREFS,
+  saveNotificationPrefs,
+  validateNotificationPrefs,
+  type NotificationPrefs,
+} from '../../lib/notification-prefs';
+import { DEFAULT_DAILY_GOAL_MINUTES } from '../../lib/active-time';
 import { Avatar } from '../../components/avatar/Avatar';
 import { presetUrlFromId, type AvatarPreset } from '../../lib/avatar-presets';
 import { haptic } from '../../lib/haptics';
@@ -78,19 +94,6 @@ const IDEAL_SELF_PLACEHOLDER: Partial<Record<LanguageCode, string>> = {
   en: 'Giving a confident talk at work in English.',
 };
 
-/**
- * Tap-to-fill starters for the ideal-self field. A learner who would rather
- * not write from nothing gets a sentence to edit; the language name is
- * substituted so the sentence is already theirs.
- */
-const IDEAL_SELF_STARTERS: { tag: string; text: (lang: string) => string }[] = [
-  { tag: 'Travel', text: (l) => `Getting around on a trip and never needing English, in ${l}.` },
-  { tag: 'Family', text: (l) => `Following the whole conversation at a family dinner in ${l}.` },
-  { tag: 'Work', text: (l) => `Running a meeting in ${l} without preparing every line.` },
-  { tag: 'Films & music', text: (l) => `Watching a film in ${l} with the subtitles off.` },
-  { tag: 'Moving abroad', text: (l) => `Settling in somewhere ${l} is spoken and feeling at home.` },
-];
-
 /** Number of lit signal bars per self-reported level, shown on the level rows. */
 const LEVEL_BARS: Record<ProficiencyLevel, number> = {
   beginner: 1,
@@ -121,6 +124,10 @@ const LEVELS: { value: ProficiencyLevel; label: string; description: string }[] 
  * celebration-as-reward are gone from the product — so the question described a
  * choice that no longer exists. `user_profiles.adult_mode` is dropped in
  * migration 091; unlike `motivation_reason` there is nothing left to restore.
+ *
+ * `building` (2026-09-11) was a 2.4-second progress animation over three stages
+ * that fetched nothing. `planReveal` takes its slot and spends the same moment
+ * showing the plan it used to pretend to build.
  */
 type Step =
   | 'language'
@@ -128,15 +135,16 @@ type Step =
   | 'level'
   | 'identity'
   | 'goal'
+  | 'notifications'
   | 'lesson'
-  | 'building'
+  | 'planReveal'
   | 'save';
 
 /**
  * Steps that show the progress header. `lesson` runs full-bleed with the
  * runner's own progress bar — two progress indicators stacked on one screen
- * measure different things and read as a bug — and `save` is the payoff, not
- * another form to fill in.
+ * measure different things and read as a bug — `planReveal` is the payoff, and
+ * `save` is the ask that follows it; neither is another form to fill in.
  */
 const ALL_STEPS: Step[] = [
   'language',
@@ -144,19 +152,21 @@ const ALL_STEPS: Step[] = [
   'level',
   'identity',
   'goal',
+  'notifications',
 ];
 
 /**
- * Every step in order, including the two that sit outside `ALL_STEPS`.
+ * Every step in order, including the three that sit outside `ALL_STEPS`.
  *
- * `ALL_STEPS` drives the progress header and deliberately omits `lesson` and
- * `save`. The funnel needs the whole path, or the last two steps — where the
- * learner is closest to converting and so where a drop-off costs most — would
- * be invisible.
+ * `ALL_STEPS` drives the progress header and deliberately omits `lesson`,
+ * `planReveal` and `save`. The funnel needs the whole path, or the last three
+ * steps — where the learner is closest to converting and so where a drop-off
+ * costs most — would be invisible.
  *
- * `building` (the plan-building loader, UI 2.0) is in neither list: it needs
- * no progress header, and it is not a place a learner can decide to leave, so
- * counting it would only pad the funnel.
+ * `planReveal` counts where `building` did not. The loader was a waiting room
+ * nobody could leave on purpose, so counting it would only have padded the
+ * funnel; the plan reveal is a screen a learner reads, reacts to, and can
+ * abandon, which makes its drop-off a real number about the plan itself.
  */
 const FUNNEL_STEPS: Step[] = [
   'language',
@@ -164,7 +174,9 @@ const FUNNEL_STEPS: Step[] = [
   'level',
   'identity',
   'goal',
+  'notifications',
   'lesson',
+  'planReveal',
   'save',
 ];
 
@@ -177,7 +189,6 @@ const DISPLAY_NAME_MAX_CHARS = 24;
 // selection, so a default is a visible recommendation and never a silent one.
 const DEFAULT_LANGUAGE: LanguageCode = 'es';
 const DEFAULT_LEVEL: ProficiencyLevel = 'beginner';
-const DEFAULT_DAILY_GOAL = 10;
 
 
 /** Sol's mood: a base mood per step, with a one-shot cheer on a good tap. */
@@ -256,12 +267,19 @@ export default function OnboardingScreen() {
   const [step, setStep] = useState<Step>('language');
   const [targetLanguage, setTargetLanguage] = useState<LanguageCode>(DEFAULT_LANGUAGE);
   const [idealL2Self, setIdealL2Self] = useState<string>('');
+  // Null until a chip is tapped or the free text gives one away. Stays null
+  // when neither happens — the trial falls back to `travel`, but the draft and
+  // the analytics event keep the honest absence (components/onboarding/trial-topic.ts).
+  const [topic, setTopic] = useState<TopicKey | null>(null);
   const [level, setLevel] = useState<ProficiencyLevel>(DEFAULT_LEVEL);
+  const [notificationPrefs, setNotificationPrefs] = useState<NotificationPrefs>(
+    DEFAULT_NOTIFICATION_PREFS,
+  );
   const [trial, setTrial] = useState<TrialLessonResult | null>(null);
   const [displayName, setDisplayName] = useState<string>('');
   const [avatarPresetId, setAvatarPresetId] = useState<string | null>(null);
   const [customizerOpen, setCustomizerOpen] = useState(false);
-  const [dailyGoal, setDailyGoal] = useState<number>(DEFAULT_DAILY_GOAL);
+  const [dailyGoal, setDailyGoal] = useState<number>(DEFAULT_DAILY_GOAL_MINUTES);
   const [saving, setSaving] = useState(false);
 
   const languageName =
@@ -278,7 +296,7 @@ export default function OnboardingScreen() {
         nativeLanguage: 'en' as LanguageCode,
         targetLanguage: draft.targetLanguage ?? DEFAULT_LANGUAGE,
         level: draft.level ?? DEFAULT_LEVEL,
-        dailyGoalMinutes: draft.dailyGoalMinutes ?? DEFAULT_DAILY_GOAL,
+        dailyGoalMinutes: draft.dailyGoalMinutes ?? DEFAULT_DAILY_GOAL_MINUTES,
         idealL2Self: draft.idealL2Self,
         ...(draft.displayName ? { displayName: draft.displayName } : {}),
       });
@@ -302,6 +320,20 @@ export default function OnboardingScreen() {
         celebratedAt: null,
       });
       await markOnboardingComplete(userId);
+
+      // The reminders the learner chose, moved from the draft to their real
+      // home on the device. They are local-only preferences — nothing here is
+      // scheduled and no permission is requested; `hooks/useNotifications.ts`
+      // reads them once the OS prompt has been answered.
+      //
+      // Logged and swallowed for the same reason as the XP award above: a
+      // failed AsyncStorage write costs the learner their reminder times,
+      // while a throw would cost them the whole profile write and strand them
+      // back in onboarding. The defaults they would fall back to are the ones
+      // the step opened on, so the loss is small and recoverable in Settings.
+      await saveNotificationPrefs(draft.notificationPrefs ?? DEFAULT_NOTIFICATION_PREFS).catch(
+        (err) => console.error('[onboarding] notification prefs write failed:', err),
+      );
 
       await clearPendingOnboarding();
       await loadUserData(userId);
@@ -333,7 +365,15 @@ export default function OnboardingScreen() {
     setCompletedAt(pending.completedAt);
     if (pending.targetLanguage) setTargetLanguage(pending.targetLanguage);
     if (pending.idealL2Self) setIdealL2Self(pending.idealL2Self);
+    if (pending.topic) setTopic(pending.topic);
     if (pending.level) setLevel(pending.level);
+    // Validated on the way in, not trusted: a draft written by an older build
+    // has no prefs at all, and one written by a newer one could carry a kind
+    // this build does not know. `validateNotificationPrefs` repairs field by
+    // field, so a partial blob keeps whatever the learner actually set.
+    if (pending.notificationPrefs) {
+      setNotificationPrefs(validateNotificationPrefs(pending.notificationPrefs));
+    }
     if (pending.trial) setTrial(pending.trial);
     if (pending.displayName) setDisplayName(pending.displayName);
     if (pending.avatarPresetId) setAvatarPresetId(pending.avatarPresetId);
@@ -409,14 +449,27 @@ export default function OnboardingScreen() {
     () => ({
       targetLanguage,
       idealL2Self: idealL2Self.trim() ? idealL2Self.trim() : null,
+      topic,
       level,
       trial,
       displayName: displayName.trim() ? displayName.trim() : null,
       avatarPresetId,
       dailyGoalMinutes: dailyGoal,
+      notificationPrefs,
       completedAt,
     }),
-    [targetLanguage, idealL2Self, level, trial, displayName, avatarPresetId, dailyGoal, completedAt],
+    [
+      targetLanguage,
+      idealL2Self,
+      topic,
+      level,
+      trial,
+      displayName,
+      avatarPresetId,
+      dailyGoal,
+      notificationPrefs,
+      completedAt,
+    ],
   );
 
   // Mirror every answer to local storage so a backgrounded or killed app
@@ -448,6 +501,7 @@ export default function OnboardingScreen() {
           count: Math.round((Date.now() - (startedAt ?? Date.now())) / 1000),
           source: 'authenticated',
           outcome: 'profile_persisted',
+          ...(topic ? { topic } : {}),
         });
         return;
       }
@@ -466,6 +520,7 @@ export default function OnboardingScreen() {
         band: level,
         count: Math.round((Date.now() - (startedAt ?? Date.now())) / 1000),
         outcome: 'local_persisted',
+        ...(topic ? { topic } : {}),
       });
       router.replace('/(public)/auth');
     } catch (err: unknown) {
@@ -480,12 +535,31 @@ export default function OnboardingScreen() {
   };
 
   /**
-   * The trial exercises, resolved once. Recomputing them on every render would
-   * hand LessonRunner a new array identity each time, which re-fires its
-   * prefetch and restore effects mid-lesson.
+   * The pack behind everything downstream of the ideal-self step: the trial's
+   * exercises, Sol's line under the text box, the six plan rows, and the
+   * sentence the save screen puts in the headline.
+   *
+   * Memoised for the same reason the exercises always were — `topicPackFor`
+   * builds a fresh array on every call, and a new identity hands LessonRunner
+   * a "new" lesson mid-run, re-firing its prefetch and restore effects.
    */
-  const trialExercises = useMemo(() => trialExercisesFor(targetLanguage), [targetLanguage]);
-  const trialAvailable = hasTrialLesson(targetLanguage);
+  const pack = useMemo(
+    () => topicPackFor(targetLanguage, topic ?? FALLBACK_TRIAL_TOPIC),
+    [targetLanguage, topic],
+  );
+
+  /**
+   * The trial exercises. The pack is the point — a learner who said "moving
+   * abroad" gets the moving-abroad micro lesson — and `trialExercisesFor` is
+   * the floor beneath it for a language that has no packs at all. An empty
+   * array means neither exists, and the flow skips the lesson entirely rather
+   * than teaching the wrong one.
+   */
+  const trialExercises = useMemo(
+    () => pack?.exercises ?? trialExercisesFor(targetLanguage),
+    [pack, targetLanguage],
+  );
+  const trialAvailable = trialExercises.length > 0;
 
   /**
    * Record the trial result, then move to the sign-up ask. The result rides
@@ -512,14 +586,18 @@ export default function OnboardingScreen() {
   // before it lands would report 'language' for a learner who is actually
   // resuming at step four, and quietly invent a drop-off that never happened.
   useEffect(() => {
-    if (!hydrated || step === 'building') return;
+    if (!hydrated) return;
     trackEvent('onboarding_step_viewed', {
       stepName: step,
       step: FUNNEL_STEPS.indexOf(step) + 1,
       count: FUNNEL_STEPS.length,
       language: targetLanguage,
+      // Omitted rather than defaulted while it is null. `travel` is what the
+      // LESSON falls back to, and sending it as the topic would report a guess
+      // as a choice — the one number this property exists to measure.
+      ...(topic ? { topic } : {}),
     });
-  }, [step, hydrated, targetLanguage]);
+  }, [step, hydrated, targetLanguage, topic]);
 
   const stepIndex = ALL_STEPS.indexOf(step);
   const band = cefrBandForProficiencyLevel(level);
@@ -565,12 +643,12 @@ export default function OnboardingScreen() {
             <LessonRunner
               exercises={trialExercises}
               lessonId={TRIAL_LESSON_ID}
-              lessonTitle={`${languageName} · Lesson 1`}
+              lessonTitle={`${languageName} · Your first words`}
               xpReward={TRIAL_LESSON_XP}
               userId=""
               targetLanguage={targetLanguage}
               onComplete={handleTrialComplete}
-              onExit={() => setStep('building')}
+              onExit={() => setStep('planReveal')}
             />
           </KeyboardAvoidingView>
         </SafeAreaView>
@@ -579,18 +657,21 @@ export default function OnboardingScreen() {
   }
 
   /**
-   * The payoff loader. Nothing is fetched here — the level is the learner's own
-   * answer and the first lesson is bundled — but the result lands better as
-   * something built than something echoed back. ~2.4s, then the save ask.
+   * The payoff. What the loader used to mime, shown for real: the learner's own
+   * sentence, the words they now have, and the six lessons that follow.
    */
-  if (step === 'building') {
+  if (step === 'planReveal') {
     return (
-      <Ui2Screen fixed>
-        <PlanBuilder
-          stages={[`Setting your level · ${band}`, 'Picking your first lesson', "Preparing today's read"]}
-          onDone={() => setStep('save')}
-        />
-      </Ui2Screen>
+      <PlanReveal
+        languageName={languageName}
+        pack={pack}
+        idealText={idealL2Self.trim() ? idealL2Self.trim() : null}
+        band={band}
+        dailyGoalMinutes={dailyGoal}
+        trialCompleted={!!trial}
+        onSave={() => setStep('save')}
+        onChangeSetup={() => setStep('goal')}
+      />
     );
   }
 
@@ -601,6 +682,46 @@ export default function OnboardingScreen() {
    * unlock what they might get.
    */
   if (step === 'save') {
+    // The sentence the learner can now say. Only real when the trial actually
+    // ran AND it ran from a pack — the `trialExercisesFor` floor teaches a
+    // different set of words and has no single sentence to point at.
+    const spokenSentence = trial && pack ? pack.sentence.target : null;
+
+    /**
+     * What the account saves, in the order it was earned.
+     *
+     * Every row is a thing that already exists on this device and will be gone
+     * when the app closes. That is the entire argument for the form on the next
+     * screen, and it only works if each line is literally true — which is why a
+     * row is omitted rather than softened when its thing was not built.
+     *
+     * NO XP. There were two stat cards here ("n/m correct", "1 lesson done")
+     * and an XP figure beside them. XP is hidden by design in this product
+     * (CLAUDE.md §1): progress is a CEFR level and a can-do statement, never a
+     * score. The lesson is still named — by the words it taught.
+     */
+    const owned: { title: string; detail: string }[] = [];
+    if (trial && pack) {
+      owned.push({
+        title: `${pack.words.length} words and 1 sentence`,
+        detail: pack.words.map((w) => w.target).join(' · '),
+      });
+    }
+    owned.push({
+      title: 'Your plan',
+      detail: `${planHeadline(idealL2Self.trim() ? idealL2Self.trim() : null, pack, languageName)} · 6 lessons`,
+    });
+    owned.push({ title: 'Your level', detail: `${band} · ${cefrCanDo(band)}` });
+
+    // Only the reminders that are actually switched on are named. A learner who
+    // turned the daily nudge off must not be told they have one.
+    const reminderParts = [`${dailyGoal} min a day`];
+    if (notificationPrefs.dailyGoal.enabled) {
+      reminderParts.push(`${formatPrefTime('dailyGoal', notificationPrefs.dailyGoal)} nudge`);
+    }
+    if (notificationPrefs.reviewsDue.enabled) reminderParts.push('review alerts');
+    owned.push({ title: 'Your goal and reminders', detail: reminderParts.join(' · ') });
+
     return (
       <Ui2Screen
         footer={
@@ -626,67 +747,52 @@ export default function OnboardingScreen() {
       >
         <Animated.View entering={shouldReduce ? undefined : FadeInDown.duration(360)} style={styles.centerCol}>
           <MascotSol size={110} mood="cheer" />
-          <Text accessibilityRole="header" style={{ fontFamily: type.heading, fontSize: 30, lineHeight: 34, color: c.ink }}>
-            {trial ? 'Nice work.' : 'Ready when you are.'}
+          <Text
+            accessibilityRole="header"
+            style={{ fontFamily: type.heading, fontSize: 30, lineHeight: 36, color: c.ink, textAlign: 'center' }}
+          >
+            {spokenSentence ?? 'Ready when you are.'}
           </Text>
           <Text style={{ fontFamily: type.ui, fontSize: 14, lineHeight: 20, color: c.muted, textAlign: 'center' }}>
+            {spokenSentence ? 'You can already say that. ' : ''}
             {user
-              ? trial
-                ? `That was your first ${languageName} lesson. Save this setup to your account and keep learning.`
-                : `Save your ${languageName} setup to your account and pick up where you left off.`
-              : trial
-                ? `That was your first ${languageName} lesson. Create an account to keep it — otherwise it disappears when you close the app.`
-                : `Create an account to save your ${languageName} setup and pick up where you left off.`}
+              ? 'Save this setup to your account to keep everything below.'
+              : 'Create an account to keep everything below. Without one it is gone when you close the app.'}
           </Text>
         </Animated.View>
 
         <Animated.View entering={enter(1)}>
-          <SlabCard tint="primary" style={styles.levelCard} accessibilityLabel={`Your level: ${band}. ${cefrCanDo(band)}`}>
-            <View style={[styles.levelBadge, { backgroundColor: c.primary }]}>
-              <Text style={{ fontFamily: type.heading, fontSize: 22, color: c.onPrimary }}>{band}</Text>
-            </View>
-            <View style={styles.levelText}>
-              <Text style={[styles.eyebrow, { fontFamily: type.uiHeavy, color: c.onTint }]}>Your level</Text>
-              <Text style={{ fontFamily: type.uiBold, fontSize: 14, lineHeight: 19, color: c.ink }}>{cefrCanDo(band)}</Text>
-            </View>
-          </SlabCard>
-        </Animated.View>
-
-        {trial && (
-          <Animated.View entering={enter(2)} style={styles.statRow}>
-            <SlabCard tint="green" style={styles.stat}>
-              <Text style={{ fontFamily: type.heading, fontSize: 26, lineHeight: 30, color: c.ink }}>
-                {trial.correctCount} / {trial.totalCount}
-              </Text>
-              <Text style={{ fontFamily: type.uiBold, fontSize: 12, color: c.muted }}>correct</Text>
-            </SlabCard>
-            <SlabCard tint="yellow" style={styles.stat}>
-              <Text style={{ fontFamily: type.heading, fontSize: 26, lineHeight: 30, color: c.ink }}>1</Text>
-              <Text style={{ fontFamily: type.uiBold, fontSize: 12, color: c.muted }}>lesson done</Text>
-            </SlabCard>
-          </Animated.View>
-        )}
-
-        <Animated.View entering={enter(3)}>
-          <SlabCard style={{ gap: 6 }}>
-            <Text style={[styles.eyebrow, { fontFamily: type.uiHeavy, color: c.green }]}>
-              {user ? 'Saving keeps' : 'Signing up saves'}
-            </Text>
-            <Text style={{ fontFamily: type.uiBold, fontSize: 14, lineHeight: 20, color: c.ink }}>
-              {trial ? 'This lesson · your' : 'Your'} {languageName} course and level · your progress, from today
-            </Text>
+          <SlabCard style={styles.ownedCard}>
+            {owned.map((row) => (
+              <View key={row.title} style={styles.ownedRow}>
+                {/* Icon AND text, never the tick alone: a green disc on its own
+                    is colour-only feedback (DESIGN.md). */}
+                <View style={[styles.checkDisc, { backgroundColor: c.greenTint, borderColor: c.greenBorder }]}>
+                  <Ionicons name="checkmark" size={14} color={c.green} />
+                </View>
+                <View style={styles.ownedText}>
+                  <Text style={{ fontFamily: type.uiBold, fontSize: 14, lineHeight: 19, color: c.ink }}>
+                    {row.title}
+                  </Text>
+                  <Text style={{ fontFamily: type.ui, fontSize: 13, lineHeight: 18, color: c.muted }}>
+                    {row.detail}
+                  </Text>
+                </View>
+              </View>
+            ))}
           </SlabCard>
         </Animated.View>
       </Ui2Screen>
     );
   }
 
-  // ─── The five form steps ────────────────────────────────────────────────
+  // ─── The six form steps ─────────────────────────────────────────────────
   const prev: Partial<Record<Step, Step>> = {
     idealSelf: 'language',
     level: 'idealSelf',
     identity: 'level',
     goal: 'identity',
+    notifications: 'goal',
   };
   // The first step backs out to the welcome screen: someone who already has
   // an account and tapped "Get started" by mistake needs a way to "I already
@@ -698,7 +804,7 @@ export default function OnboardingScreen() {
     else router.replace('/(public)');
   };
   const goBack = prev[step] ? () => setStep(prev[step] as Step) : leaveToWelcome;
-  // The step's header block: back, "Step n of 5", segments, the question, Sol.
+  // The step's header block: back, "Step n of 6", segments, the question, Sol.
   const hero = (text: string, entrance: StepHeroEntrance, heroMood: MascotMood = mood) => (
     <StepHero
       step={stepIndex + 1}
@@ -749,15 +855,28 @@ export default function OnboardingScreen() {
 
   if (step === 'idealSelf') {
     const hasText = idealL2Self.trim().length > 0;
+    // The chips no longer just fill the box — each one names a topic, and the
+    // topic picks the micro lesson two steps later. A learner who types instead
+    // of tapping still gets one, guessed from their words on the way out of the
+    // step; a guess that fails leaves `topic` null, which is honest.
+    const commitTopic = () => setTopic((current) => resolveTrialTopic(idealL2Self, current));
+    const solLine = topic && hasTopicPack(targetLanguage, topic) ? pack?.solLine : null;
     footer = (
-      <SlabButton label={hasText ? 'Continue' : 'Skip for now'} arrow={hasText} onPress={() => setStep('level')} />
+      <SlabButton
+        label={hasText ? 'Continue' : 'Skip for now'}
+        arrow={hasText}
+        onPress={() => {
+          commitTopic();
+          setStep('level');
+        }}
+      />
     );
     body = (
       <>
         {hero(`Picture a moment you'd love to have in ${languageName}.`, 'rise', 'think')}
         <Animated.View entering={enter(0)}>
           <Text style={{ fontFamily: type.ui, fontSize: 14, lineHeight: 20, color: c.muted }}>
-            One sentence is enough. You can skip this if you&apos;d rather not say.
+            Pick the closest, then make it yours. Your first lesson is built from this.
           </Text>
         </Animated.View>
         <Animated.View entering={enter(1)}>
@@ -765,6 +884,7 @@ export default function OnboardingScreen() {
             <TextInput
               value={idealL2Self}
               onChangeText={(text) => setIdealL2Self(text.slice(0, IDEAL_SELF_MAX_CHARS))}
+              onBlur={commitTopic}
               placeholder={IDEAL_SELF_PLACEHOLDER[targetLanguage] ?? IDEAL_SELF_PLACEHOLDER.en}
               placeholderTextColor={c.idle}
               multiline
@@ -779,10 +899,33 @@ export default function OnboardingScreen() {
           </SlabCard>
         </Animated.View>
         <Animated.View entering={enter(2)} style={styles.chips}>
-          {IDEAL_SELF_STARTERS.map((s) => (
-            <Chip key={s.tag} label={s.tag} onPress={() => setIdealL2Self(s.text(languageName))} />
+          {TOPIC_CHIPS.map((chip) => (
+            <Chip
+              key={chip.key}
+              label={chip.tag}
+              variant={topic === chip.key ? 'primary' : 'neutral'}
+              onPress={() => {
+                setTopic(chip.key);
+                setIdealL2Self(chip.text(languageName));
+                cheer();
+              }}
+            />
           ))}
         </Animated.View>
+        {/* Sol reacting to the topic by name is the only proof, at this point
+            in the flow, that the sentence went anywhere. */}
+        {solLine ? (
+          <Animated.View entering={enter(3)}>
+            <SlabCard tint="primary" style={styles.solCard}>
+              <MascotSol size={40} mood="cheer" />
+              <Text
+                style={{ flex: 1, fontFamily: type.ui, fontSize: 13, lineHeight: 19, color: c.ink }}
+              >
+                {solLine}
+              </Text>
+            </SlabCard>
+          </Animated.View>
+        ) : null}
       </>
     );
   }
@@ -894,14 +1037,7 @@ export default function OnboardingScreen() {
   }
 
   if (step === 'goal') {
-    // No bundled trial for this language yet — skip to the loader rather
-    // than teach the wrong one (components/onboarding/trial-lesson.ts).
-    footer = (
-      <SlabButton
-        label={trialAvailable ? 'Start my first lesson' : 'Continue'}
-        onPress={() => setStep(trialAvailable ? 'lesson' : 'building')}
-      />
-    );
+    footer = <SlabButton label="Continue" onPress={() => setStep('notifications')} />;
     body = (
       <>
         {hero('How much time do you have?', 'drop')}
@@ -934,6 +1070,36 @@ export default function OnboardingScreen() {
     );
   }
 
+  if (step === 'notifications') {
+    // The last form step, and the one that hands off to the lesson. A language
+    // with no pack and no bundled fallback skips straight to the plan rather
+    // than teaching the wrong words (components/onboarding/topic-packs).
+    footer = (
+      <SlabButton
+        label={trialAvailable ? 'Start my first lesson' : 'Continue'}
+        onPress={() => setStep(trialAvailable ? 'lesson' : 'planReveal')}
+      />
+    );
+    body = (
+      <>
+        {hero('When should Sol nudge you?', 'meet')}
+        <Animated.View entering={enter(0)}>
+          <Text style={{ fontFamily: type.ui, fontSize: 14, lineHeight: 20, color: c.muted }}>
+            Switch on only what you want. Each one has its own time. Change any of it later in
+            Settings.
+          </Text>
+        </Animated.View>
+        <Animated.View entering={enter(1)}>
+          <NotificationBuilder
+            prefs={notificationPrefs}
+            onChange={setNotificationPrefs}
+            dailyGoalMinutes={dailyGoal}
+          />
+        </Animated.View>
+      </>
+    );
+  }
+
   return (
     <Ui2Screen footer={footer}>
       {/* Keyed on the step so the body remounts and every entering animation
@@ -960,12 +1126,12 @@ const styles = StyleSheet.create({
   multiline: { fontSize: 16, lineHeight: 24, minHeight: 110, textAlignVertical: 'top', padding: 0 },
   singleLine: { fontSize: 16, lineHeight: 22, padding: 0, minHeight: 28 },
   avatarRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  solCard: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  ownedCard: { gap: 14 },
+  ownedRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  ownedText: { flex: 1, gap: 2 },
+  checkDisc: { width: 24, height: 24, borderRadius: 999, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   eyebrow: { fontSize: 12, letterSpacing: 1, textTransform: 'uppercase' },
-  levelCard: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  levelBadge: { width: 56, height: 56, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  levelText: { flex: 1, gap: 3 },
-  statRow: { flexDirection: 'row', gap: 12 },
-  stat: { flex: 1, gap: 2, padding: 14 },
   bars: { flexDirection: 'row', alignItems: 'flex-end', gap: 3, height: 22 },
   bar: { width: 5, borderRadius: 2 },
   flagTile: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
