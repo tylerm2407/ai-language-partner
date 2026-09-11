@@ -878,6 +878,24 @@ scheme (`app.json` `userInterfaceStyle: "automatic"`).
 
 `hooks/useUi2Theme.test.ts` pins the contrast floors.
 
+### Paywall — T4 · Pace, universal title (2026-09-11)
+
+From canvas Part 2, "Paywall · tint blocks". The tier rows are drawn in
+Home's unit-row language: a 44pt badge on the left carrying the one number
+Free meters — new words a day (`20` on Basic, `∞` above, from `lib/plans.ts`
+via `paceCopy`) — in the rung's own tint (violet / green / amber), the name
+with the MOST POPULAR chip, `new words a day · $99.99 billed yearly` beneath,
+the per-day price on the right, the commute meter in the rung's colour, and
+what the rung adds. The selected rung is the violet tint with a violet edge.
+The proof card under the ladder is the green tint.
+
+**The headline is universal.** The learner's onboarding sentence no longer
+becomes the title (design board P6 is retired): every learner sees the
+hands-free line and its eyebrow. The sentence still decides what sits under
+the tiers — the three proof rows appear only when there is one, the quote
+card otherwise — because those rows are claims about what a plan does WITH
+the sentence.
+
 ### Home — the Tint-blocks standard, with the level ring (2026-09-11)
 
 The Tint-blocks Home (violet-tint level card, green due tile, violet hero,

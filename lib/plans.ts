@@ -360,3 +360,13 @@ export const STRIPE_PRICE_KEYS = {
   vip_monthly: 'vip_monthly',
   vip_yearly: 'vip_yearly',
 } as const;
+
+/**
+ * The paywall's tier-row badge and its line (T4 · Pace, 2026-09-11): the one
+ * number Free meters, new words a day — Basic's real cap, "∞" above it.
+ * Lives here so the display copy can never drift from the limit it quotes.
+ */
+export function paceCopy(tier: Exclude<PlanId, 'starter'>): { badge: string; line: string } {
+  const cap = PLANS[tier].dailyNewCards;
+  return isUnlimitedNewCards(cap) ? { badge: '∞', line: 'no word ceiling' } : { badge: String(cap), line: 'new words a day' };
+}

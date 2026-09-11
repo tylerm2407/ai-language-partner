@@ -88,13 +88,13 @@ export default function PlansScreen() {
   /**
    * The learner's own sentence from onboarding, sanitised — or null.
    *
-   * When it exists it BECOMES the headline. That is the whole of design board
-   * P6: the ask is easier to weigh against the thing they said they wanted
-   * than against a stock line about commuting, and it is their words rather
-   * than a claim of ours, so there is nothing here to overstate. When it does
-   * not exist (an account from before migration 028, or someone who skipped
-   * the question) the generic advertising line stands unchanged — the screen
-   * has two copy paths, not one with a hole in it.
+   * It used to BECOME the headline (design board P6). Tyler chose a universal
+   * title instead (2026-09-11, with the T4 · Pace tier rows): every learner
+   * sees the same line at the top. The sentence still decides what sits under
+   * the tiers — the three proof rows are claims about what a paid plan does
+   * WITH it, so they appear only when there is one, and the old quote card
+   * stands otherwise. The screen keeps two copy paths below the ladder, and
+   * one above it.
    */
   const moment = useMemo(() => learnerMoment(profile?.idealL2Self), [profile?.idealL2Self]);
 
@@ -279,11 +279,7 @@ export default function PlansScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
       <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.md + 4, paddingBottom: spacing.lg }}>
-        {/* The headline — unquoted, in the display face. It is the learner's own
-            answer when they gave one, and the advertising line when they did
-            not. Deliberately NOT wrapped in quotation marks: quoting it back
-            would frame their sentence as evidence we collected, which reads as
-            a sales tactic; set plainly it reads as the subject of the screen. */}
+        {/* The headline — the same line for every learner, in the display face. */}
         <Text
           style={{
             fontFamily: type.heading,
@@ -294,7 +290,7 @@ export default function PlansScreen() {
             marginTop: spacing.lg + 2,
           }}
         >
-          {moment ?? 'Learning a language can now be done during your drive to work.'}
+          Learning a language can now be done during your drive to work.
         </Text>
         <Text
           style={{
@@ -306,7 +302,7 @@ export default function PlansScreen() {
             marginTop: spacing.sm,
           }}
         >
-          {moment ? 'YOUR PLAN IS READY' : 'HANDS-FREE VOICE PRACTICE'}
+          HANDS-FREE VOICE PRACTICE
         </Text>
 
         {loading ? (
@@ -445,7 +441,7 @@ export default function PlansScreen() {
                  a bare "has never been this easy", which asserted nothing and
                  so could not be checked against anything. */
               <SlabCard
-                tint="primary"
+                tint="green"
                 style={{ marginTop: spacing.sm + 1, padding: spacing.md - 2, gap: spacing.sm }}
               >
                 {PLAN_PROOF.map((row) => (
@@ -460,7 +456,7 @@ export default function PlansScreen() {
                     <Ionicons
                       name="checkmark"
                       size={16}
-                      color={c.onTint}
+                      color={c.green}
                       style={{ marginTop: 2 }}
                       accessibilityElementsHidden
                       importantForAccessibility="no-hide-descendants"

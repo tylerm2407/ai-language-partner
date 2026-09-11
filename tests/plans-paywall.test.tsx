@@ -246,30 +246,30 @@ describe('headline and proof', () => {
     expect(all).not.toContain(PLAN_PROOF[0].title);
   });
 
-  it('leads with the learner’s own sentence when they gave one', async () => {
+  it('keeps the universal title even when the learner gave a sentence (2026-09-11)', async () => {
+    // The sentence used to become the headline. Tyler chose one title for
+    // every learner; the sentence now only decides what sits under the tiers.
     mockIdealL2Self = 'Order dinner in Lyon without switching to English';
 
     const renderer = await render();
     const all = texts(renderer);
 
-    expect(all).toContain('Order dinner in Lyon without switching to English');
-    expect(all).toContain('YOUR PLAN IS READY');
-    // The stock line is replaced, not pushed below.
-    expect(all).not.toContain('Learning a language can now be done during your drive to work.');
+    expect(all).toContain('Learning a language can now be done during your drive to work.');
+    expect(all).toContain('HANDS-FREE VOICE PRACTICE');
+    expect(all).not.toContain('Order dinner in Lyon without switching to English');
+    expect(all).not.toContain('YOUR PLAN IS READY');
   });
 
-  it('sanitises the sentence before setting it as a headline', async () => {
-    // 300 chars is what the column allows, and it arrives as free text with
-    // whatever newlines the learner typed. Neither may reach the display face
-    // raw — see learnerMoment.
+  it('never lets raw onboarding text reach the screen', async () => {
+    // 300 chars of free text with newlines: with the headline universal it
+    // must not appear anywhere, sanitised or not.
     mockIdealL2Self = `Talk to my\n\npartner’s   family ${'x'.repeat(300)}`;
 
     const renderer = await render();
     const all = texts(renderer);
 
-    expect(all).toContain('Talk to my partner’s family');
+    expect(all).not.toContain('Talk to my partner’s family');
     expect(all).not.toContain('\n\n');
-    expect(all).toContain('…');
   });
 
   it('swaps the quote card for the three proof rows', async () => {
