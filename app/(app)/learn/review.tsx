@@ -7,6 +7,7 @@ import { useEffect, useState, useRef } from 'react';
 import { haptic } from '../../../lib/haptics';
 import { useReviewQueue, type ReviewQueueMode } from '../../../hooks/useReviewQueue';
 import { useDailyStats } from '../../../hooks/useDailyStats';
+import { useActiveTime } from '../../../hooks/useActiveTime';
 import { Ui2ProgressBar } from '../../../components/ui2/Ui2ProgressBar';
 import { SlabButton } from '../../../components/ui2/SlabButton';
 import { Ui2EmptyState } from '../../../components/ui2/Ui2EmptyState';
@@ -31,6 +32,8 @@ export default function ReviewScreen() {
   const mode: ReviewQueueMode = params.mode === 'struggling' ? 'struggling' : 'due';
   const { items, cards, loading, loadQueue, submitReview } = useReviewQueue(mode);
   const { addStats } = useDailyStats();
+  // Time on the queue, not time on the spinner. See hooks/useActiveTime.ts.
+  useActiveTime({ kind: 'review', enabled: !loading });
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   const [reviewed, setReviewed] = useState(0);

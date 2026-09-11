@@ -44,6 +44,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../hooks/useAuth';
 import { useScreenView } from '../../../hooks/useScreenView';
 import { useRealtimeTutor } from '../../../hooks/useRealtimeTutor';
+import { useActiveTime } from '../../../hooks/useActiveTime';
 import { useAppStore, effectiveTier } from '../../../stores/useAppStore';
 import { CallControls } from '../../../components/tutor/CallControls';
 import { CallStatusRing } from '../../../components/tutor/CallStatusRing';
@@ -97,6 +98,19 @@ export default function TutorCallScreen() {
 
   const tutor = useRealtimeTutor();
   const { phase, transcript, muted, remainingMs, endReason } = tutor;
+
+  // Only while the call is actually live. `preflight`/`connecting` is waiting,
+  // and `ended` is the debrief. Listening is the skill being exercised, so this
+  // is the one kind that also writes `listening_minutes`.
+  // See hooks/useActiveTime.ts.
+  useActiveTime({
+    kind: 'tutor',
+    enabled:
+      phase === 'greeting' ||
+      phase === 'listening' ||
+      phase === 'tutor_speaking' ||
+      phase === 'interrupted',
+  });
 
   const [mode, setMode] = useState<CorrectionMode | null>(session?.correctionMode ?? null);
   const [terminal, setTerminal] = useState<TutorCallDestination | null>(null);

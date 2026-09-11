@@ -7,6 +7,7 @@ import { useSafeBack } from '../../../hooks/useSafeBack';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAppStore, effectiveTier } from '../../../stores/useAppStore';
 import { useOnboardingChecklist } from '../../../hooks/useOnboardingChecklist';
+import { useActiveTime } from '../../../hooks/useActiveTime';
 import {
   sendChatMessage,
   streamChatMessage,
@@ -148,6 +149,15 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
   const goBack = useSafeBack('/(app)');
   const params = useLocalSearchParams<{ assignmentId?: string; chatSessionId?: string }>();
   const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(null);
+
+  // Wall-clock in the conversation itself, not the scenario picker. This writes
+  // `minutes_practiced` ONLY — `speaking_minutes` is already written per voice
+  // turn below, from the turn's own measured duration, which is a better number
+  // than a screen clock can produce; adding to it here would count the same
+  // speech twice. See hooks/useActiveTime.ts for why the session is not
+  // attributed to `writing_minutes` either.
+  useActiveTime({ kind: 'chat', enabled: !!selectedScenario });
+
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
   /**
    * Native-language glosses of assistant replies, keyed by message id.

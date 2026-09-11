@@ -11,6 +11,7 @@ import { useAuth } from '../../../hooks/useAuth';
 import { useAppStore } from '../../../stores/useAppStore';
 import { useProfile } from '../../../hooks/useProfile';
 import { useDailyStats } from '../../../hooks/useDailyStats';
+import { useActiveTime } from '../../../hooks/useActiveTime';
 import { useLevel } from '../../../hooks/useLevel';
 import { useLessonProgress } from '../../../hooks/useLessonProgress';
 import { useOnboardingChecklist } from '../../../hooks/useOnboardingChecklist';
@@ -51,6 +52,11 @@ export default function LessonScreen() {
   // How the finished lesson was recorded — drives the sync notice below.
   const [saveState, setSaveState] = useState<'idle' | 'saved' | 'queued' | 'failed'>('idle');
   const [showingAchievement, setShowingAchievement] = useState<AchievementDefinition | null>(null);
+
+  // Counts only once the lesson is actually on screen — time on the spinner or
+  // the load-error state is not practice. Pauses on background and writes
+  // `minutes_practiced` on the way out. See hooks/useActiveTime.ts.
+  useActiveTime({ kind: 'lesson', enabled: !loading && !loadError });
 
   const loadLesson = useCallback(() => {
     if (!lessonId) return;

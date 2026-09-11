@@ -15,6 +15,7 @@ import { RampBar, brandRampCool } from '../BrandRamp';
 import { useHomeEnter } from './HomeSections';
 import { haptic } from '../../../lib/haptics';
 import { localDayKey } from '../../../lib/dates';
+import { displayMinutes } from '../../../lib/active-time';
 import { useUi2Theme } from '../../../hooks/useUi2Theme';
 import type { DailyStats } from '../../../types';
 import type { LessonTileData } from '../../magazine/LessonTile';
@@ -177,8 +178,12 @@ export function WeekStrip({ stats, error, onRetry }: { stats: DailyStats[]; erro
     const stat = stats.find((s) => s.date === key);
     return { key, label: DAY_LABELS[i], minutes: stat?.minutesPracticed ?? 0, future: i > mondayOffset, isToday: i === mondayOffset };
   });
+  // The bars stay on the raw values so a 90-second day is drawn at its real
+  // height; only the numbers people READ are rounded. `minutes_practiced` is
+  // REAL and `lib/active-time.ts` writes fractions of a minute into it, so an
+  // unformatted total renders as "23.466666666666665 min".
   const max = Math.max(1, ...days.map((d) => d.minutes));
-  const total = days.reduce((n, d) => n + d.minutes, 0);
+  const total = displayMinutes(days.reduce((n, d) => n + d.minutes, 0));
 
   return (
     <Animated.View entering={enter(6)} style={styles.section}>
@@ -203,7 +208,7 @@ export function WeekStrip({ stats, error, onRetry }: { stats: DailyStats[]; erro
               </Text>
               <Text style={{ fontFamily: type.uiBold, fontSize: 12, color: c.muted }}>practised so far</Text>
             </View>
-            <View style={styles.week} accessibilityLabel={`Minutes practised this week: ${days.map((d) => `${d.label} ${d.minutes}`).join(', ')}`}>
+            <View style={styles.week} accessibilityLabel={`Minutes practised this week: ${days.map((d) => `${d.label} ${displayMinutes(d.minutes)}`).join(', ')}`}>
               {days.map((d) => (
                 <View key={d.key} style={styles.dayCol}>
                   <View style={[styles.dayTrack, { backgroundColor: c.trackOnCard }]}>
