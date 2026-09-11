@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, Pressable, ScrollView, Alert, Linking, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -28,6 +28,15 @@ import { cefrBandForProficiencyLevel } from '../../../lib/cefr-proficiency';
 import { cefrCanDo } from '../../../lib/cefr-labels';
 import type { LanguageCode, ProficiencyLevel } from '../../../types';
 import { SentrySmokeTrigger } from '../../../components/debug/SentrySmokeTrigger';
+import { NotificationBuilder } from '../../../components/onboarding/NotificationBuilder';
+import {
+  DEFAULT_NOTIFICATION_PREFS,
+  loadNotificationPrefs,
+  saveNotificationPrefs,
+  type NotificationPrefs,
+} from '../../../lib/notification-prefs';
+import { syncScheduledNotifications } from '../../../hooks/useNotifications';
+import { useAppStore } from '../../../stores/useAppStore';
 
 /** Matches the `ideal_l2_self` column check (migration 028) and onboarding. */
 const IDEAL_SELF_MAX = 300;
@@ -67,6 +76,27 @@ export default function SettingsScreen() {
   const [idealSelf, setIdealSelf] = useState(profile?.idealL2Self ?? '');
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  // The reminder choices from onboarding (components/onboarding/NotificationBuilder).
+  // Device-local, not a profile column: a notification is a per-device thing.
+  // `saved` is the on-disk copy so the dirty check can compare against it.
+  const [notifPrefs, setNotifPrefs] = useState<NotificationPrefs>(DEFAULT_NOTIFICATION_PREFS);
+  const [savedNotifPrefs, setSavedNotifPrefs] = useState<NotificationPrefs>(DEFAULT_NOTIFICATION_PREFS);
+  const dailyStats = useAppStore((s) => s.dailyStats);
+  const reviewCount = useAppStore((s) => s.reviewCount);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadNotificationPrefs()
+      .then((p) => {
+        if (cancelled) return;
+        setNotifPrefs(p);
+        setSavedNotifPrefs(p);
+      })
+      .catch((err) => console.error('[settings] loadNotificationPrefs failed:', err));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Reduce motion is device-local and applies the instant it is tapped — it is
   // not part of the profile save. A user turning motion off is usually doing it
@@ -97,7 +127,8 @@ export default function SettingsScreen() {
     targetLanguage !== getTargetLanguage(profile) ||
     level !== profile?.level ||
     dailyGoal !== profile?.dailyGoalMinutes ||
-    idealSelf.trim() !== (profile?.idealL2Self ?? '');
+    idealSelf.trim() !== (profile?.idealL2Self ?? '') ||
+    JSON.stringify(notifPrefs) !== JSON.stringify(savedNotifPrefs);
 
   const handleSave = async () => {
     setSaving(true);
@@ -112,6 +143,17 @@ export default function SettingsScreen() {
         // reminder and hero copy fall back to their generic lines.
         idealL2Self: idealSelf.trim() || null,
       });
+      // Reminders are re-armed here rather than waiting for the next
+      // foreground, so a changed time takes effect the moment Save lands.
+      await saveNotificationPrefs(notifPrefs);
+      await syncScheduledNotifications({
+        prefs: notifPrefs,
+        minutesToday: dailyStats?.minutesPracticed ?? 0,
+        goalMinutes: dailyGoal,
+        dueCount: reviewCount,
+        idealL2Self: idealSelf.trim() || null,
+        band: cefrBandForProficiencyLevel(level),
+      }).catch((err) => console.error('[settings] syncScheduledNotifications failed:', err));
       goBack();
     } catch {
       Alert.alert('Error', 'Failed to save settings. Please try again.');
@@ -246,6 +288,20 @@ export default function SettingsScreen() {
           accessibilityLabel="Your goal"
           accessibilityHint="A sentence about the moment you are learning for. Used to personalise your practice."
         />
+
+        {/* Reminders — the same four switches the learner set in onboarding.
+            Saved with the rest of the form; nothing fires without OS permission. */}
+        <Text className="text-sm font-semibold mb-2 uppercase tracking-wide" style={{ color: c.muted }}>
+          Reminders
+        </Text>
+        <View style={{ marginBottom: spacing.lg }}>
+          <NotificationBuilder
+            compact
+            prefs={notifPrefs}
+            onChange={setNotifPrefs}
+            dailyGoalMinutes={dailyGoal}
+          />
+        </View>
 
         {/* Motion — WCAG 2.2 SC 2.2.2 (Level A) asks for a mechanism to stop
             auto-starting motion. The OS Reduce Motion switch is honored too;

@@ -31,6 +31,7 @@ import { Ui2Screen } from '../ui2/Ui2Screen';
 import { useMotion } from '../../hooks/useMotion';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { haptic } from '../../lib/haptics';
+import { cefrCanDo } from '../../lib/cefr-labels';
 import { TOPIC_CHIPS, type TopicPack } from './topic-packs';
 
 /** Lessons the learner can open before the paywall. The rest draw locked. */
@@ -77,6 +78,8 @@ export function PlanReveal({
   onChangeSetup,
 }: PlanRevealProps) {
   const { c, type } = useUi2Theme();
+  // A band never renders bare (CLAUDE.md §1); it is always paired with its can-do line.
+  const canDo = cefrCanDo(band as Parameters<typeof cefrCanDo>[0]).replace(/\.$/, '').replace(/^Can /, 'can ');
   const { shouldReduce } = useMotion();
   const enter = (i: number) =>
     shouldReduce ? undefined : FadeInDown.delay(80 + i * 60).duration(360);
@@ -112,8 +115,8 @@ export function PlanReveal({
           {headline}
         </Text>
         <Text style={{ fontFamily: type.ui, fontSize: 14, lineHeight: 20, color: c.muted }}>
-          Six lessons, {dailyGoalMinutes} minutes a day. Built from your level ({band}) and your
-          moment.
+          Six lessons, {dailyGoalMinutes} minutes a day. Built from your moment and your level:
+          {' '}{band}, {canDo}
         </Text>
       </Animated.View>
 
