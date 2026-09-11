@@ -47,7 +47,7 @@ export function trialTimelineSteps(trialDays: number, priceString: string): Tria
       day: reminderDay,
       icon: 'notifications-outline',
       title: `Day ${reminderDay}`,
-      detail: 'We remind you the trial is ending, so nothing is a surprise.',
+      detail: 'We remind you the trial is ending, if notifications are on, so nothing is a surprise.',
     },
     {
       day: days,

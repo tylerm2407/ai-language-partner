@@ -9,7 +9,11 @@ import { useAppStore } from '../stores/useAppStore';
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 import { useSchoolStore } from '../stores/useSchoolStore';
 import { SCHOOL_ENABLED } from '../config/app';
-import { useNotifications, syncScheduledNotifications } from '../hooks/useNotifications';
+import {
+  useNotifications,
+  syncScheduledNotifications,
+  syncTrialEndingReminder,
+} from '../hooks/useNotifications';
 import { readCachedTopMistake } from '../hooks/useLearnerInsights';
 import { DEFAULT_DAILY_GOAL_MINUTES } from '../lib/active-time';
 import { cefrBandForProficiencyLevel } from '../lib/cefr-proficiency';
@@ -18,6 +22,7 @@ import {
   identifyPurchaser,
   resetPurchaser,
   addEntitlementListener,
+  addTrialStateListener,
 } from '../lib/purchases';
 import { identifyUser, resetAnalytics } from '../lib/analytics';
 import { startAnalytics } from '../lib/analytics-posthog';
@@ -205,6 +210,19 @@ function RootLayout() {
     const unsubscribe = addEntitlementListener(setEntitledTier);
     return unsubscribe;
   }, [session?.user?.id, setEntitledTier]);
+
+  // The trial-ending reminder rides the same SDK stream. Gated on permission
+  // so the first registration after the OS prompt (re)arms it, and re-run per
+  // user so one account's trial never schedules on the next account's device.
+  useEffect(() => {
+    const userId = session?.user?.id ?? null;
+    if (!userId || !permissionGranted) return;
+    return addTrialStateListener((state) => {
+      syncTrialEndingReminder(state).catch((err) =>
+        console.warn('[notifications] trial reminder sync failed:', err),
+      );
+    });
+  }, [session?.user?.id, permissionGranted]);
 
   // Load user data when session becomes available
   useEffect(() => {

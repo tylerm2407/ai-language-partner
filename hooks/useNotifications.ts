@@ -50,6 +50,12 @@ import {
   type NotificationPref,
   type NotificationPrefs,
 } from '../lib/notification-prefs';
+import {
+  TRIAL_REMINDER_ID,
+  trialReminderContent,
+  trialReminderFireAt,
+  type TrialState,
+} from '../lib/trial-reminder';
 
 // Configure how notifications are displayed when the app is in the foreground
 Notifications.setNotificationHandler({
@@ -463,4 +469,47 @@ export async function scheduleLessonExpiryReminder({
 export async function cancelLessonExpiryReminder(lessonId: string): Promise<void> {
   if (Platform.OS === 'web') return;
   await cancelById(lessonExpiryNotificationId(lessonId));
+}
+
+// ─── Trial-ending reminder ───────────────────────────────────────────────
+
+/**
+ * Keep the one trial-ending reminder in step with the learner's RevenueCat
+ * trial state. The subscription screen's timeline has promised this since the
+ * honest-paywall work (`lib/trial-timeline.ts`, "we remind you"); this is the
+ * code that makes the promise true.
+ *
+ * Cancel-and-reschedule on every call, so a cancelled trial, an early
+ * conversion or a restore on a new device all converge on the right state:
+ * scheduled while a trial is running with more than an hour left, absent
+ * otherwise. Silent no-op on web and without permission — the timeline copy
+ * says "if notifications are on" for exactly that reason.
+ */
+export async function syncTrialEndingReminder(state: TrialState): Promise<void> {
+  if (Platform.OS === 'web') return;
+
+  const { status } = await Notifications.getPermissionsAsync();
+  if (status !== 'granted') return;
+
+  await cancelLegacyScheduledOnce();
+  await cancelById(TRIAL_REMINDER_ID);
+
+  if (!state.isTrial || !state.expiresAt) return;
+  const fireAt = trialReminderFireAt(state.expiresAt);
+  if (!fireAt) return;
+
+  const content = trialReminderContent(state.expiresAt, fireAt);
+  await Notifications.scheduleNotificationAsync({
+    identifier: TRIAL_REMINDER_ID,
+    content: {
+      title: content.title,
+      body: content.body,
+      sound: true,
+      data: { type: 'trial-ending' },
+    },
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.DATE,
+      date: fireAt,
+    },
+  });
 }

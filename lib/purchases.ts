@@ -27,6 +27,7 @@ import Purchases, {
   LOG_LEVEL,
 } from 'react-native-purchases';
 import type { PlanId } from './plans';
+import { trialStateFromEntitlements, type TrialState } from './trial-reminder';
 
 /**
  * RevenueCat public SDK key prefixes. The keys are issued per platform and are
@@ -326,6 +327,32 @@ export function addEntitlementListener(onTier: (tier: PlanId) => void): () => vo
     return unsubscribe;
   } catch (err) {
     console.warn('[purchases] entitlement listener failed:', err);
+    return () => {};
+  }
+}
+
+/** Whether the learner is inside a free trial, and when it ends. */
+export function trialStateFromCustomerInfo(info: CustomerInfo): TrialState {
+  return trialStateFromEntitlements(Object.values(info.entitlements.active));
+}
+
+/**
+ * Subscribe to the learner's trial state — the input to the trial-ending
+ * reminder (`hooks/useNotifications.ts` `syncTrialEndingReminder`).
+ *
+ * Same shape and same caveats as `addEntitlementListener`: fires with the
+ * cached CustomerInfo on registration, then on every store event the SDK
+ * observes; a no-op when IAP is not configured on this build.
+ */
+export function addTrialStateListener(onState: (state: TrialState) => void): () => void {
+  if (!configured || !isPurchasesAvailable()) return () => {};
+  try {
+    const listener = (info: CustomerInfo) => onState(trialStateFromCustomerInfo(info));
+    const unsubscribe = subscribeToCustomerInfoUpdates(Purchases, listener);
+    Purchases.getCustomerInfo().then(listener).catch(() => {});
+    return unsubscribe;
+  } catch (err) {
+    console.warn('[purchases] trial listener failed:', err);
     return () => {};
   }
 }
