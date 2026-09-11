@@ -242,7 +242,7 @@ function BookReaderBody({
           style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}
           accessibilityRole="button"
           accessibilityLabel="Display settings"
-          accessibilityHint="Text size, spacing, font, brightness and night reading"
+          accessibilityHint="Text size, spacing, font and night reading"
         >
           <Ionicons name="text-outline" size={22} color={c.primary} />
         </Pressable>

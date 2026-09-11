@@ -60,19 +60,21 @@ describe('parseReadingPreferences', () => {
 
   it('falls back per field, keeping the fields that are valid', () => {
     const parsed = parseReadingPreferences(
-      JSON.stringify({ nightReading: true, fontSizeIndex: 9, lineSpacing: 'huge', font: 'comic', brightness: 0.33 }),
+      JSON.stringify({ nightReading: true, fontSizeIndex: 9, lineSpacing: 'huge', font: 'comic', brightness: 0.4 }),
     );
     expect(parsed).toEqual({
       nightReading: true,
       fontSizeIndex: 1,
       lineSpacing: 'normal',
       font: 'sans',
-      brightness: null,
     });
+    // `brightness` was a field for two days; a record that still carries it
+    // must not leak it back in.
+    expect('brightness' in parsed).toBe(false);
   });
 
   it('accepts a fully valid record', () => {
-    const stored = { nightReading: true, fontSizeIndex: 4, lineSpacing: 'relaxed', font: 'serif', brightness: 0.4 };
+    const stored = { nightReading: true, fontSizeIndex: 4, lineSpacing: 'relaxed', font: 'serif' };
     expect(parseReadingPreferences(JSON.stringify(stored))).toEqual(stored);
   });
 

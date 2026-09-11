@@ -21,9 +21,7 @@ import { Body, Caption, Heading } from '../ui2/Ui2Text';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { useReadingPreferences } from '../../hooks/useReadingPreferences';
 import {
-  READER_BRIGHTNESS_STEPS,
   READER_FONT_SIZES,
-  type ReaderBrightness,
   type ReaderFont,
   type ReaderFontSizeIndex,
   type ReaderLineSpacing,
@@ -31,7 +29,6 @@ import {
 import { ui2ReaderType, spacing } from '../../config/theme';
 import { haptic } from '../../lib/haptics';
 import { trackEvent } from '../../lib/analytics';
-import { isReaderBrightnessAvailable } from '../../lib/reader-brightness';
 
 interface Props {
   visible: boolean;
@@ -85,19 +82,6 @@ export function ReaderDisplaySheet({ visible, onDismiss }: Props) {
       trackEvent('reading_display_changed', { source: 'font', count: value === 'serif' ? 1 : 0 });
     },
     [prefs.font, update],
-  );
-
-  const setBrightness = useCallback(
-    (value: ReaderBrightness) => {
-      if (value === prefs.brightness) return;
-      haptic('select');
-      void update({ brightness: value });
-      trackEvent('reading_display_changed', {
-        source: 'brightness',
-        count: value === null ? -1 : READER_BRIGHTNESS_STEPS.indexOf(value),
-      });
-    },
-    [prefs.brightness, update],
   );
 
   const toggleNight = useCallback(() => {
@@ -211,42 +195,6 @@ export function ReaderDisplaySheet({ visible, onDismiss }: Props) {
           })}
         </View>
       </View>
-
-      {/* Brightness — five steps plus "Auto", which hands the phone its own
-          setting back. Steps rather than a slider: no slider dependency, and
-          each step is a 44pt radio a screen reader can name. */}
-      {isReaderBrightnessAvailable() && (
-      <View style={styles.row}>
-        <Body size="sm" weight="semibold" tone="secondary" style={styles.rowLabel}>Brightness</Body>
-        <View
-          style={[styles.segments, { backgroundColor: c.surface2, borderRadius: shape.radiusButton }]}
-          accessibilityRole="radiogroup"
-          accessibilityLabel="Brightness"
-        >
-          {[null, ...READER_BRIGHTNESS_STEPS].map((step, i) => {
-            const selected = step === prefs.brightness;
-            const fg = selected ? c.onPrimary : c.muted;
-            const label = step === null ? 'Auto' : `${Math.round(step * 100)} percent`;
-            return (
-              <Pressable
-                key={label}
-                onPress={() => setBrightness(step)}
-                accessibilityRole="radio"
-                accessibilityLabel={step === null ? 'Automatic brightness' : `Brightness ${label}`}
-                accessibilityState={{ checked: selected }}
-                style={[styles.segment, { backgroundColor: selected ? c.primary : 'transparent', borderRadius: shape.radiusButton }]}
-              >
-                {step === null ? (
-                  <Text style={{ fontFamily: type.uiBold, fontSize: 13, color: fg }}>Auto</Text>
-                ) : (
-                  <Ionicons name={i <= 2 ? 'sunny-outline' : 'sunny'} size={12 + i * 2} color={fg} />
-                )}
-              </Pressable>
-            );
-          })}
-        </View>
-      </View>
-      )}
 
       {/* Night reading — the Settings checked-row pattern (Motion, Vibration). */}
       <Pressable

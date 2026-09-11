@@ -1,6 +1,5 @@
 /**
- * Reader display preferences: text size, line spacing, face, Night reading,
- * and an in-app brightness step.
+ * Reader display preferences: text size, line spacing, face, Night reading.
  *
  * Device-local by design, like `lib/motion-preference.ts`. These are display
  * settings, not part of the learning record — the same learner on two phones
@@ -18,7 +17,8 @@
  *
  * Every field is validated on read. A stored value from an older build, a
  * hand-edited backup, or a corrupt write must fall back per field rather than
- * take the reader down with it.
+ * take the reader down with it. Unknown keys are dropped — the record briefly
+ * carried a `brightness` step, and phones that stored one still parse.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -40,17 +40,11 @@ export const LINE_SPACING_MULTIPLIER: Record<ReaderLineSpacing, number> = {
 
 export type ReaderFont = 'sans' | 'serif';
 
-/** In-app brightness steps, as fractions of full. `null` means "leave the
- *  phone's own setting alone", which is the default and the safe state. */
-export const READER_BRIGHTNESS_STEPS = [0.2, 0.4, 0.6, 0.8, 1] as const;
-export type ReaderBrightness = (typeof READER_BRIGHTNESS_STEPS)[number] | null;
-
 export interface ReadingPreferences {
   nightReading: boolean;
   fontSizeIndex: ReaderFontSizeIndex;
   lineSpacing: ReaderLineSpacing;
   font: ReaderFont;
-  brightness: ReaderBrightness;
 }
 
 export const DEFAULT_READING_PREFERENCES: ReadingPreferences = Object.freeze({
@@ -58,7 +52,6 @@ export const DEFAULT_READING_PREFERENCES: ReadingPreferences = Object.freeze({
   fontSizeIndex: 1,
   lineSpacing: 'normal',
   font: 'sans',
-  brightness: null,
 }) as ReadingPreferences;
 
 type Listener = (prefs: ReadingPreferences) => void;
@@ -73,10 +66,6 @@ function isFontSizeIndex(value: unknown): value is ReaderFontSizeIndex {
 
 function isLineSpacing(value: unknown): value is ReaderLineSpacing {
   return value === 'compact' || value === 'normal' || value === 'relaxed';
-}
-
-function isBrightness(value: unknown): value is ReaderBrightness {
-  return value === null || (READER_BRIGHTNESS_STEPS as readonly number[]).includes(value as number);
 }
 
 /**
@@ -102,7 +91,6 @@ export function parseReadingPreferences(raw: string | null): ReadingPreferences 
     fontSizeIndex: isFontSizeIndex(o.fontSizeIndex) ? o.fontSizeIndex : d.fontSizeIndex,
     lineSpacing: isLineSpacing(o.lineSpacing) ? o.lineSpacing : d.lineSpacing,
     font: o.font === 'serif' ? 'serif' : d.font,
-    brightness: isBrightness(o.brightness) ? o.brightness : d.brightness,
   };
 }
 

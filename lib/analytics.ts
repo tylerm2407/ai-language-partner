@@ -68,9 +68,8 @@ type EventName =
   /** A learner saved a word from reading into their SRS deck. */
   | 'card_saved'
   /** The learner changed a reader display setting. Which one travels in
-   *  `source` ('size' | 'spacing' | 'font' | 'night' | 'brightness'), the new
-   *  step in `count` where there is one, and `ok` for the Night reading
-   *  switch. Night reading is the one to watch: it is the app's only
+   *  `source` ('size' | 'spacing' | 'font' | 'night'), the new step in
+   *  `count` where there is one, and `ok` for the Night reading switch. Night reading is the one to watch: it is the app's only
    *  blue-light control, and how many people find it decides whether it
    *  earns a place in Settings too. */
   | 'reading_display_changed'

@@ -24,9 +24,6 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   },
 }));
 jest.mock('../../lib/analytics', () => ({ trackEvent: jest.fn() }));
-jest.mock('expo-modules-core', () => ({
-  requireOptionalNativeModule: () => ({ getBrightnessAsync: async () => 1, setBrightnessAsync: async () => {} }),
-}));
 jest.mock('../../lib/haptics', () => ({ haptic: jest.fn() }));
 
 function render(warm = false) {
@@ -66,7 +63,7 @@ beforeEach(() => {
 describe('ReaderDisplaySheet', () => {
   it('exposes one checked radio per group and a switch for Night reading', () => {
     const tree = render();
-    expect(checkedIn(tree, 'radio')).toEqual(['Normal', 'Sans font', 'Automatic brightness']);
+    expect(checkedIn(tree, 'radio')).toEqual(['Normal', 'Sans font']);
     const night = pressable(tree, 'Night reading');
     expect(night.props.accessibilityRole).toBe('switch');
     expect(night.props.accessibilityState.checked).toBe(false);
@@ -77,16 +74,14 @@ describe('ReaderDisplaySheet', () => {
     press(pressable(tree, 'Larger text'));
     press(pressable(tree, 'Relaxed'));
     press(pressable(tree, 'Serif font'));
-    press(pressable(tree, 'Brightness 40 percent'));
     press(pressable(tree, 'Night reading'));
     expect(getReadingPreferences()).toEqual({
       nightReading: true,
       fontSizeIndex: 2,
       lineSpacing: 'relaxed',
       font: 'serif',
-      brightness: 0.4,
     });
-    expect(checkedIn(tree, 'radio')).toEqual(['Relaxed', 'Serif font', 'Brightness 40 percent']);
+    expect(checkedIn(tree, 'radio')).toEqual(['Relaxed', 'Serif font']);
   });
 
   it('disables the size step at either end', async () => {
