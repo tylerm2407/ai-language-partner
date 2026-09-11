@@ -19,24 +19,20 @@
  * and that only looks right when the leftover room divides into a gap wide
  * enough to keep two 40px circles apart. See tabPillWidth for the arithmetic.
  *
- * The active disc is the app icon's colour ramp, and it DRIFTS (canvas "Home
- * · motion", T2, picked 2026-09-11): a gradient three discs wide slides
- * across the circle and back, so the light passes over the disc without the
- * disc ever looking like it spins. One shared value, one transform; the
- * canvas take was 4 s and Tyler asked for slower, so a pass is `DRIFT_MS`.
- * Reduce Motion shows the still ramp.
+ * The active disc is a still `primary` → `slab` gradient. It carried the app
+ * icon's cyan-to-magenta ramp for a day (2026-09-10) and drifted for another
+ * (2026-09-11); Tyler then asked for it back — the logo colours read as
+ * "vibe coded" and are the same colourway as a competitor. Do not bring the
+ * ramp or the motion back here.
  */
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { View, Pressable, StyleSheet } from 'react-native';
-import Animated, { Easing, cancelAnimation, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { radii, ui2Shape } from '../../config/theme';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
-import { brandRamp } from '../ui2/BrandRamp';
 import { useImmersive } from '../../hooks/useImmersive';
-import { useMotion } from '../../hooks/useMotion';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 
 export const TAB_ICONS: Record<string, { active: string; inactive: string }> = {
@@ -56,44 +52,6 @@ export const VISIBLE_TABS = ['index', 'learn', 'tutor', 'chat', 'profile'];
 
 /** Height of the pill itself. */
 const TAB_BAR_HEIGHT = 56;
-
-/** The active disc's diameter; the drifting sheet is three of these wide. */
-const DISC = 40;
-/** One pass of the drift, each way. */
-export const DRIFT_MS = 5500;
-
-/** The ramp sliding across the active disc. Children sit on top, still. */
-function DriftingDisc({ children }: { children: React.ReactNode }) {
-  const { c } = useUi2Theme();
-  const { shouldReduce } = useMotion();
-  const x = useSharedValue(0);
-
-  useEffect(() => {
-    if (shouldReduce) {
-      cancelAnimation(x);
-      x.value = 0;
-      return;
-    }
-    x.value = 0;
-    x.value = withRepeat(withTiming(-DISC * 2, { duration: DRIFT_MS, easing: Easing.inOut(Easing.sin) }), -1, true);
-    return () => cancelAnimation(x);
-  }, [shouldReduce, x]);
-
-  const drift = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
-
-  return (
-    <View style={styles.activeCircle}>
-      {shouldReduce ? (
-        <LinearGradient colors={brandRamp(c)} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
-      ) : (
-        <Animated.View style={[styles.driftSheet, drift]}>
-          <LinearGradient colors={brandRamp(c)} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0.35 }} style={StyleSheet.absoluteFill} />
-        </Animated.View>
-      )}
-      <View style={styles.discIcon}>{children}</View>
-    </View>
-  );
-}
 
 /**
  * Measured pill widths, by how many icons are in the bar.
@@ -258,11 +216,14 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
             accessibilityLabel={descriptors[route.key]?.options.title ?? route.name}
           >
             {isFocused ? (
-              // The active disc is the app icon's ramp (Home board G1, kept
-              // when Tyler picked S1 for the rest of Home, 2026-09-10).
-              <DriftingDisc>
+              <LinearGradient
+                colors={[c.primary, c.slab]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.activeCircle}
+              >
                 <Ionicons name={iconName as any} size={22} color={c.onPrimary} />
-              </DriftingDisc>
+              </LinearGradient>
             ) : (
               <View style={styles.inactiveCircle}>
                 <Ionicons name={iconName as any} size={22} color={c.idle} />
@@ -312,23 +273,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   activeCircle: {
-    width: DISC,
-    height: DISC,
-    borderRadius: DISC / 2,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  driftSheet: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    width: DISC * 3,
-    height: DISC,
-  },
-  discIcon: {
-    width: DISC,
-    height: DISC,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
   },
