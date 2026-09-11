@@ -83,7 +83,7 @@ export function UnitRows({ tiles, loading, error, onRetry, onOpen, onAll }: Unit
   return (
     <Animated.View entering={enter(4)} style={styles.section}>
       <SectionTitle title="Continue learning" action="All units" onAction={onAll} />
-      {tiles.map((tile) => {
+      {tiles.map((tile, i) => {
         const pct = Math.round(Math.min(Math.max(tile.progress, 0), 1) * 100);
         return (
           <Pressable
@@ -104,7 +104,8 @@ export function UnitRows({ tiles, loading, error, onRetry, onOpen, onAll }: Unit
                   {tile.completedCount} / {tile.lessonCount} · {pct}%
                 </Text>
               </View>
-              <RampBar pct={pct} />
+              {/* Each row's swell starts a beat after the one above it. */}
+              <RampBar pct={pct} phase={((i + 1) * 0.18) % 1} />
             </SlabCard>
           </Pressable>
         );

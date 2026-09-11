@@ -7,6 +7,12 @@
  * call case is discoverable by stranding a peer connection while you look.
  */
 
+// FloatingTabBar pulls hooks/useMotion -> AsyncStorage, which has no native module
+// under jest; this is the same mock the other UI suites use.
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  __esModule: true,
+  default: { setItem: jest.fn(async () => {}), getItem: jest.fn(async () => null), removeItem: jest.fn(async () => {}) },
+}));
 import {
   tabPillWidth,
   floatingTabBarSpace,
