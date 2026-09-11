@@ -4,6 +4,14 @@
  * the two branches that decide whether a learner gets confetti or silence.
  */
 
+import React from 'react';
+import TestRenderer, { act } from 'react-test-renderer';
+import * as Notifications from 'expo-notifications';
+import { updateOnboardingChecklist } from '../lib/supabase-queries';
+import { useAppStore } from '../stores/useAppStore';
+import { useOnboardingReconciliation } from './useOnboardingReconciliation';
+import type { OnboardingChecklist, UserProfile } from '../types';
+
 jest.mock('../lib/supabase-queries', () => ({
   fetchProfile: jest.fn(),
   fetchTodayStats: jest.fn(),
@@ -21,14 +29,6 @@ jest.mock('@sentry/react-native', () => ({ captureException: jest.fn() }));
 
 const mockUser: { id: string } | null = { id: 'user-1' };
 jest.mock('./useAuth', () => ({ useAuth: () => ({ user: mockUser }) }));
-
-import React from 'react';
-import TestRenderer, { act } from 'react-test-renderer';
-import * as Notifications from 'expo-notifications';
-import { updateOnboardingChecklist } from '../lib/supabase-queries';
-import { useAppStore } from '../stores/useAppStore';
-import { useOnboardingReconciliation } from './useOnboardingReconciliation';
-import type { OnboardingChecklist, UserProfile } from '../types';
 
 const mockUpdate = updateOnboardingChecklist as jest.Mock;
 const mockPerms = Notifications.getPermissionsAsync as jest.Mock;

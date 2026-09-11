@@ -209,7 +209,6 @@ describe('enqueue + flush FIFO', () => {
     const order: string[] = [];
     mockUpsertReview.mockImplementation(async () => order.push('review'));
     mockUpsertCompletion.mockImplementation(async () => order.push('completion'));
-    mockIncrementXp.mockImplementation(async () => order.push('xp'));
 
     await enqueue(USER, reviewInput());
     await enqueue(USER, completionInput());
@@ -217,10 +216,12 @@ describe('enqueue + flush FIFO', () => {
 
     await flush(USER);
 
-    expect(order).toEqual(['review', 'completion', 'xp']);
+    expect(order).toEqual(['review', 'completion']);
     expect(mockUpsertReview).toHaveBeenCalledWith(reviewPayload());
     expect(mockUpsertCompletion).toHaveBeenCalledWith(USER, 'lesson-1', 'course-1', 0.9, 45, 0);
-    expect(mockIncrementXp).toHaveBeenCalledWith(20, 'xp:lesson-1:abc12345');
+    // Pre-upgrade XP items are deliberately drained without calling the
+    // authenticated RPC retired by migration 117.
+    expect(mockIncrementXp).not.toHaveBeenCalled();
     expect(await AsyncStorage.getItem(KEY)).toBeNull();
   });
 
@@ -245,9 +246,9 @@ describe('single-flight', () => {
     const gate = new Promise<void>((resolve) => {
       release = resolve;
     });
-    mockIncrementXp.mockImplementation(() => gate);
+    mockUpsertCompletion.mockImplementation(() => gate);
 
-    await enqueue(USER, xpInput());
+    await enqueue(USER, completionInput());
 
     const first = flush(USER);
     // Let the first flush reach its executor (now pending on the gate),
@@ -260,7 +261,7 @@ describe('single-flight', () => {
     release();
     await first;
 
-    expect(mockIncrementXp).toHaveBeenCalledTimes(1);
+    expect(mockUpsertCompletion).toHaveBeenCalledTimes(1);
     expect(await AsyncStorage.getItem(KEY)).toBeNull();
   });
 });
@@ -269,38 +270,37 @@ describe('failure handling', () => {
   it('skips a failing item rather than blocking what is behind it', async () => {
     // The flush used to STOP on the first failure. Because completions are
     // queued on 4xx as well as network errors, one permanently-invalid row at
-    // the head froze every later XP award and review write — and `attempts`
+    // the head froze every later review write — and `attempts`
     // increments once per flush TRIGGER, so clearing it took ten
     // mount/reconnect cycles, i.e. days.
-    mockIncrementXp.mockRejectedValue(networkError());
-    await enqueue(USER, xpInput('xp:lesson-9:zzzz9999'));
+    mockUpsertCompletion.mockRejectedValue(networkError());
     await enqueue(USER, completionInput());
+    await enqueue(USER, reviewInput());
 
     await flush(USER);
 
     // The item behind the failure still ran.
-    expect(mockUpsertCompletion).toHaveBeenCalledTimes(1);
+    expect(mockUpsertReview).toHaveBeenCalledTimes(1);
 
-    // The failure is retained for a later trigger, with its key intact so the
-    // retry cannot double-award.
+    // The failed completion is retained for a later trigger.
     const items = await storedItems();
     expect(items).toHaveLength(1);
     expect(items[0].attempts).toBe(1);
-    expect(items[0].key).toBe('xp:lesson-9:zzzz9999');
+    expect(items[0].type).toBe('lesson-completion');
   });
 
   it('dead-letters a non-network failure after two attempts, not ten', async () => {
     // A 4xx does not fix itself. Retrying it to the network budget only delays
     // the point at which the queue behind it drains.
-    mockIncrementXp.mockRejectedValue(new Error('invalid XP amount (1-500)'));
-    await enqueue(USER, xpInput());
+    mockUpsertCompletion.mockRejectedValue(new Error('invalid lesson id'));
+    await enqueue(USER, completionInput());
 
     await flush(USER);
     expect(await storedItems()).toHaveLength(1);
 
     await flush(USER);
 
-    expect(mockIncrementXp).toHaveBeenCalledTimes(OFFLINE_QUEUE_MAX_NON_NETWORK_ATTEMPTS);
+    expect(mockUpsertCompletion).toHaveBeenCalledTimes(OFFLINE_QUEUE_MAX_NON_NETWORK_ATTEMPTS);
     expect(Sentry.captureMessage).toHaveBeenCalledWith(
       expect.stringContaining('dead-letter'),
       'error',
@@ -309,21 +309,21 @@ describe('failure handling', () => {
   });
 
   it('dead-letters an item after OFFLINE_QUEUE_MAX_ATTEMPTS failures and continues', async () => {
-    mockIncrementXp.mockRejectedValue(networkError());
-    await enqueue(USER, xpInput());
+    mockUpsertCompletion.mockRejectedValue(networkError());
     await enqueue(USER, completionInput());
+    await enqueue(USER, reviewInput());
 
     for (let i = 0; i < OFFLINE_QUEUE_MAX_ATTEMPTS; i++) {
       await flush(USER);
     }
 
-    expect(mockIncrementXp).toHaveBeenCalledTimes(OFFLINE_QUEUE_MAX_ATTEMPTS);
+    expect(mockUpsertCompletion).toHaveBeenCalledTimes(OFFLINE_QUEUE_MAX_ATTEMPTS);
     expect(Sentry.captureMessage).toHaveBeenCalledWith(
       expect.stringContaining('dead-letter'),
       'error',
     );
     // The dead-lettered item is gone and the flush moved on to the next one.
-    expect(mockUpsertCompletion).toHaveBeenCalledTimes(1);
+    expect(mockUpsertReview).toHaveBeenCalledTimes(1);
     expect(await AsyncStorage.getItem(KEY)).toBeNull();
   });
 });
@@ -356,8 +356,8 @@ describe('TTL', () => {
 
     await flush(USER);
 
-    expect(mockIncrementXp).toHaveBeenCalledTimes(1);
-    expect(mockIncrementXp).toHaveBeenCalledWith(20, 'xp:fresh:12345678');
+    expect(mockIncrementXp).not.toHaveBeenCalled();
+    expect(await AsyncStorage.getItem(KEY)).toBeNull();
     expect(errorSpy).toHaveBeenCalled();
     // captureMessage, not addBreadcrumb: a breadcrumb only rides along with a
     // later event, so a silent data loss that crashes nothing is never sent.

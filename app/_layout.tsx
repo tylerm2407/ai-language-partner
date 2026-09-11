@@ -60,14 +60,14 @@ Sentry.init({
   // Set per EAS build profile (eas.json → EXPO_PUBLIC_APP_ENV) so preview
   // builds do not pollute the production issue stream or its alert rules.
   environment: process.env.EXPO_PUBLIC_APP_ENV ?? 'production',
-  // Strip the live tutor's ephemeral OpenAI credential out of anything we send.
+  // Strip the live tutor's one-use connection capability out of anything we send.
   //
-  // `startTutorSession` returns a short-lived `clientSecret` that the device
-  // uses to open a WebRTC session directly with OpenAI. It is deliberately
+  // `startTutorSession` returns a short-lived `connectionToken` that the device
+  // uses for one server-controlled SDP exchange. It is deliberately
   // never persisted and never logged, but a crash report is the one path that
   // serialises arbitrary state without anyone asking it to — an unhandled
   // rejection carrying the start response, or a breadcrumb from the fetch that
-  // produced it, would put a working credential in a third-party dashboard.
+  // produced it, would put a working capability in a third-party dashboard.
   //
   // `redactTutorSecrets` lives in lib/tutor-api.ts, next to the shape it
   // redacts, so this wiring does not have to know that shape.
@@ -122,8 +122,8 @@ function RootLayout() {
   const { permissionGranted } = useNotifications();
 
   // Re-arm the daily practice reminder whenever the inputs change
-  // (xp/permission). Silent no-op if permission isn't granted yet
-  // or if XP was already earned today.
+  // (practice/permission). Silent no-op if permission isn't granted yet
+  // or if the learner already practised today.
   //
   // The body rotates through the learner's goal, the mistake they keep making
   // and the cards due. The mistake comes from the insights READ CACHE — Home
@@ -135,7 +135,9 @@ function RootLayout() {
       .catch(() => null)
       .then((topMistakeLabel) =>
         scheduleDailyPracticeReminder({
-          xpEarnedToday: dailyStats?.xpEarned ?? 0,
+          practiceMinutesToday: dailyStats?.minutesPracticed ?? 0,
+          lessonsCompletedToday: dailyStats?.lessonsCompleted ?? 0,
+          cardsReviewedToday: dailyStats?.cardsReviewed ?? 0,
           preferredHour: 21,
           idealL2Self: profile.idealL2Self ?? null,
           dueCount: reviewCount,
@@ -143,7 +145,7 @@ function RootLayout() {
         }),
       )
       .catch(() => {});
-  }, [profile, dailyStats?.xpEarned, permissionGranted, reviewCount]);
+  }, [profile, dailyStats?.minutesPracticed, dailyStats?.lessonsCompleted, dailyStats?.cardsReviewed, permissionGranted, reviewCount]);
 
   // Also re-arm on background — covers edge cases where the user
   // backgrounds before the schedule-on-change useEffect has resolved.
@@ -154,7 +156,9 @@ function RootLayout() {
           .catch(() => null)
           .then((topMistakeLabel) =>
             scheduleDailyPracticeReminder({
-              xpEarnedToday: dailyStats?.xpEarned ?? 0,
+              practiceMinutesToday: dailyStats?.minutesPracticed ?? 0,
+              lessonsCompletedToday: dailyStats?.lessonsCompleted ?? 0,
+              cardsReviewedToday: dailyStats?.cardsReviewed ?? 0,
               preferredHour: 21,
               idealL2Self: profile.idealL2Self ?? null,
               dueCount: reviewCount,
@@ -165,7 +169,7 @@ function RootLayout() {
       }
     });
     return () => sub.remove();
-  }, [profile, dailyStats?.xpEarned, permissionGranted, reviewCount]);
+  }, [profile, dailyStats?.minutesPracticed, dailyStats?.lessonsCompleted, dailyStats?.cardsReviewed, permissionGranted, reviewCount]);
 
   // Register the analytics provider once, before anything tries to track.
   // No-ops without EXPO_PUBLIC_POSTHOG_KEY, which is the normal state for a
@@ -177,6 +181,10 @@ function RootLayout() {
   // Tie purchases, analytics, and crash reports to the signed-in user.
   // Idempotent; analytics/IAP no-op until a provider/keys are configured.
   useEffect(() => {
+    // The initial null session means "not restored yet", not "signed out".
+    // Resetting here fragments the persisted anonymous identity on every cold
+    // start and briefly detaches RevenueCat/Sentry from a returning learner.
+    if (authLoading) return;
     const userId = session?.user?.id ?? null;
     configurePurchases(userId);
     if (userId) {
@@ -188,7 +196,7 @@ function RootLayout() {
       resetAnalytics();
       Sentry.setUser(null);
     }
-  }, [session?.user?.id]);
+  }, [session?.user?.id, authLoading]);
 
   // Track the device's live RevenueCat entitlement. This is half of the paywall
   // gate (app/(app)/_layout.tsx) — without it, a learner who has just paid is

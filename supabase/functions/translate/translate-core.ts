@@ -98,7 +98,11 @@ export async function translateWithValidation(
       continue;
     }
 
-    const safety = await validateContentSafety(text, { language, fn: 'translate' });
+    const safety = await validateContentSafety(text, {
+      language,
+      fn: 'translate',
+      moderation: 'required',
+    });
     if (safety.safe) return { ok: true, translation: text };
 
     lastReason = 'unsafe';

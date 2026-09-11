@@ -13,9 +13,8 @@
  *                         review is never clobbered.
  *   • lesson-completion — lesson_completions upsert. Conflict-safe on
  *                         (user_id, lesson_id), so replay is idempotent.
- *   • xp-award          — increment_xp_idempotent RPC (migration 046) keyed
- *                         by an idempotency key generated at ENQUEUE time,
- *                         so a lost-response retry can never double-award.
+ *   • xp-award          — legacy queue shape retained only so upgrades can
+ *                         discard awards queued before XP was retired (117).
  *
  * flush() replays sequentially in FIFO order: success removes the item; a
  * failure increments `attempts` and SKIPS that item for the rest of the run,
@@ -37,7 +36,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Sentry from '@sentry/react-native';
 import {
   fetchReviewItemsByCardIds,
-  incrementXpIdempotent,
   insertReviewLogIdempotent,
   upsertLessonCompletion,
   upsertReviewItem,
@@ -375,7 +373,9 @@ async function executeItem(userId: string, item: OfflineQueueItem): Promise<'don
       return 'done';
     }
     case 'xp-award':
-      await incrementXpIdempotent(item.payload.amount, item.key);
+      // XP was removed from the learner-facing product and authenticated
+      // award RPCs were revoked in migration 117. Treat a pre-upgrade queued
+      // award as complete so it cannot poison the useful progress behind it.
       return 'done';
   }
 }

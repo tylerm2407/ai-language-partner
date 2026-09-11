@@ -355,7 +355,7 @@ export default function AuthScreen() {
                         marginTop: spacing.xs,
                       }}
                     >
-                      {`${pending.trial.xpEarned} XP · ${pending.trial.correctCount}/${pending.trial.totalCount} IN LESSON 1`}
+                      {`${pending.trial.correctCount}/${pending.trial.totalCount} CORRECT IN LESSON 1`}
                     </Text>
                   ) : null}
                 </View>

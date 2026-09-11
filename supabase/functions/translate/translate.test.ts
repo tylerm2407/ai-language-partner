@@ -10,6 +10,15 @@ import {
   translateWithValidation,
 } from './translate-core.ts';
 
+Deno.env.set('OPENAI_KEY', 'sk-test');
+const providerFetchForTest = globalThis.fetch;
+globalThis.fetch = ((input: string | URL | Request, init?: RequestInit) =>
+  String(input) === 'https://api.openai.com/v1/moderations'
+    ? Promise.resolve(new Response(JSON.stringify({
+        results: [{ flagged: false, categories: {} }],
+      }), { status: 200 }))
+    : providerFetchForTest(input, init)) as typeof fetch;
+
 const noopLog = () => {};
 
 Deno.test('clean translation returns on the first attempt', async () => {

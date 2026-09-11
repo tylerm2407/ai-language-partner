@@ -7,9 +7,8 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "environment": "development",
       "env": {
-        "EXPO_PUBLIC_SUPABASE_URL": "https://ngqpsuixmumdnqbqxjxv.supabase.co",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_lkA4HmlH-NZzBjsLmzQ-TA_FvS_aQk1",
         "EXPO_PUBLIC_APP_ENV": "development"
       }
     },
@@ -20,11 +19,7 @@
         "buildConfiguration": "Release"
       },
       "env": {
-        "EXPO_PUBLIC_SUPABASE_URL": "https://ngqpsuixmumdnqbqxjxv.supabase.co",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_lkA4HmlH-NZzBjsLmzQ-TA_FvS_aQk1",
         "EXPO_PUBLIC_APP_ENV": "preview",
-        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "appl_KLvWOLovdOVLmzAkMwLfDNaqNOK",
-        "EXPO_PUBLIC_REVENUECAT_ANDROID_KEY": "goog_REPLACE_WITH_REVENUECAT_ANDROID_PUBLIC_KEY",
         "EXPO_PUBLIC_SENTRY_DSN": "https://9285b6c772c26a74a2646822c597cd47@o4511033096536064.ingest.us.sentry.io/4511880912633856"
       }
     },
@@ -35,8 +30,6 @@
         "EXPO_PUBLIC_SUPABASE_URL": "https://ngqpsuixmumdnqbqxjxv.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_lkA4HmlH-NZzBjsLmzQ-TA_FvS_aQk1",
         "EXPO_PUBLIC_APP_ENV": "production",
-        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "appl_KLvWOLovdOVLmzAkMwLfDNaqNOK",
-        "EXPO_PUBLIC_REVENUECAT_ANDROID_KEY": "goog_REPLACE_WITH_REVENUECAT_ANDROID_PUBLIC_KEY",
         "EXPO_PUBLIC_SENTRY_DSN": "https://9285b6c772c26a74a2646822c597cd47@o4511033096536064.ingest.us.sentry.io/4511880912633856"
       }
     }

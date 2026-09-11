@@ -4,12 +4,12 @@
  */
 // BrandRamp pulls hooks/useMotion -> AsyncStorage, which has no native module
 // under jest; this is the same mock the other UI suites use.
+import { brandRamp, brandRampCool, brandRampWarm, clampPct, swellAt, FLOW_MS } from './BrandRamp';
+import { ui2Dark, ui2Light, ui2Warm } from '../../config/theme';
 jest.mock('@react-native-async-storage/async-storage', () => ({
   __esModule: true,
   default: { setItem: jest.fn(async () => {}), getItem: jest.fn(async () => null), removeItem: jest.fn(async () => {}) },
 }));
-import { brandRamp, brandRampCool, brandRampWarm, clampPct, swellAt, FLOW_MS } from './BrandRamp';
-import { ui2Dark, ui2Light, ui2Warm } from '../../config/theme';
 
 describe('brandRamp', () => {
   it('runs the icon left to right: cyan, sky, violet, magenta', () => {

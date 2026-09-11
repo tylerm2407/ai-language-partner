@@ -10,13 +10,11 @@ import {
   submitWriting,
   updateWritingFeedback,
   fetchWritingSubmissionsByPrompt,
-  incrementXpIdempotent,
 } from '../../../../lib/supabase-queries';
 import { WritingExercise } from '../../../../components/writing/WritingExercise';
 import { WritingFeedbackView } from '../../../../components/writing/WritingFeedbackView';
 import { supabase } from '../../../../lib/supabase';
 import { getTargetLanguage } from '../../../../lib/language';
-import { writingXpKey } from '../../../../lib/offline-queue';
 import { limitCopy } from '../../../../lib/limit-messaging';
 import type { WritingPrompt, WritingFeedback, WritingSubmission } from '../../../../types';
 // `colors` is deliberately NOT imported: it is the fixed DARK palette, and a
@@ -77,7 +75,7 @@ export default function WritingPromptScreen() {
     // A ref, not the `isGrading` state: two taps dispatched in the same React
     // batch both read the pre-update value, and this handler had no guard at
     // all. Two taps meant two submissions, two paid Claude grading calls, and
-    // two XP awards. Same pattern as `claimInFlight` in useDailyChallenges.
+    // two grading requests and conflicting feedback writes.
     if (submittingRef.current) return;
 
     // Grading must use the user's real target language — if the profile
@@ -123,13 +121,6 @@ export default function WritingPromptScreen() {
         : 0;
       await updateWritingFeedback(submission.id, gradeFeedback, overallScore);
 
-      // Award XP based on CEFR level
-      const xpMap: Record<string, number> = { A1: 5, A2: 10, B1: 15, B2: 20, C1: 25, C2: 30 };
-      const baseXp = xpMap[prompt.cefrLevel] ?? 10;
-      const bonusXp = Math.round(overallScore * 15);
-      // Keyed on the submission: a retried grade of the same piece of work must
-      // not pay twice. `addXp` went through the non-idempotent `increment_xp`.
-      await incrementXpIdempotent(baseXp + bonusXp, writingXpKey(submission.id));
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Failed to grade writing';
       // Surface plan limits clearly instead of a raw "429: …[CODE]" string.

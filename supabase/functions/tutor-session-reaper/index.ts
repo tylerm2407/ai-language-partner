@@ -32,6 +32,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, corsResponse } from '../_shared/cors.ts';
 import { resolveEntitlement } from '../_shared/entitlement.ts';
 import { hangupCall } from '../_shared/tutor-calls.ts';
+import { settleTutorSession } from '../_shared/tutor-ledger.ts';
 import { TUTOR_MAX_SESSION_SECONDS } from '../_shared/tutor-pricing.ts';
 import { analyzeTutorSession } from '../_shared/tutor-analysis.ts';
 import { writeBackTutorSession } from '../_shared/tutor-writeback.ts';
@@ -43,7 +44,7 @@ import {
   reapAbandonedSessions,
   type ReapableSession,
   type ReaperDeps,
-  type SettleClaim,
+  type SettleOutcome,
 } from './reap.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -129,37 +130,22 @@ function buildDeps(supabase: any, anthropicKey: string): ReaperDeps {
 
     hangup: (callId) => hangupCall(OPENAI_KEY, callId),
 
-    async claimSettlement(sessionId, observedSeconds): Promise<SettleClaim> {
-      // `observed_seconds IS NULL` is migration 107's stated double-settle
-      // detector. Postgres evaluates the predicate under the row lock, so of
-      // two concurrent callers exactly one gets a row back.
-      const { data, error } = await supabase
-        .from('tutor_sessions')
-        .update({ observed_seconds: observedSeconds })
-        .eq('id', sessionId)
-        .is('observed_seconds', null)
-        .select('id');
-      if (error) return 'error';
-      if (Array.isArray(data) && data.length === 0) return 'already';
-      return 'claimed';
-    },
-
-    async refundSeconds(userId, seconds) {
-      const { error } = await supabase.rpc('refund_daily_quota', {
-        p_user_id: userId,
-        p_counter: 'tutor_seconds',
-        p_amount: seconds,
-      });
-      if (error) throw new Error(error.message);
-    },
-
-    async refundCents(userId, cents) {
-      const { error } = await supabase.rpc('refund_monthly_quota', {
-        p_user_id: userId,
-        p_counter: 'tutor_cents',
-        p_amount: cents,
-      });
-      if (error) throw new Error(error.message);
+    async settle(session, owed): Promise<SettleOutcome> {
+      // One transaction (migration 123): observed seconds, the daily refund
+      // and the monthly refund land together or not at all, against the exact
+      // day and month the reservation charged. The row lock makes a second
+      // caller see `already_settled` instead of refunding twice.
+      try {
+        const result = await settleTutorSession(supabase, {
+          sessionId: session.id,
+          userId: session.user_id,
+          settlement: owed,
+        });
+        return result.status === 'already_settled' ? 'already' : 'settled';
+      } catch (err) {
+        console.error(`[${FN}] settle_tutor_session failed for ${session.id}:`, err instanceof Error ? err.message : err);
+        return 'error';
+      }
     },
 
     readTranscript: (sessionId) => readTranscript(sessionId),
@@ -193,17 +179,15 @@ function buildDeps(supabase: any, anthropicKey: string): ReaperDeps {
       return { alreadyAnalyzed: result.alreadyAnalyzed };
     },
 
-    async closeSession(sessionId, observedSeconds) {
+    async closeSession(sessionId, _observedSeconds) {
       // Guarded on `ended_at IS NULL` so a close can never overwrite an honest
-      // `end`'s settlement with the reaper's. `observed_seconds` is restated
-      // rather than trusted from the claim, so a row whose claim took the
-      // fail-open path still lands correct.
+      // `end`. `observed_seconds` is NOT restated here: the settlement RPC is
+      // its only writer, so a row `end` settled keeps `end`'s figure.
       const { error } = await supabase
         .from('tutor_sessions')
         .update({
           ended_at: new Date().toISOString(),
           end_reason: 'abandoned',
-          observed_seconds: observedSeconds,
         })
         .eq('id', sessionId)
         .is('ended_at', null);
@@ -283,7 +267,7 @@ serve(async (req: Request) => {
 
   const elapsedMs = Date.now() - startedAt;
 
-  // One line, every count. `refundFailures > 0` is the one that means a
+  // One line, every count. `forfeited > 0` is the one that means a
   // learner is owed money and nothing else will say so.
   console.log(`[${FN}] ${JSON.stringify({ ...summary, elapsedMs })}`);
 

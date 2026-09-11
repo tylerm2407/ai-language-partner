@@ -5,9 +5,8 @@
  *
  * The lobby mints the session, so it is holding a `StartTutorSessionResult`
  * that the call screen needs. The obvious way to pass it is the URL, and the
- * URL is exactly where it must not go: that object carries `clientSecret`, an
- * ephemeral OpenAI credential that can open a realtime call and spend against
- * this account's grant.
+ * URL is exactly where it must not go: that object carries a one-use
+ * `connectionToken` for the server-controlled SDP exchange.
  *
  * A route param is not a function argument. It is a string in the navigation
  * state — retained in the back stack, serialised into any state persistence,

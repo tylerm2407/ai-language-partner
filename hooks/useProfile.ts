@@ -2,8 +2,7 @@ import { useCallback, useEffect } from 'react';
 import { AppState } from 'react-native';
 import { useAuth } from './useAuth';
 import { useAppStore } from '../stores/useAppStore';
-import { upsertProfile, incrementXpIdempotent } from '../lib/supabase-queries';
-import { enqueue, isNetworkError, makeXpKey } from '../lib/offline-queue';
+import { upsertProfile } from '../lib/supabase-queries';
 import type { UserProfile } from '../types';
 
 /**
@@ -34,7 +33,7 @@ function invalidateTimezoneSync(): void {
  */
 export function useTimezoneSync() {
   const { user } = useAuth();
-  const { profile, setProfile, patchProfile } = useAppStore();
+  const { profile, setProfile } = useAppStore();
 
   // Re-check when the app comes back to the foreground. A learner who flies
   // somewhere does not relaunch the app on landing, and every server-side
@@ -80,7 +79,7 @@ export function useTimezoneSync() {
 
 export function useProfile() {
   const { user } = useAuth();
-  const { profile, setProfile, patchProfile, loading } = useAppStore();
+  const { profile, setProfile, loading } = useAppStore();
 
   const updateProfile = useCallback(async (
     updates: Partial<Pick<UserProfile, 'displayName' | 'nativeLanguage' | 'targetLanguage' | 'level' | 'dailyGoalMinutes' | 'timezone' | 'idealL2Self'>>
@@ -91,38 +90,5 @@ export function useProfile() {
     return updated;
   }, [user, setProfile]);
 
-  /**
-   * Award XP.
-   *
-   * `idempotencyKey` is what decides how often this award can ever be paid.
-   * Pass a deterministic one (see `lessonXpKey`) when the award belongs to a
-   * specific thing that must pay at most once; omit it for a genuinely
-   * one-off award, which then gets a random key and is protected only against
-   * a lost-response retry of that same call.
-   */
-  const earnXp = useCallback(async (xp: number, idempotencyKey?: string) => {
-    if (!user || !profile) return;
-    const key = idempotencyKey ?? makeXpKey('earn');
-    try {
-      const serverTotal = await incrementXpIdempotent(xp, key);
-      // Prefer the server's total over adding locally. When this key has
-      // already been paid — a replayed lesson — the server grants nothing and
-      // returns the unchanged total, and adding `xp` here anyway would show
-      // XP the learner does not have until the next cold load contradicts it.
-      // patchProfile, not a spread of the render-time `profile`: a heart or
-      // avatar write landing in the same tick would otherwise be clobbered by
-      // this stale snapshot and visibly revert.
-      patchProfile({ totalXp: serverTotal ?? profile.totalXp + xp });
-      return;
-    } catch (err) {
-      if (!isNetworkError(err)) throw err;
-      // Network blip: queue the award for replay on reconnect (same key)
-      // and keep the local update below so the UI reflects the earned XP;
-      // the server catches up when the queue flushes.
-      await enqueue(user.id, { type: 'xp-award', payload: { amount: xp }, key });
-    }
-    patchProfile({ totalXp: profile.totalXp + xp });
-  }, [user, profile, setProfile]);
-
-  return { profile, loading, updateProfile, earnXp };
+  return { profile, loading, updateProfile };
 }

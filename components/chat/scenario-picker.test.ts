@@ -4,6 +4,9 @@
  */
 // The component pulls SlabButton -> lib/haptics -> AsyncStorage, which has no
 // native module under jest; these are the same mocks the other UI suites use.
+import { questionForDay, resumeHint, scenarioIdentity, tileTone } from './ScenarioPicker';
+import { paletteForScheme } from '../../hooks/useUi2Theme';
+
 jest.mock('@react-native-async-storage/async-storage', () => ({
   __esModule: true,
   default: { setItem: jest.fn(async () => {}), getItem: jest.fn(async () => null), removeItem: jest.fn(async () => {}) },
@@ -15,9 +18,6 @@ jest.mock('expo-haptics', () => ({
   ImpactFeedbackStyle: { Light: 'light' },
 }));
 jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Ionicons' }));
-
-import { questionForDay, resumeHint, scenarioIdentity, tileTone } from './ScenarioPicker';
-import { paletteForScheme } from '../../hooks/useUi2Theme';
 
 const c = paletteForScheme('light');
 

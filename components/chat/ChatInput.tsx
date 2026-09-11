@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import { View, TextInput, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -388,8 +388,17 @@ export function ChatInput({
     }
   };
 
+  // Mode changes and explicit listening signals own microphone transitions.
+  // Read the latest committed handlers without restarting the microphone when
+  // a parent callback or the recording state changes during an active turn.
+  const listeningSnapshot = useRef({ isRecording, handsFreeState, sending, onListeningStarted, startRecording });
+  useLayoutEffect(() => {
+    listeningSnapshot.current = { isRecording, handsFreeState, sending, onListeningStarted, startRecording };
+  });
+
   // Auto-start listening when parent signals (e.g. after TTS finishes)
   useEffect(() => {
+    const { isRecording, onListeningStarted, startRecording } = listeningSnapshot.current;
     if (handsFreeMode && shouldStartListening && !isRecording && !isStoppingRef.current) {
       onListeningStarted?.();
       startRecording(true);
@@ -398,6 +407,7 @@ export function ChatInput({
 
   // Start listening when hands-free mode is first activated.
   useEffect(() => {
+    const { handsFreeState, isRecording, sending, startRecording } = listeningSnapshot.current;
     if (handsFreeMode && handsFreeState === 'IDLE' && !isRecording && !sending) {
       startRecording(true);
     }
@@ -419,7 +429,7 @@ export function ChatInput({
       setIsRecording(false);
       isStoppingRef.current = false;
     };
-  }, [handsFreeMode]);
+  }, [handsFreeMode, clearVadState]);
 
   // Hands-free mode UI
   if (handsFreeMode) {

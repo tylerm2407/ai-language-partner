@@ -46,6 +46,8 @@ import {
   type TutorTranscriptTurn,
 } from './tutor-analysis.ts';
 
+Deno.env.set('OPENAI_KEY', 'sk-test');
+
 // ─── Fixtures ─────────────────────────────────────────────────────────────
 
 const learner = (text: string, recognizerConfidence?: number): TutorTranscriptTurn =>
@@ -119,8 +121,14 @@ function anthropicResponse(text: string): Response {
 }
 
 function stubFetch(handler: (url: string, init?: RequestInit) => Response | Promise<Response>) {
-  globalThis.fetch = ((input: string | URL | Request, init?: RequestInit) =>
-    Promise.resolve(handler(String(input), init))) as typeof fetch;
+  globalThis.fetch = ((input: string | URL | Request, init?: RequestInit) => {
+    if (String(input) === 'https://api.openai.com/v1/moderations') {
+      return Promise.resolve(new Response(JSON.stringify({
+        results: [{ flagged: false, categories: {} }],
+      }), { status: 200 }));
+    }
+    return Promise.resolve(handler(String(input), init));
+  }) as typeof fetch;
 }
 function restoreFetch() {
   globalThis.fetch = realFetch;

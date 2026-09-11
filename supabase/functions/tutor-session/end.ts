@@ -1,7 +1,7 @@
 /**
  * Closing a live tutor session.
  *
- * THE ORDER IS LOAD-BEARING: settle -> analyse -> mark ended.
+ * THE ORDER IS LOAD-BEARING: hang up -> settle -> analyse -> mark ended.
  *
  * Settlement is MONEY and must not depend on the analysis succeeding. The
  * analysis is one Haiku call plus up to forty inserts, and it can time out
@@ -27,6 +27,7 @@ import { proficiencyToCefr } from '../_shared/cefr.ts';
 import { getEffectiveLimits } from '../_shared/plan-limits.ts';
 import { hangupCall, refundAllowed, type HangupOutcome } from '../_shared/tutor-calls.ts';
 import { settlement } from '../_shared/tutor-pricing.ts';
+import { settleTutorSession } from '../_shared/tutor-ledger.ts';
 import { readTranscript, dropTranscript } from '../_shared/tutor-transcript-buffer.ts';
 import { analyzeTutorSession } from '../_shared/tutor-analysis.ts';
 import { writeBackTutorSession } from '../_shared/tutor-writeback.ts';
@@ -91,44 +92,16 @@ export async function handleEnd(
     };
   }
 
-  // ── 1. settle ───────────────────────────────────────────────────────
+  // ── 1. hang up, then settle — in ONE transaction ────────────────────
   const startedAt = new Date(session.started_at).getTime();
   const observedRaw = Math.ceil((Date.now() - startedAt) / 1000);
-  const settled = settlement(session.granted_seconds, session.granted_cents, observedRaw);
-
-  // The CLAIM comes before any money moves. `observed_seconds IS NULL` is the
-  // double-settle detector (migration 107) and the predicate is evaluated
-  // under the row lock, so of N concurrent `end` calls exactly one gets a row
-  // back. Before this, thirty parallel ends each refunded the same session
-  // and floored both counters at zero — a month of tutor budget, wiped.
-  const { data: claimed, error: claimErr } = await supabase
-    .from('tutor_sessions')
-    .update({ observed_seconds: settled.observedSeconds })
-    .eq('id', session.id)
-    .is('observed_seconds', null)
-    .is('ended_at', null)
-    .select('id');
-  if (claimErr) {
-    console.error('[tutor-session] settle claim failed:', claimErr.message);
-    return { status: 503, body: { error: 'Could not end the session. Please try again.', code: 'SETTLE_UNAVAILABLE' } };
-  }
-  if (!claimed || claimed.length === 0) {
-    // Someone else — a concurrent end, or the reaper — holds the settlement.
-    return {
-      status: 200,
-      body: {
-        sessionId: session.id,
-        alreadyEnded: true,
-        minutesSpoken: Math.max(1, Math.round((session.observed_seconds ?? settled.observedSeconds) / 60)),
-        debrief: session.debrief ?? null,
-        savedWords: [],
-      },
-    };
-  }
+  const wanted = settlement(session.granted_seconds, session.granted_cents, observedRaw);
 
   // Hang the call up BEFORE refunding. A refund is a statement that the
   // unused minutes were not spent, and the only way to know that is to have
-  // ended the call ourselves. See refundAllowed for the three cases.
+  // ended the call ourselves. See refundAllowed for the three cases. Hanging
+  // up is idempotent (a 404 is "already over"), so N concurrent ends may all
+  // do it; the ledger below is what makes exactly one of them settle.
   let hangup: HangupOutcome | null = null;
   if (typeof session.call_id === 'string' && session.call_id && env.openaiKey) {
     hangup = await hangupCall(env.openaiKey, session.call_id);
@@ -137,6 +110,39 @@ export async function handleEnd(
     { connected_at: session.connected_at ?? null, call_id: session.call_id ?? null },
     hangup,
   );
+  // A forfeited refund still SETTLES: observed time is recorded and the
+  // reservation stays charged in full. `settle_tutor_session` (migration 123)
+  // accepts a refund smaller than the unused share for exactly this case.
+  const requested = mayRefund
+    ? wanted
+    : { observedSeconds: wanted.observedSeconds, refundSeconds: 0, refundCents: 0 };
+
+  // Observed seconds and BOTH refunds land together or not at all, and the
+  // row lock makes a second settlement return `already_settled` rather than
+  // refunding twice. Before this, thirty parallel ends each refunded the same
+  // session and floored both counters at zero — a month of tutor budget, wiped.
+  let settled: Awaited<ReturnType<typeof settleTutorSession>>;
+  try {
+    settled = await settleTutorSession(supabase, { sessionId: session.id, userId, settlement: requested });
+  } catch (err) {
+    // Nothing committed. The row stays open with `observed_seconds IS NULL`,
+    // so the reaper retries the same settlement on its next tick.
+    console.error('[tutor-session] settlement failed:', err instanceof Error ? err.message : err);
+    return { status: 503, body: { error: 'Could not end the session. Please try again.', code: 'SETTLE_UNAVAILABLE' } };
+  }
+  if (settled.status === 'already_settled') {
+    // Someone else — a concurrent end, or the reaper — holds the settlement.
+    return {
+      status: 200,
+      body: {
+        sessionId: session.id,
+        alreadyEnded: true,
+        minutesSpoken: Math.max(1, Math.round(settled.observedSeconds / 60)),
+        debrief: session.debrief ?? null,
+        savedWords: [],
+      },
+    };
+  }
 
   if (!mayRefund) {
     console.error(JSON.stringify({
@@ -145,30 +151,10 @@ export async function handleEnd(
       sessionId: session.id,
       callId: session.call_id ?? null,
       hangup,
-      refundSeconds: settled.refundSeconds,
-      refundCents: settled.refundCents,
+      refundSeconds: wanted.refundSeconds,
+      refundCents: wanted.refundCents,
       ts: new Date().toISOString(),
     }));
-  } else if (settled.refundSeconds > 0 || settled.refundCents > 0) {
-    const results = await Promise.allSettled([
-      settled.refundSeconds > 0
-        ? supabase.rpc('refund_daily_quota', {
-            p_user_id: userId, p_counter: 'tutor_seconds', p_amount: settled.refundSeconds,
-          })
-        : Promise.resolve(null),
-      settled.refundCents > 0
-        ? supabase.rpc('refund_monthly_quota', {
-            p_user_id: userId, p_counter: 'tutor_cents', p_amount: settled.refundCents,
-          })
-        : Promise.resolve(null),
-    ]);
-    for (const r of results) {
-      if (r.status === 'rejected') {
-        // A refund that does not land is a learner charged for time they did
-        // not use, and it surfaces nowhere else.
-        console.error('[tutor-session] REFUND FAILED on end:', r.reason);
-      }
-    }
   }
 
   // ── 2. analyse and write back (best effort) ─────────────────────────
@@ -220,10 +206,11 @@ export async function handleEnd(
   // ── 3. close, LAST ──────────────────────────────────────────────────
   const { error: closeErr } = await supabase
     .from('tutor_sessions')
+    // `observed_seconds` was written by the settlement RPC; the close only
+    // marks the row terminal.
     .update({
       ended_at: new Date().toISOString(),
       end_reason: req.endReason ?? 'learner',
-      observed_seconds: settled.observedSeconds,
     })
     .eq('id', session.id)
     // Only close a session that is still open, so a race with the reaper

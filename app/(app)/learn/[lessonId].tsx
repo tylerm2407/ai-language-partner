@@ -9,7 +9,6 @@ import { touchPack } from '../../../lib/offline-packs';
 import { orderExercisesForCognitiveLoad, lessonIsAlreadyOrdered } from '../../../lib/lesson-ordering';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAppStore } from '../../../stores/useAppStore';
-import { useProfile } from '../../../hooks/useProfile';
 import { useDailyStats } from '../../../hooks/useDailyStats';
 import { useLevel } from '../../../hooks/useLevel';
 import { useLessonProgress } from '../../../hooks/useLessonProgress';
@@ -17,7 +16,6 @@ import { useOnboardingChecklist } from '../../../hooks/useOnboardingChecklist';
 import { LessonRunner, type LessonResult } from '../../../components/lesson/LessonRunner';
 import { AchievementModal } from '../../../components/gamification/AchievementModal';
 import { checkAndAwardAchievements, type AchievementDefinition } from '../../../lib/achievements';
-import { lessonXpKey } from '../../../lib/offline-queue';
 import { getTargetLanguage } from '../../../lib/language';
 import { useSafeBack } from '../../../hooks/useSafeBack';
 import { SlabButton } from '../../../components/ui2/SlabButton';
@@ -39,7 +37,6 @@ export default function LessonScreen() {
   const goBack = useSafeBack('/(app)');
   const { user } = useAuth();
   const { profile } = useAppStore();
-  const { earnXp } = useProfile();
   const { addStats } = useDailyStats();
   const { dismissLevelUp } = useLevel();
   const { markLessonComplete } = useLessonProgress();
@@ -176,16 +173,6 @@ export default function LessonScreen() {
    */
   const handleComplete = async (result: LessonResult) => {
     completedRef.current = true;
-    trackEvent('lesson_completed', {
-      contentId: lesson?.id,
-      language: targetLanguage ?? undefined,
-      // The runner's skip-aware accuracy, NOT correctCount/totalExercises:
-      // a question the learner could not hear is out of the denominator, and
-      // recomputing it here is exactly how the recorded score and the score
-      // they were shown drifted apart once already.
-      score: result.accuracy,
-      count: result.totalExercises,
-    });
 
     // 1. Completion — the durable record of progress. Resolves once the row
     //    is in Postgres or in the replay queue (see useLessonProgressStore).
@@ -211,10 +198,20 @@ export default function LessonScreen() {
             lesson.id,
             lesson.courseId,
             score,
-            result.xpEarned,
+            0,
             result.timeSpentMs,
           );
           setSaveState(persisted ? 'saved' : 'queued');
+          // A completion means the durable server row or its durable replay
+          // queue exists — never merely that the runner called this handler.
+          trackEvent('lesson_completed', {
+            contentId: lesson.id,
+            language: targetLanguage ?? undefined,
+            score: result.accuracy,
+            count: result.totalExercises,
+            source: persisted ? 'server' : 'offline_queue',
+            outcome: persisted ? 'server_persisted' : 'local_queued',
+          });
         } catch (err) {
           console.error('[lesson] markLessonComplete failed:', err);
           setSaveState('failed');
@@ -222,15 +219,7 @@ export default function LessonScreen() {
       }
     }
 
-    // 2. XP, keyed to the lesson so a replay never pays twice. Queued offline
-    //    by earnXp itself under that same key.
-    if (result.xpEarned > 0 && lesson) {
-      await earnXp(result.xpEarned, lessonXpKey(lesson.id)).catch((err) =>
-        console.error('[lesson] earnXp failed:', err),
-      );
-    }
-
-    // 3. Daily stats — cosmetic rollup; never blocks anything above.
+    // 2. Daily stats — cosmetic rollup; never blocks anything above.
     // `accuracy` is set-if-provided rather than additive (see upsertDailyStats),
     // so this records the accuracy of the lesson just finished. Omitting it left
     // the column at 0 for everyone, which made `perfect_lesson` — checked as
@@ -238,12 +227,11 @@ export default function LessonScreen() {
     // sitting in `result`.
     await addStats({
       lessonsCompleted: 1,
-      xpEarned: result.xpEarned,
       accuracy: result.accuracy,
     }).catch((err) => console.error('[lesson] addStats failed:', err));
 
     if (lesson && user?.id) {
-      // 4. Onboarding checklist + achievements.
+      // 3. Onboarding checklist + achievements.
       markOnboardingItem('firstLesson').catch(console.error);
 
       if (profile) {
@@ -355,11 +343,6 @@ export default function LessonScreen() {
         onExit={handleExit}
       />
       </KeyboardAvoidingView>
-
-      {/* The LevelUpModal used to fire here. The numeric level it celebrated is
-          no longer shown anywhere, so a full-screen modal announcing it was
-          celebrating a number the learner cannot go and look at. XP still
-          accrues and still drives achievements — those keep their modal. */}
 
       {/* Achievement Celebration */}
       <AchievementModal

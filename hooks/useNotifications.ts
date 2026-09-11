@@ -152,7 +152,11 @@ async function cancelById(identifier: string): Promise<void> {
 }
 
 interface ScheduleDailyPracticeReminderParams {
-  xpEarnedToday: number;
+  practiceMinutesToday: number;
+  /** Lessons do not record minutes (only `lessonsCompleted`), so a learner
+   *  who finished a lesson still counts as having practised today. */
+  lessonsCompletedToday?: number;
+  cardsReviewedToday?: number;
   /** Local hour (0-23). Clamped to [18, 22] — evening-only, before quiet hours. */
   preferredHour?: number;
   /** Learner's Ideal L2 Self (Dörnyei L2MSS). When present, enriches the
@@ -178,10 +182,12 @@ interface ScheduleDailyPracticeReminderParams {
  * notification. Silent no-op when:
  *   - Platform is web
  *   - Permission not granted
- *   - User already earned XP today (no reason to nag)
+ *   - User already practised today (no reason to nag)
  */
 export async function scheduleDailyPracticeReminder({
-  xpEarnedToday,
+  practiceMinutesToday,
+  lessonsCompletedToday = 0,
+  cardsReviewedToday = 0,
   preferredHour = 21,
   idealL2Self,
   dueCount,
@@ -199,7 +205,7 @@ export async function scheduleDailyPracticeReminder({
   // Retire the streak-era reminder still scheduled on upgrading installs.
   await cancelById(LEGACY_ID_STREAK_SAVE);
 
-  if (xpEarnedToday > 0) return;
+  if (practiceMinutesToday > 0 || lessonsCompletedToday > 0 || cardsReviewedToday > 0) return;
 
   const hour = Math.max(18, Math.min(preferredHour, 22));
   const { title, body } = reminderCopy({ idealL2Self, dueCount, topMistakeLabel });
@@ -292,4 +298,3 @@ export async function cancelLessonExpiryReminder(lessonId: string): Promise<void
   if (Platform.OS === 'web') return;
   await cancelById(lessonExpiryNotificationId(lessonId));
 }
-

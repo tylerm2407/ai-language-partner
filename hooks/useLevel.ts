@@ -72,7 +72,7 @@ export function useLevel() {
     if (user && (level !== profile.xpLevel || tier !== profile.leagueTier)) {
       patchProfile({ xpLevel: level, leagueTier: tier });
     }
-  }, [profile?.totalXp, user?.id, profile?.xpLevel, profile?.leagueTier, patchProfile]);
+  }, [profile, user, patchProfile]);
 
   const dismissLevelUp = useCallback(() => {
     setLevelUpInfo(null);

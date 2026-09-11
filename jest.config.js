@@ -1,6 +1,7 @@
 /** Frontend unit tests only — edge functions are Deno and run via `npm run test:functions`. */
 module.exports = {
   preset: 'jest-expo',
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   testMatch: ['**/*.test.ts', '**/*.test.tsx'],
   // '/.claude/' excludes agent worktrees: they are full checkouts of this same
   // repo, so without it every suite is counted twice and the totals lie.

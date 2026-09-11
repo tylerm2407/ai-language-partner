@@ -14,13 +14,21 @@
  * that mints a token and never calls home keeps the full charge. Abandonment
  * becomes the expensive choice rather than the free one.
  *
+ * The reservation is ONE database transaction (`reserve_tutor_session`,
+ * migration 123): both ceilings are checked under row locks and both meters
+ * move together, or nothing moves. It also refuses a second open session for
+ * the same learner. The session row is inserted first so the ledger has a row
+ * to lock and to remember which day and month it charged.
+ *
  * The single most important error path in this file is the one after a failed
  * mint. If we have reserved and the mint then fails, the learner has been
- * charged for a session that never happened.
+ * charged for a session that never happened — `settle_tutor_session` with zero
+ * observed seconds gives every cent back in one transaction.
  */
 import { type PlanLimits } from '../_shared/plan-limits.ts';
 import { resolveEntitlement } from '../_shared/entitlement.ts';
 import { stashEphemeralKey } from '../_shared/tutor-calls.ts';
+import { reserveTutorSession, settleTutorSession } from '../_shared/tutor-ledger.ts';
 import { fetchLearnerContext, serializeLearnerContext, isEntitledToLearnerContext } from '../_shared/learner-context.ts';
 import { fetchTutorMemory, serializeTutorMemory } from '../_shared/tutor-memory.ts';
 import { proficiencyToCefr } from '../_shared/cefr.ts';
@@ -28,7 +36,6 @@ import { providerFetch, PROVIDER_TIMEOUT_MS } from '../_shared/provider-fetch.ts
 import {
   TUTOR_MODEL,
   TUTOR_HEARTBEAT_SECONDS,
-  centsForSeconds,
   resolveGrant,
 } from '../_shared/tutor-pricing.ts';
 import { buildTutorInstructions, turnDetectionForLevel, type CorrectionMode } from './instructions.ts';
@@ -193,36 +200,7 @@ export async function handleStart(
     };
   }
 
-  // ── reserve, monthly FIRST ──────────────────────────────────────────
-  // Monthly is the margin guarantee, and a daily failure must not strand a
-  // monthly charge. Every early return past this point refunds what it took.
   const cents = grant.cents;
-  const { data: monthlyOk, error: monthlyErr } = await supabase.rpc('consume_monthly_quota', {
-    p_user_id: userId,
-    p_counter: 'tutor_cents',
-    p_limit: limits.monthlyTutorCents,
-    p_amount: cents,
-  });
-  if (monthlyErr || monthlyOk !== true) {
-    return {
-      status: 429,
-      body: { error: 'You have used all your live tutor minutes this month.', code: 'MONTHLY_TUTOR_BUDGET_REACHED' },
-    };
-  }
-
-  const { data: dailyOk, error: dailyErr } = await supabase.rpc('consume_daily_quota', {
-    p_user_id: userId,
-    p_counter: 'tutor_seconds',
-    p_limit: limits.dailyTutorMinutes * 60,
-    p_amount: grant.seconds,
-  });
-  if (dailyErr || dailyOk !== true) {
-    await refundBoth(supabase, userId, grant.seconds, cents, 'daily quota refused');
-    return {
-      status: 429,
-      body: { error: 'You have used your live tutor time for today.', code: 'DAILY_TUTOR_LIMIT_REACHED' },
-    };
-  }
 
   // ── assemble the instructions ───────────────────────────────────────
   const persona = resolvePersona(req.personaId);
@@ -251,7 +229,8 @@ export async function handleStart(
     pushStance: selectPushStance(pushSignal),
   });
 
-  // ── the session row, before the token ───────────────────────────────
+  // ── the session row, before the money ───────────────────────────────
+  // Nothing has been charged yet, so a failure here refunds nothing.
   const { data: session, error: sessionErr } = await supabase
     .from('tutor_sessions')
     .insert({
@@ -271,9 +250,48 @@ export async function handleStart(
     .single();
 
   if (sessionErr || !session) {
-    await refundBoth(supabase, userId, grant.seconds, cents, 'session insert failed');
     console.error('[tutor-session] session insert failed:', sessionErr?.message);
     return { status: 500, body: { error: 'Could not start a session. Please try again.', code: 'SESSION_INSERT_FAILED' } };
+  }
+
+  // ── reserve, atomically ─────────────────────────────────────────────
+  // Both ceilings in one transaction. A refusal leaves no charge behind, so
+  // the unreserved row is simply removed rather than closed.
+  let reserved: Awaited<ReturnType<typeof reserveTutorSession>>;
+  try {
+    reserved = await reserveTutorSession(supabase, {
+      sessionId: session.id,
+      userId,
+      dailyLimit: limits.dailyTutorMinutes * 60,
+      monthlyLimit: limits.monthlyTutorCents,
+    });
+  } catch (err) {
+    console.error('[tutor-session] reservation failed:', err instanceof Error ? err.message : err);
+    await discardUnreserved(supabase, session.id);
+    return { status: 503, body: { error: 'Could not start a session. Please try again.', code: 'RESERVATION_UNAVAILABLE' } };
+  }
+  if (reserved === 'monthly_limit') {
+    await discardUnreserved(supabase, session.id);
+    return {
+      status: 429,
+      body: { error: 'You have used all your live tutor minutes this month.', code: 'MONTHLY_TUTOR_BUDGET_REACHED' },
+    };
+  }
+  if (reserved === 'daily_limit') {
+    await discardUnreserved(supabase, session.id);
+    return {
+      status: 429,
+      body: { error: 'You have used your live tutor time for today.', code: 'DAILY_TUTOR_LIMIT_REACHED' },
+    };
+  }
+  if (reserved === 'active_session') {
+    // Another call is open or not yet settled. The reaper closes abandoned
+    // ones within TUTOR_REAP_AFTER_SECONDS, so this clears itself.
+    await discardUnreserved(supabase, session.id);
+    return {
+      status: 409,
+      body: { error: 'You already have a live tutor session open. End it before starting another.', code: 'TUTOR_SESSION_ACTIVE' },
+    };
   }
 
   // ── mint ────────────────────────────────────────────────────────────
@@ -350,32 +368,45 @@ export async function handleStart(
     // THE important error path. We have charged for a session that will not
     // happen; give it all back and mark the row so the reaper does not later
     // try to settle a session that never opened.
-    await refundBoth(supabase, userId, grant.seconds, cents, 'mint failed');
+    await refundEverything(supabase, userId, session.id, grant.seconds, cents, 'mint failed');
     await supabase
       .from('tutor_sessions')
-      .update({ ended_at: new Date().toISOString(), end_reason: 'error', observed_seconds: 0 })
+      .update({ ended_at: new Date().toISOString(), end_reason: 'error' })
       .eq('id', session.id);
     console.error('[tutor-session] mint threw:', err instanceof Error ? err.message : err);
     return { status: 502, body: { error: 'The tutor is unavailable right now. Please try again.', code: 'TUTOR_UNAVAILABLE' } };
   }
 }
 
-/** Give back both reservations. Logged loudly on failure: a refund that does not
- *  land is a learner charged for nothing, and it will not show up anywhere else. */
-async function refundBoth(
+/** Give back the whole reservation in one transaction: zero observed seconds,
+ *  every second and cent refunded. Logged loudly on failure — a refund that
+ *  does not land is a learner charged for nothing, and the open row is left
+ *  for the reaper, which will settle it the same way. */
+async function refundEverything(
   supabase: Client,
   userId: string,
-  seconds: number,
-  cents: number,
+  sessionId: string,
+  grantedSeconds: number,
+  grantedCents: number,
   why: string,
 ): Promise<void> {
-  const results = await Promise.allSettled([
-    supabase.rpc('refund_daily_quota', { p_user_id: userId, p_counter: 'tutor_seconds', p_amount: seconds }),
-    supabase.rpc('refund_monthly_quota', { p_user_id: userId, p_counter: 'tutor_cents', p_amount: cents }),
-  ]);
-  for (const r of results) {
-    if (r.status === 'rejected') {
-      console.error(`[tutor-session] REFUND FAILED (${why}):`, r.reason);
-    }
+  try {
+    // Not `settlement(…, 0)`: that applies the per-second floor and would
+    // keep one cent for a call that never existed. Nothing happened; nothing
+    // is owed.
+    await settleTutorSession(supabase, {
+      sessionId,
+      userId,
+      settlement: { observedSeconds: 0, refundSeconds: grantedSeconds, refundCents: grantedCents },
+    });
+  } catch (err) {
+    console.error(`[tutor-session] REFUND FAILED (${why}):`, err instanceof Error ? err.message : err);
   }
+}
+
+/** Remove a session row that was never reserved. Best effort: a leftover row
+ *  has no money on it and `reserved_at IS NULL`, so nothing will settle it. */
+async function discardUnreserved(supabase: Client, sessionId: string): Promise<void> {
+  const { error } = await supabase.from('tutor_sessions').delete().eq('id', sessionId);
+  if (error) console.warn('[tutor-session] could not remove unreserved session row:', error.message);
 }

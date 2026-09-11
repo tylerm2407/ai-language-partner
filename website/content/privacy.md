@@ -2,7 +2,7 @@
 
 **Fluenci — AI-Powered Language Learning Platform**
 **Operated by NovaWealth**
-**Effective Date: April 23, 2026**
+**Effective Date: September 8, 2026**
 
 ---
 
@@ -46,18 +46,18 @@ When you use Fluenci through a school or educational institution, the following 
 - **Organization membership** — your role (student, teacher, administrator) and classroom assignments.
 - **Learning progress** — CEFR proficiency level, experience points (XP), streaks, and lesson completion data.
 - **Chat messages** — text conversations with the AI tutor, used for tutoring and teacher review.
-- **Voice recordings** — audio captured during speaking exercises, used for pronunciation scoring and speaking assessment.
+- **Voice and photo inputs** — microphone audio used for transcription or live tutoring, and photos you explicitly select for avatar generation. Fluenci does not store raw microphone audio after processing; generated avatar images and derived transcripts may be stored with your account.
 - **Assignment submissions** — work submitted for grading and progress tracking.
 - **Spaced repetition data** — review scheduling data that personalizes your learning experience.
 
 ### Operational Data
 
-- **Usage analytics** — screens visited, session duration, and feature engagement. This data is used for product improvement and is aggregated and stripped of personally identifiable information (PII) within 90 days.
+- **Usage analytics** — named product events, screens visited, session duration, feature engagement, app version, subscription tier, and an internal account identifier. Free-form lesson, chat, and voice content is excluded from analytics events.
 - **Crash and error reports** — when the app crashes or encounters an unexpected error, we collect a technical report containing the error message, stack trace, app version, device model, operating system version, and your internal account identifier (a random ID, not your name or email). We use this solely to diagnose and fix defects. Reports never include lesson content, chat messages, or voice audio, and credentials are stripped before the report leaves the device.
 
 ### Payment Information
 
-- **Subscription and billing data** — payment processing is handled entirely by Stripe. Fluenci stores only your Stripe customer identifier and subscription tier. We do not store credit card numbers, bank account details, or other payment credentials.
+- **Subscription and billing data** — mobile purchases are processed by Apple or Google and managed through RevenueCat; Stripe may process web or institutional checkout. Fluenci stores provider customer/transaction identifiers, entitlement status, plan, and expiration metadata. We do not store full payment-card credentials.
 
 ---
 
@@ -79,7 +79,7 @@ We want to be explicit about what we will never do with your data:
 - **No advertising or marketing to students.** We do not use student data to advertise or market products or services.
 - **No sale or rental of data.** We do not sell, rent, or lease personal information or education records to any third party, for any reason, under any circumstances.
 - **No non-educational profiling.** We do not build behavioral profiles of students for purposes unrelated to their education.
-- **No AI model training on your data.** Our AI subprocessors (Anthropic, Google, and OpenAI) are contractually prohibited from using any data submitted through Fluenci to train, fine-tune, or improve their models. This is enforced through data processing agreements with each provider.
+- **No Fluenci model training on your content.** Fluenci does not use learner content to train its own models. Third-party AI processing is governed by the providers' applicable commercial/API data terms and any executed agreements; institutions should verify required contractual terms with us before deployment.
 
 ---
 
@@ -90,16 +90,17 @@ We share data only with the subprocessors listed below, solely to operate the Se
 | Subprocessor | Data Received | Purpose | DPA in Place | Receives Student PII? |
 |---|---|---|---|---|
 | **Supabase** (hosted on AWS) | All data at rest | Database, authentication, file storage, edge compute | Yes | Yes |
-| **Anthropic** (Claude API) | Chat messages, assignment text | AI tutoring, automated grading | Yes (API Terms of Service) | Yes |
-| **Google** (Gemini API) | Voice audio, conversation context | Real-time voice practice | Yes (API Terms of Service) | Yes |
-| **OpenAI** (Whisper API) | Voice audio | Speech-to-text transcription | Yes (API Terms of Service) | Yes |
-| **ElevenLabs** | Target language text only | Text-to-speech audio generation | Yes | No (no student identifiers are sent) |
-| **Stripe** | Email address, subscription tier | Payment processing | Yes (Stripe DPA) | Minimal (email and plan only) |
-| **Sentry** (Functional Software, Inc.) | Crash and error reports: error message, stack trace, app version, device model, OS version, internal account ID | Crash reporting and error diagnostics | Yes (Sentry DPA) | Minimal (internal account ID only; no name, email, or learning content) |
+| **Anthropic** | Typed messages, writing/assignment text, and client-reported tutor transcripts | AI tutoring, grading, and learner-facing debriefs | Commercial/API terms; institution-specific terms must be verified | Yes |
+| **OpenAI** | Voice audio, live voice-session content, text for safety checks, and user-selected avatar photos | Transcription, live tutoring, content moderation, and avatar generation | Commercial/API terms; institution-specific terms must be verified | Yes |
+| **Fish Audio and ElevenLabs** | Text to be spoken and voice configuration | Speech synthesis | Provider terms; institution-specific terms must be verified | Content may contain student text |
+| **Upstash** | Internal account/session identifiers and short-lived lesson or tutor state | Redis rate limiting and temporary session state | Provider terms; institution-specific terms must be verified | Yes |
+| **RevenueCat, Apple, and Google Play** | Internal account identifier, product, transaction, entitlement, and device/store metadata | Mobile subscription purchase and entitlement management | Provider/platform terms | Yes |
+| **Apple and Google identity services** | Account identifier, email/name when supplied, and authentication metadata | Optional social sign-in | Provider/platform terms | Yes |
+| **Stripe** | Verified account email, provider customer identifier, plan, and checkout metadata | Web or institutional payment processing | Provider terms | Yes |
+| **PostHog** | Internal account identifier and allow-listed product events/properties; no free-form learning content | Product analytics | Provider terms | Yes |
+| **Sentry** | Internal account identifier, error/stack data, app/device metadata; credentials are scrubbed | Crash reporting and diagnostics | Provider terms | Yes |
 
-**All subprocessors that receive student PII are contractually committed not to use that data for model training or any purpose beyond delivering the service.**
-
-We do not share data with any parties not listed above. If we add a new subprocessor that will receive student PII, we will update this policy and notify affected institutions before the change takes effect.
+We use these providers only to operate, secure, bill, and improve the Service. If we add a new subprocessor that will receive student personal information, we will update this policy and provide any notice required by the applicable institutional agreement or law.
 
 ---
 
@@ -115,10 +116,10 @@ We retain data only as long as necessary to provide the Service. Retention perio
 | Chat messages | Duration of contract + 30 days |
 | Assignment submissions | Duration of contract + 30 days |
 | Spaced repetition data | Duration of contract + 30 days |
-| Voice recordings | **90 days after creation**, then permanently deleted |
-| Usage analytics | Aggregated and de-identified after 90 days; no PII retained beyond that point |
-| Crash and error reports | 90 days, then automatically deleted by Sentry |
-| Payment information | Managed by Stripe per their retention policy; Fluenci retains only the Stripe customer ID for the duration of the subscription |
+| Raw microphone audio | Processed transiently and not stored by Fluenci after the request/live session; provider-side handling follows applicable provider terms |
+| Client-reported live-tutor transcript buffer | Short-lived session buffer; derived debriefs may remain with the account |
+| Usage analytics and crash reports | Retained according to the configured PostHog/Sentry project settings and then deleted or de-identified; exact production settings are reviewed before launch |
+| Payment information | Retained by Apple, Google, RevenueCat, or Stripe under their terms; Fluenci retains identifiers and entitlement records as needed for billing, support, fraud prevention, and legal obligations |
 
 Upon contract termination or at the institution's request, all PII is anonymized or permanently deleted within 30 days. Anonymized, aggregate data may be retained for service improvement purposes.
 
@@ -267,4 +268,4 @@ Operator of Fluenci
 
 ---
 
-*This Privacy Policy is effective as of April 23, 2026.*
+*This Privacy Policy is effective as of September 8, 2026.*

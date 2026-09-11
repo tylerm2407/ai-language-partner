@@ -282,6 +282,20 @@ export async function getCurrentTier(): Promise<PlanId> {
   }
 }
 
+type CustomerInfoListenerApi = {
+  addCustomerInfoUpdateListener: (listener: (info: CustomerInfo) => void) => void;
+  removeCustomerInfoUpdateListener: (listener: (info: CustomerInfo) => void) => void;
+};
+
+/** Register and remove the exact same callback, as required by the native SDK. */
+export function subscribeToCustomerInfoUpdates(
+  api: CustomerInfoListenerApi,
+  listener: (info: CustomerInfo) => void,
+): () => void {
+  api.addCustomerInfoUpdateListener(listener);
+  return () => api.removeCustomerInfoUpdateListener(listener);
+}
+
 /**
  * Subscribe to entitlement changes.
  *
@@ -302,13 +316,14 @@ export async function getCurrentTier(): Promise<PlanId> {
 export function addEntitlementListener(onTier: (tier: PlanId) => void): () => void {
   if (!configured || !isPurchasesAvailable()) return () => {};
   try {
-    const remove = Purchases.addCustomerInfoUpdateListener((info) => {
+    const listener = (info: CustomerInfo) => {
       onTier(tierFromCustomerInfo(info));
-    });
+    };
+    const unsubscribe = subscribeToCustomerInfoUpdates(Purchases, listener);
     // Prime with what the SDK already has cached, so a cold start on an
     // entitled device doesn't flash the paywall while waiting for an event.
     getCurrentTier().then(onTier).catch(() => {});
-    return typeof remove === 'function' ? remove : () => {};
+    return unsubscribe;
   } catch (err) {
     console.warn('[purchases] entitlement listener failed:', err);
     return () => {};

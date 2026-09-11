@@ -59,6 +59,15 @@ const METRICS = {
   insets: { top: 59, left: 0, right: 0, bottom: 34 },
 };
 
+const mountedRenderers = new Set<TestRenderer.ReactTestRenderer>();
+
+afterEach(() => {
+  TestRenderer.act(() => {
+    for (const renderer of mountedRenderers) renderer.unmount();
+    mountedRenderers.clear();
+  });
+});
+
 function render(element: React.ReactElement) {
   let renderer!: TestRenderer.ReactTestRenderer;
   TestRenderer.act(() => {
@@ -66,6 +75,7 @@ function render(element: React.ReactElement) {
       <SafeAreaProvider initialMetrics={METRICS}>{element}</SafeAreaProvider>,
     );
   });
+  mountedRenderers.add(renderer);
   return renderer;
 }
 

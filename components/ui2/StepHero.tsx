@@ -32,6 +32,7 @@ import Animated, {
   FadeInUp,
   SlideInRight,
   ZoomIn,
+  cancelAnimation,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -188,14 +189,16 @@ export function StepHero({
   const bob = useSharedValue(0);
   useEffect(() => {
     if (shouldReduce) {
+      cancelAnimation(bob);
       bob.value = 0;
-      return;
+      return () => cancelAnimation(bob);
     }
     bob.value = withRepeat(
       withSequence(withTiming(-4, { duration: 1600 }), withTiming(0, { duration: 1600 })),
       -1,
       false,
     );
+    return () => cancelAnimation(bob);
   }, [shouldReduce, bob]);
   const bobStyle = useAnimatedStyle(() => ({ transform: [{ translateY: bob.value }] }));
 

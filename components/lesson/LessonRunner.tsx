@@ -158,7 +158,7 @@ export function LessonRunner({
   // SRS warm-up state. `warmupResolved` gates the lesson: true once the
   // warm-up either loaded (with items or zero) or the fetch timed out.
   const [warmupResolved, setWarmupResolved] = useState(false);
-  const [warmupEntries, setWarmupEntries] = useState<Array<{ item: ReviewItem; card: Card }>>([]);
+  const [warmupEntries, setWarmupEntries] = useState<{ item: ReviewItem; card: Card }[]>([]);
   const [warmupIndex, setWarmupIndex] = useState(0);
   const [warmupPhase, setWarmupPhase] = useState(false);
   const warmupFetchedRef = useRef(false);

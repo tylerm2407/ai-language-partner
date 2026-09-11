@@ -13,7 +13,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { SlabCard } from '../../../../components/ui2/SlabCard';
 import StatusBadge from '../../../../components/school/StatusBadge';
 import { fetchAssignmentById, fetchAssignmentSubmissions } from '../../../../lib/supabase-queries';
-import { useSchoolStore } from '../../../../stores/useSchoolStore';
 import type { Assignment, AssignmentSubmission } from '../../../../types';
 import { Ui2InlineError } from '../../../../components/ui2/Ui2InlineError';
 import { loadErrorCopy, type ErrorCopy } from '../../../../lib/error-copy';

@@ -138,7 +138,7 @@ export default function ClassDetailScreen() {
         </SlabCard>
       </Pressable>
     ),
-    [classId, router],
+    [classId, router, c.idle, c.ink, c.muted, c.onTint, c.primaryTint],
   );
 
   const renderAssignmentItem = useCallback(

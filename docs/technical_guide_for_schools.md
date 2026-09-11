@@ -23,7 +23,7 @@ Universities are generally comfortable with modern cloud-native stacks as long a
 **Databases**
 - Managed relational DB (PostgreSQL or MySQL) with:
   - Encryption at rest using provider-managed keys (KMS or equivalent).
-  - Automated backups and point-in-time recovery with tested restore procedures.
+  - Automated backups with documented and tested restore procedures; enable point-in-time recovery only when the selected service tier and verified configuration provide it.
   - Private network access only (VPC, no public DB endpoint).
 
 **File / object storage**
@@ -133,7 +133,7 @@ Adapt the language below to your actual stack:
 > "We run automated dependency and container image scanning in CI and periodic infrastructure scans; high/critical vulnerabilities are remediated according to internal SLAs."
 
 **Backups & disaster recovery**
-> "We perform automated daily backups of the production database and allow point-in-time recovery for at least 30 days. Restore procedures are tested at least annually."
+> "We perform automated daily backups of the production database. Point-in-time recovery and independent object-storage recovery are not currently enabled. Restore testing is scheduled but has not yet been completed."
 
 **Incident response**
 > "We maintain an incident-response plan covering detection, triage, containment, remediation, and communication. For incidents affecting institutional data, we notify the institution within 72 hours of confirmation, consistent with contract terms."

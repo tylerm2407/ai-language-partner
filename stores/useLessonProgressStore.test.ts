@@ -62,6 +62,7 @@ beforeEach(() => {
   mockUpsert.mockImplementation(async (userId, lessonId, courseId, score, xpEarned, timeSpentMs) =>
     completion(lessonId, { userId, courseId, score, xpEarned, timeSpentMs }),
   );
+  mockEnqueue.mockResolvedValue(undefined);
 });
 
 describe('load', () => {
@@ -174,6 +175,16 @@ describe('markComplete', () => {
     expect(result.persisted).toBe(false);
     expect(mockEnqueue).toHaveBeenCalledTimes(1);
     expect(useLessonProgressStore.getState().completions.has('lesson-a')).toBe(true);
+  });
+
+  it('rejects when neither Postgres nor the replay queue is durable', async () => {
+    mockUpsert.mockRejectedValue(new Error('Network request failed'));
+    mockEnqueue.mockRejectedValue(new Error('storage full'));
+
+    await expect(useLessonProgressStore
+      .getState()
+      .markComplete(USER, 'lesson-a', COURSE, 0.5, 10, 0))
+      .rejects.toThrow('storage full');
   });
 });
 

@@ -4,9 +4,9 @@ import { handleStart } from './start.ts';
 /**
  * These tests exist for the class of bug the compiler cannot see.
  *
- * Every RPC name, counter name and column name in start.ts is a STRING. TypeScript
- * will happily let you call `consume_daily_quota` with counter `'tutor_second'`,
- * or read `fluenci_user_today` with the wrong parameter name, and the first
+ * Every RPC name, parameter name and column name in start.ts is a STRING.
+ * TypeScript will happily let you call `reserve_tutor_session` with the wrong
+ * parameter name, or read `fluenci_user_today` with the wrong one, and the first
  * symptom would be a learner charged wrongly in production. Two such traps have
  * already been hit in this feature: `fluenci_user_today` takes `p_uid` while
  * `fluenci_user_month` takes `p_user_id`, and `isValidLanguage` lives in
@@ -21,11 +21,13 @@ interface RpcCall { name: string; params: Record<string, unknown> }
 function makeStub(opts: {
   tier?: string | null;
   limits?: Record<string, number>;
-  monthlyOk?: boolean;
-  dailyOk?: boolean;
+  /** What `reserve_tutor_session` answers. Defaults to 'reserved'. */
+  reserve?: 'reserved' | 'daily_limit' | 'monthly_limit' | 'active_session';
   sessionInsertFails?: boolean;
 } = {}) {
   const rpcCalls: RpcCall[] = [];
+  const deletes: string[] = [];
+  let inserted: Record<string, unknown> | null = null;
   const tier = opts.tier === undefined ? 'premium' : opts.tier;
   const limits = opts.limits ?? {
     dailyTutorMinutes: 30, monthlyTutorCents: 800, dailyChatCards: 30,
@@ -35,9 +37,15 @@ function makeStub(opts: {
   const table = (name: string) => {
     const chain: Record<string, unknown> = {};
     const self = () => chain;
-    for (const m of ['select', 'eq', 'gte', 'in', 'order', 'limit', 'is', 'update']) {
+    for (const m of ['select', 'gte', 'in', 'order', 'limit', 'is', 'update']) {
       chain[m] = self;
     }
+    chain.eq = (_col: string, value: unknown) => {
+      if (name === 'tutor_sessions' && deleting) deletes.push(String(value));
+      return chain;
+    };
+    let deleting = false;
+    chain.delete = () => { deleting = true; return chain; };
     chain.maybeSingle = () => {
       if (name === 'subscriptions') {
         return Promise.resolve({ data: tier ? { tier, is_active: true } : null, error: null });
@@ -50,7 +58,7 @@ function makeStub(opts: {
           ? { data: null, error: { message: 'insert exploded' } }
           : { data: { id: 'session-1' }, error: null },
       );
-    chain.insert = () => chain;
+    chain.insert = (row: Record<string, unknown>) => { inserted = row; return chain; };
     chain.then = undefined;
     return chain;
   };
@@ -62,17 +70,25 @@ function makeStub(opts: {
       if (name === 'get_effective_limits') return Promise.resolve({ data: limits, error: null });
       if (name === 'fluenci_user_today') return Promise.resolve({ data: '2026-09-06', error: null });
       if (name === 'fluenci_user_month') return Promise.resolve({ data: '2026-09-01', error: null });
-      if (name === 'consume_monthly_quota') {
-        return Promise.resolve({ data: opts.monthlyOk ?? true, error: null });
+      if (name === 'reserve_tutor_session') {
+        return Promise.resolve({ data: { status: opts.reserve ?? 'reserved' }, error: null });
       }
-      if (name === 'consume_daily_quota') {
-        return Promise.resolve({ data: opts.dailyOk ?? true, error: null });
+      if (name === 'settle_tutor_session') {
+        return Promise.resolve({
+          data: {
+            status: 'settled',
+            observedSeconds: params.p_observed_seconds,
+            refundSeconds: params.p_refund_seconds,
+            refundCents: params.p_refund_cents,
+          },
+          error: null,
+        });
       }
       return Promise.resolve({ data: null, error: null });
     },
   };
 
-  return { supabase, rpcCalls };
+  return { supabase, rpcCalls, deletes, inserted: () => inserted };
 }
 
 const request = {
@@ -100,36 +116,38 @@ Deno.test('a free-tier learner is walled before any money moves', async () => {
   assertEquals(res.status, 403);
   assertEquals(res.body.code, 'TUTOR_NOT_ENTITLED');
   // Nothing was reserved, so nothing needs refunding.
+  assert(!rpcCalls.some((c) => c.name === 'reserve_tutor_session'));
+  assert(!rpcCalls.some((c) => c.name === 'settle_tutor_session'));
+});
+
+Deno.test('both ceilings are reserved in ONE transaction, after the row exists', async () => {
+  const { supabase, rpcCalls, inserted } = makeStub();
+  stubMint(goodMint);
+  try {
+    await handleStart(supabase, 'user-1', request, env);
+  } finally { restore(); }
+
+  const reserves = rpcCalls.filter((c) => c.name === 'reserve_tutor_session');
+  assertEquals(reserves.length, 1, 'exactly one reservation RPC');
+  // The row is inserted first so the ledger has something to lock and can
+  // remember which day and month it charged.
+  assert(inserted(), 'the session row must be inserted before the reservation');
+  assertEquals(reserves[0].params.p_session_id, 'session-1');
+  assertEquals(reserves[0].params.p_user_id, 'user-1');
+  // Minutes in, SECONDS out: the ledger counts tutor_seconds.
+  assertEquals(reserves[0].params.p_daily_limit, 30 * 60);
+  assertEquals(reserves[0].params.p_monthly_limit, 800);
+  // The legacy two-step is gone for good.
   assert(!rpcCalls.some((c) => c.name === 'consume_monthly_quota'));
   assert(!rpcCalls.some((c) => c.name === 'consume_daily_quota'));
 });
 
-Deno.test('the MONTHLY ceiling is reserved before the daily one', async () => {
+Deno.test('the meter RPC parameter names are exactly right', async () => {
   const { supabase, rpcCalls } = makeStub();
   stubMint(goodMint);
   try {
     await handleStart(supabase, 'user-1', request, env);
   } finally { restore(); }
-
-  const monthlyAt = rpcCalls.findIndex((c) => c.name === 'consume_monthly_quota');
-  const dailyAt = rpcCalls.findIndex((c) => c.name === 'consume_daily_quota');
-  assert(monthlyAt > -1 && dailyAt > -1, 'both reservations must happen');
-  // Monthly is the margin guarantee. A daily failure must not be able to strand
-  // a monthly charge, which is only true if monthly goes first.
-  assert(monthlyAt < dailyAt, 'monthly must be reserved before daily');
-});
-
-Deno.test('the counters and RPC parameter names are exactly right', async () => {
-  const { supabase, rpcCalls } = makeStub();
-  stubMint(goodMint);
-  try {
-    await handleStart(supabase, 'user-1', request, env);
-  } finally { restore(); }
-
-  const monthly = rpcCalls.find((c) => c.name === 'consume_monthly_quota');
-  assertEquals(monthly?.params.p_counter, 'tutor_cents');
-  const daily = rpcCalls.find((c) => c.name === 'consume_daily_quota');
-  assertEquals(daily?.params.p_counter, 'tutor_seconds');
 
   // These two genuinely differ in production and getting one wrong reads the
   // wrong row silently.
@@ -139,10 +157,10 @@ Deno.test('the counters and RPC parameter names are exactly right', async () => 
   assert(month && 'p_user_id' in month.params, 'fluenci_user_month takes p_user_id');
 });
 
-Deno.test('a failed mint refunds BOTH reservations', async () => {
+Deno.test('a failed mint refunds the whole reservation', async () => {
   // The single most important error path in the function: we have charged for a
   // session that will not happen.
-  const { supabase, rpcCalls } = makeStub();
+  const { supabase, rpcCalls, inserted } = makeStub();
   stubMint(() => new Response('upstream on fire', { status: 500 }));
   try {
     const res = await handleStart(supabase, 'user-1', request, env);
@@ -150,12 +168,15 @@ Deno.test('a failed mint refunds BOTH reservations', async () => {
     assertEquals(res.body.code, 'TUTOR_UNAVAILABLE');
   } finally { restore(); }
 
-  const refundedSeconds = rpcCalls.find(
-    (c) => c.name === 'refund_daily_quota' && c.params.p_counter === 'tutor_seconds');
-  const refundedCents = rpcCalls.find(
-    (c) => c.name === 'refund_monthly_quota' && c.params.p_counter === 'tutor_cents');
-  assert(refundedSeconds, 'daily seconds must be refunded when the mint fails');
-  assert(refundedCents, 'monthly cents must be refunded when the mint fails');
+  // One settlement with ZERO observed seconds gives back every second and
+  // every cent of the grant, in the same transaction.
+  const settle = rpcCalls.find((c) => c.name === 'settle_tutor_session');
+  assert(settle, 'the reservation must be settled back when the mint fails');
+  const row = inserted()!;
+  assertEquals(settle.params.p_session_id, 'session-1');
+  assertEquals(settle.params.p_observed_seconds, 0);
+  assertEquals(settle.params.p_refund_seconds, row.granted_seconds);
+  assertEquals(settle.params.p_refund_cents, row.granted_cents);
 });
 
 Deno.test('a mint that returns no secret is treated as a failure, not a session', async () => {
@@ -169,36 +190,44 @@ Deno.test('a mint that returns no secret is treated as a failure, not a session'
     const res = await handleStart(supabase, 'user-1', request, env);
     assertEquals(res.status, 502);
   } finally { restore(); }
-  assert(rpcCalls.some((c) => c.name === 'refund_daily_quota'));
-  assert(rpcCalls.some((c) => c.name === 'refund_monthly_quota'));
+  assert(rpcCalls.some((c) => c.name === 'settle_tutor_session'));
 });
 
-Deno.test('a daily refusal refunds the monthly reservation it already took', async () => {
-  const { supabase, rpcCalls } = makeStub({ dailyOk: false });
+Deno.test('a daily refusal takes nothing: the row is removed and nothing is settled', async () => {
+  const { supabase, rpcCalls, deletes } = makeStub({ reserve: 'daily_limit' });
   const res = await handleStart(supabase, 'user-1', request, env);
   assertEquals(res.status, 429);
   assertEquals(res.body.code, 'DAILY_TUTOR_LIMIT_REACHED');
-  assert(
-    rpcCalls.some((c) => c.name === 'refund_monthly_quota' && c.params.p_counter === 'tutor_cents'),
-    'the monthly charge must be given back when the daily check refuses',
-  );
+  // The RPC refused under its own locks, so no counter moved and there is
+  // nothing to refund — only an unreserved row to tidy away.
+  assert(!rpcCalls.some((c) => c.name === 'settle_tutor_session'));
+  assertEquals(deletes, ['session-1']);
 });
 
-Deno.test('a monthly refusal takes nothing and refunds nothing', async () => {
-  const { supabase, rpcCalls } = makeStub({ monthlyOk: false });
+Deno.test('a monthly refusal takes nothing either', async () => {
+  const { supabase, rpcCalls, deletes } = makeStub({ reserve: 'monthly_limit' });
   const res = await handleStart(supabase, 'user-1', request, env);
   assertEquals(res.status, 429);
   assertEquals(res.body.code, 'MONTHLY_TUTOR_BUDGET_REACHED');
-  assert(!rpcCalls.some((c) => c.name === 'consume_daily_quota'), 'must not reserve daily after a monthly refusal');
-  assert(!rpcCalls.some((c) => c.name.startsWith('refund_')), 'nothing was taken, so nothing to refund');
+  assert(!rpcCalls.some((c) => c.name === 'settle_tutor_session'));
+  assertEquals(deletes, ['session-1']);
 });
 
-Deno.test('a failed session insert refunds too', async () => {
+Deno.test('a second open session is refused with 409, not charged', async () => {
+  const { supabase, rpcCalls, deletes } = makeStub({ reserve: 'active_session' });
+  const res = await handleStart(supabase, 'user-1', request, env);
+  assertEquals(res.status, 409);
+  assertEquals(res.body.code, 'TUTOR_SESSION_ACTIVE');
+  assert(!rpcCalls.some((c) => c.name === 'settle_tutor_session'));
+  assertEquals(deletes, ['session-1']);
+});
+
+Deno.test('a failed session insert happens before any money moves', async () => {
   const { supabase, rpcCalls } = makeStub({ sessionInsertFails: true });
   const res = await handleStart(supabase, 'user-1', request, env);
   assertEquals(res.status, 500);
-  assert(rpcCalls.some((c) => c.name === 'refund_daily_quota'));
-  assert(rpcCalls.some((c) => c.name === 'refund_monthly_quota'));
+  assert(!rpcCalls.some((c) => c.name === 'reserve_tutor_session'), 'no row, no reservation');
+  assert(!rpcCalls.some((c) => c.name === 'settle_tutor_session'), 'nothing to refund');
 });
 
 Deno.test('a successful start never returns the instructions or the voice', async () => {

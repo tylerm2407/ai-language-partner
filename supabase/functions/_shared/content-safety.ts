@@ -1,12 +1,21 @@
-﻿/**
+/**
  * Content safety validation for AI-generated content.
  * All AI outputs must pass through validateContent() before display to learners.
- * Required by COPPA compliance and CLAUDE.md architecture rules.
+ * Required by the product's learner-safety architecture rules.
  *
- * This is a first-pass deterministic safety net using regex pattern matching.
- * It catches obviously unsafe content — not a replacement for human review
- * or AI-based moderation on sensitive edge cases.
+ * The deterministic pass catches high-confidence violations without a network
+ * dependency. AI-generated text additionally runs through OpenAI moderation.
+ *
+ * Moderation FAILS OPEN by product decision (2026-09-11): if OpenAI is down,
+ * slow, or the key is missing, the text still ships on the strength of the
+ * deterministic pass and the result is marked `degraded` so the outage is
+ * visible in logs. Failing closed turned every AI feature into canned
+ * fallback text for the duration of any OpenAI incident, which is a worse
+ * learner outcome than a briefly unmoderated reply that the regex pass has
+ * already screened.
  */
+
+import { providerFetch, PROVIDER_TIMEOUT_MS } from './provider-fetch.ts';
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -53,16 +62,35 @@ const MULTILINGUAL_PROFANITY_PATTERNS = [
   /\b(caralho|porra|foda|merda|puta|buceta|viado)\b/i,
 ];
 
-/** Violence-related patterns */
+/**
+ * High-confidence threats and self-harm directives in every language the app
+ * teaches. Keep this list contextual: broad nouns such as `suicide`, `bomb`,
+ * or `sex` incorrectly reject legitimate lessons (for example, a discussion
+ * of suicide prevention). The model moderation pass handles nuanced prose.
+ */
 const VIOLENCE_PATTERNS = [
-  /\b(kill|murder|stab|shoot|bomb|suicide|self[- ]?harm|massacre|slaughter|rape)\b/i,
-  /\b(terrorist|terrorism|execution|torture|assault)\b/i,
+  // English
+  /\b(?:i(?:'ll|\s+will|\s+am going to)|we(?:'ll|\s+will|\s+are going to))\s+(?:kill|murder|stab|shoot)\s+(?:you|him|her|them)\b/i,
+  /\b(?:kill|hurt|shoot|stab|hang)\s+yourself\b/i,
+  // Spanish, French, German, Italian, Portuguese
+  /\b(?:te voy a matar|voy a matarte|m[aá]tate)\b/i,
+  /\b(?:je vais te tuer|tue[- ]toi)\b/i,
+  /\b(?:ich werde dich t[oö]ten|bring dich um)\b/i,
+  /\b(?:ti uccider[oò]|ammazzati|ucciditi)\b/i,
+  /\b(?:vou te matar|vou matar voc[eê]|mate[- ]se)\b/i,
+  // Russian, Japanese, Korean, Chinese (word boundaries do not work here).
+  /(?:я\s+тебя\s+убью|убей\s+себя)/i,
+  /(?:あなたを殺す|殺してやる|死ね)/,
+  // `죽어` alone is a common idiom stem (배고파 죽어요 = "I'm starving"), so it
+  // only counts with an imperative ending.
+  /(?:너를\s*죽이겠|죽여\s*버릴|죽어라|죽어\s*버려)/,
+  /(?:我要杀你|杀了你|去死)/,
 ];
 
 /** Sexual content patterns */
 const SEXUAL_PATTERNS = [
-  /\b(porn|pornography|nude|naked|sex(?:ual|ting)|genitals|orgasm|masturbat)\b/i,
-  /\b(erotic|xxx|nsfw)\b/i,
+  /\b(?:send|show|share|trade|buy|sell)\s+(?:me\s+|your\s+|some\s+)?(?:nudes?|porn(?:ography)?)\b/i,
+  /\b(?:explicit sex|sexual roleplay|erotic roleplay)\b/i,
 ];
 
 /** Hate speech / discriminatory patterns */
@@ -79,10 +107,38 @@ const URL_PATTERN = /https?:\/\/[^\s)>\]]+/gi;
 
 /** Stricter patterns applied when the user is a minor */
 const MINOR_EXTRA_PATTERNS = [
-  /\b(drug|alcohol|beer|wine|vodka|whiskey|marijuana|weed|cocaine|heroin|meth)\b/i,
-  /\b(gambling|casino|bet(?:ting)?|vaping|vape|cigarette|smoking)\b/i,
-  /\b(dating|hookup|tinder|grindr)\b/i,
+  // `drink` on its own rejects A1 staples ("let's drink coffee", "you can
+  // drink water here"), so it must name alcohol to count.
+  /\b(?:let(?:'s| us)|you should|you can)\s+(?:get drunk|drink\s+(?:alcohol|beer|wine|vodka|whisky|whiskey|tequila|rum|gin|a beer|some beer|some wine)|gamble|place a bet|vape|smoke)\b/i,
+  /\b(?:buy|score|sell)\s+(?:some\s+)?(?:cocaine|heroin|meth|marijuana|weed)\b/i,
+  /\b(?:join me|meet me|find me)\s+(?:on|at)\s+(?:tinder|grindr|a casino)\b/i,
 ];
+
+const MODERATION_URL = 'https://api.openai.com/v1/moderations';
+const MODERATION_MODEL = 'omni-moderation-latest';
+const MAX_MODERATION_CHARS = 20_000;
+
+/**
+ * `required` and `best-effort` now behave the same at the outage boundary:
+ * both run moderation and both degrade to the deterministic verdict when the
+ * provider cannot answer. The two names survive so call sites still document
+ * which texts are model output (`required`) and which are learner input
+ * (`best-effort`); only `skip` changes behaviour.
+ */
+export type ModerationMode = 'required' | 'best-effort' | 'skip';
+
+type ModerationVerdict = {
+  flagged: boolean;
+  categories: string[];
+};
+
+function moderationApiKeyFromEnvironment(): string | null {
+  const runtime = globalThis as typeof globalThis & {
+    Deno?: { env?: { get: (name: string) => string | undefined } };
+    process?: { env?: Record<string, string | undefined> };
+  };
+  return runtime.Deno?.env?.get('OPENAI_KEY') ?? runtime.process?.env?.OPENAI_KEY ?? null;
+}
 
 // ─── CEFR Level Heuristics ──────────────────────────────────────────
 
@@ -129,7 +185,7 @@ function cefrIndex(level: string): number {
  * Uses deterministic regex matching for speed and predictability.
  *
  * @param content - The AI-generated text to validate.
- * @param options - Optional flags. Set `isMinor: true` for stricter filtering (COPPA).
+ * @param options - Optional flags. Set `isMinor: true` for the minor-safe policy.
  * @returns A `ContentSafetyResult` indicating whether content is safe and any flags raised.
  */
 export function validateContent(
@@ -252,6 +308,51 @@ export function checkLevel(content: string, targetLevel: string): LevelCheckResu
 export interface SafetyCheck {
   safe: boolean;
   reasons: string[];
+  /** True when model moderation could not run and only the deterministic
+   *  pass vouched for the text. */
+  degraded?: boolean;
+}
+
+async function moderateContent(content: string, apiKey: string): Promise<ModerationVerdict | null> {
+  try {
+    const inputs: string[] = [];
+    for (let offset = 0; offset < content.length; offset += MAX_MODERATION_CHARS) {
+      inputs.push(content.slice(offset, offset + MAX_MODERATION_CHARS));
+    }
+    if (inputs.length === 0) inputs.push('');
+
+    const response = await providerFetch(
+      MODERATION_URL,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: MODERATION_MODEL,
+          input: inputs.length === 1 ? inputs[0] : inputs,
+        }),
+      },
+      { provider: 'openai-moderation', timeoutMs: PROVIDER_TIMEOUT_MS.textShort },
+    );
+    if (!response.ok) return null;
+
+    const body = await response.json();
+    const results = body?.results;
+    if (!Array.isArray(results) || results.length !== inputs.length) return null;
+    if (results.some((result) => typeof result?.flagged !== 'boolean')) return null;
+
+    const flagged = results.some((result) => result.flagged === true);
+    const categories = [...new Set(results.flatMap((result) =>
+      Object.entries(result.categories ?? {})
+        .filter(([, categoryFlagged]) => categoryFlagged === true)
+        .map(([category]) => category)
+    ))];
+    return { flagged, categories };
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -261,11 +362,60 @@ export interface SafetyCheck {
  */
 export async function validateContentSafety(
   content: string,
-  options?: { userAge?: number; language?: string; fn?: string },
+  options?: {
+    userAge?: number;
+    language?: string;
+    fn?: string;
+    /** Required for model output, best-effort for user input, skip for trusted fallback text. */
+    moderation?: ModerationMode;
+    /** Test seam and explicit credential for isolated callers. */
+    moderationApiKey?: string | null;
+  },
 ): Promise<SafetyCheck> {
-  const isMinor = options?.userAge != null && options.userAge < 18;
+  // The product does not currently collect verified age. Unknown users receive
+  // the safer policy; an explicit adult age is the only opt-out.
+  const isMinor = options?.userAge == null || options.userAge < 18;
   const result = validateContent(content, { isMinor });
-  return { safe: result.safe, reasons: result.flags };
+  if (!result.safe) return { safe: false, reasons: result.flags };
+
+  const mode = options?.moderation ?? 'best-effort';
+  if (mode === 'skip') return { safe: true, reasons: [] };
+
+  const apiKey = options?.moderationApiKey === undefined
+    ? moderationApiKeyFromEnvironment()
+    : options.moderationApiKey;
+  if (!apiKey) {
+    return degradedResult(options?.fn, mode, 'missing_credential');
+  }
+
+  const verdict = await moderateContent(content, apiKey);
+  if (verdict === null) {
+    return degradedResult(options?.fn, mode, 'provider_unavailable');
+  }
+
+  return verdict.flagged
+    ? {
+        safe: false,
+        reasons: verdict.categories.length > 0
+          ? verdict.categories.map((category) => `moderation:${category}`)
+          : ['moderation:flagged'],
+      }
+    : { safe: true, reasons: [] };
+}
+
+/**
+ * The fail-open verdict. Logged as a structured event every time so an
+ * outage is countable in the function logs rather than silent.
+ */
+function degradedResult(fn: string | undefined, mode: ModerationMode, cause: string): SafetyCheck {
+  console.log(JSON.stringify({
+    evt: 'moderation_degraded',
+    fn: fn ?? 'unknown',
+    mode,
+    cause,
+    ts: new Date().toISOString(),
+  }));
+  return { safe: true, reasons: [], degraded: true };
 }
 
 export function sanitizeContent(content: string): string {

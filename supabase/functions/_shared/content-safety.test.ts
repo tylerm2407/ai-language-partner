@@ -4,23 +4,20 @@
 import { assert, assertEquals } from 'https://deno.land/std@0.168.0/testing/asserts.ts';
 import { validateContentSafety } from './content-safety.ts';
 
-// The deterministic pass is offline and should run without ANTHROPIC_API_KEY.
-// If the env var IS set, these tests still work — the LLM pass only runs
-// after the deterministic pass is clean.
+const offline = { moderation: 'skip' as const };
 
 Deno.test('clean English text passes', async () => {
   const res = await validateContentSafety('Hello, how are you today?', {
     language: 'en',
+    ...offline,
   });
-  // LLM pass may or may not run depending on env; deterministic is definitely clean.
-  // Either way, safe:true is the expected outcome for obviously clean text.
-  // If the LLM errors, fail-open still returns safe:true.
   assertEquals(res.safe, true);
 });
 
 Deno.test('deterministic: profanity is rejected (English)', async () => {
   const res = await validateContentSafety('this is fucking great', {
     language: 'en',
+    ...offline,
   });
   assertEquals(res.safe, false);
   assert(res.reasons.length > 0);
@@ -29,6 +26,7 @@ Deno.test('deterministic: profanity is rejected (English)', async () => {
 Deno.test('deterministic: Spanish profanity is rejected', async () => {
   const res = await validateContentSafety('qué mierda es esto', {
     language: 'es',
+    ...offline,
   });
   assertEquals(res.safe, false);
 });
@@ -36,6 +34,7 @@ Deno.test('deterministic: Spanish profanity is rejected', async () => {
 Deno.test('deterministic: self-harm phrase is rejected', async () => {
   const res = await validateContentSafety('you should kill yourself', {
     language: 'en',
+    ...offline,
   });
   assertEquals(res.safe, false);
 });
@@ -45,19 +44,28 @@ Deno.test('deterministic: diacritic normalization catches accented variants', as
   // after NFD normalization.
   const res = await validateContentSafety('no jodér con eso', {
     language: 'es',
+    ...offline,
   });
   assertEquals(res.safe, false);
 });
 
-Deno.test('deterministic: minors list adds stricter rejections', async () => {
-  const adult = await validateContentSafety('he drank a beer', { language: 'en' });
-  const kid = await validateContentSafety('he drank a beer', { language: 'en', userAge: 12 });
-  // Adult passes deterministic (LLM may flag; but if no API key, still passes).
-  // Kid should hit the minors blocklist.
-  assertEquals(kid.safe, false);
-  // Don't assert on adult here since LLM pass could flag it; the minors
-  // contrast is the load-bearing invariant.
-  assert(adult.safe || !adult.safe);
+Deno.test('unknown age defaults to the minor-safe policy without blocking educational mentions', async () => {
+  const educational = await validateContentSafety('We learned the word beer today.', {
+    language: 'en',
+    ...offline,
+  });
+  const unknownAge = await validateContentSafety("Let's gamble at a casino", {
+    language: 'en',
+    ...offline,
+  });
+  const adult = await validateContentSafety("Let's gamble at a casino", {
+    language: 'en',
+    userAge: 21,
+    ...offline,
+  });
+  assertEquals(educational.safe, true);
+  assertEquals(unknownAge.safe, false);
+  assertEquals(adult.safe, true);
 });
 
 Deno.test('short tokens require word boundaries (no false positive)', async () => {
@@ -65,27 +73,141 @@ Deno.test('short tokens require word boundaries (no false positive)', async () =
   // positives are guarded against by the word-boundary regex.
   const res = await validateContentSafety('the peacock spread its tail', {
     language: 'en',
+    ...offline,
   });
   // "peacock" contains "cock" but with non-boundary prefix → should be safe.
   assertEquals(res.safe, true);
 });
 
-Deno.test('fail-open on simulated LLM outage', async () => {
-  // Point the Anthropic endpoint at a guaranteed-unreachable host by
-  // temporarily overriding the API key so the HTTP call still attempts.
-  // Since we can't easily monkey-patch fetch in a shared module, we instead
-  // verify that when the deterministic pass is clean and there's NO api key,
-  // we return safe:true (which is the LLM-skipped path, equivalent to fail-open).
-  const prev = Deno.env.get('ANTHROPIC_API_KEY');
+Deno.test('multilingual threats are rejected locally in every supported non-English language', async () => {
+  for (const [language, text] of [
+    ['es', 'Te voy a matar.'],
+    ['fr', 'Je vais te tuer.'],
+    ['de', 'Ich werde dich töten.'],
+    ['it', 'Ti ucciderò.'],
+    ['pt', 'Vou te matar.'],
+    ['ru', 'Я тебя убью.'],
+    ['ja', 'あなたを殺す。'],
+    ['ko', '너를 죽이겠어.'],
+    ['zh', '我要杀你。'],
+  ]) {
+    const res = await validateContentSafety(text, { language, ...offline });
+    assertEquals(res.safe, false, `${language} threat should be rejected`);
+  }
+});
+
+Deno.test('educational discussion is not a deterministic violence false positive', async () => {
+  const res = await validateContentSafety('We are studying suicide prevention.', {
+    language: 'en',
+    ...offline,
+  });
+  assertEquals(res.safe, true);
+});
+
+Deno.test('required moderation fails OPEN when its credential is unavailable', async () => {
+  // Product decision 2026-09-11: an OpenAI outage must not turn every AI
+  // feature into canned text. The deterministic pass still vouches for the
+  // text and the verdict is marked degraded so the outage is countable.
+  const res = await validateContentSafety('A clean generated sentence.', {
+    language: 'en',
+    moderation: 'required',
+    moderationApiKey: null,
+  });
+  assertEquals(res, { safe: true, reasons: [], degraded: true });
+});
+
+Deno.test('required moderation fails OPEN when the provider errors', async () => {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = (() => Promise.resolve(new Response('down', { status: 503 }))) as typeof fetch;
   try {
-    Deno.env.delete('ANTHROPIC_API_KEY');
-    // re-import? Deno caches the module. We rely on the runtime check inside
-    // llmCheck(): no API key ⇒ skip ⇒ safe:true.
-    const res = await validateContentSafety('perfectly fine sentence', {
+    const res = await validateContentSafety('A clean generated sentence.', {
       language: 'en',
+      moderation: 'required',
+      moderationApiKey: 'sk-test',
     });
-    assertEquals(res.safe, true);
+    assertEquals(res, { safe: true, reasons: [], degraded: true });
   } finally {
-    if (prev !== undefined) Deno.env.set('ANTHROPIC_API_KEY', prev);
+    globalThis.fetch = realFetch;
+  }
+});
+
+Deno.test('the deterministic pass still rejects even when moderation is down', async () => {
+  const res = await validateContentSafety('kill yourself', {
+    language: 'en',
+    moderation: 'required',
+    moderationApiKey: null,
+  });
+  assertEquals(res.safe, false);
+});
+
+Deno.test('minor policy: ordinary drinking is not alcohol', async () => {
+  for (const text of ["Let's drink coffee.", 'You can drink water here.', 'Let us drink some tea.']) {
+    const res = await validateContentSafety(text, { language: 'en', ...offline });
+    assertEquals(res.safe, true, text);
+  }
+  const res = await validateContentSafety("Let's drink beer tonight.", { language: 'en', ...offline });
+  assertEquals(res.safe, false);
+});
+
+Deno.test('Korean idiom stems are not death threats', async () => {
+  const idiom = await validateContentSafety('배고파 죽어요.', { language: 'ko', ...offline });
+  assertEquals(idiom.safe, true);
+  const threat = await validateContentSafety('죽어라!', { language: 'ko', ...offline });
+  assertEquals(threat.safe, false);
+});
+
+Deno.test('best-effort moderation reports degradation without rejecting user text', async () => {
+  const res = await validateContentSafety('A clean user-authored sentence.', {
+    language: 'en',
+    moderation: 'best-effort',
+    moderationApiKey: null,
+  });
+  assertEquals(res, { safe: true, reasons: [], degraded: true });
+});
+
+Deno.test('provider moderation categories are preserved and the supported model is requested', async () => {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = ((input: string | URL | Request, init?: RequestInit) => {
+    assertEquals(String(input), 'https://api.openai.com/v1/moderations');
+    const request = JSON.parse(String(init?.body));
+    assertEquals(request.model, 'omni-moderation-latest');
+    assertEquals(request.input, 'nuanced generated output');
+    return Promise.resolve(new Response(JSON.stringify({
+      results: [{ flagged: true, categories: { violence: true, sexual: false } }],
+    }), { status: 200 }));
+  }) as typeof fetch;
+  try {
+    const res = await validateContentSafety('nuanced generated output', {
+      moderation: 'required',
+      moderationApiKey: 'sk-test',
+    });
+    assertEquals(res, { safe: false, reasons: ['moderation:violence'] });
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+Deno.test('long generated content is moderated in full rather than silently truncated', async () => {
+  const realFetch = globalThis.fetch;
+  const longText = 'a'.repeat(20_001);
+  globalThis.fetch = ((_input: string | URL | Request, init?: RequestInit) => {
+    const request = JSON.parse(String(init?.body));
+    assert(Array.isArray(request.input));
+    assertEquals(request.input.map((part: string) => part.length), [20_000, 1]);
+    return Promise.resolve(new Response(JSON.stringify({
+      results: [
+        { flagged: false, categories: {} },
+        { flagged: true, categories: { 'self-harm': true } },
+      ],
+    }), { status: 200 }));
+  }) as typeof fetch;
+  try {
+    const res = await validateContentSafety(longText, {
+      moderation: 'required',
+      moderationApiKey: 'sk-test',
+    });
+    assertEquals(res, { safe: false, reasons: ['moderation:self-harm'] });
+  } finally {
+    globalThis.fetch = realFetch;
   }
 });

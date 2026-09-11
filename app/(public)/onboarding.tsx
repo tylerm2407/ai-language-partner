@@ -18,7 +18,6 @@ import {
   markOnboardingComplete,
   updateOnboardingChecklist,
   setAvatarKind,
-  incrementXpIdempotent,
 } from '../../lib/supabase-queries';
 import { useAppStore } from '../../stores/useAppStore';
 import { LessonRunner, type LessonResult } from '../../components/lesson/LessonRunner';
@@ -304,21 +303,6 @@ export default function OnboardingScreen() {
       });
       await markOnboardingComplete(userId);
 
-      // The XP the learner earned in the pre-auth trial. The sign-up screen
-      // promised it by name, so it has to land — but it must not block the
-      // flush: a failure here costs the learner a number, while a throw would
-      // cost them the whole profile write and strand them back in onboarding.
-      //
-      // Keyed on the trial's completion timestamp, which is stable across
-      // retries of the same draft, so the idempotency guard (migration 046)
-      // makes a re-run of this flush a no-op rather than a second award.
-      if (draft.trial && draft.trial.xpEarned > 0) {
-        await incrementXpIdempotent(
-          draft.trial.xpEarned,
-          `trial-lesson:${draft.trial.completedAt}`,
-        ).catch((err) => console.error('[onboarding] trial XP award failed:', err));
-      }
-
       await clearPendingOnboarding();
       await loadUserData(userId);
 
@@ -386,6 +370,13 @@ export default function OnboardingScreen() {
         setFlushing(true);
         try {
           await writeProfile(user.id, pending);
+          trackEvent('onboarding_completed', {
+            language: pending.targetLanguage ?? DEFAULT_LANGUAGE,
+            band: pending.level ?? DEFAULT_LEVEL,
+            count: Math.round((Date.now() - pending.startedAt) / 1000),
+            source: 'post_signup_flush',
+            outcome: 'profile_persisted',
+          });
           return;
         } catch (err: unknown) {
           if (cancelled) return;
@@ -455,6 +446,8 @@ export default function OnboardingScreen() {
           language: targetLanguage,
           band: level,
           count: Math.round((Date.now() - (startedAt ?? Date.now())) / 1000),
+          source: 'authenticated',
+          outcome: 'profile_persisted',
         });
         return;
       }
@@ -465,14 +458,14 @@ export default function OnboardingScreen() {
       setCompletedAt(stamp);
       await savePendingOnboarding({ ...draft, completedAt: stamp }, startedAt);
       haptic('complete');
-      // The pre-auth path completes onboarding but has no account yet, so the
-      // profile write happens later on the flush. This is still the end of the
-      // onboarding funnel — the sign-up that follows is its own step, and
-      // conflating them would hide learners lost between the two.
-      trackEvent('onboarding_completed', {
+      // This is durable only on the device. The authoritative completion fires
+      // after writeProfile succeeds on the post-signup flush, making the loss
+      // between draft, account creation, and server persistence measurable.
+      trackEvent('onboarding_draft_saved', {
         language: targetLanguage,
         band: level,
         count: Math.round((Date.now() - (startedAt ?? Date.now())) / 1000),
+        outcome: 'local_persisted',
       });
       router.replace('/(public)/auth');
     } catch (err: unknown) {
@@ -499,8 +492,8 @@ export default function OnboardingScreen() {
    * into the account on the pending draft: nothing about this run exists
    * server-side, because there is no account to attach it to yet.
    *
-   * XP is taken from the runner rather than from TRIAL_LESSON_XP so the number
-   * on the next screen is the one the celebration just showed.
+   * The score is retained locally so the sign-up screen can show the concrete
+   * lesson result that will be saved with the new account.
    */
   const handleTrialComplete = useCallback(async (result: LessonResult) => {
     setTrial({
@@ -637,9 +630,13 @@ export default function OnboardingScreen() {
             {trial ? 'Nice work.' : 'Ready when you are.'}
           </Text>
           <Text style={{ fontFamily: type.ui, fontSize: 14, lineHeight: 20, color: c.muted, textAlign: 'center' }}>
-            {trial
-              ? `That was your first ${languageName} lesson. Create an account to keep it — otherwise it disappears when you close the app.`
-              : `Create an account to save your ${languageName} setup and pick up where you left off.`}
+            {user
+              ? trial
+                ? `That was your first ${languageName} lesson. Save this setup to your account and keep learning.`
+                : `Save your ${languageName} setup to your account and pick up where you left off.`
+              : trial
+                ? `That was your first ${languageName} lesson. Create an account to keep it — otherwise it disappears when you close the app.`
+                : `Create an account to save your ${languageName} setup and pick up where you left off.`}
           </Text>
         </Animated.View>
 
@@ -672,7 +669,9 @@ export default function OnboardingScreen() {
 
         <Animated.View entering={enter(3)}>
           <SlabCard style={{ gap: 6 }}>
-            <Text style={[styles.eyebrow, { fontFamily: type.uiHeavy, color: c.green }]}>Signing up saves</Text>
+            <Text style={[styles.eyebrow, { fontFamily: type.uiHeavy, color: c.green }]}>
+              {user ? 'Saving keeps' : 'Signing up saves'}
+            </Text>
             <Text style={{ fontFamily: type.uiBold, fontSize: 14, lineHeight: 20, color: c.ink }}>
               {trial ? 'This lesson · your' : 'Your'} {languageName} course and level · your progress, from today
             </Text>

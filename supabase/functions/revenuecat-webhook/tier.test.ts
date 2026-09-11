@@ -103,17 +103,9 @@ Deno.test('classifyEvent: expiry revokes access', () => {
   });
 });
 
-Deno.test('classifyEvent: BILLING_ISSUE currently revokes access immediately', () => {
-  // Documents CURRENT behaviour, and it is worth questioning: BILLING_ISSUE
-  // fires at the START of a billing problem, while the store grace period
-  // may still entitle the user. See LAUNCH-READINESS-AUDIT P1-3 — the
-  // suggested change is to let EXPIRATION do the downgrade and treat this as
-  // a flag only. Change this test deliberately if that lands.
-  assertEquals(classifyEvent('BILLING_ISSUE', ['premium'], null), {
-    tier: 'starter',
-    isActive: false,
-    cancelAtPeriodEnd: false,
-  });
+Deno.test('classifyEvent: billing and pause signals do not revoke paid access', () => {
+  assertEquals(classifyEvent('BILLING_ISSUE', ['premium'], null), null);
+  assertEquals(classifyEvent('SUBSCRIPTION_PAUSED', ['premium'], null), null);
 });
 
 Deno.test('classifyEvent: TEST and TRANSFER change nothing', () => {

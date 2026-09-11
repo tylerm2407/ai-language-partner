@@ -8,6 +8,8 @@
  * exactly like a working feature and is the entire point of the feature not
  * working.
  */
+import { fetchBooksRankedByCoverage } from './supabase-queries';
+
 const mockRpc = jest.fn();
 const mockIn = jest.fn();
 
@@ -17,8 +19,6 @@ jest.mock('./supabase', () => ({
     from: () => ({ select: () => ({ in: (...a: unknown[]) => mockIn(...a) }) }),
   },
 }));
-
-import { fetchBooksRankedByCoverage } from './supabase-queries';
 
 function bookRow(id: string, title: string) {
   return {

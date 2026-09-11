@@ -50,8 +50,15 @@ export const ACTIVE_EVENTS = new Set([
   'NON_RENEWING_PURCHASE',
 ]);
 
-/** Events that mean "access has ended". */
-export const INACTIVE_EVENTS = new Set(['EXPIRATION', 'SUBSCRIPTION_PAUSED', 'BILLING_ISSUE']);
+/** Events that prove access has ended. RevenueCat emits EXPIRATION when a
+ * grace period actually ends and when a paused subscription reaches the end
+ * of its paid term. BILLING_ISSUE and SUBSCRIPTION_PAUSED are signals to
+ * reconcile provider state, not authority to revoke immediately. */
+export const INACTIVE_EVENTS = new Set(['EXPIRATION']);
+
+/** Non-terminal lifecycle signals that must not change entitlement by
+ * themselves. A reconciler may persist their status separately. */
+export const NON_TERMINAL_EVENTS = new Set(['BILLING_ISSUE', 'SUBSCRIPTION_PAUSED']);
 
 /** Events acknowledged without touching subscription state at all.
  *  TRANSFER moves entitlements between users; TEST is the dashboard's
@@ -92,7 +99,7 @@ export function classifyEvent(
   productId: string | null,
   reason: string | null = null,
 ): TierDecision | null {
-  if (IGNORED_EVENTS.has(type)) return null;
+  if (IGNORED_EVENTS.has(type) || NON_TERMINAL_EVENTS.has(type)) return null;
 
   // A revocation is inactive NOW, whatever the event type says about
   // auto-renew. Checked before the CANCELLATION branch below, which would

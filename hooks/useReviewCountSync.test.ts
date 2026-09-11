@@ -13,6 +13,12 @@
  * (which would query with `undefined` and count nobody's cards).
  */
 
+import { createElement } from 'react';
+import TestRenderer, { act } from 'react-test-renderer';
+import * as queries from '../lib/supabase-queries';
+import { useAppStore } from '../stores/useAppStore';
+import { useReviewCountSync } from './useReviewCountSync';
+
 let mockFocusCallback: (() => void) | null = null;
 let mockUser: { id: string } | null = { id: 'u1' };
 
@@ -33,12 +39,6 @@ jest.mock('../lib/supabase-queries', () => ({
   fetchHasCompletedLesson: jest.fn(),
   fetchHasAiConversation: jest.fn(),
 }));
-
-import { createElement } from 'react';
-import TestRenderer, { act } from 'react-test-renderer';
-import * as queries from '../lib/supabase-queries';
-import { useAppStore } from '../stores/useAppStore';
-import { useReviewCountSync } from './useReviewCountSync';
 
 /** Mount the hook on a component that renders nothing. */
 function mount() {

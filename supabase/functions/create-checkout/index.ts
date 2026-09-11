@@ -4,10 +4,19 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import Stripe from 'https://esm.sh/stripe@13.0.0?target=deno';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, corsResponse } from '../_shared/cors.ts';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
+import {
+  CHECKOUT_CANCEL_URL,
+  CHECKOUT_SUCCESS_URL,
+  customerSearchQuery,
+  resolveCustomerOwnership,
+} from './customer-ownership.ts';
 
 const STRIPE_SECRET_KEY = Deno.env.get('STRIPE_SECRET_KEY');
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 // Price IDs — set these after creating products in Stripe Dashboard
 const PRICE_IDS: Record<string, string> = {
@@ -20,11 +29,7 @@ const PRICE_IDS: Record<string, string> = {
 };
 
 interface CheckoutRequest {
-  userId: string;
-  email: string;
   priceKey: string;
-  successUrl?: string;
-  cancelUrl?: string;
 }
 
 serve(async (req: Request) => {
@@ -55,26 +60,7 @@ serve(async (req: Request) => {
       httpClient: Stripe.createFetchHttpClient(),
     });
 
-    const { userId, priceKey, successUrl, cancelUrl } = (await req.json()) as CheckoutRequest;
-    // The Stripe customer is found by the AUTHENTICATED email, never by a
-    // body field: a client-supplied email let a caller attach their new
-    // subscription to whichever existing Stripe customer had that address —
-    // the victim's invoices, billing portal and saved payment methods.
-    const email = authUser.email;
-    if (!email) {
-      return new Response(
-        JSON.stringify({ error: 'Account has no email address' }),
-        { status: 400, headers }
-      );
-    }
-
-    if (userId !== authUser.userId) {
-      return new Response(
-        JSON.stringify({ error: 'Forbidden' }),
-        { status: 403, headers }
-      );
-    }
-
+    const { priceKey } = (await req.json()) as CheckoutRequest;
     const authenticatedUserId = authUser.userId;
 
     const priceId = PRICE_IDS[priceKey];
@@ -85,27 +71,67 @@ serve(async (req: Request) => {
       );
     }
 
-    // Find or create Stripe customer
-    const customers = await stripe.customers.list({ email, limit: 1 });
-    let customerId: string;
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const { data: subscriptionRow, error: mappingReadError } = await supabase
+      .from('subscriptions')
+      .select('stripe_customer_id')
+      .eq('user_id', authenticatedUserId)
+      .maybeSingle();
+    if (mappingReadError) throw new Error('billing customer mapping lookup failed');
 
-    if (customers.data.length > 0) {
-      customerId = customers.data[0].id;
+    const mappedId = subscriptionRow?.stripe_customer_id as string | null | undefined;
+    const mappedCustomer = mappedId
+      ? await stripe.customers.retrieve(mappedId)
+      : null;
+    if (mappedCustomer?.deleted) {
+      throw new Error('mapped Stripe customer was deleted; manual reconciliation required');
+    }
+
+    const discovered = mappedCustomer
+      ? []
+      : (await stripe.customers.search({
+        query: customerSearchQuery(authenticatedUserId),
+        limit: 2,
+      })).data;
+
+    const ownership = resolveCustomerOwnership(
+      authenticatedUserId,
+      mappedCustomer,
+      discovered,
+    );
+    if (ownership.kind === 'conflict') {
+      throw new Error('Stripe customer ownership conflict; manual reconciliation required');
+    }
+
+    let customerId: string;
+    if (ownership.kind === 'owned') {
+      customerId = ownership.customerId;
     } else {
       const customer = await stripe.customers.create({
-        email,
+        email: authUser.email || undefined,
         metadata: { supabase_user_id: authenticatedUserId },
+      }, {
+        idempotencyKey: 'fluenci-customer-' + authenticatedUserId,
       });
       customerId = customer.id;
     }
 
+    const { error: mappingWriteError } = await supabase
+      .from('subscriptions')
+      .upsert({
+        user_id: authenticatedUserId,
+        stripe_customer_id: customerId,
+      }, { onConflict: 'user_id' });
+    if (mappingWriteError) throw new Error('billing customer mapping write failed');
+
     // Create checkout session
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
+      client_reference_id: authenticatedUserId,
       mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: successUrl ?? 'languageai://subscription-success',
-      cancel_url: cancelUrl ?? 'languageai://subscription-cancel',
+      success_url: CHECKOUT_SUCCESS_URL,
+      cancel_url: CHECKOUT_CANCEL_URL,
       metadata: { supabase_user_id: authenticatedUserId },
       subscription_data: {
         metadata: { supabase_user_id: authenticatedUserId },

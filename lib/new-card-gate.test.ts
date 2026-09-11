@@ -11,14 +11,14 @@
 // plan-pricing pulls in lib/purchases, which loads the RevenueCat native
 // module. Same treatment as lib/plan-pricing.test.ts — these are pure values,
 // so stubbing the SDK just keeps the module importable under jest.
+import { PLANS, UNLIMITED_NEW_CARDS, isUnlimitedNewCards } from './plans';
+import { STEP_ADDS } from './plan-pricing';
+
 jest.mock('react-native-purchases', () => ({
   __esModule: true,
   default: {},
   LOG_LEVEL: { WARN: 1 },
 }));
-
-import { PLANS, UNLIMITED_NEW_CARDS, isUnlimitedNewCards } from './plans';
-import { STEP_ADDS } from './plan-pricing';
 
 describe('new-card allowance ladder', () => {
   it('gives the free tier a usable but slower allowance, never zero', () => {

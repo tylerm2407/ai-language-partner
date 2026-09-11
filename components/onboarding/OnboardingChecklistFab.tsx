@@ -16,8 +16,8 @@
  * somewhere to play; it can never keep the checklist alive.
  *
  * That separation is the scar tissue from two rounds of the same bug. The
- * first version wrote `xpAwarded` inside an effect that listed `xpAwarded` as a
- * dependency, so the re-render's cleanup cleared both of its timers before
+ * first version wrote completion state inside an effect that listed that state
+ * as a dependency, so the re-render's cleanup cleared both of its timers before
  * either ran. The second still wrote the retirement from inside a 2.5s timer,
  * which any dependency flip — including `useMotion`'s async Reduce Motion read
  * — cancelled for good. Both times the rocket never went away. See the
@@ -41,11 +41,6 @@ import {
 } from '../../hooks/useOnboardingChecklist';
 import { useMotion } from '../../hooks/useMotion';
 import { useAppStore, effectiveTier } from '../../stores/useAppStore';
-import { incrementXpIdempotent } from '../../lib/supabase-queries';
-import {
-  ONBOARDING_COMPLETE_XP,
-  ONBOARDING_COMPLETE_XP_KEY,
-} from '../../lib/onboarding-checklist';
 import { radii, spacing, ui2Dark, ui2Light, type Ui2Palette } from '../../config/theme';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
 
@@ -200,7 +195,7 @@ export function OnboardingChecklistFab({ bottomOffset = 100 }: OnboardingCheckli
   });
 
   /**
-   * The celebration: +50 XP, retire, then confetti.
+   * Retire the checklist, then celebrate with confetti.
    *
    * That order is the whole point, and it is the fix for the second time this
    * component failed to retire. The previous version wrote `markCelebrated`
@@ -221,13 +216,6 @@ export function OnboardingChecklistFab({ bottomOffset = 100 }: OnboardingCheckli
    * `celebratingRef` is still a ref rather than state so the once-only guard
    * can never appear in a dependency array.
    *
-   * The XP goes through `incrementXpIdempotent` under a fixed key rather than
-   * through `earnXp`, which mints a random key per call. With a random key the
-   * `client_events` de-dupe protected nothing, and since the dismiss never
-   * landed, every app launch re-ran this and paid out another 50 XP. The stable
-   * key makes the server the guard: a second award is impossible even if every
-   * client-side flag write fails.
-   *
    * `isFocused` matters because the bottom tabs keep Home mounted while it is
    * hidden, so without it the confetti plays behind whatever screen the learner
    * is actually looking at. `completedAt` is already persisted by the time we
@@ -240,18 +228,12 @@ export function OnboardingChecklistFab({ bottomOffset = 100 }: OnboardingCheckli
     if (!celebrationPending || !isFocused || celebratingRef.current) return;
     celebratingRef.current = true;
 
-    incrementXpIdempotent(ONBOARDING_COMPLETE_XP, ONBOARDING_COMPLETE_XP_KEY).catch((err) => {
-      Sentry.captureException(err, {
-        tags: { area: 'onboarding-checklist', op: 'complete-xp' },
-      });
-    });
     haptic('complete');
 
     markCelebrated().catch((err) => {
       // The ref stays set, so this does not retry within the session. It does
       // not need to: `completedAt` is persisted, so the next launch finds the
-      // celebration still pending and tries again — and the XP key means that
-      // retry cannot pay twice.
+      // celebration still pending and tries again.
       Sentry.captureException(err, {
         tags: { area: 'onboarding-checklist', op: 'mark-celebrated' },
       });

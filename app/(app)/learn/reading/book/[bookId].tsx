@@ -16,7 +16,6 @@ import {
   upsertBookProgress,
   addCardFromAnnotation,
   NewCardsCapReachedError,
-  incrementXpIdempotent,
   fetchSubscription,
   type AnnotationCardSource,
 } from '../../../../../lib/supabase-queries';
@@ -27,7 +26,6 @@ import { OfflineDownloadControl } from '../../../../../components/learn/OfflineD
 import { floatingTabBarSpace } from '../../../../../components/navigation/FloatingTabBar';
 import { supabase } from '../../../../../lib/supabase';
 import { loadErrorCopy, saveErrorCopy, type ErrorCopy } from '../../../../../lib/error-copy';
-import { bookXpKey } from '../../../../../lib/offline-queue';
 import { cefrCanDo, cefrAccessibilityLabel } from '../../../../../lib/cefr-labels';
 import type { ReadingBook, BookAnnotation, UserBookProgress, Subscription } from '../../../../../types';
 // `colors` is deliberately NOT imported: it is the fixed DARK palette, and a
@@ -251,15 +249,6 @@ export default function BookDetailScreen() {
         completedAt: new Date().toISOString(),
       });
 
-      // Award XP: wordCount / 10, capped at 500
-      const xpReward = Math.min(500, Math.round(book.wordCount / 10));
-      // One payout per book, ever. `hasCompletedRef` only guards this session,
-      // so re-opening a finished book in a later session paid again through the
-      // non-idempotent `increment_xp`.
-      await incrementXpIdempotent(xpReward, bookXpKey(bookId));
-
-      // The XP above still accrues, but it is a server-side ledger the learner
-      // never sees — so the congratulation names the thing they actually did.
       Alert.alert(
         'Book finished',
         `You read all ${book.wordCount.toLocaleString()} words of "${book.title}".`,
@@ -429,9 +418,9 @@ export default function BookDetailScreen() {
             <View style={{ alignItems: 'center' }}>
               <Ionicons name="star-outline" size={20} color={c.primary} />
               <Body weight="semibold" style={{ marginTop: 4 }}>
-                {Math.min(500, Math.round(book.wordCount / 10))} XP
+                {book.cefrLevel}
               </Body>
-              <Caption size="sm" tone="tertiary">reward</Caption>
+              <Caption size="sm" tone="tertiary">level</Caption>
             </View>
           </View>
         </SlabCard>

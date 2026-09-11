@@ -27,7 +27,7 @@ import {
   staleCutoffIso,
   type ReapableSession,
   type ReaperDeps,
-  type SettleClaim,
+  type SettleOutcome,
 } from './reap.ts';
 
 // ─── Test doubles ─────────────────────────────────────────────────────────
@@ -61,9 +61,7 @@ function session(over: Partial<ReapableSession> = {}): ReapableSession {
 
 interface Calls {
   hangups: string[];
-  claims: { id: string; observed: number }[];
-  refundSeconds: { userId: string; seconds: number }[];
-  refundCents: { userId: string; cents: number }[];
+  settles: { id: string; observed: number; refundSeconds: number; refundCents: number }[];
   transcriptReads: string[];
   analyses: string[];
   writeBacks: { id: string; observed: number }[];
@@ -84,9 +82,7 @@ interface FakeOptions {
    * fake applies `last_heartbeat_at < cutoff` exactly as the SQL does.
    */
   applyCutoff?: boolean;
-  claim?: (id: string) => SettleClaim;
-  refundSecondsError?: string;
-  refundCentsError?: string;
+  settle?: (id: string) => SettleOutcome;
   transcript?: (id: string) => { turns: BufferedTurn[]; available: boolean };
   analyzeThrows?: string;
   alreadyAnalyzed?: string[];
@@ -102,9 +98,7 @@ interface FakeOptions {
 function fakeDeps(opts: FakeOptions = {}): { deps: ReaperDeps; calls: Calls } {
   const calls: Calls = {
     hangups: [],
-    claims: [],
-    refundSeconds: [],
-    refundCents: [],
+    settles: [],
     transcriptReads: [],
     analyses: [],
     writeBacks: [],
@@ -140,21 +134,14 @@ function fakeDeps(opts: FakeOptions = {}): { deps: ReaperDeps; calls: Calls } {
       return Promise.resolve(filtered.slice(0, limit));
     },
 
-    claimSettlement(sessionId, observedSeconds) {
-      calls.claims.push({ id: sessionId, observed: observedSeconds });
-      return Promise.resolve(opts.claim ? opts.claim(sessionId) : 'claimed');
-    },
-
-    refundSeconds(userId, seconds) {
-      calls.refundSeconds.push({ userId, seconds });
-      if (opts.refundSecondsError) return Promise.reject(new Error(opts.refundSecondsError));
-      return Promise.resolve();
-    },
-
-    refundCents(userId, cents) {
-      calls.refundCents.push({ userId, cents });
-      if (opts.refundCentsError) return Promise.reject(new Error(opts.refundCentsError));
-      return Promise.resolve();
+    settle(session, owed) {
+      calls.settles.push({
+        id: session.id,
+        observed: owed.observedSeconds,
+        refundSeconds: owed.refundSeconds,
+        refundCents: owed.refundCents,
+      });
+      return Promise.resolve(opts.settle ? opts.settle(session.id) : 'settled');
     },
 
     readTranscript(sessionId) {
@@ -243,7 +230,7 @@ Deno.test('a live session slipping through the query is refused, not settled', a
   const summary = await reapAbandonedSessions(deps);
 
   assertEquals(summary.scanned, 1);
-  assertEquals(calls.claims.length, 0);
+  assertEquals(calls.settles.length, 0);
   assertEquals(calls.closes.length, 0);
   assertEquals(summary.errors, 1);
 });
@@ -264,59 +251,51 @@ Deno.test('refunds match settlement() exactly', async () => {
   const { deps, calls } = fakeDeps({ rows: [s] });
   const summary = await reapAbandonedSessions(deps);
 
-  assertEquals(calls.claims, [{ id: s.id, observed: expected.observedSeconds }]);
-  assertEquals(calls.refundSeconds, [{ userId: 'user-1', seconds: expected.refundSeconds }]);
-  assertEquals(calls.refundCents, [{ userId: 'user-1', cents: expected.refundCents }]);
+  // One call carries observed time and BOTH refunds: the RPC commits them
+  // together or not at all.
+  assertEquals(calls.settles, [{
+    id: s.id,
+    observed: expected.observedSeconds,
+    refundSeconds: expected.refundSeconds,
+    refundCents: expected.refundCents,
+  }]);
   assertEquals(summary.settled, 1);
-  assertEquals(summary.refundFailures, 0);
 });
 
 Deno.test('a session already settled by the end action is not refunded twice', async () => {
-  const { deps, calls } = fakeDeps({ rows: [session()], claim: () => 'already' });
+  const { deps, calls } = fakeDeps({ rows: [session()], settle: () => 'already' });
   const summary = await reapAbandonedSessions(deps);
 
   assertEquals(summary.alreadySettled, 1);
   assertEquals(summary.settled, 0);
-  assertEquals(calls.refundSeconds.length, 0);
-  assertEquals(calls.refundCents.length, 0);
   // Still closed and still analysed: the money was someone else's job, the
   // learning half is still owed to the learner.
   assertEquals(calls.closes.length, 1);
   assertEquals(calls.writeBacks.length, 1);
 });
 
-Deno.test('a claim that errors leaves the session entirely alone for the next tick', async () => {
-  const { deps, calls } = fakeDeps({ rows: [session()], claim: () => 'error' });
+Deno.test('a row that already carries observed_seconds is not hung up or settled again', async () => {
+  // `end` settled it and wrote observed_seconds; only the learning half is
+  // owed. Hanging up again would be harmless but pointless, and settling again
+  // would only return already_settled.
+  const row = session({ observed_seconds: 300, call_id: 'rtc_done', connected_at: '2026-09-08T10:00:01Z' });
+  const { deps, calls } = fakeDeps({ rows: [row] });
   const summary = await reapAbandonedSessions(deps);
 
-  assertEquals(calls.refundSeconds.length, 0);
+  assertEquals(calls.hangups, []);
+  assertEquals(calls.settles.length, 0);
+  assertEquals(summary.alreadySettled, 1);
+  assertEquals(calls.closes.length, 1);
+  assertEquals(calls.writeBacks.length, 1);
+});
+
+Deno.test('a settlement that errors leaves the session entirely alone for the next tick', async () => {
+  const { deps, calls } = fakeDeps({ rows: [session()], settle: () => 'error' });
+  const summary = await reapAbandonedSessions(deps);
+
   assertEquals(calls.closes.length, 0);
   assertEquals(summary.reaped, 0);
   assertEquals(summary.errors, 1);
-});
-
-Deno.test('a failed refund is counted and does not stop the rest of the settlement', async () => {
-  const { deps, calls } = fakeDeps({
-    rows: [session()],
-    refundSecondsError: 'daily_usage unreachable',
-  });
-  const summary = await reapAbandonedSessions(deps);
-
-  assertEquals(summary.refundFailures, 1);
-  // The monthly cents refund is the one the plans are sold on. A failure of
-  // the daily counter must not skip it.
-  assertEquals(calls.refundCents.length, 1);
-  assertEquals(summary.reaped, 1);
-});
-
-Deno.test('both refunds failing are counted separately', async () => {
-  const { deps } = fakeDeps({
-    rows: [session()],
-    refundSecondsError: 'down',
-    refundCentsError: 'down',
-  });
-  const summary = await reapAbandonedSessions(deps);
-  assertEquals(summary.refundFailures, 2);
 });
 
 Deno.test('elapsed time beyond the grant is clamped, not stored raw', async () => {
@@ -330,12 +309,11 @@ Deno.test('elapsed time beyond the grant is clamped, not stored raw', async () =
   const { deps, calls } = fakeDeps({ rows: [s] });
   const summary = await reapAbandonedSessions(deps);
 
-  assertEquals(calls.claims[0].observed, 600);
+  assertEquals(calls.settles[0].observed, 600);
   assertEquals(calls.closes[0].observed, 600);
   assertEquals(calls.writeBacks[0].observed, 600);
-  // Nothing was unused, so no refund RPC should be issued at all.
-  assertEquals(calls.refundSeconds.length, 0);
-  assertEquals(calls.refundCents.length, 0);
+  // Nothing was unused, so nothing is refunded.
+  assertEquals(calls.settles[0].refundSeconds, 0);
   assertEquals(summary.settled, 1);
 });
 
@@ -356,7 +334,7 @@ Deno.test('a lost buffer skips the analysis but still settles and closes', async
   // The money and the terminal state are unaffected — settlement must never
   // depend on the analysis half succeeding.
   assertEquals(summary.settled, 1);
-  assertEquals(calls.refundCents.length, 1);
+  assertEquals(calls.settles.length, 1);
   assertEquals(summary.reaped, 1);
   // The key is deliberately left for its TTL rather than dropped: if Redis
   // merely blinked, a manual replay is still possible inside the grace window.
@@ -443,11 +421,11 @@ Deno.test('every session is settled before any is analysed', async () => {
   ];
   const { deps } = fakeDeps({ rows });
 
-  const claim = deps.claimSettlement.bind(deps);
+  const settle = deps.settle.bind(deps);
   const analyze = deps.analyze.bind(deps);
-  deps.claimSettlement = (id, o) => {
-    order.push(`settle:${id}`);
-    return claim(id, o);
+  deps.settle = (s, o) => {
+    order.push(`settle:${s.id}`);
+    return settle(s, o);
   };
   deps.analyze = (s, t) => {
     order.push(`analyze:${s.id}`);
@@ -468,9 +446,9 @@ Deno.test('one session throwing does not abort the batch', async () => {
   ];
   const { deps, calls } = fakeDeps({
     rows,
-    claim: (id) => {
-      if (id === 'poison') throw new Error('claim exploded');
-      return 'claimed';
+    settle: (id) => {
+      if (id === 'poison') throw new Error('settle exploded');
+      return 'settled';
     },
   });
 
@@ -579,7 +557,7 @@ Deno.test('the budget defers the learning half but never the money', async () =>
 
   // All three settled — deferral must never delay a refund.
   assertEquals(summary.settled, 3);
-  assertEquals(calls.refundCents.length, 3);
+  assertEquals(calls.settles.length, 3);
   // Only the ones that fitted were closed; the rest stay open with
   // `ended_at IS NULL` so the next tick finishes them.
   assert(summary.deferred > 0);
@@ -605,7 +583,7 @@ Deno.test('a connected session is hung up before its refund, and refunded when t
   assertEquals(calls.hangups, ['rtc_1']);
   assertEquals(summary.settled, 1);
   assertEquals(summary.forfeited, 0);
-  assertEquals(calls.refundSeconds.length, 1);
+  assert(calls.settles[0].refundSeconds > 0);
 });
 
 Deno.test('a failed hangup FORFEITS the refund: the call may still be running', async () => {
@@ -613,8 +591,10 @@ Deno.test('a failed hangup FORFEITS the refund: the call may still be running', 
   const { deps, calls } = fakeDeps({ rows: [row], hangup: () => 'failed' });
   const summary = await reapAbandonedSessions(deps, { skipAnalysis: true });
   assertEquals(summary.forfeited, 1);
-  assertEquals(calls.refundSeconds.length, 0);
-  assertEquals(calls.refundCents.length, 0);
+  // Settled — observed time recorded — but with the refund forfeited.
+  assertEquals(calls.settles.length, 1);
+  assertEquals(calls.settles[0].refundSeconds, 0);
+  assertEquals(calls.settles[0].refundCents, 0);
   // Still closed: the money question is answered (kept), the row is done.
   assertEquals(calls.closes.length, 1);
 });
@@ -625,7 +605,7 @@ Deno.test('a connected session with no call id cannot be ended, so it is forfeit
   const summary = await reapAbandonedSessions(deps, { skipAnalysis: true });
   assertEquals(calls.hangups, []);
   assertEquals(summary.forfeited, 1);
-  assertEquals(calls.refundSeconds.length, 0);
+  assertEquals(calls.settles[0].refundSeconds, 0);
 });
 
 Deno.test('a session that never connected is refunded in full with no hangup', async () => {
@@ -633,7 +613,7 @@ Deno.test('a session that never connected is refunded in full with no hangup', a
   const { deps, calls } = fakeDeps({ rows: [row] });
   await reapAbandonedSessions(deps, { skipAnalysis: true });
   assertEquals(calls.hangups, []);
-  assertEquals(calls.refundSeconds.length, 1);
+  assert(calls.settles[0].refundSeconds > 0);
 });
 
 Deno.test('an overrun session is hung up and settled at its whole grant: nothing refunded', async () => {
@@ -650,7 +630,6 @@ Deno.test('an overrun session is hung up and settled at its whole grant: nothing
   assertEquals(summary.overrun, 1);
   assertEquals(calls.hangups, ['rtc_over']);
   assertEquals(summary.settled, 1);
-  assertEquals(calls.refundSeconds.length, 0);
-  assertEquals(calls.refundCents.length, 0);
-  assertEquals(calls.claims[0]?.observed, 600);
+  assertEquals(calls.settles[0]?.observed, 600);
+  assertEquals(calls.settles[0]?.refundSeconds, 0);
 });

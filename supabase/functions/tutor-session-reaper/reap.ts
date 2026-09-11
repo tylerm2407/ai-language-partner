@@ -33,19 +33,16 @@
  * The refund is computed from `last_heartbeat_at - started_at`, both already on
  * the row, so deferring phase B by a tick changes nothing about the amount.
  *
- * ── Replay safety, and the one hole it leaves ─────────────────────────────
+ * ── Replay safety ─────────────────────────────────────────────────────────
  *
  * `ended_at IS NULL` is this function's own queue predicate, so the close is
- * written LAST and everything before it is replayable: the money is claimed by
- * a conditional `observed_seconds IS NULL` update before either refund, and the
- * analysis is claimed by `writeBackTutorSession` on `analyzed_at IS NULL`.
- *
- * The hole, stated rather than hidden: if the settle claim lands and the refund
- * RPC then fails, the next tick sees the session as already settled and does
- * NOT retry the refund. That learner has been charged for time they did not
- * spend and no other system will notice — which is why a refund failure is
- * logged at `error` and counted on its own rather than folded into the generic
- * error count. That log line is the only evidence it happened.
+ * written LAST and everything before it is replayable: the money moves in
+ * `settle_tutor_session` (migration 123), ONE transaction that records the
+ * observed seconds and both refunds under a row lock and answers
+ * `already_settled` to every later caller, and the analysis is claimed by
+ * `writeBackTutorSession` on `analyzed_at IS NULL`. The old two-step (claim,
+ * then two refund RPCs) had a hole — a refund failing after the claim was
+ * never retried — and that hole is what the single transaction closes.
  *
  * ── Everything here is injected ───────────────────────────────────────────
  *
@@ -119,8 +116,9 @@ export interface ReapableSession {
   connected_at: string | null;
 }
 
-/** Outcome of the conditional `observed_seconds IS NULL` update. */
-export type SettleClaim = 'claimed' | 'already' | 'error';
+/** Outcome of `settle_tutor_session`: this run moved the money, someone
+ *  already had, or the RPC failed and nothing changed. */
+export type SettleOutcome = 'settled' | 'already' | 'error';
 
 // ─── Injected effects ─────────────────────────────────────────────────────
 
@@ -146,15 +144,9 @@ export interface ReaperDeps {
   /** `POST /v1/realtime/calls/{id}/hangup`. Never throws. */
   hangup(callId: string): Promise<HangupOutcome>;
 
-  /** Conditional `UPDATE ... SET observed_seconds = $2 WHERE id = $1 AND
-   *  observed_seconds IS NULL`. The money's idempotency guard. */
-  claimSettlement(sessionId: string, observedSeconds: number): Promise<SettleClaim>;
-
-  /** `refund_daily_quota(user, 'tutor_seconds', n)`. Rejects on failure. */
-  refundSeconds(userId: string, seconds: number): Promise<void>;
-
-  /** `refund_monthly_quota(user, 'tutor_cents', n)`. Rejects on failure. */
-  refundCents(userId: string, cents: number): Promise<void>;
+  /** `settle_tutor_session`: observed seconds and BOTH refunds in one
+   *  transaction, idempotent on the row. Never throws — reports `error`. */
+  settle(session: ReapableSession, owed: SessionSettlement): Promise<SettleOutcome>;
 
   /** `available: false` means the buffer was LOST, not that nobody spoke. */
   readTranscript(sessionId: string): Promise<{ turns: BufferedTurn[]; available: boolean }>;
@@ -200,7 +192,7 @@ export interface ReapOptions {
  *
  * The counts are deliberately not collapsed into "succeeded / failed". Each of
  * these means something different operationally: `lostBuffer` climbing is a
- * Redis problem, `refundFailures` above zero is a learner owed money,
+ * Redis problem, `forfeited` climbing means calls we could not confirm ended,
  * `deferred` climbing means the batch is bigger than a tick can carry, and
  * `errors` is the only one that means "something is broken in here".
  */
@@ -211,9 +203,6 @@ export interface ReapSummary {
   settled: number;
   /** Sessions a previous tick (or the `end` action) had already settled. */
   alreadySettled: number;
-  /** Refund RPCs that failed AFTER the settle claim landed. See the header:
-   *  each one is a learner charged for time they did not use. */
-  refundFailures: number;
   /** Sessions settled WITHOUT a refund because the call could not be
    *  confirmed ended (hangup failed, or no call id). The reservation stands. */
   forfeited: number;
@@ -248,7 +237,6 @@ function emptySummary(): ReapSummary {
     scanned: 0,
     settled: 0,
     alreadySettled: 0,
-    refundFailures: 0,
     reaped: 0,
     analyzed: 0,
     alreadyAnalyzed: 0,
@@ -357,15 +345,16 @@ export function settleFor(session: ReapableSession): SessionSettlement | null {
 /**
  * Settle one session and refund what it did not use.
  *
- * The claim comes FIRST, before either refund — see the file header. An
- * errored claim is treated as "unknown" and the session is left entirely
- * alone: the next tick retries it, whereas refunding against a claim we could
- * not confirm is the one mistake here that cannot be undone.
+ * Hang up FIRST, then settle. The refund asserts the unused seconds were not
+ * spent, and the only way to know that is to have ended the call; a call we
+ * could not confirm ended forfeits its refund but still settles, so the row
+ * carries its observed time and stops being reapable. An errored settlement
+ * changes nothing and the session is left entirely alone: the next tick
+ * retries it, whereas guessing about money is the one mistake here that
+ * cannot be undone.
  *
- * The two refunds are independent on purpose. They meter different things in
- * different tables (`daily_usage.tutor_seconds`, `monthly_usage.tutor_cents`),
- * so a failure of one must not skip the other — the monthly cents ceiling is
- * the one the plans are actually sold on.
+ * A row that already carries `observed_seconds` was settled by `end` (or an
+ * earlier tick); it is not hung up again and only its learning half is owed.
  */
 async function settleOne(
   deps: ReaperDeps,
@@ -373,65 +362,37 @@ async function settleOne(
   owed: SessionSettlement,
   summary: ReapSummary,
 ): Promise<boolean> {
-  const claim = await deps.claimSettlement(session.id, owed.observedSeconds);
-
-  if (claim === 'already') {
+  if (session.observed_seconds !== null) {
     summary.alreadySettled += 1;
     return true;
   }
-  if (claim === 'error') {
-    // Not counted as a settlement in either direction: we genuinely do not
-    // know. Leaving the row open costs one tick of delay and nothing else.
-    console.error(`[${FN}] settle claim failed for ${session.id}; leaving it for the next tick`);
+
+  let hangup: HangupOutcome | null = null;
+  if (session.call_id) hangup = await deps.hangup(session.call_id);
+  const forfeited = !refundAllowed(session, hangup);
+  const requested: SessionSettlement = forfeited
+    ? { observedSeconds: owed.observedSeconds, refundSeconds: 0, refundCents: 0 }
+    : owed;
+
+  const outcome = await deps.settle(session, requested);
+  if (outcome === 'already') {
+    summary.alreadySettled += 1;
+    return true;
+  }
+  if (outcome === 'error') {
+    console.error(`[${FN}] settlement failed for ${session.id}; leaving it for the next tick`);
     summary.errors += 1;
     return false;
   }
 
   summary.settled += 1;
-
-  // Hang up BEFORE refunding. The refund below asserts the unused seconds
-  // were not spent, and the only way to know that is to have ended the call.
-  // `refundAllowed` holds the three cases; a forfeited session keeps its
-  // reservation charged and says so in the log.
-  let hangup: HangupOutcome | null = null;
-  if (session.call_id) hangup = await deps.hangup(session.call_id);
-  if (!refundAllowed(session, hangup)) {
+  if (forfeited) {
     summary.forfeited += 1;
     console.error(
       `[${FN}] refund forfeited for ${session.id}: call ${session.call_id ?? '(none)'} ` +
         `hangup=${hangup ?? 'n/a'} seconds=${owed.refundSeconds} cents=${owed.refundCents}`,
     );
-    return true;
   }
-
-  if (owed.refundSeconds > 0) {
-    try {
-      await deps.refundSeconds(session.user_id, owed.refundSeconds);
-    } catch (err) {
-      // LOUD on purpose. Nothing downstream re-derives this: the settle claim
-      // has already landed, so no later tick will retry the refund, and the
-      // learner's daily tutor allowance stays spent on time they did not use.
-      // This log line is the only trace it happened.
-      summary.refundFailures += 1;
-      console.error(
-        `[${FN}] REFUND FAILED (daily tutor_seconds) session=${session.id} amount=${owed.refundSeconds}:`,
-        err instanceof Error ? err.message : err,
-      );
-    }
-  }
-
-  if (owed.refundCents > 0) {
-    try {
-      await deps.refundCents(session.user_id, owed.refundCents);
-    } catch (err) {
-      summary.refundFailures += 1;
-      console.error(
-        `[${FN}] REFUND FAILED (monthly tutor_cents) session=${session.id} amount=${owed.refundCents}:`,
-        err instanceof Error ? err.message : err,
-      );
-    }
-  }
-
   return true;
 }
 
