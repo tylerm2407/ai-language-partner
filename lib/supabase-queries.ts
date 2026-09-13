@@ -891,6 +891,23 @@ export async function fetchProficiencyEvidence(
   userId: string,
   targetLanguage: string,
 ): Promise<ProficiencyEvidence> {
+  // Passages and prompts carry their language through their course. Resolving
+  // the course ids first keeps every embed filter below one level deep —
+  // `reading_passages.course_id` — which is the shape this file already relies
+  // on, rather than a two-level `reading_passages.courses.target_language`
+  // path that nothing else here exercises.
+  const courseRes = await supabase
+    .from('courses')
+    .select('id')
+    .eq('target_language', targetLanguage)
+    .limit(200);
+  if (courseRes.error) throw courseRes.error;
+  const courseIds = (courseRes.data ?? []).map((row: { id: string }) => row.id);
+  // PostgREST's `in` with an empty list matches nothing, which is the right
+  // answer for a language with no courses, but spell it out so the intent
+  // survives a driver that treats `in ()` as an error.
+  const courseFilter = courseIds.length > 0 ? courseIds : ['00000000-0000-0000-0000-000000000000'];
+
   const [
     vocabRes,
     readingRes,
@@ -911,13 +928,12 @@ export async function fetchProficiencyEvidence(
         .eq('cards.language', targetLanguage)
         .limit(PROFICIENCY_VOCAB_LIMIT),
 
-      // A passage's language is its course's. The nested inner join both
-      // scopes the rows and is what PostgREST needs to filter on the course.
+      // A passage's language is its course's; the inner join carries the filter.
       supabase
         .from('user_reading_progress')
-        .select('comprehension_score, completed_at, reading_passages!inner(cefr_level, courses!inner(target_language))')
+        .select('comprehension_score, completed_at, reading_passages!inner(cefr_level, course_id)')
         .eq('user_id', userId)
-        .eq('reading_passages.courses.target_language', targetLanguage)
+        .in('reading_passages.course_id', courseFilter)
         .limit(PROFICIENCY_READING_LIMIT),
 
       // Daily-news articles finished with their comprehension check (migration
@@ -931,9 +947,9 @@ export async function fetchProficiencyEvidence(
 
       supabase
         .from('user_writing_submissions')
-        .select('overall_score, word_count, writing_prompts!inner(cefr_level, courses!inner(target_language))')
+        .select('overall_score, word_count, writing_prompts!inner(cefr_level, course_id)')
         .eq('user_id', userId)
-        .eq('writing_prompts.courses.target_language', targetLanguage)
+        .in('writing_prompts.course_id', courseFilter)
         .limit(PROFICIENCY_WRITING_LIMIT),
 
       // Scored spoken attempts (migration 089). The card embed is a LEFT join
