@@ -79,10 +79,19 @@ export function useReviewQueue(mode: ReviewQueueMode = 'due') {
   const [cards, setCards] = useState<Record<string, Card>>({});
   const [pool, setPool] = useState<Card[]>([]);
   const [loading, setLoading] = useState(false);
+  /**
+   * Why the queue could not be loaded, when there was nothing cached to show
+   * instead. Held as the raw error so the screen can classify it into copy
+   * (lib/error-copy.ts). Before this the rejection escaped the mount effect
+   * unhandled and the screen painted "All caught up!" over an outage — an
+   * empty queue and a failed fetch looked identical to the learner.
+   */
+  const [error, setError] = useState<unknown>(null);
 
   const loadQueue = useCallback(async () => {
     if (!user) return;
     setLoading(true);
+    setError(null);
     try {
       if (mode === 'struggling') {
         // Not cached: this list changes with every card the learner rates,
@@ -133,6 +142,11 @@ export function useReviewQueue(mode: ReviewQueueMode = 'due') {
       setPool(data.pool ?? []);
       setItems(data.items);
       setCards(data.cards);
+    } catch (err) {
+      // Surfaced, not swallowed: the screen renders an error + retry. Whatever
+      // was on screen stays (a stale paint is still better than a blank one).
+      console.warn('[review] loadQueue failed:', err);
+      setError(err);
     } finally {
       setLoading(false);
     }
@@ -228,5 +242,5 @@ export function useReviewQueue(mode: ReviewQueueMode = 'due') {
     }
   }, [user, refreshReviewCount]);
 
-  return { items, cards, pool, reviewCount, loading, loadQueue, submitReview };
+  return { items, cards, pool, reviewCount, loading, error, loadQueue, submitReview };
 }

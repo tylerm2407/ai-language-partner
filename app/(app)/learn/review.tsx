@@ -11,6 +11,7 @@ import { useActiveTime } from '../../../hooks/useActiveTime';
 import { Ui2ProgressBar } from '../../../components/ui2/Ui2ProgressBar';
 import { SlabButton } from '../../../components/ui2/SlabButton';
 import { Ui2EmptyState } from '../../../components/ui2/Ui2EmptyState';
+import { Ui2InlineError } from '../../../components/ui2/Ui2InlineError';
 import { Heading, Body } from '../../../components/ui2/Ui2Text';
 import { ReviewChoiceCard } from '../../../components/review/ReviewChoiceCard';
 import {
@@ -21,8 +22,10 @@ import {
   currentId,
   isComplete as isSessionComplete,
   isFirstAttempt,
+  sessionIds,
   type ChoiceSession,
 } from '../../../lib/review-choices';
+import { loadErrorCopy, saveErrorCopy } from '../../../lib/error-copy';
 // `colors` is deliberately NOT imported: it is the fixed DARK palette, and a
 // screen that reads it stays dark whatever the phone is set to. `spacing` is a
 // plain scheme-independent number set.
@@ -40,7 +43,7 @@ export default function ReviewScreen() {
   // is the ordinary due queue.
   const params = useLocalSearchParams<{ mode?: string }>();
   const mode: ReviewQueueMode = params.mode === 'struggling' ? 'struggling' : 'due';
-  const { items, cards, pool, loading, loadQueue, submitReview } = useReviewQueue(mode);
+  const { items, cards, pool, loading, error, loadQueue, submitReview } = useReviewQueue(mode);
   const { addStats } = useDailyStats();
   // Time on the queue, not time on the spinner. See hooks/useActiveTime.ts.
   useActiveTime({ kind: 'review', enabled: !loading });
@@ -57,15 +60,25 @@ export default function ReviewScreen() {
     loadQueue();
   }, [loadQueue]);
 
-  // The queue is dealt once, from the loaded items. Keyed on the item ids so a
-  // stale-while-revalidate refresh that returns the same queue does not reset
-  // a session in progress, while a genuinely different queue does.
-  const queueKey = items.map((i) => i.id).join('|');
-  useEffect(() => {
-    setSession(createChoiceSession(queueKey ? queueKey.split('|') : []));
+  // The queue is dealt once, from the loaded items that have a card. Keyed on
+  // the item ids so a stale-while-revalidate refresh that returns the same
+  // queue does not reset a session in progress, while a genuinely different
+  // queue does.
+  //
+  // Reset DURING RENDER, not in an effect. An effect runs after the commit,
+  // so the render in which `items` first lands still saw the empty session:
+  // no current id, index -1, and `items[-1].cardId` threw before the effect
+  // could run. Setting state mid-render on a key change is React's own
+  // pattern for derived state; it re-renders before anything is painted.
+  const dealtIds = sessionIds(items, cards);
+  const queueKey = dealtIds.join('|');
+  const [sessionKey, setSessionKey] = useState(queueKey);
+  if (sessionKey !== queueKey) {
+    setSessionKey(queueKey);
+    setSession(createChoiceSession(dealtIds));
     setSelected(null);
     setPending(null);
-  }, [queueKey]);
+  }
 
   const currentItemId = currentId(session);
   const currentIndex = currentItemId ? items.findIndex((i) => i.id === currentItemId) : -1;
@@ -168,8 +181,10 @@ export default function ReviewScreen() {
       setSelected(null);
       setPending(null);
       setSession((s) => applyChoiceResult(s, item.id, pending.correct));
-    } catch {
-      Alert.alert('Error', 'Failed to save review. Please try again.');
+    } catch (err) {
+      // Nothing advanced: the pick stays on screen and Continue is live again.
+      const copy = saveErrorCopy(err, 'this review');
+      Alert.alert(copy.title, copy.message);
     } finally {
       setSubmitting(false);
     }
@@ -186,7 +201,18 @@ export default function ReviewScreen() {
     );
   }
 
-  if (items.length === 0) {
+  // A failed load with nothing cached. Checked before the empty state so an
+  // outage never reads as "All caught up!".
+  if (error && items.length === 0) {
+    return (
+      <SafeAreaView className="flex-1 justify-center px-6" style={{ backgroundColor: c.bg }}>
+        <Ui2InlineError copy={loadErrorCopy(error, 'your review')} onRetry={() => { loadQueue(); }} />
+        <SlabButton label="Back to Learn" variant="ghost" arrow={false} onPress={() => goBack()} style={{ marginTop: spacing.md }} />
+      </SafeAreaView>
+    );
+  }
+
+  if (dealtIds.length === 0) {
     return (
       <SafeAreaView className="flex-1" style={{ backgroundColor: c.bg }}>
         <Ui2EmptyState
@@ -228,8 +254,18 @@ export default function ReviewScreen() {
     );
   }
 
-  const item = items[currentIndex];
-  const card = cards[item.cardId];
+  // Both are guaranteed by the render-time reset above (the session only
+  // holds ids that had a card when dealt); the guard is a belt for the
+  // one-render window where a refresh swaps the queue under a live session.
+  const item = currentIndex >= 0 ? items[currentIndex] : undefined;
+  const card = item ? cards[item.cardId] : undefined;
+  if (!item || !card) {
+    return (
+      <SafeAreaView className="flex-1 items-center justify-center" style={{ backgroundColor: c.bg }}>
+        <ActivityIndicator size="large" color={c.primary} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: c.bg }}>

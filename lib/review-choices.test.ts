@@ -8,6 +8,7 @@ import {
   currentId,
   isComplete,
   isFirstAttempt,
+  sessionIds,
   shuffle,
 } from './review-choices';
 import type { Card } from '../types';
@@ -90,6 +91,22 @@ describe('buildChoiceOptions', () => {
     };
     for (let i = 0; i < 50; i += 1) positions.add(buildChoiceOptions(target, pool, rng).indexOf('the dog'));
     expect(positions.size).toBeGreaterThan(1);
+  });
+});
+
+describe('sessionIds', () => {
+  const items = [
+    { id: 'i1', cardId: 'c1' },
+    { id: 'i2', cardId: 'missing' },
+    { id: 'i3', cardId: 'c3' },
+  ];
+
+  it('deals only the items whose card is loaded, in order', () => {
+    expect(sessionIds(items, { c1: {}, c3: {} })).toEqual(['i1', 'i3']);
+  });
+
+  it('is empty when no cards have loaded yet', () => {
+    expect(sessionIds(items, {})).toEqual([]);
   });
 });
 

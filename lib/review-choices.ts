@@ -126,6 +126,19 @@ export function createChoiceSession(ids: readonly string[]): ChoiceSession {
   return { queue: [...ids], attempts: {}, resolved: 0, total: ids.length };
 }
 
+/**
+ * The item ids a session is dealt from: every loaded item whose card is also
+ * loaded, in queue order. An item without a card (the card was deleted, or
+ * the card fetch came back short) has nothing to show and is left out rather
+ * than dealt as a blank; it stays due and comes round next time.
+ */
+export function sessionIds(
+  items: readonly { id: string; cardId: string }[],
+  cards: Readonly<Record<string, unknown>>,
+): string[] {
+  return items.filter((i) => cards[i.cardId] !== undefined).map((i) => i.id);
+}
+
 export function currentId(session: ChoiceSession): string | null {
   return session.queue[0] ?? null;
 }
