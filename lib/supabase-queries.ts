@@ -91,7 +91,7 @@ export async function fetchProfile(userId: string): Promise<UserProfile | null> 
 
 export async function upsertProfile(
   userId: string,
-  updates: Partial<Pick<UserProfile, 'displayName' | 'nativeLanguage' | 'targetLanguage' | 'level' | 'dailyGoalMinutes' | 'timezone' | 'motivationReason' | 'idealL2Self'>>
+  updates: Partial<Pick<UserProfile, 'displayName' | 'nativeLanguage' | 'targetLanguage' | 'level' | 'dailyGoalMinutes' | 'timezone' | 'motivationReason' | 'idealL2Self' | 'currentCourseId' | 'placementBand'>>
 ): Promise<UserProfile> {
   const row: Record<string, unknown> = {
     user_id: userId,
@@ -101,6 +101,12 @@ export async function upsertProfile(
   if (updates.nativeLanguage !== undefined) row.native_language = updates.nativeLanguage;
   if (updates.targetLanguage !== undefined) row.target_language = updates.targetLanguage;
   if (updates.level !== undefined) row.level = updates.level;
+  // Null is a real value for both (no lesson path), so only `undefined` is
+  // "leave it alone". Write them together with target_language when the
+  // language changes: the guard trigger (migration 125) checks the pointer
+  // against the language in the same row.
+  if (updates.currentCourseId !== undefined) row.current_course_id = updates.currentCourseId;
+  if (updates.placementBand !== undefined) row.placement_band = updates.placementBand;
   if (updates.dailyGoalMinutes !== undefined) row.daily_goal_minutes = updates.dailyGoalMinutes;
   if (updates.timezone !== undefined) row.timezone = updates.timezone;
   if (updates.motivationReason !== undefined) row.motivation_reason = updates.motivationReason;
@@ -1046,6 +1052,10 @@ function mapProfile(row: Record<string, unknown>): UserProfile {
     nativeLanguage: row.native_language as UserProfile['nativeLanguage'],
     targetLanguage: row.target_language as UserProfile['targetLanguage'],
     level: row.level as UserProfile['level'],
+    // Lesson path placement (migration 125). Both null for rows written before
+    // it; `useEnsurePlacement` fills them in on the next Home mount.
+    currentCourseId: (row.current_course_id as string | null) ?? null,
+    placementBand: (row.placement_band as string | null) ?? null,
     dailyGoalMinutes: row.daily_goal_minutes as number,
     totalXp: row.total_xp as number,
     timezone: row.timezone as string,
@@ -1315,22 +1325,19 @@ export interface UnitProgressTile {
 }
 
 /**
- * Build an ordered list of units with progress + the next-up lesson for the
- * user's primary course in `targetLanguage`. Used by the home-screen
- * "Continue learning" tile grid.
+ * Build an ordered list of units with progress + the next-up lesson for one
+ * course — the learner's current course (`user_profiles.current_course_id`,
+ * migration 125). Used by the home-screen "Continue learning" tile grid.
  *
- * Returns [] if no published course exists for the language yet.
+ * Used to take a language and pick `courses[0]`, which after the cefr_level
+ * sort was always the A1 course, for everyone. The caller now owns the choice.
  */
 export async function fetchUnitProgressTiles(
   userId: string,
-  targetLanguage: string,
+  courseId: string,
   limit = 4,
 ): Promise<UnitProgressTile[]> {
-  const courses = await fetchCourses(targetLanguage);
-  if (courses.length === 0) return [];
-  const course = courses[0];
-
-  const units = await fetchUnits(course.id);
+  const units = await fetchUnits(courseId);
   if (units.length === 0) return [];
 
   // Single query for all units' lessons (was one fetchLessons per unit —
@@ -1341,7 +1348,7 @@ export async function fetchUnitProgressTiles(
       .select('*')
       .in('unit_id', units.map((u) => u.id))
       .order('order_index', { ascending: true }),
-    fetchLessonCompletions(userId, course.id),
+    fetchLessonCompletions(userId, courseId),
   ]);
   if (lessonsResult.error) throw lessonsResult.error;
   const lessonsByUnit = new Map<string, Lesson[]>();
@@ -1361,7 +1368,7 @@ export async function fetchUnitProgressTiles(
     const nextLesson = lessons.find((l) => !completedSet.has(l.id)) ?? null;
     return {
       unitId: unit.id,
-      courseId: course.id,
+      courseId: courseId,
       title: unit.title,
       lessonCount,
       completedCount,

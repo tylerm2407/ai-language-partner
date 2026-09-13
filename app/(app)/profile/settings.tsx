@@ -26,6 +26,14 @@ import { getHapticsEnabled, setHapticsEnabled, haptic } from '../../../lib/hapti
 import { revokeAllAiConsent } from '../../../lib/ai-consent';
 import { cefrBandForProficiencyLevel } from '../../../lib/cefr-proficiency';
 import { cefrCanDo } from '../../../lib/cefr-labels';
+import { fetchCourses } from '../../../lib/supabase-queries';
+import {
+  courseForBand,
+  placementAfterSettingsChange,
+  settingsNeedsPlacementConfirm,
+  type SettingsPlacementDecision,
+} from '../../../lib/course-placement';
+import { trackEvent } from '../../../lib/analytics';
 import type { LanguageCode, ProficiencyLevel } from '../../../types';
 import { SentrySmokeTrigger } from '../../../components/debug/SentrySmokeTrigger';
 import { NotificationBuilder } from '../../../components/onboarding/NotificationBuilder';
@@ -130,9 +138,72 @@ export default function SettingsScreen() {
     idealSelf.trim() !== (profile?.idealL2Self ?? '') ||
     JSON.stringify(notifPrefs) !== JSON.stringify(savedNotifPrefs);
 
+  /**
+   * "Move your lessons too?" — asked only when the level moved and the
+   * language did not. A language change re-places without asking (the old
+   * course is in the wrong language), and a level that did not move has
+   * nothing to ask about. Wraps Alert in a promise so the save reads top to
+   * bottom.
+   */
+  const confirmPlacementMove = (hasCourseAtBand: boolean) =>
+    new Promise<SettingsPlacementDecision>((resolve) => {
+      const band = cefrBandForProficiencyLevel(level);
+      const startsAt = profile?.placementBand ? ` Your lessons currently start at ${profile.placementBand}.` : '';
+      if (!hasCourseAtBand) {
+        Alert.alert(
+          `No ${band} lesson path yet`,
+          `${cefrCanDo(band)} Lessons run A1 to B2 today.${startsAt}`,
+          [
+            { text: 'Keep my lessons', onPress: () => resolve('keep') },
+            { text: 'Lessons off: reading, chat, tutor', onPress: () => resolve('none') },
+          ],
+          { cancelable: true, onDismiss: () => resolve('keep') },
+        );
+        return;
+      }
+      Alert.alert(
+        `Move your lessons to ${band} too?`,
+        `${cefrCanDo(band)}${startsAt}`,
+        [
+          { text: 'Just the level', onPress: () => resolve('keep') },
+          { text: 'Move lessons', onPress: () => resolve('move') },
+        ],
+        { cancelable: true, onDismiss: () => resolve('keep') },
+      );
+    });
+
   const handleSave = async () => {
     setSaving(true);
     try {
+      // Lesson path placement (migration 125) travels in the same write as the
+      // level and language, so the guard trigger sees the pointer and the
+      // language together.
+      let placement: ReturnType<typeof placementAfterSettingsChange> = null;
+      const nextLanguage = targetLanguage ?? profile?.targetLanguage ?? null;
+      if (profile && nextLanguage && (level !== profile.level || nextLanguage !== profile.targetLanguage)) {
+        const courses = await fetchCourses(nextLanguage);
+        let decision: SettingsPlacementDecision = 'move';
+        if (settingsNeedsPlacementConfirm(profile.level, level, profile.targetLanguage, nextLanguage)) {
+          const hasCourseAtBand = courseForBand(courses, cefrBandForProficiencyLevel(level)) !== null;
+          decision = await confirmPlacementMove(hasCourseAtBand);
+        }
+        placement = placementAfterSettingsChange({
+          previous: profile,
+          nextLevel: level,
+          nextLanguage,
+          courses,
+          decision,
+        });
+        if (placement) {
+          trackEvent('course_placement_set', {
+            screen: 'settings',
+            source: decision === 'none' ? 'none' : 'start',
+            band: placement.placementBand,
+            language: nextLanguage,
+          });
+        }
+      }
+
       await updateProfile({
         displayName: displayName.trim() || undefined,
         // Only write the language when one is actually selected.
@@ -142,6 +213,7 @@ export default function SettingsScreen() {
         // Empty clears it: a learner is allowed to have no stated goal, and the
         // reminder and hero copy fall back to their generic lines.
         idealL2Self: idealSelf.trim() || null,
+        ...(placement ?? {}),
       });
       // Reminders are re-armed here rather than waiting for the next
       // foreground, so a changed time takes effect the moment Save lands.
@@ -236,6 +308,13 @@ export default function SettingsScreen() {
               )}
             </Pressable>
           ))}
+          {profile?.placementBand ? (
+            /* What the "move your lessons?" confirm on Save is about. Band
+               paired with its can-do, never bare. */
+            <Text className="text-sm mt-1" style={{ color: c.muted }}>
+              Lessons start at {profile.placementBand} · {cefrCanDo(profile.placementBand)}
+            </Text>
+          ) : null}
         </View>
 
         {/* Daily Goal */}

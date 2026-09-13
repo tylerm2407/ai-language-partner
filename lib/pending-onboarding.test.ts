@@ -113,6 +113,22 @@ describe('save / load round-trip', () => {
   });
 });
 
+describe('course choice', () => {
+  it('round-trips the course choice and reads an old draft without one', async () => {
+    await savePendingOnboarding({ ...makeDraft(), courseChoice: 'warm_up' });
+    expect((await loadPendingOnboarding())?.courseChoice).toBe('warm_up');
+
+    // A blob written before the course step existed: no version bump, the
+    // field is simply absent and the flush treats absent as `start`.
+    const legacy = { ...makeDraft(), version: PENDING_ONBOARDING_SCHEMA_VERSION, startedAt: Date.now() } as Record<string, unknown>;
+    delete legacy.courseChoice;
+    await AsyncStorage.setItem(PENDING_ONBOARDING_KEY, JSON.stringify(legacy));
+    const loaded = await loadPendingOnboarding();
+    expect(loaded).not.toBeNull();
+    expect(loaded?.courseChoice).toBeUndefined();
+  });
+});
+
 describe('forward compatibility', () => {
   it('loads a draft carrying fields that no longer exist', async () => {
     // The schema version is deliberately not bumped when a field comes or goes,

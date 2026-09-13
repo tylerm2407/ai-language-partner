@@ -573,6 +573,13 @@ export async function enforcePackBudget(
 
 export interface TopUpContext {
   targetLanguage: string;
+  /**
+   * The learner's current course (`user_profiles.current_course_id`). Only
+   * this course's units are warmed; null means no lesson path and no unit
+   * packs. Warming every course in the language spent the learner's
+   * bandwidth on A1 unit 1 before their own band.
+   */
+  currentCourseId: string | null;
   newsTier: NewsTier;
   /** YYYY-MM-DD for the news pack; today when omitted. */
   date?: string;
@@ -590,8 +597,8 @@ let topUpInFlight: Promise<TopUpSummary> | null = null;
 
 /**
  * Keep the device ahead of the learner: the current unit and the next
- * AUTO_TOPUP_UNITS_AHEAD of every course in their language, every book they
- * have started, and today's article. Single-flight; the caller decides when
+ * AUTO_TOPUP_UNITS_AHEAD of their current course, every book they have
+ * started, and today's article. Single-flight; the caller decides when
  * (Wi-Fi, foreground — see hooks/useOfflineAutoTopUp.ts).
  */
 export async function autoTopUp(
@@ -616,10 +623,12 @@ async function runTopUp(userId: string, ctx: TopUpContext, opts?: DownloadOption
   const deps = withDeps(opts);
   const packed = new Set(m.packs.map((p) => p.id));
 
-  // Units: from the first unit with an unfinished lesson, this one and the next.
+  // Units: from the first unit with an unfinished lesson, this one and the next,
+  // in the learner's current course only.
   try {
-    const courses = await deps.fetchCourses(ctx.targetLanguage);
-    for (const course of courses) {
+    const courses = ctx.currentCourseId ? await deps.fetchCourses(ctx.targetLanguage) : [];
+    const course = courses.find((k) => k.id === ctx.currentCourseId);
+    if (course) {
       const [units, completions] = await Promise.all([
         deps.fetchUnits(course.id),
         deps.fetchLessonCompletions(userId, course.id).catch(() => [] as LessonCompletion[]),

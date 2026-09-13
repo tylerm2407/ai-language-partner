@@ -63,6 +63,9 @@ function bandStatusColor(c: Ui2Palette, status: BandBreakdown['status']): string
       return c.primary;
     case 'weak':
       return c.yellow;
+    case 'placed':
+      // Distinct from idle "Not started": this rung was granted, not skipped.
+      return c.muted;
     default:
       return c.idle;
   }
@@ -76,6 +79,8 @@ function bandStatusLabel(status: BandBreakdown['status']): string {
       return 'Developing';
     case 'weak':
       return 'Needs work';
+    case 'placed':
+      return 'Assumed from placement';
     default:
       return 'Not started';
   }
@@ -170,6 +175,14 @@ export default function ProficiencyScreen() {
                   Not yet assessed
                 </Text>
               )}
+              {report.levelBasis ? (
+                /* Which rungs under the level were assumed from the learner's
+                   placement rather than measured. Part of the honesty the card
+                   below promises, so it sits with the level, not in a footnote. */
+                <Text className="text-sm text-center mb-1" style={{ color: c.muted }}>
+                  {report.levelBasis}
+                </Text>
+              ) : null}
               <View className="flex-row items-center">
                 <View
                   style={{
@@ -340,7 +353,9 @@ export default function ProficiencyScreen() {
                     out of the rate so that starting new material cannot make
                     the learner's level appear to drop. */}
                 <Text className="text-sm mt-2" style={{ color: c.idle }}>
-                  {band.seen === 0
+                  {band.seen === 0 && band.status === 'placed'
+                    ? 'Not studied — below your starting level'
+                    : band.seen === 0
                     ? 'No items studied yet'
                     : band.mature === 0
                       ? `${band.seen} ${band.seen === 1 ? 'item' : 'items'} started — too new to score yet`

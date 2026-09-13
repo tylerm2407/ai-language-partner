@@ -11,7 +11,7 @@ import { SCHOOL_ENABLED, HANDSFREE_ENABLED, levelToNewsTier } from '../../config
 import { fetchStatsRange } from '../../lib/supabase-queries';
 import { localDayKey } from '../../lib/dates';
 import { getTargetLanguage, targetLanguageGreeting } from '../../lib/language';
-import { cefrBandForProficiencyLevel } from '../../lib/cefr-proficiency';
+import { cefrBandForProficiencyLevel, normalizeBand } from '../../lib/cefr-proficiency';
 import { useNextBandProgress } from '../../hooks/useNextBandProgress';
 import { cefrCanDo } from '../../lib/cefr-labels';
 import { useLevel } from '../../hooks/useLevel';
@@ -68,9 +68,11 @@ export default function HomeScreen() {
     newsTier,
   );
   const { permissionStatus, requestPermissionsExplicit } = useNotifications();
+  // The learner's current course (migration 125), not the language's first
+  // course — which after the cefr_level sort was always A1, for everyone.
   const { tiles: unitTiles, loading: tilesLoading, error: tilesError, refetch: refetchTiles } = useUnitProgressTiles(
     user?.id,
-    profile?.targetLanguage,
+    profile?.currentCourseId ?? null,
     4,
   );
   const lessonTiles = unitTiles ? unitTilesToLessonTiles(unitTiles) : null;
@@ -89,9 +91,14 @@ export default function HomeScreen() {
   const { c, scheme } = useUi2Theme();
   const { challenges } = useDailyChallenges();
   // The level card shows the MEASURED band once the proficiency report can
-  // assess one; the profile's self-declared level only stands in before that.
-  // Both it and the ring toward the next band are rebuilt on focus.
-  const level = useNextBandProgress(cefrBandForProficiencyLevel(profile?.level ?? 'beginner'));
+  // assess one; before that it stands in the band the learner's lessons start
+  // at (their placement, which is one below the declared level when they chose
+  // to warm up), falling back to the declared level for unplaced accounts.
+  // Bands below the placement count as assumed, not measured — see
+  // `levelBasis`. Both the band and the ring are rebuilt on focus.
+  const level = useNextBandProgress(
+    normalizeBand(profile?.placementBand) ?? cefrBandForProficiencyLevel(profile?.level ?? 'beginner'),
+  );
   const band = level.band;
   // What the tutor already knows about this learner — recurring mistakes and
   // words the SRS says keep failing. Same rows the paid tutor prompt reads.
@@ -224,12 +231,16 @@ export default function HomeScreen() {
             nextBand={level.progress?.next ?? null}
             progressPercent={level.progress?.percent ?? null}
             measured={level.measured}
+            basis={level.basis}
             dueCount={reviewCount}
             onReview={() => router.push('/learn/review' as any)}
           />
 
           <SessionHero
-            title={nextTile?.title ?? 'Your next lesson'}
+            // No current course means no lesson path at this band yet (an
+            // advanced learner, no C1 course); the hero then opens Learn, where
+            // the pills let them pick one, so it must not promise a "next lesson".
+            title={nextTile?.title ?? (profile?.currentCourseId ? 'Your next lesson' : 'Pick a lesson path')}
             // Real minutes against the learner's own goal. `minutes_practiced`
             // is written by `hooks/useActiveTime.ts` from every practice screen.
             minutesToday={dailyStats?.minutesPracticed ?? 0}

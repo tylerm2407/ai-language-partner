@@ -18,14 +18,15 @@ import {
   addCardFromAnnotation,
   NewCardsCapReachedError,
   fetchSubscription,
+  fetchCourses,
   type AnnotationCardSource,
 } from '../../../../../lib/supabase-queries';
+import { defaultCourseFor } from '../../../../../lib/course-placement';
 import { BookReader } from '../../../../../components/reading/BookReader';
 import { cachedFetch, getCached, readCacheKey, setCached } from '../../../../../lib/read-cache';
 import { touchPack } from '../../../../../lib/offline-packs';
 import { OfflineDownloadControl } from '../../../../../components/learn/OfflineDownloadControl';
 import { floatingTabBarSpace } from '../../../../../components/navigation/FloatingTabBar';
-import { supabase } from '../../../../../lib/supabase';
 import { loadErrorCopy, saveErrorCopy, type ErrorCopy } from '../../../../../lib/error-copy';
 import { cefrCanDo, cefrAccessibilityLabel } from '../../../../../lib/cefr-labels';
 import type { ReadingBook, BookAnnotation, UserBookProgress, Subscription } from '../../../../../types';
@@ -171,16 +172,17 @@ export default function BookDetailScreen() {
   const handleAddToReview = useCallback(async (source: AnnotationCardSource) => {
     if (!user || !book) return null;
 
-    // Find the user's active course for this language to associate the card
-    const { data: courses } = await supabase
-      .from('courses')
-      .select('id')
-      .eq('target_language', book.language)
-      .eq('is_published', true)
-      .limit(1)
-      .single();
+    // File the card under the learner's current course. Used to take the
+    // first published course the query returned — unordered, and without the
+    // goal_key filter, so a generated goal track could win. When the current
+    // course is in another language (or there is none), fall to the course
+    // the learner's level would open in the book's language.
+    const courseId =
+      profile?.currentCourseId && book.language === profile.targetLanguage
+        ? profile.currentCourseId
+        : defaultCourseFor(await fetchCourses(book.language), profile?.level ?? 'beginner', 'start')?.id ?? null;
 
-    if (!courses) {
+    if (!courseId) {
       // Not a failure — there is genuinely nowhere to file the card yet.
       Alert.alert(
         "Can't save that word",
@@ -200,7 +202,7 @@ export default function BookDetailScreen() {
       return await addCardFromAnnotation(
         user.id,
         source,
-        courses.id,
+        courseId,
         ['reading', 'book'],
         book.cefrLevel,
         book.language,
@@ -217,7 +219,7 @@ export default function BookDetailScreen() {
       Alert.alert(title, message);
       return null;
     }
-  }, [user, book]);
+  }, [user, book, profile]);
 
   /**
    * Persist how many words were looked up this session.

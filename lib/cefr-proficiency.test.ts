@@ -376,7 +376,14 @@ describe('overallFromSkills', () => {
     name: SkillAssessment['skill'],
     level: SkillAssessment['level'],
     status: SkillAssessment['status']
-  ): SkillAssessment => ({ skill: name, level, status, detail: '', evidenceCount: 0 });
+  ): SkillAssessment => ({
+    skill: name,
+    level,
+    status,
+    detail: '',
+    evidenceCount: 0,
+    assumedBands: [],
+  });
 
   it('returns null when no skill is assessed', () => {
     expect(
@@ -903,5 +910,188 @@ describe('conversation as proficiency evidence', () => {
     expect(report.skills.find((s) => s.skill === 'writing')!.level).toBe('A1');
     // Never "assessed" off typing — a keyboard and time to think is not speech.
     expect(report.skills.find((s) => s.skill === 'speaking')!.status).toBe('not_assessed');
+  });
+});
+
+// ─── Placement ──────────────────────────────────────────────────
+//
+// A learner placed straight into the B1 course never meets A1 or A2 cards. The
+// contiguity walk must step over the rungs their placement vouches for — while
+// still refusing to publish a level made of assumed rungs, and still letting
+// real evidence below the placement band overrule it.
+
+describe('placement', () => {
+  const PLACED_EVIDENCE = { totalReviews: 600, activeDays: 40 };
+
+  describe('analyzeBands', () => {
+    it('marks unjudged bands below the placement band as placed, judged ones on their evidence', () => {
+      const bands = analyzeBands([...vocab('A2', 40, 10), ...vocab('B1', 40, 36)], 'B1');
+      expect(bands.find((b) => b.band === 'A1')?.status).toBe('placed');
+      expect(bands.find((b) => b.band === 'A2')?.status).toBe('weak');
+      expect(bands.find((b) => b.band === 'B1')?.status).toBe('mastered');
+      // Above the placement band nothing is assumed.
+      expect(bands.find((b) => b.band === 'B2')?.status).toBe('insufficient');
+    });
+
+    it('marks nothing placed at A1 placement or with no placement', () => {
+      expect(analyzeBands([], 'A1').every((b) => b.status === 'insufficient')).toBe(true);
+      expect(analyzeBands([], null)).toEqual(analyzeBands([]));
+    });
+
+    it('keeps the counts of a placed band untouched', () => {
+      const a1 = analyzeBands(vocab('A1', 15, 15), 'B1').find((b) => b.band === 'A1');
+      expect(a1?.status).toBe('placed');
+      expect(a1?.seen).toBe(15);
+    });
+  });
+
+  describe('vocabularyLevel', () => {
+    it('starts the walk at the placement band', () => {
+      const items = vocab('B1', 40, 36);
+      expect(vocabularyLevel(analyzeBands(items, 'B1'), 'B1')).toBe('B1');
+      // Pin the old behaviour: without placement the same evidence is nothing.
+      expect(vocabularyLevel(analyzeBands(items))).toBeNull();
+    });
+
+    it('never grants a level made only of assumed rungs', () => {
+      // B1 barely started: A1 and A2 are assumed, but an assumed rung is not a level.
+      expect(vocabularyLevel(analyzeBands(vocab('B1', 5, 5), 'B1'), 'B1')).toBeNull();
+    });
+
+    it('lets evidence below the placement band override it downward', () => {
+      const items = [...vocab('A1', 40, 40), ...vocab('A2', 40, 10), ...vocab('B1', 40, 36)];
+      expect(vocabularyLevel(analyzeBands(items, 'B1'), 'B1')).toBe('A1');
+    });
+
+    it('steps over a placed rung between two evidenced ones', () => {
+      const items = [...vocab('A1', 40, 40), ...vocab('B1', 40, 36)];
+      expect(vocabularyLevel(analyzeBands(items, 'B1'), 'B1')).toBe('B1');
+    });
+  });
+
+  describe('nextLevelRequirement', () => {
+    it('points a placed learner at their entry band, never at A1', () => {
+      const bands = analyzeBands(vocab('B1', 5, 5), 'B1');
+      const { nextLevel, requirement } = nextLevelRequirement(null, bands, 'B1');
+      expect(nextLevel).toBe('B1');
+      expect(requirement).toContain('15 more B1');
+      expect(requirement).not.toContain('A1');
+    });
+
+    it('skips assumed rungs when choosing the next rung to prove', () => {
+      const bands = analyzeBands(vocab('A1', 40, 40), 'B1');
+      expect(nextLevelRequirement('A1', bands, 'B1').nextLevel).toBe('B1');
+    });
+
+    it('targets the rung the evidence broke on', () => {
+      // A2 judged weak (40 mature, 10 retained): mastery needs 32 → 22 more.
+      const bands = analyzeBands([...vocab('A2', 40, 10), ...vocab('B1', 40, 36)], 'B1');
+      const { nextLevel, requirement } = nextLevelRequirement(null, bands, 'B1');
+      expect(nextLevel).toBe('A2');
+      expect(requirement).toContain('22 more A2');
+    });
+  });
+
+  describe('buildProficiencyReport', () => {
+    it('reports the entry band as measured and discloses the assumed rungs', () => {
+      const report = buildProficiencyReport(
+        { ...emptyEvidence(), vocabulary: vocab('B1', 40, 36), ...PLACED_EVIDENCE },
+        NOW,
+        { placementBand: 'B1' },
+      );
+      expect(report.overallLevel).toBe('B1');
+      expect(report.placementBand).toBe('B1');
+      expect(report.assumedBands).toEqual(['A1', 'A2']);
+      expect(report.levelBasis).toBe(
+        'Measured from your B1 work; A1–A2 assumed from your placement.',
+      );
+      expect(report.nextLevel).toBe('B2');
+      expect(report.bands.slice(0, 2).map((b) => b.status)).toEqual(['placed', 'placed']);
+      expect(report.skills.find((s) => s.skill === 'vocabulary')?.detail).toContain(
+        'A1–A2 assumed from your placement',
+      );
+    });
+
+    it('withholds the level and points at the entry band while it is unproven', () => {
+      const report = buildProficiencyReport(
+        { ...emptyEvidence(), vocabulary: vocab('B1', 5, 5), ...PLACED_EVIDENCE },
+        NOW,
+        { placementBand: 'B1' },
+      );
+      expect(report.overallLevel).toBeNull();
+      expect(report.levelBasis).toBeNull();
+      expect(report.assumedBands).toEqual([]);
+      expect(report.nextLevel).toBe('B1');
+      expect(report.nextLevelRequirement).not.toContain('A1');
+    });
+
+    it('lets weak evidence below the placement band pin the level down', () => {
+      const report = buildProficiencyReport(
+        {
+          ...emptyEvidence(),
+          vocabulary: [...vocab('A1', 40, 40), ...vocab('A2', 40, 10), ...vocab('B1', 40, 36)],
+          ...PLACED_EVIDENCE,
+        },
+        NOW,
+        { placementBand: 'B1' },
+      );
+      expect(report.overallLevel).toBe('A1');
+      expect(report.assumedBands).toEqual([]);
+      expect(report.levelBasis).toBeNull();
+      expect(report.nextLevel).toBe('A2');
+    });
+
+    it('applies the same rule to reading, writing and speaking', () => {
+      const report = buildProficiencyReport(
+        {
+          ...emptyEvidence(),
+          reading: reading('B1', MIN_READING_ITEMS),
+          ...PLACED_EVIDENCE,
+        },
+        NOW,
+        { placementBand: 'B1' },
+      );
+      const readingSkill = report.skills.find((s) => s.skill === 'reading');
+      expect(readingSkill?.level).toBe('B1');
+      expect(readingSkill?.assumedBands).toEqual(['A1', 'A2']);
+      expect(readingSkill?.detail).toContain('assumed from your placement');
+      expect(report.skills.find((s) => s.skill === 'writing')?.detail).toContain('from B1 up');
+      expect(report.skills.find((s) => s.skill === 'speaking')?.status).toBe('not_assessed');
+    });
+
+    it('reproduces the pre-placement report field for field when placement is null', () => {
+      const evidence: ProficiencyEvidence = {
+        ...emptyEvidence(),
+        vocabulary: [...vocab('A1', 60, 55), ...vocab('A2', 60, 50)],
+        totalReviews: 400,
+        activeDays: 25,
+      };
+      const before = buildProficiencyReport(evidence, NOW);
+      const after = buildProficiencyReport(evidence, NOW, { placementBand: null });
+      expect(after).toEqual(before);
+      expect(before.placementBand).toBeNull();
+      expect(before.assumedBands).toEqual([]);
+      expect(before.levelBasis).toBeNull();
+    });
+
+    it('does not let new entry-band material lower a placed learner’s level', () => {
+      const settled = buildProficiencyReport(
+        { ...emptyEvidence(), vocabulary: vocab('B1', 40, 34), ...PLACED_EVIDENCE },
+        NOW,
+        { placementBand: 'B1' },
+      );
+      const studying = buildProficiencyReport(
+        {
+          ...emptyEvidence(),
+          vocabulary: [...vocab('B1', 40, 34), ...newVocab('B1', 20)],
+          ...PLACED_EVIDENCE,
+        },
+        NOW,
+        { placementBand: 'B1' },
+      );
+      expect(settled.overallLevel).toBe('B1');
+      expect(studying.overallLevel).toBe('B1');
+      expect(studying.nextLevelRequirement).toBe(settled.nextLevelRequirement);
+    });
   });
 });

@@ -1,5 +1,5 @@
 import { MASTERY_RATE, MIN_ITEMS_PER_BAND, MIN_MATURE_ITEMS_PER_BAND, type BandBreakdown } from './cefr-proficiency';
-import { nextBandAfter, nextBandProgress } from './next-band-progress';
+import { nextBandAfter, nextBandProgress, progressToward } from './next-band-progress';
 
 function band(partial: Partial<BandBreakdown> & { band: BandBreakdown['band'] }): BandBreakdown {
   return { seen: 0, mature: 0, retained: 0, retentionRate: 0, status: 'insufficient', ...partial };
@@ -54,5 +54,21 @@ describe('nextBandProgress', () => {
   it('ignores breakdowns for other bands', () => {
     const p = nextBandProgress('A2', [band({ band: 'C1', seen: 999, mature: 999, retained: 999 })]);
     expect(p.percent).toBe(0);
+  });
+});
+
+describe('progressToward', () => {
+  it('measures the same three gates against an explicit target band', () => {
+    const bands = [band({ band: 'B1', seen: MIN_ITEMS_PER_BAND * 2 })];
+    // An unmeasured learner placed at B1: the ring points at proving B1, not B2.
+    expect(progressToward('B1', 'B1', bands)).toEqual({ current: 'B1', next: 'B1', fraction: 1 / 3, percent: 33 });
+    expect(progressToward('A2', 'B1', bands)).toEqual(nextBandProgress('A2', bands));
+  });
+
+  it('ignores band status entirely — a placed band with counts contributes the same fraction', () => {
+    const counts = { seen: MIN_ITEMS_PER_BAND, mature: MIN_MATURE_ITEMS_PER_BAND, retained: MIN_MATURE_ITEMS_PER_BAND * MASTERY_RATE };
+    const placed = nextBandProgress('A2', [band({ band: 'B1', status: 'placed', ...counts })]);
+    const insufficient = nextBandProgress('A2', [band({ band: 'B1', status: 'insufficient', ...counts })]);
+    expect(placed).toEqual(insufficient);
   });
 });

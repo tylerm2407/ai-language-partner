@@ -27,6 +27,7 @@ import type {
 // shape is shared without the dependency.
 import type { NotificationPrefs } from './notification-prefs';
 import type { TopicKey } from '../components/onboarding/topic-packs';
+import type { PlacementChoice } from './course-placement';
 
 export const PENDING_ONBOARDING_KEY = 'pending-onboarding';
 export const PENDING_ONBOARDING_SCHEMA_VERSION = 1;
@@ -120,10 +121,22 @@ export interface PendingOnboarding {
    * them to their real home on flush.
    */
   notificationPrefs?: NotificationPrefs | null;
+  /**
+   * Where the learner asked their lessons to start, from the course step:
+   * their declared band, one below it, or no lesson path. Only the CHOICE is
+   * stored — the curriculum tables are unreadable before sign-in (RLS
+   * `TO authenticated`), so the course id is resolved at flush time in
+   * `writeProfile`. Absent or null reads as `start`.
+   */
+  courseChoice?: PlacementChoice | null;
 }
 
 /**
- * WHY NEITHER NEW FIELD BUMPS `PENDING_ONBOARDING_SCHEMA_VERSION`.
+ * WHY NONE OF THE NEW FIELDS BUMPS `PENDING_ONBOARDING_SCHEMA_VERSION`.
+ *
+ * `courseChoice` follows the same rule as the two below it: optional and
+ * nullable, so an older draft loads without it and the flush substitutes
+ * `start` — the course the learner's declared level would have opened anyway.
  *
  * A bump discards every in-flight draft on upgrade, so it is only worth paying
  * when the loader would otherwise MISREAD an old blob. Both fields above are
@@ -151,6 +164,7 @@ export function emptyPendingOnboarding(): PendingOnboardingDraft {
     claimedByUserId: null,
     topic: null,
     notificationPrefs: null,
+    courseChoice: null,
   };
 }
 

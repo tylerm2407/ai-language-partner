@@ -19,6 +19,7 @@ import {
   markOnboardingComplete,
   updateOnboardingChecklist,
   setAvatarKind,
+  fetchCourses,
 } from '../../lib/supabase-queries';
 import { useAppStore } from '../../stores/useAppStore';
 import { LessonRunner, type LessonResult } from '../../components/lesson/LessonRunner';
@@ -33,6 +34,12 @@ import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { useMotion } from '../../hooks/useMotion';
 import { cefrBandForProficiencyLevel } from '../../lib/cefr-proficiency';
 import { cefrCanDo } from '../../lib/cefr-labels';
+import {
+  normalizePlacementChoice,
+  placementOptionsFor,
+  resolvePlacement,
+  type PlacementChoice,
+} from '../../lib/course-placement';
 import { trialExercisesFor } from '../../components/onboarding/trial-lesson';
 import {
   TOPIC_CHIPS,
@@ -133,6 +140,7 @@ type Step =
   | 'language'
   | 'idealSelf'
   | 'level'
+  | 'course'
   | 'identity'
   | 'goal'
   | 'notifications'
@@ -150,6 +158,7 @@ const ALL_STEPS: Step[] = [
   'language',
   'idealSelf',
   'level',
+  'course',
   'identity',
   'goal',
   'notifications',
@@ -172,6 +181,7 @@ const FUNNEL_STEPS: Step[] = [
   'language',
   'idealSelf',
   'level',
+  'course',
   'identity',
   'goal',
   'notifications',
@@ -272,6 +282,12 @@ export default function OnboardingScreen() {
   // the analytics event keep the honest absence (components/onboarding/trial-topic.ts).
   const [topic, setTopic] = useState<TopicKey | null>(null);
   const [level, setLevel] = useState<ProficiencyLevel>(DEFAULT_LEVEL);
+  // Where the lessons start relative to the declared level. `start` is the
+  // smart default; the course step only exists for levels with a band below
+  // them, so a beginner never sees it (`placementOptions` is empty).
+  const [courseChoice, setCourseChoice] = useState<PlacementChoice>('start');
+  const placementOptions = placementOptionsFor(level);
+  const hasCourseStep = placementOptions.length > 0;
   const [notificationPrefs, setNotificationPrefs] = useState<NotificationPrefs>(
     DEFAULT_NOTIFICATION_PREFS,
   );
@@ -292,13 +308,28 @@ export default function OnboardingScreen() {
    */
   const writeProfile = useCallback(
     async (userId: string, draft: PendingOnboardingDraft) => {
+      const draftLanguage = draft.targetLanguage ?? DEFAULT_LANGUAGE;
+      const draftLevel = draft.level ?? DEFAULT_LEVEL;
+      // The course id could not be resolved before sign-in (curriculum tables
+      // are RLS `TO authenticated`), so the draft carries only the CHOICE and
+      // it is turned into a course here, now that there is a session. A fetch
+      // failure throws like any other step and lands in the retry path below.
+      const choice = normalizePlacementChoice(draftLevel, draft.courseChoice);
+      const placement = resolvePlacement(await fetchCourses(draftLanguage), draftLevel, choice);
       await upsertProfile(userId, {
         nativeLanguage: 'en' as LanguageCode,
-        targetLanguage: draft.targetLanguage ?? DEFAULT_LANGUAGE,
-        level: draft.level ?? DEFAULT_LEVEL,
+        targetLanguage: draftLanguage,
+        level: draftLevel,
         dailyGoalMinutes: draft.dailyGoalMinutes ?? DEFAULT_DAILY_GOAL_MINUTES,
         idealL2Self: draft.idealL2Self,
         ...(draft.displayName ? { displayName: draft.displayName } : {}),
+        ...placement,
+      });
+      trackEvent('course_placement_set', {
+        screen: 'onboarding',
+        source: choice,
+        band: placement.placementBand,
+        language: draftLanguage,
       });
 
       if (draft.avatarPresetId) {
@@ -367,6 +398,7 @@ export default function OnboardingScreen() {
     if (pending.idealL2Self) setIdealL2Self(pending.idealL2Self);
     if (pending.topic) setTopic(pending.topic);
     if (pending.level) setLevel(pending.level);
+    if (pending.courseChoice) setCourseChoice(pending.courseChoice);
     // Validated on the way in, not trusted: a draft written by an older build
     // has no prefs at all, and one written by a newer one could carry a kind
     // this build does not know. `validateNotificationPrefs` repairs field by
@@ -451,6 +483,7 @@ export default function OnboardingScreen() {
       idealL2Self: idealL2Self.trim() ? idealL2Self.trim() : null,
       topic,
       level,
+      courseChoice,
       trial,
       displayName: displayName.trim() ? displayName.trim() : null,
       avatarPresetId,
@@ -463,6 +496,7 @@ export default function OnboardingScreen() {
       idealL2Self,
       topic,
       level,
+      courseChoice,
       trial,
       displayName,
       avatarPresetId,
@@ -711,7 +745,16 @@ export default function OnboardingScreen() {
       title: 'Your plan',
       detail: `${planHeadline(idealL2Self.trim() ? idealL2Self.trim() : null, pack, languageName)} · 6 lessons`,
     });
-    owned.push({ title: 'Your level', detail: `${band} · ${cefrCanDo(band)}` });
+    // The summary must be literally true: a warm-up learner's lessons start a
+    // band below the level they declared, and a no-path learner has none.
+    const chosen = placementOptions.find((o) => o.choice === courseChoice);
+    const levelDetail =
+      chosen && chosen.choice === 'none'
+        ? `${band} · ${cefrCanDo(band)} · reading, chat and tutor — no lessons yet`
+        : chosen && chosen.band && chosen.band !== band
+          ? `${band} · ${cefrCanDo(band)} · lessons start at ${chosen.band}`
+          : `${band} · ${cefrCanDo(band)}`;
+    owned.push({ title: 'Your level', detail: levelDetail });
 
     // Only the reminders that are actually switched on are named. A learner who
     // turned the daily nudge off must not be told they have one.
@@ -790,7 +833,8 @@ export default function OnboardingScreen() {
   const prev: Partial<Record<Step, Step>> = {
     idealSelf: 'language',
     level: 'idealSelf',
-    identity: 'level',
+    course: 'level',
+    identity: hasCourseStep ? 'course' : 'level',
     goal: 'identity',
     notifications: 'goal',
   };
@@ -931,7 +975,9 @@ export default function OnboardingScreen() {
   }
 
   if (step === 'level') {
-    footer = <SlabButton label="Continue" onPress={() => setStep('identity')} />;
+    footer = (
+      <SlabButton label="Continue" onPress={() => setStep(hasCourseStep ? 'course' : 'identity')} />
+    );
     body = (
       <>
         {hero("What's your level?", 'pop')}
@@ -959,6 +1005,43 @@ export default function OnboardingScreen() {
               }}
               lead={<LevelBars lit={LEVEL_BARS[l.value]} selected={level === l.value} />}
               trail={<Chip label={cefrBandForProficiencyLevel(l.value)} />}
+            />
+          ))}
+        </View>
+      </>
+    );
+  }
+
+  /*
+    Where the lessons start. Only reached when the declared level has a band
+    below it (see `placementOptionsFor`); a beginner goes straight to identity.
+    The self-report is trusted — this is the learner's chance to hedge it, not
+    a test. Advanced learners are told plainly that no C1 path exists yet.
+  */
+  if (step === 'course') {
+    footer = <SlabButton label="Continue" onPress={() => setStep('identity')} />;
+    body = (
+      <>
+        {hero('Where should your lessons start?', 'pop')}
+        <Animated.View entering={enter(0)}>
+          <Text style={{ fontFamily: type.ui, fontSize: 14, lineHeight: 20, color: c.muted }}>
+            Reading, chat and the tutor already follow your level. This only sets where the lesson
+            path opens, and you can switch levels any time from the Learn tab.
+          </Text>
+        </Animated.View>
+        <View style={styles.rows}>
+          {placementOptions.map((o, i) => (
+            <OptionRow
+              key={o.choice}
+              index={i + 1}
+              title={o.title}
+              subtitle={o.subtitle}
+              selected={courseChoice === o.choice}
+              onSelect={() => {
+                setCourseChoice(o.choice);
+                cheer();
+              }}
+              trail={o.band ? <Chip label={o.band} /> : undefined}
             />
           ))}
         </View>

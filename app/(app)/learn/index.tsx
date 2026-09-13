@@ -42,6 +42,9 @@ import { BookCard } from '../../../components/reading/BookCard';
 import { ContinueReadingSection } from '../../../components/reading/ContinueReadingSection';
 import { cefrCanDo, cefrAccessibilityLabel } from '../../../lib/cefr-labels';
 import { useScreenView } from '../../../hooks/useScreenView';
+import { useProfile } from '../../../hooks/useProfile';
+import { initialCourseSelection } from '../../../lib/course-placement';
+import * as Sentry from '@sentry/react-native';
 
 
 type CourseTab = 'vocab' | 'reading' | 'writing';
@@ -66,10 +69,12 @@ export default function LearnScreen() {
   const { c } = useUi2Theme();
   const router = useRouter();
   const { reviewCount, profile } = useAppStore();
+  const { updateProfile } = useProfile();
   // The review screen and the lesson warm-up both clear cards without this
   // screen knowing, so re-read the due count whenever it comes back into view.
   useReviewCountSync();
   const [courses, setCourses] = useState<Course[]>([]);
+  const [coursesError, setCoursesError] = useState<ErrorCopy | null>(null);
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
   const [units, setUnits] = useState<Record<string, { unit: Unit; lessons: Lesson[] }[]>>({});
   const [loading, setLoading] = useState(true);
@@ -97,19 +102,59 @@ export default function LearnScreen() {
   const [inProgressBooks, setInProgressBooks] = useState<{ book: ReadingBook; progress: UserBookProgress }[]>([]);
   const [bookProgressMap, setBookProgressMap] = useState<Map<string, UserBookProgress>>(new Map());
 
-  // Load courses on mount
+  // Load courses on mount. The pill that opens is the learner's current course
+  // (migration 125), not `data[0]` — which after the cefr_level sort was the
+  // A1 course for everyone, whatever level they had declared. A deliberate
+  // "no lesson path" (advanced learner, no C1 course yet) opens on nothing and
+  // shows the empty state below; the pills stay so they can opt in.
+  const currentCourseId = profile?.currentCourseId ?? null;
+  const placementBand = profile?.placementBand ?? null;
+  const declaredLevel = profile?.level;
   useEffect(() => {
     const targetLang = profile?.targetLanguage;
+    let cancelled = false;
+    setCoursesError(null);
     fetchCourses(targetLang)
       .then((data) => {
+        if (cancelled) return;
         setCourses(data);
-        if (data.length > 0) {
-          setSelectedCourseId(data[0].id);
-        }
+        setSelectedCourseId(
+          declaredLevel
+            ? initialCourseSelection(data, { currentCourseId, placementBand, level: declaredLevel })
+            : data[0]?.id ?? null,
+        );
         setLoading(false);
       })
-      .catch(() => setLoading(false));
-  }, [profile?.targetLanguage]);
+      .catch((err) => {
+        if (cancelled) return;
+        // An empty course list and an outage look identical to a learner, so
+        // this has to be visible rather than swallowed.
+        setCoursesError(loadErrorCopy(err, 'your courses'));
+        setLoading(false);
+      });
+    return () => { cancelled = true; };
+    // Re-run when the stored pointer changes (Settings moved it, or the
+    // placement hook healed it) so the open pill follows the profile.
+  }, [profile?.targetLanguage, currentCourseId, placementBand, declaredLevel]);
+
+  // A pill tap is remembered on the profile so Home's "Continue learning"
+  // follows what the learner last looked at. Local state switches first; a
+  // failed write is reported, not hidden, and the next mount falls back to the
+  // stored pointer.
+  const handleSelectCourse = useCallback((courseId: string) => {
+    setSelectedCourseId(courseId);
+    if (courseId === currentCourseId) return;
+    const course = courses.find((k) => k.id === courseId);
+    trackEvent('course_placement_set', {
+      screen: 'learn',
+      source: 'pill',
+      band: course?.cefrLevel,
+      language: profile?.targetLanguage,
+    });
+    updateProfile({ currentCourseId: courseId }).catch((err) => {
+      Sentry.captureException(err, { tags: { area: 'course-placement', op: 'pill' } });
+    });
+  }, [courses, currentCourseId, profile?.targetLanguage, updateProfile]);
 
   // Load units + lessons when course is selected
   const loadCourseContent = useCallback(async (courseId: string) => {
@@ -162,15 +207,18 @@ export default function LearnScreen() {
 
   const selectTab = async (tab: CourseTab) => {
     setActiveTab(tab);
-    if (!selectedCourseId) return;
 
-    if (tab === 'reading' && !readingPassages[selectedCourseId]) {
-      await loadPassages(selectedCourseId);
-      // Also load library books and in-progress books
+    if (tab === 'reading') {
+      // The library and in-progress shelves are language-scoped, so a learner
+      // with no course (no lesson path at their band) still gets them; only
+      // the course's passages need a course.
+      if (selectedCourseId && !readingPassages[selectedCourseId]) {
+        await loadPassages(selectedCourseId);
+      }
       loadLibraryBooks(selectedCefrTab);
       loadInProgressBooks();
     }
-    if (tab === 'writing' && !writingPrompts[selectedCourseId]) {
+    if (tab === 'writing' && selectedCourseId && !writingPrompts[selectedCourseId]) {
       await loadPrompts(selectedCourseId);
     }
   };
@@ -348,7 +396,7 @@ export default function LearnScreen() {
               <CoursePills
                 courses={courses}
                 selectedCourseId={selectedCourseId}
-                onSelect={setSelectedCourseId}
+                onSelect={handleSelectCourse}
                 compact
               />
             </View>
@@ -364,11 +412,24 @@ export default function LearnScreen() {
         </View>
 
         {/* Content area */}
-        {courses.length === 0 ? (
+        {coursesError ? (
+          <Ui2InlineError copy={coursesError} onRetry={() => router.replace('/learn' as never)} />
+        ) : courses.length === 0 ? (
           <Ui2EmptyState
             icon="book-outline"
             title="No courses yet"
             description="There are no courses for this language yet. Check back soon."
+          />
+        ) : selectedCourseId === null && activeTab === 'vocab' ? (
+          /* A deliberate no-course placement: the learner's band has no lesson
+             path yet. Written off the placement band, not a hard-coded "C1",
+             so it stays true when C1 arrives and C2 is the gap. */
+          <Ui2EmptyState
+            icon="chatbubbles-outline"
+            title={`No lesson path at ${placementBand ?? 'your level'} yet`}
+            description={`${placementBand ? `${cefrCanDo(placementBand)} ` : ''}Lessons run A1 to B2 today. Keep sharpening with reading, chat and the tutor, or tap a level above to open its lessons.`}
+            actionLabel="Open chat"
+            onAction={() => router.push('/chat' as never)}
           />
         ) : activeTab === 'vocab' ? (
           /* Vocab tab — unit carousel over the selected unit's lessons */

@@ -60,6 +60,20 @@ export interface UserProfile {
   nativeLanguage: LanguageCode;
   targetLanguage: LanguageCode;
   level: ProficiencyLevel;
+  /**
+   * The course Home and Learn open on (migration 125). Moved by onboarding,
+   * Settings and the Learn course pills. Null means either no lesson path
+   * exists at the learner's band (advanced, no C1 course yet) or the account is
+   * unplaced and `hooks/useEnsurePlacement.ts` will fill it in.
+   */
+  currentCourseId: string | null;
+  /**
+   * CEFR band of the course the learner STARTED in (migration 125). A1–C2 by
+   * CHECK constraint; normalise with `normalizeBand` before trusting it. The
+   * proficiency report treats bands strictly below it as assumed from
+   * placement rather than measured. Stable: course pills never move it.
+   */
+  placementBand: string | null;
   dailyGoalMinutes: number;
   totalXp: number;
   timezone: string;

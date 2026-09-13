@@ -83,7 +83,15 @@ export const CEFR_BAND_BY_LEVEL: Record<ProficiencyLevel, CefrBand> = {
 
 export type SkillKey = 'vocabulary' | 'reading' | 'writing' | 'listening' | 'speaking';
 
-export type BandStatus = 'mastered' | 'developing' | 'weak' | 'insufficient';
+/**
+ * `placed` is the one status that is not a verdict on evidence. It marks a band
+ * strictly below the learner's placement band (the CEFR band of the course they
+ * started in) that has too little evidence to judge. The report assumes such a
+ * band from the learner's own placement rather than breaking the contiguity
+ * walk on it — see `highestContiguousBand` — and always discloses that it did.
+ * A band below placement that DOES have enough evidence is judged on it.
+ */
+export type BandStatus = 'mastered' | 'developing' | 'weak' | 'insufficient' | 'placed';
 
 export type AssessmentStatus = 'assessed' | 'insufficient_data' | 'not_assessed';
 
@@ -272,6 +280,12 @@ export interface SkillAssessment {
   /** Human-readable explanation of why this level (or why not). */
   detail: string;
   evidenceCount: number;
+  /**
+   * Rungs below `level` granted from the learner's placement rather than from
+   * evidence. Empty when every rung under the level was measured, and always
+   * empty when `level` is null — an assumed rung is never itself a level.
+   */
+  assumedBands: CefrBand[];
 }
 
 export interface ProficiencyReport {
@@ -283,7 +297,26 @@ export interface ProficiencyReport {
   nextLevel: CefrBand | null;
   /** Concrete, countable requirement to reach `nextLevel`. */
   nextLevelRequirement: string | null;
+  /**
+   * The CEFR band of the course the learner started in, or null for an account
+   * with no placement (the walk then starts at A1 exactly as it always did).
+   */
+  placementBand: CefrBand | null;
+  /** Union over assessed skills of rungs assumed from placement below `overallLevel`. */
+  assumedBands: CefrBand[];
+  /**
+   * One sentence the UI pairs with `cefrCanDo(overallLevel)` whenever part of
+   * the level rests on placement. Null when nothing was assumed or there is no
+   * level, so a caller can render it unconditionally.
+   */
+  levelBasis: string | null;
   generatedAt: string;
+}
+
+/** Optional inputs to `buildProficiencyReport` that are not in-app history. */
+export interface ProficiencyReportOptions {
+  /** See `ProficiencyReport.placementBand`. */
+  placementBand?: CefrBand | null;
 }
 
 // ─── Helpers ────────────────────────────────────────────────────
@@ -358,9 +391,31 @@ function bandIndex(band: CefrBand): number {
   return CEFR_LADDER.indexOf(band);
 }
 
-function nextBand(band: CefrBand): CefrBand | null {
-  const idx = bandIndex(band);
-  return idx >= 0 && idx < CEFR_LADDER.length - 1 ? CEFR_LADDER[idx + 1] : null;
+/** True when `band` sits strictly below the placement band. Never true without one. */
+function isBelowPlacement(band: CefrBand, placementBand: CefrBand | null): boolean {
+  return placementBand !== null && bandIndex(band) < bandIndex(placementBand);
+}
+
+/**
+ * "A1", "A1–A2" for a contiguous run, otherwise comma-separated. Bands arrive
+ * in ladder order from the walk, so contiguity is a first/last check.
+ */
+export function formatBandRange(bands: CefrBand[]): string {
+  if (bands.length === 0) return '';
+  if (bands.length === 1) return bands[0];
+  const first = bandIndex(bands[0]);
+  const last = bandIndex(bands[bands.length - 1]);
+  const contiguous = last - first === bands.length - 1;
+  return contiguous ? `${bands[0]}–${bands[bands.length - 1]}` : bands.join(', ');
+}
+
+/**
+ * The sentence that keeps a placed learner's level honest. Null when there is
+ * nothing to disclose, so the UI can render it unconditionally.
+ */
+export function levelBasis(level: CefrBand | null, assumed: CefrBand[]): string | null {
+  if (!level || assumed.length === 0) return null;
+  return `Measured from your ${level} work; ${formatBandRange(assumed)} assumed from your placement.`;
 }
 
 // ─── Band analysis ──────────────────────────────────────────────
@@ -374,8 +429,16 @@ function nextBand(band: CefrBand): CefrBand | null {
  * everything met, `mature` is the subset that has had time to prove itself, and
  * the rate is measured strictly over `mature`. That separation is what makes
  * the reported level immune to new material (see `isMature`).
+ *
+ * With a `placementBand`, an unjudgeable band strictly below it is reported as
+ * `placed` instead of `insufficient`. The counts are untouched — a placed band
+ * with 15 items seen still says 15 — only the verdict changes, and only for
+ * bands the evidence could not speak to.
  */
-export function analyzeBands(items: VocabEvidenceItem[]): BandBreakdown[] {
+export function analyzeBands(
+  items: VocabEvidenceItem[],
+  placementBand: CefrBand | null = null,
+): BandBreakdown[] {
   const counts = new Map<CefrBand, { seen: number; mature: number; retained: number }>();
   CEFR_LADDER.forEach((band) => counts.set(band, { seen: 0, mature: 0, retained: 0 }));
 
@@ -403,7 +466,7 @@ export function analyzeBands(items: VocabEvidenceItem[]): BandBreakdown[] {
     // met at all, or not enough of what was met has settled. A rate computed
     // over three mature cards is arithmetic, not an assessment.
     if (seen < MIN_ITEMS_PER_BAND || mature < MIN_MATURE_ITEMS_PER_BAND) {
-      status = 'insufficient';
+      status = isBelowPlacement(band, placementBand) ? 'placed' : 'insufficient';
     } else if (retentionRate >= MASTERY_RATE) {
       status = 'mastered';
     } else if (retentionRate >= DEVELOPING_RATE) {
@@ -428,23 +491,53 @@ export function analyzeBands(items: VocabEvidenceItem[]): BandBreakdown[] {
  * report C1) while three C1 decks correctly printed nothing. One policy, one
  * implementation, or the two drift again.
  *
- * A band with no evidence at all does not qualify and therefore stops the walk.
- * That is the same treatment `analyzeBands` already gives an empty vocabulary
- * band — `insufficient`, which breaks the walk — and it is the conservative
- * reading: we have not been shown the lower rung, so we do not grant the
- * higher one.
+ * A band with no evidence at all does not qualify and therefore stops the walk,
+ * with one exception: placement. A learner who started in the B1 course was
+ * never shown A1 or A2 cards, and a walk that breaks on those would leave them
+ * unassessed forever while telling them to go review A1 words. So a rung that
+ * is strictly below the `placementBand` AND has no usable evidence is *assumed*
+ * — the walk steps over it and records it in `assumedBands` so the report can
+ * say so. Two limits keep the never-inflate rule intact:
  *
- * Callers pass the bands in ladder order, each already judged.
+ *  - Evidence overrides placement, never the reverse. A rung below placement
+ *    that HAS enough evidence is judged on it, and if it fails it breaks the
+ *    walk exactly as it would for anyone else. Placement fills gaps in the
+ *    evidence; it does not outrank it.
+ *  - A level is never an assumed rung. Only an evidenced, qualifying rung sets
+ *    `level`. A placed-B1 learner with nothing settled at B1 yet is null, not
+ *    "A2" off zero A2 evidence.
+ *
+ * Callers pass the bands in ladder order, each already judged, with `evidenced`
+ * saying whether the rung had enough evidence to be judged at all.
  */
+interface JudgedBand {
+  band: CefrBand;
+  qualifies: boolean;
+  evidenced: boolean;
+}
+
 function highestContiguousBand(
-  judged: { band: CefrBand; qualifies: boolean }[]
-): CefrBand | null {
+  judged: JudgedBand[],
+  placementBand: CefrBand | null = null,
+): { level: CefrBand | null; assumedBands: CefrBand[] } {
   let level: CefrBand | null = null;
+  const assumed: CefrBand[] = [];
   for (const entry of judged) {
-    if (!entry.qualifies) break;
-    level = entry.band;
+    const placed = !entry.evidenced && isBelowPlacement(entry.band, placementBand);
+    if (!entry.qualifies && !placed) break;
+    if (placed) {
+      assumed.push(entry.band);
+    } else {
+      level = entry.band;
+    }
   }
-  return level;
+  // Assumed rungs above the level actually granted are not part of that level's
+  // basis, so they are not reported as such.
+  const granted = level;
+  return {
+    level,
+    assumedBands: granted ? assumed.filter((b) => bandIndex(b) < bandIndex(granted)) : [],
+  };
 }
 
 /**
@@ -453,21 +546,39 @@ function highestContiguousBand(
  * The contiguity requirement matters. A learner who has mastered A1 and, via
  * a niche track, a handful of B2 medical terms is not B2. We walk up from A1
  * and stop at the first band that is not mastered, which is what a placement
- * examiner would effectively do.
+ * examiner would effectively do. With a `placementBand`, unjudgeable bands
+ * below it are stepped over — see `highestContiguousBand`.
  */
-export function vocabularyLevel(bands: BandBreakdown[]): CefrBand | null {
+export function vocabularyLevel(
+  bands: BandBreakdown[],
+  placementBand: CefrBand | null = null,
+): CefrBand | null {
+  return highestContiguousBand(judgeVocabulary(bands), placementBand).level;
+}
+
+function judgeVocabulary(bands: BandBreakdown[]): JudgedBand[] {
   // Walked in the caller's order rather than over CEFR_LADDER, so a caller that
   // hands us a partial ladder still gets the old answer.
-  return highestContiguousBand(
-    bands.map((b) => ({ band: b.band, qualifies: b.status === 'mastered' }))
-  );
+  return bands.map((b) => ({
+    band: b.band,
+    qualifies: b.status === 'mastered',
+    evidenced: b.status !== 'insufficient' && b.status !== 'placed',
+  }));
+}
+
+/** Appended to an assessed skill's detail whenever part of its level is assumed. */
+function assumedClause(assumed: CefrBand[]): string {
+  return assumed.length > 0 ? ` ${formatBandRange(assumed)} assumed from your placement.` : '';
 }
 
 // ─── Per-skill assessment ───────────────────────────────────────
 
-function assessVocabulary(bands: BandBreakdown[]): SkillAssessment {
+function assessVocabulary(
+  bands: BandBreakdown[],
+  placementBand: CefrBand | null,
+): SkillAssessment {
   const evidenceCount = bands.reduce((sum, b) => sum + b.seen, 0);
-  const level = vocabularyLevel(bands);
+  const { level, assumedBands } = highestContiguousBand(judgeVocabulary(bands), placementBand);
 
   if (level) {
     const at = bands.find((b) => b.band === level);
@@ -478,8 +589,11 @@ function assessVocabulary(bands: BandBreakdown[]): SkillAssessment {
       // Counted against mature items, not against everything seen, so the
       // sentence matches the number that decided the level — and so it does not
       // read worse the day after the learner starts a new deck.
-      detail: `Retained ${at?.retained ?? 0} of ${at?.mature ?? 0} ${level} items in long-term review.`,
+      detail:
+        `Retained ${at?.retained ?? 0} of ${at?.mature ?? 0} ${level} items in long-term review.` +
+        assumedClause(assumedBands),
       evidenceCount,
+      assumedBands,
     };
   }
 
@@ -493,6 +607,7 @@ function assessVocabulary(bands: BandBreakdown[]): SkillAssessment {
         `Working through ${inProgress.band}: ${inProgress.retained} of ${inProgress.mature} items retained. ` +
         `${Math.round(MASTERY_RATE * 100)}% retention confirms the level.`,
       evidenceCount,
+      assumedBands: [],
     };
   }
 
@@ -513,6 +628,7 @@ function assessVocabulary(bands: BandBreakdown[]): SkillAssessment {
         `${settling.seen} ${settling.band} words started, ${settling.mature} of them settled into long-term review. ` +
         `${MIN_MATURE_ITEMS_PER_BAND} are needed before ${settling.band} can be judged — keep reviewing.`,
       evidenceCount,
+      assumedBands: [],
     };
   }
 
@@ -522,6 +638,7 @@ function assessVocabulary(bands: BandBreakdown[]): SkillAssessment {
     status: 'insufficient_data',
     detail: `Review at least ${MIN_ITEMS_PER_BAND} words in a level to be assessed on it.`,
     evidenceCount,
+    assumedBands: [],
   };
 }
 
@@ -537,7 +654,10 @@ function assessVocabulary(bands: BandBreakdown[]): SkillAssessment {
  * no matter what sat below it: three C1 articles, which the library will happily
  * serve to a curious B1 learner, printed "Reading: C1" on the profile screen.
  */
-function assessReading(items: ReadingEvidenceItem[]): SkillAssessment {
+function assessReading(
+  items: ReadingEvidenceItem[],
+  placementBand: CefrBand | null,
+): SkillAssessment {
   const completed = items.filter((i) => i.completed);
   const perBand = new Map<CefrBand, { total: number; passed: number }>();
 
@@ -550,11 +670,13 @@ function assessReading(items: ReadingEvidenceItem[]): SkillAssessment {
     perBand.set(band, bucket);
   }
 
-  const level = highestContiguousBand(
+  const { level, assumedBands } = highestContiguousBand(
     CEFR_LADDER.map((band) => ({
       band,
       qualifies: (perBand.get(band)?.passed ?? 0) >= MIN_READING_ITEMS,
-    }))
+      evidenced: (perBand.get(band)?.total ?? 0) >= MIN_READING_ITEMS,
+    })),
+    placementBand,
   );
 
   if (level) {
@@ -563,8 +685,11 @@ function assessReading(items: ReadingEvidenceItem[]): SkillAssessment {
       skill: 'reading',
       level,
       status: 'assessed',
-      detail: `Understood ${bucket?.passed ?? 0} of ${bucket?.total ?? 0} ${level} texts at ${Math.round(READING_COMPREHENSION_PASS * 100)}%+ comprehension.`,
+      detail:
+        `Understood ${bucket?.passed ?? 0} of ${bucket?.total ?? 0} ${level} texts at ${Math.round(READING_COMPREHENSION_PASS * 100)}%+ comprehension.` +
+        assumedClause(assumedBands),
       evidenceCount: completed.length,
+      assumedBands,
     };
   }
 
@@ -572,8 +697,9 @@ function assessReading(items: ReadingEvidenceItem[]): SkillAssessment {
     skill: 'reading',
     level: null,
     status: 'insufficient_data',
-    detail: `Finish ${MIN_READING_ITEMS} texts with comprehension questions at each level from A1 up to be assessed.`,
+    detail: `Finish ${MIN_READING_ITEMS} texts with comprehension questions at each level from ${placementBand ?? 'A1'} up to be assessed.`,
     evidenceCount: completed.length,
+    assumedBands: [],
   };
 }
 
@@ -589,7 +715,10 @@ function assessReading(items: ReadingEvidenceItem[]): SkillAssessment {
  * writing three passable B2 paragraphs on a familiar topic is not the same
  * claim as being able to write at B2.
  */
-function assessWriting(items: WritingEvidenceItem[]): SkillAssessment {
+function assessWriting(
+  items: WritingEvidenceItem[],
+  placementBand: CefrBand | null,
+): SkillAssessment {
   const graded = items.filter((i) => i.overallScore !== null);
   const perBand = new Map<CefrBand, number[]>();
 
@@ -608,11 +737,16 @@ function assessWriting(items: WritingEvidenceItem[]): SkillAssessment {
     means.set(band, scores.reduce((a, b) => a + b, 0) / scores.length);
   }
 
-  const level = highestContiguousBand(
+  const { level, assumedBands } = highestContiguousBand(
     CEFR_LADDER.map((band) => {
       const mean = means.get(band);
-      return { band, qualifies: mean !== undefined && mean >= WRITING_PASS_SCORE };
-    })
+      return {
+        band,
+        qualifies: mean !== undefined && mean >= WRITING_PASS_SCORE,
+        evidenced: mean !== undefined,
+      };
+    }),
+    placementBand,
   );
 
   if (level) {
@@ -621,8 +755,11 @@ function assessWriting(items: WritingEvidenceItem[]): SkillAssessment {
       skill: 'writing',
       level,
       status: 'assessed',
-      detail: `Averaged ${Math.round(levelMean * 100)}% across ${perBand.get(level)?.length ?? 0} graded ${level} pieces.`,
+      detail:
+        `Averaged ${Math.round(levelMean * 100)}% across ${perBand.get(level)?.length ?? 0} graded ${level} pieces.` +
+        assumedClause(assumedBands),
       evidenceCount: graded.length,
+      assumedBands,
     };
   }
 
@@ -630,8 +767,9 @@ function assessWriting(items: WritingEvidenceItem[]): SkillAssessment {
     skill: 'writing',
     level: null,
     status: 'insufficient_data',
-    detail: `Submit ${MIN_WRITING_ITEMS} graded pieces at each level from A1 up to be assessed.`,
+    detail: `Submit ${MIN_WRITING_ITEMS} graded pieces at each level from ${placementBand ?? 'A1'} up to be assessed.`,
     evidenceCount: graded.length,
+    assumedBands: [],
   };
 }
 
@@ -650,6 +788,7 @@ function assessListening(minutes: number): SkillAssessment {
         ? `${Math.round(minutes)} minutes of listening practice logged. Listening is not yet scored.`
         : 'No listening practice logged yet.',
     evidenceCount: Math.round(minutes),
+    assumedBands: [],
   };
 }
 
@@ -666,7 +805,11 @@ function assessListening(minutes: number): SkillAssessment {
  * be told which. `minutes` is exposure from daily_stats and is only ever used
  * to phrase that first case — it can never produce a level on its own.
  */
-function assessSpeaking(items: SpeakingEvidenceItem[], minutes: number): SkillAssessment {
+function assessSpeaking(
+  items: SpeakingEvidenceItem[],
+  minutes: number,
+  placementBand: CefrBand | null,
+): SkillAssessment {
   if (items.length === 0) {
     return {
       skill: 'speaking',
@@ -677,6 +820,7 @@ function assessSpeaking(items: SpeakingEvidenceItem[], minutes: number): SkillAs
           ? `${Math.round(minutes)} minutes of speaking practice logged, but no scored attempts yet.`
           : 'No speaking practice logged yet.',
       evidenceCount: 0,
+      assumedBands: [],
     };
   }
 
@@ -699,11 +843,16 @@ function assessSpeaking(items: SpeakingEvidenceItem[], minutes: number): SkillAs
   // Same walk as reading and writing. Skipping unevidenced rungs would let ten
   // C1 attempts print "Speaking: C1" off no lower evidence at all — the exact
   // failure `highestContiguousBand` exists to stop.
-  const level = highestContiguousBand(
+  const { level, assumedBands } = highestContiguousBand(
     CEFR_LADDER.map((band) => {
       const mean = means.get(band);
-      return { band, qualifies: mean !== undefined && mean >= SPEAKING_PASS_SCORE };
-    })
+      return {
+        band,
+        qualifies: mean !== undefined && mean >= SPEAKING_PASS_SCORE,
+        evidenced: mean !== undefined,
+      };
+    }),
+    placementBand,
   );
 
   if (level) {
@@ -715,8 +864,11 @@ function assessSpeaking(items: SpeakingEvidenceItem[], minutes: number): SkillAs
       // Not "pronunciation": conversation turns contribute how accurate the
       // language was and how well it came across, alongside scored
       // pronunciation attempts. Naming one source would misdescribe the other.
-      detail: `Averaged ${Math.round(levelMean * 100)}% across ${perBand.get(level)?.length ?? 0} scored ${level} attempts.`,
+      detail:
+        `Averaged ${Math.round(levelMean * 100)}% across ${perBand.get(level)?.length ?? 0} scored ${level} attempts.` +
+        assumedClause(assumedBands),
       evidenceCount: items.length,
+      assumedBands,
     };
   }
 
@@ -724,8 +876,9 @@ function assessSpeaking(items: SpeakingEvidenceItem[], minutes: number): SkillAs
     skill: 'speaking',
     level: null,
     status: 'insufficient_data',
-    detail: `Record ${MIN_SPEAKING_ITEMS} scored attempts at each level from A1 up to be assessed on speaking.`,
+    detail: `Record ${MIN_SPEAKING_ITEMS} scored attempts at each level from ${placementBand ?? 'A1'} up to be assessed on speaking.`,
     evidenceCount: items.length,
+    assumedBands: [],
   };
 }
 
@@ -783,27 +936,49 @@ export function overallFromSkills(skills: SkillAssessment[]): CefrBand | null {
  */
 export function nextLevelRequirement(
   current: CefrBand | null,
-  bands: BandBreakdown[]
+  bands: BandBreakdown[],
+  placementBand: CefrBand | null = null,
 ): { nextLevel: CefrBand | null; requirement: string | null } {
   if (!current) {
-    return {
-      nextLevel: 'A1',
-      requirement: `Review at least ${MIN_ITEMS_PER_BAND} A1 words to earn your first assessed level.`,
-    };
+    if (!placementBand) {
+      return {
+        nextLevel: 'A1',
+        requirement: `Review at least ${MIN_ITEMS_PER_BAND} A1 words to earn your first assessed level.`,
+      };
+    }
+    // A placed learner's first level is proved at their entry band, never by
+    // going back to A1 words they were placed past.
+    const target = nextRungToProve(null, bands) ?? placementBand;
+    return { nextLevel: target, requirement: requirementForBand(target, bands) };
   }
 
-  const target = nextBand(current);
+  const target = nextRungToProve(current, bands);
   if (!target) {
     return { nextLevel: null, requirement: null };
   }
+  return { nextLevel: target, requirement: requirementForBand(target, bands) };
+}
 
+/**
+ * The next rung the learner has to PROVE: the first band above `current` (from
+ * the bottom when nothing is assessed yet) that placement does not already
+ * vouch for. Without a placement no band is `placed`, so this is exactly
+ * the band after `current`.
+ */
+function nextRungToProve(current: CefrBand | null, bands: BandBreakdown[]): CefrBand | null {
+  const start = current ? bandIndex(current) + 1 : 0;
+  for (const band of CEFR_LADDER.slice(start)) {
+    const judged = bands.find((b) => b.band === band);
+    if (judged?.status !== 'placed') return band;
+  }
+  return null;
+}
+
+function requirementForBand(target: CefrBand, bands: BandBreakdown[]): string {
   const targetBand = bands.find((b) => b.band === target);
   if (!targetBand || targetBand.seen < MIN_ITEMS_PER_BAND) {
     const shortfall = MIN_ITEMS_PER_BAND - (targetBand?.seen ?? 0);
-    return {
-      nextLevel: target,
-      requirement: `Start ${target}: review ${shortfall} more ${target} item${shortfall === 1 ? '' : 's'}.`,
-    };
+    return `Start ${target}: review ${shortfall} more ${target} item${shortfall === 1 ? '' : 's'}.`;
   }
 
   // Enough of the band met, not enough of it settled. The fix for this state is
@@ -811,10 +986,7 @@ export function nextLevelRequirement(
   // nothing for it, so the requirement must not imply otherwise.
   if (targetBand.mature < MIN_MATURE_ITEMS_PER_BAND) {
     const shortfall = MIN_MATURE_ITEMS_PER_BAND - targetBand.mature;
-    return {
-      nextLevel: target,
-      requirement: `Keep reviewing your ${target} words — ${shortfall} more must reach long-term intervals (${targetBand.mature}/${MIN_MATURE_ITEMS_PER_BAND} so far).`,
-    };
+    return `Keep reviewing your ${target} words — ${shortfall} more must reach long-term intervals (${targetBand.mature}/${MIN_MATURE_ITEMS_PER_BAND} so far).`;
   }
 
   // Against mature, matching the rate that actually gates the band. This is a
@@ -824,16 +996,10 @@ export function nextLevelRequirement(
   // error, and the number moves with every review anyway.
   const needed = Math.ceil(targetBand.mature * MASTERY_RATE) - targetBand.retained;
   if (needed > 0) {
-    return {
-      nextLevel: target,
-      requirement: `Retain ${needed} more ${target} item${needed === 1 ? '' : 's'} in long-term review (${targetBand.retained}/${targetBand.mature} so far).`,
-    };
+    return `Retain ${needed} more ${target} item${needed === 1 ? '' : 's'} in long-term review (${targetBand.retained}/${targetBand.mature} so far).`;
   }
 
-  return {
-    nextLevel: target,
-    requirement: `${target} vocabulary is on track — build reading and writing evidence at ${target} to confirm the level.`,
-  };
+  return `${target} vocabulary is on track — build reading and writing evidence at ${target} to confirm the level.`;
 }
 
 // ─── Entry point ────────────────────────────────────────────────
@@ -843,19 +1009,24 @@ export function nextLevelRequirement(
  *
  * @param evidence Aggregated in-app history.
  * @param now Injected clock, so output is deterministic under test.
+ * @param options Inputs that are not history — today only the placement band.
+ *   Omitted or null, the report is exactly what it was before placement
+ *   existed.
  */
 export function buildProficiencyReport(
   evidence: ProficiencyEvidence,
-  now: Date
+  now: Date,
+  options: ProficiencyReportOptions = {},
 ): ProficiencyReport {
-  const bands = analyzeBands(evidence.vocabulary);
+  const placementBand = options.placementBand ?? null;
+  const bands = analyzeBands(evidence.vocabulary, placementBand);
 
   const skills: SkillAssessment[] = [
-    assessVocabulary(bands),
-    assessReading(evidence.reading),
-    assessWriting(evidence.writing),
+    assessVocabulary(bands, placementBand),
+    assessReading(evidence.reading, placementBand),
+    assessWriting(evidence.writing, placementBand),
     assessListening(evidence.listeningMinutes),
-    assessSpeaking(evidence.speaking, evidence.speakingMinutes),
+    assessSpeaking(evidence.speaking, evidence.speakingMinutes, placementBand),
   ];
 
   const confidence = assessConfidence(evidence.totalReviews, evidence.activeDays);
@@ -864,7 +1035,18 @@ export function buildProficiencyReport(
   // publish a number the learner would be right not to trust.
   const overallLevel = confidence === 'none' ? null : overallFromSkills(skills);
 
-  const { nextLevel, requirement } = nextLevelRequirement(overallLevel, bands);
+  const { nextLevel, requirement } = nextLevelRequirement(overallLevel, bands, placementBand);
+
+  // Only rungs under the level actually published count as its basis. A skill
+  // that assumed A2 on its way to B2 contributes nothing when the overall level
+  // is the A1 another skill pinned it to.
+  const assumedBands = overallLevel
+    ? CEFR_LADDER.filter(
+        (band) =>
+          bandIndex(band) < bandIndex(overallLevel) &&
+          skills.some((s) => s.status === 'assessed' && s.assumedBands.includes(band)),
+      )
+    : [];
 
   return {
     overallLevel,
@@ -873,6 +1055,9 @@ export function buildProficiencyReport(
     bands,
     nextLevel,
     nextLevelRequirement: requirement,
+    placementBand,
+    assumedBands,
+    levelBasis: levelBasis(overallLevel, assumedBands),
     generatedAt: now.toISOString(),
   };
 }

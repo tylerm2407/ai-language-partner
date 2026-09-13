@@ -1,5 +1,5 @@
 ---
-paths: ["lib/srs.ts", "lib/grading.ts", "lib/levels.ts", "lib/hearts.ts", "components/lesson/**", "app/(app)/learn/**", "app/(app)/review/**", "app/(app)/practice/**"]
+paths: ["lib/srs.ts", "lib/grading.ts", "lib/levels.ts", "lib/hearts.ts", "lib/cefr-proficiency.ts", "lib/next-band-progress.ts", "lib/course-placement.ts", "components/lesson/**", "app/(app)/learn/**", "app/(app)/review/**", "app/(app)/practice/**"]
 ---
 
 # Learning Domain Rules
@@ -13,6 +13,11 @@ paths: ["lib/srs.ts", "lib/grading.ts", "lib/levels.ts", "lib/hearts.ts", "compo
 - EF adjusts per review: `EF' = EF + (0.1 - (5 - rating) * (0.08 + (5 - rating) * 0.02))`. Minimum EF = 1.3.
 - Cards due today (`nextDue <= now`) appear in the review queue, sorted by overdue-ness.
 - New cards are introduced at a controlled rate (default: 20/day, configurable per user).
+
+### Review session format (`lib/review-choices.ts`)
+- A review card is a four-option question: the target word, pick its meaning. No self-rating. Distractors are translations of other cards from the learner's own deck (same language first), topped up from the course when the deck is small.
+- The pick sets the rating: wrong = 1 (Again), correct in under 4s = 5 (Easy), correct otherwise = 4 (Good). Hard (3) is unreachable by design.
+- A missed card is re-asked later in the same session, up to 3 times, but only the FIRST showing is written to SM-2 and `review_logs`. The miss already reset it to tomorrow; it stays in the queue until a fresh-day pass.
 
 ## Lesson & Exercise Structure
 
@@ -41,3 +46,11 @@ paths: ["lib/srs.ts", "lib/grading.ts", "lib/levels.ts", "lib/hearts.ts", "compo
 - **Unit** = thematic group (e.g., "Greetings", "Food & Drink").
 - **Lesson** = a single learning session within a unit (10-15 exercises).
 - **Card** = atomic learning item (word, phrase, or sentence) with translations and audio.
+
+## Measured CEFR level (`lib/cefr-proficiency.ts`)
+
+- A vocabulary band is judged only with ≥ 20 items seen and ≥ 10 mature; retention over mature items ≥ 0.8 is `mastered`, ≥ 0.5 `developing`, else `weak`. Reading needs 3 passed pieces (comprehension ≥ 0.7), writing 3 graded pieces averaging ≥ 0.7, speaking 10 scored attempts averaging ≥ 0.7. The overall level is the lowest assessed skill.
+- The level is the highest band reached by walking A1 → C2 without skipping one (`highestContiguousBand`). Every skill shares that walk.
+- **Placement.** A learner's lessons start at `user_profiles.placement_band` — the band of the course they started in (one below the declared level if they chose to warm up; B2 for an advanced learner while no C1 course exists; the declared band if they chose no lesson path). Bands strictly below it that have too little evidence to judge are `placed`: the walk steps over them and the report discloses it ("assumed from your placement"). Two limits hold: placement never overrides evidence — a judged band below placement is used on its verdict and a failing one breaks the walk — and the reported level is always an evidenced rung, never an assumed one. `nextLevelRequirement` targets the first band above the current level that is not placed, so a placed learner is never sent back to A1 words.
+- `lib/course-placement.ts` owns which course a level opens and what the onboarding/Settings choosers offer. `current_course_id` is the navigation pointer (moved by pills); `placement_band` is the assessment input (never moved by pills).
+- Changing any threshold or the placement rule requires updating `lib/cefr-proficiency.test.ts`, `lib/course-placement.test.ts` and this section.

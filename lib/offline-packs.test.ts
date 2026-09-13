@@ -238,7 +238,7 @@ describe('removal and budget', () => {
 describe('auto top-up', () => {
   it('packs the current unit and the next, started books, and today\'s article', async () => {
     const { deps: d, calls } = deps();
-    const summary = await autoTopUp(USER, { targetLanguage: 'es', newsTier: 'easy', date: '2026-09-09' }, { deps: d, now: NOW });
+    const summary = await autoTopUp(USER, { targetLanguage: 'es', currentCourseId: 'course-1', newsTier: 'easy', date: '2026-09-09' }, { deps: d, now: NOW });
     // u1 is finished (both lessons completed), so the current unit is u2.
     expect((await listPacks(USER)).map((p) => p.id).sort()).toEqual(['book:book-9', 'news:art-1', 'unit:u2', 'unit:u3']);
     expect(summary).toMatchObject({ units: 2, books: 1, news: 1, errors: 0, skipped: null });
@@ -248,24 +248,39 @@ describe('auto top-up', () => {
   it('does nothing when the learner turned auto-download off', async () => {
     const { deps: d, calls } = deps();
     await setAutoDownload(USER, false);
-    const summary = await autoTopUp(USER, { targetLanguage: 'es', newsTier: 'easy' }, { deps: d, now: NOW });
+    const summary = await autoTopUp(USER, { targetLanguage: 'es', currentCourseId: 'course-1', newsTier: 'easy' }, { deps: d, now: NOW });
     expect(summary.skipped).toBe('off');
     expect(calls.courses).toBeUndefined();
   });
 
   it('skips packs already on the device and re-fetches only a news pack that lacks audio', async () => {
     const { deps: d, calls } = deps();
-    await autoTopUp(USER, { targetLanguage: 'es', newsTier: 'easy', date: '2026-09-09' }, { deps: d, now: NOW });
+    await autoTopUp(USER, { targetLanguage: 'es', currentCourseId: 'course-1', newsTier: 'easy', date: '2026-09-09' }, { deps: d, now: NOW });
     const before = { ...calls };
-    const again = await autoTopUp(USER, { targetLanguage: 'es', newsTier: 'easy', date: '2026-09-09' }, { deps: d, now: NOW });
+    const again = await autoTopUp(USER, { targetLanguage: 'es', currentCourseId: 'course-1', newsTier: 'easy', date: '2026-09-09' }, { deps: d, now: NOW });
     expect(again).toMatchObject({ units: 0, books: 0, news: 0 });
     expect(calls.lesson).toBe(before.lesson);
     expect(await findPack(USER, 'unit', 'u2')).not.toBeNull();
   });
 
+  it('warms nothing for a learner with no current course, and only that course otherwise', async () => {
+    const { deps: d, calls } = deps();
+    const none = await autoTopUp(USER, { targetLanguage: 'es', currentCourseId: null, newsTier: 'easy', date: '2026-09-09' }, { deps: d, now: NOW });
+    expect(none.units).toBe(0);
+    // No course means no course list either: nothing to warm, nothing to fetch.
+    expect(calls.courses).toBeUndefined();
+    expect(await findPack(USER, 'unit', 'u2')).toBeNull();
+
+    const other = await autoTopUp(USER, { targetLanguage: 'es', currentCourseId: 'course-9', newsTier: 'easy', date: '2026-09-09' }, { deps: d, now: NOW });
+    // A pointer at a course the language does not have warms no units — the
+    // profile is stale, and the placement hook heals it rather than this
+    // guessing a course.
+    expect(other.units).toBe(0);
+  });
+
   it('a missing article is the normal morning state, not an error', async () => {
     const { deps: d } = deps({ fetchDailyNews: async () => null });
-    const summary = await autoTopUp(USER, { targetLanguage: 'es', newsTier: 'easy' }, { deps: d, now: NOW });
+    const summary = await autoTopUp(USER, { targetLanguage: 'es', currentCourseId: 'course-1', newsTier: 'easy' }, { deps: d, now: NOW });
     expect(summary.errors).toBe(0);
     expect(summary.news).toBe(0);
   });

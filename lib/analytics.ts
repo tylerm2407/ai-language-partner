@@ -61,6 +61,13 @@ type EventName =
   | 'onboarding_draft_saved'
   | 'onboarding_abandoned'
   | 'signup_completed'
+  /**
+   * Where the learner's lesson path starts or moves to. `screen` says who set
+   * it ('onboarding' | 'settings' | 'learn'), `source` the choice that set it
+   * ('start' | 'warm_up' | 'none' | 'pill'), `band` the resulting course band
+   * (or the declared band when no course was chosen).
+   */
+  | 'course_placement_set'
 
   // ── Feature reach: which of the Phase 2 features get used at all?
   | 'reading_book_opened'

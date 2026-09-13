@@ -68,6 +68,12 @@ interface LevelDueRowProps {
   progressPercent: number | null;
   /** True when `band` is the measured assessment rather than the profile's claim. */
   measured: boolean;
+  /**
+   * The report's disclosure when rungs under `band` were assumed from the
+   * learner's placement rather than measured ("Measured from your B1 work;
+   * A1–A2 assumed from your placement."). Null or omitted renders nothing.
+   */
+  basis?: string | null;
   dueCount: number;
   onReview: () => void;
 }
@@ -81,7 +87,7 @@ export function levelEyebrow(nextBand: string | null, progressPercent: number | 
   return `${progressPercent}% to ${nextBand}`;
 }
 
-export function LevelDueRow({ band, nextBand, progressPercent, measured, dueCount, onReview }: LevelDueRowProps) {
+export function LevelDueRow({ band, nextBand, progressPercent, measured, basis, dueCount, onReview }: LevelDueRowProps) {
   const { c, type } = useUi2Theme();
   const enter = useHomeEnter();
   const eyebrow = levelEyebrow(nextBand, progressPercent);
@@ -94,7 +100,7 @@ export function LevelDueRow({ band, nextBand, progressPercent, measured, dueCoun
         style={styles.levelCard}
         accessible
         accessibilityRole="progressbar"
-        accessibilityLabel={`${measured ? 'Measured level' : 'Level'} ${band}. ${cefrCanDo(band)}`}
+        accessibilityLabel={`${measured ? 'Measured level' : 'Level'} ${band}. ${cefrCanDo(band)}.${basis ? ` ${basis}` : ''}`}
         accessibilityValue={
           progressPercent === null
             ? undefined
@@ -113,6 +119,14 @@ export function LevelDueRow({ band, nextBand, progressPercent, measured, dueCoun
           <Text style={{ fontFamily: type.ui, fontSize: 12, lineHeight: 16, color: c.muted }} numberOfLines={3}>
             {cefrCanDo(band)}
           </Text>
+          {basis ? (
+            // The can-do line above is what keeps the band from standing bare;
+            // this is the honesty line under it, and it stays one line so the
+            // card's height does not swing with the disclosure.
+            <Text style={{ fontFamily: type.ui, fontSize: 11, lineHeight: 14, color: c.muted }} numberOfLines={1}>
+              {basis}
+            </Text>
+          ) : null}
         </View>
       </SlabCard>
 

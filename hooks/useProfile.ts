@@ -82,7 +82,7 @@ export function useProfile() {
   const { profile, setProfile, loading } = useAppStore();
 
   const updateProfile = useCallback(async (
-    updates: Partial<Pick<UserProfile, 'displayName' | 'nativeLanguage' | 'targetLanguage' | 'level' | 'dailyGoalMinutes' | 'timezone' | 'idealL2Self'>>
+    updates: Partial<Pick<UserProfile, 'displayName' | 'nativeLanguage' | 'targetLanguage' | 'level' | 'dailyGoalMinutes' | 'timezone' | 'idealL2Self' | 'currentCourseId' | 'placementBand'>>
   ) => {
     if (!user) return;
     const updated = await upsertProfile(user.id, updates);

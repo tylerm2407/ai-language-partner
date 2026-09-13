@@ -28,6 +28,7 @@ export function useOfflineAutoTopUp() {
   const userId = user?.id;
   const targetLanguage = profile?.targetLanguage;
   const level = profile?.level;
+  const currentCourseId = profile?.currentCourseId ?? null;
   const entitled = offlinePacksEntitled(effectiveTier(subscription, entitledTier));
   const lastRunRef = useRef(0);
 
@@ -40,7 +41,7 @@ export function useOfflineAutoTopUp() {
       const now = Date.now();
       if (now - lastRunRef.current < AUTO_TOPUP_MIN_INTERVAL_MS) return;
       lastRunRef.current = now;
-      autoTopUp(userId, { targetLanguage, newsTier: levelToNewsTier(level), date: localToday() })
+      autoTopUp(userId, { targetLanguage, currentCourseId, newsTier: levelToNewsTier(level), date: localToday() })
         .then((summary) => {
           if (summary.units + summary.books + summary.news > 0) {
             console.log('[offline-packs] top-up:', JSON.stringify(summary));
@@ -58,5 +59,5 @@ export function useOfflineAutoTopUp() {
       unsubscribeNetInfo();
       appStateSubscription.remove();
     };
-  }, [userId, targetLanguage, level, entitled]);
+  }, [userId, targetLanguage, level, currentCourseId, entitled]);
 }

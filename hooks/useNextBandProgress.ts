@@ -4,8 +4,15 @@
  * Home's level card shows the learner's band and how far they are toward the
  * next one (N3 · Ring). Both come from the proficiency report: the band is
  * the MEASURED `overallLevel` when the report has one, falling back to the
- * profile's self-declared band only while there is not enough evidence to
- * assess; the ring is `nextBandProgress` over the report's band breakdown.
+ * profile's band only while there is not enough evidence to assess at or
+ * above the learner's entry band; the ring is `progressToward` over the
+ * report's band breakdown.
+ *
+ * Which band the ring points at depends on that same distinction. Measured,
+ * it is the band after the measured level. Unmeasured, it is the band the
+ * report says the learner has to prove next (`report.nextLevel`) — for a
+ * learner placed at B1 that is B1 itself, not "B2", which is what the ring
+ * used to show while they were still proving their entry band.
  *
  * "Live" here means: rebuilt from the database every time Home regains
  * focus, at most once a minute. The evidence query is four capped reads
@@ -18,7 +25,7 @@
 import { useCallback, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useProficiencyReport } from './useProficiencyReport';
-import { nextBandProgress, type NextBandProgress } from '../lib/next-band-progress';
+import { nextBandProgress, progressToward, type NextBandProgress } from '../lib/next-band-progress';
 import type { CefrBand } from '../lib/cefr-proficiency';
 
 /** Minimum gap between two focus-triggered rebuilds. */
@@ -29,6 +36,13 @@ export interface NextBandState {
   band: CefrBand;
   /** True when `band` is the report's assessment rather than the profile's claim. */
   measured: boolean;
+  /**
+   * One line disclosing which rungs under `band` were assumed from the
+   * learner's placement rather than measured. Null when none were, so the UI
+   * can render it unconditionally.
+   */
+  basis: string | null;
+  assumedBands: CefrBand[];
   /** null until the first report has loaded. */
   progress: NextBandProgress | null;
   loading: boolean;
@@ -54,12 +68,21 @@ export function useNextBandProgress(fallbackBand: CefrBand): NextBandState {
     }, [refresh]),
   );
 
+  const measured = report?.overallLevel != null;
   const band = report?.overallLevel ?? fallbackBand;
-  const progress = report ? nextBandProgress(band, report.bands) : null;
+  let progress: NextBandProgress | null = null;
+  if (report) {
+    progress =
+      !measured && report.nextLevel
+        ? progressToward(band, report.nextLevel, report.bands)
+        : nextBandProgress(band, report.bands);
+  }
 
   return {
     band,
-    measured: report?.overallLevel != null,
+    measured,
+    basis: report?.levelBasis ?? null,
+    assumedBands: report?.assumedBands ?? [],
     progress,
     loading: isLoading,
     error,

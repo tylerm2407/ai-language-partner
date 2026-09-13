@@ -242,6 +242,19 @@ describe('CoursePills', () => {
     const r = render(<CoursePills courses={[]} selectedCourseId={null} onSelect={() => {}} />);
     expect(r.toJSON()).toBeNull();
   });
+
+  it('shows every course unselected when the learner has no lesson path', () => {
+    // An advanced learner with no C1 course: nothing is open, but the pills
+    // stay so they can opt into a lower band.
+    const courses = [course('a1', 'Spanish A1', 'A1'), course('b2', 'Spanish B2', 'B2')];
+    const r = render(<CoursePills courses={courses} selectedCourseId={null} onSelect={() => {}} />);
+    const rendered = text(r);
+    expect(rendered).toContain('A1');
+    expect(rendered).toContain('B2');
+    expect(rendered).not.toContain('Spanish A1');
+    expect(rendered).not.toContain('Spanish B2');
+    expect(labels(r)).toHaveLength(2);
+  });
 });
 
 describe('TabPills', () => {

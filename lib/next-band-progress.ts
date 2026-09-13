@@ -58,7 +58,20 @@ function clamp01(n: number): number {
 export function nextBandProgress(current: CefrBand, bands: readonly BandBreakdown[]): NextBandProgress {
   const next = nextBandAfter(current);
   if (!next) return { current, next: null, fraction: 1, percent: 100 };
+  return progressToward(current, next, bands);
+}
 
+/**
+ * The same three gates measured against an explicit target band. This is what
+ * an unmeasured, placed learner's ring shows: progress toward proving their
+ * entry band (the report's `nextLevel`), rather than toward the band after the
+ * one they have not proved yet.
+ */
+export function progressToward(
+  current: CefrBand,
+  next: CefrBand,
+  bands: readonly BandBreakdown[],
+): NextBandProgress {
   const target = bands.find((b) => b.band === next);
   if (!target) return { current, next, fraction: 0, percent: 0 };
 

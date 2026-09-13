@@ -7,6 +7,7 @@ import { useOfflineQueueFlush } from '../../hooks/useOfflineQueueFlush';
 import { useLessonSessionSweep } from '../../hooks/useLessonSessionSweep';
 import { useOfflineAutoTopUp } from '../../hooks/useOfflineAutoTopUp';
 import { useOnboardingReconciliation } from '../../hooks/useOnboardingReconciliation';
+import { useEnsurePlacement } from '../../hooks/useEnsurePlacement';
 import { useTimezoneSync } from '../../hooks/useProfile';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
 
@@ -20,6 +21,7 @@ export default function AppLayout() {
   // Lives here rather than in the FAB because the FAB only exists on Home, and
   // someone who finishes a lesson and never opens Home still finished it.
   useOnboardingReconciliation();
+  useEnsurePlacement();
   // Keep the profile's timezone tracking the device. Mounted here rather than
   // on Home: every server-side "today" (quotas, daily challenges, the new-card
   // cap) is derived from that column, and a learner who deep-links into a
