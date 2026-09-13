@@ -648,16 +648,56 @@ of comprehensible input on a string they will read every session.
 · elapsed-time `<Chip variant="primary">` · controls.
 
 The stack is `<Body weight="extrabold">` (the scenario label) over a status row: a
-6px `success.base` dot plus `<Caption size="sm">` reading `Live · A2`. The dot and
-the word "Live" appear only while hands-free is active.
+6px `success.base` dot plus `<Caption size="sm">` reading `Live · ` followed by
+`cefrLabel(band)` — `Live · A2 · Handle short, routine exchanges on familiar
+topics`, one line, tail-truncated. The dot and the word "Live" appear only while
+hands-free is active.
 
-The level is a bare CEFR code, not the deck's "Nivel A2" — "Nivel" is Spanish and
-the target language varies, so localising the noun would mean 12 translations of
-a word the code already conveys.
+The level is never the bare code (`lib/cefr-labels.ts`): "A2" on its own is a
+figure that looks like information and carries none, so it is always paired
+with the can-do line. Nor is it the deck's "Nivel A2" — "Nivel" is Spanish and
+the target language varies, so a localised noun would mean 12 translations of a
+word the code already conveys; the can-do lines are language-neutral for the
+same reason. Where a pill has room only for the code, `cefrAccessibilityLabel`
+carries the meaning — the two-place rule the Situations header pill follows.
 
 The hands-free toggle **collapses to icon-only once live**, because the status row
 already says so. It keeps its "Live Voice" label while off, where it is the only
 affordance advertising the feature.
+
+### Mission chrome (2026-09-13)
+
+A mission attempt is the same chat with a checklist on it. The chrome it adds,
+and only while a mission is running:
+
+- **Finish pill** in the header's controls slot — a primary `Chip`-style pill
+  reading "Finish". It ends the attempt (the server scores it) and routes to
+  the debrief. It is the ONE way to close a mission; the back chevron leaves
+  the attempt open so it can be resumed from the picker.
+- **Live toggle goes icon-only** for the whole attempt, not just once live:
+  the Finish pill needs the width, and the objectives strip below already
+  says what the screen is for.
+- **Objectives strip** above the composer: the mission's objectives as compact
+  rows, ticked as `objectivesMet` arrives with each turn — `checkmark-circle`
+  in `green` beside the text, the untouched ones `ellipse-outline` in `idle`.
+  Never colour alone: the glyph changes, and VoiceOver reads "Done." / "To
+  do." before each line, the same rule as the picker sheet.
+- **Help square**: a 44pt square at the composer's leading edge in text and
+  hold-to-talk modes. It opens the **warm-up sheet** — the mission title, its
+  band through `cefrLabel`, the objectives, and a few things the learner
+  could say — without leaving the chat. It is NOT present in hands-free: the
+  listen/speak loop owns the mic, and a modal sheet over it would either
+  stall the loop or talk over it. Toggling Live off is one tap, and the
+  square is back.
+- **Warm-up sheet** also opens on its own before the first turn of a fresh
+  attempt, so no mission starts with a blank composer and no brief.
+- **Debrief** is its own route, `app/(app)/chat/debrief?sessionId=…`
+  (`chatDebriefHref` in `lib/missions.ts`), reached from Finish and from a
+  finished attempt's history row. It shows pass/retry, the accuracy line
+  ("78% accuracy over 6 turns", or "Not enough said to score"), the
+  objectives with their final ticks, "Habits worth fixing" from the server's
+  grouped corrections, and one footer: next mission, try again, or the
+  ladder-done line.
 
 ### Message bubbles
 
@@ -1036,16 +1076,49 @@ with a trash icon on the right. Nothing new was added to the token set.
   title named the technology, not the benefit; canvas page "AI Chat ·
   picker", G1 "Gallery"):
   a two-column grid of scene tiles (icon well in a rotating tint, label), Free
-  Chat last and full width; tapping a tile opens `Ui2Sheet` with the icon,
-  title, "Language · CEFR line", description, a resume hint, and ONE
-  Continue that opens the chat as text with the mic ready
+  Chat last and full width; tapping a tile opens `Ui2Sheet` with ONE button
+  that opens the chat as text with the mic ready
   (`components/chat/ScenarioPicker.tsx`). Header (S1 "Question", canvas
   "Situations · header"): a 12px violet uppercase eyebrow "Situations" with a
   "Language · band" pill on its line, then a level-1 heading that asks a
-  question rotating by day. Tiles are 104pt with the label pinned to the
-  bottom, so nine clear the floating tab bar without scrolling. The old Text Chat / Live Voice pair
-  is gone from the picker: spoken replies and hands-free are toggles inside
-  the chat, and the real-time voice call is the Talk tab.
+  question rotating by day. Tiles are 116pt with the label pinned to the
+  bottom — 46pt under the 36pt icon well, two lines of the 14pt label — so
+  nine clear the floating tab bar without scrolling. The old Text Chat / Live
+  Voice pair is gone from the picker: spoken replies and hands-free are
+  toggles inside the chat, and the real-time voice call is the Talk tab.
+  - **Mission dots** (2026-09-13). Every built-in scene is a four-stage
+    ladder (`types/missions.ts`, server-owned progress), and the tile shows
+    where the learner is on it: four 8pt dots to the right of the icon well,
+    4pt apart. Passed = filled `primary`; the one to play = a 2px `primary`
+    ring; locked = a 1px `idle` ring. SHAPE carries the state — a filled disc,
+    a thick ring, a thin ring read in greyscale — colour only agrees. No dots
+    render until the progress read has landed (a tile with four thin rings
+    would claim "nothing passed" before we know). The dots are
+    `accessibilityElementsHidden`; the tile's label carries the stage instead
+    ("Ordering at a Restaurant. Mission 2 of 4." / "All missions passed."),
+    and they fade in over `micro` when they arrive, gated on `useMotion`.
+  - **The sheet** for a mission scene: icon well, scene name, "Mission N of
+    4" caption; the mission title; the mission's band through `cefrLabel`
+    (`A2 · Handle short, routine exchanges on familiar topics` — never the
+    bare code); the objectives as a plain list, `ellipse-outline` in `idle`
+    for one still to do and `checkmark-circle` in `green` for one already
+    met in an open attempt (VoiceOver reads "Done." / "To do." before the
+    text); "Best so far: 82% accuracy" when there is a score; the resume
+    hint under the list when an attempt is open; and ONE `SlabButton` whose
+    label is `missionCtaLabel` — "Start mission 2", "Continue mission 2",
+    "Play mission 4 again", or "See plans" for a free-tier learner. The
+    scene description is not repeated here: the mission title and its
+    objectives say what the scene practises more concretely. Free Chat and
+    teacher-authored scenes keep the older sheet (description, "Language ·
+    CEFR line", resume line, "Continue"), and so does every scene until the
+    progress read has arrived — the button still works then, acting on
+    mission 1. A failed read shows a `Ui2InlineError` with retry above the
+    grid; the tiles stay tappable, because a scene is still playable when its
+    ladder is unknown.
+  - **Order**: the learner's goal-track scenes first, in the order the goal
+    named them, then the rest in their existing order, Free Chat always last
+    (`orderScenarios` in `lib/missions.ts`). A goal track that fails to load
+    never blanks the picker — the order simply stays as it was.
 - **Motion vocabulary** (all gated on `useMotion().shouldReduce`): step change =
   the hero block arrives with a per-step entrance (slide / rise / pop / meet /
   drop), the done segments light up 70ms apart, the question fades up, Sol
