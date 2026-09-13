@@ -89,7 +89,7 @@ export default function HomeScreen() {
   const greeting = targetLanguageGreeting(getTargetLanguage(profile));
   const [showPrePermission, setShowPrePermission] = useState(false);
   const { c, scheme } = useUi2Theme();
-  const { challenges } = useDailyChallenges();
+  const { challenges, error: challengesError, retry: retryChallenges } = useDailyChallenges();
   // The level card shows the MEASURED band once the proficiency report can
   // assess one; before that it stands in the band the learner's lessons start
   // at (their placement, which is one below the declared level when they chose
@@ -289,7 +289,7 @@ export default function HomeScreen() {
             }}
           />
 
-          <DailyThree items={challenges} />
+          <DailyThree items={challenges} error={challengesError} onRetry={retryChallenges} />
 
           <WeekStrip
             stats={weeklyStats}
