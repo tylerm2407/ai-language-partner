@@ -9,6 +9,7 @@ import { useAuth } from '../../../../../hooks/useAuth';
 import { useProfile } from '../../../../../hooks/useProfile';
 import { useWordLookup } from '../../../../../hooks/useWordLookup';
 import { useActiveTime } from '../../../../../hooks/useActiveTime';
+import { useNarrationActive } from '../../../../../hooks/usePageNarrator';
 import {
   fetchBookMeta,
   fetchBookContent,
@@ -61,7 +62,14 @@ export default function BookDetailScreen() {
 
   // Only while the reader itself is open — the cover screen is browsing, not
   // reading. See hooks/useActiveTime.ts.
-  useActiveTime({ kind: 'reading', enabled: isReading && !!content });
+  //
+  // Two clocks, never both: reading while the page is silent, listening while
+  // the narrator is speaking. The split on `narrating` is what keeps
+  // `minutes_practiced` from being written twice for the same minute.
+  const narrating = useNarrationActive();
+  const readerOpen = isReading && !!content;
+  useActiveTime({ kind: 'reading', enabled: readerOpen && !narrating });
+  useActiveTime({ kind: 'listening', enabled: readerOpen && narrating });
 
   const isUnlimitedPlan = subscription?.tier === 'vip' && subscription?.isActive;
 

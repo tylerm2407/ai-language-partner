@@ -7,20 +7,29 @@ import { Ionicons } from '@expo/vector-icons';
 import { haptic } from '../../../lib/haptics';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAppStore } from '../../../stores/useAppStore';
-import { fetchDailyNews, fetchNewsReadStatus, markNewsAsRead } from '../../../lib/supabase-queries';
+import {
+  fetchDailyNews,
+  fetchNewsReadStatus,
+  fetchNewsReadingResult,
+  markNewsAsRead,
+  recordNewsReading,
+} from '../../../lib/supabase-queries';
 import { SlabCard } from '../../../components/ui2/SlabCard';
 import { SlabButton } from '../../../components/ui2/SlabButton';
+import { Ui2InlineError } from '../../../components/ui2/Ui2InlineError';
 import { Body, Caption, Heading } from '../../../components/ui2/Ui2Text';
 import { levelToNewsTier } from '../../../config/app';
 import { getTargetLanguage } from '../../../lib/language';
-import { loadErrorCopy, type ErrorCopy } from '../../../lib/error-copy';
-import type { DailyNewsArticle, VocabularyHighlight } from '../../../types';
+import { loadErrorCopy, saveErrorCopy, type ErrorCopy } from '../../../lib/error-copy';
+import { useActiveTime } from '../../../hooks/useActiveTime';
+import type { DailyNewsArticle, NewsReadingResult, VocabularyHighlight } from '../../../types';
 // `colors` is deliberately NOT imported: it is the fixed DARK palette, and a
 // screen that reads it stays dark whatever the phone is set to. `spacing` is a
 // set of plain scheme-independent numbers and carries over unchanged.
 import { spacing } from '../../../config/theme';
 import { useUi2Theme } from '../../../hooks/useUi2Theme';
 import { ArticleAudioPlayer } from '../../../components/news/ArticleAudioPlayer';
+import { NewsComprehensionCheck } from '../../../components/news/NewsComprehensionCheck';
 import { OfflineDownloadControl } from '../../../components/learn/OfflineDownloadControl';
 import { cachedFetch } from '../../../lib/read-cache';
 import { newsCacheKey, touchPack } from '../../../lib/offline-packs';
@@ -38,10 +47,21 @@ export default function NewsReaderScreen() {
   const [showTranslation, setShowTranslation] = useState<boolean>(false);
   const [readAt, setReadAt] = useState<string | null>(null);
   const [isMarking, setIsMarking] = useState<boolean>(false);
+  const [markError, setMarkError] = useState<ErrorCopy | null>(null);
+  const [readingResult, setReadingResult] = useState<NewsReadingResult | null>(null);
+  const [audioPlaying, setAudioPlaying] = useState<boolean>(false);
   const [error, setError] = useState<ErrorCopy | null>(null);
 
   const targetLanguage = getTargetLanguage(profile);
   const tier = levelToNewsTier(profile?.level ?? 'intermediate');
+
+  // Two clocks, never both: the article on screen is reading until the
+  // narration plays, and listening while it does. Splitting on `audioPlaying`
+  // is what keeps `minutes_practiced` from being counted twice for the same
+  // minute (hooks/useActiveTime.ts). A skeleton or an error is neither.
+  const articleOpen = !isLoading && !error && article !== null;
+  useActiveTime({ kind: 'reading', enabled: articleOpen && !audioPlaying });
+  useActiveTime({ kind: 'listening', enabled: articleOpen && audioPlaying });
 
   const loadArticle = useCallback(async () => {
     // Wait until the profile has loaded — never fetch news in a defaulted
@@ -58,8 +78,14 @@ export default function NewsReaderScreen() {
       setArticle(data);
       if (data) {
         void touchPack(user.id, 'news', data.id);
-        const existing = await fetchNewsReadStatus(user.id, data.id).catch(() => null);
+        // Both best-effort: offline, the article still reads. A missed result
+        // is safe — a re-submit returns the stored first attempt unchanged.
+        const [existing, result] = await Promise.all([
+          fetchNewsReadStatus(user.id, data.id).catch(() => null),
+          fetchNewsReadingResult(user.id, data.id).catch(() => null),
+        ]);
         setReadAt(existing);
+        setReadingResult(result);
       }
     } catch (err) {
       // "No article today" and "the fetch failed" are different facts and used
@@ -78,16 +104,28 @@ export default function NewsReaderScreen() {
   const handleMarkAsRead = useCallback(async () => {
     if (!article || isMarking || readAt) return;
     setIsMarking(true);
+    setMarkError(null);
     try {
       const stamp = await markNewsAsRead(article.id);
       setReadAt(stamp);
       haptic('complete');
-    } catch {
-      // Non-fatal — button returns to enabled state
+    } catch (err) {
+      // Used to be swallowed, which left the button re-enabled with no word on
+      // why the tap did nothing. The read is the learner's record of having
+      // finished; losing it silently is losing their evidence.
+      setMarkError(saveErrorCopy(err, 'this article as read'));
     } finally {
       setIsMarking(false);
     }
   }, [article, isMarking, readAt]);
+
+  const handleSubmitAnswers = useCallback(
+    (answers: number[]) => {
+      if (!article) return Promise.reject(new Error('No article loaded'));
+      return recordNewsReading(article.id, answers);
+    },
+    [article],
+  );
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
@@ -175,7 +213,7 @@ export default function NewsReaderScreen() {
 
               {/* Listen. Sits between the summary and the body because that is
                   where a reader decides whether to read this or hear it. */}
-              <ArticleAudioPlayer article={article} />
+              <ArticleAudioPlayer article={article} onPlayingChange={setAudioPlaying} />
               {targetLanguage ? (
                 <View style={{ alignItems: 'flex-start', marginTop: spacing.sm }}>
                   <OfflineDownloadControl
@@ -254,9 +292,24 @@ export default function NewsReaderScreen() {
                 </View>
               )}
 
+              {/* Comprehension check. After the vocabulary and before "Mark as
+                  read" so the screen ends the way a reading ends: read, check,
+                  done. Articles whose question generation failed carry null
+                  and show nothing here — no quiz is better than a broken one. */}
+              {article.questions ? (
+                <NewsComprehensionCheck
+                  questions={article.questions}
+                  existing={readingResult}
+                  onSubmit={handleSubmitAnswers}
+                />
+              ) : null}
+
               {/* Mark as read CTA — hidden after it's been read once. */}
               {!readAt && (
                 <View className="mt-2">
+                  {markError ? (
+                    <Ui2InlineError copy={markError} onRetry={handleMarkAsRead} />
+                  ) : null}
                   <SlabButton
                     label={isMarking ? 'Saving…' : 'Mark as read'}
                     onPress={handleMarkAsRead}

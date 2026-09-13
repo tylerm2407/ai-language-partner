@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { View, Pressable, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Body, Caption } from '../ui2/Ui2Text';
@@ -22,6 +22,12 @@ function timecode(ms: number): string {
 
 interface ArticleAudioPlayerProps {
   article: DailyNewsArticle;
+  /**
+   * Fires on every play/pause edge so the screen can swap its reading clock
+   * for a listening one (`useActiveTime`). The player owns the transport
+   * state; the screen owns the minutes — this is the one wire between them.
+   */
+  onPlayingChange?: (playing: boolean) => void;
 }
 
 /**
@@ -33,13 +39,21 @@ interface ArticleAudioPlayerProps {
  * merely opened the article, and a render loop would have nothing but the
  * server's burst limit to stop it.
  */
-export function ArticleAudioPlayer({ article }: ArticleAudioPlayerProps) {
+export function ArticleAudioPlayer({ article, onPlayingChange }: ArticleAudioPlayerProps) {
   const { c } = useUi2Theme();
   const { user } = useAuth();
   const player = useArticlePlayer();
   const [fetching, setFetching] = useState(false);
   const [fetchError, setFetchError] = useState<{ title: string; message: string } | null>(null);
   const [loaded, setLoaded] = useState(false);
+
+  const playing = player.status === 'playing';
+  useEffect(() => {
+    onPlayingChange?.(playing);
+  }, [playing, onPlayingChange]);
+  // Unmount is a stop: the screen's listening clock must not run on after
+  // the player that fed it is gone.
+  useEffect(() => () => onPlayingChange?.(false), [onPlayingChange]);
 
   const start = useCallback(async () => {
     setFetching(true);
@@ -78,7 +92,6 @@ export function ArticleAudioPlayer({ article }: ArticleAudioPlayerProps) {
   }, [article, player, user?.id]);
 
   const busy = fetching || player.status === 'loading';
-  const playing = player.status === 'playing';
 
   // Before the first tap this is a single invitation, not a transport bar —
   // controls for audio that does not exist yet would be dead affordances.

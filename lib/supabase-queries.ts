@@ -44,6 +44,8 @@ import type {
   WritingSubmission,
   WritingFeedback,
   DailyNewsArticle,
+  NewsComprehensionQuestion,
+  NewsReadingResult,
   NewsAudio,
   NewsAudioStatus,
   LessonCompletion,
@@ -2076,6 +2078,59 @@ export async function fetchNewsReadStatus(
 }
 
 /**
+ * Grade the comprehension check and store it as reading evidence.
+ *
+ * `answers[i]` is the chosen option index (0–3) for `article.questions[i]`.
+ * The grading happens in `record_news_reading` (migration 129) against the
+ * stored questions — the client never learns or sends the correct index. The
+ * first submission is the one that counts: a repeat (a retried timeout, a
+ * reopened article) returns the stored row unchanged, so callers may retry
+ * freely.
+ */
+export async function recordNewsReading(articleId: string, answers: number[]): Promise<NewsReadingResult> {
+  const { data, error } = await supabase.rpc('record_news_reading', {
+    p_article_id: articleId,
+    p_answers: answers,
+  });
+  if (error) throw error;
+  if (!data) throw new Error('record_news_reading returned no row');
+  return mapNewsReadingResult(data as Record<string, unknown>);
+}
+
+/**
+ * The stored result for an article the learner already checked, or null.
+ * Read on open so a finished check renders finished rather than inviting a
+ * second attempt the server would ignore.
+ */
+export async function fetchNewsReadingResult(
+  userId: string,
+  articleId: string,
+): Promise<NewsReadingResult | null> {
+  const { data, error } = await supabase
+    .from('news_reading_results')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('article_id', articleId)
+    .maybeSingle();
+
+  if (error && error.code !== 'PGRST116') throw error;
+  return data ? mapNewsReadingResult(data as Record<string, unknown>) : null;
+}
+
+function mapNewsReadingResult(row: Record<string, unknown>): NewsReadingResult {
+  return {
+    id: row.id as string,
+    userId: row.user_id as string,
+    articleId: row.article_id as string,
+    targetLanguage: row.target_language as string,
+    cefrLevel: row.cefr_level as string,
+    comprehension: Number(row.comprehension),
+    questionsTotal: Number(row.questions_total),
+    completedAt: row.completed_at as string,
+  };
+}
+
+/**
  * Fetch a playable URL for an article's narration.
  *
  * Returns `null` when the audio is still rendering (HTTP 202) — a state, not
@@ -2663,12 +2718,34 @@ function mapDailyNewsArticle(row: Record<string, unknown>): DailyNewsArticle {
       ? (row.audio_status as NewsAudioStatus)
       : null,
     audioDurationMs: typeof row.audio_duration_ms === 'number' ? row.audio_duration_ms : null,
+    questions: mapNewsQuestions(row.questions),
   };
 }
 
 /** The states `audio_status` may hold (migration 079). NULL — a row that
  *  predates the podcast feature — is deliberately absent: it maps to null. */
 const NEWS_AUDIO_STATUSES = ['pending', 'generating', 'ready', 'failed'];
+
+/**
+ * The stored shape is validated by the cron before the write, but the mapper
+ * re-checks rather than casts: a quiz with three options would render a
+ * question nobody can answer. The `answer` index is dropped on purpose — see
+ * the `questions` field on DailyNewsArticle.
+ */
+function mapNewsQuestions(raw: unknown): NewsComprehensionQuestion[] | null {
+  if (!Array.isArray(raw) || raw.length === 0) return null;
+  const out: NewsComprehensionQuestion[] = [];
+  for (const q of raw) {
+    if (!q || typeof q !== 'object') return null;
+    const { question, options } = q as { question?: unknown; options?: unknown };
+    if (typeof question !== 'string' || !question.trim()) return null;
+    if (!Array.isArray(options) || options.length !== 4 || !options.every((o) => typeof o === 'string' && o.trim())) {
+      return null;
+    }
+    out.push({ question, options: options as string[] });
+  }
+  return out;
+}
 
 // ─── Avatar ─────────────────────────────────────────────────────
 

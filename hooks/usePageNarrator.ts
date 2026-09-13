@@ -1,5 +1,39 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useSyncExternalStore } from 'react';
 import * as Speech from 'expo-speech';
+
+/**
+ * Whether any narrator is currently speaking (playing and not paused).
+ *
+ * Published module-wide rather than returned, because the hook lives inside
+ * `BookReader` while the practice clocks live on the screen above it
+ * (`app/(app)/learn/reading/book/[bookId].tsx`): the screen must switch its
+ * reading clock off and a listening clock on for exactly the seconds the
+ * narrator is speaking, and threading a callback through the reader's props
+ * for one boolean would couple a presentational component to the minutes
+ * ledger. One narrator plays at a time (each `speak` stops the last), so a
+ * single flag is the whole truth.
+ */
+let narrationActive = false;
+const narrationListeners = new Set<() => void>();
+
+function setNarrationActive(next: boolean): void {
+  if (narrationActive === next) return;
+  narrationActive = next;
+  narrationListeners.forEach((l) => l());
+}
+
+function subscribeNarration(listener: () => void): () => void {
+  narrationListeners.add(listener);
+  return () => narrationListeners.delete(listener);
+}
+
+function getNarrationActive(): boolean {
+  return narrationActive;
+}
+
+export function useNarrationActive(): boolean {
+  return useSyncExternalStore(subscribeNarration, getNarrationActive, getNarrationActive);
+}
 
 /** Voice selector for the (future) server-TTS path. Accepted here so callers
  *  can adopt HVPT-style voice rotation without a second refactor when
@@ -44,6 +78,15 @@ export function usePageNarrator() {
       Speech.stop();
     };
   }, []);
+
+  // Speaking = playing and not paused. Cleared on unmount too: the unmount
+  // `Speech.stop()` above fires `onStopped` after `isMountedRef` is false, so
+  // the state setters bail and the flag would otherwise stay stuck on.
+  const speaking = isPlaying && !isPaused;
+  useEffect(() => {
+    setNarrationActive(speaking);
+    return () => setNarrationActive(false);
+  }, [speaking]);
 
   const speak = useCallback(
     (

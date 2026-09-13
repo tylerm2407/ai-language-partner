@@ -771,6 +771,17 @@ export interface DailyNewsArticle {
   /** Measured from the rendered MP3, so it can be shown ("LISTEN · 2:14")
    *  before a single byte of audio is fetched. */
   audioDurationMs: number | null;
+  /** The comprehension check (migration 129), or null for an article whose
+   *  question generation failed — the screen shows nothing extra for those.
+   *  The correct index is stripped by the mapper: grading is server-side
+   *  (`record_news_reading`) and the honest client has no use for it. */
+  questions: NewsComprehensionQuestion[] | null;
+}
+
+export interface NewsComprehensionQuestion {
+  question: string;
+  /** Exactly four, in the target language. */
+  options: string[];
 }
 
 export interface VocabularyHighlight {
