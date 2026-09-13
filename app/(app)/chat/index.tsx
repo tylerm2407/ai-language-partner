@@ -3,6 +3,7 @@ import { View, Text, Pressable, FlatList, KeyboardAvoidingView, Platform, Alert 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Audio } from 'expo-av';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { useSafeBack } from '../../../hooks/useSafeBack';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAppStore, effectiveTier } from '../../../stores/useAppStore';
@@ -27,12 +28,17 @@ import { ChatBubble } from '../../../components/chat/ChatBubble';
 import { ScenarioPicker, scenarioIdentity } from '../../../components/chat/ScenarioPicker';
 import { ChatInput } from '../../../components/chat/ChatInput';
 import type { HandsFreeState } from '../../../components/chat/ChatInput';
+import { ChatHeader, FinishPill, HandsFreeToggle, SubmitPill, VoiceModeToggle } from '../../../components/chat/ChatHeader';
+import { MissionObjectives } from '../../../components/chat/MissionObjectives';
+import { confirmFinish, useMissionAttempt, type BeginMissionInput } from '../../../hooks/useMissionAttempt';
+import { chatDebriefHref, missionFor } from '../../../lib/missions';
+import type { MissionMeta } from '../../../types/missions';
 import { TypingIndicator } from '../../../components/chat/TypingIndicator';
 import AssignmentTimer from '../../../components/school/AssignmentTimer';
 import { useAssignmentTimer } from '../../../hooks/useAssignmentTimer';
 import type { ConversationMessage, Assignment, AssignmentSubmission, LanguageCode, ProficiencyLevel } from '../../../types';
 import { Ionicons } from '@expo/vector-icons';
-import { getOrCreateChatSession, listChatSessions, saveChatMessage, loadChatMessages, fetchStudentAssignments, submitAssignment, upsertDailyStats } from '../../../lib/supabase-queries';
+import { getOrCreateChatSession, listChatSessions, saveChatMessage, loadChatMessages, fetchStudentAssignments, submitAssignment, upsertDailyStats, createMissionAttemptSession } from '../../../lib/supabase-queries';
 import { getTargetLanguage } from '../../../lib/language';
 import { setAudioSessionMode, playbackModeFor } from '../../../lib/audio-session';
 import { saveErrorCopy } from '../../../lib/error-copy';
@@ -45,16 +51,11 @@ import {
 import { SCENARIO_META, SCENARIO_ORDER, type ScenarioKey } from '../../../types/scenarios';
 import { SCHOOL_ENABLED, SUPPORTED_LANGUAGES } from '../../../config/app';
 // `colors` is deliberately NOT imported: it is the fixed DARK palette, and a
-// screen that reads it stays dark whatever the phone is set to. `radii` and
-// `spacing` are plain scheme-independent numbers and carry over unchanged.
-import { radii, spacing } from '../../../config/theme';
-import { Body, Caption } from '../../../components/ui2/Ui2Text';
+// screen that reads it stays dark whatever the phone is set to.
 import { SlabCard } from '../../../components/ui2/SlabCard';
 import { useUi2Theme } from '../../../hooks/useUi2Theme';
 import { useAiConsent } from '../../../hooks/useAiConsent';
-import { Chip } from '../../../components/ui2/Chip';
 import { useScreenView } from '../../../hooks/useScreenView';
-import { Mascot } from '../../../components/mascot/Mascot';
 
 /**
  * The level line in the header status row.
@@ -89,15 +90,7 @@ interface Scenario {
   customContext?: string;
 }
 
-const SCENARIOS: Scenario[] = SCENARIO_ORDER.map((key) => {
-  const meta = SCENARIO_META[key];
-  return {
-    key: meta.key,
-    label: meta.label,
-    icon: meta.icon,
-    description: meta.description,
-  };
-});
+const SCENARIOS: Scenario[] = SCENARIO_ORDER.map((key) => SCENARIO_META[key]);
 
 /**
  * Replace a message by id, or append it if it is not in the list yet.
@@ -116,6 +109,18 @@ function upsertMessage(
   const next = list.slice();
   next[index] = msg;
   return next;
+}
+
+/** The opening line. UI only — the real system prompt is server-side, keyed by scenario.key. */
+function greetingFor(scenario: Scenario, targetLanguage: string, mission?: MissionMeta | null): string {
+  const tail = `Start by saying something in ${targetLanguage.toUpperCase()}, and I'll help you along the way!`;
+  if (mission) return `Mission ${mission.stage}: ${mission.title}. ${scenario.description} ${tail}`;
+  if (scenario.key === 'free_chat' || !scenario.key) return `Great! Let's have a free conversation. ${tail}`;
+  return `Great! Let's practice "${scenario.label}". ${scenario.description} ${tail}`;
+}
+
+function assistantTurn(content: string, id: string): ConversationMessage {
+  return { id, role: 'assistant', content, audioUrl: null, correction: null, timestamp: new Date().toISOString() };
 }
 
 export default function ChatScreen() {
@@ -145,9 +150,11 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
   const { profile, subscription, entitledTier, roles } = useAppStore();
   const { markItem: markOnboardingItem } = useOnboardingChecklist();
   const { ensureConsent, consentSheet } = useAiConsent(user?.id);
+  const missionAttempt = useMissionAttempt();
   const router = useRouter();
   const goBack = useSafeBack('/(app)');
-  const params = useLocalSearchParams<{ assignmentId?: string; chatSessionId?: string }>();
+  // `scenario` + `stage` is a mission deep link, consumed once on focus.
+  const params = useLocalSearchParams<{ assignmentId?: string; chatSessionId?: string; scenario?: string; stage?: string }>();
   const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(null);
 
   // Wall-clock in the conversation itself, not the scenario picker. This writes
@@ -357,28 +364,17 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
     }
   };
 
-  /** Load persisted chat history for a scenario, or start fresh. */
-  const loadPersistedHistory = useCallback(async (
-    userId: string,
-    scenarioKey: string,
-    fallbackFirstMessage: ConversationMessage
-  ) => {
-    try {
-      const session = await getOrCreateChatSession(userId, scenarioKey, targetLanguage, level);
-      chatSessionIdRef.current = session.id;
-      const history = await loadChatMessages(session.id);
-      if (history.length > 0) {
-        setMessages(history);
-      } else {
-        setMessages([fallbackFirstMessage]);
-        // Persist the greeting
-        saveChatMessage(session.id, fallbackFirstMessage).catch(console.error);
-      }
-    } catch (err) {
-      console.error('Failed to load chat history:', err);
-      setMessages([fallbackFirstMessage]);
+  /** Show a session's persisted history, or the greeting (persisted) if it has none. */
+  const openSession = useCallback(async (sessionId: string, firstMessage: ConversationMessage) => {
+    chatSessionIdRef.current = sessionId;
+    const history = await loadChatMessages(sessionId);
+    if (history.length > 0) {
+      setMessages(history);
+    } else {
+      setMessages([firstMessage]);
+      saveChatMessage(sessionId, firstMessage).catch(console.error);
     }
-  }, [targetLanguage, level]);
+  }, []);
 
   /** Persist a message to the current session (fire-and-forget). */
   const persistMessage = useCallback((msg: ConversationMessage) => {
@@ -586,26 +582,19 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
     // a different conversation, possibly days ago.
     repairOutstandingRef.current = false;
 
-    // Greeting string is UI only — the real Claude system prompt comes from
-    // the server-side scenario module keyed by scenario.key.
-    const greeting = scenario.key === 'free_chat' || !scenario.key
-      ? `Great! Let's have a free conversation. Start by saying something in ${targetLanguage.toUpperCase()}, and I'll help you along the way!`
-      : `Great! Let's practice "${scenario.label}". ${scenario.description} Start by saying something in ${targetLanguage.toUpperCase()}, and I'll help you along the way!`;
-
-    const firstMessage: ConversationMessage = {
-      id: '0',
-      role: 'assistant',
-      content: greeting,
-      audioUrl: null,
-      correction: null,
-      timestamp: new Date().toISOString(),
-    };
+    const greeting = greetingFor(scenario, targetLanguage);
+    const firstMessage = assistantTurn(greeting, '0');
 
     // Load persisted history or start fresh. Key sessions by the stable
     // scenario.key so renaming/localizing a label doesn't orphan history;
     // fall back to label only for custom (teacher) scenarios with no key.
     if (user?.id) {
-      loadPersistedHistory(user.id, scenario.key ?? scenario.label, firstMessage);
+      getOrCreateChatSession(user.id, scenario.key ?? scenario.label, targetLanguage, level)
+        .then((session) => openSession(session.id, firstMessage))
+        .catch((err) => {
+          console.error('Failed to load chat history:', err);
+          setMessages([firstMessage]);
+        });
     } else {
       setMessages([firstMessage]);
     }
@@ -622,6 +611,96 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
     } else if (voiceMode && !handsFreeActive) {
       speakReply(greeting, false);
     }
+  };
+
+  /** Leave hands-free: silence the tutor and close the mic loop. */
+  const stopHandsFree = () => {
+    stopSpeaking();
+    setHandsFreeActive(false);
+    setHandsFreeState('IDLE');
+    setShouldStartListening(false);
+  };
+
+  /** Back to the picker (chevron, and Finish once the debrief is stashed). No network: an open attempt stays resumable. */
+  const resetConversation = () => {
+    stopHandsFree();
+    setSelectedScenario(null);
+    setMessages([]);
+    setVoiceMode(false);
+    chatSessionIdRef.current = null;
+    repairOutstandingRef.current = false;
+    missionAttempt.leave();
+  };
+
+  /**
+   * Open a mission attempt. 'new' inserts a fresh session row so a retry
+   * never resumes a failed attempt's transcript; 'resume' reloads the open
+   * attempt's session and seeds the checklist from the server.
+   *
+   * INTEGRATION: the picker's onStart(scenario, cta, stage) and the warm-up
+   * sheet plug in here — both end by calling this ('resume' with the open
+   * attempt's sessionId + objectivesMet, else 'new'). Until then the only
+   * entry is the `scenario` + `stage` route params below.
+   */
+  const startMissionAttempt = async (
+    input: Omit<BeginMissionInput, 'sessionId' | 'language'> & { sessionId?: string },
+  ) => {
+    const meta = missionFor(input.scenarioKey, input.stage);
+    const scenario = SCENARIOS.find((s) => s.key === input.scenarioKey);
+    if (!meta || !scenario || !user?.id) return;
+    stopSpeaking();
+    try {
+      const sessionId =
+        input.source === 'resume' && input.sessionId
+          ? input.sessionId
+          : (await createMissionAttemptSession(user.id, input.scenarioKey, input.stage, targetLanguage, level)).id;
+      const greeting = greetingFor(scenario, targetLanguage, meta);
+      repairOutstandingRef.current = false;
+      setSelectedScenario(scenario);
+      await openSession(sessionId, assistantTurn(greeting, '0'));
+      missionAttempt.begin({ ...input, sessionId, language: targetLanguage });
+      if (voiceMode && !handsFreeActive) speakReply(greeting, false);
+    } catch (err) {
+      console.error('[chat] mission start failed:', err);
+      const { title, message } = saveErrorCopy(err, 'your mission');
+      Alert.alert(title, message);
+    }
+  };
+
+  // Deep link `/(app)/chat?scenario=…&stage=…` — how the debrief's "Next
+  // mission" and "Try again" arrive. Cleared as it is consumed so a later
+  // focus cannot start a second attempt.
+  const missionParamScenario = typeof params.scenario === 'string' ? params.scenario : undefined;
+  const missionParamStage = typeof params.stage === 'string' ? Number(params.stage) : NaN;
+  useFocusEffect(
+    useCallback(() => {
+      if (!missionParamScenario || !missionFor(missionParamScenario, missionParamStage)) return;
+      router.setParams({ scenario: undefined, stage: undefined });
+      void startMissionAttempt({ scenarioKey: missionParamScenario, stage: missionParamStage, source: 'new' });
+      // The params are the only trigger; startMissionAttempt is recreated every render.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [missionParamScenario, missionParamStage]),
+  );
+
+  /** What every ai-chat request shares. Context is windowed to the last 24
+   *  messages; keyless (teacher) scenarios send `topic` instead of a key;
+   *  `previousTurnRequestedRepair` is carried, not computed; every request
+   *  names its session and mission turns add the stage. */
+  const baseRequest = (list: ConversationMessage[]): AIChatRequest => {
+    const MAX_CONTEXT_MESSAGES = 24;
+    const context = list.length > MAX_CONTEXT_MESSAGES ? list.slice(list.length - MAX_CONTEXT_MESSAGES) : list;
+    const scenarioKey = selectedScenario?.key ?? undefined;
+    return {
+      userId: user?.id ?? '',
+      messages: context.map((m) => ({ role: m.role, content: m.content })),
+      targetLanguage,
+      nativeLanguage: profile?.nativeLanguage,
+      level,
+      scenarioKey,
+      topic: scenarioKey ? undefined : selectedScenario?.customContext || selectedScenario?.label || undefined,
+      previousTurnRequestedRepair: repairOutstandingRef.current,
+      ...missionAttempt.requestPayloadFields(chatSessionIdRef.current),
+    };
   };
 
   const handleSend = async (
@@ -670,28 +749,8 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
     setTimeout(() => flatListRef.current?.scrollToEnd(), 100);
 
     try {
-      // Built-in scenarios resolve to a rich server-side prompt via scenarioKey.
-      // Teacher custom scenarios (and any scenario without a key) fall back to
-      // the free-form `topic` field.
-      const scenarioKey = selectedScenario?.key ?? undefined;
-      const topicPayload = scenarioKey
-        ? undefined
-        : selectedScenario?.customContext || selectedScenario?.label || undefined;
-
-      // Context windowing: send only the last ~12 turns to avoid unbounded token usage
-      const MAX_CONTEXT_MESSAGES = 24;
-      const contextMessages = newMessages.length > MAX_CONTEXT_MESSAGES
-        ? newMessages.slice(newMessages.length - MAX_CONTEXT_MESSAGES)
-        : newMessages;
-
       const requestPayload: AIChatRequest = {
-        userId: user?.id ?? '',
-        messages: contextMessages.map((m) => ({ role: m.role, content: m.content })),
-        targetLanguage,
-        nativeLanguage: profile?.nativeLanguage,
-        level,
-        scenarioKey: scenarioKey ?? undefined,
-        topic: topicPayload,
+        ...baseRequest(newMessages),
         // Only worth sending when it contradicts the target — the tutor only
         // needs to know that a switch happened, not that nothing happened.
         spokenLanguage:
@@ -702,11 +761,6 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
         // pooling them would let a learner type their way to a speaking level.
         modality: voiceTurn ? 'speaking' : 'writing',
         recognizerConfidence: voiceTurn?.confidence,
-        // Carried, not computed. Whether the last turn left a repair
-        // outstanding is the server's call — it depends on the level's
-        // correction policy — and this is how the tutor knows to react to the
-        // learner's attempt instead of asking them to try again.
-        previousTurnRequestedRepair: repairOutstandingRef.current,
       };
 
       const assistantId = (Date.now() + 1).toString();
@@ -803,6 +857,7 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
       }
 
       repairOutstandingRef.current = response.requestedRepair === true;
+      missionAttempt.applyTurn(response); // the server's union; a no-op outside a mission
 
       const assistantMsg: ConversationMessage = {
         id: assistantId,
@@ -881,18 +936,20 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
         );
       } else if (detail.includes('RATE_LIMITED')) {
         Alert.alert('Slow down a moment', 'You’re sending messages very quickly. Please try again in a few seconds.');
+      } else if (detail.includes('MISSION_FINISHED') && chatSessionIdRef.current) {
+        // Already scored (another device, a retried Finish): show the result.
+        router.push(chatDebriefHref(chatSessionIdRef.current));
+        resetConversation();
       } else {
         // A real attempt that failed downstream: the turn stays on screen, so
-        // it has to reach history too, or a reload silently drops it.
+        // it has to reach history too, or a reload silently drops it. The
+        // mission codes (MISSION_LOCKED, SESSION_NOT_FOUND, INVALID_MISSION,
+        // NOTHING_TO_FINISH) land here too — the same honest bubble.
         persistMessage(userMsg);
-        setMessages((prev) => [...prev, {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: 'Sorry, I had trouble responding. Please try again.',
-          audioUrl: null,
-          correction: null,
-          timestamp: new Date().toISOString(),
-        }]);
+        setMessages((prev) => [
+          ...prev,
+          assistantTurn('Sorry, I had trouble responding. Please try again.', (Date.now() + 1).toString()),
+        ]);
       }
       // If hands-free, restart listening even after error
       if (handsFreeActive) {
@@ -901,6 +958,43 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
     } finally {
       setSending(false);
     }
+  };
+
+  /** The Finish turn. Hands-free closes FIRST — a mic that reopened after
+   *  the send-off would record the debrief screen as the next turn. No new
+   *  user message: the server scores what was said and says goodbye. */
+  const runFinish = async () => {
+    const sessionId = chatSessionIdRef.current;
+    if (!sessionId) return;
+    stopHandsFree();
+    setSending(true);
+    const outcome = await missionAttempt.finish({
+      buildPayload: (extra) => ({ ...baseRequest(messages), isClosing: true, ...extra }),
+      onReply: async (reply) => {
+        // An assistant turn like any other, so a reloaded transcript ends
+        // where the mission did.
+        const sendoff = assistantTurn(reply, Date.now().toString());
+        setMessages((prev) => upsertMessage(prev, sendoff));
+        persistMessage(sendoff);
+      },
+    });
+    setSending(false);
+    if (outcome.status === 'done' || (outcome.status === 'failed' && outcome.message.includes('MISSION_FINISHED'))) {
+      resetConversation();
+      router.push(chatDebriefHref(sessionId));
+    } else if (outcome.status === 'refused') {
+      // The mission stays open; the checklist is still on screen.
+      showLimitAlert('messages', effectiveTier(subscription, entitledTier), () => router.push('/(app)/profile/subscription'));
+    } else {
+      console.error('[chat] finish failed:', outcome.message);
+      Alert.alert('Could not finish the mission', 'Please try again in a moment. Your conversation is still here.');
+    }
+  };
+
+  const handleFinish = () => {
+    const mission = missionAttempt.mission;
+    if (!mission || sending || missionAttempt.finishing) return;
+    confirmFinish(missionAttempt.met.length, mission.meta.objectives.length, () => void runFinish());
   };
 
   const handleVoiceMessage = async (
@@ -921,21 +1015,14 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
   };
 
   const toggleVoiceMode = () => {
-    if (handsFreeActive) {
-      // Turn off hands-free when switching voice mode off
-      setHandsFreeActive(false);
-      setHandsFreeState('IDLE');
-    }
-    stopSpeaking();
+    // Switching voice mode off also leaves hands-free.
+    if (handsFreeActive) stopHandsFree(); else stopSpeaking();
     setVoiceMode((prev) => !prev);
   };
 
   const toggleHandsFree = () => {
     if (handsFreeActive) {
-      stopSpeaking();
-      setHandsFreeActive(false);
-      setHandsFreeState('IDLE');
-      setShouldStartListening(false);
+      stopHandsFree();
     } else {
       // IDLE is ChatInput's cue to open the mic, so entering here goes straight
       // to listening rather than replaying a greeting mid-conversation.
@@ -945,13 +1032,7 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
     }
   };
 
-  const handleHandsFreeStateChange = useCallback((state: HandsFreeState) => {
-    setHandsFreeState(state);
-  }, []);
-
-  const handleListeningStarted = useCallback(() => {
-    setShouldStartListening(false);
-  }, []);
+  const handleListeningStarted = useCallback(() => setShouldStartListening(false), []);
 
   // Skip scenario picker while assignment is loading
   if (params.assignmentId && !selectedScenario) {
@@ -1071,131 +1152,34 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
         />
       )}
 
-      {/* Header — deck screen 08: chevron · mascot · title/status stack · chip */}
-      <View
-        className="flex-row items-center px-4 py-3 border-b"
-        style={{ borderColor: c.cardBorder, gap: spacing.sm }}
-      >
-        <Pressable
-          onPress={() => {
-            stopSpeaking();
-            if (assignmentMode) {
-              handleAssignmentBack();
-              return;
-            }
-            setSelectedScenario(null);
-            setMessages([]);
-            setVoiceMode(false);
-            setHandsFreeActive(false);
-            setHandsFreeState('IDLE');
-            setShouldStartListening(false);
-            chatSessionIdRef.current = null;
-            repairOutstandingRef.current = false;
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-          hitSlop={8}
-        >
-          <Ionicons name="chevron-back" size={22} color={c.idle} />
-        </Pressable>
-
-        {/* Sol sits in the header as the tutor's face: thinking while a reply
-            is on its way, listening while the mic is open, idle otherwise. */}
-        <Mascot
-          state={sending ? 'thinking' : handsFreeActive && handsFreeState === 'LISTENING' ? 'listening' : 'idle'}
-          size={44}
-        />
-
-        <View className="flex-1">
-          <Body weight="extrabold" numberOfLines={1}>
-            {selectedScenario.label}
-          </Body>
-          <View className="flex-row items-center" style={{ gap: spacing.xxs }}>
-            {handsFreeActive && (
-              <View
-                style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: radii.pill,
-                  backgroundColor: c.green,
-                }}
-              />
+      {/* Header — deck screen 08: chevron · mascot · title/status stack · chip.
+          The elapsed chip reads useAssignmentTimer, which is a plain stopwatch
+          despite the name — live sessions just show it. */}
+      <ChatHeader
+        label={selectedScenario.label}
+        statusLine={cefrLabel(CEFR_FOR_LEVEL[level])}
+        statusA11y={cefrAccessibilityLabel(CEFR_FOR_LEVEL[level])}
+        live={handsFreeActive}
+        mascotState={sending ? 'thinking' : handsFreeActive && handsFreeState === 'LISTENING' ? 'listening' : 'idle'}
+        timer={assignmentTimer.running ? assignmentTimer.formattedElapsed : undefined}
+        onBack={assignmentMode ? () => { stopSpeaking(); handleAssignmentBack(); } : resetConversation}
+        rightActions={
+          <>
+            {assignmentMode && assignmentTimer.isMinimumMet && (
+              <SubmitPill onPress={handleSubmitAssignment} busy={submitting} />
             )}
-            <Caption
-              size="sm"
-              numberOfLines={2}
-              accessibilityLabel={`${handsFreeActive ? 'Live. ' : ''}${cefrAccessibilityLabel(
-                CEFR_FOR_LEVEL[level]
-              )}`}
-            >
-              {handsFreeActive ? 'Live · ' : ''}
-              {cefrLabel(CEFR_FOR_LEVEL[level])}
-            </Caption>
-          </View>
-        </View>
-
-        {/* Elapsed clock. useAssignmentTimer is a plain stopwatch despite the
-            name — assignments read isMinimumMet, live sessions just show this. */}
-        {assignmentTimer.running && (
-          <Chip label={assignmentTimer.formattedElapsed} variant="primary" />
-        )}
-
-        {/* Submit Assignment Button */}
-        {assignmentMode && assignmentTimer.isMinimumMet && (
-          <Pressable
-            onPress={handleSubmitAssignment}
-            disabled={submitting}
-            accessibilityRole="button"
-            accessibilityLabel="Submit assignment"
-            className="min-h-9 py-1.5 px-3 rounded-full items-center justify-center flex-row" style={{ backgroundColor: c.green }}
-          >
-            <Ionicons name="checkmark-circle-outline" size={16} color={c.onPrimary} />
-            <Text className="text-xs font-semibold ml-1.5" style={{ color: c.onPrimary }}>
-              {submitting ? 'Submitting...' : 'Submit'}
-            </Text>
-          </Pressable>
-        )}
-
-        {/* Hands-free toggle. Collapses to icon-only once live, because the status
-            row above already reads "Live" — that buys back the width the deck's
-            mascot + status stack needs. Keeps its label while off, where it is
-            the only thing advertising the feature. */}
-        <Pressable
-          onPress={toggleHandsFree}
-          accessibilityRole="button"
-          accessibilityLabel={handsFreeActive ? 'End live voice conversation' : 'Start live voice conversation'}
-          accessibilityHint="Real-time bidirectional voice conversation with AI tutor"
-          className={`min-h-9 py-1.5 rounded-full items-center justify-center flex-row ${
-            handsFreeActive ? 'w-9' : 'px-3'
-          }`}
-          style={{ backgroundColor: handsFreeActive ? c.green : c.card }}
-        >
-          <Ionicons
-            name={handsFreeActive ? 'mic' : 'mic-outline'}
-            size={16}
-            color={handsFreeActive ? c.onPrimary : c.idle}
-          />
-          {!handsFreeActive && (
-            <Text className="text-xs font-sans-semibold ml-1.5" style={{ color: c.idle }}>
-              Live Voice
-            </Text>
-          )}
-        </Pressable>
-
-        {/* Voice mode toggle (hidden when hands-free is active) */}
-        {!handsFreeActive && (
-          <Pressable
-            onPress={toggleVoiceMode}
-            hitSlop={4}
-            accessibilityRole="button"
-            accessibilityLabel={voiceMode ? 'Switch to text mode' : 'Switch to voice mode'}
-            className="w-9 h-9 rounded-full items-center justify-center"
-            style={{ backgroundColor: voiceMode ? c.primary : c.card }}
-          >
-            <Ionicons name={voiceMode ? 'mic' : 'mic-outline'} size={20} color={voiceMode ? c.onPrimary : c.onTint} />
-          </Pressable>
-        )}
-      </View>
+            {missionAttempt.mission && (
+              <FinishPill onPress={handleFinish} disabled={sending || missionAttempt.finishing} />
+            )}
+            <HandsFreeToggle
+              active={handsFreeActive}
+              compact={missionAttempt.mission !== null}
+              onPress={toggleHandsFree}
+            />
+            {!handsFreeActive && <VoiceModeToggle active={voiceMode} onPress={toggleVoiceMode} />}
+          </>
+        }
+      />
 
       <KeyboardAvoidingView
         className="flex-1"
@@ -1222,6 +1206,15 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
           ListFooterComponent={sending ? <TypingIndicator /> : null}
         />
 
+        {/* Inside the KeyboardAvoidingView: above every composer branch. */}
+        {missionAttempt.mission && (
+          <MissionObjectives
+            mission={missionAttempt.mission.meta}
+            met={missionAttempt.met}
+            lastTicked={missionAttempt.lastTicked}
+          />
+        )}
+
         <ChatInput
           value={input}
           onChangeText={setInput}
@@ -1232,7 +1225,7 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
           targetLanguage={targetLanguage}
           handsFreeMode={handsFreeActive}
           handsFreeState={handsFreeState}
-          onHandsFreeStateChange={handleHandsFreeStateChange}
+          onHandsFreeStateChange={setHandsFreeState}
           shouldStartListening={shouldStartListening}
           onListeningStarted={handleListeningStarted}
           voiceGender={voiceGender}
