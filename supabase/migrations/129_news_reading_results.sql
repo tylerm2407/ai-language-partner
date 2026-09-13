@@ -68,6 +68,7 @@ CREATE INDEX IF NOT EXISTS idx_news_reading_results_user_lang
 
 ALTER TABLE public.news_reading_results ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can read own news reading results" ON public.news_reading_results;
 CREATE POLICY "Users can read own news reading results" ON public.news_reading_results
   FOR SELECT
   TO authenticated
@@ -167,7 +168,10 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.record_news_reading(uuid, smallint[]) FROM PUBLIC;
+-- Supabase's default privileges grant EXECUTE on every new function to anon
+-- explicitly, and a revoke from PUBLIC does not touch an explicit grant —
+-- so anon is named here, as in migration 128.
+REVOKE ALL ON FUNCTION public.record_news_reading(uuid, smallint[]) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.record_news_reading(uuid, smallint[]) TO authenticated;
 
 COMMENT ON FUNCTION public.record_news_reading(uuid, smallint[]) IS
