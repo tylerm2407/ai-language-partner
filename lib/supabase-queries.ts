@@ -395,6 +395,29 @@ export async function fetchDueReviewItemsWithCards(
 }
 
 
+/**
+ * The learner's own deck, as cards — the distractor pool for the multiple-
+ * choice review (lib/review-choices.ts). Every card the learner has ever been
+ * scheduled on, due or not, so a wrong option is a word they have actually
+ * met and might confuse. Capped: a long-lived deck runs to thousands and a
+ * session needs a couple of hundred candidates at most. review_items is
+ * unique on (user_id, card_id), so no card repeats.
+ */
+export async function fetchReviewDeckCards(userId: string, limit = 200): Promise<Card[]> {
+  const { data, error } = await supabase
+    .from('review_items')
+    .select('cards!inner(*)')
+    .eq('user_id', userId)
+    .order('last_reviewed_at', { ascending: false, nullsFirst: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return ((data ?? []) as Record<string, unknown>[])
+    .map((row) => row.cards)
+    .filter((c): c is Record<string, unknown> => !!c && typeof c === 'object')
+    .map(mapCard);
+}
+
 export async function fetchReviewItemCount(userId: string): Promise<number> {
   const { count, error } = await supabase
     .from('review_items')

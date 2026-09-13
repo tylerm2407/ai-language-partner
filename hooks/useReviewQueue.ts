@@ -5,10 +5,13 @@ import {
   fetchDueReviewItems,
   fetchCardsByIds,
   fetchStrugglingReviewItems,
+  fetchReviewDeckCards,
+  fetchCardsByCourse,
   upsertReviewItem,
   insertReviewLogIdempotent,
 } from '../lib/supabase-queries';
 import { calculateNextReview } from '../lib/srs';
+import { CHOICE_DISTRACTOR_COUNT } from '../lib/review-choices';
 import { rankStrugglingWords } from '../lib/insights';
 import { enqueue, isNetworkError, newClientLogId } from '../lib/offline-queue';
 import { cachedFetch, readCacheKey } from '../lib/read-cache';
@@ -18,6 +21,44 @@ import type { ReviewItem, Card, ReviewRating } from '../types';
 interface ReviewQueuePayload {
   items: ReviewItem[];
   cards: Record<string, Card>;
+  /**
+   * Distractor pool for the multiple-choice format (lib/review-choices.ts):
+   * the learner's own deck, topped up from the course when the deck is too
+   * small to fill a question. Optional because a queue cached before this
+   * field existed has none; the screen treats that as an empty pool.
+   */
+  pool?: Card[];
+}
+
+/**
+ * The learner's deck as a distractor pool. Never throws: a pool failure
+ * degrades the question — fewer wrong options — and must not take the whole
+ * review down with it.
+ */
+async function fetchDeckSafe(userId: string): Promise<Card[]> {
+  try {
+    return await fetchReviewDeckCards(userId);
+  } catch (err) {
+    console.warn('[review] distractor pool failed (non-fatal):', err);
+    return [];
+  }
+}
+
+/**
+ * Top a small deck up from its course so a question can still show four
+ * options (a brand-new learner has three cards). `sample` supplies the course;
+ * without one there is nothing to top up from.
+ */
+async function topUpPool(deck: Card[], sample: Card | undefined): Promise<Card[]> {
+  if (deck.length > CHOICE_DISTRACTOR_COUNT || !sample) return deck;
+  try {
+    const course = await fetchCardsByCourse(sample.courseId);
+    const seen = new Set(deck.map((c) => c.id));
+    return [...deck, ...course.filter((c) => !seen.has(c.id))];
+  } catch (err) {
+    console.warn('[review] course top-up failed (non-fatal):', err);
+    return deck;
+  }
 }
 
 /**
@@ -36,6 +77,7 @@ export function useReviewQueue(mode: ReviewQueueMode = 'due') {
   const { reviewCount, refreshReviewCount } = useAppStore();
   const [items, setItems] = useState<ReviewItem[]>([]);
   const [cards, setCards] = useState<Record<string, Card>>({});
+  const [pool, setPool] = useState<Card[]>([]);
   const [loading, setLoading] = useState(false);
 
   const loadQueue = useCallback(async () => {
@@ -49,6 +91,9 @@ export function useReviewQueue(mode: ReviewQueueMode = 'due') {
         const ranked = rankStrugglingWords(await fetchStrugglingReviewItems(user.id), { limit: 20, language });
         const map: Record<string, Card> = {};
         ranked.forEach((w) => { map[w.card.id] = w.card; });
+        // Pool BEFORE cards: the screen deals the first question the moment
+        // cards land, and a question dealt against an empty pool has one row.
+        setPool(await topUpPool(await fetchDeckSafe(user.id), ranked[0]?.card));
         setItems(ranked.map((w) => w.item));
         setCards(map);
         return;
@@ -61,20 +106,31 @@ export function useReviewQueue(mode: ReviewQueueMode = 'due') {
         async () => {
           const reviewItems = await fetchDueReviewItems(user.id);
           const map: Record<string, Card> = {};
-          if (reviewItems.length > 0) {
-            const fetched = await fetchCardsByIds(reviewItems.map((r) => r.cardId));
-            fetched.forEach((c) => { map[c.id] = c; });
-          }
-          return { items: reviewItems, cards: map };
+          if (reviewItems.length === 0) return { items: reviewItems, cards: map, pool: [] };
+          // Cards and deck are independent, so they go out together; the
+          // course top-up needs a card in hand and only a tiny deck pays it.
+          const [fetched, deck] = await Promise.all([
+            fetchCardsByIds(reviewItems.map((r) => r.cardId)),
+            fetchDeckSafe(user.id),
+          ]);
+          fetched.forEach((c) => { map[c.id] = c; });
+          return { items: reviewItems, cards: map, pool: await topUpPool(deck, fetched[0]) };
         },
         {
           onCached: (cached) => {
+            // A queue cached before the pool existed is not painted: with no
+            // distractors the first question would be one trivially-right row,
+            // and a tap on it is a real Easy (5) written to SM-2. Waiting for
+            // the fetch costs one paint on the first launch after the upgrade.
+            if (!cached.pool) return;
+            setPool(cached.pool);
             setItems(cached.items);
             setCards(cached.cards);
             setLoading(false);
           },
         },
       );
+      setPool(data.pool ?? []);
       setItems(data.items);
       setCards(data.cards);
     } finally {
@@ -172,5 +228,5 @@ export function useReviewQueue(mode: ReviewQueueMode = 'due') {
     }
   }, [user, refreshReviewCount]);
 
-  return { items, cards, reviewCount, loading, loadQueue, submitReview };
+  return { items, cards, pool, reviewCount, loading, loadQueue, submitReview };
 }
