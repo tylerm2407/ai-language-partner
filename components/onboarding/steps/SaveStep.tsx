@@ -85,7 +85,9 @@ export function SaveStep({
   }
   owned.push({
     title: 'Your plan',
-    detail: `${planHeadline(idealText, pack, languageName)} · 6 lessons`,
+    // The headline is the learner's own sentence and usually ends in a full
+    // stop; drop it before the separator so the row does not read "home. · 6".
+    detail: `${planHeadline(idealText, pack, languageName).replace(/[.!?。]+$/, '')} · 6 lessons`,
   });
   // The summary must be literally true: a warm-up learner's lessons start a
   // band below the level they declared, and a no-path learner has none.

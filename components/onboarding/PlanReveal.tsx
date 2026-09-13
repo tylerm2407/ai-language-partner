@@ -79,7 +79,10 @@ export function PlanReveal({
 }: PlanRevealProps) {
   const { c, type } = useUi2Theme();
   // A band never renders bare (CLAUDE.md §1); it is always paired with its can-do line.
-  const canDo = cefrCanDo(band as Parameters<typeof cefrCanDo>[0]).replace(/\.$/, '').replace(/^Can /, 'can ');
+  // `cefrCanDo` returns an imperative line ("Handle short, routine exchanges…"),
+  // not a "Can …" sentence, so it is joined with the band the way Settings
+  // does — "A2 · Handle …" — rather than folded into the sentence.
+  const canDo = cefrCanDo(band as Parameters<typeof cefrCanDo>[0]).replace(/\.$/, '');
   const { shouldReduce } = useMotion();
   const enter = (i: number) =>
     shouldReduce ? undefined : FadeInDown.delay(80 + i * 60).duration(360);
@@ -116,7 +119,7 @@ export function PlanReveal({
         </Text>
         <Text style={{ fontFamily: type.ui, fontSize: 14, lineHeight: 20, color: c.muted }}>
           Six lessons, {dailyGoalMinutes} minutes a day. Built from your moment and your level:
-          {' '}{band}, {canDo}
+          {' '}{band} · {canDo}.
         </Text>
       </Animated.View>
 
@@ -130,7 +133,9 @@ export function PlanReveal({
                   You already know {taught.words.length} words and 1 sentence.
                 </Text>
                 <Text style={{ fontFamily: type.ui, fontSize: 13, lineHeight: 18, color: c.muted }}>
-                  {taught.sentence.target}. Sol keeps building from here.
+                  {/* The pack sentence carries its own full stop; strip it so
+                      the line does not read "centre-ville.. Sol". */}
+                  {taught.sentence.target.replace(/[.!?。]+$/, '')}. Sol keeps building from here.
                 </Text>
               </>
             ) : (
