@@ -98,3 +98,40 @@ Deno.test('normalizeGloss trims but does not otherwise rewrite', () => {
   assertEquals(normalizeGloss(undefined), null);
   assertEquals(normalizeGloss(42), null);
 });
+
+// ── objectivesMet ─────────────────────────────────────────────────────────
+//
+// A tick is sticky (index.ts unions it into the attempt row), so the parser
+// must never manufacture one. Only an array of id-shaped strings counts.
+
+import { normalizeObjectivesMet } from './parse.ts';
+
+Deno.test('objectivesMet is surfaced when the model supplies id strings', () => {
+  const parsed = parseAIResponse(JSON.stringify({
+    reply: '¡Claro!',
+    correction: null,
+    vocabularyHighlights: [],
+    gloss: 'Of course!',
+    objectivesMet: ['greet_table', 'order_drink'],
+  }));
+  assertEquals(parsed.objectivesMet, ['greet_table', 'order_drink']);
+});
+
+Deno.test('a response without objectivesMet parses to an empty list, on every branch', () => {
+  assertEquals(parseAIResponse(JSON.stringify({ reply: 'Hola' })).objectivesMet, []);
+  assertEquals(parseAIResponse('Hola, ¿qué tal?').objectivesMet, []);
+  assertEquals(parseAIResponse('Hola [CORRECTION]: use "está"').objectivesMet, []);
+  assertEquals(parseAIResponse('junk {"reply":"x"} trailing').objectivesMet, []);
+});
+
+Deno.test('normalizeObjectivesMet accepts only well-formed ids, deduped and capped', () => {
+  assertEquals(normalizeObjectivesMet(undefined), []);
+  assertEquals(normalizeObjectivesMet('greet_table'), []);
+  assertEquals(normalizeObjectivesMet({ greet_table: true }), []);
+  assertEquals(normalizeObjectivesMet([true, 1, null]), []);
+  assertEquals(normalizeObjectivesMet(['Greet Table', 'greet-table', '_x', '']), []);
+  assertEquals(normalizeObjectivesMet([' greet_table ', 'greet_table', 'ask_price']), ['greet_table', 'ask_price']);
+  const many = Array.from({ length: 12 }, (_, i) => `o${i}`);
+  assertEquals(normalizeObjectivesMet(many).length, 8);
+  assertEquals(normalizeObjectivesMet(['a'.repeat(41)]), []);
+});

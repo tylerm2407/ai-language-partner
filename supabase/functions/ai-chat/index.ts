@@ -18,7 +18,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, corsResponse } from '../_shared/cors.ts';
 import { resolveEntitlement } from '../_shared/entitlement.ts';
 import { getScenario } from '../_shared/scenarios.ts';
-import { buildSystemPrompt, buildTopicTurn, usesPromptFirstCorrection } from './prompt.ts';
+import { buildFinishTurn, buildSystemPrompt, buildTopicTurn, usesPromptFirstCorrection } from './prompt.ts';
 // parseAIResponse/normalizeCorrection/normalizeVocabulary moved to parse.ts so
 // they can be tested: index.ts calls serve() at module scope, so importing it
 // from a test would stand up an HTTP listener.
@@ -127,6 +127,14 @@ interface ChatRequest {
    *  to the pre-streaming behaviour, which is what the client falls back to if
    *  streaming ever misbehaves in the field. */
   stream?: boolean;
+  /** Which mission of the scene's ladder this turn belongs to, 1..4. Absent
+   *  means plain chat — free_chat, assignments, and every client that
+   *  predates missions. See _shared/missions.ts. */
+  missionStage?: number;
+  /** The learner tapped Finish. The turn carries no new learner message: the
+   *  model says goodbye in character and the attempt is scored. Never
+   *  streamed, never refused at the daily limit (a canned send-off instead). */
+  finish?: boolean;
 }
 
 /**
@@ -236,8 +244,14 @@ serve(async (req: Request) => {
       recognizerConfidence,
       previousTurnRequestedRepair,
       isClosing,
-      stream: wantsStream,
+      stream: rawStream,
+      missionStage,
+      finish: rawFinish,
     } = (await req.json()) as ChatRequest;
+    const finish = rawFinish === true;
+    // Finish is scored and returned in one JSON envelope; there is nothing to
+    // stream and a stream would leave the client waiting for a result frame.
+    const wantsStream = finish ? false : rawStream;
     const nativeLanguage = rawNativeLanguage || 'en';
 
     // Validate untrusted input before it reaches a paid model call.
@@ -404,7 +418,12 @@ serve(async (req: Request) => {
       ? `${learnerBlock}\nUse this to decide what to correct, what to recast, and which examples to reach for. Never read it back to the learner or mention that you have it.`
       : null;
 
-    const systemPrompt = buildSystemPrompt(targetLanguage, level, scenarioKey, safeNativeLanguage);
+    const systemPrompt = buildSystemPrompt(targetLanguage, level, scenarioKey, safeNativeLanguage, missionStage);
+    // What this attempt has achieved so far. Per-attempt, so it rides
+    // UNCACHED below, after the governors — never in the cached block.
+    // Filled in by the mission attempt flow; null when no mission is running
+    // or nothing has been met yet.
+    const missionProgressNote: string | null = null;
     // A running scenario supersedes a free-text topic — that is what the old
     // `!scenarioBlock && topic` condition encoded, preserved here.
     const topicTurn = scenarioKey && getScenario(scenarioKey) ? null : buildTopicTurn(topic);
@@ -426,7 +445,7 @@ serve(async (req: Request) => {
       learnerText: learnerTurns[learnerTurns.length - 1] ?? '',
       recentLearnerTurns: learnerTurns.slice(0, -1).reverse(),
       previousTurnRequestedRepair: previousTurnRequestedRepair === true,
-      isClosing: isClosing === true,
+      isClosing: isClosing === true || finish,
     });
     const actNote = actInstruction(dialogueAct, targetLanguage);
 
@@ -515,11 +534,15 @@ serve(async (req: Request) => {
         // they change turn to turn and would poison the shared prefix.
         ...(floorNote ? [{ type: 'text', text: floorNote }] : []),
         ...(stretchNote ? [{ type: 'text', text: stretchNote }] : []),
+        ...(missionProgressNote ? [{ type: 'text', text: missionProgressNote }] : []),
         ...(codeSwitchNote ? [{ type: 'text', text: codeSwitchNote }] : []),
       ],
       messages: [
         ...(topicTurn ? [topicTurn] : []),
         ...windowMessages(messages),
+        // After the window, not inside it: the send-off request is about this
+        // turn, and it must be the last thing the model reads.
+        ...(finish ? [buildFinishTurn()] : []),
       ].map((m) => ({
         role: m.role === 'assistant' ? 'assistant' : 'user',
         content: m.content,
@@ -605,7 +628,7 @@ serve(async (req: Request) => {
       // The safety fallback is pre-authored text, not a model completion, so
       // there is no gloss to carry. Null, not omitted: the client reads null
       // as "translate on demand", which is exactly the old behaviour.
-      ? { reply: rawText, correction: null, vocabularyHighlights: [], gloss: null, askedForRepair: null }
+      ? { reply: rawText, correction: null, vocabularyHighlights: [], gloss: null, askedForRepair: null, objectivesMet: [] }
       : parseAIResponse(rawText);
 
     // Quota already consumed atomically before the LLM call.
@@ -838,7 +861,10 @@ async function stripUnsafeMetadata(
     language,
     ts: new Date().toISOString(),
   }));
-  return { reply: parsed.reply, correction: null, vocabularyHighlights: [], gloss: null, askedForRepair: null };
+  // objectivesMet survives: the ids are whitelisted tokens from our own
+  // mission registry, never text the learner reads, so there is nothing in
+  // them for the gate to gate.
+  return { reply: parsed.reply, correction: null, vocabularyHighlights: [], gloss: null, askedForRepair: null, objectivesMet: parsed.objectivesMet };
 }
 
 function windowMessages(

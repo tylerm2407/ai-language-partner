@@ -54,6 +54,41 @@ export interface ParsedAIResponse {
    * case, which is no worse than what shipped before.
    */
   askedForRepair: boolean | null;
+  /**
+   * Which mission objectives the model says the learner's latest message
+   * achieved. Ids from the MISSION block of the system prompt, never
+   * learner-visible text — which is why this survives `stripUnsafeMetadata`
+   * in index.ts unchanged: there is nothing in it to gate.
+   *
+   * Always an array. `[]` when no mission is running, when the model reported
+   * nothing, or when what it reported was not an array of id-shaped strings.
+   * index.ts whitelists it against the running mission's ids before it is
+   * believed; this only guarantees the shape.
+   */
+  objectivesMet: string[];
+}
+
+/** The id shape `_shared/missions.ts` authors: snake_case, ≤ 40 chars. */
+const OBJECTIVE_ID_RE = /^[a-z][a-z0-9_]{0,39}$/;
+/** More than any mission has. A longer list is not a report, it is noise. */
+const MAX_OBJECTIVES = 8;
+
+/**
+ * Strictly an array of id-shaped strings, deduped, capped. Anything else is
+ * `[]`: a bare string, an object, `true`, or ids with spaces in them all read
+ * as "nothing achieved", never as a tick.
+ */
+export function normalizeObjectivesMet(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  const out: string[] = [];
+  for (const entry of raw) {
+    if (typeof entry !== 'string') continue;
+    const id = entry.trim();
+    if (!OBJECTIVE_ID_RE.test(id) || out.includes(id)) continue;
+    out.push(id);
+    if (out.length >= MAX_OBJECTIVES) break;
+  }
+  return out;
 }
 
 /**
@@ -157,6 +192,7 @@ export function parseAIResponse(text: string): ParsedAIResponse {
       vocabularyHighlights: normalizeVocabulary(parsed.vocabularyHighlights),
       gloss: normalizeGloss(parsed.gloss),
       askedForRepair: normalizeAskedForRepair(parsed.askedForRepair),
+      objectivesMet: normalizeObjectivesMet(parsed.objectivesMet),
     };
   } catch {
     const firstBrace = cleaned.indexOf('{');
@@ -170,6 +206,7 @@ export function parseAIResponse(text: string): ParsedAIResponse {
           vocabularyHighlights: normalizeVocabulary(parsed.vocabularyHighlights),
           gloss: normalizeGloss(parsed.gloss),
           askedForRepair: normalizeAskedForRepair(parsed.askedForRepair),
+          objectivesMet: normalizeObjectivesMet(parsed.objectivesMet),
         };
       } catch {
         // fall through
@@ -181,7 +218,7 @@ export function parseAIResponse(text: string): ParsedAIResponse {
     const correctionMarker = '[CORRECTION]:';
     const index = text.indexOf(correctionMarker);
     if (index === -1) {
-      return { reply: text.trim(), correction: null, vocabularyHighlights: [], gloss: null, askedForRepair: null };
+      return { reply: text.trim(), correction: null, vocabularyHighlights: [], gloss: null, askedForRepair: null, objectivesMet: [] };
     }
     const reply = text.substring(0, index).trim();
     const correction = text.substring(index + correctionMarker.length).trim();
@@ -191,6 +228,7 @@ export function parseAIResponse(text: string): ParsedAIResponse {
       vocabularyHighlights: [],
       gloss: null,
       askedForRepair: null,
+      objectivesMet: [],
     };
   }
 }

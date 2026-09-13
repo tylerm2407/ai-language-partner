@@ -72,6 +72,17 @@ type EventName =
   | 'checkpoint_started'
   | 'checkpoint_completed'
   | 'chat_message_sent'
+  /** A mission attempt began. `contentId` = scenario key, `step` = stage,
+   *  `source` = 'new' | 'resume'. Never the objective text. */
+  | 'mission_started'
+  /** The learner tapped Finish. `outcome` = 'passed' | 'failed' | 'refused',
+   *  `score` = accuracy, `count` = objectives met, `ok` = passed. */
+  | 'mission_finished'
+  /** The warm-up sheet was skipped rather than started. */
+  | 'mission_warmup_skipped'
+  /** "How do I say…" was asked. `ok` says whether an answer came back,
+   *  `code` the refusal when not. Never the ask or the phrase. */
+  | 'phrase_help_requested'
   /** A learner saved a word from reading into their SRS deck. */
   | 'card_saved'
   /** The learner changed a reader display setting. Which one travels in

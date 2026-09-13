@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import type { MissionResult } from './ai';
 import { escapeSpreadsheetCsvCell } from './csv';
 import { PLANS } from './plans';
 import { CEFR_BAND_BY_LEVEL, CEFR_LADDER,
@@ -2937,6 +2938,9 @@ export interface ChatSession {
   scenarioKey: string;
   targetLanguage: string;
   level: string;
+  /** 1..4 for a mission attempt, null for free chat and assignments
+   *  (migration 126). Informational — the attempt row is authoritative. */
+  missionStage: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -2948,13 +2952,16 @@ export async function getOrCreateChatSession(
   targetLanguage: string,
   level: string
 ): Promise<ChatSession> {
-  // Try to find an existing session for this scenario
+  // Try to find an existing session for this scenario. `.is('mission_stage',
+  // null)` is load-bearing: mission attempts are their own rows on the same
+  // scenario key, and an assignment on `restaurant` must never resume one.
   const { data: existing } = await supabase
     .from('chat_sessions')
     .select('*')
     .eq('user_id', userId)
     .eq('scenario_key', scenarioKey)
     .eq('target_language', targetLanguage)
+    .is('mission_stage', null)
     .order('updated_at', { ascending: false })
     .limit(1)
     .single();
@@ -3188,9 +3195,124 @@ function mapChatSession(row: Record<string, unknown>): ChatSession {
     scenarioKey: row.scenario_key as string,
     targetLanguage: row.target_language as string,
     level: row.level as string,
+    missionStage: typeof row.mission_stage === 'number' ? row.mission_stage : null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };
+}
+
+// ─── Chat Missions ───────────────────────────────────────────────
+//
+// Progression is server-owned (migration 126): the client INSERTS the chat
+// session an attempt lives in — the same client-managed row every chat has —
+// and only ever READS the attempt and progress tables. `ai-chat` creates the
+// attempt row on the first turn and finishes it on the Finish turn.
+
+/**
+ * A fresh session for one mission attempt. Always inserts: every attempt is
+ * its own row, so a learner can retry a stage without resuming the failed
+ * attempt's transcript. Resuming an OPEN attempt goes through
+ * `fetchOpenMissionAttempts` instead.
+ */
+export async function createMissionAttemptSession(
+  userId: string,
+  scenarioKey: string,
+  stage: number,
+  targetLanguage: string,
+  level: string
+): Promise<ChatSession> {
+  const { data, error } = await supabase
+    .from('chat_sessions')
+    .insert({
+      user_id: userId,
+      scenario_key: scenarioKey,
+      target_language: targetLanguage,
+      level,
+      mission_stage: stage,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return mapChatSession(data);
+}
+
+export interface MissionProgressRow {
+  scenarioKey: string;
+  stage: number;
+  attempts: number;
+  bestAccuracy: number | null;
+  passedAt: string | null;
+}
+
+/** Every (scene, stage) the learner has attempted in this language. ≤ 32 rows. */
+export async function fetchMissionProgress(
+  userId: string,
+  targetLanguage: string
+): Promise<MissionProgressRow[]> {
+  const { data, error } = await supabase
+    .from('chat_mission_progress')
+    .select('scenario_key, stage, attempts, best_accuracy, passed_at')
+    .eq('user_id', userId)
+    .eq('target_language', targetLanguage)
+    .limit(40);
+
+  if (error) throw error;
+  return (data ?? []).map((row) => ({
+    scenarioKey: row.scenario_key as string,
+    stage: row.stage as number,
+    attempts: row.attempts as number,
+    bestAccuracy: row.best_accuracy === null ? null : Number(row.best_accuracy),
+    passedAt: (row.passed_at as string | null) ?? null,
+  }));
+}
+
+export interface OpenMissionAttempt {
+  chatSessionId: string;
+  scenarioKey: string;
+  stage: number;
+  objectivesMet: string[];
+  startedAt: string;
+}
+
+/** Attempts started and not yet finished, newest first. Seeds a resumed checklist. */
+export async function fetchOpenMissionAttempts(
+  userId: string,
+  targetLanguage: string
+): Promise<OpenMissionAttempt[]> {
+  const { data, error } = await supabase
+    .from('chat_mission_attempts')
+    .select('chat_session_id, scenario_key, stage, objectives_met, started_at')
+    .eq('user_id', userId)
+    .eq('target_language', targetLanguage)
+    .is('finished_at', null)
+    .order('started_at', { ascending: false })
+    .limit(20);
+
+  if (error) throw error;
+  return (data ?? []).map((row) => ({
+    chatSessionId: row.chat_session_id as string,
+    scenarioKey: row.scenario_key as string,
+    stage: row.stage as number,
+    objectivesMet: Array.isArray(row.objectives_met) ? (row.objectives_met as string[]) : [],
+    startedAt: row.started_at as string,
+  }));
+}
+
+/**
+ * The stored debrief for a finished attempt, or null while it is still open
+ * (or was never a mission). The debrief screen's source of truth on a cold
+ * open; the Finish turn's inline copy is only a latency shortcut over it.
+ */
+export async function fetchMissionResult(chatSessionId: string): Promise<MissionResult | null> {
+  const { data, error } = await supabase
+    .from('chat_mission_attempts')
+    .select('result')
+    .eq('chat_session_id', chatSessionId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return (data?.result as MissionResult | null) ?? null;
 }
 
 // ─── School System ──────────────────────────────────────────────
