@@ -152,7 +152,7 @@ export default function SettingsScreen() {
       if (!hasCourseAtBand) {
         Alert.alert(
           `No ${band} lesson path yet`,
-          `${cefrCanDo(band)} Lessons run A1 to B2 today.${startsAt}`,
+          `${cefrCanDo(band)}. Lessons run A1 to B2 today.${startsAt}`,
           [
             { text: 'Keep my lessons', onPress: () => resolve('keep') },
             { text: 'Lessons off: reading, chat, tutor', onPress: () => resolve('none') },
@@ -163,7 +163,7 @@ export default function SettingsScreen() {
       }
       Alert.alert(
         `Move your lessons to ${band} too?`,
-        `${cefrCanDo(band)}${startsAt}`,
+        `${cefrCanDo(band)}.${startsAt}`,
         [
           { text: 'Just the level', onPress: () => resolve('keep') },
           { text: 'Move lessons', onPress: () => resolve('move') },
