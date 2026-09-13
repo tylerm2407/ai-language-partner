@@ -32,13 +32,17 @@ import { ChatHeader, FinishPill, HandsFreeToggle, SubmitPill, VoiceModeToggle } 
 import { MissionObjectives } from '../../../components/chat/MissionObjectives';
 import { confirmFinish, useMissionAttempt, type BeginMissionInput } from '../../../hooks/useMissionAttempt';
 import { chatDebriefHref, missionFor } from '../../../lib/missions';
-import type { MissionMeta } from '../../../types/missions';
+import { MISSION_STAGE_COUNT, type MissionMeta, type MissionScenarioKey } from '../../../types/missions';
+import { buildPickerMissions, useMissionProgress } from '../../../hooks/useMissionProgress';
+import { MissionWarmupSheet } from '../../../components/chat/MissionWarmupSheet';
+import { PhraseHelpSheet } from '../../../components/chat/PhraseHelpSheet';
+import type { MissionCta } from '../../../lib/missions';
 import { TypingIndicator } from '../../../components/chat/TypingIndicator';
 import AssignmentTimer from '../../../components/school/AssignmentTimer';
 import { useAssignmentTimer } from '../../../hooks/useAssignmentTimer';
 import type { ConversationMessage, Assignment, AssignmentSubmission, LanguageCode, ProficiencyLevel } from '../../../types';
 import { Ionicons } from '@expo/vector-icons';
-import { getOrCreateChatSession, listChatSessions, saveChatMessage, loadChatMessages, fetchStudentAssignments, submitAssignment, upsertDailyStats, createMissionAttemptSession } from '../../../lib/supabase-queries';
+import { getOrCreateChatSession, saveChatMessage, loadChatMessages, fetchStudentAssignments, submitAssignment, upsertDailyStats, createMissionAttemptSession } from '../../../lib/supabase-queries';
 import { getTargetLanguage } from '../../../lib/language';
 import { setAudioSessionMode, playbackModeFor } from '../../../lib/audio-session';
 import { saveErrorCopy } from '../../../lib/error-copy';
@@ -221,25 +225,29 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
   const level = profile?.level ?? 'beginner';
   const languageName = SUPPORTED_LANGUAGES.find((l) => l.code === targetLanguage)?.name ?? targetLanguage.toUpperCase();
 
-  // Which scenes already have a saved conversation, for the picker's
-  // "picks up where you left off" line. Read-only: getOrCreateChatSession
-  // would CREATE a row per scene just by looking.
-  const [resumable, setResumable] = useState<ReadonlySet<string>>(new Set());
-  useEffect(() => {
-    if (!user?.id) return;
-    let cancelled = false;
-    listChatSessions(user.id, 50)
-      .then((sessions) => {
-        if (cancelled) return;
-        setResumable(new Set(sessions.filter((sess) => sess.targetLanguage === targetLanguage).map((sess) => sess.scenarioKey)));
-      })
-      .catch(() => {
-        // The hint is a nicety; a failed lookup just reads as new conversations.
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.id, targetLanguage]);
+  // Mission ladders, open attempts, the goal track's scene order, and whether
+  // a Free Chat conversation exists — one hook, one settled read. Read-only:
+  // getOrCreateChatSession would CREATE a row per scene just by looking.
+  const missionProgress = useMissionProgress(user?.id, targetLanguage);
+  const resumable: ReadonlySet<string> = missionProgress.freeChatResumable ? new Set(['free_chat']) : new Set();
+
+  // The warm-up sheet before a FRESH attempt (resumes skip it). Opened only
+  // after the picker's own sheet has closed — two iOS Modals never stack.
+  const [warmup, setWarmup] = useState<{ scenarioKey: MissionScenarioKey; stage: number } | null>(null);
+  const [warmupStarting, setWarmupStarting] = useState(false);
+  const [warmupError, setWarmupError] = useState<string | null>(null);
+  const warmupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (warmupTimerRef.current) clearTimeout(warmupTimerRef.current); }, []);
+  const openWarmup = useCallback((scenarioKey: MissionScenarioKey, stage: number) => {
+    setWarmupError(null);
+    if (warmupTimerRef.current) clearTimeout(warmupTimerRef.current);
+    // Long enough for the picker sheet's close animation to finish.
+    warmupTimerRef.current = setTimeout(() => setWarmup({ scenarioKey, stage }), 400);
+  }, []);
+
+  // "How do I say…" — asked outside the tutor's earshot, so Sol stays in
+  // character. Never while hands-free is on (the loop owns the mic).
+  const [helpOpen, setHelpOpen] = useState(false);
 
   // Load assignment data if assignmentId param present (school feature)
   useEffect(() => {
@@ -629,7 +637,11 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
     setVoiceMode(false);
     chatSessionIdRef.current = null;
     repairOutstandingRef.current = false;
+    const wasMission = missionAttempt.mission !== null;
     missionAttempt.leave();
+    // The picker's dots and "Continue mission" state come from the server;
+    // a left or finished attempt changes them.
+    if (wasMission) void missionProgress.refresh();
   };
 
   /**
@@ -637,17 +649,18 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
    * never resumes a failed attempt's transcript; 'resume' reloads the open
    * attempt's session and seeds the checklist from the server.
    *
-   * INTEGRATION: the picker's onStart(scenario, cta, stage) and the warm-up
-   * sheet plug in here — both end by calling this ('resume' with the open
-   * attempt's sessionId + objectivesMet, else 'new'). Until then the only
-   * entry is the `scenario` + `stage` route params below.
+   * Three entries: the picker's "Continue mission N" (resume), the warm-up
+   * sheet's Start/Skip (new), and the `scenario` + `stage` route params the
+   * debrief uses, which open the warm-up first. Returns whether it opened;
+   * the warm-up sheet shows the failure inline rather than an Alert.
    */
   const startMissionAttempt = async (
     input: Omit<BeginMissionInput, 'sessionId' | 'language'> & { sessionId?: string },
-  ) => {
+    opts: { quiet?: boolean } = {},
+  ): Promise<boolean> => {
     const meta = missionFor(input.scenarioKey, input.stage);
     const scenario = SCENARIOS.find((s) => s.key === input.scenarioKey);
-    if (!meta || !scenario || !user?.id) return;
+    if (!meta || !scenario || !user?.id) return false;
     stopSpeaking();
     try {
       const sessionId =
@@ -660,26 +673,58 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
       await openSession(sessionId, assistantTurn(greeting, '0'));
       missionAttempt.begin({ ...input, sessionId, language: targetLanguage });
       if (voiceMode && !handsFreeActive) speakReply(greeting, false);
+      return true;
     } catch (err) {
       console.error('[chat] mission start failed:', err);
       const { title, message } = saveErrorCopy(err, 'your mission');
-      Alert.alert(title, message);
+      if (!opts.quiet) Alert.alert(title, message);
+      return false;
     }
   };
 
+  /** Start or Skip on the warm-up sheet: create the attempt row, then open the chat. */
+  const startFromWarmup = async () => {
+    if (!warmup || warmupStarting) return;
+    setWarmupStarting(true);
+    setWarmupError(null);
+    const ok = await startMissionAttempt({ scenarioKey: warmup.scenarioKey, stage: warmup.stage, source: 'new' }, { quiet: true });
+    setWarmupStarting(false);
+    if (ok) setWarmup(null);
+    else setWarmupError('Please check your connection and try again.');
+  };
+
+  /** The picker's ONE button for a mission scene. */
+  const handleMissionStart = (scenarioKey: ScenarioKey, cta: MissionCta, stage: number | null) => {
+    if (scenarioKey === 'free_chat') return;
+    const scene = scenarioKey as MissionScenarioKey;
+    if (cta === 'plans') {
+      router.push('/(app)/plans');
+      return;
+    }
+    if (cta === 'resume') {
+      const open = missionProgress.openAttempts.get(scene);
+      if (open) {
+        void startMissionAttempt({ scenarioKey: scene, stage: open.stage, source: 'resume', sessionId: open.sessionId, objectivesMet: open.objectivesMet });
+        return;
+      }
+    }
+    // 'start', 'replay' (stage null → the last mission), or a resume whose
+    // open attempt has since vanished: a fresh attempt, warm-up first.
+    openWarmup(scene, stage ?? MISSION_STAGE_COUNT);
+  };
+
   // Deep link `/(app)/chat?scenario=…&stage=…` — how the debrief's "Next
-  // mission" and "Try again" arrive. Cleared as it is consumed so a later
-  // focus cannot start a second attempt.
+  // mission" and "Try again" arrive. Opens the warm-up for that stage (every
+  // fresh attempt gets one). Cleared as it is consumed so a later focus
+  // cannot open a second one.
   const missionParamScenario = typeof params.scenario === 'string' ? params.scenario : undefined;
   const missionParamStage = typeof params.stage === 'string' ? Number(params.stage) : NaN;
   useFocusEffect(
     useCallback(() => {
       if (!missionParamScenario || !missionFor(missionParamScenario, missionParamStage)) return;
       router.setParams({ scenario: undefined, stage: undefined });
-      void startMissionAttempt({ scenarioKey: missionParamScenario, stage: missionParamStage, source: 'new' });
-      // The params are the only trigger; startMissionAttempt is recreated every render.
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [missionParamScenario, missionParamStage]),
+      openWarmup(missionParamScenario as MissionScenarioKey, missionParamStage);
+    }, [missionParamScenario, missionParamStage, router, openWarmup]),
   );
 
   /** What every ai-chat request shares. Context is windowed to the last 24
@@ -1118,7 +1163,33 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
               const scenario = SCENARIOS.find((sc) => scenarioIdentity(sc) === scenarioIdentity(picked));
               if (scenario) startChat(scenario, false);
             }}
+            missions={buildPickerMissions({
+              progress: missionProgress.progress,
+              openAttempts: missionProgress.openAttempts,
+              // The starter gate above has already turned free learners away.
+              paid: true,
+              loading: missionProgress.loading,
+            })}
+            missionsError={missionProgress.error}
+            onRetryMissions={() => void missionProgress.refresh()}
+            goalScenes={missionProgress.goalScenes}
+            onMissionStart={handleMissionStart}
           />
+          {warmup && user?.id && (
+            <MissionWarmupSheet
+              visible
+              scenarioKey={warmup.scenarioKey}
+              stage={warmup.stage}
+              targetLanguage={targetLanguage}
+              nativeLanguage={profile?.nativeLanguage ?? 'en'}
+              userId={user.id}
+              tier={tier}
+              onStart={startFromWarmup}
+              onSkip={startFromWarmup}
+              starting={warmupStarting}
+              startError={warmupError}
+            />
+          )}
         </SafeAreaView>
       </View>
     );
@@ -1233,7 +1304,32 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
           onBeforeRecord={() => ensureConsent('voice')}
           onInterruptPlayback={interruptAndListen}
           cefrLevel={CEFR_FOR_LEVEL[level]}
+          onHelp={
+            handsFreeActive
+              ? undefined
+              : () => {
+                  // Consent first, and never both Modals at once.
+                  void ensureConsent('text').then((ok) => { if (ok) setHelpOpen(true); });
+                }
+          }
         />
+        {user?.id && (
+          <PhraseHelpSheet
+            visible={helpOpen}
+            mode={voiceMode ? 'voice' : 'text'}
+            targetLanguage={targetLanguage}
+            nativeLanguage={profile?.nativeLanguage ?? 'en'}
+            level={level}
+            scenarioKey={selectedScenario.key ?? undefined}
+            userId={user.id}
+            tier={tier}
+            onInsert={(phrase) => {
+              setInput((prev) => (prev.trim() ? `${prev.trimEnd()} ${phrase}` : phrase));
+              setHelpOpen(false);
+            }}
+            onClose={() => setHelpOpen(false)}
+          />
+        )}
         {consentSheet}
       </KeyboardAvoidingView>
     </SafeAreaView>

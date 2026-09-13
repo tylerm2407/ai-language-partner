@@ -40,6 +40,7 @@ import { useRouter } from 'expo-router';
 import { minLineHeight, spacing, typography } from '../../config/theme';
 import { useAudioPlayer } from '../../hooks/useAudioPlayer';
 import { useMotion } from '../../hooks/useMotion';
+import { usePressed } from '../../hooks/usePressed';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { fetchMissionPhrases, MissionApiError, VoiceError, type MissionPhrase } from '../../lib/ai';
 import { trackEvent } from '../../lib/analytics';
@@ -140,7 +141,7 @@ export function MissionWarmupSheet({
   starting = false,
   startError = null,
 }: MissionWarmupSheetProps) {
-  const { c, shape } = useUi2Theme();
+  const { c } = useUi2Theme();
   const { shouldReduce, duration } = useMotion();
   const router = useRouter();
   const player = useAudioPlayer();
@@ -248,15 +249,6 @@ export function MissionWarmupSheet({
     void onSkip();
   }, [starting, stop, scenarioKey, stage, onSkip]);
 
-  const iconColor = (glyph: RowGlyph): string => {
-    switch (glyph) {
-      case 'playing': return c.green;
-      case 'failed': return c.error;
-      case 'muted': return c.idle;
-      default: return c.onTint;
-    }
-  };
-
   return (
     <Ui2Sheet visible={visible} onDismiss={handleSkip} dismissOnBackdrop={!starting}>
       <View style={styles.sheet}>
@@ -302,35 +294,13 @@ export function MissionWarmupSheet({
                 failed: !!playerError || rowFailed,
               });
               return (
-                <Pressable
+                <WarmupRow
                   key={`${i}-${p.phrase}`}
-                  onPress={() => void onRowPress(i, p)}
+                  phrase={p}
+                  glyph={glyph}
                   disabled={quotaExhausted}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Play: ${p.phrase}. ${p.meaning}`}
-                  accessibilityState={{ disabled: quotaExhausted, busy: glyph === 'loading' }}
-                  style={({ pressed }) => [
-                    styles.row,
-                    { backgroundColor: pressed ? c.surface2 : 'transparent', borderRadius: shape.radiusCard - 8 },
-                  ]}
-                >
-                  <View style={[styles.well, { backgroundColor: c.primaryTint }]}>
-                    {glyph === 'loading' ? (
-                      <ActivityIndicator size="small" color={c.onTint} />
-                    ) : (
-                      <Ionicons name={GLYPH_ICON[glyph]} size={20} color={iconColor(glyph)} />
-                    )}
-                  </View>
-                  <View style={styles.rowText}>
-                    <Text
-                      style={[styles.phrase, { color: quotaExhausted ? c.muted : c.ink }]}
-                      maxFontSizeMultiplier={1.6}
-                    >
-                      {p.phrase}
-                    </Text>
-                    <Caption tone="secondary">{p.meaning}</Caption>
-                  </View>
-                </Pressable>
+                  onPress={() => void onRowPress(i, p)}
+                />
               );
             })}
           </Animated.View>
@@ -355,6 +325,56 @@ export function MissionWarmupSheet({
         ) : null}
       </View>
     </Ui2Sheet>
+  );
+}
+
+/**
+ * One phrase row. Its own component so press state can come from
+ * `usePressed` — the callback form of `style` is dropped by NativeWind's
+ * Pressable wrapper (see hooks/usePressed.ts and lib/no-callback-style.test.ts).
+ */
+function WarmupRow({
+  phrase,
+  glyph,
+  disabled,
+  onPress,
+}: {
+  phrase: MissionPhrase;
+  glyph: RowGlyph;
+  disabled: boolean;
+  onPress: () => void;
+}) {
+  const { c, shape } = useUi2Theme();
+  const { pressed, pressHandlers } = usePressed();
+  const iconColor = (g: RowGlyph): string =>
+    g === 'playing' ? c.green : g === 'failed' ? c.error : g === 'muted' ? c.idle : c.onTint;
+  return (
+    <Pressable
+      {...pressHandlers}
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={`Play: ${phrase.phrase}. ${phrase.meaning}`}
+      accessibilityState={{ disabled, busy: glyph === 'loading' }}
+      style={[
+        styles.row,
+        { backgroundColor: pressed ? c.surface2 : 'transparent', borderRadius: shape.radiusCard - 8 },
+      ]}
+    >
+      <View style={[styles.well, { backgroundColor: c.primaryTint }]}>
+        {glyph === 'loading' ? (
+          <ActivityIndicator size="small" color={c.onTint} />
+        ) : (
+          <Ionicons name={GLYPH_ICON[glyph]} size={20} color={iconColor(glyph)} />
+        )}
+      </View>
+      <View style={styles.rowText}>
+        <Text style={[styles.phrase, { color: disabled ? c.muted : c.ink }]} maxFontSizeMultiplier={1.6}>
+          {phrase.phrase}
+        </Text>
+        <Caption tone="secondary">{phrase.meaning}</Caption>
+      </View>
+    </Pressable>
   );
 }
 
