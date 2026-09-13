@@ -1,8 +1,7 @@
 import { View, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useSafeBack } from '../../../hooks/useSafeBack';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { haptic } from '../../../lib/haptics';
 import { useReviewQueue, type ReviewQueueMode } from '../../../hooks/useReviewQueue';
@@ -37,7 +36,21 @@ import { trackEvent } from '../../../lib/analytics';
 export default function ReviewScreen() {
   useScreenView('review');
   const { c, shape } = useUi2Theme();
-  const goBack = useSafeBack('/(app)');
+  const router = useRouter();
+  // Exit, Done and Back to Learn all land on the Learn tab, whatever opened
+  // the review. This screen lives on the learn stack but is pushed from other
+  // tabs too (Home's due-cards card, the chat debrief, the patterns screen).
+  // A plain back() from those pops the TAB switch and drops the learner on
+  // Home, and a replace() when Learn's index is already underneath leaves two
+  // copies of Learn on the stack. So: pop to the stack root when there is
+  // one, and only when this screen IS the root swap it for Learn.
+  const goBack = () => {
+    if (router.canDismiss()) {
+      router.dismissAll();
+      return;
+    }
+    router.replace('/(app)/learn');
+  };
   // `?mode=struggling` deals only the words the learner keeps failing (Home's
   // "Your patterns" card and the patterns screen link here). Anything else
   // is the ordinary due queue.
