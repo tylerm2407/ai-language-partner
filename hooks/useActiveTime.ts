@@ -12,11 +12,21 @@
  *
  * WHAT EACH KIND WRITES, AND WHY IT IS NOT SYMMETRIC
  *
- *   lesson  → minutesPracticed
- *   review  → minutesPracticed
- *   reading → minutesPracticed + readingMinutes
- *   chat    → minutesPracticed
- *   tutor   → minutesPracticed + listeningMinutes
+ *   lesson    → minutesPracticed
+ *   review    → minutesPracticed
+ *   reading   → minutesPracticed + readingMinutes
+ *   writing   → minutesPracticed + writingMinutes
+ *   listening → minutesPracticed + listeningMinutes   (narration, news audio)
+ *   chat      → minutesPracticed
+ *   tutor     → minutesPracticed + listeningMinutes + speakingMinutes
+ *   handsfree → minutesPracticed + speakingMinutes
+ *
+ * `tutor` credits BOTH listening and speaking. A live call is one continuous
+ * exchange in which the learner listens to every tutor turn and speaks every
+ * learner turn; neither half is measured separately (the audio never crosses
+ * our servers), so the wall clock is the only honest number for either, and
+ * `minutes_practiced` is still written once. `handsfree` is spoken review:
+ * every item is answered aloud, so its clock is speaking practice.
  *
  * `chat` writes the wall clock and NOTHING else on purpose. The chat screen
  * already writes `speaking_minutes` per voice turn, from the turn's own
@@ -35,7 +45,15 @@ import { useDailyStats } from './useDailyStats';
 import { createActiveClock, type ActiveClock } from '../lib/active-time';
 import type { DailyStats } from '../types';
 
-export type ActiveTimeKind = 'lesson' | 'review' | 'reading' | 'chat' | 'tutor';
+export type ActiveTimeKind =
+  | 'lesson'
+  | 'review'
+  | 'reading'
+  | 'writing'
+  | 'listening'
+  | 'chat'
+  | 'tutor'
+  | 'handsfree';
 
 /**
  * Below this, nothing is written. A screen opened and closed in a couple of
@@ -56,8 +74,14 @@ function deltaFor(kind: ActiveTimeKind, seconds: number): StatsDelta {
   switch (kind) {
     case 'reading':
       return { minutesPracticed: minutes, readingMinutes: minutes };
-    case 'tutor':
+    case 'writing':
+      return { minutesPracticed: minutes, writingMinutes: minutes };
+    case 'listening':
       return { minutesPracticed: minutes, listeningMinutes: minutes };
+    case 'tutor':
+      return { minutesPracticed: minutes, listeningMinutes: minutes, speakingMinutes: minutes };
+    case 'handsfree':
+      return { minutesPracticed: minutes, speakingMinutes: minutes };
     // See the header: chat's spoken half is already measured per turn, so the
     // wall clock stays unattributed rather than double-counting it.
     case 'chat':

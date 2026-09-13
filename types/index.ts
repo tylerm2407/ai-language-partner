@@ -351,6 +351,57 @@ export interface DailyStats {
   accuracy: number; // 0-1
 }
 
+// ─── Exercise Results (migration 128) ──────────────────────────
+
+/**
+ * One graded lesson exercise. Server-owned: written only by the
+ * `record_exercise_result` RPC, which derives `exerciseType`, `skillType`,
+ * `cefrLevel` and `targetLanguage` from the exercise → lesson → unit → course
+ * chain rather than trusting the client to tag its own evidence. This is what
+ * the listening strand of the proficiency report is assessed on
+ * (`listening_choice`, `listening_type`, `dictation` types) and the per-exercise
+ * history every strand can be audited against.
+ */
+export interface ExerciseResult {
+  id: string;
+  userId: string;
+  lessonId: string;
+  exerciseId: string;
+  cardId: string | null;
+  exerciseType: string;
+  skillType: string | null;
+  /** From the card when linked, else the lesson's course band. */
+  cefrLevel: string | null;
+  targetLanguage: string;
+  /** First-attempt correctness. A recovered second attempt is `false`. */
+  correct: boolean;
+  attempts: number;
+  responseTimeMs: number | null;
+  /** Client-minted idempotency key, unique per user. */
+  clientResultId: string;
+  createdAt: string;
+}
+
+// ─── News Reading Results (migration 129) ──────────────────────
+
+/**
+ * A finished daily-news article with its comprehension check, graded
+ * server-side by `record_news_reading` against the questions stored on the
+ * article. Reading evidence for the proficiency report alongside
+ * `user_reading_progress`.
+ */
+export interface NewsReadingResult {
+  id: string;
+  userId: string;
+  articleId: string;
+  targetLanguage: string;
+  cefrLevel: string;
+  /** 0–1 share of comprehension questions answered correctly. */
+  comprehension: number;
+  questionsTotal: number;
+  completedAt: string;
+}
+
 // ─── Pronunciation Scores ───────────────────────────────────────
 
 /**

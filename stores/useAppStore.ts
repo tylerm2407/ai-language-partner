@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { UserProfile, DailyStats, Subscription, SubscriptionTier } from '../types';
+import type { CefrBand } from '../lib/cefr-proficiency';
 import { fetchProfile, fetchTodayStats, fetchSubscription, fetchReviewItemCount, fetchUserRoles, fetchHasCompletedLesson, fetchHasAiConversation } from '../lib/supabase-queries';
 
 /**
@@ -52,6 +53,15 @@ interface AppState {
    *  free and closes afterwards. Deliberately NOT dailyStats.lessonsCompleted,
    *  which resets every night and would reopen the gate each morning. */
   hasCompletedLesson: boolean;
+  /**
+   * The band the proficiency report last MEASURED for this learner, or null
+   * while nothing has been measured. Written only by `useProficiencyReport`
+   * after a report is built; read by every surface that has to pitch itself
+   * at the learner's real level (chat, tutor) so a level earned in lessons
+   * moves the conversation without a second evidence fetch per screen. See
+   * `lib/conversation-level.ts` for the fallback order.
+   */
+  measuredBand: CefrBand | null;
   /** Raw signals for the onboarding reconciliation pass (hooks/
    *  useOnboardingReconciliation.ts). `null` = the read failed, which the
    *  reconciler treats as "unknown" and therefore as "change nothing".
@@ -88,6 +98,8 @@ interface AppState {
   setEntitledTier: (tier: SubscriptionTier | null) => void;
   /** Flip the paywall gate the instant a lesson completes, without a refetch. */
   setHasCompletedLesson: (value: boolean) => void;
+  /** Mirror the report's measured band (see `measuredBand`). */
+  setMeasuredBand: (band: CefrBand | null) => void;
   /** Record that the onboarding checklist has been reconciled for this user. */
   setReconciled: (userId: string) => void;
   refreshReviewCount: (userId: string) => Promise<void>;
@@ -102,6 +114,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   reviewCount: 0,
   roles: [],
   hasCompletedLesson: false,
+  measuredBand: null,
   hasCompletedLessonSignal: null,
   hasAiConversationSignal: null,
   reconciledUserId: null,
@@ -163,6 +176,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ profile: { ...current, ...patch } });
   },
   setHasCompletedLesson: (hasCompletedLesson) => set({ hasCompletedLesson }),
+  setMeasuredBand: (measuredBand) => set({ measuredBand }),
   setReconciled: (reconciledUserId) => set({ reconciledUserId }),
   setDailyStats: (dailyStats) => set({ dailyStats }),
 
@@ -212,6 +226,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     reviewCount: 0,
     roles: [],
     hasCompletedLesson: false,
+    measuredBand: null,
     hasCompletedLessonSignal: null,
     hasAiConversationSignal: null,
     reconciledUserId: null,
