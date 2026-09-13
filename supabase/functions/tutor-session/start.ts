@@ -31,7 +31,7 @@ import { stashEphemeralKey } from '../_shared/tutor-calls.ts';
 import { reserveTutorSession, settleTutorSession } from '../_shared/tutor-ledger.ts';
 import { fetchLearnerContext, serializeLearnerContext, isEntitledToLearnerContext } from '../_shared/learner-context.ts';
 import { fetchTutorMemory, serializeTutorMemory } from '../_shared/tutor-memory.ts';
-import { proficiencyToCefr } from '../_shared/cefr.ts';
+import { cefrToProficiency, resolveCefrLevel } from '../_shared/cefr.ts';
 import { providerFetch, PROVIDER_TIMEOUT_MS } from '../_shared/provider-fetch.ts';
 import {
   TUTOR_MODEL,
@@ -56,7 +56,12 @@ type Client = any;
 export interface StartRequest {
   targetLanguage: string;
   nativeLanguage?: string;
+  /** The declared onboarding level — the fallback band, see `cefrLevel`. */
   level: string;
+  /** The band the client resolved from the learner's MEASURED level
+   *  (`lib/conversation-level.ts`). Optional so an old client still starts a
+   *  session; when absent or unusable the declared `level` decides. */
+  cefrLevel?: string;
   scenarioKey?: string | null;
   correctionMode: CorrectionMode;
   personaId?: string;
@@ -157,8 +162,20 @@ export async function handleStart(
 ): Promise<StartResult> {
   const targetLanguage = req.targetLanguage;
   const nativeLanguage = req.nativeLanguage || 'en';
-  const level = req.level;
-  const cefrLevel = proficiencyToCefr(level);
+  // The band first, the level from it — never the other way round. The band
+  // is what the session is pitched at and what `tutor_sessions.cefr_level`
+  // records, which `_shared/tutor-writeback.ts` copies onto every evidence
+  // row at the end of the call. It used to be `proficiencyToCefr(req.level)`,
+  // so a learner who had measured past their onboarding answer was still
+  // spoken to, and assessed, at the level they declared on day one.
+  //
+  // `level` is that band read back through the inverse ladder, for the code
+  // still keyed on the five-level enum: speech speed, turn detection, the
+  // correction policy and level guide in the instructions, and the row's own
+  // `level` column, which `end.ts` hands to the debrief analysis. Deriving it
+  // here means the row's two columns cannot disagree.
+  const cefrLevel = resolveCefrLevel(req.level, req.cefrLevel);
+  const level = cefrToProficiency(cefrLevel);
 
   // ── tier and entitlement ────────────────────────────────────────────
   // One definition of "paid" (_shared/entitlement.ts): active AND unexpired.

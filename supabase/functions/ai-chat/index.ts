@@ -47,7 +47,7 @@ import { chatStreamResponse } from './stream.ts';
 import { floorShareNote, pushNote, selectPushStance } from './turn-policy.ts';
 import { generateValidated } from '../_shared/validated-generate.ts';
 import { validateContentSafety } from '../_shared/content-safety.ts';
-import { proficiencyToCefr } from '../_shared/cefr.ts';
+import { cefrToProficiency, resolveCefrLevel } from '../_shared/cefr.ts';
 import { checkBurstLimit } from '../_shared/burst-limit.ts';
 import { PROVIDER_TIMEOUT_MS, providerFetch } from '../_shared/provider-fetch.ts';
 import { fetchLearnerContext, serializeLearnerContext } from '../_shared/learner-context.ts';
@@ -119,7 +119,15 @@ interface ChatRequest {
   /** Language the correction's explanation should be written in.
    *  Defaults to 'en' if not supplied. */
   nativeLanguage?: string;
+  /** The self-declared onboarding level. Still required, still validated,
+   *  but since `cefrLevel` arrived it is only the fallback band. */
   level: string;
+  /** The band the client resolved from the learner's MEASURED level
+   *  (`lib/conversation-level.ts`: measured > placement > declared). When it
+   *  is a valid band it decides both how hard the tutor pitches and which
+   *  band the turn's evidence is stamped with; otherwise `level` is mapped
+   *  through the ladder as before, so an old client keeps working. */
+  cefrLevel?: string;
   scenarioKey?: string;
   topic?: string;
   assignmentId?: string;
@@ -283,6 +291,7 @@ serve(async (req: Request) => {
       targetLanguage,
       nativeLanguage: rawNativeLanguage,
       level,
+      cefrLevel: rawCefrLevel,
       topic: rawTopic,
       scenarioKey,
       assignmentId,
@@ -321,6 +330,23 @@ serve(async (req: Request) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // ── The band this conversation runs at ─────────────────────────────
+    //
+    // Resolved ONCE, here, and used for everything downstream: the system
+    // prompt, the safety pipeline's target level, the push governor's read,
+    // and the band stamped on the turn's evidence. It used to be
+    // `proficiencyToCefr(level)` — the declared level alone — which made the
+    // onboarding answer a ceiling on the measured level. `cefrLevel` degrades
+    // rather than 400s, like nativeLanguage: an unusable value is a client
+    // that predates the field, not a malformed request.
+    //
+    // `effectiveLevel` is the same band read back through the inverse ladder,
+    // for the code that is still keyed on the five-level enum (level guide,
+    // correction policy, scenario prompt). It is derived from the band, never
+    // the other way round, so the two cannot disagree.
+    const cefrLevel = resolveCefrLevel(level, rawCefrLevel);
+    const effectiveLevel = cefrToProficiency(cefrLevel);
 
     // ── Mission request shape ──────────────────────────────────────────
     //
@@ -551,7 +577,7 @@ serve(async (req: Request) => {
     // pre-mission one and keeps every free-chat cached prefix intact.
     const systemPrompt = buildSystemPrompt(
       targetLanguage,
-      level,
+      effectiveLevel,
       scenarioKey,
       safeNativeLanguage,
       missionAttempt?.stage,
@@ -588,10 +614,6 @@ serve(async (req: Request) => {
     });
     const actNote = actInstruction(dialogueAct, targetLanguage);
 
-    // Needed by the push governor below as well as by the safety pipeline, so
-    // it is resolved before either.
-    const cefrLevel = proficiencyToCefr(level);
-
     // ── Governors ──────────────────────────────────────────────────────
     //
     // How much room the learner gets, and how hard they are pushed. Both are
@@ -622,7 +644,7 @@ serve(async (req: Request) => {
       evidenceSessionId:
         typeof chatSessionId === 'string' && isValidUUID(chatSessionId) ? chatSessionId : undefined,
       targetLanguage,
-      level,
+      level: effectiveLevel,
       cefrLevel,
       dialogueAct,
       modality: modality === 'speaking' ? 'speaking' : 'writing',

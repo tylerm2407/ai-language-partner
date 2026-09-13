@@ -249,3 +249,45 @@ Deno.test('a successful start never returns the instructions or the voice', asyn
     assert(!serialised.includes('CORRECTING mode'), 'prompt text leaked into the response');
   } finally { restore(); }
 });
+
+Deno.test('the measured band, not the declared level, decides what the session is pitched at', async () => {
+  // A learner who declared "beginner" at onboarding and has since measured
+  // B2. Before `cefrLevel` existed this session ran at A1 — and every
+  // evidence row it produced was stamped A1, so the debrief could never see
+  // the learner above the level they declared on day one.
+  const { supabase, inserted } = makeStub();
+  let mintBody: Record<string, unknown> | null = null;
+  globalThis.fetch = ((_url: unknown, init?: RequestInit) => {
+    mintBody = JSON.parse(String(init?.body ?? '{}'));
+    return Promise.resolve(goodMint());
+  }) as unknown as typeof fetch;
+  try {
+    const res = await handleStart(supabase, 'user-1', { ...request, level: 'beginner', cefrLevel: 'b2' }, env);
+    assertEquals(res.status, 200);
+  } finally { restore(); }
+
+  const row = inserted()!;
+  // Normalised, stamped, and the level column derived from the band so the
+  // two can never disagree on the same row.
+  assertEquals(row.cefr_level, 'B2');
+  assertEquals(row.level, 'upper_intermediate');
+
+  // The level-keyed knobs follow the band too: a B2 speaker gets natural pace
+  // and the shorter silence window, not the beginner settings.
+  const session = (mintBody as unknown as { session: Record<string, unknown> }).session;
+  const audio = session.audio as { output: { speed: number }; input: { turn_detection: { silence_duration_ms: number } } };
+  assertEquals(audio.output.speed, 1.0);
+  assertEquals(audio.input.turn_detection.silence_duration_ms, 900);
+  assert(String(session.instructions).includes('CEFR B2'));
+});
+
+Deno.test('without a usable band the declared level still decides, as it always did', async () => {
+  const { supabase, inserted } = makeStub();
+  stubMint(goodMint);
+  try {
+    await handleStart(supabase, 'user-1', { ...request, level: 'elementary', cefrLevel: 'B1-B2' }, env);
+  } finally { restore(); }
+  const row = inserted()!;
+  assertEquals(row.cefr_level, 'A2');
+  assertEquals(row.level, 'elementary');
+});

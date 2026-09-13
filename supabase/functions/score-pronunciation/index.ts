@@ -20,6 +20,7 @@ import { validateContentSafety } from '../_shared/content-safety.ts';
 import { PROVIDER_TIMEOUT_MS, providerFetch } from '../_shared/provider-fetch.ts';
 import { runInBackground } from '../_shared/background.ts';
 import { calculatePronunciationScore } from './scoring.ts';
+import { persistAttempt } from './persist.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -214,6 +215,8 @@ serve(async (req: Request) => {
     // is already final, nothing in the reply depends on the row, and the
     // insert is one more Postgres round trip the learner would otherwise wait
     // through. Being non-fatal already, it loses nothing by being deferred.
+    // It retries once and logs a final failure at error level — see
+    // ./persist.ts for why a lost row here is lost speaking evidence.
     runInBackground(persistAttempt(supabase, {
       user_id: authenticatedUserId,
       // Bounded rather than rejected: `language` is already accepted as free
@@ -258,19 +261,6 @@ serve(async (req: Request) => {
     );
   }
 });
-
-/** The deferred pronunciation_scores write. Never throws: it runs after the response. */
-// deno-lint-ignore no-explicit-any
-async function persistAttempt(supabase: any, row: Record<string, unknown>): Promise<void> {
-  try {
-    const { error } = await supabase.from('pronunciation_scores').insert(row);
-    if (error) {
-      console.warn('[score-pronunciation] pronunciation_scores write failed (non-fatal):', error.message);
-    }
-  } catch (err) {
-    console.warn('[score-pronunciation] pronunciation_scores write threw (non-fatal):', err);
-  }
-}
 
 /**
  * Transcribe audio with OpenAI speech-to-text (see STT_MODEL).

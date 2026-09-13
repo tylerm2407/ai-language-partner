@@ -50,6 +50,11 @@ export function parseStartRequest(body: Record<string, unknown>): ParseResult<St
       // over a field that is only ever a hint.
       nativeLanguage: isValidLanguage(nativeRaw) ? nativeRaw : 'en',
       level,
+      // The measured band, when the client has one. Passed through as text
+      // and resolved in start.ts (`resolveCefrLevel`), which falls back to
+      // `level` for anything that is not a band — so an old client, or a
+      // malformed value, degrades to the declared level rather than to a 400.
+      cefrLevel: typeof body.cefrLevel === 'string' ? body.cefrLevel : undefined,
       // An unknown scenario key is dropped rather than rejected: getScenario
       // returns null for it and the session degrades to free conversation,
       // which is a better outcome than a 400 the learner cannot act on.

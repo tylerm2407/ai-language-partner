@@ -611,11 +611,14 @@ async function handleSubmit(supabase: Db, userId: string, body: Record<string, u
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
-  // `score` is 0..1 — the same scale SPEAKING_PASS_SCORE (0.7) is compared
-  // against in lib/cefr-proficiency.ts — so it needs no rescaling, only
-  // clamping against a malformed row.
+  // `pronunciation_scores.score` is a smallint 0–100 (migration 089; see
+  // `calculatePronunciationScore` in score-pronunciation/scoring.ts), while
+  // `composite` and SPEAKING_PASS_SCORE (0.7) speak 0–1. This used to clamp
+  // the raw column as if it were already 0–1, so every real score above 1
+  // became exactly 1.0 and the speaking strand passed unconditionally. The
+  // clamp stays, for a malformed row.
   if (spoken && typeof spoken.score === 'number') {
-    scores.speaking = Math.min(1, Math.max(0, spoken.score));
+    scores.speaking = Math.min(1, Math.max(0, spoken.score / 100));
   }
 
   const value = composite(scores);

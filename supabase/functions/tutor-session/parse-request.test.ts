@@ -109,3 +109,22 @@ Deno.test('an unrecognised end reason falls back to learner', () => {
   assert(known.ok);
   assertEquals(known.value.endReason, 'budget');
 });
+
+Deno.test('a measured band rides through as text; anything else is dropped, not refused', () => {
+  // The parser only shapes the field. Whether it is a real band is decided in
+  // start.ts by resolveCefrLevel, which falls back to `level` — so a client
+  // that predates the field, or sends junk, still gets a session.
+  const withBand = parseStartRequest({
+    targetLanguage: 'es', level: 'beginner', correctionMode: 'as_you_go', cefrLevel: 'B2',
+  });
+  assert(withBand.ok);
+  assertEquals(withBand.value.cefrLevel, 'B2');
+
+  for (const junk of [undefined, null, 42, true, { band: 'B1' }]) {
+    const r = parseStartRequest({
+      targetLanguage: 'es', level: 'beginner', correctionMode: 'as_you_go', cefrLevel: junk,
+    });
+    assert(r.ok, `${String(junk)} must not block the session`);
+    assertEquals(r.value.cefrLevel, undefined);
+  }
+});
