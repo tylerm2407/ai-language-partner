@@ -143,9 +143,33 @@ export async function resetPurchaser(): Promise<void> {
 }
 
 /** Fetch the current offering's packages (drives the paywall UI). */
+/**
+ * How long the paywall waits for RevenueCat before giving up.
+ *
+ * `Purchases.getOfferings()` has no timeout of its own. When the RevenueCat
+ * edge or StoreKit is slow the promise simply never settles, and the paywall
+ * — the screen every new learner lands on right after sign-up — sat on a
+ * spinner with no way forward. A rejection after this long drops the screen
+ * into its `blocked` state, which shows plain copy and a Continue button.
+ * Cached offerings normally answer in well under a second, so this only
+ * fires when something is actually wrong.
+ */
+export const OFFERINGS_TIMEOUT_MS = 8_000;
+
+/** Reject `promise` if it has not settled within `ms`. Timer is always cleared. */
+export function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timer) clearTimeout(timer);
+  }) as Promise<T>;
+}
+
 export async function getOfferingPackages(): Promise<PurchasesPackage[]> {
   if (!isPurchasesAvailable()) return [];
-  const offerings = await Purchases.getOfferings();
+  const offerings = await withTimeout(Purchases.getOfferings(), OFFERINGS_TIMEOUT_MS, 'getOfferings');
   const current: PurchasesOffering | null = offerings.current;
   return current?.availablePackages ?? [];
 }
