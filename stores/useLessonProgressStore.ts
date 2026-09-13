@@ -15,13 +15,15 @@
  *
  * Durability contract — a finished lesson is NEVER silently dropped:
  *   1. the completion lands in this map immediately (the learner advances),
- *   2. the `lesson_completions` upsert is attempted (conflict-safe on
- *      (user_id, lesson_id), so it is idempotent),
+ *   2. the `record_lesson_completion` RPC is called (conflict-safe on
+ *      (user_id, lesson_id), so it is idempotent; it keeps the best score on
+ *      a retake and moves daily_stats.lessons_completed only the first time),
  *   3. if that write fails for ANY reason it is handed to the offline queue,
  *      which retries on reconnect/foreground/mount and dead-letters to Sentry
  *      after OFFLINE_QUEUE_MAX_ATTEMPTS rather than losing the row.
  * `markComplete` reports which of those happened via `persisted` so the UI
- * can say "saved" vs "will sync".
+ * can say "saved" vs "will sync", and `firstCompletion` so a retake can say
+ * "best score kept".
  */
 import { create } from 'zustand';
 import * as Sentry from '@sentry/react-native';
@@ -34,6 +36,13 @@ export interface MarkCompleteResult {
   completion: LessonCompletion;
   /** true = the row is in Postgres. false = queued for replay. */
   persisted: boolean;
+  /**
+   * true = this is the first time the learner finished this lesson; false =
+   * a retake, whose score only stands if it beat the recorded one. The
+   * server's verdict when persisted; when queued, whether this store had a
+   * completion for the lesson — the best available answer offline.
+   */
+  firstCompletion: boolean;
 }
 
 interface LessonProgressStore {
@@ -134,6 +143,9 @@ export const useLessonProgressStore = create<LessonProgressStore>((set, get) => 
 
   markComplete: async (userId, lessonId, courseId, score, xpEarned, timeSpentMs) => {
     const payload = { lessonId, courseId, score, xpEarned, timeSpentMs };
+    // Read before the optimistic write below lands, or a retake looks new.
+    const previous = get().completions.get(lessonId);
+    const knownLocally = previous !== undefined;
 
     const applyLocally = (completion: LessonCompletion) => {
       set((prev) => {
@@ -145,12 +157,16 @@ export const useLessonProgressStore = create<LessonProgressStore>((set, get) => 
 
     // Optimistic: the learner advances the instant the lesson ends, before
     // the round-trip. Replaced by the server row on success.
+    //
+    // A retake keeps the better of the two scores locally as well — the
+    // server does the same with GREATEST — so the path never shows a lesson
+    // getting worse because it was practised.
     const optimistic: LessonCompletion = {
-      id: `pending:${lessonId}`,
+      id: previous?.id ?? `pending:${lessonId}`,
       userId,
       lessonId,
       courseId,
-      score,
+      score: Math.max(score, previous?.score ?? 0),
       xpEarned,
       timeSpentMs,
       completedAt: new Date().toISOString(),
@@ -164,7 +180,7 @@ export const useLessonProgressStore = create<LessonProgressStore>((set, get) => 
     useAppStore.getState().setHasCompletedLesson(true);
 
     try {
-      const completion = await upsertLessonCompletion(
+      const { completion, firstCompletion } = await upsertLessonCompletion(
         userId,
         lessonId,
         courseId,
@@ -173,7 +189,7 @@ export const useLessonProgressStore = create<LessonProgressStore>((set, get) => 
         timeSpentMs,
       );
       applyLocally(completion);
-      return { completion, persisted: true };
+      return { completion, persisted: true, firstCompletion };
     } catch (err) {
       // Every failure is queued, not just network blips. A 4xx/5xx here would
       // previously vanish into a console.error and the completion was gone
@@ -195,7 +211,7 @@ export const useLessonProgressStore = create<LessonProgressStore>((set, get) => 
         Sentry.captureException(queueErr, { tags: { area: 'lesson-completion-queue' } });
         throw queueErr;
       }
-      return { completion: optimistic, persisted: false };
+      return { completion: optimistic, persisted: false, firstCompletion: !knownLocally };
     }
   },
 

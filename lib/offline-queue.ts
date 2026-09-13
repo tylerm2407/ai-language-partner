@@ -1,18 +1,28 @@
 /**
  * Offline write queue — learning progress must survive network blips.
  *
- * AsyncStorage-backed FIFO per user (`offline-queue:{userId}`). Exactly
- * three write types are queued, and only when they fail with a
- * network-ish error (4xx/validation failures must NOT be queued — they
- * would fail forever):
+ * AsyncStorage-backed FIFO per user (`offline-queue:{userId}`). These write
+ * types are queued, and only when they fail with a network-ish error
+ * (4xx/validation failures must NOT be queued — they would fail forever):
  *
  *   • review-upsert     — SRS results (LessonRunner warm-up + lesson grading).
  *                         Replay is guarded against staleness: if the server
  *                         row was reviewed more recently than the queued
  *                         payload, the item is skipped so a fresher online
  *                         review is never clobbered.
- *   • lesson-completion — lesson_completions upsert. Conflict-safe on
- *                         (user_id, lesson_id), so replay is idempotent.
+ *   • review-log        — one review_logs row, de-duped server-side on the
+ *                         client-minted id (migration 059). A log queued for a
+ *                         card whose review_items row did not exist yet
+ *                         (first-seen card answered offline) carries an empty
+ *                         reviewItemId and resolves it at replay time — the
+ *                         upsert that creates the row is always queued ahead
+ *                         of it, so FIFO order makes the lookup succeed.
+ *   • exercise-result   — one exercise_results row via the
+ *                         record_exercise_result RPC (migration 128), de-duped
+ *                         on the client-minted clientResultId.
+ *   • lesson-completion — record_lesson_completion RPC (migration 128).
+ *                         Conflict-safe on (user_id, lesson_id), so replay is
+ *                         idempotent and never re-counts a first completion.
  *   • xp-award          — legacy queue shape retained only so upgrades can
  *                         discard awards queued before XP was retired (117).
  *
@@ -37,6 +47,7 @@ import * as Sentry from '@sentry/react-native';
 import {
   fetchReviewItemsByCardIds,
   insertReviewLogIdempotent,
+  recordExerciseResult,
   upsertLessonCompletion,
   upsertReviewItem,
 } from './supabase-queries';
@@ -78,6 +89,22 @@ export interface XpAwardPayload {
  */
 export type ReviewLogPayload = Omit<ReviewLog, 'id'> & { clientLogId: string };
 
+/**
+ * A graded lesson exercise awaiting replay through `record_exercise_result`.
+ *
+ * Only what the client is trusted to say (migration 128): the server derives
+ * type, skill, band and language from the exercise row on replay exactly as it
+ * would have online. `clientResultId` is minted at answer time, same reason as
+ * `clientLogId` above.
+ */
+export interface ExerciseResultPayload {
+  exerciseId: string;
+  correct: boolean;
+  attempts: number;
+  responseTimeMs: number | null;
+  clientResultId: string;
+}
+
 interface QueueItemBase {
   id: string;
   createdAt: number;
@@ -87,6 +114,7 @@ interface QueueItemBase {
 export type OfflineQueueItem =
   | (QueueItemBase & { type: 'review-upsert'; payload: ReviewUpsertPayload })
   | (QueueItemBase & { type: 'review-log'; payload: ReviewLogPayload })
+  | (QueueItemBase & { type: 'exercise-result'; payload: ExerciseResultPayload })
   | (QueueItemBase & { type: 'lesson-completion'; payload: LessonCompletionPayload })
   | (QueueItemBase & { type: 'xp-award'; payload: XpAwardPayload; key: string });
 
@@ -94,6 +122,7 @@ export type OfflineQueueItem =
 export type OfflineQueueInput =
   | { type: 'review-upsert'; payload: ReviewUpsertPayload }
   | { type: 'review-log'; payload: ReviewLogPayload }
+  | { type: 'exercise-result'; payload: ExerciseResultPayload }
   | { type: 'lesson-completion'; payload: LessonCompletionPayload }
   | { type: 'xp-award'; payload: XpAwardPayload; key: string };
 
@@ -116,6 +145,16 @@ function randomId(): string {
  */
 export function newClientLogId(): string {
   return `rl:${randomId()}`;
+}
+
+/**
+ * Idempotency key for an exercise result (migration 128) — minted when the
+ * answer is graded, for the same reason as `newClientLogId`: the online
+ * attempt and any queued replay must be one row, not two. Distinct prefix so a
+ * result id can never be mistaken for a review-log id in a stored queue.
+ */
+export function newClientResultId(): string {
+  return `er:${randomId()}`;
 }
 
 /**
@@ -215,6 +254,10 @@ function isValidItem(value: unknown): value is OfflineQueueItem {
   // reject it here rather than letting a retry double-log.
   if (v.type === 'review-log') {
     return typeof (v.payload as Record<string, unknown>).clientLogId === 'string';
+  }
+  // Same rule for an exercise result: no client id, no idempotent replay.
+  if (v.type === 'exercise-result') {
+    return typeof (v.payload as Record<string, unknown>).clientResultId === 'string';
   }
   return v.type === 'review-upsert' || v.type === 'lesson-completion';
 }
@@ -357,11 +400,38 @@ async function executeItem(userId: string, item: OfflineQueueItem): Promise<'don
       // (user_id, client_log_id) drops a duplicate rather than trusting the
       // client to send exactly once. No staleness guard is needed — unlike a
       // review item, a log is an immutable historical fact.
-      await insertReviewLogIdempotent(item.payload);
+      let payload = item.payload;
+      if (!payload.reviewItemId) {
+        // A first-seen card answered offline: the log was queued before its
+        // review_items row existed (review_logs.review_item_id is NOT NULL,
+        // so it could not be written then). The upsert that creates the row
+        // was queued ahead of this item, so by now it has replayed; look the
+        // id up rather than lose the evidence. No row is a non-network
+        // failure — it dead-letters after two attempts instead of retrying
+        // for days.
+        const rows = await fetchReviewItemsByCardIds(userId, [payload.cardId]);
+        const reviewItemId = rows[0]?.id;
+        if (!reviewItemId) {
+          throw new Error(`review-log replay: no review item for card ${payload.cardId}`);
+        }
+        payload = { ...payload, reviewItemId };
+      }
+      await insertReviewLogIdempotent(payload);
+      return 'done';
+    }
+    case 'exercise-result': {
+      // Idempotent on (user_id, client_result_id) inside the RPC (migration
+      // 128): a replay of a result the online attempt already landed returns
+      // the existing row.
+      await recordExerciseResult(item.payload);
       return 'done';
     }
     case 'lesson-completion': {
       const payload = item.payload;
+      // record_lesson_completion (migration 128) moves lessons_completed and
+      // accuracy on daily_stats itself, on the first completion only — so a
+      // replay writes the stats the screen used to skip when offline, and a
+      // replayed retake writes none.
       await upsertLessonCompletion(
         userId,
         payload.lessonId,

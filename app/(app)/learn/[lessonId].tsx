@@ -48,6 +48,9 @@ export default function LessonScreen() {
   const [, setAchievementQueue] = useState<AchievementDefinition[]>([]);
   // How the finished lesson was recorded — drives the sync notice below.
   const [saveState, setSaveState] = useState<'idle' | 'saved' | 'queued' | 'failed'>('idle');
+  // A retake: the server keeps the better of the two scores (migration 128),
+  // and silence about that reads as the new score having replaced it.
+  const [retake, setRetake] = useState(false);
   const [showingAchievement, setShowingAchievement] = useState<AchievementDefinition | null>(null);
 
   // Counts only once the lesson is actually on screen — time on the spinner or
@@ -182,6 +185,11 @@ export default function LessonScreen() {
 
     // 1. Completion — the durable record of progress. Resolves once the row
     //    is in Postgres or in the replay queue (see useLessonProgressStore).
+    //    The `record_lesson_completion` RPC behind it (migration 128) also
+    //    moves `daily_stats.lessons_completed` and sets today's `accuracy`,
+    //    on the FIRST completion only. The client used to write both here on
+    //    every pass, so a practice retake counted as another lesson — and an
+    //    offline replay never wrote them at all.
     if (lesson && user?.id) {
       // The runner already computed this, skip-aware: a question the learner
       // could not hear is out of the denominator rather than counted wrong.
@@ -200,7 +208,7 @@ export default function LessonScreen() {
         setSaveState('failed');
       } else {
         try {
-          const { persisted } = await markLessonComplete(
+          const { persisted, firstCompletion } = await markLessonComplete(
             lesson.id,
             lesson.courseId,
             score,
@@ -208,6 +216,7 @@ export default function LessonScreen() {
             result.timeSpentMs,
           );
           setSaveState(persisted ? 'saved' : 'queued');
+          setRetake(!firstCompletion);
           // A completion means the durable server row or its durable replay
           // queue exists — never merely that the runner called this handler.
           trackEvent('lesson_completed', {
@@ -226,15 +235,17 @@ export default function LessonScreen() {
     }
 
     // 2. Daily stats — cosmetic rollup; never blocks anything above.
-    // `accuracy` is set-if-provided rather than additive (see upsertDailyStats),
-    // so this records the accuracy of the lesson just finished. Omitting it left
-    // the column at 0 for everyone, which made `perfect_lesson` — checked as
-    // `accuracy >= 1` — unreachable by any user, ever. The value was already
-    // sitting in `result`.
-    await addStats({
-      lessonsCompleted: 1,
-      accuracy: result.accuracy,
-    }).catch((err) => console.error('[lesson] addStats failed:', err));
+    // `lessons_completed` and `accuracy` are the RPC's now (step 1), so the
+    // only client-side tally left is the cards this lesson put through spaced
+    // repetition. One write for the whole lesson rather than one per answer:
+    // the review screen counts each card as it is saved, and a lesson counts
+    // the same cards the same way, in one round trip at the end. A lesson
+    // with no card-linked exercises writes nothing.
+    if (result.cardsReviewed > 0) {
+      await addStats({ cardsReviewed: result.cardsReviewed }).catch((err) =>
+        console.error('[lesson] cards_reviewed tally failed:', err),
+      );
+    }
 
     if (lesson && user?.id) {
       // 3. Onboarding checklist + achievements.
@@ -334,6 +345,16 @@ export default function LessonScreen() {
         <View style={{ backgroundColor: c.card, paddingHorizontal: spacing.md, paddingVertical: spacing.xs }}>
           <Body size="sm" tone="secondary" style={{ textAlign: 'center' }}>
             We couldn't save this lesson. Please try it again.
+          </Body>
+        </View>
+      )}
+      {/* A retake never lowers the recorded score (record_lesson_completion
+          keeps the GREATEST), and never counts as another completed lesson.
+          Saying so is what stops a practice run from looking like a demotion. */}
+      {retake && saveState !== 'failed' && (
+        <View style={{ backgroundColor: c.card, paddingHorizontal: spacing.md, paddingVertical: spacing.xs }}>
+          <Body size="sm" tone="secondary" style={{ textAlign: 'center' }} accessibilityLiveRegion="polite">
+            Practice run — your best score for this lesson is kept.
           </Body>
         </View>
       )}

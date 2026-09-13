@@ -59,9 +59,12 @@ beforeEach(() => {
   jest.clearAllMocks();
   useLessonProgressStore.getState().reset();
   mockFetch.mockResolvedValue([]);
-  mockUpsert.mockImplementation(async (userId, lessonId, courseId, score, xpEarned, timeSpentMs) =>
-    completion(lessonId, { userId, courseId, score, xpEarned, timeSpentMs }),
-  );
+  // The RPC wrapper's shape (migration 128): the row plus the server's verdict
+  // on whether this was the learner's first completion of the lesson.
+  mockUpsert.mockImplementation(async (userId, lessonId, courseId, score, xpEarned, timeSpentMs) => ({
+    completion: completion(lessonId, { userId, courseId, score, xpEarned, timeSpentMs }),
+    firstCompletion: true,
+  }));
   mockEnqueue.mockResolvedValue(undefined);
 });
 
@@ -125,9 +128,10 @@ describe('markComplete', () => {
   });
 
   it('shows the lesson as complete before the write resolves', async () => {
-    let release: (value: LessonCompletion) => void = () => {};
+    type Upserted = { completion: LessonCompletion; firstCompletion: boolean };
+    let release: (value: Upserted) => void = () => {};
     mockUpsert.mockImplementation(
-      () => new Promise<LessonCompletion>((resolve) => { release = resolve; }),
+      () => new Promise<Upserted>((resolve) => { release = resolve; }),
     );
 
     const pending = useLessonProgressStore
@@ -136,7 +140,7 @@ describe('markComplete', () => {
 
     // The learner advances now, not after the round trip.
     expect(useLessonProgressStore.getState().completions.has('lesson-a')).toBe(true);
-    release(completion('lesson-a'));
+    release({ completion: completion('lesson-a'), firstCompletion: true });
     await pending;
     expect(useLessonProgressStore.getState().completions.get('lesson-a')?.id).toBe('row-lesson-a');
   });
@@ -146,6 +150,42 @@ describe('markComplete', () => {
       .getState()
       .markComplete(USER, 'lesson-a', COURSE, 1, 20, 0);
     expect(result.persisted).toBe(true);
+  });
+
+  it('passes the server\'s firstCompletion verdict through', async () => {
+    // The RPC is the authority: it saw the row before the upsert, the client
+    // only has a map that may be stale on a second device.
+    const first = await useLessonProgressStore.getState().markComplete(USER, 'lesson-a', COURSE, 0.6, 0, 0);
+    expect(first.firstCompletion).toBe(true);
+
+    mockUpsert.mockImplementationOnce(async (_u, lessonId) => ({
+      completion: completion(lessonId, { score: 0.9 }),
+      firstCompletion: false,
+    }));
+    const retake = await useLessonProgressStore.getState().markComplete(USER, 'lesson-a', COURSE, 0.9, 0, 0);
+    expect(retake.firstCompletion).toBe(false);
+  });
+
+  it('never shows a retake lowering the recorded score, even before the server answers', async () => {
+    // The server keeps GREATEST(old, new); the optimistic row must agree or
+    // the path flickers to the worse score for one round trip.
+    mockFetch.mockResolvedValue([completion('lesson-a', { score: 0.9 })]);
+    await useLessonProgressStore.getState().load(USER);
+
+    let release: (value: { completion: LessonCompletion; firstCompletion: boolean }) => void = () => {};
+    mockUpsert.mockImplementation(() => new Promise((resolve) => { release = resolve; }));
+    const pending = useLessonProgressStore.getState().markComplete(USER, 'lesson-a', COURSE, 0.5, 0, 0);
+    expect(useLessonProgressStore.getState().completions.get('lesson-a')?.score).toBe(0.9);
+    release({ completion: completion('lesson-a', { score: 0.9 }), firstCompletion: false });
+    await pending;
+  });
+
+  it('derives firstCompletion from the local map when the write is queued', async () => {
+    mockUpsert.mockRejectedValue(new Error('Network request failed'));
+    const first = await useLessonProgressStore.getState().markComplete(USER, 'lesson-a', COURSE, 0.5, 0, 0);
+    expect(first.firstCompletion).toBe(true);
+    const again = await useLessonProgressStore.getState().markComplete(USER, 'lesson-a', COURSE, 0.7, 0, 0);
+    expect(again.firstCompletion).toBe(false);
   });
 
   it('queues the completion when the network is down', async () => {

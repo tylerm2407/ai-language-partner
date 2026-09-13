@@ -20,6 +20,8 @@ import {
   lessonXpKey,
   offlineQueueKey,
   newClientLogId,
+  newClientResultId,
+  type ExerciseResultPayload,
   type OfflineQueueInput,
   type ReviewLogPayload,
   type ReviewUpsertPayload,
@@ -27,6 +29,7 @@ import {
 import {
   fetchReviewItemsByCardIds,
   insertReviewLogIdempotent,
+  recordExerciseResult,
   upsertLessonCompletion,
   upsertReviewItem,
 } from './supabase-queries';
@@ -58,6 +61,7 @@ jest.mock('@sentry/react-native', () => ({
 jest.mock('./supabase-queries', () => ({
   fetchReviewItemsByCardIds: jest.fn(),
   insertReviewLogIdempotent: jest.fn(),
+  recordExerciseResult: jest.fn(),
   upsertLessonCompletion: jest.fn(),
   upsertReviewItem: jest.fn(),
 }));
@@ -66,6 +70,7 @@ const mockFetchByCardIds = fetchReviewItemsByCardIds as jest.Mock;
 const mockUpsertCompletion = upsertLessonCompletion as jest.Mock;
 const mockUpsertReview = upsertReviewItem as jest.Mock;
 const mockInsertReviewLog = insertReviewLogIdempotent as jest.Mock;
+const mockRecordExerciseResult = recordExerciseResult as jest.Mock;
 
 const USER = 'user-1';
 const KEY = offlineQueueKey(USER);
@@ -120,6 +125,7 @@ beforeEach(async () => {
   mockFetchByCardIds.mockResolvedValue([]);
   mockUpsertCompletion.mockResolvedValue({});
   mockUpsertReview.mockResolvedValue({});
+  mockRecordExerciseResult.mockResolvedValue({});
 });
 
 afterEach(() => {
@@ -482,6 +488,32 @@ describe('review-log replay', () => {
     expect(new Set(ids).size).toBe(1);
   });
 
+  it('resolves an empty reviewItemId from the card at replay time', async () => {
+    // A first-seen card answered offline: the log was queued before its
+    // review_items row existed. The upsert ahead of it in the queue has
+    // replayed by now, so the row is there to be looked up.
+    mockFetchByCardIds.mockResolvedValue([{ id: 'ri-created', cardId: 'card-1' }]);
+    const payload = logPayload({ reviewItemId: '' });
+    await enqueue(USER, { type: 'review-log', payload });
+
+    expect(await flush(USER)).toBe(1);
+    expect(mockFetchByCardIds).toHaveBeenCalledWith(USER, ['card-1']);
+    expect(mockInsertReviewLog).toHaveBeenCalledWith({ ...payload, reviewItemId: 'ri-created' });
+  });
+
+  it('dead-letters an unresolvable empty reviewItemId as a non-network failure', async () => {
+    // No row means the upsert ahead of it was dead-lettered or skipped as
+    // stale; retrying for ten flushes would not create one.
+    mockFetchByCardIds.mockResolvedValue([]);
+    await enqueue(USER, { type: 'review-log', payload: logPayload({ reviewItemId: '' }) });
+
+    for (let i = 0; i < OFFLINE_QUEUE_MAX_NON_NETWORK_ATTEMPTS; i++) await flush(USER);
+
+    expect(mockInsertReviewLog).not.toHaveBeenCalled();
+    expect(await AsyncStorage.getItem(KEY)).toBeNull();
+    expect(Sentry.captureMessage).toHaveBeenCalledWith(expect.stringContaining('dead-letter'), 'error');
+  });
+
   it('rejects a stored review-log with no client id', async () => {
     // Without one it cannot be replayed idempotently, so it must not survive
     // a reload rather than risk double-logging.
@@ -505,9 +537,70 @@ describe('review-log replay', () => {
   });
 });
 
+describe('exercise-result replay', () => {
+  function resultPayload(overrides: Partial<ExerciseResultPayload> = {}): ExerciseResultPayload {
+    return {
+      exerciseId: '123e4567-e89b-12d3-a456-426614174000',
+      correct: true,
+      attempts: 1,
+      responseTimeMs: 1800,
+      clientResultId: newClientResultId(),
+      ...overrides,
+    };
+  }
+
+  it('round-trips through the queue and replays the RPC once', async () => {
+    const payload = resultPayload();
+    await enqueue(USER, { type: 'exercise-result', payload });
+    expect(await flush(USER)).toBe(1);
+    expect(mockRecordExerciseResult).toHaveBeenCalledWith(payload);
+    expect(await AsyncStorage.getItem(KEY)).toBeNull();
+  });
+
+  it('preserves the client id across a retry so the replay is the same result', async () => {
+    const payload = resultPayload();
+    mockRecordExerciseResult.mockRejectedValueOnce(networkError());
+    await enqueue(USER, { type: 'exercise-result', payload });
+    await flush(USER);
+    await flush(USER);
+    const ids = mockRecordExerciseResult.mock.calls.map((c) => c[0].clientResultId);
+    expect(ids).toHaveLength(2);
+    expect(new Set(ids).size).toBe(1);
+  });
+
+  it('rejects a stored exercise-result with no client id', async () => {
+    await AsyncStorage.setItem(
+      KEY,
+      JSON.stringify({
+        version: OFFLINE_QUEUE_SCHEMA_VERSION,
+        items: [
+          {
+            id: 'x',
+            createdAt: Date.now(),
+            attempts: 0,
+            type: 'exercise-result',
+            payload: { exerciseId: 'e', correct: true, attempts: 1, responseTimeMs: 1 },
+          },
+        ],
+      }),
+    );
+    expect(await flush(USER)).toBe(0);
+    expect(mockRecordExerciseResult).not.toHaveBeenCalled();
+  });
+});
+
 describe('newClientLogId', () => {
   it('produces distinct ids', () => {
     const ids = new Set(Array.from({ length: 200 }, () => newClientLogId()));
     expect(ids.size).toBe(200);
+  });
+});
+
+describe('newClientResultId', () => {
+  it('produces distinct ids with a prefix no review-log id shares', () => {
+    const ids = new Set(Array.from({ length: 200 }, () => newClientResultId()));
+    expect(ids.size).toBe(200);
+    expect(newClientResultId().startsWith('er:')).toBe(true);
+    expect(newClientLogId().startsWith('er:')).toBe(false);
   });
 });

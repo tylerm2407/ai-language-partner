@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import { useSafeBack } from '../../../../hooks/useSafeBack';
 import { useAuth } from '../../../../hooks/useAuth';
+import { useActiveTime } from '../../../../hooks/useActiveTime';
 import { useAppStore, effectiveTier } from '../../../../stores/useAppStore';
 import {
   fetchWritingPromptById,
@@ -38,6 +39,14 @@ export default function WritingPromptScreen() {
   const [attemptNumber, setAttemptNumber] = useState(1);
   const [previousScore, setPreviousScore] = useState<number | null>(null);
   const [, setPastSubmissions] = useState<WritingSubmission[]>([]);
+
+  // `daily_stats.writing_minutes` had no writer at all — this screen never
+  // ran the clock, so the writing strand of the four-strand balance read zero
+  // for everyone. Counts while the prompt is on screen (writing, grading, or
+  // reading the feedback); not on the spinner, and not on the "grading is a
+  // paid feature" state, which is the closest thing this screen has to a
+  // paywall. See hooks/useActiveTime.ts.
+  useActiveTime({ kind: 'writing', enabled: !isLoading && !!prompt && !(error && !feedback) });
 
   useEffect(() => {
     if (!promptId || !user) return;

@@ -189,7 +189,6 @@ export default function ReviewScreen() {
     try {
       const rating = choiceRating(pending.correct, pending.responseTimeMs);
       await submitReview(item, rating, pending.answer, pending.responseTimeMs);
-      await addStats({ cardsReviewed: 1 });
       setReviewed((r) => r + 1);
       setSelected(null);
       setPending(null);
@@ -198,8 +197,20 @@ export default function ReviewScreen() {
       // Nothing advanced: the pick stays on screen and Continue is live again.
       const copy = saveErrorCopy(err, 'this review');
       Alert.alert(copy.title, copy.message);
-    } finally {
       setSubmitting(false);
+      return;
+    }
+    setSubmitting(false);
+    // The daily counter, AFTER the review is saved and the session has
+    // advanced, in its own catch. It used to sit inside the try above, so a
+    // stats failure alerted "couldn't save" on a review that WAS saved and
+    // left Continue live: the second tap wrote a second review_logs row and
+    // advanced SM-2 twice. A missed tally is cosmetic; a doubled review is
+    // not. `[lessonId].tsx` writes the lesson's count the same way.
+    try {
+      await addStats({ cardsReviewed: 1 });
+    } catch (err) {
+      console.warn('[review] cards_reviewed tally failed (non-fatal):', err);
     }
   };
 

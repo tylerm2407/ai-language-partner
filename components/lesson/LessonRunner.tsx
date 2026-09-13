@@ -26,16 +26,16 @@ import { CelebrationOverlay } from '../ui/CelebrationOverlay';
 import {
   fetchDueReviewItemsWithCards,
   fetchReviewItemsByCardIds,
-  upsertReviewItem,
 } from '../../lib/supabase-queries';
-import { calculateNextReview } from '../../lib/srs';
-import { enqueue, isNetworkError } from '../../lib/offline-queue';
 import {
   recordLessonSrsResult,
+  recordWarmupSrsResult,
   warmupToExercise,
   WARMUP_MAX_ITEMS,
   WARMUP_FETCH_TIMEOUT_MS,
+  type LessonSrsWriteResult,
 } from '../../lib/lesson-srs';
+import { recordExerciseEvidence, reportLessonWriteFailure } from '../../lib/lesson-evidence';
 import {
   canSkip,
   isLocked,
@@ -107,6 +107,14 @@ export interface LessonResult {
    * be hardcoded to 0.
    */
   timeSpentMs: number;
+  /**
+   * Card-linked answers that reached spaced repetition this session — warm-up
+   * and main lesson — i.e. the number of `review_logs` rows the lesson wrote
+   * or queued. The screen adds it to `daily_stats.cards_reviewed` once, at
+   * completion, so a lesson counts the same way a review session does.
+   * Cap-skipped and offline-skipped cards are not in it: nothing was written.
+   */
+  cardsReviewed: number;
 }
 
 export function LessonRunner({
@@ -187,6 +195,12 @@ export function LessonRunner({
   const [newCardCapReached, setNewCardCapReached] = useState(false);
   // Cards already introduced to SRS this session (cap accounting de-dupe).
   const srsIntroducedRef = useRef<Set<string>>(new Set());
+  // SRS writes that actually happened (see LessonResult.cardsReviewed).
+  const cardsReviewedRef = useRef(0);
+  // When the current exercise came on screen, for the response time on its
+  // review_logs / exercise_results rows. Reset per exercise id, not per
+  // attempt: a second attempt is more time on the same question.
+  const shownAtRef = useRef(Date.now());
   // Prefetched review items for this lesson's cards, keyed by cardId, so
   // grading continues real SM-2 state instead of re-baselining cards the
   // user has history with. `null` = prefetch pending/failed → fresh-baseline
@@ -304,6 +318,29 @@ export function LessonRunner({
     ? warmupToExercise(warmupEntries[warmupIndex])
     : null;
   const currentExercise = warmupPhase ? warmupExercise : exercises[currentIndex];
+  const currentExerciseId = currentExercise?.id;
+
+  useEffect(() => {
+    shownAtRef.current = Date.now();
+  }, [currentExerciseId]);
+
+  /**
+   * One place for what an SRS write's outcome means to the runner: a written
+   * review is a reviewed card, a cap skip is something the learner must be
+   * told about, and a failure is reported (Sentry for non-network) but never
+   * blocks grading.
+   */
+  const trackSrsWrite = useCallback((write: Promise<LessonSrsWriteResult>) => {
+    write
+      .then((r) => {
+        if (r.status === 'written') {
+          cardsReviewedRef.current += 1;
+        } else if (r.reason === 'cap-reached') {
+          setNewCardCapReached(true);
+        }
+      })
+      .catch((err) => reportLessonWriteFailure('SRS update', err));
+  }, []);
 
   // Per-exercise answered state. `showResult` used to stand in for this, but a
   // single boolean cannot describe an exercise you have walked back onto.
@@ -371,36 +408,16 @@ export function LessonRunner({
         setLastAnswerCorrect(correct);
         const entry = warmupEntries[warmupIndex];
         if (entry) {
-          // Warm-up items get one attempt (maxAttempts returns 1 for them), so
-          // the outcome here is only ever pass or fail — no `recovered` case.
-          const rating = correct ? 4 : 2;
-          const next = calculateNextReview(entry.item, rating);
-          const payload = {
-            id: entry.item.id,
-            userId: entry.item.userId,
-            cardId: entry.item.cardId,
-            ...next,
-            lastReviewedAt: new Date().toISOString(),
-          };
-          upsertReviewItem(payload)
-            .then((saved) => {
-              // Keep the prefetched map current: if this card also backs a
-              // main-lesson exercise, its SRS result must chain from the
-              // warm-up's advancement, not the stale pre-warm-up state.
-              existingReviewItemsRef.current?.set(entry.item.cardId, saved);
-            })
-            .catch((err) => {
-              console.warn('[warmup] upsertReviewItem failed:', err);
-              if (isNetworkError(err)) {
-                // Network blip: queue the exact failed payload for replay on
-                // reconnect, and chain in-session state from the locally
-                // computed result (same role as `saved` above).
-                enqueue(userId, { type: 'review-upsert', payload }).catch((queueErr) =>
-                  console.warn('[warmup] offline enqueue failed:', queueErr),
-                );
-                existingReviewItemsRef.current?.set(entry.item.cardId, payload);
-              }
-            });
+          // Same helper as the main lesson (lib/lesson-srs.ts): the review
+          // item continues its real SM-2 state and a review_logs row is
+          // written, with the prefetched map kept current so a main-lesson
+          // exercise on the same card chains from the warm-up's advancement.
+          trackSrsWrite(
+            recordWarmupSrsResult(entry.item, correct, existingReviewItemsRef.current, {
+              userAnswer: answer,
+              responseTimeMs: Date.now() - shownAtRef.current,
+            }),
+          );
         }
         return;
       }
@@ -410,6 +427,8 @@ export function LessonRunner({
       // A second attempt is open. Nothing is scored, nothing is written to
       // SRS moves, and — the whole point — nothing is revealed.
       if (status === 'retrying') return;
+
+      const responseTimeMs = Date.now() - shownAtRef.current;
 
       // De-dupe by exerciseId: the second attempt re-invokes this handler for
       // the same exercise, so replace any prior entry instead of appending —
@@ -446,27 +465,34 @@ export function LessonRunner({
       // warm-up above. Exercises without a linked card (e.g. AI free
       // production) are skipped.
       if (currentExercise.cardId) {
-        recordLessonSrsResult(
-          userId,
-          currentExercise.cardId,
-          status === 'correct' ? 'correct' : status === 'recovered' ? 'recovered' : 'wrong',
-          srsIntroducedRef.current,
-          existingReviewItemsRef.current,
-        )
-          .then((r) => {
-            if (r.status === 'skipped' && r.reason === 'cap-reached') {
-              setNewCardCapReached(true);
-            }
-          })
-          .catch((err) => console.warn('[lesson-srs] SRS update failed:', err));
+        trackSrsWrite(
+          recordLessonSrsResult(
+            userId,
+            currentExercise.cardId,
+            status === 'correct' ? 'correct' : status === 'recovered' ? 'recovered' : 'wrong',
+            srsIntroducedRef.current,
+            existingReviewItemsRef.current,
+            { userAnswer: answer, responseTimeMs },
+          ),
+        );
       }
+
+      // Every graded exercise, card or not, is evidence for the proficiency
+      // report (lib/lesson-evidence.ts). `attempts` is what was spent, so a
+      // recovered or wrong-after-retry answer records 2; `correct` is the
+      // first-attempt verdict, same as the score.
+      recordExerciseEvidence(userId, id, {
+        correct: status === 'correct',
+        attempts: attemptsBefore + 1,
+        responseTimeMs,
+      }).catch((err) => reportLessonWriteFailure('exercise evidence', err));
 
       // Being wrong costs nothing. There is no per-exercise currency: free
       // usage is metered by the daily new-card cap, which limits how fast new
       // material is taken on rather than penalising mistakes on material the
       // learner already has.
     },
-    [currentExercise, warmupPhase, warmupEntries, warmupIndex, answers, picks, statuses, currentIndex, lessonId, userId]
+    [currentExercise, warmupPhase, warmupEntries, warmupIndex, answers, picks, statuses, currentIndex, lessonId, userId, trackSrsWrite]
   );
 
   /**
@@ -501,22 +527,29 @@ export function LessonRunner({
       }).catch((err) => console.warn('[lesson-session] save failed:', err));
     }
 
+    const responseTimeMs = Date.now() - shownAtRef.current;
     if (currentExercise.cardId) {
-      recordLessonSrsResult(
-        userId,
-        currentExercise.cardId,
-        'wrong',
-        srsIntroducedRef.current,
-        existingReviewItemsRef.current,
-      )
-        .then((r) => {
-          if (r.status === 'skipped' && r.reason === 'cap-reached') {
-            setNewCardCapReached(true);
-          }
-        })
-        .catch((err) => console.warn('[lesson-srs] SRS update failed:', err));
+      trackSrsWrite(
+        recordLessonSrsResult(
+          userId,
+          currentExercise.cardId,
+          'wrong',
+          srsIntroducedRef.current,
+          existingReviewItemsRef.current,
+          { userAnswer: picks[id] ?? '', responseTimeMs },
+        ),
+      );
     }
-  }, [currentExercise, answers, picks, statuses, lessonId, userId, currentIndex]);
+    // Giving up forfeits the open attempt: from a blank question that is one
+    // spent attempt, after a refused first answer it is two — the same count
+    // a wrong second answer would have recorded. Either way it is
+    // first-attempt wrong.
+    recordExerciseEvidence(userId, id, {
+      correct: false,
+      attempts: (attemptsRef.current[id] ?? 0) + 1,
+      responseTimeMs,
+    }).catch((err) => reportLessonWriteFailure('exercise evidence', err));
+  }, [currentExercise, answers, picks, statuses, lessonId, userId, currentIndex, trackSrsWrite]);
 
   /**
    * Step back one exercise. Deliberately does NOT clear the answered state —
@@ -627,6 +660,7 @@ export function LessonRunner({
         xpEarned: summary.xpEarned,
         answers: allAnswers,
         timeSpentMs: Math.max(0, Date.now() - sessionStartedAtRef.current),
+        cardsReviewed: cardsReviewedRef.current,
       };
 
       // Lesson finished — the resume snapshot is no longer needed, and the

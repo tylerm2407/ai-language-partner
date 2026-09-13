@@ -50,6 +50,7 @@ import type {
   NewsAudio,
   NewsAudioStatus,
   LessonCompletion,
+  ExerciseResult,
   ReadingBook,
   UserBookProgress,
   BookAnnotation,
@@ -1443,6 +1444,19 @@ export async function fetchHasCompletedLesson(userId: string): Promise<boolean> 
   return (count ?? 0) > 0;
 }
 
+/**
+ * Record a finished lesson through `record_lesson_completion` (migration 128).
+ *
+ * This used to be a client upsert with no comparison: a practice retake
+ * overwrote a better score, and the screen bumped `lessons_completed` on every
+ * pass. The RPC keeps the best score, refreshes `completed_at`, and moves the
+ * daily counter only on the first completion — which it reports back as
+ * `firstCompletion` so the screen can say "best score kept" on a retake.
+ *
+ * `userId` and `xpEarned` are still accepted so the offline queue's stored
+ * payload shape and every caller keep working: the RPC identifies the learner
+ * from the JWT and zeroes XP itself (migration 120), so neither is sent.
+ */
 export async function upsertLessonCompletion(
   userId: string,
   lessonId: string,
@@ -1450,23 +1464,65 @@ export async function upsertLessonCompletion(
   score: number,
   xpEarned: number,
   timeSpentMs: number
-): Promise<LessonCompletion> {
-  const { data, error } = await supabase
-    .from('lesson_completions')
-    .upsert({
-      user_id: userId,
-      lesson_id: lessonId,
-      course_id: courseId,
-      score,
-      xp_earned: xpEarned,
-      time_spent_ms: timeSpentMs,
-      completed_at: new Date().toISOString(),
-    }, { onConflict: 'user_id,lesson_id' })
-    .select()
-    .single();
-
+): Promise<{ completion: LessonCompletion; firstCompletion: boolean }> {
+  void userId;
+  void xpEarned;
+  const { data, error } = await supabase.rpc('record_lesson_completion', {
+    p_lesson_id: lessonId,
+    p_course_id: courseId,
+    p_score: score,
+    p_time_spent_ms: timeSpentMs,
+  });
   if (error) throw error;
-  return mapLessonCompletion(data);
+  if (!data || typeof data !== 'object') throw new Error('record_lesson_completion returned no row');
+  const row = data as Record<string, unknown>;
+  return {
+    completion: mapLessonCompletion(row),
+    firstCompletion: row.first_completion === true,
+  };
+}
+
+/**
+ * Record one graded lesson exercise through `record_exercise_result`
+ * (migration 128). The server derives the exercise type, skill, CEFR band and
+ * language from the exercise row — the client says only which exercise,
+ * whether the first attempt was right, how many attempts, and how long.
+ * Idempotent on the client-minted `clientResultId`, so an offline replay
+ * returns the row the online attempt already wrote.
+ */
+export async function recordExerciseResult(input: {
+  exerciseId: string;
+  correct: boolean;
+  attempts: number;
+  responseTimeMs: number | null;
+  clientResultId: string;
+}): Promise<ExerciseResult> {
+  const { data, error } = await supabase.rpc('record_exercise_result', {
+    p_exercise_id: input.exerciseId,
+    p_correct: input.correct,
+    p_attempts: input.attempts,
+    p_response_time_ms: input.responseTimeMs,
+    p_client_result_id: input.clientResultId,
+  });
+  if (error) throw error;
+  if (!data || typeof data !== 'object') throw new Error('record_exercise_result returned no row');
+  const row = data as Record<string, unknown>;
+  return {
+    id: row.id as string,
+    userId: row.user_id as string,
+    lessonId: row.lesson_id as string,
+    exerciseId: row.exercise_id as string,
+    cardId: (row.card_id as string | null) ?? null,
+    exerciseType: row.exercise_type as string,
+    skillType: (row.skill_type as string | null) ?? null,
+    cefrLevel: (row.cefr_level as string | null) ?? null,
+    targetLanguage: row.target_language as string,
+    correct: row.correct as boolean,
+    attempts: row.attempts as number,
+    responseTimeMs: (row.response_time_ms as number | null) ?? null,
+    clientResultId: row.client_result_id as string,
+    createdAt: row.created_at as string,
+  };
 }
 
 export interface UnitProgressTile {
