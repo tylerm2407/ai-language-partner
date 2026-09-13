@@ -16,6 +16,7 @@ import type {
   Confidence,
   SkillAssessment,
 } from '../../../lib/cefr-proficiency';
+import { nextBandProgress, progressToward, type NextBandProgress } from '../../../lib/next-band-progress';
 
 const SKILL_LABELS: Record<SkillAssessment['skill'], string> = {
   vocabulary: 'Vocabulary',
@@ -87,6 +88,40 @@ function bandStatusLabel(status: BandBreakdown['status']): string {
 }
 
 /**
+ * How far one strand is toward holding `target`. Drawn from the same
+ * `next-band-progress` numbers as Home's ring, so this bar cannot say a strand
+ * is done while the ring says otherwise.
+ */
+function SkillProgressBar({
+  c,
+  target,
+  fraction,
+  met,
+}: {
+  c: Ui2Palette;
+  target: string;
+  fraction: number;
+  met: boolean;
+}) {
+  const pct = Math.round(Math.min(1, Math.max(0, fraction)) * 100);
+  return (
+    <View
+      className="mt-2"
+      accessibilityRole="progressbar"
+      accessibilityLabel={met ? `${target} held in this skill` : `${pct} percent of the way to ${cefrAccessibilityLabel(target)} in this skill`}
+      accessibilityValue={{ min: 0, max: 100, now: pct }}
+    >
+      <View style={{ height: 4, borderRadius: 2, backgroundColor: c.track, overflow: 'hidden' }}>
+        <View style={{ width: `${pct}%`, height: '100%', backgroundColor: met ? c.green : c.primary }} />
+      </View>
+      <Text className="text-xs mt-1" style={{ color: c.idle }} accessibilityElementsHidden importantForAccessibility="no">
+        {met ? `${target} held` : `${pct}% toward ${target}`}
+      </Text>
+    </View>
+  );
+}
+
+/**
  * Proficiency report — the learner's estimated CEFR level and the evidence
  * behind it.
  *
@@ -98,6 +133,17 @@ export default function ProficiencyScreen() {
   const { c } = useUi2Theme();
   const goBack = useSafeBack('/(app)/profile');
   const { report, isLoading, error, refresh } = useProficiencyReport();
+  // The same five-strand ring Home draws, so the per-skill bars here and the
+  // ring there are one number, not two. Unmeasured learners prove
+  // `nextLevel` itself (their entry band); measured ones work toward the band
+  // after their level.
+  const ring: NextBandProgress | null = report
+    ? report.overallLevel
+      ? nextBandProgress(report.overallLevel, report)
+      : report.nextLevel
+        ? progressToward(report.nextLevel, report.nextLevel, report)
+        : null
+    : null;
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
@@ -171,9 +217,20 @@ export default function ProficiencyScreen() {
                   {cefrCanDo(report.overallLevel)}
                 </Text>
               ) : (
-                <Text className="text-base font-semibold mb-1" style={{ color: c.ink }}>
-                  Not yet assessed
-                </Text>
+                <>
+                  <Text className="text-base font-semibold mb-1" style={{ color: c.ink }}>
+                    Not yet assessed
+                  </Text>
+                  {/* "Not yet" on its own reads as "nothing counts". A level
+                      needs every strand, so say which ones are still short —
+                      that is the whole difference between a report that
+                      explains itself and one that looks broken. */}
+                  {report.missingSkills.length > 0 ? (
+                    <Text className="text-sm text-center mb-1" style={{ color: c.muted }}>
+                      Waiting on {report.missingSkills.map((k) => SKILL_LABELS[k].toLowerCase()).join(', ')}
+                    </Text>
+                  ) : null}
+                </>
               )}
               {report.levelBasis ? (
                 /* Which rungs under the level were assumed from the learner's
@@ -238,9 +295,13 @@ export default function ProficiencyScreen() {
                     {cefrCanDo(report.nextLevel)}
                   </Text>
                 ) : null}
-                <Text className="text-base font-semibold" style={{ color: c.ink }}>
-                  {report.nextLevelRequirement}
-                </Text>
+                {/* One line per strand still short, vocabulary first, then the
+                    confidence gate if that is what is holding the level. */}
+                {report.nextLevelSteps.map((step) => (
+                  <Text key={step} className="text-base font-semibold mb-1" style={{ color: c.ink }}>
+                    {step}
+                  </Text>
+                ))}
               </SlabCard>
             )}
 
@@ -291,6 +352,14 @@ export default function ProficiencyScreen() {
                     </Text>
                   ) : null}
                   <Text className="text-sm mt-1" style={{ color: c.muted }}>{skill.detail}</Text>
+                  {ring && ring.next ? (
+                    <SkillProgressBar
+                      c={c}
+                      target={ring.next}
+                      fraction={ring.strands.find((s) => s.skill === skill.skill)?.fraction ?? 0}
+                      met={ring.strands.find((s) => s.skill === skill.skill)?.met ?? false}
+                    />
+                  ) : null}
                 </View>
               </SlabCard>
             ))}

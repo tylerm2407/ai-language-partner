@@ -16,6 +16,7 @@ import type {
   ReadingEvidenceItem,
   WritingEvidenceItem,
   SpeakingEvidenceItem,
+  ListeningEvidenceItem,
 } from './cefr-proficiency';
 import { ONBOARDING_STEP_KEYS } from './onboarding-checklist';
 import type {
@@ -839,6 +840,13 @@ const PROFICIENCY_WRITING_LIMIT = 500;
  * recent attempts are also the ones that describe the learner's current level.
  */
 const PROFICIENCY_SPEAKING_LIMIT = 500;
+/** Graded listening exercises considered — the same order as speaking, one row per answer. */
+const PROFICIENCY_LISTENING_LIMIT = 500;
+/**
+ * Exercise types answered from audio alone. Mirrors the CHECK in migration
+ * 128's `record_exercise_result`; the report reads only these for listening.
+ */
+export const LISTENING_EXERCISE_TYPES = ['listening_choice', 'listening_type', 'dictation'] as const;
 /** ~2 years of daily rows; also the active-day count for confidence scoring. */
 /** Conversation turns considered. Larger than the other evidence caps
  *  because a turn is a much smaller unit than a passage or a submission — a
@@ -860,46 +868,72 @@ function nestedCefrLevel(embedded: unknown): string | null {
 }
 
 /**
- * Gather every piece of in-app evidence the CEFR estimator can use.
+ * Gather every piece of in-app evidence the CEFR estimator can use, for ONE
+ * target language.
  *
  * Read-only aggregation over history the app already records — no new
  * assessment is run and nothing is written. The shape returned is consumed by
  * `buildProficiencyReport` in `lib/cefr-proficiency.ts`.
+ *
+ * Every evidence read is filtered to `targetLanguage`. Before that filter the
+ * report pooled a learner's Spanish and French history into one set of bands,
+ * so switching language either inherited a level the learner had not earned
+ * in the new language or dragged the old one down with beginner evidence.
+ * Two counts stay cross-language on purpose, because their tables carry no
+ * language: `activeDays` (daily_stats) is a measure of habit, and the
+ * `review_logs` count is scoped through the card it reviewed.
  *
  * Errors are thrown rather than swallowed: a proficiency report built from a
  * silently truncated dataset would understate the learner's level, which is
  * worse than showing them a retry.
  */
 export async function fetchProficiencyEvidence(
-  userId: string
+  userId: string,
+  targetLanguage: string,
 ): Promise<ProficiencyEvidence> {
   const [
     vocabRes,
     readingRes,
+    newsRes,
     writingRes,
     speakingRes,
+    listeningRes,
     statsRes,
     reviewCountRes,
     conversationRes,
   ] = await Promise.all([
       // Every review item with its card's CEFR tag. Inner join drops orphaned
-      // items, matching fetchDueReviewItemsWithCards.
+      // items, matching fetchDueReviewItemsWithCards, and carries the filter.
       supabase
         .from('review_items')
-        .select('status, repetitions, interval, cards!inner(cefr_level)')
+        .select('status, repetitions, interval, cards!inner(cefr_level, language)')
         .eq('user_id', userId)
+        .eq('cards.language', targetLanguage)
         .limit(PROFICIENCY_VOCAB_LIMIT),
 
+      // A passage's language is its course's. The nested inner join both
+      // scopes the rows and is what PostgREST needs to filter on the course.
       supabase
         .from('user_reading_progress')
-        .select('comprehension_score, completed_at, reading_passages!inner(cefr_level)')
+        .select('comprehension_score, completed_at, reading_passages!inner(cefr_level, courses!inner(target_language))')
         .eq('user_id', userId)
+        .eq('reading_passages.courses.target_language', targetLanguage)
+        .limit(PROFICIENCY_READING_LIMIT),
+
+      // Daily-news articles finished with their comprehension check (migration
+      // 129). Graded server-side; the row is complete by construction.
+      supabase
+        .from('news_reading_results')
+        .select('cefr_level, comprehension')
+        .eq('user_id', userId)
+        .eq('target_language', targetLanguage)
         .limit(PROFICIENCY_READING_LIMIT),
 
       supabase
         .from('user_writing_submissions')
-        .select('overall_score, word_count, writing_prompts!inner(cefr_level)')
+        .select('overall_score, word_count, writing_prompts!inner(cefr_level, courses!inner(target_language))')
         .eq('user_id', userId)
+        .eq('writing_prompts.courses.target_language', targetLanguage)
         .limit(PROFICIENCY_WRITING_LIMIT),
 
       // Scored spoken attempts (migration 089). The card embed is a LEFT join
@@ -910,8 +944,21 @@ export async function fetchProficiencyEvidence(
         .from('pronunciation_scores')
         .select('score, cards(cefr_level)')
         .eq('user_id', userId)
+        .eq('target_language', targetLanguage)
         .order('created_at', { ascending: false })
         .limit(PROFICIENCY_SPEAKING_LIMIT),
+
+      // Graded lesson exercises answered from audio alone (migration 128).
+      // The band and language were derived server-side when the row was
+      // written, so no join is needed to trust them.
+      supabase
+        .from('exercise_results')
+        .select('cefr_level, correct')
+        .eq('user_id', userId)
+        .eq('target_language', targetLanguage)
+        .in('exercise_type', LISTENING_EXERCISE_TYPES)
+        .order('created_at', { ascending: false })
+        .limit(PROFICIENCY_LISTENING_LIMIT),
 
       supabase
         .from('daily_stats')
@@ -922,8 +969,9 @@ export async function fetchProficiencyEvidence(
 
       supabase
         .from('review_logs')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId),
+        .select('id, cards!inner(language)', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('cards.language', targetLanguage),
 
       // Scored conversation turns (migration 095). This is what finally lets
       // chat and voice move the measured level — before it, the most
@@ -935,14 +983,17 @@ export async function fetchProficiencyEvidence(
         .from('conversation_evidence')
         .select('modality, cefr_level, accuracy, intelligibility, word_count')
         .eq('user_id', userId)
+        .eq('target_language', targetLanguage)
         .order('created_at', { ascending: false })
         .limit(PROFICIENCY_CONVERSATION_LIMIT),
     ]);
 
   if (vocabRes.error) throw vocabRes.error;
   if (readingRes.error) throw readingRes.error;
+  if (newsRes.error) throw newsRes.error;
   if (writingRes.error) throw writingRes.error;
   if (speakingRes.error) throw speakingRes.error;
+  if (listeningRes.error) throw listeningRes.error;
   if (statsRes.error) throw statsRes.error;
   if (reviewCountRes.error) throw reviewCountRes.error;
   if (conversationRes.error) throw conversationRes.error;
@@ -963,6 +1014,13 @@ export async function fetchProficiencyEvidence(
       completed: row.completed_at != null,
     })
   );
+  for (const row of (newsRes.data ?? []) as Record<string, unknown>[]) {
+    reading.push({
+      cefrLevel: (row.cefr_level as string | null) ?? null,
+      comprehension: typeof row.comprehension === 'number' ? row.comprehension : null,
+      completed: true,
+    });
+  }
 
   const writing: WritingEvidenceItem[] = (writingRes.data ?? []).map(
     (row: Record<string, unknown>) => ({
@@ -978,6 +1036,13 @@ export async function fetchProficiencyEvidence(
     (row: Record<string, unknown>) => ({
       cefrLevel: nestedCefrLevel(row.cards),
       score: ((row.score as number) ?? 0) / 100,
+    })
+  );
+
+  const listening: ListeningEvidenceItem[] = (listeningRes.data ?? []).map(
+    (row: Record<string, unknown>) => ({
+      cefrLevel: (row.cefr_level as string | null) ?? null,
+      correct: row.correct === true,
     })
   );
 
@@ -1021,6 +1086,7 @@ export async function fetchProficiencyEvidence(
     reading,
     writing,
     speaking,
+    listening,
     listeningMinutes,
     speakingMinutes,
     // One daily_stats row per active day, so the row count is the day count.

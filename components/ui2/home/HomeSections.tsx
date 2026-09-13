@@ -78,19 +78,32 @@ interface LevelDueRowProps {
   onReview: () => void;
 }
 
-/** The eyebrow beside the ring. Pure so the three states are asserted. */
-export function levelEyebrow(nextBand: string | null, progressPercent: number | null): string {
+/**
+ * The eyebrow beside the ring. Pure so the four states are asserted.
+ *
+ * Unmeasured is its own state, not a variant of measured. Before this, a
+ * learner placed at A2 with nothing proven yet read "A2" inside the ring and
+ * "15% to A2" beside it — the same band twice, one of them a claim the
+ * report had not made. "Proving A2" says what the ring is actually counting:
+ * the work that turns the placement into a measured level.
+ */
+export function levelEyebrow(
+  nextBand: string | null,
+  progressPercent: number | null,
+  measured: boolean,
+): string {
   // The band itself sits inside the ring, so the eyebrow spends its ~110pt on
   // the progress, not on the word "Level" — that word is in the a11y label.
   if (progressPercent === null) return 'Level';
   if (nextBand === null) return 'Top band';
+  if (!measured) return `Proving ${nextBand} · ${progressPercent}%`;
   return `${progressPercent}% to ${nextBand}`;
 }
 
 export function LevelDueRow({ band, nextBand, progressPercent, measured, basis, dueCount, onReview }: LevelDueRowProps) {
   const { c, type } = useUi2Theme();
   const enter = useHomeEnter();
-  const eyebrow = levelEyebrow(nextBand, progressPercent);
+  const eyebrow = levelEyebrow(nextBand, progressPercent, measured);
   const ringPct = progressPercent === null ? 0 : progressPercent / 100;
   const dueLabel = dueCount === 1 ? 'card due' : 'cards due';
   return (
@@ -100,11 +113,20 @@ export function LevelDueRow({ band, nextBand, progressPercent, measured, basis, 
         style={styles.levelCard}
         accessible
         accessibilityRole="progressbar"
-        accessibilityLabel={`${measured ? 'Measured level' : 'Level'} ${band}. ${cefrCanDo(band)}.${basis ? ` ${basis}` : ''}`}
+        accessibilityLabel={`${measured ? 'Measured level' : 'Placed at'} ${band}${measured ? '' : ', not yet measured'}. ${cefrCanDo(band)}.${basis ? ` ${basis}` : ''}`}
         accessibilityValue={
           progressPercent === null
             ? undefined
-            : { min: 0, max: 100, now: progressPercent, text: nextBand ? `${progressPercent} percent of the way to ${nextBand}` : 'Top band' }
+            : {
+                min: 0,
+                max: 100,
+                now: progressPercent,
+                text: !nextBand
+                  ? 'Top band'
+                  : measured
+                    ? `${progressPercent} percent of the way to ${nextBand}`
+                    : `${progressPercent} percent of the way to proving ${nextBand}`,
+              }
         }
       >
         <View style={styles.levelRing}>

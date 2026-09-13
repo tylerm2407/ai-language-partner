@@ -15,16 +15,24 @@ import {
   combineConversationScore,
   isMature,
   isRetained,
+  missingSkills,
   normalizeBand,
   nextLevelRequirement,
   overallFromSkills,
   vocabularyLevel,
+  CEFR_LADDER,
+  CONFIDENCE_TIERS,
+  LISTENING_PASS_RATE,
   MIN_ITEMS_PER_BAND,
+  MIN_LISTENING_ITEMS,
   MIN_MATURE_ITEMS_PER_BAND,
   MIN_READING_ITEMS,
   MIN_SPEAKING_ITEMS,
   MIN_WRITING_ITEMS,
+  SCORED_SKILLS,
   SPEAKING_PASS_SCORE,
+  type CefrBand,
+  type ListeningEvidenceItem,
   type ProficiencyEvidence,
   type ReadingEvidenceItem,
   type SkillAssessment,
@@ -89,12 +97,33 @@ function speak(band: string | null, count: number, score: number): SpeakingEvide
   return Array.from({ length: count }, () => ({ cefrLevel: band, score }));
 }
 
+/** Build `count` graded listening exercises in a band, the first `correct` of them right first time. */
+function listen(band: string | null, count: number, correct: number): ListeningEvidenceItem[] {
+  return Array.from({ length: count }, (_, i) => ({ cefrLevel: band, correct: i < correct }));
+}
+
+/**
+ * Passing evidence in the four non-vocabulary strands at every band from
+ * `from` up to `to` inclusive. A level needs all five strands to hold it, so
+ * most report-level tests pair this with `vocab(...)` at the same bands.
+ */
+function fullStrands(to: CefrBand, from: CefrBand = 'A1'): Pick<ProficiencyEvidence, 'reading' | 'writing' | 'speaking' | 'listening'> {
+  const bands = CEFR_LADDER.slice(CEFR_LADDER.indexOf(from), CEFR_LADDER.indexOf(to) + 1);
+  return {
+    reading: bands.flatMap((b) => reading(b, MIN_READING_ITEMS)),
+    writing: bands.flatMap((b) => writing(b, MIN_WRITING_ITEMS)),
+    speaking: bands.flatMap((b) => speak(b, MIN_SPEAKING_ITEMS, 0.9)),
+    listening: bands.flatMap((b) => listen(b, MIN_LISTENING_ITEMS, MIN_LISTENING_ITEMS)),
+  };
+}
+
 function emptyEvidence(): ProficiencyEvidence {
   return {
     vocabulary: [],
     reading: [],
     writing: [],
     speaking: [],
+    listening: [],
     listeningMinutes: 0,
     speakingMinutes: 0,
     activeDays: 0,
@@ -397,19 +426,37 @@ describe('overallFromSkills', () => {
   it('takes the floor, not the ceiling — B2 reading with A2 writing is A2', () => {
     expect(
       overallFromSkills([
+        skill('vocabulary', 'B2', 'assessed'),
         skill('reading', 'B2', 'assessed'),
         skill('writing', 'A2', 'assessed'),
+        skill('listening', 'B1', 'assessed'),
+        skill('speaking', 'B2', 'assessed'),
       ])
     ).toBe('A2');
   });
 
-  it('ignores unassessed skills instead of treating them as zero', () => {
-    expect(
-      overallFromSkills([
-        skill('vocabulary', 'B1', 'assessed'),
-        skill('speaking', null, 'not_assessed'),
-      ])
-    ).toBe('B1');
+  it('withholds the level while any scored strand is unassessed', () => {
+    // Four strands at B1 and one never measured is not "B1" — it is B1 in
+    // four strands and unknown in the fifth, and the report says so instead.
+    const skills = [
+      skill('vocabulary', 'B1', 'assessed'),
+      skill('reading', 'B1', 'assessed'),
+      skill('writing', 'B1', 'assessed'),
+      skill('listening', 'B1', 'assessed'),
+      skill('speaking', null, 'not_assessed'),
+    ];
+    expect(overallFromSkills(skills)).toBeNull();
+    expect(missingSkills(skills)).toEqual(['speaking']);
+  });
+
+  it('names every missing strand in row order', () => {
+    expect(missingSkills([skill('reading', 'A1', 'assessed')])).toEqual([
+      'vocabulary',
+      'writing',
+      'listening',
+      'speaking',
+    ]);
+    expect(missingSkills(SCORED_SKILLS.map((k) => skill(k, 'A1', 'assessed')))).toEqual([]);
   });
 });
 
@@ -450,6 +497,7 @@ describe('nextLevelRequirement', () => {
     expect(nextLevelRequirement('C2', analyzeBands([]))).toEqual({
       nextLevel: null,
       requirement: null,
+      steps: [],
     });
   });
 });
@@ -473,7 +521,24 @@ describe('buildProficiencyReport', () => {
     expect(report.overallLevel).toBeNull();
   });
 
-  it('reports an overall level once evidence and confidence are both present', () => {
+  it('reports an overall level once every strand and confidence are present', () => {
+    const report = buildProficiencyReport(
+      {
+        ...emptyEvidence(),
+        vocabulary: [...vocab('A1', 60, 55), ...vocab('A2', 60, 50)],
+        ...fullStrands('A2'),
+        totalReviews: 400,
+        activeDays: 25,
+      },
+      NOW
+    );
+    expect(report.confidence).toBe('medium');
+    expect(report.overallLevel).toBe('A2');
+    expect(report.nextLevel).toBe('B1');
+    expect(report.missingSkills).toEqual([]);
+  });
+
+  it('withholds the level and names the strands still missing when only vocabulary is measured', () => {
     const report = buildProficiencyReport(
       {
         ...emptyEvidence(),
@@ -483,9 +548,60 @@ describe('buildProficiencyReport', () => {
       },
       NOW
     );
-    expect(report.confidence).toBe('medium');
-    expect(report.overallLevel).toBe('A2');
-    expect(report.nextLevel).toBe('B1');
+    expect(report.skills.find((s) => s.skill === 'vocabulary')?.level).toBe('A2');
+    expect(report.overallLevel).toBeNull();
+    expect(report.missingSkills).toEqual(['reading', 'writing', 'listening', 'speaking']);
+    // The first level such a learner can earn is A1, and the steps say what
+    // A1 still needs in each strand — vocabulary is already past it.
+    expect(report.nextLevel).toBe('A1');
+    expect(report.nextLevelSteps.some((line) => line.startsWith('Reading:'))).toBe(true);
+    expect(report.nextLevelSteps.some((line) => line.startsWith('Listening:'))).toBe(true);
+    expect(report.nextLevelSteps.some((line) => line.includes('vocabulary'))).toBe(false);
+  });
+
+  it('assesses listening from graded exercises and never from minutes', () => {
+    const measured = buildProficiencyReport(
+      {
+        ...emptyEvidence(),
+        listening: [...listen('A1', MIN_LISTENING_ITEMS, MIN_LISTENING_ITEMS), ...listen('A2', MIN_LISTENING_ITEMS, 8)],
+        totalReviews: 600,
+        activeDays: 40,
+      },
+      NOW
+    );
+    const listening = measured.skills.find((s) => s.skill === 'listening');
+    expect(listening?.status).toBe('assessed');
+    expect(listening?.level).toBe('A2');
+    expect(listening?.detail).toContain('8 of 10 A2');
+
+    const belowRate = buildProficiencyReport(
+      {
+        ...emptyEvidence(),
+        listening: listen('A1', MIN_LISTENING_ITEMS, Math.ceil(MIN_LISTENING_ITEMS * LISTENING_PASS_RATE) - 1),
+        totalReviews: 600,
+        activeDays: 40,
+      },
+      NOW
+    );
+    expect(belowRate.skills.find((s) => s.skill === 'listening')?.status).toBe('insufficient_data');
+  });
+
+  it('names the confidence gate as the last step when it alone withholds the level', () => {
+    const report = buildProficiencyReport(
+      {
+        ...emptyEvidence(),
+        vocabulary: vocab('A1', 60, 55),
+        ...fullStrands('A1'),
+        totalReviews: CONFIDENCE_TIERS.low.reviews - 5,
+        activeDays: 1,
+      },
+      NOW
+    );
+    expect(report.overallLevel).toBeNull();
+    expect(report.missingSkills).toEqual([]);
+    const last = report.nextLevelSteps[report.nextLevelSteps.length - 1];
+    expect(last).toContain('5 more logged reviews');
+    expect(last).toContain('2 more active days');
   });
 
   it('never turns practice minutes alone into an assessed speaking or listening level', () => {
@@ -641,14 +757,9 @@ describe('buildProficiencyReport', () => {
     const report = buildProficiencyReport(
       {
         ...emptyEvidence(),
-        // Vocabulary reaches A1 only; reading reaches B2.
+        // Vocabulary reaches A1 only; every other strand reaches B2.
         vocabulary: vocab('A1', 60, 55),
-        reading: [
-          ...reading('A1', MIN_READING_ITEMS),
-          ...reading('A2', MIN_READING_ITEMS),
-          ...reading('B1', MIN_READING_ITEMS),
-          ...reading('B2', MIN_READING_ITEMS),
-        ],
+        ...fullStrands('B2'),
         totalReviews: 600,
         activeDays: 40,
       },
@@ -661,7 +772,7 @@ describe('buildProficiencyReport', () => {
   it('never lowers the overall level because the learner started new material', () => {
     // End to end, on the audit's worked example: a B1 learner opens a new deck.
     const settled = [...vocab('A1', 40, 40), ...vocab('A2', 40, 40), ...vocab('B1', 40, 34)];
-    const base = { ...emptyEvidence(), totalReviews: 600, activeDays: 40 };
+    const base = { ...emptyEvidence(), ...fullStrands('B1'), totalReviews: 600, activeDays: 40 };
 
     const before = buildProficiencyReport({ ...base, vocabulary: settled }, NOW);
     const after = buildProficiencyReport(
@@ -781,22 +892,24 @@ describe('buildProficiencyReport', () => {
       ...reading('B2', MIN_READING_ITEMS),
     ];
 
-    const withoutSpeaking = buildProficiencyReport(
-      { ...emptyEvidence(), reading: strongReading, totalReviews: 600, activeDays: 40 },
-      NOW
-    );
-    expect(withoutSpeaking.overallLevel).toBe('B2');
+    const strong = {
+      ...emptyEvidence(),
+      ...fullStrands('B2'),
+      reading: strongReading,
+      vocabulary: [...vocab('A1', 40, 40), ...vocab('A2', 40, 40), ...vocab('B1', 40, 40), ...vocab('B2', 40, 40)],
+      totalReviews: 600,
+      activeDays: 40,
+    };
+    const allStrong = buildProficiencyReport(strong, NOW);
+    expect(allStrong.overallLevel).toBe('B2');
 
     const withSpeaking = buildProficiencyReport(
       {
-        ...emptyEvidence(),
-        reading: strongReading,
+        ...strong,
         speaking: [
           ...speak('A1', MIN_SPEAKING_ITEMS, 0.9),
           ...speak('A2', MIN_SPEAKING_ITEMS, 0.9),
         ],
-        totalReviews: 600,
-        activeDays: 40,
       },
       NOW
     );
@@ -864,6 +977,7 @@ describe('conversation as proficiency evidence', () => {
         ...conversationTurns('A1', MIN_SPEAKING_ITEMS, 0.85),
         ...conversationTurns('A2', MIN_SPEAKING_ITEMS, 0.8),
       ],
+      listening: [],
       listeningMinutes: 0,
       speakingMinutes: 30,
       activeDays: 12,
@@ -881,6 +995,7 @@ describe('conversation as proficiency evidence', () => {
       reading: [],
       writing: [],
       speaking: conversationTurns('A1', MIN_SPEAKING_ITEMS, SPEAKING_PASS_SCORE - 0.05),
+      listening: [],
       listeningMinutes: 0,
       speakingMinutes: 30,
       activeDays: 12,
@@ -901,6 +1016,7 @@ describe('conversation as proficiency evidence', () => {
       reading: [],
       writing: typed,
       speaking: [],
+      listening: [],
       listeningMinutes: 0,
       speakingMinutes: 0,
       activeDays: 12,
@@ -995,7 +1111,7 @@ describe('placement', () => {
   describe('buildProficiencyReport', () => {
     it('reports the entry band as measured and discloses the assumed rungs', () => {
       const report = buildProficiencyReport(
-        { ...emptyEvidence(), vocabulary: vocab('B1', 40, 36), ...PLACED_EVIDENCE },
+        { ...emptyEvidence(), vocabulary: vocab('B1', 40, 36), ...fullStrands('B1', 'B1'), ...PLACED_EVIDENCE },
         NOW,
         { placementBand: 'B1' },
       );
@@ -1030,6 +1146,7 @@ describe('placement', () => {
         {
           ...emptyEvidence(),
           vocabulary: [...vocab('A1', 40, 40), ...vocab('A2', 40, 10), ...vocab('B1', 40, 36)],
+          ...fullStrands('B1', 'B1'),
           ...PLACED_EVIDENCE,
         },
         NOW,
@@ -1076,7 +1193,7 @@ describe('placement', () => {
 
     it('does not let new entry-band material lower a placed learner’s level', () => {
       const settled = buildProficiencyReport(
-        { ...emptyEvidence(), vocabulary: vocab('B1', 40, 34), ...PLACED_EVIDENCE },
+        { ...emptyEvidence(), vocabulary: vocab('B1', 40, 34), ...fullStrands('B1', 'B1'), ...PLACED_EVIDENCE },
         NOW,
         { placementBand: 'B1' },
       );
@@ -1084,6 +1201,7 @@ describe('placement', () => {
         {
           ...emptyEvidence(),
           vocabulary: [...vocab('B1', 40, 34), ...newVocab('B1', 20)],
+          ...fullStrands('B1', 'B1'),
           ...PLACED_EVIDENCE,
         },
         NOW,

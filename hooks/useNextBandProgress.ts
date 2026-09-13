@@ -6,16 +6,17 @@
  * the MEASURED `overallLevel` when the report has one, falling back to the
  * profile's band only while there is not enough evidence to assess at or
  * above the learner's entry band; the ring is `progressToward` over the
- * report's band breakdown.
+ * report's five strands.
  *
  * Which band the ring points at depends on that same distinction. Measured,
  * it is the band after the measured level. Unmeasured, it is the band the
  * report says the learner has to prove next (`report.nextLevel`) — for a
  * learner placed at B1 that is B1 itself, not "B2", which is what the ring
- * used to show while they were still proving their entry band.
+ * used to show while they were still proving their entry band. The card
+ * renders that case as "Proving B1", never as "B1 · n% to B1".
  *
  * "Live" here means: rebuilt from the database every time Home regains
- * focus, at most once a minute. The evidence query is four capped reads
+ * focus, at most once a minute. The evidence query is nine capped reads
  * (see `fetchProficiencyEvidence`), so a per-focus rebuild is affordable, and
  * a minute is shorter than any lesson — a learner who finishes a review and
  * comes back sees the ring move. Errors leave the last good value in place
@@ -26,7 +27,7 @@ import { useCallback, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useProficiencyReport } from './useProficiencyReport';
 import { nextBandProgress, progressToward, type NextBandProgress } from '../lib/next-band-progress';
-import type { CefrBand } from '../lib/cefr-proficiency';
+import type { CefrBand, SkillKey } from '../lib/cefr-proficiency';
 
 /** Minimum gap between two focus-triggered rebuilds. */
 export const REFRESH_MIN_MS = 60_000;
@@ -43,6 +44,10 @@ export interface NextBandState {
    */
   basis: string | null;
   assumedBands: CefrBand[];
+  /** Scored strands with no level yet; what "not yet measured" is waiting on. */
+  missingSkills: SkillKey[];
+  /** One line per piece of work still between the learner and `progress.next`. */
+  steps: string[];
   /** null until the first report has loaded. */
   progress: NextBandProgress | null;
   loading: boolean;
@@ -74,8 +79,8 @@ export function useNextBandProgress(fallbackBand: CefrBand): NextBandState {
   if (report) {
     progress =
       !measured && report.nextLevel
-        ? progressToward(band, report.nextLevel, report.bands)
-        : nextBandProgress(band, report.bands);
+        ? progressToward(band, report.nextLevel, report)
+        : nextBandProgress(band, report);
   }
 
   return {
@@ -83,6 +88,8 @@ export function useNextBandProgress(fallbackBand: CefrBand): NextBandState {
     measured,
     basis: report?.levelBasis ?? null,
     assumedBands: report?.assumedBands ?? [],
+    missingSkills: report?.missingSkills ?? [],
+    steps: report?.nextLevelSteps ?? [],
     progress,
     loading: isLoading,
     error,

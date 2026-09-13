@@ -1,8 +1,41 @@
-import { MASTERY_RATE, MIN_ITEMS_PER_BAND, MIN_MATURE_ITEMS_PER_BAND, type BandBreakdown } from './cefr-proficiency';
-import { nextBandAfter, nextBandProgress, progressToward } from './next-band-progress';
+import {
+  LISTENING_PASS_RATE,
+  MASTERY_RATE,
+  MIN_ITEMS_PER_BAND,
+  MIN_LISTENING_ITEMS,
+  MIN_MATURE_ITEMS_PER_BAND,
+  MIN_READING_ITEMS,
+  MIN_SPEAKING_ITEMS,
+  MIN_WRITING_ITEMS,
+  SCORED_SKILLS,
+  SPEAKING_PASS_SCORE,
+  WRITING_PASS_SCORE,
+  type BandBreakdown,
+  type CefrBand,
+  type SkillAssessment,
+  type SkillKey,
+  type StrandBandStats,
+  type StrandBreakdown,
+} from './cefr-proficiency';
+import { nextBandAfter, nextBandProgress, progressToward, type RingEvidence } from './next-band-progress';
 
-function band(partial: Partial<BandBreakdown> & { band: BandBreakdown['band'] }): BandBreakdown {
+function band(partial: Partial<BandBreakdown> & { band: CefrBand }): BandBreakdown {
   return { seen: 0, mature: 0, retained: 0, retentionRate: 0, status: 'insufficient', ...partial };
+}
+
+function strand(skill: StrandBreakdown['skill'], at?: Partial<StrandBandStats> & { band: CefrBand }): StrandBreakdown {
+  return {
+    skill,
+    bands: at ? [{ total: 0, passed: 0, mean: 0, ...at }] : [],
+  };
+}
+
+function assessed(skill: SkillKey, level: CefrBand): SkillAssessment {
+  return { skill, level, status: 'assessed', detail: '', evidenceCount: 0, assumedBands: [] };
+}
+
+function evidence(partial: Partial<RingEvidence> = {}): RingEvidence {
+  return { bands: [], strands: [], skills: [], ...partial };
 }
 
 describe('nextBandAfter', () => {
@@ -15,60 +48,119 @@ describe('nextBandAfter', () => {
 
 describe('nextBandProgress', () => {
   it('is 0 when the next band has never been touched', () => {
-    expect(nextBandProgress('A2', [])).toEqual({ current: 'A2', next: 'B1', fraction: 0, percent: 0 });
+    const p = nextBandProgress('A2', evidence());
+    expect(p).toMatchObject({ current: 'A2', next: 'B1', fraction: 0, percent: 0 });
+    expect(p.strands.map((s) => s.skill)).toEqual(SCORED_SKILLS);
+    expect(p.strands.every((s) => s.fraction === 0 && !s.met)).toBe(true);
   });
 
   it('is full only at the top band', () => {
-    expect(nextBandProgress('C2', [])).toEqual({ current: 'C2', next: null, fraction: 1, percent: 100 });
+    expect(nextBandProgress('C2', evidence())).toEqual({
+      current: 'C2',
+      next: null,
+      fraction: 1,
+      percent: 100,
+      strands: [],
+    });
   });
 
-  it('gives each gate a third and caps each at full', () => {
-    // Seen gate met twice over, nothing mature: exactly one third.
-    const seenOnly = nextBandProgress('A2', [band({ band: 'B1', seen: MIN_ITEMS_PER_BAND * 2 })]);
-    expect(seenOnly.percent).toBe(33);
-    // Half the seen gate, nothing else: a sixth.
-    const halfSeen = nextBandProgress('A2', [band({ band: 'B1', seen: MIN_ITEMS_PER_BAND / 2 })]);
-    expect(halfSeen.percent).toBe(16);
+  it('gives each of the five strands a fifth', () => {
+    // Every vocabulary gate met, nothing else: one fifth of the ring.
+    const mature = MIN_MATURE_ITEMS_PER_BAND;
+    const vocabOnly = nextBandProgress(
+      'A2',
+      evidence({ bands: [band({ band: 'B1', seen: MIN_ITEMS_PER_BAND, mature, retained: Math.ceil(mature * MASTERY_RATE) })] }),
+    );
+    expect(vocabOnly.percent).toBe(20);
+    expect(vocabOnly.strands.find((s) => s.skill === 'vocabulary')?.fraction).toBe(1);
   });
 
-  it('measures retention against the mature set, as the band rule does', () => {
+  it('gives each vocabulary gate a third of the strand and caps each at full', () => {
+    // Seen gate met twice over, nothing mature: a third of a fifth.
+    const seenOnly = nextBandProgress('A2', evidence({ bands: [band({ band: 'B1', seen: MIN_ITEMS_PER_BAND * 2 })] }));
+    expect(seenOnly.strands[0].fraction).toBeCloseTo(1 / 3);
+    expect(seenOnly.percent).toBe(6);
+  });
+
+  it('measures vocabulary retention against the mature set, as the band rule does', () => {
     const mature = MIN_MATURE_ITEMS_PER_BAND;
     const needed = Math.ceil(mature * MASTERY_RATE);
-    const p = nextBandProgress('A2', [band({ band: 'B1', seen: MIN_ITEMS_PER_BAND, mature, retained: needed })]);
-    // All three gates met on vocabulary — but the band is not confirmed, so never 100.
+    const p = nextBandProgress(
+      'A2',
+      evidence({ bands: [band({ band: 'B1', seen: MIN_ITEMS_PER_BAND, mature, retained: needed })] }),
+    );
+    expect(p.strands[0].fraction).toBe(1);
+  });
+
+  it('counts reading by pieces understood, not pieces attempted', () => {
+    const p = nextBandProgress(
+      'A2',
+      evidence({ strands: [strand('reading', { band: 'B1', total: 6, passed: 2, mean: 0.5 })] }),
+    );
+    expect(p.strands.find((s) => s.skill === 'reading')?.fraction).toBeCloseTo(2 / MIN_READING_ITEMS);
+  });
+
+  it('splits writing, speaking and listening between volume and quality', () => {
+    const p = nextBandProgress(
+      'A2',
+      evidence({
+        strands: [
+          strand('writing', { band: 'B1', total: MIN_WRITING_ITEMS, passed: MIN_WRITING_ITEMS, mean: WRITING_PASS_SCORE / 2 }),
+          strand('speaking', { band: 'B1', total: MIN_SPEAKING_ITEMS / 2, passed: MIN_SPEAKING_ITEMS / 2, mean: SPEAKING_PASS_SCORE }),
+          strand('listening', { band: 'B1', total: MIN_LISTENING_ITEMS, passed: MIN_LISTENING_ITEMS, mean: LISTENING_PASS_RATE }),
+        ],
+      }),
+    );
+    const by = Object.fromEntries(p.strands.map((s) => [s.skill, s.fraction]));
+    expect(by.writing).toBeCloseTo(0.75);
+    expect(by.speaking).toBeCloseTo(0.75);
+    expect(by.listening).toBe(1);
+  });
+
+  it('treats a strand already assessed at or above the target as complete', () => {
+    const p = nextBandProgress(
+      'A2',
+      evidence({ skills: [assessed('reading', 'B2'), assessed('speaking', 'B1')] }),
+    );
+    const by = Object.fromEntries(p.strands.map((s) => [s.skill, s]));
+    expect(by.reading).toEqual({ skill: 'reading', fraction: 1, met: true });
+    expect(by.speaking.met).toBe(true);
+    expect(by.vocabulary.met).toBe(false);
+    expect(p.percent).toBe(40);
+  });
+
+  it('never reaches 100 while a next band exists, whatever the counts say', () => {
+    const p = nextBandProgress(
+      'B1',
+      evidence({ skills: SCORED_SKILLS.map((skill) => assessed(skill, 'C2')) }),
+    );
     expect(p.percent).toBe(99);
     expect(p.fraction).toBeLessThan(1);
   });
 
-  it('never reaches 100 while a next band exists, whatever the counts say', () => {
-    const p = nextBandProgress('B1', [band({ band: 'B2', seen: 10_000, mature: 10_000, retained: 10_000 })]);
-    expect(p.percent).toBe(99);
-  });
-
   it('floors rather than rounds up', () => {
-    // 19 of 20 seen, nothing else: 0.95 / 3 = 0.3166… → 31, not 32.
-    const p = nextBandProgress('A1', [band({ band: 'A2', seen: MIN_ITEMS_PER_BAND - 1 })]);
-    expect(p.percent).toBe(31);
+    // 19 of 20 seen, nothing else: 0.95 / 3 / 5 = 0.0633… → 6, not 7.
+    const p = nextBandProgress('A1', evidence({ bands: [band({ band: 'A2', seen: MIN_ITEMS_PER_BAND - 1 })] }));
+    expect(p.percent).toBe(6);
   });
 
-  it('ignores breakdowns for other bands', () => {
-    const p = nextBandProgress('A2', [band({ band: 'C1', seen: 999, mature: 999, retained: 999 })]);
+  it('ignores evidence for other bands', () => {
+    const p = nextBandProgress(
+      'A2',
+      evidence({
+        bands: [band({ band: 'C1', seen: 999, mature: 999, retained: 999 })],
+        strands: [strand('reading', { band: 'C1', total: 99, passed: 99, mean: 1 })],
+      }),
+    );
     expect(p.percent).toBe(0);
   });
 });
 
 describe('progressToward', () => {
-  it('measures the same three gates against an explicit target band', () => {
-    const bands = [band({ band: 'B1', seen: MIN_ITEMS_PER_BAND * 2 })];
-    // An unmeasured learner placed at B1: the ring points at proving B1, not B2.
-    expect(progressToward('B1', 'B1', bands)).toEqual({ current: 'B1', next: 'B1', fraction: 1 / 3, percent: 33 });
-    expect(progressToward('A2', 'B1', bands)).toEqual(nextBandProgress('A2', bands));
-  });
-
-  it('ignores band status entirely — a placed band with counts contributes the same fraction', () => {
-    const counts = { seen: MIN_ITEMS_PER_BAND, mature: MIN_MATURE_ITEMS_PER_BAND, retained: MIN_MATURE_ITEMS_PER_BAND * MASTERY_RATE };
-    const placed = nextBandProgress('A2', [band({ band: 'B1', status: 'placed', ...counts })]);
-    const insufficient = nextBandProgress('A2', [band({ band: 'B1', status: 'insufficient', ...counts })]);
-    expect(placed).toEqual(insufficient);
+  it('measures the explicit target rather than the band after current', () => {
+    // An unmeasured, placed-A2 learner proves A2 itself.
+    const p = progressToward('A2', 'A2', evidence({ bands: [band({ band: 'A2', seen: MIN_ITEMS_PER_BAND })] }));
+    expect(p.next).toBe('A2');
+    expect(p.strands[0].fraction).toBeCloseTo(1 / 3);
   });
 });

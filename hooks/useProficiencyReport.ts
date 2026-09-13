@@ -23,6 +23,15 @@ interface UseProficiencyReportReturn {
  * told to review A1 words forever — see `highestContiguousBand`. Home and the
  * profile screen both read this hook, so they agree by construction.
  *
+ * Evidence is fetched for the profile's CURRENT target language only. The
+ * report used to pool every language the learner had ever touched; switching
+ * from Spanish to French then either inherited a Spanish level or dragged it
+ * down with French beginner cards. Changing language now rebuilds the report.
+ *
+ * After every build the measured band is mirrored into the app store
+ * (`measuredBand`), null when nothing is measured, so chat and the tutor can
+ * pitch at the learner's real level without a second evidence fetch.
+ *
  * Errors surface to the UI with a retry rather than degrading to an empty
  * report — a blank report is indistinguishable from "you've learned nothing",
  * which is the worst possible thing to show someone on this particular screen.
@@ -30,6 +39,8 @@ interface UseProficiencyReportReturn {
 export function useProficiencyReport(): UseProficiencyReportReturn {
   const { user } = useAuth();
   const placementBand = useAppStore((s) => normalizeBand(s.profile?.placementBand));
+  const targetLanguage = useAppStore((s) => s.profile?.targetLanguage ?? null);
+  const setMeasuredBand = useAppStore((s) => s.setMeasuredBand);
   const [report, setReport] = useState<ProficiencyReport | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,20 +49,24 @@ export function useProficiencyReport(): UseProficiencyReportReturn {
   const refresh = useCallback(() => setReloadToken((n) => n + 1), []);
 
   useEffect(() => {
-    if (!user) {
+    // No profile yet means no language to scope evidence to; the store loads
+    // the profile right after sign-in, and this effect re-runs on it.
+    if (!user || !targetLanguage) {
       setIsLoading(false);
       return;
     }
 
     let cancelled = false;
 
-    async function load(userId: string) {
+    async function load(userId: string, language: string) {
       try {
         setIsLoading(true);
         setError(null);
-        const evidence = await fetchProficiencyEvidence(userId);
+        const evidence = await fetchProficiencyEvidence(userId, language);
         if (cancelled) return;
-        setReport(buildProficiencyReport(evidence, new Date(), { placementBand }));
+        const built = buildProficiencyReport(evidence, new Date(), { placementBand });
+        setReport(built);
+        setMeasuredBand(built.overallLevel);
       } catch (e) {
         if (!cancelled) {
           setError(e instanceof Error ? e.message : 'Could not load your proficiency report');
@@ -61,11 +76,11 @@ export function useProficiencyReport(): UseProficiencyReportReturn {
       }
     }
 
-    load(user.id);
+    load(user.id, targetLanguage);
     return () => {
       cancelled = true;
     };
-  }, [user, reloadToken, placementBand]);
+  }, [user, reloadToken, placementBand, targetLanguage, setMeasuredBand]);
 
   return { report, isLoading, error, refresh };
 }
