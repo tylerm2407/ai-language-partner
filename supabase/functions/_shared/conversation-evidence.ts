@@ -50,6 +50,15 @@ export interface ConversationEvidenceInput {
    *  `TurnCorrection` so any caller's richer correction shape is accepted. */
   correction: TurnCorrection | null;
   recognizerConfidence?: number;
+  /**
+   * The `chat_sessions` row this turn came from (migration 126), so a mission
+   * attempt's accuracy can be the mean over ITS OWN turns rather than the
+   * learner's whole history. Optional: the voice tutor and every pre-mission
+   * client leave it unset and the column stays null. The caller validates it
+   * as a UUID before passing it — the column is typed, and a bad value here
+   * would fail the insert and silently lose the evidence.
+   */
+  chatSessionId?: string;
   /** Log prefix, so a failure is attributable to the surface that caused it.
    *  Defaults to the historical `ai-chat` value. */
   fn?: string;
@@ -89,6 +98,9 @@ export async function recordConversationEvidence(
       intelligibility: score.intelligibility,
       accuracy: score.accuracy,
       word_count: score.wordCount,
+      // Only when supplied: an absent key leaves the column at its default,
+      // which keeps every existing caller's insert byte-identical.
+      ...(input.chatSessionId ? { chat_session_id: input.chatSessionId } : {}),
     });
     // PostgREST reports a rejected insert as a returned `error`, not a throw,
     // so the original `await` here swallowed every write failure in complete

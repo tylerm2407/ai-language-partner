@@ -18,7 +18,18 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, corsResponse } from '../_shared/cors.ts';
 import { resolveEntitlement } from '../_shared/entitlement.ts';
 import { getScenario } from '../_shared/scenarios.ts';
+import { getMission, missionObjectiveIds, type Mission } from '../_shared/missions.ts';
 import { buildFinishTurn, buildSystemPrompt, buildTopicTurn, usesPromptFirstCorrection } from './prompt.ts';
+// The mission attempt's lifecycle — resolve before the turn, record after it,
+// score on Finish — lives in its own module for the same testability reason
+// as parse.ts, and because the finish claim is the one piece of this file
+// that must be provably idempotent (mission-attempt.test.ts).
+import {
+  finishMissionAttempt,
+  recordMissionTurn,
+  resolveMissionAttempt,
+  type MissionAttempt,
+} from './mission-attempt.ts';
 // parseAIResponse/normalizeCorrection/normalizeVocabulary moved to parse.ts so
 // they can be tested: index.ts calls serve() at module scope, so importing it
 // from a test would stand up an HTTP listener.
@@ -44,6 +55,7 @@ import { learnerContextIncludeFor } from './learner-context-policy.ts';
 import {
   isValidLanguage,
   isValidProficiencyLevel,
+  isValidUUID,
   sanitizeText,
 } from '../_shared/validation.ts';
 
@@ -82,6 +94,23 @@ const FALLBACK_REPLIES: Record<string, string> = {
   ja: '違う話題にしましょう — 他に何について話したいですか？',
   ko: '다른 주제로 바꿔볼까요 — 또 무엇에 대해 이야기하고 싶으세요?',
   zh: '我们换个话题吧 — 你还想聊点什么？',
+};
+
+// The send-off when a Finish turn lands on a learner who has used their daily
+// text allowance. Finish is never refused — the attempt is scored from the
+// turns already paid for, and the model call it would have made is replaced
+// by this line. Same nine languages as FALLBACK_REPLIES, same
+// `usedFallback: true` semantics (no correction, no cards, no gloss).
+const SENDOFF_REPLIES: Record<string, string> = {
+  en: 'Thanks for the chat — see you next time!',
+  es: '¡Gracias por la charla! ¡Hasta la próxima!',
+  fr: 'Merci pour la conversation — à la prochaine !',
+  de: 'Danke fürs Gespräch — bis zum nächsten Mal!',
+  it: 'Grazie per la chiacchierata — alla prossima!',
+  pt: 'Obrigado pela conversa — até a próxima!',
+  ja: '話せて楽しかったです。また今度！',
+  ko: '이야기 즐거웠어요. 다음에 또 봐요!',
+  zh: '聊得很开心，下次见！',
 };
 
 interface ChatRequest {
@@ -149,6 +178,25 @@ interface ChatRequest {
 function buildCodeSwitchNote(spokenLanguage: string | undefined, targetLanguage: string): string | null {
   if (!spokenLanguage || spokenLanguage === targetLanguage) return null;
   return `The learner just spoke in ${spokenLanguage}, not ${targetLanguage}. They have probably hit a gap in what they can express. Acknowledge briefly in ${spokenLanguage} if that helps them, answer what they actually asked, give them the ${targetLanguage} phrasing they were reaching for, and continue the conversation in ${targetLanguage}. Do not scold them for switching and do not ignore what they said.`;
+}
+
+/**
+ * What this attempt has already achieved, for the model.
+ *
+ * Per-attempt, so it rides UNCACHED (prompt.test.ts pins that). Null until
+ * something has been met: on a fresh attempt the mission block in the cached
+ * prompt already says everything, and a note that fires every turn is just a
+ * longer system prompt. Lists the open ids so the model steers toward them,
+ * and tells it not to re-report the met ones — Haiku will otherwise tick
+ * `greet_table` on every turn after the greeting.
+ */
+function buildMissionProgressNote(mission: Mission, met: readonly string[]): string | null {
+  if (met.length === 0) return null;
+  const open = mission.objectives.map((o) => o.id).filter((id) => !met.includes(id));
+  const openLine = open.length > 0
+    ? `Still open: ${open.join(', ')}.`
+    : 'Every objective is met; let the scene wind down naturally.';
+  return `The student has already achieved: ${met.join(', ')}. ${openLine} Do not report met ids again; steer toward the open ones without announcing them.`;
 }
 
 type CorrectionErrorType =
@@ -273,6 +321,33 @@ serve(async (req: Request) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // ── Mission request shape ──────────────────────────────────────────
+    //
+    // `missionStage` absent (or null) is plain chat — free_chat, assignments,
+    // every client that predates missions — and nothing below this comment
+    // changes a byte of that path. Present, it must name a real mission of
+    // the scene AND come with the session id that identifies the attempt;
+    // anything else is a malformed request, not a plain chat with extras.
+    const missionRequested = missionStage !== undefined && missionStage !== null;
+    if (missionRequested) {
+      const requested = scenarioKey ? getMission(scenarioKey, missionStage) : null;
+      if (!requested || typeof chatSessionId !== 'string' || !isValidUUID(chatSessionId)) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid mission request', code: 'INVALID_MISSION' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+    // Finish needs an attempt to finish and at least one learner turn to
+    // score. A finish with neither is not a conversation ending; it is a
+    // client bug, and it should not spend a text message finding that out.
+    if (finish && (!missionRequested || !rawMessages.some((m) => m?.role === 'user'))) {
+      return new Response(
+        JSON.stringify({ error: 'Nothing to finish', code: 'NOTHING_TO_FINISH' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     // The other two strings that reach the system prompt — nativeLanguage
     // through buildSystemPrompt, spokenLanguage through the code-switch note —
     // and neither was checked. targetLanguage and level already were; this
@@ -355,6 +430,49 @@ serve(async (req: Request) => {
       );
     }
 
+    // ── The attempt ────────────────────────────────────────────────────
+    //
+    // BEFORE the daily quota, deliberately: a locked stage, a finished
+    // attempt or someone else's session is refused here, and a refusal must
+    // not cost the learner a text message. The row's stage overrides the
+    // request's from this point on — see mission-attempt.ts for why.
+    let missionDef: Mission | null = null;
+    let missionAttempt: MissionAttempt | null = null;
+    if (missionRequested) {
+      const resolved = await resolveMissionAttempt(supabase, {
+        userId: authenticatedUserId,
+        chatSessionId: chatSessionId as string,
+        scenarioKey: scenarioKey as string,
+        targetLanguage,
+        requestedStage: missionStage as number,
+        finishing: finish,
+      });
+      if (!resolved.ok) {
+        const status = resolved.code === 'SESSION_NOT_FOUND' ? 404
+          : resolved.code === 'MISSION_LOCKED' ? 403
+          : 409;
+        const message = resolved.code === 'SESSION_NOT_FOUND' ? 'Chat session not found'
+          : resolved.code === 'MISSION_LOCKED' ? 'Pass the previous mission first'
+          : 'This mission attempt is already finished';
+        return new Response(
+          JSON.stringify({ error: message, code: resolved.code }),
+          { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      missionAttempt = resolved.attempt;
+      // The attempt is bound to the scene it started in. A request that names
+      // a different scene for the same session is inconsistent with itself.
+      missionDef = missionAttempt.scenarioKey === scenarioKey
+        ? getMission(missionAttempt.scenarioKey, missionAttempt.stage)
+        : null;
+      if (!missionDef) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid mission request', code: 'INVALID_MISSION' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     // `resolveEntitlement` rather than `getEffectiveLimits` alone: this
     // function needs the tier string as well as the limits, and resolving it
     // twice is two definitions of "paid" in one request. `limits` is the same
@@ -373,15 +491,25 @@ serve(async (req: Request) => {
       'text_messages',
       limits.dailyTextMessages
     );
+    // Finish is never a 429. The turns that count were each paid for as they
+    // happened; refusing to score them because the NEXT message is over the
+    // limit would strand a finished conversation behind a paywall. So at the
+    // limit a finish degrades instead: the model is skipped and the send-off
+    // comes from SENDOFF_REPLIES, and the attempt is scored exactly as it
+    // would have been. `sendoffOnly` is that flag.
+    let sendoffOnly = false;
     if (!allowed) {
-      return new Response(
-        JSON.stringify({
-          error:
-            "You've reached your daily text message limit. Upgrade your plan to keep practicing today.",
-          code: 'DAILY_TEXT_LIMIT_REACHED',
-        }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      if (!finish) {
+        return new Response(
+          JSON.stringify({
+            error:
+              "You've reached your daily text message limit. Upgrade your plan to keep practicing today.",
+            code: 'DAILY_TEXT_LIMIT_REACHED',
+          }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      sendoffOnly = true;
     }
 
     // Per-learner context is a paid feature (basic and up). The entitlement is
@@ -418,12 +546,23 @@ serve(async (req: Request) => {
       ? `${learnerBlock}\nUse this to decide what to correct, what to recast, and which examples to reach for. Never read it back to the learner or mention that you have it.`
       : null;
 
-    const systemPrompt = buildSystemPrompt(targetLanguage, level, scenarioKey, safeNativeLanguage, missionStage);
+    // The stage comes from the ROW, never the request: `missionAttempt` is
+    // null for plain chat, which makes this call byte-identical to the
+    // pre-mission one and keeps every free-chat cached prefix intact.
+    const systemPrompt = buildSystemPrompt(
+      targetLanguage,
+      level,
+      scenarioKey,
+      safeNativeLanguage,
+      missionAttempt?.stage,
+    );
     // What this attempt has achieved so far. Per-attempt, so it rides
     // UNCACHED below, after the governors — never in the cached block.
-    // Filled in by the mission attempt flow; null when no mission is running
-    // or nothing has been met yet.
-    const missionProgressNote: string | null = null;
+    // Null when no mission is running or nothing has been met yet.
+    const missionProgressNote: string | null =
+      missionDef && missionAttempt
+        ? buildMissionProgressNote(missionDef, missionAttempt.objectivesMet)
+        : null;
     // A running scenario supersedes a free-text topic — that is what the old
     // `!scenarioBlock && topic` condition encoded, preserved here.
     const topicTurn = scenarioKey && getScenario(scenarioKey) ? null : buildTopicTurn(topic);
@@ -477,14 +616,23 @@ serve(async (req: Request) => {
     const turnContext: TurnContext = {
       userId: authenticatedUserId,
       chatSessionId,
+      // The evidence column is a typed uuid; an attribution tag that is not
+      // one would fail the insert and lose the data point. Validated here,
+      // at the boundary, so the shared module can write what it is handed.
+      evidenceSessionId:
+        typeof chatSessionId === 'string' && isValidUUID(chatSessionId) ? chatSessionId : undefined,
       targetLanguage,
       level,
       cefrLevel,
       dialogueAct,
       modality: modality === 'speaking' ? 'speaking' : 'writing',
       recognizerConfidence,
-      learnerTurn: messages[messages.length - 1]?.content ?? '',
+      // A finish carries no learner message: the last entry in `messages` is
+      // history, and scoring it again would double-count the previous turn.
+      learnerTurn: finish ? '' : messages[messages.length - 1]?.content ?? '',
       chatCardsLimit: limits.dailyChatCards,
+      mission: missionDef && missionAttempt ? { def: missionDef, attempt: missionAttempt } : undefined,
+      finish,
     };
 
     // One request body, read two ways. The streaming path adds exactly one key
@@ -586,54 +734,88 @@ serve(async (req: Request) => {
             text: turnContext.learnerTurn,
             correction: null,
             recognizerConfidence: turnContext.recognizerConfidence,
+            chatSessionId: turnContext.evidenceSessionId,
           });
         },
       });
     }
 
-    const { text: rawText, usedFallback } = await generateValidated({
-      fn: 'ai-chat',
-      targetLevel: cefrLevel,
-      language: targetLanguage,
-      safetyRetries: 2,
-      generate: async () => {
-        const response = await providerFetch(
-          'https://api.anthropic.com/v1/messages',
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-api-key': ANTHROPIC_API_KEY,
-              'anthropic-version': '2023-06-01',
+    let rawText: string;
+    let usedFallback: boolean;
+    if (sendoffOnly) {
+      // Daily limit reached on a finish: no model call, canned send-off, and
+      // the fallback semantics — nothing to parse, nothing to award.
+      rawText = SENDOFF_REPLIES[targetLanguage] ?? SENDOFF_REPLIES.en;
+      usedFallback = true;
+    } else {
+      const generated = await generateValidated({
+        fn: 'ai-chat',
+        targetLevel: cefrLevel,
+        language: targetLanguage,
+        safetyRetries: 2,
+        generate: async () => {
+          const response = await providerFetch(
+            'https://api.anthropic.com/v1/messages',
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': ANTHROPIC_API_KEY,
+                'anthropic-version': '2023-06-01',
+              },
+              body: JSON.stringify(anthropicBody),
             },
-            body: JSON.stringify(anthropicBody),
-          },
-          { provider: 'anthropic', timeoutMs: PROVIDER_TIMEOUT_MS.text },
-        );
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Anthropic API error: ${response.status} - ${errorText}`);
-        }
-        const data = await response.json();
-        const text = data.content?.[0]?.text ?? '';
-        if (!text) throw new Error('Empty response from Claude');
-        return text;
-      },
-      fallback: async () => fallbackReply,
-    });
+            { provider: 'anthropic', timeoutMs: PROVIDER_TIMEOUT_MS.text },
+          );
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Anthropic API error: ${response.status} - ${errorText}`);
+          }
+          const data = await response.json();
+          const text = data.content?.[0]?.text ?? '';
+          if (!text) throw new Error('Empty response from Claude');
+          return text;
+        },
+        fallback: async () => fallbackReply,
+      });
+      rawText = generated.text;
+      usedFallback = generated.usedFallback;
+    }
 
     // When the safety fallback fires, we skip parsing (no [CORRECTION] block)
     // and deliver a clean reply with no correction metadata.
     const parsed: ParsedAIResponse = usedFallback
       // The safety fallback is pre-authored text, not a model completion, so
       // there is no gloss to carry. Null, not omitted: the client reads null
-      // as "translate on demand", which is exactly the old behaviour.
+      // as "translate on demand", which is exactly the old behaviour. And it
+      // awards nothing: objectivesMet is empty by construction.
       ? { reply: rawText, correction: null, vocabularyHighlights: [], gloss: null, askedForRepair: null, objectivesMet: [] }
       : parseAIResponse(rawText);
 
     // Quota already consumed atomically before the LLM call.
+    const envelope = await finalizeTurn(supabase, turnContext, parsed);
+
+    // ── Finish ─────────────────────────────────────────────────────────
+    //
+    // After finalizeTurn, so the row holds the final union of objective ids
+    // before it is scored. The reply is the send-off; the result rides
+    // beside it. `finishMissionAttempt` is idempotent — a retried finish
+    // gets the stored result back — so a client that times out here can
+    // simply send the same request again.
+    if (finish && turnContext.mission) {
+      envelope.missionResult = await finishMissionAttempt(supabase, {
+        userId: authenticatedUserId,
+        chatSessionId: turnContext.mission.attempt.chatSessionId,
+        scenarioKey: turnContext.mission.attempt.scenarioKey,
+        targetLanguage,
+        mission: turnContext.mission.def,
+        attempt: turnContext.mission.attempt,
+        sendoff: parsed.reply,
+      });
+    }
+
     return new Response(
-      JSON.stringify(await finalizeTurn(supabase, turnContext, parsed)),
+      JSON.stringify(envelope),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
@@ -656,6 +838,9 @@ serve(async (req: Request) => {
 interface TurnContext {
   userId: string;
   chatSessionId?: string;
+  /** `chatSessionId` when it is a well-formed UUID, else undefined. What the
+   *  evidence row is attributed to; see the comment where it is set. */
+  evidenceSessionId?: string;
   targetLanguage: string;
   level: string;
   cefrLevel: string;
@@ -666,6 +851,12 @@ interface TurnContext {
   learnerTurn: string;
   /** `limits.dailyChatCards`, the per-day allowance for vocabulary cards. */
   chatCardsLimit: number;
+  /** The running mission, or undefined for plain chat. The attempt is the
+   *  row as it stood when the request began. */
+  mission?: { def: Mission; attempt: MissionAttempt };
+  /** The learner tapped Finish: no learner turn to log, score or mine for
+   *  cards. */
+  finish: boolean;
 }
 
 /**
@@ -689,7 +880,11 @@ async function finalizeTurn(
   ctx: TurnContext,
   parsed: ParsedAIResponse,
 ): Promise<Record<string, unknown>> {
-  const { reply, correction, vocabularyHighlights, gloss } = parsed;
+  const { reply, vocabularyHighlights, gloss } = parsed;
+  // A finish has no learner turn. Whatever the model put in the correction
+  // slot is about history that was already corrected when it happened, so
+  // it is dropped rather than logged twice.
+  const correction = ctx.finish ? null : parsed.correction;
 
   // Log correction + compute repetition count. Non-fatal: chat reply
   // returns even if logging/counting fails.
@@ -758,23 +953,57 @@ async function finalizeTurn(
         enrichedCorrection !== null &&
         ctx.dialogueAct !== 'follow_repair';
 
-  await recordConversationEvidence(supabase, {
-    userId: ctx.userId,
-    targetLanguage: ctx.targetLanguage,
-    cefrLevel: ctx.cefrLevel,
-    modality: ctx.modality,
-    text: ctx.learnerTurn,
-    correction,
-    recognizerConfidence: ctx.recognizerConfidence,
-  });
+  // Neither runs on a finish. `learnerTurn` is empty there, so the evidence
+  // call would decline anyway — but the send-off's vocabulary must not bank
+  // cards either: the learner is leaving, and a card for a word in a goodbye
+  // is unrequested review for a word they never used.
+  let savedWords: string[] = [];
+  if (!ctx.finish) {
+    await recordConversationEvidence(supabase, {
+      userId: ctx.userId,
+      targetLanguage: ctx.targetLanguage,
+      cefrLevel: ctx.cefrLevel,
+      modality: ctx.modality,
+      text: ctx.learnerTurn,
+      correction,
+      recognizerConfidence: ctx.recognizerConfidence,
+      chatSessionId: ctx.evidenceSessionId,
+    });
 
-  const savedWords = await saveChatVocabulary(supabase, {
-    userId: ctx.userId,
-    targetLanguage: ctx.targetLanguage,
-    cefrLevel: ctx.cefrLevel,
-    words: vocabularyHighlights,
-    limit: ctx.chatCardsLimit,
-  });
+    savedWords = await saveChatVocabulary(supabase, {
+      userId: ctx.userId,
+      targetLanguage: ctx.targetLanguage,
+      cefrLevel: ctx.cefrLevel,
+      words: vocabularyHighlights,
+      limit: ctx.chatCardsLimit,
+    });
+  }
+
+  // ── Mission progress ───────────────────────────────────────────────
+  //
+  // The model's report is WHITELISTED against the mission's own ids before
+  // it is believed — an id it invented, or one from a different stage, is
+  // dropped — then unioned with what the row already held. The union, not
+  // this turn's delta, is what the client shows: its checklist trusts the
+  // server over its own state (lib/ai.ts). Last, after cards, because the
+  // words that just became cards are recorded on the same row.
+  let mission: { stage: number; objectivesMet: string[]; complete: boolean } | null = null;
+  if (ctx.mission) {
+    const ids = missionObjectiveIds(ctx.mission.def);
+    const fresh = parsed.objectivesMet.filter((id) => ids.has(id));
+    const objectivesMet = [...ctx.mission.attempt.objectivesMet];
+    for (const id of fresh) if (!objectivesMet.includes(id)) objectivesMet.push(id);
+    await recordMissionTurn(supabase, {
+      chatSessionId: ctx.mission.attempt.chatSessionId,
+      objectivesMet: fresh,
+      savedWords,
+    });
+    mission = {
+      stage: ctx.mission.attempt.stage,
+      objectivesMet,
+      complete: [...ids].every((id) => objectivesMet.includes(id)),
+    };
+  }
 
   return {
     reply,
@@ -804,6 +1033,9 @@ async function finalizeTurn(
      *  — nothing in the client branches on it. */
     dialogueAct: ctx.dialogueAct,
     audioUrl: null,
+    /** Only when a mission is running. Absent — not null — otherwise, so the
+     *  plain-chat envelope is byte-identical to what shipped before missions. */
+    ...(mission ? { mission } : {}),
   };
 }
 

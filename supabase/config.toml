@@ -194,6 +194,24 @@ verify_jwt = false
 [functions.tutor-session-reaper]
 verify_jwt = false
 
+# ─── mission-phrases ──────────────────────────────────────────────────────
+# Warm-up phrases for a chat mission, generated once per (scene, stage,
+# language pair) into mission_phrase_cache. Same posture as translate: auth
+# enforced by the function body via getAuthenticatedUser (_shared/auth.ts),
+# tier by resolveEntitlement, so the platform gate stays off. Without an
+# entry the CLI would deploy it verify_jwt = true and every call would 401.
+[functions.mission-phrases]
+verify_jwt = false
+
+# ─── phrase-help ──────────────────────────────────────────────────────────
+# "How do I say…" beside a chat mission, metered on the daily hints budget.
+# Deliberately NOT part of ai-chat, so the tutor never sees the question.
+# Auth enforced by the function body via getAuthenticatedUser
+# (_shared/auth.ts); same reasoning as mission-phrases for keeping the gate
+# off.
+[functions.phrase-help]
+verify_jwt = false
+
 # ─── Functions that authenticate at the platform gate ─────────────────────
 # These three were deployed verify_jwt = true and, until this entry, unrecorded.
 # Each also re-checks the caller in its body via getAuthenticatedUser, so the

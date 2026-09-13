@@ -164,6 +164,34 @@ Deno.test('a correction lowers the recorded accuracy', async () => {
   assertEquals(corrected.rows[0].accuracy as number < 1, true);
 });
 
+// ─── Session attribution (migration 126) ──────────────────────────────────
+
+Deno.test('the session id is written when supplied', async () => {
+  const fake = fakeClient();
+  await recordConversationEvidence(fake.client, {
+    ...BASE,
+    modality: 'writing',
+    text: LONG_TURN,
+    chatSessionId: '11111111-1111-4111-8111-111111111111',
+  });
+  assertEquals(fake.rows.length, 1);
+  assertEquals(fake.rows[0].chat_session_id, '11111111-1111-4111-8111-111111111111');
+});
+
+Deno.test('no session id means the column is not in the insert at all', async () => {
+  // Absent, not null: every caller that predates the column — the voice
+  // tutor included — must keep sending exactly the row it always sent.
+  const fake = fakeClient();
+  await recordConversationEvidence(fake.client, {
+    ...BASE,
+    modality: 'writing',
+    text: LONG_TURN,
+  });
+  assertEquals(fake.rows.length, 1);
+  assertEquals('chat_session_id' in fake.rows[0], false);
+  assertEquals(fake.rows[0].chat_session_id, undefined);
+});
+
 // ─── Never fatal ──────────────────────────────────────────────────────────
 
 Deno.test('a rejected insert is logged, not thrown', async () => {
