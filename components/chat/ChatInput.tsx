@@ -65,6 +65,13 @@ interface ChatInputProps {
    *  deciding a turn is over — a beginner assembling a clause pauses far
    *  longer than an advanced speaker. See `chatVadForLevel`. */
   cefrLevel?: string | null;
+  /**
+   * Open the "How do I say…" phrase-help sheet. Purely additive: when absent,
+   * nothing about the composer changes. Surfaced in the text composer and the
+   * hold-to-talk composer only — never in the hands-free loop, where the loop
+   * owns the mic and toggling Live off is one tap (see the hands-free branch).
+   */
+  onHelp?: () => void;
 }
 
 // Endpointing now comes from lib/vad.ts, which calibrates a noise floor from
@@ -121,6 +128,7 @@ export function ChatInput({
   onBeforeRecord,
   onInterruptPlayback,
   cefrLevel,
+  onHelp,
 }: ChatInputProps) {
   const { c } = useUi2Theme();
   const insets = useSafeAreaInsets();
@@ -520,6 +528,11 @@ export function ChatInput({
         onMicPressIn={() => startRecording(false)}
         onMicPressOut={stopRecording}
         onKeypad={() => setShowTextFallback(true)}
+        // Passed here and NOT from the hands-free branch above, the same way
+        // `onKeypad` is: LiveComposer renders whatever it is handed, so the
+        // mode gate lives with the code that knows the mode. In the loop a
+        // sheet raising a keyboard mid-turn would race the endpointer.
+        onHelp={onHelp}
         bottomPadding={spacing.md + insets.bottom + 60}
       />
     );
@@ -537,6 +550,24 @@ export function ChatInput({
           className="w-11 h-11 items-center justify-center mr-2"
         >
           <Ionicons name="mic-outline" size={22} color={c.primary} />
+        </Pressable>
+      )}
+
+      {/* "How do I say…" — opens the phrase-help sheet. Same 44pt square as
+          the voice-mode switch beside it; layout classes only, colour from
+          the palette. Disabled while a send is in flight so the draft it
+          would insert into is not mid-submit. */}
+      {onHelp && (
+        <Pressable
+          onPress={onHelp}
+          disabled={sending}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="How do I say…"
+          accessibilityState={{ disabled: sending }}
+          className="w-11 h-11 items-center justify-center mr-2"
+        >
+          <Ionicons name="help-circle-outline" size={22} color={sending ? c.idle : c.primary} />
         </Pressable>
       )}
 

@@ -58,6 +58,16 @@ interface LiveComposerProps {
   /** Omit to hide the keypad affordance. */
   onKeypad?: () => void;
   keypadAccessibilityLabel?: string;
+  /**
+   * Omit to hide the "How do I say…" square. This component renders whatever
+   * it is handed and does not know which voice branch it is in — the gate is
+   * ChatInput's, exactly as it is for `onKeypad`: passed from hold-to-talk,
+   * withheld from the hands-free loop, where the loop owns the mic and a
+   * sheet raising a keyboard mid-turn would race the endpointer. Toggling
+   * Live off is one tap, so the keyboard path is the way in from there.
+   */
+  onHelp?: () => void;
+  helpAccessibilityLabel?: string;
   /** Error text rendered under the card. */
   errorMessage?: string | null;
   /** Bottom padding — caller adds safe-area inset + tab bar clearance. */
@@ -86,6 +96,8 @@ export function LiveComposer({
   onMicPressOut,
   onKeypad,
   keypadAccessibilityLabel = 'Switch to keyboard',
+  onHelp,
+  helpAccessibilityLabel = 'How do I say…',
   errorMessage,
   bottomPadding,
   voiceGender,
@@ -192,6 +204,27 @@ export function LiveComposer({
             }}
           >
             <Ionicons name="keypad-outline" size={18} color={c.muted} />
+          </Pressable>
+        )}
+
+        {/* Same 40pt square as the keypad, so the two read as one control
+            group. hitSlop lifts the target to the 44pt floor. */}
+        {onHelp && (
+          <Pressable
+            onPress={onHelp}
+            accessibilityRole="button"
+            accessibilityLabel={helpAccessibilityLabel}
+            hitSlop={8}
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: radii.md,
+              backgroundColor: c.surface2,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Ionicons name="help-circle-outline" size={18} color={c.muted} />
           </Pressable>
         )}
 
