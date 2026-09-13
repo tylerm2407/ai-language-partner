@@ -61,3 +61,7 @@ Fluenci-UI-Mockups-2.0.pptx
 Fluenci-UI-Mockups-2.0.pptx.inspect.ndjson
 Fluenci-UI-Mockups-2.0/
 React-Core-prebuilt/
+
+# Agent scratch — local tool state, never source
+.codex-temp/
+.agents/

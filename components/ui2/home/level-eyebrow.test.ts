@@ -4,12 +4,12 @@
  */
 // HomeSections pulls lib/haptics -> AsyncStorage, which has no native module
 // under jest; this is the same mock the other UI suites use.
+import { levelEyebrow } from './HomeSections';
+
 jest.mock('@react-native-async-storage/async-storage', () => ({
   __esModule: true,
   default: { setItem: jest.fn(async () => {}), getItem: jest.fn(async () => null), removeItem: jest.fn(async () => {}) },
 }));
-
-import { levelEyebrow } from './HomeSections';
 
 describe('levelEyebrow', () => {
   it('says only "Level" until the report has loaded', () => {

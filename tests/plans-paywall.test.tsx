@@ -24,6 +24,11 @@ import TestRenderer, { type ReactTestInstance } from 'react-test-renderer';
 
 import PlansScreen from '../app/(app)/plans';
 
+// The copy itself — and the numbers inside it — is pinned against `PLANS` in
+// lib/plan-pricing.test.ts. Importing rather than retyping it here keeps this
+// file about WHERE the copy renders and on which path, not about its wording.
+import { PLAN_PROOF, FREE_EXIT_LINE } from '../lib/plan-pricing';
+
 jest.mock('react-native-purchases', () => ({ __esModule: true, default: {}, LOG_LEVEL: { WARN: 1 } }));
 jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Ionicons' }));
 jest.mock('expo-linear-gradient', () => ({ LinearGradient: 'LinearGradient' }));
@@ -105,11 +110,6 @@ jest.mock('../lib/purchases', () => ({
   annualSavingsPercent: () => 0,
   reportPurchaseFailure: jest.fn(),
 }));
-
-// The copy itself — and the numbers inside it — is pinned against `PLANS` in
-// lib/plan-pricing.test.ts. Importing rather than retyping it here keeps this
-// file about WHERE the copy renders and on which path, not about its wording.
-import { PLAN_PROOF, FREE_EXIT_LINE } from '../lib/plan-pricing';
 
 function texts(renderer: TestRenderer.ReactTestRenderer): string {
   return renderer.root
