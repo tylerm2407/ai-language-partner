@@ -1,5 +1,8 @@
 -- 126 — Chat missions: server-owned progression for the guided-chat scenes.
 --
+-- Applied to production 2026-09-13 via the Supabase MCP (migration name
+-- `chat_missions`); this file is the mirror of record.
+--
 -- Every guidance layer in `ai-chat` was per-turn. Nothing tracked progress per
 -- topic: scenes never ended, one `chat_sessions` row per scene resumed forever,
 -- and evidence was tagged by level and modality, never by scene. This adds the
