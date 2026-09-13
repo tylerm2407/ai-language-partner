@@ -36,7 +36,8 @@ import { loadErrorCopy, saveErrorCopy, type ErrorCopy } from '../../../lib/error
 import { spacing, radii } from '../../../config/theme';
 import { useUi2Theme } from '../../../hooks/useUi2Theme';
 import { getTargetLanguage } from '../../../lib/language';
-import type { Course, Unit, Lesson, ReadingPassage, WritingPrompt, ReadingBook, UserBookProgress, GoalTrack } from '../../../types';
+import type { Course, Unit, Lesson, ReadingPassage, WritingPrompt, ReadingBook, UserBookProgress } from '../../../types';
+import type { GoalTrackProgress } from '../../../lib/goal-track-progress';
 import { Ionicons } from '@expo/vector-icons';
 import { BookCard } from '../../../components/reading/BookCard';
 import { ContinueReadingSection } from '../../../components/reading/ContinueReadingSection';
@@ -91,7 +92,7 @@ export default function LearnScreen() {
   const [loadingLibrary, setLoadingLibrary] = useState(false);
   /** True when 'For you' had nothing to rank and fell back to the A1 shelf. */
   const [rankedUnavailable, setRankedUnavailable] = useState(false);
-  const [goalTrack, setGoalTrack] = useState<GoalTrack | null>(null);
+  const [goalTrack, setGoalTrack] = useState<GoalTrackProgress | null>(null);
   const [buildingTrack, setBuildingTrack] = useState(false);
   const [goalTrackError, setGoalTrackError] = useState<string | null>(null);
   const [libraryError, setLibraryError] = useState<ErrorCopy | null>(null);

@@ -47,6 +47,7 @@ import {
   parseExercises,
   parseUnitPlan,
 } from './goal-core.ts';
+import { ensureLessonCards } from './goal-cards.ts';
 
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -361,6 +362,10 @@ async function handleResolve(
       target_language: language,
       title: plan.title,
       description: plan.description,
+      // Load-bearing, not descriptive: every card a lesson of this track
+      // creates inherits this level (goal-cards.ts), and the proficiency
+      // report drops cards whose level is null. `cefrLevel` was allow-listed
+      // above, so this can never be empty.
       cefr_level: cefrLevel,
       total_units: 1,
       is_published: true,
@@ -520,19 +525,27 @@ async function handleLesson(
     return json({ ready: false, generating: true }, 202);
   }
 
+  // A2 is the fallback for a pre-099 track that somehow lacks a level; every
+  // track `handleResolve` builds has one. It is resolved once so the prompt,
+  // the level check and the cards all agree on it.
+  const cefrLevel: string = course.cefr_level ?? 'A2';
+
+  // Card text (term, termNative, example) rides in the same JSON as the
+  // exercise text, so it passes through the same `generateValidated` safety
+  // check here — there is no second, unchecked path for it.
   const generated = await askForJson(
     'goal-lesson',
     buildExercisePrompt(
       course.target_language,
       body.nativeLanguage,
-      course.cefr_level ?? 'A2',
+      cefrLevel,
       lesson.title,
       lesson.description,
     ),
     `${lesson.title}\n${lesson.description}`,
-    3000,
+    3500,
     course.target_language,
-    course.cefr_level ?? undefined,
+    cefrLevel,
   );
 
   if (!generated.ok) {
@@ -545,7 +558,7 @@ async function handleLesson(
       503,
     );
   }
-  const exercises = parseExercises(generated.data);
+  const exercises = parseExercises(generated.data).slice(0, EXERCISES_PER_LESSON);
   if (exercises.length < MIN_USABLE_EXERCISES) {
     // Hand the claim back so the next learner can retry, rather than leaving
     // the lesson stuck in 'generating' forever.
@@ -553,8 +566,25 @@ async function handleLesson(
     return json({ error: 'Building this lesson failed. Please try again.', code: 'LESSON_FAILED' }, 502);
   }
 
+  // Cards BEFORE exercises: an exercise row is inserted with its card_id, so
+  // the cards have to exist first. A failure here fails the lesson — see
+  // goal-cards.ts for why a card-less lesson is worse than no lesson.
+  const cards = await ensureLessonCards(supabase, {
+    courseId: lesson.units.course_id,
+    unitId: lesson.unit_id,
+    lessonId: lesson.id,
+    language: course.target_language,
+    cefrLevel,
+    exercises,
+  });
+  if (!cards.ok) {
+    await supabase.from('lessons').update({ generation_state: 'pending' }).eq('id', lesson.id);
+    console.error('[goal-track]', cards.error);
+    return json({ error: 'Building this lesson failed. Please try again.', code: 'LESSON_FAILED' }, 502);
+  }
+
   const { error: exError } = await supabase.from('exercises').insert(
-    exercises.slice(0, EXERCISES_PER_LESSON).map((e, i) => ({
+    exercises.map((e, i) => ({
       lesson_id: lesson.id,
       type: e.type,
       order_index: i,
@@ -563,8 +593,15 @@ async function handleLesson(
       accepted_answers: e.acceptedAnswers,
       options: e.options,
       explanation: e.explanation,
+      card_id: cards.cardIdByExercise[i],
+      target_word: e.term,
       metadata: {},
-      source_type: 'goal_track',
+      // Not 'goal_track': `exercises_source_type_check` in production admits
+      // only imported / ai_generated / seed / manual (pg_constraint,
+      // 2026-09-13), so the previous value would have failed every lesson
+      // the first time anyone opened one. Provenance is the lesson's course
+      // `goal_key` and the card's tags.
+      source_type: 'ai_generated',
     })),
   );
   if (exError) {

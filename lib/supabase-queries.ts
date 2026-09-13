@@ -10,6 +10,7 @@ import { trackEvent, trackRefusal } from './analytics';
 import { asTutorDebrief } from './tutor-api';
 import { wordTokens } from './reading-text';
 import { languageVariants, type CorrectionLogRow } from './insights';
+import type { GoalLessonCompletion, GoalTrackLesson, GoalTrackProgress } from './goal-track-progress';
 import type {
   ProficiencyEvidence,
   VocabEvidenceItem,
@@ -2334,8 +2335,14 @@ export async function fetchCohortLeaderboard(): Promise<LeaderboardRow[]> {
  * at, and that course's single unit with its lessons. The lessons carry
  * `generation_state`, so the caller can tell a lesson that is ready to open
  * from a shell that still needs building.
+ *
+ * A SECOND round trip attaches the learner's completions. `lesson_completions`
+ * has no foreign key to `lessons` (a completion outlives its curriculum row —
+ * see `fetchCompletedLessonsWithTitles`), so PostgREST cannot embed it; and a
+ * track's lessons are shared while its completions are the learner's own, so
+ * they would not belong in the same embed anyway.
  */
-export async function fetchGoalTrack(userId: string): Promise<GoalTrack | null> {
+export async function fetchGoalTrack(userId: string): Promise<GoalTrackProgress | null> {
   const { data, error } = await supabase
     .from('user_goal_tracks')
     .select(
@@ -2369,16 +2376,38 @@ export async function fetchGoalTrack(userId: string): Promise<GoalTrack | null> 
   // A goal track has exactly one unit (migration 099), but sort rather than
   // assume — a future "extended on completion" track may add a second.
   const units = [...(course.units ?? [])].sort((a, b) => a.order_index - b.order_index);
-  const lessons = units
+  const lessonRows = units
     .flatMap((u) => u.lessons ?? [])
-    .sort((a, b) => a.order_index - b.order_index)
-    .map((l) => ({
-      id: l.id,
-      title: l.title,
-      description: l.description,
-      orderIndex: l.order_index,
-      generationState: (l.generation_state as GoalTrack['lessons'][number]['generationState']) ?? null,
-    }));
+    .sort((a, b) => a.order_index - b.order_index);
+
+  // Completions are unique per (user, lesson), so the id list bounds the
+  // result exactly and `.limit(ids.length)` is a runaway guard, not a page.
+  const completionByLesson = new Map<string, GoalLessonCompletion>();
+  if (lessonRows.length > 0) {
+    const lessonIds = lessonRows.map((l) => l.id);
+    const { data: completions, error: completionsError } = await supabase
+      .from('lesson_completions')
+      .select('lesson_id, score, completed_at')
+      .eq('user_id', userId)
+      .in('lesson_id', lessonIds)
+      .limit(lessonIds.length);
+    if (completionsError) throw completionsError;
+    for (const row of completions ?? []) {
+      completionByLesson.set(row.lesson_id as string, {
+        score: typeof row.score === 'number' ? row.score : null,
+        completedAt: row.completed_at as string,
+      });
+    }
+  }
+
+  const lessons: GoalTrackLesson[] = lessonRows.map((l) => ({
+    id: l.id,
+    title: l.title,
+    description: l.description,
+    orderIndex: l.order_index,
+    generationState: (l.generation_state as GoalTrack['lessons'][number]['generationState']) ?? null,
+    completion: completionByLesson.get(l.id) ?? null,
+  }));
 
   return {
     courseId: course.id,
