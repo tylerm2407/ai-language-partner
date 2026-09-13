@@ -133,6 +133,54 @@ export async function upsertProfile(
   return mapProfile(data);
 }
 
+/** Everything the onboarding draft writes server-side, in one call. */
+export interface OnboardingDraftWrite {
+  targetLanguage: LanguageCode;
+  level: ProficiencyLevel;
+  dailyGoalMinutes: number;
+  idealL2Self: string | null;
+  displayName: string | null;
+  avatarPresetId: string | null;
+  currentCourseId: string | null;
+  placementBand: string | null;
+  /** The bundled trial lesson ran before the account existed. */
+  firstLesson: boolean;
+}
+
+/**
+ * Flush the onboarding draft into the caller's profile atomically.
+ *
+ * One RPC (`apply_onboarding_draft`, migration 127) replaces what used to be
+ * four sequential table writes — profile upsert, avatar kind, checklist,
+ * onboarding_completed — none of which were in a transaction. A connection
+ * dropped between them left a half-written profile that the route guard read
+ * as "onboarding not finished", while the device had already cleared the
+ * draft on some paths. The function either writes the whole row or nothing,
+ * and the same input twice leaves the same row, so the caller can retry
+ * without checking state first.
+ *
+ * The course is resolved on the client first (`resolvePlacement`), because
+ * `lib/course-placement.ts` is the one source of truth for how a level and a
+ * choice become a course; the server's `fluenci_guard_current_course` trigger
+ * still rejects a pointer that does not belong to the language on the row.
+ */
+export async function applyOnboardingDraft(input: OnboardingDraftWrite): Promise<UserProfile> {
+  const { data, error } = await supabase.rpc('apply_onboarding_draft', {
+    p_target_language: input.targetLanguage,
+    p_level: input.level,
+    p_daily_goal_minutes: input.dailyGoalMinutes,
+    p_ideal_l2_self: input.idealL2Self,
+    p_display_name: input.displayName,
+    p_avatar_preset_id: input.avatarPresetId,
+    p_current_course_id: input.currentCourseId,
+    p_placement_band: input.placementBand,
+    p_first_lesson: input.firstLesson,
+  });
+  if (error) throw error;
+  if (!data) throw new Error('apply_onboarding_draft returned no row');
+  return mapProfile(data as Record<string, unknown>);
+}
+
 export async function markOnboardingComplete(userId: string): Promise<void> {
   const { error } = await supabase
     .from('user_profiles')

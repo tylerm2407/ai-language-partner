@@ -14,13 +14,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
-import {
-  upsertProfile,
-  markOnboardingComplete,
-  updateOnboardingChecklist,
-  setAvatarKind,
-  fetchCourses,
-} from '../../lib/supabase-queries';
+import { applyOnboardingDraft, fetchCourses } from '../../lib/supabase-queries';
 import { useAppStore } from '../../stores/useAppStore';
 import { LessonRunner, type LessonResult } from '../../components/lesson/LessonRunner';
 import { Ui2Screen } from '../../components/ui2/Ui2Screen';
@@ -316,14 +310,26 @@ export default function OnboardingScreen() {
       // failure throws like any other step and lands in the retry path below.
       const choice = normalizePlacementChoice(draftLevel, draft.courseChoice);
       const placement = resolvePlacement(await fetchCourses(draftLanguage), draftLevel, choice);
-      await upsertProfile(userId, {
-        nativeLanguage: 'en' as LanguageCode,
+
+      // ONE server write. Profile, course pointer, avatar preset, checklist
+      // and onboarding_completed land together or not at all (migration 127).
+      // The old four-call chain could be interrupted between calls and leave
+      // a profile the route guard read as unfinished; this cannot. It is also
+      // idempotent, so the retry path below can simply call it again.
+      //
+      // `firstLesson` is ticked when the trial ran: it happened before this
+      // account existed, so nothing server-side recorded it, and re-asking the
+      // learner to "complete your first lesson" would deny work they just did.
+      await applyOnboardingDraft({
         targetLanguage: draftLanguage,
         level: draftLevel,
         dailyGoalMinutes: draft.dailyGoalMinutes ?? DEFAULT_DAILY_GOAL_MINUTES,
         idealL2Self: draft.idealL2Self,
-        ...(draft.displayName ? { displayName: draft.displayName } : {}),
-        ...placement,
+        displayName: draft.displayName,
+        avatarPresetId: draft.avatarPresetId,
+        currentCourseId: placement.currentCourseId,
+        placementBand: placement.placementBand,
+        firstLesson: !!draft.trial,
       });
       trackEvent('course_placement_set', {
         screen: 'onboarding',
@@ -331,26 +337,6 @@ export default function OnboardingScreen() {
         band: placement.placementBand,
         language: draftLanguage,
       });
-
-      if (draft.avatarPresetId) {
-        await setAvatarKind(userId, 'preset', draft.avatarPresetId);
-      }
-
-      await updateOnboardingChecklist(userId, {
-        chooseLanguage: true,
-        // The trial lesson happened before this account existed, so nothing
-        // server-side recorded it. Ticking it here is the honest reading: the
-        // learner HAS finished a lesson, and re-asking them to "complete your
-        // first lesson" would deny work they just did.
-        firstLesson: !!draft.trial,
-        aiConversation: false,
-        dailyReminder: false,
-        skipped: [],
-        dismissed: false,
-        completedAt: null,
-        celebratedAt: null,
-      });
-      await markOnboardingComplete(userId);
 
       // The reminders the learner chose, moved from the draft to their real
       // home on the device. They are local-only preferences — nothing here is
