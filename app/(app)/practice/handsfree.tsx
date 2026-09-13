@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAiConsent } from '../../../hooks/useAiConsent';
 import { useHandsFreeSession } from '../../../hooks/useHandsFreeSession';
+import { useActiveTime } from '../../../hooks/useActiveTime';
 import { useMotion } from '../../../hooks/useMotion';
 import { useUi2Theme } from '../../../hooks/useUi2Theme';
 import { Body, Heading, Hero } from '../../../components/ui2/Ui2Text';
@@ -64,6 +65,18 @@ export default function HandsFreeScreen() {
   const session = useHandsFreeSession({
     targetDurationMs: durationMs,
     onEnded: handleEnded,
+  });
+
+  // Every answer in here is spoken, so the running clock is speaking practice
+  // — `handsfree` writes `speaking_minutes` as well as the total. Only while
+  // the loop is actually going: the disclaimer and setup screens are not
+  // practice, and neither is a pause (a phone call, the learner's own tap).
+  // Before this the screen wrote no `daily_stats` at all; a whole commute of
+  // review left the day's minutes at zero. See hooks/useActiveTime.ts.
+  const { phase } = session.state;
+  useActiveTime({
+    kind: 'handsfree',
+    enabled: screen === 'running' && phase !== 'idle' && phase !== 'ended' && phase !== 'paused',
   });
 
   // Decide the entry screen once the stored preferences are known.

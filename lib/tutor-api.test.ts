@@ -108,6 +108,24 @@ describe('startTutorSession', () => {
     });
   });
 
+  it('sends the measured band alongside the declared level when it has one', async () => {
+    // Both go over the wire: the server prefers the band and falls back to
+    // the level, so a request with both is what lets a learner who measured
+    // past their onboarding answer be talked to at the level they have.
+    mockInvoke.mockResolvedValue({ data: START_OK, error: null });
+    await startTutorSession({ ...START_INPUT, cefrLevel: 'B2' });
+    const [, options] = mockInvoke.mock.calls[0] as [string, { body: Record<string, unknown> }];
+    expect(options.body.cefrLevel).toBe('B2');
+    expect(options.body.level).toBe('intermediate');
+  });
+
+  it('omits cefrLevel entirely when there is none, rather than sending a blank', async () => {
+    mockInvoke.mockResolvedValue({ data: START_OK, error: null });
+    await startTutorSession(START_INPUT);
+    const [, options] = mockInvoke.mock.calls[0] as [string, { body: Record<string, unknown> }];
+    expect('cefrLevel' in options.body).toBe(false);
+  });
+
   it('sends scenarioKey as null rather than omitting it', async () => {
     // The server reads `scenarioKey ?? null` either way, but an explicit null
     // is what says "free conversation" rather than "this client is too old to

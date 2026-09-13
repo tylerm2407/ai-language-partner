@@ -75,7 +75,7 @@ import { clearDebriefHandoff } from '../../../lib/tutor-debrief-handoff';
 import { lowBudgetLine, startBlockedReason } from '../../../lib/tutor-screen-flow';
 import { stashCallHandoff } from '../../../lib/tutor-call-handoff';
 import { cefrAccessibilityLabel, cefrLabel } from '../../../lib/cefr-labels';
-import { CEFR_BAND_BY_LEVEL } from '../../../lib/cefr-proficiency';
+import { conversationCefrBand } from '../../../lib/conversation-level';
 import { tutorLimitCopy, type LimitCopy } from '../../../lib/limit-messaging';
 import { saveErrorCopy } from '../../../lib/error-copy';
 import type { ErrorCopy } from '../../../lib/error-copy';
@@ -94,10 +94,16 @@ export default function TutorLobbyScreen() {
   const { c } = useUi2Theme();
   const router = useRouter();
   const { user } = useAuth();
-  const { profile, subscription, entitledTier, roles } = useAppStore();
+  const { profile, subscription, entitledTier, roles, measuredBand } = useAppStore();
   const { ensureConsent, consentSheet } = useAiConsent(user?.id);
 
-  const band = profile ? CEFR_BAND_BY_LEVEL[profile.level] : null;
+  // Measured > placement > declared. What the lobby shows is what the call is
+  // started at: the same value goes to the server as `cefrLevel`, so the band
+  // under the persona's name is never a different one from the band every
+  // evidence row of the call will be stamped with.
+  const band = profile
+    ? conversationCefrBand({ measuredBand, placementBand: profile.placementBand, level: profile.level })
+    : null;
   const tier = effectiveTier(subscription, entitledTier);
   useScreenView('tutor', { language: profile?.targetLanguage, band: band ?? undefined, tier });
 
@@ -212,6 +218,7 @@ export default function TutorLobbyScreen() {
         targetLanguage: profile.targetLanguage,
         nativeLanguage: profile.nativeLanguage,
         level: profile.level,
+        cefrLevel: band ?? undefined,
         correctionMode: mode,
         personaId: persona.id,
       });
@@ -235,7 +242,7 @@ export default function TutorLobbyScreen() {
     } finally {
       setStarting(false);
     }
-  }, [user, profile, persona, prefs, ensureConsent, router, tier]);
+  }, [user, profile, band, persona, prefs, ensureConsent, router, tier]);
 
   // ── Free tier ────────────────────────────────────────────────────────
   // Walled exactly as chat is, and for the same reason: the free plan's tutor

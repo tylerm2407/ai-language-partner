@@ -220,7 +220,15 @@ export interface StartTutorSessionInput {
   /** The learner's own language, used for the debrief and for explanations
    *  mid-call. Defaults to English server-side. */
   nativeLanguage?: LanguageCode;
+  /** The declared onboarding level — the server's fallback when `cefrLevel`
+   *  is absent, so an old client still starts a session. */
   level: ProficiencyLevel;
+  /** The band the call should run at: `conversationCefrBand` in
+   *  lib/conversation-level.ts (measured > placement > declared). The server
+   *  pitches the instructions, speech speed and turn detection at it, and
+   *  stamps `tutor_sessions.cefr_level` with it — which is the band every
+   *  evidence row from the debrief inherits. */
+  cefrLevel?: string;
   /** Resolves to a hidden server-side scenario prompt, same as chat. */
   scenarioKey?: ScenarioKey | null;
   correctionMode: CorrectionMode;
@@ -271,6 +279,7 @@ export async function startTutorSession(
     targetLanguage: input.targetLanguage,
     ...(input.nativeLanguage ? { nativeLanguage: input.nativeLanguage } : {}),
     level: input.level,
+    ...(input.cefrLevel ? { cefrLevel: input.cefrLevel } : {}),
     scenarioKey: input.scenarioKey ?? null,
     correctionMode: input.correctionMode,
     ...(input.personaId ? { personaId: input.personaId } : {}),

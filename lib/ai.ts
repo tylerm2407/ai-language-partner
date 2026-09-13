@@ -82,7 +82,15 @@ export interface AIChatRequest {
   /** User's native language. Used by the Edge Function to write the
    *  correction explanation in a language the learner can read comfortably. */
   nativeLanguage?: LanguageCode;
+  /** The self-declared onboarding level. Still sent, still validated
+   *  server-side, but only the fallback band now — see `cefrLevel`. */
   level: ProficiencyLevel;
+  /** The band the conversation should run at — `conversationCefrBand` in
+   *  lib/conversation-level.ts (measured > placement > declared). The server
+   *  pitches the prompt at it AND stamps the turn's evidence with it, so a
+   *  learner who has measured past their onboarding answer is talked to, and
+   *  assessed, at the level they actually have. */
+  cefrLevel?: string;
   /** Resolves to a hidden server-side system prompt. Preferred for scenario-
    *  based chat. Takes precedence over `topic` when both are sent. */
   scenarioKey?: ScenarioKey;
@@ -594,8 +602,33 @@ function httpErrorFrom(xhr: XMLHttpRequest): Error {
 }
 
 /**
+ * A `score-pronunciation` failure that still carries the server's code.
+ *
+ * The message keeps the prefix this function has always thrown, so callers
+ * reading `.message` are unchanged. The code is what lets hands-free tell "the
+ * daily scoring allowance is spent" — settled for the day, not worth asking
+ * again this session — from "the network blinked", which is worth another try
+ * on the next card.
+ */
+export class PronunciationScoreError extends Error {
+  readonly code?: string;
+  readonly status?: number;
+
+  constructor(message: string, code?: string, status?: number) {
+    super(message);
+    this.name = 'PronunciationScoreError';
+    this.code = code;
+    this.status = status;
+  }
+}
+
+/**
  * Score a user's pronunciation against expected text.
  * Audio is sent as base64 to the Edge Function.
+ *
+ * Throws `PronunciationScoreError`. On a non-2xx, supabase-js only exposes a
+ * generic message; the real cause and its code are on `error.context`, read
+ * the same way `sendChatMessage` and `translateText` read theirs.
  */
 export async function scorePronunciation(
   request: PronunciationScoreRequest
@@ -604,7 +637,32 @@ export async function scorePronunciation(
     body: request,
   });
 
-  if (error) throw new Error(`Pronunciation scoring error: ${error.message}`);
+  if (error) {
+    let detail = error.message;
+    let code: string | undefined;
+    let status: number | undefined;
+    try {
+      const ctx = (error as Record<string, unknown>).context;
+      if (ctx && typeof (ctx as Response).json === 'function') {
+        status = (ctx as Response).status;
+        const body = await (ctx as Response).json();
+        if (body?.error) detail = body.error;
+        if (typeof body?.code === 'string') code = body.code;
+      }
+    } catch {
+      // Body wasn't JSON — fall through with the generic message.
+    }
+    throw new PronunciationScoreError(`Pronunciation scoring error: ${detail}`, code, status);
+  }
+
+  // A 200 that still carries an application-level refusal.
+  if (data?.error) {
+    throw new PronunciationScoreError(
+      `Pronunciation scoring error: ${data.error}`,
+      typeof data.code === 'string' ? data.code : undefined,
+    );
+  }
+
   return data as PronunciationScoreResponse;
 }
 

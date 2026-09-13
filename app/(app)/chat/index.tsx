@@ -22,7 +22,7 @@ import {
 import { createSentenceStream } from '../../../lib/sentence-stream';
 import { createSpeechQueue, type SpeechQueue } from '../../../lib/speech-queue';
 import { showLimitAlert } from '../../../lib/limit-messaging';
-import { CEFR_BAND_BY_LEVEL } from '../../../lib/cefr-proficiency';
+import { conversationCefrBand } from '../../../lib/conversation-level';
 import { cefrLabel, cefrAccessibilityLabel } from '../../../lib/cefr-labels';
 import { ChatBubble } from '../../../components/chat/ChatBubble';
 import { ScenarioPicker, scenarioIdentity } from '../../../components/chat/ScenarioPicker';
@@ -40,7 +40,7 @@ import type { MissionCta } from '../../../lib/missions';
 import { TypingIndicator } from '../../../components/chat/TypingIndicator';
 import AssignmentTimer from '../../../components/school/AssignmentTimer';
 import { useAssignmentTimer } from '../../../hooks/useAssignmentTimer';
-import type { ConversationMessage, Assignment, AssignmentSubmission, LanguageCode, ProficiencyLevel } from '../../../types';
+import type { ConversationMessage, Assignment, AssignmentSubmission, LanguageCode } from '../../../types';
 import { Ionicons } from '@expo/vector-icons';
 import { getOrCreateChatSession, saveChatMessage, loadChatMessages, fetchStudentAssignments, submitAssignment, upsertDailyStats, createMissionAttemptSession } from '../../../lib/supabase-queries';
 import { getTargetLanguage } from '../../../lib/language';
@@ -69,10 +69,13 @@ import { useScreenView } from '../../../hooks/useScreenView';
  * ways. True, and beside the point: "A2" is not international, it is unknown.
  * The can-do line carries the meaning in one language-neutral clause, so the
  * row states what the tutor is pitching at rather than a code for it.
+ *
+ * WHICH band it shows — and sends — is `conversationBand` below: the measured
+ * one when the report has one, else placement, else the declared level. The
+ * header, the bubbles' saved-correction band, the composer's VAD tuning and
+ * the request all read the same value, so what the learner sees is what the
+ * tutor is actually pitched at.
  */
-// Was a fourth private copy of the ladder; now derived. See
-// CEFR_BAND_BY_LEVEL in lib/cefr-proficiency.ts.
-const CEFR_FOR_LEVEL: Record<ProficiencyLevel, string> = CEFR_BAND_BY_LEVEL;
 
 /**
  * Scenario metadata (label/icon/description) is imported from
@@ -151,7 +154,7 @@ export default function ChatScreen() {
 function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
   const { c } = useUi2Theme();
   const { user } = useAuth();
-  const { profile, subscription, entitledTier, roles } = useAppStore();
+  const { profile, subscription, entitledTier, roles, measuredBand } = useAppStore();
   const { markItem: markOnboardingItem } = useOnboardingChecklist();
   const { ensureConsent, consentSheet } = useAiConsent(user?.id);
   const missionAttempt = useMissionAttempt();
@@ -223,6 +226,14 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
   const playbackResolveRef = useRef<(() => void) | null>(null);
 
   const level = profile?.level ?? 'beginner';
+  // Measured > placement > declared. Sent as `cefrLevel` on every request and
+  // shown in the header, so the conversation is pitched at — and its evidence
+  // stamped with — the level the learner has, not the one they declared.
+  const conversationBand = conversationCefrBand({
+    measuredBand,
+    placementBand: profile?.placementBand,
+    level,
+  });
   const languageName = SUPPORTED_LANGUAGES.find((l) => l.code === targetLanguage)?.name ?? targetLanguage.toUpperCase();
 
   // Mission ladders, open attempts, the goal track's scene order, and whether
@@ -741,6 +752,7 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
       targetLanguage,
       nativeLanguage: profile?.nativeLanguage,
       level,
+      cefrLevel: conversationBand,
       scenarioKey,
       topic: scenarioKey ? undefined : selectedScenario?.customContext || selectedScenario?.label || undefined,
       previousTurnRequestedRepair: repairOutstandingRef.current,
@@ -1155,9 +1167,9 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
           <ScenarioPicker
             scenarios={SCENARIOS}
             languageName={languageName}
-            levelLine={cefrLabel(CEFR_FOR_LEVEL[level])}
-            levelBand={CEFR_FOR_LEVEL[level]}
-            levelAccessibilityLabel={cefrAccessibilityLabel(CEFR_FOR_LEVEL[level])}
+            levelLine={cefrLabel(conversationBand)}
+            levelBand={conversationBand}
+            levelAccessibilityLabel={cefrAccessibilityLabel(conversationBand)}
             resumable={resumable}
             onStart={(picked) => {
               const scenario = SCENARIOS.find((sc) => scenarioIdentity(sc) === scenarioIdentity(picked));
@@ -1228,8 +1240,8 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
           despite the name — live sessions just show it. */}
       <ChatHeader
         label={selectedScenario.label}
-        statusLine={cefrLabel(CEFR_FOR_LEVEL[level])}
-        statusA11y={cefrAccessibilityLabel(CEFR_FOR_LEVEL[level])}
+        statusLine={cefrLabel(conversationBand)}
+        statusA11y={cefrAccessibilityLabel(conversationBand)}
         live={handsFreeActive}
         mascotState={sending ? 'thinking' : handsFreeActive && handsFreeState === 'LISTENING' ? 'listening' : 'idle'}
         timer={assignmentTimer.running ? assignmentTimer.formattedElapsed : undefined}
@@ -1268,7 +1280,7 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
               message={item}
               targetLanguage={targetLanguage}
               userId={user?.id}
-              cefrLevel={CEFR_FOR_LEVEL[level]}
+              cefrLevel={conversationBand}
               nativeLanguage={profile?.nativeLanguage}
               voiceGender={voiceGender}
               gloss={glosses[item.id]}
@@ -1303,7 +1315,7 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
           onVoiceGenderChange={handleVoiceGenderChange}
           onBeforeRecord={() => ensureConsent('voice')}
           onInterruptPlayback={interruptAndListen}
-          cefrLevel={CEFR_FOR_LEVEL[level]}
+          cefrLevel={conversationBand}
           onHelp={
             handsFreeActive
               ? undefined

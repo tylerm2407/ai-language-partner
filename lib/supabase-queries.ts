@@ -2,6 +2,7 @@ import { supabase } from './supabase';
 import type { MissionResult } from './ai';
 import { escapeSpreadsheetCsvCell } from './csv';
 import { PLANS } from './plans';
+import { conversationCefrBand } from './conversation-level';
 import { CEFR_BAND_BY_LEVEL, CEFR_LADDER,
   combineConversationScore,
 } from './cefr-proficiency';
@@ -1916,6 +1917,9 @@ export async function addCardFromAnnotation(
   }
 
   if (!cardId) {
+    // Never file an untagged card — see fallbackCardBand. Books and passages
+    // normally carry a tag; this covers the ones that do not.
+    const band = cefrLevel ?? (await fallbackCardBand());
     const { data: card, error: cardError } = await supabase
       .from('cards')
       .insert({
@@ -1928,7 +1932,7 @@ export async function addCardFromAnnotation(
         audio_url: annotation.audioUrl,
         part_of_speech: annotation.partOfSpeech,
         language: language ?? null,
-        cefr_level: cefrLevel ?? null,
+        cefr_level: band,
         // Tokenized here rather than in SQL so the coverage ranking
         // (migration 096) intersects against terms produced by the SAME
         // tokenizer the corpus build used. A Postgres approximation of
@@ -3411,6 +3415,31 @@ async function findExistingLearnerCard(
   return data && data.length > 0 ? (data[0].id as string) : null;
 }
 
+/**
+ * The band a learner-created card is filed under when its caller had none.
+ *
+ * `analyzeBands` skips a card with a null `cefr_level`, so an untagged card
+ * exists, gets reviewed, and never counts toward the learner's own measured
+ * vocabulary. The two creation paths below take a band from their caller — a
+ * conversation's band, a passage's or book's tag — and this is the fallback
+ * for the cases that still arrive with nothing: an untagged book, a caller
+ * that predates the parameter. The learner's own conversation band (measured
+ * > placement > declared) is an honest guess for material they chose to
+ * study; null is a guarantee the card never counts.
+ *
+ * The store is loaded lazily because `stores/useAppStore` imports this module
+ * for its fetches, and a static import back would be a cycle.
+ */
+async function fallbackCardBand(): Promise<string> {
+  const { useAppStore } = await import('../stores/useAppStore');
+  const { profile, measuredBand } = useAppStore.getState();
+  return conversationCefrBand({
+    measuredBand,
+    placementBand: profile?.placementBand,
+    level: profile?.level,
+  });
+}
+
 /** Save a correction as an SRS card so the user can review it later.
  *  Uses the corrected phrase as target_text and the explanation/shortLabel
  *  as native_text. Creates both the card and a fresh review_item.
@@ -3452,6 +3481,9 @@ export async function saveCorrectionAsCard(params: {
   // Native text prefers shortLabel (concise) but falls back to explanation.
   const nativeText = shortLabel.trim() || explanation.trim().slice(0, 200) || 'Correction';
 
+  // Never file an untagged card — see fallbackCardBand.
+  const band = cefrLevel ?? (await fallbackCardBand());
+
   const { data: card, error: cardErr } = await supabase
     .from('cards')
     .insert({
@@ -3468,7 +3500,7 @@ export async function saveCorrectionAsCard(params: {
       tags: ['correction', 'chat'],
       language: targetLanguage,
       // Files the card in a band so it counts toward measured vocabulary.
-      cefr_level: cefrLevel ?? null,
+      cefr_level: band,
       skill_type: 'grammar',
       source_type: 'manual',
     })

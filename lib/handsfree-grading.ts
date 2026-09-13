@@ -26,6 +26,124 @@ import { gradeSpeechTranscription, speechScoreToRating } from './grading';
 import type { FeedbackPhraseKey } from './handsfree-session';
 import type { ReviewRating } from '../types';
 
+// ─── Getting the transcript: scored when possible, transcribed otherwise ──
+//
+// A hands-free session used to transcribe every answer through `transcribe`
+// and grade it on the device. That produced review_items and review_logs —
+// the SRS half of the loop — and NOTHING for the speaking strand: the CEFR
+// report's speaking level is built from `pronunciation_scores` alone, and a
+// twenty-minute commute of spoken answers left that table untouched. A
+// learner could speak every day and still be `not_assessed` at speaking.
+//
+// `score-pronunciation` transcribes AND persists a scored row against the
+// card, and returns the transcription, so one call now does both jobs. The
+// on-device grading is unchanged — it grades whatever transcript comes back,
+// from either source, so a scored turn and a transcribed one cannot drift in
+// how they are marked.
+//
+// The rule that matters: scoring may fail, and the session may not. The
+// daily scoring allowance is small (3–7 on paid tiers, 0 on free) and the
+// function can be down; either way the answer is still transcribed the old
+// way and the session keeps going. Evidence is the bonus; the drive is the
+// product.
+
+/** What `score-pronunciation` returns in place of a transcript its safety
+ *  check rejected. Mirrors the literal in the edge function. */
+export const TRANSCRIPTION_UNAVAILABLE = '[transcription unavailable]';
+
+/**
+ * Consecutive scoring failures before the session stops trying.
+ *
+ * One transient failure should not cost twenty minutes of evidence, but
+ * a function that is down would otherwise be asked once per card, each ask
+ * a retried round trip before the fallback even starts — that latency is
+ * paid in a car. Two in a row is the compromise. A spent allowance skips
+ * straight to the cap: it is settled for the day and asking again only
+ * wastes the round trip.
+ */
+export const MAX_SCORING_STRIKES = 2;
+
+/** The server code for a spent daily allowance. Mirrors score-pronunciation. */
+export const PRONUNCIATION_LIMIT_CODE = 'DAILY_PRONUNCIATION_LIMIT_REACHED';
+
+export interface HandsFreeTurnTranscript {
+  text: string;
+  /** Whisper's confidence signals — only the plain transcriber reports them.
+   *  A scored turn carries nulls, which `sttConfidence` reads as neutral. */
+  noSpeechProb: number | null;
+  avgLogprob: number | null;
+  /** True when a `pronunciation_scores` row was written for this turn. */
+  scored: boolean;
+}
+
+export interface TranscribeHandsFreeTurnDeps {
+  /** Consecutive scoring failures so far this session. */
+  scoringStrikes: number;
+  /** `scorePronunciation` for this card. */
+  score: () => Promise<{ transcription?: string | null }>;
+  /** `transcribeAudio` — the fallback. */
+  transcribe: () => Promise<{ text: string; noSpeechProb: number | null; avgLogprob: number | null }>;
+}
+
+export interface TranscribeHandsFreeTurnResult {
+  transcript: HandsFreeTurnTranscript;
+  /** Strikes for the caller to hold for the next turn. */
+  scoringStrikes: number;
+  /** Why the fallback was used, when it was. `null` on a scored turn. */
+  fallbackReason: 'strikes' | 'error' | null;
+}
+
+/** Is this the server saying the allowance is spent for the day? */
+function isQuotaError(err: unknown): boolean {
+  return (err as { code?: unknown } | null)?.code === PRONUNCIATION_LIMIT_CODE;
+}
+
+/**
+ * Transcribe one hands-free answer, through scoring when scoring is available.
+ *
+ * Pure apart from the two injected calls, so the fallback policy — which is
+ * the part that decides whether a drive is interrupted — is testable without
+ * a network or a microphone.
+ */
+export async function transcribeHandsFreeTurn(
+  deps: TranscribeHandsFreeTurnDeps,
+): Promise<TranscribeHandsFreeTurnResult> {
+  if (deps.scoringStrikes >= MAX_SCORING_STRIKES) {
+    const plain = await deps.transcribe();
+    return {
+      transcript: { ...plain, scored: false },
+      scoringStrikes: deps.scoringStrikes,
+      fallbackReason: 'strikes',
+    };
+  }
+
+  let scored: { transcription?: string | null };
+  try {
+    scored = await deps.score();
+  } catch (err) {
+    // The answer still has to be heard: fall back, and remember the failure.
+    const plain = await deps.transcribe();
+    return {
+      transcript: { ...plain, scored: false },
+      scoringStrikes: isQuotaError(err) ? MAX_SCORING_STRIKES : deps.scoringStrikes + 1,
+      fallbackReason: 'error',
+    };
+  }
+
+  // A safety-rejected transcript is not re-transcribed: the plain path would
+  // hand back the very text the server declined to echo. An empty transcript
+  // grades as `low_confidence`, and the card is simply asked again.
+  const text =
+    typeof scored.transcription === 'string' && scored.transcription !== TRANSCRIPTION_UNAVAILABLE
+      ? scored.transcription
+      : '';
+  return {
+    transcript: { text, noSpeechProb: null, avgLogprob: null, scored: true },
+    scoringStrikes: 0,
+    fallbackReason: null,
+  };
+}
+
 /**
  * Signals from the transcription provider.
  *
