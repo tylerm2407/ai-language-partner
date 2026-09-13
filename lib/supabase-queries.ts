@@ -1518,7 +1518,11 @@ export async function fetchUnitProgressTiles(
   const tiles: UnitProgressTile[] = units.map((unit) => {
     const lessons = lessonsByUnit.get(unit.id) ?? [];
     const completedCount = lessons.filter((l) => completedSet.has(l.id)).length;
-    const lessonCount = lessons.length > 0 ? lessons.length : unit.totalLessons;
+    // Was `lessons.length > 0 ? lessons.length : unit.totalLessons` — falling
+    // back to the denormalised unit column disagreed with the Learn tab,
+    // which always counts actual lesson rows. A unit with no lesson rows is
+    // 0/0 (progress 0), not a lie borrowed from a column nothing else reads.
+    const lessonCount = lessons.length;
     const progress = lessonCount > 0 ? completedCount / lessonCount : 0;
     const nextLesson = lessons.find((l) => !completedSet.has(l.id)) ?? null;
     return {

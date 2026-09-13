@@ -134,10 +134,41 @@ export interface DailyThreeItem {
   target: number;
 }
 
-export function DailyThree({ items }: { items: DailyThreeItem[] }) {
+interface DailyThreeProps {
+  items: DailyThreeItem[];
+  /** Non-null when `useDailyChallenges` failed to load today's three. */
+  error?: string | null;
+  onRetry?: () => void;
+}
+
+export function DailyThree({ items, error, onRetry }: DailyThreeProps) {
   const { c, type } = useUi2Theme();
   const enter = useHomeEnter();
-  if (items.length === 0) return null;
+
+  // A failed load and "nothing to show today" used to render identically —
+  // both returned null, so a broken fetch vanished the whole section with no
+  // sign anything went wrong (CLAUDE.md §5). Only skip rendering on a true
+  // empty state now; a load failure always gets a visible retry card.
+  if (items.length === 0 && !error) return null;
+
+  if (error) {
+    return (
+      <Animated.View entering={enter(5)} style={styles.section}>
+        <SectionTitle title="Your daily three" />
+        <SlabCard style={{ gap: 8 }}>
+          <Text style={{ fontFamily: type.uiBold, fontSize: 14, color: c.error }}>
+            Couldn&apos;t load today&apos;s challenges.
+          </Text>
+          {onRetry && (
+            <Pressable onPress={onRetry} accessibilityRole="button" accessibilityLabel="Retry loading today's challenges" style={styles.retry}>
+              <Text style={{ fontFamily: type.uiHeavy, fontSize: 13, color: c.primary }}>Try again</Text>
+            </Pressable>
+          )}
+        </SlabCard>
+      </Animated.View>
+    );
+  }
+
   return (
     <Animated.View entering={enter(5)} style={styles.section}>
       <SectionTitle title="Your daily three" />

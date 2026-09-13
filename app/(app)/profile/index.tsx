@@ -24,8 +24,8 @@ import { AvatarPresetPicker } from '../../../components/avatar/AvatarPresetPicke
 import { AvatarGeneratorSheet } from '../../../components/avatar/AvatarGeneratorSheet';
 import { useAvatarImage, invalidateAvatarImage } from '../../../hooks/useAvatarImage';
 import { FourStrandsCard } from '../../../components/stats/FourStrandsCard';
-import { useDailyStats } from '../../../hooks/useDailyStats';
 import { strandMinutesFromDailyStats } from '../../../lib/four-strands';
+import { localDayKey } from '../../../lib/dates';
 import { CompletedLessonsSection } from '../../../components/profile/CompletedLessonsSection';
 import {
   setAvatarKind,
@@ -34,7 +34,9 @@ import {
   deleteGeneratedAvatar,
   clearGeneratedAvatar,
   joinClassroom,
+  fetchStatsRange,
 } from '../../../lib/supabase-queries';
+import type { DailyStats } from '../../../types';
 import { presetUrlFromId, type AvatarPreset } from '../../../lib/avatar-presets';
 import JoinClassModal from '../../../components/school/JoinClassModal';
 import RoleSwitcher from '../../../components/school/RoleSwitcher';
@@ -65,13 +67,30 @@ export default function ProfileScreen() {
   // the ledger keeps accruing whether or not anything renders it. Nothing on
   // this screen shows the number any more.
   useLevel();
-  const { dailyStats } = useDailyStats();
-  const strandTotals = strandMinutesFromDailyStats({
-    listeningMinutes: dailyStats?.listeningMinutes,
-    readingMinutes: dailyStats?.readingMinutes,
-    speakingMinutes: dailyStats?.speakingMinutes,
-    writingMinutes: dailyStats?.writingMinutes,
-  });
+  // Four Strands reads the current week, not just today — matching the
+  // card's own "This week's balance" heading, and Home's week-strip fetch
+  // pattern (`app/(app)/index.tsx`'s loadWeeklyStats). `dailyStats` from the
+  // store is only ever today's row, which is why this used to always show
+  // a mostly-empty bar chart labelled "week".
+  const [weekStats, setWeekStats] = useState<DailyStats[] | null>(null);
+  const [weekStatsError, setWeekStatsError] = useState(false);
+  const loadWeekStats = useCallback(async (userId: string) => {
+    const today = new Date();
+    const mondayOffset = today.getDay() === 0 ? 6 : today.getDay() - 1;
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - mondayOffset);
+    setWeekStatsError(false);
+    try {
+      setWeekStats(await fetchStatsRange(userId, localDayKey(monday), localDayKey(today)));
+    } catch (err) {
+      console.error('[profile] week stats load failed:', err);
+      setWeekStatsError(true);
+    }
+  }, []);
+  useEffect(() => {
+    if (user?.id) loadWeekStats(user.id);
+  }, [user?.id, loadWeekStats]);
+  const strandTotals = strandMinutesFromDailyStats(weekStats ?? []);
   const router = useRouter();
   const [customizerVisible, setCustomizerVisible] = useState(false);
   const [generatorVisible, setGeneratorVisible] = useState(false);
@@ -310,9 +329,22 @@ export default function ProfileScreen() {
           accessibilityHint="Lists what the live tutor remembers about you between sessions, and lets you delete any of it"
         />
 
-        {/* Four Strands balance (Nation, research.md §14.3) */}
+        {/* Four Strands — this week's listening/reading/speaking/writing balance */}
         <View className="mb-4">
           <FourStrandsCard totals={strandTotals} />
+          {weekStatsError && (
+            <Pressable
+              onPress={() => user?.id && loadWeekStats(user.id)}
+              accessibilityRole="button"
+              accessibilityLabel="Try loading this week's balance again"
+              style={styles.weekRetry}
+            >
+              <Text style={{ color: c.error, fontSize: 13 }}>
+                Couldn&apos;t load this week&apos;s balance.{' '}
+                <Text style={{ color: c.primary, fontWeight: '700' }}>Try again</Text>
+              </Text>
+            </Pressable>
+          )}
         </View>
 
         {/* Achievements */}
@@ -480,6 +512,11 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
+  weekRetry: {
+    minHeight: 44,
+    justifyContent: 'center',
+    marginTop: spacing.xs,
+  },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',

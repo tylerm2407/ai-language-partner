@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { useAppStore } from '../stores/useAppStore';
 import type { UserProfile, DailyStats } from '../types';
 
 // ─── Achievement Types ──────────────────────────────────────────
@@ -140,6 +141,17 @@ const ACHIEVEMENT_CONDITIONS: AchievementCondition[] = [
   {
     type: 'first_review',
     check: (_profile, stats) => (stats?.cardsReviewed ?? 0) >= 1,
+  },
+  {
+    // Had no condition at all, so it could never be earned. `hasAiConversationSignal`
+    // is already fetched once per app-store hydration via the `has_ai_conversation`
+    // RPC (`lib/supabase-queries.ts` / `stores/useAppStore.ts`) — read from the
+    // store here instead of adding a new query. `checkAndAwardAchievements` is
+    // also called directly from `app/(app)/learn/[lessonId].tsx` with the
+    // 3-arg signature, so this reads the store rather than taking a 4th
+    // parameter that call site would need updating to pass.
+    type: 'first_chat',
+    check: () => useAppStore.getState().hasAiConversationSignal === true,
   },
   // Reading/writing achievements are checked via separate queries below
 ];

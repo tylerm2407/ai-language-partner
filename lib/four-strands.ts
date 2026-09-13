@@ -1,77 +1,39 @@
 /**
- * Paul Nation's Four Strands (research.md §14.3).
+ * Weekly practice-time balance across the four columns Fluenci actually
+ * measures: listening, reading, speaking, writing.
  *
- * A balanced language course spends ~25% of time in each strand:
- *   1. Meaning-focused input   — listening/reading, focus on comprehension
- *   2. Meaning-focused output  — writing/speaking, focus on communication
- *   3. Language-focused learning — explicit study of form (grammar, vocab drills)
- *   4. Fluency development     — improving automaticity on known material
+ * This used to model Paul Nation's Four Strands (research.md §14.3) —
+ * meaning-focused input/output, language-focused study, and fluency
+ * development — but only two of those four buckets ever had a real data
+ * source: `daily_stats` has no `languageFocusMinutes` or `fluencyMinutes`
+ * column, so those two bars always read 0% and the "underweight" nudge could
+ * only ever point at one of them. This module now measures the four columns
+ * `daily_stats` genuinely tracks, directly, over the current week.
  *
- * This module maps exercise types to their primary strand so we can measure
- * balance in `daily_stats` / a future dashboard (improvements.md §A.14.2).
- * Each exercise is classified under exactly one strand — the one it best
- * exercises — even though some types touch multiple strands.
+ * The `Strand` union's member names below are kept as-is even though they no
+ * longer mean "strand" — `components/stats/FourStrandsCard.tsx` (out of this
+ * change's file scope) types its own per-strand color map against this exact
+ * union, so renaming the keys would break that file's typecheck. What each
+ * key HOLDS and is LABELED as has changed: one key per measured skill, not a
+ * strand grouping.
  */
 
-import type { ExerciseType } from '../types';
-
-export type Strand =
-  | 'meaning_input'
-  | 'meaning_output'
-  | 'language_focus'
-  | 'fluency';
+export type Strand = 'meaning_input' | 'meaning_output' | 'language_focus' | 'fluency';
 
 export const STRAND_LABELS: Record<Strand, string> = {
-  meaning_input: 'Meaning-focused input',
-  meaning_output: 'Meaning-focused output',
-  language_focus: 'Language-focused learning',
-  fluency: 'Fluency development',
+  meaning_input: 'Listening',
+  meaning_output: 'Reading',
+  language_focus: 'Speaking',
+  fluency: 'Writing',
 };
 
 export const STRAND_DESCRIPTION: Record<Strand, string> = {
-  meaning_input: 'Listening and reading for comprehension.',
-  meaning_output: 'Writing and speaking to communicate.',
-  language_focus: 'Explicit study of grammar, vocabulary, spelling.',
-  fluency: 'Building automaticity on material you already know.',
+  meaning_input: 'Minutes spent listening this week.',
+  meaning_output: 'Minutes spent reading this week.',
+  language_focus: 'Minutes spent speaking this week.',
+  fluency: 'Minutes spent writing this week.',
 };
 
-const EXERCISE_STRAND: Record<ExerciseType, Strand> = {
-  // Meaning-focused input — reception skills
-  multiple_choice: 'meaning_input',
-  listening_choice: 'meaning_input',
-  listening_type: 'meaning_input',
-  translate_to_native: 'meaning_input',
-
-  // Meaning-focused output — production for communication
-  translate_to_target: 'meaning_output',
-  free_production: 'meaning_output',
-  speaking: 'meaning_output',
-  mini_dialogue: 'meaning_output',
-
-  // Language-focused learning — explicit form
-  cloze_deletion: 'language_focus',
-  fill_blank: 'language_focus',
-  sentence_construction: 'language_focus',
-  dictation: 'language_focus',
-  error_correction: 'language_focus',
-  collocation_match: 'language_focus',
-  word_form: 'language_focus',
-  sentence_transformation: 'language_focus',
-};
-
-export function strandForExerciseType(type: ExerciseType): Strand {
-  return EXERCISE_STRAND[type] ?? 'language_focus';
-}
-
-/**
- * Aggregate minutes by strand from a daily_stats row.
- * daily_stats already tracks: listening_minutes, reading_minutes,
- * speaking_minutes, writing_minutes. This collapses those into strand
- * buckets (reading + listening → meaning_input, writing + speaking →
- * meaning_output). The language_focus / fluency buckets are populated
- * from per-exercise logs — for now they're derived from exercise type
- * on the client side.
- */
 export interface StrandMinutes {
   meaning_input: number;
   meaning_output: number;
@@ -79,28 +41,35 @@ export interface StrandMinutes {
   fluency: number;
 }
 
-export function strandMinutesFromDailyStats(stats: {
-  listeningMinutes?: number;
-  readingMinutes?: number;
-  speakingMinutes?: number;
-  writingMinutes?: number;
-  /** Minutes spent on explicit drills (SRS vocab review, grammar drills). */
-  languageFocusMinutes?: number;
-  /** Minutes spent on fluency activities (repeated reading, shadowing). */
-  fluencyMinutes?: number;
-}): StrandMinutes {
-  return {
-    meaning_input: (stats.listeningMinutes ?? 0) + (stats.readingMinutes ?? 0),
-    meaning_output: (stats.speakingMinutes ?? 0) + (stats.writingMinutes ?? 0),
-    language_focus: stats.languageFocusMinutes ?? 0,
-    fluency: stats.fluencyMinutes ?? 0,
-  };
+/**
+ * Sum listening/reading/speaking/writing minutes across a set of
+ * `daily_stats` rows — typically a week from `fetchStatsRange`, so the card
+ * reads "this week's balance" honestly instead of just today's row.
+ */
+export function strandMinutesFromDailyStats(
+  rows: {
+    listeningMinutes?: number;
+    readingMinutes?: number;
+    speakingMinutes?: number;
+    writingMinutes?: number;
+  }[],
+): StrandMinutes {
+  return rows.reduce<StrandMinutes>(
+    (totals, row) => ({
+      meaning_input: totals.meaning_input + (row.listeningMinutes ?? 0),
+      meaning_output: totals.meaning_output + (row.readingMinutes ?? 0),
+      language_focus: totals.language_focus + (row.speakingMinutes ?? 0),
+      fluency: totals.fluency + (row.writingMinutes ?? 0),
+    }),
+    { meaning_input: 0, meaning_output: 0, language_focus: 0, fluency: 0 },
+  );
 }
 
 /**
- * Return the strand that's most underweight in this week's balance, or
- * null if the learner is roughly balanced. Useful for nudges like
- * "You've been heavy on drills — try a reading passage."
+ * Return the strand that's most underweight this week, or null if the
+ * learner is roughly balanced or there isn't enough data yet. Since all four
+ * buckets are now genuinely measured, "underweight" only fires for a skill
+ * that is truly below the others — never a bucket that was never wired up.
  */
 export function mostUnderweightStrand(totals: StrandMinutes): Strand | null {
   const total =
