@@ -179,7 +179,6 @@ export function UnitPath({ units, courseId, language, header }: UnitPathProps) {
             state={selected.lessonStates[i]}
             isMilestone={isMilestoneLesson(i, selected.totalCount)}
             score={selected.lessonScores[i]}
-            xpReward={lesson.xpReward}
             estimatedMinutes={lesson.estimatedMinutes}
             onPress={() => router.push(`/learn/${lesson.id}` as never)}
           />

@@ -36,9 +36,9 @@
  * resume snapshot ends up keyed on a string nothing else recognises.
  */
 import type { Exercise, LanguageCode } from '../../types';
-import { topicPackFor, TRIAL_LESSON_ID, TRIAL_LESSON_XP } from './topic-packs';
+import { topicPackFor, TRIAL_LESSON_ID } from './topic-packs';
 
-export { TRIAL_LESSON_ID, TRIAL_LESSON_XP };
+export { TRIAL_LESSON_ID };
 
 /** Shorthand for the fields every trial exercise leaves empty. */
 function ex(

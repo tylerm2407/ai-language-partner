@@ -24,7 +24,6 @@ import {
   topicFromIdealText,
   topicPackFor,
   TRIAL_LESSON_ID,
-  TRIAL_LESSON_XP,
   type TopicPack,
 } from './index';
 
@@ -67,9 +66,8 @@ describe('coverage', () => {
     expect(topicPackFor('en', 'travel')).toBeNull();
   });
 
-  it('keeps the trial lesson id and XP stable', () => {
+  it('keeps the trial lesson id stable', () => {
     expect(TRIAL_LESSON_ID).toBe('trial-lesson');
-    expect(TRIAL_LESSON_XP).toBe(20);
   });
 });
 

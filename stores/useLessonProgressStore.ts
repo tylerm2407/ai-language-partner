@@ -69,7 +69,6 @@ interface LessonProgressStore {
     lessonId: string,
     courseId: string,
     score: number,
-    xpEarned: number,
     timeSpentMs: number,
   ) => Promise<MarkCompleteResult>;
   reset: () => void;
@@ -141,8 +140,8 @@ export const useLessonProgressStore = create<LessonProgressStore>((set, get) => 
     return promise;
   },
 
-  markComplete: async (userId, lessonId, courseId, score, xpEarned, timeSpentMs) => {
-    const payload = { lessonId, courseId, score, xpEarned, timeSpentMs };
+  markComplete: async (userId, lessonId, courseId, score, timeSpentMs) => {
+    const payload = { lessonId, courseId, score, timeSpentMs };
     // Read before the optimistic write below lands, or a retake looks new.
     const previous = get().completions.get(lessonId);
     const knownLocally = previous !== undefined;
@@ -167,7 +166,6 @@ export const useLessonProgressStore = create<LessonProgressStore>((set, get) => 
       lessonId,
       courseId,
       score: Math.max(score, previous?.score ?? 0),
-      xpEarned,
       timeSpentMs,
       completedAt: new Date().toISOString(),
     };
@@ -185,7 +183,6 @@ export const useLessonProgressStore = create<LessonProgressStore>((set, get) => 
         lessonId,
         courseId,
         score,
-        xpEarned,
         timeSpentMs,
       );
       applyLocally(completion);

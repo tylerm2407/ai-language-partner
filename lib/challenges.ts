@@ -9,7 +9,7 @@
  * 3 picked at random, only C(6,3)/C(10,3) = 17% of days were completable, and
  * the bonus had never once been claimed in production.
  *
- * The two live writers are addStats({lessonsCompleted, xpEarned}) on lesson
+ * The live writers are record_lesson_completion (lessonsCompleted) on lesson
  * completion and addStats({cardsReviewed}) on review; cardsLearned comes from
  * try_consume_new_card_slot. If you add a template, add its writer first.
  *
@@ -26,7 +26,7 @@ export interface ChallengeTemplate {
   target: number;
   unit: string;
   /** The key in DailyStats to track progress against */
-  statKey: 'lessonsCompleted' | 'cardsReviewed' | 'minutesPracticed' | 'speakingMinutes' | 'listeningMinutes' | 'xpEarned' | 'cardsLearned';
+  statKey: 'lessonsCompleted' | 'cardsReviewed' | 'minutesPracticed' | 'speakingMinutes' | 'listeningMinutes' | 'cardsLearned';
 }
 
 const CHALLENGE_POOL: ChallengeTemplate[] = [

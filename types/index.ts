@@ -51,8 +51,6 @@ export interface User {
   updatedAt: string;
 }
 
-export type LeagueTier = 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond';
-
 export interface UserProfile {
   id: string;
   userId: string;
@@ -75,12 +73,8 @@ export interface UserProfile {
    */
   placementBand: string | null;
   dailyGoalMinutes: number;
-  totalXp: number;
   timezone: string;
   onboardingCompleted: boolean;
-  // XP levels & leagues
-  xpLevel: number;
-  leagueTier: LeagueTier;
   /**
    * Which avatar renderer this account uses (migration 067). Accounts created
    * before that migration still read 'procedural' — the SVG renderer they
@@ -174,7 +168,6 @@ export interface Lesson {
   description: string;
   orderIndex: number;
   estimatedMinutes: number;
-  xpReward: number;
   exercises: Exercise[];
 }
 
@@ -347,7 +340,6 @@ export interface DailyStats {
   listeningMinutes: number;
   readingMinutes: number;
   writingMinutes: number;
-  xpEarned: number;
   accuracy: number; // 0-1
 }
 
@@ -600,7 +592,6 @@ export interface DailyChallengesRecord {
   date: string;
   challenges: DailyChallenge[];
   allCompleted: boolean;
-  bonusXpClaimed: boolean;
 }
 
 // ─── Reading ──────────────────────────────────────────────────
@@ -722,7 +713,6 @@ export interface LessonCompletion {
   lessonId: string;
   courseId: string;
   score: number; // 0-1
-  xpEarned: number;
   timeSpentMs: number;
   completedAt: string;
 }

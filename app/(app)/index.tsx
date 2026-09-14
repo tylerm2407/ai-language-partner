@@ -14,7 +14,6 @@ import { getTargetLanguage, targetLanguageGreeting } from '../../lib/language';
 import { cefrBandForProficiencyLevel, normalizeBand } from '../../lib/cefr-proficiency';
 import { useNextBandProgress } from '../../hooks/useNextBandProgress';
 import { cefrCanDo } from '../../lib/cefr-labels';
-import { useLevel } from '../../hooks/useLevel';
 import { useDailyNews } from '../../hooks/useDailyNews';
 import { useNotifications, syncScheduledNotifications, cacheWeekSummary } from '../../hooks/useNotifications';
 import { useOnboardingChecklist } from '../../hooks/useOnboardingChecklist';
@@ -56,7 +55,6 @@ export default function HomeScreen() {
   // challenge/quota days from it (migration 044). One-shot per session.
   const [weeklyStats, setWeeklyStats] = useState<DailyStats[]>([]);
   const [weeklyStatsError, setWeeklyStatsError] = useState<ErrorCopy | null>(null);
-  useLevel(); // level-up detection mirrors xpLevel/leagueTier into the store
   const { loadStudentSchoolData } = useSchoolStore();
   const schoolEnabled = SCHOOL_ENABLED;
   const newsTier = levelToNewsTier(profile?.level ?? 'intermediate');

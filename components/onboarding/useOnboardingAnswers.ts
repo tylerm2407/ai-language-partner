@@ -98,7 +98,6 @@ export function useOnboardingAnswers() {
    */
   const recordTrial = useCallback((result: LessonResult) => {
     setTrial({
-      xpEarned: result.xpEarned,
       correctCount: result.correctCount,
       totalCount: result.totalExercises,
       completedAt: new Date().toISOString(),

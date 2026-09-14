@@ -175,7 +175,6 @@ function runner(onComplete: (r: LessonResult) => void) {
       exercises={[exercise('ex1')]}
       lessonId="l1"
       lessonTitle="Basics"
-      xpReward={20}
       userId=""
       targetLanguage="es"
       onComplete={onComplete}

@@ -23,8 +23,10 @@
  *   • lesson-completion — record_lesson_completion RPC (migration 128).
  *                         Conflict-safe on (user_id, lesson_id), so replay is
  *                         idempotent and never re-counts a first completion.
- *   • xp-award          — legacy queue shape retained only so upgrades can
- *                         discard awards queued before XP was retired (117).
+ *
+ * Items of any other type (the retired `xp-award` shape from before migration
+ * 120) fail validation on load and are dropped, which is the right fate for a
+ * reward that no longer exists.
  *
  * flush() replays sequentially in FIFO order: success removes the item; a
  * failure increments `attempts` and SKIPS that item for the rest of the run,
@@ -72,12 +74,7 @@ export interface LessonCompletionPayload {
   lessonId: string;
   courseId: string;
   score: number;
-  xpEarned: number;
   timeSpentMs: number;
-}
-
-export interface XpAwardPayload {
-  amount: number;
 }
 
 /**
@@ -115,16 +112,14 @@ export type OfflineQueueItem =
   | (QueueItemBase & { type: 'review-upsert'; payload: ReviewUpsertPayload })
   | (QueueItemBase & { type: 'review-log'; payload: ReviewLogPayload })
   | (QueueItemBase & { type: 'exercise-result'; payload: ExerciseResultPayload })
-  | (QueueItemBase & { type: 'lesson-completion'; payload: LessonCompletionPayload })
-  | (QueueItemBase & { type: 'xp-award'; payload: XpAwardPayload; key: string });
+  | (QueueItemBase & { type: 'lesson-completion'; payload: LessonCompletionPayload });
 
 /** What callers pass to enqueue() — id/createdAt/attempts are added here. */
 export type OfflineQueueInput =
   | { type: 'review-upsert'; payload: ReviewUpsertPayload }
   | { type: 'review-log'; payload: ReviewLogPayload }
   | { type: 'exercise-result'; payload: ExerciseResultPayload }
-  | { type: 'lesson-completion'; payload: LessonCompletionPayload }
-  | { type: 'xp-award'; payload: XpAwardPayload; key: string };
+  | { type: 'lesson-completion'; payload: LessonCompletionPayload };
 
 export function offlineQueueKey(userId: string): string {
   return `offline-queue:${userId}`;
@@ -155,62 +150,6 @@ export function newClientLogId(): string {
  */
 export function newClientResultId(): string {
   return `er:${randomId()}`;
-}
-
-/**
- * Idempotency key for an XP award, generated at enqueue time so every
- * retry of the same award reuses the same key (the server de-dupes on it —
- * migration 046). `context` is a short label like a lessonId or 'earn'.
- * Server constraint: 8-128 chars — the prefix alone guarantees ≥ 8.
- */
-export function makeXpKey(context: string): string {
-  return `xp:${context}:${randomId()}`.slice(0, 128);
-}
-
-/**
- * Idempotency key for the XP a lesson pays out — deterministic, so a lesson
- * pays at most once per learner no matter how many times it is completed.
- *
- * Replaying a finished lesson is a supported affordance (a completed row's
- * accessibility hint literally offers "Opens this lesson again for practice"),
- * and while this key was `makeXpKey('earn')` every replay minted a fresh
- * random key, so `client_events`' `(user_id, event_key)` primary key de-duped
- * nothing and the full XP was granted again on every pass. Because
- * `increment_xp_idempotent` derives `xp_level` and `league_tier` in the same
- * statement, that made the league standings mintable too.
- *
- * Same fix, and the same reasoning, as `ONBOARDING_COMPLETE_XP_KEY` — a stable
- * key makes the server the guard rather than any client-side flag.
- *
- * Practice replays still run, still score, and still record an attempt; they
- * just do not pay twice. Bump the `v1` only to deliberately re-grant every
- * lesson's XP to everyone.
- *
- * Length: migration 046 rejects keys outside 8..128 chars. `xp:lesson:v1:` is
- * 13, plus a 36-char uuid — comfortably inside.
- */
-export function lessonXpKey(lessonId: string): string {
-  return `xp:lesson:v1:${lessonId}`.slice(0, 128);
-}
-
-/**
- * Idempotency key for the XP a finished book pays out. One payout per book,
- * ever — re-reading is practice, not a second reward.
- */
-export function bookXpKey(bookId: string): string {
-  return `xp:book:v1:${bookId}`.slice(0, 128);
-}
-
-/**
- * Idempotency key for the XP a graded writing submission pays out.
- *
- * Keyed on the SUBMISSION, not the prompt: each attempt at a prompt is a
- * distinct piece of work and is meant to pay, but a retried grade of the same
- * submission is not. Both of these went through the non-idempotent
- * `increment_xp`, so a retry paid twice.
- */
-export function writingXpKey(submissionId: string): string {
-  return `xp:writing:v1:${submissionId}`.slice(0, 128);
 }
 
 /**
@@ -249,7 +188,6 @@ function isValidItem(value: unknown): value is OfflineQueueItem {
     return false;
   }
   if (typeof v.payload !== 'object' || v.payload === null) return false;
-  if (v.type === 'xp-award') return typeof v.key === 'string';
   // A review log without its client id cannot be replayed idempotently, so
   // reject it here rather than letting a retry double-log.
   if (v.type === 'review-log') {
@@ -437,16 +375,10 @@ async function executeItem(userId: string, item: OfflineQueueItem): Promise<'don
         payload.lessonId,
         payload.courseId,
         payload.score,
-        payload.xpEarned,
         payload.timeSpentMs,
       );
       return 'done';
     }
-    case 'xp-award':
-      // XP was removed from the learner-facing product and authenticated
-      // award RPCs were revoked in migration 117. Treat a pre-upgrade queued
-      // award as complete so it cannot poison the useful progress behind it.
-      return 'done';
   }
 }
 

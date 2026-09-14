@@ -67,7 +67,6 @@ interface LessonRunnerProps {
    */
   lessonId?: string;
   lessonTitle: string;
-  xpReward: number;
   userId: string;
   targetLanguage: LanguageCode;
   /** CEFR level for grammar-rule lookups in per-exercise FeedbackCard. */
@@ -93,7 +92,6 @@ export interface LessonResult {
    * completion row disagreed about a learner's score in the first place.
    */
   accuracy: number;
-  xpEarned: number;
   /**
    * One entry per RESOLVED, non-skipped exercise, so this can legitimately be
    * shorter than `totalExercises`. A second-attempt-correct is recorded here
@@ -121,7 +119,6 @@ export function LessonRunner({
   exercises,
   lessonId,
   lessonTitle,
-  xpReward,
   userId,
   targetLanguage,
   cefrLevel,
@@ -641,7 +638,7 @@ export function LessonRunner({
       // Lesson complete. One summarizeLesson call — the runner, the overlay
       // and the completion row all read the same numbers.
       const allAnswers = [...answers];
-      const summary = summarizeLesson(effectiveStatuses, exerciseIds, xpReward);
+      const summary = summarizeLesson(effectiveStatuses, exerciseIds);
 
       // Perfect run gets a Heavy "thump" that lands just before the overlay's
       // Success haptic on mount — creates a signature double-thump only when
@@ -657,7 +654,6 @@ export function LessonRunner({
         skippedCount: summary.skippedCount,
         scoredCount: summary.scoredCount,
         accuracy: summary.accuracy,
-        xpEarned: summary.xpEarned,
         answers: allAnswers,
         timeSpentMs: Math.max(0, Date.now() - sessionStartedAtRef.current),
         cardsReviewed: cardsReviewedRef.current,
@@ -751,7 +747,7 @@ export function LessonRunner({
   if (completed) {
     // Same summarizeLesson the result payload used — the overlay used to
     // recompute this and could disagree with the score that was recorded.
-    const summary = summarizeLesson(statuses, exerciseIds, xpReward);
+    const summary = summarizeLesson(statuses, exerciseIds);
     const strong = summary.accuracy >= 0.8;
     const title = summary.perfect ? 'Flawless!' : strong ? 'Nailed it!' : 'Lesson complete';
     const mood = strong ? 'lessonComplete' : 'correct';

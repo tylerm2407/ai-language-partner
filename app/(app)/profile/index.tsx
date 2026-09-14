@@ -6,7 +6,6 @@ import { useAuth } from '../../../hooks/useAuth';
 import { useAppStore } from '../../../stores/useAppStore';
 import { useSchoolStore } from '../../../stores/useSchoolStore';
 import { SCHOOL_ENABLED, SUPPORTED_LANGUAGES } from '../../../config/app';
-import { useLevel } from '../../../hooks/useLevel';
 import { Ionicons } from '@expo/vector-icons';
 // `colors` is deliberately NOT imported: it is the fixed DARK palette, and a
 // screen that reads it stays dark whatever the phone is set to. `radii` and
@@ -63,10 +62,6 @@ export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const { profile, subscription, setProfile } = useAppStore();
   const { enrolledClasses, loadStudentSchoolData, roles, activeRole, setActiveRole } = useSchoolStore();
-  // Called for its side effect only — it mirrors level-ups into the store, and
-  // the ledger keeps accruing whether or not anything renders it. Nothing on
-  // this screen shows the number any more.
-  useLevel();
   // Four Strands reads the current week, not just today — matching the
   // card's own "This week's balance" heading, and Home's week-strip fetch
   // pattern (`app/(app)/index.tsx`'s loadWeeklyStats). `dailyStats` from the
@@ -284,12 +279,11 @@ export default function ProfileScreen() {
           <LevelBadge level={profile?.level ?? 'beginner'} />
         </View>
 
-        {/* The Total XP / numeric Level tiles used to sit here, behind an adult
-            mode check. They are gone for everyone: both are point totals that
-            describe how much the app was used, not what the learner can do, and
-            the proficiency report below answers the question they only implied.
-            Both values still accrue server-side — achievements and offline
-            replay depend on the XP ledger. */}
+        {/* The Total XP / numeric Level tiles used to sit here. They are gone
+            for everyone, and so is the ledger behind them (migration 130):
+            both were point totals that describe how much the app was used,
+            not what the learner can do, and the proficiency report below
+            answers the question they only implied. */}
 
         {/* Proficiency report — the evidence-backed answer to "what level am I
             actually at?", which is the question a point total never answers.

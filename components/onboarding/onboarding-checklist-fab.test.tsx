@@ -73,7 +73,7 @@ const RESOLVED: OnboardingChecklist = {
 function profileWith(checklist: OnboardingChecklist): UserProfile {
   return {
     userId: 'user-1',
-    totalXp: 100,
+    dailyGoalMinutes: 10,
     targetLanguage: 'es',
     onboardingChecklist: checklist,
   } as unknown as UserProfile;
@@ -162,7 +162,7 @@ it('a setProfile mid-celebration does not cancel markCelebrated', async () => {
 
   act(() => {
     const { profile } = useAppStore.getState();
-    useAppStore.getState().setProfile({ ...profile!, totalXp: 150 });
+    useAppStore.getState().setProfile({ ...profile!, dailyGoalMinutes: 15 });
   });
 
   await act(async () => { jest.runAllTimers(); });

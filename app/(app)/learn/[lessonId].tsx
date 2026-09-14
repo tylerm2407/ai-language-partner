@@ -11,7 +11,6 @@ import { useAuth } from '../../../hooks/useAuth';
 import { useAppStore } from '../../../stores/useAppStore';
 import { useDailyStats } from '../../../hooks/useDailyStats';
 import { useActiveTime } from '../../../hooks/useActiveTime';
-import { useLevel } from '../../../hooks/useLevel';
 import { useLessonProgress } from '../../../hooks/useLessonProgress';
 import { useOnboardingChecklist } from '../../../hooks/useOnboardingChecklist';
 import { LessonRunner, type LessonResult } from '../../../components/lesson/LessonRunner';
@@ -39,7 +38,6 @@ export default function LessonScreen() {
   const { user } = useAuth();
   const { profile } = useAppStore();
   const { addStats } = useDailyStats();
-  const { dismissLevelUp } = useLevel();
   const { markLessonComplete } = useLessonProgress();
   const { markItem: markOnboardingItem } = useOnboardingChecklist();
   const [lesson, setLesson] = useState<Lesson | null>(null);
@@ -212,7 +210,6 @@ export default function LessonScreen() {
             lesson.id,
             lesson.courseId,
             score,
-            0,
             result.timeSpentMs,
           );
           setSaveState(persisted ? 'saved' : 'queued');
@@ -302,9 +299,6 @@ export default function LessonScreen() {
     // Closing it first is what makes the pop visible.
     setShowingAchievement(null);
     setAchievementQueue([]);
-    // Nothing renders the level-up any more, but the pending record still has to
-    // be cleared or useLevel replays it against the next lesson's state.
-    dismissLevelUp();
 
     // router.back() is a silent no-op with nothing beneath. A deep link, a
     // notification tap or a cold start straight into a lesson has no parent
@@ -363,7 +357,6 @@ export default function LessonScreen() {
         exercises={orderedExercises}
         lessonId={lesson.id}
         lessonTitle={lesson.title}
-        xpReward={lesson.xpReward}
         userId={user?.id ?? ''}
         targetLanguage={targetLanguage}
         onComplete={handleComplete}

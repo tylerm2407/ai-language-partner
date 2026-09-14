@@ -48,7 +48,6 @@ function completion(lessonId: string, overrides: Partial<LessonCompletion> = {})
     lessonId,
     courseId: COURSE,
     score: 0.8,
-    xpEarned: 15,
     timeSpentMs: 1000,
     completedAt: '2026-08-23T00:00:00.000Z',
     ...overrides,
@@ -61,8 +60,8 @@ beforeEach(() => {
   mockFetch.mockResolvedValue([]);
   // The RPC wrapper's shape (migration 128): the row plus the server's verdict
   // on whether this was the learner's first completion of the lesson.
-  mockUpsert.mockImplementation(async (userId, lessonId, courseId, score, xpEarned, timeSpentMs) => ({
-    completion: completion(lessonId, { userId, courseId, score, xpEarned, timeSpentMs }),
+  mockUpsert.mockImplementation(async (userId, lessonId, courseId, score, timeSpentMs) => ({
+    completion: completion(lessonId, { userId, courseId, score, timeSpentMs }),
     firstCompletion: true,
   }));
   mockEnqueue.mockResolvedValue(undefined);
@@ -120,10 +119,9 @@ describe('load', () => {
 describe('markComplete', () => {
   it('records the completion in the shared map for every consumer', async () => {
     await useLessonProgressStore.getState().load(USER);
-    await useLessonProgressStore.getState().markComplete(USER, 'lesson-a', COURSE, 0.9, 18, 5000);
+    await useLessonProgressStore.getState().markComplete(USER, 'lesson-a', COURSE, 0.9, 5000);
 
     const stored = useLessonProgressStore.getState().completions.get('lesson-a');
-    expect(stored?.xpEarned).toBe(18);
     expect(stored?.timeSpentMs).toBe(5000);
   });
 
@@ -136,7 +134,7 @@ describe('markComplete', () => {
 
     const pending = useLessonProgressStore
       .getState()
-      .markComplete(USER, 'lesson-a', COURSE, 1, 20, 0);
+      .markComplete(USER, 'lesson-a', COURSE, 1, 0);
 
     // The learner advances now, not after the round trip.
     expect(useLessonProgressStore.getState().completions.has('lesson-a')).toBe(true);
@@ -148,21 +146,21 @@ describe('markComplete', () => {
   it('reports persisted:true once the row is in Postgres', async () => {
     const result = await useLessonProgressStore
       .getState()
-      .markComplete(USER, 'lesson-a', COURSE, 1, 20, 0);
+      .markComplete(USER, 'lesson-a', COURSE, 1, 0);
     expect(result.persisted).toBe(true);
   });
 
   it('passes the server\'s firstCompletion verdict through', async () => {
     // The RPC is the authority: it saw the row before the upsert, the client
     // only has a map that may be stale on a second device.
-    const first = await useLessonProgressStore.getState().markComplete(USER, 'lesson-a', COURSE, 0.6, 0, 0);
+    const first = await useLessonProgressStore.getState().markComplete(USER, 'lesson-a', COURSE, 0.6, 0);
     expect(first.firstCompletion).toBe(true);
 
     mockUpsert.mockImplementationOnce(async (_u, lessonId) => ({
       completion: completion(lessonId, { score: 0.9 }),
       firstCompletion: false,
     }));
-    const retake = await useLessonProgressStore.getState().markComplete(USER, 'lesson-a', COURSE, 0.9, 0, 0);
+    const retake = await useLessonProgressStore.getState().markComplete(USER, 'lesson-a', COURSE, 0.9, 0);
     expect(retake.firstCompletion).toBe(false);
   });
 
@@ -174,7 +172,7 @@ describe('markComplete', () => {
 
     let release: (value: { completion: LessonCompletion; firstCompletion: boolean }) => void = () => {};
     mockUpsert.mockImplementation(() => new Promise((resolve) => { release = resolve; }));
-    const pending = useLessonProgressStore.getState().markComplete(USER, 'lesson-a', COURSE, 0.5, 0, 0);
+    const pending = useLessonProgressStore.getState().markComplete(USER, 'lesson-a', COURSE, 0.5, 0);
     expect(useLessonProgressStore.getState().completions.get('lesson-a')?.score).toBe(0.9);
     release({ completion: completion('lesson-a', { score: 0.9 }), firstCompletion: false });
     await pending;
@@ -182,9 +180,9 @@ describe('markComplete', () => {
 
   it('derives firstCompletion from the local map when the write is queued', async () => {
     mockUpsert.mockRejectedValue(new Error('Network request failed'));
-    const first = await useLessonProgressStore.getState().markComplete(USER, 'lesson-a', COURSE, 0.5, 0, 0);
+    const first = await useLessonProgressStore.getState().markComplete(USER, 'lesson-a', COURSE, 0.5, 0);
     expect(first.firstCompletion).toBe(true);
-    const again = await useLessonProgressStore.getState().markComplete(USER, 'lesson-a', COURSE, 0.7, 0, 0);
+    const again = await useLessonProgressStore.getState().markComplete(USER, 'lesson-a', COURSE, 0.7, 0);
     expect(again.firstCompletion).toBe(false);
   });
 
@@ -192,12 +190,12 @@ describe('markComplete', () => {
     mockUpsert.mockRejectedValue(new Error('Network request failed'));
     const result = await useLessonProgressStore
       .getState()
-      .markComplete(USER, 'lesson-a', COURSE, 0.5, 10, 0);
+      .markComplete(USER, 'lesson-a', COURSE, 0.5, 0);
 
     expect(result.persisted).toBe(false);
     expect(mockEnqueue).toHaveBeenCalledWith(USER, {
       type: 'lesson-completion',
-      payload: { lessonId: 'lesson-a', courseId: COURSE, score: 0.5, xpEarned: 10, timeSpentMs: 0 },
+      payload: { lessonId: 'lesson-a', courseId: COURSE, score: 0.5, timeSpentMs: 0 },
     });
     // The learner still advances.
     expect(useLessonProgressStore.getState().completions.has('lesson-a')).toBe(true);
@@ -209,7 +207,7 @@ describe('markComplete', () => {
     mockUpsert.mockRejectedValue(new Error('duplicate key value violates constraint'));
     const result = await useLessonProgressStore
       .getState()
-      .markComplete(USER, 'lesson-a', COURSE, 0.5, 10, 0);
+      .markComplete(USER, 'lesson-a', COURSE, 0.5, 0);
 
     expect(isNetworkError).toHaveBeenCalled();
     expect(result.persisted).toBe(false);
@@ -223,7 +221,7 @@ describe('markComplete', () => {
 
     await expect(useLessonProgressStore
       .getState()
-      .markComplete(USER, 'lesson-a', COURSE, 0.5, 10, 0))
+      .markComplete(USER, 'lesson-a', COURSE, 0.5, 0))
       .rejects.toThrow('storage full');
   });
 });
@@ -233,7 +231,7 @@ describe('refresh', () => {
     // Marked complete offline (queued), then a refresh runs before the queue
     // replays. Dropping it here would walk the learner back a lesson.
     mockUpsert.mockRejectedValue(new Error('Network request failed'));
-    await useLessonProgressStore.getState().markComplete(USER, 'lesson-a', COURSE, 1, 20, 0);
+    await useLessonProgressStore.getState().markComplete(USER, 'lesson-a', COURSE, 1, 0);
 
     mockFetch.mockResolvedValue([completion('lesson-b')]);
     await useLessonProgressStore.getState().refresh(USER);

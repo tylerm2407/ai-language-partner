@@ -16,8 +16,6 @@ import {
   enqueue,
   flush,
   isNetworkError,
-  makeXpKey,
-  lessonXpKey,
   offlineQueueKey,
   newClientLogId,
   newClientResultId,
@@ -96,12 +94,16 @@ function reviewInput(overrides: Partial<ReviewUpsertPayload> = {}): OfflineQueue
 function completionInput(): OfflineQueueInput {
   return {
     type: 'lesson-completion',
-    payload: { lessonId: 'lesson-1', courseId: 'course-1', score: 0.9, xpEarned: 45, timeSpentMs: 0 },
+    payload: { lessonId: 'lesson-1', courseId: 'course-1', score: 0.9, timeSpentMs: 0 },
   };
 }
 
-function xpInput(key = 'xp:test:abcdef12'): OfflineQueueInput {
-  return { type: 'xp-award', payload: { amount: 20 }, key };
+/** A third, distinct item type for ordering and capacity tests. */
+function resultInput(clientResultId = 'er:test-abcdef12'): OfflineQueueInput {
+  return {
+    type: 'exercise-result',
+    payload: { exerciseId: 'ex-1', correct: true, attempts: 1, responseTimeMs: 1200, clientResultId },
+  };
 }
 
 function networkError(): TypeError {
@@ -169,59 +171,22 @@ describe('isNetworkError', () => {
   });
 });
 
-describe('makeXpKey', () => {
-  it('produces unique keys within server length bounds (8-128)', () => {
-    const a = makeXpKey('lesson-1');
-    const b = makeXpKey('lesson-1');
-    expect(a).not.toBe(b);
-    expect(a.startsWith('xp:lesson-1:')).toBe(true);
-    expect(a.length).toBeGreaterThanOrEqual(8);
-    expect(a.length).toBeLessThanOrEqual(128);
-  });
-});
-
-describe('lessonXpKey', () => {
-  // The bug this pins: while the lesson award used makeXpKey('earn'), every
-  // replay of a finished lesson minted a fresh random key, so the server's
-  // (user_id, event_key) de-dupe matched nothing and paid full XP again —
-  // and increment_xp_idempotent derives xp_level and league_tier in the same
-  // statement, so the league standings were mintable with it.
-  it('is stable for the same lesson, so a replay cannot pay twice', () => {
-    expect(lessonXpKey('abc')).toBe(lessonXpKey('abc'));
-  });
-
-  it('is distinct per lesson', () => {
-    expect(lessonXpKey('lesson-a')).not.toBe(lessonXpKey('lesson-b'));
-  });
-
-  it('stays inside the server key bounds (8-128) for a uuid', () => {
-    const k = lessonXpKey('123e4567-e89b-12d3-a456-426614174000');
-    expect(k.length).toBeGreaterThanOrEqual(8);
-    expect(k.length).toBeLessThanOrEqual(128);
-  });
-
-  it('never collides with an ad-hoc makeXpKey award', () => {
-    expect(lessonXpKey('x').startsWith('xp:lesson:v1:')).toBe(true);
-    expect(makeXpKey('x').startsWith('xp:lesson:v1:')).toBe(false);
-  });
-});
-
 describe('enqueue + flush FIFO', () => {
   it('replays items sequentially in enqueue order and empties the queue', async () => {
     const order: string[] = [];
     mockUpsertReview.mockImplementation(async () => order.push('review'));
     mockUpsertCompletion.mockImplementation(async () => order.push('completion'));
+    mockRecordExerciseResult.mockImplementation(async () => order.push('result'));
 
     await enqueue(USER, reviewInput());
     await enqueue(USER, completionInput());
-    await enqueue(USER, xpInput('xp:lesson-1:abc12345'));
+    await enqueue(USER, resultInput());
 
     await flush(USER);
 
-    expect(order).toEqual(['review', 'completion']);
+    expect(order).toEqual(['review', 'completion', 'result']);
     expect(mockUpsertReview).toHaveBeenCalledWith(reviewPayload());
-    expect(mockUpsertCompletion).toHaveBeenCalledWith(USER, 'lesson-1', 'course-1', 0.9, 45, 0);
-    // Pre-upgrade XP items are deliberately drained: no award RPC exists any more.
+    expect(mockUpsertCompletion).toHaveBeenCalledWith(USER, 'lesson-1', 'course-1', 0.9, 0);
     expect(await AsyncStorage.getItem(KEY)).toBeNull();
   });
 
@@ -232,7 +197,7 @@ describe('enqueue + flush FIFO', () => {
   });
 
   it('does not leak items across users', async () => {
-    await enqueue(USER, xpInput());
+    await enqueue(USER, resultInput());
     await flush('user-2');
     expect(await storedItems()).toHaveLength(1);
   });
@@ -334,17 +299,15 @@ describe('TTL', () => {
       items: [
         {
           id: 'old',
-          type: 'xp-award',
-          payload: { amount: 10 },
-          key: 'xp:old:12345678',
+          type: 'exercise-result',
+          payload: { exerciseId: 'ex-1', correct: true, attempts: 1, responseTimeMs: 0, clientResultId: 'er:old' },
           createdAt: now - OFFLINE_QUEUE_TTL_MS - 60_000,
           attempts: 0,
         },
         {
           id: 'fresh',
-          type: 'xp-award',
-          payload: { amount: 20 },
-          key: 'xp:fresh:12345678',
+          type: 'exercise-result',
+          payload: { exerciseId: 'ex-2', correct: true, attempts: 1, responseTimeMs: 0, clientResultId: 'er:fresh' },
           createdAt: now - 60_000,
           attempts: 0,
         },
@@ -402,14 +365,15 @@ describe('staleness guard (review-upsert)', () => {
 describe('capacity cap', () => {
   it('drops the oldest item (with a logged warning) beyond the cap', async () => {
     for (let i = 0; i < OFFLINE_QUEUE_MAX_ITEMS + 1; i++) {
-      await enqueue(USER, xpInput(`xp:cap:${String(i).padStart(8, '0')}`));
+      await enqueue(USER, resultInput(`er:cap:${String(i).padStart(8, '0')}`));
     }
     const items = await storedItems();
     expect(items).toHaveLength(OFFLINE_QUEUE_MAX_ITEMS);
-    expect(items[0].key).toBe('xp:cap:00000001'); // oldest (index 0) was dropped
+    // oldest (index 0) was dropped
+    expect((items[0].payload as { clientResultId: string }).clientResultId).toBe('er:cap:00000001');
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining('queue full'),
-      'xp-award',
+      'exercise-result',
       expect.any(String),
     );
   });
@@ -435,11 +399,11 @@ describe('invalid stored payloads', () => {
     const envelope = {
       version: OFFLINE_QUEUE_SCHEMA_VERSION,
       items: [
-        { id: 'bad', type: 'xp-award' }, // no payload/key/createdAt/attempts
+        { id: 'bad', type: 'xp-award', payload: { amount: 20 }, key: 'xp:old:12345678', createdAt: Date.now(), attempts: 0 }, // retired type
         {
           id: 'good',
           type: 'lesson-completion',
-          payload: { lessonId: 'l', courseId: 'c', score: 1, xpEarned: 10, timeSpentMs: 0 },
+          payload: { lessonId: 'l', courseId: 'c', score: 1, timeSpentMs: 0 },
           createdAt: Date.now(),
           attempts: 0,
         },

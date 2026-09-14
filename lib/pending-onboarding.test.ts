@@ -96,10 +96,9 @@ describe('save / load round-trip', () => {
 
   it('round-trips the trial lesson result', async () => {
     // The sign-up screen names these numbers back to the learner, so losing
-    // them turns a specific promise ("keep your 20 XP") into a vague one.
+    // them turns a specific promise ("keep your 6 of 8") into a vague one.
     const draft = makeDraft({
       trial: {
-        xpEarned: 20,
         correctCount: 6,
         totalCount: 8,
         completedAt: '2026-08-24T12:00:00.000Z',
@@ -107,7 +106,6 @@ describe('save / load round-trip', () => {
     });
     await savePendingOnboarding(draft);
     const loaded = await loadPendingOnboarding();
-    expect(loaded?.trial?.xpEarned).toBe(20);
     expect(loaded?.trial?.correctCount).toBe(6);
     expect(loaded?.trial?.totalCount).toBe(8);
   });

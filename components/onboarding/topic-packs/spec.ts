@@ -45,9 +45,6 @@ export const TOPIC_KEYS: readonly TopicKey[] = [
   'housing_admin',
 ] as const;
 
-/** XP awarded for finishing the trial. Matches a normal first lesson. */
-export const TRIAL_LESSON_XP = 20;
-
 /**
  * Stable id for the trial run. LessonRunner keys its resume snapshot on
  * (userId, lessonId) and skips persistence entirely when `userId` is empty,

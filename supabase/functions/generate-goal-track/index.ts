@@ -417,7 +417,6 @@ async function handleResolve(
       description: l.description,
       order_index: i,
       estimated_minutes: 5,
-      xp_reward: 20,
       generation_state: 'pending',
     })),
   );

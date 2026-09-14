@@ -47,7 +47,7 @@ export function useDailyChallenges() {
             current: 0,
             completed: false,
           }));
-          existing = await upsertDailyChallenges(user.id, today, challenges, false, false);
+          existing = await upsertDailyChallenges(user.id, today, challenges, false);
         }
         setRecord(existing);
       } catch (err) {
@@ -82,16 +82,13 @@ export function useDailyChallenges() {
     if (JSON.stringify(updatedChallenges) !== JSON.stringify(record.challenges) || allCompleted !== record.allCompleted) {
       setRecord({ ...record, challenges: updatedChallenges, allCompleted });
 
-      // Persist to DB. Since migration 071 the server OWNS bonus_xp_claimed —
-      // a guard trigger silently coerces whatever we send back to the stored
-      // value — so take the returned row as truth rather than discarding it.
+      // Persist to DB and take the returned row as truth.
       if (user) {
         upsertDailyChallenges(
           user.id,
           today,
           updatedChallenges,
-          allCompleted,
-          record.bonusXpClaimed
+          allCompleted
         )
           .then((saved) => {
             if (saved) setRecord(saved);
@@ -108,7 +105,6 @@ export function useDailyChallenges() {
   return {
     challenges: record?.challenges ?? [],
     allCompleted: record?.allCompleted ?? false,
-    bonusXpClaimed: record?.bonusXpClaimed ?? false,
     loading,
     /** Non-null when today's challenges could not be loaded. Render a retry. */
     error,

@@ -71,7 +71,6 @@ export const PENDING_ONBOARDING_COMPLETED_TTL_MS = 60 * 60 * 1000;
  * there is nothing to record against; the checklist preserves the completion.
  */
 export interface TrialLessonResult {
-  xpEarned: number;
   correctCount: number;
   totalCount: number;
   /** ISO timestamp the trial finished. */

@@ -1,5 +1,5 @@
 ---
-paths: ["lib/srs.ts", "lib/grading.ts", "lib/levels.ts", "lib/hearts.ts", "lib/cefr-proficiency.ts", "lib/next-band-progress.ts", "lib/course-placement.ts", "components/lesson/**", "app/(app)/learn/**", "app/(app)/review/**", "app/(app)/practice/**"]
+paths: ["lib/srs.ts", "lib/grading.ts", "lib/lesson-scoring.ts", "lib/cefr-proficiency.ts", "lib/next-band-progress.ts", "lib/course-placement.ts", "components/lesson/**", "app/(app)/learn/**", "app/(app)/review/**", "app/(app)/practice/**"]
 ---
 
 # Learning Domain Rules
@@ -32,7 +32,7 @@ paths: ["lib/srs.ts", "lib/grading.ts", "lib/levels.ts", "lib/hearts.ts", "lib/c
 ### Lesson Flow
 - Each lesson contains 10-15 exercises mixing the types above.
 - Start with recognition, progress to production within a single lesson.
-- End each lesson with a summary: items learned, accuracy, XP earned.
+- End each lesson with a summary: items learned, accuracy, best score kept on a retake.
 - Failed items get added to the review queue immediately.
 
 ### Grading

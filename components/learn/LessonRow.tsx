@@ -38,7 +38,6 @@ interface LessonRowProps {
   isMilestone: boolean;
   /** 0-1, from lesson_completions. Null when never completed. */
   score: number | null;
-  xpReward: number;
   estimatedMinutes: number;
   onPress: () => void;
 }
@@ -51,7 +50,6 @@ function LessonRowComponent({
   state,
   isMilestone,
   score,
-  xpReward,
   estimatedMinutes,
   onPress,
 }: LessonRowProps) {
@@ -78,7 +76,6 @@ function LessonRowComponent({
     state,
     isMilestone,
     score,
-    xpReward,
     estimatedMinutes,
   });
 
@@ -140,7 +137,6 @@ function LessonRowComponent({
         state={state}
         milestoneLocked={milestoneLocked}
         score={score}
-        xpReward={xpReward}
       />
     </Pressable>
   );
@@ -183,12 +179,10 @@ function TrailingSlot({
   state,
   milestoneLocked,
   score,
-  xpReward,
 }: {
   state: LessonRowState;
   milestoneLocked: boolean;
   score: number | null;
-  xpReward: number;
 }) {
   const { c } = useUi2Theme();
   if (state === 'active') {
@@ -219,8 +213,8 @@ function TrailingSlot({
     );
   }
 
-  // Nothing to advertise here any more: XP is a server-side ledger, not a
-  // number the learner is playing for.
+  // Nothing to advertise for an upcoming lesson: there is no reward number,
+  // only the work.
   return null;
 }
 
@@ -232,11 +226,10 @@ function buildLabel({
   state,
   isMilestone,
   score,
-  xpReward,
   estimatedMinutes,
 }: Pick<
   LessonRowProps,
-  'position' | 'title' | 'state' | 'isMilestone' | 'score' | 'xpReward' | 'estimatedMinutes'
+  'position' | 'title' | 'state' | 'isMilestone' | 'score' | 'estimatedMinutes'
 >): string {
   const parts = [`Lesson ${position}`, title];
 

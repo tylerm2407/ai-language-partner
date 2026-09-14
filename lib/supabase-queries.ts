@@ -760,7 +760,6 @@ export async function upsertDailyStats(
       p_listening_minutes: updates.listeningMinutes ?? 0,
       p_reading_minutes: updates.readingMinutes ?? 0,
       p_writing_minutes: updates.writingMinutes ?? 0,
-      p_xp_earned: updates.xpEarned ?? 0,
       p_accuracy: updates.accuracy ?? null,
     })
     .single();
@@ -1215,12 +1214,8 @@ function mapProfile(row: Record<string, unknown>): UserProfile {
     currentCourseId: (row.current_course_id as string | null) ?? null,
     placementBand: (row.placement_band as string | null) ?? null,
     dailyGoalMinutes: row.daily_goal_minutes as number,
-    totalXp: row.total_xp as number,
     timezone: row.timezone as string,
     onboardingCompleted: (row.onboarding_completed as boolean) ?? false,
-    // XP levels & leagues
-    xpLevel: (row.xp_level as number) ?? 1,
-    leagueTier: (row.league_tier as UserProfile['leagueTier']) ?? 'bronze',
     // Avatar renderer selection (migration 067). Rows written before it have
     // no avatar_kind. Nothing renders 'procedural' now, so those rows show
     // the initials placeholder until the learner picks from the library.
@@ -1308,7 +1303,6 @@ function mapLesson(row: Record<string, unknown>, exercises: Exercise[]): Lesson 
     description: row.description as string,
     orderIndex: row.order_index as number,
     estimatedMinutes: row.estimated_minutes as number,
-    xpReward: row.xp_reward as number,
     exercises,
   };
 }
@@ -1391,7 +1385,6 @@ function mapDailyStats(row: Record<string, unknown>): DailyStats {
     listeningMinutes: row.listening_minutes as number,
     readingMinutes: (row.reading_minutes as number) ?? 0,
     writingMinutes: (row.writing_minutes as number) ?? 0,
-    xpEarned: row.xp_earned as number,
     accuracy: row.accuracy as number,
   };
 }
@@ -1454,20 +1447,18 @@ export async function fetchHasCompletedLesson(userId: string): Promise<boolean> 
  * daily counter only on the first completion — which it reports back as
  * `firstCompletion` so the screen can say "best score kept" on a retake.
  *
- * `userId` and `xpEarned` are still accepted so the offline queue's stored
- * payload shape and every caller keep working: the RPC identifies the learner
- * from the JWT and zeroes XP itself (migration 120), so neither is sent.
+ * `userId` is still accepted so the offline queue's stored payload shape and
+ * every caller keep working: the RPC identifies the learner from the JWT, so
+ * it is not sent.
  */
 export async function upsertLessonCompletion(
   userId: string,
   lessonId: string,
   courseId: string,
   score: number,
-  xpEarned: number,
   timeSpentMs: number
 ): Promise<{ completion: LessonCompletion; firstCompletion: boolean }> {
   void userId;
-  void xpEarned;
   const { data, error } = await supabase.rpc('record_lesson_completion', {
     p_lesson_id: lessonId,
     p_course_id: courseId,
@@ -1707,7 +1698,6 @@ function mapLessonCompletion(row: Record<string, unknown>): LessonCompletion {
     lessonId: row.lesson_id as string,
     courseId: row.course_id as string,
     score: row.score as number,
-    xpEarned: row.xp_earned as number,
     timeSpentMs: row.time_spent_ms as number,
     completedAt: row.completed_at as string,
   };
@@ -1735,8 +1725,7 @@ export async function upsertDailyChallenges(
   userId: string,
   date: string,
   challenges: unknown[],
-  allCompleted: boolean,
-  bonusXpClaimed: boolean
+  allCompleted: boolean
 ): Promise<DailyChallengesRecord> {
   const { data, error } = await supabase
     .from('daily_challenges')
@@ -1745,7 +1734,6 @@ export async function upsertDailyChallenges(
       date,
       challenges,
       all_completed: allCompleted,
-      bonus_xp_claimed: bonusXpClaimed,
     }, { onConflict: 'user_id,date' })
     .select()
     .single();
@@ -1761,7 +1749,6 @@ function mapDailyChallengesRecord(row: Record<string, unknown>): DailyChallenges
     date: row.date as string,
     challenges: row.challenges as DailyChallengesRecord['challenges'],
     allCompleted: (row.all_completed as boolean) ?? false,
-    bonusXpClaimed: (row.bonus_xp_claimed as boolean) ?? false,
   };
 }
 

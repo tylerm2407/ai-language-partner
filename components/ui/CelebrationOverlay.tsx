@@ -52,9 +52,9 @@ interface CelebrationOverlayProps {
  * `haptic` — a field of the same name reads as a call at every use site.
  *
  * The `levelUp` row is currently unreachable: this overlay has one caller
- * (LessonRunner), which only ever passes 'lessonComplete' or 'correct', and a
- * real level-up goes through LevelUpModal instead. Left in place rather than
- * deleted so that the mood stays correct if anything ever does route here.
+ * (LessonRunner), which only ever passes 'lessonComplete' or 'correct'. XP
+ * levels are gone (migration 130); the mood is kept so a future CEFR band
+ * promotion can route here without inventing a new one.
  */
 const MOOD_CONFIG: Record<
   Mood,

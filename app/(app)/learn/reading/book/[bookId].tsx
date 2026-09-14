@@ -56,8 +56,9 @@ export default function BookDetailScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isReading, setIsReading] = useState(false);
   const [error, setError] = useState<ErrorCopy | null>(null);
-  // Guards against re-awarding XP when the reader re-fires onComplete (paging
-  // back and forth across the last page, narration auto-advance, etc.).
+  // Guards against recording the completion twice when the reader re-fires
+  // onComplete (paging back and forth across the last page, narration
+  // auto-advance, etc.).
   const hasCompletedRef = useRef(false);
 
   // Only while the reader itself is open — the cover screen is browsing, not

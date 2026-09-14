@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useUi2Theme } from '../../../hooks/useUi2Theme';
 import type { Exercise, LanguageCode } from '../../../types';
 import { LessonRunner, type LessonResult } from '../../lesson/LessonRunner';
-import { TRIAL_LESSON_ID, TRIAL_LESSON_XP } from '../topic-packs';
+import { TRIAL_LESSON_ID } from '../topic-packs';
 
 export function TrialLessonStep({
   exercises,
@@ -38,7 +38,6 @@ export function TrialLessonStep({
             exercises={exercises}
             lessonId={TRIAL_LESSON_ID}
             lessonTitle={`${languageName} · Your first words`}
-            xpReward={TRIAL_LESSON_XP}
             userId=""
             targetLanguage={targetLanguage}
             onComplete={onComplete}

@@ -22,7 +22,6 @@ import {
   buildPack,
   TOPIC_KEYS,
   TRIAL_LESSON_ID,
-  TRIAL_LESSON_XP,
   type LanguagePacks,
   type PackWord,
   type TopicKey,
@@ -30,7 +29,7 @@ import {
 } from './spec';
 import { ZH_PACKS } from './zh';
 
-export { TOPIC_KEYS, TRIAL_LESSON_ID, TRIAL_LESSON_XP };
+export { TOPIC_KEYS, TRIAL_LESSON_ID };
 export type { PackWord, TopicKey, TopicPack };
 
 const PACKS_BY_LANGUAGE: Partial<Record<LanguageCode, LanguagePacks>> = {
