@@ -5,7 +5,11 @@ const EXPECTED_ENVIRONMENT = {
   development: 'development',
   preview: 'preview',
   production: 'production',
+  // Ad-hoc (internal distribution) build of the production app for registered
+  // devices. Same code, env and database as `production`; only the signing differs.
+  device: 'production',
 };
+const PRODUCTION_CLASS = new Set(['production', 'device']);
 
 function validateBuildEnvironment(env) {
   const errors = [];
@@ -26,7 +30,8 @@ function validateBuildEnvironment(env) {
   if (!supabaseUrl) errors.push('EXPO_PUBLIC_SUPABASE_URL is required');
   if (!supabaseKey) errors.push('EXPO_PUBLIC_SUPABASE_ANON_KEY is required');
 
-  if (profile === 'production') {
+  const isProductionClass = PRODUCTION_CLASS.has(profile);
+  if (isProductionClass) {
     if (supabaseUrl && supabaseUrl !== PRODUCTION_SUPABASE_URL) {
       errors.push('production profile does not target the approved production Supabase project');
     }
@@ -37,7 +42,7 @@ function validateBuildEnvironment(env) {
   }
 
   if (
-    profile === 'production' &&
+    isProductionClass &&
     env.EAS_BUILD_PLATFORM === 'android' &&
     (!env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY?.startsWith('goog_') ||
       env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY.includes('REPLACE_WITH'))
@@ -45,7 +50,7 @@ function validateBuildEnvironment(env) {
     errors.push('production Android build requires a real goog_ RevenueCat public key');
   }
   if (
-    profile === 'production' &&
+    isProductionClass &&
     env.EAS_BUILD_PLATFORM === 'ios' &&
     (!env.EXPO_PUBLIC_REVENUECAT_IOS_KEY?.startsWith('appl_') ||
       env.EXPO_PUBLIC_REVENUECAT_IOS_KEY.includes('REPLACE_WITH'))

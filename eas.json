@@ -32,6 +32,14 @@
         "EXPO_PUBLIC_APP_ENV": "production",
         "EXPO_PUBLIC_SENTRY_DSN": "https://9285b6c772c26a74a2646822c597cd47@o4511033096536064.ingest.us.sentry.io/4511880912633856"
       }
+    },
+    "device": {
+      "extends": "production",
+      "distribution": "internal",
+      "autoIncrement": false,
+      "ios": {
+        "buildConfiguration": "Release"
+      }
     }
   },
   "submit": {

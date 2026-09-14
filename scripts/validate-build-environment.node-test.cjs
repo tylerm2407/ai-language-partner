@@ -23,6 +23,24 @@ test('production accepts only the approved production database', () => {
   }), []);
 });
 
+test('device (ad-hoc) is production-class: same database, same key checks', () => {
+  assert.deepEqual(validateBuildEnvironment({
+    ...BASE,
+    EAS_BUILD_PROFILE: 'device',
+    EAS_BUILD_PLATFORM: 'ios',
+    EXPO_PUBLIC_APP_ENV: 'production',
+    EXPO_PUBLIC_SUPABASE_URL: PRODUCTION_SUPABASE_URL,
+  }), []);
+  const errors = validateBuildEnvironment({
+    ...BASE,
+    EAS_BUILD_PROFILE: 'device',
+    EAS_BUILD_PLATFORM: 'ios',
+    EXPO_PUBLIC_APP_ENV: 'production',
+    EXPO_PUBLIC_SUPABASE_URL: 'https://fluenci-staging.supabase.co',
+  });
+  assert.ok(errors.some((error) => error.includes('approved production Supabase project')));
+});
+
 test('preview and development reject the production database', () => {
   for (const profile of ['preview', 'development']) {
     const errors = validateBuildEnvironment({
