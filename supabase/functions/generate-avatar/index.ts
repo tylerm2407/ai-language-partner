@@ -18,11 +18,14 @@
 // clears, the render runs in EdgeRuntime.waitUntil inside the Pro plan's 400s
 // wall clock, and the client polls `avatar_jobs` (migration 112) under RLS.
 //
-// Paid tiers, plus ONE lifetime free generation per account — and that check
-// happens HERE rather than in the client (CLAUDE.md §1.2), because the
-// function is directly invokable by any signed-in user. The free grant is a
-// row-level flag spent atomically by consume_free_avatar (migration 077); a
-// client cannot see it, set it, or ask twice.
+// Every tier, free included, on a MONTHLY allowance (_shared/plan-limits.ts)
+// — and that check happens HERE rather than in the client (CLAUDE.md §1.2),
+// because the function is directly invokable by any signed-in user. The slot
+// is consumed atomically by consume_monthly_quota before the render and
+// refunded by failJob when the render does not deliver. The free tier used to
+// get one lifetime generation (consume_free_avatar, migration 077); since
+// 2026-09-13 the photo avatar is part of onboarding for everyone, so the free
+// tier is metered the same way as paid.
 //
 // Secrets: OPENAI_KEY (required, shared with transcribe / score-pronunciation),
 //          AVATAR_IMAGE_MODEL (optional).
@@ -42,8 +45,6 @@ import { OPENAI_API_KEY, renderAvatar, failJob, runInBackground } from './render
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-/** Tiers with an ongoing daily allowance. `starter` gets one free, once. */
-const PAID_TIERS: PlanTier[] = ['basic', 'premium', 'vip'];
 
 /**
  * Source photos are downscaled client-side to 1024px before upload, which
@@ -135,14 +136,13 @@ serve(async (req: Request) => {
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-  // ── Entitlement: paid tiers only, enforced server-side ──────────────────
+  // ── Entitlement: a monthly allowance for every tier, enforced server-side ─
   const tier: PlanTier = await resolveTier(supabase, userId);
-  const isPaid = PAID_TIERS.includes(tier);
 
   // ── Abuse control ───────────────────────────────────────────────────────
-  // Ahead of the entitlement branch on purpose: an unentitled caller hammering
-  // this endpoint still costs database work, and the free-grant path below
-  // leans on this bound to keep its check-then-generate window narrow.
+  // Ahead of the quota on purpose: a caller hammering this endpoint still
+  // costs database work, and this bound keeps the consume-then-render window
+  // narrow.
   const withinBurst = await checkBurstLimit(supabase, userId, 'generate-avatar', 3, 300);
   if (!withinBurst) {
     return json(
@@ -151,71 +151,42 @@ serve(async (req: Request) => {
     );
   }
 
-  /**
-   * Set when this request is running on the account's one lifetime free
-   * generation, so the success path knows to spend it.
-   *
-   * The flag is claimed AFTER the image comes back, not here. Claiming it up
-   * front would burn a learner's single free avatar on our 502, on a provider
-   * timeout, or on a photo the moderator rejected — the three failures most
-   * likely to make someone try again. The cost of waiting is a window in which
-   * a caller could get two images before the flag lands; the burst limit above
-   * bounds that at three requests per five minutes, which is a far better
-   * trade than charging people for our own outages.
-   */
-  const usingFreeGrant = !isPaid;
-
-  if (isPaid) {
-    // MONTHLY, not daily (migration 105). A daily cap was the wrong shape for
-    // this feature: at ~$0.211 an image, 1/day is ~$6.33/user/month — 75% of
-    // net revenue on basic — to serve a behaviour nobody has. Someone setting
-    // up a profile wants two or three attempts in one sitting and then nothing
-    // for months. 3/month serves that better AND costs ten times less.
-    const monthlyLimit = getPlanLimits(tier).monthlyAvatarGenerations;
-    const { data: quotaOk, error: quotaErr } = await supabase.rpc('consume_monthly_quota', {
-      p_user_id: userId,
-      p_counter: 'avatars_generated',
-      p_limit: monthlyLimit,
-    });
-    if (quotaErr) {
-      // Fail closed — broken quota accounting must not hand out unmetered
-      // image generations, which cost real money per call.
-      console.error('[generate-avatar] consume_monthly_quota failed:', quotaErr.message);
-      return json({ error: 'Could not verify your limit. Try again shortly.' }, 503);
-    }
-    if (quotaOk !== true) {
-      return json(
-        {
-          error: `You've used all ${monthlyLimit} avatar generations for this month.`,
-          code: 'MONTHLY_AVATAR_LIMIT_REACHED',
-        },
-        429
-      );
-    }
-  } else {
-    // Free tier: allowed exactly once, ever. SPENT here, atomically, before
-    // any provider is paid — a read-then-spend-after-success let a burst of
-    // three requests all see the grant unspent and all render. A failed
-    // render gives it back (release_free_avatar in failJob), so the learner
-    // still gets their one image.
-    const { data: claimed, error: claimErr } = await supabase.rpc('consume_free_avatar', {
-      p_user_id: userId,
-    });
-
-    if (claimErr) {
-      // Fail closed for the same reason as the quota branch above.
-      console.error('[generate-avatar] consume_free_avatar failed:', claimErr.message);
-      return json({ error: 'Could not verify your plan. Try again shortly.' }, 503);
-    }
-    if (claimed !== true) {
-      return json(
-        {
-          error: "You've used your free avatar. More are included with a paid plan.",
-          code: 'AVATAR_REQUIRES_PLAN',
-        },
-        403
-      );
-    }
+  // MONTHLY, not daily (migration 105). A daily cap was the wrong shape for
+  // this feature: at ~$0.211 an image, 1/day is ~$6.33/user/month — 75% of
+  // net revenue on basic — to serve a behaviour nobody has. Someone setting
+  // up a profile wants two or three attempts in one sitting and then nothing
+  // for months. 3/month serves that better AND costs ten times less.
+  //
+  // The slot is consumed BEFORE the render, atomically: a read-then-spend-
+  // after-success let a burst of requests all see the quota open and all
+  // render. A render that does not deliver refunds it (failJob), so a provider
+  // timeout or a rejected photo never costs the learner a slot.
+  const monthlyLimit = getPlanLimits(tier).monthlyAvatarGenerations;
+  if (monthlyLimit < 1) {
+    return json(
+      { error: 'Photo avatars are not available on this plan.', code: 'AVATAR_REQUIRES_PLAN' },
+      403
+    );
+  }
+  const { data: quotaOk, error: quotaErr } = await supabase.rpc('consume_monthly_quota', {
+    p_user_id: userId,
+    p_counter: 'avatars_generated',
+    p_limit: monthlyLimit,
+  });
+  if (quotaErr) {
+    // Fail closed — broken quota accounting must not hand out unmetered
+    // image generations, which cost real money per call.
+    console.error('[generate-avatar] consume_monthly_quota failed:', quotaErr.message);
+    return json({ error: 'Could not verify your limit. Try again shortly.' }, 503);
+  }
+  if (quotaOk !== true) {
+    return json(
+      {
+        error: `You've used all ${monthlyLimit} avatar generations for this month.`,
+        code: 'MONTHLY_AVATAR_LIMIT_REACHED',
+      },
+      429
+    );
   }
 
   // ── Create the job, answer, render in the background ────────────────────
@@ -273,7 +244,6 @@ serve(async (req: Request) => {
       imageBase64,
       mimeType,
       tier,
-      usingFreeGrant,
     }).catch(async (err: unknown) => {
       // Last line of defence: renderAvatar settles the job on every path it
       // knows about, so reaching here means a bug, and the client must still
@@ -281,7 +251,7 @@ serve(async (req: Request) => {
       console.error('[generate-avatar] render crashed:', err);
       await failJob(
         supabase,
-        { jobId, userId, refundMonthlySlot: !usingFreeGrant },
+        { jobId, userId, refundMonthlySlot: true },
         'GENERATION_FAILED',
         'Avatar generation failed. Please try again.'
       );

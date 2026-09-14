@@ -63,8 +63,11 @@ jest.mock('react-native-reanimated', () => {
 const mockReplace = jest.fn();
 const mockBack = jest.fn();
 const mockCanGoBack = jest.fn(() => false);
+/** Route params; `{ source: 'onboarding' }` is what the post-sign-up flush passes. */
+let mockParams: { source?: string } = {};
 jest.mock('expo-router', () => ({
   useRouter: () => ({ replace: mockReplace, back: mockBack, canGoBack: mockCanGoBack }),
+  useLocalSearchParams: () => mockParams,
 }));
 
 jest.mock('../hooks/useAuth', () => ({ useAuth: () => ({ user: { id: 'u1' } }) }));
@@ -143,6 +146,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockCanGoBack.mockReturnValue(false);
   mockIdealL2Self = null;
+  mockParams = {};
 });
 
 describe('free-plan exit', () => {
@@ -173,7 +177,7 @@ describe('free-plan exit', () => {
       byLabel(renderer, 'Continue on the free plan').props.onPress(),
     );
 
-    // canGoBack is false here, which is the setup path: avatar-setup REPLACES
+    // canGoBack is false here, which is the setup path: onboarding REPLACES
     // into the paywall, so there is nothing beneath it and back() would be a
     // silent no-op.
     expect(mockReplace).toHaveBeenCalledWith('/(app)');
@@ -358,6 +362,22 @@ describe('paywall review-safety escape', () => {
 
     expect(mockBack).toHaveBeenCalled();
     expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  it('lands on Home from the setup path even when back is possible (2026-09-13)', async () => {
+    // The post-sign-up flush REPLACES into the paywall with source=onboarding.
+    // What the navigator kept beneath that replace (the welcome screen on a
+    // cold start) is not somewhere a new learner should be sent back to.
+    mockIsPurchasesAvailable.mockReturnValue(false);
+    mockGetOfferingPackages.mockResolvedValue([]);
+    mockCanGoBack.mockReturnValue(true);
+    mockParams = { source: 'onboarding' };
+
+    const renderer = await render();
+    await TestRenderer.act(async () => byLabel(renderer, 'Continue').props.onPress());
+
+    expect(mockReplace).toHaveBeenCalledWith('/(app)');
+    expect(mockBack).not.toHaveBeenCalled();
   });
 
   it('shows no purchase CTA at all while blocked', async () => {

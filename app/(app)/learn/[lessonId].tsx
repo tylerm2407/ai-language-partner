@@ -130,8 +130,8 @@ export default function LessonScreen() {
   //
   // The paywall used to fire from here, on the first completed lesson. It
   // does not any more: the first lesson happens before the account exists
-  // (app/(public)/onboarding.tsx) and the ask lands right after sign-up and
-  // the free avatar. Finishing a lesson in the app is now just finishing a
+  // (app/(public)/onboarding.tsx) and the ask lands right after sign-up.
+  // Finishing a lesson in the app is now just finishing a
   // lesson — no sales pitch attached to the celebration.
 
   if (loading || !targetLanguage) {

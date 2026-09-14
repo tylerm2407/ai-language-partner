@@ -22,6 +22,7 @@ import type {
   PendingOnboardingDraft,
   TrialLessonResult,
 } from '../../lib/pending-onboarding';
+import type { StashedAvatarPhoto } from '../../lib/onboarding-avatar-photo';
 import type { LanguageCode, ProficiencyLevel } from '../../types';
 import type { TopicKey } from './topic-packs';
 import { DEFAULT_LANGUAGE, DEFAULT_LEVEL } from './steps/config';
@@ -51,6 +52,9 @@ export function useOnboardingAnswers() {
   const [trial, setTrial] = useState<TrialLessonResult | null>(null);
   const [displayName, setDisplayName] = useState<string>('');
   const [avatarPresetId, setAvatarPresetId] = useState<string | null>(null);
+  // A photo parked on disk for generation after sign-up; see
+  // lib/onboarding-avatar-photo.ts. One of preset or photo, never both.
+  const [avatarPhoto, setAvatarPhoto] = useState<StashedAvatarPhoto | null>(null);
   const [dailyGoal, setDailyGoal] = useState<number>(DEFAULT_DAILY_GOAL_MINUTES);
 
   const draft: PendingOnboardingDraft = useMemo(
@@ -63,6 +67,7 @@ export function useOnboardingAnswers() {
       trial,
       displayName: displayName.trim() ? displayName.trim() : null,
       avatarPresetId,
+      avatarPhoto,
       dailyGoalMinutes: dailyGoal,
       notificationPrefs,
       completedAt,
@@ -76,6 +81,7 @@ export function useOnboardingAnswers() {
       trial,
       displayName,
       avatarPresetId,
+      avatarPhoto,
       dailyGoal,
       notificationPrefs,
       completedAt,
@@ -100,6 +106,7 @@ export function useOnboardingAnswers() {
     if (pending.trial) setTrial(pending.trial);
     if (pending.displayName) setDisplayName(pending.displayName);
     if (pending.avatarPresetId) setAvatarPresetId(pending.avatarPresetId);
+    if (pending.avatarPhoto) setAvatarPhoto(pending.avatarPhoto);
     if (pending.dailyGoalMinutes) setDailyGoal(pending.dailyGoalMinutes);
   }, []);
 
@@ -140,6 +147,8 @@ export function useOnboardingAnswers() {
     setDisplayName,
     avatarPresetId,
     setAvatarPresetId,
+    avatarPhoto,
+    setAvatarPhoto,
     dailyGoal,
     setDailyGoal,
     draft,

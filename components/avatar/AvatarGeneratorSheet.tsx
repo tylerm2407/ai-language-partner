@@ -24,6 +24,14 @@ interface AvatarGeneratorSheetProps {
   onGenerated: (path: string) => void;
   /** Invoked when the user is on a free plan and taps through to upgrade. */
   onUpgrade?: () => void;
+  /**
+   * DEFERRED mode. When set, the sheet stops after the photo and style are
+   * chosen and hands them back instead of generating: onboarding runs before
+   * an account exists, so the model call (which needs a JWT) happens after
+   * sign-up (components/onboarding/deferred-avatar.ts). The consent step is
+   * unchanged — the photo is still sent to the provider, just later.
+   */
+  onPhotoReady?: (photo: PreparedPhoto, styleKey: string) => void;
 }
 
 type Step = 'consent' | 'compose' | 'camera' | 'working';
@@ -42,7 +50,7 @@ type Step = 'consent' | 'compose' | 'camera' | 'working';
  * already presents in-app.
  */
 export const AvatarGeneratorSheet = React.memo(
-  ({ visible, onClose, onGenerated, onUpgrade }: AvatarGeneratorSheetProps) => {
+  ({ visible, onClose, onGenerated, onUpgrade, onPhotoReady }: AvatarGeneratorSheetProps) => {
     const { c, scheme } = useUi2Theme();
     const styles = STYLES[scheme];
     const [step, setStep] = useState<Step>('consent');
@@ -73,8 +81,11 @@ export const AvatarGeneratorSheet = React.memo(
     // style list is already populated by the time they reach it. Fetched on
     // open rather than once at mount: a style added server-side then shows up
     // on the next open instead of requiring an app restart.
+    //
+    // Skipped in deferred mode: the catalogue sits behind auth and there is no
+    // session yet, so the call could only 401 into the bundled fallback list.
     useEffect(() => {
-      if (!visible) return;
+      if (!visible || onPhotoReady) return;
       let cancelled = false;
       fetchAvatarStyles().then((list) => {
         if (cancelled) return;
@@ -89,7 +100,7 @@ export const AvatarGeneratorSheet = React.memo(
       return () => {
         cancelled = true;
       };
-    }, [visible]);
+    }, [visible, onPhotoReady]);
 
     const choose = useCallback(async (source: 'library' | 'file') => {
       setError(null);
@@ -113,6 +124,11 @@ export const AvatarGeneratorSheet = React.memo(
 
     const run = useCallback(async () => {
       if (!photo) return;
+      if (onPhotoReady) {
+        onPhotoReady(photo, styleKey);
+        onClose();
+        return;
+      }
       setStep('working');
       setError(null);
       setNeedsUpgrade(false);
@@ -129,7 +145,7 @@ export const AvatarGeneratorSheet = React.memo(
           setError('Avatar generation failed. Please try again.');
         }
       }
-    }, [photo, styleKey, onGenerated, onClose]);
+    }, [photo, styleKey, onGenerated, onClose, onPhotoReady]);
 
     return (
       <Sheet
@@ -263,15 +279,23 @@ export const AvatarGeneratorSheet = React.memo(
                 </View>
               )}
 
+              {onPhotoReady && (
+                <Caption style={styles.workingHint}>
+                  We draw your avatar from it right after you sign up. It takes a few minutes and
+                  lands on your profile on its own.
+                </Caption>
+              )}
               <Pressable
                 style={[styles.primaryButton, !photo && styles.primaryButtonDisabled]}
                 onPress={run}
                 disabled={!photo}
                 accessibilityRole="button"
-                accessibilityLabel="Generate avatar"
+                accessibilityLabel={onPhotoReady ? 'Use this photo' : 'Generate avatar'}
                 accessibilityState={{ disabled: !photo }}
               >
-                <Body style={styles.primaryButtonText}>Generate avatar</Body>
+                <Body style={styles.primaryButtonText}>
+                  {onPhotoReady ? 'Use this photo' : 'Generate avatar'}
+                </Body>
               </Pressable>
               <Pressable style={styles.secondaryButton} onPress={onClose} accessibilityRole="button">
                 <Body style={styles.secondaryButtonText}>Cancel</Body>

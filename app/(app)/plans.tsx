@@ -23,7 +23,7 @@
 import { View, Text, Pressable, ScrollView, Alert, ActivityIndicator, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import type { PurchasesPackage } from 'react-native-purchases';
 import { useAuth } from '../../hooks/useAuth';
@@ -70,6 +70,11 @@ export default function PlansScreen() {
   const { user } = useAuth();
   const { subscription, profile, refreshSubscription, setEntitledTier } = useAppStore();
   const router = useRouter();
+  // `source=onboarding` is set by the post-sign-up flush. Leaving the paywall
+  // then means Home, full stop — never `back()`, which on that path could land
+  // on whatever the navigator kept beneath the replace (the welcome screen).
+  const { source } = useLocalSearchParams<{ source?: string }>();
+  const fromOnboarding = source === 'onboarding';
 
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -102,14 +107,15 @@ export default function PlansScreen() {
    * Leave the paywall — after a purchase, a restore, an offerings failure, or
    * a deliberate "stay on the free plan".
    *
-   * `canGoBack` is false on the setup path: avatar-setup REPLACES into this
-   * screen rather than pushing, precisely so a learner cannot swipe back into
-   * a finished step. Falling through to Home is what makes the exit work there.
+   * On the setup path (`fromOnboarding`) the exit is always Home: onboarding
+   * REPLACES into this screen, and whether the navigator still holds a route
+   * beneath it is not something this screen should have to know. Opened from
+   * Profile or an in-place upsell, back is the right exit.
    */
   const proceed = useCallback(() => {
-    if (router.canGoBack()) router.back();
+    if (!fromOnboarding && router.canGoBack()) router.back();
     else router.replace('/(app)');
-  }, [router]);
+  }, [router, fromOnboarding]);
 
   /** Decline, and stay on the free plan. */
   const declineToFree = useCallback(() => {

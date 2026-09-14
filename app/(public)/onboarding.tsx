@@ -22,6 +22,7 @@ import { trackEvent } from '../../lib/analytics';
 import { useScreenView } from '../../hooks/useScreenView';
 import { savePendingOnboarding, type PendingOnboardingDraft } from '../../lib/pending-onboarding';
 import { flushDraftToProfile } from '../../components/onboarding/flush-draft';
+import { stashOnboardingPhoto } from '../../lib/onboarding-avatar-photo';
 import { useOnboardingAnswers } from '../../components/onboarding/useOnboardingAnswers';
 import { useDraftBootstrap } from '../../components/onboarding/useDraftBootstrap';
 import { TrialLessonStep } from '../../components/onboarding/steps/TrialLessonStep';
@@ -61,6 +62,7 @@ export default function OnboardingScreen() {
 
   const [step, setStep] = useState<Step>('language');
   const [customizerOpen, setCustomizerOpen] = useState(false);
+  const [generatorOpen, setGeneratorOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Every answer, the draft built from them, and the restore function. Kept
@@ -87,6 +89,8 @@ export default function OnboardingScreen() {
     setDisplayName,
     avatarPresetId,
     setAvatarPresetId,
+    avatarPhoto,
+    setAvatarPhoto,
     dailyGoal,
     setDailyGoal,
     draft,
@@ -109,12 +113,17 @@ export default function OnboardingScreen() {
    * the learner straight to Home and skipping the avatar entirely. The whole
    * chain is replaces — avatar-setup replaces into plans, plans replaces into
    * Home — which is also what keeps a finished setup step off the back stack.
+   *
+   * Straight to the paywall: the avatar is chosen on the identity step now,
+   * so there is no setup screen between sign-up and the ask. `source` tells
+   * the paywall to land on Home when the learner leaves it, whatever the
+   * navigator's back stack happens to hold.
    */
   const writeProfile = useCallback(
     async (userId: string, draft: PendingOnboardingDraft) => {
       await flushDraftToProfile(draft);
       await loadUserData(userId);
-      router.replace('/(app)/avatar-setup');
+      router.replace({ pathname: '/(app)/plans', params: { source: 'onboarding' } });
     },
     [loadUserData, router],
   );
@@ -412,11 +421,22 @@ export default function OnboardingScreen() {
           avatarPresetId={avatarPresetId}
           onPickAvatar={(preset) => {
             setAvatarPresetId(preset.id);
+            setAvatarPhoto(null);
             setCustomizerOpen(false);
+          }}
+          avatarPhoto={avatarPhoto}
+          onPhotoReady={(photo, styleKey) => {
+            // Parked on disk; only the URI rides in the draft. A preset chosen
+            // earlier gives way — one look, not two.
+            setAvatarPhoto(stashOnboardingPhoto(photo, styleKey));
+            setAvatarPresetId(null);
           }}
           pickerOpen={customizerOpen}
           onPickerOpen={() => setCustomizerOpen(true)}
           onPickerClose={() => setCustomizerOpen(false)}
+          generatorOpen={generatorOpen}
+          onGeneratorOpen={() => setGeneratorOpen(true)}
+          onGeneratorClose={() => setGeneratorOpen(false)}
         />
       );
       break;
