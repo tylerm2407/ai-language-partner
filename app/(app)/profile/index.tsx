@@ -13,7 +13,6 @@ import { useUi2Theme } from '../../../hooks/useUi2Theme';
 import { spacing } from '../../../config/theme';
 import { SlabCard } from '../../../components/ui2/SlabCard';
 import { Ui2ListRow } from '../../../components/ui2/Ui2ListRow';
-import { LevelBadge } from '../../../components/stats/LevelBadge';
 import { AchievementGridView, ACHIEVEMENT_TOTAL } from '../../../components/gamification/AchievementGrid';
 import { useAchievements } from '../../../hooks/useAchievements';
 import { IdentityRow, StatTiles } from '../../../components/ui2/profile/ProfileTiles';
@@ -272,11 +271,6 @@ export default function ProfileScreen() {
             achievements={achievements.loading ? null : { earned: achievements.earnedAchievements.length, total: ACHIEVEMENT_TOTAL }}
             lessons={lessonsSummary}
           />
-        </View>
-
-        {/* Level ladder */}
-        <View style={styles.blockSpacing}>
-          <LevelBadge level={profile?.level ?? 'beginner'} />
         </View>
 
         {/* The Total XP / numeric Level tiles used to sit here. They are gone
