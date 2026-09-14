@@ -40,7 +40,7 @@
  * The state names are the old star mascot's, so nothing upstream changes.
  * When the Rive rig lands it replaces the Image element behind this same API.
  */
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, StyleSheet, View, type ViewStyle } from 'react-native';
 import { Image } from 'expo-image';
 import { useMotion } from '../../hooks/useMotion';
@@ -88,6 +88,13 @@ const CLIP_FOR: Record<MascotState, Clip> = {
   disappointed: 'listening',
 };
 
+/**
+ * The one-shot files carry loop count 1 (set with `webpmux -set loop 1`), the
+ * loops carry 0. So if the JS timer below fires late, a one-shot holds its
+ * last frame instead of wrapping to its first — bedtime must never snap from
+ * asleep back to standing while the sleep loop is still being handed in.
+ * Keep that when a clip is regenerated.
+ */
 const CLIPS: Record<Clip, number> = {
   idle: require('../../assets/mascot/video/sol-idle.webp'),
   listening: require('../../assets/mascot/video/sol-listening.webp'),
@@ -120,40 +127,103 @@ export function afterClip(clip: Clip): Clip {
 }
 
 const STILL = require('../../assets/mascot/sol-still.png');
+/** First frame of the sleep loop (== last frame of bedtime), so a clip that starts asleep never shows him standing first. */
+const ASLEEP_STILL = require('../../assets/mascot/sol-asleep-still.png');
+
+function stillFor(clip: Clip): number {
+  return clip === 'sleep' ? ASLEEP_STILL : STILL;
+}
+
+/**
+ * One mounted Image. `run` is part of the React key: a new run is a fresh
+ * native view starting at frame one. The key is what makes the hand-over
+ * below seamless — the slot that was pre-loaded keeps its key, so React keeps
+ * the native view and nothing has to decode at the moment of the swap.
+ */
+interface Slot {
+  clip: Clip;
+  run: number;
+}
 
 export function Mascot({ state = 'idle', size = 'md', style, accessibilityVisible = false }: MascotProps) {
   const px = typeof size === 'number' ? size : SIZE_PX[size];
   const { shouldReduce } = useMotion();
   const wanted = CLIP_FOR[state];
-  const [clip, setClip] = useState<Clip>(wanted);
-  // Bumped on every fresh request and on every return to the foreground;
-  // part of the Image key, so the animation remounts and starts from frame
-  // one instead of sitting on the last frame it reached.
-  const [run, setRun] = useState(0);
-  const busyRef = useRef(false);
+  const runRef = useRef(0);
+  const nextRun = () => ++runRef.current;
+  // `front` is what the learner sees. `back` is the clip a one-shot hands
+  // over to, mounted underneath at opacity 0 with autoplay off, so its first
+  // frame is already decoded when the front finishes. The old approach
+  // remounted a single Image on the hand-over, and for ~100-300 ms the
+  // placeholder still (Sol standing) showed while the sleep loop decoded —
+  // a visible flash on the welcome screen at the end of bedtime.
+  const [front, setFront] = useState<Slot>(() => ({ clip: wanted, run: nextRun() }));
+  const [back, setBackState] = useState<Slot | null>(() =>
+    LOOPS.has(wanted) ? null : { clip: afterClip(wanted), run: nextRun() },
+  );
+  // Mirror of `back` the timer can read without nesting state updates.
+  const backRef = useRef<Slot | null>(back);
+  const setBack = (b: Slot | null) => {
+    backRef.current = b;
+    setBackState(b);
+  };
+  const busyRef = useRef(!LOOPS.has(wanted));
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const frontRef = useRef<Image>(null);
+  const mountedRef = useRef(false);
 
-  const play = (next: Clip) => {
+  const clearTimer = () => {
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = null;
-    busyRef.current = !LOOPS.has(next);
-    setClip(next);
-    setRun((n) => n + 1);
-    if (LOOPS.has(next)) return;
-    timerRef.current = setTimeout(() => {
-      busyRef.current = false;
-      const after = afterClip(next);
-      setClip(after);
-      setRun((n) => n + 1);
-    }, CLIP_MS[next]);
   };
+
+  const play = (next: Clip) => {
+    clearTimer();
+    busyRef.current = !LOOPS.has(next);
+    setFront({ clip: next, run: nextRun() });
+    setBack(LOOPS.has(next) ? null : { clip: afterClip(next), run: nextRun() });
+  };
+
+  // The one-shot timer starts when the front clip has actually loaded, not
+  // when it was requested: decode time would otherwise be taken off the end
+  // of the clip.
+  const onFrontLoad = useCallback((slot: Slot) => {
+    if (LOOPS.has(slot.clip)) return;
+    clearTimer();
+    timerRef.current = setTimeout(() => {
+      timerRef.current = null;
+      busyRef.current = false;
+      // Promote the pre-loaded slot. Its key is unchanged, so this is an
+      // opacity flip plus startAnimating on a view that is already showing
+      // the right first frame.
+      const promoted = backRef.current ?? { clip: afterClip(slot.clip), run: nextRun() };
+      setBack(null);
+      setFront(promoted);
+    }, CLIP_MS[slot.clip]);
+  }, []);
+
+  useEffect(() => {
+    if (LOOPS.has(front.clip)) {
+      // Fresh mounts autoplay already; a promoted slot was mounted with
+      // autoplay off and needs the nudge. Calling it on both is harmless.
+      frontRef.current?.startAnimating().catch(() => undefined);
+    }
+  }, [front]);
 
   // Latch: a one-shot runs to its end even if the parent has already gone
   // back to idle. A new request replaces whatever is playing. Loops never
   // latch, so a parent can always move Sol out of idle or sleep.
   useEffect(() => {
+    if (!mountedRef.current) {
+      // The initial state was mounted by useState; do not remount it.
+      mountedRef.current = true;
+      return;
+    }
     if (wanted === 'idle') {
-      if (!busyRef.current) setClip('idle');
+      if (!busyRef.current) {
+        setFront((f) => (f.clip === 'idle' ? f : { clip: 'idle', run: nextRun() }));
+        setBack(null);
+      }
       return;
     }
     play(wanted);
@@ -169,12 +239,7 @@ export function Mascot({ state = 'idle', size = 'md', style, accessibilityVisibl
     return () => sub.remove();
   }, [wanted]);
 
-  useEffect(
-    () => () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    },
-    [],
-  );
+  useEffect(() => () => clearTimer(), []);
 
   const a11y = {
     accessibilityElementsHidden: !accessibilityVisible,
@@ -182,24 +247,34 @@ export function Mascot({ state = 'idle', size = 'md', style, accessibilityVisibl
     accessibilityLabel: accessibilityVisible ? `Sol, ${state}` : undefined,
   };
 
+  const renderSlot = (slot: Slot, isFront: boolean) => (
+    <Image
+      key={`${slot.clip}-${slot.run}`}
+      ref={isFront ? frontRef : undefined}
+      source={CLIPS[slot.clip]}
+      style={[styles.fill, isFront ? null : styles.hidden]}
+      contentFit="contain"
+      // The pre-loaded slot sits on its first frame until it is promoted.
+      autoplay={isFront}
+      onLoad={isFront ? () => onFrontLoad(slot) : undefined}
+      // The still shows until the first frame decodes, so there is never an
+      // empty box on a mount or a fresh request.
+      placeholder={stillFor(slot.clip)}
+      placeholderContentFit="contain"
+      transition={0}
+      cachePolicy="memory"
+    />
+  );
+
   return (
     <View style={[{ width: px, height: px }, style]} {...a11y}>
       {shouldReduce ? (
-        <Image source={STILL} style={styles.fill} contentFit="contain" />
+        <Image source={stillFor(wanted)} style={styles.fill} contentFit="contain" />
       ) : (
-        <Image
-          key={`${clip}-${run}`}
-          source={CLIPS[clip]}
-          style={styles.fill}
-          contentFit="contain"
-          autoplay
-          // The still shows until the first frame decodes, so there is never
-          // an empty box on mount or on a clip swap.
-          placeholder={STILL}
-          placeholderContentFit="contain"
-          transition={0}
-          cachePolicy="memory"
-        />
+        <>
+          {back ? renderSlot(back, false) : null}
+          {renderSlot(front, true)}
+        </>
       )}
     </View>
   );
@@ -220,5 +295,6 @@ export function mascotForOutcome(outcome: 'correct' | 'wrong' | 'complete'): Mas
 }
 
 const styles = StyleSheet.create({
-  fill: { width: '100%', height: '100%', backgroundColor: 'transparent' },
+  fill: { ...StyleSheet.absoluteFillObject, backgroundColor: 'transparent' },
+  hidden: { opacity: 0 },
 });
