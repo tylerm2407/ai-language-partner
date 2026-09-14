@@ -7,6 +7,8 @@ import { useCallback, useEffect, useRef, useState, type ComponentProps, type Rea
 import { StyleSheet, Text, View } from 'react-native';
 import type Animated from 'react-native-reanimated';
 import { useUi2Theme } from '../../../hooks/useUi2Theme';
+import type { CefrBand } from '../../../lib/cefr-proficiency';
+import { cefrChipVariant } from '../../ui2/CefrExplainerSheet';
 import type { MascotMood } from '../../ui2/MascotSol';
 import type { StepHeroEntrance } from '../../ui2/StepHero';
 
@@ -38,19 +40,25 @@ export function useMascotMood(base: MascotMood): [MascotMood, () => void] {
   return [cheering ? 'cheer' : base, cheer];
 }
 
-export function LevelBars({ lit, selected }: { lit: number; selected: boolean }) {
-  const { c } = useUi2Theme();
-  // On the selected row the block is solid primary, so the lit bars go white.
-  const on = selected ? c.onPrimary : c.primary;
-  const off = selected ? c.onPrimary : c.idle;
+/**
+ * The band code as the row's lead. Green, amber, pink up the ladder — the same
+ * three tints the explainer sheet's ladder uses, so the two read as one scale.
+ * On the selected (solid primary) row the tile goes to the slab shade with
+ * white text, the way the flag tile swaps on a selected language.
+ */
+export function BandTile({ band, selected }: { band: CefrBand; selected: boolean }) {
+  const { c, type } = useUi2Theme();
+  const variant = cefrChipVariant(band);
+  const fill = selected
+    ? { bg: c.slab, fg: c.onPrimary }
+    : variant === 'success'
+      ? { bg: c.greenTint, fg: c.green }
+      : variant === 'warning'
+        ? { bg: c.yellowTint, fg: c.yellow }
+        : { bg: c.pinkTint, fg: c.error };
   return (
-    <View style={stepStyles.bars} accessibilityElementsHidden importantForAccessibility="no">
-      {[0, 1, 2, 3, 4].map((k) => (
-        <View
-          key={k}
-          style={[stepStyles.bar, { height: 6 + k * 4, backgroundColor: k < lit ? on : off, opacity: k < lit ? 1 : 0.4 }]}
-        />
-      ))}
+    <View style={[stepStyles.bandTile, { backgroundColor: fill.bg }]} accessibilityElementsHidden importantForAccessibility="no">
+      <Text style={{ fontFamily: type.uiHeavy, fontSize: 14, color: fill.fg }}>{band}</Text>
     </View>
   );
 }
@@ -80,8 +88,9 @@ export const stepStyles = StyleSheet.create({
   avatarRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   solCard: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   eyebrow: { fontSize: 12, letterSpacing: 1, textTransform: 'uppercase' },
-  bars: { flexDirection: 'row', alignItems: 'flex-end', gap: 3, height: 22 },
-  bar: { width: 5, borderRadius: 2 },
   flagTile: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  bandTile: { width: 44, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  cefrNote: { gap: 2, padding: 14, borderRadius: 16 },
+  canDo: { padding: 10, borderRadius: 14 },
   flagGlyph: { fontSize: 18 },
 });

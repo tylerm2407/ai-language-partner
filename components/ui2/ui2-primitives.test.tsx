@@ -24,6 +24,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import React from 'react';
+import { Text } from 'react-native';
 import TestRenderer, { type ReactTestInstance } from 'react-test-renderer';
 
 import { ui2Dark, ui2Light, type Ui2Palette } from '../../config/theme';
@@ -35,6 +36,7 @@ import { Ui2InlineError } from './Ui2InlineError';
 import { scrimColor } from './Ui2Sheet';
 import { Ui2Input, inputSurface } from './Ui2Input';
 import { Ui2ListRow, trailingGlyph } from './Ui2ListRow';
+import { OptionRow } from './OptionRow';
 
 // The icon set resolves its font asynchronously and setState()s after the
 // assertion has already run. Nothing here depends on the glyph shape — only on
@@ -78,6 +80,7 @@ const FILES = [
   'Ui2Sheet.tsx',
   'Ui2Input.tsx',
   'Ui2ListRow.tsx',
+  'CefrExplainerSheet.tsx',
 ];
 
 /**
@@ -428,5 +431,25 @@ describe('Ui2ListRow', () => {
     expect(hosts(r, (n) => n.props?.accessibilityRole === 'button')).toHaveLength(0);
     // Destructive still says what it does in words, not only in red.
     expect(texts(r)).toContain('Delete account');
+  });
+});
+
+describe('OptionRow detail slot', () => {
+  const detail = React.createElement(Text, null, 'At B1 you can handle most situations while travelling.');
+
+  it('opens under the row only while it is selected', () => {
+    const closed = render(
+      React.createElement(OptionRow, { title: 'Intermediate', selected: false, onSelect: () => {}, detail }),
+    );
+    expect(closed.root.findAllByType(Text).map((t) => t.props.children)).not.toContain(
+      'At B1 you can handle most situations while travelling.',
+    );
+
+    const open = render(
+      React.createElement(OptionRow, { title: 'Intermediate', selected: true, onSelect: () => {}, detail }),
+    );
+    expect(open.root.findAllByType(Text).map((t) => t.props.children)).toContain(
+      'At B1 you can handle most situations while travelling.',
+    );
   });
 });

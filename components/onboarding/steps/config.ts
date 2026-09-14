@@ -23,15 +23,6 @@ export const IDEAL_SELF_PLACEHOLDER: Partial<Record<LanguageCode, string>> = {
   en: 'Giving a confident talk at work in English.',
 };
 
-/** Number of lit signal bars per self-reported level, shown on the level rows. */
-export const LEVEL_BARS: Record<ProficiencyLevel, number> = {
-  beginner: 1,
-  elementary: 2,
-  intermediate: 3,
-  upper_intermediate: 4,
-  advanced: 5,
-};
-
 export const LEVELS: { value: ProficiencyLevel; label: string; description: string }[] = [
   { value: 'beginner', label: 'Beginner', description: 'I know a few words' },
   { value: 'elementary', label: 'Elementary', description: 'I can form basic sentences' },

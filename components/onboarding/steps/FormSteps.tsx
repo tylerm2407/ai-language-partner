@@ -7,6 +7,7 @@ import { Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useUi2Theme } from '../../../hooks/useUi2Theme';
 import { cefrBandForProficiencyLevel } from '../../../lib/cefr-proficiency';
+import { cefrCanDo } from '../../../lib/cefr-labels';
 import type { PlacementChoice, PlacementOption } from '../../../lib/course-placement';
 import type { NotificationPrefs } from '../../../lib/notification-prefs';
 import { SUPPORTED_LANGUAGES, DAILY_GOALS } from '../../../config/app';
@@ -14,8 +15,8 @@ import type { LanguageCode, ProficiencyLevel } from '../../../types';
 import { OptionRow } from '../../ui2/OptionRow';
 import { Chip } from '../../ui2/Chip';
 import { NotificationBuilder } from '../NotificationBuilder';
-import { FlagTile, LevelBars, stepStyles, type StepFrame } from './bits';
-import { LEVELS, LEVEL_BARS } from './config';
+import { BandTile, FlagTile, stepStyles, type StepFrame } from './bits';
+import { LEVELS } from './config';
 
 function Lede({ children }: { children: React.ReactNode }) {
   const { c, type } = useUi2Theme();
@@ -72,38 +73,62 @@ export function LevelStep({
   value: ProficiencyLevel;
   onChange: (level: ProficiencyLevel) => void;
 }) {
+  const { c, type } = useUi2Theme();
   return (
     <>
       {frame.hero("What's your level?", 'pop')}
-      {/* The acronym used to be introduced on the removed mode step, and
-          this is now the first and only place a new user meets it — so it
-          defines itself here or nowhere. */}
       <Animated.View entering={frame.enter(0)}>
-        <Lede>
-          Pick whichever is closest. Nothing here is a test, and you can change it any time. From
-          here on your progress is shown as a CEFR level — the A1 to C2 scale — stated as what you
-          can actually do.
-        </Lede>
+        <Lede>Pick whichever is closest. Nothing here is a test, and you can change it any time.</Lede>
+      </Animated.View>
+      {/* The acronym used to be introduced on the removed mode step, and this
+          is now the first place a new user meets it — so it defines itself
+          here. The rows below ARE the scale: each choice is a band, and the
+          chosen one opens to say what that band means (canvas "CEFR Level
+          Explainer", onboarding option A, 2026-09-13). */}
+      <Animated.View entering={frame.enter(1)} style={[stepStyles.cefrNote, { backgroundColor: c.surface2 }]}>
+        <Text style={{ fontFamily: type.uiHeavy, fontSize: 11, letterSpacing: 0.6, textTransform: 'uppercase', color: c.onTint }}>
+          Your level is a CEFR level
+        </Text>
+        <Text style={{ fontFamily: type.ui, fontSize: 12, lineHeight: 16, color: c.muted }}>
+          The A1 to C2 scale schools and employers use. Each step below says what you can do at it,
+          so your level means the same thing outside Fluenci.
+        </Text>
       </Animated.View>
       <View style={stepStyles.rows}>
-        {LEVELS.map((l, i) => (
-          <OptionRow
-            key={l.value}
-            index={i + 1}
-            title={l.label}
-            subtitle={l.description}
-            selected={value === l.value}
-            onSelect={() => {
-              onChange(l.value);
-              frame.cheer();
-            }}
-            lead={<LevelBars lit={LEVEL_BARS[l.value]} selected={value === l.value} />}
-            trail={<Chip label={cefrBandForProficiencyLevel(l.value)} />}
-          />
-        ))}
+        {LEVELS.map((l, i) => {
+          const band = cefrBandForProficiencyLevel(l.value);
+          const selected = value === l.value;
+          return (
+            <OptionRow
+              key={l.value}
+              index={i + 2}
+              title={l.label}
+              subtitle={l.description}
+              selected={selected}
+              accessibilityLabel={`${l.label}, ${band}: ${l.description}. At ${band} you can ${lowerFirst(cefrCanDo(band))}.`}
+              onSelect={() => {
+                onChange(l.value);
+                frame.cheer();
+              }}
+              lead={<BandTile band={band} selected={selected} />}
+              detail={
+                <View style={[stepStyles.canDo, { backgroundColor: c.slab }]}>
+                  <Text style={{ fontFamily: type.ui, fontSize: 12, lineHeight: 16, color: c.onPrimary }}>
+                    <Text style={{ fontFamily: type.uiHeavy }}>At {band}</Text> you can {lowerFirst(cefrCanDo(band))}.
+                  </Text>
+                </View>
+              }
+            />
+          );
+        })}
       </View>
     </>
   );
+}
+
+/** "Handle most situations…" reads as an order; "you can handle…" as a fact. */
+function lowerFirst(s: string): string {
+  return s.charAt(0).toLowerCase() + s.slice(1);
 }
 
 /*

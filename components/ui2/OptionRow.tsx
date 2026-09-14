@@ -8,7 +8,7 @@
  *
  * The `lead` slot renders as given: a lead that paints in `c.primary` will
  * vanish on the selected fill, so pass it `selected` and let it swap to
- * `c.onPrimary` (see `LevelBars` in onboarding).
+ * `c.onPrimary` (see `BandTile` in onboarding).
  */
 import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
@@ -35,6 +35,13 @@ interface OptionRowProps {
   /** Trailing slot shown when NOT selected (the check replaces it). */
   trail?: React.ReactNode;
   /**
+   * Opens under the row while it is selected — the one place a picker can
+   * say what the choice means without lengthening every row (the onboarding
+   * level step's can-do line). Paints on the primary fill, so give it
+   * `c.onPrimary` text.
+   */
+  detail?: React.ReactNode;
+  /**
    * Grid-tile density for short labels in a two-column grid: tighter padding,
    * one-line title, and no trailing check — the solid fill already says
    * "selected", and a 170px tile has no room for a 26px disc beside a word
@@ -56,6 +63,7 @@ export function OptionRow({
   index = 0,
   lead,
   trail,
+  detail,
   accessibilityLabel,
   style,
   tile = false,
@@ -92,35 +100,37 @@ export function OptionRow({
       >
         <Animated.View
           style={[
-            styles.row,
-            tile && styles.tileRow,
+            styles.block,
             {
               backgroundColor: selected ? c.primary : c.card,
               borderRadius: shape.radiusCard,
             },
           ]}
         >
-          {lead}
-          <View style={styles.text}>
-            <Text
-              numberOfLines={tile ? 1 : undefined}
-              style={{ fontFamily: type.uiHeavy, fontSize: tile ? 15 : 16, lineHeight: 22, color: selected ? c.onPrimary : c.ink }}
-            >
-              {title}
-            </Text>
-            {subtitle ? (
-              <Text style={{ fontFamily: type.ui, fontSize: 13, lineHeight: 18, color: selected ? c.onPrimaryMuted : c.muted }}>
-                {subtitle}
+          <View style={[styles.row, tile && styles.tileRow]}>
+            {lead}
+            <View style={styles.text}>
+              <Text
+                numberOfLines={tile ? 1 : undefined}
+                style={{ fontFamily: type.uiHeavy, fontSize: tile ? 15 : 16, lineHeight: 22, color: selected ? c.onPrimary : c.ink }}
+              >
+                {title}
               </Text>
-            ) : null}
+              {subtitle ? (
+                <Text style={{ fontFamily: type.ui, fontSize: 13, lineHeight: 18, color: selected ? c.onPrimaryMuted : c.muted }}>
+                  {subtitle}
+                </Text>
+              ) : null}
+            </View>
+            {selected && !tile ? (
+              <Animated.View style={[styles.check, { backgroundColor: c.onPrimary }, checkStyle]}>
+                <Ionicons name="checkmark" size={16} color={c.primary} />
+              </Animated.View>
+            ) : (
+              trail
+            )}
           </View>
-          {selected && !tile ? (
-            <Animated.View style={[styles.check, { backgroundColor: c.onPrimary }, checkStyle]}>
-              <Ionicons name="checkmark" size={16} color={c.primary} />
-            </Animated.View>
-          ) : (
-            trail
-          )}
+          {selected && detail ? <View style={styles.detail}>{detail}</View> : null}
         </Animated.View>
       </Pressable>
     </Animated.View>
@@ -128,6 +138,7 @@ export function OptionRow({
 }
 
 const styles = StyleSheet.create({
+  block: { overflow: 'hidden' },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -138,6 +149,7 @@ const styles = StyleSheet.create({
   },
   tileRow: { gap: 10, paddingHorizontal: 12, paddingVertical: 12, minHeight: 64 },
   text: { flex: 1, gap: 2, minWidth: 0 },
+  detail: { paddingHorizontal: 16, paddingBottom: 14, marginTop: -4 },
   check: {
     width: 26,
     height: 26,

@@ -108,3 +108,21 @@ export function cefrBandColors(band: string | null | undefined): CefrBandColors 
   const normalized = normalizeBand(band);
   return normalized ? CEFR_BAND_COLORS[normalized] : CEFR_BAND_COLORS_UNKNOWN;
 }
+
+// ─── Band names ─────────────────────────────────────────────────
+
+/**
+ * The plain-English name each band goes by. Used only where the ladder is
+ * explained as a whole (the CEFR explainer sheet); a badge on its own still
+ * pairs the code with the can-do line, never with the name — "Intermediate"
+ * says less about what a learner can do than the sentence does. Names follow
+ * the Council of Europe's common labels rather than an invented scale.
+ */
+export const CEFR_BAND_NAMES: Record<CefrBand, string> = {
+  A1: 'Beginner',
+  A2: 'Elementary',
+  B1: 'Intermediate',
+  B2: 'Upper intermediate',
+  C1: 'Advanced',
+  C2: 'Mastery',
+};

@@ -76,6 +76,8 @@ interface LevelDueRowProps {
   basis?: string | null;
   dueCount: number;
   onReview: () => void;
+  /** Opens the CEFR explainer. The card is the badge the question is asked of. */
+  onExplain?: () => void;
 }
 
 /**
@@ -100,7 +102,7 @@ export function levelEyebrow(
   return `${progressPercent}% to ${nextBand}`;
 }
 
-export function LevelDueRow({ band, nextBand, progressPercent, measured, basis, dueCount, onReview }: LevelDueRowProps) {
+export function LevelDueRow({ band, nextBand, progressPercent, measured, basis, dueCount, onReview, onExplain }: LevelDueRowProps) {
   const { c, type } = useUi2Theme();
   const enter = useHomeEnter();
   const eyebrow = levelEyebrow(nextBand, progressPercent, measured);
@@ -108,49 +110,61 @@ export function LevelDueRow({ band, nextBand, progressPercent, measured, basis, 
   const dueLabel = dueCount === 1 ? 'card due' : 'cards due';
   return (
     <Animated.View entering={enter(1)} style={styles.statRow}>
-      <SlabCard
-        tint="primary"
-        style={styles.levelCard}
-        accessible
-        accessibilityRole="progressbar"
-        accessibilityLabel={`${measured ? 'Measured level' : 'Placed at'} ${band}${measured ? '' : ', not yet measured'}. ${cefrCanDo(band)}.${basis ? ` ${basis}` : ''}`}
-        accessibilityValue={
-          progressPercent === null
-            ? undefined
-            : {
-                min: 0,
-                max: 100,
-                now: progressPercent,
-                text: !nextBand
-                  ? 'Top band'
-                  : measured
-                    ? `${progressPercent} percent of the way to ${nextBand}`
-                    : `${progressPercent} percent of the way to proving ${nextBand}`,
-              }
-        }
+      {/* The card is the badge the "what does B1 mean?" question is asked of,
+          so tapping it answers. The progressbar role stays on the card; the
+          wrapper is the button. */}
+      <Pressable
+        onPress={onExplain}
+        disabled={!onExplain}
+        style={styles.levelPress}
+        accessibilityRole="button"
+        accessibilityLabel="What is a CEFR level?"
+        accessibilityHint="Explains the A1 to C2 scale"
       >
-        <View style={styles.levelRing}>
-          <ProgressRing pct={ringPct} size={48} stroke={5} color={c.primary} track={c.primaryTintBorder}>
-            <Text style={{ fontFamily: type.heading, fontSize: 15, lineHeight: 18, color: c.onTint }}>{band}</Text>
-          </ProgressRing>
-        </View>
-        <View style={styles.levelText}>
-          <Text style={[styles.eyebrow, { fontFamily: type.uiHeavy, color: c.onTint, fontSize: 11, letterSpacing: 0.6 }]} numberOfLines={1}>
-            {eyebrow}
-          </Text>
-          <Text style={{ fontFamily: type.ui, fontSize: 12, lineHeight: 16, color: c.muted }} numberOfLines={3}>
-            {cefrCanDo(band)}
-          </Text>
-          {basis ? (
-            // The can-do line above is what keeps the band from standing bare;
-            // this is the honesty line under it, and it stays one line so the
-            // card's height does not swing with the disclosure.
-            <Text style={{ fontFamily: type.ui, fontSize: 11, lineHeight: 14, color: c.muted }} numberOfLines={1}>
-              {basis}
+        <SlabCard
+          tint="primary"
+          style={styles.levelCard}
+          accessible
+          accessibilityRole="progressbar"
+          accessibilityLabel={`${measured ? 'Measured level' : 'Placed at'} ${band}${measured ? '' : ', not yet measured'}. ${cefrCanDo(band)}.${basis ? ` ${basis}` : ''}`}
+          accessibilityValue={
+            progressPercent === null
+              ? undefined
+              : {
+                  min: 0,
+                  max: 100,
+                  now: progressPercent,
+                  text: !nextBand
+                    ? 'Top band'
+                    : measured
+                      ? `${progressPercent} percent of the way to ${nextBand}`
+                      : `${progressPercent} percent of the way to proving ${nextBand}`,
+                }
+          }
+        >
+          <View style={styles.levelRing}>
+            <ProgressRing pct={ringPct} size={48} stroke={5} color={c.primary} track={c.primaryTintBorder}>
+              <Text style={{ fontFamily: type.heading, fontSize: 15, lineHeight: 18, color: c.onTint }}>{band}</Text>
+            </ProgressRing>
+          </View>
+          <View style={styles.levelText}>
+            <Text style={[styles.eyebrow, { fontFamily: type.uiHeavy, color: c.onTint, fontSize: 11, letterSpacing: 0.6 }]} numberOfLines={1}>
+              {eyebrow}
             </Text>
-          ) : null}
-        </View>
-      </SlabCard>
+            <Text style={{ fontFamily: type.ui, fontSize: 12, lineHeight: 16, color: c.muted }} numberOfLines={3}>
+              {cefrCanDo(band)}
+            </Text>
+            {basis ? (
+              // The can-do line above is what keeps the band from standing bare;
+              // this is the honesty line under it, and it stays one line so the
+              // card's height does not swing with the disclosure.
+              <Text style={{ fontFamily: type.ui, fontSize: 11, lineHeight: 14, color: c.muted }} numberOfLines={1}>
+                {basis}
+              </Text>
+            ) : null}
+          </View>
+        </SlabCard>
+      </Pressable>
 
       <SlabCard tint="green" style={styles.dueInner}>
         <View>
@@ -371,7 +385,8 @@ const styles = StyleSheet.create({
   header: { gap: 4 },
   eyebrow: { fontSize: 12, letterSpacing: 1, textTransform: 'uppercase' },
   statRow: { flexDirection: 'row', gap: 12 },
-  levelCard: { flex: 1.5, flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12 },
+  levelPress: { flex: 1.5 },
+  levelCard: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12 },
   levelRing: { flexShrink: 0 },
   levelText: { flex: 1, gap: 4, minWidth: 0 },
   dueInner: { flex: 1, justifyContent: 'space-between', gap: 10, padding: 14 },

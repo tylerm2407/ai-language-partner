@@ -5,6 +5,7 @@ import { useSafeBack } from '../../../hooks/useSafeBack';
 import { Ionicons } from '@expo/vector-icons';
 import { useProficiencyReport } from '../../../hooks/useProficiencyReport';
 import { Ui2Header } from '../../../components/ui2/Ui2Header';
+import { CefrExplainerSheet, useCefrExplainer } from '../../../components/ui2/CefrExplainerSheet';
 import { SlabCard } from '../../../components/ui2/SlabCard';
 import { cefrCanDo, cefrAccessibilityLabel } from '../../../lib/cefr-labels';
 // `colors` is deliberately NOT imported: it is the fixed DARK palette, and a
@@ -133,6 +134,7 @@ export default function ProficiencyScreen() {
   const { c } = useUi2Theme();
   const goBack = useSafeBack('/(app)/profile');
   const { report, isLoading, error, refresh } = useProficiencyReport();
+  const cefrExplainer = useCefrExplainer();
   // The same five-strand ring Home draws, so the per-skill bars here and the
   // ring there are one number, not two. Unmeasured learners prove
   // `nextLevel` itself (their entry band); measured ones work toward the band
@@ -152,6 +154,17 @@ export default function ProficiencyScreen() {
           title="Proficiency Report"
           subtitle="Estimated from your practice history"
           onBack={() => goBack()}
+          right={
+            <Pressable
+              onPress={cefrExplainer.open}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="What is a CEFR level?"
+              style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
+            >
+              <Ionicons name="help-circle-outline" size={24} color={c.muted} />
+            </Pressable>
+          }
         />
 
         {isLoading && (
@@ -440,6 +453,12 @@ export default function ProficiencyScreen() {
             </Text>
           </ScrollView>
         )}
+        {/* No report link: this is the report. */}
+        <CefrExplainerSheet
+          visible={cefrExplainer.visible}
+          onDismiss={cefrExplainer.close}
+          band={report?.overallLevel ?? null}
+        />
       </SafeAreaView>
     </View>
   );

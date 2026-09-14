@@ -24,6 +24,7 @@ import { unitTilesToLessonTiles } from '../../components/magazine/LessonTile';
 import { useUnitProgressTiles } from '../../hooks/useUnitProgressTiles';
 import { useDailyChallenges } from '../../hooks/useDailyChallenges';
 import { HomeHeader, LevelDueRow, SessionHero, ReadRow } from '../../components/ui2/home/HomeSections';
+import { CefrExplainerSheet, useCefrExplainer } from '../../components/ui2/CefrExplainerSheet';
 import { PatternsCard } from '../../components/ui2/home/HomeInsights';
 import { useLearnerInsights } from '../../hooks/useLearnerInsights';
 import { heroSubtitle } from '../../lib/insights';
@@ -47,6 +48,7 @@ export default function HomeScreen() {
   useScreenView('home');
   const { user } = useAuth();
   const router = useRouter();
+  const cefrExplainer = useCefrExplainer();
   const { profile, dailyStats, reviewCount } = useAppStore();
   // Same reason as the learn page: the "N cards due" quick action is store
   // state that other screens change behind Home's back.
@@ -232,6 +234,7 @@ export default function HomeScreen() {
             basis={level.basis}
             dueCount={reviewCount}
             onReview={() => router.push('/learn/review' as any)}
+            onExplain={cefrExplainer.open}
           />
 
           <SessionHero
@@ -326,6 +329,12 @@ export default function HomeScreen() {
 
       {/* Pre-permission sheet — shown once, post-first-lesson, before the
           iOS system notification prompt. Lifts opt-in ~2-3× vs cold-firing. */}
+      <CefrExplainerSheet
+        visible={cefrExplainer.visible}
+        onDismiss={cefrExplainer.close}
+        band={band}
+        onSeeReport={() => router.push('/profile/proficiency' as any)}
+      />
       <PrePermissionSheet
         visible={showPrePermission}
         onEnable={handleEnableReminders}
