@@ -37,9 +37,9 @@ export default function AppLayout() {
   // lock those learners out of the product they are entitled to.
   //
   // What replaced it:
-  //   • the paywall is SHOWN once, right after sign-up (the onboarding flush
-  //     replaces into it with `source=onboarding`), with a visible way out
-  //     that lands on Home;
+  //   • the paywall is SHOWN once, right after sign-up and the name + avatar
+  //     screen (app/(app)/identity-setup.tsx replaces into it with
+  //     `source=onboarding`), with a visible way out that lands on Home;
   //   • the free tier's AI quotas are all 0 server-side (_shared/plan-limits.ts),
   //     so nothing behind this layout can spend money on a free account;
   //   • paid surfaces upsell in place when tapped, at the moment of want.
@@ -96,6 +96,7 @@ export default function AppLayout() {
               title: 'Profile',
             }}
           />
+          <Tabs.Screen name="identity-setup" options={{ href: null }} />
           <Tabs.Screen name="news" options={{ href: null }} />
           <Tabs.Screen name="practice" options={{ href: null }} />
           <Tabs.Screen name="assignments" options={{ href: null }} />

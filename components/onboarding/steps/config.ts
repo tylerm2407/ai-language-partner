@@ -57,13 +57,17 @@ export const LEVELS: { value: ProficiencyLevel; label: string; description: stri
  * `building` (2026-09-11) was a 2.4-second progress animation over three stages
  * that fetched nothing. `planReveal` takes its slot and spends the same moment
  * showing the plan it used to pretend to build.
+ *
+ * `identity` (2026-09-13) — name and avatar — moved to the far side of sign-up
+ * (`app/(app)/identity-setup.tsx`). The photo avatar is a model call behind a
+ * JWT, and the learner should see the finished avatar before the paywall, so
+ * the step now runs where the render can.
  */
 export type Step =
   | 'language'
   | 'idealSelf'
   | 'level'
   | 'course'
-  | 'identity'
   | 'goal'
   | 'notifications'
   | 'lesson'
@@ -81,7 +85,6 @@ export const ALL_STEPS: Step[] = [
   'idealSelf',
   'level',
   'course',
-  'identity',
   'goal',
   'notifications',
 ];
@@ -104,7 +107,6 @@ export const FUNNEL_STEPS: Step[] = [
   'idealSelf',
   'level',
   'course',
-  'identity',
   'goal',
   'notifications',
   'lesson',

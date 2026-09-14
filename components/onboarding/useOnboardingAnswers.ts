@@ -7,6 +7,10 @@
  * running — only the answers. Keeping the answer state together means the
  * draft memo and the restore function can never drift apart: every field that
  * is saved is a field that is restored, in one file.
+ *
+ * Name and avatar are NOT here since 2026-09-13: they are asked after sign-up
+ * (`app/(app)/identity-setup.tsx`). The draft keeps the two fields, always
+ * null, so a draft written by an older build still parses.
  */
 import { useCallback, useMemo, useState } from 'react';
 import type { LessonResult } from '../lesson/LessonRunner';
@@ -22,7 +26,6 @@ import type {
   PendingOnboardingDraft,
   TrialLessonResult,
 } from '../../lib/pending-onboarding';
-import type { StashedAvatarPhoto } from '../../lib/onboarding-avatar-photo';
 import type { LanguageCode, ProficiencyLevel } from '../../types';
 import type { TopicKey } from './topic-packs';
 import { DEFAULT_LANGUAGE, DEFAULT_LEVEL } from './steps/config';
@@ -50,11 +53,6 @@ export function useOnboardingAnswers() {
     DEFAULT_NOTIFICATION_PREFS,
   );
   const [trial, setTrial] = useState<TrialLessonResult | null>(null);
-  const [displayName, setDisplayName] = useState<string>('');
-  const [avatarPresetId, setAvatarPresetId] = useState<string | null>(null);
-  // A photo parked on disk for generation after sign-up; see
-  // lib/onboarding-avatar-photo.ts. One of preset or photo, never both.
-  const [avatarPhoto, setAvatarPhoto] = useState<StashedAvatarPhoto | null>(null);
   const [dailyGoal, setDailyGoal] = useState<number>(DEFAULT_DAILY_GOAL_MINUTES);
 
   const draft: PendingOnboardingDraft = useMemo(
@@ -65,27 +63,13 @@ export function useOnboardingAnswers() {
       level,
       courseChoice,
       trial,
-      displayName: displayName.trim() ? displayName.trim() : null,
-      avatarPresetId,
-      avatarPhoto,
+      displayName: null,
+      avatarPresetId: null,
       dailyGoalMinutes: dailyGoal,
       notificationPrefs,
       completedAt,
     }),
-    [
-      targetLanguage,
-      idealL2Self,
-      topic,
-      level,
-      courseChoice,
-      trial,
-      displayName,
-      avatarPresetId,
-      avatarPhoto,
-      dailyGoal,
-      notificationPrefs,
-      completedAt,
-    ],
+    [targetLanguage, idealL2Self, topic, level, courseChoice, trial, dailyGoal, notificationPrefs, completedAt],
   );
 
   const applyPending = useCallback((pending: PendingOnboarding) => {
@@ -104,9 +88,6 @@ export function useOnboardingAnswers() {
       setNotificationPrefs(validateNotificationPrefs(pending.notificationPrefs));
     }
     if (pending.trial) setTrial(pending.trial);
-    if (pending.displayName) setDisplayName(pending.displayName);
-    if (pending.avatarPresetId) setAvatarPresetId(pending.avatarPresetId);
-    if (pending.avatarPhoto) setAvatarPhoto(pending.avatarPhoto);
     if (pending.dailyGoalMinutes) setDailyGoal(pending.dailyGoalMinutes);
   }, []);
 
@@ -143,12 +124,6 @@ export function useOnboardingAnswers() {
     setNotificationPrefs,
     trial,
     recordTrial,
-    displayName,
-    setDisplayName,
-    avatarPresetId,
-    setAvatarPresetId,
-    avatarPhoto,
-    setAvatarPhoto,
     dailyGoal,
     setDailyGoal,
     draft,

@@ -22,7 +22,6 @@ import { trackEvent } from '../../lib/analytics';
 import { useScreenView } from '../../hooks/useScreenView';
 import { savePendingOnboarding, type PendingOnboardingDraft } from '../../lib/pending-onboarding';
 import { flushDraftToProfile } from '../../components/onboarding/flush-draft';
-import { stashOnboardingPhoto } from '../../lib/onboarding-avatar-photo';
 import { useOnboardingAnswers } from '../../components/onboarding/useOnboardingAnswers';
 import { useDraftBootstrap } from '../../components/onboarding/useDraftBootstrap';
 import { TrialLessonStep } from '../../components/onboarding/steps/TrialLessonStep';
@@ -36,7 +35,6 @@ import {
   NotificationsStep,
 } from '../../components/onboarding/steps/FormSteps';
 import { IdealSelfStep } from '../../components/onboarding/steps/IdealSelfStep';
-import { IdentityStep } from '../../components/onboarding/steps/IdentityStep';
 import { SaveStep } from '../../components/onboarding/steps/SaveStep';
 
 /**
@@ -61,8 +59,6 @@ export default function OnboardingScreen() {
   const { loadUserData } = useAppStore();
 
   const [step, setStep] = useState<Step>('language');
-  const [customizerOpen, setCustomizerOpen] = useState(false);
-  const [generatorOpen, setGeneratorOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Every answer, the draft built from them, and the restore function. Kept
@@ -85,12 +81,6 @@ export default function OnboardingScreen() {
     setNotificationPrefs,
     trial,
     recordTrial,
-    displayName,
-    setDisplayName,
-    avatarPresetId,
-    setAvatarPresetId,
-    avatarPhoto,
-    setAvatarPhoto,
     dailyGoal,
     setDailyGoal,
     draft,
@@ -114,16 +104,15 @@ export default function OnboardingScreen() {
    * chain is replaces — avatar-setup replaces into plans, plans replaces into
    * Home — which is also what keeps a finished setup step off the back stack.
    *
-   * Straight to the paywall: the avatar is chosen on the identity step now,
-   * so there is no setup screen between sign-up and the ask. `source` tells
-   * the paywall to land on Home when the learner leaves it, whatever the
-   * navigator's back stack happens to hold.
+   * What follows the flush is name + avatar (`app/(app)/identity-setup.tsx`,
+   * where the photo avatar can actually render now that a session exists),
+   * then the paywall, then Home.
    */
   const writeProfile = useCallback(
     async (userId: string, draft: PendingOnboardingDraft) => {
       await flushDraftToProfile(draft);
       await loadUserData(userId);
-      router.replace({ pathname: '/(app)/plans', params: { source: 'onboarding' } });
+      router.replace('/(app)/identity-setup');
     },
     [loadUserData, router],
   );
@@ -324,13 +313,12 @@ export default function OnboardingScreen() {
     );
   }
 
-  // ─── The seven form steps ───────────────────────────────────────────────
+  // ─── The six form steps ─────────────────────────────────────────────────
   const prev: Partial<Record<Step, Step>> = {
     idealSelf: 'language',
     level: 'idealSelf',
     course: 'level',
-    identity: hasCourseStep ? 'course' : 'level',
-    goal: 'identity',
+    goal: hasCourseStep ? 'course' : 'level',
     notifications: 'goal',
   };
   // The first step backs out to the welcome screen: someone who already has
@@ -343,7 +331,7 @@ export default function OnboardingScreen() {
     else router.replace('/(public)');
   };
   const goBack = prev[step] ? () => setStep(prev[step] as Step) : leaveToWelcome;
-  // The step's header block: back, "Step n of 7", segments, the question, Sol.
+  // The step's header block: back, "Step n of 6", segments, the question, Sol.
   const hero = (text: string, entrance: StepHeroEntrance, heroMood: MascotMood = mood) => (
     <StepHero
       step={stepIndex + 1}
@@ -400,44 +388,14 @@ export default function OnboardingScreen() {
       break;
     case 'level':
       footer = (
-        <SlabButton label="Continue" onPress={() => setStep(hasCourseStep ? 'course' : 'identity')} />
+        <SlabButton label="Continue" onPress={() => setStep(hasCourseStep ? 'course' : 'goal')} />
       );
       body = <LevelStep frame={frame} value={level} onChange={setLevel} />;
       break;
     case 'course':
-      footer = <SlabButton label="Continue" onPress={() => setStep('identity')} />;
-      body = (
-        <CourseStep frame={frame} options={placementOptions} value={courseChoice} onChange={setCourseChoice} />
-      );
-      break;
-    case 'identity':
       footer = <SlabButton label="Continue" onPress={() => setStep('goal')} />;
       body = (
-        <IdentityStep
-          frame={frame}
-          languageName={languageName}
-          displayName={displayName}
-          onChangeName={setDisplayName}
-          avatarPresetId={avatarPresetId}
-          onPickAvatar={(preset) => {
-            setAvatarPresetId(preset.id);
-            setAvatarPhoto(null);
-            setCustomizerOpen(false);
-          }}
-          avatarPhoto={avatarPhoto}
-          onPhotoReady={(photo, styleKey) => {
-            // Parked on disk; only the URI rides in the draft. A preset chosen
-            // earlier gives way — one look, not two.
-            setAvatarPhoto(stashOnboardingPhoto(photo, styleKey));
-            setAvatarPresetId(null);
-          }}
-          pickerOpen={customizerOpen}
-          onPickerOpen={() => setCustomizerOpen(true)}
-          onPickerClose={() => setCustomizerOpen(false)}
-          generatorOpen={generatorOpen}
-          onGeneratorOpen={() => setGeneratorOpen(true)}
-          onGeneratorClose={() => setGeneratorOpen(false)}
-        />
+        <CourseStep frame={frame} options={placementOptions} value={courseChoice} onChange={setCourseChoice} />
       );
       break;
     case 'goal':

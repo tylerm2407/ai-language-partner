@@ -264,7 +264,7 @@ export const PLAN_FEATURES: Record<PlanId, string[]> = {
     '5 new words a day',
     'Unlimited review — always',
     'All lessons, reading and daily news',
-    'An illustrated avatar from your photo',
+    'One photo avatar, free',
   ],
   // Every number below is pinned against PLANS by lib/plans-features.test.ts.
   // The strings drifted once (basic advertised 25 messages and 10 voice

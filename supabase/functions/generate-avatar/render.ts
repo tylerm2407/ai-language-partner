@@ -55,6 +55,7 @@ interface RenderArgs {
   imageBase64: string;
   mimeType: string;
   tier: PlanTier;
+  usingFreeGrant: boolean;
 }
 
 /**
@@ -64,10 +65,8 @@ interface RenderArgs {
  * order that cannot hand out unmetered images. The cost of that order is that
  * a provider timeout or a rejected photo would otherwise burn one of three
  * monthly generations on a portrait the learner never got — which is exactly
- * what happened on 2026-09-08 — so every failure path refunds here. Every
- * tier is on the monthly meter now (the free tier's one-lifetime grant went
- * on 2026-09-13), so `refundMonthlySlot` is always true from index.ts; the
- * flag stays so a caller that never consumed a slot cannot mint one.
+ * what happened on 2026-09-08 — so every failure path refunds here. The free
+ * grant is spent before the render too (migration 113) and is released here.
  */
 export async function failJob(
   supabase: SupabaseClient,
@@ -95,6 +94,13 @@ export async function failJob(
     if (refundErr) {
       console.error('[generate-avatar] refund_monthly_quota failed:', refundErr.message);
     }
+  } else {
+    // The free grant was spent before the render (index.ts, migration 113);
+    // this render did not deliver, so it goes back.
+    const { error: releaseErr } = await supabase.rpc('release_free_avatar', { p_user_id: job.userId });
+    if (releaseErr) {
+      console.error('[generate-avatar] release_free_avatar failed:', releaseErr.message);
+    }
   }
 }
 
@@ -105,8 +111,9 @@ export async function failJob(
  * to carry; the client shows error_message verbatim.
  */
 export async function renderAvatar(args: RenderArgs): Promise<void> {
-  const { supabase, req, userId, jobId, styleKey, prompt, imageBase64, mimeType, tier } = args;
-  const job = { jobId, userId, refundMonthlySlot: true };
+  const { supabase, req, userId, jobId, styleKey, prompt, imageBase64, mimeType, tier, usingFreeGrant } =
+    args;
+  const job = { jobId, userId, refundMonthlySlot: !usingFreeGrant };
 
   // The photo lives only in this buffer. It is never written anywhere.
   const photoBytes = base64ToBytes(imageBase64);
@@ -257,7 +264,7 @@ export async function renderAvatar(args: RenderArgs): Promise<void> {
     resourceType: 'avatar',
     resourceId: path,
     // Deliberately records the style and model, never the source photo.
-    metadata: { styleKey, model: IMAGE_MODEL, tier, jobId },
+    metadata: { styleKey, model: IMAGE_MODEL, tier, freeGrant: usingFreeGrant, jobId },
     ipAddress: getClientIp(req),
   });
 }

@@ -17,7 +17,6 @@ import {
 } from '../../lib/notification-prefs';
 import { clearPendingOnboarding, type PendingOnboardingDraft } from '../../lib/pending-onboarding';
 import { applyOnboardingDraft, fetchCourses } from '../../lib/supabase-queries';
-import { startDeferredAvatarGeneration } from './deferred-avatar';
 import { DEFAULT_LANGUAGE, DEFAULT_LEVEL } from './steps/config';
 
 export async function flushDraftToProfile(draft: PendingOnboardingDraft): Promise<void> {
@@ -53,13 +52,6 @@ export async function flushDraftToProfile(draft: PendingOnboardingDraft): Promis
     band: placement.placementBand,
     language: draftLanguage,
   });
-
-  // The photo avatar, if one was chosen. Started, not awaited: a render takes
-  // minutes, and the profile row above is already complete without it. The
-  // store is patched when the job settles (deferred-avatar.ts).
-  if (draft.avatarPhoto) {
-    void startDeferredAvatarGeneration(draft.avatarPhoto);
-  }
 
   // The reminders the learner chose, moved from the draft to their real
   // home on the device. They are local-only preferences — nothing here is

@@ -26,10 +26,10 @@ interface AvatarGeneratorSheetProps {
   onUpgrade?: () => void;
   /**
    * DEFERRED mode. When set, the sheet stops after the photo and style are
-   * chosen and hands them back instead of generating: onboarding runs before
-   * an account exists, so the model call (which needs a JWT) happens after
-   * sign-up (components/onboarding/deferred-avatar.ts). The consent step is
-   * unchanged — the photo is still sent to the provider, just later.
+   * chosen and hands them back instead of generating, so the CALLER owns the
+   * wait — `app/(app)/identity-setup.tsx` draws full-screen with Sol rather
+   * than inside this sheet. Consent is unchanged: the photo still goes to the
+   * provider, from the caller.
    */
   onPhotoReady?: (photo: PreparedPhoto, styleKey: string) => void;
 }
@@ -81,11 +81,8 @@ export const AvatarGeneratorSheet = React.memo(
     // style list is already populated by the time they reach it. Fetched on
     // open rather than once at mount: a style added server-side then shows up
     // on the next open instead of requiring an app restart.
-    //
-    // Skipped in deferred mode: the catalogue sits behind auth and there is no
-    // session yet, so the call could only 401 into the bundled fallback list.
     useEffect(() => {
-      if (!visible || onPhotoReady) return;
+      if (!visible) return;
       let cancelled = false;
       fetchAvatarStyles().then((list) => {
         if (cancelled) return;
@@ -100,7 +97,7 @@ export const AvatarGeneratorSheet = React.memo(
       return () => {
         cancelled = true;
       };
-    }, [visible, onPhotoReady]);
+    }, [visible]);
 
     const choose = useCallback(async (source: 'library' | 'file') => {
       setError(null);
@@ -281,8 +278,7 @@ export const AvatarGeneratorSheet = React.memo(
 
               {onPhotoReady && (
                 <Caption style={styles.workingHint}>
-                  We draw your avatar from it right after you sign up. It takes a few minutes and
-                  lands on your profile on its own.
+                  Drawing takes a few minutes — we draw it at full quality. Keep the app open.
                 </Caption>
               )}
               <Pressable

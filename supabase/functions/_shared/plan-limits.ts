@@ -166,17 +166,15 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
   //
   // Two exceptions, both deliberate:
   //   • `dailyLessonTtsPlays` — lesson audio, so free lessons work at all.
-  //   • `monthlyAvatarGenerations` — the photo avatar is chosen during
-  //     onboarding, before the paywall, and Tyler's call (2026-09-13) is to
-  //     carry that cost on the free tier because a learner who looks like
-  //     themselves is likelier to subscribe. Same monthly meter as paid
-  //     (consume_monthly_quota); the old one-lifetime grant
-  //     (consume_free_avatar, migration 077) is no longer consulted.
+  //   • `monthlyAvatarGenerations` stays 0, but generate-avatar grants one
+  //     LIFETIME free generation via consume_free_avatar (migration 077),
+  //     which is a different thing from a daily allowance and is checked
+  //     before this quota is ever consulted.
   //
   // Classroom students are unaffected — their org's contract_config is merged
   // in by get_effective_limits with GREATEST(), so a 0 personal quota still
   // resolves to the school's allowance.
-  starter:   { dailyTextMessages: 0,  dailyVoiceMinutes: 0,  dailyTranslations: 10, dailyWordLookups: 60,  dailyWritingGrades: 0,  dailyPronunciationScores: 0, dailyLessonTtsPlays: 5,   monthlyAvatarGenerations: 3, dailyNewCards: 5,    dailyHints: 5,   dailyGoalTracks: 1, dailyAudiobookChapters: 0, dailyChatCards: 3,    dailyTutorMinutes: 0, monthlyTutorCents: 0, offlineMode: false },
+  starter:   { dailyTextMessages: 0,  dailyVoiceMinutes: 0,  dailyTranslations: 10, dailyWordLookups: 60,  dailyWritingGrades: 0,  dailyPronunciationScores: 0, dailyLessonTtsPlays: 5,   monthlyAvatarGenerations: 0, dailyNewCards: 5,    dailyHints: 5,   dailyGoalTracks: 1, dailyAudiobookChapters: 0, dailyChatCards: 3,    dailyTutorMinutes: 0, monthlyTutorCents: 0, offlineMode: false },
   basic:     { dailyTextMessages: 20, dailyVoiceMinutes: 6,  dailyTranslations: 30, dailyWordLookups: 300, dailyWritingGrades: 3,  dailyPronunciationScores: 3, dailyLessonTtsPlays: 25,  monthlyAvatarGenerations: 3, dailyNewCards: 20,   dailyHints: 30,  dailyGoalTracks: 1, dailyAudiobookChapters: 0, dailyChatCards: 15,   dailyTutorMinutes: 15, monthlyTutorCents: 300, offlineMode: false },
   premium:   { dailyTextMessages: 50, dailyVoiceMinutes: 12, dailyTranslations: 60, dailyWordLookups: 600, dailyWritingGrades: 7,  dailyPronunciationScores: 5, dailyLessonTtsPlays: 50, monthlyAvatarGenerations: 3, dailyNewCards: 9999, dailyHints: 75,  dailyGoalTracks: 1, dailyAudiobookChapters: 3, dailyChatCards: 30,   dailyTutorMinutes: 30, monthlyTutorCents: 800, offlineMode: true },
   vip:       { dailyTextMessages: 75, dailyVoiceMinutes: 18, dailyTranslations: 90, dailyWordLookups: 800, dailyWritingGrades: 12, dailyPronunciationScores: 7, dailyLessonTtsPlays: 80, monthlyAvatarGenerations: 3, dailyNewCards: 9999, dailyHints: 150, dailyGoalTracks: 1, dailyAudiobookChapters: 5, dailyChatCards: 50, dailyTutorMinutes: 45, monthlyTutorCents: 1400, offlineMode: true },

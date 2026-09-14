@@ -28,7 +28,6 @@ import type {
 import type { NotificationPrefs } from './notification-prefs';
 import type { TopicKey } from '../components/onboarding/topic-packs';
 import type { PlacementChoice } from './course-placement';
-import type { StashedAvatarPhoto } from './onboarding-avatar-photo';
 
 export const PENDING_ONBOARDING_KEY = 'pending-onboarding';
 export const PENDING_ONBOARDING_SCHEMA_VERSION = 1;
@@ -130,12 +129,6 @@ export interface PendingOnboarding {
    * `writeProfile`. Absent or null reads as `start`.
    */
   courseChoice?: PlacementChoice | null;
-  /**
-   * A photo picked on the name + avatar step, parked on disk for generation
-   * after sign-up (lib/onboarding-avatar-photo.ts). One of this or
-   * `avatarPresetId`: choosing either clears the other.
-   */
-  avatarPhoto?: StashedAvatarPhoto | null;
 }
 
 /**
@@ -172,7 +165,6 @@ export function emptyPendingOnboarding(): PendingOnboardingDraft {
     topic: null,
     notificationPrefs: null,
     courseChoice: null,
-    avatarPhoto: null,
   };
 }
 
