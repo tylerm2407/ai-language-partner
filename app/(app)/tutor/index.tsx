@@ -50,11 +50,14 @@ import { useAuth } from '../../../hooks/useAuth';
 import { useAiConsent } from '../../../hooks/useAiConsent';
 import { useScreenView } from '../../../hooks/useScreenView';
 import { useAppStore, effectiveTier } from '../../../stores/useAppStore';
-import { CallStatusRing } from '../../../components/tutor/CallStatusRing';
-import { CorrectionModeToggle } from '../../../components/tutor/CorrectionModeToggle';
+import { LinearGradient } from 'expo-linear-gradient';
+import { CorrectionModeToggle, CORRECTION_MODE_QUESTION } from '../../../components/tutor/CorrectionModeToggle';
+import { Spectrum } from '../../../components/tutor/Spectrum';
+import { TutorPortrait, PORTRAIT_DIAMETER } from '../../../components/tutor/TutorPortrait';
+import { WaveBand, WAVE_PORTRAIT_OVERHANG } from '../../../components/tutor/WaveBand';
 import { LastSessionCard } from '../../../components/tutor/LastSessionCard';
 import { SlabButton } from '../../../components/ui2/SlabButton';
-import { SlabCard } from '../../../components/ui2/SlabCard';
+import { SlabCard, useLiftShadow } from '../../../components/ui2/SlabCard';
 import { Ui2InlineError } from '../../../components/ui2/Ui2InlineError';
 import { Body, Caption, Heading } from '../../../components/ui2/Ui2Text';
 import { useUi2Theme } from '../../../hooks/useUi2Theme';
@@ -92,6 +95,7 @@ interface LastSession {
 
 export default function TutorLobbyScreen() {
   const { c } = useUi2Theme();
+  const lift = useLiftShadow();
   const router = useRouter();
   const { user } = useAuth();
   const { profile, subscription, entitledTier, roles, measuredBand } = useAppStore();
@@ -287,14 +291,13 @@ export default function TutorLobbyScreen() {
   const budgetLine = lowBudgetLine(remainingMinutes);
   const mode = prefs?.correctionMode ?? null;
 
-  // The tab IS the conversation screen, at rest (Talk C1, 2026-09-08). Same
-  // frame as app/(app)/tutor/call.tsx — centred name, compact correction
-  // pills, the stage (portrait over the analyser, "Ready"), captions, then the
-  // controls row — so starting a call changes the state of the screen the
-  // learner is already looking at rather than swapping in a new one. Every
-  // lobby feature is still here: persona bio and level, last session, the
-  // correction question (unanswered stays unanswered), minutes left, limit
-  // card, errors, consent, and the Starter plan wall above.
+  // "Talk · Wave" (2026-09-14): the tab at rest is a stage. A wave band
+  // carries the portrait, the violet block under it holds the invitation, bio
+  // and band, and a ground-coloured sheet holds everything the learner can
+  // act on. Every lobby feature is still here: persona bio and level, last
+  // session, the correction question (unanswered stays unanswered), minutes
+  // left, limit card, errors, consent, and the Starter plan wall above. Start
+  // is one wide pill instead of a round mic; same action, same states.
   return (
     <View style={[styles.flex, { backgroundColor: c.bg }]}>
       <SafeAreaView style={styles.flex} edges={['top']}>
@@ -312,21 +315,6 @@ export default function TutorLobbyScreen() {
               ) : null}
             </View>
           </View>
-
-          {/* Unanswered stays a real question: the compact row drops the
-              question text, so it is asked here until one pill is chosen. */}
-          {mode === null ? (
-            <Caption tone="secondary" style={styles.question}>
-              How should I correct you?
-            </Caption>
-          ) : null}
-          <CorrectionModeToggle mode={mode} onChange={handleCorrectionMode} compact />
-
-          {budgetLine ? (
-            <Caption tone="tertiary" style={styles.centeredText} accessibilityLiveRegion="polite">
-              {budgetLine}
-            </Caption>
-          ) : null}
         </View>
 
         <ScrollView
@@ -334,60 +322,83 @@ export default function TutorLobbyScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.stage}>
+          <WaveBand>
             {persona ? (
-              <>
-                <CallStatusRing phase="idle" portraitId={persona.portraitId} name={persona.name} />
-                <Body tone="secondary" style={styles.centeredText}>
-                  {persona.bio}
-                </Body>
-              </>
+              <TutorPortrait portraitId={persona.portraitId} name={persona.name} size="hero" />
             ) : (
-              <ActivityIndicator color={c.primary} />
+              <View style={styles.portraitPlaceholder}>
+                <ActivityIndicator color={c.primary} />
+              </View>
             )}
+          </WaveBand>
 
+          <View style={[styles.stage, { backgroundColor: c.primary }]}>
+            <Heading level={2} tone="onPrimary" style={styles.centeredText}>
+              Ready when you are
+            </Heading>
+            {persona ? (
+              <Body tone="onPrimary" style={[styles.centeredText, styles.bio]}>
+                {persona.bio}
+              </Body>
+            ) : null}
             {/* Never a bare band code — see lib/cefr-labels.ts. */}
             {band ? (
-              <Caption tone="tertiary" style={styles.centeredText} accessibilityLabel={cefrAccessibilityLabel(band)}>
+              <Caption style={[styles.centeredText, { color: c.onPrimaryMuted }]} accessibilityLabel={cefrAccessibilityLabel(band)}>
                 {cefrLabel(band)}
               </Caption>
             ) : null}
           </View>
 
-          <LastSessionCard
-            minutes={lastSession?.minutes ?? null}
-            headline={lastSession?.headline ?? null}
-            loading={loadingLast}
-          />
+          <View style={[styles.sheet, { backgroundColor: c.bg }]}>
+            <Caption tone="secondary" style={styles.centeredText}>
+              {CORRECTION_MODE_QUESTION}
+            </Caption>
+            <CorrectionModeToggle mode={mode} onChange={handleCorrectionMode} compact segmented />
 
-          {/* A ceiling is a settled state with an upgrade path, never a retry. */}
-          {limit ? (
-            <SlabCard tint="yellow" style={styles.limit} accessibilityRole="alert">
-              <Body weight="semibold">
-                {limit.title}
-              </Body>
-              <Body size="sm" tone="secondary" style={styles.limitMessage}>
-                {limit.message}
-              </Body>
-              {limit.upgrade ? (
-                <Pressable
-                  style={styles.tertiaryButton}
-                  onPress={() => router.push('/(app)/profile/subscription')}
-                  accessibilityRole="button"
-                  accessibilityLabel={limit.upgrade.label}
-                >
-                  <Body size="sm" weight="semibold" tone="accent">
-                    {limit.upgrade.label}
-                  </Body>
-                </Pressable>
-              ) : null}
-            </SlabCard>
-          ) : null}
+            {budgetLine ? (
+              <Caption tone="tertiary" style={styles.centeredText} accessibilityLiveRegion="polite">
+                {budgetLine}
+              </Caption>
+            ) : null}
 
-          {error ? <Ui2InlineError copy={error} onRetry={() => void handleStart()} /> : null}
+            {/* The analyser at rest: the same bars the call screen drives. */}
+            <Spectrum state="idle" color={c.primaryTintBorder} bars={21} height={44} barWidth={4} gap={6} />
+
+            <LastSessionCard
+              minutes={lastSession?.minutes ?? null}
+              headline={lastSession?.headline ?? null}
+              loading={loadingLast}
+            />
+
+            {/* A ceiling is a settled state with an upgrade path, never a retry. */}
+            {limit ? (
+              <SlabCard tint="yellow" style={styles.limit} accessibilityRole="alert">
+                <Body weight="semibold">
+                  {limit.title}
+                </Body>
+                <Body size="sm" tone="secondary" style={styles.limitMessage}>
+                  {limit.message}
+                </Body>
+                {limit.upgrade ? (
+                  <Pressable
+                    style={styles.tertiaryButton}
+                    onPress={() => router.push('/(app)/profile/subscription')}
+                    accessibilityRole="button"
+                    accessibilityLabel={limit.upgrade.label}
+                  >
+                    <Body size="sm" weight="semibold" tone="accent">
+                      {limit.upgrade.label}
+                    </Body>
+                  </Pressable>
+                ) : null}
+              </SlabCard>
+            ) : null}
+
+            {error ? <Ui2InlineError copy={error} onRetry={() => void handleStart()} /> : null}
+          </View>
         </ScrollView>
 
-        {/* ── Start: the call screen's controls row, with one control ── */}
+        {/* ── Start: one wide pill ── */}
         <View style={styles.footer}>
           {blocked === 'needs_correction_mode' ? (
             <Caption tone="tertiary" style={styles.centeredText}>
@@ -405,20 +416,24 @@ export default function TutorLobbyScreen() {
                 : 'Starts a live voice conversation with your tutor.'
             }
             accessibilityState={{ disabled: blocked !== null, busy: starting }}
-            style={[
-              styles.startButton,
-              { backgroundColor: c.primary, opacity: blocked !== null && !starting ? 0.5 : 1 },
-            ]}
+            style={[styles.startButton, lift, { opacity: blocked !== null && !starting ? 0.5 : 1 }]}
           >
-            {starting ? (
-              <ActivityIndicator color={c.onPrimary} />
-            ) : (
-              <Ionicons name="mic" size={30} color={c.onPrimary} />
-            )}
+            <LinearGradient
+              colors={[c.primary, c.slab]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.startFill}
+            >
+              {starting ? (
+                <ActivityIndicator color={c.onPrimary} />
+              ) : (
+                <Ionicons name="mic" size={22} color={c.onPrimary} />
+              )}
+              <Body weight="extrabold" tone="onPrimary">
+                {starting ? 'Starting your call' : 'Start call'}
+              </Body>
+            </LinearGradient>
           </Pressable>
-          <Body weight="bold" style={styles.centeredText}>
-            {starting ? 'Starting your call' : 'Start call'}
-          </Body>
         </View>
 
         {consentSheet}
@@ -450,19 +465,35 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     justifyContent: 'center',
   },
-  question: {
-    textAlign: 'center',
-  },
   content: {
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
+    paddingTop: spacing.sm,
     paddingBottom: spacing.md,
-    gap: spacing.md,
+  },
+  portraitPlaceholder: {
+    width: PORTRAIT_DIAMETER.hero,
+    height: PORTRAIT_DIAMETER.hero,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   stage: {
     alignItems: 'center',
+    gap: spacing.xxs,
+    // Room for the portrait hanging off the wave above, then the copy, then
+    // the sheet's rounded top overlapping the bottom edge.
+    paddingTop: WAVE_PORTRAIT_OVERHANG + spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg + spacing.xl,
+  },
+  bio: {
+    marginTop: spacing.xxs,
+  },
+  sheet: {
+    marginTop: -spacing.xl,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.lg,
     gap: spacing.sm,
-    paddingVertical: spacing.xs,
   },
   centeredText: {
     textAlign: 'center',
@@ -475,17 +506,24 @@ const styles = StyleSheet.create({
     marginTop: spacing.xxs,
   },
   footer: {
-    alignItems: 'center',
+    alignItems: 'stretch',
     paddingHorizontal: spacing.md,
-    paddingBottom: floatingTabBarSpace(),
+    paddingTop: spacing.xs,
+    paddingBottom: floatingTabBarSpace() + spacing.xs,
     gap: spacing.xs,
   },
   startButton: {
-    width: 72,
-    height: 72,
+    alignSelf: 'stretch',
+    height: 56,
     borderRadius: radii.pill,
+    overflow: 'hidden',
+  },
+  startFill: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: spacing.xs,
   },
   tertiaryButton: {
     minHeight: 44,

@@ -10,6 +10,12 @@
  * hooks/useReviewCountSync — and the card never shows a percentage it does
  * not have: while the report loads the ring is empty and the eyebrow reads
  * "Level"; at C2 it reads "Top band" and the ring is full.
+ *
+ * Atmosphere (canvas "Fluenci Home, Talk and Profile", picked 2026-09-14):
+ * every card on Home is `glass` over the colour glows in
+ * `./Atmosphere.tsx`, and the hero is a mesh — `primary` with a highlight
+ * stop at its top-right, a shade stop at its bottom-left, a soft white disc
+ * and an amber glow, all SVG. Layout and copy did not move.
  */
 import { useEffect, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -19,9 +25,9 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import Svg, { Circle, G } from 'react-native-svg';
+import Svg, { Circle, Defs, G, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
-import { SlabCard } from '../SlabCard';
+import { SlabCard, useLiftShadow } from '../SlabCard';
 import { SlabButton } from '../SlabButton';
 import { haptic } from '../../../lib/haptics';
 import { cefrCanDo } from '../../../lib/cefr-labels';
@@ -123,6 +129,7 @@ export function LevelDueRow({ band, nextBand, progressPercent, measured, basis, 
       >
         <SlabCard
           tint="primary"
+          glass
           style={styles.levelCard}
           accessible
           accessibilityRole="progressbar"
@@ -166,7 +173,7 @@ export function LevelDueRow({ band, nextBand, progressPercent, measured, basis, 
         </SlabCard>
       </Pressable>
 
-      <SlabCard tint="green" style={styles.dueInner}>
+      <SlabCard tint="green" glass style={styles.dueInner}>
         <View>
           <Text style={{ fontFamily: type.heading, fontSize: 26, lineHeight: 28, color: c.ink }}>{dueCount}</Text>
           <Text style={{ fontFamily: type.uiBold, fontSize: 12, color: c.muted }}>{dueLabel}</Text>
@@ -224,7 +231,7 @@ interface ProgressRingProps {
  * differently on free would turn the learner's stated intention into an
  * upsell surface.
  */
-function ProgressRing({ pct, size = RING_SIZE, stroke = RING_STROKE, color, track, trackOpacity = 1, children }: ProgressRingProps) {
+export function ProgressRing({ pct, size = RING_SIZE, stroke = RING_STROKE, color, track, trackOpacity = 1, children }: ProgressRingProps) {
   const { shouldReduce } = useMotion();
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -272,9 +279,45 @@ interface SessionHeroProps {
   onStart: () => void;
 }
 
+/**
+ * The hero's atmosphere: two radial stops that turn the flat violet into a
+ * mesh, a large soft white disc off the top-right corner and an amber glow off
+ * the bottom-left. Absolute, clipped by the hero's radius, never announced.
+ * Sized for the widest hero a phone shows; the disc and glow hang off the
+ * edges by design, so a wider card just shows more of them.
+ */
+function HeroMesh() {
+  const { c } = useUi2Theme();
+  return (
+    <View pointerEvents="none" style={StyleSheet.absoluteFill} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+      <Svg width="100%" height="100%" viewBox="0 0 350 240" preserveAspectRatio="none">
+        <Defs>
+          <RadialGradient id="hero-hi" cx="100%" cy="0%" r="90%">
+            <Stop offset="0" stopColor={c.heroHighlight} stopOpacity={1} />
+            <Stop offset="0.55" stopColor={c.heroHighlight} stopOpacity={0} />
+          </RadialGradient>
+          <RadialGradient id="hero-lo" cx="0%" cy="100%" r="80%">
+            <Stop offset="0" stopColor={c.heroShade} stopOpacity={1} />
+            <Stop offset="0.6" stopColor={c.heroShade} stopOpacity={0} />
+          </RadialGradient>
+          <RadialGradient id="hero-amber" cx="50%" cy="50%" r="50%">
+            <Stop offset="0" stopColor={c.yellow} stopOpacity={0.3} />
+            <Stop offset="1" stopColor={c.yellow} stopOpacity={0} />
+          </RadialGradient>
+        </Defs>
+        <Rect x="0" y="0" width="350" height="240" fill="url(#hero-hi)" />
+        <Rect x="0" y="0" width="350" height="240" fill="url(#hero-lo)" />
+        <Circle cx="390" cy="10" r="130" fill={c.onPrimary} fillOpacity={0.14} />
+        <Circle cx="30" cy="240" r="110" fill="url(#hero-amber)" />
+      </Svg>
+    </View>
+  );
+}
+
 export function SessionHero({ title, minutesToday, goalMinutes, subtitle, onStart }: SessionHeroProps) {
   const { c, type, shape } = useUi2Theme();
   const enter = useHomeEnter();
+  const lift = useLiftShadow();
 
   const { pct, remainingMinutes, met } = goalProgress(minutesToday, goalMinutes);
   const done = displayMinutes(minutesToday);
@@ -295,11 +338,13 @@ export function SessionHero({ title, minutesToday, goalMinutes, subtitle, onStar
       <View
         style={[
           styles.hero,
+          lift,
           { backgroundColor: c.primary, borderBottomColor: c.slab, borderBottomWidth: shape.buttonSlab, borderRadius: shape.radiusHero },
         ]}
         accessibilityRole="summary"
         accessibilityLabel={`Today's session: ${title}`}
       >
+        <HeroMesh />
         <Text style={[styles.eyebrow, { fontFamily: type.uiHeavy, color: c.onPrimaryMuted }]}>
           Today's session
         </Text>
@@ -331,7 +376,7 @@ export function SessionHero({ title, minutesToday, goalMinutes, subtitle, onStar
           <Text style={{ fontFamily: type.ui, fontSize: 13, lineHeight: 18, color: c.onPrimaryMuted, flex: 1 }} numberOfLines={2}>
             {subtitle}
           </Text>
-          <SlabButton label="Start" variant="onPrimary" onPress={onStart} style={styles.heroCta} />
+          <SlabButton label="Start" variant="onPrimary" onPress={onStart} style={{ ...styles.heroCta, ...lift }} />
         </View>
       </View>
     </Animated.View>
@@ -364,7 +409,7 @@ export function ReadRow({ title, minutes, loading, error, hasRead, onPress }: Re
         accessibilityRole="button"
         accessibilityLabel={`${label}. ${body}`}
       >
-        <SlabCard tint="yellow" style={styles.readRow}>
+        <SlabCard tint="yellow" glass style={styles.readRow}>
           <View style={[styles.iconTile, { backgroundColor: c.yellow }]}>
             <Ionicons name={hasRead ? 'checkmark' : 'book-outline'} size={18} color="#23203A" />
           </View>
@@ -393,7 +438,7 @@ const styles = StyleSheet.create({
   reviewPill: { minHeight: 36, borderRadius: 999, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 12 },
   ringCentre: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
   iconTile: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  hero: { padding: 20, gap: 12 },
+  hero: { padding: 20, gap: 12, overflow: 'hidden' },
   heroBottom: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   heroCta: { minWidth: 104 },
   goal: { flexDirection: 'row', alignItems: 'center', gap: 12 },

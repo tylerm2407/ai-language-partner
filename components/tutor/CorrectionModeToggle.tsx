@@ -30,6 +30,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { radii, spacing } from '../../config/theme';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { Body, Caption } from '../ui2/Ui2Text';
+import { useLiftShadow } from '../ui2/SlabCard';
 import type { CorrectionMode } from '../../lib/tutor-storage';
 
 export interface CorrectionModeOption {
@@ -87,21 +88,33 @@ interface CorrectionModeToggleProps {
   mode: CorrectionMode | null;
   onChange: (mode: CorrectionMode) => void;
   compact?: boolean;
+  /**
+   * The lobby's segmented look ("Talk · Wave", 2026-09-14): both options sit
+   * in one card-coloured trough and the chosen one is a raised ground-coloured
+   * pill with violet text. Compact only; the checkmark stays.
+   */
+  segmented?: boolean;
 }
 
-export function CorrectionModeToggle({ mode, onChange, compact = false }: CorrectionModeToggleProps) {
+export function CorrectionModeToggle({ mode, onChange, compact = false, segmented = false }: CorrectionModeToggleProps) {
   const { c, shape } = useUi2Theme();
+  const lift = useLiftShadow();
+  const seg = compact && segmented;
 
   // Tint blocks: filled surfaces, no outline. The fill carries selection and
   // the checkmark below is still the non-colour cue. The compact in-call row is two
   // pills and the chosen one goes solid; the lobby's full cards stay on the
   // tint so their descriptions keep reading.
   const surface = {
-    backgroundColor: c.card,
+    backgroundColor: seg ? 'transparent' : c.card,
     borderRadius: compact ? radii.pill : shape.radiusCard,
   };
-  const selectedSurface = compact ? { backgroundColor: c.primary } : { backgroundColor: c.primaryTint };
-  const selectedFg = compact ? c.onPrimary : c.onTint;
+  const selectedSurface = seg
+    ? { backgroundColor: c.bg, ...lift }
+    : compact
+      ? { backgroundColor: c.primary }
+      : { backgroundColor: c.primaryTint };
+  const selectedFg = seg ? c.primary : compact ? c.onPrimary : c.onTint;
 
   return (
     <View
@@ -110,7 +123,7 @@ export function CorrectionModeToggle({ mode, onChange, compact = false }: Correc
       // is not drawn: a screen-reader user landing on two radios needs to know
       // what they are answering.
       accessibilityLabel={CORRECTION_MODE_QUESTION}
-      style={compact ? styles.groupCompact : styles.group}
+      style={[compact ? styles.groupCompact : styles.group, seg ? [styles.trough, { backgroundColor: c.card }] : null]}
     >
       {!compact ? (
         <Body weight="extrabold" style={styles.question}>
@@ -130,6 +143,7 @@ export function CorrectionModeToggle({ mode, onChange, compact = false }: Correc
             accessibilityHint={correctionOptionHint(option)}
             style={[
               compact ? styles.optionCompact : styles.option,
+              seg ? styles.optionSegment : null,
               surface,
               selected && selectedSurface,
             ]}
@@ -137,14 +151,14 @@ export function CorrectionModeToggle({ mode, onChange, compact = false }: Correc
             <Ionicons
               name={option.icon}
               size={compact ? 16 : 20}
-              color={selected ? selectedFg : c.idle}
+              color={selected ? selectedFg : seg ? c.muted : c.idle}
             />
             <View style={styles.optionText}>
               <Body
                 size={compact ? 'sm' : 'md'}
                 weight={selected ? 'extrabold' : 'medium'}
                 numberOfLines={compact ? 1 : undefined}
-                style={selected && compact ? { color: selectedFg } : undefined}
+                style={selected && compact ? { color: selectedFg } : seg ? { color: c.muted } : undefined}
               >
                 {option.label}
               </Body>
@@ -170,6 +184,15 @@ const styles = StyleSheet.create({
   groupCompact: {
     flexDirection: 'row',
     gap: spacing.xs,
+  },
+  trough: {
+    gap: 0,
+    padding: 4,
+    borderRadius: radii.pill,
+  },
+  optionSegment: {
+    minHeight: 40,
+    justifyContent: 'center',
   },
   question: {
     marginBottom: spacing.xxs,

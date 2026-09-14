@@ -6,18 +6,19 @@ import { useAuth } from '../../../hooks/useAuth';
 import { useAppStore } from '../../../stores/useAppStore';
 import { useSchoolStore } from '../../../stores/useSchoolStore';
 import { SCHOOL_ENABLED, SUPPORTED_LANGUAGES } from '../../../config/app';
-import { Ionicons } from '@expo/vector-icons';
 // `colors` is deliberately NOT imported: it is the fixed DARK palette, and a
 // screen that reads it stays dark whatever the phone is set to. `radii` and
 // `spacing` are plain scheme-independent numbers and carry over unchanged.
 import { useUi2Theme } from '../../../hooks/useUi2Theme';
-import { radii, spacing } from '../../../config/theme';
-import { Heading } from '../../../components/ui2/Ui2Text';
-import { Chip } from '../../../components/ui2/Chip';
+import { spacing } from '../../../config/theme';
 import { SlabCard } from '../../../components/ui2/SlabCard';
 import { Ui2ListRow } from '../../../components/ui2/Ui2ListRow';
 import { LevelBadge } from '../../../components/stats/LevelBadge';
-import { AchievementGrid } from '../../../components/gamification/AchievementGrid';
+import { AchievementGridView, ACHIEVEMENT_TOTAL } from '../../../components/gamification/AchievementGrid';
+import { useAchievements } from '../../../hooks/useAchievements';
+import { IdentityRow, StatTiles } from '../../../components/ui2/profile/ProfileTiles';
+import { useNextBandProgress } from '../../../hooks/useNextBandProgress';
+import { cefrBandForProficiencyLevel, normalizeBand } from '../../../lib/cefr-proficiency';
 import { Avatar } from '../../../components/avatar/Avatar';
 import { AvatarPresetPicker } from '../../../components/avatar/AvatarPresetPicker';
 import { AvatarGeneratorSheet } from '../../../components/avatar/AvatarGeneratorSheet';
@@ -25,7 +26,7 @@ import { useAvatarImage, invalidateAvatarImage } from '../../../hooks/useAvatarI
 import { FourStrandsCard } from '../../../components/stats/FourStrandsCard';
 import { strandMinutesFromDailyStats } from '../../../lib/four-strands';
 import { localDayKey } from '../../../lib/dates';
-import { CompletedLessonsSection } from '../../../components/profile/CompletedLessonsSection';
+import { CompletedLessonsSection, type CompletedLessonsSummary } from '../../../components/profile/CompletedLessonsSection';
 import {
   setAvatarKind,
   setGeneratedAvatar,
@@ -57,7 +58,7 @@ const LEVEL_LABELS: Record<string, string> = {
 };
 
 export default function ProfileScreen() {
-  const { c, type } = useUi2Theme();
+  const { c } = useUi2Theme();
   useScreenView('profile');
   const { user, signOut } = useAuth();
   const { profile, subscription, setProfile } = useAppStore();
@@ -87,6 +88,17 @@ export default function ProfileScreen() {
   }, [user?.id, loadWeekStats]);
   const strandTotals = strandMinutesFromDailyStats(weekStats ?? []);
   const router = useRouter();
+
+  // ── Dashboard tiles (2026-09-14) ─────────────────────────────────────
+  // Same band + ring as Home's level card: measured once the report can
+  // assess one, the placement (or declared level) until then.
+  const level = useNextBandProgress(
+    normalizeBand(profile?.placementBand) ?? cefrBandForProficiencyLevel(profile?.level ?? 'beginner'),
+  );
+  // Read once here and handed to the grid below, so the tile and the grid
+  // never disagree and the achievements are fetched a single time.
+  const achievements = useAchievements();
+  const [lessonsSummary, setLessonsSummary] = useState<CompletedLessonsSummary | null>(null);
   const [customizerVisible, setCustomizerVisible] = useState(false);
   const [generatorVisible, setGeneratorVisible] = useState(false);
   // Every portrait the learner has generated and still owns. Loaded when the
@@ -233,45 +245,33 @@ export default function ProfileScreen() {
     <View style={{ flex: 1, backgroundColor: c.bg }}>
     <SafeAreaView className="flex-1" edges={['top']}>
       <ScrollView className="flex-1 px-4 pt-2" contentContainerStyle={{ paddingBottom: 100 }}>
-        {/* Header — title + settings. Settings also has a row further down; the
-            header affordance is the primary one. */}
-        <View style={styles.headerRow}>
-          <Heading level={2}>Profile</Heading>
-          <Pressable
-            onPress={() => router.push('/profile/settings' as any)}
-            accessibilityRole="button"
-            accessibilityLabel="Settings"
-            style={[styles.iconButton, { borderColor: c.cardBorder }]}
-            hitSlop={8}
-          >
-            <Ionicons name="settings-outline" size={18} color={c.muted} />
-          </Pressable>
+        {/* Identity row with the settings affordance, then the four stat
+            tiles. Each tile summarises a section further down the page (level
+            → the report, week → the strands card, achievements → the grid,
+            lessons → the completed-lessons row); see ProfileTiles.tsx. */}
+        <View style={styles.blockSpacing}>
+          <IdentityRow
+            name={profile?.displayName ?? user?.email ?? 'Learner'}
+            email={profile?.displayName ? user?.email ?? null : null}
+            languageLabel={languageLabel}
+            avatar={<Avatar size="medium" imageUri={avatarUri} displayName={profile?.displayName} />}
+            onAvatar={() => setCustomizerVisible(true)}
+            onSettings={() => router.push('/profile/settings' as any)}
+          />
         </View>
 
-        {/* Identity — avatar in a primary ring, name, mono meta, language chip */}
-        <View style={styles.identityRow}>
-          <Pressable
-            onPress={() => setCustomizerVisible(true)}
-            accessibilityLabel="Change avatar"
-            accessibilityRole="button"
-            style={[styles.avatarRing, { backgroundColor: c.primaryTint, borderColor: c.primary }]}
-          >
-            <Avatar size="medium" imageUri={avatarUri} displayName={profile?.displayName} />
-          </Pressable>
-          <View style={styles.identityText}>
-            <Heading level={3} numberOfLines={1}>
-              {profile?.displayName ?? user?.email ?? 'Learner'}
-            </Heading>
-            <Text
-              style={[styles.identityMeta, { fontFamily: type.ui, color: c.idle }]}
-              numberOfLines={1}
-            >
-              {profile?.displayName ? user?.email ?? '' : ''}
-            </Text>
-            <View style={styles.identityChips}>
-              {languageLabel ? <Chip variant="premium" label={languageLabel.toUpperCase()} /> : null}
-            </View>
-          </View>
+        <View style={styles.blockSpacing}>
+          <StatTiles
+            band={level.band}
+            nextBand={level.progress?.next ?? null}
+            progressPercent={level.progress?.percent ?? null}
+            measured={level.measured}
+            levelLabel={levelLabel}
+            onLevel={() => router.push('/profile/proficiency' as any)}
+            strands={weekStats ? strandTotals : null}
+            achievements={achievements.loading ? null : { earned: achievements.earnedAchievements.length, total: ACHIEVEMENT_TOTAL }}
+            lessons={lessonsSummary}
+          />
         </View>
 
         {/* Level ladder */}
@@ -342,10 +342,10 @@ export default function ProfileScreen() {
         </View>
 
         {/* Achievements */}
-        <AchievementGrid />
+        <AchievementGridView {...achievements} />
 
         {/* Completed Lessons */}
-        <CompletedLessonsSection userId={user?.id} />
+        <CompletedLessonsSection userId={user?.id} onSummary={setLessonsSummary} />
 
         {/* My Classes — hidden when school features are disabled */}
         {SCHOOL_ENABLED && (
@@ -509,51 +509,6 @@ const styles = StyleSheet.create({
   weekRetry: {
     minHeight: 44,
     justifyContent: 'center',
-    marginTop: spacing.xs,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.md,
-  },
-  iconButton: {
-    width: 44, // Apple HIG minimum touch target
-    height: 44,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  identityRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  avatarRing: {
-    width: 64,
-    height: 64,
-    borderRadius: radii.xxl,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  identityText: {
-    flex: 1,
-    minWidth: 0,
-  },
-  identityMeta: {
-    fontSize: 11,
-    lineHeight: 15,
-    marginTop: 2,
-  },
-  identityChips: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: spacing.xxs,
     marginTop: spacing.xs,
   },
   blockSpacing: {

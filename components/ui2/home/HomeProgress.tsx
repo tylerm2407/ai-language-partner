@@ -1,6 +1,8 @@
 /**
  * Home, UI 2.0 — the lower page: continue-learning unit rows, the daily
  * three, the week strip, and the talk / hands-free action rows.
+ *
+ * Every card here is `glass` (Atmosphere, 2026-09-14) — see HomeSections.
  */
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
@@ -52,7 +54,7 @@ export function UnitRows({ tiles, loading, error, onRetry, onOpen, onAll }: Unit
     return (
       <Animated.View entering={enter(4)} style={styles.section}>
         <SectionTitle title="Continue learning" />
-        <SlabCard style={{ gap: 8 }}>
+        <SlabCard glass style={{ gap: 8 }}>
           <Text style={{ fontFamily: type.uiBold, fontSize: 14, color: c.error }}>Couldn&apos;t load your lessons.</Text>
           <Pressable onPress={onRetry} accessibilityRole="button" accessibilityLabel="Retry loading lessons" style={styles.retry}>
             <Text style={{ fontFamily: type.uiHeavy, fontSize: 13, color: c.primary }}>Try again</Text>
@@ -67,7 +69,7 @@ export function UnitRows({ tiles, loading, error, onRetry, onOpen, onAll }: Unit
       <Animated.View entering={enter(4)} style={styles.section}>
         <SectionTitle title="Continue learning" />
         {[0, 1].map((i) => (
-          <SlabCard key={i} style={styles.unitRow}>
+          <SlabCard key={i} glass style={styles.unitRow}>
             <View style={[styles.pctTile, { backgroundColor: c.surface2 }]} />
             <View style={{ flex: 1, gap: 8 }}>
               <View style={[styles.skeleton, { backgroundColor: c.trackOnCard, width: '55%' }]} />
@@ -100,8 +102,8 @@ export function UnitRows({ tiles, loading, error, onRetry, onOpen, onAll }: Unit
             accessibilityRole="button"
             accessibilityLabel={`${tile.title}, ${tile.completedCount} of ${tile.lessonCount} lessons, ${pct} percent complete`}
           >
-            <SlabCard style={styles.unitRow}>
-              <View style={[styles.pctTile, { backgroundColor: tint }]}>
+            <SlabCard glass style={styles.unitRow}>
+              <View style={[styles.pctTile, { backgroundColor: tint, borderWidth: 1, borderColor: c.glassBorder }]}>
                 <Text style={{ fontFamily: type.heading, fontSize: 13, color: onPct }}>{pct}%</Text>
               </View>
               <View style={{ flex: 1, gap: 7, minWidth: 0 }}>
@@ -155,7 +157,7 @@ export function DailyThree({ items, error, onRetry }: DailyThreeProps) {
     return (
       <Animated.View entering={enter(5)} style={styles.section}>
         <SectionTitle title="Your daily three" />
-        <SlabCard style={{ gap: 8 }}>
+        <SlabCard glass style={{ gap: 8 }}>
           <Text style={{ fontFamily: type.uiBold, fontSize: 14, color: c.error }}>
             Couldn&apos;t load today&apos;s challenges.
           </Text>
@@ -172,7 +174,7 @@ export function DailyThree({ items, error, onRetry }: DailyThreeProps) {
   return (
     <Animated.View entering={enter(5)} style={styles.section}>
       <SectionTitle title="Your daily three" />
-      <SlabCard style={{ gap: 14 }}>
+      <SlabCard glass style={{ gap: 14 }}>
         {items.map((it) => {
           const done = it.target > 0 && it.current >= it.target;
           const pct = it.target > 0 ? Math.min(it.current / it.target, 1) * 100 : 0;
@@ -230,7 +232,7 @@ export function WeekStrip({ stats, error, onRetry }: { stats: DailyStats[]; erro
   return (
     <Animated.View entering={enter(6)} style={styles.section}>
       <SectionTitle title="This week" />
-      <SlabCard style={{ gap: 12 }}>
+      <SlabCard glass style={{ gap: 12 }}>
         {error ? (
           <>
             <Text style={{ fontFamily: type.uiBold, fontSize: 14, color: c.error }}>{error.title}</Text>
@@ -300,7 +302,7 @@ export function ActionRow({ icon, tint, title, subtitle, onPress, accessibilityH
         accessibilityLabel={title}
         accessibilityHint={accessibilityHint}
       >
-        <SlabCard style={styles.unitRow}>
+        <SlabCard glass style={styles.unitRow}>
           <View style={[styles.pctTile, { backgroundColor: color }]}>
             <Ionicons name={icon} size={18} color={tint === 'yellow' ? '#23203A' : '#FFFFFF'} />
           </View>

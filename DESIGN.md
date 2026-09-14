@@ -964,6 +964,42 @@ standard, variations", N3 · Ring):
   (`useReviewCountSync`), so a warm-up review or another device cannot leave
   it stale.
 
+### Home · Atmosphere, Talk · Wave, Profile · Dashboard (2026-09-14)
+
+Three screens were restyled from the canvas "Fluenci Home, Talk and Profile"
+(Tyler picked one of three / three / five boards). Layout, copy and every
+feature stayed; only the treatment moved. Tokens added to all three palettes:
+
+- **Glass** — `glass`, `glassPrimary`, `glassGreen`, `glassYellow`,
+  `glassPink` are the card tints made translucent (0.62–0.80 alpha), with
+  `glassBorder` as a hairline that reads as a lit edge. `SlabCard glass` uses
+  them plus `useLiftShadow()` — `shadow` (violet in light, black in dark),
+  y 12, radius 18, 0.16 / 0.45 opacity, `elevation: 3`. **Home only**: the
+  glass is meaningful over `components/ui2/home/Atmosphere.tsx`, four radial
+  colour glows (`primary` / `yellow` / `green` at 0.16–0.30) drawn as SVG
+  behind the scroll content. No BlurView — the gradients already fade, and a
+  blur pass on Android buys nothing visible.
+- **Hero mesh** — `heroHighlight` (top-right) and `heroShade` (bottom-left)
+  are radial stops over the hero's `primary`, plus a soft white disc and an
+  amber glow (`HeroMesh` in HomeSections). The Start pill takes the lift.
+- **Talk · Wave** — `components/tutor/WaveBand.tsx`: three waves
+  (`primaryTint`, `primaryTintBorder`, `primary`) drift on the UI thread, the
+  portrait bobs on the crest; both hold still under Reduce Motion. The
+  violet block under it carries the invitation, bio and band; the sheet
+  below holds the correction question, the toggle in its `segmented` look
+  (card trough, chosen option raised in `bg` with `primary` text), the idle
+  analyser, last session, limit and errors. Start is one wide
+  `primary → slab` pill. The call screen is unchanged.
+- **Profile · Dashboard** — `components/ui2/profile/ProfileTiles.tsx`: an
+  identity row with the gear, then four tiles (Level with the same ring as
+  Home; This week with a four-strand segment bar; Achievements; Lessons).
+  Each tile is fed by the section it summarises — `useNextBandProgress`,
+  the strands fetch, `useAchievements` read once and passed to
+  `AchievementGridView`, and the completed-lessons section's `onSummary` —
+  so a tile can never disagree with the card below it. Only Level navigates.
+- Night reading (`ui2Warm`) never shows these screens, so its glass keys are
+  the opaque tints — every warm value must stay a blue-free hex.
+
 ### Night reading — the warm palette (2026-09-09)
 
 A third palette, `ui2Warm`, for the reader only. It is not a third scheme.

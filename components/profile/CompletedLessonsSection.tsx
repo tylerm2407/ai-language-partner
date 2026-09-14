@@ -13,7 +13,7 @@
  * fixed for the Learn path.
  */
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -26,8 +26,20 @@ import {
   type CompletedLessonsPage,
 } from '../../lib/supabase-queries';
 
+export interface CompletedLessonsSummary {
+  total: number;
+  /** ISO timestamp of the most recent completion, if any. */
+  latestAt: string | null;
+}
+
 interface Props {
   userId: string | null | undefined;
+  /**
+   * Called whenever the count changes; `null` while loading or unreadable.
+   * The profile's Lessons tile shows the same number without a second
+   * query — this section owns the fetch (and its focus refresh).
+   */
+  onSummary?: (summary: CompletedLessonsSummary | null) => void;
 }
 
 /**
@@ -50,7 +62,7 @@ function scoreBadge(score: number, c: Ui2Palette): { label: string; color: strin
   return { label: `${pct}%`, color: c.error };
 }
 
-export function CompletedLessonsSection({ userId }: Props) {
+export function CompletedLessonsSection({ userId, onSummary }: Props) {
   const { c } = useUi2Theme();
   const router = useRouter();
   const [page, setPage] = useState<CompletedLessonsPage | null>(null);
@@ -97,6 +109,11 @@ export function CompletedLessonsSection({ userId }: Props) {
   const total = page?.total ?? 0;
   const unreadable = failed && !page;
   const latest = rows[0]?.completedAt;
+
+  useEffect(() => {
+    if (!onSummary) return;
+    onSummary(loading || unreadable ? null : { total, latestAt: latest ?? null });
+  }, [onSummary, loading, unreadable, total, latest]);
 
   // The vault row is the section header. A separate title above it would just
   // say "Completed Lessons" twice.

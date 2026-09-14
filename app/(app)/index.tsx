@@ -24,6 +24,7 @@ import { unitTilesToLessonTiles } from '../../components/magazine/LessonTile';
 import { useUnitProgressTiles } from '../../hooks/useUnitProgressTiles';
 import { useDailyChallenges } from '../../hooks/useDailyChallenges';
 import { HomeHeader, LevelDueRow, SessionHero, ReadRow } from '../../components/ui2/home/HomeSections';
+import { Atmosphere } from '../../components/ui2/home/Atmosphere';
 import { CefrExplainerSheet, useCefrExplainer } from '../../components/ui2/CefrExplainerSheet';
 import { PatternsCard } from '../../components/ui2/home/HomeInsights';
 import { useLearnerInsights } from '../../hooks/useLearnerInsights';
@@ -223,6 +224,9 @@ export default function HomeScreen() {
         contentContainerStyle={styles.body}
         showsVerticalScrollIndicator={false}
       >
+        {/* The colour glows every glass card on this page sits over. Inside the
+            scroll view so they move with the content, behind it in z-order. */}
+        <Atmosphere />
         <SafeAreaView edges={['top']} style={styles.stack}>
           <HomeHeader greeting={greeting} name={profile?.displayName} />
 

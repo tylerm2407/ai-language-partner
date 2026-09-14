@@ -7,11 +7,23 @@ import { useAchievements } from '../../hooks/useAchievements';
 import { AchievementBadge } from './AchievementBadge';
 
 const allAchievements = Object.values(ACHIEVEMENTS);
-const TOTAL = allAchievements.length;
+export const ACHIEVEMENT_TOTAL = allAchievements.length;
+const TOTAL = ACHIEVEMENT_TOTAL;
 
+/** The grid with its data fetched here. Screens that also need the count
+ *  elsewhere (the profile's stat tiles) call `useAchievements` once and render
+ *  `AchievementGridView` themselves, so the achievements are read once. */
 export function AchievementGrid() {
+  return <AchievementGridView {...useAchievements()} />;
+}
+
+export type AchievementGridViewProps = Pick<
+  ReturnType<typeof useAchievements>,
+  'earnedAchievements' | 'loading' | 'isNewInSession'
+>;
+
+export function AchievementGridView({ earnedAchievements, loading, isNewInSession }: AchievementGridViewProps) {
   const { c } = useUi2Theme();
-  const { earnedAchievements, loading, isNewInSession } = useAchievements();
 
   const earnedMap = new Map(
     earnedAchievements.map((e) => [e.type, e.earnedAt])
