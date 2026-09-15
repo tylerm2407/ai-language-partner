@@ -347,7 +347,7 @@ const CONFUSABLE_PAIRS: Partial<Record<LanguageCode, [string, string][]>> = {
      *
      * What the gate does NOT close is this: the kana keys already accept each
      * other, with no addition involved and nothing pending. Measured across
-     * all 2,153 taught Japanese strings — 23 acceptances on 12 rows. Kana is
+     * all 2,121 taught Japanese strings — 23 acceptances on 12 rows. Kana is
      * exactly what the gate leaves tolerant, and correctly so, which is what
      * leaves these two live and load-bearing.
      */
