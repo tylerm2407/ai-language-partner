@@ -56,6 +56,28 @@ export interface ExerciseHints {
    * `blankContext` in lib/exercise-restore.ts, which derives them.
    */
   blankContext?: { prefix: string; suffix: string };
+  /**
+   * The other keys taught alongside this row — the lesson's, and the unit's
+   * when the caller has them.
+   *
+   * A string that is the stored answer to a DIFFERENT question the learner is
+   * being taught is not a typo of this one, however close the two look. The
+   * curriculum audit counted 868 of these key-to-key collisions across the
+   * frozen curriculum, in all nine languages: Spanish "Más bajo" accepting
+   * "Más caro", "Paciente" accepting "Valiente", Korean "더 좋은" accepting
+   * "더 작은", "더 비싼" accepting "더 싼".
+   *
+   * This is the general rule the pair list cannot be: it is derived from the
+   * curriculum the learner is sitting in, so it covers every row authored from
+   * now on. `lib/confusable-pairs.ts` keeps the cases it already handles —
+   * words taught in different units, and words that are never anyone's stored
+   * key — which no sibling list can reach.
+   *
+   * Keys only. A sibling's accepted ALTERNATIVES are not included: an
+   * alternative is one row's judgement about a synonym, and refusing it
+   * everywhere else would turn a generosity into a trap.
+   */
+  siblingKeys?: readonly string[];
 }
 
 /**
@@ -247,6 +269,49 @@ export function gradeAnswer(
 
   const allAccepted = [normalizedCorrect, ...acceptedAnswers.map(normalize)];
 
+  /**
+   * Another taught key is never a typo of this one.
+   *
+   * Anything this row itself accepts is filtered out first, so a unit that
+   * teaches the same string twice, or a row that already accepts its
+   * neighbour's answer, is unaffected. What is left is a string the learner is
+   * being taught as the answer to a different question — and the fact that it
+   * sits one edit away from this key is exactly the contrast the lesson is
+   * drawing, not a slip of the finger.
+   */
+  const keyFolded = new Set([
+    stripDiacritics(normalizedCorrect),
+    stripDiacritics(completeWord(correctAnswer)),
+  ]);
+  const siblingKeys = new Set(
+    (hints?.siblingKeys ?? [])
+      .map(normalize)
+      .filter(
+        (key) =>
+          key !== '' &&
+          !allAccepted.includes(key) &&
+          !completedAccepted.includes(key) &&
+          // A sibling that folds onto this row's KEY is the same word written
+          // with or without its accents — "Menu" against "Menú", "Niece"
+          // against "Nièce", both taught because one is the gloss of the
+          // other. That is a question about accents, settled by the accent
+          // branch and the pair list, not a lexical collision. Measured on
+          // the frozen curriculum: 31 rows, all of them cognate pairs.
+          //
+          // Folding onto an ACCEPTED ALTERNATIVE is not excused the same way.
+          // "Groß_____ (Generous)" keys on zügig and also accepts mütig, and
+          // the unit teaches Mutig (brave) as its own answer — so the
+          // alternative's unaccented form is another word outright. An
+          // alternative is a generosity; it must not swallow a taught key.
+          !keyFolded.has(stripDiacritics(key)),
+      ),
+  );
+  const isTaughtElsewhere = (candidate: string): boolean =>
+    siblingKeys.has(candidate) ||
+    // On a fill-blank row the sibling keys arrive as whole words, so the
+    // fragment the learner typed has to be welded before it can match.
+    (hints?.blankContext !== undefined && siblingKeys.has(completeWord(candidate)));
+
   // Exact match (after normalization)
   if (allAccepted.includes(normalized) || typedWholeWord) {
     return {
@@ -299,6 +364,9 @@ export function gradeAnswer(
   const accentMatch = allAccepted.find(
     (accepted) =>
       stripDiacritics(accepted) === stripped &&
+      // A string the curriculum teaches as another answer is that answer, not
+      // a missing accent on this one.
+      !isTaughtElsewhere(normalized) &&
       !(
         hints?.language !== undefined &&
         (isConfusablePair(normalized, accepted, hints.language) ||
@@ -546,6 +614,7 @@ export function gradeAnswer(
         )));
   const confusable =
     negationMismatch
+    || isTaughtElsewhere(normalized)
     || (hints?.language !== undefined
       && (confusableIn(hints.language) || confusableIn('en')));
 

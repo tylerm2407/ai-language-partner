@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { haptic } from '../../lib/haptics';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,8 +24,10 @@ import { CelebrationOverlay } from '../ui/CelebrationOverlay';
 import {
   fetchDueReviewItemsWithCards,
   fetchReviewItemsByCardIds,
+  fetchUnitTaughtKeys,
   upsertReviewItem,
 } from '../../lib/supabase-queries';
+import { taughtKeys } from '../../lib/exercise-restore';
 import { calculateNextReview } from '../../lib/srs';
 import { enqueue, isNetworkError } from '../../lib/offline-queue';
 import {
@@ -65,6 +67,14 @@ interface LessonRunnerProps {
    */
   lessonId?: string;
   lessonTitle: string;
+  /**
+   * The unit this lesson belongs to. Supplied so the grader can be told every
+   * key the unit teaches, not just this lesson's — three quarters of the
+   * key-to-key collisions the curriculum audit found are between lessons of
+   * one unit. Omit it (review drills, the pre-auth trial lesson) and the
+   * lesson's own keys are used alone.
+   */
+  unitId?: string;
   xpReward: number;
   userId: string;
   targetLanguage: LanguageCode;
@@ -111,6 +121,7 @@ export function LessonRunner({
   exercises,
   lessonId,
   lessonTitle,
+  unitId,
   xpReward,
   userId,
   targetLanguage,
@@ -212,6 +223,39 @@ export function LessonRunner({
         );
       });
   }, [userId, exercises]);
+
+  /**
+   * Every key the unit teaches, so the grader can tell a neighbour's answer
+   * from a typo of this one (`siblingKeys` in lib/grading.ts).
+   *
+   * The lesson's own exercises are already in hand and cover about a quarter
+   * of the collisions; the rest are between lessons of the same unit, which is
+   * one vocabulary set in several exercise formats. That costs one keys-only
+   * query of a few kilobytes, fetched once per lesson.
+   *
+   * A failure here is not a reason to stop the lesson: the lesson's own keys
+   * still apply, so grading degrades to the narrower rule rather than to none.
+   */
+  const [unitKeys, setUnitKeys] = useState<string[]>([]);
+  const unitKeysFetchedRef = useRef(false);
+
+  useEffect(() => {
+    if (unitKeysFetchedRef.current || !unitId) return;
+    unitKeysFetchedRef.current = true;
+    fetchUnitTaughtKeys(unitId)
+      .then((rows) => setUnitKeys(taughtKeys(rows)))
+      .catch((err) =>
+        console.warn(
+          '[lesson-grading] unit keys unavailable; sibling-key refusals fall back to this lesson:',
+          err,
+        ),
+      );
+  }, [unitId]);
+
+  const siblingKeys = useMemo(
+    () => [...new Set([...taughtKeys(exercises), ...unitKeys])],
+    [exercises, unitKeys],
+  );
 
   useEffect(() => {
     if (restoreAttemptedRef.current) return;
@@ -845,6 +889,7 @@ export function LessonRunner({
                   userId,
                   targetLanguage,
                   cefrLevel,
+                  siblingKeys,
                   statuses[currentExercise.id],
                 )}
             </View>
@@ -864,6 +909,8 @@ function renderExercise(
   userId: string,
   targetLanguage: LanguageCode,
   cefrLevel: string | undefined,
+  /** Every other key this lesson and unit teach — see lib/grading.ts. */
+  siblingKeys: readonly string[],
   /** The recorded outcome for this exercise; read only by open production,
    *  whose semantic grade the key alone cannot rebuild on Previous. */
   recordedStatus?: AttemptStatus,
@@ -877,7 +924,7 @@ function renderExercise(
   // own input state from it, so walking back with Previous returns the
   // learner to the answer they gave rather than a blank, locked input sitting
   // under a note that says they got it right.
-  const shared = { userId, language: targetLanguage, cefrLevel, selected };
+  const shared = { userId, language: targetLanguage, cefrLevel, selected, siblingKeys };
 
   switch (exercise.type) {
     case 'multiple_choice':

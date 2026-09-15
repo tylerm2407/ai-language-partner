@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import { View, Text, Pressable, TextInput, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { haptic } from '../../lib/haptics';
@@ -38,6 +38,16 @@ export function ComprehensionQuestions({ questions, onComplete, onExit, cefrLeve
   const progress = questions.length > 0 ? currentIndex / questions.length : 0;
 
   /**
+   * The answers to the other questions on this passage. A typed answer that is
+   * another question's stored answer is that answer, not a typo of this one —
+   * see `siblingKeys` in lib/grading.ts.
+   */
+  const siblingKeys = useMemo(
+    () => [...new Set(questions.map((q) => q.correctAnswer).filter(Boolean))],
+    [questions],
+  );
+
+  /**
    * A ref, not the `isGrading` state: two taps dispatched in the same React
    * batch both read the pre-update value, so the state guard lets both through
    * and each spends a unit of the day's semantic allowance. Same pattern as
@@ -56,7 +66,11 @@ export function ComprehensionQuestions({ questions, onComplete, onExit, cefrLeve
     try {
       // The grader is injected: lib/reading-questions must not import this
       // module at value scope (it runs under Deno in the audit scripts).
-      result = await gradeReadingAnswerAsync(userAnswer, question, { cefrLevel, grader: gradeOpenResponse });
+      result = await gradeReadingAnswerAsync(userAnswer, question, {
+        cefrLevel,
+        grader: gradeOpenResponse,
+        siblingKeys,
+      });
     } catch (err) {
       // gradeOpenResponse folds remote failures into its result, so this is
       // an unexpected failure. Surface it and leave Check available.
@@ -78,7 +92,7 @@ export function ComprehensionQuestions({ questions, onComplete, onExit, cefrLeve
     } else {
       haptic('incorrect');
     }
-  }, [question, textAnswer, selectedOption, isRevealed, isGrading, cefrLevel]);
+  }, [question, textAnswer, selectedOption, isRevealed, isGrading, cefrLevel, siblingKeys]);
 
   const handleNext = useCallback(() => {
     if (currentIndex + 1 < questions.length) {
@@ -144,7 +158,7 @@ export function ComprehensionQuestions({ questions, onComplete, onExit, cefrLeve
               let borderColor = 'transparent';
 
               if (isRevealed) {
-                if (gradeReadingAnswer(option, question).isCorrect) {
+                if (gradeReadingAnswer(option, question, siblingKeys).isCorrect) {
                   bgColor = colors.success.tint;
                   borderColor = colors.success.base;
                 } else if (option === selectedOption && !isCorrect) {

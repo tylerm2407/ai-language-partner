@@ -24,7 +24,7 @@
  */
 
 import { gradeAnswer, type ExerciseHints, type GradeResult } from './grading';
-import type { Exercise, LanguageCode } from '../types';
+import type { Exercise, LanguageCode, TaughtRow } from '../types';
 import { restoreUnspacedTiles } from './sentence-tiles';
 
 /**
@@ -52,8 +52,33 @@ export function blankContext(prompt: string): { prefix: string; suffix: string }
   return { prefix, suffix };
 }
 
+/**
+ * The keys the learner is being taught alongside this row.
+ *
+ * `gradeAnswer` refuses a candidate that is another taught key: it is the
+ * answer to a different question, not a typo of this one. See `siblingKeys` in
+ * `ExerciseHints` for the 868 collisions this closes.
+ *
+ * Fill-blank keys are welded into the word their prompt completes, because a
+ * fragment is not a key anyone can type on another row — `rino` means nothing
+ * outside "Sob_____", while `Sobrino` is the word the lesson taught.
+ */
+export function taughtKeys(rows: readonly TaughtRow[]): string[] {
+  const keys = new Set<string>();
+  for (const row of rows) {
+    if (!row.correctAnswer) continue;
+    const blank = row.type === 'fill_blank' ? blankContext(row.prompt) : undefined;
+    keys.add(blank ? `${blank.prefix}${row.correctAnswer}${blank.suffix}` : row.correctAnswer);
+  }
+  return [...keys];
+}
+
 /** The classifier hints every exercise passes to `gradeAnswer`. */
-export function exerciseHints(exercise: Exercise, language?: LanguageCode): ExerciseHints {
+export function exerciseHints(
+  exercise: Exercise,
+  language?: LanguageCode,
+  siblingKeys?: readonly string[],
+): ExerciseHints {
   return {
     exerciseType: exercise.type,
     skillType: exercise.skillType,
@@ -63,6 +88,7 @@ export function exerciseHints(exercise: Exercise, language?: LanguageCode): Exer
     // Only fill_blank. A cloze row is graded strictly on the form it tests,
     // and welding a word onto a strict comparison changes nothing there.
     blankContext: exercise.type === 'fill_blank' ? blankContext(exercise.prompt) : undefined,
+    siblingKeys,
   };
 }
 
@@ -81,10 +107,11 @@ export function regradePick(
   exercise: Exercise,
   selected: string | null | undefined,
   language?: LanguageCode,
+  siblingKeys?: readonly string[],
 ): GradeResult | null {
   if (!isRestored(selected)) return null;
   return gradeAnswer(selected, exercise.correctAnswer, exercise.acceptedAnswers, {
-    exerciseHints: exerciseHints(exercise, language),
+    exerciseHints: exerciseHints(exercise, language, siblingKeys),
   });
 }
 

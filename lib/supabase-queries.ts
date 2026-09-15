@@ -28,6 +28,8 @@ import type {
   Lesson,
   Card,
   Exercise,
+  ExerciseType,
+  TaughtRow,
   ReviewItem,
   ReviewLog,
   HandsFreeSessionRow,
@@ -300,6 +302,37 @@ export async function fetchLessonWithExercises(lessonId: string): Promise<Lesson
   if (exerciseError) throw exerciseError;
 
   return mapLesson(lessonRow, (exerciseData ?? []).map(mapExercise));
+}
+
+/**
+ * Every answer the unit teaches, as three columns.
+ *
+ * The grader refuses a candidate that is another taught key (`siblingKeys` in
+ * lib/grading.ts). The lesson's own exercises are already loaded and cover a
+ * quarter of the collisions the curriculum audit measured; the other
+ * three-quarters sit in a SIBLING lesson of the same unit, because a unit is
+ * one vocabulary set presented in several exercise formats — the row that
+ * teaches "Data" and the row that teaches "Dati" are in different lessons of
+ * the same unit by construction.
+ *
+ * Kept to `type, prompt, correct_answer` for exactly that reason: a unit is
+ * about 84 exercises with 35 distinct keys, so this is a few kilobytes, not a
+ * second copy of the lesson. `type` and `prompt` are needed only to weld a
+ * fill-blank key back into the word it completes.
+ */
+export async function fetchUnitTaughtKeys(unitId: string): Promise<TaughtRow[]> {
+  const { data, error } = await supabase
+    .from('exercises')
+    .select('type, prompt, correct_answer, lessons!inner(unit_id)')
+    .eq('lessons.unit_id', unitId)
+    .limit(1000);
+
+  if (error) throw error;
+  return (data ?? []).map((row) => ({
+    type: row.type as ExerciseType,
+    prompt: (row.prompt as string) ?? '',
+    correctAnswer: (row.correct_answer as string) ?? '',
+  }));
 }
 
 // ─── Cards ──────────────────────────────────────────────────────

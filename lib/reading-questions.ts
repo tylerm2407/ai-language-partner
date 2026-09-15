@@ -14,10 +14,23 @@ export function readingQuestionOptions(question: ReadingQuestion): string[] {
   return question.questionType === 'true_false' ? ['True', 'False'] : [];
 }
 
-/** A tapped option is a deliberate choice, not a typing error. */
-export function gradeReadingAnswer(answer: string, question: ReadingQuestion) {
+/**
+ * A tapped option is a deliberate choice, not a typing error.
+ *
+ * `siblingKeys` are the answers to the OTHER questions on this passage: a
+ * typed answer that is another question's stored answer is that answer, not a
+ * typo of this one. See `siblingKeys` in lib/grading.ts.
+ */
+export function gradeReadingAnswer(
+  answer: string,
+  question: ReadingQuestion,
+  siblingKeys?: readonly string[],
+) {
   return gradeAnswer(answer, question.correctAnswer, question.acceptedAnswers, {
-    exerciseHints: question.questionType === 'short_answer' ? undefined : { exerciseType: 'multiple_choice' },
+    exerciseHints:
+      question.questionType === 'short_answer'
+        ? { siblingKeys }
+        : { exerciseType: 'multiple_choice', siblingKeys },
   });
 }
 
@@ -34,6 +47,8 @@ export interface ReadingGradeContext {
    * rather than a silent one.
    */
   grader?: OpenGrader;
+  /** The other questions' stored answers — see `gradeReadingAnswer`. */
+  siblingKeys?: readonly string[];
 }
 
 /**
@@ -49,9 +64,9 @@ export async function gradeReadingAnswerAsync(
   question: ReadingQuestion,
   context: ReadingGradeContext = {},
 ): Promise<OpenGradeResult> {
-  const { grader } = context;
+  const { grader, siblingKeys } = context;
   if (question.questionType !== 'short_answer' || !grader) {
-    const fixed = gradeReadingAnswer(answer, question);
+    const fixed = gradeReadingAnswer(answer, question, siblingKeys);
     return { ...fixed, source: 'fixed', verdict: fixed.isCorrect ? 'correct' : 'incorrect' };
   }
   return grader({
@@ -65,5 +80,8 @@ export async function gradeReadingAnswerAsync(
     // cause a correct answer to an older passage to be graded as wrong.
     passageId: question.passageId,
     promptText: context.promptText ?? question.questionText,
+    // The grader checks the stored key first; give that check the same
+    // sibling-key rule the synchronous path uses.
+    exerciseHints: { siblingKeys },
   });
 }

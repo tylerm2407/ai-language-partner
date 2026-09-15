@@ -7,7 +7,7 @@ import { Button } from '../ui/Button';
 import { gradeAnswer } from '../../lib/grading';
 import type { GradeResult } from '../../lib/grading';
 import { exerciseHints, isRestored, splitJoinedAnswer } from '../../lib/exercise-restore';
-import type { Exercise } from '../../types';
+import type { Exercise, LanguageCode } from '../../types';
 
 interface DialogueLine {
   speaker: string;
@@ -24,6 +24,11 @@ interface MiniDialogueExerciseProps {
   userId?: string;
   language?: string;
   cefrLevel?: string;
+  /**
+   * Every other key this lesson and unit teach. A candidate that is one of
+   * them is another question's answer, never a typo of this one.
+   */
+  siblingKeys?: readonly string[];
 }
 
 export function MiniDialogueExercise({
@@ -34,6 +39,7 @@ export function MiniDialogueExercise({
   userId,
   language,
   cefrLevel,
+  siblingKeys,
 }: MiniDialogueExerciseProps) {
   const dialogue = (exercise.metadata?.dialogue as DialogueLine[]) ?? [];
   const blankIndices = (exercise.metadata?.blankIndices as number[]) ?? [];
@@ -95,7 +101,7 @@ export function MiniDialogueExercise({
       corrects.push(correct);
 
       const grade = gradeAnswer(userAnswer, correct, accepted, {
-        exerciseHints: exerciseHints(exercise),
+        exerciseHints: exerciseHints(exercise, language as LanguageCode | undefined, siblingKeys),
       });
       if (!grade.isCorrect) {
         allCorrect = false;
@@ -156,7 +162,11 @@ export function MiniDialogueExercise({
     const userAnswer = answers[blankIndex] ?? '';
     const correct = correctAnswers[i] ?? '';
     const accepted = acceptedPerBlank[i] ?? [];
-    const grade = gradeAnswer(userAnswer, correct, accepted);
+    // The same hints the submitted grade used, or a blank could be outlined
+    // green while the recorded answer counted it wrong.
+    const grade = gradeAnswer(userAnswer, correct, accepted, {
+      exerciseHints: exerciseHints(exercise, language as LanguageCode | undefined, siblingKeys),
+    });
 
     return grade.isCorrect ? 'border-success' : 'border-error';
   };

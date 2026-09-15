@@ -33,6 +33,11 @@ interface TranslationExerciseProps {
   userId?: string;
   language?: string;
   cefrLevel?: string;
+  /**
+   * Every other key this lesson and unit teach. A candidate that is one of
+   * them is another question's answer, never a typo of this one.
+   */
+  siblingKeys?: readonly string[];
 }
 
 /** Open sentence production is the one type here whose key is illustrative. */
@@ -49,6 +54,7 @@ export function TranslationExercise({
   userId,
   language,
   cefrLevel,
+  siblingKeys,
 }: TranslationExerciseProps) {
   const lang = language as LanguageCode | undefined;
   // Seeded from the recorded pick so Previous comes back to the answer the
@@ -56,7 +62,7 @@ export function TranslationExercise({
   const [answer, setAnswer] = useState(selected ?? '');
   const [submitted, setSubmitted] = useState(() => isRestored(selected));
   const [result, setResult] = useState<GradeResult | null>(() => {
-    const fixed = regradePick(exercise, selected, lang);
+    const fixed = regradePick(exercise, selected, lang, siblingKeys);
     return isOpenProduction(exercise) ? restoreOpenGrade(fixed, restoredCorrect) : fixed;
   });
   const [isGrading, setIsGrading] = useState(false);
@@ -79,7 +85,7 @@ export function TranslationExercise({
 
   const handleSubmit = () => {
     if (!answer.trim() || submitted || gradingRef.current) return;
-    const hints = exerciseHints(exercise, lang);
+    const hints = exerciseHints(exercise, lang, siblingKeys);
 
     // Translations have a definite key and stay on the string grader. Open
     // production goes to the semantic grader, with the key as the fast path

@@ -479,3 +479,72 @@ describe('fill_blank is graded as the completed word', () => {
     expect(result.normalizedCorrectAnswer).toBe('ごい');
   });
 });
+
+describe('another taught key is not a typo', () => {
+  it('refuses a sibling key that sits inside the typo budget', () => {
+    // Spanish A2 comparatives teach "Más bajo" and "Más caro" in one unit.
+    // Two edits in an eight-character key is inside the budget, so the shorter
+    // row marked the taller row's answer correct — and SM-2 then showed the
+    // card less often.
+    const hints = { language: 'es' as const, siblingKeys: ['Más caro'] };
+    expect(gradeAnswer('Más caro', 'Más bajo', [], { exerciseHints: hints }).isCorrect).toBe(false);
+    // Without the sibling list it is accepted, which is the defect.
+    expect(
+      gradeAnswer('Más caro', 'Más bajo', [], { exerciseHints: { language: 'es' } }).isCorrect,
+    ).toBe(true);
+  });
+
+  it('refuses a Korean sibling key the pair list never named', () => {
+    const hints = { language: 'ko' as const, siblingKeys: ['더 싼'] };
+    expect(gradeAnswer('더 싼', '더 비싼', [], { exerciseHints: hints }).isCorrect).toBe(false);
+  });
+
+  it('still accepts a sibling key this row explicitly accepts', () => {
+    // A unit that teaches the same string twice, or a row that deliberately
+    // accepts its neighbour's answer, must be unaffected.
+    const hints = { language: 'es' as const, siblingKeys: ['Más caro'] };
+    expect(
+      gradeAnswer('Más caro', 'Más bajo', ['Más caro'], { exerciseHints: hints }).isCorrect,
+    ).toBe(true);
+  });
+
+  it('still forgives an ordinary typo that is nobody else’s answer', () => {
+    const hints = { language: 'es' as const, siblingKeys: ['Más caro', 'Paciente'] };
+    expect(gradeAnswer('Más bjao', 'Más bajo', [], { exerciseHints: hints }).isCorrect).toBe(true);
+  });
+
+  it('matches a fill-blank sibling on the completed word', () => {
+    // Sibling keys arrive as words, because a fragment is nobody's answer:
+    // "Sob_____ (Niece)" contributes Sobrina, not rina.
+    const hints = { exerciseType: 'fill_blank' as const, language: 'es' as const,
+      blankContext: { prefix: 'Sob', suffix: '' }, siblingKeys: ['Sobrina'] };
+    expect(gradeAnswer('rina', 'rino', [], { exerciseHints: hints }).isCorrect).toBe(false);
+  });
+
+  it('does nothing at all when the caller passes no sibling keys', () => {
+    expect(gradeAnswer('Más caro', 'Más bajo', [], {}).isCorrect).toBe(true);
+  });
+});
+
+describe('a sibling key that is the same word unaccented is still an accent slip', () => {
+  it('accepts the unaccented form when the sibling folds onto this row’s key', () => {
+    // French teaches "Nièce" and glosses it "Niece" on the paired row, so both
+    // are stored keys in the unit. Typing "Niece" on the French row is a
+    // missing accent, not another question's answer.
+    const result = gradeAnswer('Niece', 'Nièce', [], {
+      exerciseHints: { language: 'fr', siblingKeys: ['Niece'] },
+    });
+    expect(result.isCorrect).toBe(true);
+  });
+
+  it('does not extend that excuse to an accepted alternative', () => {
+    // "Groß_____ (Generous)" keys on zügig and also accepts mütig, while the
+    // unit teaches Mutig (brave) in its own right. The alternative's
+    // unaccented form is a different word, and a generosity must not swallow
+    // a taught key.
+    const result = gradeAnswer('Mutig', 'zügig', ['mütig'], {
+      exerciseHints: { language: 'de', siblingKeys: ['Mutig'] },
+    });
+    expect(result.isCorrect).toBe(false);
+  });
+});

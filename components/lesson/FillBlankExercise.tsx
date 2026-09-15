@@ -21,6 +21,11 @@ interface FillBlankExerciseProps {
   userId?: string;
   language?: string;
   cefrLevel?: string;
+  /**
+   * Every other key this lesson and unit teach. A candidate that is one of
+   * them is another question's answer, never a typo of this one.
+   */
+  siblingKeys?: readonly string[];
 }
 
 export function FillBlankExercise({
@@ -31,13 +36,14 @@ export function FillBlankExercise({
   userId,
   language,
   cefrLevel,
+  siblingKeys,
 }: FillBlankExerciseProps) {
   // Seeded from the recorded pick so Previous comes back to the answer the
   // learner actually gave, in its graded state — see lib/exercise-restore.ts.
   const [answer, setAnswer] = useState(selected ?? '');
   const [submitted, setSubmitted] = useState(() => isRestored(selected));
   const [result, setResult] = useState<GradeResult | null>(() =>
-    regradePick(exercise, selected, language as LanguageCode | undefined),
+    regradePick(exercise, selected, language as LanguageCode | undefined, siblingKeys),
   );
 
   // Split prompt on "___" to show sentence with blank
@@ -47,7 +53,7 @@ export function FillBlankExercise({
     if (!answer.trim() || submitted) return;
 
     const grade = gradeAnswer(answer, exercise.correctAnswer, exercise.acceptedAnswers, {
-      exerciseHints: exerciseHints(exercise, language as LanguageCode | undefined),
+      exerciseHints: exerciseHints(exercise, language as LanguageCode | undefined, siblingKeys),
     });
     setResult(grade);
     setSubmitted(true);
