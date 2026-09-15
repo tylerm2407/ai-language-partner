@@ -40,6 +40,7 @@
  */
 import { readFile } from 'node:fs/promises';
 import { gradeAnswer } from '../../lib/grading.ts';
+import { blankContext, taughtKeys } from '../../lib/exercise-restore.ts';
 
 const base = 'docs/audits/question-verification/remediation';
 const snapshot = JSON.parse(await readFile('.question-audit/snapshot-8c7f381c78d8.json', 'utf8'));
@@ -53,18 +54,43 @@ const courses = new Map(snapshot.courses.map((c) => [c.id, c]));
 const unitOf = (exercise) => units.get(lessons.get(exercise.lesson_id)?.unit_id);
 const courseOf = (exercise) => courses.get(unitOf(exercise)?.course_id);
 
-/** Stored keys taught by the other non-speaking rows of the same unit. */
-const siblingKeys = new Map();
+/**
+ * The keys taught by the other non-speaking rows of the same unit, in the form
+ * a learner could actually type them.
+ *
+ * `taughtKeys` is the app's own function, reused rather than reimplemented, so
+ * this measurement cannot drift from what the runtime does. It welds a
+ * fill-blank key into the word its prompt completes, which is the scoping fix
+ * the audit asked for: `rino` is nobody's answer to another question, while
+ * `Sobrino` is what the lesson teaches. Counting the fragment produced 17
+ * phantom Japanese readmissions and would produce more with every new
+ * fill-blank row.
+ */
+const rowsByUnit = new Map();
 for (const exercise of snapshot.exercises) {
   if (exercise.type === 'speaking' || exercise.response_mode === 'speak') continue;
   const unit = unitOf(exercise);
   if (!unit) continue;
-  if (!siblingKeys.has(unit.id)) siblingKeys.set(unit.id, new Map());
-  if (typeof exercise.correct_answer === 'string' && exercise.correct_answer.trim()) {
-    siblingKeys.get(unit.id).set(exercise.correct_answer, exercise.id);
-  }
+  if (!rowsByUnit.has(unit.id)) rowsByUnit.set(unit.id, []);
+  rowsByUnit.get(unit.id).push({
+    type: exercise.type,
+    prompt: exercise.prompt ?? '',
+    correctAnswer: exercise.correct_answer,
+  });
 }
+const siblingKeys = new Map(
+  [...rowsByUnit].map(([unitId, rows]) => [unitId, taughtKeys(rows)]),
+);
 
+/**
+ * The hints the shipped app passes, not a subset of them.
+ *
+ * Measuring without `siblingKeys` and `blankContext` measures a grader nobody
+ * runs: the sibling-key rule and the welded fill-blank comparison both fire
+ * only when the caller supplies them, and the lesson runner does. Leaving them
+ * out overstated the readmission count by attributing to the content a
+ * collision the grader already refuses.
+ */
 const hintsFor = (exercise, language) => ({
   exerciseHints: {
     exerciseType: exercise.type,
@@ -72,6 +98,10 @@ const hintsFor = (exercise, language) => ({
     targetGrammar: exercise.target_grammar,
     targetWord: exercise.target_word,
     language,
+    blankContext: exercise.type === 'fill_blank' ? blankContext(exercise.prompt ?? '') : undefined,
+    siblingKeys: (siblingKeys.get(unitOf(exercise)?.id) ?? []).filter(
+      (key) => key !== exercise.correct_answer,
+    ),
   },
 });
 
@@ -91,7 +121,7 @@ export function findReadmissions() {
 
     const shouldStayWrong = new Set([
       ...(before.distractors ?? []),
-      ...(siblingKeys.get(unitOf(before)?.id)?.keys() ?? []),
+      ...(siblingKeys.get(unitOf(before)?.id) ?? []),
     ]);
     for (const candidate of shouldStayWrong) {
       if (typeof candidate !== 'string' || !candidate.trim()) continue;
