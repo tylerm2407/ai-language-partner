@@ -15,6 +15,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { SNAPSHOT_FILE, SNAPSHOT_SHA, createRound2PatchSet } from './patch-set-round2.mjs';
 import { loadTriage, DEPENDENT_ROWS, PARTIALLY_HELD, TRIAGE_SHA, TRIAGE_SOURCE } from './triage-accepted-answers.mjs';
+import { loadCandidates, REGISTER_RULING, FR_C0024, CANDIDATES_SHA, RULED_ON } from './product-rulings.mjs';
 
 const raw = await readFile(SNAPSHOT_FILE, 'utf8');
 if (createHash('sha256').update(raw).digest('hex') !== SNAPSHOT_SHA) throw new Error('Changed frozen snapshot');
@@ -208,6 +209,7 @@ const TRIAGE = {
     recorded_where: 'In each of the four patch reasons, prefixed DEPENDENCY, so it travels with the row rather than living only in this file.',
     collateral: Object.entries(DEPENDENT_ROWS).flatMap(([ref, strings]) => strings.map(string => ({ ref, string }))),
   },
+  open_decisions_now_ruled_on: 'Both were settled on 2026-09-15; see `rulings`. The text below is kept as the record of what was decided and at what cost.',
   open_decisions_carried_forward: [
     {
       decision: 'Japanese orthography on written-production rows',
@@ -233,6 +235,68 @@ const TRIAGE = {
   rows_where_only_the_confirmed_half_is_patched: PARTIALLY_HELD,
 };
 
+const candidates = (await loadCandidates()).filter(entry => entry.verdict === 'needs_human');
+const isScript = entry => entry.group === 'ja_script_policy' || (entry.group === 'individual' && entry.candidate === 'イス');
+
+/** The four rulings of 2026-09-15, and what each one became. */
+const RULINGS = {
+  ruled_on: RULED_ON,
+  candidates_source_sha256: CANDIDATES_SHA,
+  '1_japanese_script': {
+    ruling: 'Accept the reading. On a row whose cue is an English gloss, the same Japanese word typed in the other script is correct.',
+    compiled: { rows: new Set(candidates.filter(isScript).map(e => e.exercise_id)).size, additions: candidates.filter(isScript).length },
+    note: 'Every addition is an exact match once added, so no typo tolerance is involved; re-measured against all 2,281 taught Japanese strings, none brings another inside any row\'s budget.',
+    accepted_cost: 'The course no longer requires kanji production anywhere: a learner can complete the Japanese written-production rows in hiragana. Recorded because it was the reason this was a decision rather than a defect, and it should not be rediscovered as a surprise.',
+  },
+  '2_register': {
+    ruling: 'Accept upward, refuse downward. A more polite form than the key is correct on a cue that names no register; a less polite one is not.',
+    compiled: { candidates: 19, accepted: 10, refused: 9 },
+    refused: Object.entries(REGISTER_RULING).filter(([, [accept]]) => !accept)
+      .map(([key, [, note]]) => ({ row: key.split('|')[0], candidate: key.split('|')[1], note })),
+    conflict_inside_the_ruling: {
+      what: 'The stated principle and one stated example disagree. In the Korean speech-level hierarchy 한다체 (plain) < 해요체 (polite) < 합니다체 (deferential), so 해야 해요 IS more polite than the keyed 해야 한다 — yet it appears in the REFUSE list, which is verbatim the triage\'s "politeness dropped" bullet, where it was arguably mis-filed.',
+      how_it_was_resolved: 'The named example was followed, because it is the more specific instruction. 바라요 for 바란다 (ko-E1684) is the identical move on an identical key shape and was refused with it, so the two rows are treated alike rather than arbitrarily.',
+      if_the_principle_was_meant_literally: 'Two strings on two rows become accepts: 해야 해요 on ko-E1670 and 바라요 on ko-E1684. Nothing else in the ruling changes.',
+    },
+  },
+  '2b_the_reversal_that_is_not': {
+    instruction: 'Remove ごめん for すみません, うん for はい and ううん for いいえ from production, as shipped in the round-1 patch.',
+    finding: 'There is nothing to remove. Those three strings are in no row and never were.',
+    what_actually_happened: [
+      'An early draft of the Japanese alternatives batch (source sha 747140d3…) did add all three.',
+      'The independent reviewer flagged exactly this register contradiction and marked the field `revise`.',
+      'The author removed them. The final draft (sha 0f0764d3…) carries ["ごめんなさい","申し訳ありません","申し訳ございません"], ["ええ"] and ["いや"], and the reviewer cleared it `approve_as_correction`.',
+      'That final draft is what deployed, so the reversal had already happened before the deploy — during round-1 review.',
+      'remediation/ja-alternatives-root-review/README.md §2 was written against the FIRST source sha and never updated. The contradiction was carried forward from that prose rather than from the field decisions beside it.',
+    ],
+    verified: [
+      'No patch in the round-1 draft-patches.json adds any of the three.',
+      'A read-only count against production — select count(*) from exercises where accepted_answers && ARRAY[ごめん, うん, ううん] — returns 0.',
+      'A test asserts the three appear in no frozen row and in no round-2 patch.',
+    ],
+    what_IS_live_and_was_NOT_removed: {
+      why_not: 'These are the real instances of the shape the ruling is about, but they are different strings with different register facts — ごめんなさい and ええ are themselves polite, merely less formal than the key — and removing a shipped accepted answer is the one change that makes a previously accepted learner answer start being rejected. That is named here rather than done unilaterally.',
+      rows: [
+        { id: 'aabbccdd-6666-1001-0003-e00000000006', ref: 'ja-E0030', prompt: 'Translate to Japanese: Sorry', key: 'すみません', live: ['ごめんなさい', '申し訳ありません', '申し訳ございません'], softer_than_the_key: ['ごめんなさい'] },
+        { id: 'aabbccdd-6666-1001-0005-e00000000006', ref: 'ja-E0054', prompt: 'Translate to Japanese: Yes', key: 'はい', live: ['ええ'], softer_than_the_key: ['ええ'] },
+        { id: 'aabbccdd-6666-1001-0006-e00000000006', ref: 'ja-E0066', prompt: 'Translate to Japanese: No', key: 'いいえ', live: ['いや'], softer_than_the_key: ['いや'] },
+      ],
+      recommendation: 'いや is the clearest downward move and the closest to what the ruling refuses; ごめんなさい and ええ are marginal. If the ruling is meant to reach them, it is three rows and three strings to remove, and it should be a deliberate second instruction.',
+    },
+  },
+  '3_fr_C0024': {
+    ruling: 'Accept the paraphrase. A B1 reading checkpoint whose key is a single connector also accepts a multi-word paraphrase of the same relation.',
+    compiled: { rows: 1, additions: 1, addition: FR_C0024.addition, before: FR_C0024.before },
+    note: 'The elision hypothesis the claim was filed under does not arise: checkpoint normalizeAnswer strips every non-letter, non-digit, non-space character before comparing, so the apostrophe is not in the comparison and both typographies collapse to one string. The unelided "par l\u2019intermédiaire de" stays refused — "de un" is ungrammatical — and a test asserts it.',
+    closes: 'The last open French claim.',
+  },
+  '4_reading_bar': {
+    ruling: 'No change. The five passages keep three questions and READING_COMPREHENSION_PASS stays at 0.70, so a learner still needs all three.',
+    compiled: { rows: 0 },
+    note: 'Nothing done. lib/cefr-proficiency.ts is not touched by this branch; another engineer owns it.',
+  },
+};
+
 const findings = {
   round: 2,
   snapshot_sha256: SNAPSHOT_SHA,
@@ -249,7 +313,9 @@ const findings = {
     '8_phrasal_verbs_title': { patched: 9, see: 'draft-patches.json (lessons)' },
     '9_productive_paradigms': { patched: 249, see: 'paradigm_refusals for what was left out' },
     'triage_298_confirmed_ja_ko_rows': { patched: 298, additions: 313, see: 'triage_block' },
+    'rulings_2026_09_15': { patched: 62, additions: 77, see: 'rulings' },
   },
+  rulings: RULINGS,
   triage_block: TRIAGE,
   already_fixed_by_round_one: ALREADY_FIXED.map(finding => ({
     ...finding, verified_now: finding.id ? frozen(finding.id, finding.field, finding.now, finding.ref) : null,

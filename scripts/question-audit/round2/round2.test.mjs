@@ -7,6 +7,7 @@ import { PGlite } from '../../../.question-audit/test-runtime/node_modules/@elec
 import { createRound2PatchSet, renderPatchSql, renderReverseSql, SNAPSHOT_FILE, SNAPSHOT_SHA } from './patch-set-round2.mjs';
 import { NEW_TITLE } from './idiomatic-equivalents-retitle.mjs';
 import { loadTriage, DEPENDENT_ROWS, PARTIALLY_HELD, TRIAGE_SHA } from './triage-accepted-answers.mjs';
+import { loadCandidates, REGISTER_RULING, FR_C0024, CANDIDATES_SHA, RULED_ON } from './product-rulings.mjs';
 
 const draft = JSON.parse(await readFile('docs/audits/question-verification/round2/draft-patches.json', 'utf8'));
 const { patches } = draft;
@@ -15,6 +16,7 @@ assert.equal(createHash('sha256').update(raw).digest('hex'), SNAPSHOT_SHA, 'the 
 assert.equal(draft.snapshot_sha256, SNAPSHOT_SHA, 'the draft must be built against the pinned snapshot');
 const snapshot = JSON.parse(raw);
 const triage = await loadTriage();
+const candidates = (await loadCandidates()).filter(entry => entry.verdict === 'needs_human');
 const tables = [...new Set(patches.flatMap(p => [p.table, ...(p.context_guards ?? []).map(g => g.table)]))].sort();
 const arrayFields = new Set(['accepted_answers', 'accepted_speech_variants', 'options', 'distractors', 'tags', 'target_vocabulary', 'collocations', 'search_terms']);
 
@@ -143,14 +145,20 @@ test('the compiler refuses speaking rows, unknown ids and fields, and contradict
 });
 
 test('the build is reproducible: a second compile emits byte-identical patches', async () => {
-  const [{ productiveParadigmFixes }, { filmTheaterFixes }, { idiomaticEquivalentsRetitle }, { triageAcceptedAnswers }] = await Promise.all([
+  const [{ productiveParadigmFixes }, { filmTheaterFixes }, { idiomaticEquivalentsRetitle },
+    { triageAcceptedAnswers }, { productRulings, frenchCheckpointParaphrase }, { createAcceptedAnswerLedger }] = await Promise.all([
     import('./productive-paradigm-fixes.mjs'), import('./film-theater-fixes.mjs'),
     import('./idiomatic-equivalents-retitle.mjs'), import('./triage-accepted-answers.mjs'),
+    import('./product-rulings.mjs'), import('./accepted-answer-ledger.mjs'),
   ]);
   const rebuild = async () => {
     const set = await createRound2PatchSet();
+    const ledger = createAcceptedAnswerLedger();
     filmTheaterFixes(set); idiomaticEquivalentsRetitle(set); productiveParadigmFixes(set);
-    await triageAcceptedAnswers(set);
+    await triageAcceptedAnswers(set, ledger);
+    await productRulings(set, ledger);
+    frenchCheckpointParaphrase(set);
+    ledger.write(set);
     return set.patches();
   };
   const [one, two] = [await rebuild(), await rebuild()];
@@ -223,7 +231,9 @@ test('the rollback writes back only the fields the patch wrote, never the identi
 /** Scope assertions: what this patch is allowed to touch, stated as tests so a
  * future producer cannot widen it without saying so. */
 test('the patch stays inside its declared scope', () => {
-  assert.deepEqual([...new Set(patches.map(p => p.table))].sort(), ['exercises', 'lessons']);
+  assert.deepEqual([...new Set(patches.map(p => p.table))].sort(), ['checkpoint_items', 'exercises', 'lessons']);
+  const checkpointFields = new Set(patches.filter(p => p.table === 'checkpoint_items').flatMap(p => Object.keys(p.after)));
+  assert.deepEqual([...checkpointFields], ['accepted_answers']);
   const exerciseFields = new Set(patches.filter(p => p.table === 'exercises').flatMap(p => Object.keys(p.after)));
   assert.deepEqual([...exerciseFields].sort(),
     ['accepted_answers', 'card_id', 'correct_answer', 'explanation', 'hint_text', 'options', 'prompt', 'target_grammar']);
@@ -274,7 +284,7 @@ test('the paradigm patch only ever sets target_grammar, and only on rows that ar
   }
   assert.equal(translateToNative, 2, 'exactly the French and Portuguese "Cheaper" rows');
   assert.equal(count, 249, '192 tense rows + 57 derivational rows');
-  assert.equal(shared, 7, 'the ja/ko tense rows the triage block also touches');
+  assert.equal(shared, 8, 'the ja/ko tense rows an accepted-answer block also touches');
   passedChecks++;
 });
 
@@ -298,9 +308,9 @@ test('Film & Theater stops teaching Painting and Sculpture in all six remaining 
   const lessons = new Map(snapshot.lessons.map(l => [l.id, l]));
   const units = new Map(snapshot.units.map(u => [u.id, u]));
   const courses = new Map(snapshot.courses.map(c => [c.id, c]));
-  const triageIds = new Set(triage.map(entry => entry.exercise_id));
+  const ledgerIds = new Set([...triage.map(entry => entry.exercise_id), ...candidates.map(entry => entry.exercise_id)]);
   const touched = patches.filter(p => p.table === 'exercises'
-    && !Object.hasOwn(p.after, 'target_grammar') && !triageIds.has(p.id));
+    && !Object.hasOwn(p.after, 'target_grammar') && !ledgerIds.has(p.id));
   assert.equal(touched.length, 24, 'four rows in each of six languages');
   const languages = new Set();
   for (const patch of touched) {
@@ -331,10 +341,16 @@ test('the triage block writes exactly the confirmed rows, and only accepted_answ
     if (!entry) continue;                       // a Film & Theater row, checked elsewhere
     rows++;
     additions += entry.additions.length;
-    // The field was empty, so the patch writes the additions and nothing else.
+    // The field was empty, so the patch writes only authored strings. Nine rows
+    // are also reached by a product ruling, so the stored value is the union and
+    // the triage additions come first, in their own order.
     assert.deepEqual(byId.get(patch.id).accepted_answers, []);
-    assert.deepEqual(patch.after.accepted_answers, entry.additions);
     assert.deepEqual(patch.before.accepted_answers, []);
+    assert.deepEqual(patch.after.accepted_answers.slice(0, entry.additions.length), entry.additions);
+    const ruled = new Set(candidates.filter(c => c.exercise_id === patch.id).map(c => c.candidate));
+    for (const value of patch.after.accepted_answers.slice(entry.additions.length)) {
+      assert(ruled.has(value), `${entry.ref}: ${value} comes from no recorded block`);
+    }
     assert(['ja', 'ko'].includes(entry.language));
     // Every reason names its row and carries the triage's own words.
     assert(patch.reasons.some(reason => reason.startsWith(`${entry.ref} (`)), entry.ref);
@@ -389,8 +405,72 @@ test('the 67 rows awaiting a product decision are not in the patch', () => {
   passedChecks++;
 });
 
+test('ruling 1 adds every Japanese script candidate and invents none', () => {
+  const script = candidates.filter(e => e.group === 'ja_script_policy' || (e.group === 'individual' && e.candidate === 'イス'));
+  assert.equal(script.length, 66);
+  assert.equal(new Set(script.map(e => e.exercise_id)).size, 61);
+  const byId = new Map(snapshot.exercises.map(e => [e.id, e]));
+  for (const entry of script) {
+    const patch = patches.find(p => p.id === entry.exercise_id);
+    assert(patch, entry.ref);
+    assert.equal(byId.get(entry.exercise_id).language ?? null, null);   // exercises carry no language column
+    assert.deepEqual(patch.before.accepted_answers, []);
+    assert(patch.after.accepted_answers.includes(entry.candidate), `${entry.ref}: ${entry.candidate} missing`);
+    assert(patch.reasons.some(r => r.includes(`RULING ${RULED_ON} — Japanese script`)), entry.ref);
+    assert.equal(entry.type === 'translate_to_target' || entry.type === 'cloze_deletion', true);
+  }
+  passedChecks++;
+});
+
+test('ruling 2 accepts every upward form, refuses every downward one, and rules on all 19', () => {
+  const register = candidates.filter(e => !(e.group === 'ja_script_policy' || (e.group === 'individual' && e.candidate === 'イス')));
+  assert.equal(register.length, 19);
+  assert.equal(Object.keys(REGISTER_RULING).length, 19);
+  let accepted = 0;
+  let refused = 0;
+  for (const entry of register) {
+    const decision = REGISTER_RULING[`${entry.ref}|${entry.candidate}`];
+    assert(decision, `${entry.ref}|${entry.candidate}`);
+    const [accept] = decision;
+    const patch = patches.find(p => p.id === entry.exercise_id);
+    if (accept) {
+      accepted++;
+      assert(patch, entry.ref);
+      assert(patch.after.accepted_answers.includes(entry.candidate), `${entry.ref}: ${entry.candidate} missing`);
+      assert(patch.reasons.some(r => r.includes(`RULING ${RULED_ON} — register`)), entry.ref);
+    } else {
+      refused++;
+      // A refused candidate must appear nowhere: not on its own row, not anywhere.
+      for (const other of patches) {
+        if (!Array.isArray(other.after.accepted_answers)) continue;
+        assert(!other.after.accepted_answers.includes(entry.candidate),
+          `${entry.ref}: the refused "${entry.candidate}" was written to ${other.id}`);
+      }
+    }
+  }
+  assert.equal(accepted, 10);
+  assert.equal(refused, 9);
+  // The three strings the reversal was about are in no row, before or after.
+  for (const string of ['ごめん', 'うん', 'ううん']) {
+    for (const row of snapshot.exercises) assert(!(row.accepted_answers ?? []).includes(string), `${string} is live on ${row.id}`);
+    for (const patch of patches) assert(!(patch.after.accepted_answers ?? []).includes(string));
+  }
+  passedChecks++;
+});
+
+test('ruling 3 adds the one held French paraphrase to fr-C0024', () => {
+  const patch = patches.find(p => p.table === 'checkpoint_items');
+  assert(patch);
+  assert.equal(patch.id, FR_C0024.id);
+  assert.deepEqual(patch.before.accepted_answers, FR_C0024.before);
+  assert.deepEqual(patch.after.accepted_answers, [...FR_C0024.before, FR_C0024.addition]);
+  assert.equal(patch.before.strand, 'reading');
+  assert(patch.reasons[0].includes(`RULING ${RULED_ON}`));
+  passedChecks++;
+});
+
 test('write a truthful local verification record after the assertions', async () => {
-  assert.equal(passedChecks, 19, 'never write a successful verification record when an earlier check failed');
+  assert.equal(passedChecks, 22, 'never write a successful verification record when an earlier check failed');
   await writeFile('docs/audits/question-verification/round2/local-sql-tests.json', JSON.stringify({
     engine: 'PGlite (in-memory PostgreSQL)',
     round: 2,
@@ -407,11 +487,14 @@ test('write a truthful local verification record after the assertions', async ()
       'rollback refuses an edited row', 'rollback writes only patched fields, never guarded identity fields',
       'declared table/field scope', 'target_grammar rows are not already strict', 'retitle covers exactly nine lessons',
       'Film & Theater keys no longer visual-art labels', 'triage block writes exactly the 298 confirmed rows and 313 additions',
-      'the four dependency-bearing rows carry the dependency in their own reason', 'no row awaiting a product decision is patched'],
+      'the four dependency-bearing rows carry the dependency in their own reason', 'no row awaiting a product decision is patched',
+      'ruling 1 adds every Japanese script candidate and invents none', 'ruling 2 accepts upward, refuses downward, and rules on all 19',
+      'ruling 3 adds the one held French paraphrase'],
     production_writes: 0,
     limitations: ['Minimal typed content schema, not full Supabase auth/RLS/triggers or historical migrations',
       'Does not establish linguistic correctness or independent round-2 approval',
       'Does not test the shipped grader; see runtime-round2.mjs for that, including the whole-language widening check'],
     triage_source_sha256: TRIAGE_SHA,
+    triage_candidates_sha256: CANDIDATES_SHA,
   }, null, 2) + '\n');
 });

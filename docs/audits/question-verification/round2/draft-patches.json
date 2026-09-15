@@ -3,8 +3,38 @@
   "status": "Draft: independent round-2 review and migration tests required; NOT deployed.",
   "round": 2,
   "applies_on_top_of": "the round-1 content patch deployed 2026-09-14",
-  "apply_precondition": "MUST ship in the same release as the grader branch (Japanese edit-distance gate + the kinship confusable pairs). The 313 accepted-answer additions widen typo tolerance on 88 rows without that gate; under strict grading all 313 still pass and all 12 collateral acceptances vanish.",
+  "ruled_on": "2026-09-15 (Japanese script: accept the reading; register: accept upward, refuse downward; fr-C0024: accept the paraphrase; reading bar: no change)",
+  "apply_precondition": "MUST ship in the same release as the grader branch (Japanese edit-distance gate + the kinship confusable pairs). The accepted-answer additions widen typo tolerance without that gate; under strict grading every addition still passes and all 12 collateral acceptances vanish.",
   "patches": [
+    {
+      "table": "checkpoint_items",
+      "id": "4f4bc9b6-c3e9-462d-bfd5-c83b198229ed",
+      "before": {
+        "language": "fr",
+        "band": "B1",
+        "strand": "reading",
+        "accepted_answers": [
+          "par",
+          "grâce à",
+          "chez"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "par",
+          "grâce à",
+          "chez",
+          "par l’intermédiaire d’"
+        ]
+      },
+      "reasons": [
+        "fr-C0024: RULING 2026-09-15 — a B1 reading checkpoint whose key is a single connector also accepts a multi-word paraphrase of the same relation. \"par l’intermédiaire d’un ami commun\" expresses the same mediated-introduction relation as the keyed \"par\", and the phrase is the one held candidate on this row. The elision hypothesis it was filed under does not arise: checkpoint normalizeAnswer strips punctuation before comparing."
+      ],
+      "sources": [
+        "https://www.larousse.fr/dictionnaires/francais/interm%C3%A9diaire/43672"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
     {
       "table": "exercises",
       "id": "006598c0-ae2a-4c33-9822-0e05031778b8",
@@ -7252,6 +7282,771 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-1002-0002-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1002-0002-000000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "さかな"
+        ]
+      },
+      "reasons": [
+        "ja-E0090 (ja, cloze_deletion): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"さかな\" is the same word as the keyed \"魚\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1002-0004-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1002-0004-000000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "さかな"
+        ]
+      },
+      "reasons": [
+        "ja-E0112 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"さかな\" is the same word as the keyed \"魚\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1002-0005-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1002-0005-000000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "みず"
+        ]
+      },
+      "reasons": [
+        "ja-E0126 (ja, cloze_deletion): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"みず\" is the same word as the keyed \"水\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1002-0006-e00000000004",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1002-0006-000000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "さかな"
+        ]
+      },
+      "reasons": [
+        "ja-E0134 (ja, cloze_deletion): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"さかな\" is the same word as the keyed \"魚\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1003-0001-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1003-0001-000000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "みぎ"
+        ]
+      },
+      "reasons": [
+        "ja-E0142 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"みぎ\" is the same word as the keyed \"右\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1003-0002-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1003-0002-000000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "真っ直ぐ",
+          "真直ぐ"
+        ]
+      },
+      "reasons": [
+        "ja-E0154 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"真っ直ぐ\", \"真直ぐ\" is the same word as the keyed \"まっすぐ\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1003-0002-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1003-0002-000000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "えき"
+        ]
+      },
+      "reasons": [
+        "ja-E0158 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"えき\" is the same word as the keyed \"駅\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1003-0003-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1003-0003-000000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "びょういん"
+        ]
+      },
+      "reasons": [
+        "ja-E0170 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"びょういん\" is the same word as the keyed \"病院\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1003-0004-e00000000004",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1003-0004-000000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "えき"
+        ]
+      },
+      "reasons": [
+        "ja-E0180 (ja, cloze_deletion): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"えき\" is the same word as the keyed \"駅\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1003-0004-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1003-0004-000000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "ぎんこう"
+        ]
+      },
+      "reasons": [
+        "ja-E0182 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"ぎんこう\" is the same word as the keyed \"銀行\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1003-0005-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1003-0005-000000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "ひだり"
+        ]
+      },
+      "reasons": [
+        "ja-E0196 (ja, cloze_deletion): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"ひだり\" is the same word as the keyed \"左\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1003-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1003-0006-000000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "えき"
+        ]
+      },
+      "reasons": [
+        "ja-E0202 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"えき\" is the same word as the keyed \"駅\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1003-0006-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1003-0006-000000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "くうこう"
+        ]
+      },
+      "reasons": [
+        "ja-E0206 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"くうこう\" is the same word as the keyed \"空港\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1003-0006-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1003-0006-000000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "みぎ"
+        ]
+      },
+      "reasons": [
+        "ja-E0208 (ja, cloze_deletion): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"みぎ\" is the same word as the keyed \"右\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1004-0002-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1004-0002-000000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "くつ"
+        ]
+      },
+      "reasons": [
+        "ja-E0228 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"くつ\" is the same word as the keyed \"靴\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1004-0004-e00000000004",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1004-0004-000000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "くつ"
+        ]
+      },
+      "reasons": [
+        "ja-E0250 (ja, cloze_deletion): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"くつ\" is the same word as the keyed \"靴\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1004-0005-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1004-0005-000000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "あした",
+          "あす"
+        ]
+      },
+      "reasons": [
+        "ja-E0264 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"あした\", \"あす\" is the same word as the keyed \"明日\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1004-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1004-0006-000000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "くつ"
+        ]
+      },
+      "reasons": [
+        "ja-E0272 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"くつ\" is the same word as the keyed \"靴\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1005-0002-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1005-0002-000000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "なつ"
+        ]
+      },
+      "reasons": [
+        "ja-E0300 (ja, cloze_deletion): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"なつ\" is the same word as the keyed \"夏\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1005-0004-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1005-0004-000000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "なつ"
+        ]
+      },
+      "reasons": [
+        "ja-E0322 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"なつ\" is the same word as the keyed \"夏\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1005-0005-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1005-0005-000000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "ふゆ"
+        ]
+      },
+      "reasons": [
+        "ja-E0334 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"ふゆ\" is the same word as the keyed \"冬\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1005-0006-e00000000004",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1005-0006-000000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "なつ"
+        ]
+      },
+      "reasons": [
+        "ja-E0344 (ja, cloze_deletion): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"なつ\" is the same word as the keyed \"夏\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1006-0004-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1006-0004-000000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "かぞく"
+        ]
+      },
+      "reasons": [
+        "ja-E0392 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"かぞく\" is the same word as the keyed \"家族\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1007-0002-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1007-0002-000000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "まど"
+        ]
+      },
+      "reasons": [
+        "ja-E0438 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"まど\" is the same word as the keyed \"窓\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1007-0004-e00000000004",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1007-0004-000000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "まど"
+        ]
+      },
+      "reasons": [
+        "ja-E0460 (ja, cloze_deletion): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"まど\" is the same word as the keyed \"窓\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1007-0004-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1007-0004-000000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "いす",
+          "イス"
+        ]
+      },
+      "reasons": [
+        "ja-E0462 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"いす\", \"イス\" is the same word as the keyed \"椅子\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1007-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1007-0006-000000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "まど"
+        ]
+      },
+      "reasons": [
+        "ja-E0482 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"まど\" is the same word as the keyed \"窓\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1008-0001-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1008-0001-000000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "て"
+        ]
+      },
+      "reasons": [
+        "ja-E0492 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"て\" is the same word as the keyed \"手\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1008-0002-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1008-0002-000000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "め"
+        ]
+      },
+      "reasons": [
+        "ja-E0504 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"め\" is the same word as the keyed \"目\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1008-0003-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1008-0003-000000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "うで"
+        ]
+      },
+      "reasons": [
+        "ja-E0522 (ja, cloze_deletion): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"うで\" is the same word as the keyed \"腕\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1008-0005-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1008-0005-000000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "うで"
+        ]
+      },
+      "reasons": [
+        "ja-E0544 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"うで\" is the same word as the keyed \"腕\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1008-0005-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1008-0005-000000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "あたま"
+        ]
+      },
+      "reasons": [
+        "ja-E0546 (ja, cloze_deletion): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"あたま\" is the same word as the keyed \"頭\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1008-0006-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1008-0006-000000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "て"
+        ]
+      },
+      "reasons": [
+        "ja-E0558 (ja, cloze_deletion): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"て\" is the same word as the keyed \"手\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2001-0001-e00000000004",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2001-0001-a20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "おい"
+        ]
+      },
+      "reasons": [
+        "ja-E0564 (ja, cloze_deletion): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"おい\" is the same word as the keyed \"甥\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2001-0001-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2001-0001-a20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "めい"
+        ]
+      },
+      "reasons": [
+        "ja-E0565 (ja, cloze_deletion): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"めい\" is the same word as the keyed \"姪\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2001-0002-e00000000004",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2001-0002-a20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "めい"
+        ]
+      },
+      "reasons": [
+        "ja-E0576 (ja, cloze_deletion): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"めい\" is the same word as the keyed \"姪\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2001-0003-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2001-0003-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "おい"
+        ]
+      },
+      "reasons": [
+        "ja-E0586 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"おい\" is the same word as the keyed \"甥\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2001-0004-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2001-0004-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "めい"
+        ]
+      },
+      "reasons": [
+        "ja-E0598 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"めい\" is the same word as the keyed \"姪\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2003-0001-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2003-0001-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "りょうりする",
+          "料理します"
+        ]
+      },
+      "reasons": [
+        "ja-E0712 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"りょうりする\" is the same word as the keyed \"料理する\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget.",
+        "ja-E0712 (ja, translate_to_target): RULING 2026-09-15 — register, accept upward and refuse downward. \"料理します\" against the keyed \"料理する\": Polite form of the keyed plain 料理する. Politeness raised on a cue that names no register."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2005-0001-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2005-0001-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "せんしゅう"
+        ]
+      },
+      "reasons": [
+        "ja-E0850 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"せんしゅう\" is the same word as the keyed \"先週\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-2005-0001-e00000000004",
       "before": {
         "lesson_id": "aabbccdd-6666-2005-0001-a20000000000",
@@ -7448,6 +8243,25 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-2005-0004-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2005-0004-a20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "べんきょうしました"
+        ]
+      },
+      "reasons": [
+        "ja-E0889 (ja, cloze_deletion): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"べんきょうしました\" is the same word as the keyed \"勉強しました\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-2005-0004-e00000000008",
       "before": {
         "lesson_id": "aabbccdd-6666-2005-0004-a20000000000",
@@ -7458,12 +8272,14 @@
       "after": {
         "target_grammar": "past_polite_mashita",
         "accepted_answers": [
-          "私は話しました"
+          "私は話しました",
+          "はなしました"
         ]
       },
       "reasons": [
         "ja A2 Past Tense Basics \"I spoke\": the lesson's point is the verb form, and the row was tagged vocabulary, so the typo budget accepted a different form of the same lemma as a \"minor typo\" — rated 3, which SM-2 treats as success. Setting target_grammar = past_polite_mashita makes the row strict, which is what every other grammar-shaped row already is. No key, alternative, prompt or option is changed.",
-        "ja-E0892 (ja, translate_to_target): Overt subject on a translate cue that says \"I\". Correct Japanese."
+        "ja-E0892 (ja, translate_to_target): Overt subject on a translate cue that says \"I\". Correct Japanese.",
+        "ja-E0892 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"はなしました\" is the same word as the keyed \"話しました\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
       ],
       "sources": [
         "lib/grading.ts gradeAnswer (TYPO_TOLERANCE_RATIO, isGrammarExercise)",
@@ -7574,6 +8390,45 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-2005-0006-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2005-0006-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "きのう",
+          "さくじつ"
+        ]
+      },
+      "reasons": [
+        "ja-E0916 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"きのう\", \"さくじつ\" is the same word as the keyed \"昨日\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2006-0001-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2006-0001-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "らいしゅう"
+        ]
+      },
+      "reasons": [
+        "ja-E0922 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"らいしゅう\" is the same word as the keyed \"来週\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-2006-0001-e00000000004",
       "before": {
         "lesson_id": "aabbccdd-6666-2006-0001-a20000000000",
@@ -7675,6 +8530,25 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-2006-0003-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2006-0003-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "ゆめ"
+        ]
+      },
+      "reasons": [
+        "ja-E0952 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"ゆめ\" is the same word as the keyed \"夢\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-2006-0004-e00000000002",
       "before": {
         "lesson_id": "aabbccdd-6666-2006-0004-a20000000000",
@@ -7723,12 +8597,14 @@
       "after": {
         "target_grammar": "future_nonpast_masu",
         "accepted_answers": [
-          "私は旅行します"
+          "私は旅行します",
+          "りょこうします"
         ]
       },
       "reasons": [
         "ja A2 Future Plans \"I will travel\": the lesson's point is the verb form, and the row was tagged vocabulary, so the typo budget accepted a different form of the same lemma as a \"minor typo\" — rated 3, which SM-2 treats as success. Setting target_grammar = future_nonpast_masu makes the row strict, which is what every other grammar-shaped row already is. No key, alternative, prompt or option is changed.",
-        "ja-E0970 (ja, translate_to_target): Overt subject on a translate cue that says \"I\". Correct Japanese."
+        "ja-E0970 (ja, translate_to_target): Overt subject on a translate cue that says \"I\". Correct Japanese.",
+        "ja-E0970 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"りょこうします\" is the same word as the keyed \"旅行します\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
       ],
       "sources": [
         "lib/grading.ts gradeAnswer (TYPO_TOLERANCE_RATIO, isGrammarExercise)",
@@ -7757,6 +8633,45 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-2006-0006-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2006-0006-a20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "ゆめ"
+        ]
+      },
+      "reasons": [
+        "ja-E0985 (ja, cloze_deletion): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"ゆめ\" is the same word as the keyed \"夢\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2006-0006-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2006-0006-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "あした",
+          "あす"
+        ]
+      },
+      "reasons": [
+        "ja-E0988 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"あした\", \"あす\" is the same word as the keyed \"明日\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-3001-0001-e00000000008",
       "before": {
         "lesson_id": "aabbccdd-6666-3001-0001-b10000000000",
@@ -7774,6 +8689,25 @@
       "sources": [
         "Stimulus analysis of the shipped app: components/lesson/ListeningExercise.tsx never renders `prompt`; components/lesson/DictationExercise.tsx never renders `prompt` and speaks `correct_answer`; `hintText` is rendered only by components/lesson/ClozeExercise.tsx. Reading/spelling checked against 大辞林/三省堂 standard orthography for the heard word."
       ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-3001-0002-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3001-0002-b10000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "しゃかい"
+        ]
+      },
+      "reasons": [
+        "ja-E1155 (ja, cloze_deletion): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"しゃかい\" is the same word as the keyed \"社会\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
       "review_status": "awaiting_independent_round2_review"
     },
     {
@@ -7799,6 +8733,25 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-3001-0003-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3001-0003-b10000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "せいじ"
+        ]
+      },
+      "reasons": [
+        "ja-E1169 (ja, cloze_deletion): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"せいじ\" is the same word as the keyed \"政治\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-3001-0003-e00000000008",
       "before": {
         "lesson_id": "aabbccdd-6666-3001-0003-b10000000000",
@@ -7816,6 +8769,25 @@
       "sources": [
         "Stimulus analysis of the shipped app: components/lesson/ListeningExercise.tsx never renders `prompt`; components/lesson/DictationExercise.tsx never renders `prompt` and speaks `correct_answer`; `hintText` is rendered only by components/lesson/ClozeExercise.tsx. Reading/spelling checked against 大辞林/三省堂 standard orthography for the heard word."
       ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-3001-0004-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3001-0004-b10000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "けいざい"
+        ]
+      },
+      "reasons": [
+        "ja-E1183 (ja, cloze_deletion): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"けいざい\" is the same word as the keyed \"経済\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
       "review_status": "awaiting_independent_round2_review"
     },
     {
@@ -7841,6 +8813,25 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-3001-0005-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3001-0005-b10000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "しゃかい"
+        ]
+      },
+      "reasons": [
+        "ja-E1194 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"しゃかい\" is the same word as the keyed \"社会\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-3001-0005-e00000000008",
       "before": {
         "lesson_id": "aabbccdd-6666-3001-0005-b10000000000",
@@ -7858,6 +8849,25 @@
       "sources": [
         "Stimulus analysis of the shipped app: components/lesson/ListeningExercise.tsx never renders `prompt`; components/lesson/DictationExercise.tsx never renders `prompt` and speaks `correct_answer`; `hintText` is rendered only by components/lesson/ClozeExercise.tsx. Reading/spelling checked against 大辞林/三省堂 standard orthography for the heard word."
       ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-3001-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3001-0006-b10000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "せいじ"
+        ]
+      },
+      "reasons": [
+        "ja-E1208 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"せいじ\" is the same word as the keyed \"政治\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
       "review_status": "awaiting_independent_round2_review"
     },
     {
@@ -8093,6 +9103,25 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-3004-0006-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3004-0006-b10000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "たんそ"
+        ]
+      },
+      "reasons": [
+        "ja-E1463 (ja, cloze_deletion): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"たんそ\" is the same word as the keyed \"炭素\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-3004-0006-e00000000008",
       "before": {
         "lesson_id": "aabbccdd-6666-3004-0006-b10000000000",
@@ -8219,6 +9248,25 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-3007-0001-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3007-0001-b10000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "でしょう"
+        ]
+      },
+      "reasons": [
+        "ja-E1642 (ja, translate_to_target): RULING 2026-09-15 — register, accept upward and refuse downward. \"でしょう\" against the keyed \"だろう\": One politeness step above the keyed だろう. Politeness raised."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-3007-0001-e00000000005",
       "before": {
         "lesson_id": "aabbccdd-6666-3007-0001-b10000000000",
@@ -8281,6 +9329,25 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-3007-0003-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3007-0003-b10000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "そうぞうして"
+        ]
+      },
+      "reasons": [
+        "ja-E1673 (ja, cloze_deletion): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"そうぞうして\" is the same word as the keyed \"想像して\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-3007-0004-e00000000002",
       "before": {
         "lesson_id": "aabbccdd-6666-3007-0004-b10000000000",
@@ -8338,6 +9405,25 @@
       "sources": [
         "Stimulus analysis of the shipped app: components/lesson/ListeningExercise.tsx never renders `prompt`; components/lesson/DictationExercise.tsx never renders `prompt` and speaks `correct_answer`; `hintText` is rendered only by components/lesson/ClozeExercise.tsx. Reading/spelling checked against 大辞林/三省堂 standard orthography for the heard word."
       ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-3008-0001-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3008-0001-b10000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "はいけい"
+        ]
+      },
+      "reasons": [
+        "ja-E1726 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"はいけい\" is the same word as the keyed \"拝啓\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
       "review_status": "awaiting_independent_round2_review"
     },
     {
@@ -8427,6 +9513,25 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-4001-0001-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-4001-0001-b20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "びょうどう"
+        ]
+      },
+      "reasons": [
+        "ja-E1816 (ja, cloze_deletion): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"びょうどう\" is the same word as the keyed \"平等\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-4001-0002-e00000000006",
       "before": {
         "lesson_id": "aabbccdd-6666-4001-0002-b20000000000",
@@ -8444,6 +9549,25 @@
       "sources": [
         "Stimulus analysis of the shipped app: components/lesson/ListeningExercise.tsx never renders `prompt`; components/lesson/DictationExercise.tsx never renders `prompt` and speaks `correct_answer`; `hintText` is rendered only by components/lesson/ClozeExercise.tsx. Reading/spelling checked against 大辞林/三省堂 standard orthography for the heard word."
       ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-4001-0003-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-4001-0003-b20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "いしき"
+        ]
+      },
+      "reasons": [
+        "ja-E1838 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"いしき\" is the same word as the keyed \"意識\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
       "review_status": "awaiting_independent_round2_review"
     },
     {
@@ -8490,6 +9614,25 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-4001-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-4001-0006-b20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "そんざい"
+        ]
+      },
+      "reasons": [
+        "ja-E1880 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"そんざい\" is the same word as the keyed \"存在\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-4001-0006-e00000000006",
       "before": {
         "lesson_id": "aabbccdd-6666-4001-0006-b20000000000",
@@ -8507,6 +9650,25 @@
       "sources": [
         "Stimulus analysis of the shipped app: components/lesson/ListeningExercise.tsx never renders `prompt`; components/lesson/DictationExercise.tsx never renders `prompt` and speaks `correct_answer`; `hintText` is rendered only by components/lesson/ClozeExercise.tsx. Reading/spelling checked against 大辞林/三省堂 standard orthography for the heard word."
       ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-4001-0006-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-4001-0006-b20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "じゆう"
+        ]
+      },
+      "reasons": [
+        "ja-E1886 (ja, cloze_deletion): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"じゆう\" is the same word as the keyed \"自由\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
       "review_status": "awaiting_independent_round2_review"
     },
     {
@@ -8675,6 +9837,25 @@
       "sources": [
         "Stimulus analysis of the shipped app: components/lesson/ListeningExercise.tsx never renders `prompt`; components/lesson/DictationExercise.tsx never renders `prompt` and speaks `correct_answer`; `hintText` is rendered only by components/lesson/ClozeExercise.tsx. Reading/spelling checked against 大辞林/三省堂 standard orthography for the heard word."
       ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-4003-0005-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-4003-0005-b20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "よさん"
+        ]
+      },
+      "reasons": [
+        "ja-E2034 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"よさん\" is the same word as the keyed \"予算\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
       "review_status": "awaiting_independent_round2_review"
     },
     {
@@ -8910,6 +10091,25 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-7777-1001-0006-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-7777-1001-0006-000000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "아닙니다"
+        ]
+      },
+      "reasons": [
+        "ko-E0066 (ko, translate_to_target): RULING 2026-09-15 — register, accept upward and refuse downward. \"아닙니다\" against the keyed \"아니요\": The deferential 합니다체 form of the keyed 아니요. Politeness raised."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-7777-2002-0003-e00000000005",
       "before": {
         "lesson_id": "aabbccdd-7777-2002-0003-a20000000000",
@@ -8960,12 +10160,14 @@
       "after": {
         "target_grammar": "past_polite_eosseoyo",
         "accepted_answers": [
-          "저는 공부했어요"
+          "저는 공부했어요",
+          "공부했습니다"
         ]
       },
       "reasons": [
         "ko A2 Past Tense Basics \"I studied\": the lesson's point is the verb form, and the row was tagged vocabulary, so the typo budget accepted a different form of the same lemma as a \"minor typo\" — rated 3, which SM-2 treats as success. Setting target_grammar = past_polite_eosseoyo makes the row strict, which is what every other grammar-shaped row already is. No key, alternative, prompt or option is changed.",
-        "ko-E0856 (ko, translate_to_target): The cue says \"I\". An overt 저는 is correct Korean; Korean drops subjects optionally, it does not forbid them."
+        "ko-E0856 (ko, translate_to_target): The cue says \"I\". An overt 저는 is correct Korean; Korean drops subjects optionally, it does not forbid them.",
+        "ko-E0856 (ko, translate_to_target): RULING 2026-09-15 — register, accept upward and refuse downward. \"공부했습니다\" against the keyed \"공부했어요\": The deferential 합니다체 form of the keyed 공부했어요. Politeness raised."
       ],
       "sources": [
         "lib/grading.ts gradeAnswer (TYPO_TOLERANCE_RATIO, isGrammarExercise)",
@@ -8985,12 +10187,14 @@
       "after": {
         "target_grammar": "past_polite_eosseoyo",
         "accepted_answers": [
-          "저는 갔어요"
+          "저는 갔어요",
+          "갔습니다"
         ]
       },
       "reasons": [
         "ko A2 Past Tense Basics \"I went\": the lesson's point is the verb form, and the row was tagged vocabulary, so the typo budget accepted a different form of the same lemma as a \"minor typo\" — rated 3, which SM-2 treats as success. Setting target_grammar = past_polite_eosseoyo makes the row strict, which is what every other grammar-shaped row already is. No key, alternative, prompt or option is changed.",
-        "ko-E0862 (ko, translate_to_target): Overt subject on a translate cue that says \"I\"."
+        "ko-E0862 (ko, translate_to_target): Overt subject on a translate cue that says \"I\".",
+        "ko-E0862 (ko, translate_to_target): RULING 2026-09-15 — register, accept upward and refuse downward. \"갔습니다\" against the keyed \"갔어요\": The deferential 합니다체 form of the keyed 갔어요. Politeness raised."
       ],
       "sources": [
         "lib/grading.ts gradeAnswer (TYPO_TOLERANCE_RATIO, isGrammarExercise)",
@@ -9133,6 +10337,25 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-7777-2005-0004-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-7777-2005-0004-a20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "공부했습니다"
+        ]
+      },
+      "reasons": [
+        "ko-E0889 (ko, cloze_deletion): RULING 2026-09-15 — register, accept upward and refuse downward. \"공부했습니다\" against the keyed \"공부했어요\": The deferential 합니다체 form of the keyed 공부했어요. Politeness raised."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-7777-2005-0004-e00000000008",
       "before": {
         "lesson_id": "aabbccdd-7777-2005-0004-a20000000000",
@@ -9186,6 +10409,25 @@
       "sources": [
         "lib/grading.ts gradeAnswer (TYPO_TOLERANCE_RATIO, isGrammarExercise)"
       ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-7777-2005-0005-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-7777-2005-0005-a20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "놀았습니다"
+        ]
+      },
+      "reasons": [
+        "ko-E0901 (ko, cloze_deletion): RULING 2026-09-15 — register, accept upward and refuse downward. \"놀았습니다\" against the keyed \"놀았어요\": The deferential 합니다체 form of the keyed 놀았어요. Politeness raised."
+      ],
+      "sources": [],
       "review_status": "awaiting_independent_round2_review"
     },
     {
@@ -9500,17 +10742,42 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-7777-3007-0003-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-7777-3007-0003-b10000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "해야 합니다"
+        ]
+      },
+      "reasons": [
+        "ko-E1670 (ko, translate_to_target): RULING 2026-09-15 — register, accept upward and refuse downward. \"해야 합니다\" against the keyed \"해야 한다\": The deferential 합니다체 form of the keyed plain 해야 한다. Politeness raised."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-7777-3007-0004-e00000000002",
       "before": {
         "lesson_id": "aabbccdd-7777-3007-0004-b10000000000",
         "type": "translate_to_target",
-        "target_grammar": null
+        "target_grammar": null,
+        "accepted_answers": []
       },
       "after": {
-        "target_grammar": "desire_barada"
+        "target_grammar": "desire_barada",
+        "accepted_answers": [
+          "바랍니다",
+          "저는 바랍니다"
+        ]
       },
       "reasons": [
-        "ko B1 Hypothetical Situations \"I wish\": the lesson's point is the verb form, and the row was tagged vocabulary, so the typo budget accepted a different form of the same lemma as a \"minor typo\" — rated 3, which SM-2 treats as success. Setting target_grammar = desire_barada makes the row strict, which is what every other grammar-shaped row already is. No key, alternative, prompt or option is changed."
+        "ko B1 Hypothetical Situations \"I wish\": the lesson's point is the verb form, and the row was tagged vocabulary, so the typo budget accepted a different form of the same lemma as a \"minor typo\" — rated 3, which SM-2 treats as success. Setting target_grammar = desire_barada makes the row strict, which is what every other grammar-shaped row already is. No key, alternative, prompt or option is changed.",
+        "ko-E1684 (ko, translate_to_target): RULING 2026-09-15 — register, accept upward and refuse downward. \"바랍니다\", \"저는 바랍니다\" against the keyed \"바란다\": The deferential 합니다체 form of the keyed 바란다. Politeness raised. The deferential form with an overt subject. The subject half was already decided correct on the two Korean translate_to_target rows in the triage block; the register half is raised, so both halves now hold."
       ],
       "sources": [
         "lib/grading.ts gradeAnswer (TYPO_TOLERANCE_RATIO, isGrammarExercise)"

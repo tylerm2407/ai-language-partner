@@ -13,6 +13,8 @@ import { gradeAnswer } from '../../../lib/grading.ts';
 import { SNAPSHOT_FILE, SNAPSHOT_SHA } from './patch-set-round2.mjs';
 import { derivationalRows, alreadyStrict } from './productive-paradigm-fixes.mjs';
 import { loadTriage, DEPENDENT_ROWS } from './triage-accepted-answers.mjs';
+import { FR_C0024 } from './product-rulings.mjs';
+import { isCorrect as checkpointCorrect } from '../../../supabase/functions/checkpoint/checkpoint-core.ts';
 
 const raw = await readFile(SNAPSHOT_FILE, 'utf8');
 if (createHash('sha256').update(raw).digest('hex') !== SNAPSHOT_SHA) throw new Error('Changed frozen snapshot');
@@ -126,7 +128,7 @@ for (const patch of draft.patches) {
 }
 
 /**
- * 5. The triage block, checked the way triage insisted it be checked.
+ * 5. Every accepted-answer addition, checked the way triage insisted it be checked.
  *
  * NOT per row. A per-row check — does this row still accept only its own
  * strings — passes all 88 rows whose typo ball grows and catches none of the
@@ -140,6 +142,12 @@ for (const patch of draft.patches) {
  * stored answer may be lost. And the only strings the patch newly admits must
  * be the twelve the four dependency-bearing kinship rows were declared to admit
  * — anything else is an unrecorded collision and fails the run.
+ *
+ * The rows checked are every exercise whose `accepted_answers` this patch
+ * changes AND whose key it leaves alone: the triage block, both product rulings,
+ * and the union rows where they overlap. Film & Theater is excluded because it
+ * rewrites the key as well, so a before/after grading comparison there would be
+ * comparing two different questions; those rows are covered by check 1.
  */
 const triage = await loadTriage();
 
@@ -158,9 +166,19 @@ const observedCollateral = new Set();
 /** Rows the paradigm block also makes strict; see the loss branch below. */
 const strictened = new Set(draft.patches.filter(p => Object.hasOwn(p.after, 'target_grammar')).map(p => p.id));
 const intendedLosses = [];
-for (const entry of triage) {
-  const original = before.get(entry.exercise_id);
-  const patched = after.get(entry.exercise_id);
+const refOf = new Map(triage.map(entry => [entry.exercise_id, entry.ref]));
+/** Every row whose accepted_answers moves and whose key does not. */
+const acceptedAnswerRows = draft.patches
+  .filter(patch => patch.table === 'exercises' && Array.isArray(patch.after.accepted_answers)
+    && !Object.hasOwn(patch.after, 'correct_answer'))
+  .map(patch => ({
+    id: patch.id,
+    ref: refOf.get(patch.id) ?? patch.id,
+    additions: patch.after.accepted_answers.filter(value => !(patch.before.accepted_answers ?? []).includes(value)),
+  }));
+for (const entry of acceptedAnswerRows) {
+  const original = before.get(entry.id);
+  const patched = after.get(entry.id);
   counts.triage_rows++;
   for (const addition of entry.additions) {
     counts.triage_additions++;
@@ -177,7 +195,7 @@ for (const entry of triage) {
       // regression: each one is already counted in closed_acceptances above. A
       // loss on any row the paradigm patch does NOT touch would be a real
       // regression and fails the run.
-      if (strictened.has(entry.exercise_id)) intendedLosses.push({ ref: entry.ref, candidate });
+      if (strictened.has(entry.id)) intendedLosses.push({ ref: entry.ref, candidate });
       else failures.push({ ref: entry.ref, kind: 'previously_accepted_string_lost', candidate });
     }
     if (!was && now && !entry.additions.includes(candidate)) {
@@ -190,7 +208,7 @@ for (const entry of triage) {
 }
 counts.collateral_acceptances = observedCollateral.size;
 counts.intended_losses_on_rows_made_strict = intendedLosses.length;
-if (intendedLosses.length !== 4) failures.push({ kind: 'intended_loss_count_changed', intendedLosses });
+if (intendedLosses.length !== 5) failures.push({ kind: 'intended_loss_count_changed', intendedLosses });
 for (const declared of declaredCollateral) {
   if (!observedCollateral.has(declared)) failures.push({ kind: 'declared_collateral_not_reproduced', declared });
 }
@@ -203,8 +221,8 @@ for (const declared of declaredCollateral) {
  * not here to test directly, so this establishes the shape of the claim, not
  * that branch's implementation of it.
  */
-for (const entry of triage) {
-  const strict = { ...after.get(entry.exercise_id), target_grammar: 'strictness-probe' };
+for (const entry of acceptedAnswerRows) {
+  const strict = { ...after.get(entry.id), target_grammar: 'strictness-probe' };
   for (const addition of entry.additions) {
     if (!grade(strict, addition)) failures.push({ ref: entry.ref, kind: 'addition_rejected_under_strict_grading', addition });
     else counts.strict_additions_accepted++;
@@ -212,6 +230,28 @@ for (const entry of triage) {
   for (const candidate of DEPENDENT_ROWS[entry.ref] ?? []) {
     if (grade(strict, candidate)) failures.push({ ref: entry.ref, kind: 'collateral_survives_strict_grading', candidate });
   }
+}
+
+/**
+ * 6b. fr-C0024 goes through the checkpoint grader, not gradeAnswer. Its
+ * normalizeAnswer strips punctuation, so the paraphrase's elided apostrophe is
+ * not in the comparison — which is why the hypothesis this claim was filed under
+ * was disproved. Check the addition is accepted and nothing else moved.
+ */
+{
+  const patch = draft.patches.find(p => p.table === 'checkpoint_items');
+  const frozen = snapshot.checkpoint_items.find(item => item.id === FR_C0024.id);
+  const patched = { ...frozen, ...patch.after };
+  const item = row => ({ id: row.id, strand: row.strand, prompt: row.prompt, audio_text: row.audio_text, correct_answer: row.correct_answer, accepted_answers: row.accepted_answers, options: row.options });
+  if (checkpointCorrect(FR_C0024.addition, item(frozen))) failures.push({ ref: 'fr-C0024', kind: 'paraphrase_was_already_accepted' });
+  if (!checkpointCorrect(FR_C0024.addition, item(patched))) failures.push({ ref: 'fr-C0024', kind: 'paraphrase_not_accepted_after_patch' });
+  for (const answer of FR_C0024.before) {
+    if (!checkpointCorrect(answer, item(patched))) failures.push({ ref: 'fr-C0024', kind: 'existing_answer_lost', answer });
+  }
+  // The unelided form stays wrong: "de un" is ungrammatical and the checkpoint
+  // normaliser keeps the two apart.
+  if (checkpointCorrect('par l’intermédiaire de', item(patched))) failures.push({ ref: 'fr-C0024', kind: 'unelided_form_accepted' });
+  counts.checkpoint_answers_checked = FR_C0024.before.length + 2;
 }
 
 /** 7. The refusals in findings.json are claims about the grader too: each listed

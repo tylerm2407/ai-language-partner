@@ -44,6 +44,166 @@
       "patched": 298,
       "additions": 313,
       "see": "triage_block"
+    },
+    "rulings_2026_09_15": {
+      "patched": 62,
+      "additions": 77,
+      "see": "rulings"
+    }
+  },
+  "rulings": {
+    "ruled_on": "2026-09-15",
+    "candidates_source_sha256": "632265eb7fada40062b7686512e6dad69c7a860647b6cd2439a944ad3b7f2866",
+    "1_japanese_script": {
+      "ruling": "Accept the reading. On a row whose cue is an English gloss, the same Japanese word typed in the other script is correct.",
+      "compiled": {
+        "rows": 61,
+        "additions": 66
+      },
+      "note": "Every addition is an exact match once added, so no typo tolerance is involved; re-measured against all 2,281 taught Japanese strings, none brings another inside any row's budget.",
+      "accepted_cost": "The course no longer requires kanji production anywhere: a learner can complete the Japanese written-production rows in hiragana. Recorded because it was the reason this was a decision rather than a defect, and it should not be rediscovered as a surprise."
+    },
+    "2_register": {
+      "ruling": "Accept upward, refuse downward. A more polite form than the key is correct on a cue that names no register; a less polite one is not.",
+      "compiled": {
+        "candidates": 19,
+        "accepted": 10,
+        "refused": 9
+      },
+      "refused": [
+        {
+          "row": "ja-E0014",
+          "candidate": "おはよう",
+          "note": "Casual for the keyed polite おはようございます. Politeness dropped, and A1 teaches the polite greeting specifically."
+        },
+        {
+          "row": "ja-E0038",
+          "candidate": "おやすみ",
+          "note": "Casual for the keyed polite おやすみなさい. Politeness dropped."
+        },
+        {
+          "row": "ko-E0066",
+          "candidate": "아니",
+          "note": "Bare casual for the keyed 아니요. Politeness dropped."
+        },
+        {
+          "row": "ko-E0856",
+          "candidate": "공부했다",
+          "note": "The plain 한다체 form of the keyed 해요체 공부했어요. Politeness dropped."
+        },
+        {
+          "row": "ko-E0862",
+          "candidate": "갔다",
+          "note": "The plain 한다체 form of the keyed 갔어요. Politeness dropped."
+        },
+        {
+          "row": "ko-E0889",
+          "candidate": "공부했다",
+          "note": "The plain 한다체 form of the keyed 공부했어요. Politeness dropped."
+        },
+        {
+          "row": "ko-E0901",
+          "candidate": "놀았다",
+          "note": "The plain 한다체 form of the keyed 놀았어요. Politeness dropped."
+        },
+        {
+          "row": "ko-E1670",
+          "candidate": "해야 해요",
+          "note": "Named in the ruling's REFUSE list. Recorded tension: in the Korean speech-level hierarchy 해요체 sits ABOVE the keyed 한다체, so the ruling's own principle would accept this. The explicit example is followed; see the round-2 report."
+        },
+        {
+          "row": "ko-E1684",
+          "candidate": "바라요",
+          "note": "The 해요체 form of the keyed plain 바란다 — the identical move to 해야 해요 on ko-E1670, and refused with it so the two rows are treated alike."
+        }
+      ],
+      "conflict_inside_the_ruling": {
+        "what": "The stated principle and one stated example disagree. In the Korean speech-level hierarchy 한다체 (plain) < 해요체 (polite) < 합니다체 (deferential), so 해야 해요 IS more polite than the keyed 해야 한다 — yet it appears in the REFUSE list, which is verbatim the triage's \"politeness dropped\" bullet, where it was arguably mis-filed.",
+        "how_it_was_resolved": "The named example was followed, because it is the more specific instruction. 바라요 for 바란다 (ko-E1684) is the identical move on an identical key shape and was refused with it, so the two rows are treated alike rather than arbitrarily.",
+        "if_the_principle_was_meant_literally": "Two strings on two rows become accepts: 해야 해요 on ko-E1670 and 바라요 on ko-E1684. Nothing else in the ruling changes."
+      }
+    },
+    "2b_the_reversal_that_is_not": {
+      "instruction": "Remove ごめん for すみません, うん for はい and ううん for いいえ from production, as shipped in the round-1 patch.",
+      "finding": "There is nothing to remove. Those three strings are in no row and never were.",
+      "what_actually_happened": [
+        "An early draft of the Japanese alternatives batch (source sha 747140d3…) did add all three.",
+        "The independent reviewer flagged exactly this register contradiction and marked the field `revise`.",
+        "The author removed them. The final draft (sha 0f0764d3…) carries [\"ごめんなさい\",\"申し訳ありません\",\"申し訳ございません\"], [\"ええ\"] and [\"いや\"], and the reviewer cleared it `approve_as_correction`.",
+        "That final draft is what deployed, so the reversal had already happened before the deploy — during round-1 review.",
+        "remediation/ja-alternatives-root-review/README.md §2 was written against the FIRST source sha and never updated. The contradiction was carried forward from that prose rather than from the field decisions beside it."
+      ],
+      "verified": [
+        "No patch in the round-1 draft-patches.json adds any of the three.",
+        "A read-only count against production — select count(*) from exercises where accepted_answers && ARRAY[ごめん, うん, ううん] — returns 0.",
+        "A test asserts the three appear in no frozen row and in no round-2 patch."
+      ],
+      "what_IS_live_and_was_NOT_removed": {
+        "why_not": "These are the real instances of the shape the ruling is about, but they are different strings with different register facts — ごめんなさい and ええ are themselves polite, merely less formal than the key — and removing a shipped accepted answer is the one change that makes a previously accepted learner answer start being rejected. That is named here rather than done unilaterally.",
+        "rows": [
+          {
+            "id": "aabbccdd-6666-1001-0003-e00000000006",
+            "ref": "ja-E0030",
+            "prompt": "Translate to Japanese: Sorry",
+            "key": "すみません",
+            "live": [
+              "ごめんなさい",
+              "申し訳ありません",
+              "申し訳ございません"
+            ],
+            "softer_than_the_key": [
+              "ごめんなさい"
+            ]
+          },
+          {
+            "id": "aabbccdd-6666-1001-0005-e00000000006",
+            "ref": "ja-E0054",
+            "prompt": "Translate to Japanese: Yes",
+            "key": "はい",
+            "live": [
+              "ええ"
+            ],
+            "softer_than_the_key": [
+              "ええ"
+            ]
+          },
+          {
+            "id": "aabbccdd-6666-1001-0006-e00000000006",
+            "ref": "ja-E0066",
+            "prompt": "Translate to Japanese: No",
+            "key": "いいえ",
+            "live": [
+              "いや"
+            ],
+            "softer_than_the_key": [
+              "いや"
+            ]
+          }
+        ],
+        "recommendation": "いや is the clearest downward move and the closest to what the ruling refuses; ごめんなさい and ええ are marginal. If the ruling is meant to reach them, it is three rows and three strings to remove, and it should be a deliberate second instruction."
+      }
+    },
+    "3_fr_C0024": {
+      "ruling": "Accept the paraphrase. A B1 reading checkpoint whose key is a single connector also accepts a multi-word paraphrase of the same relation.",
+      "compiled": {
+        "rows": 1,
+        "additions": 1,
+        "addition": "par l’intermédiaire d’",
+        "before": [
+          "par",
+          "grâce à",
+          "chez"
+        ]
+      },
+      "note": "The elision hypothesis the claim was filed under does not arise: checkpoint normalizeAnswer strips every non-letter, non-digit, non-space character before comparing, so the apostrophe is not in the comparison and both typographies collapse to one string. The unelided \"par l’intermédiaire de\" stays refused — \"de un\" is ungrammatical — and a test asserts it.",
+      "closes": "The last open French claim."
+    },
+    "4_reading_bar": {
+      "ruling": "No change. The five passages keep three questions and READING_COMPREHENSION_PASS stays at 0.70, so a learner still needs all three.",
+      "compiled": {
+        "rows": 0
+      },
+      "note": "Nothing done. lib/cefr-proficiency.ts is not touched by this branch; another engineer owns it."
     }
   },
   "triage_block": {
@@ -130,6 +290,7 @@
         }
       ]
     },
+    "open_decisions_now_ruled_on": "Both were settled on 2026-09-15; see `rulings`. The text below is kept as the record of what was decided and at what cost.",
     "open_decisions_carried_forward": [
       {
         "decision": "Japanese orthography on written-production rows",

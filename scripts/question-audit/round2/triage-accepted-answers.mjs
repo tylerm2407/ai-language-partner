@@ -94,8 +94,14 @@ export async function loadTriage() {
   return entries;
 }
 
-export async function triageAcceptedAnswers(set) {
-  const { row, update } = set;
+/**
+ * Contribute the triage additions to the shared accepted-answer ledger rather
+ * than writing them directly: five rows are also reached by one of the two
+ * product rulings, and the union has to be composed in one place. See
+ * `accepted-answer-ledger.mjs`.
+ */
+export async function triageAcceptedAnswers(set, ledger) {
+  const { row } = set;
   const entries = await loadTriage();
   const seen = new Set();
   let additions = 0;
@@ -136,7 +142,7 @@ export async function triageAcceptedAnswers(set) {
     }
 
     const reason = `${ref} (${language}, ${type}): ${entry.reason}${collateral ? DEPENDENCY_NOTE(collateral) : ''}`;
-    update('exercises', id, { accepted_answers: entry.proposed }, reason, entry.source ? [entry.source] : []);
+    ledger.contribute(id, { block: 'triage', additions: entry.additions, reason, sources: entry.source ? [entry.source] : [] });
     additions += entry.additions.length;
   }
 

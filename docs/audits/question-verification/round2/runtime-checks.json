@@ -2,19 +2,19 @@
   "round": 2,
   "grader": "lib/grading.ts gradeAnswer, with the runtime exerciseHints shape from lib/exercise-restore.ts",
   "snapshot_sha256": "9a20145dc6b53d1e4b5f17388b3f24c4ee4dd43c19b9bdac935ba8256bfb489c",
-  "draft_sha256": "f34a1d45e0c901cd706b49d776f307afeb0e425e36dff23249cc44ef61d4feac",
+  "draft_sha256": "ad6e1e1e0c9352f44736be376bdc8f914d16447b9c724a8b9012354637f63a21",
   "counts": {
-    "patched_rows": 564,
-    "stored_answers": 1022,
+    "patched_rows": 628,
+    "stored_answers": 1162,
     "choice_rows": 12,
     "closed_acceptances": 279,
     "still_open": 0,
     "refusal_claims": 23,
-    "triage_rows": 298,
-    "triage_additions": 313,
-    "whole_language_comparisons": 678577,
+    "triage_rows": 363,
+    "triage_additions": 389,
+    "whole_language_comparisons": 826197,
     "collateral_acceptances": 12,
-    "strict_additions_accepted": 313,
+    "strict_additions_accepted": 389,
     "taught_strings_per_language": {
       "ja": 2281,
       "it": 2020,
@@ -26,7 +26,8 @@
       "ko": 2152,
       "de": 1861
     },
-    "intended_losses_on_rows_made_strict": 4
+    "intended_losses_on_rows_made_strict": 5,
+    "checkpoint_answers_checked": 5
   },
   "triage_source": "docs/audits/question-verification/round2/triage-confirmed.json",
   "declared_collateral": [
@@ -95,6 +96,10 @@
     {
       "ref": "ko-E0862",
       "candidate": "가겠어요"
+    },
+    {
+      "ref": "aabbccdd-7777-3007-0004-e00000000002",
+      "candidate": "란다"
     }
   ],
   "failures": [],

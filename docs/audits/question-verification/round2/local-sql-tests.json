@@ -2,11 +2,12 @@
   "engine": "PGlite (in-memory PostgreSQL)",
   "round": 2,
   "snapshot_sha256": "9a20145dc6b53d1e4b5f17388b3f24c4ee4dd43c19b9bdac935ba8256bfb489c",
-  "sql_sha256": "6eecea884e6339d9e778479c42dae923f04e039e0dad19de99f6702898d89049",
-  "reverse_sql_sha256": "3e720f084f6df9fa21c5a317d8142de8444654ffa5c1170135c6672d434761e3",
-  "patch_rows": 573,
-  "changed_fields": 655,
+  "sql_sha256": "777a949a1afc78512255cbb65859e660e71bb3bb0508f2c732e7a8c1f971935a",
+  "reverse_sql_sha256": "0a790b370c88c749fd3340d89e4c582f36bdfff3ca041c7c4d8a6be00f1c377f",
+  "patch_rows": 638,
+  "changed_fields": 721,
   "tables": [
+    "checkpoint_items",
     "exercises",
     "lessons"
   ],
@@ -31,7 +32,10 @@
     "Film & Theater keys no longer visual-art labels",
     "triage block writes exactly the 298 confirmed rows and 313 additions",
     "the four dependency-bearing rows carry the dependency in their own reason",
-    "no row awaiting a product decision is patched"
+    "no row awaiting a product decision is patched",
+    "ruling 1 adds every Japanese script candidate and invents none",
+    "ruling 2 accepts upward, refuses downward, and rules on all 19",
+    "ruling 3 adds the one held French paraphrase"
   ],
   "production_writes": 0,
   "limitations": [
@@ -39,5 +43,6 @@
     "Does not establish linguistic correctness or independent round-2 approval",
     "Does not test the shipped grader; see runtime-round2.mjs for that, including the whole-language widening check"
   ],
-  "triage_source_sha256": "d897777b985558929da9e57a7fa1445bc303a289c414c6b49a7f48f135ea9775"
+  "triage_source_sha256": "d897777b985558929da9e57a7fa1445bc303a289c414c6b49a7f48f135ea9775",
+  "triage_candidates_sha256": "632265eb7fada40062b7686512e6dad69c7a860647b6cd2439a944ad3b7f2866"
 }
