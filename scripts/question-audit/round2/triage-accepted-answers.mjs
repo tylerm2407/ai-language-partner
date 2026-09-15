@@ -29,18 +29,27 @@
  *
  * TWO PRECONDITIONS, both carried in the patch itself rather than only in prose.
  *
- * 1. FOUR ROWS CARRY A RECORDED DEPENDENCY. ja-E0361, ja-E0373, ja-E0569 and
- *    ja-E0581 add the kanji spellings of おばあさん / おじいさん / おじさん / おばさん.
- *    Those spellings are correct, but they pull five other taught kinship terms
- *    — お母さん, お父さん, お姉さん, お嬢さん, お隣さん — inside the typo budget on
- *    rows whose entire purpose is separating kinship terms. Twelve collateral
- *    acceptances in total, enumerated below and re-measured by
- *    `runtime-round2.mjs` against the whole language, not per row. They close
- *    when the confusable pairs the `grader` agent is authoring in
- *    `lib/confusable-pairs.ts` land. The rows are included because the additions
- *    are right and because splitting them out would hide the dependency; the
- *    dependency is written into each of those four patch reasons so it travels
- *    with the row.
+ * 1. FOUR ROWS CARRY A RECORDED DEPENDENCY, on the GATE rather than on a pair
+ *    list. ja-E0361, ja-E0373, ja-E0569 and ja-E0581 add the kanji spellings of
+ *    おばあさん / おじいさん / おじさん / おばさん. Those spellings are correct, but
+ *    with the grader as it stands on this branch they pull five other taught
+ *    kinship terms — お母さん, お父さん, お姉さん, お嬢さん, お隣さん — inside the
+ *    typo budget, on rows whose entire purpose is separating kinship terms.
+ *    Twelve collateral acceptances in total, enumerated below and re-measured by
+ *    `runtime-round2.mjs` against the whole language, not per row.
+ *
+ *    What closes them is the Japanese edit-distance gate on the grader branch,
+ *    which refuses fuzzy acceptance on a kanji-bearing answer before the typo
+ *    budget is ever consulted. That was measured on the grader side: the five
+ *    confusable pairs originally authored for this collision could never fire
+ *    once the gate was in place and were removed as inert, so naming them here
+ *    would point at a remedy that no longer exists. The two kana pairs that
+ *    remain on that branch are for a collision that exists independently of
+ *    these additions.
+ *
+ *    The rows are included because the additions are right and because splitting
+ *    them out would hide the dependency; the dependency is written into each of
+ *    those four patch reasons so it travels with the row.
  *
  * 2. THE WHOLE BLOCK SHIPS WITH THE GRADER BRANCH, NOT BEFORE IT. Triage
  *    measured that the additions and the Japanese edit-distance gate are
@@ -81,7 +90,7 @@ export const DEPENDENT_ROWS = {
 export const PARTIALLY_HELD = ['ja-E0892', 'ja-E0970', 'ko-E0856', 'ko-E0862'];
 
 const DEPENDENCY_NOTE = collateral =>
-  ` DEPENDENCY — do not apply this row without the confusable pairs the grader branch adds to lib/confusable-pairs.ts: until they land, the added kanji spelling brings ${collateral.join(', ')} inside this row's typo budget, on a row whose purpose is separating kinship terms.`;
+  ` DEPENDENCY — do not apply this row without the Japanese edit-distance gate on the grader branch, which refuses fuzzy acceptance on a kanji-bearing answer before the typo budget is consulted. Until the gate lands, the added kanji spelling brings ${collateral.join(', ')} inside this row's typo budget, on a row whose purpose is separating kinship terms. The gate, not a pair list, is what holds these rows apart: the confusable pairs first authored for this collision were measured to be unreachable behind it and were withdrawn.`;
 
 export async function loadTriage() {
   const path = resolve(dirname(fileURLToPath(import.meta.url)), '../../..', TRIAGE_FILE);

@@ -37,17 +37,20 @@
  * considered it and said no" and "nobody looked" are different states and only
  * one of them is finished.
  *
- * ONE CONFLICT INSIDE THE RULING, resolved in favour of the explicit example and
- * reported rather than silently smoothed. Tyler's principle is "a more polite
- * form than the key is correct", and in the Korean speech-level hierarchy
- * (한다체 plain < 해요체 polite < 합니다체 deferential) `해야 해요` IS more polite
- * than the keyed `해야 한다` — yet `해야 해요` appears in his REFUSE list, which is
- * verbatim the "politeness dropped" bullet the triage wrote. The named example
- * wins here because it is the more specific instruction. `바라요` for `바란다`
- * (ko-E1684) is the identical move on an identical key shape, so it is refused
- * too: treating the two differently would be arbitrary in a way neither reading
- * of the ruling supports. Both are flagged in the round-2 report — if the
- * principle is meant literally, these are two strings on two rows to add.
+ * ONE CONFLICT INSIDE THE RULING, raised and then settled in favour of the
+ * principle. In the Korean speech-level hierarchy — 한다체 plain < 해요체 polite
+ * < 합니다체 deferential — `해야 해요` is a step UP from the keyed plain
+ * `해야 한다`, so the ruling accepts it. It nevertheless reached this compiler
+ * inside a REFUSE list, because the list was relayed verbatim from the triage's
+ * "politeness dropped" bullet, where it had been mis-filed. The first build
+ * followed the example and refused it; on 2026-09-15 that was corrected, on the
+ * ground that the example list was relayed prose while the principle is the
+ * ruling. `바라요` for `바란다` (ko-E1684) is the identical move on an identical
+ * key shape and is accepted with it.
+ *
+ * Consequence worth naming so it is not read as a duplicate: ko-E1684 now
+ * accepts `바라요` and `바랍니다` together, one 해요체 and one 합니다체. Both are a
+ * step up from a plain-form key, so both are correct under the principle.
  *
  * ── THE REVERSAL THAT ISN'T ───────────────────────────────────────────────
  *
@@ -106,8 +109,8 @@ export const REGISTER_RULING = {
   'ko-E0901|놀았다': [false, 'The plain 한다체 form of the keyed 놀았어요. Politeness dropped.'],
   'ko-E0901|놀았습니다': [true, 'The deferential 합니다체 form of the keyed 놀았어요. Politeness raised.'],
   'ko-E1670|해야 합니다': [true, 'The deferential 합니다체 form of the keyed plain 해야 한다. Politeness raised.'],
-  'ko-E1670|해야 해요': [false, 'Named in the ruling\'s REFUSE list. Recorded tension: in the Korean speech-level hierarchy 해요체 sits ABOVE the keyed 한다체, so the ruling\'s own principle would accept this. The explicit example is followed; see the round-2 report.'],
-  'ko-E1684|바라요': [false, 'The 해요체 form of the keyed plain 바란다 — the identical move to 해야 해요 on ko-E1670, and refused with it so the two rows are treated alike.'],
+  'ko-E1670|해야 해요': [true, 'The 해요체 polite form of the keyed plain 해야 한다. Politeness raised. This candidate reached the compiler inside a REFUSE list and was corrected on 2026-09-15: the list was relayed prose, not the ruling, and it had mis-filed a 한다체 key as though it were the polite form. The principle governs.'],
+  'ko-E1684|바라요': [true, 'The 해요체 polite form of the keyed plain 바란다 — the identical move to 해야 해요 on ko-E1670, and accepted with it. This row now accepts both 바라요 (해요체) and 바랍니다 (합니다체), which is the principle applied rather than a duplicate: both are a step up from a plain-form key.'],
   'ko-E1684|바랍니다': [true, 'The deferential 합니다체 form of the keyed 바란다. Politeness raised.'],
   'ko-E1684|저는 바랍니다': [true, 'The deferential form with an overt subject. The subject half was already decided correct on the two Korean translate_to_target rows in the triage block; the register half is raised, so both halves now hold.'],
 };
@@ -203,7 +206,7 @@ export async function productRulings(set, ledger) {
 
   const ruled = Object.keys(REGISTER_RULING).length;
   if (ruled !== register.length) throw new Error(`REGISTER_RULING has ${ruled} entries for ${register.length} candidates`);
-  if (refused.length !== 9) throw new Error(`Expected 9 refused register candidates, found ${refused.length}`);
+  if (refused.length !== 7) throw new Error(`Expected 7 refused register candidates, found ${refused.length}`);
 
   return {
     script: { rows: scriptRows.size, additions: script.length },

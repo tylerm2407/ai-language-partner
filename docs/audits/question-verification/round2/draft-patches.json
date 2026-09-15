@@ -174,7 +174,7 @@
         ]
       },
       "reasons": [
-        "ja-E0373 (ja, listening_type): Audio-only stimulus: the learner is shown no text and no gloss, so nothing in the task selects a script. This is a correct transcription of what was played. BLOCKING: adding these spellings brings other taught kinship terms inside the typo budget (お父さん, お姉さん, お嬢さん, お母さん, お隣さん), which the row exists to distinguish. Do not land this addition until matching lib/confusable-pairs.ts entries exist for those pairs; the addition is correct, the collateral is not. DEPENDENCY — do not apply this row without the confusable pairs the grader branch adds to lib/confusable-pairs.ts: until they land, the added kanji spelling brings お父さん, お姉さん, お嬢さん, お母さん, お隣さん inside this row's typo budget, on a row whose purpose is separating kinship terms."
+        "ja-E0373 (ja, listening_type): Audio-only stimulus: the learner is shown no text and no gloss, so nothing in the task selects a script. This is a correct transcription of what was played. BLOCKING: adding these spellings brings other taught kinship terms inside the typo budget (お父さん, お姉さん, お嬢さん, お母さん, お隣さん), which the row exists to distinguish. Do not land this addition until matching lib/confusable-pairs.ts entries exist for those pairs; the addition is correct, the collateral is not. DEPENDENCY — do not apply this row without the Japanese edit-distance gate on the grader branch, which refuses fuzzy acceptance on a kanji-bearing answer before the typo budget is consulted. Until the gate lands, the added kanji spelling brings お父さん, お姉さん, お嬢さん, お母さん, お隣さん inside this row's typo budget, on a row whose purpose is separating kinship terms. The gate, not a pair list, is what holds these rows apart: the confusable pairs first authored for this collision were measured to be unreachable behind it and were withdrawn."
       ],
       "sources": [
         "Stimulus analysis of the shipped app: components/lesson/ListeningExercise.tsx never renders `prompt`; components/lesson/DictationExercise.tsx never renders `prompt` and speaks `correct_answer`; `hintText` is rendered only by components/lesson/ClozeExercise.tsx. Reading/spelling checked against 大辞林/三省堂 standard orthography for the heard word."
@@ -533,7 +533,7 @@
         ]
       },
       "reasons": [
-        "ja-E0581 (ja, listening_type): Audio-only stimulus: the learner is shown no text and no gloss, so nothing in the task selects a script. This is a correct transcription of what was played. BLOCKING: adding these spellings brings other taught kinship terms inside the typo budget (お母さん), which the row exists to distinguish. Do not land this addition until matching lib/confusable-pairs.ts entries exist for those pairs; the addition is correct, the collateral is not. DEPENDENCY — do not apply this row without the confusable pairs the grader branch adds to lib/confusable-pairs.ts: until they land, the added kanji spelling brings お母さん inside this row's typo budget, on a row whose purpose is separating kinship terms."
+        "ja-E0581 (ja, listening_type): Audio-only stimulus: the learner is shown no text and no gloss, so nothing in the task selects a script. This is a correct transcription of what was played. BLOCKING: adding these spellings brings other taught kinship terms inside the typo budget (お母さん), which the row exists to distinguish. Do not land this addition until matching lib/confusable-pairs.ts entries exist for those pairs; the addition is correct, the collateral is not. DEPENDENCY — do not apply this row without the Japanese edit-distance gate on the grader branch, which refuses fuzzy acceptance on a kanji-bearing answer before the typo budget is consulted. Until the gate lands, the added kanji spelling brings お母さん inside this row's typo budget, on a row whose purpose is separating kinship terms. The gate, not a pair list, is what holds these rows apart: the confusable pairs first authored for this collision were measured to be unreachable behind it and were withdrawn."
       ],
       "sources": [
         "Stimulus analysis of the shipped app: components/lesson/ListeningExercise.tsx never renders `prompt`; components/lesson/DictationExercise.tsx never renders `prompt` and speaks `correct_answer`; `hintText` is rendered only by components/lesson/ClozeExercise.tsx. Reading/spelling checked against 大辞林/三省堂 standard orthography for the heard word."
@@ -3166,7 +3166,7 @@
         ]
       },
       "reasons": [
-        "ja-E0361 (ja, listening_type): Audio-only stimulus: the learner is shown no text and no gloss, so nothing in the task selects a script. This is a correct transcription of what was played. BLOCKING: adding these spellings brings other taught kinship terms inside the typo budget (お父さん, お姉さん, お嬢さん, お母さん, お隣さん), which the row exists to distinguish. Do not land this addition until matching lib/confusable-pairs.ts entries exist for those pairs; the addition is correct, the collateral is not. DEPENDENCY — do not apply this row without the confusable pairs the grader branch adds to lib/confusable-pairs.ts: until they land, the added kanji spelling brings お父さん, お姉さん, お嬢さん, お母さん, お隣さん inside this row's typo budget, on a row whose purpose is separating kinship terms."
+        "ja-E0361 (ja, listening_type): Audio-only stimulus: the learner is shown no text and no gloss, so nothing in the task selects a script. This is a correct transcription of what was played. BLOCKING: adding these spellings brings other taught kinship terms inside the typo budget (お父さん, お姉さん, お嬢さん, お母さん, お隣さん), which the row exists to distinguish. Do not land this addition until matching lib/confusable-pairs.ts entries exist for those pairs; the addition is correct, the collateral is not. DEPENDENCY — do not apply this row without the Japanese edit-distance gate on the grader branch, which refuses fuzzy acceptance on a kanji-bearing answer before the typo budget is consulted. Until the gate lands, the added kanji spelling brings お父さん, お姉さん, お嬢さん, お母さん, お隣さん inside this row's typo budget, on a row whose purpose is separating kinship terms. The gate, not a pair list, is what holds these rows apart: the confusable pairs first authored for this collision were measured to be unreachable behind it and were withdrawn."
       ],
       "sources": [
         "Stimulus analysis of the shipped app: components/lesson/ListeningExercise.tsx never renders `prompt`; components/lesson/DictationExercise.tsx never renders `prompt` and speaks `correct_answer`; `hintText` is rendered only by components/lesson/ClozeExercise.tsx. Reading/spelling checked against 大辞林/三省堂 standard orthography for the heard word."
@@ -10791,11 +10791,12 @@
       },
       "after": {
         "accepted_answers": [
-          "해야 합니다"
+          "해야 합니다",
+          "해야 해요"
         ]
       },
       "reasons": [
-        "ko-E1670 (ko, translate_to_target): RULING 2026-09-15 — register, accept upward and refuse downward. \"해야 합니다\" against the keyed \"해야 한다\": The deferential 합니다체 form of the keyed plain 해야 한다. Politeness raised."
+        "ko-E1670 (ko, translate_to_target): RULING 2026-09-15 — register, accept upward and refuse downward. \"해야 합니다\", \"해야 해요\" against the keyed \"해야 한다\": The deferential 합니다체 form of the keyed plain 해야 한다. Politeness raised. The 해요체 polite form of the keyed plain 해야 한다. Politeness raised. This candidate reached the compiler inside a REFUSE list and was corrected on 2026-09-15: the list was relayed prose, not the ruling, and it had mis-filed a 한다체 key as though it were the polite form. The principle governs."
       ],
       "sources": [],
       "review_status": "awaiting_independent_round2_review"
@@ -10812,13 +10813,14 @@
       "after": {
         "target_grammar": "desire_barada",
         "accepted_answers": [
+          "바라요",
           "바랍니다",
           "저는 바랍니다"
         ]
       },
       "reasons": [
         "ko B1 Hypothetical Situations \"I wish\": the lesson's point is the verb form, and the row was tagged vocabulary, so the typo budget accepted a different form of the same lemma as a \"minor typo\" — rated 3, which SM-2 treats as success. Setting target_grammar = desire_barada makes the row strict, which is what every other grammar-shaped row already is. No key, alternative, prompt or option is changed.",
-        "ko-E1684 (ko, translate_to_target): RULING 2026-09-15 — register, accept upward and refuse downward. \"바랍니다\", \"저는 바랍니다\" against the keyed \"바란다\": The deferential 합니다체 form of the keyed 바란다. Politeness raised. The deferential form with an overt subject. The subject half was already decided correct on the two Korean translate_to_target rows in the triage block; the register half is raised, so both halves now hold."
+        "ko-E1684 (ko, translate_to_target): RULING 2026-09-15 — register, accept upward and refuse downward. \"바라요\", \"바랍니다\", \"저는 바랍니다\" against the keyed \"바란다\": The 해요체 polite form of the keyed plain 바란다 — the identical move to 해야 해요 on ko-E1670, and accepted with it. This row now accepts both 바라요 (해요체) and 바랍니다 (합니다체), which is the principle applied rather than a duplicate: both are a step up from a plain-form key. The deferential 합니다체 form of the keyed 바란다. Politeness raised. The deferential form with an overt subject. The subject half was already decided correct on the two Korean translate_to_target rows in the triage block; the register half is raised, so both halves now hold."
       ],
       "sources": [
         "lib/grading.ts gradeAnswer (TYPO_TOLERANCE_RATIO, isGrammarExercise)"
@@ -12817,7 +12819,7 @@
         ]
       },
       "reasons": [
-        "ja-E0569 (ja, listening_type): Audio-only stimulus: the learner is shown no text and no gloss, so nothing in the task selects a script. This is a correct transcription of what was played. BLOCKING: adding these spellings brings other taught kinship terms inside the typo budget (お父さん), which the row exists to distinguish. Do not land this addition until matching lib/confusable-pairs.ts entries exist for those pairs; the addition is correct, the collateral is not. DEPENDENCY — do not apply this row without the confusable pairs the grader branch adds to lib/confusable-pairs.ts: until they land, the added kanji spelling brings お父さん inside this row's typo budget, on a row whose purpose is separating kinship terms."
+        "ja-E0569 (ja, listening_type): Audio-only stimulus: the learner is shown no text and no gloss, so nothing in the task selects a script. This is a correct transcription of what was played. BLOCKING: adding these spellings brings other taught kinship terms inside the typo budget (お父さん), which the row exists to distinguish. Do not land this addition until matching lib/confusable-pairs.ts entries exist for those pairs; the addition is correct, the collateral is not. DEPENDENCY — do not apply this row without the Japanese edit-distance gate on the grader branch, which refuses fuzzy acceptance on a kanji-bearing answer before the typo budget is consulted. Until the gate lands, the added kanji spelling brings お父さん inside this row's typo budget, on a row whose purpose is separating kinship terms. The gate, not a pair list, is what holds these rows apart: the confusable pairs first authored for this collision were measured to be unreachable behind it and were withdrawn."
       ],
       "sources": [
         "Stimulus analysis of the shipped app: components/lesson/ListeningExercise.tsx never renders `prompt`; components/lesson/DictationExercise.tsx never renders `prompt` and speaks `correct_answer`; `hintText` is rendered only by components/lesson/ClozeExercise.tsx. Reading/spelling checked against 大辞林/三省堂 standard orthography for the heard word."

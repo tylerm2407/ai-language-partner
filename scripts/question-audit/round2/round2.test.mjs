@@ -373,7 +373,8 @@ test('the four dependency-bearing rows say so in the patch itself', () => {
     assert(patch, ref);
     const reason = patch.reasons.join(' ');
     assert(reason.includes('DEPENDENCY'), `${ref}: the dependency is not written into the patch reason`);
-    assert(reason.includes('lib/confusable-pairs.ts'), `${ref}: the reason does not name where the remedy lands`);
+    assert(reason.includes('edit-distance gate'), `${ref}: the reason does not name the gate that actually holds the row apart`);
+    assert(!reason.includes('lib/confusable-pairs.ts: until'), `${ref}: the reason still points at the withdrawn pair list as the remedy`);
     for (const collateral of DEPENDENT_ROWS[ref]) assert(reason.includes(collateral), `${ref}: ${collateral} is not named`);
     flagged.push(ref);
   }
@@ -489,8 +490,14 @@ test('ruling 2 accepts every upward form, refuses every downward one, and rules 
       }
     }
   }
-  assert.equal(accepted, 10);
-  assert.equal(refused, 9);
+  assert.equal(accepted, 12);
+  assert.equal(refused, 7);
+  // The two corrected on 2026-09-15: the REFUSE list they arrived in was relayed
+  // prose that had mis-filed a plain-form key, and the ruling's principle accepts
+  // a step up from 한다체 to 해요체. If this ever flips back, the corpus did not
+  // drift — someone reinstated the wrong list.
+  assert.equal(REGISTER_RULING['ko-E1670|해야 해요'][0], true);
+  assert.equal(REGISTER_RULING['ko-E1684|바라요'][0], true);
   // The three strings the reversal was about are in no row, before or after.
   for (const string of ['ごめん', 'うん', 'ううん']) {
     for (const row of snapshot.exercises) assert(!(row.accepted_answers ?? []).includes(string), `${string} is live on ${row.id}`);

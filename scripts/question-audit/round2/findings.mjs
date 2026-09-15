@@ -205,8 +205,8 @@ const TRIAGE = {
   dependency: {
     rows: Object.keys(DEPENDENT_ROWS),
     what: 'Adding the kanji spellings of おばあさん / おじいさん / おじさん / おばさん pulls お母さん, お父さん, お姉さん, お嬢さん and お隣さん inside the typo budget — 12 collateral acceptances in total, on rows whose whole purpose is separating kinship terms.',
-    remedy: 'The confusable pairs the grader agent is authoring in lib/confusable-pairs.ts.',
-    recorded_where: 'In each of the four patch reasons, prefixed DEPENDENCY, so it travels with the row rather than living only in this file.',
+    remedy: 'The Japanese edit-distance gate on the grader branch, which refuses fuzzy acceptance on a kanji-bearing answer before the typo budget is consulted. NOT a pair list: the grader measured that the five confusable pairs first authored for this collision could never fire behind the gate, and withdrew them as inert. The two kana pairs that remain there address a collision that exists independently of these additions.',
+    recorded_where: 'In each of the four patch reasons, prefixed DEPENDENCY and naming the gate, so it travels with the row rather than living only in this file.',
     collateral: Object.entries(DEPENDENT_ROWS).flatMap(([ref, strings]) => strings.map(string => ({ ref, string }))),
   },
   open_decisions_now_ruled_on: 'Both were settled on 2026-09-15; see `rulings`. The text below is kept as the record of what was decided and at what cost.',
@@ -250,18 +250,20 @@ const RULINGS = {
   },
   '2_register': {
     ruling: 'Accept upward, refuse downward. A more polite form than the key is correct on a cue that names no register; a less polite one is not.',
-    compiled: { candidates: 19, accepted: 10, refused: 9 },
+    compiled: { candidates: 19, accepted: 12, refused: 7 },
     refused: Object.entries(REGISTER_RULING).filter(([, [accept]]) => !accept)
       .map(([key, [, note]]) => ({ row: key.split('|')[0], candidate: key.split('|')[1], note })),
-    conflict_inside_the_ruling: {
-      what: 'The stated principle and one stated example disagree. In the Korean speech-level hierarchy 한다체 (plain) < 해요체 (polite) < 합니다체 (deferential), so 해야 해요 IS more polite than the keyed 해야 한다 — yet it appears in the REFUSE list, which is verbatim the triage\'s "politeness dropped" bullet, where it was arguably mis-filed.',
-      how_it_was_resolved: 'The named example was followed, because it is the more specific instruction. 바라요 for 바란다 (ko-E1684) is the identical move on an identical key shape and was refused with it, so the two rows are treated alike rather than arbitrarily.',
-      if_the_principle_was_meant_literally: 'Two strings on two rows become accepts: 해야 해요 on ko-E1670 and 바라요 on ko-E1684. Nothing else in the ruling changes.',
+    THE_EXAMPLE_LIST_WAS_WRONG_AND_THE_PRINCIPLE_GOVERNS: {
+      read_this_first: 'If you find a REFUSE list naming 해야 해요 and wonder why the corpus accepts it, nothing drifted. The list was wrong and was corrected on 2026-09-15; the ruling itself never changed.',
+      what_happened: 'The ruling is "accept upward, refuse downward". The example lists that travelled with it were relayed from the triage\'s two bullets, and its "politeness dropped" bullet had mis-filed 해야 해요 — treating the keyed 해야 한다 as though it were the polite form. In the Korean speech-level hierarchy 한다체 (plain) < 해요체 (polite) < 합니다체 (deferential), so 해야 해요 against 해야 한다 is a move UP and the ruling accepts it.',
+      resolution: 'The first build followed the example and refused it, flagging the contradiction rather than smoothing it. The example was then confirmed to be relayed prose rather than part of the ruling, and the principle governs: 해야 해요 (ko-E1670) and 바라요 (ko-E1684) are both accepted. Applying the principle correctly is implementing the ruling, not overriding it.',
+      consequence_that_is_not_a_duplicate: 'ko-E1684 now accepts 바라요 and 바랍니다 together, one 해요체 and one 합니다체. Both are a step up from a plain-form key, so both are correct under the principle.',
     },
   },
   '2a_register_removals': {
     ruling: 'Refuse downward. Four live accepted answers were put to this producer; two are withdrawn and two are deliberately kept.',
     why_each_is_argued_separately: 'A removal is the only change in round two that makes a previously accepted learner answer start being rejected. Each is argued on its own row, and so is each refusal to remove.',
+    THE_RULE_OF_RECORD: 'Refuse a candidate that is the key\'s own formula with its politeness marking dropped, or that sits in the casual register against a polite key. Keep a candidate that is a distinct formula and is itself correct polite language, even when it is less formal than the key. "Less polite" is not one relation, and the two halves of it are decided differently: deference and formality move a candidate down, intimacy alone does not.',
     the_line_drawn: [
       'REFUSE a candidate that is the key\'s own formula with its politeness marking dropped, or that sits in the casual register against a polite key. That is the move the ruling names — おはよう for おはようございます, 아니 for 아니요, 공부했다 for 공부했어요.',
       'KEEP a candidate that is a distinct formula and is itself correct polite language, even when less formal than the key. Rejecting those tells a learner that natural, polite, correct output is wrong, which is a worse failure than the one being fixed.',
