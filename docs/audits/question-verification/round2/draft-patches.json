@@ -9952,6 +9952,31 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-2003-0004-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2003-0004-a20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": [
+          "料理をする",
+          "調理する"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "料理をする",
+          "調理する",
+          "りょうりする",
+          "料理します"
+        ]
+      },
+      "reasons": [
+        "ja-E0745 (ja): same-gloss-same-key levelling. The row sharing the gloss \"To cook\" already accepts \"りょうりする\", \"料理します\" on the identical question — group to_target|To cook|料理する: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ja string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-2003-0006-e00000000008",
       "before": {
         "lesson_id": "aabbccdd-6666-2003-0006-a20000000000",
@@ -10093,13 +10118,18 @@
       "before": {
         "lesson_id": "aabbccdd-6666-2005-0001-a20000000000",
         "type": "translate_to_target",
-        "target_grammar": null
+        "target_grammar": null,
+        "accepted_answers": []
       },
       "after": {
-        "target_grammar": "past_polite_mashita"
+        "target_grammar": "past_polite_mashita",
+        "accepted_answers": [
+          "べんきょうしました"
+        ]
       },
       "reasons": [
-        "ja A2 Past Tense Basics \"I studied\": the lesson's point is the verb form, and the row was tagged vocabulary, so the typo budget accepted a different form of the same lemma as a \"minor typo\" — rated 3, which SM-2 treats as success. Setting target_grammar = past_polite_mashita makes the row strict, which is what every other grammar-shaped row already is. No key, alternative, prompt or option is changed."
+        "ja A2 Past Tense Basics \"I studied\": the lesson's point is the verb form, and the row was tagged vocabulary, so the typo budget accepted a different form of the same lemma as a \"minor typo\" — rated 3, which SM-2 treats as success. Setting target_grammar = past_polite_mashita makes the row strict, which is what every other grammar-shaped row already is. No key, alternative, prompt or option is changed.",
+        "ja-E0856 (ja): same-gloss-same-key levelling. The row sharing the gloss \"I studied\" already accepts \"べんきょうしました\" on the identical question — group to_target|I studied|勉強しました: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ja string and it admits nothing else."
       ],
       "sources": [
         "lib/grading.ts gradeAnswer (TYPO_TOLERANCE_RATIO, isGrammarExercise)"
@@ -10515,6 +10545,25 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-2006-0002-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2006-0002-a20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "りょこうします"
+        ]
+      },
+      "reasons": [
+        "ja-E0937 (ja): same-gloss-same-key levelling. The row sharing the gloss \"I will travel\" already accepts \"りょこうします\" on the identical question — group to_target|I will travel|旅行します: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ja string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-2006-0003-e00000000002",
       "before": {
         "lesson_id": "aabbccdd-6666-2006-0003-a20000000000",
@@ -10814,11 +10863,13 @@
       "after": {
         "accepted_answers": [
           "より速い",
-          "より速く"
+          "より速く",
+          "もっと速く"
         ]
       },
       "reasons": [
-        "ja-E1012 (ja, translate_to_target): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より速い\" on the keyed \"もっと速い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate. ja-E1012 (ja, translate_to_target): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より速く\" on the keyed \"もっと速い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+        "ja-E1012 (ja, translate_to_target): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より速い\" on the keyed \"もっと速い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate. ja-E1012 (ja, translate_to_target): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より速く\" on the keyed \"もっと速い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate.",
+        "ja-E1012 (ja): same-gloss-same-key levelling. The row sharing the gloss \"Faster\" already accepts \"もっと速く\" on the identical question — group to_target|Faster|もっと速い: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ja string and it admits nothing else."
       ],
       "sources": [
         "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
@@ -10862,11 +10913,13 @@
         "accepted_answers": [
           "もっとゆっくり",
           "よりゆっくり",
-          "より遅い"
+          "より遅い",
+          "もっと遅く"
         ]
       },
       "reasons": [
-        "ja-E1024 (ja, translate_to_target): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より遅い\" on the keyed \"もっと遅い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+        "ja-E1024 (ja, translate_to_target): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より遅い\" on the keyed \"もっと遅い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate.",
+        "ja-E1024 (ja): same-gloss-same-key levelling. The row sharing the gloss \"Slower\" already accepts \"もっと遅く\" on the identical question — group to_target|Slower|もっと遅い: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ja string and it admits nothing else."
       ],
       "sources": [
         "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
@@ -11138,11 +11191,12 @@
       },
       "after": {
         "accepted_answers": [
-          "宴会"
+          "宴会",
+          "パーティ"
         ]
       },
       "reasons": [
-        "ja-E1126 (ja): same-gloss-same-key levelling. The row sharing the gloss \"Party\" already accepts \"宴会\" on the identical question — group to_target|Party|パーティー: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ja string and it admits nothing else."
+        "ja-E1126 (ja): same-gloss-same-key levelling. The row sharing the gloss \"Party\" already accepts \"宴会\", \"パーティ\" on the identical question — group to_target|Party|パーティー: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ja string and it admits nothing else."
       ],
       "sources": [],
       "review_status": "awaiting_independent_round2_review"
@@ -12187,6 +12241,25 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-3007-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3007-0006-b10000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "そうぞうして"
+        ]
+      },
+      "reasons": [
+        "ja-E1712 (ja): same-gloss-same-key levelling. The row sharing the gloss \"Imagine\" already accepts \"そうぞうして\" on the identical question — group to_target|Imagine|想像して: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ja string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-3008-0001-e00000000002",
       "before": {
         "lesson_id": "aabbccdd-6666-3008-0001-b10000000000",
@@ -13206,13 +13279,18 @@
       "before": {
         "lesson_id": "aabbccdd-7777-2005-0002-a20000000000",
         "type": "translate_to_target",
-        "target_grammar": null
+        "target_grammar": null,
+        "accepted_answers": []
       },
       "after": {
-        "target_grammar": "past_polite_eosseoyo"
+        "target_grammar": "past_polite_eosseoyo",
+        "accepted_answers": [
+          "놀았습니다"
+        ]
       },
       "reasons": [
-        "ko A2 Past Tense Basics \"I played\": the lesson's point is the verb form, and the row was tagged vocabulary, so the typo budget accepted a different form of the same lemma as a \"minor typo\" — rated 3, which SM-2 treats as success. Setting target_grammar = past_polite_eosseoyo makes the row strict, which is what every other grammar-shaped row already is. No key, alternative, prompt or option is changed."
+        "ko A2 Past Tense Basics \"I played\": the lesson's point is the verb form, and the row was tagged vocabulary, so the typo budget accepted a different form of the same lemma as a \"minor typo\" — rated 3, which SM-2 treats as success. Setting target_grammar = past_polite_eosseoyo makes the row strict, which is what every other grammar-shaped row already is. No key, alternative, prompt or option is changed.",
+        "ko-E0868 (ko): same-gloss-same-key levelling. The row sharing the gloss \"I played\" already accepts \"놀았습니다\" on the identical question — group to_target|I played|놀았어요: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ko string and it admits nothing else."
       ],
       "sources": [
         "lib/grading.ts gradeAnswer (TYPO_TOLERANCE_RATIO, isGrammarExercise)"
@@ -13757,6 +13835,26 @@
       "sources": [
         "Individually read against the row, its lesson and its unit; see reason."
       ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-7777-3007-0001-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-7777-3007-0001-b10000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "바라요",
+          "바랍니다"
+        ]
+      },
+      "reasons": [
+        "ko-E1645 (ko): same-gloss-same-key levelling. The row sharing the gloss \"I wish\" already accepts \"바라요\", \"바랍니다\" on the identical question — group to_target|I wish|바란다: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ko string and it admits nothing else."
+      ],
+      "sources": [],
       "review_status": "awaiting_independent_round2_review"
     },
     {

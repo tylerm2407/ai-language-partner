@@ -72,6 +72,10 @@
       "refused": 7,
       "held": 1,
       "see": "alternatives_axis"
+    },
+    "wuerde_cluster": {
+      "patched": 0,
+      "see": "wuerde_cluster — flagged, not patched: the key is miscapitalised, not the gloss"
     }
   },
   "rulings": {
@@ -455,7 +459,8 @@
     },
     "outcomes": {
       "levelled": 97,
-      "propagation_pending": 14,
+      "propagation_levelled": 11,
+      "propagation_refused": 3,
       "held_would_widen": 10,
       "declared_deliberate": 5
     },
@@ -603,94 +608,33 @@
         }
       ]
     },
-    "left_pending": {
-      "reason": "This patch added the string to one row of the group under a 2026-09-15 ruling or a restored withdrawal, and the twin does not carry it. Whether the ruling reaches the twin is a separate decision: the two rows do ask the same question, but levelling up would also spread the alternatives on that row that are themselves doubtful.",
-      "rows": [
+    "propagations_decided": {
+      "reason": "Decided 2026-09-15. Eleven levelled because the twin asks the identical question under the same ruling; three refused because the twin's own alternative is doubtful and propagating it would double the problem. The three refusals stay declared so the standing test keeps their groups visible rather than silently tolerated.",
+      "levelled": 11,
+      "refused": [
         {
           "ref": "ja-E1054",
           "lang": "ja",
           "group": "to_target|Taller|もっと背が高い",
-          "missing": "より高い"
-        },
-        {
-          "ref": "ja-E0745",
-          "lang": "ja",
-          "group": "to_target|To cook|料理する",
-          "missing": "りょうりする"
-        },
-        {
-          "ref": "ja-E0745",
-          "lang": "ja",
-          "group": "to_target|To cook|料理する",
-          "missing": "料理します"
-        },
-        {
-          "ref": "ja-E0856",
-          "lang": "ja",
-          "group": "to_target|I studied|勉強しました",
-          "missing": "べんきょうしました"
-        },
-        {
-          "ref": "ja-E0937",
-          "lang": "ja",
-          "group": "to_target|I will travel|旅行します",
-          "missing": "りょこうします"
-        },
-        {
-          "ref": "ja-E1012",
-          "lang": "ja",
-          "group": "to_target|Faster|もっと速い",
-          "missing": "もっと速く"
-        },
-        {
-          "ref": "ja-E1024",
-          "lang": "ja",
-          "group": "to_target|Slower|もっと遅い",
-          "missing": "もっと遅く"
-        },
-        {
-          "ref": "ja-E1126",
-          "lang": "ja",
-          "group": "to_target|Party|パーティー",
-          "missing": "パーティ"
+          "missing": "より高い",
+          "why": "より高い is \"higher\" or \"more expensive\", not \"taller\" — 高い alone drops the 背が that makes it about height. The twin ja-E1021 accepts it, and that is the questionable call; spreading it to a second Taller row would make the group consistently wrong instead of inconsistently."
         },
         {
           "ref": "ja-E1684",
           "lang": "ja",
           "group": "to_target|I wish|したい",
-          "missing": "願っています"
+          "missing": "願っています",
+          "why": "The row is keyed したい, \"want to do\". 願う is a different lexeme, \"to wish\" or \"to hope\", and 願っています is its progressive. The twin ja-E1645 accepts both; that is the doubtful end of the divergence, not this one."
         },
         {
           "ref": "ja-E1684",
           "lang": "ja",
           "group": "to_target|I wish|したい",
-          "missing": "願う"
-        },
-        {
-          "ref": "ja-E1712",
-          "lang": "ja",
-          "group": "to_target|Imagine|想像して",
-          "missing": "そうぞうして"
-        },
-        {
-          "ref": "ko-E0868",
-          "lang": "ko",
-          "group": "to_target|I played|놀았어요",
-          "missing": "놀았습니다"
-        },
-        {
-          "ref": "ko-E1645",
-          "lang": "ko",
-          "group": "to_target|I wish|바란다",
-          "missing": "바라요"
-        },
-        {
-          "ref": "ko-E1645",
-          "lang": "ko",
-          "group": "to_target|I wish|바란다",
-          "missing": "바랍니다"
+          "missing": "願う",
+          "why": "The same lexeme question as 願っています, on the same row and refused with it: 願う is \"to wish\" or \"to hope\", a different verb from the keyed したい, \"want to do\"."
         }
-      ]
+      ],
+      "note": "Eleven levelled onto the twin because it asks the identical question under the same 2026-09-15 ruling — kana readings under the script ruling, deferential forms under the register ruling, adverbial comparatives and an orthographic variant — and none of the eleven admits another taught string. Three refused: the twin carries the string but it is doubtful THERE, so propagating would make the group consistently wrong instead of inconsistently."
     },
     "standing_test": "scripts/question-audit/round2/same-gloss-levelling.test.mjs — nine languages, Node rather than Deno, and an allowlist that is no longer empty because two populations must stay divergent. Passes on the result: 4 checks."
   },
@@ -717,6 +661,12 @@
       "added": 18,
       "held": 1,
       "refused": 7
+    },
+    "RECONCILIATION_TWO_CLASSES_NOT_ONE": {
+      "question": "A measurement on the merged branch reported six cross-language leaks — a Korean-course row keyed \"Protagonist\" accepting Protagonistin, Russian-course rows keyed \"Presentation\", \"Reservation\" and \"Conservation\" accepting Préservation — which did not match the four reported here.",
+      "answer": "They are two classes. The four found here are WITHIN-COURSE: the axis file's own language field and the row's course agree on every one — a German-course row accepting German, French-course rows accepting French, a Portuguese-course row accepting Portuguese — and the sibling that LISTS the string is in the same course each time.",
+      "evidence": "Scanned across the whole snapshot: the only rows that list Protagonistin or Préservation as an accepted answer are one German cloze_deletion and two French rows respectively. No Korean-course row and no Russian-course row lists either string, so the six can only be tolerance acceptances where the candidate came from another language's taught set — a scope this branch never measured, because its taught-string sets are built per language.",
+      "conclusion": "Same shape, different mechanism: this class is a row accepting a string its OWN course teaches; that class is a row accepting a string ANOTHER course teaches. Both are real and both were routed to the grader as pair candidates."
     },
     "FOUR_ARE_A_DEFECT_POINTING_THE_OTHER_WAY": {
       "what": "On four translate_to_native rows the string the axis would refuse is the SOURCE-LANGUAGE word, on a row whose answer is English.",
@@ -795,6 +745,23 @@
         "why": "The feminine of the profession is correct, but it brings Renta (rent) inside the budget — a different word one edit away. A pair keyed on Gerenta is the remedy."
       }
     ]
+  },
+  "wuerde_cluster": {
+    "asked": "Fix the gloss on the three rows keyed Würde and glossed \"Would\", since Würde is dignity.",
+    "finding": "THE GLOSS IS RIGHT AND THE KEY IS MISCAPITALISED. The three rows sit in de B1 Hypothetical Situations — Second Conditional, Regrets, Review & Test — beside a listening_choice keyed \"Would\" and a multiple_choice keyed \"Would\". The lesson unambiguously means the Konjunktiv II auxiliary, which is written würde, lower case. German capitalises nouns; Würde with a capital is the noun \"dignity\". So \"Would\" is the correct gloss and the capital W is the error.",
+    "which_makes_it_the_bigger_change_you_asked_to_have_flagged": "Not patched here. The source is a CARD — aabbccdd-3333-3007-c002-b10000000000, target_text \"Würde\", native_text \"Would\" — which is the SRS payload every learner reviews, and three exercise rows point at it. Correcting it means editing a card and four rows, which changes what learners see in review rather than only in a lesson.",
+    "grading_impact": "None either way. normalize() lowercases, so Würde and würde are one string to the grader: würde on a key of Würde returns Correct with accuracy 1.0, not a typo pass. No grading rule can separate them without making German case-sensitive, which would fail every learner who types a noun in lower case. The defect is entirely in what is displayed.",
+    "the_exact_change_if_approved": {
+      "card": "aabbccdd-3333-3007-c002-b10000000000 target_text \"Würde\" -> \"würde\"",
+      "rows": [
+        "205ec1b3-5fa8-4efd-a824-d3081c280f11 (listening_type) prompt and correct_answer \"Würde\" -> \"würde\" — the prompt is the text-to-speech source, so capitalisation does not change what is heard",
+        "aabbccdd-3333-3007-0006-e00000000009 (free_production) prompt \"Write a sentence using the word: Würde (Would)\" -> \"würde (would)\", correct_answer \"Würde\" -> \"würde\"",
+        "the listening_choice and multiple_choice rows keyed \"Would\": prompt \"Würde\" -> \"würde\". Their keys are already correct and do not move."
+      ],
+      "out_of_scope": "One speaking row (6589a5e4) also carries Würde and cannot be touched by this compiler, so it would stay miscapitalised until someone else fixes it."
+    },
+    "the_fourth_row_is_correct": "The B2 fill_blank 9987684c keys würde lower case, with target_grammar konjunktiv2_irrealis, in Complex Grammar / Konjunktiv II: Unreal Conditions. It is right as it stands and is the model the B1 cluster should match.",
+    "wuerde_the_ascii_form": "That B2 row also accepts \"wuerde\", the umlaut-free transliteration. Refused for the B1 rows in the alternatives-axis block, because importing it there would carry a spelling of a different word across the capitalisation boundary."
   },
   "triage_block": {
     "rows": 298,

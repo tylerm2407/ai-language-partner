@@ -15,9 +15,9 @@
  *  - The allowlist is NOT empty. Italian could assert "nothing disagrees"
  *    because its nineteen were all omissions. Across nine languages two
  *    populations must stay divergent, and both are declared with their reason:
- *    ten that would admit a wrong answer, fourteen where this patch's own
- *    ruling has not yet been decided for the twin, and five where a cloze frame
- *    cannot take an overt-subject form. A group that disagrees and is in
+ *    ten that would admit a wrong answer, three where this patch's own ruling
+ *    was refused for the twin because the twin's alternative is itself doubtful,
+ *    and five where a cloze frame cannot take an overt-subject form. A group that disagrees and is in
  *    neither list fails, which is the whole point of the file.
  */
 import test from 'node:test';
@@ -25,7 +25,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createRound2PatchSet } from './patch-set-round2.mjs';
 import { lessonRefs } from '../lesson-refs.mjs';
-import { LEVELLED, HELD_WOULD_WIDEN, PROPAGATION_PENDING, DECLARED_EXCEPTIONS, DECLARED_REASON, PROPAGATION_REASON } from './same-gloss-levelling.mjs';
+import { LEVELLED, HELD_WOULD_WIDEN, PROPAGATION_LEVELLED, PROPAGATION_REFUSED, DECLARED_EXCEPTIONS, DECLARED_REASON, PROPAGATION_REASON } from './same-gloss-levelling.mjs';
 
 const DRAFT = 'docs/audits/question-verification/round2/draft-patches.json';
 const LANGUAGES = { es: 'Spanish', fr: 'French', de: 'German', it: 'Italian', pt: 'Portuguese', ru: 'Russian', ja: 'Japanese', ko: 'Korean', zh: 'Chinese' };
@@ -77,7 +77,7 @@ const disagreeing = groups => [...groups.entries()]
 
 const declaredGroupIds = () => [...new Set([
   ...HELD_WOULD_WIDEN.map(entry => `${entry.lang}|${entry.group}`),
-  ...PROPAGATION_PENDING.map(entry => `${entry.lang}|${entry.group}`),
+  ...PROPAGATION_REFUSED.map(entry => `${entry.lang}|${entry.group}`),
   ...DECLARED_EXCEPTIONS.map(entry => `${entry.lang}|${entry.group}`),
 ])].sort();
 
@@ -107,7 +107,9 @@ test('every declared exception carries a reason, and every held one carries what
     assert.ok(entry.group.includes('|'), entry.ref);
   }
   assert.equal(HELD_WOULD_WIDEN.length, 10);
-  assert.equal(PROPAGATION_PENDING.length, 14);
+  assert.equal(PROPAGATION_LEVELLED.length, 11);
+  assert.equal(PROPAGATION_REFUSED.length, 3);
+  for (const entry of PROPAGATION_REFUSED) assert.ok(entry.why.trim().length > 60, `${entry.ref}: no reason`);
   assert.ok(PROPAGATION_REASON.trim().length > 80);
   for (const entry of HELD_WOULD_WIDEN) {
     assert.ok(Array.isArray(entry.admits) && entry.admits.length, `${entry.ref}: held with nothing recorded that it would admit`);
@@ -115,7 +117,7 @@ test('every declared exception carries a reason, and every held one carries what
   }
   // Nothing is both levelled and held.
   const levelled = new Set(LEVELLED.map(([, ref, , , missing]) => `${ref}|${missing}`));
-  for (const entry of [...HELD_WOULD_WIDEN, ...DECLARED_EXCEPTIONS, ...PROPAGATION_PENDING]) {
+  for (const entry of [...HELD_WOULD_WIDEN, ...DECLARED_EXCEPTIONS, ...PROPAGATION_REFUSED]) {
     assert.ok(!levelled.has(`${entry.ref}|${entry.missing}`), `${entry.ref}: ${entry.missing} is both levelled and withheld`);
   }
 });

@@ -32,11 +32,13 @@
  *    variants, and eight Russian gendered pasts that also close part of the
  *    Russian alternatives gap this patch reported earlier.
  *
- *  - 14 LEFT PENDING, because the divergence is this patch's own: a ruling was
- *    applied to one row of a group and the twin does not carry the string yet.
+ *  - 14 that were this patch's own divergence, now DECIDED: 11 levelled onto
+ *    the twin under the same ruling, 3 refused because the twin's alternative
+ *    is itself doubtful and propagating it would double the problem.
  *
- *  - 14 LEFT PENDING, because the divergence is this patch's own: a ruling was
- *    applied to one row of a group and the twin does not carry the string yet.
+ *  - 14 that were this patch's own divergence, now DECIDED: 11 levelled onto
+ *    the twin under the same ruling, 3 refused because the twin's alternative
+ *    is itself doubtful and propagating it would double the problem.
  *
  *  - 10 HELD, because levelling them would admit a wrong answer, measured
  *    against every taught string in the language. These are the meaning flips
@@ -171,24 +173,43 @@ export const LEVELLED = [
  * visibly doubtful: より高い ("higher, more expensive") sits on a "Taller" row,
  * and 願う / 願っています ("to wish") sit on a row keyed したい ("want to do").
  * Propagating those would double an existing problem rather than fix one. */
-export const PROPAGATION_PENDING = [
-  {"ref":"ja-E1054","lang":"ja","group":"to_target|Taller|もっと背が高い","missing":"より高い"},
-  {"ref":"ja-E0745","lang":"ja","group":"to_target|To cook|料理する","missing":"りょうりする"},
-  {"ref":"ja-E0745","lang":"ja","group":"to_target|To cook|料理する","missing":"料理します"},
-  {"ref":"ja-E0856","lang":"ja","group":"to_target|I studied|勉強しました","missing":"べんきょうしました"},
-  {"ref":"ja-E0937","lang":"ja","group":"to_target|I will travel|旅行します","missing":"りょこうします"},
-  {"ref":"ja-E1012","lang":"ja","group":"to_target|Faster|もっと速い","missing":"もっと速く"},
-  {"ref":"ja-E1024","lang":"ja","group":"to_target|Slower|もっと遅い","missing":"もっと遅く"},
-  {"ref":"ja-E1126","lang":"ja","group":"to_target|Party|パーティー","missing":"パーティ"},
-  {"ref":"ja-E1684","lang":"ja","group":"to_target|I wish|したい","missing":"願っています"},
-  {"ref":"ja-E1684","lang":"ja","group":"to_target|I wish|したい","missing":"願う"},
-  {"ref":"ja-E1712","lang":"ja","group":"to_target|Imagine|想像して","missing":"そうぞうして"},
-  {"ref":"ko-E0868","lang":"ko","group":"to_target|I played|놀았어요","missing":"놀았습니다"},
-  {"ref":"ko-E1645","lang":"ko","group":"to_target|I wish|바란다","missing":"바라요"},
-  {"ref":"ko-E1645","lang":"ko","group":"to_target|I wish|바란다","missing":"바랍니다"},
+/** Decided 2026-09-15. The divergence was this patch's own — a ruling reached
+ * one row of a group and not its twin — and each is now settled rather than
+ * left open. Eleven level: the twin asks the identical question with the
+ * identical key, so the same ruling reaches it, and none of them admits another
+ * taught string. Three are refused below.
+ *
+ * [exercise id, ref, language, group id, the string this patch put on the twin] */
+export const PROPAGATION_LEVELLED = [
+  ["aabbccdd-6666-2003-0004-e00000000005","ja-E0745","ja","to_target|To cook|料理する","りょうりする"],
+  ["aabbccdd-6666-2003-0004-e00000000005","ja-E0745","ja","to_target|To cook|料理する","料理します"],
+  ["aabbccdd-6666-2005-0001-e00000000008","ja-E0856","ja","to_target|I studied|勉強しました","べんきょうしました"],
+  ["aabbccdd-6666-2006-0002-e00000000005","ja-E0937","ja","to_target|I will travel|旅行します","りょこうします"],
+  ["aabbccdd-6666-2007-0002-e00000000008","ja-E1012","ja","to_target|Faster|もっと速い","もっと速く"],
+  ["aabbccdd-6666-2007-0003-e00000000008","ja-E1024","ja","to_target|Slower|もっと遅い","もっと遅く"],
+  ["aabbccdd-6666-2008-0006-e00000000002","ja-E1126","ja","to_target|Party|パーティー","パーティ"],
+  ["aabbccdd-6666-3007-0006-e00000000002","ja-E1712","ja","to_target|Imagine|想像して","そうぞうして"],
+  ["aabbccdd-7777-2005-0002-e00000000008","ko-E0868","ko","to_target|I played|놀았어요","놀았습니다"],
+  ["aabbccdd-7777-3007-0001-e00000000005","ko-E1645","ko","to_target|I wish|바란다","바라요"],
+  ["aabbccdd-7777-3007-0001-e00000000005","ko-E1645","ko","to_target|I wish|바란다","바랍니다"],
 ];
 
-export const PROPAGATION_REASON = 'This patch added the string to one row of the group under a 2026-09-15 ruling or a restored withdrawal, and the twin does not carry it. Whether the ruling reaches the twin is a separate decision: the two rows do ask the same question, but levelling up would also spread the alternatives on that row that are themselves doubtful.';
+/** Refused: the twin carries the string, but it is doubtful THERE, so
+ * propagating would double an existing problem rather than fix one. Levelling up
+ * spreads a bad alternative as readily as a good one, which is the whole reason
+ * these were not settled by the sweep's mechanism. */
+export const PROPAGATION_REFUSED = [
+  { ref: 'ja-E1054', lang: 'ja', group: 'to_target|Taller|もっと背が高い', missing: 'より高い',
+    why: 'より高い is "higher" or "more expensive", not "taller" — 高い alone drops the 背が that makes it about height. The twin ja-E1021 accepts it, and that is the questionable call; spreading it to a second Taller row would make the group consistently wrong instead of inconsistently.' },
+  { ref: 'ja-E1684', lang: 'ja', group: 'to_target|I wish|したい', missing: '願っています',
+    why: 'The row is keyed したい, "want to do". 願う is a different lexeme, "to wish" or "to hope", and 願っています is its progressive. The twin ja-E1645 accepts both; that is the doubtful end of the divergence, not this one.' },
+  { ref: 'ja-E1684', lang: 'ja', group: 'to_target|I wish|したい', missing: '願う',
+    why: 'The same lexeme question as 願っています, on the same row and refused with it: 願う is "to wish" or "to hope", a different verb from the keyed したい, "want to do".' },
+];
+
+export const PROPAGATION_REASON = 'Decided 2026-09-15. Eleven levelled because the twin asks the identical question under the same ruling; three refused because the twin\'s own alternative is doubtful and propagating it would double the problem. The three refusals stay declared so the standing test keeps their groups visible rather than silently tolerated.';
+
+
 
 /**
  * Held: levelling would admit the listed string, which is wrong on this row.
@@ -232,7 +253,7 @@ const REASON = (ref, lang, group, missing, twin) =>
 export function sameGlossLevelling(set, ledger) {
   const { row } = set;
   const byRow = new Map();
-  for (const [id, ref, lang, group, missing] of LEVELLED) {
+  for (const [id, ref, lang, group, missing] of [...LEVELLED, ...PROPAGATION_LEVELLED]) {
     const original = row('exercises', id);
     if (original.options?.length) throw new Error(`${ref}: became a choice row; re-derive the groups`);
     const entry = byRow.get(id) ?? { ref, lang, group, additions: [] };
@@ -252,7 +273,8 @@ export function sameGlossLevelling(set, ledger) {
   }
   const byLanguage = LEVELLED.reduce((acc, [, , lang]) => ({ ...acc, [lang]: (acc[lang] ?? 0) + 1 }), {});
   return {
-    levelled: LEVELLED.length, rows: byRow.size, held: HELD_WOULD_WIDEN.length,
-    propagation_pending: PROPAGATION_PENDING.length, declared: DECLARED_EXCEPTIONS.length, by_language: byLanguage,
+    levelled: LEVELLED.length, propagation_levelled: PROPAGATION_LEVELLED.length,
+    rows: byRow.size, held: HELD_WOULD_WIDEN.length,
+    propagation_refused: PROPAGATION_REFUSED.length, declared: DECLARED_EXCEPTIONS.length, by_language: byLanguage,
   };
 }

@@ -10,7 +10,7 @@ import { NEW_TITLE } from './idiomatic-equivalents-retitle.mjs';
 import { loadTriage, DEPENDENT_ROWS, PARTIALLY_HELD, TRIAGE_SHA } from './triage-accepted-answers.mjs';
 import { loadCandidates, REGISTER_RULING, REGISTER_REMOVALS, REGISTER_KEPT, FR_C0024, CANDIDATES_SHA, RULED_ON } from './product-rulings.mjs';
 import { loadAlternativesEvidence, SCRIPT_ACCEPT, SCRIPT_REFUSE, HELD_TYPO_BALL, GATE_DEPENDENT_COMPARATIVES, EVIDENCE_SHA } from './restored-withdrawals.mjs';
-import { LEVELLED } from './same-gloss-levelling.mjs';
+import { LEVELLED, PROPAGATION_LEVELLED } from './same-gloss-levelling.mjs';
 import { AXIS_REMAINDER, AXIS_REFUSED, AXIS_HELD } from './alternatives-axis-remainder.mjs';
 
 const draft = JSON.parse(await readFile('docs/audits/question-verification/round2/draft-patches.json', 'utf8'));
@@ -297,7 +297,7 @@ test('the paradigm patch only ever sets target_grammar, and only on rows that ar
   }
   assert.equal(translateToNative, 2, 'exactly the French and Portuguese "Cheaper" rows');
   assert.equal(count, 249, '192 tense rows + 57 derivational rows');
-  assert.equal(shared, 8, 'the ja/ko tense rows an accepted-answer block also touches');
+  assert.equal(shared, 10, 'the ja/ko tense rows an accepted-answer block also touches');
   passedChecks++;
 });
 
@@ -322,7 +322,7 @@ test('Film & Theater stops teaching Painting and Sculpture in all six remaining 
   const units = new Map(snapshot.units.map(u => [u.id, u]));
   const courses = new Map(snapshot.courses.map(c => [c.id, c]));
   const ledgerIds = new Set([...triage.map(entry => entry.exercise_id), ...candidates.map(entry => entry.exercise_id),
-    ...REGISTER_REMOVALS.map(entry => entry.id), ...withdrawalIds, ...LEVELLED.map(([id]) => id), ...AXIS_REMAINDER.map(([id]) => id)]);
+    ...REGISTER_REMOVALS.map(entry => entry.id), ...withdrawalIds, ...LEVELLED.map(([id]) => id), ...PROPAGATION_LEVELLED.map(([id]) => id), ...AXIS_REMAINDER.map(([id]) => id)]);
   const touched = patches.filter(p => p.table === 'exercises'
     && !Object.hasOwn(p.after, 'target_grammar') && !ledgerIds.has(p.id));
   assert.equal(touched.length, 24, 'four rows in each of six languages');
@@ -363,7 +363,7 @@ test('the triage block writes exactly the confirmed rows, and only accepted_answ
     assert.deepEqual(patch.after.accepted_answers.slice(0, entry.additions.length), entry.additions);
     const ruled = new Set([...candidates.filter(c => c.exercise_id === patch.id).map(c => c.candidate),
       ...[...withdrawals.script, ...withdrawals.ball].filter(w => jaRef(Number(w.ref.slice(4))).exercise.id === patch.id).map(w => w.candidate),
-      ...LEVELLED.filter(([id]) => id === patch.id).map(([, , , , missing]) => missing),
+      ...[...LEVELLED, ...PROPAGATION_LEVELLED].filter(([id]) => id === patch.id).map(([, , , , missing]) => missing),
       ...AXIS_REMAINDER.filter(([id]) => id === patch.id).map(entry => entry[5])]);
     for (const value of patch.after.accepted_answers.slice(entry.additions.length)) {
       assert(ruled.has(value), `${entry.ref}: ${value} comes from no recorded block`);

@@ -17,7 +17,7 @@ import { SNAPSHOT_FILE, SNAPSHOT_SHA, createRound2PatchSet } from './patch-set-r
 import { loadTriage, DEPENDENT_ROWS, PARTIALLY_HELD, TRIAGE_SHA, TRIAGE_SOURCE } from './triage-accepted-answers.mjs';
 import { loadCandidates, REGISTER_RULING, REGISTER_REMOVALS, REGISTER_KEPT, FR_C0024, CANDIDATES_SHA, RULED_ON } from './product-rulings.mjs';
 import { loadAlternativesEvidence, SCRIPT_ACCEPT, SCRIPT_REFUSE, HELD_TYPO_BALL, GATE_DEPENDENT_COMPARATIVES, EVIDENCE_SHA, EVIDENCE_SOURCE } from './restored-withdrawals.mjs';
-import { LEVELLED, HELD_WOULD_WIDEN, PROPAGATION_PENDING, DECLARED_EXCEPTIONS as GLOSS_EXCEPTIONS, DECLARED_REASON as GLOSS_REASON, PROPAGATION_REASON } from './same-gloss-levelling.mjs';
+import { LEVELLED, HELD_WOULD_WIDEN, PROPAGATION_LEVELLED, PROPAGATION_REFUSED, DECLARED_EXCEPTIONS as GLOSS_EXCEPTIONS, DECLARED_REASON as GLOSS_REASON, PROPAGATION_REASON } from './same-gloss-levelling.mjs';
 import { AXIS_REMAINDER, AXIS_REFUSED, AXIS_HELD } from './alternatives-axis-remainder.mjs';
 
 const raw = await readFile(SNAPSHOT_FILE, 'utf8');
@@ -380,7 +380,8 @@ const SAME_GLOSS = {
   derived: { groups: 4605, asked_more_than_once: 967, disagreeing: 101, omissions: 129, italian: 0 },
   outcomes: {
     levelled: LEVELLED.length,
-    propagation_pending: PROPAGATION_PENDING.length,
+    propagation_levelled: PROPAGATION_LEVELLED.length,
+    propagation_refused: PROPAGATION_REFUSED.length,
     held_would_widen: HELD_WOULD_WIDEN.length,
     declared_deliberate: GLOSS_EXCEPTIONS.length,
   },
@@ -393,7 +394,12 @@ const SAME_GLOSS = {
     note: 'Measured against every taught string in the language. These are the meaning flips the audit exists to catch: "Nurse" would accept Enfermo (sick), "Neighbor" would accept Cozinha (kitchen), "Tired" would accept Zangada (angry), "Grandmother" would accept 고모 (aunt), "To cook" would accept Cool. Each needs a confusable pair keyed on the added string.',
     rows: HELD_WOULD_WIDEN,
   },
-  left_pending: { reason: PROPAGATION_REASON, rows: PROPAGATION_PENDING },
+  propagations_decided: {
+    reason: PROPAGATION_REASON,
+    levelled: PROPAGATION_LEVELLED.length,
+    refused: PROPAGATION_REFUSED,
+    note: 'Eleven levelled onto the twin because it asks the identical question under the same 2026-09-15 ruling — kana readings under the script ruling, deferential forms under the register ruling, adverbial comparatives and an orthographic variant — and none of the eleven admits another taught string. Three refused: the twin carries the string but it is doubtful THERE, so propagating would make the group consistently wrong instead of inconsistently.',
+  },
   standing_test: 'scripts/question-audit/round2/same-gloss-levelling.test.mjs — nine languages, Node rather than Deno, and an allowlist that is no longer empty because two populations must stay divergent. Passes on the result: 4 checks.',
 };
 
@@ -417,6 +423,12 @@ const AXIS = {
     note: '62 of 88 were already covered. The remainder was 26 rows, not 88.',
   },
   outcome_of_the_26: { added: AXIS_REMAINDER.length, held: AXIS_HELD.length, refused: AXIS_REFUSED.length },
+  RECONCILIATION_TWO_CLASSES_NOT_ONE: {
+    question: 'A measurement on the merged branch reported six cross-language leaks — a Korean-course row keyed "Protagonist" accepting Protagonistin, Russian-course rows keyed "Presentation", "Reservation" and "Conservation" accepting Préservation — which did not match the four reported here.',
+    answer: 'They are two classes. The four found here are WITHIN-COURSE: the axis file\'s own language field and the row\'s course agree on every one — a German-course row accepting German, French-course rows accepting French, a Portuguese-course row accepting Portuguese — and the sibling that LISTS the string is in the same course each time.',
+    evidence: 'Scanned across the whole snapshot: the only rows that list Protagonistin or Préservation as an accepted answer are one German cloze_deletion and two French rows respectively. No Korean-course row and no Russian-course row lists either string, so the six can only be tolerance acceptances where the candidate came from another language\'s taught set — a scope this branch never measured, because its taught-string sets are built per language.',
+    conclusion: 'Same shape, different mechanism: this class is a row accepting a string its OWN course teaches; that class is a row accepting a string ANOTHER course teaches. Both are real and both were routed to the grader as pair candidates.',
+  },
   FOUR_ARE_A_DEFECT_POINTING_THE_OTHER_WAY: {
     what: 'On four translate_to_native rows the string the axis would refuse is the SOURCE-LANGUAGE word, on a row whose answer is English.',
     rows: AXIS_REFUSED.filter(entry => entry.type === 'translate_to_native'),
@@ -424,6 +436,25 @@ const AXIS = {
   },
   other_refusals: AXIS_REFUSED.filter(entry => entry.type !== 'translate_to_native'),
   held: AXIS_HELD,
+};
+
+/** The Würde cluster: flagged, deliberately not patched. */
+const WUERDE = {
+  asked: 'Fix the gloss on the three rows keyed Würde and glossed "Would", since Würde is dignity.',
+  finding: 'THE GLOSS IS RIGHT AND THE KEY IS MISCAPITALISED. The three rows sit in de B1 Hypothetical Situations — Second Conditional, Regrets, Review & Test — beside a listening_choice keyed "Would" and a multiple_choice keyed "Would". The lesson unambiguously means the Konjunktiv II auxiliary, which is written würde, lower case. German capitalises nouns; Würde with a capital is the noun "dignity". So "Would" is the correct gloss and the capital W is the error.',
+  which_makes_it_the_bigger_change_you_asked_to_have_flagged: 'Not patched here. The source is a CARD — aabbccdd-3333-3007-c002-b10000000000, target_text "Würde", native_text "Would" — which is the SRS payload every learner reviews, and three exercise rows point at it. Correcting it means editing a card and four rows, which changes what learners see in review rather than only in a lesson.',
+  grading_impact: 'None either way. normalize() lowercases, so Würde and würde are one string to the grader: würde on a key of Würde returns Correct with accuracy 1.0, not a typo pass. No grading rule can separate them without making German case-sensitive, which would fail every learner who types a noun in lower case. The defect is entirely in what is displayed.',
+  the_exact_change_if_approved: {
+    card: 'aabbccdd-3333-3007-c002-b10000000000 target_text "Würde" -> "würde"',
+    rows: [
+      '205ec1b3-5fa8-4efd-a824-d3081c280f11 (listening_type) prompt and correct_answer "Würde" -> "würde" — the prompt is the text-to-speech source, so capitalisation does not change what is heard',
+      'aabbccdd-3333-3007-0006-e00000000009 (free_production) prompt "Write a sentence using the word: Würde (Would)" -> "würde (would)", correct_answer "Würde" -> "würde"',
+      'the listening_choice and multiple_choice rows keyed "Would": prompt "Würde" -> "würde". Their keys are already correct and do not move.',
+    ],
+    out_of_scope: 'One speaking row (6589a5e4) also carries Würde and cannot be touched by this compiler, so it would stay miscapitalised until someone else fixes it.',
+  },
+  the_fourth_row_is_correct: 'The B2 fill_blank 9987684c keys würde lower case, with target_grammar konjunktiv2_irrealis, in Complex Grammar / Konjunktiv II: Unreal Conditions. It is right as it stands and is the model the B1 cluster should match.',
+  wuerde_the_ascii_form: 'That B2 row also accepts "wuerde", the umlaut-free transliteration. Refused for the B1 rows in the alternatives-axis block, because importing it there would carry a spelling of a different word across the capitalisation boundary.',
 };
 
 const findings = {
@@ -446,11 +477,13 @@ const findings = {
     'restored_withdrawals': { patched: 67, additions: 95, refused: 46, held: 3, see: 'restored_withdrawals' },
     'same_gloss_levelling': { patched: 84, additions: 97, held: 13, pending: 14, declared: 5, see: 'same_gloss_levelling' },
     'alternatives_axis_remainder': { patched: 17, additions: 18, refused: 7, held: 1, see: 'alternatives_axis' },
+    'wuerde_cluster': { patched: 0, see: 'wuerde_cluster — flagged, not patched: the key is miscapitalised, not the gloss' },
   },
   rulings: RULINGS,
   restored_withdrawals: RESTORED,
   same_gloss_levelling: SAME_GLOSS,
   alternatives_axis: AXIS,
+  wuerde_cluster: WUERDE,
   triage_block: TRIAGE,
   already_fixed_by_round_one: ALREADY_FIXED.map(finding => ({
     ...finding, verified_now: finding.id ? frozen(finding.id, finding.field, finding.now, finding.ref) : null,
