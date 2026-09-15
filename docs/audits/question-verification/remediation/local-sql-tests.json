@@ -1,0 +1,45 @@
+{
+  "engine": "PGlite 0.5.8 (in-memory PostgreSQL)",
+  "sql_sha256": "bedc0954fe9c3e0b1913542bc63045f7d79cc9b3b060908c2b128022e9a4796c",
+  "reverse_sql_sha256": "7814b851fecc6bdbe83400009ac7d262a788d915e2c1d97d246ee012569de39b",
+  "patch_rows": 5556,
+  "tables": [
+    "cards",
+    "checkpoint_items",
+    "exercises",
+    "grammar_rules",
+    "lessons",
+    "reading_passages",
+    "reading_questions",
+    "units",
+    "writing_prompts"
+  ],
+  "checks": [
+    "exact changed rows/fields",
+    "unchanged rows/fields",
+    "idempotence",
+    "atomic conflict rollback",
+    "exact array guards",
+    "missing-row abort",
+    "compiler scope and conflict guards",
+    "category meaning/course guards",
+    "insert id derivation and stability",
+    "insert table/column/parent/slug guards",
+    "insert order_index collision guards",
+    "insert id collision and UUID shape guards",
+    "insert apply, idempotence, parent/sibling/conflict aborts",
+    "insert failure rolls back applied updates",
+    "renderPatchSql insert-shape guards",
+    "no-insert SQL byte-identical to the pre-insert compiler",
+    "rollback restores the frozen snapshot exactly",
+    "rollback idempotence and no-op on an unpatched database",
+    "rollback repairs a half-applied patch",
+    "rollback refuses an edited row and an edited authored row",
+    "rollback writes only patched fields, never guarded identity fields"
+  ],
+  "production_writes": 0,
+  "limitations": [
+    "Minimal typed content schema, not full Supabase auth/RLS/triggers or historical migrations",
+    "Does not establish linguistic correctness or independent remediation approval"
+  ]
+}

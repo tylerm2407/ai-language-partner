@@ -1,0 +1,16 @@
+{
+  "snapshot_sha256": "8c7f381c78d87e57593febe851526355d300c7a704e5a57dd49a614edabd7c0f",
+  "draft_sha256": "237ddddab42875e97dc5ecdea0b92658313dbcb0f185e548b676e79150f306d5",
+  "scope": "Every stored non-speaking lesson key/alias, every reading key/alias, fixed-answer checkpoint reading/listening. Open lesson keys passing only proves routing, NOT valid open-response grading. Writing, spoken audio and future generation are not certified.",
+  "counts": {
+    "lesson_rows": 20808,
+    "lesson_answers": 28726,
+    "lesson_choice_rows": 6456,
+    "reading_rows": 314,
+    "reading_answers": 730,
+    "reading_choice_rows": 18,
+    "checkpoint_rows": 48,
+    "checkpoint_answers": 183
+  },
+  "failures": []
+}
