@@ -3,6 +3,7 @@ import { View, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { haptic } from '../../lib/haptics';
 import { FeedbackCard } from './FeedbackCard';
+import { ExerciseHint } from './ExerciseHint';
 import { HighlightedText } from '../shared/HighlightedText';
 import { Body, Caption } from '../ui/Text';
 import { colors, spacing, radii } from '../../config/theme';
@@ -111,6 +112,8 @@ export function SentenceConstructionExercise({
         highlight={highlight}
         className="text-text-primary text-[18px] font-sans-semibold mb-5 leading-7"
       />
+
+      <ExerciseHint hint={exercise.hintText} revealed={isRevealed} />
 
       {/* Answer area */}
       <View style={{

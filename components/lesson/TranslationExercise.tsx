@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { haptic } from '../../lib/haptics';
 import { ExerciseCard } from './ExerciseCard';
 import { FeedbackCard } from './FeedbackCard';
+import { ExerciseHint } from './ExerciseHint';
 import { HighlightedText } from '../shared/HighlightedText';
 import { Button } from '../ui/Button';
 import { colors } from '../../config/theme';
@@ -137,6 +138,12 @@ export function TranslationExercise({
 
   return (
     <ExerciseCard type={exercise.type} promptNode={promptNode}>
+      {/* Only into the target language. A translate-to-native hint glosses the
+          very words being translated — see components/lesson/ExerciseHint.tsx. */}
+      {exercise.type === 'translate_to_target' ? (
+        <ExerciseHint hint={exercise.hintText} revealed={submitted || showResult} />
+      ) : null}
+
       <TextInput
         className={`border-2 ${getBorderClass()} rounded-[14px] px-4 py-2.5 text-base text-text-primary min-h-[80px]`}
         placeholder={isOpenProduction(exercise) ? 'Write your sentence...' : 'Type your translation...'}

@@ -3,6 +3,7 @@ import { View, TextInput, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { haptic } from '../../lib/haptics';
 import { FeedbackCard } from './FeedbackCard';
+import { ExerciseHint } from './ExerciseHint';
 import { HighlightedText } from '../shared/HighlightedText';
 import { Body, Caption } from '../ui/Text';
 import { colors, spacing, radii } from '../../config/theme';
@@ -99,6 +100,8 @@ export function ErrorCorrectionExercise({
           {correctionInstruction || 'This sentence contains an error. Type the corrected version below.'}
         </Caption>
       </View>
+
+      <ExerciseHint hint={exercise.hintText} revealed={isRevealed} />
 
       {/* Corrected Input */}
       <View>

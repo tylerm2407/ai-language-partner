@@ -3,6 +3,7 @@ import { View, Text, TextInput } from 'react-native';
 import { haptic } from '../../lib/haptics';
 import { ExerciseCard } from './ExerciseCard';
 import { FeedbackCard } from './FeedbackCard';
+import { ExerciseHint } from './ExerciseHint';
 import { HighlightedText } from '../shared/HighlightedText';
 import { Button } from '../ui/Button';
 import { gradeAnswer } from '../../lib/grading';
@@ -87,6 +88,8 @@ export function SentenceTransformExercise({
           <Text className="text-primary text-sm font-semibold">{instruction}</Text>
         </View>
       ) : null}
+
+      <ExerciseHint hint={exercise.hintText} revealed={submitted || showResult} />
 
       <TextInput
         className={`border-2 ${getBorderClass()} rounded-[14px] px-4 py-2.5 text-base text-text-primary`}

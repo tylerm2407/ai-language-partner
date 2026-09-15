@@ -3,6 +3,7 @@ import { View, TextInput, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { haptic } from '../../lib/haptics';
 import { FeedbackCard } from './FeedbackCard';
+import { ExerciseHint } from './ExerciseHint';
 import { HighlightedText } from '../shared/HighlightedText';
 import { Body, Caption } from '../ui/Text';
 import { colors, spacing, radii } from '../../config/theme';
@@ -145,12 +146,8 @@ export function ClozeExercise({
         />
       )}
 
-      {/* Hint */}
-      {exercise.hintText && !isRevealed && (
-        <Caption tone="tertiary" style={{ fontStyle: 'italic', marginBottom: spacing.md }}>
-          Hint: {exercise.hintText}
-        </Caption>
-      )}
+      {/* Hint — shared with every other typed row that carries one. */}
+      <ExerciseHint hint={exercise.hintText} revealed={isRevealed} />
 
       {/* Differentiated feedback */}
       {result && isRevealed && language ? (
