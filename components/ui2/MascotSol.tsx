@@ -11,21 +11,36 @@ export type MascotMood =
   | 'idle'
   | 'think'
   | 'cheer'
+  | 'celebrate'
   | 'listening'
   | 'thinking'
   | 'approving'
   | 'surprised'
+  | 'amazed'
+  | 'confused'
+  | 'wince'
+  | 'wave'
   | 'bedtime'
   | 'asleep';
 
+/**
+ * `cheer` is the small nod a good tap earns — the onboarding steps fire it on
+ * a 700 ms tick, so it must stay small. `celebrate` is the big one (Sol rears
+ * up and puffs a flame) and belongs to a moment that actually finished.
+ */
 const STATE_FOR: Record<MascotMood, MascotState> = {
   idle: 'idle',
   think: 'thinking',
   thinking: 'thinking',
-  cheer: 'cheering',
+  cheer: 'happy',
+  celebrate: 'cheering',
   approving: 'happy',
   listening: 'listening',
   surprised: 'surprised',
+  amazed: 'amazed',
+  confused: 'confused',
+  wince: 'sad',
+  wave: 'waving',
   bedtime: 'sleepy',
   asleep: 'asleep',
 };

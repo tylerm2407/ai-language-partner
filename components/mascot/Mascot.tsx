@@ -39,6 +39,17 @@
  *
  * The state names are the old star mascot's, so nothing upstream changes.
  * When the Rive rig lands it replaces the Image element behind this same API.
+ *
+ * ── CLIPS THAT SHIP BUT ARE NOT WIRED (2026-09-14) ──
+ *
+ * assets/mascot/video also holds ten clips no state maps to yet, generated in
+ * the same pass and keyed the same way: five of Sol moving around his frame
+ * (sol-walk, sol-hop, sol-pace, sol-spin, sol-peek, sol-circle — ten seconds
+ * each, 10126 ms) and five of him at a task (sol-reading, sol-writing,
+ * sol-headphones, sol-mic — five seconds, 5146 ms). Nothing `require`s them,
+ * so they cost repository space and not binary space. To use one: add it to
+ * `Clip`, `CLIPS` and `CLIP_MS` with the length above, give it a state in
+ * `CLIP_FOR`, and re-measure with `webpmux -info` if it is ever regenerated.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, StyleSheet, View, type ViewStyle } from 'react-native';
@@ -55,7 +66,10 @@ export type MascotState =
   | 'sleepy'
   | 'asleep'
   | 'sad'
-  | 'disappointed';
+  | 'disappointed'
+  | 'amazed'
+  | 'confused'
+  | 'waving';
 
 export type MascotSize = 'xs' | 'sm' | 'md' | 'lg' | number;
 
@@ -69,23 +83,47 @@ interface MascotProps {
 
 const SIZE_PX: Record<Exclude<MascotSize, number>, number> = { xs: 32, sm: 48, md: 80, lg: 128 };
 
-type Clip = 'idle' | 'listening' | 'thinking' | 'approving' | 'surprised' | 'bedtime' | 'sleep';
+type Clip =
+  | 'idle'
+  | 'listening'
+  | 'thinking'
+  | 'approving'
+  | 'surprised'
+  | 'bedtime'
+  | 'sleep'
+  | 'wince'
+  | 'confused'
+  | 'celebrate'
+  | 'amazed'
+  | 'wave';
 
 /** Clips that repeat until the parent changes state. */
 const LOOPS: ReadonlySet<Clip> = new Set<Clip>(['idle', 'sleep']);
 
-/** Which clip a state plays. Sad/disappointed have no clip of their own yet: Sol just watches. */
+/**
+ * Which clip a state plays.
+ *
+ * `happy` and `cheering` are deliberately different sizes of the same
+ * feeling: `happy` is the small nod a correct answer or a good tap earns,
+ * `cheering` is the rear-up-and-breathe-fire one that belongs to finishing
+ * something. Sad and disappointed used to borrow the listening clip, which
+ * read as Sol waiting rather than Sol feeling it with you; they now play the
+ * wince.
+ */
 const CLIP_FOR: Record<MascotState, Clip> = {
   idle: 'idle',
   happy: 'approving',
-  cheering: 'approving',
+  cheering: 'celebrate',
   thinking: 'thinking',
   listening: 'listening',
   surprised: 'surprised',
   sleepy: 'bedtime',
   asleep: 'sleep',
-  sad: 'listening',
-  disappointed: 'listening',
+  sad: 'wince',
+  disappointed: 'wince',
+  amazed: 'amazed',
+  confused: 'confused',
+  waving: 'wave',
 };
 
 /**
@@ -103,6 +141,11 @@ const CLIPS: Record<Clip, number> = {
   surprised: require('../../assets/mascot/video/sol-surprised.webp'),
   bedtime: require('../../assets/mascot/video/sol-bedtime.webp'),
   sleep: require('../../assets/mascot/video/sol-sleep.webp'),
+  wince: require('../../assets/mascot/video/sol-wince.webp'),
+  confused: require('../../assets/mascot/video/sol-confused.webp'),
+  celebrate: require('../../assets/mascot/video/sol-celebrate.webp'),
+  amazed: require('../../assets/mascot/video/sol-amazed.webp'),
+  wave: require('../../assets/mascot/video/sol-wave.webp'),
 };
 
 /**
@@ -118,6 +161,11 @@ export const CLIP_MS: Record<Clip, number> = {
   surprised: 5146,
   bedtime: 15023,
   sleep: 7968,
+  wince: 5146,
+  confused: 5146,
+  celebrate: 5146,
+  amazed: 5146,
+  wave: 5146,
 };
 
 /** What a finished one-shot hands over to. Pure so the chain can be asserted. */

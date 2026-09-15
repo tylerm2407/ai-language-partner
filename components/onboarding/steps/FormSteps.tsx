@@ -36,7 +36,8 @@ export function LanguageStep({
 }) {
   return (
     <>
-      {frame.hero('What language do you want to learn?', 'slide')}
+      {/* First question of the whole app: Sol says hello rather than sitting. */}
+      {frame.hero('What language do you want to learn?', 'slide', 'wave')}
       <Animated.View entering={frame.enter(0)}>
         <Lede>You can add another later.</Lede>
       </Animated.View>

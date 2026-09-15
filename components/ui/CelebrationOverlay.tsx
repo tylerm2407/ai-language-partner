@@ -62,7 +62,7 @@ const MOOD_CONFIG: Record<
 > = {
   correct: { mascot: 'happy', particles: 10, hapticIntent: 'correct' },
   lessonComplete: { mascot: 'cheering', particles: 25, hapticIntent: 'complete' },
-  levelUp: { mascot: 'cheering', particles: 40, hapticIntent: 'levelUp' },
+  levelUp: { mascot: 'amazed', particles: 40, hapticIntent: 'levelUp' },
 };
 
 /** Matches Ui2Sheet — the alpha Dark Glow's `surface.overlay` token used to carry. */

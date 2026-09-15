@@ -102,7 +102,7 @@ function heroFor(state: ExerciseNoteState, instruction: string): HeroCopy {
     case 'unanswered':
       return { tone: 'primary', title: instruction, mood: 'idle' };
     case 'retrying':
-      return { tone: 'error', title: 'Not quite', subtitle: 'One more try.', mood: 'thinking' };
+      return { tone: 'error', title: 'Not quite', subtitle: 'One more try.', mood: 'confused' };
     case 'skipped':
       return { tone: 'primary', title: 'Skipped', mood: 'idle' };
     case 'correct':
@@ -114,7 +114,7 @@ function heroFor(state: ExerciseNoteState, instruction: string): HeroCopy {
         tone: 'error',
         title: 'Not quite',
         subtitle: state.note ?? `The answer is ${state.correctAnswer}.`,
-        mood: 'thinking',
+        mood: 'wince',
       };
   }
 }

@@ -133,7 +133,7 @@ export function SaveStep({
       }
     >
       <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(360)} style={styles.centerCol}>
-        <MascotSol size={110} mood="cheer" />
+        <MascotSol size={110} mood="celebrate" />
         <Text
           accessibilityRole="header"
           style={{ fontFamily: type.heading, fontSize: 30, lineHeight: 36, color: c.ink, textAlign: 'center' }}
