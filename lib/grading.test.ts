@@ -548,3 +548,42 @@ describe('a sibling key that is the same word unaccented is still an accent slip
     expect(result.isCorrect).toBe(false);
   });
 });
+
+describe('edit distance is not a model for Han script', () => {
+  it('refuses a one-character Chinese neighbour', () => {
+    // One edit, and the drink changes: 茶 tea, 水 water. Neither string is in
+    // the pair list, and no pair list can hold every sentence a lesson
+    // teaches — which is the point of gating the script rather than
+    // enumerating the words.
+    expect(gradeAnswer('我喜欢喝水', '我喜欢喝茶', [], { exerciseHints: { language: 'zh' } }).isCorrect)
+      .toBe(false);
+  });
+
+  it('still accepts the exact Chinese answer', () => {
+    expect(gradeAnswer('我喜欢喝茶', '我喜欢喝茶', [], { exerciseHints: { language: 'zh' } }).isCorrect)
+      .toBe(true);
+  });
+
+  it('refuses a one-character Japanese neighbour once kanji are involved', () => {
+    // 書きます (write) and 行きます (go) are one edit apart and unrelated. The
+    // past forms are in the pair list; the present forms are not, and an IME
+    // cannot produce one from the other in any case.
+    const hints = { exerciseHints: { language: 'ja' as const } };
+    expect(gradeAnswer('行きます', '書きます', [], hints).isCorrect).toBe(false);
+    expect(gradeAnswer('書きます', '行きます', [], hints).isCorrect).toBe(false);
+  });
+
+  it('keeps tolerance for kana, which can genuinely be mistyped', () => {
+    // No kanji on either side: ありがとう with one kana wrong is a typing slip,
+    // and the IME can produce it.
+    expect(gradeAnswer('ありがとお', 'ありがとう', [], { exerciseHints: { language: 'ja' } }).isCorrect)
+      .toBe(true);
+  });
+
+  it('leaves Korean tolerance alone', () => {
+    // A jamo is a fraction of a word, so distance is meaningful in Hangul —
+    // 간후사 for 간호사 is an ordinary adjacent-key slip.
+    expect(gradeAnswer('간후사', '간호사', [], { exerciseHints: { language: 'ko' } }).isCorrect)
+      .toBe(true);
+  });
+});

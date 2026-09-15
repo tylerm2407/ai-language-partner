@@ -511,7 +511,42 @@ export function gradeAnswer(
     stripDiacritics(expectedForTolerance).length,
     stripDiacritics(normalizedCorrect).length,
   );
-  const maxAllowedDistance = Math.min(2, Math.floor(toleranceBasis * TYPO_TOLERANCE_RATIO));
+  /**
+   * Chinese, and Japanese above the kana line, get no typo tolerance at all.
+   *
+   * Edit distance works in Latin script because a letter is a fraction of a
+   * morpheme: one edit in "receive" rarely lands on another real word, and the
+   * 0.3 ratio encodes exactly that. A Han character IS a morpheme. One edit is
+   * not a fraction of a word, it is a whole unit of meaning replaced — 我同意
+   * and 我不同意 are one edit apart and are opposites, and in the A2 Japanese
+   * comparative block every one of the six taught adjectives is exactly one
+   * edit from every other, so a budget of one guarantees that any of the six
+   * scores correct for any of the others.
+   *
+   * And there is no keystroke path to the neighbour. These scripts are typed
+   * through an IME by reading, then converted: もっと良い is typed `motto yoi`
+   * and もっと悪い is `motto warui`, sharing no input sequence. A slip that
+   * lands on another valid word is not a slip the input method can produce, so
+   * the tolerance buys nothing it was designed to buy. Mean key length makes it
+   * worse — 2.28 characters in Chinese and 3.29 in Japanese against 8.30 in
+   * Spanish — so one edit is a third of the answer and all of the meaning.
+   *
+   * Japanese keeps tolerance for kana, which genuinely can be mistyped: the
+   * gate is per-answer, not per-language, and lifts as soon as either side
+   * carries a Han character.
+   *
+   * Korean is deliberately NOT included. A Hangul syllable is a phonological
+   * block, not a morpheme, and a single jamo really is a fraction of a word —
+   * which is the level the grader already measures at. Korean's problem was
+   * the opposite one, and was fixed by measuring the budget in jamo too.
+   */
+  const han = /[㐀-䶿一-鿿豈-﫿]/;
+  const scriptTakesTypoTolerance =
+    hints?.language !== 'zh' &&
+    (hints?.language !== 'ja' || !(han.test(normalized) || han.test(expectedForTolerance)));
+  const maxAllowedDistance = scriptTakesTypoTolerance
+    ? Math.min(2, Math.floor(toleranceBasis * TYPO_TOLERANCE_RATIO))
+    : 0;
 
   /**
    * Length alone cannot separate a typo from a different word of the same
