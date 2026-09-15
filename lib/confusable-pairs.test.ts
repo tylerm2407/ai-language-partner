@@ -453,17 +453,18 @@ describe('the お〜さん kinship frame', () => {
     expect(gradeAnswer('おじいさん', 'おじさん', [], ja).isCorrect).toBe(false);
   });
 
-  it('holds the kanji spellings apart in the list itself', () => {
-    // These fire only if Japanese fuzzy tolerance is ever ungated — the kanji
-    // gate in lib/grading.ts refuses them first today. The list is what stands
-    // between these rows and a silent regression if that gate is relaxed, so
-    // it is asserted directly rather than through the grader.
-    expect(isConfusablePair('お母さん', 'お祖母さん', 'ja')).toBe(true);
-    expect(isConfusablePair('お父さん', 'お祖父さん', 'ja')).toBe(true);
-    expect(isConfusablePair('お父さん', '叔父さん', 'ja')).toBe(true);
-    expect(isConfusablePair('お母さん', '叔母さん', 'ja')).toBe(true);
-    expect(isConfusablePair('お姉さん', 'お婆さん', 'ja')).toBe(true);
-    expect(isConfusablePair('お隣さん', 'お爺さん', 'ja')).toBe(true);
+  it('refuses the kanji collisions without needing a pair for each', () => {
+    // Adding the kanji spelling of おばあさん brings five other taught kinship
+    // terms inside the budget — お婆さん is four characters, so the budget is
+    // one, and each of them is one substitution away. The kanji gate refuses
+    // all five before the budget is consulted, so the list deliberately does
+    // NOT carry entries for them: they could never fire. The guard against a
+    // relaxed gate is scripts/grading/widening-check.mjs, which reproduces the
+    // readmission in that case.
+    for (const candidate of ['お母さん', 'お父さん', 'お姉さん', 'お嬢さん', 'お隣さん']) {
+      expect(gradeAnswer(candidate, 'おばあさん', ['お婆さん'], ja).isCorrect).toBe(false);
+      expect(isConfusablePair(candidate, 'お婆さん', 'ja')).toBe(false);
+    }
   });
 
   it('refuses a presentation for a present', () => {

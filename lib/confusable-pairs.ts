@@ -325,88 +325,39 @@ const CONFUSABLE_PAIRS: Partial<Record<LanguageCode, [string, string][]>> = {
     // on the named row before this entry; see korean-goodbye-evidence.json.
     ['朝ご飯', 'ご飯'],                    // Breakfast vs rice/a meal — a scope change, not a typo. Accepted on ja-E0219 (listening_type, key 朝ご飯, d=1 vs budget 1). The reverse never fires: ご飯 has budget 0.
     /**
-     * Third batch, 2026-09-15: the お〜さん honorific frame, enumerated as the
-     * closed set it is.
+     * Third batch, 2026-09-15: the kana kinship keys, and only those.
      *
-     * Round-2 triage measured two things about these rows. Adding the correct
-     * kanji spellings of おばあさん and おじいさん — which the transcription
-     * additions must do, because the learner hears them and can write them
-     * either way — brings お母さん, お父さん, お姉さん, お嬢さん and お隣さん
-     * inside the typo budget on the four rows whose entire job is telling
-     * kinship terms apart. And even before any addition, おばあさん already
-     * accepts おばさん and おじいさん already accepts おじさん, in both
-     * directions: measured by the whole-language check across all 2,281 taught
-     * Japanese strings, 23 acceptances on 12 rows.
+     * Round-2 triage found that adding the correct kanji spellings of おばあさん
+     * and おじいさん — which the transcription additions must do, because the
+     * learner hears them and can write them either way — brings お母さん,
+     * お父さん, お姉さん, お嬢さん and お隣さん inside the typo budget on the four
+     * rows whose whole job is telling kinship terms apart. お婆さん is four
+     * characters, so the budget is one, and each of those five is one
+     * substitution away.
      *
-     * Every term in this frame is exactly one edit from every other, because
-     * the frame IS お + one character + さん. That makes it the Japanese twin
-     * of the もっと+ADJ block above, and the same remedy applies: enumerate the
-     * closed set once rather than react to it one row at a time. The set here
-     * is the さん-terms the curriculum actually teaches, plus the eight kanji
-     * spellings the transcription patch adds.
+     * Those five entries are NOT in this list, because they would never fire.
+     * Japanese fuzzy tolerance is now gated off for any answer carrying a
+     * kanji (lib/grading.ts), and every string in that collision carries one,
+     * so the comparison never reaches the budget. Measured across all four
+     * combinations of the gate and this list, on both `translate_to_target`
+     * and `listening_type`: with the gate on and no pairs at all, the five are
+     * already refused. `scripts/grading/widening-check.mjs` reproduces the
+     * readmission the moment the gate is relaxed, which makes it a better
+     * guard than a page of entries that cannot run.
      *
-     * Which entries fire TODAY: the kana-to-kana ones. The rest are guards.
-     * With Japanese fuzzy tolerance now gated off for any answer carrying a
-     * kanji (lib/grading.ts), a pair with kanji on both sides is unreachable —
-     * but it costs nothing, it documents the contrast, and it is what stands
-     * between these rows and a silent regression if that gate is ever relaxed.
-     * Verified both ways: with the gate off, these entries alone take the 12
-     * collateral acceptances to zero.
+     * What the gate does NOT close is this: the kana keys already accept each
+     * other, with no addition involved and nothing pending. Measured across
+     * all 2,153 taught Japanese strings — 23 acceptances on 12 rows. Kana is
+     * exactly what the gate leaves tolerant, and correctly so, which is what
+     * leaves these two live and load-bearing.
      */
-    ['おじいさん', 'おじさん'],              // Grandfather vs uncle. Accepted in both directions today on ja-E0373/ja-E0569 (d=1 vs budget 1) with no addition involved.
-    ['おばあさん', 'おばさん'],              // Grandmother vs aunt. Same shape, same rows: ja-E0361/ja-E0581.
-    ['おばさん', 'お婆さん'],                // Aunt vs grandmother in kanji: the addition on ja-E0361 lands one edit from the key of ja-E0581.
-    ['おじさん', 'お爺さん'],                // Uncle vs grandfather in kanji: the addition on ja-E0373 against the key of ja-E0569.
-    ['お婆さん', 'お父さん'],                // Grandmother vs father. Measured: adding お婆さん to ja-E0361 made お父さん "Correct! (Minor typo)".
-    ['お婆さん', 'お姉さん'],                // Grandmother vs older sister. Same measurement, same row.
-    ['お婆さん', 'お嬢さん'],                // Grandmother vs young lady/daughter. Same.
-    ['お婆さん', 'お母さん'],                // Grandmother vs mother — the contrast the row exists to draw.
-    ['お婆さん', 'お隣さん'],                // Grandmother vs the neighbour. Same.
-    ['お祖母さん', 'お母さん'],              // The other spelling of grandmother against mother: this is the pair that actually fired on ja-E0361, since お祖母さん is the nearer match to お母さん.
-    ['お爺さん', 'お父さん'],                // Grandfather vs father. Measured on ja-E0373.
-    ['お爺さん', 'お姉さん'],                // Grandfather vs older sister. Same row.
-    ['お爺さん', 'お嬢さん'],                // Grandfather vs young lady. Same row.
-    ['お爺さん', 'お母さん'],                // Grandfather vs mother. Same row.
-    ['お爺さん', 'お隣さん'],                // Grandfather vs the neighbour. Same row.
-    ['お祖父さん', 'お父さん'],              // Grandfather in the other spelling against father — the pair that fired on ja-E0373.
-    ['叔父さん', 'お父さん'],                // Uncle vs father: the addition on ja-E0569 made お父さん correct.
-    ['伯父さん', 'お父さん'],                // The senior-uncle spelling, same row, same collision.
-    ['叔母さん', 'お母さん'],                // Aunt vs mother: the addition on ja-E0581 made お母さん correct.
-    ['伯母さん', 'お母さん'],                // The senior-aunt spelling, same row, same collision.
-    ['お祖母さん', 'お祖父さん'],            // Grandmother vs grandfather: the two additions of ja-E0361 and ja-E0373 are one edit from each other.
-    ['お婆さん', 'お爺さん'],                // The same contrast in the other spelling.
-    ['叔父さん', '伯父さん'],                // Younger vs older uncle — a real distinction in Japanese, and one edit apart.
-    ['叔母さん', '伯母さん'],                // Younger vs older aunt, likewise.
-    ['叔父さん', '叔母さん'],                // Uncle vs aunt in the same spelling frame.
-    ['伯父さん', '伯母さん'],                // The same, senior.
-    // The rest of the frame. These are taught terms one edit apart that no
-    // addition created; they hold whether or not the transcription patch
-    // lands, and they are inert while the kanji gate stands.
-    ['お父さん', 'お母さん'],                // Father vs mother.
-    ['お父さん', 'お姉さん'],                // Father vs older sister.
-    ['お父さん', 'お嬢さん'],                // Father vs young lady.
-    ['お父さん', 'お隣さん'],                // Father vs the neighbour.
-    ['お母さん', 'お姉さん'],                // Mother vs older sister.
-    ['お母さん', 'お嬢さん'],                // Mother vs young lady.
-    ['お母さん', 'お隣さん'],                // Mother vs the neighbour.
-    ['お姉さん', 'お嬢さん'],                // Older sister vs young lady.
-    ['お姉さん', 'お隣さん'],                // Older sister vs the neighbour.
-    ['お嬢さん', 'お隣さん'],                // Young lady vs the neighbour.
-    ['おじさん', 'お父さん'],                // Uncle vs father — kana key against a kanji term, one edit apart and live today.
-    ['おじさん', 'お母さん'],                // Uncle vs mother, same shape.
-    ['おじさん', 'お姉さん'],                // Uncle vs older sister, same shape.
-    ['おじさん', 'お嬢さん'],                // Uncle vs young lady, same shape.
-    ['おじさん', 'お隣さん'],                // Uncle vs the neighbour, same shape.
-    ['おばさん', 'お父さん'],                // Aunt vs father, same shape.
-    ['おばさん', 'お母さん'],                // Aunt vs mother, same shape.
-    ['おばさん', 'お姉さん'],                // Aunt vs older sister, same shape.
-    ['おばさん', 'お嬢さん'],                // Aunt vs young lady, same shape.
-    ['おばさん', 'お隣さん'],                // Aunt vs the neighbour, same shape.
+    ['おじいさん', 'おじさん'],              // Grandfather vs uncle, one character apart, accepted in both directions today on ja-E0373 and ja-E0569 (d=1 vs budget 1) with no addition involved. おじさん/おばさん is already listed above.
+    ['おばあさん', 'おばさん'],              // Grandmother vs aunt. The same shape on ja-E0361 and ja-E0581.
     /**
      * Also found by the whole-language check, outside the kinship frame and
-     * live today in both directions: プレゼン is a presentation and プレゼント
-     * is a present, one character apart, both taught, and each accepted on the
-     * other's row (ja-E1544/ja-E2110 and their translate twins).
+     * live in both directions: プレゼン is a presentation and プレゼント is a
+     * present, one character apart, both taught, and each accepted on the
+     * other's row. Katakana on both sides, so the kanji gate does not reach it.
      */
     ['プレゼン', 'プレゼント'],              // Presentation vs present.
   ],
