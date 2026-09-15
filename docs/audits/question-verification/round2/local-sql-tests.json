@@ -2,10 +2,10 @@
   "engine": "PGlite (in-memory PostgreSQL)",
   "round": 2,
   "snapshot_sha256": "9a20145dc6b53d1e4b5f17388b3f24c4ee4dd43c19b9bdac935ba8256bfb489c",
-  "sql_sha256": "85d2e0a3d7297254c9d6dee88e2da275d0ce5568d686dd5b26606d32ab31e426",
-  "reverse_sql_sha256": "75b1ebdbe864f54e5134c7e1f7762c151cec67dbf7800e47bf8d6be462771ad2",
-  "patch_rows": 640,
-  "changed_fields": 723,
+  "sql_sha256": "2ac5a9344b201eed3719a449c28fcfbbc3c1cbb1386179872f37e32429d30395",
+  "reverse_sql_sha256": "c13635c77c3cd3eb3044d3d55603d8a4c103336a5c8d8d160a96e205d9fc9539",
+  "patch_rows": 790,
+  "changed_fields": 873,
   "tables": [
     "checkpoint_items",
     "exercises",
@@ -36,7 +36,8 @@
     "ruling 1 adds every Japanese script candidate and invents none",
     "ruling 2 accepts upward, refuses downward, and rules on all 19",
     "ruling 3 adds the one held French paraphrase",
-    "the two register removals withdraw exactly what was argued and nothing else loses an accepted answer"
+    "the two register removals withdraw exactly what was argued and nothing else loses an accepted answer",
+    "both withdrawal lists recovered exactly, disjoint from round two, every candidate adjudicated"
   ],
   "production_writes": 0,
   "limitations": [
@@ -45,5 +46,6 @@
     "Does not test the shipped grader; see runtime-round2.mjs for that, including the whole-language widening check"
   ],
   "triage_source_sha256": "d897777b985558929da9e57a7fa1445bc303a289c414c6b49a7f48f135ea9775",
-  "triage_candidates_sha256": "632265eb7fada40062b7686512e6dad69c7a860647b6cd2439a944ad3b7f2866"
+  "triage_candidates_sha256": "632265eb7fada40062b7686512e6dad69c7a860647b6cd2439a944ad3b7f2866",
+  "alternatives_evidence_sha256": "83fec33cd17436836ab8651187f544f76e72e900c8f11e86c6fe08ee032062e7"
 }

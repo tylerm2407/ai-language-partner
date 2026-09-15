@@ -15,6 +15,8 @@ import { productiveParadigmFixes } from './productive-paradigm-fixes.mjs';
 import { triageAcceptedAnswers } from './triage-accepted-answers.mjs';
 import { productRulings, frenchCheckpointParaphrase, registerRemovals } from './product-rulings.mjs';
 import { createAcceptedAnswerLedger } from './accepted-answer-ledger.mjs';
+import { restoredWithdrawals } from './restored-withdrawals.mjs';
+import { sameGlossLevelling } from './same-gloss-levelling.mjs';
 
 const set = await createRound2PatchSet();
 // Four blocks reach `accepted_answers` and five rows fall to more than one of
@@ -30,6 +32,8 @@ const counts = {
   // the strict return, so strictness never rejects it.
   triage_accepted_answers: await triageAcceptedAnswers(set, ledger),
   product_rulings: await productRulings(set, ledger),
+  restored_withdrawals: await restoredWithdrawals(set, ledger),
+  same_gloss_levelling: sameGlossLevelling(set, ledger),
   french_checkpoint_paraphrase: frenchCheckpointParaphrase(set),
   // Before the ledger writes, so that a row this touches and an addition block
   // also claims would collide loudly instead of one silently winning.

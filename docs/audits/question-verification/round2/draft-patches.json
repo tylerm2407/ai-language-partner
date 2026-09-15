@@ -37,6 +37,27 @@
     },
     {
       "table": "exercises",
+      "id": "0008542e-8491-47d9-9643-df481db2bb24",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1002-0006-000000000000",
+        "type": "listening_type",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "珈琲"
+        ]
+      },
+      "reasons": [
+        "ja-E0139 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"珈琲\" is the keyed \"コーヒー\" spelled another way — コーヒー; 珈琲 is the established ateji for the same loanword. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "006598c0-ae2a-4c33-9822-0e05031778b8",
       "before": {
         "lesson_id": "aabbccdd-6666-4005-0004-b20000000000",
@@ -320,6 +341,30 @@
       ],
       "sources": [
         "Stimulus analysis of the shipped app: components/lesson/ListeningExercise.tsx never renders `prompt`; components/lesson/DictationExercise.tsx never renders `prompt` and speaks `correct_answer`; `hintText` is rendered only by components/lesson/ClozeExercise.tsx. Reading/spelling checked against 大辞林/三省堂 standard orthography for the heard word."
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "0b62a1d8-27a9-431d-a704-82a115fd9158",
+      "before": {
+        "lesson_id": "aabbccdd-6666-4006-0003-b20000000000",
+        "type": "listening_type",
+        "accepted_answers": [
+          "うけみ"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "うけみ",
+          "受け身"
+        ]
+      },
+      "reasons": [
+        "ja-E2267 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"受け身\" is the keyed \"受身\" spelled another way — うけみ with the okurigana written. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
       ],
       "review_status": "awaiting_independent_round2_review"
     },
@@ -1461,6 +1506,27 @@
     },
     {
       "table": "exercises",
+      "id": "48786069-d858-491a-b2f9-38eef48bc260",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1004-0001-000000000000",
+        "type": "listening_type",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "朝ごはん"
+        ]
+      },
+      "reasons": [
+        "ja-E0219 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"朝ごはん\" is the keyed \"朝ご飯\" spelled another way — あさごはん with 飯 written in kana. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "48ba36e8-5b47-4332-8c3c-d3325601bb68",
       "before": {
         "lesson_id": "aabbccdd-6666-2004-0003-a20000000000",
@@ -1538,6 +1604,27 @@
     },
     {
       "table": "exercises",
+      "id": "4a67996d-df05-4e51-8f5c-b5096eca94c0",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2002-0004-a20000000000",
+        "type": "listening_type",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "処方せん"
+        ]
+      },
+      "reasons": [
+        "ja-E0677 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"処方せん\" is the keyed \"処方箋\" spelled another way — しょほうせん; 箋 written in kana, the standard newspaper substitution. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "4bbd8557-378f-47e5-ae4f-692ff9775447",
       "before": {
         "lesson_id": "aabbccdd-6666-3006-0004-b10000000000",
@@ -1575,6 +1662,28 @@
       ],
       "sources": [
         "Stimulus analysis of the shipped app: components/lesson/ListeningExercise.tsx never renders `prompt`; components/lesson/DictationExercise.tsx never renders `prompt` and speaks `correct_answer`; `hintText` is rendered only by components/lesson/ClozeExercise.tsx. Reading/spelling checked against 大辞林/三省堂 standard orthography for the heard word."
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "4c538433-08e6-4905-ba47-64dae6a17f35",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2001-0003-a20000000000",
+        "type": "listening_type",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "従兄弟",
+          "従姉妹"
+        ]
+      },
+      "reasons": [
+        "ja-E0593 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"従兄弟\" is the keyed \"いとこ\" spelled another way — いとこ; the general kanji spelling. Re-measured against every taught Japanese string: it widens nothing. ja-E0593 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"従姉妹\" is the keyed \"いとこ\" spelled another way — いとこ; the general kanji spelling for female cousins. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
       ],
       "review_status": "awaiting_independent_round2_review"
     },
@@ -1723,6 +1832,28 @@
       ],
       "sources": [
         "Individually read against the row, its lesson and its unit; see reason."
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "51c44857-6cb7-4db6-a164-c38e4501b7f2",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3002-0004-b10000000000",
+        "type": "listening_type",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "締切",
+          "〆切"
+        ]
+      },
+      "reasons": [
+        "ja-E1275 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"締切\" is the keyed \"締め切り\" spelled another way — しめきり with the okurigana omitted. Re-measured against every taught Japanese string: it widens nothing. ja-E1275 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"〆切\" is the keyed \"締め切り\" spelled another way — しめきり written with the 〆 abbreviation. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
       ],
       "review_status": "awaiting_independent_round2_review"
     },
@@ -2000,6 +2131,27 @@
     },
     {
       "table": "exercises",
+      "id": "5ae5c743-84be-4717-8808-94f2d23f9001",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3008-0006-b10000000000",
+        "type": "listening_type",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "カッコいい"
+        ]
+      },
+      "reasons": [
+        "ja-E1805 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"カッコいい\" is the keyed \"かっこいい\" spelled another way — かっこいい with the first element in katakana. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "5b122369-4a64-44e0-b4ae-5cbacba35497",
       "before": {
         "lesson_id": "aabbccdd-6666-3005-0004-b10000000000",
@@ -2252,6 +2404,28 @@
     },
     {
       "table": "exercises",
+      "id": "679ca224-1cee-4e43-b021-d28b8594620b",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3008-0006-b10000000000",
+        "type": "listening_type",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "ため口",
+          "ためぐち"
+        ]
+      },
+      "reasons": [
+        "ja-E1807 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"ため口\" is the keyed \"タメ口\" spelled another way — ためぐち with the first element in hiragana. Re-measured against every taught Japanese string: it widens nothing. ja-E1807 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"ためぐち\" is the keyed \"タメ口\" spelled another way — ためぐち written entirely in hiragana. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "686fcf61-abe5-4e2b-9075-ee587755330d",
       "before": {
         "lesson_id": "aabbccdd-6666-4004-0002-b20000000000",
@@ -2371,6 +2545,48 @@
       ],
       "sources": [
         "Stimulus analysis of the shipped app: components/lesson/ListeningExercise.tsx never renders `prompt`; components/lesson/DictationExercise.tsx never renders `prompt` and speaks `correct_answer`; `hintText` is rendered only by components/lesson/ClozeExercise.tsx. Reading/spelling checked against 大辞林/三省堂 standard orthography for the heard word."
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "6e5019b6-95d1-4ef6-b8a1-95742c270700",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3006-0001-b10000000000",
+        "type": "listening_type",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "昔昔"
+        ]
+      },
+      "reasons": [
+        "ja-E1567 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"昔昔\" is the keyed \"昔々\" spelled another way — むかしむかし with the iteration mark written out. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "6e95c2fb-466b-4874-8229-09c9b0ecff95",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1007-0003-000000000000",
+        "type": "listening_type",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "イス"
+        ]
+      },
+      "reasons": [
+        "ja-E0455 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"イス\" is the keyed \"椅子\" spelled another way — いす in katakana. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
       ],
       "review_status": "awaiting_independent_round2_review"
     },
@@ -2819,6 +3035,27 @@
     },
     {
       "table": "exercises",
+      "id": "7dc879b7-1520-4a25-98e9-645b24ac96f5",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2004-0005-a20000000000",
+        "type": "listening_type",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "わくわくする"
+        ]
+      },
+      "reasons": [
+        "ja-E0833 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"わくわくする\" is the keyed \"ワクワクする\" spelled another way — the same mimetic in hiragana. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "7f2a2255-c450-4544-ac93-707b6ef41cb4",
       "before": {
         "lesson_id": "aabbccdd-6666-4002-0005-b20000000000",
@@ -3175,6 +3412,27 @@
     },
     {
       "table": "exercises",
+      "id": "93935a78-c607-41fd-b97b-be7e3bf084bf",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1006-0004-000000000000",
+        "type": "listening_type",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "イヌ"
+        ]
+      },
+      "reasons": [
+        "ja-E0397 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"イヌ\" is the keyed \"犬\" spelled another way — いぬ in katakana, standard for the species. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "93968611-3819-4e0b-8d64-af94b472b668",
       "before": {
         "lesson_id": "aabbccdd-6666-1006-0002-000000000000",
@@ -3252,6 +3510,27 @@
       ],
       "sources": [
         "Stimulus analysis of the shipped app: components/lesson/ListeningExercise.tsx never renders `prompt`; components/lesson/DictationExercise.tsx never renders `prompt` and speaks `correct_answer`; `hintText` is rendered only by components/lesson/ClozeExercise.tsx. Reading/spelling checked against 大辞林/三省堂 standard orthography for the heard word."
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "974943ab-cbfa-445c-aa6b-f787a77e61c1",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2004-0002-a20000000000",
+        "type": "listening_type",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "哀しい"
+        ]
+      },
+      "reasons": [
+        "ja-E0797 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"哀しい\" is the keyed \"悲しい\" spelled another way — かなしい; a variant kanji with the same reading. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
       ],
       "review_status": "awaiting_independent_round2_review"
     },
@@ -3401,6 +3680,27 @@
       ],
       "sources": [
         "Stimulus analysis of the shipped app: components/lesson/ListeningExercise.tsx never renders `prompt`; components/lesson/DictationExercise.tsx never renders `prompt` and speaks `correct_answer`; `hintText` is rendered only by components/lesson/ClozeExercise.tsx. Reading/spelling checked against 大辞林/三省堂 standard orthography for the heard word."
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "a074df71-a9b8-4329-b341-1964d715b65f",
+      "before": {
+        "lesson_id": "aabbccdd-6666-4004-0005-b20000000000",
+        "type": "listening_type",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "比ゆ"
+        ]
+      },
+      "reasons": [
+        "ja-E2127 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"比ゆ\" is the keyed \"比喩\" spelled another way — ひゆ; 喩 written in kana. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
       ],
       "review_status": "awaiting_independent_round2_review"
     },
@@ -3735,6 +4035,49 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-1111-2001-0003-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-1111-2001-0003-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Vecina"
+        ]
+      },
+      "reasons": [
+        "es-E0592 (es): same-gloss-same-key levelling. The row sharing the gloss \"Neighbor\" already accepts \"Vecina\" on the identical question — group to_target|Neighbor|Vecino: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught es string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-1111-2002-0002-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-1111-2002-0002-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Fatigado",
+          "Fatigada"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Fatigado",
+          "Fatigada",
+          "Cansada"
+        ]
+      },
+      "reasons": [
+        "es-E0652 (es): same-gloss-same-key levelling. The row sharing the gloss \"Tired\" already accepts \"Cansada\" on the identical question — group to_target|Tired|Cansado: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught es string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-1111-2003-0001-e00000000008",
       "before": {
         "lesson_id": "aabbccdd-1111-2003-0001-a20000000000",
@@ -3750,6 +4093,110 @@
       "sources": [
         "lib/grading.ts gradeAnswer (TYPO_TOLERANCE_RATIO, isGrammarExercise)"
       ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-1111-2004-0002-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-1111-2004-0002-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Dadivoso",
+          "Dadivosa"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Dadivoso",
+          "Dadivosa",
+          "Generosa"
+        ]
+      },
+      "reasons": [
+        "es-E0796 (es): same-gloss-same-key levelling. The row sharing the gloss \"Generous\" already accepts \"Generosa\" on the identical question — group to_target|Generous|Generoso: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught es string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-1111-2004-0003-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-1111-2004-0003-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Vago",
+          "Vaga",
+          "Flojo",
+          "Floja",
+          "Holgazán",
+          "Holgazana"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Vago",
+          "Vaga",
+          "Flojo",
+          "Floja",
+          "Holgazán",
+          "Holgazana",
+          "Perezosa"
+        ]
+      },
+      "reasons": [
+        "es-E0808 (es): same-gloss-same-key levelling. The row sharing the gloss \"Lazy\" already accepts \"Perezosa\" on the identical question — group to_target|Lazy|Perezoso: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught es string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-1111-2004-0004-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-1111-2004-0004-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Entusiasmado",
+          "Entusiasmada"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Entusiasmado",
+          "Entusiasmada",
+          "Emocionada"
+        ]
+      },
+      "reasons": [
+        "es-E0814 (es): same-gloss-same-key levelling. The row sharing the gloss \"Excited\" already accepts \"Emocionada\" on the identical question — group to_target|Excited|Emocionado: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught es string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-1111-2004-0005-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-1111-2004-0005-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Vergonzoso",
+          "Vergonzosa"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Vergonzoso",
+          "Vergonzosa",
+          "Tímida"
+        ]
+      },
+      "reasons": [
+        "es-E0826 (es): same-gloss-same-key levelling. The row sharing the gloss \"Shy\" already accepts \"Tímida\" on the identical question — group to_target|Shy|Tímido: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught es string and it admits nothing else."
+      ],
+      "sources": [],
       "review_status": "awaiting_independent_round2_review"
     },
     {
@@ -4210,6 +4657,28 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-1111-2006-0005-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-1111-2006-0005-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Turno"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Turno",
+          "Cita médica"
+        ]
+      },
+      "reasons": [
+        "es-E0976 (es): same-gloss-same-key levelling. The row sharing the gloss \"Appointment\" already accepts \"Cita médica\" on the identical question — group to_target|Appointment|Cita: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught es string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-1111-2006-0006-e00000000002",
       "before": {
         "lesson_id": "aabbccdd-1111-2006-0006-a20000000000",
@@ -4225,6 +4694,121 @@
       "sources": [
         "lib/grading.ts gradeAnswer (TYPO_TOLERANCE_RATIO, isGrammarExercise)"
       ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-1111-2007-0001-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-1111-2007-0001-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Más corto",
+          "Más corta"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Más corto",
+          "Más corta",
+          "Más baja"
+        ]
+      },
+      "reasons": [
+        "es-E1000 (es): same-gloss-same-key levelling. The row sharing the gloss \"Shorter\" already accepts \"Más baja\" on the identical question — group to_target|Shorter|Más bajo: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught es string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-1111-2007-0002-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-1111-2007-0002-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Más deprisa",
+          "Más rápidamente"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Más deprisa",
+          "Más rápidamente",
+          "Más rápida"
+        ]
+      },
+      "reasons": [
+        "es-E1012 (es): same-gloss-same-key levelling. The row sharing the gloss \"Faster\" already accepts \"Más rápida\" on the identical question — group to_target|Faster|Más rápido: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught es string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-1111-2007-0003-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-1111-2007-0003-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Más despacio",
+          "Más lentamente"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Más despacio",
+          "Más lentamente",
+          "Más lenta"
+        ]
+      },
+      "reasons": [
+        "es-E1024 (es): same-gloss-same-key levelling. The row sharing the gloss \"Slower\" already accepts \"Más lenta\" on the identical question — group to_target|Slower|Más lento: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught es string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-1111-2007-0004-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-1111-2007-0004-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Más económico",
+          "Más económica"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Más económico",
+          "Más económica",
+          "Más barata"
+        ]
+      },
+      "reasons": [
+        "es-E1030 (es): same-gloss-same-key levelling. The row sharing the gloss \"Cheaper\" already accepts \"Más barata\" on the identical question — group to_target|Cheaper|Más barato: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught es string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-1111-2007-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-1111-2007-0006-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Más alta"
+        ]
+      },
+      "reasons": [
+        "es-E1054 (es): same-gloss-same-key levelling. The row sharing the gloss \"Taller\" already accepts \"Más alta\" on the identical question — group to_target|Taller|Más alto: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught es string and it admits nothing else."
+      ],
+      "sources": [],
       "review_status": "awaiting_independent_round2_review"
     },
     {
@@ -4438,6 +5022,25 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-2222-1003-0005-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-2222-1003-0005-000000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Ticket"
+        ]
+      },
+      "reasons": [
+        "fr-E0190 (fr): same-gloss-same-key levelling. The row sharing the gloss \"Ticket\" already accepts \"Ticket\" on the identical question — group to_target|Ticket|Billet: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught fr string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-2222-1004-0001-e00000000002",
       "before": {
         "lesson_id": "aabbccdd-2222-1004-0001-000000000000",
@@ -4453,6 +5056,120 @@
       "sources": [
         "lib/grading.ts gradeAnswer (TYPO_TOLERANCE_RATIO, isGrammarExercise)"
       ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-2222-2001-0003-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-2222-2001-0003-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Voisine"
+        ]
+      },
+      "reasons": [
+        "fr-E0592 (fr): same-gloss-same-key levelling. The row sharing the gloss \"Neighbor\" already accepts \"Voisine\" on the identical question — group to_target|Neighbor|Voisin: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught fr string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-2222-2002-0002-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-2222-2002-0002-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Fatiguée"
+        ]
+      },
+      "reasons": [
+        "fr-E0652 (fr): same-gloss-same-key levelling. The row sharing the gloss \"Tired\" already accepts \"Fatiguée\" on the identical question — group to_target|Tired|Fatigué: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught fr string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-2222-2002-0005-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-2222-2002-0005-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Infirmier"
+        ]
+      },
+      "reasons": [
+        "fr-E0682 (fr): same-gloss-same-key levelling. The row sharing the gloss \"Nurse\" already accepts \"Infirmier\" on the identical question — group to_target|Nurse|Infirmière: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught fr string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-2222-2004-0002-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-2222-2004-0002-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Généreuse"
+        ]
+      },
+      "reasons": [
+        "fr-E0796 (fr): same-gloss-same-key levelling. The row sharing the gloss \"Generous\" already accepts \"Généreuse\" on the identical question — group to_target|Generous|Généreux: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught fr string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-2222-2004-0003-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-2222-2004-0003-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Paresseuse"
+        ]
+      },
+      "reasons": [
+        "fr-E0808 (fr): same-gloss-same-key levelling. The row sharing the gloss \"Lazy\" already accepts \"Paresseuse\" on the identical question — group to_target|Lazy|Paresseux: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught fr string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-2222-2004-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-2222-2004-0006-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Courageuse"
+        ]
+      },
+      "reasons": [
+        "fr-E0838 (fr): same-gloss-same-key levelling. The row sharing the gloss \"Brave\" already accepts \"Courageuse\" on the identical question — group to_target|Brave|Courageux: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught fr string and it admits nothing else."
+      ],
+      "sources": [],
       "review_status": "awaiting_independent_round2_review"
     },
     {
@@ -4932,6 +5649,30 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-2222-2007-0001-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-2222-2007-0001-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Plus court",
+          "Plus courte"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Plus court",
+          "Plus courte",
+          "Plus petite"
+        ]
+      },
+      "reasons": [
+        "fr-E1000 (fr): same-gloss-same-key levelling. The row sharing the gloss \"Shorter\" already accepts \"Plus petite\" on the identical question — group to_target|Shorter|Plus petit: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught fr string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-2222-2007-0002-e00000000004",
       "before": {
         "lesson_id": "aabbccdd-2222-2007-0002-a20000000000",
@@ -4989,6 +5730,85 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-2222-2007-0003-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-2222-2007-0003-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Plus lentement"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Plus lentement",
+          "Plus lente"
+        ]
+      },
+      "reasons": [
+        "fr-E1024 (fr): same-gloss-same-key levelling. The row sharing the gloss \"Slower\" already accepts \"Plus lente\" on the identical question — group to_target|Slower|Plus lent: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught fr string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-2222-2007-0004-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-2222-2007-0004-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Moins chère"
+        ]
+      },
+      "reasons": [
+        "fr-E1030 (fr): same-gloss-same-key levelling. The row sharing the gloss \"Cheaper\" already accepts \"Moins chère\" on the identical question — group to_target|Cheaper|Moins cher: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught fr string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-2222-2007-0005-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-2222-2007-0005-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Plus chère"
+        ]
+      },
+      "reasons": [
+        "fr-E1042 (fr): same-gloss-same-key levelling. The row sharing the gloss \"More expensive\" already accepts \"Plus chère\" on the identical question — group to_target|More expensive|Plus cher: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught fr string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-2222-2007-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-2222-2007-0006-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Plus grande"
+        ]
+      },
+      "reasons": [
+        "fr-E1054 (fr): same-gloss-same-key levelling. The row sharing the gloss \"Taller\" already accepts \"Plus grande\" on the identical question — group to_target|Taller|Plus grand: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught fr string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-2222-2008-0006-e00000000002",
       "before": {
         "lesson_id": "aabbccdd-2222-2008-0006-a20000000000",
@@ -5042,6 +5862,28 @@
       "sources": [
         "lib/grading.ts gradeAnswer (TYPO_TOLERANCE_RATIO, isGrammarExercise)"
       ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-2222-3007-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-2222-3007-0006-b10000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Imaginons"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Imaginons",
+          "Imaginez"
+        ]
+      },
+      "reasons": [
+        "fr-E1712 (fr): same-gloss-same-key levelling. The row sharing the gloss \"Imagine\" already accepts \"Imaginez\" on the identical question — group to_target|Imagine|Imagine: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught fr string and it admits nothing else."
+      ],
+      "sources": [],
       "review_status": "awaiting_independent_round2_review"
     },
     {
@@ -5144,6 +5986,25 @@
       "sources": [
         "lib/grading.ts gradeAnswer (TYPO_TOLERANCE_RATIO, isGrammarExercise)"
       ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-3333-2002-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-3333-2002-0006-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Zahnärztin"
+        ]
+      },
+      "reasons": [
+        "de-E0694 (de): same-gloss-same-key levelling. The row sharing the gloss \"Dentist\" already accepts \"Zahnärztin\" on the identical question — group to_target|Dentist|Zahnarzt: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught de string and it admits nothing else."
+      ],
+      "sources": [],
       "review_status": "awaiting_independent_round2_review"
     },
     {
@@ -5661,6 +6522,25 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-3333-3002-0005-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-3333-3002-0005-b10000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Anstellen"
+        ]
+      },
+      "reasons": [
+        "de-E1278 (de): same-gloss-same-key levelling. The row sharing the gloss \"To hire\" already accepts \"Anstellen\" on the identical question — group to_target|To hire|Einstellen: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught de string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-3333-3002-0005-e00000000004",
       "before": {
         "lesson_id": "aabbccdd-3333-3002-0005-b10000000000",
@@ -5695,6 +6575,30 @@
       "sources": [
         "lib/grading.ts gradeAnswer (TYPO_TOLERANCE_RATIO, isGrammarExercise)"
       ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-3333-3007-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-3333-3007-0006-b10000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Stellen Sie sich vor",
+          "Stellt euch vor"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Stellen Sie sich vor",
+          "Stellt euch vor",
+          "Stelle dir vor"
+        ]
+      },
+      "reasons": [
+        "de-E1712 (de): same-gloss-same-key levelling. The row sharing the gloss \"Imagine\" already accepts \"Stelle dir vor\" on the identical question — group to_target|Imagine|Stell dir vor: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught de string and it admits nothing else."
+      ],
+      "sources": [],
       "review_status": "awaiting_independent_round2_review"
     },
     {
@@ -6458,6 +7362,92 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-5555-2002-0001-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-5555-2002-0001-a20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": [
+          "Consulta médica",
+          "Marcação"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Consulta médica",
+          "Marcação",
+          "Compromisso"
+        ]
+      },
+      "reasons": [
+        "pt-E0637 (pt): same-gloss-same-key levelling. The row sharing the gloss \"Appointment\" already accepts \"Compromisso\" on the identical question — group to_target|Appointment|Consulta: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught pt string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-5555-2002-0001-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-5555-2002-0001-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Stresse"
+        ]
+      },
+      "reasons": [
+        "pt-E0640 (pt): same-gloss-same-key levelling. The row sharing the gloss \"Stress\" already accepts \"Stresse\" on the identical question — group to_target|Stress|Estresse: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught pt string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-5555-2002-0004-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-5555-2002-0004-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Consulta médica",
+          "Marcação"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Consulta médica",
+          "Marcação",
+          "Compromisso"
+        ]
+      },
+      "reasons": [
+        "pt-E0670 (pt): same-gloss-same-key levelling. The row sharing the gloss \"Appointment\" already accepts \"Compromisso\" on the identical question — group to_target|Appointment|Consulta: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught pt string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-5555-2002-0005-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-5555-2002-0005-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Enfermeiro"
+        ]
+      },
+      "reasons": [
+        "pt-E0682 (pt): same-gloss-same-key levelling. The row sharing the gloss \"Nurse\" already accepts \"Enfermeiro\" on the identical question — group to_target|Nurse|Enfermeira: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught pt string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-5555-2003-0001-e00000000008",
       "before": {
         "lesson_id": "aabbccdd-5555-2003-0001-a20000000000",
@@ -6477,6 +7467,28 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-5555-2003-0002-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-5555-2003-0002-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Renda"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Renda",
+          "Aluguer"
+        ]
+      },
+      "reasons": [
+        "pt-E0724 (pt): same-gloss-same-key levelling. The row sharing the gloss \"Rent\" already accepts \"Aluguer\" on the identical question — group to_target|Rent|Aluguel: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught pt string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-5555-2003-0005-e00000000004",
       "before": {
         "lesson_id": "aabbccdd-5555-2003-0005-a20000000000",
@@ -6492,6 +7504,117 @@
       "sources": [
         "lib/grading.ts gradeAnswer (TYPO_TOLERANCE_RATIO, isGrammarExercise)"
       ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-5555-2004-0002-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-5555-2004-0002-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Generosa"
+        ]
+      },
+      "reasons": [
+        "pt-E0796 (pt): same-gloss-same-key levelling. The row sharing the gloss \"Generous\" already accepts \"Generosa\" on the identical question — group to_target|Generous|Generoso: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught pt string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-5555-2004-0003-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-5555-2004-0003-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Preguiçosa"
+        ]
+      },
+      "reasons": [
+        "pt-E0808 (pt): same-gloss-same-key levelling. The row sharing the gloss \"Lazy\" already accepts \"Preguiçosa\" on the identical question — group to_target|Lazy|Preguiçoso: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught pt string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-5555-2004-0004-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-5555-2004-0004-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Empolgado",
+          "Empolgada",
+          "Entusiasmado",
+          "Entusiasmada"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Empolgado",
+          "Empolgada",
+          "Entusiasmado",
+          "Entusiasmada",
+          "Animada"
+        ]
+      },
+      "reasons": [
+        "pt-E0814 (pt): same-gloss-same-key levelling. The row sharing the gloss \"Excited\" already accepts \"Animada\" on the identical question — group to_target|Excited|Animado: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught pt string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-5555-2004-0005-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-5555-2004-0005-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Tímida"
+        ]
+      },
+      "reasons": [
+        "pt-E0826 (pt): same-gloss-same-key levelling. The row sharing the gloss \"Shy\" already accepts \"Tímida\" on the identical question — group to_target|Shy|Tímido: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught pt string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-5555-2004-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-5555-2004-0006-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Valente",
+          "Bravo",
+          "Brava"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Valente",
+          "Bravo",
+          "Brava",
+          "Corajosa"
+        ]
+      },
+      "reasons": [
+        "pt-E0838 (pt): same-gloss-same-key levelling. The row sharing the gloss \"Brave\" already accepts \"Corajosa\" on the identical question — group to_target|Brave|Corajoso: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught pt string and it admits nothing else."
+      ],
+      "sources": [],
       "review_status": "awaiting_independent_round2_review"
     },
     {
@@ -6971,6 +8094,77 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-5555-2007-0001-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-5555-2007-0001-a20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": [
+          "Mais barata"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Mais barata",
+          "Menos caro",
+          "Menos cara"
+        ]
+      },
+      "reasons": [
+        "pt-E0997 (pt): same-gloss-same-key levelling. The row sharing the gloss \"Cheaper\" already accepts \"Menos caro\", \"Menos cara\" on the identical question — group to_target|Cheaper|Mais barato: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught pt string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-5555-2007-0001-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-5555-2007-0001-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Mais curto",
+          "Mais curta"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Mais curto",
+          "Mais curta",
+          "Mais baixa"
+        ]
+      },
+      "reasons": [
+        "pt-E1000 (pt): same-gloss-same-key levelling. The row sharing the gloss \"Shorter\" already accepts \"Mais baixa\" on the identical question — group to_target|Shorter|Mais baixo: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught pt string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-5555-2007-0002-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-5555-2007-0002-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Mais depressa",
+          "Mais veloz"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Mais depressa",
+          "Mais veloz",
+          "Mais rápida"
+        ]
+      },
+      "reasons": [
+        "pt-E1012 (pt): same-gloss-same-key levelling. The row sharing the gloss \"Faster\" already accepts \"Mais rápida\" on the identical question — group to_target|Faster|Mais rápido: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught pt string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-5555-2007-0003-e00000000003",
       "before": {
         "lesson_id": "aabbccdd-5555-2007-0003-a20000000000",
@@ -6986,6 +8180,71 @@
       "sources": [
         "lib/grading.ts gradeAnswer (TYPO_TOLERANCE_RATIO, isGrammarExercise)"
       ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-5555-2007-0003-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-5555-2007-0003-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Mais devagar"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Mais devagar",
+          "Mais lenta"
+        ]
+      },
+      "reasons": [
+        "pt-E1024 (pt): same-gloss-same-key levelling. The row sharing the gloss \"Slower\" already accepts \"Mais lenta\" on the identical question — group to_target|Slower|Mais lento: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught pt string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-5555-2007-0004-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-5555-2007-0004-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Menos caro",
+          "Menos cara"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Menos caro",
+          "Menos cara",
+          "Mais barata"
+        ]
+      },
+      "reasons": [
+        "pt-E1030 (pt): same-gloss-same-key levelling. The row sharing the gloss \"Cheaper\" already accepts \"Mais barata\" on the identical question — group to_target|Cheaper|Mais barato: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught pt string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-5555-2007-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-5555-2007-0006-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Mais alta"
+        ]
+      },
+      "reasons": [
+        "pt-E1054 (pt): same-gloss-same-key levelling. The row sharing the gloss \"Taller\" already accepts \"Mais alta\" on the identical question — group to_target|Taller|Mais alto: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught pt string and it admits nothing else."
+      ],
+      "sources": [],
       "review_status": "awaiting_independent_round2_review"
     },
     {
@@ -7161,6 +8420,25 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-5555-3007-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-5555-3007-0006-b10000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Imagina"
+        ]
+      },
+      "reasons": [
+        "pt-E1712 (pt): same-gloss-same-key levelling. The row sharing the gloss \"Imagine\" already accepts \"Imagina\" on the identical question — group to_target|Imagine|Imagine: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught pt string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-5555-3007-0006-e00000000009",
       "before": {
         "lesson_id": "aabbccdd-5555-3007-0006-b10000000000",
@@ -7282,6 +8560,25 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-1001-0001-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1001-0001-000000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "どうぞ"
+        ]
+      },
+      "reasons": [
+        "ja-E0006 (ja): same-gloss-same-key levelling. The row sharing the gloss \"Please\" already accepts \"どうぞ\" on the identical question — group to_target|Please|お願いします: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ja string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-1001-0004-e00000000006",
       "before": {
         "lesson_id": "aabbccdd-6666-1001-0004-000000000000",
@@ -7323,6 +8620,51 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-1002-0001-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1002-0001-000000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "チキン"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "チキン",
+          "とり肉"
+        ]
+      },
+      "reasons": [
+        "ja-E0072 (ja, translate_to_target): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"とり肉\" is the keyed \"鶏肉\" spelled another way — とりにく, with 鶏 written in kana. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1002-0001-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1002-0001-000000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "珈琲"
+        ]
+      },
+      "reasons": [
+        "ja-E0076 (ja, translate_to_target): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"珈琲\" is the keyed \"コーヒー\" spelled another way — コーヒー; 珈琲 is the established ateji for the same loanword. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-1002-0002-e00000000008",
       "before": {
         "lesson_id": "aabbccdd-6666-1002-0002-000000000000",
@@ -7338,6 +8680,28 @@
         "ja-E0090 (ja, cloze_deletion): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"さかな\" is the same word as the keyed \"魚\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
       ],
       "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1002-0003-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1002-0003-000000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "リンゴ",
+          "林檎"
+        ]
+      },
+      "reasons": [
+        "ja-E0096 (ja, translate_to_target): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"リンゴ\" is the keyed \"りんご\" spelled another way — りんご in katakana, the ordinary spelling for the fruit. Re-measured against every taught Japanese string: it widens nothing. ja-E0096 (ja, translate_to_target): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"林檎\" is the keyed \"りんご\" spelled another way — りんご in kanji. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
       "review_status": "awaiting_independent_round2_review"
     },
     {
@@ -7667,6 +9031,25 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-1005-0002-e00000000007",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1005-0002-000000000000",
+        "type": "translate_to_native",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Chilly"
+        ]
+      },
+      "reasons": [
+        "ja-E0299 (ja): same-gloss-same-key levelling. The row sharing the gloss \"Cold\" already accepts \"Chilly\" on the identical question — group to_native|Cold|寒い: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ja string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-1005-0002-e00000000008",
       "before": {
         "lesson_id": "aabbccdd-6666-1005-0002-000000000000",
@@ -7743,6 +9126,77 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-1006-0001-e00000000007",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1006-0001-000000000000",
+        "type": "translate_to_native",
+        "accepted_answers": [
+          "Granny"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Granny",
+          "Grandma",
+          "Old woman",
+          "Elderly woman"
+        ]
+      },
+      "reasons": [
+        "ja-E0357 (ja, translate_to_native): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"Grandma\" on the keyed \"Grandmother\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate. ja-E0357 (ja, translate_to_native): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"Old woman\" on the keyed \"Grandmother\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate. ja-E0357 (ja, translate_to_native): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"Elderly woman\" on the keyed \"Grandmother\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1006-0002-e00000000007",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1006-0002-000000000000",
+        "type": "translate_to_native",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Grandpa",
+          "Granddad",
+          "Old man",
+          "Elderly man"
+        ]
+      },
+      "reasons": [
+        "ja-E0369 (ja, translate_to_native): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"Grandpa\" on the keyed \"Grandfather\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate. ja-E0369 (ja, translate_to_native): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"Granddad\" on the keyed \"Grandfather\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate. ja-E0369 (ja, translate_to_native): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"Old man\" on the keyed \"Grandfather\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate. ja-E0369 (ja, translate_to_native): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"Elderly man\" on the keyed \"Grandfather\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1006-0003-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1006-0003-000000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "イヌ"
+        ]
+      },
+      "reasons": [
+        "ja-E0382 (ja, cloze_deletion): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"イヌ\" is the keyed \"犬\" spelled another way — いぬ in katakana, standard for the species. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-1006-0004-e00000000006",
       "before": {
         "lesson_id": "aabbccdd-6666-1006-0004-000000000000",
@@ -7758,6 +9212,119 @@
         "ja-E0392 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"かぞく\" is the same word as the keyed \"家族\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
       ],
       "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1006-0004-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1006-0004-000000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "ネコ"
+        ]
+      },
+      "reasons": [
+        "ja-E0394 (ja, cloze_deletion): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"ネコ\" is the keyed \"猫\" spelled another way — ねこ in katakana. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1006-0005-e00000000003",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1006-0005-000000000000",
+        "type": "translate_to_native",
+        "accepted_answers": [
+          "Granny"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Granny",
+          "Grandma",
+          "Old woman",
+          "Elderly woman"
+        ]
+      },
+      "reasons": [
+        "ja-E0401 (ja, translate_to_native): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"Grandma\" on the keyed \"Grandmother\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate. ja-E0401 (ja, translate_to_native): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"Old woman\" on the keyed \"Grandmother\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate. ja-E0401 (ja, translate_to_native): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"Elderly woman\" on the keyed \"Grandmother\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1006-0005-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1006-0005-000000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "イヌ"
+        ]
+      },
+      "reasons": [
+        "ja-E0404 (ja, translate_to_target): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"イヌ\" is the keyed \"犬\" spelled another way — いぬ in katakana, standard for the species. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1006-0006-e00000000003",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1006-0006-000000000000",
+        "type": "translate_to_native",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Grandpa",
+          "Granddad",
+          "Old man",
+          "Elderly man"
+        ]
+      },
+      "reasons": [
+        "ja-E0413 (ja, translate_to_native): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"Grandpa\" on the keyed \"Grandfather\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate. ja-E0413 (ja, translate_to_native): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"Granddad\" on the keyed \"Grandfather\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate. ja-E0413 (ja, translate_to_native): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"Old man\" on the keyed \"Grandfather\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate. ja-E0413 (ja, translate_to_native): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"Elderly man\" on the keyed \"Grandfather\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1006-0006-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1006-0006-000000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "ネコ"
+        ]
+      },
+      "reasons": [
+        "ja-E0416 (ja, translate_to_target): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"ネコ\" is the keyed \"猫\" spelled another way — ねこ in katakana. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
       "review_status": "awaiting_independent_round2_review"
     },
     {
@@ -7896,6 +9463,25 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-1008-0004-e00000000004",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1008-0004-000000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "医薬品"
+        ]
+      },
+      "reasons": [
+        "ja-E0530 (ja): same-gloss-same-key levelling. The row sharing the gloss \"Medicine\" already accepts \"医薬品\" on the identical question — group to_target|Medicine|薬: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ja string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-1008-0005-e00000000006",
       "before": {
         "lesson_id": "aabbccdd-6666-1008-0005-000000000000",
@@ -7928,6 +9514,25 @@
       },
       "reasons": [
         "ja-E0546 (ja, cloze_deletion): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"あたま\" is the same word as the keyed \"頭\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1008-0006-e00000000004",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1008-0006-000000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "発熱"
+        ]
+      },
+      "reasons": [
+        "ja-E0554 (ja): same-gloss-same-key levelling. The row sharing the gloss \"Fever\" already accepts \"発熱\" on the identical question — group to_target|Fever|熱: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ja string and it admits nothing else."
       ],
       "sources": [],
       "review_status": "awaiting_independent_round2_review"
@@ -8048,6 +9653,49 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-2002-0003-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2002-0003-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "処方"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "処方",
+          "処方せん"
+        ]
+      },
+      "reasons": [
+        "ja-E0658 (ja, translate_to_target): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"処方せん\" is the keyed \"処方箋\" spelled another way — しょほうせん; 箋 written in kana, the standard newspaper substitution. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2002-0004-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2002-0004-a20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "精神的負担"
+        ]
+      },
+      "reasons": [
+        "ja-E0673 (ja): same-gloss-same-key levelling. The row sharing the gloss \"Stress\" already accepts \"精神的負担\" on the identical question — group to_target|Stress|ストレス: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ja string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-2003-0001-e00000000008",
       "before": {
         "lesson_id": "aabbccdd-6666-2003-0001-a20000000000",
@@ -8057,14 +9705,116 @@
       "after": {
         "accepted_answers": [
           "りょうりする",
-          "料理します"
+          "料理します",
+          "料理をする",
+          "調理する"
         ]
       },
       "reasons": [
         "ja-E0712 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"りょうりする\" is the same word as the keyed \"料理する\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget.",
-        "ja-E0712 (ja, translate_to_target): RULING 2026-09-15 — register, accept upward and refuse downward. \"料理します\" against the keyed \"料理する\": Polite form of the keyed plain 料理する. Politeness raised on a cue that names no register."
+        "ja-E0712 (ja, translate_to_target): RULING 2026-09-15 — register, accept upward and refuse downward. \"料理します\" against the keyed \"料理する\": Polite form of the keyed plain 料理する. Politeness raised on a cue that names no register.",
+        "ja-E0712 (ja): same-gloss-same-key levelling. The row sharing the gloss \"To cook\" already accepts \"料理をする\", \"調理する\" on the identical question — group to_target|To cook|料理する: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ja string and it admits nothing else."
       ],
       "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2003-0006-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2003-0006-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "長椅子",
+          "カウチ"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "長椅子",
+          "カウチ",
+          "ソファー"
+        ]
+      },
+      "reasons": [
+        "ja-E0772 (ja, translate_to_target): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"ソファー\" is the keyed \"ソファ\" spelled another way — the same loanword with the long-vowel mark written. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2004-0001-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2004-0001-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "哀しい"
+        ]
+      },
+      "reasons": [
+        "ja-E0778 (ja, translate_to_target): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"哀しい\" is the keyed \"悲しい\" spelled another way — かなしい; a variant kanji with the same reading. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2004-0001-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2004-0001-a20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": [
+          "興奮している",
+          "興奮した"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "興奮している",
+          "興奮した",
+          "わくわくする"
+        ]
+      },
+      "reasons": [
+        "ja-E0781 (ja, cloze_deletion): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"わくわくする\" is the keyed \"ワクワクする\" spelled another way — the same mimetic in hiragana. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2004-0004-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2004-0004-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "興奮している",
+          "興奮した"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "興奮している",
+          "興奮した",
+          "わくわくする"
+        ]
+      },
+      "reasons": [
+        "ja-E0814 (ja, translate_to_target): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"わくわくする\" is the keyed \"ワクワクする\" spelled another way — the same mimetic in hiragana. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
       "review_status": "awaiting_independent_round2_review"
     },
     {
@@ -8713,6 +10463,437 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-2007-0001-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2007-0001-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "より小さい"
+        ]
+      },
+      "reasons": [
+        "ja-E0994 (ja, translate_to_target): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より小さい\" on the keyed \"もっと小さい\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2007-0001-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2007-0001-a20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "より安い"
+        ]
+      },
+      "reasons": [
+        "ja-E0997 (ja, cloze_deletion): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より安い\" on the keyed \"もっと安い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2007-0001-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2007-0001-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "より短い"
+        ]
+      },
+      "reasons": [
+        "ja-E1000 (ja, translate_to_target): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より短い\" on the keyed \"もっと背が低い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2007-0002-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2007-0002-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "より良い"
+        ]
+      },
+      "reasons": [
+        "ja-E1006 (ja, translate_to_target): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より良い\" on the keyed \"もっと良い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2007-0002-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2007-0002-a20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": [
+          "もっと高価"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "もっと高価",
+          "より高い"
+        ]
+      },
+      "reasons": [
+        "ja-E1009 (ja, cloze_deletion): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より高い\" on the keyed \"もっと高い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2007-0002-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2007-0002-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "より速い",
+          "より速く"
+        ]
+      },
+      "reasons": [
+        "ja-E1012 (ja, translate_to_target): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より速い\" on the keyed \"もっと速い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate. ja-E1012 (ja, translate_to_target): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より速く\" on the keyed \"もっと速い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2007-0003-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2007-0003-a20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "より背が高い",
+          "より高い"
+        ]
+      },
+      "reasons": [
+        "ja-E1021 (ja, cloze_deletion): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より背が高い\" on the keyed \"もっと背が高い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate. ja-E1021 (ja, cloze_deletion): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より高い\" on the keyed \"もっと背が高い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2007-0003-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2007-0003-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "もっとゆっくり",
+          "よりゆっくり"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "もっとゆっくり",
+          "よりゆっくり",
+          "より遅い"
+        ]
+      },
+      "reasons": [
+        "ja-E1024 (ja, translate_to_target): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より遅い\" on the keyed \"もっと遅い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2007-0004-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2007-0004-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "より安い"
+        ]
+      },
+      "reasons": [
+        "ja-E1030 (ja, translate_to_target): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より安い\" on the keyed \"もっと安い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2007-0004-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2007-0004-a20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "より背が低い",
+          "もっと短い",
+          "より短い"
+        ]
+      },
+      "reasons": [
+        "ja-E1033 (ja, cloze_deletion): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より背が低い\" on the keyed \"もっと背が低い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate. ja-E1033 (ja, cloze_deletion): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"もっと短い\" on the keyed \"もっと背が低い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate. ja-E1033 (ja, cloze_deletion): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より短い\" on the keyed \"もっと背が低い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2007-0004-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2007-0004-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "最高",
+          "最良",
+          "ベスト"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "最高",
+          "最良",
+          "ベスト",
+          "最も良い"
+        ]
+      },
+      "reasons": [
+        "ja-E1036 (ja, translate_to_target): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"最も良い\" on the keyed \"一番良い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2007-0005-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2007-0005-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "もっと高価"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "もっと高価",
+          "より高い"
+        ]
+      },
+      "reasons": [
+        "ja-E1042 (ja, translate_to_target): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より高い\" on the keyed \"もっと高い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2007-0005-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2007-0005-a20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "より速い",
+          "もっと速く",
+          "より速く"
+        ]
+      },
+      "reasons": [
+        "ja-E1045 (ja, cloze_deletion): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より速い\" on the keyed \"もっと速い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate. ja-E1045 (ja, cloze_deletion): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"もっと速く\" on the keyed \"もっと速い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate. ja-E1045 (ja, cloze_deletion): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より速く\" on the keyed \"もっと速い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2007-0005-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2007-0005-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "最悪"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "最悪",
+          "最も悪い"
+        ]
+      },
+      "reasons": [
+        "ja-E1048 (ja, translate_to_target): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"最も悪い\" on the keyed \"一番悪い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2007-0006-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2007-0006-a20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": [
+          "もっとゆっくり",
+          "よりゆっくり"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "もっとゆっくり",
+          "よりゆっくり",
+          "より遅い",
+          "もっと遅く"
+        ]
+      },
+      "reasons": [
+        "ja-E1057 (ja, cloze_deletion): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より遅い\" on the keyed \"もっと遅い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate. ja-E1057 (ja, cloze_deletion): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"もっと遅く\" on the keyed \"もっと遅い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2007-0006-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2007-0006-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "より大きい"
+        ]
+      },
+      "reasons": [
+        "ja-E1060 (ja, translate_to_target): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より大きい\" on the keyed \"もっと大きい\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2008-0002-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2008-0002-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "ミュージック"
+        ]
+      },
+      "reasons": [
+        "ja-E1084 (ja): same-gloss-same-key levelling. The row sharing the gloss \"Music\" already accepts \"ミュージック\" on the identical question — group to_target|Music|音楽: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ja string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2008-0003-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2008-0003-a20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": [
+          "宴会"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "宴会",
+          "パーティ"
+        ]
+      },
+      "reasons": [
+        "ja-E1093 (ja, cloze_deletion): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"パーティ\" is the keyed \"パーティー\" spelled another way — the same loanword without the final long-vowel mark. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2008-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2008-0006-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "宴会"
+        ]
+      },
+      "reasons": [
+        "ja-E1126 (ja): same-gloss-same-key levelling. The row sharing the gloss \"Party\" already accepts \"宴会\" on the identical question — group to_target|Party|パーティー: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ja string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-3001-0001-e00000000008",
       "before": {
         "lesson_id": "aabbccdd-6666-3001-0001-b10000000000",
@@ -8810,6 +10991,25 @@
       "sources": [
         "Stimulus analysis of the shipped app: components/lesson/ListeningExercise.tsx never renders `prompt`; components/lesson/DictationExercise.tsx never renders `prompt` and speaks `correct_answer`; `hintText` is rendered only by components/lesson/ClozeExercise.tsx. Reading/spelling checked against 大辞林/三省堂 standard orthography for the heard word."
       ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-3001-0004-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3001-0004-b10000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "報道"
+        ]
+      },
+      "reasons": [
+        "ja-E1180 (ja): same-gloss-same-key levelling. The row sharing the gloss \"News\" already accepts \"報道\" on the identical question — group to_target|News|ニュース: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ja string and it admits nothing else."
+      ],
+      "sources": [],
       "review_status": "awaiting_independent_round2_review"
     },
     {
@@ -8950,6 +11150,144 @@
       ],
       "sources": [
         "Stimulus analysis of the shipped app: components/lesson/ListeningExercise.tsx never renders `prompt`; components/lesson/DictationExercise.tsx never renders `prompt` and speaks `correct_answer`; `hintText` is rendered only by components/lesson/ClozeExercise.tsx. Reading/spelling checked against 大辞林/三省堂 standard orthography for the heard word."
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-3002-0003-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3002-0003-b10000000000",
+        "type": "dictation",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "締切",
+          "〆切"
+        ]
+      },
+      "reasons": [
+        "ja-E1256 (ja, dictation): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"締切\" is the keyed \"締め切り\" spelled another way — しめきり with the okurigana omitted. Re-measured against every taught Japanese string: it widens nothing. ja-E1256 (ja, dictation): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"〆切\" is the keyed \"締め切り\" spelled another way — しめきり written with the 〆 abbreviation. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-3002-0004-e00000000003",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3002-0004-b10000000000",
+        "type": "translate_to_native",
+        "accepted_answers": [
+          "To employ",
+          "Employ"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "To employ",
+          "Employ",
+          "Hire"
+        ]
+      },
+      "reasons": [
+        "ja-E1265 (ja, translate_to_native): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"Hire\" on the keyed \"To hire\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-3002-0005-e00000000003",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3002-0005-b10000000000",
+        "type": "translate_to_native",
+        "accepted_answers": [
+          "To dismiss",
+          "Dismiss",
+          "To sack",
+          "Sack",
+          "To lay off"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "To dismiss",
+          "Dismiss",
+          "To sack",
+          "Sack",
+          "To lay off",
+          "Fire"
+        ]
+      },
+      "reasons": [
+        "ja-E1279 (ja, translate_to_native): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"Fire\" on the keyed \"To fire\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-3002-0005-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3002-0005-b10000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": [
+          "管理者",
+          "管理職",
+          "支配人",
+          "経営者"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "管理者",
+          "管理職",
+          "支配人",
+          "経営者",
+          "マネジャー"
+        ]
+      },
+      "reasons": [
+        "ja-E1281 (ja, cloze_deletion): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"マネジャー\" is the keyed \"マネージャー\" spelled another way — the same loanword with one long-vowel mark dropped. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-3002-0006-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3002-0006-b10000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": [
+          "期限",
+          "期日"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "期限",
+          "期日",
+          "締切",
+          "締切り",
+          "〆切"
+        ]
+      },
+      "reasons": [
+        "ja-E1295 (ja, cloze_deletion): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"締切\" is the keyed \"締め切り\" spelled another way — しめきり with the okurigana omitted. Re-measured against every taught Japanese string: it widens nothing. ja-E1295 (ja, cloze_deletion): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"締切り\" is the keyed \"締め切り\" spelled another way — しめきり with one okurigana omitted. Re-measured against every taught Japanese string: it widens nothing. ja-E1295 (ja, cloze_deletion): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"〆切\" is the keyed \"締め切り\" spelled another way — しめきり written with the 〆 abbreviation. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
       ],
       "review_status": "awaiting_independent_round2_review"
     },
@@ -9184,6 +11522,28 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-3005-0002-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3005-0002-b10000000000",
+        "type": "dictation",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "エスエヌエス",
+          "えすえぬえす"
+        ]
+      },
+      "reasons": [
+        "ja-E1494 (ja, dictation): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"エスエヌエス\" is the keyed \"SNS\" spelled another way — the letter names spelled out in katakana. Re-measured against every taught Japanese string: it widens nothing. ja-E1494 (ja, dictation): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"えすえぬえす\" is the keyed \"SNS\" spelled another way — the letter names spelled out in hiragana. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-3005-0003-e00000000008",
       "before": {
         "lesson_id": "aabbccdd-6666-3005-0003-b10000000000",
@@ -9289,6 +11649,48 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-3006-0005-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3006-0005-b10000000000",
+        "type": "dictation",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "終り"
+        ]
+      },
+      "reasons": [
+        "ja-E1620 (ja, dictation): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"終り\" is the keyed \"終わり\" spelled another way — おわり with the okurigana omitted. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-3006-0006-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3006-0006-b10000000000",
+        "type": "dictation",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "昔昔"
+        ]
+      },
+      "reasons": [
+        "ja-E1634 (ja, dictation): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"昔昔\" is the keyed \"昔々\" spelled another way — むかしむかし with the iteration mark written out. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-3007-0001-e00000000002",
       "before": {
         "lesson_id": "aabbccdd-6666-3007-0001-b10000000000",
@@ -9370,6 +11772,34 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-3007-0002-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3007-0002-b10000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": [
+          "もしかすると",
+          "もしかしたら",
+          "おそらく"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "もしかすると",
+          "もしかしたら",
+          "おそらく",
+          "多分"
+        ]
+      },
+      "reasons": [
+        "ja-E1659 (ja, cloze_deletion): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"多分\" is the keyed \"たぶん\" spelled another way — たぶん in kanji. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-3007-0003-e00000000005",
       "before": {
         "lesson_id": "aabbccdd-6666-3007-0003-b10000000000",
@@ -9429,6 +11859,58 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-3007-0005-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3007-0005-b10000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "もしかすると",
+          "もしかしたら",
+          "おそらく"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "もしかすると",
+          "もしかしたら",
+          "おそらく",
+          "多分"
+        ]
+      },
+      "reasons": [
+        "ja-E1698 (ja, translate_to_target): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"多分\" is the keyed \"たぶん\" spelled another way — たぶん in kanji. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-3007-0005-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3007-0005-b10000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": [
+          "代わりに"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "代わりに",
+          "その代りに"
+        ]
+      },
+      "reasons": [
+        "ja-E1701 (ja, cloze_deletion): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"その代りに\" is the keyed \"その代わりに\" spelled another way — そのかわりに with the okurigana moved. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-3007-0005-e00000000008",
       "before": {
         "lesson_id": "aabbccdd-6666-3007-0005-b10000000000",
@@ -9465,6 +11947,30 @@
         "ja-E1726 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"はいけい\" is the same word as the keyed \"拝啓\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
       ],
       "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-3008-0002-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3008-0002-b10000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": [
+          "クール"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "クール",
+          "カッコいい"
+        ]
+      },
+      "reasons": [
+        "ja-E1743 (ja, cloze_deletion): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"カッコいい\" is the keyed \"かっこいい\" spelled another way — かっこいい with the first element in katakana. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
       "review_status": "awaiting_independent_round2_review"
     },
     {
@@ -9506,6 +12012,30 @@
       ],
       "sources": [
         "Stimulus analysis of the shipped app: components/lesson/ListeningExercise.tsx never renders `prompt`; components/lesson/DictationExercise.tsx never renders `prompt` and speaks `correct_answer`; `hintText` is rendered only by components/lesson/ClozeExercise.tsx. Reading/spelling checked against 大辞林/三省堂 standard orthography for the heard word."
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-3008-0005-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3008-0005-b10000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "クール"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "クール",
+          "カッコいい"
+        ]
+      },
+      "reasons": [
+        "ja-E1782 (ja, translate_to_target): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"カッコいい\" is the keyed \"かっこいい\" spelled another way — かっこいい with the first element in katakana. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
       ],
       "review_status": "awaiting_independent_round2_review"
     },
@@ -9650,6 +12180,27 @@
       ],
       "sources": [
         "Stimulus analysis of the shipped app: components/lesson/ListeningExercise.tsx never renders `prompt`; components/lesson/DictationExercise.tsx never renders `prompt` and speaks `correct_answer`; `hintText` is rendered only by components/lesson/ClozeExercise.tsx. Reading/spelling checked against 大辞林/三省堂 standard orthography for the heard word."
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-4001-0005-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-6666-4001-0005-b20000000000",
+        "type": "dictation",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "智慧"
+        ]
+      },
+      "reasons": [
+        "ja-E1870 (ja, dictation): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"智慧\" is the keyed \"知恵\" spelled another way — ちえ; the older kanji pair with the same reading. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
       ],
       "review_status": "awaiting_independent_round2_review"
     },
@@ -9922,6 +12473,34 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-4003-0005-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-4003-0005-b20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": [
+          "期限",
+          "期日"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "期限",
+          "期日",
+          "締切",
+          "締切り",
+          "〆切"
+        ]
+      },
+      "reasons": [
+        "ja-E2040 (ja, cloze_deletion): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"締切\" is the keyed \"締め切り\" spelled another way — しめきり with the okurigana omitted. Re-measured against every taught Japanese string: it widens nothing. ja-E2040 (ja, cloze_deletion): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"締切り\" is the keyed \"締め切り\" spelled another way — しめきり with one okurigana omitted. Re-measured against every taught Japanese string: it widens nothing. ja-E2040 (ja, cloze_deletion): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"〆切\" is the keyed \"締め切り\" spelled another way — しめきり written with the 〆 abbreviation. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-4003-0006-e00000000006",
       "before": {
         "lesson_id": "aabbccdd-6666-4003-0006-b20000000000",
@@ -9980,6 +12559,34 @@
       ],
       "sources": [
         "Stimulus analysis of the shipped app: components/lesson/ListeningExercise.tsx never renders `prompt`; components/lesson/DictationExercise.tsx never renders `prompt` and speaks `correct_answer`; `hintText` is rendered only by components/lesson/ClozeExercise.tsx. Reading/spelling checked against 大辞林/三省堂 standard orthography for the heard word."
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-4004-0004-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-4004-0004-b20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "隠喩",
+          "暗喩",
+          "メタファー"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "隠喩",
+          "暗喩",
+          "メタファー",
+          "比ゆ"
+        ]
+      },
+      "reasons": [
+        "ja-E2104 (ja, translate_to_target): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"比ゆ\" is the keyed \"比喩\" spelled another way — ひゆ; 喩 written in kana. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
       ],
       "review_status": "awaiting_independent_round2_review"
     },
@@ -10145,6 +12752,82 @@
       },
       "reasons": [
         "ko-E0066 (ko, translate_to_target): RULING 2026-09-15 — register, accept upward and refuse downward. \"아닙니다\" against the keyed \"아니요\": The deferential 합니다체 form of the keyed 아니요. Politeness raised."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-7777-1004-0006-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-7777-1004-0006-000000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "금전"
+        ]
+      },
+      "reasons": [
+        "ko-E0276 (ko): same-gloss-same-key levelling. The row sharing the gloss \"Money\" already accepts \"금전\" on the identical question — group to_target|Money|돈: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ko string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-7777-1007-0001-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-7777-1007-0001-000000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "출입문"
+        ]
+      },
+      "reasons": [
+        "ko-E0426 (ko): same-gloss-same-key levelling. The row sharing the gloss \"Door\" already accepts \"출입문\" on the identical question — group to_target|Door|문: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ko string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-7777-1007-0003-e00000000004",
+      "before": {
+        "lesson_id": "aabbccdd-7777-1007-0003-000000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "출입문"
+        ]
+      },
+      "reasons": [
+        "ko-E0448 (ko): same-gloss-same-key levelling. The row sharing the gloss \"Door\" already accepts \"출입문\" on the identical question — group to_target|Door|문: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ko string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-7777-2001-0001-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-7777-2001-0001-a20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "조카"
+        ]
+      },
+      "reasons": [
+        "ko-E0565 (ko): same-gloss-same-key levelling. The row sharing the gloss \"Niece\" already accepts \"조카\" on the identical question — group to_target|Niece|조카딸: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ko string and it admits nothing else."
       ],
       "sources": [],
       "review_status": "awaiting_independent_round2_review"
@@ -10701,6 +13384,44 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-7777-2008-0003-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-7777-2008-0003-a20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "잔치"
+        ]
+      },
+      "reasons": [
+        "ko-E1093 (ko): same-gloss-same-key levelling. The row sharing the gloss \"Party\" already accepts \"잔치\" on the identical question — group to_target|Party|파티: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ko string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-7777-3001-0004-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-7777-3001-0004-b10000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "소식"
+        ]
+      },
+      "reasons": [
+        "ko-E1180 (ko): same-gloss-same-key levelling. The row sharing the gloss \"News\" already accepts \"소식\" on the identical question — group to_target|News|뉴스: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ko string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-7777-3004-0005-e00000000007",
       "before": {
         "lesson_id": "aabbccdd-7777-3004-0005-b10000000000",
@@ -10829,6 +13550,146 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-8888-2002-0001-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-8888-2002-0001-a20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "约会"
+        ]
+      },
+      "reasons": [
+        "zh-E0637 (zh): same-gloss-same-key levelling. The row sharing the gloss \"Appointment\" already accepts \"约会\" on the identical question — group to_target|Appointment|预约: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught zh string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-8888-2002-0004-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-8888-2002-0004-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "约会"
+        ]
+      },
+      "reasons": [
+        "zh-E0670 (zh): same-gloss-same-key levelling. The row sharing the gloss \"Appointment\" already accepts \"约会\" on the identical question — group to_target|Appointment|预约: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught zh string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-8888-2003-0006-e00000000003",
+      "before": {
+        "lesson_id": "aabbccdd-8888-2003-0006-a20000000000",
+        "type": "translate_to_native",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "To prepare food"
+        ]
+      },
+      "reasons": [
+        "zh-E0767 (zh): same-gloss-same-key levelling. The row sharing the gloss \"To cook\" already accepts \"To prepare food\" on the identical question — group to_native|To cook|做饭: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught zh string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-8888-2005-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-8888-2005-0006-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "我去旅行了",
+          "我旅游了"
+        ]
+      },
+      "reasons": [
+        "zh-E0910 (zh): same-gloss-same-key levelling. The row sharing the gloss \"I traveled\" already accepts \"我去旅行了\", \"我旅游了\" on the identical question — group to_target|I traveled|我旅行了: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught zh string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-8888-2006-0004-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-8888-2006-0004-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "我将学习",
+          "我将会学习",
+          "我要学习"
+        ]
+      },
+      "reasons": [
+        "zh-E0958 (zh): same-gloss-same-key levelling. The row sharing the gloss \"I will study\" already accepts \"我将学习\", \"我将会学习\", \"我要学习\" on the identical question — group to_target|I will study|我会学习: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught zh string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-8888-2006-0005-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-8888-2006-0005-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "我将旅行",
+          "我将会旅行",
+          "我会去旅行"
+        ]
+      },
+      "reasons": [
+        "zh-E0970 (zh): same-gloss-same-key levelling. The row sharing the gloss \"I will travel\" already accepts \"我将旅行\", \"我将会旅行\", \"我会去旅行\" on the identical question — group to_target|I will travel|我会旅行: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught zh string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-8888-2006-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-8888-2006-0006-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "我将工作",
+          "我将会工作",
+          "我要工作"
+        ]
+      },
+      "reasons": [
+        "zh-E0982 (zh): same-gloss-same-key levelling. The row sharing the gloss \"I will work\" already accepts \"我将工作\", \"我将会工作\", \"我要工作\" on the identical question — group to_target|I will work|我会工作: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught zh string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-8888-4004-0003-e00000000001",
       "before": {
         "lesson_id": "aabbccdd-8888-4004-0003-b20000000000",
@@ -10890,6 +13751,377 @@
         "https://www.mdbg.net/chinese/dictionary?page=worddict&wdrst=0&wdqb=%E8%88%9E%E5%8F%B0",
         "https://www.mdbg.net/chinese/dictionary?page=worddict&wdrst=0&wdqb=%E8%A7%82%E4%BC%97"
       ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-9999-2002-0001-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-9999-2002-0001-a20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": [
+          "Приём у врача"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Приём у врача",
+          "Встреча"
+        ]
+      },
+      "reasons": [
+        "ru-E0637 (ru): same-gloss-same-key levelling. The row sharing the gloss \"Appointment\" already accepts \"Встреча\" on the identical question — group to_target|Appointment|Приём: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ru string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-9999-2002-0004-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-9999-2002-0004-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Приём у врача"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Приём у врача",
+          "Встреча"
+        ]
+      },
+      "reasons": [
+        "ru-E0670 (ru): same-gloss-same-key levelling. The row sharing the gloss \"Appointment\" already accepts \"Встреча\" on the identical question — group to_target|Appointment|Приём: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ru string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-9999-2003-0004-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-9999-2003-0004-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Чистить"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Чистить",
+          "Убираться",
+          "Убрать"
+        ]
+      },
+      "reasons": [
+        "ru-E0742 (ru): same-gloss-same-key levelling. The row sharing the gloss \"To clean\" already accepts \"Убираться\", \"Убрать\" on the identical question — group to_target|To clean|Убирать: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ru string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-9999-2004-0001-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-9999-2004-0001-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Добросердечный"
+        ]
+      },
+      "reasons": [
+        "ru-E0784 (ru): same-gloss-same-key levelling. The row sharing the gloss \"Kind\" already accepts \"Добросердечный\" on the identical question — group to_target|Kind|Добрый: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ru string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-9999-2005-0001-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-9999-2005-0001-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Я занимался",
+          "Я занималась"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Я занимался",
+          "Я занималась",
+          "Я училась"
+        ]
+      },
+      "reasons": [
+        "ru-E0856 (ru): same-gloss-same-key levelling. The row sharing the gloss \"I studied\" already accepts \"Я училась\" on the identical question — group to_target|I studied|Я учился: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ru string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-9999-2005-0002-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-9999-2005-0002-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Я сыграла"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Я сыграла",
+          "Я играла",
+          "Я сыграл"
+        ]
+      },
+      "reasons": [
+        "ru-E0868 (ru): same-gloss-same-key levelling. The row sharing the gloss \"I played\" already accepts \"Я играла\", \"Я сыграл\" on the identical question — group to_target|I played|Я играл: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ru string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-9999-2005-0004-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-9999-2005-0004-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Я увидела"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Я увидела",
+          "Я видел",
+          "Я видела"
+        ]
+      },
+      "reasons": [
+        "ru-E0886 (ru): same-gloss-same-key levelling. The row sharing the gloss \"I saw\" already accepts \"Я видел\", \"Я видела\" on the identical question — group to_target|I saw|Я увидел: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ru string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-9999-2005-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-9999-2005-0006-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Я путешествовала"
+        ]
+      },
+      "reasons": [
+        "ru-E0910 (ru): same-gloss-same-key levelling. The row sharing the gloss \"I traveled\" already accepts \"Я путешествовала\" on the identical question — group to_target|I traveled|Я путешествовал: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ru string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-9999-2006-0004-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-9999-2006-0004-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Я буду заниматься",
+          "Буду заниматься"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Я буду заниматься",
+          "Буду заниматься",
+          "Буду учиться"
+        ]
+      },
+      "reasons": [
+        "ru-E0958 (ru): same-gloss-same-key levelling. The row sharing the gloss \"I will study\" already accepts \"Буду учиться\" on the identical question — group to_target|I will study|Я буду учиться: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ru string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-9999-2006-0005-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-9999-2006-0005-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Буду путешествовать"
+        ]
+      },
+      "reasons": [
+        "ru-E0970 (ru): same-gloss-same-key levelling. The row sharing the gloss \"I will travel\" already accepts \"Буду путешествовать\" on the identical question — group to_target|I will travel|Я буду путешествовать: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ru string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-9999-2006-0005-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-9999-2006-0005-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Встреча"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Встреча",
+          "Приём у врача"
+        ]
+      },
+      "reasons": [
+        "ru-E0976 (ru): same-gloss-same-key levelling. The row sharing the gloss \"Appointment\" already accepts \"Приём у врача\" on the identical question — group to_target|Appointment|Приём: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ru string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-9999-2006-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-9999-2006-0006-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Буду работать"
+        ]
+      },
+      "reasons": [
+        "ru-E0982 (ru): same-gloss-same-key levelling. The row sharing the gloss \"I will work\" already accepts \"Буду работать\" on the identical question — group to_target|I will work|Я буду работать: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ru string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-9999-2008-0001-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-9999-2008-0001-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Отмечать"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Отмечать",
+          "Отпраздновать"
+        ]
+      },
+      "reasons": [
+        "ru-E1072 (ru): same-gloss-same-key levelling. The row sharing the gloss \"To celebrate\" already accepts \"Отпраздновать\" on the identical question — group to_target|To celebrate|Праздновать: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ru string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-9999-3005-0004-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-9999-3005-0004-b10000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Загрузить"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Загрузить",
+          "Скачивать"
+        ]
+      },
+      "reasons": [
+        "ru-E1516 (ru): same-gloss-same-key levelling. The row sharing the gloss \"To download\" already accepts \"Скачивать\" on the identical question — group to_target|To download|Скачать: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ru string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-9999-3005-0005-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-9999-3005-0005-b10000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Загружать"
+        ]
+      },
+      "reasons": [
+        "ru-E1530 (ru): same-gloss-same-key levelling. The row sharing the gloss \"To upload\" already accepts \"Загружать\" on the identical question — group to_target|To upload|Загрузить: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ru string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-9999-3007-0004-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-9999-3007-0004-b10000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Мне хотелось бы",
+          "Хотела бы"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Мне хотелось бы",
+          "Хотела бы",
+          "Я хотела бы",
+          "Хотел бы"
+        ]
+      },
+      "reasons": [
+        "ru-E1684 (ru): same-gloss-same-key levelling. The row sharing the gloss \"I wish\" already accepts \"Я хотела бы\", \"Хотел бы\" on the identical question — group to_target|I wish|Я хотел бы: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ru string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-9999-3007-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-9999-3007-0006-b10000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Вообрази",
+          "Вообразите"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Вообрази",
+          "Вообразите",
+          "Представьте"
+        ]
+      },
+      "reasons": [
+        "ru-E1712 (ru): same-gloss-same-key levelling. The row sharing the gloss \"Imagine\" already accepts \"Представьте\" on the identical question — group to_target|Imagine|Представь: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ru string and it admits nothing else."
+      ],
+      "sources": [],
       "review_status": "awaiting_independent_round2_review"
     },
     {
@@ -11217,6 +14449,27 @@
       ],
       "sources": [
         "Stimulus analysis of the shipped app: components/lesson/ListeningExercise.tsx never renders `prompt`; components/lesson/DictationExercise.tsx never renders `prompt` and speaks `correct_answer`; `hintText` is rendered only by components/lesson/ClozeExercise.tsx. Reading/spelling checked against 大辞林/三省堂 standard orthography for the heard word."
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "b82d04b5-51aa-4956-94df-120514016981",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1005-0005-000000000000",
+        "type": "listening_type",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "友だち"
+        ]
+      },
+      "reasons": [
+        "ja-E0339 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"友だち\" is the keyed \"友達\" spelled another way — ともだち with 達 written in kana. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
       ],
       "review_status": "awaiting_independent_round2_review"
     },
@@ -11928,6 +15181,27 @@
     },
     {
       "table": "exercises",
+      "id": "d5070120-d0b6-4024-9aec-fd020bc46fe6",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1006-0005-000000000000",
+        "type": "listening_type",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "ネコ"
+        ]
+      },
+      "reasons": [
+        "ja-E0409 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"ネコ\" is the keyed \"猫\" spelled another way — ねこ in katakana. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "d544f108-617f-42a3-a3da-ed6c6b2b53fa",
       "before": {
         "lesson_id": "aabbccdd-6666-3003-0001-b10000000000",
@@ -12348,6 +15622,27 @@
     },
     {
       "table": "exercises",
+      "id": "e84081f1-8886-4f00-aae2-910f62b34644",
+      "before": {
+        "lesson_id": "aabbccdd-6666-4001-0004-b20000000000",
+        "type": "listening_type",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "智慧"
+        ]
+      },
+      "reasons": [
+        "ja-E1863 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"智慧\" is the keyed \"知恵\" spelled another way — ちえ; the older kanji pair with the same reading. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "e9fca016-d99e-4191-b008-56f0a83922b8",
       "before": {
         "lesson_id": "aabbccdd-6666-3001-0003-b10000000000",
@@ -12406,6 +15701,28 @@
       ],
       "sources": [
         "Stimulus analysis of the shipped app: components/lesson/ListeningExercise.tsx never renders `prompt`; components/lesson/DictationExercise.tsx never renders `prompt` and speaks `correct_answer`; `hintText` is rendered only by components/lesson/ClozeExercise.tsx. Reading/spelling checked against 大辞林/三省堂 standard orthography for the heard word."
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "ec68f864-425b-48f2-aeb9-efe534014fb0",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1002-0004-000000000000",
+        "type": "listening_type",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "リンゴ",
+          "林檎"
+        ]
+      },
+      "reasons": [
+        "ja-E0115 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"リンゴ\" is the keyed \"りんご\" spelled another way — りんご in katakana, the ordinary spelling for the fruit. Re-measured against every taught Japanese string: it widens nothing. ja-E0115 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"林檎\" is the keyed \"りんご\" spelled another way — りんご in kanji. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
       ],
       "review_status": "awaiting_independent_round2_review"
     },
