@@ -1,6 +1,7 @@
 {
  "what_this_is": "Collisions whose colliding string is only ever an accepted ALTERNATIVE, never a key. No sibling scope reaches them. `breaks: true` means some row with this row's own key accepts that string, so counting alternatives would mark a right answer wrong.",
  "what_this_is_not": "Same-gloss-same-key divergence across the corpus. That population is larger, is not conditioned on a collision, and is the right input for content levelling.",
+ "why_a_content_pass_may_report_fewer": "A pass counting divergence among TYPED rows and this file can disagree without either being wrong: 161 of the breaking rows are audio-stimulus rows, where the absent alternative should stay absent. Italian Generoso is the worked example — diverging across four rows here, levelled among the typed ones.",
  "snapshot": "/Users/tylermoore/Fluenci_Main/question-audit-verification/.question-audit/snapshot-9a20145dc6b5.json",
  "snapshot_captured_at": "2026-09-15T02:38:03.559269+00:00",
  "collisions_source": "/private/tmp/claude-501/-Users-tylermoore-Fluenci-Main-ai-language-partner/3066ff99-4475-4615-9aa3-c6431c41e81c/scratchpad/corpus-widening.json",
