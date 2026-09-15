@@ -36,6 +36,12 @@
  * want reading: `Einstellen` / `Anstellen` are two verbs, not one word in two
  * genders. Filter on `type` before treating any of this as a worklist.
  *
+ * That also settles an apparent contradiction, so nobody re-opens it: a content
+ * pass reporting ZERO diverging Italian groups and this file showing `Generoso`
+ * diverging across four rows are both correct. The pass counts divergence among
+ * typed rows, and the two rows keeping `Generosa` out here are the listening and
+ * speaking ones — where it should stay out, because the audio says `Generoso`.
+ *
  *   deno run -A --no-check --sloppy-imports scripts/grading/alternatives-axis.mjs \
  *     --snapshot .question-audit/snapshot-9a20145dc6b5.json \
  *     --collisions corpus-widening.json --json alternatives-axis.json
@@ -129,6 +135,10 @@ const report = {
     'that string, so counting alternatives would mark a right answer wrong.',
   what_this_is_not: 'Same-gloss-same-key divergence across the corpus. That population is larger, is ' +
     'not conditioned on a collision, and is the right input for content levelling.',
+  why_a_content_pass_may_report_fewer: 'A pass counting divergence among TYPED rows and this file can ' +
+    'disagree without either being wrong: 161 of the breaking rows are audio-stimulus rows, where the ' +
+    'absent alternative should stay absent. Italian Generoso is the worked example — diverging across ' +
+    'four rows here, levelled among the typed ones.',
   snapshot: snapshotPath,
   snapshot_captured_at: snapshot.captured_at ?? null,
   collisions_source: collisionsPath,
