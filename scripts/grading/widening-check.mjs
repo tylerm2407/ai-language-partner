@@ -130,6 +130,34 @@ const siblingRowsFor = (exercise) => {
   if (siblingScope === 'language') return rowsByLanguage.get(languageOf(exercise)) ?? [];
   return rowsByUnit.get(unitOf(exercise)) ?? [];
 };
+const scopeIdOf = (exercise) => {
+  if (siblingScope === 'none') return null;
+  if (siblingScope === 'lesson') return exercise.lesson_id;
+  if (siblingScope === 'course') return courseOf(exercise);
+  if (siblingScope === 'language') return languageOf(exercise);
+  return unitOf(exercise);
+};
+
+/**
+ * One sibling array per scope group, not per row. `gradeAnswer` caches the
+ * normalized key set on the array's identity, so handing it a fresh array per
+ * row throws that cache away — at language scope, a thousand keys renormalized
+ * for every grade.
+ */
+const siblingsByScope = new Map();
+const siblingKeysFor = (exercise) => {
+  const id = scopeIdOf(exercise);
+  if (id == null) return [];
+  const cached = siblingsByScope.get(id);
+  if (cached) return cached;
+  const built = taughtKeys(siblingRowsFor(exercise).map(row => ({
+    type: row.type,
+    prompt: row.prompt ?? '',
+    correctAnswer: row.correct_answer ?? '',
+  })));
+  siblingsByScope.set(id, built);
+  return built;
+};
 
 /** The hints the lesson runner really builds — see lib/exercise-restore.ts.
  *  Without them the strict gate does not fire on choice and grammar rows and
@@ -142,11 +170,7 @@ const runtimeHints = exercise => ({
     targetWord: exercise.target_word,
     language: languageOf(exercise),
     blankContext: exercise.type === 'fill_blank' ? blankContext(exercise.prompt ?? '') : undefined,
-    siblingKeys: taughtKeys(siblingRowsFor(exercise).map(row => ({
-      type: row.type,
-      prompt: row.prompt ?? '',
-      correctAnswer: row.correct_answer ?? '',
-    }))),
+    siblingKeys: siblingKeysFor(exercise),
   },
 });
 
