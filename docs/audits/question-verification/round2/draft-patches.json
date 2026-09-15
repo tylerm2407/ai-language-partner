@@ -195,7 +195,7 @@
         ]
       },
       "reasons": [
-        "ja-E0373 (ja, listening_type): Audio-only stimulus: the learner is shown no text and no gloss, so nothing in the task selects a script. This is a correct transcription of what was played. BLOCKING: adding these spellings brings other taught kinship terms inside the typo budget (お父さん, お姉さん, お嬢さん, お母さん, お隣さん), which the row exists to distinguish. Do not land this addition until matching lib/confusable-pairs.ts entries exist for those pairs; the addition is correct, the collateral is not. DEPENDENCY — do not apply this row without the Japanese edit-distance gate on the grader branch, which refuses fuzzy acceptance on a kanji-bearing answer before the typo budget is consulted. Until the gate lands, the added kanji spelling brings お父さん, お姉さん, お嬢さん, お母さん, お隣さん inside this row's typo budget, on a row whose purpose is separating kinship terms. The gate, not a pair list, is what holds these rows apart: the confusable pairs first authored for this collision were measured to be unreachable behind it and were withdrawn."
+        "ja-E0373 (ja, listening_type): Audio-only stimulus: the learner is shown no text and no gloss, so nothing in the task selects a script. This is a correct transcription of what was played. BLOCKING: adding these spellings brings other taught kinship terms inside the typo budget (お父さん, お姉さん, お嬢さん, お母さん, お隣さん), which the row exists to distinguish. Do not land this addition until matching lib/confusable-pairs.ts entries exist for those pairs; the addition is correct, the collateral is not. DEPENDENCY — the Japanese edit-distance gate on the grader branch is the ONLY thing that holds this row apart, so do not apply it without that gate. Until the gate lands, the added kanji spelling brings お父さん, お姉さん, お嬢さん, お母さん, お隣さん inside this row's typo budget, on a row whose purpose is separating kinship terms. No other mechanism reaches them: お父さん, お姉さん, お嬢さん, お母さん, お隣さん are never taught KEYS anywhere in the corpus — each appears only as an accepted alternative on one or two rows, and is an option, a distractor and a card target text nowhere — so the sibling-key rule cannot see them at any scope, and the confusable pairs first authored for this collision were measured unreachable behind the gate and withdrawn. The gate refuses fuzzy acceptance on a kanji-bearing answer before the typo budget is consulted; nothing else does."
       ],
       "sources": [
         "Stimulus analysis of the shipped app: components/lesson/ListeningExercise.tsx never renders `prompt`; components/lesson/DictationExercise.tsx never renders `prompt` and speaks `correct_answer`; `hintText` is rendered only by components/lesson/ClozeExercise.tsx. Reading/spelling checked against 大辞林/三省堂 standard orthography for the heard word."
@@ -578,7 +578,7 @@
         ]
       },
       "reasons": [
-        "ja-E0581 (ja, listening_type): Audio-only stimulus: the learner is shown no text and no gloss, so nothing in the task selects a script. This is a correct transcription of what was played. BLOCKING: adding these spellings brings other taught kinship terms inside the typo budget (お母さん), which the row exists to distinguish. Do not land this addition until matching lib/confusable-pairs.ts entries exist for those pairs; the addition is correct, the collateral is not. DEPENDENCY — do not apply this row without the Japanese edit-distance gate on the grader branch, which refuses fuzzy acceptance on a kanji-bearing answer before the typo budget is consulted. Until the gate lands, the added kanji spelling brings お母さん inside this row's typo budget, on a row whose purpose is separating kinship terms. The gate, not a pair list, is what holds these rows apart: the confusable pairs first authored for this collision were measured to be unreachable behind it and were withdrawn."
+        "ja-E0581 (ja, listening_type): Audio-only stimulus: the learner is shown no text and no gloss, so nothing in the task selects a script. This is a correct transcription of what was played. BLOCKING: adding these spellings brings other taught kinship terms inside the typo budget (お母さん), which the row exists to distinguish. Do not land this addition until matching lib/confusable-pairs.ts entries exist for those pairs; the addition is correct, the collateral is not. DEPENDENCY — the Japanese edit-distance gate on the grader branch is the ONLY thing that holds this row apart, so do not apply it without that gate. Until the gate lands, the added kanji spelling brings お母さん inside this row's typo budget, on a row whose purpose is separating kinship terms. No other mechanism reaches them: お母さん are never taught KEYS anywhere in the corpus — each appears only as an accepted alternative on one or two rows, and is an option, a distractor and a card target text nowhere — so the sibling-key rule cannot see them at any scope, and the confusable pairs first authored for this collision were measured unreachable behind the gate and withdrawn. The gate refuses fuzzy acceptance on a kanji-bearing answer before the typo budget is consulted; nothing else does."
       ],
       "sources": [
         "Stimulus analysis of the shipped app: components/lesson/ListeningExercise.tsx never renders `prompt`; components/lesson/DictationExercise.tsx never renders `prompt` and speaks `correct_answer`; `hintText` is rendered only by components/lesson/ClozeExercise.tsx. Reading/spelling checked against 大辞林/三省堂 standard orthography for the heard word."
@@ -3403,7 +3403,7 @@
         ]
       },
       "reasons": [
-        "ja-E0361 (ja, listening_type): Audio-only stimulus: the learner is shown no text and no gloss, so nothing in the task selects a script. This is a correct transcription of what was played. BLOCKING: adding these spellings brings other taught kinship terms inside the typo budget (お父さん, お姉さん, お嬢さん, お母さん, お隣さん), which the row exists to distinguish. Do not land this addition until matching lib/confusable-pairs.ts entries exist for those pairs; the addition is correct, the collateral is not. DEPENDENCY — do not apply this row without the Japanese edit-distance gate on the grader branch, which refuses fuzzy acceptance on a kanji-bearing answer before the typo budget is consulted. Until the gate lands, the added kanji spelling brings お父さん, お姉さん, お嬢さん, お母さん, お隣さん inside this row's typo budget, on a row whose purpose is separating kinship terms. The gate, not a pair list, is what holds these rows apart: the confusable pairs first authored for this collision were measured to be unreachable behind it and were withdrawn."
+        "ja-E0361 (ja, listening_type): Audio-only stimulus: the learner is shown no text and no gloss, so nothing in the task selects a script. This is a correct transcription of what was played. BLOCKING: adding these spellings brings other taught kinship terms inside the typo budget (お父さん, お姉さん, お嬢さん, お母さん, お隣さん), which the row exists to distinguish. Do not land this addition until matching lib/confusable-pairs.ts entries exist for those pairs; the addition is correct, the collateral is not. DEPENDENCY — the Japanese edit-distance gate on the grader branch is the ONLY thing that holds this row apart, so do not apply it without that gate. Until the gate lands, the added kanji spelling brings お父さん, お姉さん, お嬢さん, お母さん, お隣さん inside this row's typo budget, on a row whose purpose is separating kinship terms. No other mechanism reaches them: お父さん, お姉さん, お嬢さん, お母さん, お隣さん are never taught KEYS anywhere in the corpus — each appears only as an accepted alternative on one or two rows, and is an option, a distractor and a card target text nowhere — so the sibling-key rule cannot see them at any scope, and the confusable pairs first authored for this collision were measured unreachable behind the gate and withdrawn. The gate refuses fuzzy acceptance on a kanji-bearing answer before the typo budget is consulted; nothing else does."
       ],
       "sources": [
         "Stimulus analysis of the shipped app: components/lesson/ListeningExercise.tsx never renders `prompt`; components/lesson/DictationExercise.tsx never renders `prompt` and speaks `correct_answer`; `hintText` is rendered only by components/lesson/ClozeExercise.tsx. Reading/spelling checked against 大辞林/三省堂 standard orthography for the heard word."
@@ -5003,6 +5003,28 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-1111-3008-0001-e00000000009",
+      "before": {
+        "lesson_id": "aabbccdd-1111-3008-0001-b10000000000",
+        "type": "free_production",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "No se preocupe",
+          "No se preocupen"
+        ]
+      },
+      "reasons": [
+        "es-E1733 (es, free_production): alternatives-axis remainder. A row sharing the stored key \"No te preocupes\" already accepts \"No se preocupe\", \"No se preocupen\" for the same gloss, and this row accepts it today only through the typo budget — so a learner who typed it was told \"Correct! (Minor typo)\" on one row and would be marked wrong the moment tolerance tightened. Authored explicitly. Measured against every taught es string: it admits nothing else."
+      ],
+      "sources": [
+        "audit/grader-behaviour scripts/grading/alternatives-axis.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-1111-4003-0003-e00000000002",
       "before": {
         "lesson_id": "aabbccdd-1111-4003-0003-b20000000000",
@@ -5017,6 +5039,48 @@
       ],
       "sources": [
         "lib/grading.ts gradeAnswer (TYPO_TOLERANCE_RATIO, isGrammarExercise)"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-1111-4003-0003-e00000000007",
+      "before": {
+        "lesson_id": "aabbccdd-1111-4003-0003-b20000000000",
+        "type": "free_production",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Actas"
+        ]
+      },
+      "reasons": [
+        "es-E2011 (es, free_production): alternatives-axis remainder. A row sharing the stored key \"Acta\" already accepts \"Actas\" for the same gloss, and this row accepts it today only through the typo budget — so a learner who typed it was told \"Correct! (Minor typo)\" on one row and would be marked wrong the moment tolerance tightened. Authored explicitly. Measured against every taught es string: it admits nothing else."
+      ],
+      "sources": [
+        "audit/grader-behaviour scripts/grading/alternatives-axis.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-1111-4005-0005-e00000000007",
+      "before": {
+        "lesson_id": "aabbccdd-1111-4005-0005-b20000000000",
+        "type": "free_production",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "La pelota está en su tejado"
+        ]
+      },
+      "reasons": [
+        "es-E2207 (es, free_production): alternatives-axis remainder. A row sharing the stored key \"La pelota está en tu tejado\" already accepts \"La pelota está en su tejado\" for the same gloss, and this row accepts it today only through the typo budget — so a learner who typed it was told \"Correct! (Minor typo)\" on one row and would be marked wrong the moment tolerance tightened. Authored explicitly. Measured against every taught es string: it admits nothing else."
+      ],
+      "sources": [
+        "audit/grader-behaviour scripts/grading/alternatives-axis.json"
       ],
       "review_status": "awaiting_independent_round2_review"
     },
@@ -5649,6 +5713,27 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-2222-2007-0001-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-2222-2007-0001-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Plus petite"
+        ]
+      },
+      "reasons": [
+        "fr-E0994 (fr, translate_to_target): alternatives-axis remainder. A row sharing the stored key \"Plus petit\" already accepts \"Plus petite\" for the same gloss, and this row accepts it today only through the typo budget — so a learner who typed it was told \"Correct! (Minor typo)\" on one row and would be marked wrong the moment tolerance tightened. Authored explicitly. Measured against every taught fr string: it admits nothing else."
+      ],
+      "sources": [
+        "audit/grader-behaviour scripts/grading/alternatives-axis.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-2222-2007-0001-e00000000008",
       "before": {
         "lesson_id": "aabbccdd-2222-2007-0001-a20000000000",
@@ -5809,6 +5894,27 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-2222-2007-0006-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-2222-2007-0006-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Plus grande"
+        ]
+      },
+      "reasons": [
+        "fr-E1060 (fr, translate_to_target): alternatives-axis remainder. A row sharing the stored key \"Plus grand\" already accepts \"Plus grande\" for the same gloss, and this row accepts it today only through the typo budget — so a learner who typed it was told \"Correct! (Minor typo)\" on one row and would be marked wrong the moment tolerance tightened. Authored explicitly. Measured against every taught fr string: it admits nothing else."
+      ],
+      "sources": [
+        "audit/grader-behaviour scripts/grading/alternatives-axis.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-2222-2008-0006-e00000000002",
       "before": {
         "lesson_id": "aabbccdd-2222-2008-0006-a20000000000",
@@ -5902,6 +6008,27 @@
       ],
       "sources": [
         "lib/grading.ts gradeAnswer (TYPO_TOLERANCE_RATIO, isGrammarExercise)"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-2222-3008-0001-e00000000009",
+      "before": {
+        "lesson_id": "aabbccdd-2222-3008-0001-b10000000000",
+        "type": "free_production",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Pas de soucis"
+        ]
+      },
+      "reasons": [
+        "fr-E1733 (fr, free_production): alternatives-axis remainder. A row sharing the stored key \"Pas de souci\" already accepts \"Pas de soucis\" for the same gloss, and this row accepts it today only through the typo budget — so a learner who typed it was told \"Correct! (Minor typo)\" on one row and would be marked wrong the moment tolerance tightened. Authored explicitly. Measured against every taught fr string: it admits nothing else."
+      ],
+      "sources": [
+        "audit/grader-behaviour scripts/grading/alternatives-axis.json"
       ],
       "review_status": "awaiting_independent_round2_review"
     },
@@ -6522,6 +6649,27 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-3333-3002-0001-e00000000009",
+      "before": {
+        "lesson_id": "aabbccdd-3333-3002-0001-b10000000000",
+        "type": "free_production",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Managerin"
+        ]
+      },
+      "reasons": [
+        "de-E1229 (de, free_production): alternatives-axis remainder. A row sharing the stored key \"Manager\" already accepts \"Managerin\" for the same gloss, and this row accepts it today only through the typo budget — so a learner who typed it was told \"Correct! (Minor typo)\" on one row and would be marked wrong the moment tolerance tightened. Authored explicitly. Measured against every taught de string: it admits nothing else."
+      ],
+      "sources": [
+        "audit/grader-behaviour scripts/grading/alternatives-axis.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-3333-3002-0005-e00000000002",
       "before": {
         "lesson_id": "aabbccdd-3333-3002-0005-b10000000000",
@@ -6636,6 +6784,27 @@
       ],
       "sources": [
         "lib/grading.ts gradeAnswer (TYPO_TOLERANCE_RATIO, isGrammarExercise)"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-3333-4004-0002-e00000000007",
+      "before": {
+        "lesson_id": "aabbccdd-3333-4004-0002-b20000000000",
+        "type": "free_production",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Protagonistin"
+        ]
+      },
+      "reasons": [
+        "de-E2081 (de, free_production): alternatives-axis remainder. A row sharing the stored key \"Protagonist\" already accepts \"Protagonistin\" for the same gloss, and this row accepts it today only through the typo budget — so a learner who typed it was told \"Correct! (Minor typo)\" on one row and would be marked wrong the moment tolerance tightened. Authored explicitly. Measured against every taught de string: it admits nothing else."
+      ],
+      "sources": [
+        "audit/grader-behaviour scripts/grading/alternatives-axis.json"
       ],
       "review_status": "awaiting_independent_round2_review"
     },
@@ -7254,6 +7423,48 @@
       ],
       "sources": [
         "lib/grading.ts gradeAnswer (TYPO_TOLERANCE_RATIO, isGrammarExercise)"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-4444-4001-0002-e00000000007",
+      "before": {
+        "lesson_id": "aabbccdd-4444-4001-0002-b20000000000",
+        "type": "free_production",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Eguaglianza"
+        ]
+      },
+      "reasons": [
+        "it-E1829 (it, free_production): alternatives-axis remainder. A row sharing the stored key \"Uguaglianza\" already accepts \"Eguaglianza\" for the same gloss, and this row accepts it today only through the typo budget — so a learner who typed it was told \"Correct! (Minor typo)\" on one row and would be marked wrong the moment tolerance tightened. Authored explicitly. Measured against every taught it string: it admits nothing else."
+      ],
+      "sources": [
+        "audit/grader-behaviour scripts/grading/alternatives-axis.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-4444-4003-0003-e00000000007",
+      "before": {
+        "lesson_id": "aabbccdd-4444-4003-0003-b20000000000",
+        "type": "free_production",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Verbali"
+        ]
+      },
+      "reasons": [
+        "it-E2011 (it, free_production): alternatives-axis remainder. A row sharing the stored key \"Verbale\" already accepts \"Verbali\" for the same gloss, and this row accepts it today only through the typo budget — so a learner who typed it was told \"Correct! (Minor typo)\" on one row and would be marked wrong the moment tolerance tightened. Authored explicitly. Measured against every taught it string: it admits nothing else."
+      ],
+      "sources": [
+        "audit/grader-behaviour scripts/grading/alternatives-axis.json"
       ],
       "review_status": "awaiting_independent_round2_review"
     },
@@ -8453,6 +8664,27 @@
       ],
       "sources": [
         "lib/grading.ts gradeAnswer (TYPO_TOLERANCE_RATIO, isGrammarExercise)"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-5555-3008-0001-e00000000009",
+      "before": {
+        "lesson_id": "aabbccdd-5555-3008-0001-b10000000000",
+        "type": "free_production",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Sem problema"
+        ]
+      },
+      "reasons": [
+        "pt-E1733 (pt, free_production): alternatives-axis remainder. A row sharing the stored key \"Sem problemas\" already accepts \"Sem problema\" for the same gloss, and this row accepts it today only through the typo budget — so a learner who typed it was told \"Correct! (Minor typo)\" on one row and would be marked wrong the moment tolerance tightened. Authored explicitly. Measured against every taught pt string: it admits nothing else."
+      ],
+      "sources": [
+        "audit/grader-behaviour scripts/grading/alternatives-axis.json"
       ],
       "review_status": "awaiting_independent_round2_review"
     },
@@ -9720,6 +9952,31 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-2003-0004-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2003-0004-a20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": [
+          "料理をする",
+          "調理する"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "料理をする",
+          "調理する",
+          "りょうりする",
+          "料理します"
+        ]
+      },
+      "reasons": [
+        "ja-E0745 (ja): same-gloss-same-key levelling. The row sharing the gloss \"To cook\" already accepts \"りょうりする\", \"料理します\" on the identical question — group to_target|To cook|料理する: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ja string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-2003-0006-e00000000008",
       "before": {
         "lesson_id": "aabbccdd-6666-2003-0006-a20000000000",
@@ -9861,13 +10118,18 @@
       "before": {
         "lesson_id": "aabbccdd-6666-2005-0001-a20000000000",
         "type": "translate_to_target",
-        "target_grammar": null
+        "target_grammar": null,
+        "accepted_answers": []
       },
       "after": {
-        "target_grammar": "past_polite_mashita"
+        "target_grammar": "past_polite_mashita",
+        "accepted_answers": [
+          "べんきょうしました"
+        ]
       },
       "reasons": [
-        "ja A2 Past Tense Basics \"I studied\": the lesson's point is the verb form, and the row was tagged vocabulary, so the typo budget accepted a different form of the same lemma as a \"minor typo\" — rated 3, which SM-2 treats as success. Setting target_grammar = past_polite_mashita makes the row strict, which is what every other grammar-shaped row already is. No key, alternative, prompt or option is changed."
+        "ja A2 Past Tense Basics \"I studied\": the lesson's point is the verb form, and the row was tagged vocabulary, so the typo budget accepted a different form of the same lemma as a \"minor typo\" — rated 3, which SM-2 treats as success. Setting target_grammar = past_polite_mashita makes the row strict, which is what every other grammar-shaped row already is. No key, alternative, prompt or option is changed.",
+        "ja-E0856 (ja): same-gloss-same-key levelling. The row sharing the gloss \"I studied\" already accepts \"べんきょうしました\" on the identical question — group to_target|I studied|勉強しました: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ja string and it admits nothing else."
       ],
       "sources": [
         "lib/grading.ts gradeAnswer (TYPO_TOLERANCE_RATIO, isGrammarExercise)"
@@ -10283,6 +10545,25 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-2006-0002-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2006-0002-a20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "りょこうします"
+        ]
+      },
+      "reasons": [
+        "ja-E0937 (ja): same-gloss-same-key levelling. The row sharing the gloss \"I will travel\" already accepts \"りょこうします\" on the identical question — group to_target|I will travel|旅行します: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ja string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-2006-0003-e00000000002",
       "before": {
         "lesson_id": "aabbccdd-6666-2006-0003-a20000000000",
@@ -10513,11 +10794,13 @@
       },
       "after": {
         "accepted_answers": [
+          "より背が低い",
+          "もっと短い",
           "より短い"
         ]
       },
       "reasons": [
-        "ja-E1000 (ja, translate_to_target): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より短い\" on the keyed \"もっと背が低い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+        "ja-E1000 (ja, translate_to_target): RESTORED under a gate dependency. DEPENDENCY — the Japanese edit-distance gate on the grader branch is the ONLY thing that holds this row apart, so do not apply it without that gate. Measured on the merged branch: no new acceptance anywhere in this family. Measured on the content branch, which has no gate: adding \"より背が低い\" to the keyed \"もっと背が低い\" admits 背が低い, because the budget is one and each sibling is one substitution away. The gate withdraws fuzzy acceptance on a kanji-bearing answer before the budget is consulted; nothing else does. The twin cloze row carries these strings safely on either branch only because a grammar-shaped type is graded strictly. ja-E1000 (ja, translate_to_target): RESTORED under a gate dependency. DEPENDENCY — the Japanese edit-distance gate on the grader branch is the ONLY thing that holds this row apart, so do not apply it without that gate. Measured on the merged branch: no new acceptance anywhere in this family. Measured on the content branch, which has no gate: adding \"もっと短い\" to the keyed \"もっと背が低い\" admits もっと良い, もっと悪い, もっと遅い, もっと速い, もっと安い, もっと高い, because the budget is one and each sibling is one substitution away. The gate withdraws fuzzy acceptance on a kanji-bearing answer before the budget is consulted; nothing else does. The twin cloze row carries these strings safely on either branch only because a grammar-shaped type is graded strictly. ja-E1000 (ja, translate_to_target): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より短い\" on the keyed \"もっと背が低い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
       ],
       "sources": [
         "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
@@ -10580,11 +10863,13 @@
       "after": {
         "accepted_answers": [
           "より速い",
-          "より速く"
+          "より速く",
+          "もっと速く"
         ]
       },
       "reasons": [
-        "ja-E1012 (ja, translate_to_target): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より速い\" on the keyed \"もっと速い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate. ja-E1012 (ja, translate_to_target): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より速く\" on the keyed \"もっと速い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+        "ja-E1012 (ja, translate_to_target): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より速い\" on the keyed \"もっと速い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate. ja-E1012 (ja, translate_to_target): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より速く\" on the keyed \"もっと速い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate.",
+        "ja-E1012 (ja): same-gloss-same-key levelling. The row sharing the gloss \"Faster\" already accepts \"もっと速く\" on the identical question — group to_target|Faster|もっと速い: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ja string and it admits nothing else."
       ],
       "sources": [
         "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
@@ -10628,11 +10913,13 @@
         "accepted_answers": [
           "もっとゆっくり",
           "よりゆっくり",
-          "より遅い"
+          "より遅い",
+          "もっと遅く"
         ]
       },
       "reasons": [
-        "ja-E1024 (ja, translate_to_target): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より遅い\" on the keyed \"もっと遅い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+        "ja-E1024 (ja, translate_to_target): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より遅い\" on the keyed \"もっと遅い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate.",
+        "ja-E1024 (ja): same-gloss-same-key levelling. The row sharing the gloss \"Slower\" already accepts \"もっと遅く\" on the identical question — group to_target|Slower|もっと遅い: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ja string and it admits nothing else."
       ],
       "sources": [
         "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
@@ -10784,6 +11071,27 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-2007-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2007-0006-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "より背が高い"
+        ]
+      },
+      "reasons": [
+        "ja-E1054 (ja, translate_to_target): RESTORED under a gate dependency. DEPENDENCY — the Japanese edit-distance gate on the grader branch is the ONLY thing that holds this row apart, so do not apply it without that gate. Measured on the merged branch: no new acceptance anywhere in this family. Measured on the content branch, which has no gate: adding \"より背が高い\" to the keyed \"もっと背が高い\" admits 背が高い, because the budget is one and each sibling is one substitution away. The gate withdraws fuzzy acceptance on a kanji-bearing answer before the budget is consulted; nothing else does. The twin cloze row carries these strings safely on either branch only because a grammar-shaped type is graded strictly."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-2007-0006-e00000000005",
       "before": {
         "lesson_id": "aabbccdd-6666-2007-0006-a20000000000",
@@ -10883,11 +11191,12 @@
       },
       "after": {
         "accepted_answers": [
-          "宴会"
+          "宴会",
+          "パーティ"
         ]
       },
       "reasons": [
-        "ja-E1126 (ja): same-gloss-same-key levelling. The row sharing the gloss \"Party\" already accepts \"宴会\" on the identical question — group to_target|Party|パーティー: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ja string and it admits nothing else."
+        "ja-E1126 (ja): same-gloss-same-key levelling. The row sharing the gloss \"Party\" already accepts \"宴会\", \"パーティ\" on the identical question — group to_target|Party|パーティー: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ja string and it admits nothing else."
       ],
       "sources": [],
       "review_status": "awaiting_independent_round2_review"
@@ -11932,6 +12241,25 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-3007-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3007-0006-b10000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "そうぞうして"
+        ]
+      },
+      "reasons": [
+        "ja-E1712 (ja): same-gloss-same-key levelling. The row sharing the gloss \"Imagine\" already accepts \"そうぞうして\" on the identical question — group to_target|Imagine|想像して: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ja string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-3008-0001-e00000000002",
       "before": {
         "lesson_id": "aabbccdd-6666-3008-0001-b10000000000",
@@ -12951,13 +13279,18 @@
       "before": {
         "lesson_id": "aabbccdd-7777-2005-0002-a20000000000",
         "type": "translate_to_target",
-        "target_grammar": null
+        "target_grammar": null,
+        "accepted_answers": []
       },
       "after": {
-        "target_grammar": "past_polite_eosseoyo"
+        "target_grammar": "past_polite_eosseoyo",
+        "accepted_answers": [
+          "놀았습니다"
+        ]
       },
       "reasons": [
-        "ko A2 Past Tense Basics \"I played\": the lesson's point is the verb form, and the row was tagged vocabulary, so the typo budget accepted a different form of the same lemma as a \"minor typo\" — rated 3, which SM-2 treats as success. Setting target_grammar = past_polite_eosseoyo makes the row strict, which is what every other grammar-shaped row already is. No key, alternative, prompt or option is changed."
+        "ko A2 Past Tense Basics \"I played\": the lesson's point is the verb form, and the row was tagged vocabulary, so the typo budget accepted a different form of the same lemma as a \"minor typo\" — rated 3, which SM-2 treats as success. Setting target_grammar = past_polite_eosseoyo makes the row strict, which is what every other grammar-shaped row already is. No key, alternative, prompt or option is changed.",
+        "ko-E0868 (ko): same-gloss-same-key levelling. The row sharing the gloss \"I played\" already accepts \"놀았습니다\" on the identical question — group to_target|I played|놀았어요: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ko string and it admits nothing else."
       ],
       "sources": [
         "lib/grading.ts gradeAnswer (TYPO_TOLERANCE_RATIO, isGrammarExercise)"
@@ -13403,6 +13736,27 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-7777-3001-0001-e00000000009",
+      "before": {
+        "lesson_id": "aabbccdd-7777-3001-0001-b10000000000",
+        "type": "free_production",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "언쟁하다"
+        ]
+      },
+      "reasons": [
+        "ko-E1145 (ko, free_production): alternatives-axis remainder. A row sharing the stored key \"논쟁하다\" already accepts \"언쟁하다\" for the same gloss, and this row accepts it today only through the typo budget — so a learner who typed it was told \"Correct! (Minor typo)\" on one row and would be marked wrong the moment tolerance tightened. Authored explicitly. Measured against every taught ko string: it admits nothing else."
+      ],
+      "sources": [
+        "audit/grader-behaviour scripts/grading/alternatives-axis.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-7777-3001-0004-e00000000002",
       "before": {
         "lesson_id": "aabbccdd-7777-3001-0004-b10000000000",
@@ -13485,6 +13839,47 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-7777-3007-0001-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-7777-3007-0001-b10000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "바라요",
+          "바랍니다"
+        ]
+      },
+      "reasons": [
+        "ko-E1645 (ko): same-gloss-same-key levelling. The row sharing the gloss \"I wish\" already accepts \"바라요\", \"바랍니다\" on the identical question — group to_target|I wish|바란다: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ko string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-7777-3007-0001-e00000000009",
+      "before": {
+        "lesson_id": "aabbccdd-7777-3007-0001-b10000000000",
+        "type": "free_production",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "대신"
+        ]
+      },
+      "reasons": [
+        "ko-E1649 (ko, free_production): alternatives-axis remainder. A row sharing the stored key \"대신에\" already accepts \"대신\" for the same gloss, and this row accepts it today only through the typo budget — so a learner who typed it was told \"Correct! (Minor typo)\" on one row and would be marked wrong the moment tolerance tightened. Authored explicitly. Measured against every taught ko string: it admits nothing else."
+      ],
+      "sources": [
+        "audit/grader-behaviour scripts/grading/alternatives-axis.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-7777-3007-0002-e00000000004",
       "before": {
         "lesson_id": "aabbccdd-7777-3007-0002-b10000000000",
@@ -13545,6 +13940,27 @@
       ],
       "sources": [
         "lib/grading.ts gradeAnswer (TYPO_TOLERANCE_RATIO, isGrammarExercise)"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-7777-4002-0002-e00000000007",
+      "before": {
+        "lesson_id": "aabbccdd-7777-4002-0002-b20000000000",
+        "type": "free_production",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "논박하다"
+        ]
+      },
+      "reasons": [
+        "ko-E1913 (ko, free_production): alternatives-axis remainder. A row sharing the stored key \"반박하다\" already accepts \"논박하다\" for the same gloss, and this row accepts it today only through the typo budget — so a learner who typed it was told \"Correct! (Minor typo)\" on one row and would be marked wrong the moment tolerance tightened. Authored explicitly. Measured against every taught ko string: it admits nothing else."
+      ],
+      "sources": [
+        "audit/grader-behaviour scripts/grading/alternatives-axis.json"
       ],
       "review_status": "awaiting_independent_round2_review"
     },
@@ -14036,6 +14452,27 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-9999-3003-0001-e00000000009",
+      "before": {
+        "lesson_id": "aabbccdd-9999-3003-0001-b10000000000",
+        "type": "free_production",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Отменять"
+        ]
+      },
+      "reasons": [
+        "ru-E1313 (ru, free_production): alternatives-axis remainder. A row sharing the stored key \"Отменить\" already accepts \"Отменять\" for the same gloss, and this row accepts it today only through the typo budget — so a learner who typed it was told \"Correct! (Minor typo)\" on one row and would be marked wrong the moment tolerance tightened. Authored explicitly. Measured against every taught ru string: it admits nothing else."
+      ],
+      "sources": [
+        "audit/grader-behaviour scripts/grading/alternatives-axis.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-9999-3005-0004-e00000000002",
       "before": {
         "lesson_id": "aabbccdd-9999-3005-0004-b10000000000",
@@ -14122,6 +14559,48 @@
         "ru-E1712 (ru): same-gloss-same-key levelling. The row sharing the gloss \"Imagine\" already accepts \"Представьте\" on the identical question — group to_target|Imagine|Представь: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ru string and it admits nothing else."
       ],
       "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-9999-3008-0001-e00000000009",
+      "before": {
+        "lesson_id": "aabbccdd-9999-3008-0001-b10000000000",
+        "type": "free_production",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Не переживайте"
+        ]
+      },
+      "reasons": [
+        "ru-E1733 (ru, free_production): alternatives-axis remainder. A row sharing the stored key \"Не переживай\" already accepts \"Не переживайте\" for the same gloss, and this row accepts it today only through the typo budget — so a learner who typed it was told \"Correct! (Minor typo)\" on one row and would be marked wrong the moment tolerance tightened. Authored explicitly. Measured against every taught ru string: it admits nothing else."
+      ],
+      "sources": [
+        "audit/grader-behaviour scripts/grading/alternatives-axis.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-9999-4002-0002-e00000000007",
+      "before": {
+        "lesson_id": "aabbccdd-9999-4002-0002-b20000000000",
+        "type": "free_production",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Опровергнуть"
+        ]
+      },
+      "reasons": [
+        "ru-E1913 (ru, free_production): alternatives-axis remainder. A row sharing the stored key \"Опровергать\" already accepts \"Опровергнуть\" for the same gloss, and this row accepts it today only through the typo budget — so a learner who typed it was told \"Correct! (Minor typo)\" on one row and would be marked wrong the moment tolerance tightened. Authored explicitly. Measured against every taught ru string: it admits nothing else."
+      ],
+      "sources": [
+        "audit/grader-behaviour scripts/grading/alternatives-axis.json"
+      ],
       "review_status": "awaiting_independent_round2_review"
     },
     {
@@ -16136,7 +16615,7 @@
         ]
       },
       "reasons": [
-        "ja-E0569 (ja, listening_type): Audio-only stimulus: the learner is shown no text and no gloss, so nothing in the task selects a script. This is a correct transcription of what was played. BLOCKING: adding these spellings brings other taught kinship terms inside the typo budget (お父さん), which the row exists to distinguish. Do not land this addition until matching lib/confusable-pairs.ts entries exist for those pairs; the addition is correct, the collateral is not. DEPENDENCY — do not apply this row without the Japanese edit-distance gate on the grader branch, which refuses fuzzy acceptance on a kanji-bearing answer before the typo budget is consulted. Until the gate lands, the added kanji spelling brings お父さん inside this row's typo budget, on a row whose purpose is separating kinship terms. The gate, not a pair list, is what holds these rows apart: the confusable pairs first authored for this collision were measured to be unreachable behind it and were withdrawn."
+        "ja-E0569 (ja, listening_type): Audio-only stimulus: the learner is shown no text and no gloss, so nothing in the task selects a script. This is a correct transcription of what was played. BLOCKING: adding these spellings brings other taught kinship terms inside the typo budget (お父さん), which the row exists to distinguish. Do not land this addition until matching lib/confusable-pairs.ts entries exist for those pairs; the addition is correct, the collateral is not. DEPENDENCY — the Japanese edit-distance gate on the grader branch is the ONLY thing that holds this row apart, so do not apply it without that gate. Until the gate lands, the added kanji spelling brings お父さん inside this row's typo budget, on a row whose purpose is separating kinship terms. No other mechanism reaches them: お父さん are never taught KEYS anywhere in the corpus — each appears only as an accepted alternative on one or two rows, and is an option, a distractor and a card target text nowhere — so the sibling-key rule cannot see them at any scope, and the confusable pairs first authored for this collision were measured unreachable behind the gate and withdrawn. The gate refuses fuzzy acceptance on a kanji-bearing answer before the typo budget is consulted; nothing else does."
       ],
       "sources": [
         "Stimulus analysis of the shipped app: components/lesson/ListeningExercise.tsx never renders `prompt`; components/lesson/DictationExercise.tsx never renders `prompt` and speaks `correct_answer`; `hintText` is rendered only by components/lesson/ClozeExercise.tsx. Reading/spelling checked against 大辞林/三省堂 standard orthography for the heard word."

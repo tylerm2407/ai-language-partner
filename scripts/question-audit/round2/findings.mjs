@@ -16,8 +16,9 @@ import { createHash } from 'node:crypto';
 import { SNAPSHOT_FILE, SNAPSHOT_SHA, createRound2PatchSet } from './patch-set-round2.mjs';
 import { loadTriage, DEPENDENT_ROWS, PARTIALLY_HELD, TRIAGE_SHA, TRIAGE_SOURCE } from './triage-accepted-answers.mjs';
 import { loadCandidates, REGISTER_RULING, REGISTER_REMOVALS, REGISTER_KEPT, FR_C0024, CANDIDATES_SHA, RULED_ON } from './product-rulings.mjs';
-import { loadAlternativesEvidence, SCRIPT_ACCEPT, SCRIPT_REFUSE, HELD_TYPO_BALL, EVIDENCE_SHA, EVIDENCE_SOURCE } from './restored-withdrawals.mjs';
-import { LEVELLED, HELD_WOULD_WIDEN, PROPAGATION_PENDING, DECLARED_EXCEPTIONS as GLOSS_EXCEPTIONS, DECLARED_REASON as GLOSS_REASON, PROPAGATION_REASON } from './same-gloss-levelling.mjs';
+import { loadAlternativesEvidence, SCRIPT_ACCEPT, SCRIPT_REFUSE, HELD_TYPO_BALL, GATE_DEPENDENT_COMPARATIVES, EVIDENCE_SHA, EVIDENCE_SOURCE } from './restored-withdrawals.mjs';
+import { LEVELLED, HELD_WOULD_WIDEN, PROPAGATION_LEVELLED, PROPAGATION_REFUSED, DECLARED_EXCEPTIONS as GLOSS_EXCEPTIONS, DECLARED_REASON as GLOSS_REASON, PROPAGATION_REASON } from './same-gloss-levelling.mjs';
+import { AXIS_REMAINDER, AXIS_REFUSED, AXIS_HELD } from './alternatives-axis-remainder.mjs';
 
 const raw = await readFile(SNAPSHOT_FILE, 'utf8');
 if (createHash('sha256').update(raw).digest('hex') !== SNAPSHOT_SHA) throw new Error('Changed frozen snapshot');
@@ -207,7 +208,9 @@ const TRIAGE = {
   dependency: {
     rows: Object.keys(DEPENDENT_ROWS),
     what: 'Adding the kanji spellings of おばあさん / おじいさん / おじさん / おばさん pulls お母さん, お父さん, お姉さん, お嬢さん and お隣さん inside the typo budget — 12 collateral acceptances in total, on rows whose whole purpose is separating kinship terms.',
-    remedy: 'The Japanese edit-distance gate on the grader branch, which refuses fuzzy acceptance on a kanji-bearing answer before the typo budget is consulted. NOT a pair list: the grader measured that the five confusable pairs first authored for this collision could never fire behind the gate, and withdrew them as inert. The two kana pairs that remain there address a collision that exists independently of these additions.',
+    remedy: 'The Japanese edit-distance gate on the grader branch, which refuses fuzzy acceptance on a kanji-bearing answer before the typo budget is consulted.',
+    also_applies_to: 'The three comparatives restored under the same condition — see restored_withdrawals.within_typo_ball. Seven rows in total carry a DEPENDENCY naming the gate as the sole mechanism.',
+    THE_GATE_IS_THE_ONLY_DEFENCE: 'Not one of two mechanisms — the only one. The five confusable pairs first authored for this collision were measured unreachable behind the gate and withdrawn as inert. The sibling-key rule cannot reach it at ANY scope either: verified against the frozen snapshot, お母さん, お父さん, お姉さん, お嬢さん and お隣さん are never a correct_answer anywhere in the corpus, never an option or distractor, and never a card target text — each appears only as an accepted alternative on one or two rows, and taughtKeys reads correct_answer only. So the apply precondition is load-bearing for these four rows rather than cautious, and anyone weighing whether to ship round two ahead of the grader branch should read it that way.',
     recorded_where: 'In each of the four patch reasons, prefixed DEPENDENCY and naming the gate, so it travels with the row rather than living only in this file.',
     collateral: Object.entries(DEPENDENT_ROWS).flatMap(([ref, strings]) => strings.map(string => ({ ref, string }))),
   },
@@ -327,10 +330,26 @@ const RESTORED = {
   recovered_counts: { script: withdrawals.script.length, within_typo_ball: withdrawals.ball.length, note: 'The prose said 102 and 42; the file really contains 102 and 42. They agree, and were checked rather than assumed — the prose in that same file has been wrong once already.' },
   overlap_with_round_two: 'NONE, at candidate level and at row level. Not one of the 144 candidates, and not one of their 102 rows, appears in the 66 Ruling-1 script candidates or the 313 triage additions. They came from a different input — the alternatives batch\'s 1,163 proposals — which the lexical reconciliation behind the triage block had already excluded. This is genuinely new work, and the register was right to imply it.',
   within_typo_ball: {
-    restored: 39, held: HELD_TYPO_BALL.length,
+    restored: 42, held: HELD_TYPO_BALL.length, restored_under_a_gate_dependency: GATE_DEPENDENT_COMPARATIVES.length,
     THE_PAIRS_AND_THE_GATE_ARE_BOTH_UNNECESSARY: 'These were expected to need 39 confusable pairs, and were then expected to be covered instead by the Japanese edit-distance gate. Neither is required. Measured against every taught Japanese string with the grader as it stands on this branch, 39 of the 42 widen NOTHING AT ALL.',
     why: 'The withdrawals were measured against a grader that scaled the typo budget by the MATCHED ALTERNATIVE, so a long correct addition widened tolerance for every wrong neighbour on the row — the 88-instance "readmission by a correct addition" class. Round one\'s own app-half fix already closed it: lib/grading.ts now scales by the shorter of the key and the matched alternative, and consults the confusable-pair list in both the accent and the fuzzy branch. The collisions these answers were withdrawn for no longer exist.',
     held_with_what_would_restore_them: HELD_TYPO_BALL,
+    THREE_ROWS_RESOLVED_AS_CONDITIONALLY_CLEAR: {
+      outcome: 'Restored under the same gate dependency the four kinship rows carry. Neither "clear" nor "held".',
+      what_went_wrong_in_the_measurement: 'This worktree branched at 5e89e70, before the grader branch landed. lib/grading.ts here has ZERO occurrences of the Japanese kanji gate, and audit/grader-behaviour is not an ancestor of this history — both verified locally. So every tolerance measurement made from this branch describes a grader that will not ship.',
+      what_this_branch_measures: 'Real against this code: on ja-E1000 the key もっと背が低い is seven characters and the addition もっと短い five, so the basis is min(5,7), the budget is one, and every もっと+adjective sibling is one substitution away. もっと安い, もっと高い, もっと良い and もっと速い each grade "Correct! (Minor typo)" on a row glossed Shorter.',
+      what_the_merged_branch_measures: 'No new acceptance anywhere in the family — both the fill_blank rows keying the fragment and the translate_to_target rows keying the whole string. The arithmetic is unchanged; it never runs, because もっと短い and もっと安い both carry kanji and the gate withdraws fuzzy acceptance before the budget is consulted. The same mechanism that made the five kinship pairs unreachable.',
+      why_the_flips_are_kept_in_the_record: 'As the evidence FOR the precondition, not as a reason to withhold. If round two shipped without the grader branch these three would flip four meanings on a row glossed "Shorter".',
+      the_cloze_fact_worth_keeping: 'The twin ja-E1033 carries all three strings without incident even on this branch, because it is a cloze_deletion — a grammar-shaped type, graded strictly — so tolerance never runs there at all. Same strings, different exercise type, different mechanism. That is why the same-gloss sweep treats the group the way it does.',
+      rows: GATE_DEPENDENT_COMPARATIVES,
+    },
+    SUPERSEDED_THREE_ROWS_REPORTED_CLEAR_AND_RE_MEASURED_AS_NOT_CLEAR: {
+      reported: 'ja-E1000 and the two bare-adjective comparatives were reported clear to restore, on the ground that tolerance still compares against the stored fragment 短い — two characters, budget zero — so the six もっと+adjective siblings are four edits away and refused even with the gate off.',
+      finding: 'That is true of a fill_blank row and not of these. The fill_blank もっと_____ (Shorter) keys the fragment 背が低い and already ships the fragment 短い, where the budget is indeed zero. ja-E1000 and ja-E1054 are translate_to_target rows that store the WHOLE string: もっと短い is five characters with a budget of one, and every もっと+adjective sibling is one substitution away.',
+      measured_against_the_shipped_grader: 'Adding もっと短い to ja-E1000 makes もっと安い (cheaper), もっと高い (more expensive), もっと良い (better) and もっと速い (faster) each grade "Correct! (Minor typo)" on a row glossed Shorter. Adding より背が低い admits 背が低い; adding より背が高い to ja-E1054 admits 背が高い.',
+      why_the_twin_is_safe: 'ja-E1033 carries all three strings without incident because it is a cloze_deletion — a grammar-shaped type, graded strictly — so tolerance never runs there. Same strings, different exercise type, opposite consequence. That is also why same-gloss-levelling declares this group instead of levelling it.',
+      disposition: 'SUPERSEDED 2026-09-15. The re-measurement was correct about the code it ran and wrong about the code that ships: this branch has no kanji gate. See THREE_ROWS_RESOLVED_AS_CONDITIONALLY_CLEAR. Kept because the reasoning about fill_blank fragments versus whole-string keys, and about why the cloze twin is safe, both stand.',
+    },
   },
   script_withdrawals: {
     restored: 56, refused: 46,
@@ -344,6 +363,7 @@ const RESTORED = {
     },
     one_row_type_distinction: 'いとこ has six standard kanji spellings. On the LISTENING row the learner heard いとこ, so any spelling read いとこ is a faithful transcription and the two general spellings 従兄弟 and 従姉妹 come back. The four naming a specific cousin — 従兄 older male, 従弟 younger male, 従姉 older female, 従妹 younger female — assert a gender and seniority that neither the audio nor the gloss "Cousin" supplies, and are refused on both row types. SNS <- エスエヌエス / えすえぬえす is restored on the same transcription ground.',
   },
+  A_LIMITATION_OF_EVERY_TOLERANCE_MEASUREMENT_ON_THIS_BRANCH: 'This worktree cannot execute the Japanese kanji gate: lib/grading.ts here has zero occurrences of it, verified, and the grader branch is not in this history. Any statement this patch makes about what the typo budget admits is therefore about a grader that will not ship. Where that matters the limitation is stated on the claim itself, and the collateral it produces is declared in runtime-checks.json rather than reported as a defect. For anything in this class, the merged branch is the authority.',
   measurement: 'All 144 candidates were run through the whole-language check before any was authored: every addition graded against all 2,281 taught Japanese strings, before and after. 141 widen nothing; the 3 that do are the held ones. After compiling, the patch\'s total collateral acceptances are unchanged at 12 — the 95 restorations add none.',
 };
 
@@ -355,25 +375,86 @@ const SAME_GLOSS = {
     what_249_probably_counts: 'A different population. The rejected axis was to count sibling ALTERNATIVES as taught strings, over the shipped sibling scope (unit by default), which is far wider than same-gloss-same-key. Reproducing that rule at each scope gives figures in the tens of thousands to millions of (row, string) pairs, nowhere near 249, so the number must be measured with a narrowing this report does not have.',
     corroborating_signal: 'The Italian examples that travelled with the request — "Generoso" refusing "Generosa" — are already levelled: to_target|Generous|Generoso is in round one\'s own RESOLVED_HERE list, and Italian now has zero diverging groups. So the 249 was measured against a corpus state predating the round-1 patch, a different population, or both.',
     what_is_reported_instead: 'The population this file can prove, derived from the frozen snapshot plus the round-2 draft: 4,605 groups across nine languages, 967 asked more than once, 101 disagreeing, carrying 129 (row, string) omissions. Italian is at zero, which is round one showing up as a result rather than a claim.',
-    ask: 'If 249 is meant to be a different population, point at the file and it can be worked separately.',
+    RESOLVED_2026_09_15: 'The file now exists and both populations are confirmed different and both correct. See `alternatives_axis` for the reconciliation, the audio-majority finding, and what the 88 typed rows became.',
   },
   derived: { groups: 4605, asked_more_than_once: 967, disagreeing: 101, omissions: 129, italian: 0 },
   outcomes: {
     levelled: LEVELLED.length,
-    propagation_pending: PROPAGATION_PENDING.length,
+    propagation_levelled: PROPAGATION_LEVELLED.length,
+    propagation_refused: PROPAGATION_REFUSED.length,
     held_would_widen: HELD_WOULD_WIDEN.length,
     declared_deliberate: GLOSS_EXCEPTIONS.length,
   },
   levelled_note: 'Only pre-existing divergence: every string levelled was accepted by a sibling in the FROZEN snapshot, so this closes a round-one omission rather than propagating something this patch itself added. Gender agreement, gendered professions, aspect pairs, register and script variants — and eight Russian gendered pasts that also close part of the Russian alternatives gap this patch reported earlier.',
   by_language: LEVELLED.reduce((acc, [, , lang]) => ({ ...acc, [lang]: (acc[lang] ?? 0) + 1 }), {}),
-  A_LARGE_FRACTION_IS_NOT_DELIBERATE: 'Asked whether many turn out to be deliberate contrasts rather than omissions: they do not. Of 129 omissions, 5 are deliberate — 4%. The rest are omissions or, in 13 cases, would-be omissions that cannot be closed without admitting a wrong answer. That does not support reading the rejected axis as more costly than measured; it says the divergence is overwhelmingly accidental.',
+  A_LARGE_FRACTION_IS_NOT_DELIBERATE: 'Asked whether many turn out to be deliberate contrasts rather than omissions: they do not. Of 129 omissions, 5 are deliberate — 4%. The rest are omissions or, in 13 cases, would-be omissions that cannot be closed without admitting a wrong answer. Divergence in this corpus is overwhelmingly accidental, so this does NOT support reading the rejected sibling-alternatives axis as costlier than the grader measured. If anything it cuts the other way.',
+  BUT_THE_TWO_POPULATIONS_ARE_NOT_THE_SAME_SET: 'The 4% figure describes THIS population and should not be carried over to the 249. That number measures correct answers that would start being REFUSED if sibling alternatives counted as taught strings — tolerance breakage — while this measures explicit same-gloss-same-key divergence. The two overlap without being the same set, and they behave differently: this one is 96% accidental omission, which is not a property the other inherits. Treat any conclusion drawn from one as unproven for the other until the grader commits the 249 as a file.',
   deliberate_contrasts_not_flattened: { reason: GLOSS_REASON, rows: GLOSS_EXCEPTIONS },
   held_because_levelling_would_admit_a_wrong_answer: {
     note: 'Measured against every taught string in the language. These are the meaning flips the audit exists to catch: "Nurse" would accept Enfermo (sick), "Neighbor" would accept Cozinha (kitchen), "Tired" would accept Zangada (angry), "Grandmother" would accept 고모 (aunt), "To cook" would accept Cool. Each needs a confusable pair keyed on the added string.',
     rows: HELD_WOULD_WIDEN,
   },
-  left_pending: { reason: PROPAGATION_REASON, rows: PROPAGATION_PENDING },
+  propagations_decided: {
+    reason: PROPAGATION_REASON,
+    levelled: PROPAGATION_LEVELLED.length,
+    refused: PROPAGATION_REFUSED,
+    note: 'Eleven levelled onto the twin because it asks the identical question under the same 2026-09-15 ruling — kana readings under the script ruling, deferential forms under the register ruling, adverbial comparatives and an orthographic variant — and none of the eleven admits another taught string. Three refused: the twin carries the string but it is doubtful THERE, so propagating would make the group consistently wrong instead of inconsistently.',
+  },
   standing_test: 'scripts/question-audit/round2/same-gloss-levelling.test.mjs — nine languages, Node rather than Deno, and an allowlist that is no longer empty because two populations must stay divergent. Passes on the result: 4 checks.',
+};
+
+const AXIS = {
+  resolved: 'The 249 is no longer a number in prose: scripts/grading/alternatives-axis.json is committed on audit/grader-behaviour with both definitions in its header and per-row provenance. Its counts reproduce exactly here — 249 rows with breaks:true, 141 listening_type, 20 dictation, 65 translate_to_target, 18 free_production, 4 translate_to_native, 1 fill_blank.',
+  the_two_populations: {
+    axis: 'TOLERANCE BREAKAGE. A row that currently accepts, through the typo budget, a string the language teaches as something else on the same key. Conditioned on the grader accepting it today.',
+    same_gloss: 'EXPLICIT DIVERGENCE. Two rows asking the same question with different accepted lists, whether or not any collision exists. Unconditioned.',
+    both_correct: 'They overlap without being the same set, which is why 249 and 129 were never going to agree.',
+    two_visible_consequences: [
+      'The axis is keyed on the KEY, not the gloss: fr-E0994 keys "Plus petit" under the gloss "Smaller" while fr-E1000 keys it under "Shorter". The axis pairs them; the same-gloss sweep deliberately does not.',
+      'The axis reaches prompt shapes the sweep does not classify: free_production ("Write a sentence using the word: …") and fill_blank ("stem_____ (gloss)") are not bare-gloss frames.',
+    ],
+  },
+  the_audio_majority: '161 of the 249 are audio-stimulus rows — 141 listening_type, 20 dictation — where the missing alternative should STAY missing: accepting Generosa on a row that PLAYS Generoso is accepting a different spoken word, not levelling a gender pair. That is why the same-gloss population is smaller, and it is a positive argument for the alternatives axis staying rejected rather than a gap in it.',
+  the_italian_discrepancy_explained: 'The same-gloss sweep reports zero diverging Italian groups while the axis still shows Generoso diverging across four rows. Neither is stale: two of those four are a listening_type and a speaking row, which the sweep correctly excludes.',
+  intersection_of_the_88_typed_rows_against_the_129: {
+    already_levelled_here: 56,
+    already_held_here: 6,
+    genuinely_new: 26,
+    note: '62 of 88 were already covered. The remainder was 26 rows, not 88.',
+  },
+  outcome_of_the_26: { added: AXIS_REMAINDER.length, held: AXIS_HELD.length, refused: AXIS_REFUSED.length },
+  RECONCILIATION_TWO_CLASSES_NOT_ONE: {
+    question: 'A measurement on the merged branch reported six cross-language leaks — a Korean-course row keyed "Protagonist" accepting Protagonistin, Russian-course rows keyed "Presentation", "Reservation" and "Conservation" accepting Préservation — which did not match the four reported here.',
+    answer: 'They are two classes. The four found here are WITHIN-COURSE: the axis file\'s own language field and the row\'s course agree on every one — a German-course row accepting German, French-course rows accepting French, a Portuguese-course row accepting Portuguese — and the sibling that LISTS the string is in the same course each time.',
+    evidence: 'Scanned across the whole snapshot: the only rows that list Protagonistin or Préservation as an accepted answer are one German cloze_deletion and two French rows respectively. No Korean-course row and no Russian-course row lists either string, so the six can only be tolerance acceptances where the candidate came from another language\'s taught set — a scope this branch never measured, because its taught-string sets are built per language.',
+    conclusion: 'Same shape, different mechanism: this class is a row accepting a string its OWN course teaches; that class is a row accepting a string ANOTHER course teaches. Both are real and both were routed to the grader as pair candidates.',
+  },
+  FOUR_ARE_A_DEFECT_POINTING_THE_OTHER_WAY: {
+    what: 'On four translate_to_native rows the string the axis would refuse is the SOURCE-LANGUAGE word, on a row whose answer is English.',
+    rows: AXIS_REFUSED.filter(entry => entry.type === 'translate_to_native'),
+    finding: 'These are rows accepting the prompt\'s own language as the answer. The alternatives axis would have been RIGHT to refuse them. They are recorded as defects rather than fixed here, because closing them means removing tolerance rather than adding an alternative, and this patch removes an accepted answer only where the removal is argued row by row.',
+  },
+  other_refusals: AXIS_REFUSED.filter(entry => entry.type !== 'translate_to_native'),
+  held: AXIS_HELD,
+};
+
+/** The Würde cluster: flagged, deliberately not patched. */
+const WUERDE = {
+  asked: 'Fix the gloss on the three rows keyed Würde and glossed "Would", since Würde is dignity.',
+  finding: 'THE GLOSS IS RIGHT AND THE KEY IS MISCAPITALISED. The three rows sit in de B1 Hypothetical Situations — Second Conditional, Regrets, Review & Test — beside a listening_choice keyed "Would" and a multiple_choice keyed "Would". The lesson unambiguously means the Konjunktiv II auxiliary, which is written würde, lower case. German capitalises nouns; Würde with a capital is the noun "dignity". So "Would" is the correct gloss and the capital W is the error.',
+  which_makes_it_the_bigger_change_you_asked_to_have_flagged: 'Not patched here. The source is a CARD — aabbccdd-3333-3007-c002-b10000000000, target_text "Würde", native_text "Would" — which is the SRS payload every learner reviews, and three exercise rows point at it. Correcting it means editing a card and four rows, which changes what learners see in review rather than only in a lesson.',
+  grading_impact: 'None either way. normalize() lowercases, so Würde and würde are one string to the grader: würde on a key of Würde returns Correct with accuracy 1.0, not a typo pass. No grading rule can separate them without making German case-sensitive, which would fail every learner who types a noun in lower case. The defect is entirely in what is displayed.',
+  the_exact_change_if_approved: {
+    card: 'aabbccdd-3333-3007-c002-b10000000000 target_text "Würde" -> "würde"',
+    rows: [
+      '205ec1b3-5fa8-4efd-a824-d3081c280f11 (listening_type) prompt and correct_answer "Würde" -> "würde" — the prompt is the text-to-speech source, so capitalisation does not change what is heard',
+      'aabbccdd-3333-3007-0006-e00000000009 (free_production) prompt "Write a sentence using the word: Würde (Would)" -> "würde (would)", correct_answer "Würde" -> "würde"',
+      'the listening_choice and multiple_choice rows keyed "Would": prompt "Würde" -> "würde". Their keys are already correct and do not move.',
+    ],
+    out_of_scope: 'One speaking row (6589a5e4) also carries Würde and cannot be touched by this compiler, so it would stay miscapitalised until someone else fixes it.',
+  },
+  the_fourth_row_is_correct: 'The B2 fill_blank 9987684c keys würde lower case, with target_grammar konjunktiv2_irrealis, in Complex Grammar / Konjunktiv II: Unreal Conditions. It is right as it stands and is the model the B1 cluster should match.',
+  wuerde_the_ascii_form: 'That B2 row also accepts "wuerde", the umlaut-free transliteration. Refused for the B1 rows in the alternatives-axis block, because importing it there would carry a spelling of a different word across the capitalisation boundary.',
 };
 
 const findings = {
@@ -395,10 +476,14 @@ const findings = {
     'rulings_2026_09_15': { patched: 64, additions: 77, removals: 2, see: 'rulings' },
     'restored_withdrawals': { patched: 67, additions: 95, refused: 46, held: 3, see: 'restored_withdrawals' },
     'same_gloss_levelling': { patched: 84, additions: 97, held: 13, pending: 14, declared: 5, see: 'same_gloss_levelling' },
+    'alternatives_axis_remainder': { patched: 17, additions: 18, refused: 7, held: 1, see: 'alternatives_axis' },
+    'wuerde_cluster': { patched: 0, see: 'wuerde_cluster — flagged, not patched: the key is miscapitalised, not the gloss' },
   },
   rulings: RULINGS,
   restored_withdrawals: RESTORED,
   same_gloss_levelling: SAME_GLOSS,
+  alternatives_axis: AXIS,
+  wuerde_cluster: WUERDE,
   triage_block: TRIAGE,
   already_fixed_by_round_one: ALREADY_FIXED.map(finding => ({
     ...finding, verified_now: finding.id ? frozen(finding.id, finding.field, finding.now, finding.ref) : null,

@@ -42,12 +42,11 @@
  * longer exist, so they come back on measurement rather than on anybody's
  * promise about an unshipped gate.
  *
- * Three still widen, and are held. Two admit the bare adjective on a
- * comparative row (背が低い on "Shorter", 背が高い on "Taller"), and one is the
- * meaning-flip family the review was right to fear: もっと短い on ja-E1000 admits
- * six other もっと+adjective strings, so "Shorter" would accept "cheaper",
- * "more expensive", "better", "worse", "faster" and "slower". A pair list keyed
- * on the added string is the remedy for that one, and it is named below.
+ * Three widen on THIS branch and not on the merged one, and they are restored
+ * under the gate dependency rather than held. See GATE_DEPENDENT_COMPARATIVES:
+ * this worktree's grader has no kanji gate, so a tolerance measurement made here
+ * describes code that will not ship. They carry the same DEPENDENCY text as the
+ * four kinship rows, naming the gate as the sole mechanism.
  *
  * ── THE 102 SCRIPT WITHDRAWALS: THE GROUND IS NOT WHAT IT SAYS ────────────
  *
@@ -179,16 +178,53 @@ export const SCRIPT_REFUSE = {
   'ウェブサイト|Webサイト': 'Latin script. Tyler ruled on the kana/kanji question; whether a Latin-script rendering counts is a separate question nobody has ruled on.',
 };
 
-/** The three typo-ball answers that still widen, held with what would restore
- * them. Keyed on the ADDED string, which is what the pair mechanism requires. */
-export const HELD_TYPO_BALL = [
-  { ref: 'ja-E1000', key: 'もっと背が低い', candidate: 'より背が低い', admits: ['背が低い'],
-    pair_would_have_to_say: '背が低い ("short") and より背が低い ("shorter") are different answers, so the bare adjective must not be accepted on a comparative row.' },
-  { ref: 'ja-E1054', key: 'もっと背が高い', candidate: 'より背が高い', admits: ['背が高い'],
-    pair_would_have_to_say: 'The same, for tall: 背が高い must not be accepted on a "Taller" row.' },
-  { ref: 'ja-E1000', key: 'もっと背が低い', candidate: 'もっと短い', admits: ['もっと良い', 'もっと悪い', 'もっと遅い', 'もっと速い', 'もっと安い', 'もっと高い'],
-    pair_would_have_to_say: 'もっと短い against each of the six other もっと+adjective strings the unit teaches. This is the meaning-flip family the round-one review was right to fear: "Shorter" would otherwise accept cheaper, more expensive, better, worse, faster and slower.' },
+/**
+ * The three comparative answers that carry a GATE DEPENDENCY rather than a hold.
+ *
+ * These were held for two rounds on a measurement that was correct about the
+ * code it ran and wrong about the code that will ship. This worktree branched at
+ * 5e89e70, before the grader branch landed: `lib/grading.ts` here contains zero
+ * occurrences of the Japanese kanji gate, so every tolerance measurement made
+ * from this branch describes a grader that will not ship. Verified rather than
+ * assumed — the merged branch carries the gate, this one does not, and the
+ * grader branch is not an ancestor of this history.
+ *
+ * What was measured here, and it is real against this code: on ja-E1000 the key
+ * もっと背が低い is seven characters and the addition もっと短い is five, so the
+ * basis is min(5,7) and the budget is one, and every もっと+adjective sibling is
+ * one substitution away. もっと安い (cheaper), もっと高い (more expensive),
+ * もっと良い (better) and もっと速い (faster) each grade "Correct! (Minor typo)"
+ * on a row glossed Shorter.
+ *
+ * What the merged branch measures, across every row in the family — both the
+ * fill_blank rows keying the fragment and the translate_to_target rows keying the
+ * whole string: no new acceptances anywhere. The arithmetic is unchanged; it
+ * never runs, because もっと短い and もっと安い both carry kanji and the gate
+ * withdraws fuzzy acceptance before the budget is consulted. The same mechanism
+ * that made the five kinship pairs unreachable.
+ *
+ * So the disposition is neither "clear" nor "held" but CONDITIONALLY CLEAR, on
+ * exactly the condition the kinship four carry. The rows are restored and the
+ * four meaning flips above are kept as the evidence FOR the precondition rather
+ * than as a reason to withhold: if round two ever shipped without the grader
+ * branch, these three would flip four meanings on a row glossed "Shorter".
+ *
+ * One fact worth keeping, because it explains why the group looked like a plain
+ * omission: the twin ja-E1033 carries all three of these strings without
+ * incident even on THIS branch, because it is a `cloze_deletion` — a
+ * grammar-shaped type, graded strictly — so tolerance never runs there at all.
+ * Same strings, different exercise type, different mechanism. That is also why
+ * `same-gloss-levelling.mjs` treats the group the way it does.
+ */
+export const GATE_DEPENDENT_COMPARATIVES = [
+  { ref: 'ja-E1000', key: 'もっと背が低い', candidate: 'より背が低い', admits_without_the_gate: ['背が低い'] },
+  { ref: 'ja-E1054', key: 'もっと背が高い', candidate: 'より背が高い', admits_without_the_gate: ['背が高い'] },
+  { ref: 'ja-E1000', key: 'もっと背が低い', candidate: 'もっと短い',
+    admits_without_the_gate: ['もっと良い', 'もっと悪い', 'もっと遅い', 'もっと速い', 'もっと安い', 'もっと高い'] },
 ];
+
+/** Nothing from the typo-ball block is withheld any more. */
+export const HELD_TYPO_BALL = [];
 
 const SCRIPT_REASON = (ref, type, candidate, key, reading) =>
   `${ref} (ja, ${type}): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. "${candidate}" is the keyed "${key}" spelled another way — ${reading}. Re-measured against every taught Japanese string: it widens nothing.`;
@@ -218,6 +254,7 @@ export async function restoredWithdrawals(set, ledger) {
   const contributions = new Map();
   const refused = [];
   const held = [];
+  const gate = [];
 
   const check = (entry, id) => {
     const original = row('exercises', id);
@@ -257,14 +294,22 @@ export async function restoredWithdrawals(set, ledger) {
   }
 
   // ── The 42 typo-ball withdrawals ──────────────────────────────────────
+  const gateDependent = entry => GATE_DEPENDENT_COMPARATIVES.some(g => g.ref === entry.ref && g.candidate === entry.candidate);
   const isHeld = entry => HELD_TYPO_BALL.some(h => h.ref === entry.ref && h.candidate === entry.candidate);
   for (const entry of ball) {
     const id = idOf(entry.ref);
     const original = check(entry, id);
     if (isHeld(entry)) { held.push(entry); continue; }
+    if (gateDependent(entry)) {
+      const declared = GATE_DEPENDENT_COMPARATIVES.find(g => g.ref === entry.ref && g.candidate === entry.candidate);
+      add(id, entry, `${entry.ref} (ja, ${original.type}): RESTORED under a gate dependency. DEPENDENCY — the Japanese edit-distance gate on the grader branch is the ONLY thing that holds this row apart, so do not apply it without that gate. Measured on the merged branch: no new acceptance anywhere in this family. Measured on the content branch, which has no gate: adding "${entry.candidate}" to the keyed "${entry.key}" admits ${declared.admits_without_the_gate.join(', ')}, because the budget is one and each sibling is one substitution away. The gate withdraws fuzzy acceptance on a kanji-bearing answer before the budget is consulted; nothing else does. The twin cloze row carries these strings safely on either branch only because a grammar-shaped type is graded strictly.`);
+      gate.push(entry);
+      continue;
+    }
     add(id, entry, BALL_REASON(entry.ref, original.type, entry.candidate, entry.key));
   }
   if (held.length !== HELD_TYPO_BALL.length) throw new Error(`Held ${held.length} typo-ball candidates, recorded ${HELD_TYPO_BALL.length}`);
+  if (gate.length !== GATE_DEPENDENT_COMPARATIVES.length) throw new Error(`Restored ${gate.length} gate-dependent comparatives, recorded ${GATE_DEPENDENT_COMPARATIVES.length}`);
 
   for (const [id, entry] of contributions) {
     ledger.contribute(id, {
@@ -281,6 +326,7 @@ export async function restoredWithdrawals(set, ledger) {
     restored_candidates: [...contributions.values()].reduce((total, entry) => total + entry.additions.length, 0),
     script_refused: refused.length,
     typo_ball_held: held.length,
+    gate_dependent_restored: gate.length,
     refused,
   };
 }

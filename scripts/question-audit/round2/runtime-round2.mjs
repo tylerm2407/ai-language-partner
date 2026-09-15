@@ -13,6 +13,8 @@ import { gradeAnswer } from '../../../lib/grading.ts';
 import { SNAPSHOT_FILE, SNAPSHOT_SHA } from './patch-set-round2.mjs';
 import { derivationalRows, alreadyStrict } from './productive-paradigm-fixes.mjs';
 import { loadTriage, DEPENDENT_ROWS } from './triage-accepted-answers.mjs';
+import { GATE_DEPENDENT_COMPARATIVES } from './restored-withdrawals.mjs';
+import { lessonRefs } from '../lesson-refs.mjs';
 import { FR_C0024, REGISTER_REMOVALS } from './product-rulings.mjs';
 import { isCorrect as checkpointCorrect } from '../../../supabase/functions/checkpoint/checkpoint-core.ts';
 
@@ -160,8 +162,22 @@ for (const exercise of snapshot.exercises) {
   }
 }
 counts.taught_strings_per_language = Object.fromEntries([...taughtByLanguage].map(([k, v]) => [k, v.size]));
-const declaredCollateral = new Set(Object.entries(DEPENDENT_ROWS)
-  .flatMap(([ref, strings]) => strings.map(string => `${ref}|${string}`)));
+/**
+ * Collateral this branch WILL observe and the merged branch will not.
+ *
+ * Two sources, both gate-dependent and both declared: the four kinship rows, and
+ * the three comparatives restored under the same condition. This worktree's
+ * lib/grading.ts has no Japanese kanji gate — verified, zero occurrences — so a
+ * tolerance measurement made here describes a grader that will not ship. The
+ * gate withdraws fuzzy acceptance on a kanji-bearing answer before the budget is
+ * consulted, which is why the merged branch measures none of this. Declaring
+ * them keeps the check honest in both directions: it must see exactly these and
+ * nothing else.
+ */
+const declaredCollateral = new Set([
+  ...Object.entries(DEPENDENT_ROWS).flatMap(([ref, strings]) => strings.map(string => `${ref}|${string}`)),
+  ...GATE_DEPENDENT_COMPARATIVES.flatMap(entry => entry.admits_without_the_gate.map(string => `${entry.ref}|${string}`)),
+]);
 const observedCollateral = new Set();
 /** Rows the paradigm block also makes strict; see the loss branch below. */
 const strictened = new Set(draft.patches.filter(p => Object.hasOwn(p.after, 'target_grammar')).map(p => p.id));
@@ -170,7 +186,14 @@ const strictened = new Set(draft.patches.filter(p => Object.hasOwn(p.after, 'tar
 const withdrawn = new Map(REGISTER_REMOVALS.map(entry => [entry.id, entry.remove]));
 const intendedLosses = [];
 const intendedRemovals = [];
+/** Ref for every Japanese row, so a declared collateral entry written as a ref
+ * and an observed one keyed by exercise id compare as the same thing. */
+const japanese = lessonRefs(snapshot, 'ja');
 const refOf = new Map(triage.map(entry => [entry.exercise_id, entry.ref]));
+for (let n = 1; n <= 2312; n++) {
+  const { exercise } = japanese(n);
+  if (!refOf.has(exercise.id)) refOf.set(exercise.id, `ja-E${String(n).padStart(4, '0')}`);
+}
 /** Every row whose accepted_answers moves and whose key does not. */
 const acceptedAnswerRows = draft.patches
   .filter(patch => patch.table === 'exercises' && Array.isArray(patch.after.accepted_answers)
@@ -296,7 +319,11 @@ const record = {
   draft_sha256: createHash('sha256').update(JSON.stringify(draft.patches)).digest('hex'),
   counts,
   triage_source: 'docs/audits/question-verification/round2/triage-confirmed.json',
-  declared_collateral: Object.entries(DEPENDENT_ROWS).flatMap(([ref, strings]) => strings.map(s => ({ ref, string: s }))),
+  declared_collateral: [
+    ...Object.entries(DEPENDENT_ROWS).flatMap(([ref, strings]) => strings.map(s => ({ ref, string: s, source: 'kinship' }))),
+    ...GATE_DEPENDENT_COMPARATIVES.flatMap(e => e.admits_without_the_gate.map(s => ({ ref: e.ref, string: s, source: 'comparative' }))),
+  ],
+  gate_note: 'This branch has no Japanese kanji gate (verified: zero occurrences in lib/grading.ts, and audit/grader-behaviour is not an ancestor of this history). Every collateral acceptance recorded here is gate-dependent and measured on a grader that will not ship; the merged branch measures none of them.',
   intended_losses_on_rows_made_strict: intendedLosses,
   argued_register_removals: REGISTER_REMOVALS.map(entry => ({ ref: entry.ref, key: entry.key, removed: entry.remove, remaining: entry.after, why_downward: entry.why_downward })),
   failures,
