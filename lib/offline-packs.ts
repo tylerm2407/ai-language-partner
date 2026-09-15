@@ -48,6 +48,7 @@ import {
   fetchCourses,
   fetchDailyNews,
   fetchInProgressBooks,
+  fetchTaughtKeysForLanguage,
   fetchLessonCompletions,
   fetchLessonWithExercises,
   fetchLessons,
@@ -64,6 +65,7 @@ import type {
   NewsAudio,
   ReadingBook,
   SubscriptionTier,
+  TaughtRow,
   Unit,
 } from '../types';
 
@@ -257,6 +259,7 @@ export interface PackDeps {
   fetchLessons: (unitId: string) => Promise<Lesson[]>;
   fetchLessonWithExercises: (lessonId: string) => Promise<Lesson | null>;
   fetchLessonCompletions: (userId: string, courseId: string) => Promise<LessonCompletion[]>;
+  fetchTaughtKeysForLanguage: (language: string) => Promise<TaughtRow[]>;
   fetchBookMeta: (bookId: string) => Promise<ReadingBook | null>;
   fetchBookContent: (bookId: string) => Promise<string | null>;
   fetchBookAnnotations: (bookId: string) => Promise<BookAnnotation[]>;
@@ -273,6 +276,7 @@ const realDeps: PackDeps = {
   fetchLessons,
   fetchLessonWithExercises,
   fetchLessonCompletions,
+  fetchTaughtKeysForLanguage,
   fetchBookMeta,
   fetchBookContent,
   fetchBookAnnotations,
@@ -356,6 +360,26 @@ export async function downloadUnitPack(
     // that 404 offline. Roll back what landed and let the caller retry.
     await removeKeysQuietly(keys);
     throw err;
+  }
+
+  // The grader refuses a candidate that is another taught key in the language,
+  // and reads that set from this cache. Without it a lesson taken offline
+  // degrades to the lesson's own keys — not broken, but a narrower rule than
+  // the one everyone else gets, and silently so.
+  //
+  // Warmed but deliberately NOT added to `keys`, and its bytes are not counted.
+  // Every unit of a language shares this one entry, so listing it would let
+  // removing any single pack delete a set the others still need. It is a
+  // grading dependency shared across packs rather than content this pack owns,
+  // and it expires on the read cache's own TTL like any other entry.
+  // Failure is soft on purpose: a pack is still worth having without it.
+  try {
+    await setCached(
+      readCacheKey('taught-keys', target.language),
+      await deps.fetchTaughtKeysForLanguage(target.language),
+    );
+  } catch {
+    // Ignored: the lesson still works offline, on the narrower rule.
   }
 
   return commitPack(userId, {

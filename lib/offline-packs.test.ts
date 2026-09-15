@@ -117,6 +117,7 @@ function deps(over: Partial<PackDeps> = {}): { deps: PackDeps; calls: Record<str
     fetchLessons: async (unitId) => { count('lessons'); return [lesson(`${unitId}-l1`, unitId), lesson(`${unitId}-l2`, unitId)]; },
     fetchLessonWithExercises: async (lessonId) => { count('lesson'); return { ...lesson(lessonId, lessonId.split('-')[0]), exercises: [{ id: 'e1' }] } as unknown as Lesson; },
     fetchLessonCompletions: async () => { count('completions'); return [{ lessonId: 'u1-l1' }, { lessonId: 'u1-l2' }] as never; },
+    fetchTaughtKeysForLanguage: async () => { count('taughtKeys'); return [{ type: 'translate_to_target', prompt: '', correctAnswer: 'Hola' }] as never; },
     fetchBookMeta: async (bookId) => { count('bookMeta'); return { id: bookId, title: 'Niebla', language: 'es' } as never; },
     fetchBookContent: async () => { count('bookContent'); return 'Érase una vez…'; },
     fetchBookAnnotations: async () => { count('bookAnn'); return []; },
@@ -156,6 +157,43 @@ describe('unit packs', () => {
     expect(progress).toEqual([0, 1, 2]);
     expect(pack.bytes).toBeGreaterThan(0);
     expect((await listPacks(USER)).map((p) => p.id)).toEqual(['unit:u2']);
+  });
+
+  it('warms the language taught-keys cache without claiming it, so removing one pack cannot break another', async () => {
+    const { deps: d, calls } = deps();
+    const target = { courseId: 'course-1', unitId: 'u2', title: 'Unit 2', language: 'es' };
+    const pack = await downloadUnitPack(USER, target, { deps: d, now: NOW });
+    const taughtKey = readCacheKey('taught-keys', 'es');
+
+    // Warmed: the grader refuses a candidate that is another taught key in the
+    // language, and reads that set from here. Without it an offline lesson
+    // silently grades on the narrower lesson-scoped rule.
+    expect(calls.taughtKeys).toBe(1);
+    expect(await getCached(taughtKey)).toMatchObject([{ correctAnswer: 'Hola' }]);
+
+    // Not claimed: every unit of a language shares this one entry, so listing
+    // it would let removing any single pack delete a set the others still need.
+    expect(pack.keys).not.toContain(taughtKey);
+
+    const second = await downloadUnitPack(
+      USER, { ...target, unitId: 'u3', title: 'Unit 3' }, { deps: d, now: NOW },
+    );
+    expect(second.keys).not.toContain(taughtKey);
+    await removePack(USER, pack.id);
+    expect(await getCached(taughtKey)).toMatchObject([{ correctAnswer: 'Hola' }]);
+  });
+
+  it('still produces a usable pack when the taught-keys warm fails', async () => {
+    const { deps: d } = deps({
+      fetchTaughtKeysForLanguage: async () => { throw new Error('network'); },
+    });
+    const pack = await downloadUnitPack(
+      USER, { courseId: 'course-1', unitId: 'u2', title: 'Unit 2', language: 'es' },
+      { deps: d, now: NOW },
+    );
+    // The lessons are what the pack is for; grading degrades to lesson scope.
+    expect(pack.keys).toEqual([readCacheKey('lessons', 'u2'), readCacheKey('lesson', 'u2-l1'), readCacheKey('lesson', 'u2-l2')]);
+    expect(await getCached(readCacheKey('lesson', 'u2-l1'))).toMatchObject({ id: 'u2-l1' });
   });
 
   it('rolls back a half-downloaded unit rather than promising lessons that 404 offline', async () => {
