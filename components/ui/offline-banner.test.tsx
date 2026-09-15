@@ -5,13 +5,14 @@
  * "You're offline" for the rest of the session while every request succeeded,
  * and only a full app restart cleared it.
  *
- * These tests pin the two things that fix it: reading the honest field, and
- * re-checking instead of trusting one bad reading forever.
+ * These tests pin the three things that fix it: reading the honest field,
+ * re-checking instead of trusting one bad reading forever, and confirming
+ * with a real request before the banner is allowed to accuse the connection.
  */
 import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
 
-import { OfflineBanner, looksOffline } from './OfflineBanner';
+import { OfflineBanner, looksOffline, probeReachable } from './OfflineBanner';
 
 const mockFetch = jest.fn();
 const mockAddEventListener = jest.fn();
@@ -60,13 +61,58 @@ describe('looksOffline', () => {
   });
 });
 
+describe('probeReachable', () => {
+  const REAL_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
+  afterEach(() => {
+    if (REAL_URL === undefined) delete process.env.EXPO_PUBLIC_SUPABASE_URL;
+    else process.env.EXPO_PUBLIC_SUPABASE_URL = REAL_URL;
+  });
+
+  it('has no opinion when there is nothing to probe', async () => {
+    delete process.env.EXPO_PUBLIC_SUPABASE_URL;
+    await expect(probeReachable()).resolves.toBeNull();
+  });
+
+  it('counts any HTTP response as reachable, including an error status', async () => {
+    // The question the banner is asking is whether bytes move, not whether
+    // this endpoint is happy. A 401 proves the network works.
+    process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://example.test';
+    globalThis.fetch = jest.fn().mockResolvedValue({ status: 401 }) as never;
+    await expect(probeReachable()).resolves.toBe(true);
+  });
+
+  it('reports unreachable when the request throws', async () => {
+    process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://example.test';
+    globalThis.fetch = jest.fn().mockRejectedValue(new Error('Network request failed')) as never;
+    await expect(probeReachable()).resolves.toBe(false);
+  });
+});
+
 describe('OfflineBanner', () => {
+  const REAL_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
   beforeEach(() => {
     jest.useFakeTimers();
     mockFetch.mockReset();
     mockAddEventListener.mockReset().mockReturnValue(() => {});
+    process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://example.test';
+    // Default: the network is genuinely down, so NetInfo and the probe agree.
+    globalThis.fetch = jest.fn().mockRejectedValue(new Error('Network request failed')) as never;
   });
-  afterEach(() => jest.useRealTimers());
+  afterEach(() => {
+    jest.useRealTimers();
+    if (REAL_URL === undefined) delete process.env.EXPO_PUBLIC_SUPABASE_URL;
+    else process.env.EXPO_PUBLIC_SUPABASE_URL = REAL_URL;
+  });
+
+  it('stays quiet when NetInfo says offline but the network answers', async () => {
+    // The Simulator case Tyler kept seeing: "You're offline" over an app
+    // whose every request to Supabase was succeeding.
+    globalThis.fetch = jest.fn().mockResolvedValue({ status: 200 }) as never;
+    mockFetch.mockResolvedValue(state(false, false));
+    let tree!: TestRenderer.ReactTestRenderer;
+    await act(async () => { tree = TestRenderer.create(<OfflineBanner />); });
+    expect(bannerText(tree)).toBeNull();
+  });
 
   it('seeds from an explicit read instead of waiting for a change event', async () => {
     mockFetch.mockResolvedValue(state(false, false));
