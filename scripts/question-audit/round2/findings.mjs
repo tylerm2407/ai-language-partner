@@ -16,6 +16,7 @@ import { createHash } from 'node:crypto';
 import { SNAPSHOT_FILE, SNAPSHOT_SHA, createRound2PatchSet } from './patch-set-round2.mjs';
 import { loadTriage, DEPENDENT_ROWS, PARTIALLY_HELD, TRIAGE_SHA, TRIAGE_SOURCE } from './triage-accepted-answers.mjs';
 import { loadCandidates, REGISTER_RULING, REGISTER_REMOVALS, REGISTER_KEPT, FR_C0024, CANDIDATES_SHA, RULED_ON } from './product-rulings.mjs';
+import { loadAlternativesEvidence, SCRIPT_ACCEPT, SCRIPT_REFUSE, HELD_TYPO_BALL, EVIDENCE_SHA, EVIDENCE_SOURCE } from './restored-withdrawals.mjs';
 
 const raw = await readFile(SNAPSHOT_FILE, 'utf8');
 if (createHash('sha256').update(raw).digest('hex') !== SNAPSHOT_SHA) throw new Error('Changed frozen snapshot');
@@ -316,6 +317,35 @@ const RULINGS = {
   },
 };
 
+const withdrawals = await loadAlternativesEvidence();
+const RESTORED = {
+  what: 'Two blocks of correct Japanese answers that round one withdrew pending decisions, recovered and re-adjudicated.',
+  recovery_method: 'Not a diff of the two source shas. Both lists are machine-readable in the batch\'s own evidence file: `withdrawn_to_policy` (102 entries, every one ground script_variant) and `refused` filtered to ground within_typo_ball (42). Copied here and hashed so the build reads no other worktree.',
+  source: EVIDENCE_SOURCE,
+  source_sha256: EVIDENCE_SHA,
+  recovered_counts: { script: withdrawals.script.length, within_typo_ball: withdrawals.ball.length, note: 'The prose said 102 and 42; the file really contains 102 and 42. They agree, and were checked rather than assumed — the prose in that same file has been wrong once already.' },
+  overlap_with_round_two: 'NONE, at candidate level and at row level. Not one of the 144 candidates, and not one of their 102 rows, appears in the 66 Ruling-1 script candidates or the 313 triage additions. They came from a different input — the alternatives batch\'s 1,163 proposals — which the lexical reconciliation behind the triage block had already excluded. This is genuinely new work, and the register was right to imply it.',
+  within_typo_ball: {
+    restored: 39, held: HELD_TYPO_BALL.length,
+    THE_PAIRS_AND_THE_GATE_ARE_BOTH_UNNECESSARY: 'These were expected to need 39 confusable pairs, and were then expected to be covered instead by the Japanese edit-distance gate. Neither is required. Measured against every taught Japanese string with the grader as it stands on this branch, 39 of the 42 widen NOTHING AT ALL.',
+    why: 'The withdrawals were measured against a grader that scaled the typo budget by the MATCHED ALTERNATIVE, so a long correct addition widened tolerance for every wrong neighbour on the row — the 88-instance "readmission by a correct addition" class. Round one\'s own app-half fix already closed it: lib/grading.ts now scales by the shorter of the key and the matched alternative, and consults the confusable-pair list in both the accent and the fuzzy branch. The collisions these answers were withdrawn for no longer exist.',
+    held_with_what_would_restore_them: HELD_TYPO_BALL,
+  },
+  script_withdrawals: {
+    restored: 56, refused: 46,
+    THE_GROUND_IS_NOT_WHAT_IT_SAYS: 'Every one of the 102 widens nothing, so a widening check passes all of them — which is exactly why it cannot be the filter. The ground `script_variant` was applied far more broadly than "the same lexeme in another orthography", and restoring on the label would add wrong answers: ご飯 <- こめ is cooked versus raw rice; 赤い <- あか swaps an adjective for a noun; お金 <- かね drops an honorific; おばあさん <- そぼ is a different lexeme; ドア <- とびら is a door-leaf, not a spelling; プレゼント <- おくりもの, パスポート <- りょけん and ニュース <- ほうどう are synonyms.',
+    filter_applied: 'Tyler\'s ruling licenses orthography, not synonymy, honorific dropping or a change of part of speech. ACCEPT kana<->kanji, hiragana<->katakana, a variant kanji with the same reading, okurigana moved, a long-vowel or iteration mark. REFUSE anything that changes the morpheme count, adds or drops an honorific, changes part of speech, or is a synonym with a different reading — whatever ground the evidence file recorded.',
+    every_accepted_pair_with_its_shared_reading: SCRIPT_ACCEPT,
+    every_refused_pair_with_its_reason: SCRIPT_REFUSE,
+    excluded_as_a_class: {
+      fill_blank: 'All nine. The key on those rows is a FRAGMENT, and "the same lexeme in another orthography" is not well defined against one. It shows: five of the nine are not script variants at all — もっと_____ (Taller) keyed 背が高い would accept たかい, which means expensive and drops 背が; の_____ (While) keyed 間に would accept あいだ, dropping the に; よろしくお_____ keyed 願いします would accept ねがいいたします, a different humble verb. Ruling 1 covered 40 translate_to_target and 25 cloze_deletion rows; fill_blank was not in its scope.',
+      latin_script: 'ウェブサイト <- Webサイト. Latin script is a different question from the kana/kanji one that was ruled on, and nobody has ruled on it.',
+    },
+    one_row_type_distinction: 'いとこ has six standard kanji spellings. On the LISTENING row the learner heard いとこ, so any spelling read いとこ is a faithful transcription and the two general spellings 従兄弟 and 従姉妹 come back. The four naming a specific cousin — 従兄 older male, 従弟 younger male, 従姉 older female, 従妹 younger female — assert a gender and seniority that neither the audio nor the gloss "Cousin" supplies, and are refused on both row types. SNS <- エスエヌエス / えすえぬえす is restored on the same transcription ground.',
+  },
+  measurement: 'All 144 candidates were run through the whole-language check before any was authored: every addition graded against all 2,281 taught Japanese strings, before and after. 141 widen nothing; the 3 that do are the held ones. After compiling, the patch\'s total collateral acceptances are unchanged at 12 — the 95 restorations add none.',
+};
+
 const findings = {
   round: 2,
   snapshot_sha256: SNAPSHOT_SHA,
@@ -333,8 +363,10 @@ const findings = {
     '9_productive_paradigms': { patched: 249, see: 'paradigm_refusals for what was left out' },
     'triage_298_confirmed_ja_ko_rows': { patched: 298, additions: 313, see: 'triage_block' },
     'rulings_2026_09_15': { patched: 64, additions: 77, removals: 2, see: 'rulings' },
+    'restored_withdrawals': { patched: 67, additions: 95, refused: 46, held: 3, see: 'restored_withdrawals' },
   },
   rulings: RULINGS,
+  restored_withdrawals: RESTORED,
   triage_block: TRIAGE,
   already_fixed_by_round_one: ALREADY_FIXED.map(finding => ({
     ...finding, verified_now: finding.id ? frozen(finding.id, finding.field, finding.now, finding.ref) : null,

@@ -50,6 +50,13 @@
       "additions": 77,
       "removals": 2,
       "see": "rulings"
+    },
+    "restored_withdrawals": {
+      "patched": 67,
+      "additions": 95,
+      "refused": 46,
+      "held": 3,
+      "see": "restored_withdrawals"
     }
   },
   "rulings": {
@@ -274,6 +281,130 @@
       },
       "note": "Nothing done. lib/cefr-proficiency.ts is not touched by this branch; another engineer owns it."
     }
+  },
+  "restored_withdrawals": {
+    "what": "Two blocks of correct Japanese answers that round one withdrew pending decisions, recovered and re-adjudicated.",
+    "recovery_method": "Not a diff of the two source shas. Both lists are machine-readable in the batch's own evidence file: `withdrawn_to_policy` (102 entries, every one ground script_variant) and `refused` filtered to ground within_typo_ball (42). Copied here and hashed so the build reads no other worktree.",
+    "source": "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json",
+    "source_sha256": "83fec33cd17436836ab8651187f544f76e72e900c8f11e86c6fe08ee032062e7",
+    "recovered_counts": {
+      "script": 102,
+      "within_typo_ball": 42,
+      "note": "The prose said 102 and 42; the file really contains 102 and 42. They agree, and were checked rather than assumed — the prose in that same file has been wrong once already."
+    },
+    "overlap_with_round_two": "NONE, at candidate level and at row level. Not one of the 144 candidates, and not one of their 102 rows, appears in the 66 Ruling-1 script candidates or the 313 triage additions. They came from a different input — the alternatives batch's 1,163 proposals — which the lexical reconciliation behind the triage block had already excluded. This is genuinely new work, and the register was right to imply it.",
+    "within_typo_ball": {
+      "restored": 39,
+      "held": 3,
+      "THE_PAIRS_AND_THE_GATE_ARE_BOTH_UNNECESSARY": "These were expected to need 39 confusable pairs, and were then expected to be covered instead by the Japanese edit-distance gate. Neither is required. Measured against every taught Japanese string with the grader as it stands on this branch, 39 of the 42 widen NOTHING AT ALL.",
+      "why": "The withdrawals were measured against a grader that scaled the typo budget by the MATCHED ALTERNATIVE, so a long correct addition widened tolerance for every wrong neighbour on the row — the 88-instance \"readmission by a correct addition\" class. Round one's own app-half fix already closed it: lib/grading.ts now scales by the shorter of the key and the matched alternative, and consults the confusable-pair list in both the accent and the fuzzy branch. The collisions these answers were withdrawn for no longer exist.",
+      "held_with_what_would_restore_them": [
+        {
+          "ref": "ja-E1000",
+          "key": "もっと背が低い",
+          "candidate": "より背が低い",
+          "admits": [
+            "背が低い"
+          ],
+          "pair_would_have_to_say": "背が低い (\"short\") and より背が低い (\"shorter\") are different answers, so the bare adjective must not be accepted on a comparative row."
+        },
+        {
+          "ref": "ja-E1054",
+          "key": "もっと背が高い",
+          "candidate": "より背が高い",
+          "admits": [
+            "背が高い"
+          ],
+          "pair_would_have_to_say": "The same, for tall: 背が高い must not be accepted on a \"Taller\" row."
+        },
+        {
+          "ref": "ja-E1000",
+          "key": "もっと背が低い",
+          "candidate": "もっと短い",
+          "admits": [
+            "もっと良い",
+            "もっと悪い",
+            "もっと遅い",
+            "もっと速い",
+            "もっと安い",
+            "もっと高い"
+          ],
+          "pair_would_have_to_say": "もっと短い against each of the six other もっと+adjective strings the unit teaches. This is the meaning-flip family the round-one review was right to fear: \"Shorter\" would otherwise accept cheaper, more expensive, better, worse, faster and slower."
+        }
+      ]
+    },
+    "script_withdrawals": {
+      "restored": 56,
+      "refused": 46,
+      "THE_GROUND_IS_NOT_WHAT_IT_SAYS": "Every one of the 102 widens nothing, so a widening check passes all of them — which is exactly why it cannot be the filter. The ground `script_variant` was applied far more broadly than \"the same lexeme in another orthography\", and restoring on the label would add wrong answers: ご飯 <- こめ is cooked versus raw rice; 赤い <- あか swaps an adjective for a noun; お金 <- かね drops an honorific; おばあさん <- そぼ is a different lexeme; ドア <- とびら is a door-leaf, not a spelling; プレゼント <- おくりもの, パスポート <- りょけん and ニュース <- ほうどう are synonyms.",
+      "filter_applied": "Tyler's ruling licenses orthography, not synonymy, honorific dropping or a change of part of speech. ACCEPT kana<->kanji, hiragana<->katakana, a variant kanji with the same reading, okurigana moved, a long-vowel or iteration mark. REFUSE anything that changes the morpheme count, adds or drops an honorific, changes part of speech, or is a synonym with a different reading — whatever ground the evidence file recorded.",
+      "every_accepted_pair_with_its_shared_reading": {
+        "鶏肉|とり肉": "とりにく, with 鶏 written in kana",
+        "コーヒー|珈琲": "コーヒー; 珈琲 is the established ateji for the same loanword",
+        "りんご|リンゴ": "りんご in katakana, the ordinary spelling for the fruit",
+        "りんご|林檎": "りんご in kanji",
+        "犬|イヌ": "いぬ in katakana, standard for the species",
+        "猫|ネコ": "ねこ in katakana",
+        "椅子|イス": "いす in katakana",
+        "処方箋|処方せん": "しょほうせん; 箋 written in kana, the standard newspaper substitution",
+        "ソファ|ソファー": "the same loanword with the long-vowel mark written",
+        "悲しい|哀しい": "かなしい; a variant kanji with the same reading",
+        "ワクワクする|わくわくする": "the same mimetic in hiragana",
+        "たぶん|多分": "たぶん in kanji",
+        "かっこいい|カッコいい": "かっこいい with the first element in katakana",
+        "比喩|比ゆ": "ひゆ; 喩 written in kana",
+        "パーティー|パーティ": "the same loanword without the final long-vowel mark",
+        "マネージャー|マネジャー": "the same loanword with one long-vowel mark dropped",
+        "締め切り|締切": "しめきり with the okurigana omitted",
+        "締め切り|締切り": "しめきり with one okurigana omitted",
+        "締め切り|〆切": "しめきり written with the 〆 abbreviation",
+        "その代わりに|その代りに": "そのかわりに with the okurigana moved",
+        "朝ご飯|朝ごはん": "あさごはん with 飯 written in kana",
+        "友達|友だち": "ともだち with 達 written in kana",
+        "昔々|昔昔": "むかしむかし with the iteration mark written out",
+        "終わり|終り": "おわり with the okurigana omitted",
+        "タメ口|ため口": "ためぐち with the first element in hiragana",
+        "タメ口|ためぐち": "ためぐち written entirely in hiragana",
+        "知恵|智慧": "ちえ; the older kanji pair with the same reading",
+        "受身|受け身": "うけみ with the okurigana written",
+        "SNS|エスエヌエス": "the letter names spelled out in katakana",
+        "SNS|えすえぬえす": "the letter names spelled out in hiragana",
+        "いとこ|従兄弟": "いとこ; the general kanji spelling",
+        "いとこ|従姉妹": "いとこ; the general kanji spelling for female cousins"
+      },
+      "every_refused_pair_with_its_reason": {
+        "ご飯|こめ": "こめ (米) is raw rice; ご飯 is cooked rice or a meal. Different words, not one word spelled twice.",
+        "赤い|あか": "あか (赤) is the noun; 赤い is the adjective the row keys. A part-of-speech change, not an orthography change.",
+        "青い|あお": "あお (青) is the noun; 青い is the adjective. Same reason as 赤い.",
+        "お金|かね": "Drops the honorific お. かね alone is blunt and is a different form, not a respelling of お金.",
+        "おばあさん|そぼ": "そぼ (祖母) is the own-side humble term for one's own grandmother. A different lexeme with a different reading.",
+        "おじいさん|そふ": "そふ (祖父) is the own-side humble term. Same reason as そぼ.",
+        "ドア|とびら": "とびら (扉) is a door leaf or gate, a separate word. It is not a spelling of the loanword ドア. The round-one review flagged this one itself.",
+        "いとこ|従兄": "Names an older male cousin. The gloss \"Cousin\" and the audio いとこ supply no gender or seniority.",
+        "いとこ|従弟": "Names a younger male cousin. Same reason.",
+        "いとこ|従姉": "Names an older female cousin. Same reason.",
+        "いとこ|従妹": "Names a younger female cousin. Same reason.",
+        "カーペット|じゅうたん": "じゅうたん (絨毯) is a synonym with a different reading, not a respelling of the loanword.",
+        "ソファ|長いす": "ながいす is a different word for a different object shape. A synonym at best.",
+        "もっと良い|よりいい": "A different comparative construction, not a spelling of もっと良い. The round-one review flagged this row separately.",
+        "お祝いする|いわう": "いわう (祝う) is the plain verb; the key is a する-compound with the honorific お. Two changes, neither orthographic.",
+        "お祭り|まつり": "Drops the honorific お.",
+        "プレゼント|おくりもの": "おくりもの (贈り物) is a synonym with a different reading.",
+        "解雇する|首にする": "A different idiom, not a spelling.",
+        "パスポート|りょけん": "りょけん (旅券) is a synonym with a different reading.",
+        "パスワード|あいことば": "あいことば (合言葉) is a watchword or catchphrase, a different word.",
+        "ニュース|ほうどう": "ほうどう (報道) is reporting or coverage, a different word.",
+        "その代わりに|かわりに": "Drops その. A shorter phrase, not a respelling.",
+        "かっこいい|かっこういい": "A different reading of 格好いい, not a different spelling of one reading.",
+        "ウェブサイト|Webサイト": "Latin script. Tyler ruled on the kana/kanji question; whether a Latin-script rendering counts is a separate question nobody has ruled on."
+      },
+      "excluded_as_a_class": {
+        "fill_blank": "All nine. The key on those rows is a FRAGMENT, and \"the same lexeme in another orthography\" is not well defined against one. It shows: five of the nine are not script variants at all — もっと_____ (Taller) keyed 背が高い would accept たかい, which means expensive and drops 背が; の_____ (While) keyed 間に would accept あいだ, dropping the に; よろしくお_____ keyed 願いします would accept ねがいいたします, a different humble verb. Ruling 1 covered 40 translate_to_target and 25 cloze_deletion rows; fill_blank was not in its scope.",
+        "latin_script": "ウェブサイト <- Webサイト. Latin script is a different question from the kana/kanji one that was ruled on, and nobody has ruled on it."
+      },
+      "one_row_type_distinction": "いとこ has six standard kanji spellings. On the LISTENING row the learner heard いとこ, so any spelling read いとこ is a faithful transcription and the two general spellings 従兄弟 and 従姉妹 come back. The four naming a specific cousin — 従兄 older male, 従弟 younger male, 従姉 older female, 従妹 younger female — assert a gender and seniority that neither the audio nor the gloss \"Cousin\" supplies, and are refused on both row types. SNS <- エスエヌエス / えすえぬえす is restored on the same transcription ground."
+    },
+    "measurement": "All 144 candidates were run through the whole-language check before any was authored: every addition graded against all 2,281 taught Japanese strings, before and after. 141 widen nothing; the 3 that do are the held ones. After compiling, the patch's total collateral acceptances are unchanged at 12 — the 95 restorations add none."
   },
   "triage_block": {
     "rows": 298,

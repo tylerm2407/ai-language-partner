@@ -37,6 +37,27 @@
     },
     {
       "table": "exercises",
+      "id": "0008542e-8491-47d9-9643-df481db2bb24",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1002-0006-000000000000",
+        "type": "listening_type",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "珈琲"
+        ]
+      },
+      "reasons": [
+        "ja-E0139 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"珈琲\" is the keyed \"コーヒー\" spelled another way — コーヒー; 珈琲 is the established ateji for the same loanword. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "006598c0-ae2a-4c33-9822-0e05031778b8",
       "before": {
         "lesson_id": "aabbccdd-6666-4005-0004-b20000000000",
@@ -320,6 +341,30 @@
       ],
       "sources": [
         "Stimulus analysis of the shipped app: components/lesson/ListeningExercise.tsx never renders `prompt`; components/lesson/DictationExercise.tsx never renders `prompt` and speaks `correct_answer`; `hintText` is rendered only by components/lesson/ClozeExercise.tsx. Reading/spelling checked against 大辞林/三省堂 standard orthography for the heard word."
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "0b62a1d8-27a9-431d-a704-82a115fd9158",
+      "before": {
+        "lesson_id": "aabbccdd-6666-4006-0003-b20000000000",
+        "type": "listening_type",
+        "accepted_answers": [
+          "うけみ"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "うけみ",
+          "受け身"
+        ]
+      },
+      "reasons": [
+        "ja-E2267 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"受け身\" is the keyed \"受身\" spelled another way — うけみ with the okurigana written. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
       ],
       "review_status": "awaiting_independent_round2_review"
     },
@@ -1461,6 +1506,27 @@
     },
     {
       "table": "exercises",
+      "id": "48786069-d858-491a-b2f9-38eef48bc260",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1004-0001-000000000000",
+        "type": "listening_type",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "朝ごはん"
+        ]
+      },
+      "reasons": [
+        "ja-E0219 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"朝ごはん\" is the keyed \"朝ご飯\" spelled another way — あさごはん with 飯 written in kana. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "48ba36e8-5b47-4332-8c3c-d3325601bb68",
       "before": {
         "lesson_id": "aabbccdd-6666-2004-0003-a20000000000",
@@ -1538,6 +1604,27 @@
     },
     {
       "table": "exercises",
+      "id": "4a67996d-df05-4e51-8f5c-b5096eca94c0",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2002-0004-a20000000000",
+        "type": "listening_type",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "処方せん"
+        ]
+      },
+      "reasons": [
+        "ja-E0677 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"処方せん\" is the keyed \"処方箋\" spelled another way — しょほうせん; 箋 written in kana, the standard newspaper substitution. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "4bbd8557-378f-47e5-ae4f-692ff9775447",
       "before": {
         "lesson_id": "aabbccdd-6666-3006-0004-b10000000000",
@@ -1575,6 +1662,28 @@
       ],
       "sources": [
         "Stimulus analysis of the shipped app: components/lesson/ListeningExercise.tsx never renders `prompt`; components/lesson/DictationExercise.tsx never renders `prompt` and speaks `correct_answer`; `hintText` is rendered only by components/lesson/ClozeExercise.tsx. Reading/spelling checked against 大辞林/三省堂 standard orthography for the heard word."
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "4c538433-08e6-4905-ba47-64dae6a17f35",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2001-0003-a20000000000",
+        "type": "listening_type",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "従兄弟",
+          "従姉妹"
+        ]
+      },
+      "reasons": [
+        "ja-E0593 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"従兄弟\" is the keyed \"いとこ\" spelled another way — いとこ; the general kanji spelling. Re-measured against every taught Japanese string: it widens nothing. ja-E0593 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"従姉妹\" is the keyed \"いとこ\" spelled another way — いとこ; the general kanji spelling for female cousins. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
       ],
       "review_status": "awaiting_independent_round2_review"
     },
@@ -1723,6 +1832,28 @@
       ],
       "sources": [
         "Individually read against the row, its lesson and its unit; see reason."
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "51c44857-6cb7-4db6-a164-c38e4501b7f2",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3002-0004-b10000000000",
+        "type": "listening_type",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "締切",
+          "〆切"
+        ]
+      },
+      "reasons": [
+        "ja-E1275 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"締切\" is the keyed \"締め切り\" spelled another way — しめきり with the okurigana omitted. Re-measured against every taught Japanese string: it widens nothing. ja-E1275 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"〆切\" is the keyed \"締め切り\" spelled another way — しめきり written with the 〆 abbreviation. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
       ],
       "review_status": "awaiting_independent_round2_review"
     },
@@ -2000,6 +2131,27 @@
     },
     {
       "table": "exercises",
+      "id": "5ae5c743-84be-4717-8808-94f2d23f9001",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3008-0006-b10000000000",
+        "type": "listening_type",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "カッコいい"
+        ]
+      },
+      "reasons": [
+        "ja-E1805 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"カッコいい\" is the keyed \"かっこいい\" spelled another way — かっこいい with the first element in katakana. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "5b122369-4a64-44e0-b4ae-5cbacba35497",
       "before": {
         "lesson_id": "aabbccdd-6666-3005-0004-b10000000000",
@@ -2252,6 +2404,28 @@
     },
     {
       "table": "exercises",
+      "id": "679ca224-1cee-4e43-b021-d28b8594620b",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3008-0006-b10000000000",
+        "type": "listening_type",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "ため口",
+          "ためぐち"
+        ]
+      },
+      "reasons": [
+        "ja-E1807 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"ため口\" is the keyed \"タメ口\" spelled another way — ためぐち with the first element in hiragana. Re-measured against every taught Japanese string: it widens nothing. ja-E1807 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"ためぐち\" is the keyed \"タメ口\" spelled another way — ためぐち written entirely in hiragana. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "686fcf61-abe5-4e2b-9075-ee587755330d",
       "before": {
         "lesson_id": "aabbccdd-6666-4004-0002-b20000000000",
@@ -2371,6 +2545,48 @@
       ],
       "sources": [
         "Stimulus analysis of the shipped app: components/lesson/ListeningExercise.tsx never renders `prompt`; components/lesson/DictationExercise.tsx never renders `prompt` and speaks `correct_answer`; `hintText` is rendered only by components/lesson/ClozeExercise.tsx. Reading/spelling checked against 大辞林/三省堂 standard orthography for the heard word."
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "6e5019b6-95d1-4ef6-b8a1-95742c270700",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3006-0001-b10000000000",
+        "type": "listening_type",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "昔昔"
+        ]
+      },
+      "reasons": [
+        "ja-E1567 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"昔昔\" is the keyed \"昔々\" spelled another way — むかしむかし with the iteration mark written out. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "6e95c2fb-466b-4874-8229-09c9b0ecff95",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1007-0003-000000000000",
+        "type": "listening_type",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "イス"
+        ]
+      },
+      "reasons": [
+        "ja-E0455 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"イス\" is the keyed \"椅子\" spelled another way — いす in katakana. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
       ],
       "review_status": "awaiting_independent_round2_review"
     },
@@ -2819,6 +3035,27 @@
     },
     {
       "table": "exercises",
+      "id": "7dc879b7-1520-4a25-98e9-645b24ac96f5",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2004-0005-a20000000000",
+        "type": "listening_type",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "わくわくする"
+        ]
+      },
+      "reasons": [
+        "ja-E0833 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"わくわくする\" is the keyed \"ワクワクする\" spelled another way — the same mimetic in hiragana. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "7f2a2255-c450-4544-ac93-707b6ef41cb4",
       "before": {
         "lesson_id": "aabbccdd-6666-4002-0005-b20000000000",
@@ -3175,6 +3412,27 @@
     },
     {
       "table": "exercises",
+      "id": "93935a78-c607-41fd-b97b-be7e3bf084bf",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1006-0004-000000000000",
+        "type": "listening_type",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "イヌ"
+        ]
+      },
+      "reasons": [
+        "ja-E0397 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"イヌ\" is the keyed \"犬\" spelled another way — いぬ in katakana, standard for the species. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "93968611-3819-4e0b-8d64-af94b472b668",
       "before": {
         "lesson_id": "aabbccdd-6666-1006-0002-000000000000",
@@ -3252,6 +3510,27 @@
       ],
       "sources": [
         "Stimulus analysis of the shipped app: components/lesson/ListeningExercise.tsx never renders `prompt`; components/lesson/DictationExercise.tsx never renders `prompt` and speaks `correct_answer`; `hintText` is rendered only by components/lesson/ClozeExercise.tsx. Reading/spelling checked against 大辞林/三省堂 standard orthography for the heard word."
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "974943ab-cbfa-445c-aa6b-f787a77e61c1",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2004-0002-a20000000000",
+        "type": "listening_type",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "哀しい"
+        ]
+      },
+      "reasons": [
+        "ja-E0797 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"哀しい\" is the keyed \"悲しい\" spelled another way — かなしい; a variant kanji with the same reading. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
       ],
       "review_status": "awaiting_independent_round2_review"
     },
@@ -3401,6 +3680,27 @@
       ],
       "sources": [
         "Stimulus analysis of the shipped app: components/lesson/ListeningExercise.tsx never renders `prompt`; components/lesson/DictationExercise.tsx never renders `prompt` and speaks `correct_answer`; `hintText` is rendered only by components/lesson/ClozeExercise.tsx. Reading/spelling checked against 大辞林/三省堂 standard orthography for the heard word."
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "a074df71-a9b8-4329-b341-1964d715b65f",
+      "before": {
+        "lesson_id": "aabbccdd-6666-4004-0005-b20000000000",
+        "type": "listening_type",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "比ゆ"
+        ]
+      },
+      "reasons": [
+        "ja-E2127 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"比ゆ\" is the keyed \"比喩\" spelled another way — ひゆ; 喩 written in kana. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
       ],
       "review_status": "awaiting_independent_round2_review"
     },
@@ -7323,6 +7623,51 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-1002-0001-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1002-0001-000000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "チキン"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "チキン",
+          "とり肉"
+        ]
+      },
+      "reasons": [
+        "ja-E0072 (ja, translate_to_target): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"とり肉\" is the keyed \"鶏肉\" spelled another way — とりにく, with 鶏 written in kana. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1002-0001-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1002-0001-000000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "珈琲"
+        ]
+      },
+      "reasons": [
+        "ja-E0076 (ja, translate_to_target): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"珈琲\" is the keyed \"コーヒー\" spelled another way — コーヒー; 珈琲 is the established ateji for the same loanword. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-1002-0002-e00000000008",
       "before": {
         "lesson_id": "aabbccdd-6666-1002-0002-000000000000",
@@ -7338,6 +7683,28 @@
         "ja-E0090 (ja, cloze_deletion): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"さかな\" is the same word as the keyed \"魚\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
       ],
       "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1002-0003-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1002-0003-000000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "リンゴ",
+          "林檎"
+        ]
+      },
+      "reasons": [
+        "ja-E0096 (ja, translate_to_target): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"リンゴ\" is the keyed \"りんご\" spelled another way — りんご in katakana, the ordinary spelling for the fruit. Re-measured against every taught Japanese string: it widens nothing. ja-E0096 (ja, translate_to_target): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"林檎\" is the keyed \"りんご\" spelled another way — りんご in kanji. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
       "review_status": "awaiting_independent_round2_review"
     },
     {
@@ -7743,6 +8110,77 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-1006-0001-e00000000007",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1006-0001-000000000000",
+        "type": "translate_to_native",
+        "accepted_answers": [
+          "Granny"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Granny",
+          "Grandma",
+          "Old woman",
+          "Elderly woman"
+        ]
+      },
+      "reasons": [
+        "ja-E0357 (ja, translate_to_native): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"Grandma\" on the keyed \"Grandmother\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate. ja-E0357 (ja, translate_to_native): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"Old woman\" on the keyed \"Grandmother\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate. ja-E0357 (ja, translate_to_native): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"Elderly woman\" on the keyed \"Grandmother\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1006-0002-e00000000007",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1006-0002-000000000000",
+        "type": "translate_to_native",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Grandpa",
+          "Granddad",
+          "Old man",
+          "Elderly man"
+        ]
+      },
+      "reasons": [
+        "ja-E0369 (ja, translate_to_native): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"Grandpa\" on the keyed \"Grandfather\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate. ja-E0369 (ja, translate_to_native): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"Granddad\" on the keyed \"Grandfather\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate. ja-E0369 (ja, translate_to_native): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"Old man\" on the keyed \"Grandfather\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate. ja-E0369 (ja, translate_to_native): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"Elderly man\" on the keyed \"Grandfather\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1006-0003-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1006-0003-000000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "イヌ"
+        ]
+      },
+      "reasons": [
+        "ja-E0382 (ja, cloze_deletion): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"イヌ\" is the keyed \"犬\" spelled another way — いぬ in katakana, standard for the species. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-1006-0004-e00000000006",
       "before": {
         "lesson_id": "aabbccdd-6666-1006-0004-000000000000",
@@ -7758,6 +8196,119 @@
         "ja-E0392 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"かぞく\" is the same word as the keyed \"家族\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
       ],
       "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1006-0004-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1006-0004-000000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "ネコ"
+        ]
+      },
+      "reasons": [
+        "ja-E0394 (ja, cloze_deletion): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"ネコ\" is the keyed \"猫\" spelled another way — ねこ in katakana. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1006-0005-e00000000003",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1006-0005-000000000000",
+        "type": "translate_to_native",
+        "accepted_answers": [
+          "Granny"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Granny",
+          "Grandma",
+          "Old woman",
+          "Elderly woman"
+        ]
+      },
+      "reasons": [
+        "ja-E0401 (ja, translate_to_native): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"Grandma\" on the keyed \"Grandmother\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate. ja-E0401 (ja, translate_to_native): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"Old woman\" on the keyed \"Grandmother\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate. ja-E0401 (ja, translate_to_native): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"Elderly woman\" on the keyed \"Grandmother\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1006-0005-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1006-0005-000000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "イヌ"
+        ]
+      },
+      "reasons": [
+        "ja-E0404 (ja, translate_to_target): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"イヌ\" is the keyed \"犬\" spelled another way — いぬ in katakana, standard for the species. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1006-0006-e00000000003",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1006-0006-000000000000",
+        "type": "translate_to_native",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Grandpa",
+          "Granddad",
+          "Old man",
+          "Elderly man"
+        ]
+      },
+      "reasons": [
+        "ja-E0413 (ja, translate_to_native): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"Grandpa\" on the keyed \"Grandfather\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate. ja-E0413 (ja, translate_to_native): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"Granddad\" on the keyed \"Grandfather\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate. ja-E0413 (ja, translate_to_native): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"Old man\" on the keyed \"Grandfather\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate. ja-E0413 (ja, translate_to_native): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"Elderly man\" on the keyed \"Grandfather\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1006-0006-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1006-0006-000000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "ネコ"
+        ]
+      },
+      "reasons": [
+        "ja-E0416 (ja, translate_to_target): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"ネコ\" is the keyed \"猫\" spelled another way — ねこ in katakana. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
       "review_status": "awaiting_independent_round2_review"
     },
     {
@@ -8048,6 +8599,30 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-2002-0003-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2002-0003-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "処方"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "処方",
+          "処方せん"
+        ]
+      },
+      "reasons": [
+        "ja-E0658 (ja, translate_to_target): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"処方せん\" is the keyed \"処方箋\" spelled another way — しょほうせん; 箋 written in kana, the standard newspaper substitution. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-2003-0001-e00000000008",
       "before": {
         "lesson_id": "aabbccdd-6666-2003-0001-a20000000000",
@@ -8065,6 +8640,105 @@
         "ja-E0712 (ja, translate_to_target): RULING 2026-09-15 — register, accept upward and refuse downward. \"料理します\" against the keyed \"料理する\": Polite form of the keyed plain 料理する. Politeness raised on a cue that names no register."
       ],
       "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2003-0006-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2003-0006-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "長椅子",
+          "カウチ"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "長椅子",
+          "カウチ",
+          "ソファー"
+        ]
+      },
+      "reasons": [
+        "ja-E0772 (ja, translate_to_target): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"ソファー\" is the keyed \"ソファ\" spelled another way — the same loanword with the long-vowel mark written. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2004-0001-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2004-0001-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "哀しい"
+        ]
+      },
+      "reasons": [
+        "ja-E0778 (ja, translate_to_target): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"哀しい\" is the keyed \"悲しい\" spelled another way — かなしい; a variant kanji with the same reading. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2004-0001-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2004-0001-a20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": [
+          "興奮している",
+          "興奮した"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "興奮している",
+          "興奮した",
+          "わくわくする"
+        ]
+      },
+      "reasons": [
+        "ja-E0781 (ja, cloze_deletion): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"わくわくする\" is the keyed \"ワクワクする\" spelled another way — the same mimetic in hiragana. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2004-0004-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2004-0004-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "興奮している",
+          "興奮した"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "興奮している",
+          "興奮した",
+          "わくわくする"
+        ]
+      },
+      "reasons": [
+        "ja-E0814 (ja, translate_to_target): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"わくわくする\" is the keyed \"ワクワクする\" spelled another way — the same mimetic in hiragana. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
       "review_status": "awaiting_independent_round2_review"
     },
     {
@@ -8713,6 +9387,399 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-2007-0001-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2007-0001-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "より小さい"
+        ]
+      },
+      "reasons": [
+        "ja-E0994 (ja, translate_to_target): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より小さい\" on the keyed \"もっと小さい\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2007-0001-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2007-0001-a20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "より安い"
+        ]
+      },
+      "reasons": [
+        "ja-E0997 (ja, cloze_deletion): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より安い\" on the keyed \"もっと安い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2007-0001-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2007-0001-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "より短い"
+        ]
+      },
+      "reasons": [
+        "ja-E1000 (ja, translate_to_target): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より短い\" on the keyed \"もっと背が低い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2007-0002-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2007-0002-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "より良い"
+        ]
+      },
+      "reasons": [
+        "ja-E1006 (ja, translate_to_target): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より良い\" on the keyed \"もっと良い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2007-0002-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2007-0002-a20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": [
+          "もっと高価"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "もっと高価",
+          "より高い"
+        ]
+      },
+      "reasons": [
+        "ja-E1009 (ja, cloze_deletion): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より高い\" on the keyed \"もっと高い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2007-0002-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2007-0002-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "より速い",
+          "より速く"
+        ]
+      },
+      "reasons": [
+        "ja-E1012 (ja, translate_to_target): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より速い\" on the keyed \"もっと速い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate. ja-E1012 (ja, translate_to_target): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より速く\" on the keyed \"もっと速い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2007-0003-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2007-0003-a20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "より背が高い",
+          "より高い"
+        ]
+      },
+      "reasons": [
+        "ja-E1021 (ja, cloze_deletion): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より背が高い\" on the keyed \"もっと背が高い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate. ja-E1021 (ja, cloze_deletion): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より高い\" on the keyed \"もっと背が高い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2007-0003-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2007-0003-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "もっとゆっくり",
+          "よりゆっくり"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "もっとゆっくり",
+          "よりゆっくり",
+          "より遅い"
+        ]
+      },
+      "reasons": [
+        "ja-E1024 (ja, translate_to_target): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より遅い\" on the keyed \"もっと遅い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2007-0004-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2007-0004-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "より安い"
+        ]
+      },
+      "reasons": [
+        "ja-E1030 (ja, translate_to_target): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より安い\" on the keyed \"もっと安い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2007-0004-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2007-0004-a20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "より背が低い",
+          "もっと短い",
+          "より短い"
+        ]
+      },
+      "reasons": [
+        "ja-E1033 (ja, cloze_deletion): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より背が低い\" on the keyed \"もっと背が低い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate. ja-E1033 (ja, cloze_deletion): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"もっと短い\" on the keyed \"もっと背が低い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate. ja-E1033 (ja, cloze_deletion): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より短い\" on the keyed \"もっと背が低い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2007-0004-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2007-0004-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "最高",
+          "最良",
+          "ベスト"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "最高",
+          "最良",
+          "ベスト",
+          "最も良い"
+        ]
+      },
+      "reasons": [
+        "ja-E1036 (ja, translate_to_target): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"最も良い\" on the keyed \"一番良い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2007-0005-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2007-0005-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "もっと高価"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "もっと高価",
+          "より高い"
+        ]
+      },
+      "reasons": [
+        "ja-E1042 (ja, translate_to_target): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より高い\" on the keyed \"もっと高い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2007-0005-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2007-0005-a20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "より速い",
+          "もっと速く",
+          "より速く"
+        ]
+      },
+      "reasons": [
+        "ja-E1045 (ja, cloze_deletion): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より速い\" on the keyed \"もっと速い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate. ja-E1045 (ja, cloze_deletion): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"もっと速く\" on the keyed \"もっと速い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate. ja-E1045 (ja, cloze_deletion): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より速く\" on the keyed \"もっと速い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2007-0005-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2007-0005-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "最悪"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "最悪",
+          "最も悪い"
+        ]
+      },
+      "reasons": [
+        "ja-E1048 (ja, translate_to_target): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"最も悪い\" on the keyed \"一番悪い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2007-0006-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2007-0006-a20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": [
+          "もっとゆっくり",
+          "よりゆっくり"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "もっとゆっくり",
+          "よりゆっくり",
+          "より遅い",
+          "もっと遅く"
+        ]
+      },
+      "reasons": [
+        "ja-E1057 (ja, cloze_deletion): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より遅い\" on the keyed \"もっと遅い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate. ja-E1057 (ja, cloze_deletion): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"もっと遅く\" on the keyed \"もっと遅い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2007-0006-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2007-0006-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "より大きい"
+        ]
+      },
+      "reasons": [
+        "ja-E1060 (ja, translate_to_target): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より大きい\" on the keyed \"もっと大きい\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2008-0003-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2008-0003-a20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": [
+          "宴会"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "宴会",
+          "パーティ"
+        ]
+      },
+      "reasons": [
+        "ja-E1093 (ja, cloze_deletion): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"パーティ\" is the keyed \"パーティー\" spelled another way — the same loanword without the final long-vowel mark. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-3001-0001-e00000000008",
       "before": {
         "lesson_id": "aabbccdd-6666-3001-0001-b10000000000",
@@ -8955,6 +10022,144 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-3002-0003-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3002-0003-b10000000000",
+        "type": "dictation",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "締切",
+          "〆切"
+        ]
+      },
+      "reasons": [
+        "ja-E1256 (ja, dictation): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"締切\" is the keyed \"締め切り\" spelled another way — しめきり with the okurigana omitted. Re-measured against every taught Japanese string: it widens nothing. ja-E1256 (ja, dictation): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"〆切\" is the keyed \"締め切り\" spelled another way — しめきり written with the 〆 abbreviation. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-3002-0004-e00000000003",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3002-0004-b10000000000",
+        "type": "translate_to_native",
+        "accepted_answers": [
+          "To employ",
+          "Employ"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "To employ",
+          "Employ",
+          "Hire"
+        ]
+      },
+      "reasons": [
+        "ja-E1265 (ja, translate_to_native): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"Hire\" on the keyed \"To hire\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-3002-0005-e00000000003",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3002-0005-b10000000000",
+        "type": "translate_to_native",
+        "accepted_answers": [
+          "To dismiss",
+          "Dismiss",
+          "To sack",
+          "Sack",
+          "To lay off"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "To dismiss",
+          "Dismiss",
+          "To sack",
+          "Sack",
+          "To lay off",
+          "Fire"
+        ]
+      },
+      "reasons": [
+        "ja-E1279 (ja, translate_to_native): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"Fire\" on the keyed \"To fire\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-3002-0005-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3002-0005-b10000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": [
+          "管理者",
+          "管理職",
+          "支配人",
+          "経営者"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "管理者",
+          "管理職",
+          "支配人",
+          "経営者",
+          "マネジャー"
+        ]
+      },
+      "reasons": [
+        "ja-E1281 (ja, cloze_deletion): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"マネジャー\" is the keyed \"マネージャー\" spelled another way — the same loanword with one long-vowel mark dropped. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-3002-0006-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3002-0006-b10000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": [
+          "期限",
+          "期日"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "期限",
+          "期日",
+          "締切",
+          "締切り",
+          "〆切"
+        ]
+      },
+      "reasons": [
+        "ja-E1295 (ja, cloze_deletion): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"締切\" is the keyed \"締め切り\" spelled another way — しめきり with the okurigana omitted. Re-measured against every taught Japanese string: it widens nothing. ja-E1295 (ja, cloze_deletion): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"締切り\" is the keyed \"締め切り\" spelled another way — しめきり with one okurigana omitted. Re-measured against every taught Japanese string: it widens nothing. ja-E1295 (ja, cloze_deletion): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"〆切\" is the keyed \"締め切り\" spelled another way — しめきり written with the 〆 abbreviation. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-3002-0006-e00000000008",
       "before": {
         "lesson_id": "aabbccdd-6666-3002-0006-b10000000000",
@@ -9184,6 +10389,28 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-3005-0002-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3005-0002-b10000000000",
+        "type": "dictation",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "エスエヌエス",
+          "えすえぬえす"
+        ]
+      },
+      "reasons": [
+        "ja-E1494 (ja, dictation): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"エスエヌエス\" is the keyed \"SNS\" spelled another way — the letter names spelled out in katakana. Re-measured against every taught Japanese string: it widens nothing. ja-E1494 (ja, dictation): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"えすえぬえす\" is the keyed \"SNS\" spelled another way — the letter names spelled out in hiragana. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-3005-0003-e00000000008",
       "before": {
         "lesson_id": "aabbccdd-6666-3005-0003-b10000000000",
@@ -9289,6 +10516,48 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-3006-0005-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3006-0005-b10000000000",
+        "type": "dictation",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "終り"
+        ]
+      },
+      "reasons": [
+        "ja-E1620 (ja, dictation): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"終り\" is the keyed \"終わり\" spelled another way — おわり with the okurigana omitted. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-3006-0006-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3006-0006-b10000000000",
+        "type": "dictation",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "昔昔"
+        ]
+      },
+      "reasons": [
+        "ja-E1634 (ja, dictation): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"昔昔\" is the keyed \"昔々\" spelled another way — むかしむかし with the iteration mark written out. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-3007-0001-e00000000002",
       "before": {
         "lesson_id": "aabbccdd-6666-3007-0001-b10000000000",
@@ -9370,6 +10639,34 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-3007-0002-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3007-0002-b10000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": [
+          "もしかすると",
+          "もしかしたら",
+          "おそらく"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "もしかすると",
+          "もしかしたら",
+          "おそらく",
+          "多分"
+        ]
+      },
+      "reasons": [
+        "ja-E1659 (ja, cloze_deletion): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"多分\" is the keyed \"たぶん\" spelled another way — たぶん in kanji. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-3007-0003-e00000000005",
       "before": {
         "lesson_id": "aabbccdd-6666-3007-0003-b10000000000",
@@ -9429,6 +10726,58 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-3007-0005-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3007-0005-b10000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "もしかすると",
+          "もしかしたら",
+          "おそらく"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "もしかすると",
+          "もしかしたら",
+          "おそらく",
+          "多分"
+        ]
+      },
+      "reasons": [
+        "ja-E1698 (ja, translate_to_target): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"多分\" is the keyed \"たぶん\" spelled another way — たぶん in kanji. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-3007-0005-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3007-0005-b10000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": [
+          "代わりに"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "代わりに",
+          "その代りに"
+        ]
+      },
+      "reasons": [
+        "ja-E1701 (ja, cloze_deletion): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"その代りに\" is the keyed \"その代わりに\" spelled another way — そのかわりに with the okurigana moved. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-3007-0005-e00000000008",
       "before": {
         "lesson_id": "aabbccdd-6666-3007-0005-b10000000000",
@@ -9465,6 +10814,30 @@
         "ja-E1726 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"はいけい\" is the same word as the keyed \"拝啓\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
       ],
       "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-3008-0002-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3008-0002-b10000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": [
+          "クール"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "クール",
+          "カッコいい"
+        ]
+      },
+      "reasons": [
+        "ja-E1743 (ja, cloze_deletion): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"カッコいい\" is the keyed \"かっこいい\" spelled another way — かっこいい with the first element in katakana. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
       "review_status": "awaiting_independent_round2_review"
     },
     {
@@ -9506,6 +10879,30 @@
       ],
       "sources": [
         "Stimulus analysis of the shipped app: components/lesson/ListeningExercise.tsx never renders `prompt`; components/lesson/DictationExercise.tsx never renders `prompt` and speaks `correct_answer`; `hintText` is rendered only by components/lesson/ClozeExercise.tsx. Reading/spelling checked against 大辞林/三省堂 standard orthography for the heard word."
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-3008-0005-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3008-0005-b10000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "クール"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "クール",
+          "カッコいい"
+        ]
+      },
+      "reasons": [
+        "ja-E1782 (ja, translate_to_target): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"カッコいい\" is the keyed \"かっこいい\" spelled another way — かっこいい with the first element in katakana. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
       ],
       "review_status": "awaiting_independent_round2_review"
     },
@@ -9650,6 +11047,27 @@
       ],
       "sources": [
         "Stimulus analysis of the shipped app: components/lesson/ListeningExercise.tsx never renders `prompt`; components/lesson/DictationExercise.tsx never renders `prompt` and speaks `correct_answer`; `hintText` is rendered only by components/lesson/ClozeExercise.tsx. Reading/spelling checked against 大辞林/三省堂 standard orthography for the heard word."
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-4001-0005-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-6666-4001-0005-b20000000000",
+        "type": "dictation",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "智慧"
+        ]
+      },
+      "reasons": [
+        "ja-E1870 (ja, dictation): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"智慧\" is the keyed \"知恵\" spelled another way — ちえ; the older kanji pair with the same reading. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
       ],
       "review_status": "awaiting_independent_round2_review"
     },
@@ -9922,6 +11340,34 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-4003-0005-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-4003-0005-b20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": [
+          "期限",
+          "期日"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "期限",
+          "期日",
+          "締切",
+          "締切り",
+          "〆切"
+        ]
+      },
+      "reasons": [
+        "ja-E2040 (ja, cloze_deletion): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"締切\" is the keyed \"締め切り\" spelled another way — しめきり with the okurigana omitted. Re-measured against every taught Japanese string: it widens nothing. ja-E2040 (ja, cloze_deletion): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"締切り\" is the keyed \"締め切り\" spelled another way — しめきり with one okurigana omitted. Re-measured against every taught Japanese string: it widens nothing. ja-E2040 (ja, cloze_deletion): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"〆切\" is the keyed \"締め切り\" spelled another way — しめきり written with the 〆 abbreviation. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-4003-0006-e00000000006",
       "before": {
         "lesson_id": "aabbccdd-6666-4003-0006-b20000000000",
@@ -9980,6 +11426,34 @@
       ],
       "sources": [
         "Stimulus analysis of the shipped app: components/lesson/ListeningExercise.tsx never renders `prompt`; components/lesson/DictationExercise.tsx never renders `prompt` and speaks `correct_answer`; `hintText` is rendered only by components/lesson/ClozeExercise.tsx. Reading/spelling checked against 大辞林/三省堂 standard orthography for the heard word."
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-4004-0004-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-4004-0004-b20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "隠喩",
+          "暗喩",
+          "メタファー"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "隠喩",
+          "暗喩",
+          "メタファー",
+          "比ゆ"
+        ]
+      },
+      "reasons": [
+        "ja-E2104 (ja, translate_to_target): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"比ゆ\" is the keyed \"比喩\" spelled another way — ひゆ; 喩 written in kana. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
       ],
       "review_status": "awaiting_independent_round2_review"
     },
@@ -11222,6 +12696,27 @@
     },
     {
       "table": "exercises",
+      "id": "b82d04b5-51aa-4956-94df-120514016981",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1005-0005-000000000000",
+        "type": "listening_type",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "友だち"
+        ]
+      },
+      "reasons": [
+        "ja-E0339 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"友だち\" is the keyed \"友達\" spelled another way — ともだち with 達 written in kana. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "b86b8283-96ce-4f21-9110-e5787dafaba6",
       "before": {
         "lesson_id": "aabbccdd-6666-1003-0003-000000000000",
@@ -11928,6 +13423,27 @@
     },
     {
       "table": "exercises",
+      "id": "d5070120-d0b6-4024-9aec-fd020bc46fe6",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1006-0005-000000000000",
+        "type": "listening_type",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "ネコ"
+        ]
+      },
+      "reasons": [
+        "ja-E0409 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"ネコ\" is the keyed \"猫\" spelled another way — ねこ in katakana. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "d544f108-617f-42a3-a3da-ed6c6b2b53fa",
       "before": {
         "lesson_id": "aabbccdd-6666-3003-0001-b10000000000",
@@ -12348,6 +13864,27 @@
     },
     {
       "table": "exercises",
+      "id": "e84081f1-8886-4f00-aae2-910f62b34644",
+      "before": {
+        "lesson_id": "aabbccdd-6666-4001-0004-b20000000000",
+        "type": "listening_type",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "智慧"
+        ]
+      },
+      "reasons": [
+        "ja-E1863 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"智慧\" is the keyed \"知恵\" spelled another way — ちえ; the older kanji pair with the same reading. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "e9fca016-d99e-4191-b008-56f0a83922b8",
       "before": {
         "lesson_id": "aabbccdd-6666-3001-0003-b10000000000",
@@ -12406,6 +13943,28 @@
       ],
       "sources": [
         "Stimulus analysis of the shipped app: components/lesson/ListeningExercise.tsx never renders `prompt`; components/lesson/DictationExercise.tsx never renders `prompt` and speaks `correct_answer`; `hintText` is rendered only by components/lesson/ClozeExercise.tsx. Reading/spelling checked against 大辞林/三省堂 standard orthography for the heard word."
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "ec68f864-425b-48f2-aeb9-efe534014fb0",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1002-0004-000000000000",
+        "type": "listening_type",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "リンゴ",
+          "林檎"
+        ]
+      },
+      "reasons": [
+        "ja-E0115 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"リンゴ\" is the keyed \"りんご\" spelled another way — りんご in katakana, the ordinary spelling for the fruit. Re-measured against every taught Japanese string: it widens nothing. ja-E0115 (ja, listening_type): RESTORED — withdrawn by the round-1 alternatives batch to the open kana/kanji question, which Tyler ruled on 2026-09-15: the same Japanese word typed in the other script is correct. \"林檎\" is the keyed \"りんご\" spelled another way — りんご in kanji. Re-measured against every taught Japanese string: it widens nothing."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
       ],
       "review_status": "awaiting_independent_round2_review"
     },
