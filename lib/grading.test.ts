@@ -416,3 +416,66 @@ describe('confusable pairs are not typos', () => {
     expect(gradeAnswer('hambre', 'hombre', []).isCorrect).toBe(true);
   });
 });
+
+describe('fill_blank is graded as the completed word', () => {
+  // す_____ (Awesome), correct_answer "ごい", accepted "ばらしい".
+  const awesome = { exerciseType: 'fill_blank' as const, language: 'ja' as const,
+    blankContext: { prefix: 'す', suffix: '' } };
+
+  it('still accepts the missing piece on its own', () => {
+    // The learner types into a blank; the piece is what the row asks for.
+    expect(gradeAnswer('ごい', 'ごい', ['ばらしい'], { exerciseHints: awesome }).isCorrect).toBe(true);
+  });
+
+  it('accepts the whole word the lesson actually taught', () => {
+    // すごい IS the word. Before this it was marked wrong, because the stored
+    // key is two of its three characters.
+    expect(gradeAnswer('すごい', 'ごい', ['ばらしい'], { exerciseHints: awesome }).isCorrect).toBe(true);
+    expect(gradeAnswer('すばらしい', 'ごい', ['ばらしい'], { exerciseHints: awesome }).isCorrect).toBe(true);
+  });
+
+  it('accepts a whole word typed with the space the prompt welds shut', () => {
+    // "Buenas_____ (Good afternoon)" renders with a space, so the learner may
+    // well type both words.
+    const hints = { exerciseType: 'fill_blank' as const, language: 'es' as const,
+      blankContext: { prefix: 'Buenas', suffix: '' } };
+    expect(gradeAnswer('buenas tardes', 'tardes', [], { exerciseHints: hints }).isCorrect).toBe(true);
+  });
+
+  it('does not accept a different word welded onto the same stem', () => {
+    const hints = { exerciseType: 'fill_blank' as const, language: 'es' as const,
+      blankContext: { prefix: 'Buenas', suffix: '' } };
+    expect(gradeAnswer('noches', 'tardes', [], { exerciseHints: hints }).isCorrect).toBe(false);
+  });
+
+  it('consults the confusable list on the completed word, not the fragment', () => {
+    // "Sob_____ (Nephew)" keys on the fragment "rino". The pair list is
+    // written in words, so it knows sobrino/sobrina and has never heard of
+    // rino/rina — and one edit is well inside a four-letter budget, so the
+    // niece row's key was scored "Correct! (Minor typo)" on the nephew row.
+    const hints = { exerciseType: 'fill_blank' as const, language: 'es' as const,
+      blankContext: { prefix: 'Sob', suffix: '' } };
+    expect(gradeAnswer('rina', 'rino', [], { exerciseHints: hints }).isCorrect).toBe(false);
+    // Without the welded context the grader sees fragments and accepts it,
+    // which is the defect this closes.
+    expect(
+      gradeAnswer('rina', 'rino', [], { exerciseHints: { ...hints, blankContext: undefined } }).isCorrect,
+    ).toBe(true);
+  });
+
+  it('does not widen the typo budget by welding a stem on', () => {
+    // A three-character filler earns a budget of 0. Welding a long Japanese
+    // clause on must not turn that into 2.
+    const hints = { exerciseType: 'fill_blank' as const, language: 'ja' as const,
+      blankContext: { prefix: '部長はもうお帰り', suffix: 'ました' } };
+    expect(gradeAnswer('にした', 'になり', [], { exerciseHints: hints }).isCorrect).toBe(false);
+  });
+
+  it('reports what the learner typed, not the welded form', () => {
+    // normalizedUserAnswer is logged to correction_log and struck through in
+    // the feedback card next to the stored key; both must stay comparable.
+    const result = gradeAnswer('ごい', 'ごい', [], { exerciseHints: awesome });
+    expect(result.normalizedUserAnswer).toBe('ごい');
+    expect(result.normalizedCorrectAnswer).toBe('ごい');
+  });
+});

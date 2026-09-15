@@ -40,6 +40,22 @@ export interface ExerciseHints {
    * it the confusable check is skipped rather than guessed at.
    */
   language?: LanguageCode;
+  /**
+   * The text welded to the blank on a `fill_blank` row, so the grader can see
+   * the WORD the row teaches rather than the fragment the row stores.
+   *
+   * A fill-blank row stores only the missing piece: the "Awesome" row prompts
+   * `す_____` and its `correct_answer` is `ごい`. Everything the grader knows
+   * about words — the confusable-pair list, the sibling-key rule — is written
+   * in words, so on 1,995 rows it was comparing against fragments and matching
+   * nothing. Korean tolerance operated on `간색` where the taught word is
+   * `빨간색`.
+   *
+   * `prefix` is the run of non-space characters immediately before the blank
+   * and `suffix` the run immediately after, both taken from the prompt. See
+   * `blankContext` in lib/exercise-restore.ts, which derives them.
+   */
+  blankContext?: { prefix: string; suffix: string };
 }
 
 /**
@@ -187,11 +203,52 @@ export function gradeAnswer(
 ): GradeResult {
   const normalized = normalize(userAnswer);
   const normalizedCorrect = normalize(correctAnswer);
-  const allAccepted = [normalizedCorrect, ...acceptedAnswers.map(normalize)];
   const hints = options?.exerciseHints;
 
+  /**
+   * Fill-blank rows are judged as the completed word.
+   *
+   * The row stores the blank's filler, not the word: `す_____` / `ごい`. Two
+   * consequences, both measured by the curriculum audit across 1,995 rows.
+   * First, a learner who types the whole word — `すごい`, which is what the
+   * lesson taught — was marked wrong, because the stored key is two of its
+   * three characters. Second, every rule the grader has about *words* (the
+   * confusable-pair list, the sibling-key rule below) was being handed a
+   * fragment and matching nothing at all.
+   *
+   * `completeWord` welds the prompt's own characters back on, so both of those
+   * work on `すごい` and `빨간색` instead of `ごい` and `간색`.
+   *
+   * Deliberately NOT welded: the edit distance and the typo budget. They stay
+   * on the piece the learner actually typed, so completing the word can only
+   * change WHICH strings are judged equal, never how much of the learner's own
+   * typing is allowed to be wrong, and never the partial credit a near miss
+   * earns. A welded prefix would otherwise hand a long Japanese clause a budget
+   * of 2 where the three-character filler earns 0.
+   */
+  const completeWord = (text: string): string => {
+    const blank = hints?.blankContext;
+    if (!blank || (!blank.prefix && !blank.suffix)) return normalize(text);
+    return normalize(`${blank.prefix}${text}${blank.suffix}`);
+  };
+  const withoutSpaces = (text: string) => text.replace(/\s+/g, '');
+  const completedAccepted = [correctAnswer, ...acceptedAnswers].map(completeWord);
+
+  /**
+   * The learner typed the whole word rather than the missing piece.
+   *
+   * Matched without spaces because a welded prompt (`Buenas_____`) renders with
+   * a space the learner will type: "buenas tardes" has to reach
+   * "buenastardes".
+   */
+  const typedWholeWord =
+    hints?.blankContext !== undefined &&
+    completedAccepted.some((accepted) => withoutSpaces(accepted) === withoutSpaces(normalized));
+
+  const allAccepted = [normalizedCorrect, ...acceptedAnswers.map(normalize)];
+
   // Exact match (after normalization)
-  if (allAccepted.includes(normalized)) {
+  if (allAccepted.includes(normalized) || typedWholeWord) {
     return {
       isCorrect: true,
       accuracy: 1,
@@ -476,7 +533,17 @@ export function gradeAnswer(
 
   const confusableIn = (language: LanguageCode) =>
     isConfusablePair(normalized, expectedForTolerance, language) ||
-    isConfusablePair(normalized, expectedForTolerance, language, stripDiacritics);
+    isConfusablePair(normalized, expectedForTolerance, language, stripDiacritics) ||
+    // The pair list is written in words, so on a fill-blank row it has to be
+    // asked about the completed word — `빨간색`, not the stored `간색`.
+    (hints?.blankContext !== undefined &&
+      (isConfusablePair(completeWord(normalized), completeWord(expectedForTolerance), language) ||
+        isConfusablePair(
+          completeWord(normalized),
+          completeWord(expectedForTolerance),
+          language,
+          stripDiacritics,
+        )));
   const confusable =
     negationMismatch
     || (hints?.language !== undefined

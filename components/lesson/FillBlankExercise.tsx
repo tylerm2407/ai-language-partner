@@ -9,7 +9,7 @@ import { Button } from '../ui/Button';
 import { colors } from '../../config/theme';
 import { gradeAnswer } from '../../lib/grading';
 import type { GradeResult } from '../../lib/grading';
-import { isRestored, regradePick } from '../../lib/exercise-restore';
+import { exerciseHints, isRestored, regradePick } from '../../lib/exercise-restore';
 import type { Exercise, LanguageCode } from '../../types';
 
 interface FillBlankExerciseProps {
@@ -47,13 +47,7 @@ export function FillBlankExercise({
     if (!answer.trim() || submitted) return;
 
     const grade = gradeAnswer(answer, exercise.correctAnswer, exercise.acceptedAnswers, {
-      exerciseHints: {
-        exerciseType: exercise.type,
-        skillType: exercise.skillType,
-        targetGrammar: exercise.targetGrammar,
-        targetWord: exercise.targetWord,
-        language: language as LanguageCode | undefined,
-      },
+      exerciseHints: exerciseHints(exercise, language as LanguageCode | undefined),
     });
     setResult(grade);
     setSubmitted(true);

@@ -27,6 +27,31 @@ import { gradeAnswer, type ExerciseHints, type GradeResult } from './grading';
 import type { Exercise, LanguageCode } from '../types';
 import { restoreUnspacedTiles } from './sentence-tiles';
 
+/**
+ * The characters welded to the blank in a fill-blank prompt.
+ *
+ * A fill-blank row stores the missing piece, never the word: `す_____` keys on
+ * `ごい`, `Lo s_____` on `iento`. The grader needs the word — see
+ * `blankContext` in `ExerciseHints` — so this reads the prompt's own
+ * characters either side of the blank.
+ *
+ * The run stops at whitespace and at punctuation, so the English gloss that
+ * follows most prompts (`Buenas_____ (Good afternoon)`) is never welded on.
+ * Apostrophes and hyphens are part of a word (`l'_____`, `grand-_____`) and
+ * are kept. Returns `undefined` when the prompt has no blank, or when the
+ * blank stands alone as its own word and the filler IS the answer.
+ */
+export function blankContext(prompt: string): { prefix: string; suffix: string } | undefined {
+  const blank = /_+/.exec(prompt);
+  if (!blank) return undefined;
+  const inWord = "[^\\s\\p{P}]|['’\\-]";
+  const prefix = new RegExp(`(?:${inWord})*$`, 'u').exec(prompt.slice(0, blank.index))?.[0] ?? '';
+  const suffix =
+    new RegExp(`^(?:${inWord})*`, 'u').exec(prompt.slice(blank.index + blank[0].length))?.[0] ?? '';
+  if (!prefix && !suffix) return undefined;
+  return { prefix, suffix };
+}
+
 /** The classifier hints every exercise passes to `gradeAnswer`. */
 export function exerciseHints(exercise: Exercise, language?: LanguageCode): ExerciseHints {
   return {
@@ -35,6 +60,9 @@ export function exerciseHints(exercise: Exercise, language?: LanguageCode): Exer
     targetGrammar: exercise.targetGrammar,
     targetWord: exercise.targetWord,
     language,
+    // Only fill_blank. A cloze row is graded strictly on the form it tests,
+    // and welding a word onto a strict comparison changes nothing there.
+    blankContext: exercise.type === 'fill_blank' ? blankContext(exercise.prompt) : undefined,
   };
 }
 
