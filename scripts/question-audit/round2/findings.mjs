@@ -1,0 +1,227 @@
+/**
+ * The round-2 register: what each of the nine open items became.
+ *
+ * Five of the nine produce no patch. That is the point of writing them down
+ * rather than quietly dropping them: two were already fixed by round one and
+ * the register had gone stale, one is settled in favour of the existing content,
+ * one turns out not to be a defect at all, and one is a judgement the audit
+ * should not make on its own. Each carries the evidence that decides it, and
+ * every claim about a stored value is re-checked against the frozen snapshot
+ * when this runs, so a stale finding fails the build instead of being published.
+ *
+ *   node scripts/question-audit/round2/findings.mjs
+ */
+import { readFile, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { SNAPSHOT_FILE, SNAPSHOT_SHA, createRound2PatchSet } from './patch-set-round2.mjs';
+
+const raw = await readFile(SNAPSHOT_FILE, 'utf8');
+if (createHash('sha256').update(raw).digest('hex') !== SNAPSHOT_SHA) throw new Error('Changed frozen snapshot');
+const snapshot = JSON.parse(raw);
+const { row } = await createRound2PatchSet();
+const exercise = id => row('exercises', id);
+
+/** Assert a stored field is exactly what a finding claims, or fail loudly. */
+function frozen(id, field, expected, claim) {
+  const actual = exercise(id)[field];
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+    throw new Error(`${claim}: ${id}.${field} is ${JSON.stringify(actual)}, the finding says ${JSON.stringify(expected)}`);
+  }
+  return actual;
+}
+
+/** 1 & 2 — already fixed by round one; the open-items register is stale. */
+const ALREADY_FIXED = [
+  {
+    item: 1, ref: 'it-E1074', id: 'c98104aa-5e43-4610-b530-d5ba9255b51e',
+    claim: 'The Festa/Festival choice row is semantically ambiguous because the batch asserts Festival is also correct.',
+    disposition: 'withdrawn — already corrected and deployed by round one',
+    evidence: 'The deployed row offers ["Winter","To celebrate","Holiday","Gift"]. "Festival" was replaced by "Winter" in the round-1 patch (italian-lesson-fixes.mjs), so the option the claim is about is no longer offered.',
+    field: 'options', now: ['Winter', 'To celebrate', 'Holiday', 'Gift'],
+  },
+  {
+    item: 1, ref: 'it-E1876', id: '5f44217a-f420-4f10-9956-809d0630e997',
+    claim: 'The Etica/Morality choice row is semantically ambiguous.',
+    disposition: 'withdrawn — already corrected and deployed by round one',
+    evidence: '"Morality" was replaced by "Wealth". The deployed options are ["Wealth","Ethics","Freedom","Doubt"].',
+    field: 'options', now: ['Wealth', 'Ethics', 'Freedom', 'Doubt'],
+  },
+  {
+    item: 1, ref: 'it-E1960', id: '13bddacc-7f3d-43f0-a6b9-80cc9a6aa37e',
+    claim: 'The Tuttavia/Nevertheless choice row is semantically ambiguous.',
+    disposition: 'withdrawn — already corrected and deployed by round one',
+    evidence: '"Nevertheless" was replaced by "Therefore". The deployed options are ["Therefore","However","Claim","Evidence"].',
+    field: 'options', now: ['Therefore', 'However', 'Claim', 'Evidence'],
+  },
+  {
+    item: 2, ref: 'it-E1008', id: 'aabbccdd-4444-2007-0002-e00000000004',
+    claim: 'A fifth welded blank renders as "Menocaro".',
+    disposition: 'withdrawn — already corrected and deployed by round one',
+    evidence: 'The deployed prompt is "Meno _____ (Cheaper)", separated by italian-cross-row-fixes.mjs. Filled with the key "caro" it renders "Meno caro".',
+    field: 'prompt', now: 'Meno _____ (Cheaper)',
+  },
+];
+
+/** 3 — the one uncertain German field, settled. */
+const DE_E2035 = {
+  item: 3, ref: 'de-E2035', id: 'aabbccdd-3333-4003-0005-e00000000003',
+  claim: '"Pressure group" is an uncertain accepted answer for "Translate to English: Interessengruppe".',
+  disposition: 'settled — keep it; the alternative is correct',
+  reasoning: [
+    'Duden defines Interessengruppe as "Zusammenschluss von Personen zur Durchsetzung politischer oder gesellschaftlicher Ziele" and lists Lobby among its synonyms. A group formed to press political or social aims is what English calls a pressure group.',
+    'Bilingual dictionaries give the equivalence directly: Langenscheidt lists interest group, pressure group and lobby; PONS gives interest group and lobby.',
+    'The prompt is bare — "Translate to English: Interessengruppe" — so nothing narrows it to the business sense the stored key "Stakeholder" reflects. That is the same standard under which round one kept dozens of dictionary equivalents on bare prompts.',
+    'The row is translate_to_native with no options, so no wrong answer is marked right either way; the only question was whether a correct alternative was being wrongly offered. It is not.',
+  ],
+  sources: [
+    'https://www.duden.de/rechtschreibung/Interessengruppe',
+    'https://en.langenscheidt.com/german-english/interessengruppe',
+    'https://en.pons.com/translate/german-english/Interessengruppe',
+  ],
+  accepted_answers: ['Interest group', 'Pressure group'],
+};
+
+/** 5 — the "malformed" Portuguese row. */
+const PT_FORES = {
+  item: 5, ref: 'pt B2 / Complex Grammar / O Futuro do Conjuntivo, row 0',
+  id: null,
+  claim: 'The non-word "fores" appears as a taught string; it looks like truncation.',
+  disposition: 'withdrawn — "fores" is a real and correctly used Portuguese form',
+  reasoning: [
+    'fores is the tu (second person singular) future subjunctive of ir: for, fores, for, formos, fordes, forem.',
+    'The row is "Complete: «Quando ___ a Lisboa, visita o Mosteiro dos Jerónimos.» (tu, ir)" with key "fores" and target_grammar "futuro_do_conjuntivo". Quando + futuro do conjuntivo with a tu subject is exactly the form the lesson teaches, and the parenthesis names both the person and the verb.',
+    'The distractors are well chosen: vais (presente do indicativo), irás (futuro do indicativo) and vás (presente do conjuntivo) are each a different form of the same lemma, which is what the lesson is contrasting.',
+    'Nothing is truncated: the blank stands where a whole word goes, separated by spaces on both sides.',
+  ],
+  sources: ['https://dicionario.priberam.org/Conjugar/ir'],
+};
+
+/** 4 — needs the Travel unit owner, so it is proposed, not compiled. */
+const ZH_E1321 = {
+  item: 4, ref: 'zh-E1321', id: 'aabbccdd-8888-3003-0002-e00000000003',
+  claim: 'Whether "Booking" and "To reserve" belong on the 预约 row is part of speech as much as lexis.',
+  disposition: 'HELD — a proposal, deliberately NOT in draft.sql; it needs the Travel unit owner\'s ruling',
+  why_no_dictionary_settles_it: [
+    'MDBG glosses 预约 as "booking / reservation / to book / to make an appointment" — both a noun and a verb, so both contested alternatives are inside the dictionary range of the word taken alone.',
+    'The distinction the curriculum is actually teaching is narrower than the dictionary: 预约 is used for scheduling a person or a service (a doctor, a haircut), 预订 for reserving a thing or a space (a room, a ticket, a table).',
+    'The curriculum carries that contrast entirely through part of speech. Across all 25 rows that mention either word, 预约 is glossed only as a noun — "Appointment" (A2 Health & Wellness, six rows) and "Reservation" (B1 Travel & Adventure, three rows) — and 预订 only as a verb, "To book", in all six of its rows. Accepting "Booking" and "To reserve" on a 预约 row erases the only signal the learner has.',
+    'No wrong answer is graded right either way: the row is translate_to_native with no options. The cost is teaching clarity, not scoring.',
+  ],
+  proposal: {
+    table: 'exercises', id: 'aabbccdd-8888-3003-0002-e00000000003', field: 'accepted_answers',
+    before: ['Appointment', 'Booking', 'To reserve'], after: ['Appointment'],
+    rationale: 'Keep the key "Reservation" and the noun "Appointment", which are the two glosses the curriculum already teaches for 预约. Drop "To reserve", which is what the curriculum teaches 预订 to mean, and "Booking", the noun of that same verb.',
+  },
+  second_finding_for_the_same_owner: {
+    ref: 'zh B1 Travel & Adventure / Hotel Check-in', id: 'aabbccdd-8888-3003-0003-e00000000002',
+    note: 'A hotel reservation is 预订, not 预约. "Translate to Chinese: Reservation" keys 预约 in a Hotel Check-in lesson, which is the same contrast pointing the other way and is arguably the sharper defect. Also held; the two should be ruled on together.',
+  },
+  sources: [
+    'https://www.mdbg.net/chinese/dictionary?page=worddict&wdrst=0&wdqb=%E9%A2%84%E7%BA%A6',
+    'https://www.mdbg.net/chinese/dictionary?page=worddict&wdrst=0&wdqb=%E9%A2%84%E8%AE%A2',
+  ],
+};
+
+/** 6 — distractors for vocabulary the lesson no longer teaches. */
+const UNTAUGHT_DISTRACTORS = {
+  item: 6, refs: ['es-E2097', 'es-E2098', 'ja-E2098', 'ko-E2102'],
+  ids: ['aabbccdd-1111-4004-0003-e00000000009', 'aabbccdd-1111-4004-0003-e00000000010', 'aabbccdd-6666-4004-0003-e00000000010', '7f9f1103-d889-426d-870b-0970f2b48ef9'],
+  claim: 'After round one replaced the Painting and Sculpture rows, these four rows offer Painting/Sculpture as distractors for vocabulary their lesson no longer teaches.',
+  disposition: 'judged — no change; the distractors stay',
+  reasoning: [
+    'A distractor is not a taught item and does not have to be one. Its job is to be plausible and wrong, and Painting and Sculpture are both.',
+    'They remain taught in the SAME unit: Literature & Arts teaches Painting and Sculpture in Describing Art and Book Reviews, two lessons the learner meets before Film & Theater. A distractor drawn from the unit\'s own pool is how a distractor is built, and round one used exactly that reasoning to withdraw the claim against zh-E1347 and its six siblings.',
+    'The grader was re-run over all four after the round-2 patch: each still has exactly one option accepted (see runtime-checks.json).',
+    'Changing them would mean authoring four new distractors in three languages to fix nothing a learner can see.',
+  ],
+};
+
+/** 9 — the two whole-language refusals, listed exactly. */
+const PARADIGM_REFUSALS = {
+  item: 9,
+  russian: {
+    disposition: 'refused — the remedy would reject correct answers',
+    reasoning: 'Russian past tense agrees with the speaker\'s gender and the future admits pronoun dropping. Several rows list only one form and rely on the typo budget to accept the other. Making them strict would reject a woman writing the feminine past, which is worse than the hole it closes. The alternatives must be authored first; that is an accepted_answers job, not a target_grammar one.',
+    correct_strings_currently_riding_on_tolerance: [
+      { id: 'aabbccdd-9999-2005-0001-e00000000008', key: 'Я учился', would_start_rejecting: ['Я училась'], note: 'feminine past of учиться' },
+      { id: 'aabbccdd-9999-2005-0002-e00000000008', key: 'Я играл', would_start_rejecting: ['Я играла', 'Я сыграл'], note: 'feminine past, and the perfective the row already accepts in the feminine only' },
+      { id: 'aabbccdd-9999-2005-0004-e00000000002', key: 'Я увидел', would_start_rejecting: ['Я видел', 'Я видела'], note: 'imperfective, defensible for "I saw"' },
+      { id: 'aabbccdd-9999-2005-0005-e00000000002', key: 'Я купил', would_start_rejecting: ['Я купила'], note: 'feminine past' },
+      { id: 'aabbccdd-9999-2005-0006-e00000000002', key: 'Я путешествовал', would_start_rejecting: ['Я путешествовала'], note: 'feminine past; this row lists no alternatives at all' },
+      { id: 'aabbccdd-9999-2006-0004-e00000000002', key: 'Я буду учиться', would_start_rejecting: ['Буду учиться'], note: 'pronoun dropped' },
+      { id: 'aabbccdd-9999-2006-0005-e00000000002', key: 'Я буду путешествовать', would_start_rejecting: ['Буду путешествовать'], note: 'pronoun dropped' },
+      { id: 'aabbccdd-9999-2006-0006-e00000000002', key: 'Я буду работать', would_start_rejecting: ['Буду работать'], note: 'pronoun dropped' },
+      { id: 'aabbccdd-9999-3007-0004-e00000000002', key: 'Я хотел бы', would_start_rejecting: ['Я хотела бы', 'Хотел бы'], note: 'feminine, and pronoun dropped' },
+    ],
+  },
+  chinese: {
+    disposition: 'refused — there is no paradigm to close, and strictness would reject correct answers',
+    reasoning: 'Chinese verbs do not inflect, so the tense pair the remedy targets does not exist: 我吃了 and 我会吃 are nowhere near each other in edit distance. What the typo budget is actually accepting on these rows is a set of correct alternatives the rows do not list.',
+    correct_strings_currently_riding_on_tolerance: [
+      { id: 'aabbccdd-8888-2005-0006-e00000000002', key: '我旅行了', would_start_rejecting: ['我去旅行了', '我旅游了'] },
+      { id: 'aabbccdd-8888-2006-0004-e00000000002', key: '我会学习', would_start_rejecting: ['我将学习', '我将会学习', '我要学习'] },
+      { id: 'aabbccdd-8888-2006-0005-e00000000002', key: '我会旅行', would_start_rejecting: ['我将旅行', '我将会旅行', '我会去旅行'] },
+      { id: 'aabbccdd-8888-2006-0006-e00000000002', key: '我会工作', would_start_rejecting: ['我将工作', '我将会工作', '我要工作'] },
+    ],
+  },
+  other_exclusions: [
+    'translate_to_native rows whose answer is English (126 finite-verb-glossed rows). Measured: none accepts any other string in its language\'s corpus, and "I study" is already refused on an "I studied" row. Two exceptions are patched, the French and Portuguese "Cheaper" rows, which accept "Cheap".',
+    'B1 Opinions & Current Events ("I agree", "I disagree", "I think that") and B1 Formal vs. Informal ("Would you mind"): set phrases with no taught sibling form. 63 and 18 rows.',
+    'One A1 Work & Social row glossed "It is windy.": a fixed weather expression, not a paradigm member.',
+    'Every speaking row, refused by the compiler itself.',
+  ],
+};
+
+/** 7 — what the Film & Theater pool actually contains, and what was left alone. */
+const SHARED_POOL = {
+  item: 7,
+  disposition: 'patched for the six languages round one did not reach; the rest of the pool is left alone, with reasons',
+  measurement: 'Every Literature & Arts unit rotates one twelve-word pool across six lessons: Novel, Poem, Painting, Sculpture, Metaphor, Symbolism, Genre, Protagonist, Plot twist, Review, Masterpiece, Inspiration.',
+  reasoning: [
+    'Ten of the twelve are ordinary film-and-theatre criticism vocabulary. Metaphor, symbolism, genre, protagonist, plot twist, review, masterpiece and inspiration are said of films and plays as naturally as of novels; replacing them would make the lesson worse, not more honest.',
+    'Two are not: Painting and Sculpture name visual-art objects. That is precisely the line round one drew, and this patch applies the same line to French, German, Italian, Portuguese, Chinese and Russian, where the two rows and the Painting listening pair were never touched.',
+    'Describing Art keeps Painting and Sculpture, which is where they belong, alongside literary items. "Art" covering letters inside a unit named Literature & Arts is a naming judgement, not a defect, so its title is not changed.',
+  ],
+};
+
+const findings = {
+  round: 2,
+  snapshot_sha256: SNAPSHOT_SHA,
+  status: 'Draft findings for independent round-2 review. Nothing here is deployed.',
+  items: {
+    '1_italian_ambiguous_choice_rows': { patched: 0, see: 'already_fixed_by_round_one' },
+    '2_italian_welded_blank_it_E1008': { patched: 0, see: 'already_fixed_by_round_one' },
+    '3_de_E2035_pressure_group': { patched: 0, see: 'settled' },
+    '4_zh_E1321_booking_vs_to_reserve': { patched: 0, see: 'held_for_the_travel_unit_owner' },
+    '5_portuguese_fores': { patched: 0, see: 'withdrawn' },
+    '6_untaught_distractors': { patched: 0, see: 'judged_no_change' },
+    '7_film_theater_shared_pool': { patched: 24, see: 'shared_pool' },
+    '8_phrasal_verbs_title': { patched: 9, see: 'draft-patches.json (lessons)' },
+    '9_productive_paradigms': { patched: 249, see: 'paradigm_refusals for what was left out' },
+  },
+  already_fixed_by_round_one: ALREADY_FIXED.map(finding => ({
+    ...finding, verified_now: finding.id ? frozen(finding.id, finding.field, finding.now, finding.ref) : null,
+  })),
+  settled: DE_E2035,
+  withdrawn: PT_FORES,
+  held_for_the_travel_unit_owner: ZH_E1321,
+  judged_no_change: UNTAUGHT_DISTRACTORS,
+  shared_pool: SHARED_POOL,
+  paradigm_refusals: PARADIGM_REFUSALS,
+};
+
+// Re-check the held and settled claims against the snapshot as well.
+frozen(DE_E2035.id, 'accepted_answers', DE_E2035.accepted_answers, 'de-E2035');
+frozen(ZH_E1321.id, 'accepted_answers', ZH_E1321.proposal.before, 'zh-E1321');
+frozen(ZH_E1321.second_finding_for_the_same_owner.id, 'correct_answer', '预约', 'zh Hotel Check-in');
+for (const entry of [...PARADIGM_REFUSALS.russian.correct_strings_currently_riding_on_tolerance,
+  ...PARADIGM_REFUSALS.chinese.correct_strings_currently_riding_on_tolerance]) {
+  frozen(entry.id, 'correct_answer', entry.key, 'paradigm refusal');
+}
+for (const id of UNTAUGHT_DISTRACTORS.ids) exercise(id);
+const ptRow = snapshot.exercises.find(e => e.correct_answer === 'fores');
+if (!ptRow || ptRow.target_grammar !== 'futuro_do_conjuntivo') throw new Error('The Portuguese "fores" row is not where the finding says it is');
+findings.withdrawn.id = ptRow.id;
+
+await writeFile('docs/audits/question-verification/round2/findings.json', JSON.stringify(findings, null, 2) + '\n');
+console.log(JSON.stringify(findings.items, null, 1));

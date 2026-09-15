@@ -1,0 +1,21 @@
+{
+  "round": 2,
+  "grader": "lib/grading.ts gradeAnswer, with the runtime exerciseHints shape from lib/exercise-restore.ts",
+  "snapshot_sha256": "9a20145dc6b53d1e4b5f17388b3f24c4ee4dd43c19b9bdac935ba8256bfb489c",
+  "draft_sha256": "96460fe9bd431cd02563aa0ea9c2d3247d07b6cd7d19de953d53d902f4134e24",
+  "counts": {
+    "patched_rows": 273,
+    "stored_answers": 418,
+    "choice_rows": 12,
+    "closed_acceptances": 279,
+    "still_open": 0,
+    "refusal_claims": 23
+  },
+  "failures": [],
+  "production_writes": 0,
+  "limitations": [
+    "Mechanical routing only: says nothing about whether an authored string is linguistically right.",
+    "Corpus-attested strings only. The productive hole is on the learner's side, so the strings a learner would actually type are not enumerable here.",
+    "Does not exercise the semantic grader behind free_production; gradeOpenResponse returns the fixed result first, which is what this measures."
+  ]
+}

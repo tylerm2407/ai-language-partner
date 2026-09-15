@@ -1,0 +1,39 @@
+{
+  "engine": "PGlite (in-memory PostgreSQL)",
+  "round": 2,
+  "snapshot_sha256": "9a20145dc6b53d1e4b5f17388b3f24c4ee4dd43c19b9bdac935ba8256bfb489c",
+  "sql_sha256": "83b0e2567dd2f415635cc2cd1b9cc9d80e9519ff3451aa32f11eddb3084ba173",
+  "reverse_sql_sha256": "47f5e88a46f7102f7b574e8dde6a3207a89e6a4801d54a326c32d9a74af78ce0",
+  "patch_rows": 282,
+  "changed_fields": 357,
+  "tables": [
+    "exercises",
+    "lessons"
+  ],
+  "checks": [
+    "updates only, no insert machinery",
+    "exact changed rows/fields",
+    "unchanged rows/fields",
+    "idempotence",
+    "atomic conflict rollback on an exercise",
+    "atomic conflict rollback on a lesson title",
+    "exact array guards",
+    "missing-row abort",
+    "compiler scope, speaking, reason and conflict guards",
+    "reproducible build matching the committed draft",
+    "rollback restores the snapshot exactly",
+    "rollback idempotence, no-op and half-applied repair",
+    "rollback refuses an edited row",
+    "rollback writes only patched fields, never guarded identity fields",
+    "declared table/field scope",
+    "target_grammar rows are not already strict",
+    "retitle covers exactly nine lessons",
+    "Film & Theater keys no longer visual-art labels"
+  ],
+  "production_writes": 0,
+  "limitations": [
+    "Minimal typed content schema, not full Supabase auth/RLS/triggers or historical migrations",
+    "Does not establish linguistic correctness or independent round-2 approval",
+    "Does not test the shipped grader; see runtime-round2.mjs for that"
+  ]
+}
