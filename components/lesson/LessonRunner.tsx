@@ -24,10 +24,10 @@ import { CelebrationOverlay } from '../ui/CelebrationOverlay';
 import {
   fetchDueReviewItemsWithCards,
   fetchReviewItemsByCardIds,
-  fetchUnitTaughtKeys,
   upsertReviewItem,
 } from '../../lib/supabase-queries';
 import { taughtKeys } from '../../lib/exercise-restore';
+import { useTaughtKeys } from '../../hooks/useTaughtKeys';
 import { calculateNextReview } from '../../lib/srs';
 import { enqueue, isNetworkError } from '../../lib/offline-queue';
 import {
@@ -67,14 +67,6 @@ interface LessonRunnerProps {
    */
   lessonId?: string;
   lessonTitle: string;
-  /**
-   * The unit this lesson belongs to. Supplied so the grader can be told every
-   * key the unit teaches, not just this lesson's — three quarters of the
-   * key-to-key collisions the curriculum audit found are between lessons of
-   * one unit. Omit it (review drills, the pre-auth trial lesson) and the
-   * lesson's own keys are used alone.
-   */
-  unitId?: string;
   xpReward: number;
   userId: string;
   targetLanguage: LanguageCode;
@@ -121,7 +113,6 @@ export function LessonRunner({
   exercises,
   lessonId,
   lessonTitle,
-  unitId,
   xpReward,
   userId,
   targetLanguage,
@@ -225,36 +216,23 @@ export function LessonRunner({
   }, [userId, exercises]);
 
   /**
-   * Every key the unit teaches, so the grader can tell a neighbour's answer
-   * from a typo of this one (`siblingKeys` in lib/grading.ts).
+   * Every key the curriculum teaches, so the grader can tell a neighbour's
+   * answer from a typo of this one (`siblingKeys` in lib/grading.ts).
    *
-   * The lesson's own exercises are already in hand and cover about a quarter
-   * of the collisions; the rest are between lessons of the same unit, which is
-   * one vocabulary set in several exercise formats. That costs one keys-only
-   * query of a few kilobytes, fetched once per lesson.
-   *
-   * A failure here is not a reason to stop the lesson: the lesson's own keys
-   * still apply, so grading degrades to the narrower rule rather than to none.
+   * Two sources, and the lesson's own exercises are the one that always works:
+   * they are already in hand, they need no query, and they cover the
+   * same-lesson collisions. The rest of the language arrives from
+   * `useTaughtKeys`, read-cached, and is where most of the collisions actually
+   * live — the row that teaches "Data" and the row that teaches "Dati" are
+   * rarely in the same unit, and "Hablé" accepting "Table" crosses a band.
    */
-  const [unitKeys, setUnitKeys] = useState<string[]>([]);
-  const unitKeysFetchedRef = useRef(false);
-
-  useEffect(() => {
-    if (unitKeysFetchedRef.current || !unitId) return;
-    unitKeysFetchedRef.current = true;
-    fetchUnitTaughtKeys(unitId)
-      .then((rows) => setUnitKeys(taughtKeys(rows)))
-      .catch((err) =>
-        console.warn(
-          '[lesson-grading] unit keys unavailable; sibling-key refusals fall back to this lesson:',
-          err,
-        ),
-      );
-  }, [unitId]);
-
+  // No account yet (the pre-auth trial lesson): the query would run against
+  // `anon` only to be refused, and that lesson's own keys are enough. Same
+  // reasoning as the warm-up fetch below.
+  const languageKeys = useTaughtKeys(userId ? targetLanguage : undefined);
   const siblingKeys = useMemo(
-    () => [...new Set([...taughtKeys(exercises), ...unitKeys])],
-    [exercises, unitKeys],
+    () => [...new Set([...taughtKeys(exercises), ...languageKeys])],
+    [exercises, languageKeys],
   );
 
   useEffect(() => {

@@ -305,34 +305,101 @@ export async function fetchLessonWithExercises(lessonId: string): Promise<Lesson
 }
 
 /**
- * Every answer the unit teaches, as three columns.
+ * Every answer the language teaches, as three columns.
  *
  * The grader refuses a candidate that is another taught key (`siblingKeys` in
- * lib/grading.ts). The lesson's own exercises are already loaded and cover a
- * quarter of the collisions the curriculum audit measured; the other
- * three-quarters sit in a SIBLING lesson of the same unit, because a unit is
- * one vocabulary set presented in several exercise formats — the row that
- * teaches "Data" and the row that teaches "Dati" are in different lessons of
- * the same unit by construction.
+ * lib/grading.ts). How much of the curriculum counts as "another taught key"
+ * was measured against the frozen snapshot rather than argued, at every scope
+ * the client could supply:
  *
- * Kept to `type, prompt, correct_answer` for exactly that reason: a unit is
- * about 84 exercises with 35 distinct keys, so this is a few kilobytes, not a
- * second copy of the lesson. `type` and `prompt` are needed only to weld a
- * fill-blank key back into the word it completes.
+ *   lesson  closes   281 of 894 same-unit collisions
+ *   unit    closes   669 of 894
+ *   course  closes a further 231 of the 1,767 that survive unit scope
+ *   language closes  651 of those 1,767
+ *
+ * A course here is one language at one CEFR band — 36 of them across nine
+ * languages — so course scope leaves most of it on the table, including the
+ * cases that prompted the question: Spanish A2 "Hablé" accepting the A1 key
+ * "Table", German A1 "Gesund" accepting the B2 key "Gerund". Those are
+ * cross-band by nature, and only the language reaches them.
+ *
+ * The cost of reaching wider was measured too, on the only mechanical evidence
+ * that a string is a SLIP rather than a different word: 38 of the 651 (6%) are
+ * a single adjacent-key substitution, and the rate is the same at course scope
+ * (5%), so widening does not buy its extra closures at a worse price.
+ *
+ * ~2,664 rows and about 150KB per language, which is why `useTaughtKeys` puts
+ * it through the read cache: fetched once per language per fortnight, painted
+ * from cache after that, and the lesson still runs on its own keys while it is
+ * in flight.
+ * The obvious optimisation, if that payload ever matters, is an RPC returning
+ * the ~1,080 DISTINCT keys instead of every row — about 20KB — but that needs
+ * a migration and this does not.
  */
-export async function fetchUnitTaughtKeys(unitId: string): Promise<TaughtRow[]> {
-  const { data, error } = await supabase
-    .from('exercises')
-    .select('type, prompt, correct_answer, lessons!inner(unit_id)')
-    .eq('lessons.unit_id', unitId)
-    .limit(1000);
+export async function fetchTaughtKeysForLanguage(language: string): Promise<TaughtRow[]> {
+  const { data: courseRows, error: courseError } = await supabase
+    .from('courses')
+    .select('id')
+    .eq('target_language', language)
+    .limit(100);
 
-  if (error) throw error;
-  return (data ?? []).map((row) => ({
-    type: row.type as ExerciseType,
-    prompt: (row.prompt as string) ?? '',
-    correctAnswer: (row.correct_answer as string) ?? '',
-  }));
+  if (courseError) throw courseError;
+  const courseIds = (courseRows ?? []).map((row) => row.id as string);
+  if (courseIds.length === 0) return [];
+
+  const { data: unitRows, error: unitError } = await supabase
+    .from('units')
+    .select('id')
+    .in('course_id', courseIds)
+    .limit(500);
+
+  if (unitError) throw unitError;
+  const unitIds = (unitRows ?? []).map((row) => row.id as string);
+  if (unitIds.length === 0) return [];
+
+  return fetchTaughtKeysForUnits(unitIds);
+}
+
+/** PostgREST's default `db.max_rows`. */
+export const TAUGHT_KEYS_PAGE_SIZE = 1000;
+
+/**
+ * Every taught answer in the given units, read a page at a time.
+ *
+ * The paging is the point, and it is load-bearing rather than defensive.
+ * PostgREST caps a response at `db.max_rows` — 1,000 by default — and a
+ * language is about 2,664 exercises. A single unpaged request would not fail:
+ * it would return the first thousand rows and leave the grader holding a third
+ * of a sibling set, refusing less than it should, with no error anywhere and
+ * every measurement taken on a full corpus quietly untrue in production. That
+ * is the one failure on this path that no test of grading behaviour could
+ * catch, so `supabase-queries.test.ts` asserts the request count directly.
+ *
+ * Split out from `fetchTaughtKeysForLanguage` so that assertion can drive the
+ * paged read without standing up the courses and units queries first.
+ */
+export async function fetchTaughtKeysForUnits(unitIds: string[]): Promise<TaughtRow[]> {
+  const MAX_PAGES = 12; // A runaway guard, not pagination: 12,000 rows is four languages.
+  const rows: TaughtRow[] = [];
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const { data, error } = await supabase
+      .from('exercises')
+      .select('type, prompt, correct_answer, lessons!inner(unit_id)')
+      .in('lessons.unit_id', unitIds)
+      .order('id', { ascending: true })
+      .range(page * TAUGHT_KEYS_PAGE_SIZE, page * TAUGHT_KEYS_PAGE_SIZE + TAUGHT_KEYS_PAGE_SIZE - 1);
+
+    if (error) throw error;
+    for (const row of data ?? []) {
+      rows.push({
+        type: row.type as ExerciseType,
+        prompt: (row.prompt as string) ?? '',
+        correctAnswer: (row.correct_answer as string) ?? '',
+      });
+    }
+    if ((data ?? []).length < TAUGHT_KEYS_PAGE_SIZE) break;
+  }
+  return rows;
 }
 
 // ─── Cards ──────────────────────────────────────────────────────

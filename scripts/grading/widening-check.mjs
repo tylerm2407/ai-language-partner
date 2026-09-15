@@ -24,7 +24,7 @@
  *   deno run -A --no-check --sloppy-imports scripts/grading/widening-check.mjs \
  *     --snapshot .question-audit/snapshot-9a20145dc6b5.json \
  *     --additions docs/audits/.../confirmed.json \
- *     [--language ja] [--json out.json]
+ *     [--language ja] [--sibling-scope unit|course|language|lesson|none] [--json out.json]
  *
  * With `--additions` it checks a proposal: each row is graded against the
  * language's taught strings before and after its additions are applied, and
@@ -54,7 +54,8 @@ const lessons = new Map(snapshot.lessons.map(l => [l.id, l]));
 const units = new Map(snapshot.units.map(u => [u.id, u]));
 const courses = new Map(snapshot.courses.map(c => [c.id, c]));
 const unitOf = e => lessons.get(e.lesson_id)?.unit_id;
-const languageOf = e => courses.get(units.get(unitOf(e))?.course_id)?.target_language;
+const courseOf = e => units.get(unitOf(e))?.course_id;
+const languageOf = e => courses.get(courseOf(e))?.target_language;
 
 /** Types the learner types into. Choice rows are strict and speaking is scored
  *  by `gradeSpeechTranscription`, so neither can be widened by an addition. */
@@ -78,6 +79,8 @@ const TYPED = new Set([
  */
 const taughtStrings = new Map();
 const rowsByUnit = new Map();
+const rowsByCourse = new Map();
+const rowsByLesson = new Map();
 for (const exercise of snapshot.exercises) {
   const language = languageOf(exercise);
   if (!language) continue;
@@ -96,7 +99,65 @@ for (const exercise of snapshot.exercises) {
   const unitId = unitOf(exercise);
   if (!rowsByUnit.has(unitId)) rowsByUnit.set(unitId, []);
   rowsByUnit.get(unitId).push(exercise);
+  const courseId = courseOf(exercise);
+  if (!rowsByCourse.has(courseId)) rowsByCourse.set(courseId, []);
+  rowsByCourse.get(courseId).push(exercise);
+  if (!rowsByLesson.has(exercise.lesson_id)) rowsByLesson.set(exercise.lesson_id, []);
+  rowsByLesson.get(exercise.lesson_id).push(exercise);
 }
+
+/**
+ * How much of the curriculum counts as "taught alongside this row" — the
+ * `siblingKeys` scope in lib/grading.ts. `unit` is what the app passes today;
+ * the others are here so the question "what would another scope close, and at
+ * what cost" can be answered with the real grader rather than argued.
+ */
+const siblingScope = args.get('sibling-scope') ?? 'unit';
+const rowsByLanguage = new Map();
+for (const exercise of snapshot.exercises) {
+  const language = languageOf(exercise);
+  if (!language) continue;
+  if (!rowsByLanguage.has(language)) rowsByLanguage.set(language, []);
+  rowsByLanguage.get(language).push(exercise);
+}
+const siblingRowsFor = (exercise) => {
+  if (siblingScope === 'none') return [];
+  if (siblingScope === 'lesson') return rowsByLesson.get(exercise.lesson_id) ?? [];
+  if (siblingScope === 'course') return rowsByCourse.get(courseOf(exercise)) ?? [];
+  // A course is one language at one band — 36 of them across nine languages —
+  // so `language` is a wider scope again, covering every band of the course's
+  // language.
+  if (siblingScope === 'language') return rowsByLanguage.get(languageOf(exercise)) ?? [];
+  return rowsByUnit.get(unitOf(exercise)) ?? [];
+};
+const scopeIdOf = (exercise) => {
+  if (siblingScope === 'none') return null;
+  if (siblingScope === 'lesson') return exercise.lesson_id;
+  if (siblingScope === 'course') return courseOf(exercise);
+  if (siblingScope === 'language') return languageOf(exercise);
+  return unitOf(exercise);
+};
+
+/**
+ * One sibling array per scope group, not per row. `gradeAnswer` caches the
+ * normalized key set on the array's identity, so handing it a fresh array per
+ * row throws that cache away — at language scope, a thousand keys renormalized
+ * for every grade.
+ */
+const siblingsByScope = new Map();
+const siblingKeysFor = (exercise) => {
+  const id = scopeIdOf(exercise);
+  if (id == null) return [];
+  const cached = siblingsByScope.get(id);
+  if (cached) return cached;
+  const built = taughtKeys(siblingRowsFor(exercise).map(row => ({
+    type: row.type,
+    prompt: row.prompt ?? '',
+    correctAnswer: row.correct_answer ?? '',
+  })));
+  siblingsByScope.set(id, built);
+  return built;
+};
 
 /** The hints the lesson runner really builds — see lib/exercise-restore.ts.
  *  Without them the strict gate does not fire on choice and grammar rows and
@@ -109,11 +170,7 @@ const runtimeHints = exercise => ({
     targetWord: exercise.target_word,
     language: languageOf(exercise),
     blankContext: exercise.type === 'fill_blank' ? blankContext(exercise.prompt ?? '') : undefined,
-    siblingKeys: taughtKeys((rowsByUnit.get(unitOf(exercise)) ?? []).map(row => ({
-      type: row.type,
-      prompt: row.prompt ?? '',
-      correctAnswer: row.correct_answer ?? '',
-    }))),
+    siblingKeys: siblingKeysFor(exercise),
   },
 });
 
@@ -224,6 +281,7 @@ for (const { exercise, ref, before, after } of cases) {
 const report = {
   snapshot: snapshotPath,
   mode: additionsPath ? 'proposal' : 'corpus audit',
+  sibling_scope: siblingScope,
   additions: additionsPath ?? null,
   languages: [...taughtStrings].map(([language, strings]) => ({ language, taught_strings: strings.size })),
   rows_checked: cases.length,
@@ -236,7 +294,7 @@ const report = {
 const out = args.get('json');
 if (out) await writeFile(out, JSON.stringify(report, null, 1));
 
-console.log(`${report.mode}: ${cases.length} rows, ${graded} grades`);
+console.log(`${report.mode}: ${cases.length} rows, ${graded} grades, sibling scope ${siblingScope}`);
 for (const { language, taught_strings } of report.languages) {
   console.log(`  ${language}: ${taught_strings} taught strings`);
 }
