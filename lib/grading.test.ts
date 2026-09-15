@@ -715,9 +715,39 @@ describe('a different Korean ending is a different form, not a typo', () => {
     expect(gradeAnswer('갔습니다', '갔어요', ['갔습니다'], ko).isCorrect).toBe(true);
   });
 
-  it('applies to Korean only', () => {
-    // Japanese kana keeps its tolerance; the Han gate is what handles Japanese.
-    expect(gradeAnswer('ありがとお', 'ありがとう', [], { exerciseHints: { language: 'ja' } }).isCorrect)
+  it('does not fire on a language with no ending table', () => {
+    // Spanish conjugation is a job for target_grammar and the pair list.
+    expect(gradeAnswer('hablo', 'hablé', [], { exerciseHints: { language: 'es' } }).isCorrect)
       .toBe(true);
+  });
+});
+
+describe('the same rule reaches the Japanese endings the kanji gate cannot', () => {
+  const ja = { exerciseHints: { language: 'ja' as const } };
+
+  it('refuses a polite past for a polite present on a long kana key', () => {
+    // The one shape that survives both guards: ます against ました is two edits,
+    // and a ten-character key earns a budget of two. Live in the curriculum on
+    // two rows before this.
+    expect(gradeAnswer('ありがとうございました', 'ありがとうございます', [], ja).isCorrect).toBe(false);
+  });
+
+  it('leaves the cases the kanji gate already covers where they are', () => {
+    // 料理する for 料理します carries a kanji, so tolerance was already gone.
+    expect(gradeAnswer('料理する', '料理します', [], ja).isCorrect).toBe(false);
+  });
+
+  it('still forgives an ordinary kana slip in a long word', () => {
+    // No ending boundary to split on, so the budget decides, as it should.
+    expect(gradeAnswer('ありがとうございまず', 'ありがとうございます', [], ja).isCorrect).toBe(true);
+    expect(gradeAnswer('ありがとお', 'ありがとう', [], ja).isCorrect).toBe(true);
+  });
+
+  it('accepts a register the row authored', () => {
+    // Accepting upward is content's job — a polite form written into
+    // accepted_answers exact-matches long before tolerance is consulted.
+    expect(
+      gradeAnswer('ありがとうございました', 'ありがとうございます', ['ありがとうございました'], ja).isCorrect,
+    ).toBe(true);
   });
 });
