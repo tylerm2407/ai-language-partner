@@ -1,0 +1,49 @@
+{
+  "engine": "PGlite (in-memory PostgreSQL)",
+  "round": 2,
+  "snapshot_sha256": "9a20145dc6b53d1e4b5f17388b3f24c4ee4dd43c19b9bdac935ba8256bfb489c",
+  "sql_sha256": "85d2e0a3d7297254c9d6dee88e2da275d0ce5568d686dd5b26606d32ab31e426",
+  "reverse_sql_sha256": "75b1ebdbe864f54e5134c7e1f7762c151cec67dbf7800e47bf8d6be462771ad2",
+  "patch_rows": 640,
+  "changed_fields": 723,
+  "tables": [
+    "checkpoint_items",
+    "exercises",
+    "lessons"
+  ],
+  "checks": [
+    "updates only, no insert machinery",
+    "exact changed rows/fields",
+    "unchanged rows/fields",
+    "idempotence",
+    "atomic conflict rollback on an exercise",
+    "atomic conflict rollback on a lesson title",
+    "exact array guards",
+    "missing-row abort",
+    "compiler scope, speaking, reason and conflict guards",
+    "reproducible build matching the committed draft",
+    "rollback restores the snapshot exactly",
+    "rollback idempotence, no-op and half-applied repair",
+    "rollback refuses an edited row",
+    "rollback writes only patched fields, never guarded identity fields",
+    "declared table/field scope",
+    "target_grammar rows are not already strict",
+    "retitle covers exactly nine lessons",
+    "Film & Theater keys no longer visual-art labels",
+    "triage block writes exactly the 298 confirmed rows and 313 additions",
+    "the four dependency-bearing rows carry the dependency in their own reason",
+    "no row awaiting a product decision is patched",
+    "ruling 1 adds every Japanese script candidate and invents none",
+    "ruling 2 accepts upward, refuses downward, and rules on all 19",
+    "ruling 3 adds the one held French paraphrase",
+    "the two register removals withdraw exactly what was argued and nothing else loses an accepted answer"
+  ],
+  "production_writes": 0,
+  "limitations": [
+    "Minimal typed content schema, not full Supabase auth/RLS/triggers or historical migrations",
+    "Does not establish linguistic correctness or independent round-2 approval",
+    "Does not test the shipped grader; see runtime-round2.mjs for that, including the whole-language widening check"
+  ],
+  "triage_source_sha256": "d897777b985558929da9e57a7fa1445bc303a289c414c6b49a7f48f135ea9775",
+  "triage_candidates_sha256": "632265eb7fada40062b7686512e6dad69c7a860647b6cd2439a944ad3b7f2866"
+}
