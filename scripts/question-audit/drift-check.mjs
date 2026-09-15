@@ -35,7 +35,12 @@ import { isDeepStrictEqual } from 'node:util';
 const project = 'ngqpsuixmumdnqbqxjxv';
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const root = resolve(scriptDirectory, '../..');
-const draftPath = resolve(root, 'docs/audits/question-verification/remediation/draft-patches.json');
+/** Which patch set to check. Round one by default; `--draft <path>` for any
+ *  later round, which is how round two gets the same pre-flight round one had. */
+const draftArg = process.argv.indexOf('--draft');
+const draftPath = draftArg !== -1 && process.argv[draftArg + 1]
+  ? resolve(process.cwd(), process.argv[draftArg + 1])
+  : resolve(root, 'docs/audits/question-verification/remediation/draft-patches.json');
 
 const after = process.argv.includes('--after');
 const token = process.env.SUPABASE_ACCESS_TOKEN;
