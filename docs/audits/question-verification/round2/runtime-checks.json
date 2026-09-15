@@ -2,7 +2,7 @@
   "round": 2,
   "grader": "lib/grading.ts gradeAnswer, with the runtime exerciseHints shape from lib/exercise-restore.ts",
   "snapshot_sha256": "9a20145dc6b53d1e4b5f17388b3f24c4ee4dd43c19b9bdac935ba8256bfb489c",
-  "draft_sha256": "b0fcba6e1ca7d47d2c21e500ac1376c94f52fd51203d8eeec8bf699d977aa3f9",
+  "draft_sha256": "77e6cc4090c93e1c05eabc65659cf2026af588d720625262eaccc537742fd39e",
   "counts": {
     "patched_rows": 780,
     "stored_answers": 1623,

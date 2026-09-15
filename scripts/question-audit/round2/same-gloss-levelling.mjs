@@ -190,8 +190,18 @@ export const PROPAGATION_PENDING = [
 
 export const PROPAGATION_REASON = 'This patch added the string to one row of the group under a 2026-09-15 ruling or a restored withdrawal, and the twin does not carry it. Whether the ruling reaches the twin is a separate decision: the two rows do ask the same question, but levelling up would also spread the alternatives on that row that are themselves doubtful.';
 
-/** Held: levelling would admit the listed string, which is wrong on this row.
- * A confusable pair keyed on `missing` is the remedy for each. */
+/**
+ * Held: levelling would admit the listed string, which is wrong on this row.
+ * A confusable pair keyed on `missing` is the remedy for each.
+ *
+ * The three Japanese comparative entries were reported clear on 2026-09-15 and
+ * re-measured rather than taken: the "budget zero on the stored fragment"
+ * reasoning describes the fill_blank row `もっと_____ (Shorter)`, which keys the
+ * fragment 背が低い. ja-E1000 and ja-E1054 are translate_to_target rows storing
+ * the whole string, where もっと短い has a budget of one and every もっと+adjective
+ * sibling is one substitution away. Their cloze twin ja-E1033 holds the same
+ * strings safely only because a cloze is graded strictly. See
+ * `restored-withdrawals.mjs` for the measurement. */
 export const HELD_WOULD_WIDEN = [
   {"ref":"es-E0682","lang":"es","group":"to_target|Nurse|Enfermera","missing":"Enfermero","admits":["Enfermo"]},
   {"ref":"es-E1042","lang":"es","group":"to_target|More expensive|Más caro","missing":"Más cara","admits":["Más corta","Más baja"]},

@@ -179,8 +179,31 @@ export const SCRIPT_REFUSE = {
   'ウェブサイト|Webサイト': 'Latin script. Tyler ruled on the kana/kanji question; whether a Latin-script rendering counts is a separate question nobody has ruled on.',
 };
 
-/** The three typo-ball answers that still widen, held with what would restore
- * them. Keyed on the ADDED string, which is what the pair mechanism requires. */
+/**
+ * The three typo-ball answers that still widen, held with what would restore
+ * them. Keyed on the ADDED string, which is what the pair mechanism requires.
+ *
+ * RE-MEASURED 2026-09-15 after these were reported clear to restore on the
+ * ground that "tolerance still compares against the stored fragment 短い — two
+ * characters, budget zero". That is true of a fill_blank row and NOT of these:
+ * `もっと_____ (Shorter)` keys the fragment 背が低い and already accepts the
+ * fragment 短い, where the budget is indeed zero. But ja-E1000 and ja-E1054 are
+ * `translate_to_target` rows that store the WHOLE string, so もっと短い is five
+ * characters with a budget of one, and every もっと+adjective sibling is one
+ * substitution away. Run against the shipped grader, adding もっと短い to ja-E1000
+ * makes もっと安い, もっと高い, もっと良い and もっと速い all grade
+ * "Correct! (Minor typo)" on a row glossed Shorter. Four meaning flips, measured,
+ * not predicted.
+ *
+ * The twin ja-E1033 carries all three of these safely, which is what makes the
+ * divergence look like an omission. It is a `cloze_deletion` — a grammar-shaped
+ * type, graded strictly — so tolerance never runs there at all. Same strings,
+ * different exercise type, opposite consequence. That is also why
+ * `same-gloss-levelling.mjs` declares this group rather than levelling it.
+ *
+ * They stay held. A pair keyed on もっと短い would still be needed, or the rows
+ * want a different remedy entirely.
+ */
 export const HELD_TYPO_BALL = [
   { ref: 'ja-E1000', key: 'もっと背が低い', candidate: 'より背が低い', admits: ['背が低い'],
     pair_would_have_to_say: '背が低い ("short") and より背が低い ("shorter") are different answers, so the bare adjective must not be accepted on a comparative row.' },

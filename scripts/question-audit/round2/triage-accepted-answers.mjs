@@ -38,14 +38,23 @@
  *    Twelve collateral acceptances in total, enumerated below and re-measured by
  *    `runtime-round2.mjs` against the whole language, not per row.
  *
- *    What closes them is the Japanese edit-distance gate on the grader branch,
- *    which refuses fuzzy acceptance on a kanji-bearing answer before the typo
- *    budget is ever consulted. That was measured on the grader side: the five
- *    confusable pairs originally authored for this collision could never fire
- *    once the gate was in place and were removed as inert, so naming them here
- *    would point at a remedy that no longer exists. The two kana pairs that
- *    remain on that branch are for a collision that exists independently of
- *    these additions.
+ *    THE GATE IS THE ONLY DEFENCE ON THESE FOUR ROWS, not one of two. The
+ *    Japanese edit-distance gate on the grader branch refuses fuzzy acceptance
+ *    on a kanji-bearing answer before the typo budget is consulted, and nothing
+ *    else reaches this collision:
+ *
+ *      - The five confusable pairs originally authored for it were measured
+ *        unreachable behind the gate and withdrawn as inert.
+ *      - The sibling-key rule cannot see it AT ANY SCOPE. Verified against the
+ *        frozen snapshot rather than taken on report: お母さん, お父さん, お姉さん,
+ *        お嬢さん and お隣さん are never a `correct_answer` anywhere in the corpus,
+ *        never an option or a distractor, and never a card's target text. Each
+ *        appears only as an accepted alternative on one or two rows, and
+ *        `taughtKeys` reads `correct_answer` only.
+ *
+ *    So the apply precondition is load-bearing for these four rows rather than
+ *    cautious. Anyone weighing whether to ship round two ahead of the grader
+ *    branch should read it that way.
  *
  *    The rows are included because the additions are right and because splitting
  *    them out would hide the dependency; the dependency is written into each of
@@ -90,7 +99,7 @@ export const DEPENDENT_ROWS = {
 export const PARTIALLY_HELD = ['ja-E0892', 'ja-E0970', 'ko-E0856', 'ko-E0862'];
 
 const DEPENDENCY_NOTE = collateral =>
-  ` DEPENDENCY — do not apply this row without the Japanese edit-distance gate on the grader branch, which refuses fuzzy acceptance on a kanji-bearing answer before the typo budget is consulted. Until the gate lands, the added kanji spelling brings ${collateral.join(', ')} inside this row's typo budget, on a row whose purpose is separating kinship terms. The gate, not a pair list, is what holds these rows apart: the confusable pairs first authored for this collision were measured to be unreachable behind it and were withdrawn.`;
+  ` DEPENDENCY — the Japanese edit-distance gate on the grader branch is the ONLY thing that holds this row apart, so do not apply it without that gate. Until the gate lands, the added kanji spelling brings ${collateral.join(', ')} inside this row's typo budget, on a row whose purpose is separating kinship terms. No other mechanism reaches them: ${collateral.join(', ')} are never taught KEYS anywhere in the corpus — each appears only as an accepted alternative on one or two rows, and is an option, a distractor and a card target text nowhere — so the sibling-key rule cannot see them at any scope, and the confusable pairs first authored for this collision were measured unreachable behind the gate and withdrawn. The gate refuses fuzzy acceptance on a kanji-bearing answer before the typo budget is consulted; nothing else does.`;
 
 export async function loadTriage() {
   const path = resolve(dirname(fileURLToPath(import.meta.url)), '../../..', TRIAGE_FILE);
