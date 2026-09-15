@@ -74,9 +74,27 @@ export interface ExerciseHints {
    * words taught in different units, and words that are never anyone's stored
    * key — which no sibling list can reach.
    *
-   * Keys only. A sibling's accepted ALTERNATIVES are not included: an
-   * alternative is one row's judgement about a synonym, and refusing it
-   * everywhere else would turn a generosity into a trap.
+   * Keys only. A sibling's accepted ALTERNATIVES are not included, and that is
+   * measured rather than squeamish: counting them would close 597 more
+   * collisions and mark 249 right answers wrong, because an alternative is a
+   * synonym of some key and is usually correct on any row that shares it —
+   * Italian Generoso/Generosa, German Nachbar/Nachbarin, Russian
+   * Загрузить/Загружать. Those 249 are content defects worth fixing (a row
+   * missing an accepted answer its identically-keyed twin has), and until they
+   * are, an alternative must not become a trap. Scope reaches 651 of the 1,767
+   * collisions in the frozen curriculum and no more; the other 1,116 are not a
+   * scope question.
+   *
+   * ONE RECORDED NON-DECISION IS REVERSED BY THIS RULE. The curriculum audit
+   * left Spanish caliente/valiente deliberately uncertain — every other
+   * approved confusable pair is two words no keyboard slip connects, but c and
+   * v are adjacent on QWERTY, so typing one for the other might genuinely be a
+   * slip. This rule decides it, by refusing: both are taught keys, and a
+   * candidate that exactly matches another taught key is that answer. It is
+   * one of 38 such adjacent-key cases among the 651 (5.8%), accepted on the
+   * measured trade — 613 wrong answers stop being marked correct, and none of
+   * the 651 is a synonym of its row's key. If that call is ever revisited,
+   * this is the paragraph to revisit.
    */
   siblingKeys?: readonly string[];
 }
