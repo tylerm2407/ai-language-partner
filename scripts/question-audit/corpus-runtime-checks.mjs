@@ -4,6 +4,7 @@ import {readFile,writeFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {isDeepStrictEqual as eq} from 'node:util';
 import {gradeAnswer} from '../../lib/grading.ts';
+import {blankContext,taughtKeys} from '../../lib/exercise-restore.ts';
 import {gradeReadingAnswer,readingQuestionOptions} from '../../lib/reading-questions.ts';
 import {isCorrect as checkpointCorrect} from '../../supabase/functions/checkpoint/checkpoint-core.ts';
 
@@ -28,6 +29,35 @@ for(const p of draft.patches){
  if(!row||!Object.entries(p.before).every(([f,v])=>eq(row[f],v)))throw Error(`Source drift: ${p.table}/${p.id}`);
  Object.assign(row,p.after);
 }
+/**
+ * The taught strings of each language, welded and memoised per (language, key).
+ *
+ * The grader refuses a candidate that is another taught key, and judges a
+ * fill-blank row as its completed word — both only when the caller supplies the
+ * hints. A harness that omits them measures a grader nobody runs, which is how
+ * the prompt-echo class came to be reported as 256 rows when the shipped grader
+ * refuses 241 of them. Memoised because `gradeAnswer` caches normalisation on
+ * array identity, and a fresh filter per call re-normalises ~2,000 strings.
+ */
+const rowsByLanguage=new Map();
+for(const e of snapshot.exercises){
+ if(e.type==='speaking'||e.response_mode==='speak')continue;
+ const lesson=indexes.get('lessons').get(e.lesson_id);if(!lesson)continue;
+ const unit=indexes.get('units').get(lesson.unit_id);if(!unit)continue;
+ const course=indexes.get('courses').get(unit.course_id);if(!course)continue;
+ const lang=course.target_language;
+ if(!rowsByLanguage.has(lang))rowsByLanguage.set(lang,[]);
+ rowsByLanguage.get(lang).push({type:e.type,prompt:e.prompt??'',correctAnswer:e.correct_answer});
+}
+const taughtByLanguage=new Map([...rowsByLanguage].map(([l,rows])=>[l,taughtKeys(rows)]));
+const siblingCache=new Map();
+const siblingsFor=(language,key)=>{
+ if(!language)return[];
+ const id=`${language}\u0000${key}`;
+ let list=siblingCache.get(id);
+ if(!list){list=(taughtByLanguage.get(language)??[]).filter(k=>k!==key);siblingCache.set(id,list);}
+ return list;
+};
 const counts={lesson_rows:0,lesson_answers:0,lesson_choice_rows:0,reading_rows:0,reading_answers:0,reading_choice_rows:0,checkpoint_rows:0,checkpoint_answers:0};
 const failures=[];
 function answers(table,row,grade,counter){
@@ -40,7 +70,7 @@ for(const e of snapshot.exercises){
  if(e.type==='speaking'||e.response_mode==='speak')continue;
  counts.lesson_rows++;
  const lesson=indexes.get('lessons').get(e.lesson_id),unit=indexes.get('units').get(lesson.unit_id),course=indexes.get('courses').get(unit.course_id);
- const grade=answer=>gradeAnswer(answer,e.correct_answer,e.accepted_answers,{exerciseHints:{exerciseType:e.type,skillType:e.skill_type,targetGrammar:e.target_grammar,targetWord:e.target_word,language:course.target_language}}).isCorrect;
+ const grade=answer=>gradeAnswer(answer,e.correct_answer,e.accepted_answers,{exerciseHints:{exerciseType:e.type,skillType:e.skill_type,targetGrammar:e.target_grammar,targetWord:e.target_word,language:course.target_language,blankContext:e.type==='fill_blank'?blankContext(e.prompt??''):undefined,siblingKeys:siblingsFor(course.target_language,e.correct_answer)}}).isCorrect;
  answers('exercises',e,grade,'lesson_answers');
  if(['multiple_choice','listening_choice'].includes(e.type)){
   counts.lesson_choice_rows++;
