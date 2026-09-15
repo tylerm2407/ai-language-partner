@@ -15,7 +15,7 @@
  *  - The allowlist is NOT empty. Italian could assert "nothing disagrees"
  *    because its nineteen were all omissions. Across nine languages two
  *    populations must stay divergent, and both are declared with their reason:
- *    thirteen that would admit a wrong answer, fourteen where this patch's own
+ *    ten that would admit a wrong answer, fourteen where this patch's own
  *    ruling has not yet been decided for the twin, and five where a cloze frame
  *    cannot take an overt-subject form. A group that disagrees and is in
  *    neither list fails, which is the whole point of the file.
@@ -106,7 +106,7 @@ test('every declared exception carries a reason, and every held one carries what
     assert.match(entry.missing, /^(私は|저는)/, `${entry.ref}: declared for a reason the reason does not describe`);
     assert.ok(entry.group.includes('|'), entry.ref);
   }
-  assert.equal(HELD_WOULD_WIDEN.length, 13);
+  assert.equal(HELD_WOULD_WIDEN.length, 10);
   assert.equal(PROPAGATION_PENDING.length, 14);
   assert.ok(PROPAGATION_REASON.trim().length > 80);
   for (const entry of HELD_WOULD_WIDEN) {

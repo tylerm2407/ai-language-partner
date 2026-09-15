@@ -10745,11 +10745,13 @@
       },
       "after": {
         "accepted_answers": [
+          "より背が低い",
+          "もっと短い",
           "より短い"
         ]
       },
       "reasons": [
-        "ja-E1000 (ja, translate_to_target): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より短い\" on the keyed \"もっと背が低い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+        "ja-E1000 (ja, translate_to_target): RESTORED under a gate dependency. DEPENDENCY — the Japanese edit-distance gate on the grader branch is the ONLY thing that holds this row apart, so do not apply it without that gate. Measured on the merged branch: no new acceptance anywhere in this family. Measured on the content branch, which has no gate: adding \"より背が低い\" to the keyed \"もっと背が低い\" admits 背が低い, because the budget is one and each sibling is one substitution away. The gate withdraws fuzzy acceptance on a kanji-bearing answer before the budget is consulted; nothing else does. The twin cloze row carries these strings safely on either branch only because a grammar-shaped type is graded strictly. ja-E1000 (ja, translate_to_target): RESTORED under a gate dependency. DEPENDENCY — the Japanese edit-distance gate on the grader branch is the ONLY thing that holds this row apart, so do not apply it without that gate. Measured on the merged branch: no new acceptance anywhere in this family. Measured on the content branch, which has no gate: adding \"もっと短い\" to the keyed \"もっと背が低い\" admits もっと良い, もっと悪い, もっと遅い, もっと速い, もっと安い, もっと高い, because the budget is one and each sibling is one substitution away. The gate withdraws fuzzy acceptance on a kanji-bearing answer before the budget is consulted; nothing else does. The twin cloze row carries these strings safely on either branch only because a grammar-shaped type is graded strictly. ja-E1000 (ja, translate_to_target): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"より短い\" on the keyed \"もっと背が低い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
       ],
       "sources": [
         "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
@@ -11008,6 +11010,27 @@
       },
       "reasons": [
         "ja-E1048 (ja, translate_to_target): RESTORED — a correct answer withdrawn by the round-1 alternatives batch because it brought a sibling item inside the typo budget. It no longer does. That collision was measured against a grader that scaled the typo budget by the matched alternative; lib/grading.ts now scales by the shorter of the key and the alternative and consults the confusable-pair list, so \"最も悪い\" on the keyed \"一番悪い\" admits no other taught Japanese string at all. Re-measured here rather than assumed, and it needs neither the 39 proposed pairs nor the edit-distance gate."
+      ],
+      "sources": [
+        "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2007-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2007-0006-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "より背が高い"
+        ]
+      },
+      "reasons": [
+        "ja-E1054 (ja, translate_to_target): RESTORED under a gate dependency. DEPENDENCY — the Japanese edit-distance gate on the grader branch is the ONLY thing that holds this row apart, so do not apply it without that gate. Measured on the merged branch: no new acceptance anywhere in this family. Measured on the content branch, which has no gate: adding \"より背が高い\" to the keyed \"もっと背が高い\" admits 背が高い, because the budget is one and each sibling is one substitution away. The gate withdraws fuzzy acceptance on a kanji-bearing answer before the budget is consulted; nothing else does. The twin cloze row carries these strings safely on either branch only because a grammar-shaped type is graded strictly."
       ],
       "sources": [
         "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"

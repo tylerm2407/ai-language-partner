@@ -9,7 +9,7 @@ import { createRound2PatchSet, renderPatchSql, renderReverseSql, SNAPSHOT_FILE, 
 import { NEW_TITLE } from './idiomatic-equivalents-retitle.mjs';
 import { loadTriage, DEPENDENT_ROWS, PARTIALLY_HELD, TRIAGE_SHA } from './triage-accepted-answers.mjs';
 import { loadCandidates, REGISTER_RULING, REGISTER_REMOVALS, REGISTER_KEPT, FR_C0024, CANDIDATES_SHA, RULED_ON } from './product-rulings.mjs';
-import { loadAlternativesEvidence, SCRIPT_ACCEPT, SCRIPT_REFUSE, HELD_TYPO_BALL, EVIDENCE_SHA } from './restored-withdrawals.mjs';
+import { loadAlternativesEvidence, SCRIPT_ACCEPT, SCRIPT_REFUSE, HELD_TYPO_BALL, GATE_DEPENDENT_COMPARATIVES, EVIDENCE_SHA } from './restored-withdrawals.mjs';
 import { LEVELLED } from './same-gloss-levelling.mjs';
 import { AXIS_REMAINDER, AXIS_REFUSED, AXIS_HELD } from './alternatives-axis-remainder.mjs';
 
@@ -394,9 +394,18 @@ test('the four dependency-bearing rows say so in the patch itself', () => {
     flagged.push(ref);
   }
   assert.deepEqual(flagged.sort(), ['ja-E0361', 'ja-E0373', 'ja-E0569', 'ja-E0581']);
-  // And no other row claims a dependency it does not have.
+  // The three comparatives restored on the same condition say so too, and name
+  // the gate as the sole mechanism. Seven rows claim a dependency; no others.
+  const comparativeIds = new Set(GATE_DEPENDENT_COMPARATIVES.map(entry => jaRef(Number(entry.ref.slice(4))).exercise.id));
+  for (const id of comparativeIds) {
+    const patch = patches.find(p => p.id === id);
+    assert(patch, id);
+    const reason = patch.reasons.join(' ');
+    assert(reason.includes('DEPENDENCY'), `${id}: restored without declaring the gate dependency`);
+    assert(reason.includes('ONLY thing that holds this row apart'), `${id}: does not name the gate as the sole mechanism`);
+  }
   const claiming = patches.filter(p => p.reasons.some(r => r.includes('DEPENDENCY')));
-  assert.equal(claiming.length, 4);
+  assert.equal(claiming.length, 4 + comparativeIds.size);
   passedChecks++;
 });
 
@@ -566,8 +575,9 @@ test('the restored withdrawals recover both lists exactly, and adjudicate every 
     if (held || refusedByGround) assert(!after.includes(entry.candidate), `${entry.ref}: ${entry.candidate} was restored despite being refused or held`);
     else if (after.includes(entry.candidate)) restored++;
   }
-  assert.equal(restored, 95, '56 script + 39 typo-ball');
-  assert.equal(HELD_TYPO_BALL.length, 3);
+  assert.equal(restored, 98, '56 script + 42 typo-ball, the last three under a gate dependency');
+  assert.equal(HELD_TYPO_BALL.length, 0);
+  assert.equal(GATE_DEPENDENT_COMPARATIVES.length, 3);
   passedChecks++;
 });
 

@@ -38,7 +38,7 @@
  *  - 14 LEFT PENDING, because the divergence is this patch's own: a ruling was
  *    applied to one row of a group and the twin does not carry the string yet.
  *
- *  - 13 HELD, because levelling them would admit a wrong answer, measured
+ *  - 10 HELD, because levelling them would admit a wrong answer, measured
  *    against every taught string in the language. These are the meaning flips
  *    the audit exists to catch: "Nurse" would accept Enfermo (sick), "Neighbor"
  *    would accept Cozinha (kitchen), "Tired" would accept Zangada (angry),
@@ -172,12 +172,12 @@ export const LEVELLED = [
  * and 願う / 願っています ("to wish") sit on a row keyed したい ("want to do").
  * Propagating those would double an existing problem rather than fix one. */
 export const PROPAGATION_PENDING = [
+  {"ref":"ja-E1054","lang":"ja","group":"to_target|Taller|もっと背が高い","missing":"より高い"},
   {"ref":"ja-E0745","lang":"ja","group":"to_target|To cook|料理する","missing":"りょうりする"},
   {"ref":"ja-E0745","lang":"ja","group":"to_target|To cook|料理する","missing":"料理します"},
   {"ref":"ja-E0856","lang":"ja","group":"to_target|I studied|勉強しました","missing":"べんきょうしました"},
   {"ref":"ja-E0937","lang":"ja","group":"to_target|I will travel|旅行します","missing":"りょこうします"},
   {"ref":"ja-E1012","lang":"ja","group":"to_target|Faster|もっと速い","missing":"もっと速く"},
-  {"ref":"ja-E1054","lang":"ja","group":"to_target|Taller|もっと背が高い","missing":"より高い"},
   {"ref":"ja-E1024","lang":"ja","group":"to_target|Slower|もっと遅い","missing":"もっと遅く"},
   {"ref":"ja-E1126","lang":"ja","group":"to_target|Party|パーティー","missing":"パーティ"},
   {"ref":"ja-E1684","lang":"ja","group":"to_target|I wish|したい","missing":"願っています"},
@@ -194,14 +194,13 @@ export const PROPAGATION_REASON = 'This patch added the string to one row of the
  * Held: levelling would admit the listed string, which is wrong on this row.
  * A confusable pair keyed on `missing` is the remedy for each.
  *
- * The three Japanese comparative entries were reported clear on 2026-09-15 and
- * re-measured rather than taken: the "budget zero on the stored fragment"
- * reasoning describes the fill_blank row `もっと_____ (Shorter)`, which keys the
- * fragment 背が低い. ja-E1000 and ja-E1054 are translate_to_target rows storing
- * the whole string, where もっと短い has a budget of one and every もっと+adjective
- * sibling is one substitution away. Their cloze twin ja-E1033 holds the same
- * strings safely only because a cloze is graded strictly. See
- * `restored-withdrawals.mjs` for the measurement. */
+ * The three Japanese comparative entries that used to sit here have moved to
+ * `restored-withdrawals.mjs` as GATE_DEPENDENT_COMPARATIVES. They widen on THIS
+ * branch, whose grader has no Japanese kanji gate, and not on the merged branch,
+ * which has one. A tolerance measurement made from this worktree describes code
+ * that will not ship, so the right disposition for them was a gate dependency
+ * rather than a hold. The ten below need a confusable pair and no gate reaches
+ * them: they are Latin-script and Korean rows. */
 export const HELD_WOULD_WIDEN = [
   {"ref":"es-E0682","lang":"es","group":"to_target|Nurse|Enfermera","missing":"Enfermero","admits":["Enfermo"]},
   {"ref":"es-E1042","lang":"es","group":"to_target|More expensive|Más caro","missing":"Más cara","admits":["Más corta","Más baja"]},
@@ -211,9 +210,6 @@ export const HELD_WOULD_WIDEN = [
   {"ref":"pt-E1042","lang":"pt","group":"to_target|More expensive|Mais caro","missing":"Mais cara","admits":["Mais curta"]},
   {"ref":"ru-E0736","lang":"ru","group":"to_target|To move|Переезжать","missing":"Переехать","admits":["переехали"]},
   {"ref":"ru-E0898","lang":"ru","group":"to_target|I bought|Я купил","missing":"Я купила","admits":["купила"]},
-  {"ref":"ja-E1000","lang":"ja","group":"to_target|Shorter|もっと背が低い","missing":"より背が低い","admits":["背が低い"]},
-  {"ref":"ja-E1000","lang":"ja","group":"to_target|Shorter|もっと背が低い","missing":"もっと短い","admits":["もっと良い","もっと悪い","もっと遅い","もっと速い","もっと安い","もっと高い"]},
-  {"ref":"ja-E1054","lang":"ja","group":"to_target|Taller|もっと背が高い","missing":"より背が高い","admits":["背が高い"]},
   {"ref":"ko-E0368","lang":"ko","group":"to_target|Grandmother|할머니","missing":"조모","admits":["고모"]},
   {"ref":"ko-E0694","lang":"ko","group":"to_target|Dentist|치과의사","missing":"치과 의사","admits":["과 의사"]},
 ];

@@ -2,19 +2,19 @@
   "round": 2,
   "grader": "lib/grading.ts gradeAnswer, with the runtime exerciseHints shape from lib/exercise-restore.ts",
   "snapshot_sha256": "9a20145dc6b53d1e4b5f17388b3f24c4ee4dd43c19b9bdac935ba8256bfb489c",
-  "draft_sha256": "a61fded69ea0fa81cb07bca79f669917e0b64f804703af9336d5aa02b70880e0",
+  "draft_sha256": "8b8ad1e8723d225e8f139a07a3c1a24b92edbe89a67d0627e10ed7b4f94c8da1",
   "counts": {
-    "patched_rows": 797,
-    "stored_answers": 1658,
+    "patched_rows": 798,
+    "stored_answers": 1662,
     "choice_rows": 12,
     "closed_acceptances": 279,
     "still_open": 0,
     "refusal_claims": 23,
-    "triage_rows": 532,
-    "triage_additions": 601,
-    "whole_language_comparisons": 1168238,
-    "collateral_acceptances": 12,
-    "strict_additions_accepted": 601,
+    "triage_rows": 533,
+    "triage_additions": 604,
+    "whole_language_comparisons": 1170519,
+    "collateral_acceptances": 20,
+    "strict_additions_accepted": 604,
     "taught_strings_per_language": {
       "ja": 2281,
       "it": 2020,
@@ -34,53 +34,106 @@
   "declared_collateral": [
     {
       "ref": "ja-E0361",
-      "string": "お父さん"
+      "string": "お父さん",
+      "source": "kinship"
     },
     {
       "ref": "ja-E0361",
-      "string": "お姉さん"
+      "string": "お姉さん",
+      "source": "kinship"
     },
     {
       "ref": "ja-E0361",
-      "string": "お嬢さん"
+      "string": "お嬢さん",
+      "source": "kinship"
     },
     {
       "ref": "ja-E0361",
-      "string": "お母さん"
+      "string": "お母さん",
+      "source": "kinship"
     },
     {
       "ref": "ja-E0361",
-      "string": "お隣さん"
+      "string": "お隣さん",
+      "source": "kinship"
     },
     {
       "ref": "ja-E0373",
-      "string": "お父さん"
+      "string": "お父さん",
+      "source": "kinship"
     },
     {
       "ref": "ja-E0373",
-      "string": "お姉さん"
+      "string": "お姉さん",
+      "source": "kinship"
     },
     {
       "ref": "ja-E0373",
-      "string": "お嬢さん"
+      "string": "お嬢さん",
+      "source": "kinship"
     },
     {
       "ref": "ja-E0373",
-      "string": "お母さん"
+      "string": "お母さん",
+      "source": "kinship"
     },
     {
       "ref": "ja-E0373",
-      "string": "お隣さん"
+      "string": "お隣さん",
+      "source": "kinship"
     },
     {
       "ref": "ja-E0569",
-      "string": "お父さん"
+      "string": "お父さん",
+      "source": "kinship"
     },
     {
       "ref": "ja-E0581",
-      "string": "お母さん"
+      "string": "お母さん",
+      "source": "kinship"
+    },
+    {
+      "ref": "ja-E1000",
+      "string": "背が低い",
+      "source": "comparative"
+    },
+    {
+      "ref": "ja-E1054",
+      "string": "背が高い",
+      "source": "comparative"
+    },
+    {
+      "ref": "ja-E1000",
+      "string": "もっと良い",
+      "source": "comparative"
+    },
+    {
+      "ref": "ja-E1000",
+      "string": "もっと悪い",
+      "source": "comparative"
+    },
+    {
+      "ref": "ja-E1000",
+      "string": "もっと遅い",
+      "source": "comparative"
+    },
+    {
+      "ref": "ja-E1000",
+      "string": "もっと速い",
+      "source": "comparative"
+    },
+    {
+      "ref": "ja-E1000",
+      "string": "もっと安い",
+      "source": "comparative"
+    },
+    {
+      "ref": "ja-E1000",
+      "string": "もっと高い",
+      "source": "comparative"
     }
   ],
+  "gate_note": "This branch has no Japanese kanji gate (verified: zero occurrences in lib/grading.ts, and audit/grader-behaviour is not an ancestor of this history). Every collateral acceptance recorded here is gate-dependent and measured on a grader that will not ship; the merged branch measures none of them.",
   "intended_losses_on_rows_made_strict": [
     {
       "ref": "ja-E0886",

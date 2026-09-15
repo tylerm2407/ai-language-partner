@@ -16,7 +16,7 @@ import { createHash } from 'node:crypto';
 import { SNAPSHOT_FILE, SNAPSHOT_SHA, createRound2PatchSet } from './patch-set-round2.mjs';
 import { loadTriage, DEPENDENT_ROWS, PARTIALLY_HELD, TRIAGE_SHA, TRIAGE_SOURCE } from './triage-accepted-answers.mjs';
 import { loadCandidates, REGISTER_RULING, REGISTER_REMOVALS, REGISTER_KEPT, FR_C0024, CANDIDATES_SHA, RULED_ON } from './product-rulings.mjs';
-import { loadAlternativesEvidence, SCRIPT_ACCEPT, SCRIPT_REFUSE, HELD_TYPO_BALL, EVIDENCE_SHA, EVIDENCE_SOURCE } from './restored-withdrawals.mjs';
+import { loadAlternativesEvidence, SCRIPT_ACCEPT, SCRIPT_REFUSE, HELD_TYPO_BALL, GATE_DEPENDENT_COMPARATIVES, EVIDENCE_SHA, EVIDENCE_SOURCE } from './restored-withdrawals.mjs';
 import { LEVELLED, HELD_WOULD_WIDEN, PROPAGATION_PENDING, DECLARED_EXCEPTIONS as GLOSS_EXCEPTIONS, DECLARED_REASON as GLOSS_REASON, PROPAGATION_REASON } from './same-gloss-levelling.mjs';
 import { AXIS_REMAINDER, AXIS_REFUSED, AXIS_HELD } from './alternatives-axis-remainder.mjs';
 
@@ -209,6 +209,7 @@ const TRIAGE = {
     rows: Object.keys(DEPENDENT_ROWS),
     what: 'Adding the kanji spellings of おばあさん / おじいさん / おじさん / おばさん pulls お母さん, お父さん, お姉さん, お嬢さん and お隣さん inside the typo budget — 12 collateral acceptances in total, on rows whose whole purpose is separating kinship terms.',
     remedy: 'The Japanese edit-distance gate on the grader branch, which refuses fuzzy acceptance on a kanji-bearing answer before the typo budget is consulted.',
+    also_applies_to: 'The three comparatives restored under the same condition — see restored_withdrawals.within_typo_ball. Seven rows in total carry a DEPENDENCY naming the gate as the sole mechanism.',
     THE_GATE_IS_THE_ONLY_DEFENCE: 'Not one of two mechanisms — the only one. The five confusable pairs first authored for this collision were measured unreachable behind the gate and withdrawn as inert. The sibling-key rule cannot reach it at ANY scope either: verified against the frozen snapshot, お母さん, お父さん, お姉さん, お嬢さん and お隣さん are never a correct_answer anywhere in the corpus, never an option or distractor, and never a card target text — each appears only as an accepted alternative on one or two rows, and taughtKeys reads correct_answer only. So the apply precondition is load-bearing for these four rows rather than cautious, and anyone weighing whether to ship round two ahead of the grader branch should read it that way.',
     recorded_where: 'In each of the four patch reasons, prefixed DEPENDENCY and naming the gate, so it travels with the row rather than living only in this file.',
     collateral: Object.entries(DEPENDENT_ROWS).flatMap(([ref, strings]) => strings.map(string => ({ ref, string }))),
@@ -329,16 +330,25 @@ const RESTORED = {
   recovered_counts: { script: withdrawals.script.length, within_typo_ball: withdrawals.ball.length, note: 'The prose said 102 and 42; the file really contains 102 and 42. They agree, and were checked rather than assumed — the prose in that same file has been wrong once already.' },
   overlap_with_round_two: 'NONE, at candidate level and at row level. Not one of the 144 candidates, and not one of their 102 rows, appears in the 66 Ruling-1 script candidates or the 313 triage additions. They came from a different input — the alternatives batch\'s 1,163 proposals — which the lexical reconciliation behind the triage block had already excluded. This is genuinely new work, and the register was right to imply it.',
   within_typo_ball: {
-    restored: 39, held: HELD_TYPO_BALL.length,
+    restored: 42, held: HELD_TYPO_BALL.length, restored_under_a_gate_dependency: GATE_DEPENDENT_COMPARATIVES.length,
     THE_PAIRS_AND_THE_GATE_ARE_BOTH_UNNECESSARY: 'These were expected to need 39 confusable pairs, and were then expected to be covered instead by the Japanese edit-distance gate. Neither is required. Measured against every taught Japanese string with the grader as it stands on this branch, 39 of the 42 widen NOTHING AT ALL.',
     why: 'The withdrawals were measured against a grader that scaled the typo budget by the MATCHED ALTERNATIVE, so a long correct addition widened tolerance for every wrong neighbour on the row — the 88-instance "readmission by a correct addition" class. Round one\'s own app-half fix already closed it: lib/grading.ts now scales by the shorter of the key and the matched alternative, and consults the confusable-pair list in both the accent and the fuzzy branch. The collisions these answers were withdrawn for no longer exist.',
     held_with_what_would_restore_them: HELD_TYPO_BALL,
-    THREE_ROWS_REPORTED_CLEAR_AND_RE_MEASURED_AS_NOT_CLEAR: {
+    THREE_ROWS_RESOLVED_AS_CONDITIONALLY_CLEAR: {
+      outcome: 'Restored under the same gate dependency the four kinship rows carry. Neither "clear" nor "held".',
+      what_went_wrong_in_the_measurement: 'This worktree branched at 5e89e70, before the grader branch landed. lib/grading.ts here has ZERO occurrences of the Japanese kanji gate, and audit/grader-behaviour is not an ancestor of this history — both verified locally. So every tolerance measurement made from this branch describes a grader that will not ship.',
+      what_this_branch_measures: 'Real against this code: on ja-E1000 the key もっと背が低い is seven characters and the addition もっと短い five, so the basis is min(5,7), the budget is one, and every もっと+adjective sibling is one substitution away. もっと安い, もっと高い, もっと良い and もっと速い each grade "Correct! (Minor typo)" on a row glossed Shorter.',
+      what_the_merged_branch_measures: 'No new acceptance anywhere in the family — both the fill_blank rows keying the fragment and the translate_to_target rows keying the whole string. The arithmetic is unchanged; it never runs, because もっと短い and もっと安い both carry kanji and the gate withdraws fuzzy acceptance before the budget is consulted. The same mechanism that made the five kinship pairs unreachable.',
+      why_the_flips_are_kept_in_the_record: 'As the evidence FOR the precondition, not as a reason to withhold. If round two shipped without the grader branch these three would flip four meanings on a row glossed "Shorter".',
+      the_cloze_fact_worth_keeping: 'The twin ja-E1033 carries all three strings without incident even on this branch, because it is a cloze_deletion — a grammar-shaped type, graded strictly — so tolerance never runs there at all. Same strings, different exercise type, different mechanism. That is why the same-gloss sweep treats the group the way it does.',
+      rows: GATE_DEPENDENT_COMPARATIVES,
+    },
+    SUPERSEDED_THREE_ROWS_REPORTED_CLEAR_AND_RE_MEASURED_AS_NOT_CLEAR: {
       reported: 'ja-E1000 and the two bare-adjective comparatives were reported clear to restore, on the ground that tolerance still compares against the stored fragment 短い — two characters, budget zero — so the six もっと+adjective siblings are four edits away and refused even with the gate off.',
       finding: 'That is true of a fill_blank row and not of these. The fill_blank もっと_____ (Shorter) keys the fragment 背が低い and already ships the fragment 短い, where the budget is indeed zero. ja-E1000 and ja-E1054 are translate_to_target rows that store the WHOLE string: もっと短い is five characters with a budget of one, and every もっと+adjective sibling is one substitution away.',
       measured_against_the_shipped_grader: 'Adding もっと短い to ja-E1000 makes もっと安い (cheaper), もっと高い (more expensive), もっと良い (better) and もっと速い (faster) each grade "Correct! (Minor typo)" on a row glossed Shorter. Adding より背が低い admits 背が低い; adding より背が高い to ja-E1054 admits 背が高い.',
       why_the_twin_is_safe: 'ja-E1033 carries all three strings without incident because it is a cloze_deletion — a grammar-shaped type, graded strictly — so tolerance never runs there. Same strings, different exercise type, opposite consequence. That is also why same-gloss-levelling declares this group instead of levelling it.',
-      disposition: 'Still held. Two independent routes — the typo-ball recovery and the same-gloss sweep — reached the same conclusion, and a third measurement now confirms it.',
+      disposition: 'SUPERSEDED 2026-09-15. The re-measurement was correct about the code it ran and wrong about the code that ships: this branch has no kanji gate. See THREE_ROWS_RESOLVED_AS_CONDITIONALLY_CLEAR. Kept because the reasoning about fill_blank fragments versus whole-string keys, and about why the cloze twin is safe, both stand.',
     },
   },
   script_withdrawals: {
@@ -353,6 +363,7 @@ const RESTORED = {
     },
     one_row_type_distinction: 'いとこ has six standard kanji spellings. On the LISTENING row the learner heard いとこ, so any spelling read いとこ is a faithful transcription and the two general spellings 従兄弟 and 従姉妹 come back. The four naming a specific cousin — 従兄 older male, 従弟 younger male, 従姉 older female, 従妹 younger female — assert a gender and seniority that neither the audio nor the gloss "Cousin" supplies, and are refused on both row types. SNS <- エスエヌエス / えすえぬえす is restored on the same transcription ground.',
   },
+  A_LIMITATION_OF_EVERY_TOLERANCE_MEASUREMENT_ON_THIS_BRANCH: 'This worktree cannot execute the Japanese kanji gate: lib/grading.ts here has zero occurrences of it, verified, and the grader branch is not in this history. Any statement this patch makes about what the typo budget admits is therefore about a grader that will not ship. Where that matters the limitation is stated on the claim itself, and the collateral it produces is declared in runtime-checks.json rather than reported as a defect. For anything in this class, the merged branch is the authority.',
   measurement: 'All 144 candidates were run through the whole-language check before any was authored: every addition graded against all 2,281 taught Japanese strings, before and after. 141 widen nothing; the 3 that do are the held ones. After compiling, the patch\'s total collateral acceptances are unchanged at 12 — the 95 restorations add none.',
 };
 
