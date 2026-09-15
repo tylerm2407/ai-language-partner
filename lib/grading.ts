@@ -212,6 +212,28 @@ export function classifyError(
 }
 
 /**
+ * Normalized sibling keys, cached per (array identity, language).
+ *
+ * The set is the whole language — about 1,100 keys — and it is passed to every
+ * grade call. Normalizing it per call cost 0.5ms against a 0.002ms baseline, a
+ * 250x regression paid on every option of every multiple-choice render. The
+ * lesson runner memoizes the array, so keying the cache on its identity turns
+ * that into one pass per lesson. A WeakMap so a finished lesson's keys are
+ * collectable.
+ */
+const normalizedSiblings = new WeakMap<readonly string[], Map<string, Set<string>>>();
+function siblingKeySet(keys: readonly string[], language: LanguageCode | undefined): Set<string> {
+  const byLanguage = normalizedSiblings.get(keys) ?? new Map<string, Set<string>>();
+  if (!normalizedSiblings.has(keys)) normalizedSiblings.set(keys, byLanguage);
+  const cacheKey = language ?? '';
+  const cached = byLanguage.get(cacheKey);
+  if (cached) return cached;
+  const built = new Set(keys.map((key) => normalize(key, language)).filter((key) => key !== ''));
+  byLanguage.set(cacheKey, built);
+  return built;
+}
+
+/**
  * Grade an answer against the correct answer and accepted alternatives.
  *
  * When `exerciseHints` is provided (optional for backward compatibility),
@@ -287,34 +309,41 @@ export function gradeAnswer(
     stripDiacritics(normalizedCorrect),
     stripDiacritics(completeWord(correctAnswer)),
   ]);
-  const siblingKeys = new Set(
-    (hints?.siblingKeys ?? [])
-      .map((key) => normalize(key, hints?.language))
-      .filter(
-        (key) =>
-          key !== '' &&
-          !allAccepted.includes(key) &&
-          !completedAccepted.includes(key) &&
-          // A sibling that folds onto this row's KEY is the same word written
-          // with or without its accents — "Menu" against "Menú", "Niece"
-          // against "Nièce", both taught because one is the gloss of the
-          // other. That is a question about accents, settled by the accent
-          // branch and the pair list, not a lexical collision. Measured on
-          // the frozen curriculum: 29 rows, all of them cognate pairs.
-          //
-          // Folding onto an ACCEPTED ALTERNATIVE is not excused the same way.
-          // "Groß_____ (Generous)" keys on zügig and also accepts mütig, and
-          // the unit teaches Mutig (brave) as its own answer — so the
-          // alternative's unaccented form is another word outright. An
-          // alternative is a generosity; it must not swallow a taught key.
-          !keyFolded.has(stripDiacritics(key)),
-      ),
-  );
-  const isTaughtElsewhere = (candidate: string): boolean =>
-    siblingKeys.has(candidate) ||
-    // On a fill-blank row the sibling keys arrive as whole words, so the
-    // fragment the learner typed has to be welded before it can match.
-    (hints?.blankContext !== undefined && siblingKeys.has(completeWord(candidate)));
+  const siblings = hints?.siblingKeys;
+  /**
+   * Asked of the CANDIDATE rather than used to pre-filter the whole list: the
+   * three conditions below describe a string, so testing the one string the
+   * learner typed is the same answer as filtering a thousand keys, and costs
+   * nothing per call.
+   */
+  const isTaughtElsewhere = (candidate: string): boolean => {
+    if (!siblings?.length) return false;
+    const set = siblingKeySet(siblings, hints?.language);
+    const forms = hints?.blankContext !== undefined
+      // On a fill-blank row the sibling keys arrive as whole words, so the
+      // fragment the learner typed has to be welded before it can match.
+      ? [candidate, completeWord(candidate)]
+      : [candidate];
+    return forms.some(
+      (form) =>
+        set.has(form) &&
+        !allAccepted.includes(form) &&
+        !completedAccepted.includes(form) &&
+        // A sibling that folds onto this row's KEY is the same word written
+        // with or without its accents — "Menu" against "Menú", "Niece"
+        // against "Nièce", both taught because one is the gloss of the other.
+        // That is a question about accents, settled by the accent branch and
+        // the pair list, not a lexical collision. Measured on the frozen
+        // curriculum: 29 rows, all of them cognate pairs.
+        //
+        // Folding onto an ACCEPTED ALTERNATIVE is not excused the same way.
+        // "Groß_____ (Generous)" keys on zügig and also accepts mütig, and the
+        // unit teaches Mutig (brave) as its own answer — so the alternative's
+        // unaccented form is another word outright. An alternative is a
+        // generosity; it must not swallow a taught key.
+        !keyFolded.has(stripDiacritics(form)),
+    );
+  };
 
   // Exact match (after normalization)
   if (allAccepted.includes(normalized) || typedWholeWord) {
