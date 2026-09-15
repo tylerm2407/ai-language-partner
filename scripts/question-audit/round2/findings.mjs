@@ -17,6 +17,7 @@ import { SNAPSHOT_FILE, SNAPSHOT_SHA, createRound2PatchSet } from './patch-set-r
 import { loadTriage, DEPENDENT_ROWS, PARTIALLY_HELD, TRIAGE_SHA, TRIAGE_SOURCE } from './triage-accepted-answers.mjs';
 import { loadCandidates, REGISTER_RULING, REGISTER_REMOVALS, REGISTER_KEPT, FR_C0024, CANDIDATES_SHA, RULED_ON } from './product-rulings.mjs';
 import { loadAlternativesEvidence, SCRIPT_ACCEPT, SCRIPT_REFUSE, HELD_TYPO_BALL, EVIDENCE_SHA, EVIDENCE_SOURCE } from './restored-withdrawals.mjs';
+import { LEVELLED, HELD_WOULD_WIDEN, PROPAGATION_PENDING, DECLARED_EXCEPTIONS as GLOSS_EXCEPTIONS, DECLARED_REASON as GLOSS_REASON, PROPAGATION_REASON } from './same-gloss-levelling.mjs';
 
 const raw = await readFile(SNAPSHOT_FILE, 'utf8');
 if (createHash('sha256').update(raw).digest('hex') !== SNAPSHOT_SHA) throw new Error('Changed frozen snapshot');
@@ -346,6 +347,35 @@ const RESTORED = {
   measurement: 'All 144 candidates were run through the whole-language check before any was authored: every addition graded against all 2,281 taught Japanese strings, before and after. 141 widen nothing; the 3 that do are the held ones. After compiling, the patch\'s total collateral acceptances are unchanged at 12 — the 95 restorations add none.',
 };
 
+const SAME_GLOSS = {
+  what: 'Two rows that ask the same question must accept the same answers. Round one built this check for Italian and levelled nineteen groups; this generalises it to all nine languages, with a standing test that now covers all of them.',
+  COULD_NOT_RECOVER_249: {
+    asked_for: 'Recover the 249 from the grader\'s JSON reports on audit/grader-behaviour.',
+    finding: 'There are no such reports. That worktree\'s tree is clean — no untracked files, no committed JSON under docs/ or scripts/grading — and its only relevant file, scripts/grading/widening-check.mjs, has no sibling-alternatives axis at all: lib/exercise-restore.ts taughtKeys reads correctAnswer only.',
+    what_249_probably_counts: 'A different population. The rejected axis was to count sibling ALTERNATIVES as taught strings, over the shipped sibling scope (unit by default), which is far wider than same-gloss-same-key. Reproducing that rule at each scope gives figures in the tens of thousands to millions of (row, string) pairs, nowhere near 249, so the number must be measured with a narrowing this report does not have.',
+    corroborating_signal: 'The Italian examples that travelled with the request — "Generoso" refusing "Generosa" — are already levelled: to_target|Generous|Generoso is in round one\'s own RESOLVED_HERE list, and Italian now has zero diverging groups. So the 249 was measured against a corpus state predating the round-1 patch, a different population, or both.',
+    what_is_reported_instead: 'The population this file can prove, derived from the frozen snapshot plus the round-2 draft: 4,605 groups across nine languages, 967 asked more than once, 101 disagreeing, carrying 129 (row, string) omissions. Italian is at zero, which is round one showing up as a result rather than a claim.',
+    ask: 'If 249 is meant to be a different population, point at the file and it can be worked separately.',
+  },
+  derived: { groups: 4605, asked_more_than_once: 967, disagreeing: 101, omissions: 129, italian: 0 },
+  outcomes: {
+    levelled: LEVELLED.length,
+    propagation_pending: PROPAGATION_PENDING.length,
+    held_would_widen: HELD_WOULD_WIDEN.length,
+    declared_deliberate: GLOSS_EXCEPTIONS.length,
+  },
+  levelled_note: 'Only pre-existing divergence: every string levelled was accepted by a sibling in the FROZEN snapshot, so this closes a round-one omission rather than propagating something this patch itself added. Gender agreement, gendered professions, aspect pairs, register and script variants — and eight Russian gendered pasts that also close part of the Russian alternatives gap this patch reported earlier.',
+  by_language: LEVELLED.reduce((acc, [, , lang]) => ({ ...acc, [lang]: (acc[lang] ?? 0) + 1 }), {}),
+  A_LARGE_FRACTION_IS_NOT_DELIBERATE: 'Asked whether many turn out to be deliberate contrasts rather than omissions: they do not. Of 129 omissions, 5 are deliberate — 4%. The rest are omissions or, in 13 cases, would-be omissions that cannot be closed without admitting a wrong answer. That does not support reading the rejected axis as more costly than measured; it says the divergence is overwhelmingly accidental.',
+  deliberate_contrasts_not_flattened: { reason: GLOSS_REASON, rows: GLOSS_EXCEPTIONS },
+  held_because_levelling_would_admit_a_wrong_answer: {
+    note: 'Measured against every taught string in the language. These are the meaning flips the audit exists to catch: "Nurse" would accept Enfermo (sick), "Neighbor" would accept Cozinha (kitchen), "Tired" would accept Zangada (angry), "Grandmother" would accept 고모 (aunt), "To cook" would accept Cool. Each needs a confusable pair keyed on the added string.',
+    rows: HELD_WOULD_WIDEN,
+  },
+  left_pending: { reason: PROPAGATION_REASON, rows: PROPAGATION_PENDING },
+  standing_test: 'scripts/question-audit/round2/same-gloss-levelling.test.mjs — nine languages, Node rather than Deno, and an allowlist that is no longer empty because two populations must stay divergent. Passes on the result: 4 checks.',
+};
+
 const findings = {
   round: 2,
   snapshot_sha256: SNAPSHOT_SHA,
@@ -364,9 +394,11 @@ const findings = {
     'triage_298_confirmed_ja_ko_rows': { patched: 298, additions: 313, see: 'triage_block' },
     'rulings_2026_09_15': { patched: 64, additions: 77, removals: 2, see: 'rulings' },
     'restored_withdrawals': { patched: 67, additions: 95, refused: 46, held: 3, see: 'restored_withdrawals' },
+    'same_gloss_levelling': { patched: 84, additions: 97, held: 13, pending: 14, declared: 5, see: 'same_gloss_levelling' },
   },
   rulings: RULINGS,
   restored_withdrawals: RESTORED,
+  same_gloss_levelling: SAME_GLOSS,
   triage_block: TRIAGE,
   already_fixed_by_round_one: ALREADY_FIXED.map(finding => ({
     ...finding, verified_now: finding.id ? frozen(finding.id, finding.field, finding.now, finding.ref) : null,

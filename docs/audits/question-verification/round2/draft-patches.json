@@ -4035,6 +4035,49 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-1111-2001-0003-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-1111-2001-0003-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Vecina"
+        ]
+      },
+      "reasons": [
+        "es-E0592 (es): same-gloss-same-key levelling. The row sharing the gloss \"Neighbor\" already accepts \"Vecina\" on the identical question — group to_target|Neighbor|Vecino: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught es string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-1111-2002-0002-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-1111-2002-0002-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Fatigado",
+          "Fatigada"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Fatigado",
+          "Fatigada",
+          "Cansada"
+        ]
+      },
+      "reasons": [
+        "es-E0652 (es): same-gloss-same-key levelling. The row sharing the gloss \"Tired\" already accepts \"Cansada\" on the identical question — group to_target|Tired|Cansado: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught es string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-1111-2003-0001-e00000000008",
       "before": {
         "lesson_id": "aabbccdd-1111-2003-0001-a20000000000",
@@ -4050,6 +4093,110 @@
       "sources": [
         "lib/grading.ts gradeAnswer (TYPO_TOLERANCE_RATIO, isGrammarExercise)"
       ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-1111-2004-0002-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-1111-2004-0002-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Dadivoso",
+          "Dadivosa"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Dadivoso",
+          "Dadivosa",
+          "Generosa"
+        ]
+      },
+      "reasons": [
+        "es-E0796 (es): same-gloss-same-key levelling. The row sharing the gloss \"Generous\" already accepts \"Generosa\" on the identical question — group to_target|Generous|Generoso: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught es string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-1111-2004-0003-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-1111-2004-0003-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Vago",
+          "Vaga",
+          "Flojo",
+          "Floja",
+          "Holgazán",
+          "Holgazana"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Vago",
+          "Vaga",
+          "Flojo",
+          "Floja",
+          "Holgazán",
+          "Holgazana",
+          "Perezosa"
+        ]
+      },
+      "reasons": [
+        "es-E0808 (es): same-gloss-same-key levelling. The row sharing the gloss \"Lazy\" already accepts \"Perezosa\" on the identical question — group to_target|Lazy|Perezoso: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught es string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-1111-2004-0004-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-1111-2004-0004-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Entusiasmado",
+          "Entusiasmada"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Entusiasmado",
+          "Entusiasmada",
+          "Emocionada"
+        ]
+      },
+      "reasons": [
+        "es-E0814 (es): same-gloss-same-key levelling. The row sharing the gloss \"Excited\" already accepts \"Emocionada\" on the identical question — group to_target|Excited|Emocionado: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught es string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-1111-2004-0005-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-1111-2004-0005-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Vergonzoso",
+          "Vergonzosa"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Vergonzoso",
+          "Vergonzosa",
+          "Tímida"
+        ]
+      },
+      "reasons": [
+        "es-E0826 (es): same-gloss-same-key levelling. The row sharing the gloss \"Shy\" already accepts \"Tímida\" on the identical question — group to_target|Shy|Tímido: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught es string and it admits nothing else."
+      ],
+      "sources": [],
       "review_status": "awaiting_independent_round2_review"
     },
     {
@@ -4510,6 +4657,28 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-1111-2006-0005-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-1111-2006-0005-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Turno"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Turno",
+          "Cita médica"
+        ]
+      },
+      "reasons": [
+        "es-E0976 (es): same-gloss-same-key levelling. The row sharing the gloss \"Appointment\" already accepts \"Cita médica\" on the identical question — group to_target|Appointment|Cita: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught es string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-1111-2006-0006-e00000000002",
       "before": {
         "lesson_id": "aabbccdd-1111-2006-0006-a20000000000",
@@ -4525,6 +4694,121 @@
       "sources": [
         "lib/grading.ts gradeAnswer (TYPO_TOLERANCE_RATIO, isGrammarExercise)"
       ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-1111-2007-0001-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-1111-2007-0001-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Más corto",
+          "Más corta"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Más corto",
+          "Más corta",
+          "Más baja"
+        ]
+      },
+      "reasons": [
+        "es-E1000 (es): same-gloss-same-key levelling. The row sharing the gloss \"Shorter\" already accepts \"Más baja\" on the identical question — group to_target|Shorter|Más bajo: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught es string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-1111-2007-0002-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-1111-2007-0002-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Más deprisa",
+          "Más rápidamente"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Más deprisa",
+          "Más rápidamente",
+          "Más rápida"
+        ]
+      },
+      "reasons": [
+        "es-E1012 (es): same-gloss-same-key levelling. The row sharing the gloss \"Faster\" already accepts \"Más rápida\" on the identical question — group to_target|Faster|Más rápido: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught es string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-1111-2007-0003-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-1111-2007-0003-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Más despacio",
+          "Más lentamente"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Más despacio",
+          "Más lentamente",
+          "Más lenta"
+        ]
+      },
+      "reasons": [
+        "es-E1024 (es): same-gloss-same-key levelling. The row sharing the gloss \"Slower\" already accepts \"Más lenta\" on the identical question — group to_target|Slower|Más lento: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught es string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-1111-2007-0004-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-1111-2007-0004-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Más económico",
+          "Más económica"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Más económico",
+          "Más económica",
+          "Más barata"
+        ]
+      },
+      "reasons": [
+        "es-E1030 (es): same-gloss-same-key levelling. The row sharing the gloss \"Cheaper\" already accepts \"Más barata\" on the identical question — group to_target|Cheaper|Más barato: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught es string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-1111-2007-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-1111-2007-0006-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Más alta"
+        ]
+      },
+      "reasons": [
+        "es-E1054 (es): same-gloss-same-key levelling. The row sharing the gloss \"Taller\" already accepts \"Más alta\" on the identical question — group to_target|Taller|Más alto: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught es string and it admits nothing else."
+      ],
+      "sources": [],
       "review_status": "awaiting_independent_round2_review"
     },
     {
@@ -4738,6 +5022,25 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-2222-1003-0005-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-2222-1003-0005-000000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Ticket"
+        ]
+      },
+      "reasons": [
+        "fr-E0190 (fr): same-gloss-same-key levelling. The row sharing the gloss \"Ticket\" already accepts \"Ticket\" on the identical question — group to_target|Ticket|Billet: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught fr string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-2222-1004-0001-e00000000002",
       "before": {
         "lesson_id": "aabbccdd-2222-1004-0001-000000000000",
@@ -4753,6 +5056,120 @@
       "sources": [
         "lib/grading.ts gradeAnswer (TYPO_TOLERANCE_RATIO, isGrammarExercise)"
       ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-2222-2001-0003-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-2222-2001-0003-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Voisine"
+        ]
+      },
+      "reasons": [
+        "fr-E0592 (fr): same-gloss-same-key levelling. The row sharing the gloss \"Neighbor\" already accepts \"Voisine\" on the identical question — group to_target|Neighbor|Voisin: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught fr string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-2222-2002-0002-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-2222-2002-0002-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Fatiguée"
+        ]
+      },
+      "reasons": [
+        "fr-E0652 (fr): same-gloss-same-key levelling. The row sharing the gloss \"Tired\" already accepts \"Fatiguée\" on the identical question — group to_target|Tired|Fatigué: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught fr string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-2222-2002-0005-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-2222-2002-0005-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Infirmier"
+        ]
+      },
+      "reasons": [
+        "fr-E0682 (fr): same-gloss-same-key levelling. The row sharing the gloss \"Nurse\" already accepts \"Infirmier\" on the identical question — group to_target|Nurse|Infirmière: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught fr string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-2222-2004-0002-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-2222-2004-0002-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Généreuse"
+        ]
+      },
+      "reasons": [
+        "fr-E0796 (fr): same-gloss-same-key levelling. The row sharing the gloss \"Generous\" already accepts \"Généreuse\" on the identical question — group to_target|Generous|Généreux: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught fr string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-2222-2004-0003-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-2222-2004-0003-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Paresseuse"
+        ]
+      },
+      "reasons": [
+        "fr-E0808 (fr): same-gloss-same-key levelling. The row sharing the gloss \"Lazy\" already accepts \"Paresseuse\" on the identical question — group to_target|Lazy|Paresseux: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught fr string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-2222-2004-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-2222-2004-0006-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Courageuse"
+        ]
+      },
+      "reasons": [
+        "fr-E0838 (fr): same-gloss-same-key levelling. The row sharing the gloss \"Brave\" already accepts \"Courageuse\" on the identical question — group to_target|Brave|Courageux: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught fr string and it admits nothing else."
+      ],
+      "sources": [],
       "review_status": "awaiting_independent_round2_review"
     },
     {
@@ -5232,6 +5649,30 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-2222-2007-0001-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-2222-2007-0001-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Plus court",
+          "Plus courte"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Plus court",
+          "Plus courte",
+          "Plus petite"
+        ]
+      },
+      "reasons": [
+        "fr-E1000 (fr): same-gloss-same-key levelling. The row sharing the gloss \"Shorter\" already accepts \"Plus petite\" on the identical question — group to_target|Shorter|Plus petit: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught fr string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-2222-2007-0002-e00000000004",
       "before": {
         "lesson_id": "aabbccdd-2222-2007-0002-a20000000000",
@@ -5289,6 +5730,85 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-2222-2007-0003-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-2222-2007-0003-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Plus lentement"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Plus lentement",
+          "Plus lente"
+        ]
+      },
+      "reasons": [
+        "fr-E1024 (fr): same-gloss-same-key levelling. The row sharing the gloss \"Slower\" already accepts \"Plus lente\" on the identical question — group to_target|Slower|Plus lent: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught fr string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-2222-2007-0004-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-2222-2007-0004-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Moins chère"
+        ]
+      },
+      "reasons": [
+        "fr-E1030 (fr): same-gloss-same-key levelling. The row sharing the gloss \"Cheaper\" already accepts \"Moins chère\" on the identical question — group to_target|Cheaper|Moins cher: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught fr string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-2222-2007-0005-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-2222-2007-0005-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Plus chère"
+        ]
+      },
+      "reasons": [
+        "fr-E1042 (fr): same-gloss-same-key levelling. The row sharing the gloss \"More expensive\" already accepts \"Plus chère\" on the identical question — group to_target|More expensive|Plus cher: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught fr string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-2222-2007-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-2222-2007-0006-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Plus grande"
+        ]
+      },
+      "reasons": [
+        "fr-E1054 (fr): same-gloss-same-key levelling. The row sharing the gloss \"Taller\" already accepts \"Plus grande\" on the identical question — group to_target|Taller|Plus grand: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught fr string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-2222-2008-0006-e00000000002",
       "before": {
         "lesson_id": "aabbccdd-2222-2008-0006-a20000000000",
@@ -5342,6 +5862,28 @@
       "sources": [
         "lib/grading.ts gradeAnswer (TYPO_TOLERANCE_RATIO, isGrammarExercise)"
       ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-2222-3007-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-2222-3007-0006-b10000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Imaginons"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Imaginons",
+          "Imaginez"
+        ]
+      },
+      "reasons": [
+        "fr-E1712 (fr): same-gloss-same-key levelling. The row sharing the gloss \"Imagine\" already accepts \"Imaginez\" on the identical question — group to_target|Imagine|Imagine: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught fr string and it admits nothing else."
+      ],
+      "sources": [],
       "review_status": "awaiting_independent_round2_review"
     },
     {
@@ -5444,6 +5986,25 @@
       "sources": [
         "lib/grading.ts gradeAnswer (TYPO_TOLERANCE_RATIO, isGrammarExercise)"
       ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-3333-2002-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-3333-2002-0006-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Zahnärztin"
+        ]
+      },
+      "reasons": [
+        "de-E0694 (de): same-gloss-same-key levelling. The row sharing the gloss \"Dentist\" already accepts \"Zahnärztin\" on the identical question — group to_target|Dentist|Zahnarzt: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught de string and it admits nothing else."
+      ],
+      "sources": [],
       "review_status": "awaiting_independent_round2_review"
     },
     {
@@ -5961,6 +6522,25 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-3333-3002-0005-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-3333-3002-0005-b10000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Anstellen"
+        ]
+      },
+      "reasons": [
+        "de-E1278 (de): same-gloss-same-key levelling. The row sharing the gloss \"To hire\" already accepts \"Anstellen\" on the identical question — group to_target|To hire|Einstellen: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught de string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-3333-3002-0005-e00000000004",
       "before": {
         "lesson_id": "aabbccdd-3333-3002-0005-b10000000000",
@@ -5995,6 +6575,30 @@
       "sources": [
         "lib/grading.ts gradeAnswer (TYPO_TOLERANCE_RATIO, isGrammarExercise)"
       ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-3333-3007-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-3333-3007-0006-b10000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Stellen Sie sich vor",
+          "Stellt euch vor"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Stellen Sie sich vor",
+          "Stellt euch vor",
+          "Stelle dir vor"
+        ]
+      },
+      "reasons": [
+        "de-E1712 (de): same-gloss-same-key levelling. The row sharing the gloss \"Imagine\" already accepts \"Stelle dir vor\" on the identical question — group to_target|Imagine|Stell dir vor: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught de string and it admits nothing else."
+      ],
+      "sources": [],
       "review_status": "awaiting_independent_round2_review"
     },
     {
@@ -6758,6 +7362,92 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-5555-2002-0001-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-5555-2002-0001-a20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": [
+          "Consulta médica",
+          "Marcação"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Consulta médica",
+          "Marcação",
+          "Compromisso"
+        ]
+      },
+      "reasons": [
+        "pt-E0637 (pt): same-gloss-same-key levelling. The row sharing the gloss \"Appointment\" already accepts \"Compromisso\" on the identical question — group to_target|Appointment|Consulta: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught pt string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-5555-2002-0001-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-5555-2002-0001-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Stresse"
+        ]
+      },
+      "reasons": [
+        "pt-E0640 (pt): same-gloss-same-key levelling. The row sharing the gloss \"Stress\" already accepts \"Stresse\" on the identical question — group to_target|Stress|Estresse: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught pt string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-5555-2002-0004-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-5555-2002-0004-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Consulta médica",
+          "Marcação"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Consulta médica",
+          "Marcação",
+          "Compromisso"
+        ]
+      },
+      "reasons": [
+        "pt-E0670 (pt): same-gloss-same-key levelling. The row sharing the gloss \"Appointment\" already accepts \"Compromisso\" on the identical question — group to_target|Appointment|Consulta: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught pt string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-5555-2002-0005-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-5555-2002-0005-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Enfermeiro"
+        ]
+      },
+      "reasons": [
+        "pt-E0682 (pt): same-gloss-same-key levelling. The row sharing the gloss \"Nurse\" already accepts \"Enfermeiro\" on the identical question — group to_target|Nurse|Enfermeira: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught pt string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-5555-2003-0001-e00000000008",
       "before": {
         "lesson_id": "aabbccdd-5555-2003-0001-a20000000000",
@@ -6777,6 +7467,28 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-5555-2003-0002-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-5555-2003-0002-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Renda"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Renda",
+          "Aluguer"
+        ]
+      },
+      "reasons": [
+        "pt-E0724 (pt): same-gloss-same-key levelling. The row sharing the gloss \"Rent\" already accepts \"Aluguer\" on the identical question — group to_target|Rent|Aluguel: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught pt string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-5555-2003-0005-e00000000004",
       "before": {
         "lesson_id": "aabbccdd-5555-2003-0005-a20000000000",
@@ -6792,6 +7504,117 @@
       "sources": [
         "lib/grading.ts gradeAnswer (TYPO_TOLERANCE_RATIO, isGrammarExercise)"
       ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-5555-2004-0002-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-5555-2004-0002-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Generosa"
+        ]
+      },
+      "reasons": [
+        "pt-E0796 (pt): same-gloss-same-key levelling. The row sharing the gloss \"Generous\" already accepts \"Generosa\" on the identical question — group to_target|Generous|Generoso: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught pt string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-5555-2004-0003-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-5555-2004-0003-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Preguiçosa"
+        ]
+      },
+      "reasons": [
+        "pt-E0808 (pt): same-gloss-same-key levelling. The row sharing the gloss \"Lazy\" already accepts \"Preguiçosa\" on the identical question — group to_target|Lazy|Preguiçoso: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught pt string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-5555-2004-0004-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-5555-2004-0004-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Empolgado",
+          "Empolgada",
+          "Entusiasmado",
+          "Entusiasmada"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Empolgado",
+          "Empolgada",
+          "Entusiasmado",
+          "Entusiasmada",
+          "Animada"
+        ]
+      },
+      "reasons": [
+        "pt-E0814 (pt): same-gloss-same-key levelling. The row sharing the gloss \"Excited\" already accepts \"Animada\" on the identical question — group to_target|Excited|Animado: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught pt string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-5555-2004-0005-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-5555-2004-0005-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Tímida"
+        ]
+      },
+      "reasons": [
+        "pt-E0826 (pt): same-gloss-same-key levelling. The row sharing the gloss \"Shy\" already accepts \"Tímida\" on the identical question — group to_target|Shy|Tímido: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught pt string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-5555-2004-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-5555-2004-0006-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Valente",
+          "Bravo",
+          "Brava"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Valente",
+          "Bravo",
+          "Brava",
+          "Corajosa"
+        ]
+      },
+      "reasons": [
+        "pt-E0838 (pt): same-gloss-same-key levelling. The row sharing the gloss \"Brave\" already accepts \"Corajosa\" on the identical question — group to_target|Brave|Corajoso: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught pt string and it admits nothing else."
+      ],
+      "sources": [],
       "review_status": "awaiting_independent_round2_review"
     },
     {
@@ -7271,6 +8094,77 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-5555-2007-0001-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-5555-2007-0001-a20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": [
+          "Mais barata"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Mais barata",
+          "Menos caro",
+          "Menos cara"
+        ]
+      },
+      "reasons": [
+        "pt-E0997 (pt): same-gloss-same-key levelling. The row sharing the gloss \"Cheaper\" already accepts \"Menos caro\", \"Menos cara\" on the identical question — group to_target|Cheaper|Mais barato: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught pt string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-5555-2007-0001-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-5555-2007-0001-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Mais curto",
+          "Mais curta"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Mais curto",
+          "Mais curta",
+          "Mais baixa"
+        ]
+      },
+      "reasons": [
+        "pt-E1000 (pt): same-gloss-same-key levelling. The row sharing the gloss \"Shorter\" already accepts \"Mais baixa\" on the identical question — group to_target|Shorter|Mais baixo: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught pt string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-5555-2007-0002-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-5555-2007-0002-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Mais depressa",
+          "Mais veloz"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Mais depressa",
+          "Mais veloz",
+          "Mais rápida"
+        ]
+      },
+      "reasons": [
+        "pt-E1012 (pt): same-gloss-same-key levelling. The row sharing the gloss \"Faster\" already accepts \"Mais rápida\" on the identical question — group to_target|Faster|Mais rápido: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught pt string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-5555-2007-0003-e00000000003",
       "before": {
         "lesson_id": "aabbccdd-5555-2007-0003-a20000000000",
@@ -7286,6 +8180,71 @@
       "sources": [
         "lib/grading.ts gradeAnswer (TYPO_TOLERANCE_RATIO, isGrammarExercise)"
       ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-5555-2007-0003-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-5555-2007-0003-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Mais devagar"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Mais devagar",
+          "Mais lenta"
+        ]
+      },
+      "reasons": [
+        "pt-E1024 (pt): same-gloss-same-key levelling. The row sharing the gloss \"Slower\" already accepts \"Mais lenta\" on the identical question — group to_target|Slower|Mais lento: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught pt string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-5555-2007-0004-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-5555-2007-0004-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Menos caro",
+          "Menos cara"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Menos caro",
+          "Menos cara",
+          "Mais barata"
+        ]
+      },
+      "reasons": [
+        "pt-E1030 (pt): same-gloss-same-key levelling. The row sharing the gloss \"Cheaper\" already accepts \"Mais barata\" on the identical question — group to_target|Cheaper|Mais barato: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught pt string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-5555-2007-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-5555-2007-0006-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Mais alta"
+        ]
+      },
+      "reasons": [
+        "pt-E1054 (pt): same-gloss-same-key levelling. The row sharing the gloss \"Taller\" already accepts \"Mais alta\" on the identical question — group to_target|Taller|Mais alto: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught pt string and it admits nothing else."
+      ],
+      "sources": [],
       "review_status": "awaiting_independent_round2_review"
     },
     {
@@ -7461,6 +8420,25 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-5555-3007-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-5555-3007-0006-b10000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Imagina"
+        ]
+      },
+      "reasons": [
+        "pt-E1712 (pt): same-gloss-same-key levelling. The row sharing the gloss \"Imagine\" already accepts \"Imagina\" on the identical question — group to_target|Imagine|Imagine: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught pt string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-5555-3007-0006-e00000000009",
       "before": {
         "lesson_id": "aabbccdd-5555-3007-0006-b10000000000",
@@ -7578,6 +8556,25 @@
         "https://dicionario.priberam.org/palco",
         "https://dicionario.priberam.org/publico"
       ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1001-0001-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1001-0001-000000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "どうぞ"
+        ]
+      },
+      "reasons": [
+        "ja-E0006 (ja): same-gloss-same-key levelling. The row sharing the gloss \"Please\" already accepts \"どうぞ\" on the identical question — group to_target|Please|お願いします: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ja string and it admits nothing else."
+      ],
+      "sources": [],
       "review_status": "awaiting_independent_round2_review"
     },
     {
@@ -8034,6 +9031,25 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-1005-0002-e00000000007",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1005-0002-000000000000",
+        "type": "translate_to_native",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Chilly"
+        ]
+      },
+      "reasons": [
+        "ja-E0299 (ja): same-gloss-same-key levelling. The row sharing the gloss \"Cold\" already accepts \"Chilly\" on the identical question — group to_native|Cold|寒い: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ja string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-1005-0002-e00000000008",
       "before": {
         "lesson_id": "aabbccdd-6666-1005-0002-000000000000",
@@ -8447,6 +9463,25 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-1008-0004-e00000000004",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1008-0004-000000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "医薬品"
+        ]
+      },
+      "reasons": [
+        "ja-E0530 (ja): same-gloss-same-key levelling. The row sharing the gloss \"Medicine\" already accepts \"医薬品\" on the identical question — group to_target|Medicine|薬: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ja string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-1008-0005-e00000000006",
       "before": {
         "lesson_id": "aabbccdd-6666-1008-0005-000000000000",
@@ -8479,6 +9514,25 @@
       },
       "reasons": [
         "ja-E0546 (ja, cloze_deletion): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"あたま\" is the same word as the keyed \"頭\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1008-0006-e00000000004",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1008-0006-000000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "発熱"
+        ]
+      },
+      "reasons": [
+        "ja-E0554 (ja): same-gloss-same-key levelling. The row sharing the gloss \"Fever\" already accepts \"発熱\" on the identical question — group to_target|Fever|熱: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ja string and it admits nothing else."
       ],
       "sources": [],
       "review_status": "awaiting_independent_round2_review"
@@ -8623,6 +9677,25 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-2002-0004-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2002-0004-a20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "精神的負担"
+        ]
+      },
+      "reasons": [
+        "ja-E0673 (ja): same-gloss-same-key levelling. The row sharing the gloss \"Stress\" already accepts \"精神的負担\" on the identical question — group to_target|Stress|ストレス: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ja string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-2003-0001-e00000000008",
       "before": {
         "lesson_id": "aabbccdd-6666-2003-0001-a20000000000",
@@ -8632,12 +9705,15 @@
       "after": {
         "accepted_answers": [
           "りょうりする",
-          "料理します"
+          "料理します",
+          "料理をする",
+          "調理する"
         ]
       },
       "reasons": [
         "ja-E0712 (ja, translate_to_target): RULING 2026-09-15 — Japanese script, accept the reading. The cue is an English gloss, so nothing in the task selects an orthography; \"りょうりする\" is the same word as the keyed \"料理する\" written in the other script. Exact match once added, so no typo tolerance is involved, and verified against every taught Japanese string to bring nothing else inside the budget.",
-        "ja-E0712 (ja, translate_to_target): RULING 2026-09-15 — register, accept upward and refuse downward. \"料理します\" against the keyed \"料理する\": Polite form of the keyed plain 料理する. Politeness raised on a cue that names no register."
+        "ja-E0712 (ja, translate_to_target): RULING 2026-09-15 — register, accept upward and refuse downward. \"料理します\" against the keyed \"料理する\": Polite form of the keyed plain 料理する. Politeness raised on a cue that names no register.",
+        "ja-E0712 (ja): same-gloss-same-key levelling. The row sharing the gloss \"To cook\" already accepts \"料理をする\", \"調理する\" on the identical question — group to_target|To cook|料理する: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ja string and it admits nothing else."
       ],
       "sources": [],
       "review_status": "awaiting_independent_round2_review"
@@ -9756,6 +10832,25 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-2008-0002-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2008-0002-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "ミュージック"
+        ]
+      },
+      "reasons": [
+        "ja-E1084 (ja): same-gloss-same-key levelling. The row sharing the gloss \"Music\" already accepts \"ミュージック\" on the identical question — group to_target|Music|音楽: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ja string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-2008-0003-e00000000005",
       "before": {
         "lesson_id": "aabbccdd-6666-2008-0003-a20000000000",
@@ -9776,6 +10871,25 @@
       "sources": [
         "round-1 batch evidence, remediation/es-ja-ko/japanese-accepted-alternatives-evidence.json"
       ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-2008-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-2008-0006-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "宴会"
+        ]
+      },
+      "reasons": [
+        "ja-E1126 (ja): same-gloss-same-key levelling. The row sharing the gloss \"Party\" already accepts \"宴会\" on the identical question — group to_target|Party|パーティー: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ja string and it admits nothing else."
+      ],
+      "sources": [],
       "review_status": "awaiting_independent_round2_review"
     },
     {
@@ -9877,6 +10991,25 @@
       "sources": [
         "Stimulus analysis of the shipped app: components/lesson/ListeningExercise.tsx never renders `prompt`; components/lesson/DictationExercise.tsx never renders `prompt` and speaks `correct_answer`; `hintText` is rendered only by components/lesson/ClozeExercise.tsx. Reading/spelling checked against 大辞林/三省堂 standard orthography for the heard word."
       ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-3001-0004-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-6666-3001-0004-b10000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "報道"
+        ]
+      },
+      "reasons": [
+        "ja-E1180 (ja): same-gloss-same-key levelling. The row sharing the gloss \"News\" already accepts \"報道\" on the identical question — group to_target|News|ニュース: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ja string and it admits nothing else."
+      ],
+      "sources": [],
       "review_status": "awaiting_independent_round2_review"
     },
     {
@@ -11625,6 +12758,82 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-7777-1004-0006-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-7777-1004-0006-000000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "금전"
+        ]
+      },
+      "reasons": [
+        "ko-E0276 (ko): same-gloss-same-key levelling. The row sharing the gloss \"Money\" already accepts \"금전\" on the identical question — group to_target|Money|돈: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ko string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-7777-1007-0001-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-7777-1007-0001-000000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "출입문"
+        ]
+      },
+      "reasons": [
+        "ko-E0426 (ko): same-gloss-same-key levelling. The row sharing the gloss \"Door\" already accepts \"출입문\" on the identical question — group to_target|Door|문: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ko string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-7777-1007-0003-e00000000004",
+      "before": {
+        "lesson_id": "aabbccdd-7777-1007-0003-000000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "출입문"
+        ]
+      },
+      "reasons": [
+        "ko-E0448 (ko): same-gloss-same-key levelling. The row sharing the gloss \"Door\" already accepts \"출입문\" on the identical question — group to_target|Door|문: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ko string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-7777-2001-0001-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-7777-2001-0001-a20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "조카"
+        ]
+      },
+      "reasons": [
+        "ko-E0565 (ko): same-gloss-same-key levelling. The row sharing the gloss \"Niece\" already accepts \"조카\" on the identical question — group to_target|Niece|조카딸: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ko string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-7777-2002-0003-e00000000005",
       "before": {
         "lesson_id": "aabbccdd-7777-2002-0003-a20000000000",
@@ -12175,6 +13384,44 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-7777-2008-0003-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-7777-2008-0003-a20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "잔치"
+        ]
+      },
+      "reasons": [
+        "ko-E1093 (ko): same-gloss-same-key levelling. The row sharing the gloss \"Party\" already accepts \"잔치\" on the identical question — group to_target|Party|파티: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ko string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-7777-3001-0004-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-7777-3001-0004-b10000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "소식"
+        ]
+      },
+      "reasons": [
+        "ko-E1180 (ko): same-gloss-same-key levelling. The row sharing the gloss \"News\" already accepts \"소식\" on the identical question — group to_target|News|뉴스: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ko string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-7777-3004-0005-e00000000007",
       "before": {
         "lesson_id": "aabbccdd-7777-3004-0005-b10000000000",
@@ -12303,6 +13550,146 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-8888-2002-0001-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-8888-2002-0001-a20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "约会"
+        ]
+      },
+      "reasons": [
+        "zh-E0637 (zh): same-gloss-same-key levelling. The row sharing the gloss \"Appointment\" already accepts \"约会\" on the identical question — group to_target|Appointment|预约: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught zh string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-8888-2002-0004-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-8888-2002-0004-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "约会"
+        ]
+      },
+      "reasons": [
+        "zh-E0670 (zh): same-gloss-same-key levelling. The row sharing the gloss \"Appointment\" already accepts \"约会\" on the identical question — group to_target|Appointment|预约: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught zh string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-8888-2003-0006-e00000000003",
+      "before": {
+        "lesson_id": "aabbccdd-8888-2003-0006-a20000000000",
+        "type": "translate_to_native",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "To prepare food"
+        ]
+      },
+      "reasons": [
+        "zh-E0767 (zh): same-gloss-same-key levelling. The row sharing the gloss \"To cook\" already accepts \"To prepare food\" on the identical question — group to_native|To cook|做饭: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught zh string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-8888-2005-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-8888-2005-0006-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "我去旅行了",
+          "我旅游了"
+        ]
+      },
+      "reasons": [
+        "zh-E0910 (zh): same-gloss-same-key levelling. The row sharing the gloss \"I traveled\" already accepts \"我去旅行了\", \"我旅游了\" on the identical question — group to_target|I traveled|我旅行了: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught zh string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-8888-2006-0004-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-8888-2006-0004-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "我将学习",
+          "我将会学习",
+          "我要学习"
+        ]
+      },
+      "reasons": [
+        "zh-E0958 (zh): same-gloss-same-key levelling. The row sharing the gloss \"I will study\" already accepts \"我将学习\", \"我将会学习\", \"我要学习\" on the identical question — group to_target|I will study|我会学习: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught zh string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-8888-2006-0005-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-8888-2006-0005-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "我将旅行",
+          "我将会旅行",
+          "我会去旅行"
+        ]
+      },
+      "reasons": [
+        "zh-E0970 (zh): same-gloss-same-key levelling. The row sharing the gloss \"I will travel\" already accepts \"我将旅行\", \"我将会旅行\", \"我会去旅行\" on the identical question — group to_target|I will travel|我会旅行: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught zh string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-8888-2006-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-8888-2006-0006-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "我将工作",
+          "我将会工作",
+          "我要工作"
+        ]
+      },
+      "reasons": [
+        "zh-E0982 (zh): same-gloss-same-key levelling. The row sharing the gloss \"I will work\" already accepts \"我将工作\", \"我将会工作\", \"我要工作\" on the identical question — group to_target|I will work|我会工作: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught zh string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-8888-4004-0003-e00000000001",
       "before": {
         "lesson_id": "aabbccdd-8888-4004-0003-b20000000000",
@@ -12364,6 +13751,377 @@
         "https://www.mdbg.net/chinese/dictionary?page=worddict&wdrst=0&wdqb=%E8%88%9E%E5%8F%B0",
         "https://www.mdbg.net/chinese/dictionary?page=worddict&wdrst=0&wdqb=%E8%A7%82%E4%BC%97"
       ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-9999-2002-0001-e00000000005",
+      "before": {
+        "lesson_id": "aabbccdd-9999-2002-0001-a20000000000",
+        "type": "cloze_deletion",
+        "accepted_answers": [
+          "Приём у врача"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Приём у врача",
+          "Встреча"
+        ]
+      },
+      "reasons": [
+        "ru-E0637 (ru): same-gloss-same-key levelling. The row sharing the gloss \"Appointment\" already accepts \"Встреча\" on the identical question — group to_target|Appointment|Приём: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ru string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-9999-2002-0004-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-9999-2002-0004-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Приём у врача"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Приём у врача",
+          "Встреча"
+        ]
+      },
+      "reasons": [
+        "ru-E0670 (ru): same-gloss-same-key levelling. The row sharing the gloss \"Appointment\" already accepts \"Встреча\" on the identical question — group to_target|Appointment|Приём: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ru string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-9999-2003-0004-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-9999-2003-0004-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Чистить"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Чистить",
+          "Убираться",
+          "Убрать"
+        ]
+      },
+      "reasons": [
+        "ru-E0742 (ru): same-gloss-same-key levelling. The row sharing the gloss \"To clean\" already accepts \"Убираться\", \"Убрать\" on the identical question — group to_target|To clean|Убирать: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ru string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-9999-2004-0001-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-9999-2004-0001-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Добросердечный"
+        ]
+      },
+      "reasons": [
+        "ru-E0784 (ru): same-gloss-same-key levelling. The row sharing the gloss \"Kind\" already accepts \"Добросердечный\" on the identical question — group to_target|Kind|Добрый: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ru string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-9999-2005-0001-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-9999-2005-0001-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Я занимался",
+          "Я занималась"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Я занимался",
+          "Я занималась",
+          "Я училась"
+        ]
+      },
+      "reasons": [
+        "ru-E0856 (ru): same-gloss-same-key levelling. The row sharing the gloss \"I studied\" already accepts \"Я училась\" on the identical question — group to_target|I studied|Я учился: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ru string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-9999-2005-0002-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-9999-2005-0002-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Я сыграла"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Я сыграла",
+          "Я играла",
+          "Я сыграл"
+        ]
+      },
+      "reasons": [
+        "ru-E0868 (ru): same-gloss-same-key levelling. The row sharing the gloss \"I played\" already accepts \"Я играла\", \"Я сыграл\" on the identical question — group to_target|I played|Я играл: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ru string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-9999-2005-0004-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-9999-2005-0004-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Я увидела"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Я увидела",
+          "Я видел",
+          "Я видела"
+        ]
+      },
+      "reasons": [
+        "ru-E0886 (ru): same-gloss-same-key levelling. The row sharing the gloss \"I saw\" already accepts \"Я видел\", \"Я видела\" on the identical question — group to_target|I saw|Я увидел: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ru string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-9999-2005-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-9999-2005-0006-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Я путешествовала"
+        ]
+      },
+      "reasons": [
+        "ru-E0910 (ru): same-gloss-same-key levelling. The row sharing the gloss \"I traveled\" already accepts \"Я путешествовала\" on the identical question — group to_target|I traveled|Я путешествовал: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ru string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-9999-2006-0004-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-9999-2006-0004-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Я буду заниматься",
+          "Буду заниматься"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Я буду заниматься",
+          "Буду заниматься",
+          "Буду учиться"
+        ]
+      },
+      "reasons": [
+        "ru-E0958 (ru): same-gloss-same-key levelling. The row sharing the gloss \"I will study\" already accepts \"Буду учиться\" on the identical question — group to_target|I will study|Я буду учиться: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ru string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-9999-2006-0005-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-9999-2006-0005-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Буду путешествовать"
+        ]
+      },
+      "reasons": [
+        "ru-E0970 (ru): same-gloss-same-key levelling. The row sharing the gloss \"I will travel\" already accepts \"Буду путешествовать\" on the identical question — group to_target|I will travel|Я буду путешествовать: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ru string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-9999-2006-0005-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-9999-2006-0005-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Встреча"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Встреча",
+          "Приём у врача"
+        ]
+      },
+      "reasons": [
+        "ru-E0976 (ru): same-gloss-same-key levelling. The row sharing the gloss \"Appointment\" already accepts \"Приём у врача\" on the identical question — group to_target|Appointment|Приём: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ru string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-9999-2006-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-9999-2006-0006-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Буду работать"
+        ]
+      },
+      "reasons": [
+        "ru-E0982 (ru): same-gloss-same-key levelling. The row sharing the gloss \"I will work\" already accepts \"Буду работать\" on the identical question — group to_target|I will work|Я буду работать: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ru string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-9999-2008-0001-e00000000008",
+      "before": {
+        "lesson_id": "aabbccdd-9999-2008-0001-a20000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Отмечать"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Отмечать",
+          "Отпраздновать"
+        ]
+      },
+      "reasons": [
+        "ru-E1072 (ru): same-gloss-same-key levelling. The row sharing the gloss \"To celebrate\" already accepts \"Отпраздновать\" on the identical question — group to_target|To celebrate|Праздновать: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ru string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-9999-3005-0004-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-9999-3005-0004-b10000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Загрузить"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Загрузить",
+          "Скачивать"
+        ]
+      },
+      "reasons": [
+        "ru-E1516 (ru): same-gloss-same-key levelling. The row sharing the gloss \"To download\" already accepts \"Скачивать\" on the identical question — group to_target|To download|Скачать: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ru string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-9999-3005-0005-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-9999-3005-0005-b10000000000",
+        "type": "translate_to_target",
+        "accepted_answers": []
+      },
+      "after": {
+        "accepted_answers": [
+          "Загружать"
+        ]
+      },
+      "reasons": [
+        "ru-E1530 (ru): same-gloss-same-key levelling. The row sharing the gloss \"To upload\" already accepts \"Загружать\" on the identical question — group to_target|To upload|Загрузить: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ru string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-9999-3007-0004-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-9999-3007-0004-b10000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Мне хотелось бы",
+          "Хотела бы"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Мне хотелось бы",
+          "Хотела бы",
+          "Я хотела бы",
+          "Хотел бы"
+        ]
+      },
+      "reasons": [
+        "ru-E1684 (ru): same-gloss-same-key levelling. The row sharing the gloss \"I wish\" already accepts \"Я хотела бы\", \"Хотел бы\" on the identical question — group to_target|I wish|Я хотел бы: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ru string and it admits nothing else."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-9999-3007-0006-e00000000002",
+      "before": {
+        "lesson_id": "aabbccdd-9999-3007-0006-b10000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "Вообрази",
+          "Вообразите"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "Вообрази",
+          "Вообразите",
+          "Представьте"
+        ]
+      },
+      "reasons": [
+        "ru-E1712 (ru): same-gloss-same-key levelling. The row sharing the gloss \"Imagine\" already accepts \"Представьте\" on the identical question — group to_target|Imagine|Представь: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught ru string and it admits nothing else."
+      ],
+      "sources": [],
       "review_status": "awaiting_independent_round2_review"
     },
     {

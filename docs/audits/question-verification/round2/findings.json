@@ -57,6 +57,14 @@
       "refused": 46,
       "held": 3,
       "see": "restored_withdrawals"
+    },
+    "same_gloss_levelling": {
+      "patched": 84,
+      "additions": 97,
+      "held": 13,
+      "pending": 14,
+      "declared": 5,
+      "see": "same_gloss_levelling"
     }
   },
   "rulings": {
@@ -405,6 +413,295 @@
       "one_row_type_distinction": "いとこ has six standard kanji spellings. On the LISTENING row the learner heard いとこ, so any spelling read いとこ is a faithful transcription and the two general spellings 従兄弟 and 従姉妹 come back. The four naming a specific cousin — 従兄 older male, 従弟 younger male, 従姉 older female, 従妹 younger female — assert a gender and seniority that neither the audio nor the gloss \"Cousin\" supplies, and are refused on both row types. SNS <- エスエヌエス / えすえぬえす is restored on the same transcription ground."
     },
     "measurement": "All 144 candidates were run through the whole-language check before any was authored: every addition graded against all 2,281 taught Japanese strings, before and after. 141 widen nothing; the 3 that do are the held ones. After compiling, the patch's total collateral acceptances are unchanged at 12 — the 95 restorations add none."
+  },
+  "same_gloss_levelling": {
+    "what": "Two rows that ask the same question must accept the same answers. Round one built this check for Italian and levelled nineteen groups; this generalises it to all nine languages, with a standing test that now covers all of them.",
+    "COULD_NOT_RECOVER_249": {
+      "asked_for": "Recover the 249 from the grader's JSON reports on audit/grader-behaviour.",
+      "finding": "There are no such reports. That worktree's tree is clean — no untracked files, no committed JSON under docs/ or scripts/grading — and its only relevant file, scripts/grading/widening-check.mjs, has no sibling-alternatives axis at all: lib/exercise-restore.ts taughtKeys reads correctAnswer only.",
+      "what_249_probably_counts": "A different population. The rejected axis was to count sibling ALTERNATIVES as taught strings, over the shipped sibling scope (unit by default), which is far wider than same-gloss-same-key. Reproducing that rule at each scope gives figures in the tens of thousands to millions of (row, string) pairs, nowhere near 249, so the number must be measured with a narrowing this report does not have.",
+      "corroborating_signal": "The Italian examples that travelled with the request — \"Generoso\" refusing \"Generosa\" — are already levelled: to_target|Generous|Generoso is in round one's own RESOLVED_HERE list, and Italian now has zero diverging groups. So the 249 was measured against a corpus state predating the round-1 patch, a different population, or both.",
+      "what_is_reported_instead": "The population this file can prove, derived from the frozen snapshot plus the round-2 draft: 4,605 groups across nine languages, 967 asked more than once, 101 disagreeing, carrying 129 (row, string) omissions. Italian is at zero, which is round one showing up as a result rather than a claim.",
+      "ask": "If 249 is meant to be a different population, point at the file and it can be worked separately."
+    },
+    "derived": {
+      "groups": 4605,
+      "asked_more_than_once": 967,
+      "disagreeing": 101,
+      "omissions": 129,
+      "italian": 0
+    },
+    "outcomes": {
+      "levelled": 97,
+      "propagation_pending": 14,
+      "held_would_widen": 13,
+      "declared_deliberate": 5
+    },
+    "levelled_note": "Only pre-existing divergence: every string levelled was accepted by a sibling in the FROZEN snapshot, so this closes a round-one omission rather than propagating something this patch itself added. Gender agreement, gendered professions, aspect pairs, register and script variants — and eight Russian gendered pasts that also close part of the Russian alternatives gap this patch reported earlier.",
+    "by_language": {
+      "es": 12,
+      "fr": 13,
+      "de": 3,
+      "pt": 18,
+      "ru": 21,
+      "ja": 10,
+      "ko": 6,
+      "zh": 14
+    },
+    "A_LARGE_FRACTION_IS_NOT_DELIBERATE": "Asked whether many turn out to be deliberate contrasts rather than omissions: they do not. Of 129 omissions, 5 are deliberate — 4%. The rest are omissions or, in 13 cases, would-be omissions that cannot be closed without admitting a wrong answer. That does not support reading the rejected axis as more costly than measured; it says the divergence is overwhelmingly accidental.",
+    "deliberate_contrasts_not_flattened": {
+      "reason": "A cloze_deletion asks for one missing word, so an overt-subject form does not fit the frame even though it is correct on the translate row that shares the gloss and key. Round one withdrew the overt pronoun from these cloze rows deliberately, and the round-2 triage refused it again on the two Korean rows.",
+      "rows": [
+        {
+          "ref": "ja-E0853",
+          "lang": "ja",
+          "group": "to_target|I saw|見ました",
+          "missing": "私は見ました"
+        },
+        {
+          "ref": "ja-E0865",
+          "lang": "ja",
+          "group": "to_target|I bought|買いました",
+          "missing": "私は買いました"
+        },
+        {
+          "ref": "ja-E0937",
+          "lang": "ja",
+          "group": "to_target|I will travel|旅行します",
+          "missing": "私は旅行します"
+        },
+        {
+          "ref": "ko-E0889",
+          "lang": "ko",
+          "group": "to_target|I studied|공부했어요",
+          "missing": "저는 공부했어요"
+        },
+        {
+          "ref": "ko-E1645",
+          "lang": "ko",
+          "group": "to_target|I wish|바란다",
+          "missing": "저는 바랍니다"
+        }
+      ]
+    },
+    "held_because_levelling_would_admit_a_wrong_answer": {
+      "note": "Measured against every taught string in the language. These are the meaning flips the audit exists to catch: \"Nurse\" would accept Enfermo (sick), \"Neighbor\" would accept Cozinha (kitchen), \"Tired\" would accept Zangada (angry), \"Grandmother\" would accept 고모 (aunt), \"To cook\" would accept Cool. Each needs a confusable pair keyed on the added string.",
+      "rows": [
+        {
+          "ref": "es-E0682",
+          "lang": "es",
+          "group": "to_target|Nurse|Enfermera",
+          "missing": "Enfermero",
+          "admits": [
+            "Enfermo"
+          ]
+        },
+        {
+          "ref": "es-E1042",
+          "lang": "es",
+          "group": "to_target|More expensive|Más caro",
+          "missing": "Más cara",
+          "admits": [
+            "Más corta",
+            "Más baja"
+          ]
+        },
+        {
+          "ref": "de-E0767",
+          "lang": "de",
+          "group": "to_native|To cook|Kochen",
+          "missing": "Cook",
+          "admits": [
+            "Cool"
+          ]
+        },
+        {
+          "ref": "pt-E0592",
+          "lang": "pt",
+          "group": "to_target|Neighbor|Vizinho",
+          "missing": "Vizinha",
+          "admits": [
+            "Cozinha"
+          ]
+        },
+        {
+          "ref": "pt-E0652",
+          "lang": "pt",
+          "group": "to_target|Tired|Cansado",
+          "missing": "Cansada",
+          "admits": [
+            "Zangada"
+          ]
+        },
+        {
+          "ref": "pt-E1042",
+          "lang": "pt",
+          "group": "to_target|More expensive|Mais caro",
+          "missing": "Mais cara",
+          "admits": [
+            "Mais curta"
+          ]
+        },
+        {
+          "ref": "ru-E0736",
+          "lang": "ru",
+          "group": "to_target|To move|Переезжать",
+          "missing": "Переехать",
+          "admits": [
+            "переехали"
+          ]
+        },
+        {
+          "ref": "ru-E0898",
+          "lang": "ru",
+          "group": "to_target|I bought|Я купил",
+          "missing": "Я купила",
+          "admits": [
+            "купила"
+          ]
+        },
+        {
+          "ref": "ja-E1000",
+          "lang": "ja",
+          "group": "to_target|Shorter|もっと背が低い",
+          "missing": "より背が低い",
+          "admits": [
+            "背が低い"
+          ]
+        },
+        {
+          "ref": "ja-E1000",
+          "lang": "ja",
+          "group": "to_target|Shorter|もっと背が低い",
+          "missing": "もっと短い",
+          "admits": [
+            "もっと良い",
+            "もっと悪い",
+            "もっと遅い",
+            "もっと速い",
+            "もっと安い",
+            "もっと高い"
+          ]
+        },
+        {
+          "ref": "ja-E1054",
+          "lang": "ja",
+          "group": "to_target|Taller|もっと背が高い",
+          "missing": "より背が高い",
+          "admits": [
+            "背が高い"
+          ]
+        },
+        {
+          "ref": "ko-E0368",
+          "lang": "ko",
+          "group": "to_target|Grandmother|할머니",
+          "missing": "조모",
+          "admits": [
+            "고모"
+          ]
+        },
+        {
+          "ref": "ko-E0694",
+          "lang": "ko",
+          "group": "to_target|Dentist|치과의사",
+          "missing": "치과 의사",
+          "admits": [
+            "과 의사"
+          ]
+        }
+      ]
+    },
+    "left_pending": {
+      "reason": "This patch added the string to one row of the group under a 2026-09-15 ruling or a restored withdrawal, and the twin does not carry it. Whether the ruling reaches the twin is a separate decision: the two rows do ask the same question, but levelling up would also spread the alternatives on that row that are themselves doubtful.",
+      "rows": [
+        {
+          "ref": "ja-E0745",
+          "lang": "ja",
+          "group": "to_target|To cook|料理する",
+          "missing": "りょうりする"
+        },
+        {
+          "ref": "ja-E0745",
+          "lang": "ja",
+          "group": "to_target|To cook|料理する",
+          "missing": "料理します"
+        },
+        {
+          "ref": "ja-E0856",
+          "lang": "ja",
+          "group": "to_target|I studied|勉強しました",
+          "missing": "べんきょうしました"
+        },
+        {
+          "ref": "ja-E0937",
+          "lang": "ja",
+          "group": "to_target|I will travel|旅行します",
+          "missing": "りょこうします"
+        },
+        {
+          "ref": "ja-E1012",
+          "lang": "ja",
+          "group": "to_target|Faster|もっと速い",
+          "missing": "もっと速く"
+        },
+        {
+          "ref": "ja-E1054",
+          "lang": "ja",
+          "group": "to_target|Taller|もっと背が高い",
+          "missing": "より高い"
+        },
+        {
+          "ref": "ja-E1024",
+          "lang": "ja",
+          "group": "to_target|Slower|もっと遅い",
+          "missing": "もっと遅く"
+        },
+        {
+          "ref": "ja-E1126",
+          "lang": "ja",
+          "group": "to_target|Party|パーティー",
+          "missing": "パーティ"
+        },
+        {
+          "ref": "ja-E1684",
+          "lang": "ja",
+          "group": "to_target|I wish|したい",
+          "missing": "願っています"
+        },
+        {
+          "ref": "ja-E1684",
+          "lang": "ja",
+          "group": "to_target|I wish|したい",
+          "missing": "願う"
+        },
+        {
+          "ref": "ja-E1712",
+          "lang": "ja",
+          "group": "to_target|Imagine|想像して",
+          "missing": "そうぞうして"
+        },
+        {
+          "ref": "ko-E0868",
+          "lang": "ko",
+          "group": "to_target|I played|놀았어요",
+          "missing": "놀았습니다"
+        },
+        {
+          "ref": "ko-E1645",
+          "lang": "ko",
+          "group": "to_target|I wish|바란다",
+          "missing": "바라요"
+        },
+        {
+          "ref": "ko-E1645",
+          "lang": "ko",
+          "group": "to_target|I wish|바란다",
+          "missing": "바랍니다"
+        }
+      ]
+    },
+    "standing_test": "scripts/question-audit/round2/same-gloss-levelling.test.mjs — nine languages, Node rather than Deno, and an allowlist that is no longer empty because two populations must stay divergent. Passes on the result: 4 checks."
   },
   "triage_block": {
     "rows": 298,

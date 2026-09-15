@@ -10,6 +10,7 @@ import { NEW_TITLE } from './idiomatic-equivalents-retitle.mjs';
 import { loadTriage, DEPENDENT_ROWS, PARTIALLY_HELD, TRIAGE_SHA } from './triage-accepted-answers.mjs';
 import { loadCandidates, REGISTER_RULING, REGISTER_REMOVALS, REGISTER_KEPT, FR_C0024, CANDIDATES_SHA, RULED_ON } from './product-rulings.mjs';
 import { loadAlternativesEvidence, SCRIPT_ACCEPT, SCRIPT_REFUSE, HELD_TYPO_BALL, EVIDENCE_SHA } from './restored-withdrawals.mjs';
+import { LEVELLED } from './same-gloss-levelling.mjs';
 
 const draft = JSON.parse(await readFile('docs/audits/question-verification/round2/draft-patches.json', 'utf8'));
 const { patches } = draft;
@@ -152,10 +153,11 @@ test('the compiler refuses speaking rows, unknown ids and fields, and contradict
 test('the build is reproducible: a second compile emits byte-identical patches', async () => {
   const [{ productiveParadigmFixes }, { filmTheaterFixes }, { idiomaticEquivalentsRetitle },
     { triageAcceptedAnswers }, { productRulings, frenchCheckpointParaphrase, registerRemovals },
-    { createAcceptedAnswerLedger }, { restoredWithdrawals }] = await Promise.all([
+    { createAcceptedAnswerLedger }, { restoredWithdrawals }, { sameGlossLevelling }] = await Promise.all([
     import('./productive-paradigm-fixes.mjs'), import('./film-theater-fixes.mjs'),
     import('./idiomatic-equivalents-retitle.mjs'), import('./triage-accepted-answers.mjs'),
     import('./product-rulings.mjs'), import('./accepted-answer-ledger.mjs'), import('./restored-withdrawals.mjs'),
+    import('./same-gloss-levelling.mjs'),
   ]);
   const rebuild = async () => {
     const set = await createRound2PatchSet();
@@ -164,6 +166,7 @@ test('the build is reproducible: a second compile emits byte-identical patches',
     await triageAcceptedAnswers(set, ledger);
     await productRulings(set, ledger);
     await restoredWithdrawals(set, ledger);
+    sameGlossLevelling(set, ledger);
     frenchCheckpointParaphrase(set);
     registerRemovals(set);
     ledger.write(set);
@@ -317,7 +320,7 @@ test('Film & Theater stops teaching Painting and Sculpture in all six remaining 
   const units = new Map(snapshot.units.map(u => [u.id, u]));
   const courses = new Map(snapshot.courses.map(c => [c.id, c]));
   const ledgerIds = new Set([...triage.map(entry => entry.exercise_id), ...candidates.map(entry => entry.exercise_id),
-    ...REGISTER_REMOVALS.map(entry => entry.id), ...withdrawalIds]);
+    ...REGISTER_REMOVALS.map(entry => entry.id), ...withdrawalIds, ...LEVELLED.map(([id]) => id)]);
   const touched = patches.filter(p => p.table === 'exercises'
     && !Object.hasOwn(p.after, 'target_grammar') && !ledgerIds.has(p.id));
   assert.equal(touched.length, 24, 'four rows in each of six languages');
@@ -357,7 +360,8 @@ test('the triage block writes exactly the confirmed rows, and only accepted_answ
     assert.deepEqual(patch.before.accepted_answers, []);
     assert.deepEqual(patch.after.accepted_answers.slice(0, entry.additions.length), entry.additions);
     const ruled = new Set([...candidates.filter(c => c.exercise_id === patch.id).map(c => c.candidate),
-      ...[...withdrawals.script, ...withdrawals.ball].filter(w => jaRef(Number(w.ref.slice(4))).exercise.id === patch.id).map(w => w.candidate)]);
+      ...[...withdrawals.script, ...withdrawals.ball].filter(w => jaRef(Number(w.ref.slice(4))).exercise.id === patch.id).map(w => w.candidate),
+      ...LEVELLED.filter(([id]) => id === patch.id).map(([, , , , missing]) => missing)]);
     for (const value of patch.after.accepted_answers.slice(entry.additions.length)) {
       assert(ruled.has(value), `${entry.ref}: ${value} comes from no recorded block`);
     }
