@@ -43,7 +43,25 @@ export type OpenResponseKind = (typeof OPEN_RESPONSE_KINDS)[number];
  * Redis with a one-day TTL (see index.ts). That is state we are willing to
  * lose: a lost counter means one extra day of grades, never a lost grade.
  */
-export const DAILY_SEMANTIC_GRADES = { starter: 20, paid: 150 } as const;
+/**
+ * Set 2026-09-14 after costing the call rather than guessing at it.
+ *
+ * This runs on Claude Haiku 4.5, the cheapest model available, with output
+ * capped at 160 tokens, so one graded response costs about $0.001: roughly 600
+ * input tokens at $1/MTok and 60 output at $5/MTok. Prompt caching cannot help
+ * — the system prompt is around 450 tokens, under the minimum cacheable prefix
+ * on every model — and there is no cheaper model to fall back to. The only real
+ * lever left is the fixed fast path in `fixedVerdict`, which grades exact and
+ * near-exact matches for nothing and never reaches the provider at all.
+ *
+ * So these are an abuse fuse, not a budget. At the paid cap, a learner who
+ * spent every grade every day of the month costs about $8; nobody writes 300
+ * open responses a day, and the realistic figure is cents. The paid number is
+ * therefore set where it stops runaway automated use rather than where it
+ * rations honest study. `starter` is different: it is a real free-tier
+ * boundary, deliberately tight, and belongs with the other tier numbers.
+ */
+export const DAILY_SEMANTIC_GRADES = { starter: 20, paid: 300 } as const;
 export const DAILY_WINDOW_SECONDS = 86_400;
 
 /** Rapid-fire guard between daily boundaries. */
