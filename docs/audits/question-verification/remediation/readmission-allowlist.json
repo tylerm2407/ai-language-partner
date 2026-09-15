@@ -2,26 +2,36 @@
  "produced": "2026-09-15, by the curriculum audit",
  "what_this_is": "Strings that the curriculum treats as wrong on a given row, and that the row's own remediation made acceptable. Each entry is language|exercise id|the readmitted string. Enforced by scripts/question-audit/readmission.test.mjs, which fails both when a new one appears and when a listed one is fixed, so the list cannot rot.",
  "mechanism": "gradeAnswer measures typo distance against whichever accepted answer is NEAREST the learner's input. Every entry in accepted_answers therefore carries a ball of radius min(2, floor(min(len(entry), len(key)) * 0.3)) around itself, and anything inside that ball is forgiven as a typo of it. Adding a correct alternative adds a ball, and anything already inside it becomes acceptable. Measured with the hints the shipped app actually passes, including siblingKeys and the welded fill-blank comparison — measuring without them describes a grader nobody runs.",
- "why_not_fixed_in_the_grader": "Three grader changes have moved this number, and each one is recorded because the count is meaningless without them. (1) Clamping the tolerance basis to the shorter of the entry and the key removed the inflation class, where a long addition widened the budget and the key 'Cheap' plus 'Inexpensive' marked the antonym 'Expensive' correct in all seven languages: 88 to 71. (2) Refusing a candidate that is another taught key in the same unit, and welding fill-blank fragments into the word their prompt completes so a fragment is not counted as a key anyone could type: 71 to 29, closing Italian and Chinese entirely. (3) Withdrawing typo tolerance from Han script closed the last Chinese entry outright. What remains is not a tolerance bug. Twenty of the twenty-nine are Portuguese preterite forms — a productive paradigm, which no pair list can close and which the round-2 patch addresses by setting target_grammar on those rows, making the whole class strict at once. The rest need a confusable pair or a content change.",
+ "why_not_fixed_in_the_grader": "Four grader changes have moved this number and the count is meaningless without them. (1) Clamping the tolerance basis to the shorter of entry and key removed the inflation class, where 'Cheap' plus 'Inexpensive' marked the antonym 'Expensive' correct in all seven languages: 88 to 71. (2) Refusing a candidate that is another taught key, and welding fill-blank fragments into the word their prompt completes: 71 to 29. (3) Withdrawing typo tolerance from Han script closed the Chinese entries outright. (4) Widening sibling keys from unit to language scope closed 680 corpus collisions — and widened this test's own candidate set at the same time, which is why 29 became 36 rather than falling further. What remains is not a tolerance bug. Twenty-one of the thirty-six are Portuguese preterites, a productive paradigm no pair list can close, which the round-2 patch addresses by setting target_grammar on those rows. The rest need a confusable pair or a content change.",
  "how_to_close_an_entry": "Add the pair to lib/confusable-pairs.ts if the two strings are genuinely distinct words a learner must not conflate; set target_grammar if the row belongs to a productive paradigm; or change the content if the row is at fault. Then delete the entry here; the test will fail until you do.",
- "scope_limits": "Checked per patched row against that row's own distractors and the stored keys of its siblings in the SAME unit. A string taught only in another unit is out of scope here and belongs to the confusable-pair list, whose own coverage is separately documented as incomplete.",
+ "scope_limits": "Checked per patched row against its own distractors and every string the LANGUAGE teaches, welded so a fill-blank fragment counts as the word its prompt completes. Earlier revisions checked only the row's own unit, which is why the count is not comparable across revisions: 88 and 71 were measured against unit-scoped candidates, 29 against unit-scoped candidates with the app's real hints, and 36 against language-scoped candidates. The test got wider, not the grader worse.",
  "severity_note": "Not all entries are equal. The worst readmit an opposite meaning: es-E1138 accepts 'No estoy de acuerdo' on an 'I agree' row. Others readmit a near-synonym the unit deliberately contrasts, such as the Chinese row that readmits 'Then' where a sibling row was corrected to exclude it. Triage by meaning, not by count.",
- "count": 29,
+ "count": 36,
  "by_language": {
-  "de": 5,
+  "de": 6,
   "es": 1,
   "fr": 1,
-  "pt": 20,
-  "ru": 2
+  "it": 2,
+  "ja": 1,
+  "ko": 1,
+  "pt": 21,
+  "ru": 2,
+  "zh": 1
  },
  "readmissions": [
   "de|aabbccdd-3333-1001-0001-e00000000008|Entschuldigen Sie",
   "de|aabbccdd-3333-1001-0002-e00000000008|Entschuldigung",
   "de|aabbccdd-3333-1001-0005-e00000000004|Entschuldigen Sie",
   "de|aabbccdd-3333-1001-0006-e00000000004|Entschuldigung",
+  "de|aabbccdd-3333-1005-0004-e00000000008|Freundin",
   "de|aabbccdd-3333-3005-0005-e00000000005|Social media",
   "es|aabbccdd-1111-4003-0006-e00000000002|interesada",
   "fr|aabbccdd-2222-3007-0005-e00000000004|Suppose",
+  "it|aabbccdd-4444-1004-0001-e00000000002|caro",
+  "it|aabbccdd-4444-2007-0002-e00000000004|Costoso",
+  "ja|aabbccdd-6666-1005-0001-e00000000008|歯医者",
+  "ko|aabbccdd-7777-1005-0001-e00000000008|치과의사",
+  "pt|aabbccdd-5555-1004-0006-e00000000008|Cara",
   "pt|aabbccdd-5555-2005-0001-e00000000008|estudei",
   "pt|aabbccdd-5555-2005-0002-e00000000005|comprei",
   "pt|aabbccdd-5555-2005-0002-e00000000008|joguei",
@@ -43,6 +53,7 @@
   "pt|aabbccdd-5555-3007-0004-e00000000002|gostaria",
   "pt|aabbccdd-5555-4003-0006-e00000000002|interessada",
   "ru|aabbccdd-9999-2006-0003-e00000000002|поем",
-  "ru|aabbccdd-9999-3007-0001-e00000000005|хотел бы"
+  "ru|aabbccdd-9999-3007-0001-e00000000005|хотел бы",
+  "zh|aabbccdd-8888-2006-0006-e00000000004|目的"
  ]
 }

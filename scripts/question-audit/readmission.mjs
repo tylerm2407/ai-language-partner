@@ -58,6 +58,11 @@ const courseOf = (exercise) => courses.get(unitOf(exercise)?.course_id);
  * The keys taught by the other non-speaking rows of the same unit, in the form
  * a learner could actually type them.
  *
+ * Scoped to the LANGUAGE, because that is what the runtime does since
+ * `useTaughtKeys` landed. A course here is one language at one CEFR band, so a
+ * narrower scope misses the cross-band collisions entirely — which is how
+ * Spanish "Hablé" came to accept "Table".
+ *
  * `taughtKeys` is the app's own function, reused rather than reimplemented, so
  * this measurement cannot drift from what the runtime does. It welds a
  * fill-blank key into the word its prompt completes, which is the scoping fix
@@ -66,21 +71,42 @@ const courseOf = (exercise) => courses.get(unitOf(exercise)?.course_id);
  * phantom Japanese readmissions and would produce more with every new
  * fill-blank row.
  */
-const rowsByUnit = new Map();
+const rowsByLanguage = new Map();
 for (const exercise of snapshot.exercises) {
   if (exercise.type === 'speaking' || exercise.response_mode === 'speak') continue;
-  const unit = unitOf(exercise);
-  if (!unit) continue;
-  if (!rowsByUnit.has(unit.id)) rowsByUnit.set(unit.id, []);
-  rowsByUnit.get(unit.id).push({
+  const language = courseOf(exercise)?.target_language;
+  if (!language) continue;
+  if (!rowsByLanguage.has(language)) rowsByLanguage.set(language, []);
+  rowsByLanguage.get(language).push({
     type: exercise.type,
     prompt: exercise.prompt ?? '',
     correctAnswer: exercise.correct_answer,
   });
 }
 const siblingKeys = new Map(
-  [...rowsByUnit].map(([unitId, rows]) => [unitId, taughtKeys(rows)]),
+  [...rowsByLanguage].map(([language, rows]) => [language, taughtKeys(rows)]),
 );
+
+/**
+ * Memoised per (language, key).
+ *
+ * `gradeAnswer` caches its normalised sibling list on the ARRAY IDENTITY, so
+ * building a fresh filtered array on every call defeats the cache and pays the
+ * full normalisation of ~2,000 strings per grade. That is the same 250x trap the
+ * grader hit when it widened the scope, and it turns this measurement from
+ * minutes into hours.
+ */
+const siblingCache = new Map();
+function siblingsExcluding(language, key) {
+  if (!language) return [];
+  const id = `${language}\u0000${key}`;
+  let list = siblingCache.get(id);
+  if (!list) {
+    list = (siblingKeys.get(language) ?? []).filter((k) => k !== key);
+    siblingCache.set(id, list);
+  }
+  return list;
+}
 
 /**
  * The hints the shipped app passes, not a subset of them.
@@ -99,9 +125,7 @@ const hintsFor = (exercise, language) => ({
     targetWord: exercise.target_word,
     language,
     blankContext: exercise.type === 'fill_blank' ? blankContext(exercise.prompt ?? '') : undefined,
-    siblingKeys: (siblingKeys.get(unitOf(exercise)?.id) ?? []).filter(
-      (key) => key !== exercise.correct_answer,
-    ),
+    siblingKeys: siblingsExcluding(courseOf(exercise)?.target_language, exercise.correct_answer),
   },
 });
 
@@ -121,7 +145,7 @@ export function findReadmissions() {
 
     const shouldStayWrong = new Set([
       ...(before.distractors ?? []),
-      ...(siblingKeys.get(unitOf(before)?.id) ?? []),
+      ...(siblingKeys.get(course.target_language) ?? []),
     ]);
     for (const candidate of shouldStayWrong) {
       if (typeof candidate !== 'string' || !candidate.trim()) continue;
