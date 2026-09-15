@@ -357,18 +357,36 @@ export async function fetchTaughtKeysForLanguage(language: string): Promise<Taug
   const unitIds = (unitRows ?? []).map((row) => row.id as string);
   if (unitIds.length === 0) return [];
 
-  const { data, error } = await supabase
-    .from('exercises')
-    .select('type, prompt, correct_answer, lessons!inner(unit_id)')
-    .in('lessons.unit_id', unitIds)
-    .limit(5000);
+  /**
+   * Paged, because PostgREST caps a response at `db.max_rows` — 1,000 by
+   * default — and a language is about 2,664 exercises. An unpaged query would
+   * not fail, it would quietly return the first thousand and leave the grader
+   * with two thirds of a sibling set, which is the kind of wrong that does not
+   * announce itself. Stops on a short page; the page ceiling is a
+   * runaway-query guard, not pagination.
+   */
+  const PAGE = 1000;
+  const MAX_PAGES = 12;
+  const rows: TaughtRow[] = [];
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const { data, error } = await supabase
+      .from('exercises')
+      .select('type, prompt, correct_answer, lessons!inner(unit_id)')
+      .in('lessons.unit_id', unitIds)
+      .order('id', { ascending: true })
+      .range(page * PAGE, page * PAGE + PAGE - 1);
 
-  if (error) throw error;
-  return (data ?? []).map((row) => ({
-    type: row.type as ExerciseType,
-    prompt: (row.prompt as string) ?? '',
-    correctAnswer: (row.correct_answer as string) ?? '',
-  }));
+    if (error) throw error;
+    for (const row of data ?? []) {
+      rows.push({
+        type: row.type as ExerciseType,
+        prompt: (row.prompt as string) ?? '',
+        correctAnswer: (row.correct_answer as string) ?? '',
+      });
+    }
+    if ((data ?? []).length < PAGE) break;
+  }
+  return rows;
 }
 
 // ─── Cards ──────────────────────────────────────────────────────
