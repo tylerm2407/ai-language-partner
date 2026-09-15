@@ -7,11 +7,23 @@ files deliberately preserve findings as they were recorded; their old pending
 labels are not a current count of unfixed errors, and a patched row does not
 automatically close every claim attached to it.
 
-**The content patch is deployed.** All 5,556 rows landed in production on
-2026-09-14 as one transaction, with zero drift before and zero mismatches after;
-`reverse.sql` is the tested, unapplied rollback. The app-side grading fixes and
-the changed edge functions did **not** ship, so readmissions stand at 88 rather
-than 71 until the next build. Everything listed below is still open.
+**The content patch and the server half are deployed.** All 5,556 rows landed in
+production on 2026-09-14 as one transaction, with zero drift before and zero
+mismatches after; `reverse.sql` is the tested, unapplied rollback. The
+`checkpoint`, `generate-goal-track`, `grade-writing` and new `grade-response`
+functions are deployed too, with 118 Deno tests passing and all four answering
+401 unauthenticated. The daily semantic-grading caps are settled at 20 starter
+and 300 paid, costed rather than guessed.
+
+**The app binary is the one thing still unshipped**, so readmissions stand at 88
+rather than 71 until a build goes out. That is the only item below whose
+remedy is already written and merely waiting.
+
+Work is now in flight on three branches, none merged: `audit/grader-behaviour`
+(the five grader defects and the sibling-key rule), `audit/content-round2` (a
+second guarded patch for the named content defects) and
+`audit/uncertain-triage` (the 371 Japanese and 29 Korean uncertain claims).
+Items below marked *in flight* are being worked; the rest are untouched.
 
 ## Current state
 
