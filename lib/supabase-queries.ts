@@ -848,6 +848,13 @@ const PROFICIENCY_SPEAKING_LIMIT = 500;
 /** Graded listening exercises considered — the same order as speaking, one row per answer. */
 const PROFICIENCY_LISTENING_LIMIT = 500;
 /**
+ * Answered tutor listening checks considered. One row per SESSION rather than
+ * per question, and a session yields at most `MAX_LISTENING_ITEMS` (3), so this
+ * is a far smaller cap than the per-answer ones above and still well beyond
+ * any real learner's history.
+ */
+const PROFICIENCY_LISTENING_CHECK_LIMIT = 400;
+/**
  * Exercise types answered from audio alone. Mirrors the CHECK in migration
  * 128's `record_exercise_result`; the report reads only these for listening.
  */
@@ -920,6 +927,7 @@ export async function fetchProficiencyEvidence(
     writingRes,
     speakingRes,
     listeningRes,
+    listeningCheckRes,
     statsRes,
     reviewCountRes,
     conversationRes,
@@ -981,6 +989,18 @@ export async function fetchProficiencyEvidence(
         .order('created_at', { ascending: false })
         .limit(PROFICIENCY_LISTENING_LIMIT),
 
+      // Answered post-session listening checks (migration 132). This is the
+      // only way a conversation can evidence listening: lesson exercises are
+      // the other source, and a learner who only ever talks does none.
+      supabase
+        .from('tutor_listening_checks')
+        .select('cefr_level, correct_count, total_count')
+        .eq('user_id', userId)
+        .eq('target_language', targetLanguage)
+        .not('answered_at', 'is', null)
+        .order('answered_at', { ascending: false })
+        .limit(PROFICIENCY_LISTENING_CHECK_LIMIT),
+
       supabase
         .from('daily_stats')
         .select('date, listening_minutes, speaking_minutes')
@@ -1017,6 +1037,7 @@ export async function fetchProficiencyEvidence(
   if (writingRes.error) throw writingRes.error;
   if (speakingRes.error) throw speakingRes.error;
   if (listeningRes.error) throw listeningRes.error;
+  if (listeningCheckRes.error) throw listeningCheckRes.error;
   if (statsRes.error) throw statsRes.error;
   if (reviewCountRes.error) throw reviewCountRes.error;
   if (conversationRes.error) throw conversationRes.error;
@@ -1068,6 +1089,26 @@ export async function fetchProficiencyEvidence(
       correct: row.correct === true,
     })
   );
+
+  // A tutor listening check is stored as a tally — correct out of total — so it
+  // expands back into one evidence item per question. The listening strand
+  // counts items and their first-try correctness, and a session that scored 2
+  // of 3 is exactly the same evidence as three lesson exercises of which two
+  // were right; collapsing it into a single weighted item would let one check
+  // count as much as one question.
+  //
+  // `correct_count` is capped at `total_count` by a CHECK constraint, but it is
+  // clamped again here: this loop turns a bad number into extra passing items
+  // in a measured level, and the table is not the only thing that could ever
+  // write it.
+  for (const row of (listeningCheckRes.data ?? []) as Record<string, unknown>[]) {
+    const total = Math.max(0, Number(row.total_count ?? 0));
+    const correct = Math.min(total, Math.max(0, Number(row.correct_count ?? 0)));
+    const cefrLevel = (row.cefr_level as string | null) ?? null;
+    for (let i = 0; i < total; i++) {
+      listening.push({ cefrLevel, correct: i < correct });
+    }
+  }
 
   // Conversation turns are their own strand now — `interaction` — rather than
   // being split by modality into the speaking and writing pools.

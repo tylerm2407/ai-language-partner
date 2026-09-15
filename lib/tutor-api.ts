@@ -615,11 +615,96 @@ export function asTutorDebrief(raw: unknown): TutorDebrief | null {
   // state the caller has for exactly this.
   if (!highlight && !nextTime && patterns.length === 0 && reachFor.length === 0) return null;
 
+  // Items are kept only when they are fully formed: a question and exactly
+  // four distinct non-empty options. A half-rendered question is worse than no
+  // question here, because the learner is about to be scored on it — and the
+  // server that wrote it has already applied the same rule
+  // (`normalizeListeningCheck`), so anything that fails here is corruption in
+  // transit rather than a model being sloppy.
+  const listeningCheck = (Array.isArray(v.listeningCheck) ? v.listeningCheck : [])
+    .filter((p): p is Record<string, unknown> => typeof p === 'object' && p !== null)
+    .map((p) => ({
+      question: typeof p.question === 'string' ? p.question : '',
+      options: (Array.isArray(p.options) ? p.options : []).filter(
+        (o): o is string => typeof o === 'string' && o.length > 0,
+      ),
+    }))
+    .filter((p) => p.question.length > 0 && p.options.length === LISTENING_OPTIONS_PER_ITEM);
+
   return {
     highlight,
     patterns,
     reachFor,
     nextTime,
+    // Omitted rather than empty when there is nothing to ask, so a caller can
+    // branch on presence without also having to check length.
+    ...(listeningCheck.length > 0 ? { listeningCheck } : {}),
     minutesSpoken: Number(v.minutesSpoken ?? 0) || 0,
+  };
+}
+
+/**
+ * Options per listening item. Mirrors `OPTIONS_PER_ITEM` in
+ * `supabase/functions/_shared/tutor-listening.ts` — the edge runtime and the
+ * app bundle cannot share a module, so the constant is restated and
+ * `lib/tutor-api.test.ts` pins the two together.
+ */
+export const LISTENING_OPTIONS_PER_ITEM = 4;
+
+export interface ListeningAnswerResult {
+  /** True when this session's check had already been graded. */
+  alreadyAnswered: boolean;
+  /**
+   * Per item, whether the learner was right. Empty on an already-answered
+   * submission: the server keeps the tally, not the individual answers.
+   */
+  correct: boolean[];
+  correctCount: number;
+  total: number;
+}
+
+/**
+ * Submit the post-session listening check.
+ *
+ * Grading is server-side and the answer key never leaves it, so this is the
+ * only way to find out whether the answers were right — see
+ * `_shared/tutor-listening.ts`. Answering is once per session: a second call
+ * returns the stored result with `alreadyAnswered: true` rather than an error,
+ * which makes a retry after a dropped response the right move and makes
+ * guessing repeatedly pointless.
+ */
+export async function answerListeningCheck(input: {
+  sessionId: string;
+  /** One option index per question, in order. */
+  answers: number[];
+}): Promise<ListeningAnswerResult> {
+  const { data, error } = await invokeTutor<Record<string, unknown>>({
+    action: 'listening-answer',
+    sessionId: input.sessionId,
+    answers: input.answers,
+  });
+
+  if (error) {
+    throwFailure(
+      await readFailure(error, 'Could not save your answers'),
+      'Could not save your answers',
+    );
+  }
+  if (data && typeof data.error === 'string') {
+    throwFailure(
+      { detail: data.error, code: typeof data.code === 'string' ? data.code : undefined },
+      'Could not save your answers',
+    );
+  }
+
+  const correct = Array.isArray(data?.correct)
+    ? (data.correct as unknown[]).map((c) => c === true)
+    : [];
+
+  return {
+    alreadyAnswered: data?.alreadyAnswered === true,
+    correct,
+    correctCount: Number(data?.correctCount ?? 0) || 0,
+    total: Number(data?.total ?? 0) || 0,
   };
 }

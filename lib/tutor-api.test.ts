@@ -21,9 +21,13 @@ import {
   endTutorSession,
   redactTutorSecrets,
   asTutorDebrief,
+  answerListeningCheck,
+  LISTENING_OPTIONS_PER_ITEM,
   TutorLimitError,
   type StartTutorSessionInput,
 } from './tutor-api';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
 const mockInvoke = jest.fn();
 
@@ -483,5 +487,83 @@ describe('asTutorDebrief', () => {
     expect(parsed?.patterns).toHaveLength(1);
     expect(parsed?.reachFor).toHaveLength(1);
     expect(parsed?.minutesSpoken).toBe(8.4);
+  });
+});
+
+describe('the listening check', () => {
+  beforeEach(() => mockInvoke.mockReset());
+
+  const PROMPTS = [
+    { question: 'Which day?', options: ['Thu', 'Fri', 'Sat', 'Sun'] },
+    { question: 'What was offered?', options: ['A room', 'A car', 'A meal', 'A map'] },
+  ];
+
+  it('keeps well-formed questions off the debrief and drops malformed ones', () => {
+    const debrief = asTutorDebrief({
+      highlight: 'Good work',
+      nextTime: 'Try aunque',
+      listeningCheck: [
+        ...PROMPTS,
+        // Three options, not four: a half-rendered question is worse than no
+        // question, because the learner is about to be scored on it.
+        { question: 'Broken', options: ['a', 'b', 'c'] },
+        { question: '', options: ['a', 'b', 'c', 'd'] },
+      ],
+    });
+    expect(debrief?.listeningCheck).toHaveLength(2);
+    expect(debrief?.listeningCheck?.[0].question).toBe('Which day?');
+  });
+
+  it('omits the field entirely when there is nothing to ask', () => {
+    // Omitted rather than empty, so a caller can branch on presence without
+    // also having to check length. A short session has no check and that is
+    // the normal outcome, not an error.
+    const debrief = asTutorDebrief({ highlight: 'Good work', nextTime: 'Try aunque' });
+    expect(debrief).not.toBeNull();
+    expect(debrief && 'listeningCheck' in debrief).toBe(false);
+  });
+
+  it('submits answers and returns the server grade', async () => {
+    mockInvoke.mockResolvedValue({
+      data: { alreadyAnswered: false, correct: [true, false], correctCount: 1, total: 2 },
+      error: null,
+    });
+
+    const result = await answerListeningCheck({ sessionId: 'sess-1', answers: [0, 3] });
+
+    expect(mockInvoke).toHaveBeenCalledWith(
+      'tutor-session',
+      expect.objectContaining({
+        body: expect.objectContaining({ action: 'listening-answer', answers: [0, 3] }),
+      }),
+    );
+    expect(result.correctCount).toBe(1);
+    expect(result.correct).toEqual([true, false]);
+    expect(result.alreadyAnswered).toBe(false);
+  });
+
+  it('reports a second submission as already answered', async () => {
+    mockInvoke.mockResolvedValue({
+      data: { alreadyAnswered: true, correctCount: 2, total: 3 },
+      error: null,
+    });
+    const result = await answerListeningCheck({ sessionId: 'sess-1', answers: [0, 0, 0] });
+    expect(result.alreadyAnswered).toBe(true);
+    expect(result.correctCount).toBe(2);
+    // The server keeps the tally, not the individual answers.
+    expect(result.correct).toEqual([]);
+  });
+
+  it('matches the edge function on options per item', () => {
+    // The edge runtime and the app bundle cannot share a module, so
+    // OPTIONS_PER_ITEM is restated in lib/tutor-api.ts. This is what stops the
+    // two drifting into a client that silently discards every question.
+    const source = readFileSync(
+      join(__dirname, '../supabase/functions/_shared/tutor-listening.ts'),
+      'utf8',
+    );
+    const match = source.match(/export const OPTIONS_PER_ITEM = (\d+);/);
+    expect(match).not.toBeNull();
+    expect(Number(match![1])).toBe(LISTENING_OPTIONS_PER_ITEM);
   });
 });

@@ -41,6 +41,7 @@
  */
 
 import { recordConversationEvidence } from './conversation-evidence.ts';
+import { toPrompts } from './tutor-listening.ts';
 import { saveChatVocabulary } from './chat-vocabulary.ts';
 import { normalizeMemoryNote, TUTOR_MEMORY_KEEP } from './tutor-memory.ts';
 import type { TutorAnalysis, TutorDebrief } from './tutor-analysis.ts';
@@ -366,8 +367,17 @@ export async function writeBackTutorSession(
 ): Promise<TutorWritebackResult> {
   // Built before anything is written, so the early-return path and the normal
   // path hand back an identically-corrected debrief.
+  //
+  // `toPrompts` is the split that keeps the listening check honest: the
+  // questions go on the debrief, which the learner can read out of
+  // `tutor_sessions`, and the answer key goes to `tutor_listening_checks`
+  // below, which is service-role only. Spreading `input.analysis.debrief`
+  // cannot leak it — the key was never on the debrief — but assigning the
+  // prompts here rather than anywhere later means there is exactly one place
+  // this object gains listening data, and it is the stripped one.
   const debrief: TutorDebrief = {
     ...input.analysis.debrief,
+    listeningCheck: toPrompts(input.analysis.listeningCheck),
     minutesSpoken: minutesFrom(input.observedSeconds),
   };
 
@@ -465,6 +475,33 @@ export async function writeBackTutorSession(
     maxCandidates: MAX_TUTOR_CARDS,
     fn: FN,
   });
+
+  // (3b) The listening check's answer key, before the memory write so that
+  // every artefact the learner can act on exists before the debrief that
+  // announces it. Best-effort like everything else here: a session that loses
+  // its check simply produces no listening evidence, which is the same outcome
+  // as a session too short to ask about.
+  //
+  // Skipped entirely when the analysis produced no items. Writing an empty
+  // `items` row would leave a check the client could open and answer zero
+  // questions in, and `answered_at` would then record a 0/0 the proficiency
+  // report has to special-case.
+  if (input.analysis.listeningCheck.length > 0) {
+    try {
+      const { error } = await supabase.from('tutor_listening_checks').insert({
+        tutor_session_id: input.sessionId,
+        user_id: input.userId,
+        target_language: input.targetLanguage,
+        cefr_level: input.cefrLevel,
+        items: input.analysis.listeningCheck,
+      });
+      if (error) {
+        console.warn(`[${FN}] tutor_listening_checks insert failed (non-fatal):`, error.message);
+      }
+    } catch (err) {
+      console.warn(`[${FN}] tutor_listening_checks write failed (non-fatal):`, err);
+    }
+  }
 
   // (4) Memory, then (5) the prune.
   const memory = await writeMemory(supabase, input);

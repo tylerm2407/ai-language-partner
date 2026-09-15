@@ -134,3 +134,39 @@ export function parseConnectRequest(body: Record<string, unknown>): ParseResult<
   if (sdp.length > MAX_SDP_BYTES) return bad('sdp is too large');
   return { ok: true, value: { sessionId, sdp } };
 }
+
+// ── listening-answer ────────────────────────────────────────────────────
+
+export interface ListeningAnswerRequest {
+  sessionId: string;
+  answers: number[];
+}
+
+/**
+ * Longest answer array accepted.
+ *
+ * Deliberately larger than `MAX_LISTENING_ITEMS` so a client one version ahead
+ * is not rejected outright, and small enough that nothing unbounded reaches
+ * the grader. `gradeListeningCheck` scores over the STORED items, so extra
+ * entries are ignored rather than counted — this cap is about the size of the
+ * request, not about the shape of the check.
+ */
+export const MAX_LISTENING_ANSWERS = 10;
+
+export function parseListeningAnswerRequest(
+  body: Record<string, unknown>,
+): ParseResult<ListeningAnswerRequest> {
+  const sessionId = String(body.sessionId ?? '');
+  if (!sessionId) return bad('sessionId is required');
+  if (!Array.isArray(body.answers)) return bad('answers must be an array');
+  if (body.answers.length > MAX_LISTENING_ANSWERS) return bad('answers is too large');
+
+  // Coerced to a number array here so the handler never sees a string, a float
+  // or a NaN. An entry that is not a usable option index becomes -1, which
+  // matches no item and is therefore graded wrong — the same outcome as not
+  // answering, which is what an unusable answer is.
+  const answers = body.answers.map((value) =>
+    typeof value === 'number' && Number.isFinite(value) ? Math.trunc(value) : -1,
+  );
+  return { ok: true, value: { sessionId, answers } };
+}

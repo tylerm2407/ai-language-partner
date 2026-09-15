@@ -7,6 +7,7 @@
  *   connect  the SDP exchange, done server-side so the call id is ours to hang up
  *   turn     safety guard + liveness heartbeat, once per tutor turn and on a timer
  *   end      hang up, settle the budget, analyse the transcript, write the record
+ *   listening-answer  grade the post-session listening check, server-side
  *
  * The AUDIO never comes through here. After `connect` the learner's device
  * holds a WebRTC peer connection straight to OpenAI. This function is the only
@@ -26,7 +27,14 @@ import { handleTurn } from './turn.ts';
 import { handleEnd } from './end.ts';
 import { handleConnect } from './connect.ts';
 import { checkBurstLimit } from '../_shared/burst-limit.ts';
-import { parseStartRequest, parseTurnRequest, parseEndRequest, parseConnectRequest } from './parse-request.ts';
+import {
+  parseStartRequest,
+  parseTurnRequest,
+  parseEndRequest,
+  parseConnectRequest,
+  parseListeningAnswerRequest,
+} from './parse-request.ts';
+import { handleListeningAnswer } from './listening.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -138,6 +146,22 @@ Deno.serve(async (req: Request): Promise<Response> => {
         anthropicKey: ANTHROPIC_KEY,
         openaiKey: OPENAI_KEY,
       });
+      return json(result.status, result.body);
+    }
+
+    if (action === 'listening-answer') {
+      // A learner answers a session's check once. The limit is generous enough
+      // for a retry after a dropped response and tight enough that guessing
+      // through the key is not a strategy — though the real defence is the
+      // `answered_at` guard in the handler, which grades a session only once
+      // however many times it is asked to.
+      const ok = await checkBurstLimit(supabase, userId, 'tutor-listening', 10, 60);
+      if (!ok) return json(429, { error: 'Too many requests.', code: 'RATE_LIMITED' });
+
+      const parsed = parseListeningAnswerRequest(body);
+      if (!parsed.ok) return json(400, { error: parsed.error, code: parsed.code });
+
+      const result = await handleListeningAnswer(supabase, userId, parsed.value);
       return json(result.status, result.body);
     }
 
