@@ -141,7 +141,12 @@ export function TranslationExercise({
   );
 
   return (
-    <ExerciseCard type={exercise.type} promptNode={promptNode}>
+    <ExerciseCard type={exercise.type} promptNode={promptNode}
+      exercise={exercise}
+      language={language}
+      userId={userId}
+      answered={submitted || showResult}
+    >
       {/* Only into the target language. A translate-to-native hint glosses the
           very words being translated — see components/lesson/ExerciseHint.tsx. */}
       {exercise.type === 'translate_to_target' ? (

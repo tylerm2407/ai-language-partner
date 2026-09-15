@@ -2,7 +2,9 @@ import { View, Text, type TextStyle } from 'react-native';
 import type { ReactNode } from 'react';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { minLineHeight, spacing, typography } from '../../config/theme';
-import type { ExerciseType } from '../../types';
+import { exerciseListenTarget } from '../../lib/exercise-audio';
+import type { Exercise, ExerciseType } from '../../types';
+import { ListenWordButton } from './ListenWordButton';
 import { useExerciseChrome } from './exercise-chrome-context';
 
 interface ExerciseCardProps {
@@ -18,6 +20,28 @@ interface ExerciseCardProps {
    * precedence over `prompt`.
    */
   promptNode?: ReactNode;
+  /**
+   * The exercise itself, which turns on the Listen button.
+   *
+   * Optional, and separate from `type`, so a caller that has not been given
+   * the audio treatment yet renders exactly what it rendered before. Where it
+   * IS passed, `lib/exercise-audio.ts` decides whether there is a
+   * target-language word worth hearing at all — most grammar stems have none,
+   * and the listening types already play their own prompt.
+   */
+  exercise?: Exercise;
+  /** Course target language code. No language, no synthesis, no button. */
+  language?: string;
+  userId?: string;
+  /**
+   * Has the learner answered yet?
+   *
+   * Gates the button for every exercise whose target word IS the answer —
+   * hearing "Salario" while choosing between four Spanish words is not a
+   * listening aid. Those exercises get the button the moment they are graded,
+   * which is when the word is worth hearing anyway.
+   */
+  answered?: boolean;
 }
 
 export const EXERCISE_TYPE_LABELS: Record<ExerciseType, string> = {
@@ -68,9 +92,20 @@ const PROMPT_STYLE: TextStyle = {
   lineHeight: minLineHeight(22),
 };
 
-export function ExerciseCard({ children, type, prompt, promptNode }: ExerciseCardProps) {
+export function ExerciseCard({
+  children,
+  type,
+  prompt,
+  promptNode,
+  exercise,
+  language,
+  userId,
+  answered = false,
+}: ExerciseCardProps) {
   const { c, shape } = useUi2Theme();
   const { instructionInHero } = useExerciseChrome();
+  const listen = exercise && language ? exerciseListenTarget(exercise, language) : null;
+  const showListen = !!listen && (listen.availableBeforeAnswer || answered);
   return (
     <View
       className="p-6 min-h-[200px]"
@@ -93,6 +128,9 @@ export function ExerciseCard({ children, type, prompt, promptNode }: ExerciseCar
         >
           {prompt}
         </Text>
+      ) : null}
+      {showListen && listen && language ? (
+        <ListenWordButton text={listen.text} language={language} userId={userId} />
       ) : null}
       {children}
     </View>

@@ -5,6 +5,19 @@ import { TranslationExercise } from './TranslationExercise';
 import type { Exercise } from '../../types';
 
 const mockInvoke = jest.fn();
+// Tyler's Listen button reaches expo-av through ExerciseCard, and jest has no
+// native ExponentAV. Mirrors the mock lesson-retry.test.tsx already uses.
+jest.mock('expo-av', () => ({
+  Audio: {
+    Sound: { createAsync: jest.fn(async () => ({ sound: { unloadAsync: jest.fn() } })) },
+    Recording: { createAsync: jest.fn() },
+  },
+  Video: () => null,
+  ResizeMode: { CONTAIN: 'contain', COVER: 'cover', STRETCH: 'stretch' },
+}));
+jest.mock('../../hooks/useAudioPlayer', () => ({
+  useAudioPlayer: () => ({ playing: false, loading: false, error: null, play: jest.fn() }),
+}));
 jest.mock('@react-native-async-storage/async-storage', () => ({
   __esModule: true,
   default: {

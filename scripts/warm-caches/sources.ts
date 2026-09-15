@@ -15,9 +15,11 @@
  */
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { exerciseListenTarget } from '../../lib/exercise-audio';
 import { splitParagraphs } from '../../lib/reading-text';
 import { requireSecret } from './env';
 import { hintCacheKey } from './keys';
+import type { Exercise } from '../../types';
 import type { AudioPromptRow, CardRow, ExerciseCardRow, PassageParagraph } from './plan';
 
 const PAGE = 1000;
@@ -77,6 +79,15 @@ interface ExerciseRow {
  * down the `voice` path, which is a different cache namespace entirely.
  */
 export const LESSON_AUDIO_TYPES = ['listening_choice', 'listening_type', 'dictation'] as const;
+
+/** Everything `exerciseListenTarget` reads, plus what resolves the language. */
+interface VocabExerciseRow extends ExerciseRow {
+  correct_answer: string | null;
+  accepted_answers: string[] | null;
+  options: string[] | null;
+  target_word: string | null;
+  skill_type: string | null;
+}
 
 async function fetchExercises(db: SupabaseClient, types: readonly string[]): Promise<ExerciseRow[]> {
   return selectAll<ExerciseRow>(
@@ -297,4 +308,71 @@ export async function existingTtsPaths(db: SupabaseClient, prefix: string): Prom
     }
     if (rows.length < PAGE) return found;
   }
+}
+
+/**
+ * The vocabulary word behind every exercise that draws a Listen button.
+ *
+ * Runs `lib/exercise-audio.ts` — the exact function the app runs — over every
+ * exercise in the bank, and warms whatever it says the button would speak.
+ * Importing it rather than restating its rules is the same discipline
+ * `fetchPassageParagraphs` follows with `splitParagraphs`: a second copy of
+ * the extraction that differed on one template would warm text no learner's
+ * button ever asks for, and leave the text they do ask for cold, with nothing
+ * anywhere reporting a problem.
+ *
+ * Unbounded by type on purpose. The extractor already declines the types that
+ * play their own prompt and the prompts it cannot read confidently, so
+ * filtering here would only be a second, drifting copy of that judgement.
+ */
+export async function fetchVocabWordPrompts(
+  db: SupabaseClient,
+  cards: readonly CardRow[],
+): Promise<AudioPromptRow[]> {
+  const [rows, byLesson] = await Promise.all([
+    selectAll<VocabExerciseRow>(
+      (from, to) =>
+        db
+          .from('exercises')
+          .select(
+            'id, lesson_id, card_id, type, prompt, prompt_audio_url, correct_answer, accepted_answers, options, target_word, skill_type',
+          )
+          .order('id')
+          .range(from, to),
+      'exercises (vocab words)',
+    ),
+    lessonLanguages(db),
+  ]);
+  const cardLanguage = new Map(cards.map((c) => [c.id, c.language]));
+
+  const out: AudioPromptRow[] = [];
+  for (const row of rows) {
+    const language =
+      (row.card_id ? cardLanguage.get(row.card_id) : undefined) ??
+      (row.lesson_id ? byLesson.get(row.lesson_id) : undefined);
+    if (!language) continue;
+
+    const target = exerciseListenTarget(
+      {
+        id: row.id,
+        lessonId: row.lesson_id ?? '',
+        type: row.type as Exercise['type'],
+        orderIndex: 0,
+        prompt: row.prompt ?? '',
+        promptAudioUrl: row.prompt_audio_url,
+        correctAnswer: row.correct_answer ?? '',
+        acceptedAnswers: row.accepted_answers ?? [],
+        options: row.options,
+        hintText: null,
+        cardId: row.card_id,
+        skillType: (row.skill_type as Exercise['skillType']) ?? undefined,
+        targetWord: row.target_word ?? undefined,
+      },
+      language,
+    );
+    if (!target) continue;
+
+    out.push({ prompt: target.text, language, type: `${row.type} word` });
+  }
+  return out;
 }

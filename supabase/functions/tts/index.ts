@@ -23,6 +23,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, corsResponse } from '../_shared/cors.ts';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { checkBurstLimit } from '../_shared/burst-limit.ts';
+import { isCurriculumTerm } from '../_shared/curriculum-terms.ts';
 import { resolveTier } from '../_shared/entitlement.ts';
 import { getEffectiveLimits } from '../_shared/plan-limits.ts';
 import { PROVIDER_TIMEOUT_MS, providerFetch } from '../_shared/provider-fetch.ts';
@@ -634,12 +635,36 @@ serve(async (req: Request) => {
       const synthesisBytes = new TextEncoder().encode(cleanText).length;
       const ttsUnits = Math.max(1, Math.ceil(synthesisBytes / TTS_BYTES_PER_UNIT));
 
-      const { data: quotaOk, error: quotaErr } = await supabase.rpc('consume_daily_quota', {
-        p_user_id: authenticatedUserId,
-        p_counter: 'lesson_tts_plays',
-        p_limit: limits.dailyLessonTtsPlays,
-        p_amount: ttsUnits,
-      });
+      // ── The vocabulary exemption ──
+      //
+      // A word from the shipped curriculum is not metered at all, on any
+      // tier. Every vocabulary exercise draws a Listen button now
+      // (components/lesson/ListenWordButton.tsx), and rationing the ability
+      // to hear the word you are being taught is backwards in a language app
+      // — the same reasoning that removed hearts (CLAUDE.md §3).
+      //
+      // Affordable because it is not a per-user allowance. The curriculum is
+      // finite, the cache above is shared by every learner, and a cache hit
+      // returns before this code runs — so the exemption is only ever reached
+      // by the FIRST learner to hear a given word, and
+      // scripts/warm-shared-caches.ts pre-pays even that. Total exposure is a
+      // couple of dollars once, across all users.
+      //
+      // `stripped`, not `cleanText`: the citation full stop is added for the
+      // synthesiser and is not part of the curriculum term. And the check is
+      // a server-side fact about the TEXT, never a request flag — a flag
+      // would just be a free-TTS switch the untrusted client could always set
+      // (CLAUDE.md §1.2). See _shared/curriculum-terms.ts.
+      const exemptVocabWord = await isCurriculumTerm(supabase, language, stripped);
+
+      const { data: quotaOk, error: quotaErr } = exemptVocabWord
+        ? { data: true, error: null }
+        : await supabase.rpc('consume_daily_quota', {
+            p_user_id: authenticatedUserId,
+            p_counter: 'lesson_tts_plays',
+            p_limit: limits.dailyLessonTtsPlays,
+            p_amount: ttsUnits,
+          });
       if (quotaErr) {
         // Fail closed. Broken quota accounting must not hand out unmetered
         // synthesis, which costs real money per call.

@@ -75,7 +75,12 @@ export function FillBlankExercise({
   const highlight = exercise.targetWord ?? exercise.targetGrammar;
 
   return (
-    <ExerciseCard type={exercise.type} prompt="Fill in the blank">
+    <ExerciseCard type={exercise.type} prompt="Fill in the blank"
+      exercise={exercise}
+      language={language}
+      userId={userId}
+      answered={submitted || showResult}
+    >
       <View className="mb-4">
         {parts.length > 1 ? (
           <Text className="text-lg leading-7" style={{ color: c.ink }}>
