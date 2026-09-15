@@ -68,6 +68,21 @@ const CONFUSABLE_PAIRS: Partial<Record<LanguageCode, [string, string][]>> = {
     ['pena', 'pene'],       // shame vs. penis
     ['pollo', 'polo'],      // chicken vs. pole
     ['hombre', 'hambre'],   // man vs. hunger
+    /**
+     * Added 2026-09-15. The feminine `Gerenta` is a correct answer on the six
+     * `Gerente` rows, and adding it puts `Renta` — rent — two edits inside the
+     * budget on four of them: translate, dictation, listening and open
+     * production. Both members are keyed, because the grader consults this
+     * list with whichever accepted answer best matched, and that is `Gerenta`
+     * on some rows and `Gerente` on others.
+     *
+     * `Renta` is a real Spanish word the curriculum teaches (as an alternative
+     * on the two `Alquiler` rows), which is why the sibling-key rule does not
+     * reach it: that rule is keys only, and `Renta` is nobody's key. This is
+     * the case a pair is actually for.
+     */
+    ['gerenta', 'renta'],   // Manager (f.) vs rent — the addition's own neighbourhood.
+    ['gerente', 'renta'],   // The same contrast against the stored key.
   ],
   fr: [
     // Added 2026-09-14 by the curriculum audit: each pair is two words the
@@ -267,6 +282,24 @@ const CONFUSABLE_PAIRS: Partial<Record<LanguageCode, [string, string][]>> = {
    * all scored "Correct! (Minor typo)" and reinforced by SRS.
    */
   en: [
+    /**
+     * Added 2026-09-15, and measured across every course rather than the one
+     * row it was reported on. `Preservation` is accepted by tolerance on the
+     * `Presentation` and `Reservation` rows of ALL NINE languages — 18 rows —
+     * because the English side of a translate-to-native row is graded like any
+     * other string and these are two edits apart.
+     *
+     * `Conservation` is deliberately NOT paired with `Preservation`, though it
+     * is the same shape and was the case first suspected. Six curricula list
+     * `Preservation` as an accepted answer on their `Conservation` rows, so
+     * the pair would contradict a judgement the content already made in six
+     * places. The remaining oddity there — a French `translate_to_target`
+     * Conservation row accepting it by tolerance while the French
+     * translate-to-native row lists it outright — is a levelling question for
+     * content, not a pair.
+     */
+    ['presentation', 'preservation'],  // A talk vs keeping something intact.
+    ['reservation', 'preservation'],   // A booking vs keeping something intact.
     // Added 2026-09-14. These two are opposites in a hiring unit and sit two
     // edits apart, so the tolerance was forgiving each as a typo of the other.
     // Found in the FROZEN curriculum with no patch involved, so this is a

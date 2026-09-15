@@ -473,3 +473,48 @@ describe('the お〜さん kinship frame', () => {
     expect(gradeAnswer('プレゼン', 'プレゼント', [], ja).isCorrect).toBe(false);
   });
 });
+
+/**
+ * Pairs added 2026-09-15, where a pair is genuinely the right tool: the two
+ * strings are different words, and no rule reaches them. `Renta` and
+ * `Preservation` are both taught only as ALTERNATIVES, never as anyone's key,
+ * which is exactly the class the sibling-key rule cannot see.
+ */
+describe('an addition that reaches a word taught somewhere else', () => {
+  const es = { exerciseHints: { exerciseType: 'translate_to_target' as const, language: 'es' as const } };
+
+  it('refuses Renta once the feminine Gerenta is accepted', () => {
+    // Gerenta is correct on the six Gerente rows, and adding it puts Renta
+    // (rent) two edits inside the budget. Both members are keyed, because the
+    // grader consults the list with whichever accepted answer matched best.
+    expect(gradeAnswer('Renta', 'Gerente', ['Gerenta'], es).isCorrect).toBe(false);
+    expect(gradeAnswer('Renta', 'Gerente', [], es).isCorrect).toBe(false);
+  });
+
+  it('leaves Renta correct on the rows that teach it', () => {
+    // It is the alternative on both Alquiler rows, and a pair must never
+    // reach an exact match or a genuine typo of one.
+    expect(gradeAnswer('Renta', 'Alquiler', ['Renta', 'Arriendo'], es).isCorrect).toBe(true);
+    expect(gradeAnswer('Rentq', 'Alquiler', ['Renta', 'Arriendo'], es).isCorrect).toBe(true);
+  });
+
+  it('refuses Preservation on a Presentation or Reservation row', () => {
+    // Measured across every course, not the one row it was reported on: 18
+    // rows in all nine languages accepted it by tolerance, because the English
+    // side of a translate-to-native row is graded like any other string.
+    const ru = { exerciseHints: { exerciseType: 'translate_to_native' as const, language: 'ru' as const } };
+    expect(gradeAnswer('Preservation', 'Presentation', [], ru).isCorrect).toBe(false);
+    expect(gradeAnswer('Preservation', 'Reservation', ['Booking'], ru).isCorrect).toBe(false);
+    // And through the accent fold, which is how the French spelling arrived.
+    expect(gradeAnswer('Préservation', 'Presentation', [], ru).isCorrect).toBe(false);
+  });
+
+  it('does not touch Conservation, which six curricula pair with Preservation', () => {
+    // The same shape, and deliberately absent from the list: six courses list
+    // Preservation as an accepted answer on their Conservation rows, so a pair
+    // would contradict a content judgement made in six places.
+    const ru = { exerciseHints: { exerciseType: 'translate_to_native' as const, language: 'ru' as const } };
+    expect(gradeAnswer('Preservation', 'Conservation', ['Protection', 'Preservation'], ru).isCorrect).toBe(true);
+    expect(isConfusablePair('conservation', 'preservation', 'en')).toBe(false);
+  });
+});

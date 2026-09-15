@@ -43,9 +43,23 @@
  * fire for choice and grammar types and the result is not what a learner meets.
  */
 import { gradeAnswer } from '../../lib/grading.ts';
+import { blankContext, taughtKeys } from '../../lib/exercise-restore.ts';
 
-/** The exact hint shape `lib/exercise-restore.ts` builds at runtime. */
-function runtimeHints(exercise, language) {
+/**
+ * The exact hint shape `lib/exercise-restore.ts` builds at runtime.
+ *
+ * `siblingKeys` and `blankContext` are not optional decoration. The grader
+ * refuses a candidate that is another taught key, and judges a fill-blank row
+ * as the completed word, and BOTH only fire when the caller supplies them.
+ * Omitting either measures a grader nobody runs — which over-reported the
+ * prompt-echo class by 241 rows before this was fixed, and had already
+ * over-reported readmissions twice.
+ *
+ * `siblingKeys` must be the caller's memoised array: `gradeAnswer` caches
+ * normalisation on array identity, so a freshly filtered array per call pays
+ * full normalisation of ~2,000 strings every time.
+ */
+function runtimeHints(exercise, language, siblingKeys = []) {
   return {
     exerciseHints: {
       exerciseType: exercise.type,
@@ -53,6 +67,8 @@ function runtimeHints(exercise, language) {
       targetGrammar: exercise.target_grammar,
       targetWord: exercise.target_word,
       language,
+      blankContext: exercise.type === 'fill_blank' ? blankContext(exercise.prompt ?? '') : undefined,
+      siblingKeys,
     },
   };
 }
@@ -92,6 +108,36 @@ export function refusalRegressions(set, { extraRefusals = new Map(), allow = new
   const byId = new Map(snapshot.exercises.map(e => [e.id, e]));
   const violations = [];
 
+  // The taught strings of each language, welded and memoised per (language,
+  // key) — the shape `useTaughtKeys` hands the runtime, and the identity
+  // `gradeAnswer` caches its normalisation on.
+  const keysByLanguage = new Map();
+  for (const exercise of snapshot.exercises) {
+    if (exercise.type === 'speaking' || exercise.response_mode === 'speak') continue;
+    const language = languageOf(exercise);
+    if (!language) continue;
+    if (!keysByLanguage.has(language)) keysByLanguage.set(language, []);
+    keysByLanguage.get(language).push({
+      type: exercise.type,
+      prompt: exercise.prompt ?? '',
+      correctAnswer: exercise.correct_answer,
+    });
+  }
+  const taughtByLanguage = new Map(
+    [...keysByLanguage].map(([language, rows]) => [language, taughtKeys(rows)]),
+  );
+  const siblingCache = new Map();
+  const siblingsFor = (language, key) => {
+    if (!language) return [];
+    const id = `${language}\u0000${key}`;
+    let list = siblingCache.get(id);
+    if (!list) {
+      list = (taughtByLanguage.get(language) ?? []).filter(k => k !== key);
+      siblingCache.set(id, list);
+    }
+    return list;
+  };
+
   for (const patch of set.patches()) {
     if (patch.table !== 'exercises') continue;
     if (!Object.hasOwn(patch.after, 'accepted_answers')) continue;
@@ -106,6 +152,7 @@ export function refusalRegressions(set, { extraRefusals = new Map(), allow = new
     const hints = runtimeHints(
       { ...exercise, ...patch.after },
       languageOf(exercise),
+      siblingsFor(languageOf(exercise), key),
     );
 
     const candidates = new Set();
