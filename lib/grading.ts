@@ -4,7 +4,7 @@
  */
 
 import type { FeedbackErrorType, ExerciseType, SkillType, ReviewRating, LanguageCode } from '../types';
-import { isConfusablePair } from './confusable-pairs';
+import { accentOnlyPartner, isConfusablePair } from './confusable-pairs';
 import { simplifyChinese } from './zh-simplify';
 
 export interface GradeResult {
@@ -300,7 +300,7 @@ export function gradeAnswer(
           // against "Nièce", both taught because one is the gloss of the
           // other. That is a question about accents, settled by the accent
           // branch and the pair list, not a lexical collision. Measured on
-          // the frozen curriculum: 31 rows, all of them cognate pairs.
+          // the frozen curriculum: 29 rows, all of them cognate pairs.
           //
           // Folding onto an ACCEPTED ALTERNATIVE is not excused the same way.
           // "Groß_____ (Generous)" keys on zügig and also accepts mütig, and
@@ -365,6 +365,59 @@ export function gradeAnswer(
    * fuzzy branch, which refuses it again and returns a wrong answer.
    */
   const stripped = stripDiacritics(normalized);
+
+  /**
+   * A bare stem that could be either of two taught words is neither.
+   *
+   * Portuguese teaches avô (grandfather) and avó (grandmother); the accent is
+   * the entire difference between them. Typing `avo` passed for BOTH, so the
+   * contrast was untestable by typing — the accent branch read it as a
+   * forgivable slip on whichever row the learner happened to be on, and said
+   * "Correct! (Watch the accents)". The same shape covers Spanish papa/papá,
+   * el/él, tu/tú, si/sí and their kin.
+   *
+   * The pair list is the authority on which words these are, and it is asked
+   * with the diacritics folded, which is the one question
+   * `isConfusablePair` cannot answer: it skips a pair whose members fold
+   * together so that folding cannot make a pair match itself.
+   *
+   * Deliberately NOT extended to sibling keys that fold together. Those are
+   * overwhelmingly a target word and its own English gloss — "Niece" beside
+   * "Nièce", 29 rows in the frozen curriculum — where the bare form is a
+   * missing accent and nothing more. Two words worth separating are a
+   * judgement, and the pair list is where that judgement is recorded.
+   *
+   * This is a real behaviour change for learners on keyboards without easy
+   * accents, so the refusal says what the accent is doing rather than a bare
+   * "incorrect".
+   */
+  const accentTwin =
+    hints?.language !== undefined && stripDiacritics(normalizedCorrect) === stripped
+      ? accentOnlyPartner(normalizedCorrect, hints.language, stripDiacritics) ??
+        accentOnlyPartner(normalizedCorrect, 'en', stripDiacritics)
+      : null;
+  if (accentTwin !== null) {
+    const distance = levenshtein(normalized, normalizedCorrect);
+    const maxLen = Math.max(normalized.length, normalizedCorrect.length);
+    // The list is stored lowercase; show the twin the way the row shows its
+    // own answer, or the sentence reads as two different kinds of word.
+    const first = correctAnswer.trim().charAt(0);
+    const twin =
+      first !== '' && first === first.toUpperCase() && first !== first.toLowerCase()
+        ? accentTwin.charAt(0).toUpperCase() + accentTwin.slice(1)
+        : accentTwin;
+    return {
+      isCorrect: false,
+      accuracy: maxLen === 0 ? 0 : 1 - distance / maxLen,
+      feedback:
+        `Not quite — the accent is the whole difference between "${correctAnswer}" and ` +
+        `"${twin}". The correct answer is: ${correctAnswer}`,
+      normalizedUserAnswer: normalized,
+      normalizedCorrectAnswer: normalizedCorrect,
+      errorType: hints ? classifyError(userAnswer, correctAnswer, hints) : null,
+    };
+  }
+
   const accentMatch = allAccepted.find(
     (accepted) =>
       stripDiacritics(accepted) === stripped &&

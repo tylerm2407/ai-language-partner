@@ -460,3 +460,38 @@ export function isConfusablePair(
     return fa !== fb && ((fa === w1 && fb === w2) || (fa === w2 && fb === w1));
   });
 }
+
+/**
+ * The listed word that differs from `word` in nothing but its diacritics.
+ *
+ * `isConfusablePair` deliberately skips a pair whose two members fold together,
+ * so that folding cannot make a pair match itself. That skip also makes the
+ * list silent on exactly the case it was written for: a learner typing `avo`
+ * on a Portuguese row keyed `avô`, where the list says plainly that avô and
+ * avó are two different words and the accent is the whole difference between
+ * them. `gradeAnswer` asks this instead, and refuses the bare stem with a
+ * message that names both words — see the accent branch in lib/grading.ts.
+ *
+ * Returns the partner in its stored spelling, or `null` when the word has no
+ * accent-only twin. Only pairs whose members fold together are considered: a
+ * pair of genuinely different words (gato/rato) is not an accent question and
+ * is left to `isConfusablePair`.
+ */
+export function accentOnlyPartner(
+  word: string,
+  language: LanguageCode,
+  fold: (word: string) => string,
+): string | null {
+  const pairs = CONFUSABLE_PAIRS[language];
+  if (!pairs) return null;
+
+  const key = (value: string) => fold(value.toLowerCase().trim());
+  const folded = key(word);
+  const plain = word.toLowerCase().trim();
+  for (const [a, b] of pairs) {
+    if (key(a) !== folded || key(b) !== folded) continue;
+    // The partner is the OTHER member: asked about avô, answer avó.
+    return a.toLowerCase().trim() === plain ? b : a;
+  }
+  return null;
+}

@@ -625,3 +625,45 @@ describe('traditional Chinese input is the same answer, not a typo', () => {
     expect(gradeAnswer('學校', '学校', []).isCorrect).toBe(false);
   });
 });
+
+describe('a bare unaccented stem that could be either word is neither', () => {
+  it('refuses "avo" on both of the Portuguese rows it used to pass', () => {
+    const grandfather = gradeAnswer('avo', 'Avô', [], { exerciseHints: { language: 'pt' } });
+    const grandmother = gradeAnswer('avo', 'Avó', [], { exerciseHints: { language: 'pt' } });
+    expect(grandfather.isCorrect).toBe(false);
+    expect(grandmother.isCorrect).toBe(false);
+  });
+
+  it('says the accent is what separates the two words', () => {
+    // A generic "incorrect" would leave a learner without easy accents with no
+    // idea what they got wrong.
+    const result = gradeAnswer('avo', 'Avô', [], { exerciseHints: { language: 'pt' } });
+    expect(result.feedback).toContain('Avô');
+    expect(result.feedback).toContain('Avó');
+    expect(result.feedback).toContain('accent');
+  });
+
+  it('refuses the other accented form too, not just the bare stem', () => {
+    expect(gradeAnswer('avó', 'Avô', [], { exerciseHints: { language: 'pt' } }).isCorrect).toBe(false);
+  });
+
+  it('refuses the Spanish stems the list names', () => {
+    expect(gradeAnswer('papa', 'papá', [], { exerciseHints: { language: 'es' } }).isCorrect).toBe(false);
+    expect(gradeAnswer('el', 'él', [], { exerciseHints: { language: 'es' } }).isCorrect).toBe(false);
+    expect(gradeAnswer('tu', 'tú', [], { exerciseHints: { language: 'es' } }).isCorrect).toBe(false);
+  });
+
+  it('still forgives an accent on a word with no twin', () => {
+    // café has no listed word it could be confused with, so a missing accent
+    // is a missing accent.
+    const result = gradeAnswer('cafe', 'café', [], { exerciseHints: { language: 'es' } });
+    expect(result.isCorrect).toBe(true);
+    expect(result.feedback).toContain('Watch the accents');
+  });
+
+  it('is scored as a near miss, not a blank wrong answer', () => {
+    // accuracy above 0.5 so gradeToRating gives 2 ("close") rather than 1.
+    const result = gradeAnswer('avo', 'Avô', [], { exerciseHints: { language: 'pt' } });
+    expect(result.accuracy > 0.5).toBe(true);
+  });
+});

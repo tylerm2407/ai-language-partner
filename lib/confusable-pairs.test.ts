@@ -220,16 +220,22 @@ describe('a listed pair also catches the unaccented spelling of either member', 
   });
 
   /**
-   * Folding must not let a pair match itself. avô/avó fold to the same string,
+   * Folding must not let a pair match itself: avô/avó fold to the same string,
    * and if that counted as a pair the grader would refuse the exact answer.
-   * Typing the bare stem `avo` stays forgiven — making it wrong is defensible
-   * for a grandmother/grandfather contrast but is a behaviour change on
-   * keyboards without easy diacritics, so it is recorded as an open question
-   * rather than decided here.
+   *
+   * The bare stem `avo` used to be forgiven, which this test recorded as an
+   * open question. It is now refused — a string that could be either of two
+   * taught words is neither, and `accentOnlyPartner` is how the grader asks
+   * the list which words those are. See the accent branch in lib/grading.ts.
    */
   test('a pair whose members fold together does not refuse itself', () => {
     expect(gradeAnswer('avô', 'Avô', [], hints('pt')).isCorrect).toBe(true);
-    expect(gradeAnswer('avo', 'Avô', [], hints('pt')).isCorrect).toBe(true);
+  });
+
+  test('the bare stem of a pair that folds together is refused, with the reason', () => {
+    const result = gradeAnswer('avo', 'Avô', [], hints('pt'));
+    expect(result.isCorrect).toBe(false);
+    expect(result.feedback).toContain('accent');
   });
 
   test('an ordinary typo with no listed partner is still forgiven', () => {
