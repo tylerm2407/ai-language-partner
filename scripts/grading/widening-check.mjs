@@ -32,6 +32,17 @@
  * it stands — every typed row against every taught string — which is the same
  * question asked of the content already shipped.
  *
+ * A ROW-LEVEL REPORT IS A SAMPLE, NOT A COUNT. Three times in one day a defect
+ * arrived described as "four instances" or "one row" and turned out, measured
+ * across the corpus, to be a class an order of magnitude larger: the prompt
+ * echo reported on translate-to-native rows was 256 rows once both directions
+ * were counted; `Preservation` reported on four rows was 18, one pair of rows
+ * in every language; the kinship collision reported as an addition's collateral
+ * was also live in kana on four rows with no addition at all. The shape is
+ * structural — a grader rule applies to every row of the same shape — so size
+ * the class here before pricing a fix for it, and before writing a list entry
+ * per instance.
+ *
  * Exits non-zero when anything is newly accepted, so it can gate a patch.
  *
  * Reads the frozen snapshot and the proposal file. Never writes to the database

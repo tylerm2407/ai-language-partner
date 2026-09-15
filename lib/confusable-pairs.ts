@@ -83,6 +83,18 @@ const CONFUSABLE_PAIRS: Partial<Record<LanguageCode, [string, string][]>> = {
      */
     ['gerenta', 'renta'],   // Manager (f.) vs rent — the addition's own neighbourhood.
     ['gerente', 'renta'],   // The same contrast against the stored key.
+    /**
+     * es-E1042: the feminine `Más cara` is correct on the five `Más caro`
+     * rows, and adding it admits two other comparatives the same unit teaches
+     * — `Más corta` (shorter) and `Más baja` (lower, shorter in height) — on
+     * the listening, speaking and translate rows. Both are alternatives
+     * elsewhere and neither is anyone's key, which is why the sibling-key rule
+     * cannot see them and a pair is the right tool.
+     */
+    ['más cara', 'más corta'],   // More expensive (f.) vs shorter.
+    ['más cara', 'más baja'],    // More expensive (f.) vs lower.
+    ['más caro', 'más corta'],   // The same two contrasts against the stored key.
+    ['más caro', 'más baja'],
   ],
   fr: [
     // Added 2026-09-14 by the curriculum audit: each pair is two words the
@@ -195,6 +207,15 @@ const CONFUSABLE_PAIRS: Partial<Record<LanguageCode, [string, string][]>> = {
     ['caldo', 'freddo'],    // hot vs. cold (not typo-confusable but common error)
   ],
   pt: [
+    /**
+     * Added 2026-09-15. Two feminine forms that are correct on their rows and
+     * reach a different word once accepted. Each admitted string is an
+     * alternative somewhere and nobody's key, so no sibling scope reaches it.
+     */
+    ['cansada', 'zangada'],      // pt-E0652: tired (f.) vs angry (f.).
+    ['cansado', 'zangada'],      // The same contrast against the stored key.
+    ['mais cara', 'mais curta'], // pt-E1042: more expensive (f.) vs shorter (f.).
+    ['mais caro', 'mais curta'],
     // Added 2026-09-14 after a sweep found that the audit's own accepted-answer
     // additions were readmitting wrong answers: every accepted answer carries a
     // typo neighbourhood, so adding one can admit whatever already sits inside
@@ -395,6 +416,14 @@ const CONFUSABLE_PAIRS: Partial<Record<LanguageCode, [string, string][]>> = {
     ['プレゼン', 'プレゼント'],              // Presentation vs present.
   ],
   ko: [
+    /**
+     * Added 2026-09-15. ko-E0368 keys 할머니 (grandmother) and the formal 조모
+     * is correct there; adding it admits 고모, the PATERNAL AUNT, one jamo
+     * away. A kinship contrast the row exists to draw, and 고모 is an
+     * alternative elsewhere rather than a key, so the sibling rule cannot see
+     * it.
+     */
+    ['조모', '고모'],                      // Grandmother (formal) vs paternal aunt.
     // Added 2026-09-14 by the curriculum audit; see remediation/runtime-independent-review/.
     ['공식적', '비공식적'],                 // Polarity pair: "비공식적" = unofficial, informal, "공식적" = official, fo
     ['남자친구', '여자친구'],                // Unrelated lexemes one character apart: "남자친구" = boyfriend, "여자친구"

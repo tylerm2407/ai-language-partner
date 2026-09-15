@@ -518,3 +518,54 @@ describe('an addition that reaches a word taught somewhere else', () => {
     expect(isConfusablePair('conservation', 'preservation', 'en')).toBe(false);
   });
 });
+
+/**
+ * The ten same-gloss groups content held rather than levelled, 2026-09-15.
+ * Five needed no entry: the string each would admit is another taught KEY in
+ * that language, so the sibling-key rule already refuses it. The entries below
+ * are the five where the admitted string is only ever an alternative, which is
+ * the class no scope reaches.
+ */
+describe('a levelled gender form that reaches a different word', () => {
+  const es = { exerciseHints: { exerciseType: 'translate_to_target' as const, language: 'es' as const } };
+  const pt = { exerciseHints: { exerciseType: 'translate_to_target' as const, language: 'pt' as const } };
+  const ko = { exerciseHints: { exerciseType: 'translate_to_target' as const, language: 'ko' as const } };
+
+  it('refuses the comparatives that Más cara reaches', () => {
+    expect(gradeAnswer('Más corta', 'Más caro', ['Más cara'], es).isCorrect).toBe(false);
+    expect(gradeAnswer('Más baja', 'Más caro', ['Más cara'], es).isCorrect).toBe(false);
+  });
+
+  it('refuses angry for tired, and shorter for more expensive, in Portuguese', () => {
+    expect(gradeAnswer('Zangada', 'Cansado', ['Cansada'], pt).isCorrect).toBe(false);
+    expect(gradeAnswer('Mais curta', 'Mais caro', ['Mais cara'], pt).isCorrect).toBe(false);
+  });
+
+  it('refuses the paternal aunt on a grandmother row', () => {
+    // 조모 is the formal grandmother and correct there; 고모 is one jamo away
+    // and is the aunt.
+    expect(gradeAnswer('고모', '할머니', ['조모'], ko).isCorrect).toBe(false);
+  });
+
+  it('leaves every one of those words correct on its own row', () => {
+    // A pair must never reach an exact match, the addition it was written for,
+    // or a genuine typo on the row that teaches the other word.
+    expect(gradeAnswer('Más cara', 'Más caro', ['Más cara'], es).isCorrect).toBe(true);
+    expect(gradeAnswer('Más cortq', 'Más corta', [], es).isCorrect).toBe(true);
+    expect(gradeAnswer('Cansada', 'Cansado', ['Cansada'], pt).isCorrect).toBe(true);
+    expect(gradeAnswer('Zangada', 'Zangado', ['Zangada'], pt).isCorrect).toBe(true);
+    expect(gradeAnswer('조모', '할머니', ['조모'], ko).isCorrect).toBe(true);
+  });
+
+  it('needs no entry where the admitted string is another taught key', () => {
+    // Enfermo, Cool, Cozinha, переехали and купила are each the stored answer
+    // to some other question, so the sibling-key rule refuses them and a pair
+    // would never fire. Asserted through the rule rather than the list.
+    const withSiblings = (language: 'es' | 'de' | 'pt' | 'ru', siblingKeys: string[]) => ({
+      exerciseHints: { exerciseType: 'translate_to_target' as const, language, siblingKeys },
+    });
+    expect(gradeAnswer('Enfermo', 'Enfermera', ['Enfermero'], withSiblings('es', ['Enfermo'])).isCorrect).toBe(false);
+    expect(gradeAnswer('Cozinha', 'Vizinho', ['Vizinha'], withSiblings('pt', ['Cozinha'])).isCorrect).toBe(false);
+    expect(isConfusablePair('enfermero', 'enfermo', 'es')).toBe(false);
+  });
+});
