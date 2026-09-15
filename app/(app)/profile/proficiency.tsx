@@ -20,6 +20,7 @@ import type {
 import { nextBandProgress, progressToward, type NextBandProgress } from '../../../lib/next-band-progress';
 
 const SKILL_LABELS: Record<SkillAssessment['skill'], string> = {
+  interaction: 'Conversation',
   vocabulary: 'Vocabulary',
   reading: 'Reading',
   writing: 'Writing',
@@ -28,6 +29,7 @@ const SKILL_LABELS: Record<SkillAssessment['skill'], string> = {
 };
 
 const SKILL_ICONS: Record<SkillAssessment['skill'], keyof typeof Ionicons.glyphMap> = {
+  interaction: 'chatbubbles-outline',
   vocabulary: 'albums-outline',
   reading: 'book-outline',
   writing: 'create-outline',
@@ -234,13 +236,14 @@ export default function ProficiencyScreen() {
                   <Text className="text-base font-semibold mb-1" style={{ color: c.ink }}>
                     Not yet assessed
                   </Text>
-                  {/* "Not yet" on its own reads as "nothing counts". A level
-                      needs every strand, so say which ones are still short —
-                      that is the whole difference between a report that
-                      explains itself and one that looks broken. */}
-                  {report.missingSkills.length > 0 ? (
+                  {/* "Not yet" on its own reads as "nothing counts". Nothing
+                      withholds a level now that the band is a weighted score —
+                      so rather than "waiting on" these strands, name them as
+                      the untouched ones, which is where the work pays most. */}
+                  {report.unevidencedSkills.length > 0 ? (
                     <Text className="text-sm text-center mb-1" style={{ color: c.muted }}>
-                      Waiting on {report.missingSkills.map((k) => SKILL_LABELS[k].toLowerCase()).join(', ')}
+                      Nothing logged yet for{' '}
+                      {report.unevidencedSkills.map((k) => SKILL_LABELS[k].toLowerCase()).join(', ')}
                     </Text>
                   ) : null}
                 </>

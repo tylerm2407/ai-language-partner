@@ -15,10 +15,20 @@ import {
   combineConversationScore,
   isMature,
   isRetained,
-  missingSkills,
+  unevidencedSkills,
   normalizeBand,
   nextLevelRequirement,
-  overallFromSkills,
+  overallFromBands,
+  scoreBand,
+  scoreBands,
+  interactionStrand,
+  BAND_THRESHOLD,
+  STRAND_WEIGHTS,
+  MIN_INTERACTION_UNITS,
+  MIN_INTERACTION_DAYS,
+  MIN_INTERACTION_TURNS_PER_UNIT,
+  MAX_INTERACTION_TURNS_COUNTED,
+  INTERACTION_PASS_SCORE,
   vocabularyLevel,
   CEFR_LADDER,
   CONFIDENCE_TIERS,
@@ -32,6 +42,7 @@ import {
   SCORED_SKILLS,
   SPEAKING_PASS_SCORE,
   type CefrBand,
+  type InteractionTurnItem,
   type ListeningEvidenceItem,
   type ProficiencyEvidence,
   type ReadingEvidenceItem,
@@ -103,22 +114,51 @@ function listen(band: string | null, count: number, correct: number): ListeningE
 }
 
 /**
- * Passing evidence in the four non-vocabulary strands at every band from
- * `from` up to `to` inclusive. A level needs all five strands to hold it, so
+ * Build `sessions` qualifying conversations in a band, each of `turns` turns
+ * scored at `score`, spread one per day over `days` distinct days.
+ *
+ * Sessions beyond `days` reuse the last day, which is how a learner who talked
+ * twice in one evening actually looks.
+ */
+function convo(
+  band: string | null,
+  sessions: number,
+  days: number,
+  score: number,
+  turns: number = MIN_INTERACTION_TURNS_PER_UNIT,
+): InteractionTurnItem[] {
+  const out: InteractionTurnItem[] = [];
+  for (let s = 0; s < sessions; s++) {
+    const day = `2026-01-${String(Math.min(s, days - 1) + 1).padStart(2, '0')}`;
+    for (let t = 0; t < turns; t++) {
+      out.push({ cefrLevel: band, sessionId: `${band}-s${s}`, day, score });
+    }
+  }
+  return out;
+}
+
+/**
+ * Passing evidence in the five non-vocabulary strands at every band from
+ * `from` up to `to` inclusive. A band is a weighted score over six strands, so
  * most report-level tests pair this with `vocab(...)` at the same bands.
  */
-function fullStrands(to: CefrBand, from: CefrBand = 'A1'): Pick<ProficiencyEvidence, 'reading' | 'writing' | 'speaking' | 'listening'> {
+function fullStrands(
+  to: CefrBand,
+  from: CefrBand = 'A1',
+): Pick<ProficiencyEvidence, 'reading' | 'writing' | 'speaking' | 'listening' | 'interaction'> {
   const bands = CEFR_LADDER.slice(CEFR_LADDER.indexOf(from), CEFR_LADDER.indexOf(to) + 1);
   return {
     reading: bands.flatMap((b) => reading(b, MIN_READING_ITEMS)),
     writing: bands.flatMap((b) => writing(b, MIN_WRITING_ITEMS)),
     speaking: bands.flatMap((b) => speak(b, MIN_SPEAKING_ITEMS, 0.9)),
     listening: bands.flatMap((b) => listen(b, MIN_LISTENING_ITEMS, MIN_LISTENING_ITEMS)),
+    interaction: bands.flatMap((b) => convo(b, MIN_INTERACTION_UNITS, MIN_INTERACTION_DAYS, 0.9)),
   };
 }
 
 function emptyEvidence(): ProficiencyEvidence {
   return {
+    interaction: [],
     vocabulary: [],
     reading: [],
     writing: [],
@@ -400,63 +440,172 @@ describe('assessConfidence', () => {
   });
 });
 
-describe('overallFromSkills', () => {
-  const skill = (
-    name: SkillAssessment['skill'],
-    level: SkillAssessment['level'],
-    status: SkillAssessment['status']
-  ): SkillAssessment => ({
-    skill: name,
-    level,
-    status,
-    detail: '',
-    evidenceCount: 0,
-    assumedBands: [],
+describe('interactionStrand', () => {
+  it('needs enough turns before a conversation counts as a unit', () => {
+    const short = interactionStrand(
+      convo('A1', 3, 3, 0.9, MIN_INTERACTION_TURNS_PER_UNIT - 1),
+    );
+    expect(short.bands.find((b) => b.band === 'A1')?.total).toBe(0);
+
+    const long = interactionStrand(convo('A1', 3, 3, 0.9));
+    expect(long.bands.find((b) => b.band === 'A1')?.total).toBe(3);
   });
 
-  it('returns null when no skill is assessed', () => {
-    expect(
-      overallFromSkills([
-        skill('vocabulary', null, 'insufficient_data'),
-        skill('speaking', null, 'not_assessed'),
-      ])
-    ).toBeNull();
+  it('drops turns that cannot be attributed to a session', () => {
+    // Pre-migration-131 voice rows have no session id. Counting each as its
+    // own conversation would rebuild the per-turn gate the session unit
+    // replaced, so they contribute nothing at all.
+    const orphaned = interactionStrand(
+      Array.from({ length: 50 }, () => ({
+        cefrLevel: 'A1',
+        sessionId: null,
+        day: '2026-01-01',
+        score: 0.9,
+      })),
+    );
+    expect(orphaned.bands.find((b) => b.band === 'A1')?.total).toBe(0);
   });
 
-  it('takes the floor, not the ceiling — B2 reading with A2 writing is A2', () => {
-    expect(
-      overallFromSkills([
-        skill('vocabulary', 'B2', 'assessed'),
-        skill('reading', 'B2', 'assessed'),
-        skill('writing', 'A2', 'assessed'),
-        skill('listening', 'B1', 'assessed'),
-        skill('speaking', 'B2', 'assessed'),
-      ])
-    ).toBe('A2');
+  it('counts distinct days, so one marathon evening is not twelve days', () => {
+    const crammed = interactionStrand(convo('A1', MIN_INTERACTION_UNITS, 1, 0.9));
+    const at = crammed.bands.find((b) => b.band === 'A1');
+    expect(at?.total).toBe(MIN_INTERACTION_UNITS);
+    expect(at?.days).toBe(1);
   });
 
-  it('withholds the level while any scored strand is unassessed', () => {
-    // Four strands at B1 and one never measured is not "B1" — it is B1 in
-    // four strands and unknown in the fifth, and the report says so instead.
-    const skills = [
-      skill('vocabulary', 'B1', 'assessed'),
-      skill('reading', 'B1', 'assessed'),
-      skill('writing', 'B1', 'assessed'),
-      skill('listening', 'B1', 'assessed'),
-      skill('speaking', null, 'not_assessed'),
-    ];
-    expect(overallFromSkills(skills)).toBeNull();
-    expect(missingSkills(skills)).toEqual(['speaking']);
+  it('caps the turns any one session contributes to the mean', () => {
+    // One enormous session of perfect turns, plus one ordinary weak session.
+    // Without the cap the big session swamps the mean; with it, each session
+    // contributes at most MAX_INTERACTION_TURNS_COUNTED turns.
+    const big = MAX_INTERACTION_TURNS_COUNTED * 10;
+    const turns = [
+      ...convo('A1', 1, 1, 1.0, big),
+      ...convo('A1', 1, 1, 0.0),
+    ].map((t, i) => ({ ...t, sessionId: i < big ? 'big' : 'small' }));
+    const at = interactionStrand(turns).bands.find((b) => b.band === 'A1');
+    const expected =
+      (MAX_INTERACTION_TURNS_COUNTED * 1.0) /
+      (MAX_INTERACTION_TURNS_COUNTED + MIN_INTERACTION_TURNS_PER_UNIT);
+    expect(at?.mean).toBeCloseTo(expected, 5);
+  });
+});
+
+describe('scoreBand and the weighted rule', () => {
+  it('has weights that sum to one', () => {
+    const total = SCORED_SKILLS.reduce((sum, k) => sum + STRAND_WEIGHTS[k], 0);
+    expect(total).toBeCloseTo(1, 10);
   });
 
-  it('names every missing strand in row order', () => {
-    expect(missingSkills([skill('reading', 'A1', 'assessed')])).toEqual([
+  it('keeps the threshold above the largest single weight', () => {
+    // The load-bearing inequality. If any one strand's weight ever reaches
+    // BAND_THRESHOLD, that strand alone can publish a band and the whole
+    // "no level rests on one source" guarantee is gone.
+    const largest = Math.max(...SCORED_SKILLS.map((k) => STRAND_WEIGHTS[k]));
+    expect(largest).toBeLessThan(BAND_THRESHOLD);
+  });
+
+  it('will not publish a band on perfect conversation alone', () => {
+    const report = buildProficiencyReport(
+      {
+        ...emptyEvidence(),
+        interaction: convo('A1', MIN_INTERACTION_UNITS, MIN_INTERACTION_DAYS, 1),
+        totalReviews: 600,
+        activeDays: 40,
+      },
+      NOW
+    );
+    expect(report.skills.find((s) => s.skill === 'interaction')?.level).toBe('A1');
+    // The strand is maxed and the band still is not held.
+    const a1 = report.bandScores.find((b) => b.band === 'A1');
+    expect(a1?.strands.find((s) => s.skill === 'interaction')?.gate).toBe(1);
+    expect(a1?.held).toBe(false);
+    expect(report.overallLevel).toBeNull();
+  });
+
+  it('publishes the band once conversation is joined by other work', () => {
+    const report = buildProficiencyReport(
+      {
+        ...emptyEvidence(),
+        interaction: convo('A1', MIN_INTERACTION_UNITS, MIN_INTERACTION_DAYS, 1),
+        reading: reading('A1', MIN_READING_ITEMS),
+        listening: listen('A1', MIN_LISTENING_ITEMS, MIN_LISTENING_ITEMS),
+        totalReviews: 600,
+        activeDays: 40,
+      },
+      NOW
+    );
+    expect(report.overallLevel).toBe('A1');
+  });
+
+  it('no longer lets thin vocabulary veto a whole report', () => {
+    // The failure that motivated the weighted rule: every other strand strong,
+    // vocabulary untouched. Under the old all-strands rule this was null.
+    const report = buildProficiencyReport(
+      {
+        ...emptyEvidence(),
+        ...fullStrands('A1'),
+        totalReviews: 600,
+        activeDays: 40,
+      },
+      NOW
+    );
+    expect(report.skills.find((s) => s.skill === 'vocabulary')?.level).toBeNull();
+    expect(report.overallLevel).toBe('A1');
+  });
+
+  it('still refuses to skip a rung', () => {
+    // Full evidence at A2 and nothing at A1. The score at A2 clears the
+    // threshold on its own, and the contiguity walk still withholds the level.
+    const report = buildProficiencyReport(
+      {
+        ...emptyEvidence(),
+        ...fullStrands('A2', 'A2'),
+        vocabulary: vocab('A2', 60, 55),
+        totalReviews: 600,
+        activeDays: 40,
+      },
+      NOW
+    );
+    expect(report.bandScores.find((b) => b.band === 'A2')?.held).toBe(true);
+    expect(report.overallLevel).toBeNull();
+  });
+
+  it('names the strands with nothing logged at the target band', () => {
+    const scores = scoreBands({
+      bands: analyzeBands([]),
+      strands: [interactionStrand(convo('A1', MIN_INTERACTION_UNITS, MIN_INTERACTION_DAYS, 0.9))],
+    });
+    expect(unevidencedSkills(scores.find((s) => s.band === 'A1'))).toEqual([
       'vocabulary',
+      'reading',
       'writing',
       'listening',
       'speaking',
     ]);
-    expect(missingSkills(SCORED_SKILLS.map((k) => skill(k, 'A1', 'assessed')))).toEqual([]);
+  });
+
+  it('credits a strand already assessed above the band at full weight', () => {
+    const skills: SkillAssessment[] = [
+      {
+        skill: 'reading',
+        level: 'B2',
+        status: 'assessed',
+        detail: '',
+        evidenceCount: 0,
+        assumedBands: [],
+      },
+    ];
+    const scored = scoreBand('A1', { bands: analyzeBands([]), strands: [] }, skills);
+    expect(scored.strands.find((s) => s.skill === 'reading')?.gate).toBe(1);
+  });
+
+  it('holds the level when overallFromBands walks a contiguous run', () => {
+    const scores = [
+      { band: 'A1' as const, score: 0.9, held: true, strands: [] },
+      { band: 'A2' as const, score: 0.8, held: true, strands: [] },
+      { band: 'B1' as const, score: 0.3, held: false, strands: [] },
+    ];
+    expect(overallFromBands(scores).level).toBe('A2');
   });
 });
 
@@ -535,10 +684,9 @@ describe('buildProficiencyReport', () => {
     expect(report.confidence).toBe('medium');
     expect(report.overallLevel).toBe('A2');
     expect(report.nextLevel).toBe('B1');
-    expect(report.missingSkills).toEqual([]);
   });
 
-  it('withholds the level and names the strands still missing when only vocabulary is measured', () => {
+  it('withholds the level and names the untouched strands when only vocabulary is measured', () => {
     const report = buildProficiencyReport(
       {
         ...emptyEvidence(),
@@ -550,7 +698,13 @@ describe('buildProficiencyReport', () => {
     );
     expect(report.skills.find((s) => s.skill === 'vocabulary')?.level).toBe('A2');
     expect(report.overallLevel).toBeNull();
-    expect(report.missingSkills).toEqual(['reading', 'writing', 'listening', 'speaking']);
+    expect(report.unevidencedSkills).toEqual([
+      'interaction',
+      'reading',
+      'writing',
+      'listening',
+      'speaking',
+    ]);
     // The first level such a learner can earn is A1, and the steps say what
     // A1 still needs in each strand — vocabulary is already past it.
     expect(report.nextLevel).toBe('A1');
@@ -598,7 +752,6 @@ describe('buildProficiencyReport', () => {
       NOW
     );
     expect(report.overallLevel).toBeNull();
-    expect(report.missingSkills).toEqual([]);
     const last = report.nextLevelSteps[report.nextLevelSteps.length - 1];
     expect(last).toContain('5 more logged reviews');
     expect(last).toContain('2 more active days');
@@ -753,11 +906,18 @@ describe('buildProficiencyReport', () => {
   // for the wrong reason, since there would no longer be a strong skill to do
   // the masking. Reading now genuinely earns B2, band by band, so the floor
   // rule is what the assertion actually exercises.
-  it('does not let a strong skill mask a weak one in the overall level', () => {
+  it('lets a strong strand carry a band a weak one would once have vetoed', () => {
+    // The compensatory property, stated plainly so nobody has to discover it.
+    // Vocabulary reaches A1 only; every other strand reaches B2. Under the old
+    // all-strands floor this report was A1. It is B2 now, because vocabulary is
+    // 0.12 of the score and the remaining 0.88 is at full strength.
+    //
+    // This is the cost of the weighted rule and it is deliberate — but it is
+    // only defensible because `BAND_THRESHOLD` exceeds every single weight, so
+    // no ONE strand can do this on its own. See the scoreBand suite.
     const report = buildProficiencyReport(
       {
         ...emptyEvidence(),
-        // Vocabulary reaches A1 only; every other strand reaches B2.
         vocabulary: vocab('A1', 60, 55),
         ...fullStrands('B2'),
         totalReviews: 600,
@@ -766,7 +926,11 @@ describe('buildProficiencyReport', () => {
       NOW
     );
     expect(report.skills.find((s) => s.skill === 'reading')?.level).toBe('B2');
-    expect(report.overallLevel).toBe('A1');
+    expect(report.overallLevel).toBe('B2');
+    // The weak strand still costs its weight — the band is held, not maxed.
+    const b2 = report.bandScores.find((b) => b.band === 'B2')!;
+    expect(b2.score).toBeLessThan(1);
+    expect(b2.score).toBeGreaterThanOrEqual(BAND_THRESHOLD);
   });
 
   it('never lowers the overall level because the learner started new material', () => {
@@ -881,7 +1045,7 @@ describe('buildProficiencyReport', () => {
     expect(speaking?.level).toBeNull();
   });
 
-  it('lets weak speaking drag the overall level down', () => {
+  it('lets a missing strand lower the band score without vetoing the level', () => {
     // Reading has to earn B2 rung by rung: `highestContiguousBand` stops the
     // walk at the first band with no evidence, so B2 texts alone assess as
     // insufficient and there would be no strong skill for speaking to drag.
@@ -913,14 +1077,38 @@ describe('buildProficiencyReport', () => {
       },
       NOW
     );
-    // Reading is unchanged at B2; the floor across skills is now speaking's A2.
+    // Speaking now reaches only A2, so B2 loses speaking's 0.08 — the score
+    // falls, and with the other five strands full it still clears the bar.
+    expect(withSpeaking.bandScores.find((b) => b.band === 'B2')!.score).toBeLessThan(
+      allStrong.bandScores.find((b) => b.band === 'B2')!.score,
+    );
     expect(withSpeaking.skills.find((s) => s.skill === 'reading')?.level).toBe('B2');
-    expect(withSpeaking.overallLevel).toBe('A2');
+    expect(withSpeaking.skills.find((s) => s.skill === 'speaking')?.level).toBe('A2');
+    expect(withSpeaking.overallLevel).toBe('B2');
   });
 
-  it('always returns exactly the five skill rows the UI expects', () => {
+  it('withholds the band when enough weight is missing at once', () => {
+    // The other half of the same claim: compensation has a limit. Conversation
+    // and vocabulary together are 0.67, so a learner with everything EXCEPT
+    // those two cannot reach 0.70 however good the rest is.
+    const report = buildProficiencyReport(
+      {
+        ...emptyEvidence(),
+        ...fullStrands('A1'),
+        interaction: [],
+        totalReviews: 600,
+        activeDays: 40,
+      },
+      NOW
+    );
+    expect(report.bandScores.find((b) => b.band === 'A1')!.held).toBe(false);
+    expect(report.overallLevel).toBeNull();
+  });
+
+  it('always returns exactly the six skill rows the UI expects', () => {
     const report = buildProficiencyReport(emptyEvidence(), NOW);
     expect(report.skills.map((s) => s.skill)).toEqual([
+      'interaction',
       'vocabulary',
       'reading',
       'writing',
@@ -960,72 +1148,69 @@ describe('combineConversationScore', () => {
 });
 
 describe('conversation as proficiency evidence', () => {
-  // Conversation turns arrive already shaped as SpeakingEvidenceItem /
-  // WritingEvidenceItem, so they flow through the existing assessments. These
-  // pin the two properties that matter: a conversation CAN move a level, and
-  // typed turns cannot move the *speaking* one.
+  // Conversation turns are their own strand now. They used to be split by
+  // modality into the speaking and writing pools, which let three chat
+  // messages satisfy the same band gate as three graded essays and let scored
+  // read-alouds stand in for ever having held a conversation. These pin the
+  // separation.
 
-  const conversationTurns = (band: string, count: number, score: number): SpeakingEvidenceItem[] =>
-    Array.from({ length: count }, () => ({ cefrLevel: band, score }));
-
-  it('spoken turns alone can evidence a speaking level', () => {
-    const evidence: ProficiencyEvidence = {
-      vocabulary: [],
-      reading: [],
-      writing: [],
-      speaking: [
-        ...conversationTurns('A1', MIN_SPEAKING_ITEMS, 0.85),
-        ...conversationTurns('A2', MIN_SPEAKING_ITEMS, 0.8),
-      ],
-      listening: [],
-      listeningMinutes: 0,
-      speakingMinutes: 30,
-      activeDays: 12,
-      totalReviews: 200,
-    };
-    const report = buildProficiencyReport(evidence, NOW);
-    const speaking = report.skills.find((s) => s.skill === 'speaking')!;
-    expect(speaking.status).toBe('assessed');
-    expect(speaking.level).toBe('A2');
-  });
-
-  it('turns below the pass mark do not grant a level', () => {
-    const evidence: ProficiencyEvidence = {
-      vocabulary: [],
-      reading: [],
-      writing: [],
-      speaking: conversationTurns('A1', MIN_SPEAKING_ITEMS, SPEAKING_PASS_SCORE - 0.05),
-      listening: [],
-      listeningMinutes: 0,
-      speakingMinutes: 30,
-      activeDays: 12,
-      totalReviews: 200,
-    };
-    const report = buildProficiencyReport(evidence, NOW);
-    expect(report.skills.find((s) => s.skill === 'speaking')!.level).toBeNull();
-  });
-
-  it('typed turns are writing evidence and never touch speaking', () => {
-    const typed: WritingEvidenceItem[] = Array.from({ length: MIN_WRITING_ITEMS }, () => ({
-      cefrLevel: 'A1',
-      overallScore: 0.9,
-      wordCount: 20,
-    }));
-    const evidence: ProficiencyEvidence = {
-      vocabulary: [],
-      reading: [],
-      writing: typed,
-      speaking: [],
-      listening: [],
-      listeningMinutes: 0,
-      speakingMinutes: 0,
-      activeDays: 12,
-      totalReviews: 200,
-    };
-    const report = buildProficiencyReport(evidence, NOW);
-    expect(report.skills.find((s) => s.skill === 'writing')!.level).toBe('A1');
-    // Never "assessed" off typing — a keyboard and time to think is not speech.
+  it('feeds the interaction strand and neither speaking nor writing', () => {
+    const report = buildProficiencyReport(
+      {
+        ...emptyEvidence(),
+        interaction: convo('A1', MIN_INTERACTION_UNITS, MIN_INTERACTION_DAYS, 0.9),
+        totalReviews: 200,
+        activeDays: 12,
+      },
+      NOW
+    );
+    expect(report.skills.find((s) => s.skill === 'interaction')!.level).toBe('A1');
+    // Never assessed off conversation: a scored read-aloud against a known
+    // target and a graded submission are different claims.
     expect(report.skills.find((s) => s.skill === 'speaking')!.status).toBe('not_assessed');
+    expect(report.skills.find((s) => s.skill === 'writing')!.status).toBe('insufficient_data');
+  });
+
+  it('needs the day spread, not just the conversations', () => {
+    const crammed = buildProficiencyReport(
+      {
+        ...emptyEvidence(),
+        interaction: convo('A1', MIN_INTERACTION_UNITS, 1, 0.95),
+        totalReviews: 200,
+        activeDays: 12,
+      },
+      NOW
+    );
+    expect(crammed.skills.find((s) => s.skill === 'interaction')!.status).toBe('insufficient_data');
+    expect(
+      crammed.nextLevelSteps.some((l) => l.startsWith('Conversation:') && l.includes('more day')),
+    ).toBe(true);
+  });
+
+  it('will not reach a level on conversations below the pass score', () => {
+    const weak = buildProficiencyReport(
+      {
+        ...emptyEvidence(),
+        interaction: convo(
+          'A1',
+          MIN_INTERACTION_UNITS,
+          MIN_INTERACTION_DAYS,
+          INTERACTION_PASS_SCORE - 0.2,
+        ),
+        totalReviews: 200,
+        activeDays: 12,
+      },
+      NOW
+    );
+    expect(weak.skills.find((s) => s.skill === 'interaction')!.status).toBe('insufficient_data');
+  });
+
+  it('leads the requirement list, because it is where the work pays', () => {
+    const report = buildProficiencyReport(
+      { ...emptyEvidence(), totalReviews: 200, activeDays: 12 },
+      NOW
+    );
+    expect(report.nextLevelSteps[0].startsWith('Conversation:')).toBe(true);
   });
 });
 
@@ -1141,7 +1326,16 @@ describe('placement', () => {
       expect(report.nextLevelRequirement).not.toContain('A1');
     });
 
-    it('lets weak evidence below the placement band pin the level down', () => {
+    it('lets weak evidence below the placement band cost score without pinning the level', () => {
+      // Under the old all-strands floor this report was A1: measured A2
+      // vocabulary that FAILED outranked the placement that would otherwise
+      // have assumed A2, and pinned the whole level there.
+      //
+      // The weighted rule keeps the first half and drops the second. A2's
+      // score still loses most of vocabulary's 0.12, and `assumedBands` is
+      // still empty — placement never overrides evidence, so A2 is judged on
+      // what the learner actually showed. But 0.12 is no longer enough to
+      // withhold a band the other five strands hold outright.
       const report = buildProficiencyReport(
         {
           ...emptyEvidence(),
@@ -1152,10 +1346,23 @@ describe('placement', () => {
         NOW,
         { placementBand: 'B1' },
       );
-      expect(report.overallLevel).toBe('A1');
-      expect(report.assumedBands).toEqual([]);
-      expect(report.levelBasis).toBeNull();
-      expect(report.nextLevel).toBe('A2');
+      // Vocabulary is judged on its evidence and fails at A2, so placement
+      // never assumes A2 *for vocabulary* — that half of the old rule stands.
+      expect(report.skills.find((s) => s.skill === 'vocabulary')?.level).toBe('A1');
+      expect(report.overallLevel).toBe('B1');
+
+      // The other four strands did reach B1 by assuming A1–A2 from placement,
+      // so the level genuinely rests partly on rungs nobody measured and the
+      // report says so. Disclosure is per-strand, not per-report: one strand
+      // measuring a rung does not make the rungs the others assumed measured.
+      expect(report.assumedBands).toEqual(['A1', 'A2']);
+      expect(report.levelBasis).toBe(
+        'Measured from your B1 work; A1–A2 assumed from your placement.',
+      );
+
+      const a2 = report.bandScores.find((b) => b.band === 'A2')!;
+      expect(a2.strands.find((s) => s.skill === 'vocabulary')!.gate).toBeLessThan(1);
+      expect(a2.held).toBe(true);
     });
 
     it('applies the same rule to reading, writing and speaking', () => {

@@ -258,6 +258,15 @@ Deno.test('a clean turn writes evidence but no correction row', async () => {
   // A turn that went right is evidence of accuracy. Skipping it would mean the
   // only spoken turns feeding a measured level were the ones that went wrong.
   assertEquals(result.evidenceRows, 1);
+
+  // The session id is what makes the turn groupable. The interaction strand
+  // counts CONVERSATIONS, not turns, and drops any row it cannot attribute to
+  // a session — so without this the voice tutor would write evidence that
+  // never reaches a learner's measured level, which is the exact failure the
+  // strand was built to fix.
+  const row = fake.rowsIn('conversation_evidence')[0] as Record<string, unknown>;
+  assertEquals(row.tutor_session_id, 'session-1');
+  assertEquals(row.chat_session_id, undefined);
 });
 
 Deno.test('correction rows carry a null chat_session_id', async () => {

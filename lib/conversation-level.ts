@@ -14,16 +14,44 @@
  *    level is for.
  *
  * Order of preference, most honest first:
- *   1. the band the proficiency report has MEASURED (`useAppStore.measuredBand`),
+ *   1. one band ABOVE the band the proficiency report has MEASURED
+ *      (`useAppStore.measuredBand`) — see "the stretch rule" below,
  *   2. the placement band the learner's lessons run at,
  *   3. the declared level, mapped through the shared ladder.
+ *
+ * ── The stretch rule ──
+ *
+ * A MEASURED band is one the learner has already proved. Holding the
+ * conversation there measures nothing new, and — because this function also
+ * decides the `cefr_level` stamped on every `conversation_evidence` row — it
+ * made promotion arithmetically impossible: the interaction strand judges a
+ * band from evidence tagged with THAT band, and a learner whose every turn is
+ * tagged at the band they already hold accumulates exactly zero evidence for
+ * the band above it, forever. The strand would sit at 0 no matter how much
+ * they talked.
+ *
+ * So a measured band is stretched one rung (capped at C2): the conversation is
+ * pitched at the band the learner is working toward, and the evidence it
+ * produces is evidence about that band. This is also the right pedagogy — the
+ * comprehensible-input-plus-one shape — but the load-bearing reason is the
+ * arithmetic one.
+ *
+ * Placement and declared levels are NOT stretched. Neither has been proved, so
+ * holding the conversation at face value is already informative, and stretching
+ * an unproven band would pitch a brand-new learner's first conversation a full
+ * rung above anything they have shown they can do.
  *
  * Pure so the fallback order is asserted in one place. Callers send the
  * result as `cefrLevel` alongside the legacy `level`; the server prefers the
  * band when it is a valid one and falls back to mapping `level` otherwise, so
  * an old client keeps working.
  */
-import { cefrBandForProficiencyLevel, normalizeBand, type CefrBand } from './cefr-proficiency';
+import {
+  CEFR_LADDER,
+  cefrBandForProficiencyLevel,
+  normalizeBand,
+  type CefrBand,
+} from './cefr-proficiency';
 import type { ProficiencyLevel } from '../types';
 
 export interface ConversationLevelInputs {
@@ -36,8 +64,19 @@ export interface ConversationLevelInputs {
 }
 
 export function conversationCefrBand(inputs: ConversationLevelInputs): CefrBand {
-  if (inputs.measuredBand) return inputs.measuredBand;
+  if (inputs.measuredBand) return stretchBand(inputs.measuredBand);
   const placed = normalizeBand(inputs.placementBand);
   if (placed) return placed;
   return cefrBandForProficiencyLevel(inputs.level ?? 'beginner');
+}
+
+/**
+ * One rung up the ladder, or the same band at the top of it. Exported because
+ * the evidence pipeline and the report both need to agree about what "the band
+ * this learner is working toward" means.
+ */
+export function stretchBand(band: CefrBand): CefrBand {
+  const i = CEFR_LADDER.indexOf(band);
+  if (i < 0 || i === CEFR_LADDER.length - 1) return band;
+  return CEFR_LADDER[i + 1];
 }

@@ -19,6 +19,7 @@ import type {
   WritingEvidenceItem,
   SpeakingEvidenceItem,
   ListeningEvidenceItem,
+  InteractionTurnItem,
 } from './cefr-proficiency';
 import { ONBOARDING_STEP_KEYS } from './onboarding-checklist';
 import type {
@@ -1001,7 +1002,9 @@ export async function fetchProficiencyEvidence(
       // weighting stays re-tunable; `combineConversationScore` folds them.
       supabase
         .from('conversation_evidence')
-        .select('modality, cefr_level, accuracy, intelligibility, word_count')
+        .select(
+          'modality, cefr_level, accuracy, intelligibility, word_count, chat_session_id, tutor_session_id, created_at',
+        )
         .eq('user_id', userId)
         .eq('target_language', targetLanguage)
         .order('created_at', { ascending: false })
@@ -1066,30 +1069,35 @@ export async function fetchProficiencyEvidence(
     })
   );
 
-  // Conversation turns join the skill they are evidence for. A spoken turn is
-  // speaking evidence; a typed one is written-production evidence and joins
-  // the writing pool. They are kept apart because composing a sentence with a
-  // keyboard and time to think is a materially easier task than saying it out
-  // loud — pooling them would let a learner type their way to a speaking level.
+  // Conversation turns are their own strand now — `interaction` — rather than
+  // being split by modality into the speaking and writing pools.
+  //
+  // What that split cost. A typed turn used to be written-production evidence,
+  // which meant three chat messages satisfied the same band gate as three
+  // graded essays (`MIN_WRITING_ITEMS`); and a spoken turn pooled 1:1 with
+  // scored read-alouds, so a run of pronunciation attempts could stand in for
+  // ever having held a conversation. Both are the same mistake: spoken
+  // interaction is a different CEFR claim from spoken production and from
+  // written production, and pooling let one substitute for another.
+  //
+  // `speaking` is therefore pronunciation attempts alone, `writing` is graded
+  // submissions alone, and every conversation turn — chat or live tutor, typed
+  // or spoken — becomes interaction evidence. The session id is what lets the
+  // strand group turns into conversations; a row without one cannot be grouped
+  // and `interactionStrand` drops it.
   const conversationRows = (conversationRes.data ?? []) as Record<string, unknown>[];
-  for (const row of conversationRows) {
-    const score = combineConversationScore(
+  const interaction: InteractionTurnItem[] = conversationRows.map((row) => ({
+    cefrLevel: (row.cefr_level as string | null) ?? null,
+    sessionId:
+      (row.chat_session_id as string | null) ?? (row.tutor_session_id as string | null) ?? null,
+    day: localDayOf(row.created_at),
+    score: combineConversationScore(
       Number(row.accuracy ?? 0),
       row.intelligibility === null || row.intelligibility === undefined
         ? null
         : Number(row.intelligibility),
-    );
-    const cefrLevel = (row.cefr_level as string | null) ?? null;
-    if (row.modality === 'speaking') {
-      speaking.push({ cefrLevel, score });
-    } else {
-      writing.push({
-        cefrLevel,
-        overallScore: score,
-        wordCount: Number(row.word_count ?? 0),
-      });
-    }
-  }
+    ),
+  }));
 
   const statRows = (statsRes.data ?? []) as Record<string, unknown>[];
   const listeningMinutes = statRows.reduce(
@@ -1102,6 +1110,7 @@ export async function fetchProficiencyEvidence(
   );
 
   return {
+    interaction,
     vocabulary,
     reading,
     writing,
@@ -1111,8 +1120,32 @@ export async function fetchProficiencyEvidence(
     speakingMinutes,
     // One daily_stats row per active day, so the row count is the day count.
     activeDays: statRows.length,
-    totalReviews: reviewCountRes.count ?? 0,
+    // Conversation turns count as reviews for the confidence tier.
+    //
+    // Without this the whole weighting is inert for the learner it was built
+    // for: `assessConfidence` read `review_logs` alone, which is flashcard
+    // reviews, so someone who conversed daily and reviewed nothing sat at
+    // `confidence: 'none'` and `buildProficiencyReport` withheld their level
+    // entirely — no matter how high their band score climbed. Confidence is
+    // meant to measure how much evidence exists, and a scored conversation
+    // turn is evidence by exactly the same standard a card review is.
+    totalReviews: (reviewCountRes.count ?? 0) + interaction.length,
   };
+}
+
+/**
+ * The local calendar day of a timestamp, `YYYY-MM-DD`.
+ *
+ * Local rather than UTC on purpose: the interaction strand's day spread is a
+ * claim about how many days the learner practised on, and a learner west of
+ * UTC doing their evening session would otherwise have it counted as tomorrow,
+ * silently merging two days of practice into one.
+ */
+function localDayOf(value: unknown): string {
+  const date = typeof value === 'string' || value instanceof Date ? new Date(value) : new Date(NaN);
+  if (Number.isNaN(date.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
 // ─── Practice Sessions ──────────────────────────────────────────

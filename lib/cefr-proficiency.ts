@@ -20,16 +20,29 @@
  *     not zero.
  *  3. The report is an *estimate from practice history*, not a certification.
  *     Any UI rendering this must say so.
- *  4. A band is held only when EVERY scored strand holds it — vocabulary,
- *     reading, writing, listening and speaking. The overall level used to be
- *     the floor across whichever strands happened to be assessed, so a
- *     learner who only ever did vocabulary reviews was "A2" with nothing to
- *     show for reading, writing or speech, and Home's ring — which now blends
- *     all five strands — could not predict when the report would promote.
- *     Requiring all five makes the ring and the report the same claim:
- *     99% means one piece of work away. The cost is honesty's usual cost —
- *     a lessons-only learner reads "not yet assessed" with a list of what to
- *     go do — and the report says exactly which strands are missing.
+ *  4. A band is held when its WEIGHTED SCORE across six strands —
+ *     interaction, vocabulary, reading, writing, listening, speaking — reaches
+ *     `BAND_THRESHOLD`, and every rung beneath it does too.
+ *
+ *     This replaced a stricter rule: the band used to be held only when every
+ *     scored strand held it independently. That rule was more faithful to what
+ *     CEFR claims (a band is a conjunction of can-do statements, not a total)
+ *     and it is worth being clear that the change cost real rigour. It was
+ *     replaced because it made vocabulary a veto over the whole report —
+ *     vocabulary being the one strand with a calendar in it, since SM-2 needs
+ *     twenty-two days to graduate a card — so a learner who conversed daily
+ *     for a month saw no movement at all. The most expensive feature in the
+ *     app could not move the number that the app exists to produce.
+ *
+ *     Two guards keep the weighted rule from collapsing into "talk a lot":
+ *     `BAND_THRESHOLD` (0.70) sits above the largest single weight (0.55), so
+ *     no strand can carry a band alone; and `MIN_INTERACTION_DAYS` puts the
+ *     calendar back, in the strand that now carries the weight, rather than
+ *     letting it leave with the veto.
+ *
+ *     Home's ring draws the same per-band gates the score is built from, so
+ *     the ring and the report remain one claim: 99% means one piece of work
+ *     away.
  *  5. Evidence is scoped to ONE target language. The caller fetches per
  *     language (`fetchProficiencyEvidence(userId, targetLanguage)`); nothing
  *     here mixes Spanish cards into a French report.
@@ -96,7 +109,13 @@ export const CEFR_BAND_BY_LEVEL: Record<ProficiencyLevel, CefrBand> = {
 };
 
 
-export type SkillKey = 'vocabulary' | 'reading' | 'writing' | 'listening' | 'speaking';
+export type SkillKey =
+  | 'interaction'
+  | 'vocabulary'
+  | 'reading'
+  | 'writing'
+  | 'listening'
+  | 'speaking';
 
 /**
  * `placed` is the one status that is not a verdict on evidence. It marks a band
@@ -191,8 +210,101 @@ export const MIN_LISTENING_ITEMS = 10;
  */
 export const LISTENING_PASS_RATE = 0.7;
 
-/** The strands a band must be held in for the overall level to hold it. */
-export const SCORED_SKILLS: SkillKey[] = ['vocabulary', 'reading', 'writing', 'listening', 'speaking'];
+// ─── Interaction (live conversation) ────────────────────────────
+//
+// The strand that carries the majority of the weight. Its unit is a SESSION,
+// not a turn: per-turn evidence at ten items a band was priced for a strand
+// worth a fifth of the level, and at 0.55 the same gate clears in four days of
+// ordinary use. A session is also the honest unit — "I held twelve
+// conversations at B1" is the claim the band makes, not "I produced 120 turns".
+
+/**
+ * Scored turns a session needs before it counts as a unit at all.
+ *
+ * A session that produced four scoreable turns was a false start, not a
+ * conversation. `scoreTurn` has already thrown away everything under four
+ * words, so these are five real contributions.
+ */
+export const MIN_INTERACTION_TURNS_PER_UNIT = 5;
+
+/**
+ * Turns counted from any one session.
+ *
+ * Without a cap, one marathon session clears a band's whole volume gate — the
+ * exact failure the move from turns to sessions was meant to fix, reintroduced
+ * through the mean. Twelve is comfortably more than a good fifteen-minute
+ * session produces, so it only ever bites the outlier.
+ */
+export const MAX_INTERACTION_TURNS_COUNTED = 12;
+
+/** Qualifying sessions in a band before it informs the interaction level. */
+export const MIN_INTERACTION_UNITS = 12;
+
+/**
+ * Distinct days those sessions must span.
+ *
+ * The calendar term. Every other gate in this module can be cleared by a
+ * determined learner in a weekend, and vocabulary's twenty-two-day SM-2
+ * maturity wall used to be the only thing making a band mean elapsed time —
+ * a role it can no longer play now that it is 0.12 of the score and not a
+ * veto. Twelve days of conversation is a different claim from twelve
+ * conversations, and it is the one a band should rest on.
+ */
+export const MIN_INTERACTION_DAYS = 12;
+
+/** Mean turn score at which interaction in a band counts as solid. */
+export const INTERACTION_PASS_SCORE = 0.7;
+
+// ─── Weighting ──────────────────────────────────────────────────
+
+/**
+ * How much each strand contributes to a band's score.
+ *
+ * Live conversation carries the majority deliberately: it is the most
+ * expensive thing the app does, the closest proxy for what a learner actually
+ * wants to be able to do, and until `conversation_evidence` existed it moved
+ * the measured level by nothing at all.
+ *
+ * `speaking` is now pronunciation attempts alone — scored read-alouds against
+ * a known target. Conversation left it for `interaction`, because spoken
+ * production and spoken interaction are different CEFR claims and pooling them
+ * let a run of read-alouds stand in for ever having held a conversation.
+ *
+ * Must sum to 1. `weightsSumToOne` asserts it in the test suite rather than
+ * here, so a bad edit fails a test instead of throwing at runtime in a
+ * learner's report.
+ */
+export const STRAND_WEIGHTS: Record<SkillKey, number> = {
+  interaction: 0.55,
+  vocabulary: 0.12,
+  listening: 0.09,
+  reading: 0.08,
+  writing: 0.08,
+  speaking: 0.08,
+};
+
+/**
+ * The weighted score a band must reach to be held.
+ *
+ * Chosen against the interaction weight, and the gap between them is
+ * load-bearing. Interaction alone tops out at 0.55, so conversation — however
+ * much of it, however good — can never publish a band by itself; it needs
+ * roughly one other strand at half strength. That is what keeps "the majority
+ * of the weight" from becoming "the only evidence", and it is the reason not
+ * to quietly lower this to 0.55 later when a learner complains that their
+ * level is stuck.
+ */
+export const BAND_THRESHOLD = 0.7;
+
+/** The strands that contribute to a band's weighted score. */
+export const SCORED_SKILLS: SkillKey[] = [
+  'interaction',
+  'vocabulary',
+  'reading',
+  'writing',
+  'listening',
+  'speaking',
+];
 
 /** Evidence volume required for each confidence tier. */
 export const CONFIDENCE_TIERS = {
@@ -283,7 +395,31 @@ export interface ListeningEvidenceItem {
   correct: boolean;
 }
 
+/**
+ * One scored conversation turn, with what it takes to group turns into
+ * sessions. Grouping happens here rather than in the query layer so the unit
+ * rules — turns per session, the per-session cap, the day spread — are
+ * testable without a database.
+ */
+export interface InteractionTurnItem {
+  /** The band the conversation was held at. See `conversationCefrBand`. */
+  cefrLevel: string | null;
+  /**
+   * The session this turn came from. Turns with no session cannot be grouped
+   * and are dropped: before `chat_session_id` was stamped there was no way to
+   * tell one conversation from ten, and counting an ungrouped turn as its own
+   * session would rebuild exactly the per-turn gate this replaced.
+   */
+  sessionId: string | null;
+  /** Local calendar day, `YYYY-MM-DD`, for the spread requirement. */
+  day: string;
+  /** `combineConversationScore` of the stored components, 0–1. */
+  score: number;
+}
+
 export interface ProficiencyEvidence {
+  /** Scored conversation turns (migration 095), chat and live tutor alike. */
+  interaction: InteractionTurnItem[];
   vocabulary: VocabEvidenceItem[];
   reading: ReadingEvidenceItem[];
   writing: WritingEvidenceItem[];
@@ -345,6 +481,11 @@ export interface StrandBandStats {
   passed: number;
   /** Mean score / correctness rate over `total`. 0 when nothing counts yet. */
   mean: number;
+  /**
+   * Interaction only: distinct calendar days the qualifying sessions span.
+   * Absent for every other strand, which has no calendar term.
+   */
+  days?: number;
 }
 
 export interface StrandBreakdown {
@@ -352,19 +493,45 @@ export interface StrandBreakdown {
   bands: StrandBandStats[];
 }
 
+/** One strand's contribution to a band's weighted score. */
+export interface StrandContribution {
+  skill: SkillKey;
+  /** 0–1, how far this strand is toward holding the band. */
+  gate: number;
+  weight: number;
+  /** `gate * weight` — what this strand actually adds to the band score. */
+  contribution: number;
+}
+
+/** The full arithmetic behind one band's verdict, so the UI can show its work. */
+export interface BandScore {
+  band: CefrBand;
+  /** 0–1, the weighted sum. Held when `>= BAND_THRESHOLD`. */
+  score: number;
+  held: boolean;
+  strands: StrandContribution[];
+}
+
 export interface ProficiencyReport {
   overallLevel: CefrBand | null;
   confidence: Confidence;
   skills: SkillAssessment[];
   bands: BandBreakdown[];
-  /** Per-band evidence for the four non-vocabulary strands, ladder order. */
+  /** Per-band evidence for the five non-vocabulary strands, ladder order. */
   strands: StrandBreakdown[];
   /**
-   * Scored strands with no level yet. Empty when a level is published. This
-   * is what stands between the learner and their first (or next) band, so
-   * the UI names them rather than showing a bare "not yet assessed".
+   * Every band's weighted score and the per-strand contributions behind it,
+   * in ladder order. This is the arithmetic the level comes from, kept on the
+   * report so the UI can show its work rather than asserting a band.
    */
-  missingSkills: SkillKey[];
+  bandScores: BandScore[];
+  /**
+   * Strands with no evidence at all at `nextLevel` — where the cheapest
+   * remaining points are. Under the old all-strands rule this was the list of
+   * things withholding the level; nothing withholds it now, so this is
+   * guidance, not a gate.
+   */
+  unevidencedSkills: SkillKey[];
   /** The band above `overallLevel`, or null at C2 / when unassessed. */
   nextLevel: CefrBand | null;
   /**
@@ -798,6 +965,73 @@ export function speakingStrand(items: SpeakingEvidenceItem[]): StrandBreakdown {
   return finishStrand('speaking', m, true);
 }
 
+/**
+ * Group scored turns into session units, per band.
+ *
+ * Three rules, each answering a way the per-turn version could be gamed or
+ * misread:
+ *
+ *  - A session needs `MIN_INTERACTION_TURNS_PER_UNIT` scored turns to count at
+ *    all. Fewer is a false start, not a conversation.
+ *  - At most `MAX_INTERACTION_TURNS_COUNTED` turns from any one session feed
+ *    the mean, so a marathon session cannot swamp the average in either
+ *    direction. The turns kept are the first ones, which is the part of a
+ *    session a learner actually sustained rather than the tail where the
+ *    tutor is carrying it.
+ *  - `days` counts distinct calendar days across qualifying sessions, so the
+ *    band carries elapsed time and not just volume.
+ *
+ * A session held across midnight is attributed to the day of its first counted
+ * turn, which is the day the learner would say they practised.
+ */
+export function interactionStrand(turns: InteractionTurnItem[]): StrandBreakdown {
+  // band -> sessionId -> that session's turns, in the order they arrived.
+  const bySession = new Map<CefrBand, Map<string, { scores: number[]; day: string }>>();
+  CEFR_LADDER.forEach((band) => bySession.set(band, new Map()));
+
+  for (const turn of turns) {
+    const band = normalizeBand(turn.cefrLevel);
+    if (!band || !turn.sessionId) continue;
+    const sessions = bySession.get(band)!;
+    const existing = sessions.get(turn.sessionId);
+    if (existing) {
+      existing.scores.push(turn.score);
+    } else {
+      sessions.set(turn.sessionId, { scores: [turn.score], day: turn.day });
+    }
+  }
+
+  return {
+    skill: 'interaction',
+    bands: CEFR_LADDER.map((band) => {
+      const sessions = bySession.get(band)!;
+      const days = new Set<string>();
+      let units = 0;
+      let sum = 0;
+      let counted = 0;
+
+      for (const session of sessions.values()) {
+        if (session.scores.length < MIN_INTERACTION_TURNS_PER_UNIT) continue;
+        units += 1;
+        days.add(session.day);
+        for (const score of session.scores.slice(0, MAX_INTERACTION_TURNS_COUNTED)) {
+          sum += score;
+          counted += 1;
+        }
+      }
+
+      return {
+        band,
+        total: units,
+        // Interaction gates on the mean, as writing and speaking do.
+        passed: units,
+        mean: counted > 0 ? sum / counted : 0,
+        days: days.size,
+      };
+    }),
+  };
+}
+
 /** Graded listening exercises; `mean` is the first-attempt correctness rate. */
 export function listeningStrand(items: ListeningEvidenceItem[]): StrandBreakdown {
   const m = emptyStrandBands();
@@ -1057,6 +1291,185 @@ function assessSpeaking(
   };
 }
 
+/**
+ * Interaction level = highest band, without skipping a band, with enough
+ * qualifying sessions, spread over enough days, averaging at or above the pass
+ * score. Shaped like writing and speaking — the mean is over every counted
+ * turn in the band, failures included — so a learner cannot reach a level by
+ * having twelve good conversations among fifty bad ones.
+ *
+ * With no qualifying session at all we say `not_assessed` rather than
+ * `insufficient_data`, the same distinction speaking and listening draw: "we
+ * have never measured this" and "we have measured it and it is not yet enough"
+ * are different things.
+ */
+function assessInteraction(
+  strand: StrandBreakdown,
+  placementBand: CefrBand | null,
+): SkillAssessment {
+  const count = strand.bands.reduce((sum, b) => sum + b.total, 0);
+  if (count === 0) {
+    return {
+      skill: 'interaction',
+      level: null,
+      status: 'not_assessed',
+      detail: 'No conversations long enough to score yet.',
+      evidenceCount: 0,
+      assumedBands: [],
+    };
+  }
+
+  const { level, assumedBands } = highestContiguousBand(
+    strand.bands.map((b) => ({
+      band: b.band,
+      qualifies:
+        b.total >= MIN_INTERACTION_UNITS &&
+        (b.days ?? 0) >= MIN_INTERACTION_DAYS &&
+        b.mean >= INTERACTION_PASS_SCORE,
+      evidenced: b.total >= MIN_INTERACTION_UNITS,
+    })),
+    placementBand,
+  );
+
+  if (level) {
+    const at = strandBand(strand, level);
+    return {
+      skill: 'interaction',
+      level,
+      status: 'assessed',
+      detail:
+        `Held ${at.total} ${level} conversations across ${at.days ?? 0} days, averaging ${Math.round(at.mean * 100)}%.` +
+        assumedClause(assumedBands),
+      evidenceCount: count,
+      assumedBands,
+    };
+  }
+
+  return {
+    skill: 'interaction',
+    level: null,
+    status: 'insufficient_data',
+    detail:
+      `Hold ${MIN_INTERACTION_UNITS} conversations of ${MIN_INTERACTION_TURNS_PER_UNIT}+ turns ` +
+      `across ${MIN_INTERACTION_DAYS} days at each level from ${placementBand ?? 'A1'} up to be assessed.`,
+    evidenceCount: count,
+    assumedBands: [],
+  };
+}
+
+// ─── Per-band gates and the weighted score ──────────────────────
+//
+// One continuous 0–1 number per strand per band, and the weighted sum over
+// them. This is the whole of the level rule now: the old `overallFromSkills`
+// took the lowest of five strands and returned null unless every one of them
+// was assessed, which made vocabulary a veto over a learner's entire report.
+//
+// These gates are also what Home's ring draws, imported rather than
+// reimplemented, so the ring and the published level can never disagree about
+// how far along a band is.
+
+function clamp01(n: number): number {
+  if (!Number.isFinite(n)) return 0;
+  return Math.min(1, Math.max(0, n));
+}
+
+/**
+ * The three vocabulary conditions `analyzeBands` needs before a band is
+ * mastered, a third each: items seen, items matured, items retained.
+ */
+export function vocabularyGate(band: CefrBand, bands: readonly BandBreakdown[]): number {
+  const at = bands.find((b) => b.band === band);
+  if (!at) return 0;
+  const seenGate = clamp01(at.seen / MIN_ITEMS_PER_BAND);
+  const matureGate = clamp01(at.mature / MIN_MATURE_ITEMS_PER_BAND);
+  // Measured against the mature set, as the band rule is. Nothing mature yet
+  // means nothing can be retained yet.
+  const retainNeeded = Math.ceil(at.mature * MASTERY_RATE);
+  const retainGate = retainNeeded > 0 ? clamp01(at.retained / retainNeeded) : 0;
+  return (seenGate + matureGate + retainGate) / 3;
+}
+
+/**
+ * Volume and quality, half each, for the non-vocabulary strands.
+ *
+ * Two exceptions, both because the strand's band rule has a different shape:
+ *
+ *  - Reading counts passed pieces rather than a mean, so its gate is the
+ *    passed count alone. A piece that failed comprehension is not partial
+ *    progress toward "understood three texts".
+ *  - Interaction's volume half is the WORSE of its two volume conditions,
+ *    sessions and days. Taking the mean of them would let a learner who held
+ *    twelve conversations in one weekend read as three-quarters done on a
+ *    requirement whose whole point is elapsed time.
+ */
+export function strandGate(strand: StrandBreakdown | undefined, band: CefrBand): number {
+  if (!strand) return 0;
+  const at = strand.bands.find((b) => b.band === band);
+  if (!at || at.total === 0) return 0;
+  switch (strand.skill) {
+    case 'reading':
+      return clamp01(at.passed / MIN_READING_ITEMS);
+    case 'writing':
+      return 0.5 * clamp01(at.total / MIN_WRITING_ITEMS) + 0.5 * clamp01(at.mean / WRITING_PASS_SCORE);
+    case 'speaking':
+      return 0.5 * clamp01(at.total / MIN_SPEAKING_ITEMS) + 0.5 * clamp01(at.mean / SPEAKING_PASS_SCORE);
+    case 'listening':
+      return 0.5 * clamp01(at.total / MIN_LISTENING_ITEMS) + 0.5 * clamp01(at.mean / LISTENING_PASS_RATE);
+    case 'interaction': {
+      const volume = Math.min(
+        clamp01(at.total / MIN_INTERACTION_UNITS),
+        clamp01((at.days ?? 0) / MIN_INTERACTION_DAYS),
+      );
+      return 0.5 * volume + 0.5 * clamp01(at.mean / INTERACTION_PASS_SCORE);
+    }
+  }
+}
+
+/** Everything the band score is computed from. */
+export interface BandScoreInputs {
+  bands: BandBreakdown[];
+  strands: StrandBreakdown[];
+}
+
+/**
+ * The weighted score for one band, with every strand's contribution kept so
+ * the report can explain the number instead of asserting it.
+ *
+ * A strand already assessed at or above `band` contributes its full weight
+ * regardless of the raw gate: finished work must never read as unfinished, and
+ * the contiguity walk means a strand assessed at B2 has already satisfied B1.
+ */
+export function scoreBand(
+  band: CefrBand,
+  inputs: BandScoreInputs,
+  skills: SkillAssessment[] = [],
+): BandScore {
+  const strands: StrandContribution[] = SCORED_SKILLS.map((skill) => {
+    const weight = STRAND_WEIGHTS[skill];
+    const gate = skillHolds(skills, skill, band)
+      ? 1
+      : skill === 'vocabulary'
+        ? vocabularyGate(band, inputs.bands)
+        : strandGate(
+            inputs.strands.find((s) => s.skill === skill),
+            band,
+          );
+    const clamped = clamp01(gate);
+    return { skill, gate: clamped, weight, contribution: clamped * weight };
+  });
+
+  const score = strands.reduce((sum, s) => sum + s.contribution, 0);
+  return { band, score, held: score >= BAND_THRESHOLD, strands };
+}
+
+/** Every band's score, in ladder order. */
+export function scoreBands(
+  inputs: BandScoreInputs,
+  skills: SkillAssessment[] = [],
+): BandScore[] {
+  return CEFR_LADDER.map((band) => scoreBand(band, inputs, skills));
+}
+
 // ─── Confidence ─────────────────────────────────────────────────
 
 /**
@@ -1089,32 +1502,66 @@ export function assessConfidence(totalReviews: number, activeDays: number): Conf
 // ─── Overall level ──────────────────────────────────────────────
 
 /**
- * Overall level is the *lowest* assessed strand, and it exists only when
- * EVERY scored strand is assessed. CEFR describes what a learner can reliably
- * do; a person who reads B2 but cannot produce past A2 is not a B2 speaker,
- * and a person whose speaking has never been measured is not yet anything the
- * report can vouch for. Taking the floor over all five is the conservative
- * reading and the one a real examiner would defend — and it is the rule that
- * makes Home's five-strand ring an honest prediction of promotion.
+ * Overall level = the highest band whose weighted score clears
+ * `BAND_THRESHOLD`, without skipping a band.
+ *
+ * ── What this replaced, and what was given up ──
+ *
+ * This used to be the *lowest* assessed strand, published only when EVERY
+ * scored strand was assessed. That rule was the conservative one and it had a
+ * real virtue: a band meant the learner could do all five things, which is
+ * what CEFR actually claims. It also had two costs that decided against it.
+ *
+ * First, it made vocabulary a veto rather than a weight. Vocabulary is the
+ * only strand fed passively by daily lessons and the only one with a calendar
+ * in it (SM-2 needs twenty-two days to graduate a card), so in practice the
+ * measured level moved at the pace of flashcards no matter what else the
+ * learner did. Second, and worse for this product: a learner could talk to the
+ * tutor every day for a month and the number would not move, because
+ * conversation fed the speaking pool that vocabulary was already vetoing.
+ *
+ * The weighted blend is COMPENSATORY and the old rule was not. That is a real
+ * loss of rigour — strength in conversation can now offset thin reading — and
+ * it is why `BAND_THRESHOLD` sits above the interaction weight: no single
+ * strand, conversation included, can carry a band alone. It is also why the
+ * calendar term moved into `MIN_INTERACTION_DAYS` rather than being dropped
+ * with the veto.
+ *
+ * Contiguity survives the change and is doing more work than before. A band is
+ * held only if every rung beneath it is too, so a burst of hard material
+ * cannot print a level with nothing under it — the failure
+ * `highestContiguousBand` has always existed to stop.
  */
-export function overallFromSkills(skills: SkillAssessment[]): CefrBand | null {
-  const byKey = new Map(skills.map((s) => [s.skill, s]));
-  let lowest: CefrBand | null = null;
-  for (const key of SCORED_SKILLS) {
-    const skill = byKey.get(key);
-    if (!skill || skill.status !== 'assessed' || !skill.level) return null;
-    if (!lowest || bandIndex(skill.level) < bandIndex(lowest)) lowest = skill.level;
-  }
-  return lowest;
+export function overallFromBands(
+  scores: BandScore[],
+  placementBand: CefrBand | null = null,
+): { level: CefrBand | null; assumedBands: CefrBand[] } {
+  return highestContiguousBand(
+    scores.map((s) => ({
+      band: s.band,
+      qualifies: s.held,
+      // A band nobody has touched is not evidence against the learner, it is
+      // absence of evidence — which is what `placed` is for. Any contribution
+      // at all makes the band evidenced and therefore judged on its score.
+      evidenced: s.strands.some((strand) => strand.gate > 0),
+    })),
+    placementBand,
+  );
 }
 
-/** Scored strands that do not hold a level, in ladder order of the UI's rows. */
-export function missingSkills(skills: SkillAssessment[]): SkillKey[] {
-  const byKey = new Map(skills.map((s) => [s.skill, s]));
-  return SCORED_SKILLS.filter((key) => {
-    const skill = byKey.get(key);
-    return !skill || skill.status !== 'assessed' || !skill.level;
-  });
+/**
+ * Strands contributing nothing at the band the learner is working toward, in
+ * the UI's row order.
+ *
+ * Under the old AND-gate this listed the strands standing between the learner
+ * and a level, because any one of them could withhold it. Nothing withholds a
+ * level now — the score is a sum — so this is the weaker, honest claim: these
+ * are the strands with no evidence at `target`, which is where the cheapest
+ * remaining points are.
+ */
+export function unevidencedSkills(score: BandScore | undefined): SkillKey[] {
+  if (!score) return [...SCORED_SKILLS];
+  return score.strands.filter((s) => s.gate <= 0).map((s) => s.skill);
 }
 
 // ─── Next level ─────────────────────────────────────────────────
@@ -1159,11 +1606,22 @@ export function nextLevelRequirement(
   if (!target) return { nextLevel: null, requirement: null, steps: [] };
 
   const steps: string[] = [];
+
+  // Conversation leads, because it is 0.55 of the score: it is where the work
+  // pays best, and a requirement list that opened with flashcards would be
+  // telling the learner to spend their fifteen minutes on the cheapest strand
+  // in the model.
+  const interaction = inputs?.strands.find((s) => s.skill === 'interaction');
+  if (inputs && interaction && !skillHolds(inputs.skills, 'interaction', target)) {
+    steps.push(strandStep(interaction, target));
+  }
+
   const vocabDone = inputs ? skillHolds(inputs.skills, 'vocabulary', target) : false;
   if (!vocabDone) steps.push(vocabularyStep(target, bands));
 
   if (inputs) {
     for (const strand of inputs.strands) {
+      if (strand.skill === 'interaction') continue;
       if (skillHolds(inputs.skills, strand.skill, target)) continue;
       steps.push(strandStep(strand, target));
     }
@@ -1253,6 +1711,24 @@ function strandStep(strand: StrandBreakdown, target: CefrBand): string {
       }
       return `Listening: get your ${target} first-try accuracy to ${Math.round(LISTENING_PASS_RATE * 100)}% (now ${pct}%).`;
     }
+    case 'interaction': {
+      // Sessions and days are separate asks and a learner short of both needs
+      // to be told both — "hold 4 more conversations" is actively misleading
+      // when the real constraint is that they all happened this weekend.
+      const sessionsShort = Math.max(0, MIN_INTERACTION_UNITS - at.total);
+      const daysShort = Math.max(0, MIN_INTERACTION_DAYS - (at.days ?? 0));
+      if (sessionsShort > 0 || daysShort > 0) {
+        const parts: string[] = [];
+        if (sessionsShort > 0) {
+          parts.push(
+            `${plural(sessionsShort, `more ${target} conversation`)} of ${MIN_INTERACTION_TURNS_PER_UNIT}+ turns`,
+          );
+        }
+        if (daysShort > 0) parts.push(`${plural(daysShort, 'more day')} of practice`);
+        return `Conversation: ${parts.join(', and ')} (${at.total}/${MIN_INTERACTION_UNITS} conversations across ${at.days ?? 0}/${MIN_INTERACTION_DAYS} days).`;
+      }
+      return `Conversation: lift your ${target} average to ${Math.round(INTERACTION_PASS_SCORE * 100)}% (now ${pct}%).`;
+    }
   }
 }
 
@@ -1291,14 +1767,16 @@ export function buildProficiencyReport(
   const bands = analyzeBands(evidence.vocabulary, placementBand);
 
   const strands: StrandBreakdown[] = [
+    interactionStrand(evidence.interaction),
     readingStrand(evidence.reading),
     writingStrand(evidence.writing),
     listeningStrand(evidence.listening),
     speakingStrand(evidence.speaking),
   ];
-  const [readingS, writingS, listeningS, speakingS] = strands;
+  const [interactionS, readingS, writingS, listeningS, speakingS] = strands;
 
   const skills: SkillAssessment[] = [
+    assessInteraction(interactionS, placementBand),
     assessVocabulary(bands, placementBand),
     assessReading(readingS, evidence.reading.filter((i) => i.completed).length, placementBand),
     assessWriting(writingS, placementBand),
@@ -1307,10 +1785,15 @@ export function buildProficiencyReport(
   ];
 
   const confidence = assessConfidence(evidence.totalReviews, evidence.activeDays);
+  const bandScores = scoreBands({ bands, strands }, skills);
 
   // With no meaningful evidence we withhold the level entirely rather than
   // publish a number the learner would be right not to trust.
-  const overallLevel = confidence === 'none' ? null : overallFromSkills(skills);
+  const blended =
+    confidence === 'none'
+      ? { level: null, assumedBands: [] as CefrBand[] }
+      : overallFromBands(bandScores, placementBand);
+  const overallLevel = blended.level;
 
   const { nextLevel, requirement, steps } = nextLevelRequirement(overallLevel, bands, placementBand, {
     strands,
@@ -1319,14 +1802,25 @@ export function buildProficiencyReport(
     activeDays: evidence.activeDays,
   });
 
-  // Only rungs under the level actually published count as its basis. A skill
-  // that assumed A2 on its way to B2 contributes nothing when the overall level
-  // is the A1 another skill pinned it to.
+  // Placement disclosure has two sources and needs both.
+  //
+  // The band walk reports rungs IT stepped over — bands with no contribution
+  // from any strand, below the placement band. But a strand assessed at B1 is
+  // credited at full weight for A1 and A2 (finished work must not read as
+  // unfinished), which makes those rungs "evidenced" as far as the walk can
+  // see, even when the strand itself only reached B1 by assuming them. Reading
+  // the walk alone would therefore drop the disclosure precisely for the
+  // placed learner it exists to protect — the one whose level genuinely rests
+  // on rungs nobody measured.
+  //
+  // So: rungs under the published level that either the walk assumed, or an
+  // assessed strand assumed on its own way up.
   const assumedBands = overallLevel
     ? CEFR_LADDER.filter(
         (band) =>
           bandIndex(band) < bandIndex(overallLevel) &&
-          skills.some((s) => s.status === 'assessed' && s.assumedBands.includes(band)),
+          (blended.assumedBands.includes(band) ||
+            skills.some((s) => s.status === 'assessed' && s.assumedBands.includes(band))),
       )
     : [];
 
@@ -1336,7 +1830,8 @@ export function buildProficiencyReport(
     skills,
     bands,
     strands,
-    missingSkills: overallLevel ? [] : missingSkills(skills),
+    bandScores,
+    unevidencedSkills: unevidencedSkills(bandScores.find((s) => s.band === nextLevel)),
     nextLevel,
     nextLevelRequirement: requirement,
     nextLevelSteps: steps,

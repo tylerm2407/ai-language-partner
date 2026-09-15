@@ -429,6 +429,12 @@ export async function writeBackTutorSession(
     // refusal is the point and must not be worked around here: a live session
     // is full of "sí" and "vale", and a level built partly out of those is a
     // level that says something untrue about the learner.
+    //
+    // `tutorSessionId` is what makes these turns groupable. The interaction
+    // strand's unit is a conversation, not a turn, so an evidence row with no
+    // session reference cannot be counted at all — before migration 131 added
+    // the column, every voice turn written here was destined to be dropped by
+    // the strand that weights conversation most heavily.
     const wrote = await recordConversationEvidence(supabase, {
       userId: input.userId,
       targetLanguage: input.targetLanguage,
@@ -437,6 +443,7 @@ export async function writeBackTutorSession(
       text: turn.learnerText,
       correction,
       recognizerConfidence: turn.recognizerConfidence,
+      tutorSessionId: input.sessionId,
       fn: FN,
     });
     if (wrote) evidenceRows += 1;
