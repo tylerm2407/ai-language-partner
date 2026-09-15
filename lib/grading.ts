@@ -5,6 +5,7 @@
 
 import type { FeedbackErrorType, ExerciseType, SkillType, ReviewRating, LanguageCode } from '../types';
 import { isConfusablePair } from './confusable-pairs';
+import { simplifyChinese } from './zh-simplify';
 
 export interface GradeResult {
   isCorrect: boolean;
@@ -120,8 +121,8 @@ export function classifyError(
   correctAnswer: string,
   hints: ExerciseHints = {}
 ): FeedbackErrorType | null {
-  const normalizedUser = normalize(userAnswer);
-  const normalizedCorrect = normalize(correctAnswer);
+  const normalizedUser = normalize(userAnswer, hints.language);
+  const normalizedCorrect = normalize(correctAnswer, hints.language);
 
   // Phonological errors only come from speaking exercises (whose output is
   // the transcription from STT graded via gradeSpeechTranscription).
@@ -223,9 +224,9 @@ export function gradeAnswer(
   acceptedAnswers: string[] = [],
   options?: { strict?: boolean; exerciseHints?: ExerciseHints }
 ): GradeResult {
-  const normalized = normalize(userAnswer);
-  const normalizedCorrect = normalize(correctAnswer);
   const hints = options?.exerciseHints;
+  const normalized = normalize(userAnswer, hints?.language);
+  const normalizedCorrect = normalize(correctAnswer, hints?.language);
 
   /**
    * Fill-blank rows are judged as the completed word.
@@ -250,8 +251,8 @@ export function gradeAnswer(
    */
   const completeWord = (text: string): string => {
     const blank = hints?.blankContext;
-    if (!blank || (!blank.prefix && !blank.suffix)) return normalize(text);
-    return normalize(`${blank.prefix}${text}${blank.suffix}`);
+    if (!blank || (!blank.prefix && !blank.suffix)) return normalize(text, hints?.language);
+    return normalize(`${blank.prefix}${text}${blank.suffix}`, hints?.language);
   };
   const withoutSpaces = (text: string) => text.replace(/\s+/g, '');
   const completedAccepted = [correctAnswer, ...acceptedAnswers].map(completeWord);
@@ -267,7 +268,10 @@ export function gradeAnswer(
     hints?.blankContext !== undefined &&
     completedAccepted.some((accepted) => withoutSpaces(accepted) === withoutSpaces(normalized));
 
-  const allAccepted = [normalizedCorrect, ...acceptedAnswers.map(normalize)];
+  const allAccepted = [
+    normalizedCorrect,
+    ...acceptedAnswers.map((accepted) => normalize(accepted, hints?.language)),
+  ];
 
   /**
    * Another taught key is never a typo of this one.
@@ -285,7 +289,7 @@ export function gradeAnswer(
   ]);
   const siblingKeys = new Set(
     (hints?.siblingKeys ?? [])
-      .map(normalize)
+      .map((key) => normalize(key, hints?.language))
       .filter(
         (key) =>
           key !== '' &&
@@ -691,9 +695,20 @@ export function gradeAnswer(
  * normalize quotes, strip trailing punctuation. Accent folding is handled
  * separately by `stripDiacritics` in the comparison path, so accented and
  * unaccented forms can be told apart for feedback.
+ *
+ * With `language` set to `zh`, traditional characters fold to simplified
+ * first. A learner writing 學校 for the stored 学校 is not making a typing
+ * error — they are writing the same word in the other script — and there was
+ * no policy at all before: the same substitution hard-failed on a
+ * two-character key and passed on a seven-character one as "Correct! (Minor
+ * typo)", telling a learner their correct answer was a mistake. The fold
+ * belongs HERE rather than in the tolerance path because 221 of the 692
+ * affected rows are strict-graded and never reach tolerance. See
+ * lib/zh-simplify.ts for the table and its provenance.
  */
-export function normalize(text: string): string {
-  return text
+export function normalize(text: string, language?: LanguageCode): string {
+  const scripted = language === 'zh' ? simplifyChinese(text) : text;
+  return scripted
     .normalize('NFC')
     .trim()
     .toLowerCase()
@@ -769,7 +784,12 @@ export function gradeSpeechTranscription(
 ): SpeechGradeResult {
   const normalizedTranscription = normalize(transcription);
   const normalizedExpected = normalize(expectedText);
-  const allVariants = [normalizedExpected, ...acceptedVariants.map(normalize)];
+  // Wrapped rather than passed by reference: `normalize` takes an optional
+  // language second argument, and `map` would hand it the array index.
+  // Speech has no language hint to give it — the transcription arrives from
+  // STT already in the target script — so traditional input is not folded on
+  // this path.
+  const allVariants = [normalizedExpected, ...acceptedVariants.map((v) => normalize(v))];
 
   // Find the best similarity across expected text and all accepted variants
   let bestSimilarity = 0;

@@ -587,3 +587,41 @@ describe('edit distance is not a model for Han script', () => {
       .toBe(true);
   });
 });
+
+describe('traditional Chinese input is the same answer, not a typo', () => {
+  it('accepts a traditional spelling of a short key', () => {
+    // 學校 for the stored 学校. Two characters, so the typo budget is zero and
+    // this was a hard fail — while the identical substitution on a longer key
+    // passed as "Correct! (Minor typo)", telling the learner their correct
+    // answer was a mistake.
+    const result = gradeAnswer('學校', '学校', [], { exerciseHints: { language: 'zh' } });
+    expect(result.isCorrect).toBe(true);
+    expect(result.feedback).toBe('Correct!');
+  });
+
+  it('accepts it on a strict-graded row too', () => {
+    // 221 of the affected rows are grammar rows, which return before the
+    // tolerance path is ever reached — which is why the fold sits in
+    // normalize() rather than beside the typo budget.
+    const result = gradeAnswer('我們在學習中文', '我们在学习中文', [], {
+      exerciseHints: { language: 'zh', targetGrammar: 'progressive_zai' },
+    });
+    expect(result.isCorrect).toBe(true);
+  });
+
+  it('still refuses a different Chinese word', () => {
+    expect(gradeAnswer('学生', '学校', [], { exerciseHints: { language: 'zh' } }).isCorrect)
+      .toBe(false);
+  });
+
+  it('leaves Japanese kanji alone', () => {
+    // Japanese uses its own forms; folding them would compare two scripts the
+    // course never asked for. 發音 is not the Japanese spelling of 発音.
+    expect(gradeAnswer('發音', '発音', [], { exerciseHints: { language: 'ja' } }).isCorrect)
+      .toBe(false);
+  });
+
+  it('folds nothing when the caller names no language', () => {
+    expect(gradeAnswer('學校', '学校', []).isCorrect).toBe(false);
+  });
+});
