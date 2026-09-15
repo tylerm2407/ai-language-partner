@@ -12,6 +12,7 @@ import { loadCandidates, REGISTER_RULING, REGISTER_REMOVALS, REGISTER_KEPT, FR_C
 import { loadAlternativesEvidence, SCRIPT_ACCEPT, SCRIPT_REFUSE, HELD_TYPO_BALL, GATE_DEPENDENT_COMPARATIVES, EVIDENCE_SHA } from './restored-withdrawals.mjs';
 import { LEVELLED, PROPAGATION_LEVELLED } from './same-gloss-levelling.mjs';
 import { AXIS_REMAINDER, AXIS_REFUSED, AXIS_HELD } from './alternatives-axis-remainder.mjs';
+import { WUERDE_EDITS, WUERDE_LEFT_WRONG } from './wuerde-capitalisation.mjs';
 
 const draft = JSON.parse(await readFile('docs/audits/question-verification/round2/draft-patches.json', 'utf8'));
 const { patches } = draft;
@@ -154,11 +155,13 @@ test('the compiler refuses speaking rows, unknown ids and fields, and contradict
 test('the build is reproducible: a second compile emits byte-identical patches', async () => {
   const [{ productiveParadigmFixes }, { filmTheaterFixes }, { idiomaticEquivalentsRetitle },
     { triageAcceptedAnswers }, { productRulings, frenchCheckpointParaphrase, registerRemovals },
-    { createAcceptedAnswerLedger }, { restoredWithdrawals }, { sameGlossLevelling }, { alternativesAxisRemainder }] = await Promise.all([
+    { createAcceptedAnswerLedger }, { restoredWithdrawals }, { sameGlossLevelling }, { alternativesAxisRemainder },
+    { wuerdeCapitalisation }] = await Promise.all([
     import('./productive-paradigm-fixes.mjs'), import('./film-theater-fixes.mjs'),
     import('./idiomatic-equivalents-retitle.mjs'), import('./triage-accepted-answers.mjs'),
     import('./product-rulings.mjs'), import('./accepted-answer-ledger.mjs'), import('./restored-withdrawals.mjs'),
     import('./same-gloss-levelling.mjs'), import('./alternatives-axis-remainder.mjs'),
+    import('./wuerde-capitalisation.mjs'),
   ]);
   const rebuild = async () => {
     const set = await createRound2PatchSet();
@@ -169,6 +172,7 @@ test('the build is reproducible: a second compile emits byte-identical patches',
     await restoredWithdrawals(set, ledger);
     sameGlossLevelling(set, ledger);
     alternativesAxisRemainder(set, ledger);
+    wuerdeCapitalisation(set);
     frenchCheckpointParaphrase(set);
     registerRemovals(set);
     ledger.write(set);
@@ -244,7 +248,9 @@ test('the rollback writes back only the fields the patch wrote, never the identi
 /** Scope assertions: what this patch is allowed to touch, stated as tests so a
  * future producer cannot widen it without saying so. */
 test('the patch stays inside its declared scope', () => {
-  assert.deepEqual([...new Set(patches.map(p => p.table))].sort(), ['checkpoint_items', 'exercises', 'lessons']);
+  assert.deepEqual([...new Set(patches.map(p => p.table))].sort(), ['cards', 'checkpoint_items', 'exercises', 'lessons']);
+  const cardFields = new Set(patches.filter(p => p.table === 'cards').flatMap(p => Object.keys(p.after)));
+  assert.deepEqual([...cardFields], ['target_text'], 'the only card edit is the Würde capitalisation');
   const checkpointFields = new Set(patches.filter(p => p.table === 'checkpoint_items').flatMap(p => Object.keys(p.after)));
   assert.deepEqual([...checkpointFields], ['accepted_answers']);
   const exerciseFields = new Set(patches.filter(p => p.table === 'exercises').flatMap(p => Object.keys(p.after)));
@@ -323,8 +329,9 @@ test('Film & Theater stops teaching Painting and Sculpture in all six remaining 
   const courses = new Map(snapshot.courses.map(c => [c.id, c]));
   const ledgerIds = new Set([...triage.map(entry => entry.exercise_id), ...candidates.map(entry => entry.exercise_id),
     ...REGISTER_REMOVALS.map(entry => entry.id), ...withdrawalIds, ...LEVELLED.map(([id]) => id), ...PROPAGATION_LEVELLED.map(([id]) => id), ...AXIS_REMAINDER.map(([id]) => id)]);
+  const wuerdeIds = new Set(WUERDE_EDITS.map(([id]) => id));
   const touched = patches.filter(p => p.table === 'exercises'
-    && !Object.hasOwn(p.after, 'target_grammar') && !ledgerIds.has(p.id));
+    && !Object.hasOwn(p.after, 'target_grammar') && !ledgerIds.has(p.id) && !wuerdeIds.has(p.id));
   assert.equal(touched.length, 24, 'four rows in each of six languages');
   const languages = new Set();
   for (const patch of touched) {
@@ -620,8 +627,38 @@ test('the alternatives-axis remainder adds only what was adjudicated, and refuse
   passedChecks++;
 });
 
+test('the Würde correction changes capitalisation only, and says so in the reason', () => {
+  const byId = new Map([...snapshot.exercises, ...snapshot.cards].map(e => [e.id, e]));
+  assert.equal(WUERDE_EDITS.length, 7);
+  for (const [id, table, field, before, after] of WUERDE_EDITS) {
+    assert.equal(byId.get(id)[field], before, `${id}.${field}: frozen value moved`);
+    assert.equal(before.toLowerCase(), after.toLowerCase(), `${id}.${field}: more than capitalisation changed`);
+    const patch = patches.find(p => p.id === id && p.table === table);
+    assert(patch, `${id}: not in the patch`);
+    assert.equal(patch.after[field], after);
+    // Anyone reading the diff will assume the gloss was wrong; the reason must
+    // say otherwise on the row itself, not only in findings.json.
+    const reason = patch.reasons.join(' ');
+    assert(reason.includes('correction is to the KEY, not to the gloss'), `${id}: the reason does not invert the obvious reading`);
+  }
+  // Exactly five rows, one of them the card, and no gloss anywhere is touched.
+  const touched = patches.filter(p => WUERDE_EDITS.some(([id, table]) => id === p.id && table === p.table));
+  assert.equal(touched.length, 5);
+  assert.equal(touched.filter(p => p.table === 'cards').length, 1);
+  for (const patch of touched) {
+    for (const value of Object.values(patch.after)) assert(!/dignity/i.test(String(value)));
+  }
+  // The speaking row is still there and still wrong, on purpose.
+  const spoken = snapshot.exercises.find(e => e.id === WUERDE_LEFT_WRONG.id);
+  assert.equal(spoken.type, 'speaking');
+  assert.equal(spoken.correct_answer, 'Würde');
+  assert(!patches.some(p => p.id === WUERDE_LEFT_WRONG.id), 'the speaking row must not be patched');
+  assert.ok(WUERDE_LEFT_WRONG.why.trim().length > 120, 'the row left wrong needs its reason recorded');
+  passedChecks++;
+});
+
 test('write a truthful local verification record after the assertions', async () => {
-  assert.equal(passedChecks, 25, 'never write a successful verification record when an earlier check failed');
+  assert.equal(passedChecks, 26, 'never write a successful verification record when an earlier check failed');
   await writeFile('docs/audits/question-verification/round2/local-sql-tests.json', JSON.stringify({
     engine: 'PGlite (in-memory PostgreSQL)',
     round: 2,
@@ -643,7 +680,8 @@ test('write a truthful local verification record after the assertions', async ()
       'ruling 3 adds the one held French paraphrase',
       'the two register removals withdraw exactly what was argued and nothing else loses an accepted answer',
       'both withdrawal lists recovered exactly, disjoint from round two, every candidate adjudicated',
-      'the alternatives-axis remainder adds only what was adjudicated and refuses the source-language leaks'],
+      'the alternatives-axis remainder adds only what was adjudicated and refuses the source-language leaks',
+      'the Würde correction changes capitalisation only and names the key as the error'],
     production_writes: 0,
     limitations: ['Minimal typed content schema, not full Supabase auth/RLS/triggers or historical migrations',
       'Does not establish linguistic correctness or independent round-2 approval',

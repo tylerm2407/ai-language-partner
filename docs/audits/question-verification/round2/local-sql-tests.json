@@ -2,11 +2,12 @@
   "engine": "PGlite (in-memory PostgreSQL)",
   "round": 2,
   "snapshot_sha256": "9a20145dc6b53d1e4b5f17388b3f24c4ee4dd43c19b9bdac935ba8256bfb489c",
-  "sql_sha256": "c39e70b20d76e1028a19e52f59a2fcdfe62fe10045709180cd41cce9e6a01f91",
-  "reverse_sql_sha256": "447d3830d44e12363885098939319be0f8b9f1af23ba23a42aaa884a44caaffd",
-  "patch_rows": 812,
-  "changed_fields": 897,
+  "sql_sha256": "1f6f407fdae408500ef63b8d641070dc96d81a6c743c57aa4661a4ab79081a8c",
+  "reverse_sql_sha256": "200309df28892b93baa5c7dcbe8ddf870cd0c02daf68ac032fd2ac0559b3deee",
+  "patch_rows": 817,
+  "changed_fields": 904,
   "tables": [
+    "cards",
     "checkpoint_items",
     "exercises",
     "lessons"
@@ -38,7 +39,8 @@
     "ruling 3 adds the one held French paraphrase",
     "the two register removals withdraw exactly what was argued and nothing else loses an accepted answer",
     "both withdrawal lists recovered exactly, disjoint from round two, every candidate adjudicated",
-    "the alternatives-axis remainder adds only what was adjudicated and refuses the source-language leaks"
+    "the alternatives-axis remainder adds only what was adjudicated and refuses the source-language leaks",
+    "the Würde correction changes capitalisation only and names the key as the error"
   ],
   "production_writes": 0,
   "limitations": [
