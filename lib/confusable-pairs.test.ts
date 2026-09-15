@@ -358,8 +358,14 @@ describe('the second Korean confusable batch', () => {
     });
 
     test('하다 / 한다 — one verb in two forms, not two words', () => {
+      // Still not a pair: the list names two different words, and these are one
+      // verb. What changed on 2026-09-15 is the grader, not the list — a
+      // difference of inflectional ending is now never a typo (see the Korean
+      // ending rule in lib/grading.ts), so the row no longer credits a form it
+      // did not ask for. This also settles the standing ko-E0218 question
+      // without reclassifying that row as a grammar exercise.
       expect(isConfusablePair('하다', '한다', 'ko')).toBe(false);
-      expect(gradeAnswer('한다', '하다', [], ko).isCorrect).toBe(true);
+      expect(gradeAnswer('한다', '하다', [], ko).isCorrect).toBe(false);
     });
 
     test('씻다 / 씨다 — 씨다 is not a word, so typing it is a real typo', () => {
@@ -424,5 +430,45 @@ describe('a candidate differing only by a leading negator is refused', () => {
 
   test('an ordinary typo on an affirmative key is untouched', () => {
     expect(gradeAnswer('To fir', 'To fire', [], hints('es')).isCorrect).toBe(true);
+  });
+});
+
+/**
+ * The お〜さん honorific frame, added 2026-09-15 after round-2 triage.
+ *
+ * Two findings, one family. Adding the kanji spellings of おばあさん and
+ * おじいさん — which the transcription patch must do — brings five other taught
+ * kinship terms inside the typo budget on the four rows that exist to tell them
+ * apart. And before any addition, the kana keys already accept each other.
+ */
+describe('the お〜さん kinship frame', () => {
+  const ja = { exerciseHints: { exerciseType: 'listening_type' as const, language: 'ja' as const } };
+
+  it('refuses the neighbouring kana kinship term, which fires today', () => {
+    // Measured across all taught Japanese strings: 23 acceptances on 12 rows,
+    // with no addition involved.
+    expect(gradeAnswer('おばさん', 'おばあさん', [], ja).isCorrect).toBe(false);
+    expect(gradeAnswer('おばあさん', 'おばさん', [], ja).isCorrect).toBe(false);
+    expect(gradeAnswer('おじさん', 'おじいさん', [], ja).isCorrect).toBe(false);
+    expect(gradeAnswer('おじいさん', 'おじさん', [], ja).isCorrect).toBe(false);
+  });
+
+  it('holds the kanji spellings apart in the list itself', () => {
+    // These fire only if Japanese fuzzy tolerance is ever ungated — the kanji
+    // gate in lib/grading.ts refuses them first today. The list is what stands
+    // between these rows and a silent regression if that gate is relaxed, so
+    // it is asserted directly rather than through the grader.
+    expect(isConfusablePair('お母さん', 'お祖母さん', 'ja')).toBe(true);
+    expect(isConfusablePair('お父さん', 'お祖父さん', 'ja')).toBe(true);
+    expect(isConfusablePair('お父さん', '叔父さん', 'ja')).toBe(true);
+    expect(isConfusablePair('お母さん', '叔母さん', 'ja')).toBe(true);
+    expect(isConfusablePair('お姉さん', 'お婆さん', 'ja')).toBe(true);
+    expect(isConfusablePair('お隣さん', 'お爺さん', 'ja')).toBe(true);
+  });
+
+  it('refuses a presentation for a present', () => {
+    // Also found by the whole-language check, and live in both directions.
+    expect(gradeAnswer('プレゼント', 'プレゼン', [], ja).isCorrect).toBe(false);
+    expect(gradeAnswer('プレゼン', 'プレゼント', [], ja).isCorrect).toBe(false);
   });
 });
