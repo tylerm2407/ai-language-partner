@@ -15,7 +15,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { SNAPSHOT_FILE, SNAPSHOT_SHA, createRound2PatchSet } from './patch-set-round2.mjs';
 import { loadTriage, DEPENDENT_ROWS, PARTIALLY_HELD, TRIAGE_SHA, TRIAGE_SOURCE } from './triage-accepted-answers.mjs';
-import { loadCandidates, REGISTER_RULING, FR_C0024, CANDIDATES_SHA, RULED_ON } from './product-rulings.mjs';
+import { loadCandidates, REGISTER_RULING, REGISTER_REMOVALS, REGISTER_KEPT, FR_C0024, CANDIDATES_SHA, RULED_ON } from './product-rulings.mjs';
 
 const raw = await readFile(SNAPSHOT_FILE, 'utf8');
 if (createHash('sha256').update(raw).digest('hex') !== SNAPSHOT_SHA) throw new Error('Changed frozen snapshot');
@@ -259,6 +259,22 @@ const RULINGS = {
       if_the_principle_was_meant_literally: 'Two strings on two rows become accepts: 해야 해요 on ko-E1670 and 바라요 on ko-E1684. Nothing else in the ruling changes.',
     },
   },
+  '2a_register_removals': {
+    ruling: 'Refuse downward. Four live accepted answers were put to this producer; two are withdrawn and two are deliberately kept.',
+    why_each_is_argued_separately: 'A removal is the only change in round two that makes a previously accepted learner answer start being rejected. Each is argued on its own row, and so is each refusal to remove.',
+    the_line_drawn: [
+      'REFUSE a candidate that is the key\'s own formula with its politeness marking dropped, or that sits in the casual register against a polite key. That is the move the ruling names — おはよう for おはようございます, 아니 for 아니요, 공부했다 for 공부했어요.',
+      'KEEP a candidate that is a distinct formula and is itself correct polite language, even when less formal than the key. Rejecting those tells a learner that natural, polite, correct output is wrong, which is a worse failure than the one being fixed.',
+    ],
+    mechanical_support: 'Across every non-speaking Japanese and Korean row, NO accepted answer is the stored key with a politeness marker removed (ございます / ます / なさい / です / ください; 습니다 / ㅂ니다 / 어요 / 아요 / 요 / 세요). The corpus does not contain the paradigm case at all. ちょっと失礼 is the one near-miss, and it is a truncation of its ROW-MATE 失礼します rather than of the key.',
+    removed: REGISTER_REMOVALS.map(entry => ({ ref: entry.ref, id: entry.id, prompt: entry.prompt, key: entry.key, removed: entry.remove, before: entry.before, after: entry.after, why_downward: entry.why_downward })),
+    kept: REGISTER_KEPT.map(entry => ({ ref: entry.ref, key: entry.key, kept: entry.kept, why_kept: entry.why_kept })),
+    overturned: [
+      'ごめんなさい — put forward as "your call". Kept: it is not a de-politened すみません, it carries its own polite ending なさい, and its casual form ごめん appears nowhere in the corpus.',
+      'ええ — put forward as "likely downward". Kept: it is inside the polite register rather than below it, and the casual affirmative うん is accepted nowhere. Less FORMAL than はい, not less polite.',
+    ],
+    the_other_half_of_the_contradiction: 'The translate rows keyed おはようございます and おやすみなさい carry NO accepted answers, and the two speaking rows accept only themselves. The corpus refuses おはよう and おやすみ by having no alternative rather than by an authored refusal. Ruling 2 makes that deliberate; nothing needed to change on those rows.',
+  },
   '2b_the_reversal_that_is_not': {
     instruction: 'Remove ごめん for すみません, うん for はい and ううん for いいえ from production, as shipped in the round-1 patch.',
     finding: 'There is nothing to remove. Those three strings are in no row and never were.',
@@ -274,6 +290,7 @@ const RULINGS = {
       'A read-only count against production — select count(*) from exercises where accepted_answers && ARRAY[ごめん, うん, ううん] — returns 0.',
       'A test asserts the three appear in no frozen row and in no round-2 patch.',
     ],
+    what_the_live_values_actually_are: 'Re-read from the pinned snapshot and confirmed against production: key すみません accepts ごめんなさい / 申し訳ありません / 申し訳ございません on one row and 失礼します / ちょっと失礼 on another; key はい accepts ええ; key いいえ accepts いや. Adjudicated in `2a_register_removals`.',
     what_IS_live_and_was_NOT_removed: {
       why_not: 'These are the real instances of the shape the ruling is about, but they are different strings with different register facts — ごめんなさい and ええ are themselves polite, merely less formal than the key — and removing a shipped accepted answer is the one change that makes a previously accepted learner answer start being rejected. That is named here rather than done unilaterally.',
       rows: [
@@ -281,7 +298,7 @@ const RULINGS = {
         { id: 'aabbccdd-6666-1001-0005-e00000000006', ref: 'ja-E0054', prompt: 'Translate to Japanese: Yes', key: 'はい', live: ['ええ'], softer_than_the_key: ['ええ'] },
         { id: 'aabbccdd-6666-1001-0006-e00000000006', ref: 'ja-E0066', prompt: 'Translate to Japanese: No', key: 'いいえ', live: ['いや'], softer_than_the_key: ['いや'] },
       ],
-      recommendation: 'いや is the clearest downward move and the closest to what the ruling refuses; ごめんなさい and ええ are marginal. If the ruling is meant to reach them, it is three rows and three strings to remove, and it should be a deliberate second instruction.',
+      superseded_by: 'The second instruction arrived with the exact live values. See `2a_register_removals`: いや and ちょっと失礼 are withdrawn; ごめんなさい and ええ are kept, with the reasoning.',
     },
   },
   '3_fr_C0024': {
@@ -313,7 +330,7 @@ const findings = {
     '8_phrasal_verbs_title': { patched: 9, see: 'draft-patches.json (lessons)' },
     '9_productive_paradigms': { patched: 249, see: 'paradigm_refusals for what was left out' },
     'triage_298_confirmed_ja_ko_rows': { patched: 298, additions: 313, see: 'triage_block' },
-    'rulings_2026_09_15': { patched: 62, additions: 77, see: 'rulings' },
+    'rulings_2026_09_15': { patched: 64, additions: 77, removals: 2, see: 'rulings' },
   },
   rulings: RULINGS,
   triage_block: TRIAGE,

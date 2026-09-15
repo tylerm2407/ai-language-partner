@@ -2,17 +2,17 @@
   "round": 2,
   "grader": "lib/grading.ts gradeAnswer, with the runtime exerciseHints shape from lib/exercise-restore.ts",
   "snapshot_sha256": "9a20145dc6b53d1e4b5f17388b3f24c4ee4dd43c19b9bdac935ba8256bfb489c",
-  "draft_sha256": "ad6e1e1e0c9352f44736be376bdc8f914d16447b9c724a8b9012354637f63a21",
+  "draft_sha256": "d75a5beecb5b2d8cbfa3ed21132e088b9c61009ecc19cd2127d46c3e2af792ec",
   "counts": {
-    "patched_rows": 628,
-    "stored_answers": 1162,
+    "patched_rows": 630,
+    "stored_answers": 1165,
     "choice_rows": 12,
     "closed_acceptances": 279,
     "still_open": 0,
     "refusal_claims": 23,
-    "triage_rows": 363,
+    "triage_rows": 365,
     "triage_additions": 389,
-    "whole_language_comparisons": 826197,
+    "whole_language_comparisons": 830759,
     "collateral_acceptances": 12,
     "strict_additions_accepted": 389,
     "taught_strings_per_language": {
@@ -27,6 +27,7 @@
       "de": 1861
     },
     "intended_losses_on_rows_made_strict": 5,
+    "argued_register_removals": 2,
     "checkpoint_answers_checked": 5
   },
   "triage_source": "docs/audits/question-verification/round2/triage-confirmed.json",
@@ -100,6 +101,24 @@
     {
       "ref": "aabbccdd-7777-3007-0004-e00000000002",
       "candidate": "란다"
+    }
+  ],
+  "argued_register_removals": [
+    {
+      "ref": "ja-E0042",
+      "key": "すみません",
+      "removed": "ちょっと失礼",
+      "remaining": [
+        "失礼します"
+      ],
+      "why_downward": "ちょっと失礼 is 失礼します with the polite verb ending dropped — the same formula as its own row-mate, minus its politeness marking. That is exactly the move the ruling refuses, and it is downward from the key and from the alternative it is derived from. It is also an ellipsis rather than a complete formula, so an A1 learner who produces it has produced something they would be corrected on in any setting where すみません is required, on a row that teaches nothing about when that is appropriate."
+    },
+    {
+      "ref": "ja-E0066",
+      "key": "いいえ",
+      "removed": "いや",
+      "remaining": [],
+      "why_downward": "いや is the casual negative. It occupies the same register slot as ううん, which the ruling names in its REFUSE list, and it sits outside the polite register rather than low within it: against a polite key at A1 it reads as blunt. The asymmetry with ええ on the neighbouring \"Yes\" row is the whole argument — for \"no\" the corpus was accepting the CASUAL tier, for \"yes\" only the polite-informal one."
     }
   ],
   "failures": [],

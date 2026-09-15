@@ -2,10 +2,10 @@
   "engine": "PGlite (in-memory PostgreSQL)",
   "round": 2,
   "snapshot_sha256": "9a20145dc6b53d1e4b5f17388b3f24c4ee4dd43c19b9bdac935ba8256bfb489c",
-  "sql_sha256": "777a949a1afc78512255cbb65859e660e71bb3bb0508f2c732e7a8c1f971935a",
-  "reverse_sql_sha256": "0a790b370c88c749fd3340d89e4c582f36bdfff3ca041c7c4d8a6be00f1c377f",
-  "patch_rows": 638,
-  "changed_fields": 721,
+  "sql_sha256": "d4750d5dbef161bdacda4a75d69d9905e7adcdf2dd6b7f094e4953d40944ff9e",
+  "reverse_sql_sha256": "02fa53d9954539928bb186fbdb99b439f9dd057d302ebbe0a2a0ee4516ddee1d",
+  "patch_rows": 640,
+  "changed_fields": 723,
   "tables": [
     "checkpoint_items",
     "exercises",
@@ -35,7 +35,8 @@
     "no row awaiting a product decision is patched",
     "ruling 1 adds every Japanese script candidate and invents none",
     "ruling 2 accepts upward, refuses downward, and rules on all 19",
-    "ruling 3 adds the one held French paraphrase"
+    "ruling 3 adds the one held French paraphrase",
+    "the two register removals withdraw exactly what was argued and nothing else loses an accepted answer"
   ],
   "production_writes": 0,
   "limitations": [

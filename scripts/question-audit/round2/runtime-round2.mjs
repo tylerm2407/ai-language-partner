@@ -13,7 +13,7 @@ import { gradeAnswer } from '../../../lib/grading.ts';
 import { SNAPSHOT_FILE, SNAPSHOT_SHA } from './patch-set-round2.mjs';
 import { derivationalRows, alreadyStrict } from './productive-paradigm-fixes.mjs';
 import { loadTriage, DEPENDENT_ROWS } from './triage-accepted-answers.mjs';
-import { FR_C0024 } from './product-rulings.mjs';
+import { FR_C0024, REGISTER_REMOVALS } from './product-rulings.mjs';
 import { isCorrect as checkpointCorrect } from '../../../supabase/functions/checkpoint/checkpoint-core.ts';
 
 const raw = await readFile(SNAPSHOT_FILE, 'utf8');
@@ -165,7 +165,11 @@ const declaredCollateral = new Set(Object.entries(DEPENDENT_ROWS)
 const observedCollateral = new Set();
 /** Rows the paradigm block also makes strict; see the loss branch below. */
 const strictened = new Set(draft.patches.filter(p => Object.hasOwn(p.after, 'target_grammar')).map(p => p.id));
+/** Rows where losing a string IS the authored change: the two register removals.
+ * Only the argued string may go, and only from its own row. */
+const withdrawn = new Map(REGISTER_REMOVALS.map(entry => [entry.id, entry.remove]));
 const intendedLosses = [];
+const intendedRemovals = [];
 const refOf = new Map(triage.map(entry => [entry.exercise_id, entry.ref]));
 /** Every row whose accepted_answers moves and whose key does not. */
 const acceptedAnswerRows = draft.patches
@@ -195,7 +199,8 @@ for (const entry of acceptedAnswerRows) {
       // regression: each one is already counted in closed_acceptances above. A
       // loss on any row the paradigm patch does NOT touch would be a real
       // regression and fails the run.
-      if (strictened.has(entry.id)) intendedLosses.push({ ref: entry.ref, candidate });
+      if (withdrawn.get(entry.id) === candidate) intendedRemovals.push({ ref: entry.ref, candidate });
+      else if (strictened.has(entry.id)) intendedLosses.push({ ref: entry.ref, candidate });
       else failures.push({ ref: entry.ref, kind: 'previously_accepted_string_lost', candidate });
     }
     if (!was && now && !entry.additions.includes(candidate)) {
@@ -209,6 +214,19 @@ for (const entry of acceptedAnswerRows) {
 counts.collateral_acceptances = observedCollateral.size;
 counts.intended_losses_on_rows_made_strict = intendedLosses.length;
 if (intendedLosses.length !== 5) failures.push({ kind: 'intended_loss_count_changed', intendedLosses });
+counts.argued_register_removals = intendedRemovals.length;
+if (intendedRemovals.length !== REGISTER_REMOVALS.length) {
+  failures.push({ kind: 'register_removal_not_observed', expected: REGISTER_REMOVALS.map(e => e.remove), observed: intendedRemovals });
+}
+// The withdrawn strings must be rejected on their own row and nowhere else must
+// have started rejecting them.
+for (const entry of REGISTER_REMOVALS) {
+  if (!grade(before.get(entry.id), entry.remove)) failures.push({ ref: entry.ref, kind: 'removal_was_not_accepted_before', candidate: entry.remove });
+  if (grade(after.get(entry.id), entry.remove)) failures.push({ ref: entry.ref, kind: 'removal_still_accepted', candidate: entry.remove });
+  for (const kept of entry.after) {
+    if (!grade(after.get(entry.id), kept)) failures.push({ ref: entry.ref, kind: 'kept_answer_lost', candidate: kept });
+  }
+}
 for (const declared of declaredCollateral) {
   if (!observedCollateral.has(declared)) failures.push({ kind: 'declared_collateral_not_reproduced', declared });
 }
@@ -280,6 +298,7 @@ const record = {
   triage_source: 'docs/audits/question-verification/round2/triage-confirmed.json',
   declared_collateral: Object.entries(DEPENDENT_ROWS).flatMap(([ref, strings]) => strings.map(s => ({ ref, string: s }))),
   intended_losses_on_rows_made_strict: intendedLosses,
+  argued_register_removals: REGISTER_REMOVALS.map(entry => ({ ref: entry.ref, key: entry.key, removed: entry.remove, remaining: entry.after, why_downward: entry.why_downward })),
   failures,
   production_writes: 0,
   limitations: [

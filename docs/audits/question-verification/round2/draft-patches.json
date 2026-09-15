@@ -7282,6 +7282,47 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-6666-1001-0004-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1001-0004-000000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "失礼します",
+          "ちょっと失礼"
+        ]
+      },
+      "after": {
+        "accepted_answers": [
+          "失礼します"
+        ]
+      },
+      "reasons": [
+        "ja-E0042 (ja, translate_to_target): RULING 2026-09-15 — register, refuse downward. REMOVAL: \"ちょっと失礼\" is withdrawn as an accepted answer for the keyed \"すみません\". ちょっと失礼 is 失礼します with the polite verb ending dropped — the same formula as its own row-mate, minus its politeness marking. That is exactly the move the ruling refuses, and it is downward from the key and from the alternative it is derived from. It is also an ellipsis rather than a complete formula, so an A1 learner who produces it has produced something they would be corrected on in any setting where すみません is required, on a row that teaches nothing about when that is appropriate. This makes a previously accepted learner answer start being rejected, which is why it is argued on the row rather than counted."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-6666-1001-0006-e00000000006",
+      "before": {
+        "lesson_id": "aabbccdd-6666-1001-0006-000000000000",
+        "type": "translate_to_target",
+        "accepted_answers": [
+          "いや"
+        ]
+      },
+      "after": {
+        "accepted_answers": []
+      },
+      "reasons": [
+        "ja-E0066 (ja, translate_to_target): RULING 2026-09-15 — register, refuse downward. REMOVAL: \"いや\" is withdrawn as an accepted answer for the keyed \"いいえ\". いや is the casual negative. It occupies the same register slot as ううん, which the ruling names in its REFUSE list, and it sits outside the polite register rather than low within it: against a polite key at A1 it reads as blunt. The asymmetry with ええ on the neighbouring \"Yes\" row is the whole argument — for \"no\" the corpus was accepting the CASUAL tier, for \"yes\" only the polite-informal one. This makes a previously accepted learner answer start being rejected, which is why it is argued on the row rather than counted."
+      ],
+      "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-6666-1002-0002-e00000000008",
       "before": {
         "lesson_id": "aabbccdd-6666-1002-0002-000000000000",

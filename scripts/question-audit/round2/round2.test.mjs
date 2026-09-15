@@ -7,7 +7,7 @@ import { PGlite } from '../../../.question-audit/test-runtime/node_modules/@elec
 import { createRound2PatchSet, renderPatchSql, renderReverseSql, SNAPSHOT_FILE, SNAPSHOT_SHA } from './patch-set-round2.mjs';
 import { NEW_TITLE } from './idiomatic-equivalents-retitle.mjs';
 import { loadTriage, DEPENDENT_ROWS, PARTIALLY_HELD, TRIAGE_SHA } from './triage-accepted-answers.mjs';
-import { loadCandidates, REGISTER_RULING, FR_C0024, CANDIDATES_SHA, RULED_ON } from './product-rulings.mjs';
+import { loadCandidates, REGISTER_RULING, REGISTER_REMOVALS, REGISTER_KEPT, FR_C0024, CANDIDATES_SHA, RULED_ON } from './product-rulings.mjs';
 
 const draft = JSON.parse(await readFile('docs/audits/question-verification/round2/draft-patches.json', 'utf8'));
 const { patches } = draft;
@@ -146,7 +146,7 @@ test('the compiler refuses speaking rows, unknown ids and fields, and contradict
 
 test('the build is reproducible: a second compile emits byte-identical patches', async () => {
   const [{ productiveParadigmFixes }, { filmTheaterFixes }, { idiomaticEquivalentsRetitle },
-    { triageAcceptedAnswers }, { productRulings, frenchCheckpointParaphrase }, { createAcceptedAnswerLedger }] = await Promise.all([
+    { triageAcceptedAnswers }, { productRulings, frenchCheckpointParaphrase, registerRemovals }, { createAcceptedAnswerLedger }] = await Promise.all([
     import('./productive-paradigm-fixes.mjs'), import('./film-theater-fixes.mjs'),
     import('./idiomatic-equivalents-retitle.mjs'), import('./triage-accepted-answers.mjs'),
     import('./product-rulings.mjs'), import('./accepted-answer-ledger.mjs'),
@@ -158,6 +158,7 @@ test('the build is reproducible: a second compile emits byte-identical patches',
     await triageAcceptedAnswers(set, ledger);
     await productRulings(set, ledger);
     frenchCheckpointParaphrase(set);
+    registerRemovals(set);
     ledger.write(set);
     return set.patches();
   };
@@ -308,7 +309,8 @@ test('Film & Theater stops teaching Painting and Sculpture in all six remaining 
   const lessons = new Map(snapshot.lessons.map(l => [l.id, l]));
   const units = new Map(snapshot.units.map(u => [u.id, u]));
   const courses = new Map(snapshot.courses.map(c => [c.id, c]));
-  const ledgerIds = new Set([...triage.map(entry => entry.exercise_id), ...candidates.map(entry => entry.exercise_id)]);
+  const ledgerIds = new Set([...triage.map(entry => entry.exercise_id), ...candidates.map(entry => entry.exercise_id),
+    ...REGISTER_REMOVALS.map(entry => entry.id)]);
   const touched = patches.filter(p => p.table === 'exercises'
     && !Object.hasOwn(p.after, 'target_grammar') && !ledgerIds.has(p.id));
   assert.equal(touched.length, 24, 'four rows in each of six languages');
@@ -382,10 +384,10 @@ test('the four dependency-bearing rows say so in the patch itself', () => {
   passedChecks++;
 });
 
-test('the 67 rows awaiting a product decision are not in the patch', () => {
-  // The triage's two open decisions cover 71 distinct rows. Four of them also
-  // carry a confirmed defect, so the confirmed half is patched and the open half
-  // is not; the other 67 are absent entirely.
+test('the triage block never took a candidate that needed a ruling, and every ruled row is now decided', () => {
+  // The triage's two decisions covered 71 distinct rows. Four also carried a
+  // confirmed defect, so the triage block took the confirmed half and left the
+  // open half; the rulings of 2026-09-15 then decided all 71.
   const decisionRows = new Set([
     'ja-E0090', 'ja-E0112', 'ja-E0126', 'ja-E0134', 'ja-E0142', 'ja-E0154', 'ja-E0158', 'ja-E0170',
     'ja-E0180', 'ja-E0182', 'ja-E0196', 'ja-E0202', 'ja-E0206', 'ja-E0208', 'ja-E0228', 'ja-E0250',
@@ -402,6 +404,45 @@ test('the 67 rows awaiting a product decision are not in the patch', () => {
   const patched = new Set(triage.map(entry => entry.ref));
   const both = [...decisionRows].filter(ref => patched.has(ref)).sort();
   assert.deepEqual(both, [...PARTIALLY_HELD].sort(), 'only the four dual rows may appear in both');
+  // Nothing is left in limbo: every one of the 71 rows is now either compiled by
+  // a ruling or carries an explicitly refused candidate.
+  const ruledRows = new Set(candidates.map(entry => entry.ref));
+  assert.deepEqual([...decisionRows].filter(ref => !ruledRows.has(ref)), [], 'a decision row no ruling reaches');
+  passedChecks++;
+});
+
+test('the two register removals withdraw exactly what was argued, and the keeps stay', () => {
+  const byId = new Map(snapshot.exercises.map(e => [e.id, e]));
+  assert.equal(REGISTER_REMOVALS.length, 2);
+  for (const entry of REGISTER_REMOVALS) {
+    const original = byId.get(entry.id);
+    assert.deepEqual(original.accepted_answers, entry.before);
+    const patch = patches.find(p => p.id === entry.id);
+    assert(patch, entry.ref);
+    assert.deepEqual(Object.keys(patch.after), ['accepted_answers']);
+    assert.deepEqual(patch.after.accepted_answers, entry.after);
+    assert(!patch.after.accepted_answers.includes(entry.remove));
+    // The key never moves on a removal, and nothing is added in the same breath.
+    assert.equal(patch.before.correct_answer, undefined, `${entry.ref}: a removal must not touch the key`);
+    for (const value of patch.after.accepted_answers) assert(entry.before.includes(value), `${entry.ref}: ${value} was added, not kept`);
+    assert(patch.reasons.some(r => r.includes('REMOVAL:')), entry.ref);
+    assert(patch.reasons.some(r => r.includes(entry.why_downward.slice(0, 40))), `${entry.ref}: the argument is not in the patch`);
+  }
+  // Everything adjudicated and kept is still on its row after the patch.
+  for (const entry of REGISTER_KEPT) {
+    const patch = patches.find(p => p.id === entry.id);
+    const after = patch ? patch.after.accepted_answers ?? byId.get(entry.id).accepted_answers : byId.get(entry.id).accepted_answers;
+    assert(after.includes(entry.kept), `${entry.ref}: ${entry.kept} was removed after all`);
+  }
+  // Only these two rows lose an accepted answer while keeping their key. The
+  // three Film & Theater "Sculpture -> Stage" rows also drop alternatives, but
+  // they rewrite the key in the same patch, so keeping "Skulptur" on a row that
+  // now asks for "Bühne" would be the defect.
+  const losing = patches.filter(p => Array.isArray(p.after.accepted_answers)
+    && !Object.hasOwn(p.after, 'correct_answer')
+    && (p.before.accepted_answers ?? []).some(v => !p.after.accepted_answers.includes(v)));
+  assert.deepEqual(losing.map(p => p.id).sort(), REGISTER_REMOVALS.map(e => e.id).sort(),
+    'some other patch silently drops an accepted answer without replacing the key');
   passedChecks++;
 });
 
@@ -470,7 +511,7 @@ test('ruling 3 adds the one held French paraphrase to fr-C0024', () => {
 });
 
 test('write a truthful local verification record after the assertions', async () => {
-  assert.equal(passedChecks, 22, 'never write a successful verification record when an earlier check failed');
+  assert.equal(passedChecks, 23, 'never write a successful verification record when an earlier check failed');
   await writeFile('docs/audits/question-verification/round2/local-sql-tests.json', JSON.stringify({
     engine: 'PGlite (in-memory PostgreSQL)',
     round: 2,
@@ -489,7 +530,8 @@ test('write a truthful local verification record after the assertions', async ()
       'Film & Theater keys no longer visual-art labels', 'triage block writes exactly the 298 confirmed rows and 313 additions',
       'the four dependency-bearing rows carry the dependency in their own reason', 'no row awaiting a product decision is patched',
       'ruling 1 adds every Japanese script candidate and invents none', 'ruling 2 accepts upward, refuses downward, and rules on all 19',
-      'ruling 3 adds the one held French paraphrase'],
+      'ruling 3 adds the one held French paraphrase',
+      'the two register removals withdraw exactly what was argued and nothing else loses an accepted answer'],
     production_writes: 0,
     limitations: ['Minimal typed content schema, not full Supabase auth/RLS/triggers or historical migrations',
       'Does not establish linguistic correctness or independent round-2 approval',

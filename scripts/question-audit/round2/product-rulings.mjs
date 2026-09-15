@@ -248,3 +248,98 @@ export function frenchCheckpointParaphrase(set) {
   ['https://www.larousse.fr/dictionnaires/francais/interm%C3%A9diaire/43672']);
   return 1;
 }
+
+/**
+ * RULING 2, the subtractive half: accepted answers that are DOWNWARD from their
+ * key, removed.
+ *
+ * This is the only part of round two that makes a previously accepted learner
+ * answer start being rejected, so every row is argued rather than counted, and
+ * the ones left alone are argued too. Four candidates were put to this producer;
+ * two are removed and two are deliberately kept.
+ *
+ * The line drawn, because "less polite" is not one relation:
+ *
+ *   REFUSE a candidate that is the key's own formula with its politeness
+ *   marking dropped, or that sits in the casual register against a polite key.
+ *   That is the move the ruling names — おはよう for おはようございます, 아니 for
+ *   아니요, 공부했다 for 공부했어요 — and it is what the corpus already refuses.
+ *
+ *   KEEP a candidate that is a distinct formula and is itself correct polite
+ *   language, even when it is less formal than the key. Rejecting those tells a
+ *   learner that natural, polite, correct output is wrong, which is a worse
+ *   failure than the one being fixed.
+ *
+ * A mechanical sweep supports the line rather than just asserting it: across
+ * every non-speaking Japanese and Korean row, NO accepted answer is the stored
+ * key with a politeness marker removed (ございます / ます / なさい / です /
+ * ください for Japanese, 습니다 / ㅂ니다 / 어요 / 아요 / 요 / 세요 for Korean).
+ * The corpus does not contain the paradigm case at all. ちょっと失礼 is the one
+ * near-miss and it is a truncation of its ROW-MATE 失礼します, not of the key.
+ *
+ * Also confirmed, and worth recording because it was the other half of the
+ * contradiction triage raised: the translate rows keyed おはようございます and
+ * おやすみなさい carry NO accepted answers. The corpus refuses おはよう and
+ * おやすみ by having no alternative rather than by an authored refusal. Ruling 2
+ * now makes that refusal deliberate; nothing needs to change on those rows.
+ */
+export const REGISTER_REMOVALS = [
+  {
+    id: 'aabbccdd-6666-1001-0004-e00000000006', ref: 'ja-E0042', prompt: 'Translate to Japanese: Excuse me',
+    key: 'すみません', before: ['失礼します', 'ちょっと失礼'], remove: 'ちょっと失礼', after: ['失礼します'],
+    why_downward: 'ちょっと失礼 is 失礼します with the polite verb ending dropped — the same formula as its own row-mate, minus its politeness marking. That is exactly the move the ruling refuses, and it is downward from the key and from the alternative it is derived from. It is also an ellipsis rather than a complete formula, so an A1 learner who produces it has produced something they would be corrected on in any setting where すみません is required, on a row that teaches nothing about when that is appropriate.',
+  },
+  {
+    id: 'aabbccdd-6666-1001-0006-e00000000006', ref: 'ja-E0066', prompt: 'Translate to Japanese: No',
+    key: 'いいえ', before: ['いや'], remove: 'いや', after: [],
+    why_downward: 'いや is the casual negative. It occupies the same register slot as ううん, which the ruling names in its REFUSE list, and it sits outside the polite register rather than low within it: against a polite key at A1 it reads as blunt. The asymmetry with ええ on the neighbouring "Yes" row is the whole argument — for "no" the corpus was accepting the CASUAL tier, for "yes" only the polite-informal one.',
+  },
+];
+
+/** Put to this producer and deliberately NOT removed. Recorded with the same
+ * weight as the removals: a reviewer should be able to see what was considered
+ * and rejected, not just what was done. */
+export const REGISTER_KEPT = [
+  {
+    id: 'aabbccdd-6666-1001-0003-e00000000006', ref: 'ja-E0030', key: 'すみません', kept: 'ごめんなさい',
+    why_kept: 'Not a de-politened すみません. ごめんなさい carries its own polite ending なさい and is a distinct apology formula — the casual form of it is ごめん, which appears nowhere in the corpus. It differs from すみません on intimacy rather than on deference, and the English cue "Sorry" does not select between two polite apologies. This overturns a reading that it should go.',
+  },
+  {
+    id: 'aabbccdd-6666-1001-0003-e00000000006', ref: 'ja-E0030', key: 'すみません', kept: '申し訳ありません',
+    why_kept: 'More formal than the key. Upward, which the ruling accepts.',
+  },
+  {
+    id: 'aabbccdd-6666-1001-0003-e00000000006', ref: 'ja-E0030', key: 'すみません', kept: '申し訳ございません',
+    why_kept: 'The most formal of the three. Upward.',
+  },
+  {
+    id: 'aabbccdd-6666-1001-0004-e00000000006', ref: 'ja-E0042', key: 'すみません', kept: '失礼します',
+    why_kept: 'A complete polite formula at or above the key\'s formality, and the standard "excuse me" for entering or leaving. Not downward.',
+  },
+  {
+    id: 'aabbccdd-6666-1001-0005-e00000000006', ref: 'ja-E0054', key: 'はい', kept: 'ええ',
+    why_kept: 'Inside the polite register, not below it: ええ、そうです is unremarkable polite Japanese, and the casual affirmative うん is accepted nowhere in the corpus. It is less FORMAL than はい, not less polite, and removing it would reject natural polite output from a learner who answered correctly. This overturns a reading that it is downward.',
+  },
+];
+
+export function registerRemovals(set) {
+  for (const entry of REGISTER_REMOVALS) {
+    const original = set.row('exercises', entry.id);
+    if (original.prompt !== entry.prompt) throw new Error(`${entry.ref}: the prompt moved`);
+    if (original.correct_answer !== entry.key) throw new Error(`${entry.ref}: the key moved`);
+    if (JSON.stringify(original.accepted_answers) !== JSON.stringify(entry.before)) {
+      throw new Error(`${entry.ref}: accepted_answers is not what was adjudicated; re-read before removing`);
+    }
+    if (!entry.before.includes(entry.remove)) throw new Error(`${entry.ref}: nothing to remove`);
+    if (JSON.stringify(entry.before.filter(value => value !== entry.remove)) !== JSON.stringify(entry.after)) {
+      throw new Error(`${entry.ref}: the recorded result is not the list minus the removal`);
+    }
+    set.update('exercises', entry.id, { accepted_answers: entry.after },
+      `${entry.ref} (ja, ${original.type}): RULING ${RULED_ON} — register, refuse downward. REMOVAL: "${entry.remove}" is withdrawn as an accepted answer for the keyed "${entry.key}". ${entry.why_downward} This makes a previously accepted learner answer start being rejected, which is why it is argued on the row rather than counted.`);
+  }
+  for (const entry of REGISTER_KEPT) {
+    const original = set.row('exercises', entry.id);
+    if (!(original.accepted_answers ?? []).includes(entry.kept)) throw new Error(`${entry.ref}: ${entry.kept} is not on the row`);
+  }
+  return { removed: REGISTER_REMOVALS.length, kept: REGISTER_KEPT.length };
+}
