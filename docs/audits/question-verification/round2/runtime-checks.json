@@ -2,20 +2,107 @@
   "round": 2,
   "grader": "lib/grading.ts gradeAnswer, with the runtime exerciseHints shape from lib/exercise-restore.ts",
   "snapshot_sha256": "9a20145dc6b53d1e4b5f17388b3f24c4ee4dd43c19b9bdac935ba8256bfb489c",
-  "draft_sha256": "96460fe9bd431cd02563aa0ea9c2d3247d07b6cd7d19de953d53d902f4134e24",
+  "draft_sha256": "f34a1d45e0c901cd706b49d776f307afeb0e425e36dff23249cc44ef61d4feac",
   "counts": {
-    "patched_rows": 273,
-    "stored_answers": 418,
+    "patched_rows": 564,
+    "stored_answers": 1022,
     "choice_rows": 12,
     "closed_acceptances": 279,
     "still_open": 0,
-    "refusal_claims": 23
+    "refusal_claims": 23,
+    "triage_rows": 298,
+    "triage_additions": 313,
+    "whole_language_comparisons": 678577,
+    "collateral_acceptances": 12,
+    "strict_additions_accepted": 313,
+    "taught_strings_per_language": {
+      "ja": 2281,
+      "it": 2020,
+      "zh": 2430,
+      "fr": 1436,
+      "ru": 1713,
+      "es": 2007,
+      "pt": 1630,
+      "ko": 2152,
+      "de": 1861
+    },
+    "intended_losses_on_rows_made_strict": 4
   },
+  "triage_source": "docs/audits/question-verification/round2/triage-confirmed.json",
+  "declared_collateral": [
+    {
+      "ref": "ja-E0361",
+      "string": "お父さん"
+    },
+    {
+      "ref": "ja-E0361",
+      "string": "お姉さん"
+    },
+    {
+      "ref": "ja-E0361",
+      "string": "お嬢さん"
+    },
+    {
+      "ref": "ja-E0361",
+      "string": "お母さん"
+    },
+    {
+      "ref": "ja-E0361",
+      "string": "お隣さん"
+    },
+    {
+      "ref": "ja-E0373",
+      "string": "お父さん"
+    },
+    {
+      "ref": "ja-E0373",
+      "string": "お姉さん"
+    },
+    {
+      "ref": "ja-E0373",
+      "string": "お嬢さん"
+    },
+    {
+      "ref": "ja-E0373",
+      "string": "お母さん"
+    },
+    {
+      "ref": "ja-E0373",
+      "string": "お隣さん"
+    },
+    {
+      "ref": "ja-E0569",
+      "string": "お父さん"
+    },
+    {
+      "ref": "ja-E0581",
+      "string": "お母さん"
+    }
+  ],
+  "intended_losses_on_rows_made_strict": [
+    {
+      "ref": "ja-E0886",
+      "candidate": "ました"
+    },
+    {
+      "ref": "ja-E0886",
+      "candidate": "いました"
+    },
+    {
+      "ref": "ja-E0898",
+      "candidate": "いました"
+    },
+    {
+      "ref": "ko-E0862",
+      "candidate": "가겠어요"
+    }
+  ],
   "failures": [],
   "production_writes": 0,
   "limitations": [
     "Mechanical routing only: says nothing about whether an authored string is linguistically right.",
     "Corpus-attested strings only. The productive hole is on the learner's side, so the strings a learner would actually type are not enumerable here.",
-    "Does not exercise the semantic grader behind free_production; gradeOpenResponse returns the fixed result first, which is what this measures."
+    "Does not exercise the semantic grader behind free_production; gradeOpenResponse returns the fixed result first, which is what this measures.",
+    "Runs lib/grading.ts as it stands on this branch. The grader branch's Japanese edit-distance gate is not present, so the 12 collateral acceptances are expected here and are the reason this patch must ship with that branch; the strict-grading probe shows they vanish under strictness."
   ]
 }

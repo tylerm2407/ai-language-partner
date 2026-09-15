@@ -2,10 +2,10 @@
   "engine": "PGlite (in-memory PostgreSQL)",
   "round": 2,
   "snapshot_sha256": "9a20145dc6b53d1e4b5f17388b3f24c4ee4dd43c19b9bdac935ba8256bfb489c",
-  "sql_sha256": "83b0e2567dd2f415635cc2cd1b9cc9d80e9519ff3451aa32f11eddb3084ba173",
-  "reverse_sql_sha256": "47f5e88a46f7102f7b574e8dde6a3207a89e6a4801d54a326c32d9a74af78ce0",
-  "patch_rows": 282,
-  "changed_fields": 357,
+  "sql_sha256": "6eecea884e6339d9e778479c42dae923f04e039e0dad19de99f6702898d89049",
+  "reverse_sql_sha256": "3e720f084f6df9fa21c5a317d8142de8444654ffa5c1170135c6672d434761e3",
+  "patch_rows": 573,
+  "changed_fields": 655,
   "tables": [
     "exercises",
     "lessons"
@@ -28,12 +28,16 @@
     "declared table/field scope",
     "target_grammar rows are not already strict",
     "retitle covers exactly nine lessons",
-    "Film & Theater keys no longer visual-art labels"
+    "Film & Theater keys no longer visual-art labels",
+    "triage block writes exactly the 298 confirmed rows and 313 additions",
+    "the four dependency-bearing rows carry the dependency in their own reason",
+    "no row awaiting a product decision is patched"
   ],
   "production_writes": 0,
   "limitations": [
     "Minimal typed content schema, not full Supabase auth/RLS/triggers or historical migrations",
     "Does not establish linguistic correctness or independent round-2 approval",
-    "Does not test the shipped grader; see runtime-round2.mjs for that"
-  ]
+    "Does not test the shipped grader; see runtime-round2.mjs for that, including the whole-language widening check"
+  ],
+  "triage_source_sha256": "d897777b985558929da9e57a7fa1445bc303a289c414c6b49a7f48f135ea9775"
 }

@@ -6,6 +6,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { PGlite } from '../../../.question-audit/test-runtime/node_modules/@electric-sql/pglite/dist/index.js';
 import { createRound2PatchSet, renderPatchSql, renderReverseSql, SNAPSHOT_FILE, SNAPSHOT_SHA } from './patch-set-round2.mjs';
 import { NEW_TITLE } from './idiomatic-equivalents-retitle.mjs';
+import { loadTriage, DEPENDENT_ROWS, PARTIALLY_HELD, TRIAGE_SHA } from './triage-accepted-answers.mjs';
 
 const draft = JSON.parse(await readFile('docs/audits/question-verification/round2/draft-patches.json', 'utf8'));
 const { patches } = draft;
@@ -13,6 +14,7 @@ const raw = await readFile(SNAPSHOT_FILE);
 assert.equal(createHash('sha256').update(raw).digest('hex'), SNAPSHOT_SHA, 'the round-2 snapshot must be the pinned one');
 assert.equal(draft.snapshot_sha256, SNAPSHOT_SHA, 'the draft must be built against the pinned snapshot');
 const snapshot = JSON.parse(raw);
+const triage = await loadTriage();
 const tables = [...new Set(patches.flatMap(p => [p.table, ...(p.context_guards ?? []).map(g => g.table)]))].sort();
 const arrayFields = new Set(['accepted_answers', 'accepted_speech_variants', 'options', 'distractors', 'tags', 'target_vocabulary', 'collocations', 'search_terms']);
 
@@ -141,12 +143,14 @@ test('the compiler refuses speaking rows, unknown ids and fields, and contradict
 });
 
 test('the build is reproducible: a second compile emits byte-identical patches', async () => {
-  const [{ productiveParadigmFixes }, { filmTheaterFixes }, { idiomaticEquivalentsRetitle }] = await Promise.all([
-    import('./productive-paradigm-fixes.mjs'), import('./film-theater-fixes.mjs'), import('./idiomatic-equivalents-retitle.mjs'),
+  const [{ productiveParadigmFixes }, { filmTheaterFixes }, { idiomaticEquivalentsRetitle }, { triageAcceptedAnswers }] = await Promise.all([
+    import('./productive-paradigm-fixes.mjs'), import('./film-theater-fixes.mjs'),
+    import('./idiomatic-equivalents-retitle.mjs'), import('./triage-accepted-answers.mjs'),
   ]);
   const rebuild = async () => {
     const set = await createRound2PatchSet();
     filmTheaterFixes(set); idiomaticEquivalentsRetitle(set); productiveParadigmFixes(set);
+    await triageAcceptedAnswers(set);
     return set.patches();
   };
   const [one, two] = [await rebuild(), await rebuild()];
@@ -244,9 +248,16 @@ test('the paradigm patch only ever sets target_grammar, and only on rows that ar
   const grammarShaped = ['word_form', 'sentence_transformation', 'error_correction', 'cloze_deletion', 'sentence_construction', 'multiple_choice', 'listening_choice'];
   let count = 0;
   let translateToNative = 0;
+  let shared = 0;
   for (const patch of patches) {
     if (!Object.hasOwn(patch.after, 'target_grammar')) continue;
-    assert.deepEqual(Object.keys(patch.after), ['target_grammar'], `${patch.id}: a paradigm row changed something else`);
+    // Seven rows are in both blocks: a Japanese or Korean tense row that the
+    // triage also gives an overt-subject alternative. Both edits belong on one
+    // patch, and the order is safe — an exact accepted answer is matched before
+    // the strict return, so strictness never rejects it.
+    assert.deepEqual(Object.keys(patch.after).sort().filter(f => f !== 'accepted_answers'),
+      ['target_grammar'], `${patch.id}: a paradigm row changed something else`);
+    if (Object.hasOwn(patch.after, 'accepted_answers')) shared++;
     const original = byId.get(patch.id);
     assert.equal(original.target_grammar, null);
     assert.notEqual(original.skill_type, 'grammar');
@@ -263,6 +274,7 @@ test('the paradigm patch only ever sets target_grammar, and only on rows that ar
   }
   assert.equal(translateToNative, 2, 'exactly the French and Portuguese "Cheaper" rows');
   assert.equal(count, 249, '192 tense rows + 57 derivational rows');
+  assert.equal(shared, 7, 'the ja/ko tense rows the triage block also touches');
   passedChecks++;
 });
 
@@ -286,7 +298,9 @@ test('Film & Theater stops teaching Painting and Sculpture in all six remaining 
   const lessons = new Map(snapshot.lessons.map(l => [l.id, l]));
   const units = new Map(snapshot.units.map(u => [u.id, u]));
   const courses = new Map(snapshot.courses.map(c => [c.id, c]));
-  const touched = patches.filter(p => p.table === 'exercises' && !Object.hasOwn(p.after, 'target_grammar'));
+  const triageIds = new Set(triage.map(entry => entry.exercise_id));
+  const touched = patches.filter(p => p.table === 'exercises'
+    && !Object.hasOwn(p.after, 'target_grammar') && !triageIds.has(p.id));
   assert.equal(touched.length, 24, 'four rows in each of six languages');
   const languages = new Set();
   for (const patch of touched) {
@@ -306,8 +320,77 @@ test('Film & Theater stops teaching Painting and Sculpture in all six remaining 
   passedChecks++;
 });
 
+test('the triage block writes exactly the confirmed rows, and only accepted_answers', async () => {
+  const byRef = new Map(triage.map(entry => [entry.exercise_id, entry]));
+  const byId = new Map(snapshot.exercises.map(e => [e.id, e]));
+  let rows = 0;
+  let additions = 0;
+  for (const patch of patches) {
+    if (!Object.hasOwn(patch.after, 'accepted_answers')) continue;
+    const entry = byRef.get(patch.id);
+    if (!entry) continue;                       // a Film & Theater row, checked elsewhere
+    rows++;
+    additions += entry.additions.length;
+    // The field was empty, so the patch writes the additions and nothing else.
+    assert.deepEqual(byId.get(patch.id).accepted_answers, []);
+    assert.deepEqual(patch.after.accepted_answers, entry.additions);
+    assert.deepEqual(patch.before.accepted_answers, []);
+    assert(['ja', 'ko'].includes(entry.language));
+    // Every reason names its row and carries the triage's own words.
+    assert(patch.reasons.some(reason => reason.startsWith(`${entry.ref} (`)), entry.ref);
+  }
+  assert.equal(rows, 298);
+  assert.equal(additions, 313);
+  passedChecks++;
+});
+
+test('the four dependency-bearing rows say so in the patch itself', () => {
+  const byRef = new Map(triage.map(entry => [entry.ref, entry]));
+  const flagged = [];
+  for (const ref of Object.keys(DEPENDENT_ROWS)) {
+    const entry = byRef.get(ref);
+    assert(entry, ref);
+    assert.equal(entry.blocking, true);
+    const patch = patches.find(p => p.id === entry.exercise_id);
+    assert(patch, ref);
+    const reason = patch.reasons.join(' ');
+    assert(reason.includes('DEPENDENCY'), `${ref}: the dependency is not written into the patch reason`);
+    assert(reason.includes('lib/confusable-pairs.ts'), `${ref}: the reason does not name where the remedy lands`);
+    for (const collateral of DEPENDENT_ROWS[ref]) assert(reason.includes(collateral), `${ref}: ${collateral} is not named`);
+    flagged.push(ref);
+  }
+  assert.deepEqual(flagged.sort(), ['ja-E0361', 'ja-E0373', 'ja-E0569', 'ja-E0581']);
+  // And no other row claims a dependency it does not have.
+  const claiming = patches.filter(p => p.reasons.some(r => r.includes('DEPENDENCY')));
+  assert.equal(claiming.length, 4);
+  passedChecks++;
+});
+
+test('the 67 rows awaiting a product decision are not in the patch', () => {
+  // The triage's two open decisions cover 71 distinct rows. Four of them also
+  // carry a confirmed defect, so the confirmed half is patched and the open half
+  // is not; the other 67 are absent entirely.
+  const decisionRows = new Set([
+    'ja-E0090', 'ja-E0112', 'ja-E0126', 'ja-E0134', 'ja-E0142', 'ja-E0154', 'ja-E0158', 'ja-E0170',
+    'ja-E0180', 'ja-E0182', 'ja-E0196', 'ja-E0202', 'ja-E0206', 'ja-E0208', 'ja-E0228', 'ja-E0250',
+    'ja-E0264', 'ja-E0272', 'ja-E0300', 'ja-E0322', 'ja-E0334', 'ja-E0344', 'ja-E0392', 'ja-E0438',
+    'ja-E0460', 'ja-E0462', 'ja-E0482', 'ja-E0492', 'ja-E0504', 'ja-E0522', 'ja-E0544', 'ja-E0546',
+    'ja-E0558', 'ja-E0564', 'ja-E0565', 'ja-E0576', 'ja-E0586', 'ja-E0598', 'ja-E0712', 'ja-E0850',
+    'ja-E0889', 'ja-E0892', 'ja-E0916', 'ja-E0922', 'ja-E0952', 'ja-E0970', 'ja-E0985', 'ja-E0988',
+    'ja-E1155', 'ja-E1169', 'ja-E1183', 'ja-E1194', 'ja-E1208', 'ja-E1463', 'ja-E1673', 'ja-E1726',
+    'ja-E1816', 'ja-E1838', 'ja-E1880', 'ja-E1886', 'ja-E2034',
+    'ja-E0014', 'ja-E0038', 'ja-E1642', 'ko-E0066', 'ko-E0856', 'ko-E0862', 'ko-E0889', 'ko-E0901',
+    'ko-E1670', 'ko-E1684',
+  ]);
+  assert.equal(decisionRows.size, 71);
+  const patched = new Set(triage.map(entry => entry.ref));
+  const both = [...decisionRows].filter(ref => patched.has(ref)).sort();
+  assert.deepEqual(both, [...PARTIALLY_HELD].sort(), 'only the four dual rows may appear in both');
+  passedChecks++;
+});
+
 test('write a truthful local verification record after the assertions', async () => {
-  assert.equal(passedChecks, 16, 'never write a successful verification record when an earlier check failed');
+  assert.equal(passedChecks, 19, 'never write a successful verification record when an earlier check failed');
   await writeFile('docs/audits/question-verification/round2/local-sql-tests.json', JSON.stringify({
     engine: 'PGlite (in-memory PostgreSQL)',
     round: 2,
@@ -323,10 +406,12 @@ test('write a truthful local verification record after the assertions', async ()
       'rollback restores the snapshot exactly', 'rollback idempotence, no-op and half-applied repair',
       'rollback refuses an edited row', 'rollback writes only patched fields, never guarded identity fields',
       'declared table/field scope', 'target_grammar rows are not already strict', 'retitle covers exactly nine lessons',
-      'Film & Theater keys no longer visual-art labels'],
+      'Film & Theater keys no longer visual-art labels', 'triage block writes exactly the 298 confirmed rows and 313 additions',
+      'the four dependency-bearing rows carry the dependency in their own reason', 'no row awaiting a product decision is patched'],
     production_writes: 0,
     limitations: ['Minimal typed content schema, not full Supabase auth/RLS/triggers or historical migrations',
       'Does not establish linguistic correctness or independent round-2 approval',
-      'Does not test the shipped grader; see runtime-round2.mjs for that'],
+      'Does not test the shipped grader; see runtime-round2.mjs for that, including the whole-language widening check'],
+    triage_source_sha256: TRIAGE_SHA,
   }, null, 2) + '\n');
 });

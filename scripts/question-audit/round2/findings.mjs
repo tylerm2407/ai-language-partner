@@ -14,6 +14,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { SNAPSHOT_FILE, SNAPSHOT_SHA, createRound2PatchSet } from './patch-set-round2.mjs';
+import { loadTriage, DEPENDENT_ROWS, PARTIALLY_HELD, TRIAGE_SHA, TRIAGE_SOURCE } from './triage-accepted-answers.mjs';
 
 const raw = await readFile(SNAPSHOT_FILE, 'utf8');
 if (createHash('sha256').update(raw).digest('hex') !== SNAPSHOT_SHA) throw new Error('Changed frozen snapshot');
@@ -184,10 +185,59 @@ const SHARED_POOL = {
   ],
 };
 
+/** The triage block: 298 confirmed Japanese and Korean rows, and the two
+ * decisions the triage deliberately did not make. Both decisions are carried
+ * here so they reach a human rather than expiring inside a worktree. */
+const triage = await loadTriage();
+const TRIAGE = {
+  rows: triage.length,
+  additions: triage.reduce((total, entry) => total + entry.additions.length, 0),
+  by_language: triage.reduce((acc, entry) => ({ ...acc, [entry.language]: (acc[entry.language] ?? 0) + 1 }), {}),
+  by_type: triage.reduce((acc, entry) => ({ ...acc, [entry.exercise_type]: (acc[entry.exercise_type] ?? 0) + 1 }), {}),
+  source: TRIAGE_SOURCE,
+  source_sha256: TRIAGE_SHA,
+  why_these_are_content_defects: [
+    '283 of the 298 are listening_type or dictation. On those the learner is shown no text and no gloss: components/lesson/ListeningExercise.tsx withholds `prompt` deliberately, because `prompt` is the string handed to text-to-speech and printing it would show the answer, and components/lesson/DictationExercise.tsx speaks `correct_answer` as its stimulus, which is what dictation is.',
+    'So nothing in the task selects a script. A learner who hears おねがいします may correctly transcribe it in kana or in kanji, and the row accepts exactly one of the two. The addition is what makes the row answerable — no rendering change could substitute, because rendering the cue would destroy the exercise.',
+    'All 298 had accepted_answers empty in the frozen snapshot and still do; the build re-checks key, type and emptiness on every row before writing.',
+  ],
+  dependency: {
+    rows: Object.keys(DEPENDENT_ROWS),
+    what: 'Adding the kanji spellings of おばあさん / おじいさん / おじさん / おばさん pulls お母さん, お父さん, お姉さん, お嬢さん and お隣さん inside the typo budget — 12 collateral acceptances in total, on rows whose whole purpose is separating kinship terms.',
+    remedy: 'The confusable pairs the grader agent is authoring in lib/confusable-pairs.ts.',
+    recorded_where: 'In each of the four patch reasons, prefixed DEPENDENCY, so it travels with the row rather than living only in this file.',
+    collateral: Object.entries(DEPENDENT_ROWS).flatMap(([ref, strings]) => strings.map(string => ({ ref, string }))),
+  },
+  open_decisions_carried_forward: [
+    {
+      decision: 'Japanese orthography on written-production rows',
+      rows: 61, candidates: 65, types: '40 translate_to_target, 25 cloze_deletion',
+      question: 'On a row whose cue is an English gloss ("Translate to Japanese: Right"), does a correct Japanese word written in the other script count, or is the taught spelling part of what the item tests?',
+      accepting_costs: 'The course stops requiring kanji production anywhere: a learner could finish the Japanese track in hiragana. That is a real pedagogical loss, which is why it is not simply a defect.',
+      refusing_costs: 'The kanji requirement is nowhere stated and the curriculum does not follow one — 明日, 社会 and 椅子 are keyed in kanji while まっすぐ, おいしい, すごい, たぶん, さらに and めったに are keyed in kana, and ご飯, お風呂 and もっと大きい are mixed. Refusing means telling some learners their correct answer is wrong with no way to have known.',
+      triage_recommendation: 'Accept the reading. 65 additions, all exact matches, and verified to bring no other taught string inside the typo budget.',
+      note: 'One row was already decided the other way by accident: ja-E2267 had うけみ added by the deployed patch. Under this triage that row is part of the confirmed transcription class, so the precedent is no longer isolated — but the written-production question should still be settled deliberately.',
+    },
+    {
+      decision: 'Register variants on a cue that names no register',
+      rows: 12, candidates: 20,
+      question: 'When the cue is a bare English gloss ("Translate to Korean: No") and the key is at one politeness level, does the same word at another level count?',
+      sub_cases: {
+        politeness_raised: '공부했습니다 for 공부했어요, 바랍니다 for 바란다, 아닙니다 for 아니요, でしょう for だろう, 料理します for 料理する. Both forms are polite; refusing is hard to justify on a cue that names no register.',
+        politeness_dropped: 'おはよう for おはようございます, おやすみ for おやすみなさい, 아니 for 아니요, 해야 해요 for 해야 한다. Here the learner has changed the register, and A1 teaches the polite form specifically.',
+      },
+      triage_recommendation: 'Split them: accept upward, refuse downward. Implementable per row.',
+      consistency_problem_the_decision_must_also_settle: 'The Japanese alternatives batch already refuses おはよう for おはようございます under JA-POLITE-AFFIX while accepting ごめん for すみません, うん for はい and ううん for いいえ as lexical — the same casual-for-polite move on the same kind of bare A1 gloss. One position has to give, and those four rows should be made to match whichever way this goes.',
+    },
+  ],
+  rows_where_only_the_confirmed_half_is_patched: PARTIALLY_HELD,
+};
+
 const findings = {
   round: 2,
   snapshot_sha256: SNAPSHOT_SHA,
   status: 'Draft findings for independent round-2 review. Nothing here is deployed.',
+  APPLY_PRECONDITION: 'This patch MUST ship in the same release as the grader branch — the Japanese edit-distance gate and the kinship confusable pairs — and NOT before it. The 313 accepted-answer additions widen typo tolerance on 88 rows while the gate is absent, and four of them let twelve other taught kinship terms through. Under strict grading all 313 additions still pass and all twelve collateral acceptances vanish, which is what makes the two halves complementary rather than merely compatible.',
   items: {
     '1_italian_ambiguous_choice_rows': { patched: 0, see: 'already_fixed_by_round_one' },
     '2_italian_welded_blank_it_E1008': { patched: 0, see: 'already_fixed_by_round_one' },
@@ -198,7 +248,9 @@ const findings = {
     '7_film_theater_shared_pool': { patched: 24, see: 'shared_pool' },
     '8_phrasal_verbs_title': { patched: 9, see: 'draft-patches.json (lessons)' },
     '9_productive_paradigms': { patched: 249, see: 'paradigm_refusals for what was left out' },
+    'triage_298_confirmed_ja_ko_rows': { patched: 298, additions: 313, see: 'triage_block' },
   },
+  triage_block: TRIAGE,
   already_fixed_by_round_one: ALREADY_FIXED.map(finding => ({
     ...finding, verified_now: finding.id ? frozen(finding.id, finding.field, finding.now, finding.ref) : null,
   })),

@@ -12,6 +12,7 @@ import { createHash } from 'node:crypto';
 import { gradeAnswer } from '../../../lib/grading.ts';
 import { SNAPSHOT_FILE, SNAPSHOT_SHA } from './patch-set-round2.mjs';
 import { derivationalRows, alreadyStrict } from './productive-paradigm-fixes.mjs';
+import { loadTriage, DEPENDENT_ROWS } from './triage-accepted-answers.mjs';
 
 const raw = await readFile(SNAPSHOT_FILE, 'utf8');
 if (createHash('sha256').update(raw).digest('hex') !== SNAPSHOT_SHA) throw new Error('Changed frozen snapshot');
@@ -38,7 +39,10 @@ const hints = exercise => ({
 const grade = (exercise, answer) => gradeAnswer(answer, exercise.correct_answer, exercise.accepted_answers ?? [], { exerciseHints: hints(exercise) }).isCorrect;
 
 const failures = [];
-const counts = { patched_rows: 0, stored_answers: 0, choice_rows: 0, closed_acceptances: 0, still_open: 0, refusal_claims: 0 };
+const counts = {
+  patched_rows: 0, stored_answers: 0, choice_rows: 0, closed_acceptances: 0, still_open: 0, refusal_claims: 0,
+  triage_rows: 0, triage_additions: 0, whole_language_comparisons: 0, collateral_acceptances: 0, strict_additions_accepted: 0,
+};
 
 /** 1. Every stored answer of every patched row must still be accepted. A strict
  * row that rejects its own key would be a far worse defect than the one fixed. */
@@ -121,7 +125,96 @@ for (const patch of draft.patches) {
   }
 }
 
-/** 5. The refusals in findings.json are claims about the grader too: each listed
+/**
+ * 5. The triage block, checked the way triage insisted it be checked.
+ *
+ * NOT per row. A per-row check — does this row still accept only its own
+ * strings — passes all 88 rows whose typo ball grows and catches none of the
+ * four real collisions, because the colliding string belongs to a DIFFERENT
+ * row. So every addition is measured against EVERY taught string in its
+ * language: 2,281 Japanese and 2,152 Korean keys, accepted answers, options and
+ * distractors, re-graded before and after the patch.
+ *
+ * Three things must hold. Every addition must be accepted after the patch (it
+ * is an exact match, so this is really a check that nothing else broke). No
+ * stored answer may be lost. And the only strings the patch newly admits must
+ * be the twelve the four dependency-bearing kinship rows were declared to admit
+ * — anything else is an unrecorded collision and fails the run.
+ */
+const triage = await loadTriage();
+
+const taughtByLanguage = new Map();
+for (const exercise of snapshot.exercises) {
+  const language = languageOf(exercise);
+  if (!taughtByLanguage.has(language)) taughtByLanguage.set(language, new Set());
+  for (const value of [exercise.correct_answer, ...(exercise.accepted_answers ?? []), ...(exercise.options ?? []), ...(exercise.distractors ?? [])]) {
+    if (typeof value === 'string' && value.trim()) taughtByLanguage.get(language).add(value.trim());
+  }
+}
+counts.taught_strings_per_language = Object.fromEntries([...taughtByLanguage].map(([k, v]) => [k, v.size]));
+const declaredCollateral = new Set(Object.entries(DEPENDENT_ROWS)
+  .flatMap(([ref, strings]) => strings.map(string => `${ref}|${string}`)));
+const observedCollateral = new Set();
+/** Rows the paradigm block also makes strict; see the loss branch below. */
+const strictened = new Set(draft.patches.filter(p => Object.hasOwn(p.after, 'target_grammar')).map(p => p.id));
+const intendedLosses = [];
+for (const entry of triage) {
+  const original = before.get(entry.exercise_id);
+  const patched = after.get(entry.exercise_id);
+  counts.triage_rows++;
+  for (const addition of entry.additions) {
+    counts.triage_additions++;
+    if (!grade(patched, addition)) failures.push({ ref: entry.ref, kind: 'addition_not_accepted', addition });
+  }
+  const language = languageOf(original);
+  for (const candidate of taughtByLanguage.get(language)) {
+    const was = grade(original, candidate);
+    const now = grade(patched, candidate);
+    counts.whole_language_comparisons++;
+    if (was && !now) {
+      // Seven rows are in both blocks, and on those the paradigm patch makes the
+      // row strict on purpose. Losing a wrong string there is the fix, not a
+      // regression: each one is already counted in closed_acceptances above. A
+      // loss on any row the paradigm patch does NOT touch would be a real
+      // regression and fails the run.
+      if (strictened.has(entry.exercise_id)) intendedLosses.push({ ref: entry.ref, candidate });
+      else failures.push({ ref: entry.ref, kind: 'previously_accepted_string_lost', candidate });
+    }
+    if (!was && now && !entry.additions.includes(candidate)) {
+      observedCollateral.add(`${entry.ref}|${candidate}`);
+      if (!declaredCollateral.has(`${entry.ref}|${candidate}`)) {
+        failures.push({ ref: entry.ref, kind: 'undeclared_collateral_acceptance', candidate });
+      }
+    }
+  }
+}
+counts.collateral_acceptances = observedCollateral.size;
+counts.intended_losses_on_rows_made_strict = intendedLosses.length;
+if (intendedLosses.length !== 4) failures.push({ kind: 'intended_loss_count_changed', intendedLosses });
+for (const declared of declaredCollateral) {
+  if (!observedCollateral.has(declared)) failures.push({ kind: 'declared_collateral_not_reproduced', declared });
+}
+
+/**
+ * 6. The precondition, reproduced rather than taken on trust: under strict
+ * grading every one of the 313 additions still passes and every collateral
+ * acceptance disappears. The probe sets target_grammar, which is the strictness
+ * switch this worktree has; the grader branch's Japanese edit-distance gate is
+ * not here to test directly, so this establishes the shape of the claim, not
+ * that branch's implementation of it.
+ */
+for (const entry of triage) {
+  const strict = { ...after.get(entry.exercise_id), target_grammar: 'strictness-probe' };
+  for (const addition of entry.additions) {
+    if (!grade(strict, addition)) failures.push({ ref: entry.ref, kind: 'addition_rejected_under_strict_grading', addition });
+    else counts.strict_additions_accepted++;
+  }
+  for (const candidate of DEPENDENT_ROWS[entry.ref] ?? []) {
+    if (grade(strict, candidate)) failures.push({ ref: entry.ref, kind: 'collateral_survives_strict_grading', candidate });
+  }
+}
+
+/** 7. The refusals in findings.json are claims about the grader too: each listed
  * string must be accepted TODAY and rejected under target_grammar. If either
  * half stops holding, the reason Russian and Chinese were left out has changed. */
 const findings = JSON.parse(await readFile('docs/audits/question-verification/round2/findings.json', 'utf8'));
@@ -144,12 +237,16 @@ const record = {
   snapshot_sha256: SNAPSHOT_SHA,
   draft_sha256: createHash('sha256').update(JSON.stringify(draft.patches)).digest('hex'),
   counts,
+  triage_source: 'docs/audits/question-verification/round2/triage-confirmed.json',
+  declared_collateral: Object.entries(DEPENDENT_ROWS).flatMap(([ref, strings]) => strings.map(s => ({ ref, string: s }))),
+  intended_losses_on_rows_made_strict: intendedLosses,
   failures,
   production_writes: 0,
   limitations: [
     'Mechanical routing only: says nothing about whether an authored string is linguistically right.',
     'Corpus-attested strings only. The productive hole is on the learner\'s side, so the strings a learner would actually type are not enumerable here.',
     'Does not exercise the semantic grader behind free_production; gradeOpenResponse returns the fixed result first, which is what this measures.',
+    'Runs lib/grading.ts as it stands on this branch. The grader branch\'s Japanese edit-distance gate is not present, so the 12 collateral acceptances are expected here and are the reason this patch must ship with that branch; the strict-grading probe shows they vanish under strictness.',
   ],
 };
 await writeFile('docs/audits/question-verification/round2/runtime-checks.json', JSON.stringify(record, null, 2) + '\n');

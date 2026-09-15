@@ -2,6 +2,7 @@
   "round": 2,
   "snapshot_sha256": "9a20145dc6b53d1e4b5f17388b3f24c4ee4dd43c19b9bdac935ba8256bfb489c",
   "status": "Draft findings for independent round-2 review. Nothing here is deployed.",
+  "APPLY_PRECONDITION": "This patch MUST ship in the same release as the grader branch — the Japanese edit-distance gate and the kinship confusable pairs — and NOT before it. The 313 accepted-answer additions widen typo tolerance on 88 rows while the gate is absent, and four of them let twelve other taught kinship terms through. Under strict grading all 313 additions still pass and all twelve collateral acceptances vanish, which is what makes the two halves complementary rather than merely compatible.",
   "items": {
     "1_italian_ambiguous_choice_rows": {
       "patched": 0,
@@ -38,7 +39,128 @@
     "9_productive_paradigms": {
       "patched": 249,
       "see": "paradigm_refusals for what was left out"
+    },
+    "triage_298_confirmed_ja_ko_rows": {
+      "patched": 298,
+      "additions": 313,
+      "see": "triage_block"
     }
+  },
+  "triage_block": {
+    "rows": 298,
+    "additions": 313,
+    "by_language": {
+      "ja": 289,
+      "ko": 9
+    },
+    "by_type": {
+      "listening_type": 231,
+      "translate_to_target": 7,
+      "dictation": 52,
+      "cloze_deletion": 3,
+      "error_correction": 3,
+      "fill_blank": 1,
+      "word_form": 1
+    },
+    "source": "audit-triage worktree, docs/audits/question-verification/round2-triage/confirmed.json",
+    "source_sha256": "d897777b985558929da9e57a7fa1445bc303a289c414c6b49a7f48f135ea9775",
+    "why_these_are_content_defects": [
+      "283 of the 298 are listening_type or dictation. On those the learner is shown no text and no gloss: components/lesson/ListeningExercise.tsx withholds `prompt` deliberately, because `prompt` is the string handed to text-to-speech and printing it would show the answer, and components/lesson/DictationExercise.tsx speaks `correct_answer` as its stimulus, which is what dictation is.",
+      "So nothing in the task selects a script. A learner who hears おねがいします may correctly transcribe it in kana or in kanji, and the row accepts exactly one of the two. The addition is what makes the row answerable — no rendering change could substitute, because rendering the cue would destroy the exercise.",
+      "All 298 had accepted_answers empty in the frozen snapshot and still do; the build re-checks key, type and emptiness on every row before writing."
+    ],
+    "dependency": {
+      "rows": [
+        "ja-E0361",
+        "ja-E0373",
+        "ja-E0569",
+        "ja-E0581"
+      ],
+      "what": "Adding the kanji spellings of おばあさん / おじいさん / おじさん / おばさん pulls お母さん, お父さん, お姉さん, お嬢さん and お隣さん inside the typo budget — 12 collateral acceptances in total, on rows whose whole purpose is separating kinship terms.",
+      "remedy": "The confusable pairs the grader agent is authoring in lib/confusable-pairs.ts.",
+      "recorded_where": "In each of the four patch reasons, prefixed DEPENDENCY, so it travels with the row rather than living only in this file.",
+      "collateral": [
+        {
+          "ref": "ja-E0361",
+          "string": "お父さん"
+        },
+        {
+          "ref": "ja-E0361",
+          "string": "お姉さん"
+        },
+        {
+          "ref": "ja-E0361",
+          "string": "お嬢さん"
+        },
+        {
+          "ref": "ja-E0361",
+          "string": "お母さん"
+        },
+        {
+          "ref": "ja-E0361",
+          "string": "お隣さん"
+        },
+        {
+          "ref": "ja-E0373",
+          "string": "お父さん"
+        },
+        {
+          "ref": "ja-E0373",
+          "string": "お姉さん"
+        },
+        {
+          "ref": "ja-E0373",
+          "string": "お嬢さん"
+        },
+        {
+          "ref": "ja-E0373",
+          "string": "お母さん"
+        },
+        {
+          "ref": "ja-E0373",
+          "string": "お隣さん"
+        },
+        {
+          "ref": "ja-E0569",
+          "string": "お父さん"
+        },
+        {
+          "ref": "ja-E0581",
+          "string": "お母さん"
+        }
+      ]
+    },
+    "open_decisions_carried_forward": [
+      {
+        "decision": "Japanese orthography on written-production rows",
+        "rows": 61,
+        "candidates": 65,
+        "types": "40 translate_to_target, 25 cloze_deletion",
+        "question": "On a row whose cue is an English gloss (\"Translate to Japanese: Right\"), does a correct Japanese word written in the other script count, or is the taught spelling part of what the item tests?",
+        "accepting_costs": "The course stops requiring kanji production anywhere: a learner could finish the Japanese track in hiragana. That is a real pedagogical loss, which is why it is not simply a defect.",
+        "refusing_costs": "The kanji requirement is nowhere stated and the curriculum does not follow one — 明日, 社会 and 椅子 are keyed in kanji while まっすぐ, おいしい, すごい, たぶん, さらに and めったに are keyed in kana, and ご飯, お風呂 and もっと大きい are mixed. Refusing means telling some learners their correct answer is wrong with no way to have known.",
+        "triage_recommendation": "Accept the reading. 65 additions, all exact matches, and verified to bring no other taught string inside the typo budget.",
+        "note": "One row was already decided the other way by accident: ja-E2267 had うけみ added by the deployed patch. Under this triage that row is part of the confirmed transcription class, so the precedent is no longer isolated — but the written-production question should still be settled deliberately."
+      },
+      {
+        "decision": "Register variants on a cue that names no register",
+        "rows": 12,
+        "candidates": 20,
+        "question": "When the cue is a bare English gloss (\"Translate to Korean: No\") and the key is at one politeness level, does the same word at another level count?",
+        "sub_cases": {
+          "politeness_raised": "공부했습니다 for 공부했어요, 바랍니다 for 바란다, 아닙니다 for 아니요, でしょう for だろう, 料理します for 料理する. Both forms are polite; refusing is hard to justify on a cue that names no register.",
+          "politeness_dropped": "おはよう for おはようございます, おやすみ for おやすみなさい, 아니 for 아니요, 해야 해요 for 해야 한다. Here the learner has changed the register, and A1 teaches the polite form specifically."
+        },
+        "triage_recommendation": "Split them: accept upward, refuse downward. Implementable per row.",
+        "consistency_problem_the_decision_must_also_settle": "The Japanese alternatives batch already refuses おはよう for おはようございます under JA-POLITE-AFFIX while accepting ごめん for すみません, うん for はい and ううん for いいえ as lexical — the same casual-for-polite move on the same kind of bare A1 gloss. One position has to give, and those four rows should be made to match whichever way this goes."
+      }
+    ],
+    "rows_where_only_the_confirmed_half_is_patched": [
+      "ja-E0892",
+      "ja-E0970",
+      "ko-E0856",
+      "ko-E0862"
+    ]
   },
   "already_fixed_by_round_one": [
     {
