@@ -7,6 +7,28 @@
   "apply_precondition": "MUST ship in the same release as the grader branch (Japanese edit-distance gate + the kinship confusable pairs). The accepted-answer additions widen typo tolerance without that gate; under strict grading every addition still passes and all 12 collateral acceptances vanish.",
   "patches": [
     {
+      "table": "cards",
+      "id": "aabbccdd-3333-3007-c002-b10000000000",
+      "before": {
+        "course_id": "aabbccdd-3333-0000-0000-b10000000000",
+        "unit_id": "aabbccdd-3333-3007-0000-b10000000000",
+        "language": "de",
+        "cefr_level": "B1",
+        "target_text": "Würde"
+      },
+      "after": {
+        "target_text": "würde"
+      },
+      "reasons": [
+        "cards/aabbccdd-3333-3007-c002-b10000000000: Würde -> würde. The correction is to the KEY, not to the gloss: read the diff the other way round and it looks wrong. These rows teach the Konjunktiv II auxiliary — they sit in de B1 Hypothetical Situations beside two rows already keyed \"Would\" — and that auxiliary is written würde, lower case. German capitalises nouns, so a capitalised Würde is the noun \"dignity\", a different word. \"Would\" was always the right gloss. Grading is unaffected either way, because normalize() lowercases before comparing; this is a display correction."
+      ],
+      "sources": [
+        "https://www.duden.de/rechtschreibung/wuerde_Konjunktiv_werden",
+        "https://www.duden.de/rechtschreibung/Wuerde"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
       "table": "checkpoint_items",
       "id": "4f4bc9b6-c3e9-462d-bfd5-c83b198229ed",
       "before": {
@@ -74,6 +96,26 @@
       ],
       "sources": [
         "Stimulus analysis of the shipped app: components/lesson/ListeningExercise.tsx never renders `prompt`; components/lesson/DictationExercise.tsx never renders `prompt` and speaks `correct_answer`; `hintText` is rendered only by components/lesson/ClozeExercise.tsx. Reading/spelling checked against 大辞林/三省堂 standard orthography for the heard word."
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "00a15d8d-141f-426c-a19a-16b03af7b624",
+      "before": {
+        "lesson_id": "aabbccdd-3333-3007-0002-b10000000000",
+        "type": "listening_choice",
+        "prompt": "Würde"
+      },
+      "after": {
+        "prompt": "würde"
+      },
+      "reasons": [
+        "exercises/00a15d8d-141f-426c-a19a-16b03af7b624: Würde -> würde. The correction is to the KEY, not to the gloss: read the diff the other way round and it looks wrong. These rows teach the Konjunktiv II auxiliary — they sit in de B1 Hypothetical Situations beside two rows already keyed \"Would\" — and that auxiliary is written würde, lower case. German capitalises nouns, so a capitalised Würde is the noun \"dignity\", a different word. \"Would\" was always the right gloss. Grading is unaffected either way, because normalize() lowercases before comparing; this is a display correction."
+      ],
+      "sources": [
+        "https://www.duden.de/rechtschreibung/wuerde_Konjunktiv_werden",
+        "https://www.duden.de/rechtschreibung/Wuerde"
       ],
       "review_status": "awaiting_independent_round2_review"
     },
@@ -788,6 +830,28 @@
       ],
       "sources": [
         "lib/grading.ts gradeAnswer (TYPO_TOLERANCE_RATIO, isGrammarExercise)"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "205ec1b3-5fa8-4efd-a824-d3081c280f11",
+      "before": {
+        "lesson_id": "aabbccdd-3333-3007-0002-b10000000000",
+        "type": "listening_type",
+        "prompt": "Würde",
+        "correct_answer": "Würde"
+      },
+      "after": {
+        "prompt": "würde",
+        "correct_answer": "würde"
+      },
+      "reasons": [
+        "exercises/205ec1b3-5fa8-4efd-a824-d3081c280f11: Würde -> würde. The correction is to the KEY, not to the gloss: read the diff the other way round and it looks wrong. These rows teach the Konjunktiv II auxiliary — they sit in de B1 Hypothetical Situations beside two rows already keyed \"Would\" — and that auxiliary is written würde, lower case. German capitalises nouns, so a capitalised Würde is the noun \"dignity\", a different word. \"Would\" was always the right gloss. Grading is unaffected either way, because normalize() lowercases before comparing; this is a display correction."
+      ],
+      "sources": [
+        "https://www.duden.de/rechtschreibung/wuerde_Konjunktiv_werden",
+        "https://www.duden.de/rechtschreibung/Wuerde"
       ],
       "review_status": "awaiting_independent_round2_review"
     },
@@ -6727,6 +6791,26 @@
     },
     {
       "table": "exercises",
+      "id": "aabbccdd-3333-3007-0005-e00000000010",
+      "before": {
+        "lesson_id": "aabbccdd-3333-3007-0005-b10000000000",
+        "type": "multiple_choice",
+        "prompt": "What does \"Würde\" mean in English?"
+      },
+      "after": {
+        "prompt": "What does \"würde\" mean in English?"
+      },
+      "reasons": [
+        "exercises/aabbccdd-3333-3007-0005-e00000000010: Würde -> würde. The correction is to the KEY, not to the gloss: read the diff the other way round and it looks wrong. These rows teach the Konjunktiv II auxiliary — they sit in de B1 Hypothetical Situations beside two rows already keyed \"Would\" — and that auxiliary is written würde, lower case. German capitalises nouns, so a capitalised Würde is the noun \"dignity\", a different word. \"Would\" was always the right gloss. Grading is unaffected either way, because normalize() lowercases before comparing; this is a display correction."
+      ],
+      "sources": [
+        "https://www.duden.de/rechtschreibung/wuerde_Konjunktiv_werden",
+        "https://www.duden.de/rechtschreibung/Wuerde"
+      ],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
       "id": "aabbccdd-3333-3007-0006-e00000000002",
       "before": {
         "lesson_id": "aabbccdd-3333-3007-0006-b10000000000",
@@ -6747,6 +6831,28 @@
         "de-E1712 (de): same-gloss-same-key levelling. The row sharing the gloss \"Imagine\" already accepts \"Stelle dir vor\" on the identical question — group to_target|Imagine|Stell dir vor: same bare gloss, same stored key, no options — so a learner meeting both rows was marked differently for the same answer. Added here; measured against every taught de string and it admits nothing else."
       ],
       "sources": [],
+      "review_status": "awaiting_independent_round2_review"
+    },
+    {
+      "table": "exercises",
+      "id": "aabbccdd-3333-3007-0006-e00000000009",
+      "before": {
+        "lesson_id": "aabbccdd-3333-3007-0006-b10000000000",
+        "type": "free_production",
+        "prompt": "Write a sentence using the word: Würde (Would)",
+        "correct_answer": "Würde"
+      },
+      "after": {
+        "prompt": "Write a sentence using the word: würde (Would)",
+        "correct_answer": "würde"
+      },
+      "reasons": [
+        "exercises/aabbccdd-3333-3007-0006-e00000000009: Würde -> würde. The correction is to the KEY, not to the gloss: read the diff the other way round and it looks wrong. These rows teach the Konjunktiv II auxiliary — they sit in de B1 Hypothetical Situations beside two rows already keyed \"Would\" — and that auxiliary is written würde, lower case. German capitalises nouns, so a capitalised Würde is the noun \"dignity\", a different word. \"Would\" was always the right gloss. Grading is unaffected either way, because normalize() lowercases before comparing; this is a display correction."
+      ],
+      "sources": [
+        "https://www.duden.de/rechtschreibung/wuerde_Konjunktiv_werden",
+        "https://www.duden.de/rechtschreibung/Wuerde"
+      ],
       "review_status": "awaiting_independent_round2_review"
     },
     {

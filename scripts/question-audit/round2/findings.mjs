@@ -19,6 +19,7 @@ import { loadCandidates, REGISTER_RULING, REGISTER_REMOVALS, REGISTER_KEPT, FR_C
 import { loadAlternativesEvidence, SCRIPT_ACCEPT, SCRIPT_REFUSE, HELD_TYPO_BALL, GATE_DEPENDENT_COMPARATIVES, EVIDENCE_SHA, EVIDENCE_SOURCE } from './restored-withdrawals.mjs';
 import { LEVELLED, HELD_WOULD_WIDEN, PROPAGATION_LEVELLED, PROPAGATION_REFUSED, DECLARED_EXCEPTIONS as GLOSS_EXCEPTIONS, DECLARED_REASON as GLOSS_REASON, PROPAGATION_REASON } from './same-gloss-levelling.mjs';
 import { AXIS_REMAINDER, AXIS_REFUSED, AXIS_HELD } from './alternatives-axis-remainder.mjs';
+import { WUERDE_EDITS, WUERDE_LEFT_WRONG } from './wuerde-capitalisation.mjs';
 
 const raw = await readFile(SNAPSHOT_FILE, 'utf8');
 if (createHash('sha256').update(raw).digest('hex') !== SNAPSHOT_SHA) throw new Error('Changed frozen snapshot');
@@ -395,6 +396,7 @@ const SAME_GLOSS = {
     rows: HELD_WOULD_WIDEN,
   },
   propagations_decided: {
+    THE_PRINCIPLE: 'Propagating an alternative that is doubtful on the row that already carries it would make the group CONSISTENTLY wrong rather than inconsistently wrong. Consistency is not the goal; correctness is. A levelling sweep spreads a bad alternative as readily as a good one, which is why this class is decided by reading and not by mechanism.',
     reason: PROPAGATION_REASON,
     levelled: PROPAGATION_LEVELLED.length,
     refused: PROPAGATION_REFUSED,
@@ -438,23 +440,25 @@ const AXIS = {
   held: AXIS_HELD,
 };
 
-/** The Würde cluster: flagged, deliberately not patched. */
+/** The Würde cluster. Its own block, not a line in a count, because the edit
+ * reaches a CARD — the SRS payload every learner meets again at every review —
+ * and because the diff reads the opposite way from the truth. */
 const WUERDE = {
-  asked: 'Fix the gloss on the three rows keyed Würde and glossed "Would", since Würde is dignity.',
-  finding: 'THE GLOSS IS RIGHT AND THE KEY IS MISCAPITALISED. The three rows sit in de B1 Hypothetical Situations — Second Conditional, Regrets, Review & Test — beside a listening_choice keyed "Would" and a multiple_choice keyed "Would". The lesson unambiguously means the Konjunktiv II auxiliary, which is written würde, lower case. German capitalises nouns; Würde with a capital is the noun "dignity". So "Would" is the correct gloss and the capital W is the error.',
-  which_makes_it_the_bigger_change_you_asked_to_have_flagged: 'Not patched here. The source is a CARD — aabbccdd-3333-3007-c002-b10000000000, target_text "Würde", native_text "Would" — which is the SRS payload every learner reviews, and three exercise rows point at it. Correcting it means editing a card and four rows, which changes what learners see in review rather than only in a lesson.',
-  grading_impact: 'None either way. normalize() lowercases, so Würde and würde are one string to the grader: würde on a key of Würde returns Correct with accuracy 1.0, not a typo pass. No grading rule can separate them without making German case-sensitive, which would fail every learner who types a noun in lower case. The defect is entirely in what is displayed.',
-  the_exact_change_if_approved: {
-    card: 'aabbccdd-3333-3007-c002-b10000000000 target_text "Würde" -> "würde"',
-    rows: [
-      '205ec1b3-5fa8-4efd-a824-d3081c280f11 (listening_type) prompt and correct_answer "Würde" -> "würde" — the prompt is the text-to-speech source, so capitalisation does not change what is heard',
-      'aabbccdd-3333-3007-0006-e00000000009 (free_production) prompt "Write a sentence using the word: Würde (Would)" -> "würde (would)", correct_answer "Würde" -> "würde"',
-      'the listening_choice and multiple_choice rows keyed "Would": prompt "Würde" -> "würde". Their keys are already correct and do not move.',
-    ],
-    out_of_scope: 'One speaking row (6589a5e4) also carries Würde and cannot be touched by this compiler, so it would stay miscapitalised until someone else fixes it.',
+  APPROVED_AND_APPLIED: '2026-09-15. Flagged first, authored only on an explicit yes, because a card is not lesson text.',
+  READ_THIS_BEFORE_THE_DIFF: 'THE CORRECTION IS TO THE KEY, NOT TO THE GLOSS. A row keyed Würde and glossed "Would" looks like a mis-glossed noun — Würde is "dignity" — and that is the wrong reading. The gloss was right all along and the capital W is the error.',
+  what_settles_it: 'The neighbourhood, not the dictionary. All five rows sit in de B1 Hypothetical Situations — Second Conditional, Regrets, Review & Test — and two of them are ALREADY keyed "Would": a listening_choice whose options are Perhaps / Should / Would / Suppose, and a multiple_choice asking what the word means. The lesson teaches the Konjunktiv II auxiliary, which is written würde, lower case. German capitalises nouns, so a capitalised Würde is a different word.',
+  the_model_it_now_matches: 'The B2 fill_blank 9987684c already keys würde lower case, with target_grammar konjunktiv2_irrealis, in Complex Grammar / Konjunktiv II: Unreal Conditions. It is correct as it stands and is untouched.',
+  grading_impact: 'None, in either direction. normalize() lowercases before comparing, so Würde and würde are one string to the grader: würde on a key of Würde already returns Correct at accuracy 1.0, not a typo pass. No grading rule could separate them without making German case-sensitive, which would fail every learner who types a noun in lower case. The defect is entirely in what is DISPLAYED, which is why the runtime check measures no change from this block.',
+  what_changed: {
+    rows: 5, fields: WUERDE_EDITS.length,
+    card: 'aabbccdd-3333-3007-c002-b10000000000 target_text "Würde" -> "würde". This is the SRS payload, rendered by three exercise rows, which is why it was put to the owner rather than folded into a levelling count.',
+    edits: WUERDE_EDITS.map(([id, table, field, before, after]) => ({ id, table, field, before, after })),
+    every_edit_is_one_character: 'A test asserts before.toLowerCase() === after.toLowerCase() on every one, so this block can never become a content change.',
   },
-  the_fourth_row_is_correct: 'The B2 fill_blank 9987684c keys würde lower case, with target_grammar konjunktiv2_irrealis, in Complex Grammar / Konjunktiv II: Unreal Conditions. It is right as it stands and is the model the B1 cluster should match.',
-  wuerde_the_ascii_form: 'That B2 row also accepts "wuerde", the umlaut-free transliteration. Refused for the B1 rows in the alternatives-axis block, because importing it there would carry a spelling of a different word across the capitalisation boundary.',
+  ONE_ROW_KNOWINGLY_LEFT_WRONG: {
+    ...WUERDE_LEFT_WRONG,
+    why_it_is_named_here: 'After this patch the cluster is right on five surfaces and wrong on one. That is worse to inherit than uniformly wrong, because the next reader will assume the odd one out is deliberate. It is not: speaking content is refused by the compiler by a hard rule. It needs whoever owns speaking content.',
+  },
 };
 
 const findings = {
@@ -477,7 +481,7 @@ const findings = {
     'restored_withdrawals': { patched: 67, additions: 95, refused: 46, held: 3, see: 'restored_withdrawals' },
     'same_gloss_levelling': { patched: 84, additions: 97, held: 13, pending: 14, declared: 5, see: 'same_gloss_levelling' },
     'alternatives_axis_remainder': { patched: 17, additions: 18, refused: 7, held: 1, see: 'alternatives_axis' },
-    'wuerde_cluster': { patched: 0, see: 'wuerde_cluster — flagged, not patched: the key is miscapitalised, not the gloss' },
+    'wuerde_cluster': { patched: 5, fields: WUERDE_EDITS.length, see: 'wuerde_cluster — the KEY was miscapitalised, not the gloss; one speaking row knowingly left' },
   },
   rulings: RULINGS,
   restored_withdrawals: RESTORED,

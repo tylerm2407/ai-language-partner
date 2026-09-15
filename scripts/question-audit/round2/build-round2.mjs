@@ -18,6 +18,7 @@ import { createAcceptedAnswerLedger } from './accepted-answer-ledger.mjs';
 import { restoredWithdrawals } from './restored-withdrawals.mjs';
 import { sameGlossLevelling } from './same-gloss-levelling.mjs';
 import { alternativesAxisRemainder } from './alternatives-axis-remainder.mjs';
+import { wuerdeCapitalisation } from './wuerde-capitalisation.mjs';
 
 const set = await createRound2PatchSet();
 // Four blocks reach `accepted_answers` and five rows fall to more than one of
@@ -36,6 +37,7 @@ const counts = {
   restored_withdrawals: await restoredWithdrawals(set, ledger),
   same_gloss_levelling: sameGlossLevelling(set, ledger),
   alternatives_axis_remainder: alternativesAxisRemainder(set, ledger),
+  wuerde_capitalisation: wuerdeCapitalisation(set),
   french_checkpoint_paraphrase: frenchCheckpointParaphrase(set),
   // Before the ledger writes, so that a row this touches and an addition block
   // also claims would collide loudly instead of one silently winning.
