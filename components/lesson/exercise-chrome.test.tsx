@@ -18,6 +18,9 @@ import { TranslationExercise } from './TranslationExercise';
 import { SentenceConstructionExercise } from './SentenceConstructionExercise';
 import { colors } from '../../config/theme';
 import type { Exercise } from '../../types';
+// TranslationExercise now reaches lib/ai (the semantic grader); keep the
+// supabase client out of this render.
+jest.mock('../../lib/ai', () => ({ invokeWithRetry: jest.fn() }));
 
 jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Ionicons' }));
 // TactileButton -> useMotion -> lib/motion-preference reaches for the native

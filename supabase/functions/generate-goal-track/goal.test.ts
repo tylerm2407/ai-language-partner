@@ -174,6 +174,38 @@ Deno.test('duplicate options collapse', () => {
   assertEquals(out[0].options, ["l'addition", 'le pain']);
 });
 
+Deno.test('choices with multiple explicitly accepted answers are refused', () => {
+  assertEquals(parseExercises({ exercises: [{ ...GOOD_MC, acceptedAnswers: ["l'addition", 'la carte'] }] }), []);
+});
+
+Deno.test('choices distinguish real alternatives from duplicate keyboard variants', () => {
+  for (const duplicate of ['L’addition', "l'addition!", "l'addition"] ) {
+    const out = parseExercises({ exercises: [{ ...GOOD_MC, options: ["l'addition", duplicate, 'le pain'] }] });
+    if (duplicate === "l'addition") assertEquals(out.length, 1);
+    else assertEquals(out.length, 0);
+  }
+  assertEquals(parseExercises({ exercises: [{ ...GOOD_MC, correctAnswer: 'été', acceptedAnswers: ['été'], options: ['été', 'e\u0301te\u0301', 'hiver'] }] }), []);
+});
+
+Deno.test('gap output has exactly one complete marker', () => {
+  const exercise = { type: 'fill_blank', correctAnswer: 'suis', acceptedAnswers: ['suis'] };
+  for (const prompt of ['Je _ ici.', 'Je __ ici.', 'Je ____ ici.', 'Je ___ ___ ici.']) {
+    assertEquals(parseExercises({ exercises: [{ ...exercise, prompt }] }), []);
+  }
+  assertEquals(parseExercises({ exercises: [{ ...exercise, prompt: 'Je ___ ici.' }] }).length, 1);
+  assertEquals(parseExercises({ exercises: [{ ...exercise, prompt: '我叫___。' }] }).length, 1);
+});
+
+Deno.test('overlong questions and keys are refused rather than silently truncated', () => {
+  assertEquals(parseExercises({ exercises: [{ ...GOOD_MC, prompt: 'x'.repeat(501) }] }), []);
+  assertEquals(parseExercises({ exercises: [{ ...GOOD_MC, correctAnswer: 'x'.repeat(301) }] }), []);
+});
+
+Deno.test('generation includes the audited topic, level, ambiguity and completion checks', () => {
+  const prompt = buildExercisePrompt('French', 'English', 'B2', 'Professional emails', 'Write a polite workplace request');
+  for (const phrase of ['Professional emails', 'Write a polite workplace request', 'B2 difficulty', 'valid synonym', 'agreement and elision', 'unrelated generic topic']) assert(prompt.includes(phrase));
+});
+
 Deno.test('junk yields an empty list rather than throwing', () => {
   for (const junk of [null, undefined, {}, { exercises: 'nope' }, { exercises: [null, 3] }]) {
     assertEquals(parseExercises(junk), []);

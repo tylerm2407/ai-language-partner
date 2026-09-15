@@ -8,6 +8,7 @@ import { GradientBackground } from '../ui/GradientBackground';
 import { haptic } from '../../lib/haptics';
 import { ReportContentSheet } from '../ui/ReportContentSheet';
 import { colors, radii, spacing } from '../../config/theme';
+import { writingOverallScore } from '../../lib/writing-quality';
 
 interface Props {
   feedback: WritingFeedback;
@@ -18,17 +19,62 @@ interface Props {
   onContinue: () => void;
 }
 
+function validScore(value: unknown, maximum = 100): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= maximum;
+}
+
+function displayStrings(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0) : [];
+}
+
+interface DisplayCorrection {
+  original: string;
+  corrected: string;
+  explanation: string;
+  type: string;
+}
+
+function displayCorrections(value: unknown): DisplayCorrection[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item: unknown): item is DisplayCorrection => {
+    if (item === null || typeof item !== 'object' || Array.isArray(item)) return false;
+    const correction = item as Record<string, unknown>;
+    return ['original', 'corrected', 'explanation', 'type'].every(key => typeof correction[key] === 'string');
+  });
+}
+
 export function WritingFeedbackView({ feedback, previousScore, attemptNumber = 1, maxAttempts = 3, onTryAgain, onContinue }: Props) {
-  const spellingScore = feedback.spellingScore ?? 0;
-  const sentenceStructureScore = feedback.sentenceStructureScore ?? 0;
-  const overallScore = Math.round(
-    (feedback.grammarScore + feedback.vocabularyScore + feedback.coherenceScore + spellingScore + sentenceStructureScore) / 5
-  );
+  // Old saved feedback predates the fresh-response validator. Missing or
+  // malformed optional display data must not crash the screen or invent zeros.
+  const strengths = displayStrings(feedback.strengths);
+  const improvements = displayStrings(feedback.improvements);
+  const corrections = displayCorrections(feedback.corrections);
+  const overallFeedback = typeof feedback.overallFeedback === 'string' && feedback.overallFeedback.trim() ? feedback.overallFeedback : null;
+  const correctedVersion = typeof feedback.correctedVersion === 'string' && feedback.correctedVersion.trim() ? feedback.correctedVersion : null;
+  // Report the same validated text the learner can see, including legacy
+  // feedback that has useful details but no overall prose. Never report the
+  // local unavailable-status message or stringify malformed saved objects.
+  const reportContent = [
+    overallFeedback,
+    strengths.length ? `Strengths:\n${strengths.join('\n')}` : null,
+    improvements.length ? `Areas to improve:\n${improvements.join('\n')}` : null,
+    correctedVersion ? `Corrected version:\n${correctedVersion}` : null,
+    ...corrections.map(correction => {
+      const parts = [
+        ['Type', correction.type], ['Original', correction.original],
+        ['Corrected', correction.corrected], ['Explanation', correction.explanation],
+      ].filter(([, value]) => value.trim()).map(([label, value]) => `${label}: ${value}`);
+      return parts.length ? `Correction:\n${parts.join('\n')}` : null;
+    }),
+  ].filter((part): part is string => part !== null).join('\n\n');
+  const assessedScore = writingOverallScore(feedback);
+  const isGraded = assessedScore !== null;
+  const overallScore = Math.round((assessedScore ?? 0) * 100);
   const scoreColor = overallScore >= 80 ? colors.success.base : overallScore >= 60 ? colors.warning.base : colors.error.base;
   const scoreBg = overallScore >= 80 ? colors.success.tint : overallScore >= 60 ? colors.warning.tint : colors.error.tint;
 
   const [reportOpen, setReportOpen] = useState(false);
-  const canRetry = attemptNumber < maxAttempts;
+  const canRetry = !isGraded || attemptNumber < maxAttempts;
 
   // The grade arriving is the moment worth feeling. Writing is the longest
   // single task in the app — minutes of typing, then a spinner — and it ended
@@ -40,9 +86,10 @@ export function WritingFeedbackView({ feedback, previousScore, attemptNumber = 1
   // flat Success on every grade would tell the learner their worst attempt felt
   // identical to their best.
   useEffect(() => {
+    if (!isGraded) return;
     haptic(overallScore >= 80 ? 'complete' : overallScore >= 60 ? 'warning' : 'incorrect');
-  }, [overallScore]);
-  const improvementDelta = previousScore != null ? overallScore - Math.round(previousScore * 100) : null;
+  }, [overallScore, isGraded]);
+  const improvementDelta = isGraded && previousScore != null ? overallScore - Math.round(previousScore * 100) : null;
 
   return (
     <GradientBackground>
@@ -64,11 +111,11 @@ export function WritingFeedbackView({ feedback, previousScore, attemptNumber = 1
         <View style={{ alignItems: 'center', marginBottom: spacing.lg }}>
           <View style={{
             width: 100, height: 100, borderRadius: 50,
-            backgroundColor: scoreBg, justifyContent: 'center', alignItems: 'center',
+            backgroundColor: isGraded ? scoreBg : colors.surface.card, justifyContent: 'center', alignItems: 'center',
           }}>
-            <Text style={{ fontSize: 32, fontWeight: '700', color: scoreColor }}>{overallScore}</Text>
+            <Text style={{ fontSize: 32, fontWeight: '700', color: isGraded ? scoreColor : colors.text.tertiary }}>{isGraded ? overallScore : '—'}</Text>
           </View>
-          <Text style={{ fontSize: 14, color: colors.text.tertiary, marginTop: spacing.xs }}>Overall Score</Text>
+          <Text style={{ fontSize: 14, color: colors.text.tertiary, marginTop: spacing.xs }}>{isGraded ? 'Overall Score' : 'Not graded'}</Text>
 
           {/* Improvement Delta */}
           {improvementDelta !== null && improvementDelta !== 0 && (
@@ -93,22 +140,23 @@ export function WritingFeedbackView({ feedback, previousScore, attemptNumber = 1
         </View>
 
         {/* Category Scores */}
-        <View style={{ backgroundColor: colors.surface.card, borderRadius: radii.xl, padding: spacing.xl, marginBottom: spacing.md }}>
-          <ScoreRow label="Grammar" score={feedback.grammarScore} />
-          <ScoreRow label="Vocabulary" score={feedback.vocabularyScore} />
-          <ScoreRow label="Coherence" score={feedback.coherenceScore} />
-          <ScoreRow label="Spelling" score={spellingScore} />
-          <ScoreRow label="Sentence Structure" score={sentenceStructureScore} />
-        </View>
+        {isGraded && <View style={{ backgroundColor: colors.surface.card, borderRadius: radii.xl, padding: spacing.xl, marginBottom: spacing.md }}>
+          {validScore(feedback.grammarScore) && <ScoreRow label="Grammar" score={feedback.grammarScore} />}
+          {validScore(feedback.vocabularyScore) && <ScoreRow label="Vocabulary" score={feedback.vocabularyScore} />}
+          {validScore(feedback.coherenceScore) && <ScoreRow label="Coherence" score={feedback.coherenceScore} />}
+          {validScore(feedback.task_completion, 25) && <ScoreRow label="Task completion" score={feedback.task_completion * 4} />}
+          {validScore(feedback.spellingScore) && <ScoreRow label="Spelling" score={feedback.spellingScore} />}
+          {validScore(feedback.sentenceStructureScore) && <ScoreRow label="Sentence Structure" score={feedback.sentenceStructureScore} />}
+        </View>}
 
         {/* Strengths */}
-        {feedback.strengths && feedback.strengths.length > 0 && (
+        {strengths.length > 0 && (
           <View style={{ backgroundColor: colors.success.tint, borderRadius: radii.xl, padding: spacing.xl, marginBottom: spacing.md }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs }}>
               <Ionicons name="checkmark-circle" size={18} color={colors.success.base} />
               <Text style={{ fontSize: 16, fontWeight: '600', color: colors.success.base, marginLeft: 6 }}>Strengths</Text>
             </View>
-            {feedback.strengths.map((s, i) => (
+            {strengths.map((s, i) => (
               <Text key={i} style={{ fontSize: 14, color: colors.success.light, lineHeight: 20, marginBottom: spacing.xxs }}>
                 {'\u2022'} {s}
               </Text>
@@ -117,13 +165,13 @@ export function WritingFeedbackView({ feedback, previousScore, attemptNumber = 1
         )}
 
         {/* Areas for Improvement */}
-        {feedback.improvements && feedback.improvements.length > 0 && (
+        {improvements.length > 0 && (
           <View style={{ backgroundColor: colors.warning.tint, borderRadius: radii.xl, padding: spacing.xl, marginBottom: spacing.md }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs }}>
               <Ionicons name="bulb" size={18} color={colors.warning.base} />
               <Text style={{ fontSize: 16, fontWeight: '600', color: colors.warning.base, marginLeft: 6 }}>Areas to Improve</Text>
             </View>
-            {feedback.improvements.map((s, i) => (
+            {improvements.map((s, i) => (
               <Text key={i} style={{ fontSize: 14, color: colors.warning.light, lineHeight: 20, marginBottom: spacing.xxs }}>
                 {'\u2022'} {s}
               </Text>
@@ -134,10 +182,10 @@ export function WritingFeedbackView({ feedback, previousScore, attemptNumber = 1
         {/* Overall Feedback */}
         <View style={{ backgroundColor: colors.surface.card, borderRadius: radii.xl, padding: spacing.xl, marginBottom: spacing.md }}>
           <Text style={{ fontSize: 16, fontWeight: '600', marginBottom: spacing.xs, color: colors.text.onPrimary }}>Feedback</Text>
-          <Text style={{ fontSize: 15, color: colors.text.tertiary, lineHeight: 22 }}>{feedback.overallFeedback}</Text>
+          <Text style={{ fontSize: 15, color: colors.text.tertiary, lineHeight: 22 }}>{overallFeedback ?? 'Written feedback is unavailable for this attempt.'}</Text>
 
           {/* Google Play generative-AI policy: users must be able to flag AI output. */}
-          <Pressable
+          {reportContent.length > 0 && <Pressable
             onPress={() => setReportOpen(true)}
             accessibilityRole="button"
             accessibilityLabel="Report this feedback"
@@ -148,33 +196,33 @@ export function WritingFeedbackView({ feedback, previousScore, attemptNumber = 1
             <Text style={{ fontSize: 12, color: colors.text.quaternary, marginLeft: spacing.xxs }}>
               Report this feedback
             </Text>
-          </Pressable>
+          </Pressable>}
         </View>
 
         {/* Corrected Version */}
-        {feedback.correctedVersion && (
+        {correctedVersion && (
           <View style={{ backgroundColor: colors.surface.card, borderRadius: radii.xl, padding: spacing.xl, marginBottom: spacing.md }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs }}>
               <Ionicons name="create" size={18} color={colors.action.accent} />
               <Text style={{ fontSize: 16, fontWeight: '600', marginLeft: 6, color: colors.text.onPrimary }}>Corrected Version</Text>
             </View>
             <Text style={{ fontSize: 15, color: colors.text.onPrimary, lineHeight: 22, fontStyle: 'italic' }}>
-              {feedback.correctedVersion}
+              {correctedVersion}
             </Text>
           </View>
         )}
 
         {/* Corrections */}
-        {feedback.corrections.length > 0 && (
+        {corrections.length > 0 && (
           <View style={{ backgroundColor: colors.surface.card, borderRadius: radii.xl, padding: spacing.xl, marginBottom: spacing.md }}>
             <Text style={{ fontSize: 16, fontWeight: '600', marginBottom: spacing.sm, color: colors.text.onPrimary }}>
-              Corrections ({feedback.corrections.length})
+              Corrections ({corrections.length})
             </Text>
-            {feedback.corrections.map((correction, index) => (
+            {corrections.map((correction, index) => (
               <View key={index} style={{
-                marginBottom: index < feedback.corrections.length - 1 ? spacing.sm : 0,
-                paddingBottom: index < feedback.corrections.length - 1 ? spacing.sm : 0,
-                borderBottomWidth: index < feedback.corrections.length - 1 ? 1 : 0,
+                marginBottom: index < corrections.length - 1 ? spacing.sm : 0,
+                paddingBottom: index < corrections.length - 1 ? spacing.sm : 0,
+                borderBottomWidth: index < corrections.length - 1 ? 1 : 0,
                 borderBottomColor: colors.border.default,
               }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xxs }}>
@@ -228,11 +276,11 @@ export function WritingFeedbackView({ feedback, previousScore, attemptNumber = 1
       </View>
 
       <ReportContentSheet
-        visible={reportOpen}
+        visible={reportOpen && reportContent.length > 0}
         onDismiss={() => setReportOpen(false)}
-        content={feedback.overallFeedback}
+        content={reportContent}
         surface="writing"
-        context={{ overallScore }}
+        context={{ overallScore: assessedScore === null ? null : overallScore }}
       />
     </SafeAreaView>
     </GradientBackground>

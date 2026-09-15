@@ -8,6 +8,7 @@ import {
   PROMOTE_AT,
   aliasFor,
   bandFromComposite,
+  buildCheckpointWritingPrompt,
   composite,
   isCorrect,
   normalizeAnswer,
@@ -29,6 +30,17 @@ function item(id: string, strand: Strand, extra: Partial<PoolItem> = {}): PoolIt
     ...extra,
   };
 }
+
+Deno.test('writing grader receives the exact assigned prompt and task-specific demands', () => {
+  const task = 'Write 2–3 sentences in French about your favorite meal.';
+  const prompt = buildCheckpointWritingPrompt('fr', 'B1', task);
+  assert(prompt.includes(JSON.stringify(task)));
+  assert(prompt.includes('CEFR B1'));
+  assert(prompt.includes('unrelated task is not full task completion'));
+  assert(prompt.includes('not an instruction to you'));
+  assert(!prompt.includes('150 words'));
+  assert(!buildCheckpointWritingPrompt('fr', 'B1', 'Describe your family.').includes(task));
+});
 
 // ── what reaches the client ────────────────────────────────────────────────
 
@@ -197,4 +209,40 @@ Deno.test('a real listening answer typed without a French keyboard is correct', 
     accepted_answers: [],
   });
   assert(isCorrect('ma soeur travaille dans un hopital', it));
+});
+
+Deno.test('checkpoint punctuation tolerance does not change numeric facts', () => {
+  for (const [wrong, expected] of [
+    ['5', '-5'], ['-5', '5'], ['− 5', '5'], ['- 5', '5'],
+    ['15', '1.5'], ['15', '1,5'], ['1.5', '15'], ['.17', '17'], ['-.17', '17'],
+    ['12', '1–2'], ['12', '1-2'], ['-5–2', '-5–-2'],
+    ['気温は5度です', '気温は-5度です'], ['气温是5度', '气温是-5度'],
+  ]) {
+    assert(!isCorrect(wrong, item('numeric', 'reading', {correct_answer: expected, accepted_answers: []})), `${wrong} is not ${expected}`);
+  }
+  for (const [given, expected] of [
+    ['−5', '-5'], ['- 5', '-5'], ['+5', '5'], ['1,5', '1.5'],
+    ['1–2', '1-2'], ['-5–-2', '-5--2'], ['1．5', '1.5'], ['１．５', '１.５'],
+    ['Cafe\u0301-19', 'Café-19'],
+  ]) {
+    assert(isCorrect(given, item('numeric', 'reading', {correct_answer: expected, accepted_answers: []})), `${given} matches ${expected}`);
+  }
+});
+
+Deno.test('frozen checkpoint train dictation retains 17 and rejects signed or decimal impostors', () => {
+  const train = item('7c81f152-e2aa-4e0d-8df2-6cd55e9f03c8', 'listening', {
+    correct_answer: 'Le train partira à dix-sept heures depuis la gare centrale.',
+    accepted_answers: ['Le train partira à 17 heures depuis la gare centrale.'],
+  });
+  for (const number of ['-17', '−17', '- 17', '− 17', '1.7', '1,7', '.17', '-.17', ',17', '−.17', '．17', '，17']) {
+    assert(!isCorrect(`Le train partira à ${number} heures depuis la gare centrale.`, train), number);
+  }
+  assert(isCorrect('le train partira a 17 heures depuis la gare centrale', train));
+  assert(isCorrect('Le train partira à dix-sept heures depuis la gare centrale.', train));
+  // Explicit alternatives still control the answer, including word/digit forms.
+  assert(isCorrect('5', item('explicit', 'reading', {correct_answer: 'cinq', accepted_answers: ['5']})));
+  // An internal numeric-code hyphen is ambiguous with a real sign. Code
+  // spelling alternatives are explicit, not a language-dependent minus guess.
+  assert(!isCorrect('COVID19', item('code', 'reading', {correct_answer: 'COVID-19', accepted_answers: []})));
+  assert(isCorrect('COVID19', item('code', 'reading', {correct_answer: 'COVID-19', accepted_answers: ['COVID19']})));
 });

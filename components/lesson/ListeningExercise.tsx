@@ -40,7 +40,7 @@ export function ListeningExercise({
   const [answer, setAnswer] = useState(selected ?? '');
   const [submitted, setSubmitted] = useState(() => isRestored(selected));
   const [result, setResult] = useState<GradeResult | null>(() =>
-    regradePick(exercise, selected),
+    regradePick(exercise, selected, language as LanguageCode | undefined),
   );
   const { playing, loading, error: audioError, play } = useAudioPlayer();
   const [synthesizing, setSynthesizing] = useState(false);
@@ -99,17 +99,21 @@ export function ListeningExercise({
     }
   };
 
+  // Reuse the actual grading decision for option colors/icons as well as
+  // credit, including when a saved pick is restored on Previous.
+  const gradeResponse = (value: string) => gradeAnswer(value, exercise.correctAnswer, exercise.acceptedAnswers, {
+    exerciseHints: {
+      exerciseType: exercise.type,
+      skillType: exercise.skillType,
+      targetGrammar: exercise.targetGrammar,
+      targetWord: exercise.targetWord,
+      language: language as LanguageCode | undefined,
+    },
+  });
+
   const handleSelectOption = (option: string) => {
     if (submitted || showResult) return;
-    const grade = gradeAnswer(option, exercise.correctAnswer, exercise.acceptedAnswers, {
-      exerciseHints: {
-        exerciseType: exercise.type,
-        skillType: exercise.skillType,
-        targetGrammar: exercise.targetGrammar,
-        targetWord: exercise.targetWord,
-        language: language as LanguageCode | undefined,
-      },
-    });
+    const grade = gradeResponse(option);
     setAnswer(option);
     setSubmitted(true);
     setResult(grade);
@@ -122,15 +126,7 @@ export function ListeningExercise({
   const handleSubmitTyped = () => {
     if (!answer.trim() || submitted) return;
 
-    const grade = gradeAnswer(answer, exercise.correctAnswer, exercise.acceptedAnswers, {
-      exerciseHints: {
-        exerciseType: exercise.type,
-        skillType: exercise.skillType,
-        targetGrammar: exercise.targetGrammar,
-        targetWord: exercise.targetWord,
-        language: language as LanguageCode | undefined,
-      },
-    });
+    const grade = gradeResponse(answer);
     setResult(grade);
     setSubmitted(true);
 
@@ -144,9 +140,7 @@ export function ListeningExercise({
     if (!submitted && !showResult) {
       return 'bg-dark-card-alt border-2 border-transparent';
     }
-    const isCorrectOption =
-      option.toLowerCase() === exercise.correctAnswer.toLowerCase() ||
-      exercise.acceptedAnswers.map((a) => a.toLowerCase()).includes(option.toLowerCase());
+    const isCorrectOption = gradeResponse(option).isCorrect;
 
     if ((submitted || showResult) && isCorrectOption) {
       return 'bg-success-bg border-2 border-success';
@@ -241,9 +235,7 @@ export function ListeningExercise({
               accessibilityLabel={`Option ${index + 1}: ${option}`}
             >
               {(submitted || showResult) && (() => {
-                const isCorrectOption =
-                  option.toLowerCase() === exercise.correctAnswer.toLowerCase() ||
-                  exercise.acceptedAnswers.map((a) => a.toLowerCase()).includes(option.toLowerCase());
+                const isCorrectOption = gradeResponse(option).isCorrect;
                 const isSelected = option === answer;
                 if (isCorrectOption) {
                   return <Ionicons name="checkmark-circle" size={20} color={colors.success.base} style={{ marginRight: 8 }} />;

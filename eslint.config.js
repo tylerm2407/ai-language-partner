@@ -5,6 +5,10 @@ const expoConfig = require('eslint-config-expo/flat');
 module.exports = defineConfig([
   expoConfig,
   {
+    files: ['docs/audits/**/*.test.mjs'],
+    languageOptions: { globals: { Deno: 'readonly' } },
+  },
+  {
     rules: {
       // Straight apostrophes/quotes in UI copy are fine in React Native text.
       'react/no-unescaped-entities': 'off',

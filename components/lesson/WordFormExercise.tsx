@@ -35,7 +35,7 @@ export function WordFormExercise({
   const [answer, setAnswer] = useState(selected ?? '');
   const [submitted, setSubmitted] = useState(() => isRestored(selected));
   const [result, setResult] = useState<GradeResult | null>(() =>
-    regradePick(exercise, selected),
+    regradePick(exercise, selected, language as LanguageCode | undefined),
   );
 
   const baseWord = (exercise.metadata?.baseWord as string) ?? '';

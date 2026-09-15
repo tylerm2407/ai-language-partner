@@ -616,6 +616,13 @@ export interface WritingPrompt {
 }
 
 export interface WritingFeedback {
+  graded?: boolean;
+  /** The grader's established four-part task rubric, each on a 0–25 scale. */
+  grammar?: number;
+  vocabulary?: number;
+  coherence?: number;
+  task_completion?: number;
+  total?: number;
   grammarScore: number;
   spellingScore: number;
   sentenceStructureScore: number;

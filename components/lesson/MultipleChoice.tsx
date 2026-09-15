@@ -40,21 +40,22 @@ export function MultipleChoice({
   const options = exercise.options ?? [];
   const locked = selected !== null || showResult;
 
-  const isCorrectOption = (option: string) =>
-    option.toLowerCase() === exercise.correctAnswer.toLowerCase() ||
-    exercise.acceptedAnswers.map((a) => a.toLowerCase()).includes(option.toLowerCase());
+  // Credit, labels and restored colors must use the same normalized exact
+  // choice decision. This helper is pure; rendering never logs or buzzes.
+  const gradeOption = (option: string) => gradeAnswer(option, exercise.correctAnswer, exercise.acceptedAnswers, {
+    exerciseHints: {
+      exerciseType: exercise.type,
+      skillType: exercise.skillType,
+      targetGrammar: exercise.targetGrammar,
+      targetWord: exercise.targetWord,
+      language: language as LanguageCode | undefined,
+    },
+  });
+  const isCorrectOption = (option: string) => gradeOption(option).isCorrect;
 
   const handleSelect = (option: string) => {
     if (locked) return;
-    const grade = gradeAnswer(option, exercise.correctAnswer, exercise.acceptedAnswers, {
-      exerciseHints: {
-        exerciseType: exercise.type,
-        skillType: exercise.skillType,
-        targetGrammar: exercise.targetGrammar,
-        targetWord: exercise.targetWord,
-        language: language as LanguageCode | undefined,
-      },
-    });
+    const grade = gradeOption(option);
     haptic(grade.isCorrect ? 'correct' : 'incorrect');
 
     // This type used to log its correction from inside FeedbackCard's mount

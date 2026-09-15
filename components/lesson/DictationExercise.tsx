@@ -41,6 +41,7 @@ export function DictationExercise({
   language,
   cefrLevel,
 }: Props) {
+  const effectiveLanguage = language ?? targetLanguage;
   // Seeded from the recorded pick so Previous comes back to the answer the
   // learner actually gave, in its graded state — see lib/exercise-restore.ts.
   const [userInput, setUserInput] = useState(selected ?? '');
@@ -52,7 +53,7 @@ export function DictationExercise({
    */
   const isRevealed = localRevealed || showResult;
   const [result, setResult] = useState<GradeResult | null>(() =>
-    regradePick(exercise, selected),
+    regradePick(exercise, selected, effectiveLanguage as LanguageCode | undefined),
   );
   const [playCount, setPlayCount] = useState(0);
 
@@ -72,7 +73,7 @@ export function DictationExercise({
         skillType: exercise.skillType,
         targetGrammar: exercise.targetGrammar,
         targetWord: exercise.targetWord,
-        language: language as LanguageCode | undefined,
+        language: effectiveLanguage as LanguageCode | undefined,
       },
     });
     setResult(grade);
@@ -83,7 +84,6 @@ export function DictationExercise({
   };
 
 
-  const effectiveLanguage = language ?? targetLanguage;
   const isCorrect = result?.isCorrect ?? false;
 
   return (

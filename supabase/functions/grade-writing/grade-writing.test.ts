@@ -63,6 +63,71 @@ Deno.test('parseGradingResponse: returns null for JSON missing required score fi
   assertEquals(parseGradingResponse('null'), null);
 });
 
+Deno.test('parseGradingResponse: rejects out-of-range or incomplete rubric scores', () => {
+  const valid = JSON.parse(VALID_GRADE);
+  for (const change of [{ grammarScore: 101 }, { vocabularyScore: -1 }, { task_completion: 26 }, { spellingScore: '90' }]) {
+    assertEquals(parseGradingResponse(JSON.stringify({ ...valid, ...change })), null);
+  }
+  delete valid.task_completion;
+  assertEquals(parseGradingResponse(JSON.stringify(valid)), null);
+});
+
+Deno.test('parseGradingResponse: preserves zeros and calculates the rubric total', () => {
+  const parsed = parseGradingResponse(JSON.stringify({ ...JSON.parse(VALID_GRADE), task_completion: 0, grammarScore: 0, total: 100 }));
+  assert(parsed !== null);
+  assertEquals(parsed.grammarScore, 0);
+  assertEquals(parsed.task_completion, 0);
+  assertEquals(parsed.total, 55);
+});
+
+Deno.test('fresh responses require every rubric, diagnostic and display field', () => {
+  for (const key of [
+    'grammar', 'vocabulary', 'coherence', 'task_completion',
+    'grammarScore', 'vocabularyScore', 'coherenceScore', 'spellingScore', 'sentenceStructureScore',
+    'strengths', 'improvements', 'correctedVersion', 'corrections', 'overallFeedback',
+  ]) {
+    const payload = JSON.parse(VALID_GRADE);
+    delete payload[key];
+    assertEquals(parseGradingResponse(JSON.stringify(payload)), null, `missing ${key}`);
+  }
+  const noRubric = JSON.parse(VALID_GRADE);
+  for (const key of ['grammar', 'vocabulary', 'coherence', 'task_completion']) delete noRubric[key];
+  assertEquals(parseGradingResponse(JSON.stringify(noRubric)), null, 'legacy compatibility must not waive a fresh task rubric');
+  assertEquals(parseGradingResponse(JSON.stringify({ grammarScore: 80, vocabularyScore: 80, coherenceScore: 80 })), null);
+});
+
+Deno.test('fresh responses reject malformed data that the feedback screen cannot render safely', () => {
+  const validCorrection = { original: 'yo es', corrected: 'yo soy', explanation: 'Match the subject.', type: 'grammar' };
+  for (const change of [
+    { strengths: 'Good writing' }, { strengths: [null] }, { improvements: [{}] },
+    { correctedVersion: {} }, { overallFeedback: {} }, { overallFeedback: '  ' },
+    { corrections: null }, { corrections: 'none' }, { corrections: [null] },
+    { corrections: [{ ...validCorrection, original: {} }] },
+    { corrections: [{ ...validCorrection, corrected: 1 }] },
+    { corrections: [{ ...validCorrection, explanation: [] }] },
+    { corrections: [{ ...validCorrection, type: ['grammar'] }] },
+    { corrections: [{ ...validCorrection, type: 'unrecognized' }] },
+    { corrections: [{ ...validCorrection, ruleViolated: {} }] },
+    { graded: false }, { graded: 'true' },
+  ]) assertEquals(parseGradingResponse(JSON.stringify({ ...JSON.parse(VALID_GRADE), ...change })), null);
+});
+
+Deno.test('fresh response validation preserves real zeros, empty advice and legitimate insertion/deletion corrections', () => {
+  const zero = JSON.parse(VALID_GRADE);
+  for (const key of ['grammar', 'vocabulary', 'coherence', 'task_completion', 'grammarScore', 'vocabularyScore', 'coherenceScore', 'spellingScore', 'sentenceStructureScore']) zero[key] = 0;
+  const empty = parseGradingResponse(JSON.stringify({ ...zero, strengths: [], improvements: [], corrections: [], correctedVersion: null }));
+  assert(empty !== null);
+  assertEquals(empty.total, 0);
+  assertEquals(empty.graded, true);
+  assertEquals(empty.corrections, []);
+  const corrections = [
+    { original: '', corrected: 'a', explanation: 'Supply the preposition.', type: 'grammar' },
+    { original: 'the', corrected: '', explanation: 'No article is needed here.', type: 'style', ruleViolated: 'Optional article guidance' },
+    { original: 'a b', corrected: 'b a', explanation: 'Restore the required order.', type: 'structure' },
+  ];
+  assertEquals(parseGradingResponse(JSON.stringify({ ...JSON.parse(VALID_GRADE), corrections }))?.corrections, corrections);
+});
+
 // ─── buildFallbackFeedback ───────────────────────────────────────────
 
 Deno.test('buildFallbackFeedback: no fake scores, flagged graded: false', () => {
@@ -138,6 +203,18 @@ Deno.test('gradeWithValidation: parse failure then valid retry returns the real 
   assertEquals(calls, 2);
   assertEquals(result.graded, true);
   assertEquals(result.grammarScore, 72);
+});
+
+Deno.test('incomplete fresh feedback retries and then uses honest no-grade fallback', async () => {
+  let calls = 0;
+  const result = await gradeWithValidation(() => {
+    calls++;
+    return Promise.resolve(JSON.stringify({ grammarScore: 80, vocabularyScore: 80, coherenceScore: 80 }));
+  }, noopLog);
+  assertEquals(calls, 2);
+  assertEquals(result.graded, false);
+  assertEquals(result.corrections, []);
+  assertEquals(shouldRefundQuota(result), true);
 });
 
 Deno.test('gradeWithValidation: unsafe output exhausts safety retries, then fallback', async () => {

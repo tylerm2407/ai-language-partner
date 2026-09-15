@@ -11,6 +11,8 @@ import { getPlanLimits } from '../_shared/plan-limits.ts';
 import { isValidUUID, isValidCefrLevel, isValidLanguage, sanitizeText } from '../_shared/validation.ts';
 import { PROVIDER_TIMEOUT_MS, providerFetch } from '../_shared/provider-fetch.ts';
 import { gradeWithValidation, shouldRefundQuota } from './grading.ts';
+import { buildGradingPrompt } from './prompt.ts';
+import { countWritingUnits } from './writing-length.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -23,6 +25,64 @@ interface GradeRequest {
   promptId: string;
   targetLanguage: string;
   cefrLevel: string;
+  /** Client-side length estimate. Informational only: the server recounts
+   * (writing-length.ts) because Hermes has no Intl.Segmenter, so a Japanese
+   * or Chinese client can only send a character count flagged 'unavailable'. */
+  wordCount?: number;
+  countMethod?: string;
+}
+
+type ServiceClient = ReturnType<typeof createClient>;
+
+/**
+ * Overwrite the stored `word_count` for the caller's own submission row with a
+ * server measurement. The number is counted from the row's OWN stored
+ * `submission_text`, never from the request body, so the stored count always
+ * describes the stored row — a retry naming a stale submission id can no longer
+ * stamp the length of different text onto it. Scoped to `(id, user_id)`, so a
+ * caller can only ever touch a row they own. The client already writes this
+ * column unguarded at insert (`submitWriting`), so this only corrects it.
+ *
+ * A failure must not block the grade the learner is waiting on: it is logged as
+ * a structured event and grading continues.
+ */
+async function storeServerWordCount(
+  supabase: ServiceClient,
+  submissionId: string,
+  userId: string,
+  language: string,
+): Promise<void> {
+  const { data: row, error: readErr } = await supabase
+    .from('user_writing_submissions')
+    .select('submission_text')
+    .eq('id', submissionId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  const storedText: unknown = row?.submission_text;
+  if (readErr || typeof storedText !== 'string') {
+    console.error(JSON.stringify({
+      evt: 'writing_length_store_failed',
+      fn: 'grade-writing',
+      stage: 'read',
+      error: readErr?.message ?? 'no submission row with this id for this user',
+      ts: new Date().toISOString(),
+    }));
+    return;
+  }
+  const { error: writeErr } = await supabase
+    .from('user_writing_submissions')
+    .update({ word_count: countWritingUnits(storedText, language).count })
+    .eq('id', submissionId)
+    .eq('user_id', userId);
+  if (writeErr) {
+    console.error(JSON.stringify({
+      evt: 'writing_length_store_failed',
+      fn: 'grade-writing',
+      stage: 'write',
+      error: writeErr.message,
+      ts: new Date().toISOString(),
+    }));
+  }
 }
 
 serve(async (req: Request) => {
@@ -45,7 +105,7 @@ serve(async (req: Request) => {
     const userId = authUser.userId;
 
     const body = (await req.json()) as GradeRequest;
-    const { submissionText, promptId, targetLanguage, cefrLevel } = body;
+    const { submissionId, submissionText, promptId, targetLanguage, cefrLevel } = body;
 
     if (!ANTHROPIC_API_KEY) {
       return new Response(
@@ -72,6 +132,27 @@ serve(async (req: Request) => {
         JSON.stringify({ error: 'Invalid target language' }),
         { status: 400, headers }
       );
+    }
+
+    if (typeof submissionText !== 'string' || !submissionText.trim() || submissionText.length > 5000) {
+      return new Response(JSON.stringify({ error: 'Writing must contain 1–5000 characters' }), { status: 400, headers });
+    }
+
+    // The assigned prompt and its course are authoritative. A profile language
+    // switch must not cause an existing French task to be graded as Spanish.
+    // Missing content is an error, never an empty generic assignment, and it
+    // is checked before consuming the learner's grading allowance.
+    const { data: prompt, error: promptError } = await supabase
+      .from('writing_prompts')
+      .select('*, courses!inner(target_language)')
+      .eq('id', promptId)
+      .single();
+    if (promptError || !prompt) {
+      return new Response(JSON.stringify({ error: 'Writing prompt unavailable' }), { status: 404, headers });
+    }
+    const assignedLanguage = prompt.courses?.target_language;
+    if (!isValidLanguage(assignedLanguage) || !isValidCefrLevel(prompt.cefr_level)) {
+      return new Response(JSON.stringify({ error: 'Writing prompt configuration is invalid' }), { status: 422, headers });
     }
 
     // ── Rate limit: check BEFORE calling AI ──────────────────
@@ -104,21 +185,41 @@ serve(async (req: Request) => {
       );
     }
 
-    // Fetch prompt details for context
-    const { data: prompt } = await supabase
-      .from('writing_prompts')
-      .select('*')
-      .eq('id', promptId)
-      .single();
+    // The server count is authoritative for min_words/max_words. Deno has full
+    // ICU, so Japanese and Chinese are measured in dictionary word segments;
+    // the client's number is only ever a hint (on Hermes it is a character
+    // count for those two languages) and is never passed to the grader.
+    const submissionLength = countWritingUnits(submissionText, assignedLanguage);
+    if (typeof body.wordCount === 'number' && body.wordCount !== submissionLength.count) {
+      console.log(JSON.stringify({
+        evt: 'writing_length_client_mismatch',
+        fn: 'grade-writing',
+        language: assignedLanguage,
+        client: { count: body.wordCount, method: body.countMethod ?? null },
+        server: submissionLength,
+        ts: new Date().toISOString(),
+      }));
+    }
+    // The client inserted the row with its own estimate before grading; the
+    // stored word_count is proficiency evidence, so overwrite it with a server
+    // measurement of the row's own stored text. See storeServerWordCount.
+    if (isValidUUID(submissionId)) {
+      await storeServerWordCount(supabase, submissionId, userId, assignedLanguage);
+    }
 
-    const systemPrompt = buildGradingPrompt(
-      targetLanguage,
-      cefrLevel,
-      sanitizeText(prompt?.prompt_text ?? '', 2000),
-      sanitizeText(prompt?.example_response ?? '', 2000),
-      prompt?.target_vocabulary ?? [],
-      prompt?.target_grammar ?? []
-    );
+    const systemPrompt = buildGradingPrompt({
+      targetLanguage: assignedLanguage,
+      cefrLevel: prompt.cefr_level,
+      promptText: sanitizeText(prompt.prompt_text ?? '', 2000),
+      exampleResponse: sanitizeText(prompt.example_response ?? '', 2000),
+      targetVocabulary: prompt.target_vocabulary ?? [],
+      targetGrammar: prompt.target_grammar ?? [],
+      minWords: prompt.min_words,
+      maxWords: prompt.max_words,
+      scaffoldType: prompt.scaffold_type,
+      scaffoldData: prompt.scaffold_data,
+      submissionLength,
+    });
 
     // Safety + parse orchestration (retry → safety-retry → parse-retry →
     // honest fallback). See grading.ts. Never fabricates scores: on
@@ -187,147 +288,3 @@ serve(async (req: Request) => {
     );
   }
 });
-
-function getLanguageSpecificRules(targetLanguage: string): string {
-  const rules: Record<string, string> = {
-    Spanish: `LANGUAGE-SPECIFIC RULES (Spanish):
-- Gender/number agreement: articles, adjectives, and nouns must agree (el libro rojo, la casa roja)
-- Ser vs estar: permanent traits (ser) vs temporary states/locations (estar)
-- Subjunctive mood: required after doubt, emotion, desire, impersonal expressions
-- Accent marks: missing or incorrect accents count as spelling errors (él vs el, está vs esta)
-- Preterite vs imperfect: completed actions vs habitual/ongoing past actions`,
-    French: `LANGUAGE-SPECIFIC RULES (French):
-- Gender/number agreement: articles, adjectives must agree with nouns
-- Accent marks: é, è, ê, ë, à, ù, ç — missing accents are spelling errors
-- Passé composé vs imparfait: completed vs habitual/descriptive past
-- Subjunctive: required after expressions of doubt, emotion, necessity
-- Negation: ne...pas must wrap the conjugated verb`,
-    German: `LANGUAGE-SPECIFIC RULES (German):
-- Noun capitalization: all nouns must be capitalized
-- Case system: nominative, accusative, dative, genitive — articles must match
-- Word order: verb-second in main clauses, verb-final in subordinate clauses
-- Separable prefixes: must move to end of clause in present/past tense
-- Adjective endings: depend on article type and case`,
-    Japanese: `LANGUAGE-SPECIFIC RULES (Japanese):
-- Particle usage: は vs が, に vs で, を correctly applied
-- Verb conjugation: te-form, masu-form, plain form used appropriately for context
-- Politeness level: consistent use of formal or informal register
-- Counter words: correct counters for different object types
-- Kanji usage: appropriate to CEFR level`,
-    Portuguese: `LANGUAGE-SPECIFIC RULES (Portuguese):
-- Gender/number agreement: articles, adjectives, nouns must agree
-- Accent marks: missing accents are spelling errors (é, ê, ã, õ, ç)
-- Ser vs estar: similar to Spanish usage
-- Subjunctive mood: required after doubt, emotion, desire
-- Personal infinitive: unique to Portuguese, must be used correctly`,
-    Italian: `LANGUAGE-SPECIFIC RULES (Italian):
-- Gender/number agreement: articles, adjectives, nouns must agree
-- Accent marks: required on final stressed syllables (città, perché)
-- Passato prossimo vs imperfetto: completed vs habitual/descriptive past
-- Subjunctive: required after doubt, emotion, opinion
-- Double consonants: spelling must reflect pronunciation (anno vs ano)`,
-  };
-  return rules[targetLanguage] ?? '';
-}
-
-function getCefrExpectations(cefrLevel: string): string {
-  const expectations: Record<string, string> = {
-    A1: `CEFR A1 EXPECTATIONS:
-- Expected length: sentences (20-50 words)
-- Can write simple isolated phrases and sentences
-- Basic vocabulary for familiar topics only
-- Simple present tense, basic connectors (and, but)
-- Frequent errors expected but core meaning should be clear`,
-    A2: `CEFR A2 EXPECTATIONS:
-- Expected length: short paragraphs (50-150 words)
-- Can write short, simple notes and messages
-- Everyday vocabulary, simple past and future tenses
-- Basic sentence linking (because, then, after)
-- Errors acceptable but should not obscure meaning`,
-    B1: `CEFR B1 EXPECTATIONS:
-- Expected length: short essays (150-300 words)
-- Can write connected text on familiar topics
-- Good range of vocabulary with some precision
-- Multiple tenses used correctly, complex sentences attempted
-- Occasional errors but generally well-controlled grammar`,
-    B2: `CEFR B2 EXPECTATIONS:
-- Expected length: full essays (300-500+ words)
-- Can write clear, detailed text on a wide range of subjects
-- Varied vocabulary with good control of idiomatic expressions
-- Complex grammar structures used accurately
-- Few errors; self-correction expected`,
-    C1: `CEFR C1 EXPECTATIONS:
-- Expected length: formal essays (500+ words)
-- Can write clear, well-structured, detailed text on complex subjects
-- Precise vocabulary with idiomatic and colloquial expressions
-- Full command of complex grammar, subtle nuances
-- Near-native accuracy; rare errors only in obscure constructions`,
-    C2: `CEFR C2 EXPECTATIONS:
-- Expected length: academic/professional text (500+ words)
-- Can write at native level with natural flow and precision
-- Sophisticated vocabulary, register-appropriate style
-- Flawless grammar; can use language for humor, emphasis, ambiguity
-- Grade as you would a native speaker's formal writing`,
-  };
-  return expectations[cefrLevel] ?? expectations['B1'];
-}
-
-function buildGradingPrompt(
-  targetLanguage: string,
-  cefrLevel: string,
-  promptText: string,
-  exampleResponse: string,
-  targetVocabulary: string[],
-  targetGrammar: string[]
-): string {
-  const languageRules = getLanguageSpecificRules(targetLanguage);
-  const cefrExpectations = getCefrExpectations(cefrLevel);
-
-  return `You are a strict but fair language teacher grading a ${cefrLevel} learner's writing in ${targetLanguage}.
-
-WRITING PROMPT: ${promptText}
-${exampleResponse ? `MODEL ANSWER: ${exampleResponse}` : ''}
-${targetVocabulary.length > 0 ? `TARGET VOCABULARY: ${targetVocabulary.join(', ')}` : ''}
-${targetGrammar.length > 0 ? `TARGET GRAMMAR: ${targetGrammar.join(', ')}` : ''}
-
-${cefrExpectations}
-
-${languageRules}
-
-Grade the submission on a 0-25 scale for each of the 4 categories (grammar, vocabulary, coherence, task_completion). Total is out of 100. Grade strictly. Do not inflate scores. List every specific correction with the grammar or spelling rule that was violated.
-
-Also provide a corrected version of the entire submission showing how it should have been written.
-
-RESPOND ONLY IN VALID JSON:
-{
-  "grammar": <0-25>,
-  "vocabulary": <0-25>,
-  "coherence": <0-25>,
-  "task_completion": <0-25>,
-  "total": <0-100>,
-  "grammarScore": <0-100>,
-  "vocabularyScore": <0-100>,
-  "coherenceScore": <0-100>,
-  "spellingScore": <0-100>,
-  "sentenceStructureScore": <0-100>,
-  "strengths": ["strength 1", "strength 2", "strength 3"],
-  "improvements": ["improvement 1", "improvement 2", "improvement 3"],
-  "correctedVersion": "the entire submission rewritten correctly in ${targetLanguage}",
-  "corrections": [
-    {"original": "...", "corrected": "...", "explanation": "...", "type": "grammar|vocabulary|spelling|style|structure", "ruleViolated": "name of the specific rule violated"}
-  ],
-  "overallFeedback": "2-3 sentences of encouraging but honest feedback"
-}
-
-SCORING GUIDELINES:
-- grammar (0-25): correctness of verb conjugations, tenses, agreement, and grammatical forms
-- vocabulary (0-25): range, precision, and appropriateness of word choices for the ${cefrLevel} level
-- coherence (0-25): logical flow, paragraph organization, use of connectors and transitions
-- task_completion (0-25): how well the writing addresses the prompt requirements
-- grammarScore/vocabularyScore/coherenceScore/spellingScore/sentenceStructureScore: detailed 0-100 sub-scores
-- strengths: 3 specific things the learner did well
-- improvements: 3 specific areas to focus on
-- correctedVersion: rewrite the entire text correctly, preserving the learner's intent
-
-Grade appropriately for ${cefrLevel} — scale expectations to the level, but do not give free points. A score of 80+ means genuinely strong performance for that level.`;
-}

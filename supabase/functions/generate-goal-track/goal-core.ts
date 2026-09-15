@@ -201,10 +201,28 @@ export function buildExercisePrompt(
     `options is required for multiple_choice and null otherwise.`,
     `explanation is one short sentence in ${nativeLanguage} saying why the answer is right.`,
     `Mix the types. Build toward the lesson goal. Keep vocabulary at ${cefrLevel}.`,
+    `Every exercise must practice this lesson's named situation, not an unrelated generic topic.`,
+    `At higher levels, require the appropriate nuance, grammar and register, not only isolated beginner words.`,
+    `Give enough context to identify the intended meaning, person, tense or register; do not reject another valid interpretation of an underspecified prompt.`,
+    `For multiple_choice, no distractor may also be a valid synonym or accepted answer in the given context.`,
+    `For fill_blank, use exactly one literal ___ and check the complete sentence after inserting every accepted answer, including agreement and elision.`,
+    `Before returning, solve each question from its prompt and verify its key, options, explanation, lesson fit and ${cefrLevel} difficulty.`,
   ].join('\n');
 }
 
 const TYPE_SET: ReadonlySet<string> = new Set(GENERATED_EXERCISE_TYPES);
+
+/** The on-device choice comparison folds these keyboard/display differences. */
+function normalizeChoice(text: string): string {
+  return text.normalize('NFC').trim().toLowerCase().replace(/\s+/g, ' ')
+    .replace(/[‘’ʼ]/g, "'").replace(/[“”]/g, '"').replace(/[.!?。！？]+$/, '');
+}
+
+/** Truncation can cut off the question's meaning or half an answer. */
+function completeText(value: unknown, maxLen: number): string | null {
+  const text = cleanText(value, maxLen + 1);
+  return text && text.length <= maxLen ? text : null;
+}
 
 /**
  * Accept only exercises that can actually be answered.
@@ -226,13 +244,13 @@ export function parseExercises(value: unknown): GeneratedExercise[] {
     const e = item as Record<string, unknown>;
 
     if (typeof e.type !== 'string' || !TYPE_SET.has(e.type)) continue;
-    const prompt = cleanText(e.prompt, 500);
-    const correctAnswer = cleanText(e.correctAnswer, 300);
+    const prompt = completeText(e.prompt, 500);
+    const correctAnswer = completeText(e.correctAnswer, 300);
     if (!prompt || !correctAnswer) continue;
 
     const accepted = Array.isArray(e.acceptedAnswers)
       ? e.acceptedAnswers
-          .map((a) => cleanText(a, 300))
+          .map((a) => completeText(a, 300))
           .filter((a): a is string => a !== null)
       : [];
     if (!accepted.includes(correctAnswer)) accepted.unshift(correctAnswer);
@@ -240,16 +258,22 @@ export function parseExercises(value: unknown): GeneratedExercise[] {
     let options: string[] | null = null;
     if (e.type === 'multiple_choice') {
       const parsed = Array.isArray(e.options)
-        ? e.options.map((o) => cleanText(o, 300)).filter((o): o is string => o !== null)
+        ? e.options.map((o) => completeText(o, 300)).filter((o): o is string => o !== null)
         : [];
       const unique = [...new Set(parsed)];
       // Unanswerable without the right answer among the choices.
       if (unique.length < 2 || !unique.includes(correctAnswer)) continue;
+      const normalized = unique.map(normalizeChoice);
+      // Visually different apostrophes/case must not create duplicate buttons
+      // or more than one right answer under the real on-device comparison.
+      if (new Set(normalized).size !== unique.length) continue;
+      const answerSet = new Set(accepted.map(normalizeChoice));
+      if (normalized.filter(option => answerSet.has(option)).length !== 1) continue;
       options = unique;
     }
 
-    // A gap exercise with no gap is just a sentence.
-    if (e.type === 'fill_blank' && !prompt.includes('_')) continue;
+    // The renderer expects one literal marker, not an arbitrary underscore.
+    if (e.type === 'fill_blank' && (prompt.match(/_+/g) ?? []).join('|') !== '___') continue;
 
     out.push({
       type: e.type as GeneratedExerciseType,
@@ -257,7 +281,7 @@ export function parseExercises(value: unknown): GeneratedExercise[] {
       correctAnswer,
       acceptedAnswers: accepted,
       options,
-      explanation: cleanText(e.explanation, 400),
+      explanation: completeText(e.explanation, 400),
     });
   }
   return out;

@@ -14,10 +14,9 @@ import { generateValidated } from '../_shared/validated-generate.ts';
 export type GradingFeedback = Record<string, unknown> & { graded: boolean };
 
 /**
- * Honest no-grade fallback. All scores are 0 (the client's overall-score
- * averaging filters out zeros, so nothing fake is persisted), feedback text
- * states that AI grading was unavailable, and `graded: false` lets clients
- * distinguish this from a real grade.
+ * Honest no-grade fallback. Numeric fields retain the legacy payload shape,
+ * but `graded: false` means no score: clients persist a null overall score,
+ * display "Not graded", and do not award scored-writing XP.
  */
 export function buildFallbackFeedback(): GradingFeedback {
   return {
@@ -47,8 +46,9 @@ export function buildFallbackFeedback(): GradingFeedback {
 
 /**
  * Strip markdown code fences and parse the model's grading JSON.
- * Returns null when the text is not a usable grading object (the client
- * requires numeric grammarScore / vocabularyScore / coherenceScore).
+ * Fresh model output must contain the complete task rubric and safe display
+ * fields. Compatibility with older stored feedback belongs to the client,
+ * not this boundary: missing assessment fields must trigger retry/fallback.
  */
 export function parseGradingResponse(raw: string): GradingFeedback | null {
   const cleaned = raw
@@ -67,6 +67,8 @@ export function parseGradingResponse(raw: string): GradingFeedback | null {
     try {
       const parsed = JSON.parse(candidate);
       if (isGradingObject(parsed)) {
+        // The total is arithmetic, not a separate model judgment.
+        parsed.total = parsed.grammar + parsed.vocabulary + parsed.coherence + parsed.task_completion;
         return { ...(parsed as Record<string, unknown>), graded: true };
       }
     } catch {
@@ -79,9 +81,27 @@ export function parseGradingResponse(raw: string): GradingFeedback | null {
 function isGradingObject(value: unknown): boolean {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
   const obj = value as Record<string, unknown>;
-  return ['grammarScore', 'vocabularyScore', 'coherenceScore'].every(
-    (key) => typeof obj[key] === 'number' && Number.isFinite(obj[key] as number),
-  );
+  const validScore = (value: unknown, maximum: number) => typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= maximum;
+  if (!['grammarScore', 'vocabularyScore', 'coherenceScore', 'spellingScore', 'sentenceStructureScore'].every(key => validScore(obj[key], 100))) return false;
+  const rubric = ['grammar', 'vocabulary', 'coherence', 'task_completion'];
+  if (!rubric.every(key => validScore(obj[key], 25))) return false;
+  if (obj.graded !== undefined && obj.graded !== true) return false;
+
+  const stringList = (value: unknown) => Array.isArray(value) && value.every(item => typeof item === 'string');
+  if (!stringList(obj.strengths) || !stringList(obj.improvements)) return false;
+  if (typeof obj.overallFeedback !== 'string' || !obj.overallFeedback.trim()) return false;
+  if (obj.correctedVersion !== null && typeof obj.correctedVersion !== 'string') return false;
+  if (!Array.isArray(obj.corrections)) return false;
+  return obj.corrections.every(value => {
+    if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
+    const correction = value as Record<string, unknown>;
+    // Empty source/replacement spans can represent a genuine insertion or
+    // deletion. Do not require a correction, or manufacture one for good text.
+    return ['original', 'corrected', 'explanation'].every(key => typeof correction[key] === 'string')
+      && typeof correction.type === 'string'
+      && ['grammar', 'vocabulary', 'spelling', 'style', 'structure'].includes(correction.type)
+      && (correction.ruleViolated === undefined || typeof correction.ruleViolated === 'string');
+  });
 }
 
 /**

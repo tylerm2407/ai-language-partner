@@ -33,7 +33,10 @@ paths: ["lib/srs.ts", "lib/grading.ts", "lib/levels.ts", "lib/hearts.ts", "compo
 ### Grading
 - **Exact match** for single-word answers (case-insensitive, accent-tolerant).
 - **Fuzzy match** for sentences: allow minor typos (Levenshtein distance <= 1 for answers of 4 chars or fewer, <= 2 otherwise).
+- **Tapped choices** (multiple-choice and listening-choice) require a normalized exact match to the key or an explicitly accepted alternative; never apply typing-error tolerance to a button selection.
+- Normalize equivalent Unicode composition, typographic apostrophes/quotes and final sentence punctuation (including Japanese/Chinese marks). Grammar-focused typed tasks retain strict spelling/accents; normalization must not merge distinct grammatical forms.
 - **AI grading** for free production: send to Edge Function for semantic evaluation.
+- **Writing feedback** uses the assigned task’s four-part rubric (grammar, vocabulary, coherence, task completion; each 0–25) for the saved/displayed overall score. Preserve real zeros. Legacy feedback without that rubric uses the mean of its available valid diagnostic scores. An unavailable/invalid grade is `null`, not zero, and must not be recorded as scored work or awarded scored-writing XP.
 - Always show the correct answer after a wrong attempt.
 
 ## Content Organization

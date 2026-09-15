@@ -155,3 +155,13 @@ verify_jwt = true
 
 [functions.score-pronunciation]
 verify_jwt = true
+
+# ─── grade-response ───────────────────────────────────────────────────────
+# AI semantic grading for open lesson sentence-production and reading
+# short-answer responses (user decision 2026-09-14). Same posture as
+# explain-passage: auth enforced by the function body via getAuthenticatedUser
+# (_shared/auth.ts), so the platform gate stays off. Without an entry here the
+# CLI would deploy it with verify_jwt = true and every call would 401, which
+# the client would then report as "checked offline" on every open answer.
+[functions.grade-response]
+verify_jwt = false

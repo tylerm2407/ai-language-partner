@@ -9,6 +9,7 @@ import { colors, spacing, radii } from '../../config/theme';
 import { gradeAnswer } from '../../lib/grading';
 import type { GradeResult } from '../../lib/grading';
 import { isRestored, regradePick, restorePlacedTiles } from '../../lib/exercise-restore';
+import { sentenceTileJoiner } from '../../lib/sentence-tiles';
 import type { Exercise, LanguageCode } from '../../types';
 
 interface Props {
@@ -40,15 +41,16 @@ export function SentenceConstructionExercise({
     const correctTiles = (exercise.metadata?.tiles as string[]) ?? exercise.correctAnswer.split(' ');
     const distractors = (exercise.metadata?.distractors as string[]) ?? [];
     const all = [...correctTiles, ...distractors];
-    // Shuffle deterministically based on exercise id
+    // Shuffle once for this mounted exercise; restoration uses this tile order.
     return all.sort(() => 0.5 - Math.random());
   }, [exercise]);
+  const joiner = sentenceTileJoiner(exercise.metadata);
 
   // Seeded from the recorded pick so Previous comes back to the sentence the
   // learner actually built, in its graded state — see lib/exercise-restore.ts.
   // The tile order is reshuffled on every mount, so the indices are resolved
   // against THIS mount's `tiles`, not the ones the answer was built from.
-  const [placed, setPlaced] = useState<number[]>(() => restorePlacedTiles(tiles, selected));
+  const [placed, setPlaced] = useState<number[]>(() => restorePlacedTiles(tiles, selected, joiner));
   const [localRevealed, setLocalRevealed] = useState(() => isRestored(selected));
   /**
    * Locked = this exercise's own reveal, OR the runner saying it is resolved
@@ -57,10 +59,10 @@ export function SentenceConstructionExercise({
    */
   const isRevealed = localRevealed || showResult;
   const [result, setResult] = useState<GradeResult | null>(() =>
-    regradePick(exercise, selected),
+    regradePick(exercise, selected, language as LanguageCode | undefined),
   );
 
-  const assembledSentence = placed.map((i) => tiles[i]).join(' ');
+  const assembledSentence = placed.map((i) => tiles[i]).join(joiner);
   const availableIndices = tiles.map((_, i) => i).filter((i) => !placed.includes(i));
   const highlight = exercise.targetWord ?? exercise.targetGrammar;
 

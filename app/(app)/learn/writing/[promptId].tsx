@@ -21,6 +21,8 @@ import { writingXpKey } from '../../../../lib/offline-queue';
 import { limitCopy } from '../../../../lib/limit-messaging';
 import type { WritingPrompt, WritingFeedback, WritingSubmission } from '../../../../types';
 import { colors } from '../../../../config/theme';
+import { writingOverallScore } from '../../../../lib/writing-quality';
+import type { WritingLengthCount } from '../../../../lib/writing-length';
 
 export default function WritingPromptScreen() {
   const { promptId } = useLocalSearchParams<{ promptId: string }>();
@@ -70,7 +72,7 @@ export default function WritingPromptScreen() {
     load();
   }, [promptId, user]);
 
-  const handleSubmit = async (text: string, wordCount: number, timeSpentMs: number) => {
+  const handleSubmit = async (text: string, length: WritingLengthCount, timeSpentMs: number) => {
     // A ref, not the `isGrading` state: two taps dispatched in the same React
     // batch both read the pre-update value, and this handler had no guard at
     // all. Two taps meant two submissions, two paid Claude grading calls, and
@@ -87,7 +89,9 @@ export default function WritingPromptScreen() {
       setIsGrading(true);
 
       // Save submission with attempt number
-      const submission = await submitWriting(user.id, prompt.id, text, wordCount, timeSpentMs, attemptNumber);
+      // The client estimate is stored first so the row exists; the server
+      // recounts (Japanese/Chinese in word segments) and overwrites word_count.
+      const submission = await submitWriting(user.id, prompt.id, text, length.count, timeSpentMs, attemptNumber);
 
       // Call grade-writing edge function
       const { data, error: fnError } = await supabase.functions.invoke('grade-writing', {
@@ -98,6 +102,8 @@ export default function WritingPromptScreen() {
           targetLanguage,
           cefrLevel: prompt.cefrLevel,
           userId: user.id,
+          wordCount: length.count,
+          countMethod: length.method,
         },
       });
 
@@ -106,19 +112,10 @@ export default function WritingPromptScreen() {
       const gradeFeedback = data as WritingFeedback;
       setFeedback(gradeFeedback);
 
-      // Save feedback — average all 5 dimensions
-      const scores = [
-        gradeFeedback.grammarScore,
-        gradeFeedback.spellingScore ?? 0,
-        gradeFeedback.sentenceStructureScore ?? 0,
-        gradeFeedback.vocabularyScore,
-        gradeFeedback.coherenceScore,
-      ];
-      const validScores = scores.filter((s) => s > 0);
-      const overallScore = validScores.length > 0
-        ? validScores.reduce((a, b) => a + b, 0) / validScores.length / 100
-        : 0;
+      const overallScore = writingOverallScore(gradeFeedback);
       await updateWritingFeedback(submission.id, gradeFeedback, overallScore);
+      // Provider fallback is not an assessment, failing score, or scored XP.
+      if (overallScore === null) return;
 
       // Award XP based on CEFR level
       const xpMap: Record<string, number> = { A1: 5, A2: 10, B1: 15, B2: 20, C1: 25, C2: 30 };
@@ -160,18 +157,8 @@ export default function WritingPromptScreen() {
   const handleTryAgain = () => {
     // Store previous score for delta display
     if (feedback) {
-      const scores = [
-        feedback.grammarScore,
-        feedback.spellingScore ?? 0,
-        feedback.sentenceStructureScore ?? 0,
-        feedback.vocabularyScore,
-        feedback.coherenceScore,
-      ];
-      const validScores = scores.filter((s) => s > 0);
-      const prevScore = validScores.length > 0
-        ? validScores.reduce((a, b) => a + b, 0) / validScores.length / 100
-        : 0;
-      setPreviousScore(prevScore);
+      const prevScore = writingOverallScore(feedback);
+      if (prevScore !== null) setPreviousScore(prevScore);
     }
     setAttemptNumber((prev) => prev + 1);
     setFeedback(null);
@@ -227,6 +214,7 @@ export default function WritingPromptScreen() {
   return (
     <WritingExercise
       prompt={prompt}
+      language={getTargetLanguage(profile)}
       isGrading={isGrading}
       attemptNumber={attemptNumber}
       onSubmit={handleSubmit}

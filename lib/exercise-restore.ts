@@ -24,15 +24,17 @@
  */
 
 import { gradeAnswer, type ExerciseHints, type GradeResult } from './grading';
-import type { Exercise } from '../types';
+import type { Exercise, LanguageCode } from '../types';
+import { restoreUnspacedTiles } from './sentence-tiles';
 
 /** The classifier hints every exercise passes to `gradeAnswer`. */
-export function exerciseHints(exercise: Exercise): ExerciseHints {
+export function exerciseHints(exercise: Exercise, language?: LanguageCode): ExerciseHints {
   return {
     exerciseType: exercise.type,
     skillType: exercise.skillType,
     targetGrammar: exercise.targetGrammar,
     targetWord: exercise.targetWord,
+    language,
   };
 }
 
@@ -50,10 +52,11 @@ export function isRestored(selected: string | null | undefined): selected is str
 export function regradePick(
   exercise: Exercise,
   selected: string | null | undefined,
+  language?: LanguageCode,
 ): GradeResult | null {
   if (!isRestored(selected)) return null;
   return gradeAnswer(selected, exercise.correctAnswer, exercise.acceptedAnswers, {
-    exerciseHints: exerciseHints(exercise),
+    exerciseHints: exerciseHints(exercise, language),
   });
 }
 
@@ -85,7 +88,9 @@ export function splitJoinedAnswer(
 export function restorePlacedTiles(
   tiles: string[],
   selected: string | null | undefined,
+  joiner: '' | ' ' = ' ',
 ): number[] {
+  if (joiner === '') return restoreUnspacedTiles(tiles, selected ?? '');
   const words = splitJoinedAnswer(selected, ' ').filter((w) => w !== '');
   if (words.length === 0) return [];
 

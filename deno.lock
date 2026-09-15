@@ -96,6 +96,7 @@
         "npm:jest-expo@54.0",
         "npm:jest@29.7",
         "npm:nativewind@^4.1.0",
+        "npm:posthog-react-native@^4.66.3",
         "npm:react-dom@19.1.0",
         "npm:react-native-css-interop@~0.2.3",
         "npm:react-native-gesture-handler@2.28",

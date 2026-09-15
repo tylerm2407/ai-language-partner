@@ -106,6 +106,7 @@ export default function ReadingPassageScreen() {
     return (
       <ComprehensionQuestions
         questions={questions}
+        cefrLevel={passage.cefrLevel}
         onComplete={async (comprehensionScore) => {
           setScore(comprehensionScore);
           await completeReading(comprehensionScore, help.lookupCount);
@@ -124,6 +125,7 @@ export default function ReadingPassageScreen() {
   return (
     <ReadingPassageViewer
       passage={passage}
+      language={profile?.targetLanguage}
       selectedRef={help.selectedRef}
       lookup={help.state}
       explanation={help.explanation}

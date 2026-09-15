@@ -845,6 +845,7 @@ export function LessonRunner({
                   userId,
                   targetLanguage,
                   cefrLevel,
+                  statuses[currentExercise.id],
                 )}
             </View>
           </WrongShake>
@@ -863,6 +864,9 @@ function renderExercise(
   userId: string,
   targetLanguage: LanguageCode,
   cefrLevel: string | undefined,
+  /** The recorded outcome for this exercise; read only by open production,
+   *  whose semantic grade the key alone cannot rebuild on Previous. */
+  recordedStatus?: AttemptStatus,
 ) {
   // Shared props threaded into every exercise so the inner FeedbackCard can
   // look up grammar rules and log to correction_log. `onContinue` is gone:
@@ -906,7 +910,21 @@ function renderExercise(
         />
       );
     case 'free_production':
-      return <TranslationExercise exercise={exercise} onAnswer={onAnswer} showResult={showResult} {...shared} />;
+      return (
+        <TranslationExercise
+          exercise={exercise}
+          onAnswer={onAnswer}
+          showResult={showResult}
+          restoredCorrect={
+            recordedStatus === 'correct' || recordedStatus === 'recovered'
+              ? true
+              : recordedStatus === 'wrong'
+                ? false
+                : null
+          }
+          {...shared}
+        />
+      );
     case 'cloze_deletion':
       return <ClozeExercise exercise={exercise} onAnswer={onAnswer} showResult={showResult} {...shared} />;
     case 'sentence_construction':

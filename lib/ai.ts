@@ -30,7 +30,7 @@ import type { VoiceGender } from './voice-preference';
  * One retry, with jitter. More would sit behind a spinner longer than anyone
  * will wait, and these calls already carry a 60s ceiling.
  */
-async function invokeWithRetry<
+export async function invokeWithRetry<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mirrors
   // FunctionsClient.invoke<T = any>. Narrowing the default here would retype
   // all eight call sites, and this change is meant to add a retry, nothing else.

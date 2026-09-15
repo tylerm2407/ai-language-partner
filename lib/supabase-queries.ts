@@ -7,6 +7,7 @@ import { CEFR_BAND_BY_LEVEL, CEFR_LADDER,
 import { localToday } from './dates';
 import { trackEvent, trackRefusal } from './analytics';
 import { wordTokens } from './reading-text';
+import { writingLevelFitsCourse } from './writing-quality';
 import type {
   ProficiencyEvidence,
   VocabEvidenceItem,
@@ -1776,7 +1777,7 @@ export async function fetchWritingPromptsByCourse(
 ): Promise<WritingPrompt[]> {
   let query = supabase
     .from('writing_prompts')
-    .select('*')
+    .select('*, courses!inner(cefr_level)')
     .eq('course_id', courseId);
   if (level) {
     query = query.in('cefr_level', allowedCefrLevelsFor(level));
@@ -1786,7 +1787,9 @@ export async function fetchWritingPromptsByCourse(
     .order('created_at', { ascending: true });
 
   if (error) throw error;
-  return (data ?? []).map(mapWritingPrompt);
+  return (data ?? [])
+    .filter(row => writingLevelFitsCourse(row.cefr_level, (row.courses as unknown as { cefr_level: string }).cefr_level))
+    .map(mapWritingPrompt);
 }
 
 export async function fetchWritingPromptById(promptId: string): Promise<WritingPrompt | null> {
@@ -1828,7 +1831,7 @@ export async function submitWriting(
 export async function updateWritingFeedback(
   submissionId: string,
   feedback: WritingFeedback,
-  overallScore: number
+  overallScore: number | null
 ): Promise<void> {
   const { error } = await supabase
     .from('user_writing_submissions')

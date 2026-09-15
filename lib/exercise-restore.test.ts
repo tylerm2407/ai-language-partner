@@ -9,6 +9,7 @@ import {
   SPEAKING_PASS_SCORE,
 } from './exercise-restore';
 import type { Exercise } from '../types';
+import { gradeAnswer } from './grading';
 
 const exercise: Exercise = {
   id: 'ex-1',
@@ -56,6 +57,15 @@ describe('regradePick', () => {
     expect(graded?.errorType).toBeDefined();
     expect(graded?.normalizedUserAnswer).toBeTruthy();
   });
+
+  it('does not turn a rejected confusable word into a correct answer on Previous', () => {
+    const french: Exercise = { ...exercise, correctAnswer: 'poisson', acceptedAnswers: [], targetWord: 'poisson' };
+    const submitted = gradeAnswer('poison', french.correctAnswer, french.acceptedAnswers, {
+      exerciseHints: exerciseHints(french, 'fr'),
+    });
+    expect(submitted.isCorrect).toBe(false);
+    expect(regradePick(french, 'poison', 'fr')).toEqual(submitted);
+  });
 });
 
 describe('exerciseHints', () => {
@@ -65,7 +75,9 @@ describe('exerciseHints', () => {
       skillType: undefined,
       targetGrammar: undefined,
       targetWord: 'agua',
+      language: undefined,
     });
+    expect(exerciseHints(exercise, 'es').language).toBe('es');
   });
 });
 

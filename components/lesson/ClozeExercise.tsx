@@ -46,7 +46,7 @@ export function ClozeExercise({
    */
   const isRevealed = localRevealed || showResult;
   const [result, setResult] = useState<GradeResult | null>(() =>
-    regradePick(exercise, selected),
+    regradePick(exercise, selected, language as LanguageCode | undefined),
   );
 
   // The prompt contains the sentence with "___" as the blank

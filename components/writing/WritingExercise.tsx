@@ -6,16 +6,27 @@ import type { WritingPrompt } from '../../types';
 import { GradientBackground } from '../ui/GradientBackground';
 import { haptic } from '../../lib/haptics';
 import { cefrAccessibilityLabel, cefrCanDo } from '../../lib/cefr-labels';
+import { completeWritingBlank, completeWritingFrame, writingBlankParts } from '../../lib/writing-scaffolds';
+import { countWritingUnits, type WritingLengthCount } from '../../lib/writing-length';
 
 interface Props {
   prompt: WritingPrompt;
+  /** Course language of the prompt. Decides whether length is whitespace words
+   * or (ja/zh) dictionary word segments; omitted means whitespace. */
+  language?: string | null;
   isGrading: boolean;
   attemptNumber?: number;
-  onSubmit: (text: string, wordCount: number, timeSpentMs: number) => void;
+  onSubmit: (text: string, length: WritingLengthCount, timeSpentMs: number) => void;
   onExit: () => void;
 }
 
-export function WritingExercise({ prompt, isGrading, attemptNumber = 1, onSubmit, onExit }: Props) {
+/** "3 words" / "3 word segments" / "3 characters" — never characters called words. */
+function lengthLabel(length: WritingLengthCount): string {
+  const noun = length.unit === 'segment' ? 'word segment' : length.unit;
+  return `${length.count} ${noun}${length.count === 1 ? '' : 's'}`;
+}
+
+export function WritingExercise({ prompt, language, isGrading, attemptNumber = 1, onSubmit, onExit }: Props) {
   const [text, setText] = useState('');
   const [scaffoldInputs, setScaffoldInputs] = useState<Record<number, string>>({});
   const startTimeRef = useRef(Date.now());
@@ -26,27 +37,28 @@ export function WritingExercise({ prompt, isGrading, attemptNumber = 1, onSubmit
   // Compute combined text for scaffold types
   const getCombinedText = (): string => {
     if (scaffoldType === 'fill_blank') {
-      const sentence = (scaffoldData.sentence as string) ?? '';
-      const blankIndex = (scaffoldData.blank_index as number) ?? 0;
-      const words = sentence.split(' ');
-      words[blankIndex] = scaffoldInputs[0] ?? '___';
-      return words.join(' ');
+      return completeWritingBlank(scaffoldData, scaffoldInputs[0] ?? '___');
     }
     if (scaffoldType === 'sentence_frame') {
       const starters = (scaffoldData.starters as string[]) ?? [];
-      return starters.map((s, i) => `${s} ${scaffoldInputs[i] ?? ''}`).join(' ').trim();
+      return starters.map((s, i) => completeWritingFrame(s, scaffoldInputs[i] ?? '')).join(' ').trim();
     }
     if (scaffoldType === 'guided_paragraph') {
       const starters = (scaffoldData.starters as string[]) ?? [];
-      return starters.map((s, i) => `${s} ${scaffoldInputs[i] ?? ''}`).join('\n').trim();
+      return starters.map((s, i) => completeWritingFrame(s, scaffoldInputs[i] ?? '')).join('\n').trim();
     }
     return text;
   };
 
   const combinedText = getCombinedText();
-  const wordCount = combinedText.trim().split(/\s+/).filter(Boolean).length;
-  const meetsMinWords = !prompt.minWords || wordCount >= prompt.minWords;
-  const exceedsMaxWords = prompt.maxWords ? wordCount > prompt.maxWords : false;
+  // Japanese and Chinese have no whitespace words. On a runtime with
+  // Intl.Segmenter the count is word segments and the task bounds apply; on
+  // Hermes (no Segmenter) the count is characters, the bounds cannot be
+  // checked here, and the server's segment count decides on submit.
+  const length = countWritingUnits(combinedText, language);
+  const lengthKnown = length.method !== 'unavailable';
+  const meetsMinWords = !lengthKnown || !prompt.minWords || length.count >= prompt.minWords;
+  const exceedsMaxWords = lengthKnown && prompt.maxWords ? length.count > prompt.maxWords : false;
 
   const isScaffoldComplete = (): boolean => {
     if (scaffoldType === 'fill_blank') return (scaffoldInputs[0]?.trim().length ?? 0) > 0;
@@ -66,7 +78,7 @@ export function WritingExercise({ prompt, isGrading, attemptNumber = 1, onSubmit
     // app hanging rather than like nothing having happened.
     haptic('buttonPress');
     const timeSpentMs = Date.now() - startTimeRef.current;
-    onSubmit(combinedText.trim(), wordCount, timeSpentMs);
+    onSubmit(combinedText.trim(), length, timeSpentMs);
   };
 
   if (isGrading) {
@@ -135,7 +147,7 @@ export function WritingExercise({ prompt, isGrading, attemptNumber = 1, onSubmit
           {prompt.targetVocabulary.length > 0 && (
             <View style={{ marginBottom: 16 }}>
               <Text style={{ fontSize: 14, fontWeight: '600', color: '#9CA3AF', marginBottom: 6 }}>
-                Try to use these words:
+                Vocabulary ideas (use the target-language equivalents):
               </Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                 {prompt.targetVocabulary.map((word, i) => (
@@ -214,15 +226,17 @@ export function WritingExercise({ prompt, isGrading, attemptNumber = 1, onSubmit
             </>
           )}
 
-          {/* Word Count */}
+          {/* Length. When the runtime cannot segment ja/zh the label is a neutral
+              character count with no bound shown, since the bounds are in words. */}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}>
             <Text style={{
               fontSize: 13,
               color: exceedsMaxWords ? '#EF4444' : !meetsMinWords ? '#CA8A04' : '#999',
             }}>
-              {wordCount} word{wordCount !== 1 ? 's' : ''}
-              {prompt.minWords ? ` (min ${prompt.minWords})` : ''}
-              {prompt.maxWords ? ` (max ${prompt.maxWords})` : ''}
+              {lengthLabel(length)}
+              {lengthKnown && prompt.minWords ? ` (min ${prompt.minWords})` : ''}
+              {lengthKnown && prompt.maxWords ? ` (max ${prompt.maxWords})` : ''}
+              {lengthKnown ? '' : ' · length checked on submit'}
             </Text>
           </View>
         </ScrollView>
@@ -263,40 +277,30 @@ function FillBlankInput({
   value: string;
   onChange: (val: string) => void;
 }) {
-  const sentence = (scaffoldData.sentence as string) ?? 'The ___ is here.';
-  const blankIndex = (scaffoldData.blank_index as number) ?? 0;
   const hint = (scaffoldData.hint as string) ?? '';
-  const words = sentence.split(' ');
+  const { before, after } = writingBlankParts(scaffoldData);
 
   return (
     <View style={{ marginBottom: 16 }}>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 4 }}>
-        {words.map((word, i) => {
-          if (i === blankIndex) {
-            return (
-              <TextInput
-                key={i}
-                value={value}
-                onChangeText={onChange}
-                placeholder="___"
-                placeholderTextColor="#999"
-                style={{
-                  borderBottomWidth: 2,
-                  borderBottomColor: '#6366F1',
-                  fontSize: 16,
-                  color: '#FFFFFF',
-                  minWidth: 80,
-                  paddingVertical: 4,
-                  textAlign: 'center',
-                }}
-                accessibilityLabel="Fill in the blank"
-              />
-            );
-          }
-          return (
-            <Text key={i} style={{ fontSize: 16, color: '#FFFFFF' }}>{word}</Text>
-          );
-        })}
+        <Text style={{ fontSize: 16, color: '#FFFFFF' }}>{before}</Text>
+        <TextInput
+          value={value}
+          onChangeText={onChange}
+          placeholder="___"
+          placeholderTextColor="#999"
+          style={{
+            borderBottomWidth: 2,
+            borderBottomColor: '#6366F1',
+            fontSize: 16,
+            color: '#FFFFFF',
+            minWidth: 80,
+            paddingVertical: 4,
+            textAlign: 'center',
+          }}
+          accessibilityLabel="Fill in the blank"
+        />
+        <Text style={{ fontSize: 16, color: '#FFFFFF' }}>{after}</Text>
       </View>
       {hint ? (
         <Text style={{ fontSize: 13, color: '#999', marginTop: 8, fontStyle: 'italic' }}>
@@ -320,9 +324,13 @@ function SentenceFrameInput({
 
   return (
     <View style={{ marginBottom: 16 }}>
-      {starters.map((starter, i) => (
+      {starters.map((starter, i) => {
+        const { before, after } = starter.includes('___')
+          ? writingBlankParts({ sentence: starter })
+          : { before: starter, after: '' };
+        return (
         <View key={i} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, flexWrap: 'wrap' }}>
-          <Text style={{ fontSize: 16, color: '#FFFFFF', marginRight: 4 }}>{starter}</Text>
+          <Text style={{ fontSize: 16, color: '#FFFFFF', marginRight: 4 }}>{before}</Text>
           <TextInput
             value={values[i] ?? ''}
             onChangeText={(val) => onChange(i, val)}
@@ -339,8 +347,10 @@ function SentenceFrameInput({
             }}
             accessibilityLabel={`Complete: ${starter}`}
           />
+          {after ? <Text style={{ fontSize: 16, color: '#FFFFFF', marginLeft: 4 }}>{after}</Text> : null}
         </View>
-      ))}
+        );
+      })}
     </View>
   );
 }
@@ -364,7 +374,7 @@ function GuidedParagraphInput({
           <TextInput
             value={values[i] ?? ''}
             onChangeText={(val) => onChange(i, val)}
-            placeholder="Continue writing..."
+            placeholder={starter.includes('___') ? 'Complete the blank...' : 'Continue writing...'}
             placeholderTextColor="#999"
             multiline
             style={{
@@ -378,7 +388,7 @@ function GuidedParagraphInput({
               textAlignVertical: 'top',
               color: '#FFFFFF',
             }}
-            accessibilityLabel={`Continue from: ${starter}`}
+            accessibilityLabel={starter.includes('___') ? `Complete: ${starter}` : `Continue from: ${starter}`}
           />
         </View>
       ))}

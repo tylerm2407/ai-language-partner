@@ -206,7 +206,11 @@ export function gradeAnswer(
   // implied for any grammar exercise — a near-miss on a grammar form is a
   // different (wrong) form, not a typo ("hablo" vs "habló" is a different
   // tense), so neither typo nor accent tolerance may accept it.
-  if (options?.strict || isGrammarExercise(hints)) {
+  // A tapped option cannot contain a learner typing error. Fuzzy matching
+  // otherwise turns authored distractors such as “To hire” / “To fire” into
+  // correct answers and disagrees with the option's red/green display.
+  const isChoice = hints?.exerciseType === 'multiple_choice' || hints?.exerciseType === 'listening_choice';
+  if (options?.strict || isChoice || isGrammarExercise(hints)) {
     return {
       isCorrect: false,
       accuracy: 0,
@@ -217,12 +221,32 @@ export function gradeAnswer(
     };
   }
 
-  // Accent-tolerant match: diacritic-stripped forms are equal but the raw
-  // normalized forms differ (e.g. "cafe" vs "café"). Accepted as correct —
-  // Duolingo-style — but the feedback nudges the learner toward the accents.
+  /**
+   * Accent-tolerant match: diacritic-stripped forms are equal but the raw
+   * normalized forms differ (e.g. "cafe" vs "café"). Accepted as correct —
+   * Duolingo-style — but the feedback nudges the learner toward the accents.
+   *
+   * The pair list is consulted HERE as well as in the fuzzy branch below,
+   * because this branch returns first. `stripDiacritics` folds far more than
+   * a missing French accent: ñ→n, ö/ü/ä→o/u/a, and Cyrillic ё→е and й→и. So
+   * Spanish él/el, tú/tu, papá/papa and Portuguese avô/avó were all reaching
+   * this branch and being accepted as "watch the accents" — while being
+   * different words. An audit of the shipped list found 22 of its 63 entries
+   * unreachable for exactly this reason.
+   *
+   * A genuine accent slip on the SAME word is still forgiven; only a pair the
+   * list names as two distinct words is refused, and it falls through to the
+   * fuzzy branch, which refuses it again and returns a wrong answer.
+   */
   const stripped = stripDiacritics(normalized);
   const accentMatch = allAccepted.find(
-    (accepted) => stripDiacritics(accepted) === stripped
+    (accepted) =>
+      stripDiacritics(accepted) === stripped &&
+      !(
+        hints?.language !== undefined &&
+        (isConfusablePair(normalized, accepted, hints.language) ||
+          isConfusablePair(normalized, accepted, 'en'))
+      )
   );
   if (accentMatch !== undefined) {
     const distance = levenshtein(normalized, accentMatch);
@@ -237,9 +261,53 @@ export function gradeAnswer(
     };
   }
 
-  // Fuzzy match: check Levenshtein distance
+  // Numeric facts are not spelling errors: 2046 is not a typo-correct answer
+  // to 2045, nor is 48.9°C interchangeable with 48.8°C. Explicit accepted
+  // answers have already been checked above. Preserve decimal comma/dot
+  // equivalence, but do not guess ambiguous thousands-separator conventions.
+  const numberSignature = (text: string): { values: string; notation: string } => {
+    const values: string[] = [];
+    // Between two numbers, a hyphen/en dash separates range endpoints; it
+    // does not make the second endpoint negative. A second sign still does:
+    // -5--2 and -5–-2 both retain the negative sign on each endpoint.
+    const ranges = text.replace(/([0-9０-９])\s*[-–－]\s*(?=[+\-＋－−]?[0-9０-９])/g, '$1\u0001');
+    const notation = ranges.replace(/[+\-＋－−]?[0-9０-９]+(?:[.,][0-9０-９]+)*/g, value => {
+      // Normalize only numeric tokens, not the surrounding language text.
+      // NFKC on the whole answer would also merge unrelated letter forms.
+      const canonical = value
+        .replace(/[０-９＋－]/g, char => String.fromCharCode(char.charCodeAt(0) - 0xfee0))
+        .replace(/−/g, '-')
+        .replace(/^\+/, '')
+        .replace(/,/g, '.');
+      values.push(canonical);
+      return canonical;
+    });
+    return { values: values.join('\u0000'), notation };
+  };
+  const userNumbers = numberSignature(normalized);
+
+  // Equivalent number notation is not a typo, even in a short answer whose
+  // typo budget is zero (e.g. −5 / -5). Strict grammar and tapped choices have
+  // already returned above and do not gain additional normalization here.
+  if (userNumbers.values && allAccepted.some(accepted => {
+    const numbers = numberSignature(accepted);
+    return numbers.values === userNumbers.values && numbers.notation === userNumbers.notation;
+  })) {
+    return {
+      isCorrect: true,
+      accuracy: 1,
+      feedback: 'Correct!',
+      normalizedUserAnswer: normalized,
+      normalizedCorrectAnswer: normalizedCorrect,
+      errorType: null,
+    };
+  }
+
+  // Fuzzy match: check Levenshtein distance only against numerically matching
+  // candidates. A different accepted variant may still be the right match.
   const bestMatch = allAccepted.reduce(
     (best, accepted) => {
+      if (numberSignature(accepted).values !== userNumbers.values) return best;
       const distance = levenshtein(stripped, stripDiacritics(accepted));
       const maxLen = Math.max(normalized.length, accepted.length);
       const similarity = maxLen === 0 ? 1 : 1 - distance / maxLen;
@@ -275,10 +343,50 @@ export function gradeAnswer(
    * path did not.
    */
   const expectedForTolerance = bestMatch.accepted || normalizedCorrect;
-  const maxAllowedDistance = Math.min(
-    2,
-    Math.floor(expectedForTolerance.length * TYPO_TOLERANCE_RATIO),
+  /**
+   * Measure the budget on the SAME string the distance was measured on.
+   *
+   * `bestMatch.distance` is computed over `stripDiacritics(...)`, which is NFD
+   * with the combining marks removed. Hangul decomposes into conjoining jamo,
+   * which are not combining marks and therefore survive — so a Korean key is
+   * about 2.35x longer there than in its composed form, while the budget was
+   * taken from the composed length. Korean tolerance was roughly nine times
+   * stricter than the stated ratio: 242 of the 354 Korean keys in the
+   * curriculum had a budget of zero, and ordinary adjacent-key slips such as
+   * 경재 for 경제 or 간후사 for 간호사 were rejected outright. Measuring both on
+   * the decomposed form leaves 29 of those at zero, which is the intended
+   * behaviour for genuinely short keys.
+   *
+   * Japanese has the same mismatch on dakuten (about 19% of keys, one unit
+   * each). Latin-script languages are unaffected: their decomposed length
+   * after mark removal equals the composed length.
+   *
+   * This loosening is only safe because the confusable-pair list is consulted
+   * below: the budget stops rejecting real typos, the pair list stops it
+   * accepting a different word.
+   */
+  /**
+   * Scale the budget by the SHORTER of the key and the alternative matched.
+   *
+   * It used to scale by the matched alternative alone, which meant that adding
+   * a long accepted answer widened tolerance for every wrong neighbour on that
+   * row. The curriculum audit measured the consequence across the remediation
+   * it had just authored: 88 rows in seven languages began accepting a string
+   * that should stay wrong, because a correct alternative had been added. The
+   * clearest case recurs in all seven — the key "Cheap" gains "Inexpensive",
+   * eleven characters, so the budget becomes 2, and "Expensive" is exactly two
+   * edits from "Inexpensive". The row then marks the antonym correct.
+   *
+   * Taking the shorter length keeps a genuine typo of a long alternative
+   * forgiven at the granularity the key itself earns, and stops an addition
+   * from making the row more permissive about wrong answers. Adding a right
+   * answer must never widen what counts as right.
+   */
+  const toleranceBasis = Math.min(
+    stripDiacritics(expectedForTolerance).length,
+    stripDiacritics(normalizedCorrect).length,
   );
+  const maxAllowedDistance = Math.min(2, Math.floor(toleranceBasis * TYPO_TOLERANCE_RATIO));
 
   /**
    * Length alone cannot separate a typo from a different word of the same
@@ -289,10 +397,90 @@ export function gradeAnswer(
    *
    * Gated on a language hint: callers that do not supply one keep the previous
    * behaviour rather than silently getting a different grade.
+   *
+   * Two lookups, because one answer can be in either of two languages while
+   * the hint only names one. `hints.language` is the COURSE TARGET language,
+   * passed by the lesson runner for both directions. That is the right list
+   * for `translate_to_target`, where the learner types the target language.
+   * On `translate_to_native` the learner types their native language, so the
+   * target list cannot match and an English neighbour of an English key —
+   * "shirt" for Skirt, taught in the same lesson — was scored "minor typo"
+   * and reinforced by SRS. Every course is currently en -> X, so the
+   * answer side of that direction is always English; hence the second lookup.
+   *
+   * Checking both is safe rather than direction-dependent: the per-language
+   * lists are disjoint word sets, so the English lookup is a no-op for any
+   * answer that is not English, and it can only reject when the typed answer
+   * and the key are both members of one English pair. When a non-English
+   * native language ships, `'en'` becomes `hints.nativeLanguage ?? 'en'` with
+   * that field threaded from the learner's profile.
    */
+  /**
+   * The stripped forms are checked too. The list stores words with their
+   * diacritics, and the lookup normalizes but does not fold them, so a pair
+   * like irmã/irmão does not catch a learner typing the bare `irmao` — one
+   * edit from `irmã` and inside its budget. Checking both forms closes that
+   * without touching the list.
+   */
+  /**
+   * A negation is never a typo.
+   *
+   * Two strings that differ only in whether they are negated are opposites, not
+   * near-misses, and the edit distance between them is often small: "to fire"
+   * and "not fire" are two substitutions, well inside the budget a seven-
+   * character key earns. The curriculum audit measured 134 such acceptances
+   * across the draft — "No estudié" credited for "I studied", "Non ho mangiato"
+   * for "I ate", "Nicht ausruhen" for "To rest" — of which about 40 invert
+   * meaning in the target language. A minor-typo pass is rated 3, which SM-2
+   * treats as a success, so the learner is told the inverse is correct and then
+   * shown the card less often.
+   *
+   * A confusable-pair entry cannot cover this: 48 of those hold on the bare key
+   * with no authored alternative involved, so closing them by data would need
+   * one entry per taught verb per language, and every new verb reopens the
+   * hole. That is a policy, not a list.
+   *
+   * The rule is deliberately narrow. It fires only when the two strings are
+   * identical apart from a leading negator — either one carries it and the
+   * other does not, or one's leading marker is swapped for the other's negator.
+   * An exact match returns long before this, so a legitimately negated key is
+   * unaffected, and a genuine typo inside a negated answer still passes.
+   */
+  const NEGATORS: Partial<Record<LanguageCode, readonly string[]>> = {
+    en: ['not', "don't", "doesn't", "didn't", "won't", 'never', 'no'],
+    es: ['no', 'nunca', 'jamás', 'jamas'],
+    it: ['non', 'mai'],
+    pt: ['não', 'nao', 'nunca', 'jamais'],
+    fr: ['ne', 'pas', 'jamais'],
+    de: ['nicht', 'kein', 'keine', 'keinen', 'nie', 'niemals'],
+    ru: ['не', 'нет', 'никогда'],
+  };
+  const differsOnlyByNegation = (a: string, b: string, language: LanguageCode): boolean => {
+    const negators = [...(NEGATORS[language] ?? []), ...(NEGATORS.en ?? [])];
+    const head = (text: string) => text.split(/\s+/).filter(Boolean);
+    const [first, second] = [head(a), head(b)];
+    if (!first.length || !second.length) return false;
+    const isNegator = (word: string) => negators.includes(word);
+    const rest = (words: string[]) => words.slice(1).join(' ');
+    // One string carries a leading negator the other does not.
+    if (isNegator(first[0]) && !isNegator(second[0]) && rest(first) === second.join(' ')) return true;
+    if (isNegator(second[0]) && !isNegator(first[0]) && rest(second) === first.join(' ')) return true;
+    // Both lead with a different word, one of which is a negator, and the rest
+    // is identical — "to fire" against "not fire".
+    if (first.length === second.length && first[0] !== second[0] && rest(first) === rest(second)
+      && (isNegator(first[0]) !== isNegator(second[0]))) return true;
+    return false;
+  };
+  const negationMismatch = hints?.language !== undefined
+    && differsOnlyByNegation(normalized, expectedForTolerance, hints.language);
+
+  const confusableIn = (language: LanguageCode) =>
+    isConfusablePair(normalized, expectedForTolerance, language) ||
+    isConfusablePair(normalized, expectedForTolerance, language, stripDiacritics);
   const confusable =
-    hints?.language !== undefined &&
-    isConfusablePair(normalized, expectedForTolerance, hints.language);
+    negationMismatch
+    || (hints?.language !== undefined
+      && (confusableIn(hints.language) || confusableIn('en')));
 
   if (!confusable && bestMatch.distance <= maxAllowedDistance) {
     return {
@@ -335,14 +523,15 @@ export function gradeAnswer(
  */
 export function normalize(text: string): string {
   return text
+    .normalize('NFC')
     .trim()
     .toLowerCase()
     .replace(/\s+/g, ' ')
     // Normalize common punctuation
-    .replace(/['']/g, "'")
-    .replace(/[""]/g, '"')
+    .replace(/[‘’ʼ]/g, "'")
+    .replace(/[“”]/g, '"')
     // Remove trailing punctuation for comparison
-    .replace(/[.!?]+$/, '');
+    .replace(/[.!?。！？]+$/, '');
 }
 
 /**

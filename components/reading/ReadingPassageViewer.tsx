@@ -9,12 +9,28 @@ import type { WordLookupState } from './WordTooltip';
 import { splitParagraphs, type Paragraph } from '../../lib/reading-text';
 import type { ReadingPassage, ReviewItem } from '../../types';
 import { cefrCanDo, cefrAccessibilityLabel } from '../../lib/cefr-labels';
+import { isSegmentedLanguage } from '../../lib/writing-length';
 import { colors } from '../../config/theme';
 
 const PASSAGE_FONT_SIZE = 16;
 
+/**
+ * "67 words" / "286 word segments" — never a Japanese or Chinese count called
+ * words. Those two languages are written without spaces, so `word_count` holds
+ * dictionary word-like segments (Intl.Segmenter) rather than whitespace words;
+ * the writing surface already names that unit the same way
+ * (components/writing/WritingExercise.tsx).
+ */
+function passageLengthLabel(count: number, language: string | null | undefined): string {
+  const noun = isSegmentedLanguage(language) ? 'word segment' : 'word';
+  return `${count} ${noun}${count === 1 ? '' : 's'}`;
+}
+
 interface Props {
   passage: ReadingPassage;
+  /** Course language of the passage. Decides whether `wordCount` is named
+   * words or (ja/zh) word segments; omitted means words. */
+  language?: string | null;
   /** Word-lookup and explanation state, from useWordLookup. */
   selectedRef: SelectedRef | null;
   lookup: WordLookupState | null;
@@ -31,6 +47,7 @@ interface Props {
 
 export function ReadingPassageViewer({
   passage,
+  language,
   selectedRef,
   lookup,
   explanation,
@@ -63,9 +80,9 @@ export function ReadingPassageViewer({
               is what tells the reader why this passage is the right one. */}
           <Text
             style={{ fontSize: 13, color: colors.text.tertiary }}
-            accessibilityLabel={`${passage.wordCount} words. ${cefrAccessibilityLabel(passage.cefrLevel)}`}
+            accessibilityLabel={`${passageLengthLabel(passage.wordCount, language)}. ${cefrAccessibilityLabel(passage.cefrLevel)}`}
           >
-            {passage.wordCount} words {'·'} {passage.cefrLevel}
+            {passageLengthLabel(passage.wordCount, language)} {'·'} {passage.cefrLevel}
           </Text>
           {cefrCanDo(passage.cefrLevel) ? (
             <Text

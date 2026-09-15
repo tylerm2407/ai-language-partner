@@ -46,10 +46,15 @@ export function ErrorCorrectionExercise({
    */
   const isRevealed = localRevealed || showResult;
   const [result, setResult] = useState<GradeResult | null>(() =>
-    regradePick(exercise, selected),
+    regradePick(exercise, selected, language as LanguageCode | undefined),
   );
 
   const errorSentence = (exercise.metadata?.error_sentence as string) ?? exercise.prompt;
+  // Some reviewed tasks practise a formal register or a changed reporting
+  // context. Their source may be grammatical elsewhere; show the authored
+  // constraint instead of falsely calling the source universally erroneous.
+  const rawInstruction = exercise.metadata?.correction_instruction;
+  const correctionInstruction = typeof rawInstruction === 'string' ? rawInstruction.trim() : '';
   const highlight = exercise.targetWord ?? exercise.targetGrammar;
 
   const handleCheck = () => {
@@ -77,12 +82,12 @@ export function ErrorCorrectionExercise({
   return (
     <View style={{ flex: 1 }}>
       <Caption tone="accent" style={{ fontWeight: '600', marginBottom: spacing.xs }}>
-        Find and fix the error
+        {correctionInstruction ? 'Rewrite for this context' : 'Find and fix the error'}
       </Caption>
 
       {/* Sentence with error */}
       <View style={{
-        backgroundColor: colors.error.tint, borderRadius: radii.xxl, padding: spacing.lg, marginBottom: spacing.lg + spacing.xxs, minHeight: 100,
+        backgroundColor: correctionInstruction ? colors.surface.cardAlt : colors.error.tint, borderRadius: radii.xxl, padding: spacing.lg, marginBottom: spacing.lg + spacing.xxs, minHeight: 100,
         justifyContent: 'center',
       }}>
         <HighlightedText
@@ -90,8 +95,8 @@ export function ErrorCorrectionExercise({
           highlight={highlight}
           className="text-text-primary text-[18px] leading-7"
         />
-        <Caption tone="error" style={{ marginTop: spacing.xs, fontStyle: 'italic' }}>
-          This sentence contains an error. Type the corrected version below.
+        <Caption tone={correctionInstruction ? 'secondary' : 'error'} style={{ marginTop: spacing.xs, fontStyle: 'italic' }}>
+          {correctionInstruction || 'This sentence contains an error. Type the corrected version below.'}
         </Caption>
       </View>
 
@@ -100,7 +105,7 @@ export function ErrorCorrectionExercise({
         <TextInput
           value={userInput}
           onChangeText={setUserInput}
-          placeholder="Type the corrected sentence..."
+          placeholder={correctionInstruction ? 'Type the rewritten sentence...' : 'Type the corrected sentence...'}
           placeholderTextColor={colors.text.quaternary}
           editable={!isRevealed}
           multiline
@@ -116,7 +121,7 @@ export function ErrorCorrectionExercise({
             color: colors.text.primary,
             marginBottom: spacing.md,
           }}
-          accessibilityLabel="Corrected sentence"
+          accessibilityLabel={correctionInstruction ? 'Rewritten sentence' : 'Corrected sentence'}
         />
         {isRevealed && (
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs }}>

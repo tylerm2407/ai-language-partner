@@ -162,10 +162,11 @@ const TRIAL_LESSONS: Partial<Record<LanguageCode, Exercise[]>> = {
     }),
     ex(4, {
       type: 'multiple_choice',
-      prompt: 'Complete: "Comment ___ appelles-tu ?"',
-      options: ['te', 'se', 'me', 'nous'],
-      correctAnswer: 'te',
+      prompt: 'Complete “What is your name?”: “Comment ___appelles-tu ?”',
+      options: ["t'", "s'", "m'", 'nous'],
+      correctAnswer: "t'",
       skillType: 'grammar',
+      explanation: 'Before a vowel, “te” becomes “t’”: “Comment t’appelles-tu ?”',
     }),
     ex(5, {
       type: 'sentence_construction',
