@@ -691,6 +691,80 @@ export function gradeAnswer(
   const negationMismatch = hints?.language !== undefined
     && differsOnlyByNegation(normalized, expectedForTolerance, hints.language);
 
+  /**
+   * A different Korean ending is a different form, not a typo.
+   *
+   * Korean is deliberately outside the Han-script gate above — a jamo really is
+   * a fraction of a word, and the grader measures distance in jamo, so ordinary
+   * slips like 간후사 for 간호사 should stay forgiven. But the same measurement
+   * hands a key of any length a budget of two jamo, and Korean inflectional
+   * endings are one or two jamo apart. Round-2 triage caught the consequence on
+   * `ko-E1032` (`더 키_____ (Taller)`, key `가 크다`), where `가 큰` now returns
+   * "Correct! (Minor typo)" — a form the row did not ask for, accepted because
+   * of a length coincidence rather than anything pedagogical. Left alone, the
+   * grader decides part of the speech-level question by tolerance constant.
+   *
+   * So the rule is the one already used for negation: when two strings are the
+   * same up to the point where their endings begin, and BOTH remainders are
+   * recognised inflectional endings, they are two forms of one stem. 크다 and
+   * 큰, 갔어요 and 가겠어요 (past against future), 먹었어요 and 먹였어요 (plain
+   * past against causative) are all differences of form, and a form the learner
+   * did not produce is not a form they mistyped.
+   *
+   * Narrow on purpose:
+   *  - Both remainders must be in the list. 씨다 / 씻다 differ by ㅅ다, which is
+   *    no ending, so that stays an ordinary typo question for the pair list.
+   *  - The shared stem must be at least two jamo, so two unrelated words that
+   *    happen to share one letter are untouched.
+   *  - Neither remainder may be empty: dropping a whole ending is as likely to
+   *    be a slip as a choice, and the budget already judges it.
+   *  - A bare final consonant on BOTH sides is not enough. ㄴ, ㄹ and ㅁ end
+   *    plenty of ordinary nouns, so 신념 against 신년 looks exactly like an
+   *    inflection and is nothing of the kind. At least one side must carry a
+   *    full ending — 크다 against 큰 qualifies, 산 against 살 does not.
+   *  - 에요 is left out, so the 이에요 / 이어요 copula spellings — 12 pairs in
+   *    the Korean corpus, the same word either way — keep their tolerance.
+   *
+   * An exact match returns long before this, so an ending a row has authored as
+   * an accepted answer is unaffected.
+   */
+  const KOREAN_ENDINGS: readonly string[] = [
+    // Plain and dictionary forms.
+    '다', '\u11ab다', '는다',
+    // Adnominal: the bare jongseong forms are how ㄴ and ㄹ attach to a stem.
+    '\u11ab', '\u11af', '은', '는', '을', '던', '\u11ab\u1103\u1161',
+    // Polite. 어요 / 아요 / 여요 and the honorific imperative.
+    '요', '어요', '아요', '여요', '세요', '으세요', '셔요',
+    // Deferential. ㅂ니다 attaches as a jongseong; 습니다 stands alone.
+    '\u11b8니다', '습니다', '\u11b8니까', '습니까', '십시오',
+    // Tense. ㅆ attaches to the stem: 갔다 is 가 + ㅆ + 다.
+    '\u11bb다', '\u11bb어요', '\u11bb습니다', '았다', '었다', '였다',
+    '았어요', '었어요', '였어요', '았습니다', '었습니다', '였습니다',
+    '겠다', '겠어요', '겠습니다',
+    // Connectives and nominalisers.
+    '고', '서', '지', '며', '면', '니까', '는데', '\u11ab데', '은데',
+    '기', '음', '\u11b7', '자', '라', '어라', '아라',
+  ].map((ending) => ending.normalize('NFD'));
+
+  const differsOnlyByKoreanEnding = (a: string, b: string): boolean => {
+    const [first, second] = [a.normalize('NFD'), b.normalize('NFD')];
+    let common = 0;
+    while (common < first.length && common < second.length && first[common] === second[common]) common++;
+    // Walk the split point back from the longest shared run rather than taking
+    // it as given: 먹었어요 and 먹였어요 share ㅁㅓㄱ AND the ㅇ that opens the
+    // next syllable, so the maximal prefix cuts both endings in half and
+    // neither remainder is recognisable.
+    for (let shared = common; shared >= 2; shared--) {
+      const [restA, restB] = [first.slice(shared), second.slice(shared)];
+      if (restA === '' || restB === '' || restA === restB) continue;
+      if (restA.length === 1 && restB.length === 1) continue;
+      if (KOREAN_ENDINGS.includes(restA) && KOREAN_ENDINGS.includes(restB)) return true;
+    }
+    return false;
+  };
+  const inflectionMismatch = hints?.language === 'ko'
+    && differsOnlyByKoreanEnding(normalized, expectedForTolerance);
+
   const confusableIn = (language: LanguageCode) =>
     isConfusablePair(normalized, expectedForTolerance, language) ||
     isConfusablePair(normalized, expectedForTolerance, language, stripDiacritics) ||
@@ -706,6 +780,7 @@ export function gradeAnswer(
         )));
   const confusable =
     negationMismatch
+    || inflectionMismatch
     || isTaughtElsewhere(normalized)
     || (hints?.language !== undefined
       && (confusableIn(hints.language) || confusableIn('en')));

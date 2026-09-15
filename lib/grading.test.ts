@@ -667,3 +667,57 @@ describe('a bare unaccented stem that could be either word is neither', () => {
     expect(result.accuracy > 0.5).toBe(true);
   });
 });
+
+describe('a different Korean ending is a different form, not a typo', () => {
+  const ko = { exerciseHints: { language: 'ko' as const } };
+
+  it('refuses the adnominal form of the key', () => {
+    // ko-E1032: `더 키_____ (Taller)`, key `가 크다`. Measuring the budget in
+    // jamo — right in itself — hands a key this length two jamo of tolerance,
+    // and Korean endings are one or two jamo apart, so `가 큰` started passing
+    // as a minor typo. The form is not what the row asked for.
+    expect(gradeAnswer('가 큰', '가 크다', [], ko).isCorrect).toBe(false);
+    expect(gradeAnswer('가 크다', '가 큰', [], ko).isCorrect).toBe(false);
+  });
+
+  it('refuses a tense the row did not ask for', () => {
+    expect(gradeAnswer('가겠어요', '갔어요', [], ko).isCorrect).toBe(false);
+    expect(gradeAnswer('먹겠어요', '먹었어요', [], ko).isCorrect).toBe(false);
+  });
+
+  it('refuses a causative for a plain past, where the split is mid-syllable', () => {
+    // 먹었어요 and 먹였어요 share ㅁㅓㄱ and the ㅇ that opens the next syllable,
+    // so the longest shared run cuts both endings in half. The rule walks the
+    // split point back until both remainders are whole endings.
+    expect(gradeAnswer('먹였어요', '먹었어요', [], ko).isCorrect).toBe(false);
+  });
+
+  it('still forgives an ordinary Korean typing slip', () => {
+    // A jamo is a fraction of a word and ㅎ/ㅜ are adjacent: this is the case
+    // the decomposed budget exists to forgive, and it stays forgiven.
+    expect(gradeAnswer('간후사', '간호사', [], ko).isCorrect).toBe(true);
+    expect(gradeAnswer('경재', '경제', [], ko).isCorrect).toBe(true);
+  });
+
+  it('leaves the copula spellings alone', () => {
+    // 이에요 / 이어요 are the same word either way — 12 pairs in the Korean
+    // corpus — so 에요 is deliberately not in the ending list.
+    expect(gradeAnswer('이어요', '이에요', [], ko).isCorrect).toBe(true);
+  });
+
+  it('does not fire when the difference is not an ending', () => {
+    // 씻다 / 씨다 differ by ㅅ다, which is no ending, so this stays an ordinary
+    // typo question for the budget and the pair list to settle.
+    expect(gradeAnswer('씻다', '씨다', [], ko).isCorrect).toBe(true);
+  });
+
+  it('accepts an ending the row authored as an alternative', () => {
+    expect(gradeAnswer('갔습니다', '갔어요', ['갔습니다'], ko).isCorrect).toBe(true);
+  });
+
+  it('applies to Korean only', () => {
+    // Japanese kana keeps its tolerance; the Han gate is what handles Japanese.
+    expect(gradeAnswer('ありがとお', 'ありがとう', [], { exerciseHints: { language: 'ja' } }).isCorrect)
+      .toBe(true);
+  });
+});
