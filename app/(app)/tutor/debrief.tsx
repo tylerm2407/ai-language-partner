@@ -42,6 +42,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useScreenView } from '../../../hooks/useScreenView';
 import { useMotion } from '../../../hooks/useMotion';
 import { LiveTranscript } from '../../../components/tutor/LiveTranscript';
+import { ListeningCheckCard } from '../../../components/tutor/ListeningCheckCard';
 import { SlabButton } from '../../../components/ui2/SlabButton';
 import { SlabCard } from '../../../components/ui2/SlabCard';
 import { Body, Caption, Heading } from '../../../components/ui2/Ui2Text';
@@ -155,7 +156,11 @@ export default function TutorDebriefScreen() {
           ) : null}
 
           {view.kind === 'ready' ? (
-            <DebriefBody debrief={view.debrief} savedWords={savedWords} />
+            <DebriefBody
+              debrief={view.debrief}
+              savedWords={savedWords}
+              sessionId={sessionId}
+            />
           ) : null}
 
           {view.kind === 'transcript_only' ? (
@@ -204,7 +209,16 @@ export default function TutorDebriefScreen() {
  * the header and the Done button are there from the first frame and must not
  * animate in underneath a learner who is already reaching for them.
  */
-function DebriefBody({ debrief, savedWords }: { debrief: TutorDebrief; savedWords: string[] }) {
+function DebriefBody({
+  debrief,
+  savedWords,
+  sessionId,
+}: {
+  debrief: TutorDebrief;
+  savedWords: string[];
+  /** Null on a debrief reached without one; the check is then not offered. */
+  sessionId: string | null;
+}) {
   const { c } = useUi2Theme();
   const { shouldReduce, durationOr0 } = useMotion();
   const opacity = useRef(new Animated.Value(shouldReduce ? 1 : 0)).current;
@@ -235,6 +249,20 @@ function DebriefBody({ debrief, savedWords }: { debrief: TutorDebrief; savedWord
           <Caption tone="primary">What worked</Caption>
           <Body style={styles.cardBody}>{debrief.highlight}</Body>
         </SlabCard>
+      ) : null}
+
+      {/* ── The listening check, before the corrections. ──
+          Two reasons, and the order is a real editorial choice rather than a
+          place to drop a new section. It asks what the TUTOR said, so it wants
+          the conversation fresh — and everything below quotes the conversation
+          back, which would prime the answers. Asking after "Habits worth
+          fixing" would be asking a learner who has just been handed the
+          transcript in prose.
+
+          It also has to sit above `nextTime`, which closes the debrief: an
+          interactive task after the closing line reads as tacked on. */}
+      {sessionId && debrief.listeningCheck && debrief.listeningCheck.length > 0 ? (
+        <ListeningCheckCard sessionId={sessionId} items={debrief.listeningCheck} />
       ) : null}
 
       {patterns.length > 0 ? (
