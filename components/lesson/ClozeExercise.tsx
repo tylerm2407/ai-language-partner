@@ -11,6 +11,8 @@ import { spacing, radii } from '../../config/theme';
 import { gradeAnswer } from '../../lib/grading';
 import type { GradeResult } from '../../lib/grading';
 import { isRestored, regradePick } from '../../lib/exercise-restore';
+import { exerciseListenTarget } from '../../lib/exercise-audio';
+import { ListenWordButton } from './ListenWordButton';
 import type { Exercise, LanguageCode } from '../../types';
 
 interface Props {
@@ -58,6 +60,8 @@ export function ClozeExercise({
   const afterBlank = parts[1] ?? '';
 
   const highlight = exercise.targetWord ?? exercise.targetGrammar;
+
+  const listen = language ? exerciseListenTarget(exercise, language) : null;
 
   const handleCheck = () => {
     if (!userInput.trim() || isRevealed) return;
@@ -123,6 +127,14 @@ export function ClozeExercise({
           <HighlightedText text={afterBlank} highlight={highlight} />
         </Body>
       </View>
+
+      {/* Hear the completed sentence. Only once it IS complete: before that
+          the gap is the answer, and `exerciseListenTarget` fills the gap with
+          `correctAnswer` to build the text, so playing it early would read the
+          answer out loud. */}
+      {isRevealed && listen && language ? (
+        <ListenWordButton text={listen.text} language={language} userId={userId} />
+      ) : null}
 
       {/* Input */}
       {!isRevealed && (

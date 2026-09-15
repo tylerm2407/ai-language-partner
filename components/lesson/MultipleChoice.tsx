@@ -137,6 +137,10 @@ export function MultipleChoice({
           style={{ color: c.ink }}
         />
       }
+      exercise={exercise}
+      language={language}
+      userId={userId}
+      answered={locked}
     >
       <View style={{ gap: spacing.xs + 2 }}>
         {options.map((option, index) => {

@@ -173,7 +173,12 @@ export function MiniDialogueExercise({
   });
 
   return (
-    <ExerciseCard type={exercise.type} prompt={exercise.prompt}>
+    <ExerciseCard type={exercise.type} prompt={exercise.prompt}
+      exercise={exercise}
+      language={language}
+      userId={userId}
+      answered={submitted || showResult}
+    >
       <View className="mb-4">
         {dialogue.map((line, index) => {
           const isBlank = blankIndices.includes(index);

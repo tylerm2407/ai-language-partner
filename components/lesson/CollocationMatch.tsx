@@ -131,7 +131,12 @@ export function CollocationMatch({
   };
 
   return (
-    <ExerciseCard type={exercise.type} prompt={exercise.prompt}>
+    <ExerciseCard type={exercise.type} prompt={exercise.prompt}
+      exercise={exercise}
+      language={language}
+      userId={userId}
+      answered={submitted || showResult}
+    >
       <View className="mb-4 items-center">
         <Text className="text-2xl font-bold" style={{ color: c.primary }}>{targetWord}</Text>
         <Text className="text-sm mt-1" style={{ color: c.muted }}>

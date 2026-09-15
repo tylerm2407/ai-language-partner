@@ -79,7 +79,12 @@ export function TranslationExercise({
   );
 
   return (
-    <ExerciseCard type={exercise.type} promptNode={promptNode}>
+    <ExerciseCard type={exercise.type} promptNode={promptNode}
+      exercise={exercise}
+      language={language}
+      userId={userId}
+      answered={submitted || showResult}
+    >
       <TextInput
         className="border-2 rounded-[14px] px-4 py-2.5 text-base min-h-[80px]"
         style={{ borderColor: getBorderColor(), color: c.ink }}

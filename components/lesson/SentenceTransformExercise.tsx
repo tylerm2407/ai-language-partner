@@ -74,7 +74,12 @@ export function SentenceTransformExercise({
   };
 
   return (
-    <ExerciseCard type={exercise.type} prompt="Transform the sentence">
+    <ExerciseCard type={exercise.type} prompt="Transform the sentence"
+      exercise={exercise}
+      language={language}
+      userId={userId}
+      answered={submitted || showResult}
+    >
       {/* Original sentence */}
       <View className="mb-3 p-3 rounded-[14px]" style={{ backgroundColor: c.surface2 }}>
         <Text className="text-xs font-medium mb-1" style={{ color: c.muted }}>Original sentence</Text>

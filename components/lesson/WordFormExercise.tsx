@@ -77,7 +77,12 @@ export function WordFormExercise({
   };
 
   return (
-    <ExerciseCard type={exercise.type} prompt="Complete the word form">
+    <ExerciseCard type={exercise.type} prompt="Complete the word form"
+      exercise={exercise}
+      language={language}
+      userId={userId}
+      answered={submitted || showResult}
+    >
       {/* Word family hint */}
       {(baseWord || wordFamily.length > 0) && (
         <View className="mb-4 p-3 rounded-[14px]" style={{ backgroundColor: c.surface2 }}>

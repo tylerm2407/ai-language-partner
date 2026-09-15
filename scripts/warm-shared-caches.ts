@@ -72,6 +72,7 @@ import {
   existingTranslationKeys,
   existingTtsPaths,
   fetchAudioPrompts,
+  fetchVocabWordPrompts,
   fetchCurriculumCards,
   fetchHintTargets,
   fetchPassageParagraphs,
@@ -362,7 +363,16 @@ async function main(): Promise<void> {
   }
 
   if (opts.caches.includes('tts')) {
-    const prompts = await fetchAudioPrompts(db, cards);
+    // Two sources, one plan. `fetchAudioPrompts` covers the spoken PROMPTS of
+    // listening and dictation exercises; `fetchVocabWordPrompts` covers the
+    // single WORD behind the Listen button every other vocabulary exercise
+    // now draws. They overlap heavily by design — a word drilled as a
+    // listening prompt and shown as a multiple-choice question is one cached
+    // object — and `dedupeAndSkip` below collapses that to one item.
+    const prompts = [
+      ...(await fetchAudioPrompts(db, cards)),
+      ...(await fetchVocabWordPrompts(db, cards)),
+    ];
     const rates = opts.includeSlow ? [DEFAULT_RATE, SLOW_RATE] : [DEFAULT_RATE];
     const candidates: TtsItem[] = [];
     const unwarmable = new Set<string>();
