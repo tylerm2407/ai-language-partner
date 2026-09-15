@@ -2,10 +2,10 @@
   "engine": "PGlite (in-memory PostgreSQL)",
   "round": 2,
   "snapshot_sha256": "9a20145dc6b53d1e4b5f17388b3f24c4ee4dd43c19b9bdac935ba8256bfb489c",
-  "sql_sha256": "2ac5a9344b201eed3719a449c28fcfbbc3c1cbb1386179872f37e32429d30395",
-  "reverse_sql_sha256": "c13635c77c3cd3eb3044d3d55603d8a4c103336a5c8d8d160a96e205d9fc9539",
-  "patch_rows": 790,
-  "changed_fields": 873,
+  "sql_sha256": "dca779fb415d960a6bad502b78e9e30fc3124f3a9b2e14c8382cb593acce716e",
+  "reverse_sql_sha256": "7197b63a9938588c3c0305aa8dcf63a3b020854675294532245b77e2948c5e98",
+  "patch_rows": 807,
+  "changed_fields": 890,
   "tables": [
     "checkpoint_items",
     "exercises",
@@ -37,7 +37,8 @@
     "ruling 2 accepts upward, refuses downward, and rules on all 19",
     "ruling 3 adds the one held French paraphrase",
     "the two register removals withdraw exactly what was argued and nothing else loses an accepted answer",
-    "both withdrawal lists recovered exactly, disjoint from round two, every candidate adjudicated"
+    "both withdrawal lists recovered exactly, disjoint from round two, every candidate adjudicated",
+    "the alternatives-axis remainder adds only what was adjudicated and refuses the source-language leaks"
   ],
   "production_writes": 0,
   "limitations": [

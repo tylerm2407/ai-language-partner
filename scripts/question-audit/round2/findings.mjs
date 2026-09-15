@@ -18,6 +18,7 @@ import { loadTriage, DEPENDENT_ROWS, PARTIALLY_HELD, TRIAGE_SHA, TRIAGE_SOURCE }
 import { loadCandidates, REGISTER_RULING, REGISTER_REMOVALS, REGISTER_KEPT, FR_C0024, CANDIDATES_SHA, RULED_ON } from './product-rulings.mjs';
 import { loadAlternativesEvidence, SCRIPT_ACCEPT, SCRIPT_REFUSE, HELD_TYPO_BALL, EVIDENCE_SHA, EVIDENCE_SOURCE } from './restored-withdrawals.mjs';
 import { LEVELLED, HELD_WOULD_WIDEN, PROPAGATION_PENDING, DECLARED_EXCEPTIONS as GLOSS_EXCEPTIONS, DECLARED_REASON as GLOSS_REASON, PROPAGATION_REASON } from './same-gloss-levelling.mjs';
+import { AXIS_REMAINDER, AXIS_REFUSED, AXIS_HELD } from './alternatives-axis-remainder.mjs';
 
 const raw = await readFile(SNAPSHOT_FILE, 'utf8');
 if (createHash('sha256').update(raw).digest('hex') !== SNAPSHOT_SHA) throw new Error('Changed frozen snapshot');
@@ -363,7 +364,7 @@ const SAME_GLOSS = {
     what_249_probably_counts: 'A different population. The rejected axis was to count sibling ALTERNATIVES as taught strings, over the shipped sibling scope (unit by default), which is far wider than same-gloss-same-key. Reproducing that rule at each scope gives figures in the tens of thousands to millions of (row, string) pairs, nowhere near 249, so the number must be measured with a narrowing this report does not have.',
     corroborating_signal: 'The Italian examples that travelled with the request — "Generoso" refusing "Generosa" — are already levelled: to_target|Generous|Generoso is in round one\'s own RESOLVED_HERE list, and Italian now has zero diverging groups. So the 249 was measured against a corpus state predating the round-1 patch, a different population, or both.',
     what_is_reported_instead: 'The population this file can prove, derived from the frozen snapshot plus the round-2 draft: 4,605 groups across nine languages, 967 asked more than once, 101 disagreeing, carrying 129 (row, string) omissions. Italian is at zero, which is round one showing up as a result rather than a claim.',
-    ask: 'If 249 is meant to be a different population, point at the file and it can be worked separately.',
+    RESOLVED_2026_09_15: 'The file now exists and both populations are confirmed different and both correct. See `alternatives_axis` for the reconciliation, the audio-majority finding, and what the 88 typed rows became.',
   },
   derived: { groups: 4605, asked_more_than_once: 967, disagreeing: 101, omissions: 129, italian: 0 },
   outcomes: {
@@ -385,6 +386,35 @@ const SAME_GLOSS = {
   standing_test: 'scripts/question-audit/round2/same-gloss-levelling.test.mjs — nine languages, Node rather than Deno, and an allowlist that is no longer empty because two populations must stay divergent. Passes on the result: 4 checks.',
 };
 
+const AXIS = {
+  resolved: 'The 249 is no longer a number in prose: scripts/grading/alternatives-axis.json is committed on audit/grader-behaviour with both definitions in its header and per-row provenance. Its counts reproduce exactly here — 249 rows with breaks:true, 141 listening_type, 20 dictation, 65 translate_to_target, 18 free_production, 4 translate_to_native, 1 fill_blank.',
+  the_two_populations: {
+    axis: 'TOLERANCE BREAKAGE. A row that currently accepts, through the typo budget, a string the language teaches as something else on the same key. Conditioned on the grader accepting it today.',
+    same_gloss: 'EXPLICIT DIVERGENCE. Two rows asking the same question with different accepted lists, whether or not any collision exists. Unconditioned.',
+    both_correct: 'They overlap without being the same set, which is why 249 and 129 were never going to agree.',
+    two_visible_consequences: [
+      'The axis is keyed on the KEY, not the gloss: fr-E0994 keys "Plus petit" under the gloss "Smaller" while fr-E1000 keys it under "Shorter". The axis pairs them; the same-gloss sweep deliberately does not.',
+      'The axis reaches prompt shapes the sweep does not classify: free_production ("Write a sentence using the word: …") and fill_blank ("stem_____ (gloss)") are not bare-gloss frames.',
+    ],
+  },
+  the_audio_majority: '161 of the 249 are audio-stimulus rows — 141 listening_type, 20 dictation — where the missing alternative should STAY missing: accepting Generosa on a row that PLAYS Generoso is accepting a different spoken word, not levelling a gender pair. That is why the same-gloss population is smaller, and it is a positive argument for the alternatives axis staying rejected rather than a gap in it.',
+  the_italian_discrepancy_explained: 'The same-gloss sweep reports zero diverging Italian groups while the axis still shows Generoso diverging across four rows. Neither is stale: two of those four are a listening_type and a speaking row, which the sweep correctly excludes.',
+  intersection_of_the_88_typed_rows_against_the_129: {
+    already_levelled_here: 56,
+    already_held_here: 6,
+    genuinely_new: 26,
+    note: '62 of 88 were already covered. The remainder was 26 rows, not 88.',
+  },
+  outcome_of_the_26: { added: AXIS_REMAINDER.length, held: AXIS_HELD.length, refused: AXIS_REFUSED.length },
+  FOUR_ARE_A_DEFECT_POINTING_THE_OTHER_WAY: {
+    what: 'On four translate_to_native rows the string the axis would refuse is the SOURCE-LANGUAGE word, on a row whose answer is English.',
+    rows: AXIS_REFUSED.filter(entry => entry.type === 'translate_to_native'),
+    finding: 'These are rows accepting the prompt\'s own language as the answer. The alternatives axis would have been RIGHT to refuse them. They are recorded as defects rather than fixed here, because closing them means removing tolerance rather than adding an alternative, and this patch removes an accepted answer only where the removal is argued row by row.',
+  },
+  other_refusals: AXIS_REFUSED.filter(entry => entry.type !== 'translate_to_native'),
+  held: AXIS_HELD,
+};
+
 const findings = {
   round: 2,
   snapshot_sha256: SNAPSHOT_SHA,
@@ -404,10 +434,12 @@ const findings = {
     'rulings_2026_09_15': { patched: 64, additions: 77, removals: 2, see: 'rulings' },
     'restored_withdrawals': { patched: 67, additions: 95, refused: 46, held: 3, see: 'restored_withdrawals' },
     'same_gloss_levelling': { patched: 84, additions: 97, held: 13, pending: 14, declared: 5, see: 'same_gloss_levelling' },
+    'alternatives_axis_remainder': { patched: 17, additions: 18, refused: 7, held: 1, see: 'alternatives_axis' },
   },
   rulings: RULINGS,
   restored_withdrawals: RESTORED,
   same_gloss_levelling: SAME_GLOSS,
+  alternatives_axis: AXIS,
   triage_block: TRIAGE,
   already_fixed_by_round_one: ALREADY_FIXED.map(finding => ({
     ...finding, verified_now: finding.id ? frozen(finding.id, finding.field, finding.now, finding.ref) : null,

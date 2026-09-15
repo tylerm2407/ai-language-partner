@@ -11,6 +11,7 @@ import { loadTriage, DEPENDENT_ROWS, PARTIALLY_HELD, TRIAGE_SHA } from './triage
 import { loadCandidates, REGISTER_RULING, REGISTER_REMOVALS, REGISTER_KEPT, FR_C0024, CANDIDATES_SHA, RULED_ON } from './product-rulings.mjs';
 import { loadAlternativesEvidence, SCRIPT_ACCEPT, SCRIPT_REFUSE, HELD_TYPO_BALL, EVIDENCE_SHA } from './restored-withdrawals.mjs';
 import { LEVELLED } from './same-gloss-levelling.mjs';
+import { AXIS_REMAINDER, AXIS_REFUSED, AXIS_HELD } from './alternatives-axis-remainder.mjs';
 
 const draft = JSON.parse(await readFile('docs/audits/question-verification/round2/draft-patches.json', 'utf8'));
 const { patches } = draft;
@@ -153,11 +154,11 @@ test('the compiler refuses speaking rows, unknown ids and fields, and contradict
 test('the build is reproducible: a second compile emits byte-identical patches', async () => {
   const [{ productiveParadigmFixes }, { filmTheaterFixes }, { idiomaticEquivalentsRetitle },
     { triageAcceptedAnswers }, { productRulings, frenchCheckpointParaphrase, registerRemovals },
-    { createAcceptedAnswerLedger }, { restoredWithdrawals }, { sameGlossLevelling }] = await Promise.all([
+    { createAcceptedAnswerLedger }, { restoredWithdrawals }, { sameGlossLevelling }, { alternativesAxisRemainder }] = await Promise.all([
     import('./productive-paradigm-fixes.mjs'), import('./film-theater-fixes.mjs'),
     import('./idiomatic-equivalents-retitle.mjs'), import('./triage-accepted-answers.mjs'),
     import('./product-rulings.mjs'), import('./accepted-answer-ledger.mjs'), import('./restored-withdrawals.mjs'),
-    import('./same-gloss-levelling.mjs'),
+    import('./same-gloss-levelling.mjs'), import('./alternatives-axis-remainder.mjs'),
   ]);
   const rebuild = async () => {
     const set = await createRound2PatchSet();
@@ -167,6 +168,7 @@ test('the build is reproducible: a second compile emits byte-identical patches',
     await productRulings(set, ledger);
     await restoredWithdrawals(set, ledger);
     sameGlossLevelling(set, ledger);
+    alternativesAxisRemainder(set, ledger);
     frenchCheckpointParaphrase(set);
     registerRemovals(set);
     ledger.write(set);
@@ -320,7 +322,7 @@ test('Film & Theater stops teaching Painting and Sculpture in all six remaining 
   const units = new Map(snapshot.units.map(u => [u.id, u]));
   const courses = new Map(snapshot.courses.map(c => [c.id, c]));
   const ledgerIds = new Set([...triage.map(entry => entry.exercise_id), ...candidates.map(entry => entry.exercise_id),
-    ...REGISTER_REMOVALS.map(entry => entry.id), ...withdrawalIds, ...LEVELLED.map(([id]) => id)]);
+    ...REGISTER_REMOVALS.map(entry => entry.id), ...withdrawalIds, ...LEVELLED.map(([id]) => id), ...AXIS_REMAINDER.map(([id]) => id)]);
   const touched = patches.filter(p => p.table === 'exercises'
     && !Object.hasOwn(p.after, 'target_grammar') && !ledgerIds.has(p.id));
   assert.equal(touched.length, 24, 'four rows in each of six languages');
@@ -361,7 +363,8 @@ test('the triage block writes exactly the confirmed rows, and only accepted_answ
     assert.deepEqual(patch.after.accepted_answers.slice(0, entry.additions.length), entry.additions);
     const ruled = new Set([...candidates.filter(c => c.exercise_id === patch.id).map(c => c.candidate),
       ...[...withdrawals.script, ...withdrawals.ball].filter(w => jaRef(Number(w.ref.slice(4))).exercise.id === patch.id).map(w => w.candidate),
-      ...LEVELLED.filter(([id]) => id === patch.id).map(([, , , , missing]) => missing)]);
+      ...LEVELLED.filter(([id]) => id === patch.id).map(([, , , , missing]) => missing),
+      ...AXIS_REMAINDER.filter(([id]) => id === patch.id).map(entry => entry[5])]);
     for (const value of patch.after.accepted_answers.slice(entry.additions.length)) {
       assert(ruled.has(value), `${entry.ref}: ${value} comes from no recorded block`);
     }
@@ -568,8 +571,47 @@ test('the restored withdrawals recover both lists exactly, and adjudicate every 
   passedChecks++;
 });
 
+test('the alternatives-axis remainder adds only what was adjudicated, and refuses the source-language leaks', () => {
+  assert.equal(AXIS_REMAINDER.length, 18);
+  assert.equal(AXIS_REFUSED.length, 7);
+  assert.equal(AXIS_HELD.length, 1);
+  const byId = new Map(snapshot.exercises.map(e => [e.id, e]));
+  const axisIdByRef = new Map();
+  for (const language of Object.keys({ es: 0, fr: 0, de: 0, it: 0, pt: 0, ru: 0, ja: 0, ko: 0, zh: 0 })) {
+    const get = lessonRefs(snapshot, language);
+    for (let n = 1; n <= 2312; n++) axisIdByRef.set(`${language}-E${String(n).padStart(4, '0')}`, get(n).exercise.id);
+  }
+  const refusedStrings = new Set(AXIS_REFUSED.map(e => `${e.ref}|${e.string}`));
+  for (const [id, ref, , type, key, string] of AXIS_REMAINDER) {
+    const frozen = byId.get(id);
+    assert.equal(frozen.correct_answer, key, `${ref}: key moved`);
+    assert.equal(frozen.type, type, `${ref}: type moved`);
+    assert(!refusedStrings.has(`${ref}|${string}`), `${ref}: ${string} is both added and refused`);
+    const patch = patches.find(p => p.id === id);
+    assert(patch, ref);
+    assert(patch.after.accepted_answers.includes(string), `${ref}: ${string} missing`);
+    // Never a translate_to_native row: those four are the source-language leak.
+    assert.notEqual(type, 'translate_to_native', `${ref}: a translate_to_native row was levelled`);
+  }
+  // A refused or held string must not be written to THE ROW IT WAS REFUSED ON.
+  // Its twin may legitimately carry it — that is why the axis paired them — so
+  // this is scoped to the row, not to every row sharing the key.
+  const refByRef = new Map(AXIS_REMAINDER.map(([id, ref]) => [ref, id]));
+  const axisRows = new Map(JSON.parse(JSON.stringify([...refByRef])));
+  for (const entry of [...AXIS_REFUSED, ...AXIS_HELD]) {
+    assert.ok(entry.why.trim().length > 40, `${entry.ref}: no reason recorded`);
+    assert(!axisRows.has(entry.ref), `${entry.ref}: refused and added in the same block`);
+    const id = axisIdByRef.get(entry.ref);
+    assert(id, `${entry.ref}: cannot resolve the row it was refused on`);
+    const patch = patches.find(p => p.id === id);
+    const after = patch?.after.accepted_answers ?? byId.get(id).accepted_answers ?? [];
+    assert(!after.includes(entry.string), `${entry.ref}: the refused "${entry.string}" reached its own row`);
+  }
+  passedChecks++;
+});
+
 test('write a truthful local verification record after the assertions', async () => {
-  assert.equal(passedChecks, 24, 'never write a successful verification record when an earlier check failed');
+  assert.equal(passedChecks, 25, 'never write a successful verification record when an earlier check failed');
   await writeFile('docs/audits/question-verification/round2/local-sql-tests.json', JSON.stringify({
     engine: 'PGlite (in-memory PostgreSQL)',
     round: 2,
@@ -590,7 +632,8 @@ test('write a truthful local verification record after the assertions', async ()
       'ruling 1 adds every Japanese script candidate and invents none', 'ruling 2 accepts upward, refuses downward, and rules on all 19',
       'ruling 3 adds the one held French paraphrase',
       'the two register removals withdraw exactly what was argued and nothing else loses an accepted answer',
-      'both withdrawal lists recovered exactly, disjoint from round two, every candidate adjudicated'],
+      'both withdrawal lists recovered exactly, disjoint from round two, every candidate adjudicated',
+      'the alternatives-axis remainder adds only what was adjudicated and refuses the source-language leaks'],
     production_writes: 0,
     limitations: ['Minimal typed content schema, not full Supabase auth/RLS/triggers or historical migrations',
       'Does not establish linguistic correctness or independent round-2 approval',
