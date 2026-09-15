@@ -18,6 +18,17 @@ jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Ionicons' }));
 jest.mock('../../lib/haptics', () => ({ haptic: jest.fn() }));
 jest.mock('../../lib/supabase-queries', () => ({ logExerciseCorrection: jest.fn() }));
 jest.mock('../../lib/ai', () => ({ VoiceError: class VoiceError extends Error {} }));
+// Reaches expo-av through ExerciseCard -> ListenWordButton -> useAudioPlayer.
+// Mocking the hook alone is enough only when it wins the load-order race; two
+// sibling suites failed intermittently on exactly that. Mirrors lesson-retry.
+jest.mock('expo-av', () => ({
+  Audio: {
+    Sound: { createAsync: jest.fn(async () => ({ sound: { unloadAsync: jest.fn() } })) },
+    Recording: { createAsync: jest.fn() },
+  },
+  Video: () => null,
+  ResizeMode: { CONTAIN: 'contain', COVER: 'cover', STRETCH: 'stretch' },
+}));
 jest.mock('../../hooks/useAudioPlayer', () => ({ useAudioPlayer: () => ({ playing: false, loading: false, error: null, play: jest.fn() }) }));
 jest.mock('../../lib/lesson-audio', () => ({ getLessonAudioUri: jest.fn(), LESSON_SLOW_RATE: 0.75 }));
 jest.mock('./FeedbackCard', () => ({ FeedbackCard: () => null }));
