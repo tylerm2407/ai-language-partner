@@ -1,0 +1,162 @@
+{
+ "question": "Does typing the prompt back score correct on a translate row?",
+ "answer": "The sibling-key rule already closes all but a handful; no separate rule was written. See the header of this script for why a source-echo rule is the wrong shape.",
+ "snapshot": "/Users/tylermoore/Fluenci_Main/question-audit-verification/.question-audit/snapshot-9a20145dc6b5.json",
+ "snapshot_captured_at": "2026-09-15T02:38:03.559269+00:00",
+ "accepted_with_no_sibling_keys": 256,
+ "still_accepted_at_unit_scope": 15,
+ "still_accepted_at_language_scope": 15,
+ "survivors_that_fold_onto_the_key": 14,
+ "rows": [
+  {
+   "exercise_id": "aabbccdd-1111-1002-0005-e00000000007",
+   "language": "es",
+   "type": "translate_to_native",
+   "prompt": "Translate to English: Menú",
+   "key": "Menu",
+   "echoed_source": "Menú",
+   "accepted_as": "Correct! (Watch the accents: \"Menu\")",
+   "folds_onto_the_key": true
+  },
+  {
+   "exercise_id": "aabbccdd-1111-1002-0006-e00000000006",
+   "language": "es",
+   "type": "translate_to_target",
+   "prompt": "Translate to Spanish: Menu",
+   "key": "Menú",
+   "echoed_source": "Menu",
+   "accepted_as": "Correct! (Watch the accents: \"Menú\")",
+   "folds_onto_the_key": true
+  },
+  {
+   "exercise_id": "aabbccdd-1111-1007-0003-e00000000002",
+   "language": "es",
+   "type": "translate_to_target",
+   "prompt": "Translate to Spanish: Plate",
+   "key": "Plato",
+   "echoed_source": "Plate",
+   "accepted_as": "Correct! (Minor typo: \"Plato\")",
+   "folds_onto_the_key": false
+  },
+  {
+   "exercise_id": "aabbccdd-1111-2003-0006-e00000000008",
+   "language": "es",
+   "type": "translate_to_target",
+   "prompt": "Translate to Spanish: Sofa",
+   "key": "Sofá",
+   "echoed_source": "Sofa",
+   "accepted_as": "Correct! (Watch the accents: \"Sofá\")",
+   "folds_onto_the_key": true
+  },
+  {
+   "exercise_id": "aabbccdd-2222-2001-0003-e00000000003",
+   "language": "fr",
+   "type": "translate_to_native",
+   "prompt": "Translate to English: Nièce",
+   "key": "Niece",
+   "echoed_source": "Nièce",
+   "accepted_as": "Correct! (Watch the accents: \"Niece\")",
+   "folds_onto_the_key": true
+  },
+  {
+   "exercise_id": "aabbccdd-2222-2001-0004-e00000000002",
+   "language": "fr",
+   "type": "translate_to_target",
+   "prompt": "Translate to French: Niece",
+   "key": "Nièce",
+   "echoed_source": "Niece",
+   "accepted_as": "Correct! (Watch the accents: \"Nièce\")",
+   "folds_onto_the_key": true
+  },
+  {
+   "exercise_id": "aabbccdd-2222-3002-0002-e00000000003",
+   "language": "fr",
+   "type": "translate_to_native",
+   "prompt": "Translate to English: Présentation",
+   "key": "Presentation",
+   "echoed_source": "Présentation",
+   "accepted_as": "Correct! (Watch the accents: \"Presentation\")",
+   "folds_onto_the_key": true
+  },
+  {
+   "exercise_id": "aabbccdd-2222-3002-0003-e00000000002",
+   "language": "fr",
+   "type": "translate_to_target",
+   "prompt": "Translate to French: Presentation",
+   "key": "Présentation",
+   "echoed_source": "Presentation",
+   "accepted_as": "Correct! (Watch the accents: \"Présentation\")",
+   "folds_onto_the_key": true
+  },
+  {
+   "exercise_id": "aabbccdd-2222-3003-0001-e00000000003",
+   "language": "fr",
+   "type": "translate_to_native",
+   "prompt": "Translate to English: Hôtel",
+   "key": "Hotel",
+   "echoed_source": "Hôtel",
+   "accepted_as": "Correct! (Watch the accents: \"Hotel\")",
+   "folds_onto_the_key": true
+  },
+  {
+   "exercise_id": "aabbccdd-2222-3003-0002-e00000000002",
+   "language": "fr",
+   "type": "translate_to_target",
+   "prompt": "Translate to French: Hotel",
+   "key": "Hôtel",
+   "echoed_source": "Hotel",
+   "accepted_as": "Correct! (Watch the accents: \"Hôtel\")",
+   "folds_onto_the_key": true
+  },
+  {
+   "exercise_id": "aabbccdd-2222-3003-0002-e00000000003",
+   "language": "fr",
+   "type": "translate_to_native",
+   "prompt": "Translate to English: Réservation",
+   "key": "Reservation",
+   "echoed_source": "Réservation",
+   "accepted_as": "Correct! (Watch the accents: \"Reservation\")",
+   "folds_onto_the_key": true
+  },
+  {
+   "exercise_id": "aabbccdd-2222-3003-0003-e00000000002",
+   "language": "fr",
+   "type": "translate_to_target",
+   "prompt": "Translate to French: Reservation",
+   "key": "Réservation",
+   "echoed_source": "Reservation",
+   "accepted_as": "Correct! (Watch the accents: \"Réservation\")",
+   "folds_onto_the_key": true
+  },
+  {
+   "exercise_id": "aabbccdd-2222-3004-0003-e00000000003",
+   "language": "fr",
+   "type": "translate_to_native",
+   "prompt": "Translate to English: Océan",
+   "key": "Ocean",
+   "echoed_source": "Océan",
+   "accepted_as": "Correct! (Watch the accents: \"Ocean\")",
+   "folds_onto_the_key": true
+  },
+  {
+   "exercise_id": "aabbccdd-2222-3004-0004-e00000000002",
+   "language": "fr",
+   "type": "translate_to_target",
+   "prompt": "Translate to French: Ocean",
+   "key": "Océan",
+   "echoed_source": "Ocean",
+   "accepted_as": "Correct! (Watch the accents: \"Océan\")",
+   "folds_onto_the_key": true
+  },
+  {
+   "exercise_id": "aabbccdd-5555-2003-0006-e00000000008",
+   "language": "pt",
+   "type": "translate_to_target",
+   "prompt": "Translate to Portuguese: Sofa",
+   "key": "Sofá",
+   "echoed_source": "Sofa",
+   "accepted_as": "Correct! (Watch the accents: \"Sofá\")",
+   "folds_onto_the_key": true
+  }
+ ]
+}
