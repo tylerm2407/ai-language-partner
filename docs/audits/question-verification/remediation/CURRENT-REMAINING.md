@@ -77,6 +77,45 @@ compiled, 35 withdrawn, and both remaining decisions ruled on by Tyler on
    the two lessons still draw on one shared vocabulary; the titles remain closer
    to decorative than descriptive.
 
+## The integrated branch
+
+`audit/integrate-ui2` carries this audit merged onto `redesign/ui-2.0`, which is
+the live trunk — `master`'s last commit is 2026-09-05 and nothing targets it.
+2,624 tests across 165 suites, typecheck and eslint clean. The merge runs with
+the audit as first parent, so Tyler's branch was never written to.
+
+Two things that worktree needs and no branch carries, because both are
+gitignored. Recreate them or the verification misreads:
+
+- `website/node_modules` — without it `npx eslint .` reports an unresolved
+  `marked` in `website/build.mjs`. Pre-existing on Tyler's branch, unrelated to
+  the audit; `npm install` inside `website/` clears it.
+- `.question-audit/snapshot-8c7f381c78d8.json` — `readmission.test.mjs` fails at
+  load with `ENOENT` without it, which reads as a broken suite rather than a
+  missing fixture.
+
+**Where to look first if round two ever misbehaves.** Content changing accepted
+answers surfaces as movement in the readmission suite, not as a jest failure, so
+that Deno run is the one to trust. The live-content graders inside the merge's
+collision zone are `readingQuestionOptions` and `gradeReadingAnswer` in
+`ComprehensionQuestions`, the `exerciseHints` path in `TranslationExercise` and
+`ClozeExercise`, and `writingOverallScore` in `WritingFeedbackView`.
+
+## Do not revert the writing-screen label
+
+`components/writing/WritingExercise.tsx` labels the vocabulary chips
+"Vocabulary ideas (use the target-language equivalents)" rather than the shorter
+"Try to use these words". It reads like a copy edit and it is not.
+
+352 of 550 writing prompts hold **English glosses** in `target_vocabulary`, and
+`grade-writing` feeds that same column into the grading prompt. So the words
+shown to the learner are the words the grader is told to look for, and the short
+label instructs someone to type English strings into a target-language
+composition that is then scored against them. The label plus the grading-prompt
+change IS the approved remedy for those 352 rows, chosen in place of rewriting
+the content. Reverting one half keeps the grading change and drops the interface
+change that makes it coherent.
+
 ## Not defects
 
 Recorded so they are not rediscovered. The Portuguese "fores" is the
