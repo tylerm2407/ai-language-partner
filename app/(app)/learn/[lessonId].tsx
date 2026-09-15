@@ -342,7 +342,6 @@ export default function LessonScreen() {
         exercises={orderedExercises}
         lessonId={lesson.id}
         lessonTitle={lesson.title}
-        unitId={lesson.unitId}
         xpReward={lesson.xpReward}
         userId={user?.id ?? ''}
         targetLanguage={targetLanguage}
