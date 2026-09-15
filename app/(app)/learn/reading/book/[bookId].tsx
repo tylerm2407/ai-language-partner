@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Pressable, ActivityIndicator, Alert, Image } from 'react-native';
+import { View, Pressable, ActivityIndicator, Alert, Image, ScrollView } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeBack } from '../../../../../hooks/useSafeBack';
@@ -30,6 +30,11 @@ import { OfflineDownloadControl } from '../../../../../components/learn/OfflineD
 import { floatingTabBarSpace } from '../../../../../components/navigation/FloatingTabBar';
 import { loadErrorCopy, saveErrorCopy, type ErrorCopy } from '../../../../../lib/error-copy';
 import { cefrCanDo, cefrAccessibilityLabel } from '../../../../../lib/cefr-labels';
+import {
+  estimatedReadMinutes,
+  formatReadDuration,
+  remainingReadMinutes,
+} from '../../../../../lib/reading-speed';
 import type { ReadingBook, BookAnnotation, UserBookProgress, Subscription } from '../../../../../types';
 // `colors` is deliberately NOT imported: it is the fixed DARK palette, and a
 // screen that reads it stays dark whatever the phone is set to.
@@ -40,7 +45,7 @@ import { useScreenView } from '../../../../../hooks/useScreenView';
 
 export default function BookDetailScreen() {
   useScreenView('book');
-  const { c, shape } = useUi2Theme();
+  const { c, shape, type } = useUi2Theme();
   const insets = useSafeAreaInsets();
   const { bookId } = useLocalSearchParams<{ bookId: string }>();
   const router = useRouter();
@@ -344,7 +349,17 @@ export default function BookDetailScreen() {
   // Book detail view
   const isStarted = progress && progress.percentComplete > 0;
   const isCompleted = progress?.completedAt !== null && progress?.completedAt !== undefined;
-  const estimatedMinutes = Math.round(book.wordCount / 200); // ~200 wpm reading speed
+  // Pace comes from lib/reading-speed.ts; this screen used to carry its own
+  // 200 wpm while Home carried its own 140, so the same book was two lengths
+  // depending on which screen you asked.
+  const totalMinutes = estimatedReadMinutes(book.wordCount);
+  // Once a book is underway, minutes *left* is the number that answers the
+  // question the learner is actually asking at this screen ("can I finish
+  // this tonight?"). Total length stops being the useful figure.
+  const minutesLeft =
+    isStarted && !isCompleted ? remainingReadMinutes(book.wordCount, progress!.percentComplete) : 0;
+  const showsRemaining = minutesLeft > 0;
+  const durationLabel = formatReadDuration(showsRemaining ? minutesLeft : totalMinutes);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }} edges={['top']}>
@@ -355,8 +370,17 @@ export default function BookDetailScreen() {
         </Pressable>
       </View>
 
-      {/* Book Info */}
-      <View style={{ padding: 20, flex: 1 }}>
+      {/* Book Info.
+          Scrolls. It used to be a fixed `flex: 1` View, which silently clipped
+          whatever did not fit — and what does not fit is the bottom of the
+          page, so on a book with a two-line title and a description the
+          progress card and the audiobook row were simply gone. The CTA below
+          is a sibling, not a child, so it stays pinned while this moves. */}
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: 20 }}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Cover Image */}
         {book.imageUrl && (
           <View style={{ alignItems: 'center', marginBottom: 16 }}>
@@ -414,32 +438,61 @@ export default function BookDetailScreen() {
           <Body tone="tertiary" style={{ lineHeight: 22, marginBottom: 16 }}>{book.description}</Body>
         )}
 
-        {/* Stats */}
-        <SlabCard style={{ marginBottom: 16 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
-            <View style={{ alignItems: 'center' }}>
-              <Ionicons name="document-text-outline" size={20} color={c.primary} />
-              <Body weight="semibold" style={{ marginTop: 4 }}>
-                {book.wordCount.toLocaleString()}
-              </Body>
-              <Caption size="sm" tone="tertiary">words</Caption>
-            </View>
-            <View style={{ alignItems: 'center' }}>
-              <Ionicons name="time-outline" size={20} color={c.primary} />
-              <Body weight="semibold" style={{ marginTop: 4 }}>
-                ~{estimatedMinutes} min
-              </Body>
-              <Caption size="sm" tone="tertiary">to read</Caption>
-            </View>
-            <View style={{ alignItems: 'center' }}>
-              <Ionicons name="star-outline" size={20} color={c.primary} />
-              <Body weight="semibold" style={{ marginTop: 4 }}>
-                {book.cefrLevel}
-              </Body>
-              <Caption size="sm" tone="tertiary">level</Caption>
-            </View>
-          </View>
-        </SlabCard>
+        {/* Stats. Two tiles, not the three that were here: the third restated
+            the CEFR level that the badge and the can-do line directly above it
+            already give, and a tile that repeats its neighbour spends the most
+            valuable strip on the screen saying nothing. The pair that is left
+            answers the two questions a learner actually has in front of an
+            unopened book — how big is it, and how long will it take me.
+
+            The second tile switches to minutes REMAINING once the book is
+            underway, because at that point total length is no longer the
+            figure being asked about. */}
+        <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
+          {/* Each tile is one accessibility element: read as three separate
+              texts it comes out as "Length", "12,480", "words". */}
+          <SlabCard
+            style={{ flex: 1, padding: 14, gap: 6, minHeight: 96 }}
+            accessible
+            accessibilityLabel={`Length: ${book.wordCount.toLocaleString()} words`}
+          >
+            <Caption
+              size="sm"
+              tone="secondary"
+              style={{ fontFamily: type.uiHeavy, letterSpacing: 0.6, textTransform: 'uppercase' }}
+            >
+              Length
+            </Caption>
+            <Heading level={2} numberOfLines={1}>{book.wordCount.toLocaleString()}</Heading>
+            <Caption size="sm" tone="tertiary">words</Caption>
+          </SlabCard>
+
+          {/* A 0-word row is possible (word_count is NOT NULL but not checked
+              positive), and an invented "~1 min" would be worse than silence. */}
+          {durationLabel ? (
+            <SlabCard
+              style={{ flex: 1, padding: 14, gap: 6, minHeight: 96 }}
+              accessible
+              accessibilityLabel={
+                showsRemaining
+                  ? `Time left: about ${durationLabel}, at a learner's pace`
+                  : `Time to read: about ${durationLabel}, at a learner's pace`
+              }
+            >
+              <Caption
+                size="sm"
+                tone="secondary"
+                style={{ fontFamily: type.uiHeavy, letterSpacing: 0.6, textTransform: 'uppercase' }}
+              >
+                {showsRemaining ? 'Time left' : 'Time to read'}
+              </Caption>
+              <Heading level={2} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+                ~{durationLabel}
+              </Heading>
+              <Caption size="sm" tone="tertiary">at a learner&apos;s pace</Caption>
+            </SlabCard>
+          ) : null}
+        </View>
 
         {/* Progress (if started) */}
         {isStarted && !isCompleted && (
@@ -480,7 +533,7 @@ export default function BookDetailScreen() {
             <Ionicons name="chevron-forward" size={18} color={c.onTint} />
           </Pressable>
         )}
-      </View>
+      </ScrollView>
 
       {/* CTA Button */}
       {/* The cover keeps the tab bar (only the pages hide it), so the CTA

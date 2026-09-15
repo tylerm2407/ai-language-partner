@@ -6,6 +6,7 @@ import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { Ui2ProgressBar } from '../ui2/Ui2ProgressBar';
 import { Body, Caption, Heading } from '../ui2/Ui2Text';
 import { spacing } from '../../config/theme';
+import { formatReadDuration, remainingReadMinutes } from '../../lib/reading-speed';
 
 interface InProgressBook {
   book: ReadingBook;
@@ -39,6 +40,13 @@ export function ContinueReadingSection({ books, onPress }: ContinueReadingSectio
         {books.map(({ book, progress }) => {
           const cefrColor = cefrBandColors(book.cefrLevel);
           const percent = Math.round(progress.percentComplete);
+          // What is left, not what is done. The card already draws the
+          // proportion as a bar, so a "34%" caption underneath it was the same
+          // fact twice; minutes remaining is the thing the bar cannot say and
+          // the thing that decides whether this gets picked up tonight.
+          const leftLabel = formatReadDuration(
+            remainingReadMinutes(book.wordCount, progress.percentComplete),
+          );
 
           return (
             <Pressable
@@ -46,7 +54,7 @@ export function ContinueReadingSection({ books, onPress }: ContinueReadingSectio
               onPress={() => onPress(book.id)}
               accessibilityRole="button"
               // The 200pt card shows the code alone; the label carries its meaning.
-              accessibilityLabel={`Continue reading ${book.title}, ${percent}% complete. ${cefrAccessibilityLabel(book.cefrLevel)}`}
+              accessibilityLabel={`Continue reading ${book.title}, ${percent}% complete${leftLabel ? `, about ${leftLabel} left` : ''}. ${cefrAccessibilityLabel(book.cefrLevel)}`}
               style={{
                 width: 200,
                 backgroundColor: c.card,
@@ -73,6 +81,22 @@ export function ContinueReadingSection({ books, onPress }: ContinueReadingSectio
               >
                 <Caption size="sm" style={{ color: cefrColor.text, fontFamily: type.uiBold }}>{book.cefrLevel}</Caption>
               </View>
+
+              {/* Its own line, above the bar. Sharing the bottom row with
+                  "Continue →" left it about 90pt in a 200pt card, which
+                  truncated a long book to "~2 hr 38 min…" — losing the one
+                  word that says what the number means. */}
+              {leftLabel ? (
+                <Caption
+                  tone="secondary"
+                  numberOfLines={1}
+                  style={{ marginBottom: 6 }}
+                  accessibilityElementsHidden
+                  importantForAccessibility="no"
+                >
+                  ~{leftLabel} left
+                </Caption>
+              ) : null}
 
               <Ui2ProgressBar
                 progress={percent / 100}

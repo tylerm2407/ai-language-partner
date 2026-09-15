@@ -22,7 +22,12 @@
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export const READ_CACHE_SCHEMA_VERSION = 1;
+// 2: the 'books-ranked' entry holds RankedBook[] (book + coverage shares)
+//    rather than a bare ReadingBook[], so the 'For you' shelf can paint its
+//    coverage line from cache instead of only after the refresh lands. A v1
+//    entry would deserialize as an array of books with no `.book`, so every
+//    v1 entry is discarded.
+export const READ_CACHE_SCHEMA_VERSION = 2;
 // 30 days, matching offline-pack retention (lib/offline-packs.ts): a pack the
 // learner downloaded must not expire out from under them before the pack does.
 export const READ_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;

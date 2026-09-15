@@ -13,6 +13,7 @@ import {
   fetchGoalTrack,
   fetchInProgressBooks,
   fetchUserBookProgress,
+  type RankedBook,
 } from '../../../lib/supabase-queries';
 import { useAppStore } from '../../../stores/useAppStore';
 import { useReviewCountSync } from '../../../hooks/useReviewCountSync';
@@ -65,6 +66,19 @@ const TAB_CONFIG: { key: CourseTab; label: string }[] = [
  */
 const FOR_YOU_TAB = 'for-you';
 
+/**
+ * Book id → `common_share` (0..1), for the cards on the 'For you' shelf.
+ *
+ * The ranking RPC has always returned this and the screen has always thrown it
+ * away, so the shelf was ordered by a number the learner could not see. Kept
+ * beside the book list rather than folded into `ReadingBook` because the
+ * per-band shelves have no coverage at all, and a field that is silently 0 on
+ * half the shelves invites a card to render "0% common words".
+ */
+function coverageByBook(ranked: RankedBook[]): Map<string, number> {
+  return new Map(ranked.map((r) => [r.book.id, r.commonShare]));
+}
+
 export default function LearnScreen() {
   useScreenView('learn');
   const { c } = useUi2Theme();
@@ -102,6 +116,8 @@ export default function LearnScreen() {
   const [generateError, setGenerateError] = useState<ErrorCopy | null>(null);
   const [inProgressBooks, setInProgressBooks] = useState<{ book: ReadingBook; progress: UserBookProgress }[]>([]);
   const [bookProgressMap, setBookProgressMap] = useState<Map<string, UserBookProgress>>(new Map());
+  /** Empty on every shelf except 'For you' — see `coverageByBook`. */
+  const [bookCoverageMap, setBookCoverageMap] = useState<Map<string, number>>(new Map());
 
   // Load courses on mount. The pill that opens is the learner's current course
   // (migration 125), not `data[0]` — which after the cefr_level sort was the
@@ -243,11 +259,20 @@ export default function LearnScreen() {
       // retained words.
       let books: ReadingBook[];
       if (cefrLevel === FOR_YOU_TAB) {
-        const { data } = await cachedFetch<ReadingBook[]>(
+        // Caches the ranked rows, not just the books, so the coverage figure
+        // survives to the instant cache paint instead of popping in a beat
+        // later when the refresh lands. The payload shape changed with that,
+        // which is what READ_CACHE_SCHEMA_VERSION is for.
+        const { data } = await cachedFetch<RankedBook[]>(
           readCacheKey('books-ranked', userId ?? 'anon', profile.targetLanguage),
-          async () =>
-            (await fetchBooksRankedByCoverage(profile.targetLanguage!)).map((r) => r.book),
-          { onCached: (cached) => { setLibraryBooks(cached); setLoadingLibrary(false); } },
+          () => fetchBooksRankedByCoverage(profile.targetLanguage!),
+          {
+            onCached: (cached) => {
+              setLibraryBooks(cached.map((r) => r.book));
+              setBookCoverageMap(coverageByBook(cached));
+              setLoadingLibrary(false);
+            },
+          },
         );
         // Empty means the language has no vocabulary profiles — Chinese,
         // Japanese and Korean have none by design (whitespace tokenization
@@ -256,11 +281,14 @@ export default function LearnScreen() {
         // library and letting them conclude there are no books.
         books =
           data.length > 0
-            ? data
+            ? data.map((r) => r.book)
             : await fetchBooksByLanguageAndLevel(profile.targetLanguage, 'A1');
+        // The A1 fallback is not a ranked shelf, so it gets no coverage line.
+        setBookCoverageMap(data.length > 0 ? coverageByBook(data) : new Map());
         setRankedUnavailable(data.length === 0);
       } else {
         books = await fetchBooksByLanguageAndLevel(profile.targetLanguage, cefrLevel);
+        setBookCoverageMap(new Map());
         setRankedUnavailable(false);
       }
       setLibraryBooks(books);
@@ -535,7 +563,12 @@ export default function LearnScreen() {
               <Caption size="sm" tone="tertiary" style={{ marginBottom: spacing.xs }}>
                 {rankedUnavailable
                   ? 'Ranking is not available for this language yet — showing the A1 shelf.'
-                  : 'Ordered by how many of the words you already know.'}
+                  // Not "how many of the words you already know": the RPC sorts
+                  // on known_share first but that is 0.00 until cards graduate
+                  // out of 'learning', so common_share does the ordering for
+                  // very nearly everyone. "Can already read" is true either
+                  // way, and matches the "N% common words" line on the cards.
+                  : 'Ordered by how much of each book you can already read.'}
               </Caption>
             )}
 
@@ -674,6 +707,7 @@ export default function LearnScreen() {
                   <BookCard
                     book={item}
                     progress={bookProgressMap.get(item.id) ?? null}
+                    commonShare={bookCoverageMap.get(item.id) ?? null}
                     onPress={() => {
                       trackEvent('reading_book_opened', {
                         contentId: item.id,

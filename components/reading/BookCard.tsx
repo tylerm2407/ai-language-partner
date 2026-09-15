@@ -9,10 +9,26 @@ import { Ui2ProgressBar } from '../ui2/Ui2ProgressBar';
 import { Chip } from '../ui2/Chip';
 import { Body, Caption } from '../ui2/Ui2Text';
 import { spacing } from '../../config/theme';
+import { estimatedReadMinutes, formatReadDuration } from '../../lib/reading-speed';
 
 interface BookCardProps {
   book: ReadingBook;
   progress?: UserBookProgress | null;
+  /**
+   * Share of the book's running words that fall in the language's 1,000 most
+   * frequent forms, 0..1 — `common_share` from `rank_books_by_coverage`.
+   *
+   * Only the 'For you' shelf has it; the per-band shelves do not go through
+   * the ranking RPC, so it is optional and the line is simply absent there
+   * rather than showing a zero that would read as "none of these words are
+   * common".
+   *
+   * Note this is deliberately NOT `known_share` (the share the learner has
+   * actually retained). `known_share` is 0 for very nearly every user today —
+   * it only counts cards that have graduated out of 'learning' — so a "words
+   * you know" figure would read 0% on every book on the shelf.
+   */
+  commonShare?: number | null;
   onPress: () => void;
 }
 
@@ -28,13 +44,21 @@ const COVER_HEIGHT = 140;
  * fixed Dark Glow palette; moving those six hues onto the scheme-aware
  * tokens is its own change (they are shared with the Learn hub).
  */
-export function BookCard({ book, progress, onPress }: BookCardProps) {
+export function BookCard({ book, progress, commonShare, onPress }: BookCardProps) {
   const { c, shape, type } = useUi2Theme();
   const { shouldReduce, duration } = useMotion();
   const cefrColor = cefrBandColors(book.cefrLevel);
   const isCompleted = !!progress?.completedAt;
   const hasProgress = progress && progress.percentComplete > 0;
   const percent = progress?.percentComplete ?? 0;
+  // The tile shows time rather than the raw word count it used to show. On a
+  // shelf the question is "have I got time for this", and 12,480 does not
+  // answer it without arithmetic. The detail screen still gives both.
+  const readDuration = formatReadDuration(estimatedReadMinutes(book.wordCount));
+  const commonPercent =
+    typeof commonShare === 'number' && Number.isFinite(commonShare)
+      ? Math.round(Math.min(1, Math.max(0, commonShare)) * 100)
+      : null;
 
   return (
     <Pressable
@@ -42,7 +66,15 @@ export function BookCard({ book, progress, onPress }: BookCardProps) {
       accessibilityRole="button"
       // The badge inside is a two-letter code in a 6pt-padded chip; there is no
       // room for the can-do line, so the whole card carries it instead.
-      accessibilityLabel={`${book.title}${isCompleted ? ', completed' : ''}. ${book.wordCount} words. ${cefrAccessibilityLabel(book.cefrLevel)}`}
+      accessibilityLabel={[
+        `${book.title}${isCompleted ? ', completed' : ''}.`,
+        `${book.wordCount} words.`,
+        readDuration ? `About ${readDuration} to read.` : '',
+        commonPercent !== null && !hasProgress ? `${commonPercent} percent common words.` : '',
+        cefrAccessibilityLabel(book.cefrLevel),
+      ]
+        .filter(Boolean)
+        .join(' ')}
       style={{
         flex: 1,
         backgroundColor: c.card,
@@ -115,7 +147,9 @@ export function BookCard({ book, progress, onPress }: BookCardProps) {
         <Body size="sm" weight="semibold" numberOfLines={1}>{book.title}</Body>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.xxs, gap: 6 }}>
-          <Caption tone="secondary">{book.wordCount} words</Caption>
+          <Caption tone="secondary" numberOfLines={1} style={{ flexShrink: 1 }}>
+            {readDuration ? `~${readDuration}` : `${book.wordCount} words`}
+          </Caption>
           <View
             style={{
               backgroundColor: cefrColor.bg,
@@ -137,6 +171,27 @@ export function BookCard({ book, progress, onPress }: BookCardProps) {
         ) : (
           <Chip label="New" style={{ marginTop: spacing.xs, alignSelf: 'flex-start' }} />
         )}
+
+        {/* Why this book sits where it does. The 'For you' shelf is ordered by
+            coverage, and until now the number doing the ordering was invisible
+            — so the order read as arbitrary. Spelled out in the card's label
+            above, since 11pt next to a progress bar is easy to miss.
+
+            Hidden once the book is underway: coverage is a pick-a-book signal,
+            and stacking "82% common words" directly under the "34%" read
+            counter puts two unrelated percentages one line apart. */}
+        {commonPercent !== null && !hasProgress ? (
+          <Caption
+            size="sm"
+            tone="tertiary"
+            numberOfLines={1}
+            style={{ marginTop: spacing.xxs }}
+            accessibilityElementsHidden
+            importantForAccessibility="no"
+          >
+            {commonPercent}% common words
+          </Caption>
+        ) : null}
       </View>
     </Pressable>
   );

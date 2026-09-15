@@ -30,6 +30,7 @@ import { PatternsCard } from '../../components/ui2/home/HomeInsights';
 import { useLearnerInsights } from '../../hooks/useLearnerInsights';
 import { heroSubtitle } from '../../lib/insights';
 import { DEFAULT_DAILY_GOAL_MINUTES } from '../../lib/active-time';
+import { estimatedReadMinutes } from '../../lib/reading-speed';
 import { trackEvent } from '../../lib/analytics';
 import { UnitRows, DailyThree, WeekStrip, ActionRow, SectionTitle } from '../../components/ui2/home/HomeProgress';
 import { useUi2Theme } from '../../hooks/useUi2Theme';
@@ -38,11 +39,16 @@ import type { DailyStats } from '../../types';
 
 import { useScreenView } from '../../hooks/useScreenView';
 
-/** Reading time at a learner's pace (~140 wpm in a second language). */
+/**
+ * Reading time for a piece of content whose text we already hold.
+ *
+ * The pace itself lives in `lib/reading-speed.ts` — this used to carry its own
+ * 140 while the book detail screen carried its own 200.
+ */
 function readMinutes(content: string | null | undefined): number | null {
   if (!content) return null;
   const words = content.trim().split(/\s+/).length;
-  return Math.max(1, Math.round(words / 140));
+  return estimatedReadMinutes(words) || null;
 }
 
 export default function HomeScreen() {
