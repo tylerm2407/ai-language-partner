@@ -17,8 +17,9 @@
  * "does this addition widen tolerance on this row" — passes all 88 and catches
  * none of the four. A unit-scoped check misses them too: the colliding terms
  * are taught in other units. What finds them is grading every proposed row
- * against every string the language teaches anywhere: 2,281 in Japanese, 2,152
- * in Korean.
+ * against every string the language teaches anywhere: 2,121 in Japanese and
+ * 2,030 in Korean, once fill-blank fragments are folded into the words their
+ * prompts complete (triage counted the fragments too, and got 2,281 / 2,152).
  *
  *   deno run -A --no-check --sloppy-imports scripts/grading/widening-check.mjs \
  *     --snapshot .question-audit/snapshot-9a20145dc6b5.json \
