@@ -48,6 +48,21 @@ test.each(SUPPORTED)('the %s trial keys grade correctly and choice distractors d
   assertKeysGrade(questions);
 });
 
+/**
+ * What this replaced, in its own terms: before onboarding v2 the assertion was
+ * `hasTrialLesson(lang) === false` and `trialExercisesFor(lang) === []` for
+ * it/pt/ja/ko/zh/ru. It guarded two things at once — that neither accessor had
+ * grown a `?? TRIAL_LESSONS.es`-style fallback, and that those six languages
+ * deliberately had NO trial content, so adding some would have to be a
+ * conscious act that broke this test.
+ *
+ * The second half cannot be carried forward: his topic packs now cover all
+ * nine languages, so "these six have nothing" is no longer true of the app.
+ * The first half is preserved and strengthened below — the cross-language
+ * fallback is now checked against `TopicPack.language` directly rather than
+ * inferred from emptiness. If the original was guarding something subtler than
+ * that, this comment is where to start looking.
+ */
 test.each(SUPPORTED)('the %s trial never falls back to another language', (language) => {
   expect(hasTrialLesson(language)).toBe(true);
   // The live path is this language's own pack, never a borrowed one...
