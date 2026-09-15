@@ -31,7 +31,7 @@
 | 2.3 | Do you have a documented data classification policy? | Yes — data inventory with retention periods in FERPA alignment doc |
 | 2.4 | Do you have a documented acceptable use policy? | Yes — Terms of Service (in development) |
 | 2.5 | Do you maintain a risk register? | In development |
-| 2.6 | Do you have a business continuity/disaster recovery plan? | Partial — Supabase provides automated backups with 30-day PITR; formal BCP in development |
+| 2.6 | Do you have a business continuity/disaster recovery plan? | Partial — a documented plan exists, but restore testing and independent object-storage recovery are not yet demonstrated; PITR is not enabled |
 | 2.7 | Are policies reviewed at least annually? | Yes |
 | 2.8 | Do you have a privacy policy? | Yes (in development for launch) |
 
@@ -76,9 +76,9 @@
 |---|----------|----------|
 | 5.1 | Where is your application hosted? | Supabase (managed platform on AWS) |
 | 5.2 | Do you use a CDN/WAF? | Yes — Cloudflare (provided by Supabase) |
-| 5.3 | Are environments separated (dev/staging/prod)? | Yes — separate Supabase projects for development and production |
+| 5.3 | Are environments separated (dev/staging/prod)? | No — current build profiles share one Supabase project; separation is a launch blocker |
 | 5.4 | How are secrets managed? | Supabase Secrets Manager for Edge Functions; never in client code or version control |
-| 5.5 | Do you perform regular backups? | Yes — automated daily backups with 30-day point-in-time recovery |
+| 5.5 | Do you perform regular backups? | Partial — automated daily database backups are verified; PITR and independent object-storage backup are not enabled/verified |
 | 5.6 | Have you tested backup restoration? | Planned for quarterly testing |
 | 5.7 | Do you have uptime monitoring? | Yes — Supabase platform monitoring + Edge Function error logging |
 | 5.8 | What is your target SLA? | 99.9% uptime (aligned with Supabase platform SLA) |
@@ -117,9 +117,9 @@
 
 | # | Question | Response |
 |---|----------|----------|
-| 8.1 | Do you have a disaster recovery plan? | Partial — relies on Supabase automated backups and PITR; formal DR plan in development |
+| 8.1 | Do you have a disaster recovery plan? | Partial — documented procedures rely on daily database backups; restore testing and storage recovery remain outstanding |
 | 8.2 | What is your Recovery Time Objective (RTO)? | < 4 hours |
-| 8.3 | What is your Recovery Point Objective (RPO)? | < 1 minute (PITR) for database; < 24 hours for other data |
+| 8.3 | What is your Recovery Point Objective (RPO)? | < 24 hours for database data; no verified RPO for stored objects |
 | 8.4 | Do you have geographic redundancy? | Single region (us-east-1); Supabase provides availability zone redundancy within region |
 | 8.5 | What happens to data if you go out of business? | 90-day notice to institutions with full data export opportunity; data deleted after export |
 

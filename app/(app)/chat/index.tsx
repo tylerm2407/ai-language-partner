@@ -3,10 +3,12 @@ import { View, Text, Pressable, FlatList, KeyboardAvoidingView, Platform, Alert 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Audio } from 'expo-av';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { useSafeBack } from '../../../hooks/useSafeBack';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAppStore, effectiveTier } from '../../../stores/useAppStore';
 import { useOnboardingChecklist } from '../../../hooks/useOnboardingChecklist';
+import { useActiveTime } from '../../../hooks/useActiveTime';
 import {
   sendChatMessage,
   streamChatMessage,
@@ -20,19 +22,27 @@ import {
 import { createSentenceStream } from '../../../lib/sentence-stream';
 import { createSpeechQueue, type SpeechQueue } from '../../../lib/speech-queue';
 import { showLimitAlert } from '../../../lib/limit-messaging';
-import { CEFR_BAND_BY_LEVEL } from '../../../lib/cefr-proficiency';
+import { conversationCefrBand } from '../../../lib/conversation-level';
 import { cefrLabel, cefrAccessibilityLabel } from '../../../lib/cefr-labels';
 import { ChatBubble } from '../../../components/chat/ChatBubble';
+import { ScenarioPicker, scenarioIdentity } from '../../../components/chat/ScenarioPicker';
 import { ChatInput } from '../../../components/chat/ChatInput';
 import type { HandsFreeState } from '../../../components/chat/ChatInput';
+import { ChatHeader, FinishPill, HandsFreeToggle, SubmitPill, VoiceModeToggle } from '../../../components/chat/ChatHeader';
+import { MissionObjectives } from '../../../components/chat/MissionObjectives';
+import { confirmFinish, useMissionAttempt, type BeginMissionInput } from '../../../hooks/useMissionAttempt';
+import { chatDebriefHref, missionFor } from '../../../lib/missions';
+import { MISSION_STAGE_COUNT, type MissionMeta, type MissionScenarioKey } from '../../../types/missions';
+import { buildPickerMissions, useMissionProgress } from '../../../hooks/useMissionProgress';
+import { MissionWarmupSheet } from '../../../components/chat/MissionWarmupSheet';
+import { PhraseHelpSheet } from '../../../components/chat/PhraseHelpSheet';
+import type { MissionCta } from '../../../lib/missions';
 import { TypingIndicator } from '../../../components/chat/TypingIndicator';
-import { GradientBackground } from '../../../components/ui/GradientBackground';
-import { GlassSurface } from '../../../components/ui/GlassSurface';
 import AssignmentTimer from '../../../components/school/AssignmentTimer';
 import { useAssignmentTimer } from '../../../hooks/useAssignmentTimer';
-import type { ConversationMessage, Assignment, AssignmentSubmission, LanguageCode, ProficiencyLevel } from '../../../types';
+import type { ConversationMessage, Assignment, AssignmentSubmission, LanguageCode } from '../../../types';
 import { Ionicons } from '@expo/vector-icons';
-import { getOrCreateChatSession, saveChatMessage, loadChatMessages, fetchStudentAssignments, submitAssignment, upsertDailyStats } from '../../../lib/supabase-queries';
+import { getOrCreateChatSession, saveChatMessage, loadChatMessages, fetchStudentAssignments, submitAssignment, upsertDailyStats, createMissionAttemptSession } from '../../../lib/supabase-queries';
 import { getTargetLanguage } from '../../../lib/language';
 import { setAudioSessionMode, playbackModeFor } from '../../../lib/audio-session';
 import { saveErrorCopy } from '../../../lib/error-copy';
@@ -43,11 +53,12 @@ import {
   type VoiceGender,
 } from '../../../lib/voice-preference';
 import { SCENARIO_META, SCENARIO_ORDER, type ScenarioKey } from '../../../types/scenarios';
-import { SCHOOL_ENABLED } from '../../../config/app';
-import { colors, radii, spacing } from '../../../config/theme';
-import { Body, Caption } from '../../../components/ui/Text';
+import { SCHOOL_ENABLED, SUPPORTED_LANGUAGES } from '../../../config/app';
+// `colors` is deliberately NOT imported: it is the fixed DARK palette, and a
+// screen that reads it stays dark whatever the phone is set to.
+import { SlabCard } from '../../../components/ui2/SlabCard';
+import { useUi2Theme } from '../../../hooks/useUi2Theme';
 import { useAiConsent } from '../../../hooks/useAiConsent';
-import { Chip } from '../../../components/ui/Chip';
 import { useScreenView } from '../../../hooks/useScreenView';
 
 /**
@@ -58,10 +69,13 @@ import { useScreenView } from '../../../hooks/useScreenView';
  * ways. True, and beside the point: "A2" is not international, it is unknown.
  * The can-do line carries the meaning in one language-neutral clause, so the
  * row states what the tutor is pitching at rather than a code for it.
+ *
+ * WHICH band it shows — and sends — is `conversationBand` below: the measured
+ * one when the report has one, else placement, else the declared level. The
+ * header, the bubbles' saved-correction band, the composer's VAD tuning and
+ * the request all read the same value, so what the learner sees is what the
+ * tutor is actually pitched at.
  */
-// Was a fourth private copy of the ladder; now derived. See
-// CEFR_BAND_BY_LEVEL in lib/cefr-proficiency.ts.
-const CEFR_FOR_LEVEL: Record<ProficiencyLevel, string> = CEFR_BAND_BY_LEVEL;
 
 /**
  * Scenario metadata (label/icon/description) is imported from
@@ -83,15 +97,7 @@ interface Scenario {
   customContext?: string;
 }
 
-const SCENARIOS: Scenario[] = SCENARIO_ORDER.map((key) => {
-  const meta = SCENARIO_META[key];
-  return {
-    key: meta.key,
-    label: meta.label,
-    icon: meta.icon,
-    description: meta.description,
-  };
-});
+const SCENARIOS: Scenario[] = SCENARIO_ORDER.map((key) => SCENARIO_META[key]);
 
 /**
  * Replace a message by id, or append it if it is not in the list yet.
@@ -112,7 +118,20 @@ function upsertMessage(
   return next;
 }
 
+/** The opening line. UI only — the real system prompt is server-side, keyed by scenario.key. */
+function greetingFor(scenario: Scenario, targetLanguage: string, mission?: MissionMeta | null): string {
+  const tail = `Start by saying something in ${targetLanguage.toUpperCase()}, and I'll help you along the way!`;
+  if (mission) return `Mission ${mission.stage}: ${mission.title}. ${scenario.description} ${tail}`;
+  if (scenario.key === 'free_chat' || !scenario.key) return `Great! Let's have a free conversation. ${tail}`;
+  return `Great! Let's practice "${scenario.label}". ${scenario.description} ${tail}`;
+}
+
+function assistantTurn(content: string, id: string): ConversationMessage {
+  return { id, role: 'assistant', content, audioUrl: null, correction: null, timestamp: new Date().toISOString() };
+}
+
 export default function ChatScreen() {
+  const { c } = useUi2Theme();
   useScreenView('chat');
   const { profile } = useAppStore();
   const targetLanguage = getTargetLanguage(profile);
@@ -121,11 +140,11 @@ export default function ChatScreen() {
   // default to any language. Mirrors the assignment-loading state below.
   if (!targetLanguage) {
     return (
-      <GradientBackground>
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
         <View className="flex-1 items-center justify-center">
-          <Text className="text-text-secondary">Loading...</Text>
+          <Text style={{ color: c.muted }}>Loading...</Text>
         </View>
-      </GradientBackground>
+      </View>
     );
   }
 
@@ -133,14 +152,26 @@ export default function ChatScreen() {
 }
 
 function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
+  const { c } = useUi2Theme();
   const { user } = useAuth();
-  const { profile, subscription, entitledTier, roles } = useAppStore();
+  const { profile, subscription, entitledTier, roles, measuredBand } = useAppStore();
   const { markItem: markOnboardingItem } = useOnboardingChecklist();
   const { ensureConsent, consentSheet } = useAiConsent(user?.id);
+  const missionAttempt = useMissionAttempt();
   const router = useRouter();
   const goBack = useSafeBack('/(app)');
-  const params = useLocalSearchParams<{ assignmentId?: string; chatSessionId?: string }>();
+  // `scenario` + `stage` is a mission deep link, consumed once on focus.
+  const params = useLocalSearchParams<{ assignmentId?: string; chatSessionId?: string; scenario?: string; stage?: string }>();
   const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(null);
+
+  // Wall-clock in the conversation itself, not the scenario picker. This writes
+  // `minutes_practiced` ONLY — `speaking_minutes` is already written per voice
+  // turn below, from the turn's own measured duration, which is a better number
+  // than a screen clock can produce; adding to it here would count the same
+  // speech twice. See hooks/useActiveTime.ts for why the session is not
+  // attributed to `writing_minutes` either.
+  useActiveTime({ kind: 'chat', enabled: !!selectedScenario });
+
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
   /**
    * Native-language glosses of assistant replies, keyed by message id.
@@ -195,6 +226,39 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
   const playbackResolveRef = useRef<(() => void) | null>(null);
 
   const level = profile?.level ?? 'beginner';
+  // Measured > placement > declared. Sent as `cefrLevel` on every request and
+  // shown in the header, so the conversation is pitched at — and its evidence
+  // stamped with — the level the learner has, not the one they declared.
+  const conversationBand = conversationCefrBand({
+    measuredBand,
+    placementBand: profile?.placementBand,
+    level,
+  });
+  const languageName = SUPPORTED_LANGUAGES.find((l) => l.code === targetLanguage)?.name ?? targetLanguage.toUpperCase();
+
+  // Mission ladders, open attempts, the goal track's scene order, and whether
+  // a Free Chat conversation exists — one hook, one settled read. Read-only:
+  // getOrCreateChatSession would CREATE a row per scene just by looking.
+  const missionProgress = useMissionProgress(user?.id, targetLanguage);
+  const resumable: ReadonlySet<string> = missionProgress.freeChatResumable ? new Set(['free_chat']) : new Set();
+
+  // The warm-up sheet before a FRESH attempt (resumes skip it). Opened only
+  // after the picker's own sheet has closed — two iOS Modals never stack.
+  const [warmup, setWarmup] = useState<{ scenarioKey: MissionScenarioKey; stage: number } | null>(null);
+  const [warmupStarting, setWarmupStarting] = useState(false);
+  const [warmupError, setWarmupError] = useState<string | null>(null);
+  const warmupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (warmupTimerRef.current) clearTimeout(warmupTimerRef.current); }, []);
+  const openWarmup = useCallback((scenarioKey: MissionScenarioKey, stage: number) => {
+    setWarmupError(null);
+    if (warmupTimerRef.current) clearTimeout(warmupTimerRef.current);
+    // Long enough for the picker sheet's close animation to finish.
+    warmupTimerRef.current = setTimeout(() => setWarmup({ scenarioKey, stage }), 400);
+  }, []);
+
+  // "How do I say…" — asked outside the tutor's earshot, so Sol stays in
+  // character. Never while hands-free is on (the loop owns the mic).
+  const [helpOpen, setHelpOpen] = useState(false);
 
   // Load assignment data if assignmentId param present (school feature)
   useEffect(() => {
@@ -319,28 +383,17 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
     }
   };
 
-  /** Load persisted chat history for a scenario, or start fresh. */
-  const loadPersistedHistory = useCallback(async (
-    userId: string,
-    scenarioKey: string,
-    fallbackFirstMessage: ConversationMessage
-  ) => {
-    try {
-      const session = await getOrCreateChatSession(userId, scenarioKey, targetLanguage, level);
-      chatSessionIdRef.current = session.id;
-      const history = await loadChatMessages(session.id);
-      if (history.length > 0) {
-        setMessages(history);
-      } else {
-        setMessages([fallbackFirstMessage]);
-        // Persist the greeting
-        saveChatMessage(session.id, fallbackFirstMessage).catch(console.error);
-      }
-    } catch (err) {
-      console.error('Failed to load chat history:', err);
-      setMessages([fallbackFirstMessage]);
+  /** Show a session's persisted history, or the greeting (persisted) if it has none. */
+  const openSession = useCallback(async (sessionId: string, firstMessage: ConversationMessage) => {
+    chatSessionIdRef.current = sessionId;
+    const history = await loadChatMessages(sessionId);
+    if (history.length > 0) {
+      setMessages(history);
+    } else {
+      setMessages([firstMessage]);
+      saveChatMessage(sessionId, firstMessage).catch(console.error);
     }
-  }, [targetLanguage, level]);
+  }, []);
 
   /** Persist a message to the current session (fire-and-forget). */
   const persistMessage = useCallback((msg: ConversationMessage) => {
@@ -548,26 +601,19 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
     // a different conversation, possibly days ago.
     repairOutstandingRef.current = false;
 
-    // Greeting string is UI only — the real Claude system prompt comes from
-    // the server-side scenario module keyed by scenario.key.
-    const greeting = scenario.key === 'free_chat' || !scenario.key
-      ? `Great! Let's have a free conversation. Start by saying something in ${targetLanguage.toUpperCase()}, and I'll help you along the way!`
-      : `Great! Let's practice "${scenario.label}". ${scenario.description} Start by saying something in ${targetLanguage.toUpperCase()}, and I'll help you along the way!`;
-
-    const firstMessage: ConversationMessage = {
-      id: '0',
-      role: 'assistant',
-      content: greeting,
-      audioUrl: null,
-      correction: null,
-      timestamp: new Date().toISOString(),
-    };
+    const greeting = greetingFor(scenario, targetLanguage);
+    const firstMessage = assistantTurn(greeting, '0');
 
     // Load persisted history or start fresh. Key sessions by the stable
     // scenario.key so renaming/localizing a label doesn't orphan history;
     // fall back to label only for custom (teacher) scenarios with no key.
     if (user?.id) {
-      loadPersistedHistory(user.id, scenario.key ?? scenario.label, firstMessage);
+      getOrCreateChatSession(user.id, scenario.key ?? scenario.label, targetLanguage, level)
+        .then((session) => openSession(session.id, firstMessage))
+        .catch((err) => {
+          console.error('Failed to load chat history:', err);
+          setMessages([firstMessage]);
+        });
     } else {
       setMessages([firstMessage]);
     }
@@ -584,6 +630,134 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
     } else if (voiceMode && !handsFreeActive) {
       speakReply(greeting, false);
     }
+  };
+
+  /** Leave hands-free: silence the tutor and close the mic loop. */
+  const stopHandsFree = () => {
+    stopSpeaking();
+    setHandsFreeActive(false);
+    setHandsFreeState('IDLE');
+    setShouldStartListening(false);
+  };
+
+  /** Back to the picker (chevron, and Finish once the debrief is stashed). No network: an open attempt stays resumable. */
+  const resetConversation = () => {
+    stopHandsFree();
+    setSelectedScenario(null);
+    setMessages([]);
+    setVoiceMode(false);
+    chatSessionIdRef.current = null;
+    repairOutstandingRef.current = false;
+    const wasMission = missionAttempt.mission !== null;
+    missionAttempt.leave();
+    // The picker's dots and "Continue mission" state come from the server;
+    // a left or finished attempt changes them.
+    if (wasMission) void missionProgress.refresh();
+  };
+
+  /**
+   * Open a mission attempt. 'new' inserts a fresh session row so a retry
+   * never resumes a failed attempt's transcript; 'resume' reloads the open
+   * attempt's session and seeds the checklist from the server.
+   *
+   * Three entries: the picker's "Continue mission N" (resume), the warm-up
+   * sheet's Start/Skip (new), and the `scenario` + `stage` route params the
+   * debrief uses, which open the warm-up first. Returns whether it opened;
+   * the warm-up sheet shows the failure inline rather than an Alert.
+   */
+  const startMissionAttempt = async (
+    input: Omit<BeginMissionInput, 'sessionId' | 'language'> & { sessionId?: string },
+    opts: { quiet?: boolean } = {},
+  ): Promise<boolean> => {
+    const meta = missionFor(input.scenarioKey, input.stage);
+    const scenario = SCENARIOS.find((s) => s.key === input.scenarioKey);
+    if (!meta || !scenario || !user?.id) return false;
+    stopSpeaking();
+    try {
+      const sessionId =
+        input.source === 'resume' && input.sessionId
+          ? input.sessionId
+          : (await createMissionAttemptSession(user.id, input.scenarioKey, input.stage, targetLanguage, level)).id;
+      const greeting = greetingFor(scenario, targetLanguage, meta);
+      repairOutstandingRef.current = false;
+      setSelectedScenario(scenario);
+      await openSession(sessionId, assistantTurn(greeting, '0'));
+      missionAttempt.begin({ ...input, sessionId, language: targetLanguage });
+      if (voiceMode && !handsFreeActive) speakReply(greeting, false);
+      return true;
+    } catch (err) {
+      console.error('[chat] mission start failed:', err);
+      const { title, message } = saveErrorCopy(err, 'your mission');
+      if (!opts.quiet) Alert.alert(title, message);
+      return false;
+    }
+  };
+
+  /** Start or Skip on the warm-up sheet: create the attempt row, then open the chat. */
+  const startFromWarmup = async () => {
+    if (!warmup || warmupStarting) return;
+    setWarmupStarting(true);
+    setWarmupError(null);
+    const ok = await startMissionAttempt({ scenarioKey: warmup.scenarioKey, stage: warmup.stage, source: 'new' }, { quiet: true });
+    setWarmupStarting(false);
+    if (ok) setWarmup(null);
+    else setWarmupError('Please check your connection and try again.');
+  };
+
+  /** The picker's ONE button for a mission scene. */
+  const handleMissionStart = (scenarioKey: ScenarioKey, cta: MissionCta, stage: number | null) => {
+    if (scenarioKey === 'free_chat') return;
+    const scene = scenarioKey as MissionScenarioKey;
+    if (cta === 'plans') {
+      router.push('/(app)/plans');
+      return;
+    }
+    if (cta === 'resume') {
+      const open = missionProgress.openAttempts.get(scene);
+      if (open) {
+        void startMissionAttempt({ scenarioKey: scene, stage: open.stage, source: 'resume', sessionId: open.sessionId, objectivesMet: open.objectivesMet });
+        return;
+      }
+    }
+    // 'start', 'replay' (stage null → the last mission), or a resume whose
+    // open attempt has since vanished: a fresh attempt, warm-up first.
+    openWarmup(scene, stage ?? MISSION_STAGE_COUNT);
+  };
+
+  // Deep link `/(app)/chat?scenario=…&stage=…` — how the debrief's "Next
+  // mission" and "Try again" arrive. Opens the warm-up for that stage (every
+  // fresh attempt gets one). Cleared as it is consumed so a later focus
+  // cannot open a second one.
+  const missionParamScenario = typeof params.scenario === 'string' ? params.scenario : undefined;
+  const missionParamStage = typeof params.stage === 'string' ? Number(params.stage) : NaN;
+  useFocusEffect(
+    useCallback(() => {
+      if (!missionParamScenario || !missionFor(missionParamScenario, missionParamStage)) return;
+      router.setParams({ scenario: undefined, stage: undefined });
+      openWarmup(missionParamScenario as MissionScenarioKey, missionParamStage);
+    }, [missionParamScenario, missionParamStage, router, openWarmup]),
+  );
+
+  /** What every ai-chat request shares. Context is windowed to the last 24
+   *  messages; keyless (teacher) scenarios send `topic` instead of a key;
+   *  `previousTurnRequestedRepair` is carried, not computed; every request
+   *  names its session and mission turns add the stage. */
+  const baseRequest = (list: ConversationMessage[]): AIChatRequest => {
+    const MAX_CONTEXT_MESSAGES = 24;
+    const context = list.length > MAX_CONTEXT_MESSAGES ? list.slice(list.length - MAX_CONTEXT_MESSAGES) : list;
+    const scenarioKey = selectedScenario?.key ?? undefined;
+    return {
+      userId: user?.id ?? '',
+      messages: context.map((m) => ({ role: m.role, content: m.content })),
+      targetLanguage,
+      nativeLanguage: profile?.nativeLanguage,
+      level,
+      cefrLevel: conversationBand,
+      scenarioKey,
+      topic: scenarioKey ? undefined : selectedScenario?.customContext || selectedScenario?.label || undefined,
+      previousTurnRequestedRepair: repairOutstandingRef.current,
+      ...missionAttempt.requestPayloadFields(chatSessionIdRef.current),
+    };
   };
 
   const handleSend = async (
@@ -632,28 +806,8 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
     setTimeout(() => flatListRef.current?.scrollToEnd(), 100);
 
     try {
-      // Built-in scenarios resolve to a rich server-side prompt via scenarioKey.
-      // Teacher custom scenarios (and any scenario without a key) fall back to
-      // the free-form `topic` field.
-      const scenarioKey = selectedScenario?.key ?? undefined;
-      const topicPayload = scenarioKey
-        ? undefined
-        : selectedScenario?.customContext || selectedScenario?.label || undefined;
-
-      // Context windowing: send only the last ~12 turns to avoid unbounded token usage
-      const MAX_CONTEXT_MESSAGES = 24;
-      const contextMessages = newMessages.length > MAX_CONTEXT_MESSAGES
-        ? newMessages.slice(newMessages.length - MAX_CONTEXT_MESSAGES)
-        : newMessages;
-
       const requestPayload: AIChatRequest = {
-        userId: user?.id ?? '',
-        messages: contextMessages.map((m) => ({ role: m.role, content: m.content })),
-        targetLanguage,
-        nativeLanguage: profile?.nativeLanguage,
-        level,
-        scenarioKey: scenarioKey ?? undefined,
-        topic: topicPayload,
+        ...baseRequest(newMessages),
         // Only worth sending when it contradicts the target — the tutor only
         // needs to know that a switch happened, not that nothing happened.
         spokenLanguage:
@@ -664,11 +818,6 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
         // pooling them would let a learner type their way to a speaking level.
         modality: voiceTurn ? 'speaking' : 'writing',
         recognizerConfidence: voiceTurn?.confidence,
-        // Carried, not computed. Whether the last turn left a repair
-        // outstanding is the server's call — it depends on the level's
-        // correction policy — and this is how the tutor knows to react to the
-        // learner's attempt instead of asking them to try again.
-        previousTurnRequestedRepair: repairOutstandingRef.current,
       };
 
       const assistantId = (Date.now() + 1).toString();
@@ -765,6 +914,7 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
       }
 
       repairOutstandingRef.current = response.requestedRepair === true;
+      missionAttempt.applyTurn(response); // the server's union; a no-op outside a mission
 
       const assistantMsg: ConversationMessage = {
         id: assistantId,
@@ -843,18 +993,20 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
         );
       } else if (detail.includes('RATE_LIMITED')) {
         Alert.alert('Slow down a moment', 'You’re sending messages very quickly. Please try again in a few seconds.');
+      } else if (detail.includes('MISSION_FINISHED') && chatSessionIdRef.current) {
+        // Already scored (another device, a retried Finish): show the result.
+        router.push(chatDebriefHref(chatSessionIdRef.current));
+        resetConversation();
       } else {
         // A real attempt that failed downstream: the turn stays on screen, so
-        // it has to reach history too, or a reload silently drops it.
+        // it has to reach history too, or a reload silently drops it. The
+        // mission codes (MISSION_LOCKED, SESSION_NOT_FOUND, INVALID_MISSION,
+        // NOTHING_TO_FINISH) land here too — the same honest bubble.
         persistMessage(userMsg);
-        setMessages((prev) => [...prev, {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: 'Sorry, I had trouble responding. Please try again.',
-          audioUrl: null,
-          correction: null,
-          timestamp: new Date().toISOString(),
-        }]);
+        setMessages((prev) => [
+          ...prev,
+          assistantTurn('Sorry, I had trouble responding. Please try again.', (Date.now() + 1).toString()),
+        ]);
       }
       // If hands-free, restart listening even after error
       if (handsFreeActive) {
@@ -863,6 +1015,43 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
     } finally {
       setSending(false);
     }
+  };
+
+  /** The Finish turn. Hands-free closes FIRST — a mic that reopened after
+   *  the send-off would record the debrief screen as the next turn. No new
+   *  user message: the server scores what was said and says goodbye. */
+  const runFinish = async () => {
+    const sessionId = chatSessionIdRef.current;
+    if (!sessionId) return;
+    stopHandsFree();
+    setSending(true);
+    const outcome = await missionAttempt.finish({
+      buildPayload: (extra) => ({ ...baseRequest(messages), isClosing: true, ...extra }),
+      onReply: async (reply) => {
+        // An assistant turn like any other, so a reloaded transcript ends
+        // where the mission did.
+        const sendoff = assistantTurn(reply, Date.now().toString());
+        setMessages((prev) => upsertMessage(prev, sendoff));
+        persistMessage(sendoff);
+      },
+    });
+    setSending(false);
+    if (outcome.status === 'done' || (outcome.status === 'failed' && outcome.message.includes('MISSION_FINISHED'))) {
+      resetConversation();
+      router.push(chatDebriefHref(sessionId));
+    } else if (outcome.status === 'refused') {
+      // The mission stays open; the checklist is still on screen.
+      showLimitAlert('messages', effectiveTier(subscription, entitledTier), () => router.push('/(app)/profile/subscription'));
+    } else {
+      console.error('[chat] finish failed:', outcome.message);
+      Alert.alert('Could not finish the mission', 'Please try again in a moment. Your conversation is still here.');
+    }
+  };
+
+  const handleFinish = () => {
+    const mission = missionAttempt.mission;
+    if (!mission || sending || missionAttempt.finishing) return;
+    confirmFinish(missionAttempt.met.length, mission.meta.objectives.length, () => void runFinish());
   };
 
   const handleVoiceMessage = async (
@@ -883,21 +1072,14 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
   };
 
   const toggleVoiceMode = () => {
-    if (handsFreeActive) {
-      // Turn off hands-free when switching voice mode off
-      setHandsFreeActive(false);
-      setHandsFreeState('IDLE');
-    }
-    stopSpeaking();
+    // Switching voice mode off also leaves hands-free.
+    if (handsFreeActive) stopHandsFree(); else stopSpeaking();
     setVoiceMode((prev) => !prev);
   };
 
   const toggleHandsFree = () => {
     if (handsFreeActive) {
-      stopSpeaking();
-      setHandsFreeActive(false);
-      setHandsFreeState('IDLE');
-      setShouldStartListening(false);
+      stopHandsFree();
     } else {
       // IDLE is ChatInput's cue to open the mic, so entering here goes straight
       // to listening rather than replaying a greeting mid-conversation.
@@ -907,22 +1089,16 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
     }
   };
 
-  const handleHandsFreeStateChange = useCallback((state: HandsFreeState) => {
-    setHandsFreeState(state);
-  }, []);
-
-  const handleListeningStarted = useCallback(() => {
-    setShouldStartListening(false);
-  }, []);
+  const handleListeningStarted = useCallback(() => setShouldStartListening(false), []);
 
   // Skip scenario picker while assignment is loading
   if (params.assignmentId && !selectedScenario) {
     return (
-      <GradientBackground>
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
         <View className="flex-1 items-center justify-center">
-          <Text className="text-text-secondary">Loading assignment...</Text>
+          <Text style={{ color: c.muted }}>Loading assignment...</Text>
         </View>
-      </GradientBackground>
+      </View>
     );
   }
 
@@ -941,28 +1117,28 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
   const schoolExempt = SCHOOL_ENABLED && (roles.includes('student') || roles.includes('teacher'));
   if (tier === 'starter' && !schoolExempt && !assignmentMode) {
     return (
-      <GradientBackground>
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
         <SafeAreaView className="flex-1" edges={['top']}>
           <View className="flex-1 px-6 justify-center">
-            <View className="w-14 h-14 rounded-full bg-primary/15 items-center justify-center mb-5">
-              <Ionicons name="chatbubbles-outline" size={28} color={colors.premium.base} />
+            <View className="w-14 h-14 rounded-full items-center justify-center mb-5" style={{ backgroundColor: c.primaryTint }}>
+              <Ionicons name="chatbubbles-outline" size={28} color={c.primary} />
             </View>
-            <Text className="text-[28px] font-bold text-text-primary mb-2" accessibilityRole="header">
+            <Text className="text-[28px] font-bold mb-2" style={{ color: c.ink }} accessibilityRole="header">
               The AI tutor is part of a plan
             </Text>
-            <Text className="text-base text-text-secondary mb-6">
+            <Text className="text-base mb-6" style={{ color: c.muted }}>
               Conversations and voice practice are the parts of Fluenci that cost real money to
               run, so they sit behind a subscription. Everything else — lessons, reviews, reading
               and the daily news — stays free.
             </Text>
             <Pressable
-              className="bg-primary rounded-[14px] py-4 items-center"
+              className="rounded-[14px] py-4 items-center"
               onPress={() => router.push('/(app)/plans')}
               accessibilityRole="button"
               accessibilityLabel="See plans"
-              style={{ minHeight: 44, justifyContent: 'center' }}
+              style={{ backgroundColor: c.primary, minHeight: 44, justifyContent: 'center' }}
             >
-              <Text className="text-base font-semibold text-white">See plans</Text>
+              <Text className="text-base font-semibold" style={{ color: c.onPrimary }}>See plans</Text>
             </Pressable>
             <Pressable
               className="py-3 items-center mt-1"
@@ -971,93 +1147,84 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
               accessibilityLabel="Go to lessons instead"
               style={{ minHeight: 44, justifyContent: 'center' }}
             >
-              <Text className="text-sm text-text-secondary">Keep learning for free</Text>
+              <Text className="text-sm" style={{ color: c.muted }}>Keep learning for free</Text>
             </Pressable>
           </View>
         </SafeAreaView>
-      </GradientBackground>
+      </View>
     );
   }
 
   // Scenario picker
   if (!selectedScenario) {
+    // Direction G1 "Gallery" (canvas "AI Chat · picker", 2026-09-08): tiles,
+    // a sheet per scene, one Continue. Text mode with the mic ready — the
+    // spoken-reply and hands-free toggles are inside the chat, so the old
+    // "Live Voice" shortcut is not needed here.
     return (
-      <GradientBackground>
-      <SafeAreaView className="flex-1" edges={['top']}>
-        <View className="flex-1 px-4 pt-2">
-          <Text className="text-[28px] font-bold text-text-primary mb-2">AI Chat</Text>
-          <Text className="text-base text-text-secondary mb-6">
-            Choose a scenario to practice {targetLanguage.toUpperCase()} conversation
-          </Text>
-          <FlatList
-            data={SCENARIOS}
-            keyExtractor={(item) => item.label}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 100 }}
-            renderItem={({ item: scenario }) => (
-              <GlassSurface style={{ marginBottom: 12 }}>
-                <View className="p-5">
-                  <View className="flex-row items-center mb-3">
-                    <View className="w-10 h-10 rounded-full bg-primary/15 items-center justify-center">
-                      <Ionicons name={scenario.icon} size={22} color={colors.premium.base} />
-                    </View>
-                    <View className="ml-4 flex-1">
-                      <Text className="text-base font-semibold text-text-primary">{scenario.label}</Text>
-                      <Text className="text-sm text-text-secondary mt-0.5">
-                        {scenario.description}
-                      </Text>
-                    </View>
-                  </View>
-                  <View className="flex-row" style={{ gap: 10 }}>
-                    <Pressable
-                      className="flex-1 bg-primary rounded-[14px] py-3 items-center flex-row justify-center"
-                      onPress={() => startChat(scenario, false)}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Text chat: ${scenario.label}`}
-                    >
-                      <Ionicons name="chatbubble-outline" size={16} color={colors.text.onPrimary} />
-                      <Text className="text-sm font-semibold text-white ml-2">Text Chat</Text>
-                    </Pressable>
-                    <Pressable
-                      className="flex-1 bg-success rounded-[14px] py-3 items-center flex-row justify-center"
-                      onPress={() => startChat(scenario, true)}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Live voice: ${scenario.label}`}
-                      accessibilityHint="Start a real-time voice conversation"
-                    >
-                      <Ionicons name="mic" size={16} color={colors.text.onPrimary} />
-                      <Text className="text-sm font-semibold text-white ml-2">Live Voice</Text>
-                    </Pressable>
-                  </View>
-                </View>
-              </GlassSurface>
-            )}
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
+        <SafeAreaView className="flex-1" edges={['top']}>
+          <ScenarioPicker
+            scenarios={SCENARIOS}
+            languageName={languageName}
+            levelLine={cefrLabel(conversationBand)}
+            levelBand={conversationBand}
+            levelAccessibilityLabel={cefrAccessibilityLabel(conversationBand)}
+            resumable={resumable}
+            onStart={(picked) => {
+              const scenario = SCENARIOS.find((sc) => scenarioIdentity(sc) === scenarioIdentity(picked));
+              if (scenario) startChat(scenario, false);
+            }}
+            missions={buildPickerMissions({
+              progress: missionProgress.progress,
+              openAttempts: missionProgress.openAttempts,
+              // The starter gate above has already turned free learners away.
+              paid: true,
+              loading: missionProgress.loading,
+            })}
+            missionsError={missionProgress.error}
+            onRetryMissions={() => void missionProgress.refresh()}
+            goalScenes={missionProgress.goalScenes}
+            onMissionStart={handleMissionStart}
           />
-        </View>
-      </SafeAreaView>
-      </GradientBackground>
+          {warmup && user?.id && (
+            <MissionWarmupSheet
+              visible
+              scenarioKey={warmup.scenarioKey}
+              stage={warmup.stage}
+              targetLanguage={targetLanguage}
+              nativeLanguage={profile?.nativeLanguage ?? 'en'}
+              userId={user.id}
+              tier={tier}
+              onStart={startFromWarmup}
+              onSkip={startFromWarmup}
+              starting={warmupStarting}
+              startError={warmupError}
+            />
+          )}
+        </SafeAreaView>
+      </View>
     );
   }
 
-  // Chat interface
   return (
-    <GradientBackground>
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
     <SafeAreaView className="flex-1" edges={['top']}>
       {/* Assignment Banner */}
       {assignmentMode && currentAssignment && (
-        <GlassSurface style={{ marginHorizontal: 12, marginTop: 4, marginBottom: 4 }}>
+        <SlabCard style={{ marginHorizontal: 12, marginTop: 4, marginBottom: 4 }}>
           <View className="px-4 py-2 flex-row items-center">
-            <Ionicons name="school-outline" size={18} color={colors.premium.base} />
-            <Text className="text-sm text-text-primary font-semibold ml-2 flex-1" numberOfLines={1}>
+            <Ionicons name="school-outline" size={18} color={c.primary} />
+            <Text className="text-sm font-semibold ml-2 flex-1" style={{ color: c.ink }} numberOfLines={1}>
               Assignment: {currentAssignment.title}
             </Text>
             {currentAssignment.dueAt && (
-              <Text className="text-xs text-text-tertiary ml-2">
+              <Text className="text-xs ml-2" style={{ color: c.idle }}>
                 Due {new Date(currentAssignment.dueAt).toLocaleDateString()}
               </Text>
             )}
           </View>
-        </GlassSurface>
+        </SlabCard>
       )}
 
       {/* Assignment Timer Overlay */}
@@ -1068,122 +1235,34 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
         />
       )}
 
-      {/* Header — deck screen 08: chevron · mascot · title/status stack · chip */}
-      <View
-        className="flex-row items-center px-4 py-3 border-b border-dark-border"
-        style={{ gap: spacing.sm }}
-      >
-        <Pressable
-          onPress={() => {
-            stopSpeaking();
-            if (assignmentMode) {
-              handleAssignmentBack();
-              return;
-            }
-            setSelectedScenario(null);
-            setMessages([]);
-            setVoiceMode(false);
-            setHandsFreeActive(false);
-            setHandsFreeState('IDLE');
-            setShouldStartListening(false);
-            chatSessionIdRef.current = null;
-            repairOutstandingRef.current = false;
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-          hitSlop={8}
-        >
-          <Ionicons name="chevron-back" size={22} color={colors.text.tertiary} />
-        </Pressable>
-
-        <View className="flex-1">
-          <Body weight="extrabold" numberOfLines={1}>
-            {selectedScenario.label}
-          </Body>
-          <View className="flex-row items-center" style={{ gap: spacing.xxs }}>
-            {handsFreeActive && (
-              <View
-                style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: radii.pill,
-                  backgroundColor: colors.success.base,
-                }}
-              />
+      {/* Header — deck screen 08: chevron · mascot · title/status stack · chip.
+          The elapsed chip reads useAssignmentTimer, which is a plain stopwatch
+          despite the name — live sessions just show it. */}
+      <ChatHeader
+        label={selectedScenario.label}
+        statusLine={cefrLabel(conversationBand)}
+        statusA11y={cefrAccessibilityLabel(conversationBand)}
+        live={handsFreeActive}
+        mascotState={sending ? 'thinking' : handsFreeActive && handsFreeState === 'LISTENING' ? 'listening' : 'idle'}
+        timer={assignmentTimer.running ? assignmentTimer.formattedElapsed : undefined}
+        onBack={assignmentMode ? () => { stopSpeaking(); handleAssignmentBack(); } : resetConversation}
+        rightActions={
+          <>
+            {assignmentMode && assignmentTimer.isMinimumMet && (
+              <SubmitPill onPress={handleSubmitAssignment} busy={submitting} />
             )}
-            <Caption
-              size="sm"
-              numberOfLines={2}
-              accessibilityLabel={`${handsFreeActive ? 'Live. ' : ''}${cefrAccessibilityLabel(
-                CEFR_FOR_LEVEL[level]
-              )}`}
-            >
-              {handsFreeActive ? 'Live · ' : ''}
-              {cefrLabel(CEFR_FOR_LEVEL[level])}
-            </Caption>
-          </View>
-        </View>
-
-        {/* Elapsed clock. useAssignmentTimer is a plain stopwatch despite the
-            name — assignments read isMinimumMet, live sessions just show this. */}
-        {assignmentTimer.running && (
-          <Chip label={assignmentTimer.formattedElapsed} variant="primary" />
-        )}
-
-        {/* Submit Assignment Button */}
-        {assignmentMode && assignmentTimer.isMinimumMet && (
-          <Pressable
-            onPress={handleSubmitAssignment}
-            disabled={submitting}
-            accessibilityRole="button"
-            accessibilityLabel="Submit assignment"
-            className="min-h-9 py-1.5 px-3 rounded-full items-center justify-center flex-row bg-success"
-          >
-            <Ionicons name="checkmark-circle-outline" size={16} color={colors.text.onPrimary} />
-            <Text className="text-xs font-semibold text-white ml-1.5">
-              {submitting ? 'Submitting...' : 'Submit'}
-            </Text>
-          </Pressable>
-        )}
-
-        {/* Hands-free toggle. Collapses to icon-only once live, because the status
-            row above already reads "Live" — that buys back the width the deck's
-            mascot + status stack needs. Keeps its label while off, where it is
-            the only thing advertising the feature. */}
-        <Pressable
-          onPress={toggleHandsFree}
-          accessibilityRole="button"
-          accessibilityLabel={handsFreeActive ? 'End live voice conversation' : 'Start live voice conversation'}
-          accessibilityHint="Real-time bidirectional voice conversation with AI tutor"
-          className={`min-h-9 py-1.5 rounded-full items-center justify-center flex-row ${
-            handsFreeActive ? 'w-9 bg-success' : 'px-3 bg-dark-card'
-          }`}
-        >
-          <Ionicons
-            name={handsFreeActive ? 'mic' : 'mic-outline'}
-            size={16}
-            color={handsFreeActive ? colors.text.onPrimary : colors.text.quaternary}
-          />
-          {!handsFreeActive && (
-            <Text className="text-xs font-sans-semibold ml-1.5 text-text-tertiary">
-              Live Voice
-            </Text>
-          )}
-        </Pressable>
-
-        {/* Voice mode toggle (hidden when hands-free is active) */}
-        {!handsFreeActive && (
-          <Pressable
-            onPress={toggleVoiceMode}
-            hitSlop={4}
-            accessibilityRole="button"
-            accessibilityLabel={voiceMode ? 'Switch to text mode' : 'Switch to voice mode'}
-            className={`w-9 h-9 rounded-full items-center justify-center ${voiceMode ? 'bg-primary' : 'bg-dark-card'}`}
-          >
-            <Ionicons name={voiceMode ? 'mic' : 'mic-outline'} size={20} color={voiceMode ? colors.text.onPrimary : colors.indigo[300]} />
-          </Pressable>
-        )}
-      </View>
+            {missionAttempt.mission && (
+              <FinishPill onPress={handleFinish} disabled={sending || missionAttempt.finishing} />
+            )}
+            <HandsFreeToggle
+              active={handsFreeActive}
+              compact={missionAttempt.mission !== null}
+              onPress={toggleHandsFree}
+            />
+            {!handsFreeActive && <VoiceModeToggle active={voiceMode} onPress={toggleVoiceMode} />}
+          </>
+        }
+      />
 
       <KeyboardAvoidingView
         className="flex-1"
@@ -1201,7 +1280,7 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
               message={item}
               targetLanguage={targetLanguage}
               userId={user?.id}
-              cefrLevel={CEFR_FOR_LEVEL[level]}
+              cefrLevel={conversationBand}
               nativeLanguage={profile?.nativeLanguage}
               voiceGender={voiceGender}
               gloss={glosses[item.id]}
@@ -1209,6 +1288,15 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
           )}
           ListFooterComponent={sending ? <TypingIndicator /> : null}
         />
+
+        {/* Inside the KeyboardAvoidingView: above every composer branch. */}
+        {missionAttempt.mission && (
+          <MissionObjectives
+            mission={missionAttempt.mission.meta}
+            met={missionAttempt.met}
+            lastTicked={missionAttempt.lastTicked}
+          />
+        )}
 
         <ChatInput
           value={input}
@@ -1220,18 +1308,43 @@ function ChatSession({ targetLanguage }: { targetLanguage: LanguageCode }) {
           targetLanguage={targetLanguage}
           handsFreeMode={handsFreeActive}
           handsFreeState={handsFreeState}
-          onHandsFreeStateChange={handleHandsFreeStateChange}
+          onHandsFreeStateChange={setHandsFreeState}
           shouldStartListening={shouldStartListening}
           onListeningStarted={handleListeningStarted}
           voiceGender={voiceGender}
           onVoiceGenderChange={handleVoiceGenderChange}
           onBeforeRecord={() => ensureConsent('voice')}
           onInterruptPlayback={interruptAndListen}
-          cefrLevel={CEFR_FOR_LEVEL[level]}
+          cefrLevel={conversationBand}
+          onHelp={
+            handsFreeActive
+              ? undefined
+              : () => {
+                  // Consent first, and never both Modals at once.
+                  void ensureConsent('text').then((ok) => { if (ok) setHelpOpen(true); });
+                }
+          }
         />
+        {user?.id && (
+          <PhraseHelpSheet
+            visible={helpOpen}
+            mode={voiceMode ? 'voice' : 'text'}
+            targetLanguage={targetLanguage}
+            nativeLanguage={profile?.nativeLanguage ?? 'en'}
+            level={level}
+            scenarioKey={selectedScenario.key ?? undefined}
+            userId={user.id}
+            tier={tier}
+            onInsert={(phrase) => {
+              setInput((prev) => (prev.trim() ? `${prev.trimEnd()} ${phrase}` : phrase));
+              setHelpOpen(false);
+            }}
+            onClose={() => setHelpOpen(false)}
+          />
+        )}
         {consentSheet}
       </KeyboardAvoidingView>
     </SafeAreaView>
-    </GradientBackground>
+    </View>
   );
 }

@@ -4,8 +4,9 @@ import { useAuth } from './useAuth';
 import { useAppStore } from '../stores/useAppStore';
 import { useVoiceTurn } from './useVoiceTurn';
 import { useAudioInterruptions } from './useAudioInterruptions';
+import { useDailyStats } from './useDailyStats';
 import { setAudioSessionMode } from '../lib/audio-session';
-import { getTextToSpeech, transcribeAudio } from '../lib/ai';
+import { getTextToSpeech, scorePronunciation, transcribeAudio } from '../lib/ai';
 import {
   fetchDueReviewItemsWithCardsStrict,
   upsertReviewItem,
@@ -18,7 +19,7 @@ import { enqueue, isNetworkError, newClientLogId } from '../lib/offline-queue';
 import { getCachedTts, putCachedTts, pruneTtsCache, ttsCacheKey } from '../lib/tts-cache';
 import { feedbackPhrase, announcePhrase, summaryPhrase } from '../lib/handsfree-phrases';
 import { classifyUtterance } from '../lib/handsfree-commands';
-import { evaluateHandsFreeAnswer, sttConfidence } from '../lib/handsfree-grading';
+import { evaluateHandsFreeAnswer, sttConfidence, transcribeHandsFreeTurn } from '../lib/handsfree-grading';
 import { HANDSFREE_VAD } from '../lib/vad';
 import { HANDSFREE_DEFAULTS } from '../config/app';
 import {
@@ -98,6 +99,7 @@ export function useHandsFreeSession(
 ): UseHandsFreeSessionReturn {
   const { user } = useAuth();
   const profile = useAppStore((s) => s.profile);
+  const { addStats } = useDailyStats();
 
   const config: HandsFreeConfig = useMemo(
     () => ({
@@ -122,6 +124,11 @@ export function useHandsFreeSession(
   const soundRef = useRef<Audio.Sound | null>(null);
   const sessionRowRef = useRef<string | null>(null);
   const listenStartedAtRef = useRef<number>(0);
+  /** Consecutive `score-pronunciation` failures this session. At the cap the
+   *  answers go straight to the plain transcriber — see transcribeHandsFreeTurn. */
+  const scoringStrikesRef = useRef(0);
+  /** The end-of-session settlement runs exactly once, whoever triggers it. */
+  const settledRef = useRef(false);
   const cachedKeysRef = useRef<Set<string>>(new Set());
   // Mirrors state for callbacks that must not close over a stale render.
   const stateRef = useRef(state);
@@ -188,7 +195,33 @@ export function useHandsFreeSession(
       try {
         const { File } = await import('expo-file-system');
         const base64 = await new File(result.uri).base64();
-        const transcription = await transcribeAudio(base64, targetLanguage);
+
+        // Scored when scoring is available, transcribed otherwise. Every
+        // queue item is a review card, so a scored turn writes a
+        // `pronunciation_scores` row against it — the only thing that makes
+        // a spoken session count toward the speaking level. The fallback
+        // policy lives in lib/handsfree-grading.ts; what happens here is
+        // that the session keeps going either way.
+        const outcome = await transcribeHandsFreeTurn({
+          scoringStrikes: scoringStrikesRef.current,
+          score: () =>
+            scorePronunciation({
+              userId: user?.id ?? '',
+              audioBase64: base64,
+              expectedText: item.expectedText,
+              language: targetLanguage,
+              acceptedVariants: item.acceptedVariants,
+              targetWord: item.targetWord,
+              source: 'practice',
+              cardId: item.cardId,
+            }),
+          transcribe: () => transcribeAudio(base64, targetLanguage),
+        });
+        if (outcome.fallbackReason === 'error') {
+          console.warn('[handsfree] scoring unavailable, transcribed instead (non-fatal)');
+        }
+        scoringStrikesRef.current = outcome.scoringStrikes;
+        const transcription = outcome.transcript;
 
         // A spoken control beats an answer only when the card is not itself
         // teaching that word — classifyUtterance owns that rule.
@@ -208,7 +241,10 @@ export function useHandsFreeSession(
         // every turn and left the low-confidence gate below inert — a
         // misheard answer went straight into the SM-2 schedule. They stay
         // nullable: an older deployment of the function reports neither, and
-        // null still means "no signal", not "no confidence".
+        // null still means "no signal", not "no confidence". A SCORED turn
+        // is null too — score-pronunciation reports no per-segment
+        // probabilities — so its gate reads neutral; the pronunciation score
+        // it persisted is the stronger read on that turn anyway.
         const confidence = sttConfidence({
           noSpeechProb: transcription.noSpeechProb,
           avgLogprob: transcription.avgLogprob,
@@ -247,7 +283,7 @@ export function useHandsFreeSession(
         dispatch({ type: 'STEP_FAILED', now, stage: 'stt', recoverable: true });
       }
     },
-    [nativeLanguage, targetLanguage],
+    [nativeLanguage, targetLanguage, user],
   );
 
   const { startTurn, abortTurn } = useVoiceTurn({
@@ -522,6 +558,8 @@ export function useHandsFreeSession(
         console.warn('[handsfree] could not open session row:', err);
       }
 
+      scoringStrikesRef.current = 0;
+      settledRef.current = false;
       dispatch({ type: 'START', now: Date.now(), queue });
     } catch (err) {
       setError(
@@ -532,9 +570,17 @@ export function useHandsFreeSession(
     }
   }, [user, opts.targetDurationMs, targetLanguage, resolveAudio]);
 
-  const end = useCallback(
-    async (reason: EndReason = 'user_ended') => {
-      dispatch({ type: 'END', now: Date.now(), reason });
+  /**
+   * Everything that happens once, when the session is over: release the mic
+   * and the audio route, close the session row, bank the day's stats, tell
+   * the screen. Shared by the learner's End tap and the reducer's own
+   * completion, and guarded so the second caller is a no-op.
+   */
+  const settle = useCallback(
+    async (reason: EndReason) => {
+      if (settledRef.current) return;
+      settledRef.current = true;
+
       await abortTurn();
       if (soundRef.current) {
         await soundRef.current.unloadAsync().catch(() => undefined);
@@ -558,14 +604,44 @@ export function useHandsFreeSession(
         sessionRowRef.current = null;
       }
 
+      // The day's card count, once, from the session total. The on-screen
+      // review queue writes the same column; before this a spoken session
+      // reviewed cards that never showed up in the day's numbers. Minutes are
+      // the screen's job (useActiveTime), so they are not written here.
+      if (snapshot.itemsAttempted > 0) {
+        try {
+          await addStats({ cardsReviewed: snapshot.itemsAttempted });
+        } catch (err) {
+          console.warn('[handsfree] daily stats write failed (non-fatal):', err);
+        }
+      }
+
       opts.onEnded?.({
         attempted: snapshot.itemsAttempted,
         correct: snapshot.itemsCorrect,
         reason,
       });
     },
-    [abortTurn, opts],
+    [abortTurn, addStats, opts],
   );
+
+  const end = useCallback(
+    async (reason: EndReason = 'user_ended') => {
+      dispatch({ type: 'END', now: Date.now(), reason });
+      await settle(reason);
+    },
+    [settle],
+  );
+
+  // The reducer ends the session by itself when the time budget is spent
+  // (summary → 'completed'). Nobody calls `end()` for that, so before this the
+  // row stayed open, nothing was banked, and the screen stayed put on
+  // "Session complete" — the automatic return the screen promises never
+  // happened for a session that actually finished.
+  useEffect(() => {
+    if (state.phase !== 'ended') return;
+    void settle(state.endReason ?? 'completed');
+  }, [state.phase, state.endReason, settle]);
 
   // Teardown is non-negotiable: a leaked Recording blocks every subsequent
   // recording app-wide, and a held audio session keeps the route.

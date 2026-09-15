@@ -165,7 +165,11 @@ async function generateSafely(
 ): Promise<{ text: string; usage: { inputTokens: number; outputTokens: number } } | null> {
   for (let attempt = 1; attempt <= 2; attempt++) {
     const result = await withRetry(generate);
-    const safety = await validateContentSafety(result.text, { language, fn });
+    const safety = await validateContentSafety(result.text, {
+      language,
+      fn,
+      moderation: 'required',
+    });
     if (safety.safe) return result;
     console.warn(`   [${fn}] safety rejected (attempt ${attempt}): ${safety.reasons.join(', ')}`);
   }

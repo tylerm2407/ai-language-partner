@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -12,8 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../hooks/useAuth';
-import { Button } from '../../components/ui/Button';
-import { GradientBackground } from '../../components/ui/GradientBackground';
+import { SlabButton } from '../../components/ui2/SlabButton';
 import { Avatar } from '../../components/avatar/Avatar';
 import { presetUrlFromId } from '../../lib/avatar-presets';
 import { RotatingGreeting } from '../../components/auth/RotatingGreeting';
@@ -33,8 +32,13 @@ import {
   signInWithGoogle,
   SocialAuthCancelled,
 } from '../../lib/social-auth';
+import { topicPackFor } from '../../components/onboarding/topic-packs';
 import { SUPPORTED_LANGUAGES } from '../../config/app';
-import { colors, radii, spacing, typography } from '../../config/theme';
+// `colors` is deliberately NOT imported: it is the fixed DARK palette, so a
+// screen reading it renders dark whatever the phone is set to. `spacing`,
+// `ui2Shape` and `ui2Type` hold no scheme and carry over unchanged.
+import { spacing, ui2Shape, ui2Type } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 
 type AuthMode = 'sign_in' | 'sign_up' | 'forgot_password';
 
@@ -60,6 +64,7 @@ const MIN_PASSWORD = 6;
  *   saving their own work rather than as a gate.
  */
 export default function AuthScreen() {
+  const { c } = useUi2Theme();
   const { signInWithEmail, signUpWithEmail, resetPassword } = useAuth();
   const [mode, setMode] = useState<AuthMode>('sign_in');
   const [email, setEmail] = useState('');
@@ -152,6 +157,20 @@ export default function AuthScreen() {
     ? SUPPORTED_LANGUAGES.find((l) => l.code === pending.targetLanguage)?.name
     : null;
 
+  /**
+   * The sentence the learner can now say, from the topic pack their trial ran
+   * from. Null when the draft predates the packs, when the language has none,
+   * or when the trial never ran — the card then falls back to naming the
+   * lesson.
+   *
+   * `topicPackFor` builds the exercises too, which this screen has no use for,
+   * so it runs once per draft rather than once per keystroke in the email box.
+   */
+  const pendingSentence = useMemo(() => {
+    if (!pending?.trial || !pending.targetLanguage || !pending.topic) return null;
+    return topicPackFor(pending.targetLanguage, pending.topic)?.sentence.target ?? null;
+  }, [pending]);
+
   const handleSubmit = async () => {
     if (!email.trim()) return;
 
@@ -198,7 +217,7 @@ export default function AuthScreen() {
     !email.trim() || (!isForgot && password.length < MIN_PASSWORD) || loading;
 
   return (
-    <GradientBackground>
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
       <AmbientGreetings />
       <SafeAreaView style={{ flex: 1 }}>
         <KeyboardAvoidingView
@@ -217,13 +236,13 @@ export default function AuthScreen() {
             {/* ---------- Hero ---------- */}
             {isSignUp && (
               <View style={{ paddingHorizontal: spacing.lg, paddingTop: 54, alignItems: 'center' }}>
-                <RotatingGreeting size={56} showLanguage align="center" />
+                <RotatingGreeting size={56} color={c.ink} showLanguage align="center" />
                 <Text
                   style={{
-                    fontFamily: typography.family.medium,
+                    fontFamily: ui2Type.ui,
                     fontSize: 15,
                     lineHeight: 23,
-                    color: colors.text.secondary,
+                    color: c.muted,
                     textAlign: 'center',
                     marginTop: spacing.lg + 2,
                   }}
@@ -235,15 +254,15 @@ export default function AuthScreen() {
 
             {isSignIn && (
               <View style={{ paddingHorizontal: spacing.lg, paddingTop: 64 }}>
-                <RotatingGreeting size={34} color={colors.action.accent} align="left" />
+                <RotatingGreeting size={34} color={c.primary} align="left" />
                 <Text
                   accessibilityRole="header"
                   style={{
-                    fontFamily: typography.family.serif,
+                    fontFamily: ui2Type.heading,
                     fontSize: 32,
                     lineHeight: 39,
                     letterSpacing: -0.6,
-                    color: colors.text.primary,
+                    color: c.ink,
                     marginTop: spacing.xs + 2,
                   }}
                 >
@@ -251,10 +270,10 @@ export default function AuthScreen() {
                 </Text>
                 <Text
                   style={{
-                    fontFamily: typography.family.medium,
+                    fontFamily: ui2Type.ui,
                     fontSize: 14,
                     lineHeight: 21,
-                    color: colors.text.tertiary,
+                    color: c.muted,
                     marginTop: spacing.xs + 2,
                   }}
                 >
@@ -268,21 +287,21 @@ export default function AuthScreen() {
                 <Text
                   accessibilityRole="header"
                   style={{
-                    fontFamily: typography.family.serif,
+                    fontFamily: ui2Type.heading,
                     fontSize: 32,
                     lineHeight: 39,
                     letterSpacing: -0.6,
-                    color: colors.text.primary,
+                    color: c.ink,
                   }}
                 >
                   Reset your{'\n'}password.
                 </Text>
                 <Text
                   style={{
-                    fontFamily: typography.family.medium,
+                    fontFamily: ui2Type.ui,
                     fontSize: 14,
                     lineHeight: 21,
-                    color: colors.text.tertiary,
+                    color: c.muted,
                     marginTop: spacing.sm + 2,
                   }}
                 >
@@ -298,10 +317,11 @@ export default function AuthScreen() {
                   marginHorizontal: spacing.lg,
                   marginTop: spacing.lg,
                   padding: spacing.md,
-                  borderRadius: radii.xl,
-                  backgroundColor: colors.surface.raised,
-                  borderWidth: 1,
-                  borderColor: 'rgba(129,140,248,0.35)',
+                  borderRadius: ui2Shape.radiusCard,
+                  backgroundColor: c.primaryTint,
+                  borderWidth: ui2Shape.border,
+                  borderBottomWidth: ui2Shape.slab,
+                  borderColor: c.primaryTintBorder,
                   flexDirection: 'row',
                   alignItems: 'center',
                   gap: spacing.md,
@@ -316,9 +336,9 @@ export default function AuthScreen() {
                   {pending?.displayName ? (
                     <Text
                       style={{
-                        fontFamily: typography.family.bold,
+                        fontFamily: ui2Type.uiBold,
                         fontSize: 17,
-                        color: colors.text.primary,
+                        color: c.ink,
                       }}
                     >
                       {pending.displayName}
@@ -327,30 +347,40 @@ export default function AuthScreen() {
                   {pendingLanguage ? (
                     <Text
                       style={{
-                        fontFamily: typography.family.medium,
+                        fontFamily: ui2Type.ui,
                         fontSize: 13,
-                        color: colors.text.tertiary,
+                        color: c.muted,
                         marginTop: 1,
                       }}
                     >
                       {pendingLanguage}
                     </Text>
                   ) : null}
-                  {/* The lesson they already finished, named in numbers. This
-                      card is the whole argument for the form beneath it: the
-                      account saves something that exists, rather than
-                      unlocking something that might. */}
+                  {/* What they already did, named as the thing it bought them.
+                      This card is the whole argument for the form beneath it:
+                      the account saves something that exists, rather than
+                      unlocking something that might.
+
+                      NOT XP. This line used to read "20 XP · 7/8 IN LESSON 1".
+                      XP is hidden by design in this product (CLAUDE.md §1) —
+                      progress is what the learner can do, never a score — and
+                      a number nobody ever sees again is a poor thing to be
+                      asked to protect anyway. The sentence they can now say is
+                      the same fact, in the only currency that means anything
+                      four minutes into a language app. */}
                   {pending?.trial ? (
                     <Text
                       style={{
-                        fontFamily: typography.family.mono,
+                        fontFamily: ui2Type.uiHeavy,
                         fontSize: 10,
                         letterSpacing: 1.3,
-                        color: colors.action.accent,
+                        color: c.onTint,
                         marginTop: spacing.xs,
                       }}
                     >
-                      {`${pending.trial.xpEarned} XP · ${pending.trial.correctCount}/${pending.trial.totalCount} IN LESSON 1`}
+                      {pendingSentence
+                        ? `CAN SAY: ${pendingSentence.toUpperCase()}`
+                        : `LESSON 1 DONE · ${pending.trial.correctCount}/${pending.trial.totalCount}`}
                     </Text>
                   ) : null}
                 </View>
@@ -366,22 +396,23 @@ export default function AuthScreen() {
                   gap: spacing.sm + 2,
                   height: 58,
                   paddingHorizontal: spacing.md + 2,
-                  borderRadius: radii.lg,
-                  backgroundColor: colors.surface.card,
-                  borderWidth: 1,
-                  borderColor: colors.border.subtle,
+                  borderRadius: ui2Shape.radiusCard,
+                  backgroundColor: c.card,
+                  borderWidth: ui2Shape.border,
+                  borderBottomWidth: ui2Shape.slab,
+                  borderColor: c.cardBorder,
                 }}
               >
-                <Ionicons name="mail-outline" size={17} color={colors.text.tertiary} />
+                <Ionicons name="mail-outline" size={17} color={c.idle} />
                 <TextInput
                   style={{
                     flex: 1,
-                    fontFamily: typography.family.medium,
+                    fontFamily: ui2Type.ui,
                     fontSize: 15,
-                    color: colors.text.primary,
+                    color: c.ink,
                   }}
                   placeholder="you@example.com"
-                  placeholderTextColor={colors.text.quaternary}
+                  placeholderTextColor={c.idle}
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
@@ -394,7 +425,7 @@ export default function AuthScreen() {
                 {/* Confirms the address parsed, so the learner isn't left
                     wondering after a typo'd submit. */}
                 {email.includes('@') && email.includes('.') && (
-                  <Ionicons name="checkmark-circle" size={18} color={colors.success.base} />
+                  <Ionicons name="checkmark-circle" size={18} color={c.green} />
                 )}
               </View>
 
@@ -412,7 +443,7 @@ export default function AuthScreen() {
               )}
 
               <View style={{ marginTop: spacing.md }}>
-                <Button label={ctaLabel} onPress={handleSubmit} disabled={submitDisabled} loading={loading} />
+                <SlabButton label={ctaLabel} onPress={handleSubmit} disabled={submitDisabled} loading={loading} />
               </View>
 
               {isSignIn && (
@@ -424,9 +455,9 @@ export default function AuthScreen() {
                 >
                   <Text
                     style={{
-                      fontFamily: typography.family.semibold,
+                      fontFamily: ui2Type.uiBold,
                       fontSize: 13,
-                      color: colors.action.accent,
+                      color: c.primary,
                     }}
                   >
                     Forgot password?
@@ -450,18 +481,18 @@ export default function AuthScreen() {
                       marginTop: spacing.lg,
                     }}
                   >
-                    <View style={{ flex: 1, height: 1, backgroundColor: colors.border.subtle }} />
+                    <View style={{ flex: 1, height: 1, backgroundColor: c.cardBorder }} />
                     <Text
                       style={{
-                        fontFamily: typography.family.mono,
+                        fontFamily: ui2Type.uiHeavy,
                         fontSize: 10,
                         letterSpacing: 1.6,
-                        color: colors.text.tertiary,
+                        color: c.muted,
                       }}
                     >
                       OR
                     </Text>
-                    <View style={{ flex: 1, height: 1, backgroundColor: colors.border.subtle }} />
+                    <View style={{ flex: 1, height: 1, backgroundColor: c.cardBorder }} />
                   </View>
 
                   <View style={{ flexDirection: 'row', gap: spacing.xs + 2, marginTop: spacing.lg }}>
@@ -476,20 +507,20 @@ export default function AuthScreen() {
                         flex: 1,
                         opacity: socialPending === 'google' ? 0.5 : 1,
                         height: 54,
-                        borderRadius: radii.md,
-                        backgroundColor: colors.text.primary,
+                        borderRadius: ui2Shape.radiusButton,
+                        backgroundColor: c.ink,
                         flexDirection: 'row',
                         alignItems: 'center',
                         justifyContent: 'center',
                         gap: spacing.xs + 2,
                       }}
                     >
-                      <Ionicons name="logo-apple" size={18} color={colors.surface.base} />
+                      <Ionicons name="logo-apple" size={18} color={c.bg} />
                       <Text
                         style={{
-                          fontFamily: typography.family.bold,
+                          fontFamily: ui2Type.uiBold,
                           fontSize: 14,
-                          color: colors.surface.base,
+                          color: c.bg,
                         }}
                       >
                         {socialPending === 'apple' ? 'Signing in…' : 'Apple'}
@@ -507,22 +538,22 @@ export default function AuthScreen() {
                         flex: 1,
                         opacity: socialPending === 'apple' ? 0.5 : 1,
                         height: 54,
-                        borderRadius: radii.md,
-                        backgroundColor: colors.surface.card,
-                        borderWidth: 1,
-                        borderColor: colors.border.default,
+                        borderRadius: ui2Shape.radiusButton,
+                        backgroundColor: c.card,
+                        borderWidth: ui2Shape.border,
+                        borderColor: c.cardBorder,
                         flexDirection: 'row',
                         alignItems: 'center',
                         justifyContent: 'center',
                         gap: spacing.xs + 2,
                       }}
                     >
-                      <Ionicons name="logo-google" size={17} color={colors.action.accent} />
+                      <Ionicons name="logo-google" size={17} color={c.primary} />
                       <Text
                         style={{
-                          fontFamily: typography.family.bold,
+                          fontFamily: ui2Type.uiBold,
                           fontSize: 14,
-                          color: colors.text.primary,
+                          color: c.ink,
                         }}
                       >
                         {socialPending === 'google' ? 'Signing in…' : 'Google'}
@@ -552,13 +583,13 @@ export default function AuthScreen() {
             >
               <Text
                 style={{
-                  fontFamily: typography.family.medium,
+                  fontFamily: ui2Type.ui,
                   fontSize: 13,
-                  color: colors.text.tertiary,
+                  color: c.muted,
                 }}
               >
                 {isForgot ? 'Remembered it? ' : isSignUp ? 'Already have an account? ' : 'New to Fluenci? '}
-                <Text style={{ fontFamily: typography.family.bold, color: colors.action.accent }}>
+                <Text style={{ fontFamily: ui2Type.uiBold, color: c.primary }}>
                   {isForgot ? 'Back to sign in' : isSignUp ? 'Sign in' : 'Create an account'}
                 </Text>
               </Text>
@@ -567,10 +598,10 @@ export default function AuthScreen() {
             {isSignUp && (
               <Text
                 style={{
-                  fontFamily: typography.family.medium,
+                  fontFamily: ui2Type.ui,
                   fontSize: 12,
                   lineHeight: 18,
-                  color: colors.text.tertiary,
+                  color: c.muted,
                   textAlign: 'center',
                   marginTop: spacing.sm + 2,
                 }}
@@ -581,6 +612,6 @@ export default function AuthScreen() {
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
-    </GradientBackground>
+    </View>
   );
 }

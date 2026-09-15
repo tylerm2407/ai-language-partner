@@ -1,19 +1,25 @@
 import { supabase } from './supabase';
-import { SRS_DEFAULTS } from '../config/app';
+import type { MissionResult } from './ai';
+import { escapeSpreadsheetCsvCell } from './csv';
 import { PLANS } from './plans';
+import { conversationCefrBand } from './conversation-level';
 import { CEFR_BAND_BY_LEVEL, CEFR_LADDER,
   combineConversationScore,
 } from './cefr-proficiency';
 import { localToday } from './dates';
 import { trackEvent, trackRefusal } from './analytics';
+import { asTutorDebrief } from './tutor-api';
 import { wordTokens } from './reading-text';
 import { writingLevelFitsCourse } from './writing-quality';
+import { languageVariants, type CorrectionLogRow } from './insights';
+import type { GoalLessonCompletion, GoalTrackLesson, GoalTrackProgress } from './goal-track-progress';
 import type {
   ProficiencyEvidence,
   VocabEvidenceItem,
   ReadingEvidenceItem,
   WritingEvidenceItem,
   SpeakingEvidenceItem,
+  ListeningEvidenceItem,
 } from './cefr-proficiency';
 import { ONBOARDING_STEP_KEYS } from './onboarding-checklist';
 import type {
@@ -36,18 +42,19 @@ import type {
   DailyStats,
   DailyUsage,
   Subscription,
-  ReviewRating,
   DailyChallengesRecord,
-  LeagueTier,
   ReadingPassage,
   ReadingQuestion,
   WritingPrompt,
   WritingSubmission,
   WritingFeedback,
   DailyNewsArticle,
+  NewsComprehensionQuestion,
+  NewsReadingResult,
   NewsAudio,
   NewsAudioStatus,
   LessonCompletion,
+  ExerciseResult,
   ReadingBook,
   UserBookProgress,
   BookAnnotation,
@@ -69,7 +76,14 @@ import type {
   LanguageCode,
   ProficiencyLevel,
   SubmissionStatus,
+  TutorDebrief,
+  TutorSessionSummary,
+  AvatarJob,
+  TutorMemory,
+  TutorMemoryKind,
 } from '../types';
+
+import type { NewsTier } from '../config/app';
 
 // ─── User Profile ───────────────────────────────────────────────
 
@@ -86,7 +100,7 @@ export async function fetchProfile(userId: string): Promise<UserProfile | null> 
 
 export async function upsertProfile(
   userId: string,
-  updates: Partial<Pick<UserProfile, 'displayName' | 'nativeLanguage' | 'targetLanguage' | 'level' | 'dailyGoalMinutes' | 'timezone' | 'motivationReason' | 'idealL2Self'>>
+  updates: Partial<Pick<UserProfile, 'displayName' | 'nativeLanguage' | 'targetLanguage' | 'level' | 'dailyGoalMinutes' | 'timezone' | 'motivationReason' | 'idealL2Self' | 'currentCourseId' | 'placementBand'>>
 ): Promise<UserProfile> {
   const row: Record<string, unknown> = {
     user_id: userId,
@@ -96,6 +110,12 @@ export async function upsertProfile(
   if (updates.nativeLanguage !== undefined) row.native_language = updates.nativeLanguage;
   if (updates.targetLanguage !== undefined) row.target_language = updates.targetLanguage;
   if (updates.level !== undefined) row.level = updates.level;
+  // Null is a real value for both (no lesson path), so only `undefined` is
+  // "leave it alone". Write them together with target_language when the
+  // language changes: the guard trigger (migration 125) checks the pointer
+  // against the language in the same row.
+  if (updates.currentCourseId !== undefined) row.current_course_id = updates.currentCourseId;
+  if (updates.placementBand !== undefined) row.placement_band = updates.placementBand;
   if (updates.dailyGoalMinutes !== undefined) row.daily_goal_minutes = updates.dailyGoalMinutes;
   if (updates.timezone !== undefined) row.timezone = updates.timezone;
   if (updates.motivationReason !== undefined) row.motivation_reason = updates.motivationReason;
@@ -122,39 +142,52 @@ export async function upsertProfile(
   return mapProfile(data);
 }
 
-/**
- * XP is server-authoritative: increment_xp validates the caller, caps the
- * per-call amount, and derives xp_level/league_tier in the same statement.
- */
-export async function addXp(userId: string, xp: number): Promise<void> {
-  if (xp <= 0) return;
-  const { error } = await supabase.rpc('increment_xp', {
-    p_user_id: userId,
-    p_amount: Math.min(Math.round(xp), 500),
-  });
-  if (error) throw error;
+/** Everything the onboarding draft writes server-side, in one call. */
+export interface OnboardingDraftWrite {
+  targetLanguage: LanguageCode;
+  level: ProficiencyLevel;
+  dailyGoalMinutes: number;
+  idealL2Self: string | null;
+  displayName: string | null;
+  avatarPresetId: string | null;
+  currentCourseId: string | null;
+  placementBand: string | null;
+  /** The bundled trial lesson ran before the account existed. */
+  firstLesson: boolean;
 }
 
 /**
- * Idempotent XP award (migration 046) — same caller guard / 1-500 cap /
- * level derivation as increment_xp, but keyed: the server records `key`
- * in client_events and replays of the same key are no-ops. Used by
- * earnXp and offline-queue replays so a lost-response retry can never
- * double-award.
+ * Flush the onboarding draft into the caller's profile atomically.
  *
- * Returns the learner's authoritative total XP *after* the call. On a replay
- * the server grants nothing and returns the unchanged total, which is what
- * makes it safe for the caller to render this instead of adding the amount
- * locally — otherwise a refused award still shows up as XP until next launch.
+ * One RPC (`apply_onboarding_draft`, migration 127) replaces what used to be
+ * four sequential table writes — profile upsert, avatar kind, checklist,
+ * onboarding_completed — none of which were in a transaction. A connection
+ * dropped between them left a half-written profile that the route guard read
+ * as "onboarding not finished", while the device had already cleared the
+ * draft on some paths. The function either writes the whole row or nothing,
+ * and the same input twice leaves the same row, so the caller can retry
+ * without checking state first.
+ *
+ * The course is resolved on the client first (`resolvePlacement`), because
+ * `lib/course-placement.ts` is the one source of truth for how a level and a
+ * choice become a course; the server's `fluenci_guard_current_course` trigger
+ * still rejects a pointer that does not belong to the language on the row.
  */
-export async function incrementXpIdempotent(amount: number, key: string): Promise<number | null> {
-  if (amount <= 0) return null;
-  const { data, error } = await supabase.rpc('increment_xp_idempotent', {
-    p_amount: Math.min(Math.round(amount), 500),
-    p_key: key,
+export async function applyOnboardingDraft(input: OnboardingDraftWrite): Promise<UserProfile> {
+  const { data, error } = await supabase.rpc('apply_onboarding_draft', {
+    p_target_language: input.targetLanguage,
+    p_level: input.level,
+    p_daily_goal_minutes: input.dailyGoalMinutes,
+    p_ideal_l2_self: input.idealL2Self,
+    p_display_name: input.displayName,
+    p_avatar_preset_id: input.avatarPresetId,
+    p_current_course_id: input.currentCourseId,
+    p_placement_band: input.placementBand,
+    p_first_lesson: input.firstLesson,
   });
   if (error) throw error;
-  return typeof data === 'number' ? data : null;
+  if (!data) throw new Error('apply_onboarding_draft returned no row');
+  return mapProfile(data as Record<string, unknown>);
 }
 
 export async function markOnboardingComplete(userId: string): Promise<void> {
@@ -517,6 +550,29 @@ export async function fetchDueReviewItemsWithCards(
 }
 
 
+/**
+ * The learner's own deck, as cards — the distractor pool for the multiple-
+ * choice review (lib/review-choices.ts). Every card the learner has ever been
+ * scheduled on, due or not, so a wrong option is a word they have actually
+ * met and might confuse. Capped: a long-lived deck runs to thousands and a
+ * session needs a couple of hundred candidates at most. review_items is
+ * unique on (user_id, card_id), so no card repeats.
+ */
+export async function fetchReviewDeckCards(userId: string, limit = 200): Promise<Card[]> {
+  const { data, error } = await supabase
+    .from('review_items')
+    .select('cards!inner(*)')
+    .eq('user_id', userId)
+    .order('last_reviewed_at', { ascending: false, nullsFirst: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return ((data ?? []) as Record<string, unknown>[])
+    .map((row) => row.cards)
+    .filter((c): c is Record<string, unknown> => !!c && typeof c === 'object')
+    .map(mapCard);
+}
+
 export async function fetchReviewItemCount(userId: string): Promise<number> {
   const { count, error } = await supabase
     .from('review_items')
@@ -655,27 +711,42 @@ export async function insertReviewLog(log: Omit<ReviewLog, 'id'>): Promise<void>
  * duplicate is dropped by the database rather than by hoping the client only
  * ever sends once.
  */
+/**
+ * Record one review exactly once, keyed on the client-minted `clientLogId`.
+ *
+ * A plain INSERT that treats a duplicate-key rejection as success — NOT an
+ * upsert. The uniqueness this relies on is `review_logs_user_client_log_id_idx`
+ * (migration 059), which is a PARTIAL unique index (`WHERE client_log_id IS
+ * NOT NULL`), and Postgres cannot infer a partial index from a bare
+ * `ON CONFLICT (user_id, client_log_id)` clause: PostgREST's `on_conflict=`
+ * upsert failed on every call with 42P10 "there is no unique or exclusion
+ * constraint matching the ON CONFLICT specification". That was live from
+ * 2026-08-06 to 2026-09-08 — every review rated in that window updated its
+ * `review_items` row and then showed "Failed to save review", and wrote no
+ * log. The partial index still raises 23505 on a genuine replay, which is the
+ * only signal idempotency needs.
+ */
 export async function insertReviewLogIdempotent(
   log: Omit<ReviewLog, 'id'> & { clientLogId: string },
 ): Promise<void> {
   const { error } = await supabase
     .from('review_logs')
-    .upsert(
-      {
-        user_id: log.userId,
-        card_id: log.cardId,
-        review_item_id: log.reviewItemId,
-        rating: log.rating,
-        response_time_ms: log.responseTimeMs,
-        user_answer: log.userAnswer,
-        was_correct: log.wasCorrect,
-        reviewed_at: log.reviewedAt,
-        client_log_id: log.clientLogId,
-      },
-      { onConflict: 'user_id,client_log_id', ignoreDuplicates: true },
-    );
+    .insert({
+      user_id: log.userId,
+      card_id: log.cardId,
+      review_item_id: log.reviewItemId,
+      rating: log.rating,
+      response_time_ms: log.responseTimeMs,
+      user_answer: log.userAnswer,
+      was_correct: log.wasCorrect,
+      reviewed_at: log.reviewedAt,
+      client_log_id: log.clientLogId,
+    });
 
-  if (error) throw error;
+  // 23505 = unique_violation: this exact review was already recorded (an
+  // offline replay landing after the online attempt did). That is the
+  // idempotent outcome, not a failure.
+  if (error && error.code !== '23505') throw error;
 }
 
 // ─── Hands-Free Sessions ───────────────────────
@@ -790,7 +861,6 @@ export async function upsertDailyStats(
       p_listening_minutes: updates.listeningMinutes ?? 0,
       p_reading_minutes: updates.readingMinutes ?? 0,
       p_writing_minutes: updates.writingMinutes ?? 0,
-      p_xp_earned: updates.xpEarned ?? 0,
       p_accuracy: updates.accuracy ?? null,
     })
     .single();
@@ -810,11 +880,22 @@ export async function upsertDailyStats(
  * both pass a separate read-then-write check. Returns true iff a slot was
  * consumed; callers should only introduce the new card when it did.
  */
-export async function tryConsumeNewCardSlot(): Promise<boolean> {
+export async function tryConsumeNewCardSlot(cardId?: string): Promise<boolean> {
   // No cap argument. It used to take one, which meant the number deciding what
   // a free plan is worth was asserted by the client — a patched build could
-  // hand itself the maximum. The RPC now reads it from get_effective_limits.
-  const { data, error } = await supabase.rpc('try_consume_new_card_slot');
+  // hand itself the maximum. The RPC reads it from get_effective_limits.
+  //
+  // The card id is passed so the slot is RESERVED for that card (migration
+  // 114): the review_items insert trigger — which is what actually enforces
+  // the cap now, so a client that skips this call is still capped — charges
+  // nothing for a reserved card. That keeps the honest path (reserve here,
+  // insert now or from the offline queue later) at exactly one slot.
+  //
+  // Without a card id (a card that does not exist yet — an annotation or a
+  // correction being turned into one) this only PEEKS: true if a slot is
+  // free, nothing consumed. The insert trigger charges the slot when the
+  // review item lands, so the answer here is advisory and cannot double-bill.
+  const { data, error } = await supabase.rpc('try_consume_new_card_slot', { p_card_id: cardId ?? null });
   if (error) throw error;
   return data === true;
 }
@@ -864,6 +945,13 @@ const PROFICIENCY_WRITING_LIMIT = 500;
  * recent attempts are also the ones that describe the learner's current level.
  */
 const PROFICIENCY_SPEAKING_LIMIT = 500;
+/** Graded listening exercises considered — the same order as speaking, one row per answer. */
+const PROFICIENCY_LISTENING_LIMIT = 500;
+/**
+ * Exercise types answered from audio alone. Mirrors the CHECK in migration
+ * 128's `record_exercise_result`; the report reads only these for listening.
+ */
+export const LISTENING_EXERCISE_TYPES = ['listening_choice', 'listening_type', 'dictation'] as const;
 /** ~2 years of daily rows; also the active-day count for confidence scoring. */
 /** Conversation turns considered. Larger than the other evidence caps
  *  because a turn is a much smaller unit than a passage or a submission — a
@@ -885,46 +973,88 @@ function nestedCefrLevel(embedded: unknown): string | null {
 }
 
 /**
- * Gather every piece of in-app evidence the CEFR estimator can use.
+ * Gather every piece of in-app evidence the CEFR estimator can use, for ONE
+ * target language.
  *
  * Read-only aggregation over history the app already records — no new
  * assessment is run and nothing is written. The shape returned is consumed by
  * `buildProficiencyReport` in `lib/cefr-proficiency.ts`.
+ *
+ * Every evidence read is filtered to `targetLanguage`. Before that filter the
+ * report pooled a learner's Spanish and French history into one set of bands,
+ * so switching language either inherited a level the learner had not earned
+ * in the new language or dragged the old one down with beginner evidence.
+ * Two counts stay cross-language on purpose, because their tables carry no
+ * language: `activeDays` (daily_stats) is a measure of habit, and the
+ * `review_logs` count is scoped through the card it reviewed.
  *
  * Errors are thrown rather than swallowed: a proficiency report built from a
  * silently truncated dataset would understate the learner's level, which is
  * worse than showing them a retry.
  */
 export async function fetchProficiencyEvidence(
-  userId: string
+  userId: string,
+  targetLanguage: string,
 ): Promise<ProficiencyEvidence> {
+  // Passages and prompts carry their language through their course. Resolving
+  // the course ids first keeps every embed filter below one level deep —
+  // `reading_passages.course_id` — which is the shape this file already relies
+  // on, rather than a two-level `reading_passages.courses.target_language`
+  // path that nothing else here exercises.
+  const courseRes = await supabase
+    .from('courses')
+    .select('id')
+    .eq('target_language', targetLanguage)
+    .limit(200);
+  if (courseRes.error) throw courseRes.error;
+  const courseIds = (courseRes.data ?? []).map((row: { id: string }) => row.id);
+  // PostgREST's `in` with an empty list matches nothing, which is the right
+  // answer for a language with no courses, but spell it out so the intent
+  // survives a driver that treats `in ()` as an error.
+  const courseFilter = courseIds.length > 0 ? courseIds : ['00000000-0000-0000-0000-000000000000'];
+
   const [
     vocabRes,
     readingRes,
+    newsRes,
     writingRes,
     speakingRes,
+    listeningRes,
     statsRes,
     reviewCountRes,
     conversationRes,
   ] = await Promise.all([
       // Every review item with its card's CEFR tag. Inner join drops orphaned
-      // items, matching fetchDueReviewItemsWithCards.
+      // items, matching fetchDueReviewItemsWithCards, and carries the filter.
       supabase
         .from('review_items')
-        .select('status, repetitions, interval, cards!inner(cefr_level)')
+        .select('status, repetitions, interval, cards!inner(cefr_level, language)')
         .eq('user_id', userId)
+        .eq('cards.language', targetLanguage)
         .limit(PROFICIENCY_VOCAB_LIMIT),
 
+      // A passage's language is its course's; the inner join carries the filter.
       supabase
         .from('user_reading_progress')
-        .select('comprehension_score, completed_at, reading_passages!inner(cefr_level)')
+        .select('comprehension_score, completed_at, reading_passages!inner(cefr_level, course_id)')
         .eq('user_id', userId)
+        .in('reading_passages.course_id', courseFilter)
+        .limit(PROFICIENCY_READING_LIMIT),
+
+      // Daily-news articles finished with their comprehension check (migration
+      // 129). Graded server-side; the row is complete by construction.
+      supabase
+        .from('news_reading_results')
+        .select('cefr_level, comprehension')
+        .eq('user_id', userId)
+        .eq('target_language', targetLanguage)
         .limit(PROFICIENCY_READING_LIMIT),
 
       supabase
         .from('user_writing_submissions')
-        .select('overall_score, word_count, writing_prompts!inner(cefr_level)')
+        .select('overall_score, word_count, writing_prompts!inner(cefr_level, course_id)')
         .eq('user_id', userId)
+        .in('writing_prompts.course_id', courseFilter)
         .limit(PROFICIENCY_WRITING_LIMIT),
 
       // Scored spoken attempts (migration 089). The card embed is a LEFT join
@@ -935,8 +1065,21 @@ export async function fetchProficiencyEvidence(
         .from('pronunciation_scores')
         .select('score, cards(cefr_level)')
         .eq('user_id', userId)
+        .eq('target_language', targetLanguage)
         .order('created_at', { ascending: false })
         .limit(PROFICIENCY_SPEAKING_LIMIT),
+
+      // Graded lesson exercises answered from audio alone (migration 128).
+      // The band and language were derived server-side when the row was
+      // written, so no join is needed to trust them.
+      supabase
+        .from('exercise_results')
+        .select('cefr_level, correct')
+        .eq('user_id', userId)
+        .eq('target_language', targetLanguage)
+        .in('exercise_type', LISTENING_EXERCISE_TYPES)
+        .order('created_at', { ascending: false })
+        .limit(PROFICIENCY_LISTENING_LIMIT),
 
       supabase
         .from('daily_stats')
@@ -947,8 +1090,9 @@ export async function fetchProficiencyEvidence(
 
       supabase
         .from('review_logs')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId),
+        .select('id, cards!inner(language)', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('cards.language', targetLanguage),
 
       // Scored conversation turns (migration 095). This is what finally lets
       // chat and voice move the measured level — before it, the most
@@ -960,14 +1104,17 @@ export async function fetchProficiencyEvidence(
         .from('conversation_evidence')
         .select('modality, cefr_level, accuracy, intelligibility, word_count')
         .eq('user_id', userId)
+        .eq('target_language', targetLanguage)
         .order('created_at', { ascending: false })
         .limit(PROFICIENCY_CONVERSATION_LIMIT),
     ]);
 
   if (vocabRes.error) throw vocabRes.error;
   if (readingRes.error) throw readingRes.error;
+  if (newsRes.error) throw newsRes.error;
   if (writingRes.error) throw writingRes.error;
   if (speakingRes.error) throw speakingRes.error;
+  if (listeningRes.error) throw listeningRes.error;
   if (statsRes.error) throw statsRes.error;
   if (reviewCountRes.error) throw reviewCountRes.error;
   if (conversationRes.error) throw conversationRes.error;
@@ -988,6 +1135,13 @@ export async function fetchProficiencyEvidence(
       completed: row.completed_at != null,
     })
   );
+  for (const row of (newsRes.data ?? []) as Record<string, unknown>[]) {
+    reading.push({
+      cefrLevel: (row.cefr_level as string | null) ?? null,
+      comprehension: typeof row.comprehension === 'number' ? row.comprehension : null,
+      completed: true,
+    });
+  }
 
   const writing: WritingEvidenceItem[] = (writingRes.data ?? []).map(
     (row: Record<string, unknown>) => ({
@@ -1003,6 +1157,13 @@ export async function fetchProficiencyEvidence(
     (row: Record<string, unknown>) => ({
       cefrLevel: nestedCefrLevel(row.cards),
       score: ((row.score as number) ?? 0) / 100,
+    })
+  );
+
+  const listening: ListeningEvidenceItem[] = (listeningRes.data ?? []).map(
+    (row: Record<string, unknown>) => ({
+      cefrLevel: (row.cefr_level as string | null) ?? null,
+      correct: row.correct === true,
     })
   );
 
@@ -1046,6 +1207,7 @@ export async function fetchProficiencyEvidence(
     reading,
     writing,
     speaking,
+    listening,
     listeningMinutes,
     speakingMinutes,
     // One daily_stats row per active day, so the row count is the day count.
@@ -1148,13 +1310,13 @@ function mapProfile(row: Record<string, unknown>): UserProfile {
     nativeLanguage: row.native_language as UserProfile['nativeLanguage'],
     targetLanguage: row.target_language as UserProfile['targetLanguage'],
     level: row.level as UserProfile['level'],
+    // Lesson path placement (migration 125). Both null for rows written before
+    // it; `useEnsurePlacement` fills them in on the next Home mount.
+    currentCourseId: (row.current_course_id as string | null) ?? null,
+    placementBand: (row.placement_band as string | null) ?? null,
     dailyGoalMinutes: row.daily_goal_minutes as number,
-    totalXp: row.total_xp as number,
     timezone: row.timezone as string,
     onboardingCompleted: (row.onboarding_completed as boolean) ?? false,
-    // XP levels & leagues
-    xpLevel: (row.xp_level as number) ?? 1,
-    leagueTier: (row.league_tier as UserProfile['leagueTier']) ?? 'bronze',
     // Avatar renderer selection (migration 067). Rows written before it have
     // no avatar_kind. Nothing renders 'procedural' now, so those rows show
     // the initials placeholder until the learner picks from the library.
@@ -1242,7 +1404,6 @@ function mapLesson(row: Record<string, unknown>, exercises: Exercise[]): Lesson 
     description: row.description as string,
     orderIndex: row.order_index as number,
     estimatedMinutes: row.estimated_minutes as number,
-    xpReward: row.xp_reward as number,
     exercises,
   };
 }
@@ -1325,22 +1486,7 @@ function mapDailyStats(row: Record<string, unknown>): DailyStats {
     listeningMinutes: row.listening_minutes as number,
     readingMinutes: (row.reading_minutes as number) ?? 0,
     writingMinutes: (row.writing_minutes as number) ?? 0,
-    xpEarned: row.xp_earned as number,
     accuracy: row.accuracy as number,
-  };
-}
-
-function mapReviewLog(row: Record<string, unknown>): ReviewLog {
-  return {
-    id: row.id as string,
-    userId: row.user_id as string,
-    cardId: row.card_id as string,
-    reviewItemId: row.review_item_id as string,
-    rating: row.rating as ReviewRating,
-    responseTimeMs: row.response_time_ms as number,
-    userAnswer: row.user_answer as string,
-    wasCorrect: row.was_correct as boolean,
-    reviewedAt: row.reviewed_at as string,
   };
 }
 
@@ -1393,30 +1539,83 @@ export async function fetchHasCompletedLesson(userId: string): Promise<boolean> 
   return (count ?? 0) > 0;
 }
 
+/**
+ * Record a finished lesson through `record_lesson_completion` (migration 128).
+ *
+ * This used to be a client upsert with no comparison: a practice retake
+ * overwrote a better score, and the screen bumped `lessons_completed` on every
+ * pass. The RPC keeps the best score, refreshes `completed_at`, and moves the
+ * daily counter only on the first completion — which it reports back as
+ * `firstCompletion` so the screen can say "best score kept" on a retake.
+ *
+ * `userId` is still accepted so the offline queue's stored payload shape and
+ * every caller keep working: the RPC identifies the learner from the JWT, so
+ * it is not sent.
+ */
 export async function upsertLessonCompletion(
   userId: string,
   lessonId: string,
   courseId: string,
   score: number,
-  xpEarned: number,
   timeSpentMs: number
-): Promise<LessonCompletion> {
-  const { data, error } = await supabase
-    .from('lesson_completions')
-    .upsert({
-      user_id: userId,
-      lesson_id: lessonId,
-      course_id: courseId,
-      score,
-      xp_earned: xpEarned,
-      time_spent_ms: timeSpentMs,
-      completed_at: new Date().toISOString(),
-    }, { onConflict: 'user_id,lesson_id' })
-    .select()
-    .single();
-
+): Promise<{ completion: LessonCompletion; firstCompletion: boolean }> {
+  void userId;
+  const { data, error } = await supabase.rpc('record_lesson_completion', {
+    p_lesson_id: lessonId,
+    p_course_id: courseId,
+    p_score: score,
+    p_time_spent_ms: timeSpentMs,
+  });
   if (error) throw error;
-  return mapLessonCompletion(data);
+  if (!data || typeof data !== 'object') throw new Error('record_lesson_completion returned no row');
+  const row = data as Record<string, unknown>;
+  return {
+    completion: mapLessonCompletion(row),
+    firstCompletion: row.first_completion === true,
+  };
+}
+
+/**
+ * Record one graded lesson exercise through `record_exercise_result`
+ * (migration 128). The server derives the exercise type, skill, CEFR band and
+ * language from the exercise row — the client says only which exercise,
+ * whether the first attempt was right, how many attempts, and how long.
+ * Idempotent on the client-minted `clientResultId`, so an offline replay
+ * returns the row the online attempt already wrote.
+ */
+export async function recordExerciseResult(input: {
+  exerciseId: string;
+  correct: boolean;
+  attempts: number;
+  responseTimeMs: number | null;
+  clientResultId: string;
+}): Promise<ExerciseResult> {
+  const { data, error } = await supabase.rpc('record_exercise_result', {
+    p_exercise_id: input.exerciseId,
+    p_correct: input.correct,
+    p_attempts: input.attempts,
+    p_response_time_ms: input.responseTimeMs,
+    p_client_result_id: input.clientResultId,
+  });
+  if (error) throw error;
+  if (!data || typeof data !== 'object') throw new Error('record_exercise_result returned no row');
+  const row = data as Record<string, unknown>;
+  return {
+    id: row.id as string,
+    userId: row.user_id as string,
+    lessonId: row.lesson_id as string,
+    exerciseId: row.exercise_id as string,
+    cardId: (row.card_id as string | null) ?? null,
+    exerciseType: row.exercise_type as string,
+    skillType: (row.skill_type as string | null) ?? null,
+    cefrLevel: (row.cefr_level as string | null) ?? null,
+    targetLanguage: row.target_language as string,
+    correct: row.correct as boolean,
+    attempts: row.attempts as number,
+    responseTimeMs: (row.response_time_ms as number | null) ?? null,
+    clientResultId: row.client_result_id as string,
+    createdAt: row.created_at as string,
+  };
 }
 
 export interface UnitProgressTile {
@@ -1431,22 +1630,19 @@ export interface UnitProgressTile {
 }
 
 /**
- * Build an ordered list of units with progress + the next-up lesson for the
- * user's primary course in `targetLanguage`. Used by the home-screen
- * "Continue learning" tile grid.
+ * Build an ordered list of units with progress + the next-up lesson for one
+ * course — the learner's current course (`user_profiles.current_course_id`,
+ * migration 125). Used by the home-screen "Continue learning" tile grid.
  *
- * Returns [] if no published course exists for the language yet.
+ * Used to take a language and pick `courses[0]`, which after the cefr_level
+ * sort was always the A1 course, for everyone. The caller now owns the choice.
  */
 export async function fetchUnitProgressTiles(
   userId: string,
-  targetLanguage: string,
+  courseId: string,
   limit = 4,
 ): Promise<UnitProgressTile[]> {
-  const courses = await fetchCourses(targetLanguage);
-  if (courses.length === 0) return [];
-  const course = courses[0];
-
-  const units = await fetchUnits(course.id);
+  const units = await fetchUnits(courseId);
   if (units.length === 0) return [];
 
   // Single query for all units' lessons (was one fetchLessons per unit —
@@ -1457,7 +1653,7 @@ export async function fetchUnitProgressTiles(
       .select('*')
       .in('unit_id', units.map((u) => u.id))
       .order('order_index', { ascending: true }),
-    fetchLessonCompletions(userId, course.id),
+    fetchLessonCompletions(userId, courseId),
   ]);
   if (lessonsResult.error) throw lessonsResult.error;
   const lessonsByUnit = new Map<string, Lesson[]>();
@@ -1472,12 +1668,16 @@ export async function fetchUnitProgressTiles(
   const tiles: UnitProgressTile[] = units.map((unit) => {
     const lessons = lessonsByUnit.get(unit.id) ?? [];
     const completedCount = lessons.filter((l) => completedSet.has(l.id)).length;
-    const lessonCount = lessons.length > 0 ? lessons.length : unit.totalLessons;
+    // Was `lessons.length > 0 ? lessons.length : unit.totalLessons` — falling
+    // back to the denormalised unit column disagreed with the Learn tab,
+    // which always counts actual lesson rows. A unit with no lesson rows is
+    // 0/0 (progress 0), not a lie borrowed from a column nothing else reads.
+    const lessonCount = lessons.length;
     const progress = lessonCount > 0 ? completedCount / lessonCount : 0;
     const nextLesson = lessons.find((l) => !completedSet.has(l.id)) ?? null;
     return {
       unitId: unit.id,
-      courseId: course.id,
+      courseId: courseId,
       title: unit.title,
       lessonCount,
       completedCount,
@@ -1599,7 +1799,6 @@ function mapLessonCompletion(row: Record<string, unknown>): LessonCompletion {
     lessonId: row.lesson_id as string,
     courseId: row.course_id as string,
     score: row.score as number,
-    xpEarned: row.xp_earned as number,
     timeSpentMs: row.time_spent_ms as number,
     completedAt: row.completed_at as string,
   };
@@ -1627,8 +1826,7 @@ export async function upsertDailyChallenges(
   userId: string,
   date: string,
   challenges: unknown[],
-  allCompleted: boolean,
-  bonusXpClaimed: boolean
+  allCompleted: boolean
 ): Promise<DailyChallengesRecord> {
   const { data, error } = await supabase
     .from('daily_challenges')
@@ -1637,25 +1835,12 @@ export async function upsertDailyChallenges(
       date,
       challenges,
       all_completed: allCompleted,
-      bonus_xp_claimed: bonusXpClaimed,
     }, { onConflict: 'user_id,date' })
     .select()
     .single();
 
   if (error) throw error;
   return mapDailyChallengesRecord(data);
-}
-
-/**
- * Atomically claim today's daily-challenge bonus XP server-side. The RPC
- * validates completion + double-claim and
- * grants the XP (migration 043) — clients cannot write XP directly.
- */
-export async function claimDailyChallengeBonus(): Promise<{ bonusXp: number; totalXp: number }> {
-  const { data, error } = await supabase.rpc('claim_daily_challenge_bonus');
-  if (error) throw error;
-  const row = Array.isArray(data) ? data[0] : data;
-  return { bonusXp: (row?.bonus_xp as number) ?? 0, totalXp: (row?.total_xp as number) ?? 0 };
 }
 
 function mapDailyChallengesRecord(row: Record<string, unknown>): DailyChallengesRecord {
@@ -1665,7 +1850,6 @@ function mapDailyChallengesRecord(row: Record<string, unknown>): DailyChallenges
     date: row.date as string,
     challenges: row.challenges as DailyChallengesRecord['challenges'],
     allCompleted: (row.all_completed as boolean) ?? false,
-    bonusXpClaimed: (row.bonus_xp_claimed as boolean) ?? false,
   };
 }
 
@@ -1821,6 +2005,9 @@ export async function addCardFromAnnotation(
   }
 
   if (!cardId) {
+    // Never file an untagged card — see fallbackCardBand. Books and passages
+    // normally carry a tag; this covers the ones that do not.
+    const band = cefrLevel ?? (await fallbackCardBand());
     const { data: card, error: cardError } = await supabase
       .from('cards')
       .insert({
@@ -1833,7 +2020,7 @@ export async function addCardFromAnnotation(
         audio_url: annotation.audioUrl,
         part_of_speech: annotation.partOfSpeech,
         language: language ?? null,
-        cefr_level: cefrLevel ?? null,
+        cefr_level: band,
         // Tokenized here rather than in SQL so the coverage ranking
         // (migration 096) intersects against terms produced by the SAME
         // tokenizer the corpus build used. A Postgres approximation of
@@ -1949,8 +2136,6 @@ export async function updateWritingFeedback(
 // the `daily-news-cron` service-role function on a 5 AM ET schedule. All
 // users at the same language+tier see the same article that day.
 
-import type { NewsTier } from '../config/app';
-
 export async function fetchDailyNews(
   language: string,
   tier: NewsTier,
@@ -2045,6 +2230,59 @@ export async function fetchNewsReadStatus(
 
   if (error && error.code !== 'PGRST116') throw error;
   return data?.read_at ?? null;
+}
+
+/**
+ * Grade the comprehension check and store it as reading evidence.
+ *
+ * `answers[i]` is the chosen option index (0–3) for `article.questions[i]`.
+ * The grading happens in `record_news_reading` (migration 129) against the
+ * stored questions — the client never learns or sends the correct index. The
+ * first submission is the one that counts: a repeat (a retried timeout, a
+ * reopened article) returns the stored row unchanged, so callers may retry
+ * freely.
+ */
+export async function recordNewsReading(articleId: string, answers: number[]): Promise<NewsReadingResult> {
+  const { data, error } = await supabase.rpc('record_news_reading', {
+    p_article_id: articleId,
+    p_answers: answers,
+  });
+  if (error) throw error;
+  if (!data) throw new Error('record_news_reading returned no row');
+  return mapNewsReadingResult(data as Record<string, unknown>);
+}
+
+/**
+ * The stored result for an article the learner already checked, or null.
+ * Read on open so a finished check renders finished rather than inviting a
+ * second attempt the server would ignore.
+ */
+export async function fetchNewsReadingResult(
+  userId: string,
+  articleId: string,
+): Promise<NewsReadingResult | null> {
+  const { data, error } = await supabase
+    .from('news_reading_results')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('article_id', articleId)
+    .maybeSingle();
+
+  if (error && error.code !== 'PGRST116') throw error;
+  return data ? mapNewsReadingResult(data as Record<string, unknown>) : null;
+}
+
+function mapNewsReadingResult(row: Record<string, unknown>): NewsReadingResult {
+  return {
+    id: row.id as string,
+    userId: row.user_id as string,
+    articleId: row.article_id as string,
+    targetLanguage: row.target_language as string,
+    cefrLevel: row.cefr_level as string,
+    comprehension: Number(row.comprehension),
+    questionsTotal: Number(row.questions_total),
+    completedAt: row.completed_at as string,
+  };
 }
 
 /**
@@ -2247,8 +2485,14 @@ export async function fetchCohortLeaderboard(): Promise<LeaderboardRow[]> {
  * at, and that course's single unit with its lessons. The lessons carry
  * `generation_state`, so the caller can tell a lesson that is ready to open
  * from a shell that still needs building.
+ *
+ * A SECOND round trip attaches the learner's completions. `lesson_completions`
+ * has no foreign key to `lessons` (a completion outlives its curriculum row —
+ * see `fetchCompletedLessonsWithTitles`), so PostgREST cannot embed it; and a
+ * track's lessons are shared while its completions are the learner's own, so
+ * they would not belong in the same embed anyway.
  */
-export async function fetchGoalTrack(userId: string): Promise<GoalTrack | null> {
+export async function fetchGoalTrack(userId: string): Promise<GoalTrackProgress | null> {
   const { data, error } = await supabase
     .from('user_goal_tracks')
     .select(
@@ -2282,16 +2526,38 @@ export async function fetchGoalTrack(userId: string): Promise<GoalTrack | null> 
   // A goal track has exactly one unit (migration 099), but sort rather than
   // assume — a future "extended on completion" track may add a second.
   const units = [...(course.units ?? [])].sort((a, b) => a.order_index - b.order_index);
-  const lessons = units
+  const lessonRows = units
     .flatMap((u) => u.lessons ?? [])
-    .sort((a, b) => a.order_index - b.order_index)
-    .map((l) => ({
-      id: l.id,
-      title: l.title,
-      description: l.description,
-      orderIndex: l.order_index,
-      generationState: (l.generation_state as GoalTrack['lessons'][number]['generationState']) ?? null,
-    }));
+    .sort((a, b) => a.order_index - b.order_index);
+
+  // Completions are unique per (user, lesson), so the id list bounds the
+  // result exactly and `.limit(ids.length)` is a runaway guard, not a page.
+  const completionByLesson = new Map<string, GoalLessonCompletion>();
+  if (lessonRows.length > 0) {
+    const lessonIds = lessonRows.map((l) => l.id);
+    const { data: completions, error: completionsError } = await supabase
+      .from('lesson_completions')
+      .select('lesson_id, score, completed_at')
+      .eq('user_id', userId)
+      .in('lesson_id', lessonIds)
+      .limit(lessonIds.length);
+    if (completionsError) throw completionsError;
+    for (const row of completions ?? []) {
+      completionByLesson.set(row.lesson_id as string, {
+        score: typeof row.score === 'number' ? row.score : null,
+        completedAt: row.completed_at as string,
+      });
+    }
+  }
+
+  const lessons: GoalTrackLesson[] = lessonRows.map((l) => ({
+    id: l.id,
+    title: l.title,
+    description: l.description,
+    orderIndex: l.order_index,
+    generationState: (l.generation_state as GoalTrack['lessons'][number]['generationState']) ?? null,
+    completion: completionByLesson.get(l.id) ?? null,
+  }));
 
   return {
     courseId: course.id,
@@ -2635,12 +2901,34 @@ function mapDailyNewsArticle(row: Record<string, unknown>): DailyNewsArticle {
       ? (row.audio_status as NewsAudioStatus)
       : null,
     audioDurationMs: typeof row.audio_duration_ms === 'number' ? row.audio_duration_ms : null,
+    questions: mapNewsQuestions(row.questions),
   };
 }
 
 /** The states `audio_status` may hold (migration 079). NULL — a row that
  *  predates the podcast feature — is deliberately absent: it maps to null. */
 const NEWS_AUDIO_STATUSES = ['pending', 'generating', 'ready', 'failed'];
+
+/**
+ * The stored shape is validated by the cron before the write, but the mapper
+ * re-checks rather than casts: a quiz with three options would render a
+ * question nobody can answer. The `answer` index is dropped on purpose — see
+ * the `questions` field on DailyNewsArticle.
+ */
+function mapNewsQuestions(raw: unknown): NewsComprehensionQuestion[] | null {
+  if (!Array.isArray(raw) || raw.length === 0) return null;
+  const out: NewsComprehensionQuestion[] = [];
+  for (const q of raw) {
+    if (!q || typeof q !== 'object') return null;
+    const { question, options } = q as { question?: unknown; options?: unknown };
+    if (typeof question !== 'string' || !question.trim()) return null;
+    if (!Array.isArray(options) || options.length !== 4 || !options.every((o) => typeof o === 'string' && o.trim())) {
+      return null;
+    }
+    out.push({ question, options: options as string[] });
+  }
+  return out;
+}
 
 // ─── Avatar ─────────────────────────────────────────────────────
 
@@ -2662,6 +2950,104 @@ export async function getAvatarImageUrl(path: string, expiresInSeconds = 3600): 
     return null;
   }
   return data?.signedUrl ?? null;
+}
+
+/**
+ * One poll of an avatar generation job. Null when the row is not visible —
+ * which under RLS means it is not this user's, or was pruned.
+ */
+export async function getAvatarJob(jobId: string): Promise<AvatarJob | null> {
+  const { data, error } = await supabase
+    .from('avatar_jobs')
+    .select('id, status, style_key, avatar_path, error_code, error_message')
+    .eq('id', jobId)
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  return {
+    id: data.id as string,
+    status: data.status as AvatarJob['status'],
+    styleKey: data.style_key as string,
+    avatarPath: (data.avatar_path as string | null) ?? null,
+    errorCode: (data.error_code as string | null) ?? null,
+    errorMessage: (data.error_message as string | null) ?? null,
+  };
+}
+
+/**
+ * Every photo avatar this learner has generated and still owns, newest first,
+ * as storage paths for `useAvatarImage` to sign.
+ *
+ * Read from the bucket, not from `avatar_jobs`: job rows are retention-pruned
+ * by the edge function, while the objects are the thing itself. The listing is
+ * scoped to the learner's folder, which is exactly what the storage SELECT
+ * policy (migration 067) grants. Throws on failure — an empty gallery and an
+ * unreachable one must not look alike (CLAUDE.md §5).
+ */
+export async function listGeneratedAvatars(userId: string): Promise<string[]> {
+  const { data, error } = await supabase.storage
+    .from('avatars')
+    .list(userId, { limit: 50, sortBy: { column: 'created_at', order: 'desc' } });
+  if (error) throw error;
+  return (data ?? [])
+    // Folder placeholders and anything that is not a rendered image are skipped.
+    .filter((o) => typeof o.name === 'string' && /\.(png|jpe?g|webp)$/i.test(o.name))
+    .map((o) => `${userId}/${o.name}`);
+}
+
+/**
+ * Put a previously generated avatar back on the profile.
+ *
+ * The client may write this because the path only ever resolves through the
+ * owner-scoped storage policy: a path into someone else's folder cannot be
+ * signed, so the worst a forged write achieves is the initials fallback.
+ */
+export async function setGeneratedAvatar(userId: string, path: string): Promise<void> {
+  const { error } = await supabase
+    .from('user_profiles')
+    .update({
+      avatar_kind: 'generated',
+      avatar_image_path: path,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('user_id', userId);
+  if (error) throw error;
+}
+
+/**
+ * Delete one generated portrait for good.
+ *
+ * Owner-scoped by the storage DELETE policy on the `avatars` bucket (the first
+ * path segment must be the caller's uid), so the path is checked here only to
+ * fail fast on a programming error, not as the security boundary. The remove
+ * call resolves without error for a path that is already gone, which is the
+ * idempotent outcome a double-tap needs.
+ */
+export async function deleteGeneratedAvatar(userId: string, path: string): Promise<void> {
+  if (!path.startsWith(`${userId}/`)) {
+    throw new Error('Refusing to delete an avatar outside the caller’s folder');
+  }
+  const { error } = await supabase.storage.from('avatars').remove([path]);
+  if (error) throw error;
+}
+
+/**
+ * Detach a generated portrait from the profile without choosing anything else
+ * — the learner falls back to initials until they pick again. Used after the
+ * portrait on the profile is deleted, so `avatar_image_path` never points at
+ * an object that no longer exists.
+ */
+export async function clearGeneratedAvatar(userId: string): Promise<void> {
+  const { error } = await supabase
+    .from('user_profiles')
+    .update({
+      avatar_kind: 'procedural',
+      avatar_image_path: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('user_id', userId);
+  if (error) throw error;
 }
 
 /** Switch the account back to the procedural SVG avatar or a bundled preset. */
@@ -2972,6 +3358,9 @@ export interface ChatSession {
   scenarioKey: string;
   targetLanguage: string;
   level: string;
+  /** 1..4 for a mission attempt, null for free chat and assignments
+   *  (migration 126). Informational — the attempt row is authoritative. */
+  missionStage: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -2983,13 +3372,16 @@ export async function getOrCreateChatSession(
   targetLanguage: string,
   level: string
 ): Promise<ChatSession> {
-  // Try to find an existing session for this scenario
+  // Try to find an existing session for this scenario. `.is('mission_stage',
+  // null)` is load-bearing: mission attempts are their own rows on the same
+  // scenario key, and an assignment on `restaurant` must never resume one.
   const { data: existing } = await supabase
     .from('chat_sessions')
     .select('*')
     .eq('user_id', userId)
     .eq('scenario_key', scenarioKey)
     .eq('target_language', targetLanguage)
+    .is('mission_stage', null)
     .order('updated_at', { ascending: false })
     .limit(1)
     .single();
@@ -3113,6 +3505,31 @@ async function findExistingLearnerCard(
   return data && data.length > 0 ? (data[0].id as string) : null;
 }
 
+/**
+ * The band a learner-created card is filed under when its caller had none.
+ *
+ * `analyzeBands` skips a card with a null `cefr_level`, so an untagged card
+ * exists, gets reviewed, and never counts toward the learner's own measured
+ * vocabulary. The two creation paths below take a band from their caller — a
+ * conversation's band, a passage's or book's tag — and this is the fallback
+ * for the cases that still arrive with nothing: an untagged book, a caller
+ * that predates the parameter. The learner's own conversation band (measured
+ * > placement > declared) is an honest guess for material they chose to
+ * study; null is a guarantee the card never counts.
+ *
+ * The store is loaded lazily because `stores/useAppStore` imports this module
+ * for its fetches, and a static import back would be a cycle.
+ */
+async function fallbackCardBand(): Promise<string> {
+  const { useAppStore } = await import('../stores/useAppStore');
+  const { profile, measuredBand } = useAppStore.getState();
+  return conversationCefrBand({
+    measuredBand,
+    placementBand: profile?.placementBand,
+    level: profile?.level,
+  });
+}
+
 /** Save a correction as an SRS card so the user can review it later.
  *  Uses the corrected phrase as target_text and the explanation/shortLabel
  *  as native_text. Creates both the card and a fresh review_item.
@@ -3154,6 +3571,9 @@ export async function saveCorrectionAsCard(params: {
   // Native text prefers shortLabel (concise) but falls back to explanation.
   const nativeText = shortLabel.trim() || explanation.trim().slice(0, 200) || 'Correction';
 
+  // Never file an untagged card — see fallbackCardBand.
+  const band = cefrLevel ?? (await fallbackCardBand());
+
   const { data: card, error: cardErr } = await supabase
     .from('cards')
     .insert({
@@ -3170,7 +3590,7 @@ export async function saveCorrectionAsCard(params: {
       tags: ['correction', 'chat'],
       language: targetLanguage,
       // Files the card in a band so it counts toward measured vocabulary.
-      cefr_level: cefrLevel ?? null,
+      cefr_level: band,
       skill_type: 'grammar',
       source_type: 'manual',
     })
@@ -3223,9 +3643,124 @@ function mapChatSession(row: Record<string, unknown>): ChatSession {
     scenarioKey: row.scenario_key as string,
     targetLanguage: row.target_language as string,
     level: row.level as string,
+    missionStage: typeof row.mission_stage === 'number' ? row.mission_stage : null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };
+}
+
+// ─── Chat Missions ───────────────────────────────────────────────
+//
+// Progression is server-owned (migration 126): the client INSERTS the chat
+// session an attempt lives in — the same client-managed row every chat has —
+// and only ever READS the attempt and progress tables. `ai-chat` creates the
+// attempt row on the first turn and finishes it on the Finish turn.
+
+/**
+ * A fresh session for one mission attempt. Always inserts: every attempt is
+ * its own row, so a learner can retry a stage without resuming the failed
+ * attempt's transcript. Resuming an OPEN attempt goes through
+ * `fetchOpenMissionAttempts` instead.
+ */
+export async function createMissionAttemptSession(
+  userId: string,
+  scenarioKey: string,
+  stage: number,
+  targetLanguage: string,
+  level: string
+): Promise<ChatSession> {
+  const { data, error } = await supabase
+    .from('chat_sessions')
+    .insert({
+      user_id: userId,
+      scenario_key: scenarioKey,
+      target_language: targetLanguage,
+      level,
+      mission_stage: stage,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return mapChatSession(data);
+}
+
+export interface MissionProgressRow {
+  scenarioKey: string;
+  stage: number;
+  attempts: number;
+  bestAccuracy: number | null;
+  passedAt: string | null;
+}
+
+/** Every (scene, stage) the learner has attempted in this language. ≤ 32 rows. */
+export async function fetchMissionProgress(
+  userId: string,
+  targetLanguage: string
+): Promise<MissionProgressRow[]> {
+  const { data, error } = await supabase
+    .from('chat_mission_progress')
+    .select('scenario_key, stage, attempts, best_accuracy, passed_at')
+    .eq('user_id', userId)
+    .eq('target_language', targetLanguage)
+    .limit(40);
+
+  if (error) throw error;
+  return (data ?? []).map((row) => ({
+    scenarioKey: row.scenario_key as string,
+    stage: row.stage as number,
+    attempts: row.attempts as number,
+    bestAccuracy: row.best_accuracy === null ? null : Number(row.best_accuracy),
+    passedAt: (row.passed_at as string | null) ?? null,
+  }));
+}
+
+export interface OpenMissionAttempt {
+  chatSessionId: string;
+  scenarioKey: string;
+  stage: number;
+  objectivesMet: string[];
+  startedAt: string;
+}
+
+/** Attempts started and not yet finished, newest first. Seeds a resumed checklist. */
+export async function fetchOpenMissionAttempts(
+  userId: string,
+  targetLanguage: string
+): Promise<OpenMissionAttempt[]> {
+  const { data, error } = await supabase
+    .from('chat_mission_attempts')
+    .select('chat_session_id, scenario_key, stage, objectives_met, started_at')
+    .eq('user_id', userId)
+    .eq('target_language', targetLanguage)
+    .is('finished_at', null)
+    .order('started_at', { ascending: false })
+    .limit(20);
+
+  if (error) throw error;
+  return (data ?? []).map((row) => ({
+    chatSessionId: row.chat_session_id as string,
+    scenarioKey: row.scenario_key as string,
+    stage: row.stage as number,
+    objectivesMet: Array.isArray(row.objectives_met) ? (row.objectives_met as string[]) : [],
+    startedAt: row.started_at as string,
+  }));
+}
+
+/**
+ * The stored debrief for a finished attempt, or null while it is still open
+ * (or was never a mission). The debrief screen's source of truth on a cold
+ * open; the Finish turn's inline copy is only a latency shortcut over it.
+ */
+export async function fetchMissionResult(chatSessionId: string): Promise<MissionResult | null> {
+  const { data, error } = await supabase
+    .from('chat_mission_attempts')
+    .select('result')
+    .eq('chat_session_id', chatSessionId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return (data?.result as MissionResult | null) ?? null;
 }
 
 // ─── School System ──────────────────────────────────────────────
@@ -3565,13 +4100,7 @@ export async function exportClassroomGradebookCsv(classroomId: string): Promise<
   );
 
   const rows: string[] = ['student,email,assignment,kind,status,final_score,max_points,submitted_at'];
-  const esc = (s: string | number | null | undefined) => {
-    if (s == null) return '';
-    const str = String(s);
-    return str.includes(',') || str.includes('"') || str.includes('\n')
-      ? `"${str.replace(/"/g, '""')}"`
-      : str;
-  };
+  const esc = escapeSpreadsheetCsvCell;
   for (const row of submissions ?? []) {
     const a = assignmentById.get(row.assignment_id as string);
     if (!a) continue;
@@ -3812,5 +4341,296 @@ export async function reportAiContent(params: {
     user_comment: params.comment?.slice(0, 1000) ?? null,
     context: params.context ?? {},
   });
+  if (error) throw error;
+}
+
+// ─── Tutor Sessions ─────────────────────────────────────────────
+// The learner's own view of `tutor_sessions` (migration 107). Owner-readable
+// via RLS and deliberately read-only: `granted_cents` and `observed_seconds`
+// ARE the spend ceiling's accounting and `debrief` is model output, so there
+// is no INSERT/UPDATE/DELETE policy at all. Everything that writes this table
+// writes it from the `tutor-session` edge function under the service role.
+//
+// It grows without bound — one row per call, forever — so every query here
+// takes a `.limit()`, per the rule in CLAUDE.md §4.
+
+/** A finished call, as the home screen wants to mention it. */
+export interface LastTutorSession {
+  /** Whole minutes, floored at 1: a 40-second call is a short call, not none. */
+  minutes: number;
+  /** The debrief's `highlight` — the one thing that went well. Null when the
+   *  session has no debrief yet (still being analysed, or the transcript
+   *  buffer expired before `end` ran). */
+  headline: string | null;
+}
+
+/**
+ * The learner's most recent COMPLETED tutor session.
+ *
+ * Open sessions are excluded on `ended_at`: an in-flight call has no observed
+ * duration and no debrief, so surfacing it would render "0 minutes" next to an
+ * empty headline. `end_reason` is read but not filtered on — a session that
+ * ended on 'budget' or 'safety' still happened and the learner still spoke.
+ */
+export async function fetchLastTutorSession(
+  userId: string,
+): Promise<LastTutorSession | null> {
+  const { data, error } = await supabase
+    .from('tutor_sessions')
+    .select('observed_seconds, debrief, ended_at')
+    .eq('user_id', userId)
+    .not('ended_at', 'is', null)
+    .order('ended_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+
+  return {
+    minutes: tutorMinutesFromSeconds(data.observed_seconds as number | null),
+    headline: tutorHeadline(data.debrief),
+  };
+}
+
+/**
+ * One session by id.
+ *
+ * No `user_id` filter here and none is needed — the RLS policy is
+ * `(select auth.uid()) = user_id`, so another learner's id returns no rows
+ * rather than someone else's debrief. `.limit(1)` regardless: `id` is the
+ * primary key so it cannot return more, and the rule does not have exceptions
+ * worth remembering per call site.
+ *
+ * `minutes` comes from `observed_seconds` — the same number the ledger bills
+ * against — rather than from `debrief.minutesSpoken`, which the writer already
+ * overwrites from the server measurement. Reading the column keeps them one
+ * value even if an older row was written before that was true.
+ */
+export async function fetchTutorSessionSummary(
+  sessionId: string,
+): Promise<TutorSessionSummary | null> {
+  const { data, error } = await supabase
+    .from('tutor_sessions')
+    .select('id, observed_seconds, debrief, ended_at')
+    .eq('id', sessionId)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+
+  return {
+    sessionId: data.id as string,
+    minutes: tutorMinutesFromSeconds(data.observed_seconds as number | null),
+    debrief: asTutorDebrief(data.debrief),
+    // Null means the session is still open. The debrief screen polls on
+    // exactly this: a null `endedAt` with a null `debrief` is "still being
+    // written", where a set `endedAt` with a null `debrief` is "there will
+    // not be one" — two states that look identical without this column.
+    endedAt: (data.ended_at as string | null) ?? null,
+  };
+}
+
+/**
+ * Seconds the server observed → whole minutes to show.
+ *
+ * Floored at 1 for anything that actually happened. Rounding a 40-second call
+ * to "0 minutes" reads as a bug rather than as a short session — the same
+ * choice `end.ts` makes server-side, kept identical so the debrief screen and
+ * the home screen cannot disagree about one call.
+ */
+function tutorMinutesFromSeconds(seconds: number | null): number {
+  const s = typeof seconds === 'number' && Number.isFinite(seconds) ? seconds : 0;
+  if (s <= 0) return 0;
+  return Math.max(1, Math.round(s / 60));
+}
+
+/** The debrief's headline, or nothing. Never a placeholder sentence — the
+ *  caller decides what an unanalysed session looks like, and it is not the
+ *  same thing as a session whose highlight happened to be empty. */
+function tutorHeadline(debrief: unknown): string | null {
+  const parsed: TutorDebrief | null = asTutorDebrief(debrief);
+  const headline = parsed?.highlight.trim() ?? '';
+  return headline.length > 0 ? headline : null;
+}
+
+// ─── Learner Insights ───────────────────────────────────────────
+// The learner's own view of what the tutor already knows about them. Every
+// read here mirrors a fetch in `supabase/functions/_shared/learner-context.ts`
+// — same tables, same windows — so Home shows the list the tutor was told,
+// not a second opinion. Ranking lives in `lib/insights.ts` (pure, tested);
+// this section only fetches rows under the learner's own RLS scope.
+//
+// `correction_log` grows one row per correction forever and `review_items` one
+// per card, so every query here carries a `.limit()` (CLAUDE.md §4).
+
+/** How far back a mistake counts as "recurring". Same as the server. */
+export const INSIGHTS_WINDOW_DAYS = 30;
+
+/**
+ * Recent correction rows for one language, newest first, capped. Aggregation
+ * happens in memory (`rankRecurringMistakes`) because supabase-js has no
+ * GROUP BY and the `(user_id, short_label, created_at)` index keeps this a
+ * narrow scan.
+ */
+export async function fetchRecentCorrections(
+  userId: string,
+  targetLanguage: string,
+  opts: { days?: number; limit?: number } = {},
+): Promise<CorrectionLogRow[]> {
+  const days = opts.days ?? INSIGHTS_WINDOW_DAYS;
+  const since = new Date();
+  since.setDate(since.getDate() - days);
+
+  const { data, error } = await supabase
+    .from('correction_log')
+    .select('short_label, error_type, original, corrected, explanation, created_at')
+    .eq('user_id', userId)
+    .in('target_language', languageVariants(targetLanguage))
+    .gte('created_at', since.toISOString())
+    .not('short_label', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(opts.limit ?? 400);
+
+  if (error) throw error;
+  return (data ?? []).map((row: Record<string, unknown>) => ({
+    shortLabel: (row.short_label as string | null) ?? null,
+    errorType: (row.error_type as string) ?? 'other',
+    original: (row.original as string | null) ?? null,
+    corrected: (row.corrected as string | null) ?? null,
+    explanation: (row.explanation as string | null) ?? null,
+    createdAt: row.created_at as string,
+  }));
+}
+
+/**
+ * Review items the learner keeps failing, with their cards. Two bounded
+ * queries on two index paths rather than one nested `.or(and(...))` — the same
+ * call the server makes, for the same reason: a mistyped PostgREST boolean
+ * fails the whole read. The candidate set is filtered and ranked in memory by
+ * `rankStrugglingWords`, which also drops never-reviewed cards.
+ */
+export async function fetchStrugglingReviewItems(
+  userId: string,
+  limit = 40,
+): Promise<{ item: ReviewItem; card: Card }[]> {
+  const columns = '*, cards!inner(*)';
+  const [lowEase, stalled, leeches] = await Promise.all([
+    supabase
+      .from('review_items')
+      .select(columns)
+      .eq('user_id', userId)
+      .lt('ease_factor', 2.2)
+      .not('last_reviewed_at', 'is', null)
+      .order('ease_factor', { ascending: true })
+      .limit(limit),
+    supabase
+      .from('review_items')
+      .select(columns)
+      .eq('user_id', userId)
+      .eq('status', 'learning')
+      .eq('repetitions', 0)
+      .not('last_reviewed_at', 'is', null)
+      .order('last_reviewed_at', { ascending: false })
+      .limit(limit),
+    supabase
+      .from('review_items')
+      .select(columns)
+      .eq('user_id', userId)
+      .eq('status', 'leech')
+      .limit(limit),
+  ]);
+
+  for (const result of [lowEase, stalled, leeches]) {
+    if (result.error) throw result.error;
+  }
+
+  const seen = new Set<string>();
+  const out: { item: ReviewItem; card: Card }[] = [];
+  for (const result of [leeches, stalled, lowEase]) {
+    for (const row of (result.data ?? []) as Record<string, unknown>[]) {
+      const id = row.id as string;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      out.push({ item: mapReviewItem(row), card: mapCard(row.cards as Record<string, unknown>) });
+    }
+  }
+  return out;
+}
+
+/**
+ * Cards the learner has answered correctly at least once since learning them
+ * (`review` or `graduated`). A count, not a score: it is the "you know 412
+ * words" number, and it only ever goes up.
+ */
+export async function fetchLearnedCardCount(userId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from('review_items')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .in('status', ['review', 'graduated']);
+
+  if (error) throw error;
+  return count ?? 0;
+}
+
+// ─── Tutor Memory ───────────────────────────────────────────────
+// `tutor_memory` (migration 108): what the live tutor remembers about a
+// learner between sessions. Read and DELETE belong to the learner; there is
+// deliberately no client insert or update, because a note is injected into a
+// future system prompt and a learner who could author one could steer the
+// tutor. Pruned server-side to 24 notes per language, so the limit below is a
+// ceiling, not a page.
+
+const TUTOR_MEMORY_KINDS: ReadonlySet<string> = new Set<TutorMemoryKind>([
+  'personal_fact', 'goal', 'recurring_error', 'preference', 'topic_thread',
+]);
+
+function mapTutorMemory(row: Record<string, unknown>): TutorMemory {
+  const kind = row.kind as string;
+  return {
+    id: row.id as string,
+    targetLanguage: row.target_language as string,
+    kind: TUTOR_MEMORY_KINDS.has(kind) ? (kind as TutorMemoryKind) : 'topic_thread',
+    content: row.content as string,
+    mentionCount: (row.mention_count as number) ?? 1,
+    firstSeenAt: row.first_seen_at as string,
+    lastSeenAt: row.last_seen_at as string,
+  };
+}
+
+/** Every note the tutor holds for this learner in one language, most-mentioned first. */
+export async function fetchTutorMemories(userId: string, targetLanguage: string): Promise<TutorMemory[]> {
+  const { data, error } = await supabase
+    .from('tutor_memory')
+    .select('id, target_language, kind, content, mention_count, first_seen_at, last_seen_at')
+    .eq('user_id', userId)
+    .in('target_language', languageVariants(targetLanguage))
+    .order('mention_count', { ascending: false })
+    .order('last_seen_at', { ascending: false })
+    .limit(50);
+
+  if (error) throw error;
+  return (data ?? []).map(mapTutorMemory);
+}
+
+/** Make the tutor forget one note. The row is derived, so nothing else is lost. */
+export async function deleteTutorMemory(userId: string, id: string): Promise<void> {
+  const { error } = await supabase
+    .from('tutor_memory')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', userId);
+  if (error) throw error;
+}
+
+/** Make the tutor forget everything it holds for this learner in one language. */
+export async function deleteAllTutorMemories(userId: string, targetLanguage: string): Promise<void> {
+  const { error } = await supabase
+    .from('tutor_memory')
+    .delete()
+    .eq('user_id', userId)
+    .in('target_language', languageVariants(targetLanguage));
   if (error) throw error;
 }

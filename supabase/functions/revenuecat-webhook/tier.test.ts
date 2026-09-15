@@ -12,7 +12,7 @@
 // `starter`. There is no error to notice.
 
 import { assertEquals } from 'https://deno.land/std@0.168.0/testing/asserts.ts';
-import { resolveTier, classifyEvent } from './tier.ts';
+import { resolveTier, classifyEvent, isRevocation } from './tier.ts';
 
 // ------------------------------------------------------------ resolveTier
 
@@ -103,17 +103,9 @@ Deno.test('classifyEvent: expiry revokes access', () => {
   });
 });
 
-Deno.test('classifyEvent: BILLING_ISSUE currently revokes access immediately', () => {
-  // Documents CURRENT behaviour, and it is worth questioning: BILLING_ISSUE
-  // fires at the START of a billing problem, while the store grace period
-  // may still entitle the user. See LAUNCH-READINESS-AUDIT P1-3 — the
-  // suggested change is to let EXPIRATION do the downgrade and treat this as
-  // a flag only. Change this test deliberately if that lands.
-  assertEquals(classifyEvent('BILLING_ISSUE', ['premium'], null), {
-    tier: 'starter',
-    isActive: false,
-    cancelAtPeriodEnd: false,
-  });
+Deno.test('classifyEvent: billing and pause signals do not revoke paid access', () => {
+  assertEquals(classifyEvent('BILLING_ISSUE', ['premium'], null), null);
+  assertEquals(classifyEvent('SUBSCRIPTION_PAUSED', ['premium'], null), null);
 });
 
 Deno.test('classifyEvent: TEST and TRANSFER change nothing', () => {
@@ -139,4 +131,25 @@ Deno.test('classifyEvent: an active event with no readable tier stays inactive',
     isActive: false,
     cancelAtPeriodEnd: false,
   });
+});
+
+// ------------------------------------------------------------ revocations
+
+Deno.test('a refund (CANCELLATION with CUSTOMER_SUPPORT) is inactive NOW, not at period end', () => {
+  const d = classifyEvent('CANCELLATION', ['vip'], 'fluenci_vip_yearly', 'CUSTOMER_SUPPORT');
+  assertEquals(d, { tier: 'starter', isActive: false, cancelAtPeriodEnd: false });
+});
+
+Deno.test('a developer revoke is a revocation on either event type', () => {
+  assertEquals(isRevocation('CANCELLATION', 'DEVELOPER_INITIATED'), true);
+  assertEquals(isRevocation('EXPIRATION', 'DEVELOPER_INITIATED'), true);
+  assertEquals(isRevocation('EXPIRATION', 'CUSTOMER_SUPPORT'), true);
+});
+
+Deno.test('an ordinary unsubscribe is NOT a revocation: still entitled until the period end', () => {
+  assertEquals(isRevocation('CANCELLATION', 'UNSUBSCRIBE'), false);
+  assertEquals(isRevocation('EXPIRATION', 'BILLING_ERROR'), false);
+  assertEquals(isRevocation('RENEWAL', 'CUSTOMER_SUPPORT'), false);
+  const d = classifyEvent('CANCELLATION', ['vip'], null, 'UNSUBSCRIBE');
+  assertEquals(d, { tier: 'vip', isActive: true, cancelAtPeriodEnd: true });
 });

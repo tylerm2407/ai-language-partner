@@ -1,5 +1,6 @@
 import { Text, View } from 'react-native';
 import { GradientBorderCard } from '../ui/GradientBorderCard';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 
 interface SectionBannerProps {
   sectionIndex: number;
@@ -8,6 +9,8 @@ interface SectionBannerProps {
 }
 
 export function SectionBanner({ sectionIndex, unitIndex, title }: SectionBannerProps) {
+  const { c } = useUi2Theme();
+
   return (
     <View style={{ paddingHorizontal: 16 }}>
       <GradientBorderCard>
@@ -16,7 +19,7 @@ export function SectionBanner({ sectionIndex, unitIndex, title }: SectionBannerP
             style={{
               fontSize: 14,
               fontWeight: '700',
-              color: '#E2E8F0',
+              color: c.ink,
               textTransform: 'uppercase',
               letterSpacing: 1,
               textAlign: 'center',

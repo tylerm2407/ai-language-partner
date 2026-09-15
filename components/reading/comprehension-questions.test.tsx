@@ -5,6 +5,14 @@ import { ComprehensionQuestions } from './ComprehensionQuestions';
 import type { ReadingQuestion } from '../../types';
 
 const mockInvoke = jest.fn();
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  __esModule: true,
+  default: {
+    setItem: jest.fn(async () => {}),
+    getItem: jest.fn(async () => null),
+    removeItem: jest.fn(async () => {}),
+  },
+}));
 jest.mock('../../lib/haptics', () => ({ haptic: jest.fn() }));
 jest.mock('../../lib/ai', () => ({ invokeWithRetry: (...a: unknown[]) => mockInvoke(...a) }));
 

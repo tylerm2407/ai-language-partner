@@ -20,10 +20,11 @@
 
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { Body, Caption } from '../ui/Text';
+import { Body, Caption } from '../ui2/Ui2Text';
 import { usePressed } from '../../hooks/usePressed';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { cefrCanDo, cefrAccessibilityLabel } from '../../lib/cefr-labels';
-import { colors, radii, spacing } from '../../config/theme';
+import { radii, spacing } from '../../config/theme';
 import type { Course } from '../../types';
 
 interface PillProps {
@@ -32,20 +33,29 @@ interface PillProps {
   onPress: () => void;
   accessibilityLabel: string;
   accessibilityRole: 'button' | 'tab';
+  /**
+   * Learn's dense header (canvas "Learn · variations", L2, 2026-09-08): a
+   * 34pt pill with the missing 10pt of the HIG target restored by hitSlop, so
+   * the row reads small and still hits at 44.
+   */
+  compact?: boolean;
 }
 
-function Pill({ label, selected, onPress, accessibilityLabel, accessibilityRole }: PillProps) {
+function Pill({ label, selected, onPress, accessibilityLabel, accessibilityRole, compact }: PillProps) {
+  const { c } = useUi2Theme();
   const { pressed, pressHandlers } = usePressed();
   return (
     <Pressable
       onPress={onPress}
       {...pressHandlers}
+      hitSlop={compact ? { top: 5, bottom: 5 } : undefined}
       accessibilityRole={accessibilityRole}
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ selected }}
       style={[
         styles.pill,
-        selected ? styles.pillSelected : styles.pillIdle,
+        compact && styles.pillCompact,
+        { backgroundColor: selected ? c.primary : c.card },
         pressed && styles.pillPressed,
       ]}
     >
@@ -67,20 +77,25 @@ interface CoursePillsProps {
   courses: Course[];
   selectedCourseId: string | null;
   onSelect: (courseId: string) => void;
+  /**
+   * Compact pills, no gutter and NO caption: the caller sits the row beside
+   * the screen title and prints the can-do line itself, under the whole row.
+   */
+  compact?: boolean;
 }
 
-export function CoursePills({ courses, selectedCourseId, onSelect }: CoursePillsProps) {
+export function CoursePills({ courses, selectedCourseId, onSelect, compact }: CoursePillsProps) {
   if (courses.length === 0) return null;
 
   const selectedCourse = courses.find((c) => c.id === selectedCourseId);
-  const canDo = cefrCanDo(selectedCourse?.cefrLevel);
+  const canDo = compact ? null : cefrCanDo(selectedCourse?.cefrLevel);
 
   return (
     <View>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.courseRow}
+        contentContainerStyle={compact ? styles.courseRowCompact : styles.courseRow}
       >
         {courses.map((course) => {
           const selected = course.id === selectedCourseId;
@@ -92,6 +107,7 @@ export function CoursePills({ courses, selectedCourseId, onSelect }: CoursePills
               onPress={() => onSelect(course.id)}
               accessibilityLabel={`${course.title}. ${cefrAccessibilityLabel(course.cefrLevel)}`}
               accessibilityRole="button"
+              compact={compact}
             />
           );
         })}
@@ -112,9 +128,10 @@ interface TabPillsProps<T extends string> {
   tabs: { key: T; label: string }[];
   activeKey: T;
   onSelect: (key: T) => void;
+  compact?: boolean;
 }
 
-export function TabPills<T extends string>({ tabs, activeKey, onSelect }: TabPillsProps<T>) {
+export function TabPills<T extends string>({ tabs, activeKey, onSelect, compact }: TabPillsProps<T>) {
   return (
     <View style={styles.tabRow} accessibilityRole="tablist">
       {tabs.map((tab) => (
@@ -125,6 +142,7 @@ export function TabPills<T extends string>({ tabs, activeKey, onSelect }: TabPil
           onPress={() => onSelect(tab.key)}
           accessibilityLabel={tab.label}
           accessibilityRole="tab"
+          compact={compact}
         />
       ))}
     </View>
@@ -139,6 +157,11 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     paddingHorizontal: spacing.md,
   },
+  courseRowCompact: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+    paddingRight: spacing.md,
+  },
   /** Aligns with the scrolling row's first pill rather than the screen edge. */
   courseCaption: {
     paddingHorizontal: spacing.md,
@@ -150,22 +173,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   pill: {
-    // 44pt Apple HIG minimum.
+    // 44pt Apple HIG minimum. Tint blocks: a filled pill, no outline.
     minHeight: 44,
     minWidth: 56,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.md,
     borderRadius: radii.pill,
-    borderWidth: 1,
   },
-  pillIdle: {
-    backgroundColor: colors.surface.card,
-    borderColor: colors.border.subtle,
-  },
-  pillSelected: {
-    backgroundColor: colors.action.primaryFill,
-    borderColor: colors.action.primaryFill,
+  pillCompact: {
+    minHeight: 34,
+    minWidth: 44,
+    paddingHorizontal: spacing.sm + 2,
   },
   pillPressed: {
     opacity: 0.8,

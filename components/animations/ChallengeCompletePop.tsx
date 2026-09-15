@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { haptic } from '../../lib/haptics';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 
 interface ChallengeCompletePopProps {
   /**
@@ -17,6 +18,7 @@ interface ChallengeCompletePopProps {
 }
 
 export function ChallengeCompletePop({ trigger }: ChallengeCompletePopProps) {
+  const { c } = useUi2Theme();
   const scale = useRef(new Animated.Value(0)).current;
   const opacity = useRef(new Animated.Value(0)).current;
   /**
@@ -60,7 +62,7 @@ export function ChallengeCompletePop({ trigger }: ChallengeCompletePopProps) {
 
   return (
     <Animated.View style={{ alignItems: 'center', justifyContent: 'center', transform: [{ scale }], opacity }}>
-      <Ionicons name="checkmark-circle" size={28} color="#34D399" />
+      <Ionicons name="checkmark-circle" size={28} color={c.green} />
     </Animated.View>
   );
 }

@@ -15,6 +15,10 @@
  * The module is mocked at its data-layer boundary so importing the store does
  * not pull in the Supabase client.
  */
+import * as queries from '../lib/supabase-queries';
+import { effectiveTier, useAppStore } from './useAppStore';
+import type { Subscription, SubscriptionTier, UserProfile } from '../types';
+
 jest.mock('../lib/supabase-queries', () => ({
   fetchProfile: jest.fn(),
   fetchTodayStats: jest.fn(),
@@ -24,10 +28,6 @@ jest.mock('../lib/supabase-queries', () => ({
   fetchHasCompletedLesson: jest.fn(),
   fetchHasAiConversation: jest.fn(),
 }));
-
-import * as queries from '../lib/supabase-queries';
-import { effectiveTier, useAppStore } from './useAppStore';
-import type { Subscription, SubscriptionTier, UserProfile } from '../types';
 
 function row(tier: SubscriptionTier): Subscription {
   return {
@@ -196,9 +196,9 @@ describe('refreshReviewCount', () => {
 
 describe('patchProfile', () => {
   const base = {
-    id: 'p1', userId: 'u1', displayName: 'A', totalXp: 100, xpLevel: 2,
+    id: 'p1', userId: 'u1', displayName: 'A', dailyGoalMinutes: 10, timezone: 'UTC',
     avatarKind: 'preset', avatarPresetId: 'old',
-  } as never;
+  } as unknown as UserProfile;
 
   it('merges into the CURRENT profile, not a captured snapshot', () => {
     // The bug it exists for: `setProfile({ ...profile, x })` spreads the profile
@@ -210,31 +210,31 @@ describe('patchProfile', () => {
     // Simulate a stale closure captured before either write.
     const stale = useAppStore.getState().profile!;
 
-    useAppStore.getState().patchProfile({ totalXp: 150 });
+    useAppStore.getState().patchProfile({ dailyGoalMinutes: 150 });
     useAppStore.getState().patchProfile({ avatarPresetId: 'new' });
 
     const after = useAppStore.getState().profile!;
-    expect(after.totalXp).toBe(150);
+    expect(after.dailyGoalMinutes).toBe(150);
     expect(after.avatarPresetId).toBe('new');
 
     // The old shape would have produced this — the second write reverting the
     // first, because both spread the same pre-write snapshot.
     const whatTheSpreadWouldGive = { ...stale, avatarPresetId: 'new' };
-    expect(whatTheSpreadWouldGive.totalXp).toBe(100);
-    expect(after.totalXp).not.toBe(whatTheSpreadWouldGive.totalXp);
+    expect(whatTheSpreadWouldGive.dailyGoalMinutes).toBe(10);
+    expect(after.dailyGoalMinutes).not.toBe(whatTheSpreadWouldGive.dailyGoalMinutes);
   });
 
   it('leaves untouched fields alone', () => {
     useAppStore.setState({ profile: base });
-    useAppStore.getState().patchProfile({ totalXp: 200 });
+    useAppStore.getState().patchProfile({ dailyGoalMinutes: 200 });
     const after = useAppStore.getState().profile!;
     expect(after.displayName).toBe('A');
-    expect(after.xpLevel).toBe(2);
+    expect(after.timezone).toBe('UTC');
   });
 
   it('is a no-op with no profile loaded — a partial cannot construct one', () => {
     useAppStore.setState({ profile: null });
-    useAppStore.getState().patchProfile({ totalXp: 999 });
+    useAppStore.getState().patchProfile({ dailyGoalMinutes: 999 });
     expect(useAppStore.getState().profile).toBeNull();
   });
 });

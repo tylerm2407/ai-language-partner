@@ -5,38 +5,39 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { fetchLessonWithExercises } from '../../../lib/supabase-queries';
 import { cachedFetch, readCacheKey } from '../../../lib/read-cache';
+import { touchPack } from '../../../lib/offline-packs';
 import { orderExercisesForCognitiveLoad, lessonIsAlreadyOrdered } from '../../../lib/lesson-ordering';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAppStore } from '../../../stores/useAppStore';
-import { useProfile } from '../../../hooks/useProfile';
 import { useDailyStats } from '../../../hooks/useDailyStats';
-import { useLevel } from '../../../hooks/useLevel';
+import { useActiveTime } from '../../../hooks/useActiveTime';
 import { useLessonProgress } from '../../../hooks/useLessonProgress';
 import { useOnboardingChecklist } from '../../../hooks/useOnboardingChecklist';
 import { LessonRunner, type LessonResult } from '../../../components/lesson/LessonRunner';
 import { AchievementModal } from '../../../components/gamification/AchievementModal';
 import { checkAndAwardAchievements, type AchievementDefinition } from '../../../lib/achievements';
-import { lessonXpKey } from '../../../lib/offline-queue';
 import { getTargetLanguage } from '../../../lib/language';
 import { useSafeBack } from '../../../hooks/useSafeBack';
-import { Button } from '../../../components/ui/Button';
-import { Body } from '../../../components/ui/Text';
-import { GradientBackground } from '../../../components/ui/GradientBackground';
-import { colors, spacing } from '../../../config/theme';
+import { SlabButton } from '../../../components/ui2/SlabButton';
+import { Body } from '../../../components/ui2/Ui2Text';
+// `colors` is deliberately NOT imported: it is the fixed DARK palette, and a
+// screen that reads it stays dark whatever the phone is set to. `spacing` is a
+// plain scheme-independent number set and carries over unchanged.
+import { spacing } from '../../../config/theme';
+import { useUi2Theme } from '../../../hooks/useUi2Theme';
 import type { Lesson } from '../../../types';
 import { useScreenView } from '../../../hooks/useScreenView';
 import { trackEvent } from '../../../lib/analytics';
 
 export default function LessonScreen() {
   useScreenView('lesson');
+  const { c } = useUi2Theme();
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
   const router = useRouter();
   const goBack = useSafeBack('/(app)');
   const { user } = useAuth();
   const { profile } = useAppStore();
-  const { earnXp } = useProfile();
   const { addStats } = useDailyStats();
-  const { dismissLevelUp } = useLevel();
   const { markLessonComplete } = useLessonProgress();
   const { markItem: markOnboardingItem } = useOnboardingChecklist();
   const [lesson, setLesson] = useState<Lesson | null>(null);
@@ -45,7 +46,15 @@ export default function LessonScreen() {
   const [, setAchievementQueue] = useState<AchievementDefinition[]>([]);
   // How the finished lesson was recorded — drives the sync notice below.
   const [saveState, setSaveState] = useState<'idle' | 'saved' | 'queued' | 'failed'>('idle');
+  // A retake: the server keeps the better of the two scores (migration 128),
+  // and silence about that reads as the new score having replaced it.
+  const [retake, setRetake] = useState(false);
   const [showingAchievement, setShowingAchievement] = useState<AchievementDefinition | null>(null);
+
+  // Counts only once the lesson is actually on screen — time on the spinner or
+  // the load-error state is not practice. Pauses on background and writes
+  // `minutes_practiced` on the way out. See hooks/useActiveTime.ts.
+  useActiveTime({ kind: 'lesson', enabled: !loading && !loadError });
 
   const loadLesson = useCallback(() => {
     if (!lessonId) return;
@@ -61,11 +70,12 @@ export default function LessonScreen() {
     ).then(({ data }) => {
       setLesson(data);
       setLoading(false);
+      if (data && user?.id) void touchPack(user.id, 'unit', data.unitId);
     }).catch((err) => {
       setLoadError(err instanceof Error ? err.message : 'Failed to load lesson');
       setLoading(false);
     });
-  }, [lessonId]);
+  }, [lessonId, user?.id]);
 
   useEffect(() => {
     loadLesson();
@@ -118,17 +128,17 @@ export default function LessonScreen() {
   //
   // The paywall used to fire from here, on the first completed lesson. It
   // does not any more: the first lesson happens before the account exists
-  // (app/(public)/onboarding.tsx) and the ask lands right after sign-up and
-  // the free avatar. Finishing a lesson in the app is now just finishing a
+  // (app/(public)/onboarding.tsx) and the ask lands right after sign-up.
+  // Finishing a lesson in the app is now just finishing a
   // lesson — no sales pitch attached to the celebration.
 
   if (loading || !targetLanguage) {
     return (
-      <GradientBackground variant="raised">
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
       <SafeAreaView className="flex-1 items-center justify-center">
-        <ActivityIndicator size="large" color={colors.league.diamond} />
+        <ActivityIndicator size="large" color={c.primary} />
       </SafeAreaView>
-      </GradientBackground>
+      </View>
     );
   }
 
@@ -136,28 +146,28 @@ export default function LessonScreen() {
   // user knows a retry can help.
   if (loadError) {
     return (
-      <GradientBackground variant="raised">
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
       <SafeAreaView className="flex-1 items-center justify-center px-8">
         <Body size="lg" tone="secondary" style={{ marginBottom: 16, textAlign: 'center' }}>
           Couldn't load this lesson. Check your connection and try again.
         </Body>
-        <Button label="Try Again" variant="primary" onPress={loadLesson} />
-        <View style={{ marginTop: 12 }}>
-          <Button label="Go Back" variant="secondary" onPress={goBack} />
+        <SlabButton label="Try Again" variant="primary" arrow={false} onPress={loadLesson} style={{ alignSelf: 'stretch' }} />
+        <View style={{ marginTop: 12, alignSelf: 'stretch' }}>
+          <SlabButton label="Go Back" variant="ghost" arrow={false} onPress={goBack} />
         </View>
       </SafeAreaView>
-      </GradientBackground>
+      </View>
     );
   }
 
   if (!lesson) {
     return (
-      <GradientBackground variant="raised">
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
       <SafeAreaView className="flex-1 items-center justify-center px-8">
         <Body size="lg" tone="secondary" style={{ marginBottom: 16 }}>Lesson not found</Body>
-        <Button label="Go Back" variant="secondary" onPress={goBack} />
+        <SlabButton label="Go Back" variant="ghost" arrow={false} onPress={goBack} style={{ alignSelf: 'stretch' }} />
       </SafeAreaView>
-      </GradientBackground>
+      </View>
     );
   }
 
@@ -170,19 +180,14 @@ export default function LessonScreen() {
    */
   const handleComplete = async (result: LessonResult) => {
     completedRef.current = true;
-    trackEvent('lesson_completed', {
-      contentId: lesson?.id,
-      language: targetLanguage ?? undefined,
-      // The runner's skip-aware accuracy, NOT correctCount/totalExercises:
-      // a question the learner could not hear is out of the denominator, and
-      // recomputing it here is exactly how the recorded score and the score
-      // they were shown drifted apart once already.
-      score: result.accuracy,
-      count: result.totalExercises,
-    });
 
     // 1. Completion — the durable record of progress. Resolves once the row
     //    is in Postgres or in the replay queue (see useLessonProgressStore).
+    //    The `record_lesson_completion` RPC behind it (migration 128) also
+    //    moves `daily_stats.lessons_completed` and sets today's `accuracy`,
+    //    on the FIRST completion only. The client used to write both here on
+    //    every pass, so a practice retake counted as another lesson — and an
+    //    offline replay never wrote them at all.
     if (lesson && user?.id) {
       // The runner already computed this, skip-aware: a question the learner
       // could not hear is out of the denominator rather than counted wrong.
@@ -201,14 +206,24 @@ export default function LessonScreen() {
         setSaveState('failed');
       } else {
         try {
-          const { persisted } = await markLessonComplete(
+          const { persisted, firstCompletion } = await markLessonComplete(
             lesson.id,
             lesson.courseId,
             score,
-            result.xpEarned,
             result.timeSpentMs,
           );
           setSaveState(persisted ? 'saved' : 'queued');
+          setRetake(!firstCompletion);
+          // A completion means the durable server row or its durable replay
+          // queue exists — never merely that the runner called this handler.
+          trackEvent('lesson_completed', {
+            contentId: lesson.id,
+            language: targetLanguage ?? undefined,
+            score: result.accuracy,
+            count: result.totalExercises,
+            source: persisted ? 'server' : 'offline_queue',
+            outcome: persisted ? 'server_persisted' : 'local_queued',
+          });
         } catch (err) {
           console.error('[lesson] markLessonComplete failed:', err);
           setSaveState('failed');
@@ -216,28 +231,21 @@ export default function LessonScreen() {
       }
     }
 
-    // 2. XP, keyed to the lesson so a replay never pays twice. Queued offline
-    //    by earnXp itself under that same key.
-    if (result.xpEarned > 0 && lesson) {
-      await earnXp(result.xpEarned, lessonXpKey(lesson.id)).catch((err) =>
-        console.error('[lesson] earnXp failed:', err),
+    // 2. Daily stats — cosmetic rollup; never blocks anything above.
+    // `lessons_completed` and `accuracy` are the RPC's now (step 1), so the
+    // only client-side tally left is the cards this lesson put through spaced
+    // repetition. One write for the whole lesson rather than one per answer:
+    // the review screen counts each card as it is saved, and a lesson counts
+    // the same cards the same way, in one round trip at the end. A lesson
+    // with no card-linked exercises writes nothing.
+    if (result.cardsReviewed > 0) {
+      await addStats({ cardsReviewed: result.cardsReviewed }).catch((err) =>
+        console.error('[lesson] cards_reviewed tally failed:', err),
       );
     }
 
-    // 3. Daily stats — cosmetic rollup; never blocks anything above.
-    // `accuracy` is set-if-provided rather than additive (see upsertDailyStats),
-    // so this records the accuracy of the lesson just finished. Omitting it left
-    // the column at 0 for everyone, which made `perfect_lesson` — checked as
-    // `accuracy >= 1` — unreachable by any user, ever. The value was already
-    // sitting in `result`.
-    await addStats({
-      lessonsCompleted: 1,
-      xpEarned: result.xpEarned,
-      accuracy: result.accuracy,
-    }).catch((err) => console.error('[lesson] addStats failed:', err));
-
     if (lesson && user?.id) {
-      // 4. Onboarding checklist + achievements.
+      // 3. Onboarding checklist + achievements.
       markOnboardingItem('firstLesson').catch(console.error);
 
       if (profile) {
@@ -291,9 +299,6 @@ export default function LessonScreen() {
     // Closing it first is what makes the pop visible.
     setShowingAchievement(null);
     setAchievementQueue([]);
-    // Nothing renders the level-up any more, but the pending record still has to
-    // be cleared or useLevel replays it against the next lesson's state.
-    dismissLevelUp();
 
     // router.back() is a silent no-op with nothing beneath. A deep link, a
     // notification tap or a cold start straight into a lesson has no parent
@@ -314,7 +319,7 @@ export default function LessonScreen() {
   };
 
   return (
-    <GradientBackground variant="raised">
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
     <SafeAreaView className="flex-1">
       <KeyboardAvoidingView
         className="flex-1"
@@ -324,16 +329,26 @@ export default function LessonScreen() {
           completion is already in the shared progress store either way — but
           silence would be dishonest when the row is only queued. */}
       {saveState === 'queued' && (
-        <View style={{ backgroundColor: colors.surface.card, paddingHorizontal: spacing.md, paddingVertical: spacing.xs }}>
+        <View style={{ backgroundColor: c.card, paddingHorizontal: spacing.md, paddingVertical: spacing.xs }}>
           <Body size="sm" tone="secondary" style={{ textAlign: 'center' }}>
             Progress saved on this device — it'll sync when you're back online.
           </Body>
         </View>
       )}
       {saveState === 'failed' && (
-        <View style={{ backgroundColor: colors.surface.card, paddingHorizontal: spacing.md, paddingVertical: spacing.xs }}>
+        <View style={{ backgroundColor: c.card, paddingHorizontal: spacing.md, paddingVertical: spacing.xs }}>
           <Body size="sm" tone="secondary" style={{ textAlign: 'center' }}>
             We couldn't save this lesson. Please try it again.
+          </Body>
+        </View>
+      )}
+      {/* A retake never lowers the recorded score (record_lesson_completion
+          keeps the GREATEST), and never counts as another completed lesson.
+          Saying so is what stops a practice run from looking like a demotion. */}
+      {retake && saveState !== 'failed' && (
+        <View style={{ backgroundColor: c.card, paddingHorizontal: spacing.md, paddingVertical: spacing.xs }}>
+          <Body size="sm" tone="secondary" style={{ textAlign: 'center' }} accessibilityLiveRegion="polite">
+            Practice run — your best score for this lesson is kept.
           </Body>
         </View>
       )}
@@ -342,18 +357,12 @@ export default function LessonScreen() {
         exercises={orderedExercises}
         lessonId={lesson.id}
         lessonTitle={lesson.title}
-        xpReward={lesson.xpReward}
         userId={user?.id ?? ''}
         targetLanguage={targetLanguage}
         onComplete={handleComplete}
         onExit={handleExit}
       />
       </KeyboardAvoidingView>
-
-      {/* The LevelUpModal used to fire here. The numeric level it celebrated is
-          no longer shown anywhere, so a full-screen modal announcing it was
-          celebrating a number the learner cannot go and look at. XP still
-          accrues and still drives achievements — those keep their modal. */}
 
       {/* Achievement Celebration */}
       <AchievementModal
@@ -362,6 +371,6 @@ export default function LessonScreen() {
         onDismiss={dismissAchievement}
       />
     </SafeAreaView>
-    </GradientBackground>
+    </View>
   );
 }

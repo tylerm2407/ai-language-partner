@@ -138,6 +138,46 @@ describe('the learning loop is instrumented as a funnel', () => {
     expect(screen).toMatch(/completedRef\.current = true/);
     expect(screen).toMatch(/if \(!completedRef\.current/);
   });
+
+  it('reports completion only after a server write or durable queue exists', () => {
+    const screen = readFileSync(resolve(ROOT, 'app/(app)/learn/[lessonId].tsx'), 'utf8');
+    expect(screen.indexOf('await markLessonComplete(')).toBeLessThan(
+      screen.indexOf("trackEvent('lesson_completed'"),
+    );
+    const store = readFileSync(resolve(ROOT, 'stores/useLessonProgressStore.ts'), 'utf8');
+    expect(store).toMatch(/await enqueue\([\s\S]*?throw queueErr;[\s\S]*?persisted: false/);
+  });
+
+  it('distinguishes a local onboarding draft from persisted completion', () => {
+    const screen = readFileSync(resolve(ROOT, 'app/(public)/onboarding.tsx'), 'utf8');
+    expect(screen).toContain("trackEvent('onboarding_draft_saved'");
+    expect(screen).toMatch(/await writeProfile\([\s\S]{0,500}trackEvent\('onboarding_completed'/);
+  });
+
+  it('reserves completed purchase events for the authoritative webhook', () => {
+    for (const path of ['app/(app)/plans.tsx', 'app/(app)/profile/subscription.tsx']) {
+      const screen = readFileSync(resolve(ROOT, path), 'utf8');
+      expect(screen).toContain("trackEvent('purchase_started'");
+      expect(screen).toContain("trackEvent('purchase_provider_confirmed'");
+      expect(screen).not.toContain("trackEvent('purchase_completed'");
+    }
+    const webhook = readFileSync(
+      resolve(ROOT, 'supabase/functions/revenuecat-webhook/analytics.ts'),
+      'utf8',
+    );
+    expect(webhook).toContain("INITIAL_PURCHASE: ['purchase_completed', 'subscription_started']");
+    expect(webhook).toContain("RENEWAL: ['purchase_completed', 'subscription_renewed']");
+  });
+});
+
+describe('account creation is instrumented after auth persistence', () => {
+  it('emits signup_completed only after signUp succeeds with a new identity', () => {
+    const auth = readFileSync(resolve(ROOT, 'hooks/useAuth.ts'), 'utf8');
+    expect(auth.indexOf('await supabase.auth.signUp(')).toBeLessThan(
+      auth.indexOf("trackEvent('signup_completed'"),
+    );
+    expect(auth).toContain('(data.user.identities?.length ?? 0) > 0');
+  });
 });
 
 describe('screen views measure attention, not mounting', () => {
@@ -168,19 +208,11 @@ describe('screen views measure attention, not mounting', () => {
   });
 });
 
-describe('development traffic is marked', () => {
-  it('isDevBuild is stamped on the capture path, not only via register()', () => {
-    // register() is async and persists to storage; fired and forgotten, a
-    // rejection is silent — which is what left every event unmarked and the
-    // project's test-account filter matching nothing. The filter that keeps
-    // development traffic out of real numbers must not depend on a promise
-    // nobody awaits.
+describe('analytics environments are isolated', () => {
+  it('uses an explicit non-production key instead of the production key', () => {
     const provider = readFileSync(resolve(ROOT, 'lib/analytics-posthog.ts'), 'utf8');
-    const captureBlock = provider.slice(
-      provider.indexOf('capture: ('),
-      provider.indexOf('identify: ('),
-    );
-    expect(captureBlock).toContain('isDevBuild');
+    expect(provider).toContain('EXPO_PUBLIC_POSTHOG_NON_PRODUCTION_KEY');
+    expect(provider).toContain('resolvePostHogEnvironment');
     expect(provider).toMatch(/register\([^)]*\)[\s\S]{0,120}catch/);
   });
 });

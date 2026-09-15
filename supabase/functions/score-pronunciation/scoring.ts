@@ -19,16 +19,32 @@ export interface PronunciationScore {
  * `matchedVariant` is null when the best match is the expected text
  * itself (i.e. no alternate variant was needed).
  */
+/**
+ * Lower-case, and strip punctuation and symbols. The comparison is word by
+ * word, and `gpt-4o-mini-transcribe` punctuates ("Hola, buenos días.") where
+ * `whisper-1` mostly did not — without this, "hola" versus "hola," counted as
+ * a mispronunciation and a perfect reading scored 85. Letters in every script
+ * and digits survive; apostrophes inside a word survive (l'homme).
+ */
+export function normalizeForScoring(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s']/gu, ' ')
+    .replace(/(^|\s)'+|'+(\s|$)/g, '$1$2')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export function calculatePronunciationScore(
   transcription: string,
   expectedText: string,
   acceptedVariants: string[]
 ): PronunciationScore {
-  const normalizedTranscription = transcription.toLowerCase().trim();
-  const normalizedExpected = expectedText.toLowerCase().trim();
+  const normalizedTranscription = normalizeForScoring(transcription);
+  const normalizedExpected = normalizeForScoring(expectedText);
 
   // Check all variants (expected text + accepted variants) for the best match
-  const allVariants = [normalizedExpected, ...acceptedVariants.map(v => v.toLowerCase().trim())];
+  const allVariants = [normalizedExpected, ...acceptedVariants.map(normalizeForScoring)];
 
   let best: { score: number; phonemeErrors: string[]; variant: string } | null = null;
 

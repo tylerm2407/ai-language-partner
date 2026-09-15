@@ -1,8 +1,12 @@
-import { View, Text, ScrollView, Pressable } from 'react-native';
+import { View, ScrollView, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { ReadingBook, UserBookProgress } from '../../types';
 import { cefrBandColors, cefrAccessibilityLabel } from '../../lib/cefr-labels';
-import { colors } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
+import { Ui2ProgressBar } from '../ui2/Ui2ProgressBar';
+import { Body, Caption, Heading } from '../ui2/Ui2Text';
+import { spacing } from '../../config/theme';
+import { formatReadDuration, remainingReadMinutes } from '../../lib/reading-speed';
 
 interface InProgressBook {
   book: ReadingBook;
@@ -14,26 +18,35 @@ interface ContinueReadingSectionProps {
   onPress: (bookId: string) => void;
 }
 
+/** The "pick up where you left off" shelf. Tint-block cards on the UI 2.0
+ *  tokens; the band tint is still `cefrBandColors` (see BookCard). */
 export function ContinueReadingSection({ books, onPress }: ContinueReadingSectionProps) {
+  const { c, shape, type } = useUi2Theme();
+
   if (books.length === 0) return null;
 
   return (
-    <View style={{ marginBottom: 16 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-        <Ionicons name="book" size={18} color="#818CF8" />
-        <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text.primary, marginLeft: 8 }}>
-          Continue Reading
-        </Text>
+    <View style={{ marginBottom: spacing.md }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs + 2 }}>
+        <Ionicons name="book" size={18} color={c.primary} />
+        <Heading level={3} style={{ marginLeft: spacing.xs }}>Continue Reading</Heading>
       </View>
 
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: 12 }}
+        contentContainerStyle={{ gap: spacing.sm }}
       >
         {books.map(({ book, progress }) => {
           const cefrColor = cefrBandColors(book.cefrLevel);
           const percent = Math.round(progress.percentComplete);
+          // What is left, not what is done. The card already draws the
+          // proportion as a bar, so a "34%" caption underneath it was the same
+          // fact twice; minutes remaining is the thing the bar cannot say and
+          // the thing that decides whether this gets picked up tonight.
+          const leftLabel = formatReadDuration(
+            remainingReadMinutes(book.wordCount, progress.percentComplete),
+          );
 
           return (
             <Pressable
@@ -41,20 +54,19 @@ export function ContinueReadingSection({ books, onPress }: ContinueReadingSectio
               onPress={() => onPress(book.id)}
               accessibilityRole="button"
               // The 200pt card shows the code alone; the label carries its meaning.
-              accessibilityLabel={`Continue reading ${book.title}, ${percent}% complete. ${cefrAccessibilityLabel(book.cefrLevel)}`}
+              accessibilityLabel={`Continue reading ${book.title}, ${percent}% complete${leftLabel ? `, about ${leftLabel} left` : ''}. ${cefrAccessibilityLabel(book.cefrLevel)}`}
               style={{
                 width: 200,
-                backgroundColor: colors.surface.card,
-                borderRadius: 14,
-                padding: 14,
+                backgroundColor: c.card,
+                borderWidth: shape.border,
+                borderColor: c.cardBorder,
+                borderRadius: shape.radiusCard,
+                padding: spacing.md,
               }}
             >
-              <Text
-                numberOfLines={2}
-                style={{ fontSize: 14, fontWeight: '600', color: colors.text.primary, marginBottom: 8 }}
-              >
+              <Body size="sm" weight="semibold" numberOfLines={2} style={{ marginBottom: spacing.xs }}>
                 {book.title}
-              </Text>
+              </Body>
 
               {/* CEFR badge */}
               <View
@@ -64,41 +76,42 @@ export function ContinueReadingSection({ books, onPress }: ContinueReadingSectio
                   paddingHorizontal: 6,
                   paddingVertical: 2,
                   alignSelf: 'flex-start',
-                  marginBottom: 10,
+                  marginBottom: spacing.xs + 2,
                 }}
               >
-                <Text style={{ fontSize: 11, fontWeight: '700', color: cefrColor.text }}>
-                  {book.cefrLevel}
-                </Text>
+                <Caption size="sm" style={{ color: cefrColor.text, fontFamily: type.uiBold }}>{book.cefrLevel}</Caption>
               </View>
 
-              {/* Progress bar */}
-              <View
-                style={{
-                  height: 4,
-                  backgroundColor: colors.surface.cardAlt,
-                  borderRadius: 2,
-                  overflow: 'hidden',
-                  marginBottom: 6,
-                }}
-              >
-                <View
-                  style={{
-                    height: 4,
-                    width: `${Math.min(percent, 100)}%`,
-                    backgroundColor: '#4F46E5',
-                    borderRadius: 2,
-                  }}
-                />
-              </View>
+              {/* Its own line, above the bar. Sharing the bottom row with
+                  "Continue →" left it about 90pt in a 200pt card, which
+                  truncated a long book to "~2 hr 38 min…" — losing the one
+                  word that says what the number means. */}
+              {leftLabel ? (
+                <Caption
+                  tone="secondary"
+                  numberOfLines={1}
+                  style={{ marginBottom: 6 }}
+                  accessibilityElementsHidden
+                  importantForAccessibility="no"
+                >
+                  ~{leftLabel} left
+                </Caption>
+              ) : null}
+
+              <Ui2ProgressBar
+                progress={percent / 100}
+                height={4}
+                onCard
+                accessibilityLabel={`${percent} percent read`}
+                style={{ marginBottom: 6 }}
+              />
 
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Text style={{ fontSize: 12, fontWeight: '400', color: colors.text.tertiary }}>
-                  {percent}%
-                </Text>
-                <Text style={{ fontSize: 12, fontWeight: '600', color: colors.action.accent }}>
-                  Continue →
-                </Text>
+                <Caption tone="secondary">{percent}%</Caption>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Body size="sm" weight="semibold" tone="accent">Continue</Body>
+                  <Ionicons name="arrow-forward" size={14} color={c.onTint} style={{ marginLeft: 2 }} />
+                </View>
               </View>
             </Pressable>
           );

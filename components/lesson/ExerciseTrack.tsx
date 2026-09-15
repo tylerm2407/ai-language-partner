@@ -1,5 +1,6 @@
 import { View } from 'react-native';
-import { colors, radii } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
+import { radii } from '../../config/theme';
 
 interface ExerciseTrackProps {
   /** Total exercises in the lesson (or warm-up). One tick each. */
@@ -24,6 +25,7 @@ interface ExerciseTrackProps {
  * for reading progress, unit mastery and XP fills.
  */
 export function ExerciseTrack({ total, currentIndex, completedCount }: ExerciseTrackProps) {
+  const { c } = useUi2Theme();
   const done = completedCount ?? currentIndex;
 
   return (
@@ -42,10 +44,10 @@ export function ExerciseTrack({ total, currentIndex, completedCount }: ExerciseT
             borderRadius: radii.sm / 2,
             backgroundColor:
               i < done
-                ? colors.success.base
+                ? c.green
                 : i === currentIndex
-                  ? colors.action.accent
-                  : colors.surface.track,
+                  ? c.primary
+                  : c.track,
           }}
         />
       ))}

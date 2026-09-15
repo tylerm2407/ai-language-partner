@@ -1,6 +1,7 @@
 import { useCallback, useSyncExternalStore } from 'react';
 import { supabase, setUnauthorizedHandler } from '../lib/supabase';
 import { RESET_PASSWORD_REDIRECT } from '../lib/auth-links';
+import { clearPendingAuthIntent, savePendingAuthIntent } from '../lib/pending-auth-intent';
 import { clearReadCache } from '../lib/read-cache';
 import { clearTtsCache } from '../lib/tts-cache';
 import { clearPendingOnboarding } from '../lib/pending-onboarding';
@@ -11,6 +12,7 @@ import { useLessonProgressStore } from '../stores/useLessonProgressStore';
 import { useSchoolStore } from '../stores/useSchoolStore';
 import { useAnimationStore } from '../stores/useAnimationStore';
 import type { Session } from '@supabase/supabase-js';
+import { identifyUser, trackEvent } from '../lib/analytics';
 
 /**
  * Auth session state, held once for the whole app.
@@ -134,18 +136,42 @@ export function useAuth() {
   }, []);
 
   const signUpWithEmail = useCallback(async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({
-      email,
+    const normalizedEmail = email.trim().toLowerCase();
+    await savePendingAuthIntent({ type: 'signup', email: normalizedEmail, createdAt: Date.now() });
+    const { data, error } = await supabase.auth.signUp({
+      email: normalizedEmail,
       password,
+      options: { emailRedirectTo: RESET_PASSWORD_REDIRECT },
     });
-    if (error) throw error;
+    if (error) {
+      await clearPendingAuthIntent();
+      throw error;
+    }
+    // `signUp` has returned a real auth.users id, so this means the account
+    // was accepted by Supabase rather than merely that the CTA was tapped.
+    // Some projects require email confirmation and return no session here;
+    // identifying with the persisted user id still keeps this event out of an
+    // anonymous bucket. Supabase may return an obfuscated existing-user result
+    // with no identities; do not count that as a new signup.
+    if (data.user && (data.user.identities?.length ?? 0) > 0) {
+      identifyUser(data.user.id);
+      trackEvent('signup_completed', { source: 'email', outcome: 'auth_persisted' });
+    }
+    // Projects with email confirmation disabled sign in immediately and never
+    // produce a callback, so no intent should remain usable afterward.
+    if (data?.session) await clearPendingAuthIntent();
   }, []);
 
   const resetPassword = useCallback(async (email: string) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    const normalizedEmail = email.trim().toLowerCase();
+    await savePendingAuthIntent({ type: 'recovery', email: normalizedEmail, createdAt: Date.now() });
+    const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
       redirectTo: RESET_PASSWORD_REDIRECT,
     });
-    if (error) throw error;
+    if (error) {
+      await clearPendingAuthIntent();
+      throw error;
+    }
   }, []);
 
   /** Set a new password for the signed-in user (used after a recovery deep link). */

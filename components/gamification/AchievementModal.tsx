@@ -1,13 +1,16 @@
 import { useEffect, useRef } from 'react';
 import { View, Text, Pressable, Modal, Dimensions, Animated, Easing } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { GRADIENT_COLORS, GRADIENT_START, GRADIENT_END } from '../../config/gradients';
 import { Ionicons } from '@expo/vector-icons';
+import { SlabCard } from '../ui2/SlabCard';
+import { scrimColor } from '../ui2/Ui2Sheet';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { haptic } from '../../lib/haptics';
 import type { AchievementDefinition } from '../../lib/achievements';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const PARTICLE_COUNT = 12;
+/** 0xB3 ≈ 70%, the same scrim weight this modal has always used. */
+const SCRIM_ALPHA = 'B3';
 
 // ─── Confetti Particle ──────────────────────────────────────────
 
@@ -78,6 +81,7 @@ export function AchievementModal({ achievement, visible, onDismiss }: {
   visible: boolean;
   onDismiss: () => void;
 }) {
+  const { c, scheme } = useUi2Theme();
   const cardScale = useRef(new Animated.Value(0)).current;
   const cardOpacity = useRef(new Animated.Value(0)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
@@ -112,7 +116,7 @@ export function AchievementModal({ achievement, visible, onDismiss }: {
 
   if (!achievement) return null;
 
-  const confettiColors = [achievement.color, '#FBBF24', '#34D399', '#38BDF8', '#F472B6', '#60A5FA'];
+  const confettiColors = [achievement.color, c.yellow, c.green, c.primary, c.pink, c.onTint];
 
   return (
     <Modal transparent visible={visible} animationType="none" onRequestClose={onDismiss}>
@@ -121,7 +125,7 @@ export function AchievementModal({ achievement, visible, onDismiss }: {
           flex: 1,
           justifyContent: 'center',
           alignItems: 'center',
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          backgroundColor: scrimColor(scheme, c) + SCRIM_ALPHA,
           opacity: backdropOpacity,
         }}
       >
@@ -134,18 +138,9 @@ export function AchievementModal({ achievement, visible, onDismiss }: {
             opacity: cardOpacity,
           }}
         >
-        <LinearGradient
-          colors={[...GRADIENT_COLORS]}
-          start={GRADIENT_START}
-          end={GRADIENT_END}
-          style={{ borderRadius: 24, padding: 1.5 }}
-        >
-        <View style={{
-          borderRadius: 22.5,
-          padding: 32,
-          alignItems: 'center',
-          backgroundColor: '#151921',
-        }}>
+        {/* Was a gradient hairline around a fixed dark panel. UI 2.0 grounds
+            flat, so the slab's own border and bottom edge carry the depth. */}
+        <SlabCard hero style={{ padding: 32, alignItems: 'center' }}>
           {/* Confetti Particles */}
           <View style={{ position: 'absolute', top: '40%', left: '50%' }}>
             {Array.from({ length: PARTICLE_COUNT }).map((_, i) => (
@@ -158,7 +153,7 @@ export function AchievementModal({ achievement, visible, onDismiss }: {
           </View>
 
           {/* Achievement Unlocked Label */}
-          <Text className="text-sm font-semibold text-text-secondary tracking-widest uppercase mb-4">
+          <Text className="text-sm font-semibold tracking-widest uppercase mb-4" style={{ color: c.muted }}>
             Achievement Unlocked
           </Text>
 
@@ -183,12 +178,12 @@ export function AchievementModal({ achievement, visible, onDismiss }: {
           </Animated.View>
 
           {/* Title */}
-          <Text className="text-2xl font-bold text-text-primary text-center mb-2">
+          <Text className="text-2xl font-bold text-center mb-2" style={{ color: c.ink }}>
             {achievement.title}
           </Text>
 
           {/* Description */}
-          <Text className="text-base text-text-secondary text-center mb-8">
+          <Text className="text-base text-center mb-8" style={{ color: c.muted }}>
             {achievement.description}
           </Text>
 
@@ -203,10 +198,9 @@ export function AchievementModal({ achievement, visible, onDismiss }: {
             accessibilityRole="button"
             accessibilityLabel="Dismiss achievement"
           >
-            <Text className="text-white text-lg font-bold">Continue</Text>
+            <Text className="text-lg font-bold" style={{ color: c.onPrimary }}>Continue</Text>
           </Pressable>
-        </View>
-        </LinearGradient>
+        </SlabCard>
         </Animated.View>
       </Animated.View>
     </Modal>

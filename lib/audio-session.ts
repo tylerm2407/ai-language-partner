@@ -28,6 +28,33 @@
 import { Platform } from 'react-native';
 import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av';
 import type { AudioMode } from 'expo-av';
+import type { RecordingOptions } from 'expo-av/build/Audio';
+
+/**
+ * Recording preset for anything that is sent to speech-to-text.
+ *
+ * Every recorder in the app used expo-av's HIGH_QUALITY preset: 44.1 kHz,
+ * stereo, 128 kbps. None of that survives contact with the transcriber — it
+ * resamples to 16 kHz mono before it listens — so the extra bytes were pure
+ * cost: a four-times-larger file to read, base64-encode, ship over cellular,
+ * decode again on the edge, and hand to the model. On a speaking exercise all
+ * of that sits between "stop" and the verdict.
+ *
+ * 16 kHz mono AAC at 48 kbps is more than the model can use and a fraction of
+ * the bytes. Metering stays on: the hands-free endpointer reads it.
+ */
+export function speechRecordingOptions(): RecordingOptions {
+  // Built on demand rather than at module load: test doubles for expo-av do
+  // not always carry the presets, and nothing needs this before a recording
+  // starts.
+  const base = Audio.RecordingOptionsPresets.HIGH_QUALITY;
+  return {
+    ...base,
+    isMeteringEnabled: true,
+    android: { ...base.android, sampleRate: 16000, numberOfChannels: 1, bitRate: 48000 },
+    ios: { ...base.ios, sampleRate: 16000, numberOfChannels: 1, bitRate: 48000 },
+  };
+}
 
 export type AudioSessionMode =
   /** Nothing playing or recording. Mixes with other apps; does not hold the session. */
@@ -50,7 +77,23 @@ export type AudioSessionMode =
    * end — so entering this mode deliberately releases expo-av to `idle`
    * settings and then leaves it alone. See enterNewsPlaybackSession below.
    */
-  | 'news-play';
+  | 'news-play'
+  /**
+   * A live voice-tutor call is running on react-native-webrtc.
+   *
+   * DELEGATED, for the same reason as `news-play` but with a sharper edge.
+   * WebRTC configures the native session itself — AVAudioSession
+   * `playAndRecord` + `voiceChat` on iOS, `MODE_IN_COMMUNICATION` on Android —
+   * because that is what routes the mic through the VoiceProcessingIO unit and
+   * gets hardware acoustic echo cancellation. The AEC is the entire reason
+   * barge-in works in a call and does not work in chat: without it the tutor's
+   * own voice comes back in through the mic and the model interrupts itself.
+   *
+   * So expo-av must not be holding a competing configuration when WebRTC takes
+   * the session. This mode is expo-av standing down. See
+   * enterTutorCallSession below.
+   */
+  | 'tutor-call';
 
 /**
  * Background audio through EXPO-AV is iOS-only. `UIBackgroundModes: ["audio"]`
@@ -153,6 +196,33 @@ const MODES: Record<AudioSessionMode, AudioMode> = {
     shouldDuckAndroid: true,
     playThroughEarpieceAndroid: false,
   },
+
+  /**
+   * Delegated to react-native-webrtc.
+   *
+   * Same shape as `news-play`, and for the same structural reason: these are
+   * expo-av's STAND-DOWN settings, not the settings the call runs under. WebRTC
+   * sets those natively, and it has to — the VoiceProcessingIO route it asks
+   * for is what supplies echo cancellation, and expo-av cannot ask for it.
+   *
+   * Written out in full rather than aliased to `news-play` even though the
+   * fields are currently identical. They are the same by coincidence of what
+   * standing down means today; collapsing them would make a future divergence
+   * an edit to two callers' behaviour instead of one.
+   *
+   * `allowsRecordingIOS: false` is the field that matters on the way out. Leave
+   * PlayAndRecord asserted here and the NEXT screen's playback routes to the
+   * earpiece — the original bug in this file's header, wearing a third hat.
+   */
+  'tutor-call': {
+    allowsRecordingIOS: false,
+    playsInSilentModeIOS: true,
+    staysActiveInBackground: false,
+    interruptionModeIOS: InterruptionModeIOS.MixWithOthers,
+    interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
+    shouldDuckAndroid: true,
+    playThroughEarpieceAndroid: false,
+  },
 };
 
 let currentMode: AudioSessionMode = 'idle';
@@ -240,6 +310,40 @@ export async function enterNewsPlaybackSession(): Promise<void> {
  * a claim nobody currently wants.
  */
 export async function releaseNewsPlaybackSession(): Promise<void> {
+  await setAudioSessionMode('idle');
+}
+
+/**
+ * Hand the device audio session to react-native-webrtc for a tutor call.
+ *
+ * ORDER MATTERS, and it is not symmetric:
+ *
+ *   - Call this BEFORE `getUserMedia`. WebRTC configures the native session as
+ *     part of acquiring the mic track, so expo-av has to have let go by then;
+ *     standing down afterwards means two owners raced over the route and the
+ *     call may already be running through the wrong one.
+ *   - Call `releaseTutorCallSession()` in a `finally`, AFTER the peer
+ *     connection is closed and every track is stopped. Releasing while a track
+ *     is live hands back a session WebRTC is still using.
+ *
+ * The pair exists so the handoff is a named, greppable event rather than an
+ * implicit consequence of whichever screen happened to mount.
+ */
+export async function enterTutorCallSession(): Promise<void> {
+  await setAudioSessionMode('tutor-call');
+}
+
+/**
+ * Take the session back from react-native-webrtc.
+ *
+ * Returns to `idle` rather than to the previous mode, for the same reason as
+ * the news pair: the call screen is gone, and whatever comes next sets the mode
+ * it needs on its own way in. Restoring a stale mode here would reassert a claim
+ * nobody currently wants — and if that stale mode were `record` or
+ * `handsfree-record`, it would reassert `allowsRecordingIOS` and route the next
+ * screen's playback to the earpiece.
+ */
+export async function releaseTutorCallSession(): Promise<void> {
   await setAudioSessionMode('idle');
 }
 

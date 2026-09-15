@@ -1,7 +1,8 @@
 import { View, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Body } from './Text';
-import { colors, spacing } from '../../config/theme';
+import { spacing } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import type { ErrorCopy } from '../../lib/error-copy';
 
 /**
@@ -19,6 +20,7 @@ export function InlineError({
   onRetry: () => void;
   retryLabel?: string;
 }) {
+  const { c } = useUi2Theme();
   return (
     <View style={{ paddingVertical: spacing.md, alignItems: 'center' }}>
       <View
@@ -29,7 +31,7 @@ export function InlineError({
           paddingHorizontal: spacing.md,
         }}
       >
-        <Ionicons name="alert-circle" size={16} color={colors.error.base} style={{ marginTop: 2 }} />
+        <Ionicons name="alert-circle" size={16} color={c.error} style={{ marginTop: 2 }} />
         <View style={{ marginLeft: spacing.xxs, flexShrink: 1 }}>
           <Body size="sm" weight="semibold" tone="error">{copy.title}</Body>
           <Body size="sm" tone="tertiary">{copy.message}</Body>

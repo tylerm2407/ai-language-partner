@@ -1,39 +1,77 @@
 /**
- * Mascot — a small shooting-star being.
+ * Mascot — Sol, the dragon.
  *
- * A 4-point rounded indigo star with a tapering cosmic trail behind it
- * and big expressive eyes + simple mouth on the star itself. The trail
- * is a soft tapered ribbon behind the star's lower-left, fading into
- * transparency — implies motion without requiring any animation.
+ * Plays the interim clips in assets/mascot/video: five moods generated from
+ * the master still with the same frame at both ends (so they return to the
+ * drawing), a fifteen-second bedtime piece, and an eight-second sleep loop
+ * whose first and last frames are the bedtime clip's final frame, so bedtime
+ * runs straight into it with no cut. Each clip is an animated WebP with a
+ * real alpha channel, decoded by expo-image (SDWebImage on iOS, Glide on
+ * Android), so Sol sits on any card, tint or text without a square behind
+ * him — on a device, in the iOS Simulator, and on Android alike.
  *
- * 6 states: idle / happy / thinking / cheering / sad / disappointed.
- * Each state swaps the eye shape + mouth shape only; the star silhouette
- * and trail stay constant.
+ * ── WHY WEBP AND NOT THE HEVC .MOV (2026-09-09) ──
  *
- * Design constraints:
- *   - 3 colors + ivory for face + warm-gold sparkle — tight palette
- *   - Thick 3pt strokes; flat fills; the trail is a single path with
- *     three stacked layers (no actual gradient needed)
- *   - Reuses theme tokens
+ * The first cut played HEVC-with-alpha .mov files through expo-av. Those
+ * files are correct (a Mac decode returns a transparent corner pixel) and a
+ * device composites them, but the iOS Simulator decodes only the base layer,
+ * so Sol appeared in a white square everywhere the simulator was used —
+ * glaring in dark mode. A "show the still on the simulator" workaround
+ * followed, and Tyler rightly did not want a still. One asset that animates
+ * with alpha everywhere beats two paths, and the WebPs were already shipped
+ * as the Android path, so this is where it was heading anyway.
  *
- * This is the **static SVG** implementation. A future Rive
- * state-machine version can drop in behind the same API.
+ * Behaviour:
+ *   - `idle` and `asleep` loop. Every other state is a one-shot: it plays
+ *     through, then the component returns to idle on its own. A parent that
+ *     flips back to `idle` mid-clip is ignored until the clip finishes, so a
+ *     700ms "cheer" tick from a picker still shows the whole nod.
+ *   - `sleepy` is the exception: bedtime plays once and then hands over to
+ *     the sleep loop, and Sol stays asleep until the parent asks for
+ *     something else. `asleep` skips the bedtime and starts in the loop.
+ *   - Every time the app comes back to the foreground the current state's
+ *     clip starts over from its first frame (a mount does the same), so a
+ *     screen left on `sleepy` shows the whole bedtime again on each return
+ *     rather than resuming mid-loop.
+ *   - An animated image reports no end-of-animation event, so the measured
+ *     clip lengths (`CLIP_MS`) drive the hand-over from a one-shot.
+ *   - Reduce Motion shows the transparent still.
+ *
+ * The state names are the old star mascot's, so nothing upstream changes.
+ * When the Rive rig lands it replaces the Image element behind this same API.
+ *
+ * ── CLIPS THAT SHIP BUT ARE NOT WIRED (2026-09-14) ──
+ *
+ * assets/mascot/video also holds ten clips no state maps to yet, generated in
+ * the same pass and keyed the same way: five of Sol moving around his frame
+ * (sol-walk, sol-hop, sol-pace, sol-spin, sol-peek, sol-circle — ten seconds
+ * each, 10126 ms) and five of him at a task (sol-reading, sol-writing,
+ * sol-headphones, sol-mic — five seconds, 5146 ms). Nothing `require`s them,
+ * so they cost repository space and not binary space. To use one: add it to
+ * `Clip`, `CLIPS` and `CLIP_MS` with the length above, give it a state in
+ * `CLIP_FOR`, and re-measure with `webpmux -info` if it is ever regenerated.
  */
-
-import React from 'react';
-import Svg, { Path, Circle, G } from 'react-native-svg';
-import { View, type ViewStyle } from 'react-native';
-import { colors } from '../../config/theme';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { AppState, StyleSheet, View, type ViewStyle } from 'react-native';
+import { Image } from 'expo-image';
+import { useMotion } from '../../hooks/useMotion';
 
 export type MascotState =
   | 'idle'
   | 'happy'
   | 'thinking'
   | 'cheering'
+  | 'listening'
+  | 'surprised'
+  | 'sleepy'
+  | 'asleep'
   | 'sad'
-  | 'disappointed';
+  | 'disappointed'
+  | 'amazed'
+  | 'confused'
+  | 'waving';
 
-export type MascotSize = 'xs' | 'sm' | 'md' | 'lg';
+export type MascotSize = 'xs' | 'sm' | 'md' | 'lg' | number;
 
 interface MascotProps {
   state?: MascotState;
@@ -43,191 +81,255 @@ interface MascotProps {
   accessibilityVisible?: boolean;
 }
 
-const SIZE_PX: Record<MascotSize, number> = { xs: 32, sm: 48, md: 80, lg: 128 };
+const SIZE_PX: Record<Exclude<MascotSize, number>, number> = { xs: 32, sm: 48, md: 80, lg: 128 };
 
-const STAR_FILL = colors.indigo[500];
-const STAR_STROKE = colors.indigo[700];
-const TRAIL_COLOR = colors.indigo[400];
-const EYE_COLOR = '#F8FAFC'; // near-ivory — AAA against indigo-500
-const PUPIL_COLOR = '#0C0F14';
-const MOUTH_COLOR = colors.indigo[800];
-const SPARK_COLOR = '#FDE68A';
+type Clip =
+  | 'idle'
+  | 'listening'
+  | 'thinking'
+  | 'approving'
+  | 'surprised'
+  | 'bedtime'
+  | 'sleep'
+  | 'wince'
+  | 'confused'
+  | 'celebrate'
+  | 'amazed'
+  | 'wave';
+
+/** Clips that repeat until the parent changes state. */
+const LOOPS: ReadonlySet<Clip> = new Set<Clip>(['idle', 'sleep']);
 
 /**
- * 4-point rounded star silhouette. viewBox 0 0 100 100, centered at (55, 45)
- * so the lower-left trail has room to breathe in the viewBox.
+ * Which clip a state plays.
+ *
+ * `happy` and `cheering` are deliberately different sizes of the same
+ * feeling: `happy` is the small nod a correct answer or a good tap earns,
+ * `cheering` is the rear-up-and-breathe-fire one that belongs to finishing
+ * something. Sad and disappointed used to borrow the listening clip, which
+ * read as Sol waiting rather than Sol feeling it with you; they now play the
+ * wince.
  */
-const STAR_PATH =
-  'M55 10 C60 35 75 50 100 55 C75 60 60 75 55 100 C50 75 35 60 10 55 C35 50 50 35 55 10 Z';
+const CLIP_FOR: Record<MascotState, Clip> = {
+  idle: 'idle',
+  happy: 'approving',
+  cheering: 'celebrate',
+  thinking: 'thinking',
+  listening: 'listening',
+  surprised: 'surprised',
+  sleepy: 'bedtime',
+  asleep: 'sleep',
+  sad: 'wince',
+  disappointed: 'wince',
+  amazed: 'amazed',
+  confused: 'confused',
+  waving: 'wave',
+};
 
 /**
- * Shooting-star trail — three stacked tapered ribbons behind the star's
- * lower-left corner, each a slightly different opacity to fake a soft
- * motion blur. The trail always points up-right-to-lower-left, the
- * classic shooting-star direction.
+ * The one-shot files carry loop count 1 (set with `webpmux -set loop 1`), the
+ * loops carry 0. So if the JS timer below fires late, a one-shot holds its
+ * last frame instead of wrapping to its first — bedtime must never snap from
+ * asleep back to standing while the sleep loop is still being handed in.
+ * Keep that when a clip is regenerated.
  */
-const TRAIL_BROAD = 'M 10 95 C 25 80 40 65 48 55 L 55 65 C 45 75 30 88 14 98 Z';
-const TRAIL_MID = 'M 12 92 C 25 82 38 70 46 62 L 52 68 C 42 78 28 88 16 96 Z';
-const TRAIL_CORE = 'M 15 90 C 27 80 38 72 44 66 L 49 70 C 40 78 28 86 18 93 Z';
+const CLIPS: Record<Clip, number> = {
+  idle: require('../../assets/mascot/video/sol-idle.webp'),
+  listening: require('../../assets/mascot/video/sol-listening.webp'),
+  thinking: require('../../assets/mascot/video/sol-thinking.webp'),
+  approving: require('../../assets/mascot/video/sol-approving.webp'),
+  surprised: require('../../assets/mascot/video/sol-surprised.webp'),
+  bedtime: require('../../assets/mascot/video/sol-bedtime.webp'),
+  sleep: require('../../assets/mascot/video/sol-sleep.webp'),
+  wince: require('../../assets/mascot/video/sol-wince.webp'),
+  confused: require('../../assets/mascot/video/sol-confused.webp'),
+  celebrate: require('../../assets/mascot/video/sol-celebrate.webp'),
+  amazed: require('../../assets/mascot/video/sol-amazed.webp'),
+  wave: require('../../assets/mascot/video/sol-wave.webp'),
+};
 
-/** Eye shapes per state. */
-function eyes(state: MascotState): React.ReactNode {
-  switch (state) {
-    case 'happy':
-    case 'cheering':
-      return (
-        <G stroke={PUPIL_COLOR} strokeWidth={3} fill="none" strokeLinecap="round">
-          <Path d="M 43 45 Q 48 40 53 45" />
-          <Path d="M 60 45 Q 65 40 70 45" />
-        </G>
-      );
-    case 'thinking':
-      return (
-        <>
-          <Circle cx={48} cy={45} r={6} fill={EYE_COLOR} />
-          <Circle cx={65} cy={45} r={6} fill={EYE_COLOR} />
-          <Circle cx={51} cy={45} r={2.5} fill={PUPIL_COLOR} />
-          <Circle cx={68} cy={45} r={2.5} fill={PUPIL_COLOR} />
-        </>
-      );
-    case 'sad':
-    case 'disappointed':
-      return (
-        <>
-          <Circle cx={48} cy={46} r={6} fill={EYE_COLOR} />
-          <Circle cx={65} cy={46} r={6} fill={EYE_COLOR} />
-          <Circle cx={48} cy={47} r={2} fill={PUPIL_COLOR} />
-          <Circle cx={65} cy={47} r={2} fill={PUPIL_COLOR} />
-          <Path d="M 42 42 L 54 44" stroke={PUPIL_COLOR} strokeWidth={2.5} strokeLinecap="round" />
-          <Path d="M 71 42 L 59 44" stroke={PUPIL_COLOR} strokeWidth={2.5} strokeLinecap="round" />
-        </>
-      );
-    case 'idle':
-    default:
-      return (
-        <>
-          <Circle cx={48} cy={45} r={6} fill={EYE_COLOR} />
-          <Circle cx={65} cy={45} r={6} fill={EYE_COLOR} />
-          <Circle cx={48} cy={45} r={2.5} fill={PUPIL_COLOR} />
-          <Circle cx={65} cy={45} r={2.5} fill={PUPIL_COLOR} />
-        </>
-      );
-  }
+/**
+ * Clip lengths in ms, read from the files with `webpmux -info` (frame delays
+ * summed). Re-measure if a clip is regenerated: too short and Sol snaps back
+ * to idle mid-nod, too long and he holds the last frame.
+ */
+export const CLIP_MS: Record<Clip, number> = {
+  idle: 16375,
+  listening: 5146,
+  thinking: 5146,
+  approving: 5146,
+  surprised: 5146,
+  bedtime: 15023,
+  sleep: 7968,
+  wince: 5146,
+  confused: 5146,
+  celebrate: 5146,
+  amazed: 5146,
+  wave: 5146,
+};
+
+/** What a finished one-shot hands over to. Pure so the chain can be asserted. */
+export function afterClip(clip: Clip): Clip {
+  // Bedtime ends asleep on purpose and keeps sleeping; everything else wakes.
+  return clip === 'bedtime' ? 'sleep' : 'idle';
 }
 
-/** Mouth shapes per state. */
-function mouth(state: MascotState): React.ReactNode {
-  switch (state) {
-    case 'happy':
-      return (
-        <Path
-          d="M 48 62 Q 56 72 64 62"
-          stroke={MOUTH_COLOR}
-          strokeWidth={3}
-          fill="none"
-          strokeLinecap="round"
-        />
-      );
-    case 'cheering':
-      return (
-        <Path
-          d="M 48 60 Q 56 78 64 60 Q 56 68 48 60 Z"
-          stroke={MOUTH_COLOR}
-          strokeWidth={3}
-          fill={MOUTH_COLOR}
-          strokeLinejoin="round"
-        />
-      );
-    case 'thinking':
-      return (
-        <Path
-          d="M 52 66 L 64 66"
-          stroke={MOUTH_COLOR}
-          strokeWidth={3}
-          fill="none"
-          strokeLinecap="round"
-        />
-      );
-    case 'sad':
-      return (
-        <Path
-          d="M 48 68 Q 56 60 64 68"
-          stroke={MOUTH_COLOR}
-          strokeWidth={3}
-          fill="none"
-          strokeLinecap="round"
-        />
-      );
-    case 'disappointed':
-      return (
-        <Path
-          d="M 52 66 L 64 68"
-          stroke={MOUTH_COLOR}
-          strokeWidth={3}
-          fill="none"
-          strokeLinecap="round"
-        />
-      );
-    case 'idle':
-    default:
-      return (
-        <Path
-          d="M 50 64 Q 56 68 62 64"
-          stroke={MOUTH_COLOR}
-          strokeWidth={3}
-          fill="none"
-          strokeLinecap="round"
-        />
-      );
-  }
+const STILL = require('../../assets/mascot/sol-still.png');
+/** First frame of the sleep loop (== last frame of bedtime), so a clip that starts asleep never shows him standing first. */
+const ASLEEP_STILL = require('../../assets/mascot/sol-asleep-still.png');
+
+function stillFor(clip: Clip): number {
+  return clip === 'sleep' ? ASLEEP_STILL : STILL;
 }
 
-export function Mascot({
-  state = 'idle',
-  size = 'md',
-  style,
-  accessibilityVisible = false,
-}: MascotProps) {
-  const px = SIZE_PX[size];
+/**
+ * One mounted Image. `run` is part of the React key: a new run is a fresh
+ * native view starting at frame one. The key is what makes the hand-over
+ * below seamless — the slot that was pre-loaded keeps its key, so React keeps
+ * the native view and nothing has to decode at the moment of the swap.
+ */
+interface Slot {
+  clip: Clip;
+  run: number;
+}
+
+export function Mascot({ state = 'idle', size = 'md', style, accessibilityVisible = false }: MascotProps) {
+  const px = typeof size === 'number' ? size : SIZE_PX[size];
+  const { shouldReduce } = useMotion();
+  const wanted = CLIP_FOR[state];
+  const runRef = useRef(0);
+  const nextRun = () => ++runRef.current;
+  // `front` is what the learner sees. `back` is the clip a one-shot hands
+  // over to, mounted underneath at opacity 0 with autoplay off, so its first
+  // frame is already decoded when the front finishes. The old approach
+  // remounted a single Image on the hand-over, and for ~100-300 ms the
+  // placeholder still (Sol standing) showed while the sleep loop decoded —
+  // a visible flash on the welcome screen at the end of bedtime.
+  const [front, setFront] = useState<Slot>(() => ({ clip: wanted, run: nextRun() }));
+  const [back, setBackState] = useState<Slot | null>(() =>
+    LOOPS.has(wanted) ? null : { clip: afterClip(wanted), run: nextRun() },
+  );
+  // Mirror of `back` the timer can read without nesting state updates.
+  const backRef = useRef<Slot | null>(back);
+  const setBack = (b: Slot | null) => {
+    backRef.current = b;
+    setBackState(b);
+  };
+  const busyRef = useRef(!LOOPS.has(wanted));
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const frontRef = useRef<Image>(null);
+  const mountedRef = useRef(false);
+
+  const clearTimer = () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = null;
+  };
+
+  const play = (next: Clip) => {
+    clearTimer();
+    busyRef.current = !LOOPS.has(next);
+    setFront({ clip: next, run: nextRun() });
+    setBack(LOOPS.has(next) ? null : { clip: afterClip(next), run: nextRun() });
+  };
+
+  // The one-shot timer starts when the front clip has actually loaded, not
+  // when it was requested: decode time would otherwise be taken off the end
+  // of the clip.
+  const onFrontLoad = useCallback((slot: Slot) => {
+    if (LOOPS.has(slot.clip)) return;
+    clearTimer();
+    timerRef.current = setTimeout(() => {
+      timerRef.current = null;
+      busyRef.current = false;
+      // Promote the pre-loaded slot. Its key is unchanged, so this is an
+      // opacity flip plus startAnimating on a view that is already showing
+      // the right first frame.
+      const promoted = backRef.current ?? { clip: afterClip(slot.clip), run: nextRun() };
+      setBack(null);
+      setFront(promoted);
+    }, CLIP_MS[slot.clip]);
+  }, []);
+
+  useEffect(() => {
+    if (LOOPS.has(front.clip)) {
+      // Fresh mounts autoplay already; a promoted slot was mounted with
+      // autoplay off and needs the nudge. Calling it on both is harmless.
+      frontRef.current?.startAnimating().catch(() => undefined);
+    }
+  }, [front]);
+
+  // Latch: a one-shot runs to its end even if the parent has already gone
+  // back to idle. A new request replaces whatever is playing. Loops never
+  // latch, so a parent can always move Sol out of idle or sleep.
+  useEffect(() => {
+    if (!mountedRef.current) {
+      // The initial state was mounted by useState; do not remount it.
+      mountedRef.current = true;
+      return;
+    }
+    if (wanted === 'idle') {
+      if (!busyRef.current) {
+        setFront((f) => (f.clip === 'idle' ? f : { clip: 'idle', run: nextRun() }));
+        setBack(null);
+      }
+      return;
+    }
+    play(wanted);
+    // Re-running on the wanted clip alone is the intended trigger; `play`
+    // closes over refs and setters only.
+  }, [wanted]);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next !== 'active') return;
+      play(wanted);
+    });
+    return () => sub.remove();
+  }, [wanted]);
+
+  useEffect(() => () => clearTimer(), []);
+
+  const a11y = {
+    accessibilityElementsHidden: !accessibilityVisible,
+    importantForAccessibility: (accessibilityVisible ? 'yes' : 'no') as 'yes' | 'no',
+    accessibilityLabel: accessibilityVisible ? `Sol, ${state}` : undefined,
+  };
+
+  const renderSlot = (slot: Slot, isFront: boolean) => (
+    <Image
+      key={`${slot.clip}-${slot.run}`}
+      ref={isFront ? frontRef : undefined}
+      source={CLIPS[slot.clip]}
+      style={[styles.fill, isFront ? null : styles.hidden]}
+      contentFit="contain"
+      // The pre-loaded slot sits on its first frame until it is promoted.
+      autoplay={isFront}
+      onLoad={isFront ? () => onFrontLoad(slot) : undefined}
+      // The still shows until the first frame decodes, so there is never an
+      // empty box on a mount or a fresh request.
+      placeholder={stillFor(slot.clip)}
+      placeholderContentFit="contain"
+      transition={0}
+      cachePolicy="memory"
+    />
+  );
+
   return (
-    <View
-      style={[{ width: px, height: px }, style]}
-      accessibilityElementsHidden={!accessibilityVisible}
-      importantForAccessibility={accessibilityVisible ? 'yes' : 'no'}
-      accessibilityLabel={accessibilityVisible ? `Mascot ${state}` : undefined}
-    >
-      <Svg width={px} height={px} viewBox="0 0 100 100">
-        {/* Shooting-star trail — three stacked tapered ribbons, opacity
-            falling off as they widen. Rendered before the star so the
-            star sits cleanly on top. */}
-        <Path d={TRAIL_BROAD} fill={TRAIL_COLOR} opacity={0.18} />
-        <Path d={TRAIL_MID} fill={TRAIL_COLOR} opacity={0.35} />
-        <Path d={TRAIL_CORE} fill={TRAIL_COLOR} opacity={0.65} />
-
-        {/* Tiny warm-gold sparkle at the very tip of the trail */}
-        <Circle cx={12} cy={96} r={1.5} fill={SPARK_COLOR} opacity={0.85} />
-
-        {/* Star silhouette */}
-        <Path
-          d={STAR_PATH}
-          fill={STAR_FILL}
-          stroke={STAR_STROKE}
-          strokeWidth={3}
-          strokeLinejoin="round"
-        />
-
-        {/* Face features */}
-        {eyes(state)}
-        {mouth(state)}
-      </Svg>
+    <View style={[{ width: px, height: px }, style]} {...a11y}>
+      {shouldReduce ? (
+        <Image source={stillFor(wanted)} style={styles.fill} contentFit="contain" />
+      ) : (
+        <>
+          {back ? renderSlot(back, false) : null}
+          {renderSlot(front, true)}
+        </>
+      )}
     </View>
   );
 }
 
 /** Convenience helper: pick a mascot state from a common lesson outcome. */
-export function mascotForOutcome(
-  outcome: 'correct' | 'wrong' | 'complete',
-): MascotState {
+export function mascotForOutcome(outcome: 'correct' | 'wrong' | 'complete'): MascotState {
   switch (outcome) {
     case 'correct':
       return 'happy';
@@ -239,3 +341,8 @@ export function mascotForOutcome(
       return 'idle';
   }
 }
+
+const styles = StyleSheet.create({
+  fill: { ...StyleSheet.absoluteFillObject, backgroundColor: 'transparent' },
+  hidden: { opacity: 0 },
+});

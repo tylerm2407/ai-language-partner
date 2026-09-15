@@ -31,9 +31,9 @@ import type { VoiceGender } from './voice-preference';
  * will wait, and these calls already carry a 60s ceiling.
  */
 export async function invokeWithRetry<
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mirrors
-  // FunctionsClient.invoke<T = any>. Narrowing the default here would retype
-  // all eight call sites, and this change is meant to add a retry, nothing else.
+  // Mirrors FunctionsClient.invoke<T = any>. Narrowing the default here would
+  // retype all eight call sites, and this change is meant to add a retry,
+  // nothing else.
   T = any,
 >(
   fn: string,
@@ -82,7 +82,15 @@ export interface AIChatRequest {
   /** User's native language. Used by the Edge Function to write the
    *  correction explanation in a language the learner can read comfortably. */
   nativeLanguage?: LanguageCode;
+  /** The self-declared onboarding level. Still sent, still validated
+   *  server-side, but only the fallback band now — see `cefrLevel`. */
   level: ProficiencyLevel;
+  /** The band the conversation should run at — `conversationCefrBand` in
+   *  lib/conversation-level.ts (measured > placement > declared). The server
+   *  pitches the prompt at it AND stamps the turn's evidence with it, so a
+   *  learner who has measured past their onboarding answer is talked to, and
+   *  assessed, at the level they actually have. */
+  cefrLevel?: string;
   /** Resolves to a hidden server-side system prompt. Preferred for scenario-
    *  based chat. Takes precedence over `topic` when both are sent. */
   scenarioKey?: ScenarioKey;
@@ -105,6 +113,64 @@ export interface AIChatRequest {
   /** The conversation is ending, so the tutor should close rather than open a
    *  new thread. */
   isClosing?: boolean;
+  /** The `chat_sessions` row this turn belongs to. Sent on every chat so the
+   *  server can attribute corrections and evidence to the session; REQUIRED
+   *  with `missionStage`, where it identifies the attempt. */
+  chatSessionId?: string;
+  /** Which mission of the scene's ladder is running, 1..4 (`types/missions`).
+   *  Absent means plain chat — free_chat, assignments. The server resolves
+   *  the attempt from `chatSessionId`, and its row's stage wins over this. */
+  missionStage?: number;
+  /** The learner tapped Finish. No new message is sent; the server scores the
+   *  attempt, has the tutor say goodbye, and returns `missionResult`. Never
+   *  streamed: use `sendChatMessage`. */
+  finish?: boolean;
+}
+
+/** One objective of a mission, with whether the learner met it. */
+export interface MissionObjectiveResult {
+  id: string;
+  text: string;
+  met: boolean;
+}
+
+/** The learner's corrections during one attempt, grouped by error type. */
+export interface MissionCorrectionGroup {
+  errorType: string;
+  count: number;
+  /** Up to three You-said / Better pairs. Empty strings where the model gave
+   *  no verbatim phrase. */
+  examples: { original: string; corrected: string }[];
+}
+
+export type MissionFailReason = 'objectives_incomplete' | 'accuracy_below_pass';
+
+/**
+ * The debrief for a finished mission attempt. Returned inline by the Finish
+ * turn and stored as `chat_mission_attempts.result`, so a cold open of the
+ * debrief screen reads the same shape via `fetchMissionResult`.
+ */
+export interface MissionResult {
+  scenarioKey: string;
+  stage: number;
+  band: string;
+  title: string;
+  passed: boolean;
+  /** Null when passed. */
+  reason: MissionFailReason | null;
+  /** Mean turn accuracy over the attempt's scored turns, 0..1. Null when no
+   *  turn was long enough to score — an A1 attempt can pass on objectives
+   *  alone in that case. */
+  accuracy: number | null;
+  scoredTurns: number;
+  objectives: MissionObjectiveResult[];
+  /** Highest stage now available for this scene, 1..5 (5 = ladder done). */
+  unlockedStage: number;
+  /** Words that became review cards during the attempt. */
+  savedWords: string[];
+  corrections: MissionCorrectionGroup[];
+  /** Sol's goodbye line, in the target language. */
+  sendoff: string;
 }
 
 /** A word the tutor introduced, with its meaning. */
@@ -146,6 +212,13 @@ export interface AIChatResponse {
   /** Which conversational stance the turn was generated with. Observability
    *  only — nothing branches on it. */
   dialogueAct?: string;
+  /** Mission progress after this turn. Present only when the request carried
+   *  `missionStage`. `objectivesMet` is the server's running union for the
+   *  attempt, already whitelisted — the client's checklist should trust it
+   *  over its own state. */
+  mission?: { stage: number; objectivesMet: string[]; complete: boolean } | null;
+  /** Present only on a Finish turn. */
+  missionResult?: MissionResult | null;
 }
 
 /**
@@ -529,8 +602,33 @@ function httpErrorFrom(xhr: XMLHttpRequest): Error {
 }
 
 /**
+ * A `score-pronunciation` failure that still carries the server's code.
+ *
+ * The message keeps the prefix this function has always thrown, so callers
+ * reading `.message` are unchanged. The code is what lets hands-free tell "the
+ * daily scoring allowance is spent" — settled for the day, not worth asking
+ * again this session — from "the network blinked", which is worth another try
+ * on the next card.
+ */
+export class PronunciationScoreError extends Error {
+  readonly code?: string;
+  readonly status?: number;
+
+  constructor(message: string, code?: string, status?: number) {
+    super(message);
+    this.name = 'PronunciationScoreError';
+    this.code = code;
+    this.status = status;
+  }
+}
+
+/**
  * Score a user's pronunciation against expected text.
  * Audio is sent as base64 to the Edge Function.
+ *
+ * Throws `PronunciationScoreError`. On a non-2xx, supabase-js only exposes a
+ * generic message; the real cause and its code are on `error.context`, read
+ * the same way `sendChatMessage` and `translateText` read theirs.
  */
 export async function scorePronunciation(
   request: PronunciationScoreRequest
@@ -539,7 +637,32 @@ export async function scorePronunciation(
     body: request,
   });
 
-  if (error) throw new Error(`Pronunciation scoring error: ${error.message}`);
+  if (error) {
+    let detail = error.message;
+    let code: string | undefined;
+    let status: number | undefined;
+    try {
+      const ctx = (error as Record<string, unknown>).context;
+      if (ctx && typeof (ctx as Response).json === 'function') {
+        status = (ctx as Response).status;
+        const body = await (ctx as Response).json();
+        if (body?.error) detail = body.error;
+        if (typeof body?.code === 'string') code = body.code;
+      }
+    } catch {
+      // Body wasn't JSON — fall through with the generic message.
+    }
+    throw new PronunciationScoreError(`Pronunciation scoring error: ${detail}`, code, status);
+  }
+
+  // A 200 that still carries an application-level refusal.
+  if (data?.error) {
+    throw new PronunciationScoreError(
+      `Pronunciation scoring error: ${data.error}`,
+      typeof data.code === 'string' ? data.code : undefined,
+    );
+  }
+
   return data as PronunciationScoreResponse;
 }
 
@@ -625,6 +748,99 @@ export async function translateText(
 
   if (data?.error) throw new TranslateError(`Translation failed: ${data.error}`);
   return (data as { translation: string }).translation;
+}
+
+/**
+ * A failure from one of the mission edge functions, carrying the server's
+ * machine-readable code so the sheet can tell a settled refusal
+ * (`HINT_QUOTA_REACHED`, `MISSION_PAID_ONLY`) from a transient one worth a
+ * retry button. Same shape as `TranslateError`.
+ */
+export class MissionApiError extends Error {
+  readonly code?: string;
+  readonly status?: number;
+
+  constructor(message: string, code?: string, status?: number) {
+    super(message);
+    this.name = 'MissionApiError';
+    this.code = code;
+    this.status = status;
+  }
+}
+
+async function throwMissionApiError(prefix: string, error: unknown): Promise<never> {
+  let detail = (error as { message?: string })?.message ?? 'request failed';
+  let code: string | undefined;
+  let status: number | undefined;
+  try {
+    const ctx = (error as Record<string, unknown>).context;
+    if (ctx && typeof (ctx as Response).json === 'function') {
+      status = (ctx as Response).status;
+      const body = await (ctx as Response).json();
+      if (body?.error) detail = body.error;
+      if (typeof body?.code === 'string') code = body.code;
+    }
+  } catch {
+    // Body wasn't JSON — fall through with the generic message.
+  }
+  if (status === 429 && !code) code = 'RATE_LIMITED';
+  throw new MissionApiError(`${prefix}: ${detail}`, code, status);
+}
+
+/** One warm-up phrase: the target-language line and what it means. */
+export interface MissionPhrase {
+  phrase: string;
+  meaning: string;
+}
+
+/**
+ * The 4-6 key phrases shown before a mission starts (`mission-phrases`).
+ *
+ * Generated once per (scene, stage, language pair) and cached server-side, so
+ * the second learner pays nothing. Paid tiers only — a `starter` account gets
+ * `MISSION_PAID_ONLY`, which the picker should have pre-empted with the
+ * paywall. Audio is NOT included: each phrase is played on tap through
+ * `getLessonAudioUri`, because a play costs a lesson-audio slot.
+ */
+export async function fetchMissionPhrases(params: {
+  scenarioKey: ScenarioKey;
+  stage: number;
+  targetLanguage: LanguageCode;
+  nativeLanguage: LanguageCode;
+}): Promise<{ phrases: MissionPhrase[]; cached: boolean }> {
+  const { data, error } = await invokeWithRetry('mission-phrases', { body: params });
+  if (error) await throwMissionApiError('Warm-up phrases failed', error);
+  if (data?.error) throw new MissionApiError(`Warm-up phrases failed: ${data.error}`, data.code);
+  return {
+    phrases: Array.isArray(data?.phrases) ? (data.phrases as MissionPhrase[]) : [],
+    cached: data?.cached === true,
+  };
+}
+
+/** The answer to "How do I say…": the phrase and a native-language gloss. */
+export interface PhraseHelp {
+  phrase: string;
+  gloss: string;
+}
+
+/**
+ * "How do I say…" (`phrase-help`). The learner asks in their native language
+ * and gets one target-language phrase back, pitched at their level and the
+ * scene's register. Metered on the daily hints budget (`HINT_QUOTA_REACHED`).
+ * A separate function from `ai-chat` on purpose: the tutor never sees the
+ * question, so Sol stays in character.
+ */
+export async function getPhraseHelp(params: {
+  ask: string;
+  targetLanguage: LanguageCode;
+  nativeLanguage: LanguageCode;
+  level: ProficiencyLevel;
+  scenarioKey?: ScenarioKey;
+}): Promise<PhraseHelp> {
+  const { data, error } = await invokeWithRetry('phrase-help', { body: params });
+  if (error) await throwMissionApiError('Phrase help failed', error);
+  if (data?.error) throw new MissionApiError(`Phrase help failed: ${data.error}`, data.code);
+  return { phrase: String(data?.phrase ?? ''), gloss: String(data?.gloss ?? '') };
 }
 
 /**
@@ -1152,4 +1368,3 @@ export async function generateContent(request: GenerateContentRequest): Promise<
   if (error) throw new Error(`Content generation error: ${error.message}`);
   return data;
 }
-

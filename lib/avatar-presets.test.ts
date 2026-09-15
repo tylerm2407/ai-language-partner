@@ -7,6 +7,8 @@
  * of an apparently-empty library (CLAUDE.md §5: returning [] on failure hides
  * outages).
  */
+import { fetchAvatarPresets, presetUrlFromId, publicPresetUrl } from './avatar-presets';
+
 const mockGetPublicUrl = jest.fn((path: string) => ({
   data: { publicUrl: `https://cdn.test/storage/v1/object/public/avatar-presets/${path}` },
 }));
@@ -24,8 +26,6 @@ jest.mock('./supabase', () => ({
     storage: { from: () => ({ getPublicUrl: (p: string) => mockGetPublicUrl(p) }) },
   },
 }));
-
-import { fetchAvatarPresets, presetUrlFromId, publicPresetUrl } from './avatar-presets';
 
 beforeEach(() => jest.clearAllMocks());
 

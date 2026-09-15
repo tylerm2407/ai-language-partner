@@ -51,8 +51,6 @@ export interface User {
   updatedAt: string;
 }
 
-export type LeagueTier = 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond';
-
 export interface UserProfile {
   id: string;
   userId: string;
@@ -60,13 +58,23 @@ export interface UserProfile {
   nativeLanguage: LanguageCode;
   targetLanguage: LanguageCode;
   level: ProficiencyLevel;
+  /**
+   * The course Home and Learn open on (migration 125). Moved by onboarding,
+   * Settings and the Learn course pills. Null means either no lesson path
+   * exists at the learner's band (advanced, no C1 course yet) or the account is
+   * unplaced and `hooks/useEnsurePlacement.ts` will fill it in.
+   */
+  currentCourseId: string | null;
+  /**
+   * CEFR band of the course the learner STARTED in (migration 125). A1–C2 by
+   * CHECK constraint; normalise with `normalizeBand` before trusting it. The
+   * proficiency report treats bands strictly below it as assumed from
+   * placement rather than measured. Stable: course pills never move it.
+   */
+  placementBand: string | null;
   dailyGoalMinutes: number;
-  totalXp: number;
   timezone: string;
   onboardingCompleted: boolean;
-  // XP levels & leagues
-  xpLevel: number;
-  leagueTier: LeagueTier;
   /**
    * Which avatar renderer this account uses (migration 067). Accounts created
    * before that migration still read 'procedural' — the SVG renderer they
@@ -160,7 +168,6 @@ export interface Lesson {
   description: string;
   orderIndex: number;
   estimatedMinutes: number;
-  xpReward: number;
   exercises: Exercise[];
 }
 
@@ -346,8 +353,58 @@ export interface DailyStats {
   listeningMinutes: number;
   readingMinutes: number;
   writingMinutes: number;
-  xpEarned: number;
   accuracy: number; // 0-1
+}
+
+// ─── Exercise Results (migration 128) ──────────────────────────
+
+/**
+ * One graded lesson exercise. Server-owned: written only by the
+ * `record_exercise_result` RPC, which derives `exerciseType`, `skillType`,
+ * `cefrLevel` and `targetLanguage` from the exercise → lesson → unit → course
+ * chain rather than trusting the client to tag its own evidence. This is what
+ * the listening strand of the proficiency report is assessed on
+ * (`listening_choice`, `listening_type`, `dictation` types) and the per-exercise
+ * history every strand can be audited against.
+ */
+export interface ExerciseResult {
+  id: string;
+  userId: string;
+  lessonId: string;
+  exerciseId: string;
+  cardId: string | null;
+  exerciseType: string;
+  skillType: string | null;
+  /** From the card when linked, else the lesson's course band. */
+  cefrLevel: string | null;
+  targetLanguage: string;
+  /** First-attempt correctness. A recovered second attempt is `false`. */
+  correct: boolean;
+  attempts: number;
+  responseTimeMs: number | null;
+  /** Client-minted idempotency key, unique per user. */
+  clientResultId: string;
+  createdAt: string;
+}
+
+// ─── News Reading Results (migration 129) ──────────────────────
+
+/**
+ * A finished daily-news article with its comprehension check, graded
+ * server-side by `record_news_reading` against the questions stored on the
+ * article. Reading evidence for the proficiency report alongside
+ * `user_reading_progress`.
+ */
+export interface NewsReadingResult {
+  id: string;
+  userId: string;
+  articleId: string;
+  targetLanguage: string;
+  cefrLevel: string;
+  /** 0–1 share of comprehension questions answered correctly. */
+  comprehension: number;
+  questionsTotal: number;
+  completedAt: string;
 }
 
 // ─── Pronunciation Scores ───────────────────────────────────────
@@ -548,7 +605,6 @@ export interface DailyChallengesRecord {
   date: string;
   challenges: DailyChallenge[];
   allCompleted: boolean;
-  bonusXpClaimed: boolean;
 }
 
 // ─── Reading ──────────────────────────────────────────────────
@@ -677,7 +733,6 @@ export interface LessonCompletion {
   lessonId: string;
   courseId: string;
   score: number; // 0-1
-  xpEarned: number;
   timeSpentMs: number;
   completedAt: string;
 }
@@ -726,6 +781,17 @@ export interface DailyNewsArticle {
   /** Measured from the rendered MP3, so it can be shown ("LISTEN · 2:14")
    *  before a single byte of audio is fetched. */
   audioDurationMs: number | null;
+  /** The comprehension check (migration 129), or null for an article whose
+   *  question generation failed — the screen shows nothing extra for those.
+   *  The correct index is stripped by the mapper: grading is server-side
+   *  (`record_news_reading`) and the honest client has no use for it. */
+  questions: NewsComprehensionQuestion[] | null;
+}
+
+export interface NewsComprehensionQuestion {
+  question: string;
+  /** Exactly four, in the target language. */
+  options: string[];
 }
 
 export interface VocabularyHighlight {
@@ -860,6 +926,23 @@ export interface GoalTrack {
 export type AvatarKind = 'procedural' | 'preset' | 'generated';
 
 /**
+ * A photo-to-avatar generation in flight (avatar_jobs, migration 112).
+ *
+ * The render takes minutes at the quality we ship, so `generate-avatar`
+ * answers with a job id and the client polls this row until it settles.
+ * Written only by the edge function; the client can only read its own rows.
+ */
+export interface AvatarJob {
+  id: string;
+  status: 'pending' | 'done' | 'failed';
+  styleKey: string;
+  /** Storage path in the private `avatars` bucket once status is 'done'. */
+  avatarPath: string | null;
+  errorCode: string | null;
+  errorMessage: string | null;
+}
+
+/**
  * A photo-to-avatar art style, as surfaced to the client. The hidden image
  * prompt for each style lives server-side only, in
  * `supabase/functions/_shared/avatar-styles.ts` — never ship it to the client.
@@ -985,4 +1068,103 @@ export interface ConversationGrade {
   summary: string;
   strengths: string[];
   improvements: string[];
+}
+
+// ─── Live Voice Tutor ───────────────────────────────────────────
+
+/**
+ * The written debrief a live tutor session produces.
+ *
+ * This is the shape of the `tutor_sessions.debrief` jsonb column (migration
+ * 107), written by `supabase/functions/_shared/tutor-writeback.ts`. It lives
+ * here rather than beside a caller because CLAUDE.md section 3 puts DB row
+ * shapes in this file, and because TWO client call sites return one —
+ * `endTutorSession` inline at the end of a call, and `fetchTutorSessionSummary`
+ * when the debrief screen has to poll for a late analysis.
+ *
+ * It is a MIRROR of the interfaces in
+ * `supabase/functions/_shared/tutor-analysis.ts`. Those run under Deno and
+ * cannot be imported from the app, so the two definitions are held together by
+ * review rather than by the compiler. If you change one, change both.
+ *
+ * THE LANGUAGE SPLIT IS DELIBERATE and the UI has to respect it: everything
+ * here is in the learner's NATIVE language except `theirs`, `better` and
+ * `phrase`, which stay in the language being learned. That is the same split
+ * `ai-chat/prompt.ts` CORRECTION RULES already enforce — clarity beats
+ * immersion when the learner is reading a rule about their own mistake.
+ */
+export interface TutorDebriefPattern {
+  /** Native language: what to call this mistake. */
+  label: string;
+  /** Native language: why it is wrong. */
+  why: string;
+  /** TARGET language: what the learner actually said. */
+  theirs: string;
+  /** TARGET language: what a native speaker would say. */
+  better: string;
+}
+
+export interface TutorDebriefPhrase {
+  /** TARGET language. */
+  phrase: string;
+  /** Native language. */
+  meaning: string;
+  /** Native language: when to reach for it. */
+  when: string;
+}
+
+export interface TutorDebrief {
+  /** Something the learner actually said that worked, quoted back to them. */
+  highlight: string;
+  /**
+   * At most three, each having occurred at least twice, most frequent first.
+   * These are PATTERNS, not an error list — a debrief enumerating every mistake
+   * is a punishment, and a learner who feels punished stops speaking. An empty
+   * array is a good outcome, not a missing one.
+   */
+  patterns: TutorDebriefPattern[];
+  /** At most three phrases they could have used but did not. */
+  reachFor: TutorDebriefPhrase[];
+  /** One concrete thing to try next time. */
+  nextTime: string;
+  /**
+   * Always the SERVER's measurement, never the model's — it has no clock, and
+   * this is the one number in the debrief a learner will actually check.
+   */
+  minutesSpoken: number;
+}
+
+/** A finished session as the lobby and debrief screens read it back. */
+export interface TutorSessionSummary {
+  sessionId: string;
+  minutes: number;
+  debrief: TutorDebrief | null;
+  endedAt: string | null;
+}
+
+// ─── Tutor Memory ────────────────────────────────────────────
+
+/** What the live tutor remembers about a learner between sessions (migration 108). */
+export type TutorMemoryKind =
+  | 'personal_fact'
+  | 'goal'
+  | 'recurring_error'
+  | 'preference'
+  | 'topic_thread';
+
+/**
+ * One note. Owner-readable and owner-DELETABLE via RLS — never writable from
+ * the client, because a note is injected verbatim into a future system prompt
+ * and a learner who could author one could steer the tutor.
+ */
+export interface TutorMemory {
+  id: string;
+  targetLanguage: string;
+  kind: TutorMemoryKind;
+  /** The note itself, ≤200 chars, written in the learner's native language. */
+  content: string;
+  /** How many sessions have surfaced this note. */
+  mentionCount: number;
+  firstSeenAt: string;
+  lastSeenAt: string;
 }

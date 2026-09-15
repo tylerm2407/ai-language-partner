@@ -6,8 +6,8 @@ import { ExerciseCard } from './ExerciseCard';
 import { FeedbackCard } from './FeedbackCard';
 import { ExerciseHint } from './ExerciseHint';
 import { HighlightedText } from '../shared/HighlightedText';
-import { Button } from '../ui/Button';
-import { colors } from '../../config/theme';
+import { SlabButton } from '../ui2/SlabButton';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { gradeAnswer } from '../../lib/grading';
 import type { GradeResult } from '../../lib/grading';
 import { exerciseHints, isRestored, regradePick } from '../../lib/exercise-restore';
@@ -57,6 +57,7 @@ export function TranslationExercise({
   cefrLevel,
   siblingKeys,
 }: TranslationExerciseProps) {
+  const { c } = useUi2Theme();
   const lang = language as LanguageCode | undefined;
   // Seeded from the recorded pick so Previous comes back to the answer the
   // learner actually gave, in its graded state — see lib/exercise-restore.ts.
@@ -121,10 +122,12 @@ export function TranslationExercise({
       .finally(() => { gradingRef.current = false; setIsGrading(false); });
   };
 
-  const getBorderClass = () => {
-    if (!submitted) return 'border-input-border';
-    if (result?.isCorrect) return 'border-success';
-    return 'border-error';
+  /** A palette token rather than the Tailwind border class it used to return,
+   *  so the graded outline follows the phone's light/dark setting. */
+  const getBorderColor = () => {
+    if (!submitted) return c.cardBorder;
+    if (result?.isCorrect) return c.green;
+    return c.error;
   };
 
   const highlight = exercise.targetWord ?? exercise.targetGrammar;
@@ -132,7 +135,8 @@ export function TranslationExercise({
     <HighlightedText
       text={exercise.prompt}
       highlight={highlight}
-      className="text-text-primary text-[22px] font-sans-semibold"
+      className="text-[22px] font-sans-semibold"
+      style={{ color: c.ink }}
     />
   );
 
@@ -145,9 +149,10 @@ export function TranslationExercise({
       ) : null}
 
       <TextInput
-        className={`border-2 ${getBorderClass()} rounded-[14px] px-4 py-2.5 text-base text-text-primary min-h-[80px]`}
+        className="border-2 rounded-[14px] px-4 py-2.5 text-base min-h-[80px]"
+        style={{ borderColor: getBorderColor(), color: c.ink }}
         placeholder={isOpenProduction(exercise) ? 'Write your sentence...' : 'Type your translation...'}
-        placeholderTextColor="#64748B"
+        placeholderTextColor={c.idle}
         value={answer}
         onChangeText={setAnswer}
         editable={!submitted && !showResult && !isGrading}
@@ -161,15 +166,15 @@ export function TranslationExercise({
           <Ionicons
             name={result.isCorrect ? 'checkmark-circle' : 'close-circle'}
             size={20}
-            color={result.isCorrect ? colors.success.base : colors.error.base}
+            color={result.isCorrect ? c.green : c.error}
           />
-          <Text className={`ml-1 text-sm font-semibold ${result.isCorrect ? 'text-success' : 'text-error'}`}>
+          <Text className="ml-1 text-sm font-semibold" style={{ color: c.ink }}>
             {result.isCorrect ? 'Correct' : 'Incorrect'}
           </Text>
         </View>
       )}
       {gradeNote ? (
-        <Text className="mt-2 text-xs text-text-tertiary" accessibilityRole="alert">
+        <Text className="mt-2 text-xs" style={{ color: c.muted }} accessibilityRole="alert">
           {gradeNote}
         </Text>
       ) : null}
@@ -187,7 +192,7 @@ export function TranslationExercise({
 
       {!submitted && !showResult && (
         <View className="mt-4">
-          <Button
+          <SlabButton
             label={isGrading ? 'Checking…' : 'Check'}
             onPress={handleSubmit}
             disabled={!answer.trim() || isGrading}

@@ -11,6 +11,8 @@ function renderText(props: {
   selectedRef?: { paragraphIndex: number; tokenIndex: number } | null;
   onWordPress?: jest.Mock;
   onExplain?: jest.Mock;
+  lineHeightMultiplier?: number;
+  fontFamily?: string;
 }) {
   let tree!: TestRenderer.ReactTestRenderer;
   act(() => {
@@ -18,6 +20,8 @@ function renderText(props: {
       <TappableText
         paragraphs={props.paragraphs}
         fontSize={16}
+        lineHeightMultiplier={props.lineHeightMultiplier}
+        fontFamily={props.fontFamily}
         selectedRef={props.selectedRef ?? null}
         onWordPress={props.onWordPress ?? jest.fn()}
         onExplain={props.onExplain}
@@ -107,6 +111,25 @@ describe('TappableText', () => {
     const tree = renderText({ paragraphs: TWO_PARAGRAPHS, onExplain });
     press(byLabel(tree, 'Explain this paragraph')[1]);
     expect(onExplain).toHaveBeenCalledWith(TWO_PARAGRAPHS[1]);
+  });
+
+  it('sets the paragraph type from the display preferences', () => {
+    // The paragraph <Text> is the parent of the word buttons; its style is
+    // where the reader's size, spacing and face actually land.
+    const paragraphOf = (tree: TestRenderer.ReactTestRenderer) =>
+      byLabel(tree, 'Look up régnait')[0].parent!.props.style;
+
+    const defaults = paragraphOf(renderText({ paragraphs: TWO_PARAGRAPHS }));
+    expect(defaults.lineHeight).toBeCloseTo(16 * 1.7);
+    expect(defaults.fontFamily).toBeUndefined();
+
+    const tuned = paragraphOf(
+      renderText({ paragraphs: TWO_PARAGRAPHS, lineHeightMultiplier: 1.95, fontFamily: 'Fraunces_400Regular' }),
+    );
+    expect(tuned.lineHeight).toBeCloseTo(16 * 1.95);
+    expect(tuned.fontFamily).toBe('Fraunces_400Regular');
+    // Never a weight beside a named family — Android would swap the face out.
+    expect(tuned.fontWeight).toBeUndefined();
   });
 
   it('a selection change re-renders only the paragraph it is in', () => {

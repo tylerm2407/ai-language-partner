@@ -3,9 +3,17 @@ import TestRenderer, { act } from 'react-test-renderer';
 import { MultipleChoice } from './MultipleChoice';
 import { ListeningExercise } from './ListeningExercise';
 import { haptic } from '../../lib/haptics';
-import { colors } from '../../config/theme';
+import { ui2Light } from '../../config/theme';
 import type { Exercise } from '../../types';
 
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  __esModule: true,
+  default: {
+    setItem: jest.fn(async () => {}),
+    getItem: jest.fn(async () => null),
+    removeItem: jest.fn(async () => {}),
+  },
+}));
 jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Ionicons' }));
 jest.mock('../../lib/haptics', () => ({ haptic: jest.fn() }));
 jest.mock('../../lib/supabase-queries', () => ({ logExerciseCorrection: jest.fn() }));
@@ -27,12 +35,17 @@ for (const type of ['multiple_choice', 'listening_choice'] as const) {
   const expectFeedback = (tree: TestRenderer.ReactTestRenderer, option: string, correct: boolean) => {
     const button = getChoice(tree, option);
     expect(button.props.disabled).toBe(true);
+    // What is asserted is that the VISUAL verdict agrees with the credit —
+    // the exact tokens are UI 2.0's to pick, so they are read from the live
+    // palette rather than pinned to a retired one. Under UI 2.0 a choice row
+    // carries its state as a fill (multiple choice) or a border (listening),
+    // not as a NativeWind colour class.
     if (type === 'multiple_choice') {
-      expect(button.props.style.borderColor).toBe(correct ? colors.success.base : colors.error.base);
+      expect(button.props.style.backgroundColor).toBe(correct ? ui2Light.green : ui2Light.error);
       const labels = button.findAll(n => typeof n.type === 'string').flatMap(n => n.children.filter(c => typeof c === 'string')).join(' ');
       expect(labels).toContain(correct ? 'CORRECT' : 'YOUR PICK');
     } else {
-      expect(button.props.className).toContain(correct ? 'border-success' : 'border-error');
+      expect(button.props.style.borderColor).toBe(correct ? ui2Light.green : ui2Light.error);
       expect(button.findAll(n => n.props.name === (correct ? 'checkmark-circle' : 'close-circle')).length).toBeGreaterThan(0);
       expect(button.findAll(n => n.props.name === (correct ? 'close-circle' : 'checkmark-circle'))).toHaveLength(0);
     }

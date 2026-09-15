@@ -157,6 +157,79 @@ Deno.test('the provider error text is never returned to the client', () => {
   }
 });
 
+// ─── Missions ─────────────────────────────────────────────────────────────
+//
+// The finish turn is the one request that must never open a stream and must
+// never be turned away at the daily limit: it is scored and answered in one
+// JSON envelope, from turns that were each already paid for.
+
+Deno.test('finish never streams', () => {
+  assert(
+    INDEX_SRC.includes('const wantsStream = finish ? false : rawStream;'),
+    'the stream flag must be forced off for a finish before the streaming branch is reached',
+  );
+  assert(
+    INDEX_SRC.indexOf('const wantsStream = finish ? false : rawStream;') <
+      INDEX_SRC.indexOf('if (wantsStream === true) {'),
+  );
+});
+
+Deno.test('finish is never a 429', () => {
+  // A finish with nothing to finish is a 400, not a quota answer.
+  const at = INDEX_SRC.indexOf("code: 'NOTHING_TO_FINISH'");
+  assert(at > 0, 'the NOTHING_TO_FINISH refusal should exist');
+  const status = INDEX_SRC.slice(at, INDEX_SRC.indexOf('status:', at) + 'status: 400'.length);
+  assert(status.endsWith('status: 400'), 'NOTHING_TO_FINISH must be a 400');
+  // The daily-limit branch turns away ordinary turns only; a finish at the
+  // limit degrades to the canned send-off instead.
+  assert(
+    INDEX_SRC.includes('if (!allowed) {\n      if (!finish) {'),
+    'the daily-limit 429 must be guarded by !finish',
+  );
+  assert(INDEX_SRC.includes('sendoffOnly = true;'));
+  assert(INDEX_SRC.includes('const SENDOFF_REPLIES: Record<string, string> = {'));
+});
+
+Deno.test('the attempt is resolved before the daily quota is spent', () => {
+  // A locked stage or a finished attempt must not cost a text message.
+  const resolveAt = INDEX_SRC.indexOf('await resolveMissionAttempt(supabase, {');
+  const quotaAt = INDEX_SRC.indexOf('await consumeDailyQuota(');
+  const burstAt = INDEX_SRC.indexOf('await checkBurstLimit(');
+  assert(resolveAt > 0 && quotaAt > 0 && burstAt > 0);
+  assert(burstAt < resolveAt, 'burst first — a rate-limited request should not touch the attempt');
+  assert(resolveAt < quotaAt, 'the attempt is resolved before quota is consumed');
+});
+
+Deno.test('the prompt is built from the row’s stage, never the request’s', () => {
+  const call = INDEX_SRC.slice(INDEX_SRC.indexOf('const systemPrompt = buildSystemPrompt('));
+  const args = call.slice(0, call.indexOf(');'));
+  assert(args.includes('missionAttempt?.stage'), 'buildSystemPrompt must take the attempt row’s stage');
+  assert(!/\bmissionStage\b/.test(args), 'the client-sent missionStage must not reach the prompt');
+});
+
+Deno.test('a finish logs no correction, leaves no evidence and banks no cards', () => {
+  const fn = INDEX_SRC.slice(INDEX_SRC.indexOf('async function finalizeTurn('));
+  assert(fn.includes("const correction = ctx.finish ? null : parsed.correction;"));
+  const guarded = fn.slice(fn.indexOf('if (!ctx.finish) {'), fn.indexOf('// ── Mission progress'));
+  assert(guarded.includes('recordConversationEvidence(supabase'), 'evidence is inside the !finish guard');
+  assert(guarded.includes('saveChatVocabulary(supabase'), 'cards are inside the !finish guard');
+});
+
+Deno.test('objective ids are whitelisted against the mission before they are believed', () => {
+  assert(INDEX_SRC.includes('parsed.objectivesMet.filter((id) => ids.has(id))'));
+  assert(INDEX_SRC.includes('missionObjectiveIds(ctx.mission.def)'));
+});
+
+Deno.test('evidence is attributed to the session on both transports', () => {
+  // The streaming fallback and finalizeTurn both write evidence; the new
+  // column has to be on both or a mission's accuracy depends on transport.
+  assertEquals(
+    INDEX_SRC.split('chatSessionId: turnContext.evidenceSessionId,').length - 1 +
+      INDEX_SRC.split('chatSessionId: ctx.evidenceSessionId,').length - 1,
+    2,
+  );
+});
+
 Deno.test('a safety failure sends the pre-authored fallback, not the model text', () => {
   assert(STREAM_SRC.includes("send('fallback', { reply: opts.fallbackReply })"));
   assert(

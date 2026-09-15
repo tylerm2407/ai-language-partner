@@ -197,7 +197,7 @@ export const radii = {
  * here equal hhea — and NOT the larger usWin* pair:
  *
  *   face            typo/hhea   usWin*   capHeight
- *   Nunito            1.364     1.377      0.705
+ *   Manrope           1.366     1.366      0.720
  *   Fraunces          1.233     1.474      0.700
  *   JetBrains Mono    1.320     1.320        —
  *
@@ -205,9 +205,9 @@ export const radii = {
  * clipped every heading by 1-5px after the font swap.
  */
 export const leading = {
-  /** Nunito — body, headings, CTA labels. */
-  sans: 1.364,
-  /** Fraunces — display face. Tighter than Nunito despite being larger on screen. */
+  /** Manrope — body, headings, CTA labels (replaced Nunito 2026-09-07; same box). */
+  sans: 1.366,
+  /** Fraunces — display face. Tighter than Manrope despite being larger on screen. */
   display: 1.233,
   /** JetBrains Mono — meta rows, eyebrows. */
   mono: 1.32,
@@ -226,11 +226,11 @@ export function minLineHeight(fontSize: number, face: keyof typeof leading = 'sa
 
 export const typography = {
   family: {
-    regular: 'Nunito_400Regular',
-    medium: 'Nunito_500Medium',
-    semibold: 'Nunito_600SemiBold',
-    bold: 'Nunito_700Bold',
-    extrabold: 'Nunito_800ExtraBold', // headings, CTA labels
+    regular: 'Manrope_400Regular',
+    medium: 'Manrope_500Medium',
+    semibold: 'Manrope_600SemiBold',
+    bold: 'Manrope_700Bold',
+    extrabold: 'Manrope_800ExtraBold', // headings, CTA labels
     display: 'Fraunces_700Bold', // celebration / hero only
     serif: 'Fraunces_600SemiBold', // magazine editorial headlines
     mono: 'JetBrainsMono_400Regular',
@@ -333,3 +333,238 @@ export const elevation = {
 
 export const theme = { colors, spacing, radii, typography, motion, elevation };
 export type Theme = typeof theme;
+
+// ─── UI 2.0 ("Tactile") — light + dark ────────────────────────────────────
+/**
+ * The redesign palette, chosen 2026-09-06 from the Home direction boards
+ * (canvas "Fluenci UI 2.0", board D3). It lives beside the Dark Glow tokens
+ * above rather than replacing them: screens migrate one at a time on
+ * `redesign/ui-2.0`, and a screen that has not migrated keeps rendering from
+ * `colors`. Read it through `useUi2Theme()` (hooks/useUi2Theme.ts), which
+ * picks light or dark from the OS setting.
+ *
+ * Contrast, checked against each scheme's `bg`: ink is 14.8:1 light / 17.2:1
+ * dark; muted is 5.1:1 light / 8.9:1 dark; white on `primary` is 5.6:1 light /
+ * 4.6:1 dark. Nothing below AA.
+ */
+export const ui2Light = {
+  bg: '#FFFFFF',
+  surface2: '#F5F4FA',
+  /** Tint blocks (2026-09-07): a card is a solid tinted fill on the ground, no
+   *  outline. `cardBorder` equals `card` so any leftover hardcoded border
+   *  disappears into the fill instead of drawing a Duolingo-style stroke. */
+  card: '#F3F1F9',
+  cardBorder: '#F3F1F9',
+  ink: '#23203A',
+  muted: '#6E6A88',
+  idle: '#8C88A6',
+  primary: '#6A4CFF',
+  slab: '#4D33D6',
+  primaryTint: '#EFEBFF',
+  primaryTintBorder: '#D9D1FF',
+  /** Text on primaryTint: primary itself is 4.4:1 there, just under AA. */
+  onTint: '#4D33D6',
+  onPrimary: '#FFFFFF',
+  onPrimaryMuted: '#E8E3FF',
+  ctaOnPrimaryBg: '#FFFFFF',
+  ctaOnPrimarySlab: '#D9D1FF',
+  ctaOnPrimaryText: '#6A4CFF',
+  /** Amber (canvas "Yellow · candidates", Y1, picked 2026-09-08). The old
+   *  #FFC857 was Duolingo's #FFC800 with a touch of warmth and read as theirs. */
+  yellow: '#F5A524',
+  yellowTint: '#FDF0DA',
+  yellowBorder: '#F6DDA9',
+  green: '#33C48D',
+  greenTint: '#E6F8F0',
+  greenBorder: '#BFEBD8',
+  /** Text on a solid `green` block: 8.6:1 light. */
+  onGreen: '#0B3D2B',
+  /** Text on a solid `error` block. */
+  onError: '#FFFFFF',
+  pink: '#FF5C8A',
+  pinkTint: '#FFE9F1',
+  track: '#EFEBFF',
+  /** Unfilled progress when the bar sits ON a card: the card is already a tint,
+   *  so the groove goes to the ground colour to stay visible. */
+  trackOnCard: '#FFFFFF',
+  error: '#E5484D',
+  /** Atmosphere (Home, picked 2026-09-14 from the "Home · Atmosphere" board):
+   *  cards go translucent over soft colour glows drawn behind the page. The
+   *  glows are `primary`/`yellow`/`green` at low opacity (see
+   *  components/ui2/home/Atmosphere.tsx); these are the glass fills that sit
+   *  on top of them, a hairline that reads as a lit edge, and the one shadow
+   *  colour every lifted surface shares. */
+  glass: 'rgba(255,255,255,0.62)',
+  glassPrimary: 'rgba(239,235,255,0.74)',
+  glassGreen: 'rgba(230,248,240,0.78)',
+  glassYellow: 'rgba(253,240,218,0.80)',
+  glassPink: 'rgba(255,233,241,0.80)',
+  glassBorder: 'rgba(255,255,255,0.85)',
+  shadow: '#4D33D6',
+  /** The hero's mesh: a highlight stop at its top-right and a shade stop at
+   *  its bottom-left, both faded into `primary` by a radial gradient. */
+  heroHighlight: '#8B75FF',
+  heroShade: '#3D27B8',
+} as const;
+
+export type Ui2Palette = Record<keyof typeof ui2Light, string>;
+
+export const ui2Dark: Ui2Palette = {
+  bg: '#0C0B14',
+  surface2: '#100E1C',
+  card: '#17152A',
+  cardBorder: '#17152A',
+  ink: '#F4F2FF',
+  muted: '#A6A2C2',
+  idle: '#6C6890',
+  // #7C63FF (the boards' value) is 4.2:1 under white; one step darker clears AA.
+  primary: '#7057FF',
+  slab: '#5641D9',
+  primaryTint: '#2A2450',
+  primaryTintBorder: '#3E3670',
+  onTint: '#C4B5FD',
+  onPrimary: '#FFFFFF',
+  onPrimaryMuted: '#E8E3FF',
+  ctaOnPrimaryBg: '#FFFFFF',
+  ctaOnPrimarySlab: '#CFC6FF',
+  ctaOnPrimaryText: '#5641D9',
+  yellow: '#FFB340',
+  yellowTint: '#3A2E16',
+  yellowBorder: '#4F4020',
+  green: '#33C48D',
+  greenTint: '#1A3A2F',
+  greenBorder: '#245244',
+  onGreen: '#0B3D2B',
+  // Dark error is #FF6B70; white on it is 3:1, near-black ink is 8:1.
+  onError: '#1A0E10',
+  pink: '#FF5C8A',
+  pinkTint: '#3A2230',
+  track: '#26224A',
+  trackOnCard: '#26224A',
+  error: '#FF6B70',
+  glass: 'rgba(23,21,42,0.72)',
+  glassPrimary: 'rgba(42,36,80,0.80)',
+  glassGreen: 'rgba(26,58,47,0.80)',
+  glassYellow: 'rgba(58,46,22,0.80)',
+  glassPink: 'rgba(58,34,48,0.80)',
+  glassBorder: 'rgba(255,255,255,0.07)',
+  shadow: '#000000',
+  heroHighlight: '#8B75FF',
+  heroShade: '#2A1A8A',
+};
+
+/**
+ * Night reading — the reader's amber-on-true-black palette (2026-09-09).
+ *
+ * WHY IT EXISTS. iOS gives an app no access to Night Shift, so the only lever
+ * an app has over blue light is the colour of the pixels it paints. On an OLED
+ * panel a `#000000` pixel is switched off and emits nothing, and a pixel whose
+ * blue byte is `00` emits no blue at all. So the palette below is the practical
+ * floor: black ground, amber foregrounds, and a blue channel of zero on every
+ * one of the 30 keys — `hooks/useUi2Theme.test.ts` asserts that byte on each.
+ * A tinted overlay could not do this: alpha blending only scales blue down,
+ * and it dims contrast with it.
+ *
+ * WHERE IT APPLIES. Only inside a `<Ui2VariantProvider variant="warm">`, which
+ * the reader mounts around itself when the learner's Night reading preference
+ * is on. Nothing outside the reader ever renders from it. It is not a third
+ * scheme: `useUi2Theme()` reports `scheme: 'dark'` under it, because every
+ * `scheme === 'dark'` branch in the app asks "is the ground dark?", and here
+ * it is.
+ *
+ * SEMANTIC HUES ARE REMAPPED, not kept. Violet, green, pink and the error red
+ * all carry blue, so `primary` becomes amber, `green` olive, `pink` orange and
+ * `error` red-orange. That is only acceptable because the design rules already
+ * forbid colour-only feedback — every verdict pairs an icon and a label — so a
+ * shifted hue changes nothing a learner relies on. White is never used
+ * either (`onPrimary` is dark ink on amber): white is one third blue.
+ *
+ * Contrast against `bg`: ink 10.9:1, muted 6.1:1, primary 8.8:1; onPrimary on
+ * primary 7.9:1; onTint on primaryTint 10.0:1; muted on card 5.5:1. `idle` is
+ * 3.1:1, the same non-text role it has in the other two palettes.
+ */
+export const ui2Warm: Ui2Palette = {
+  bg: '#000000',
+  surface2: '#0A0700',
+  card: '#161100',
+  cardBorder: '#161100',
+  ink: '#F5AE00',
+  muted: '#B88000',
+  idle: '#7A5500',
+  primary: '#E09A00',
+  slab: '#B87E00',
+  primaryTint: '#2A1E00',
+  primaryTintBorder: '#3D2C00',
+  onTint: '#FFC000',
+  onPrimary: '#1A1000',
+  onPrimaryMuted: '#4A3000',
+  ctaOnPrimaryBg: '#1A1000',
+  ctaOnPrimarySlab: '#000000',
+  ctaOnPrimaryText: '#FFC000',
+  yellow: '#FFCC00',
+  yellowTint: '#2E2400',
+  yellowBorder: '#4A3A00',
+  green: '#9CB000',
+  greenTint: '#161A00',
+  greenBorder: '#2E3400',
+  onGreen: '#101400',
+  onError: '#1A0600',
+  pink: '#FF7A00',
+  pinkTint: '#2E1600',
+  track: '#1F1800',
+  trackOnCard: '#2A2000',
+  error: '#FF4A00',
+  // Night reading never shows Home, so the glass keys are the opaque tints:
+  // every warm value must stay a blue-free hex (hooks/useUi2Theme.test.ts).
+  glass: '#161100',
+  glassPrimary: '#2A1E00',
+  glassGreen: '#161A00',
+  glassYellow: '#2E2400',
+  glassPink: '#2E1600',
+  glassBorder: '#1F1800',
+  shadow: '#000000',
+  heroHighlight: '#FFB300',
+  heroShade: '#7A5000',
+};
+
+/**
+ * Reader body faces. Manrope is the UI voice everywhere else; Fraunces is the
+ * one serif in the binary, and its 400 weight is loaded for exactly this — a
+ * long-form reading option, never UI chrome (DESIGN.md: "No serif in UI 2.0").
+ */
+export const ui2ReaderType = {
+  sans: 'Manrope_400Regular',
+  serif: 'Fraunces_400Regular',
+} as const;
+
+
+/**
+ * UI 2.0 type: Manrope for everything (canvas page "Slab-free · A/B/C",
+ * variant C, picked 2026-09-07). Nunito went because it is the free stand-in
+ * for Duolingo's rounded Feather Bold and carried every label; Plus Jakarta
+ * went with it so the app has one voice.
+ */
+export const ui2Type = {
+  heading: 'Manrope_800ExtraBold',
+  headingBold: 'Manrope_700Bold',
+  ui: 'Manrope_600SemiBold',
+  uiBold: 'Manrope_700Bold',
+  uiHeavy: 'Manrope_800ExtraBold',
+} as const;
+
+/**
+ * UI 2.0 shape: Tint blocks. No outline and no bottom slab anywhere — a card
+ * is a filled block, a button is a filled pill. The slab keys are kept at 0 so
+ * every `borderBottomWidth: shape.slab` in the tree collapses without a
+ * per-file edit; do not raise them again (the slab was the strongest single
+ * Duolingo tell, see DESIGN.md "UI 2.0 › Shape and type").
+ */
+export const ui2Shape = {
+  radiusCard: 22,
+  radiusHero: 28,
+  radiusButton: 999,
+  border: 0,
+  slab: 0,
+  slabPressed: 0,
+  buttonSlab: 0,
+} as const;

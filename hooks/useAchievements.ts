@@ -13,7 +13,13 @@ export function useAchievements() {
   const { profile, dailyStats } = useAppStore();
   const [earnedAchievements, setEarnedAchievements] = useState<EarnedAchievement[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadNonce, setReloadNonce] = useState(0);
   const newInSession = useRef(new Set<string>());
+
+  // Same retry shape as `useDailyChallenges`: bump the nonce to re-run the
+  // load effect below.
+  const retry = useCallback(() => setReloadNonce((n) => n + 1), []);
 
   useEffect(() => {
     if (!user?.id) {
@@ -25,17 +31,25 @@ export function useAchievements() {
 
     (async () => {
       setLoading(true);
-      const earned = await fetchAchievements(user.id);
-      if (!cancelled) {
-        setEarnedAchievements(earned);
-        setLoading(false);
+      setError(null);
+      try {
+        const earned = await fetchAchievements(user.id);
+        if (!cancelled) setEarnedAchievements(earned);
+      } catch (err) {
+        // Was awaited with no catch: a thrown rejection here left `loading`
+        // true forever (a permanent spinner) and the grid's count stuck on
+        // its loading em-dash. Surface it and let `retry` re-run this effect.
+        console.error('[achievements] fetchAchievements failed:', err);
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Could not load your achievements.');
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [user?.id]);
+  }, [user?.id, reloadNonce]);
 
   const checkNewAchievements = useCallback(async (): Promise<AchievementDefinition[]> => {
     if (!user?.id || !profile) return [];
@@ -62,6 +76,9 @@ export function useAchievements() {
   return {
     earnedAchievements,
     loading,
+    /** Non-null when the earned list could not be loaded. Render a retry. */
+    error,
+    retry,
     checkNewAchievements,
     isNewInSession,
   };

@@ -183,20 +183,28 @@ async function loadIndexSource(): Promise<string> {
   return await Deno.readTextFile(INDEX_PATH);
 }
 
-Deno.test('voice minutes are billed from audio duration, never a flat unit', async () => {
+Deno.test('voice minutes are RESERVED atomically before synthesis, then settled to the measured clip', async () => {
   const src = await loadIndexSource();
-  const call = src.slice(src.indexOf("rpc('increment_daily_usage'"));
-  assert(call.length > 0, 'increment_daily_usage call not found');
-  const args = call.slice(0, call.indexOf('}'));
+  // Migration 113: consume_voice_seconds is the atomic check-and-reserve that
+  // replaced a read-then-check thirty concurrent requests could all pass.
+  const reserveAt = src.indexOf("rpc('consume_voice_seconds'");
+  const synthAt = src.indexOf('generateWithFish(voiceId, cleanText, purpose)');
+  assert(reserveAt > 0, 'consume_voice_seconds call not found');
+  assert(synthAt > reserveAt, 'the reservation must land BEFORE the provider is called');
+  assert(
+    /p_seconds:\s*reservedVoiceSeconds/.test(src),
+    'the reservation is the character estimate in seconds',
+  );
+  assert(!src.includes("rpc('increment_daily_usage'"), 'increment_daily_usage has no ceiling and must not meter voice');
+  assert(src.includes("rpc('adjust_voice_seconds'"), 'the reservation is settled to the measured duration');
+});
 
-  assert(
-    !/p_voice_minutes:\s*1\s*,/.test(args),
-    'p_voice_minutes is a flat 1 again — one synthesis is not one minute',
-  );
-  assert(
-    /p_voice_minutes:\s*durationMs\s*\/\s*60_?000/.test(args),
-    'p_voice_minutes should be milliseconds of rendered audio over 60,000',
-  );
+Deno.test('a reservation that fails to land fails CLOSED', async () => {
+  const src = await loadIndexSource();
+  const block = src.slice(src.indexOf("rpc('consume_voice_seconds'"), src.indexOf("rpc('consume_voice_seconds'") + 1200);
+  assert(/reserveErr\)\s*\{/.test(block), 'a meter error must be handled');
+  assert(block.includes('status: 503'), 'a meter outage is a 503, never unmetered synthesis');
+  assert(/reserved !== true/.test(block), 'anything but an explicit true is a refusal');
 });
 
 Deno.test('duration is measured from the bytes, estimated only as a fallback', async () => {
@@ -208,16 +216,6 @@ Deno.test('duration is measured from the bytes, estimated only as a fallback', a
   assert(
     src.includes("from '../_shared/mp3-duration.ts'"),
     'the duration helpers live in _shared so tts and news-audio share one copy',
-  );
-});
-
-Deno.test('the NUMERIC voice_minutes column is parsed, not coerced', async () => {
-  const src = await loadIndexSource();
-  // PostgREST serialises NUMERIC as a JSON string to keep arbitrary
-  // precision. `'10' >= 6` happens to be true; `'10' + 0.2` is '100.2'.
-  assert(
-    /parseFloat\(data\?\.voice_minutes as string\)/.test(src),
-    'voice_minutes arrives as a string and must be parsed before arithmetic',
   );
 });
 

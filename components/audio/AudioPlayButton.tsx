@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Pressable, Text, ActivityIndicator } from 'react-native';
 import { haptic } from '../../lib/haptics';
 import { useAudioPlayer } from '../../hooks/useAudioPlayer';
-import { colors } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 
 interface AudioPlayButtonProps {
   audioUrl: string;
@@ -14,6 +14,7 @@ interface AudioPlayButtonProps {
  * Used in exercises, card reviews, and AI practice.
  */
 export function AudioPlayButton({ audioUrl, size = 48 }: AudioPlayButtonProps) {
+  const { c } = useUi2Theme();
   const { play, stop, playing, loading, error } = useAudioPlayer();
 
   // Playback failure feedback — error haptic; the button flips to an
@@ -37,7 +38,7 @@ export function AudioPlayButton({ audioUrl, size = 48 }: AudioPlayButtonProps) {
         width: size,
         height: size,
         borderRadius: size / 2,
-        backgroundColor: error ? colors.error.base : colors.action.primaryFill,
+        backgroundColor: error ? c.error : c.primary,
         justifyContent: 'center',
         alignItems: 'center',
       }}
@@ -51,9 +52,9 @@ export function AudioPlayButton({ audioUrl, size = 48 }: AudioPlayButtonProps) {
       }
     >
       {loading ? (
-        <ActivityIndicator color="#fff" size="small" />
+        <ActivityIndicator color={c.onPrimary} size="small" />
       ) : (
-        <Text style={{ color: '#fff', fontSize: size * 0.4, fontWeight: '700' }}>
+        <Text style={{ color: c.onPrimary, fontSize: size * 0.4, fontWeight: '700' }}>
           {error ? '!' : playing ? '||' : '▶'}
         </Text>
       )}

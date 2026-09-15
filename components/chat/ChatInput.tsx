@@ -1,11 +1,12 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import { View, TextInput, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import { File } from 'expo-file-system/next';
-import { colors, spacing } from '../../config/theme';
-import { setAudioSessionMode, recordingModeFor } from '../../lib/audio-session';
+import { spacing } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
+import { setAudioSessionMode, recordingModeFor, speechRecordingOptions } from '../../lib/audio-session';
 import { chatVadForLevel, createVadState, feedVadSample, type VadState } from '../../lib/vad';
 import { LiveComposer } from './LiveComposer';
 import type { VoiceGender } from '../../lib/voice-preference';
@@ -64,6 +65,13 @@ interface ChatInputProps {
    *  deciding a turn is over — a beginner assembling a clause pauses far
    *  longer than an advanced speaker. See `chatVadForLevel`. */
   cefrLevel?: string | null;
+  /**
+   * Open the "How do I say…" phrase-help sheet. Purely additive: when absent,
+   * nothing about the composer changes. Surfaced in the text composer and the
+   * hold-to-talk composer only — never in the hands-free loop, where the loop
+   * owns the mic and toggling Live off is one tap (see the hands-free branch).
+   */
+  onHelp?: () => void;
 }
 
 // Endpointing now comes from lib/vad.ts, which calibrates a noise floor from
@@ -120,7 +128,9 @@ export function ChatInput({
   onBeforeRecord,
   onInterruptPlayback,
   cefrLevel,
+  onHelp,
 }: ChatInputProps) {
+  const { c } = useUi2Theme();
   const insets = useSafeAreaInsets();
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
@@ -186,12 +196,7 @@ export function ChatInput({
 
       await setAudioSessionMode(recordingModeFor(withSilenceDetection));
 
-      const recordingOptions = {
-        ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
-        isMeteringEnabled: true,
-      };
-
-      const { recording } = await Audio.Recording.createAsync(recordingOptions);
+      const { recording } = await Audio.Recording.createAsync(speechRecordingOptions());
       recordingRef.current = recording;
       recordingStartTimeRef.current = Date.now();
       setIsRecording(true);
@@ -391,8 +396,17 @@ export function ChatInput({
     }
   };
 
+  // Mode changes and explicit listening signals own microphone transitions.
+  // Read the latest committed handlers without restarting the microphone when
+  // a parent callback or the recording state changes during an active turn.
+  const listeningSnapshot = useRef({ isRecording, handsFreeState, sending, onListeningStarted, startRecording });
+  useLayoutEffect(() => {
+    listeningSnapshot.current = { isRecording, handsFreeState, sending, onListeningStarted, startRecording };
+  });
+
   // Auto-start listening when parent signals (e.g. after TTS finishes)
   useEffect(() => {
+    const { isRecording, onListeningStarted, startRecording } = listeningSnapshot.current;
     if (handsFreeMode && shouldStartListening && !isRecording && !isStoppingRef.current) {
       onListeningStarted?.();
       startRecording(true);
@@ -401,6 +415,7 @@ export function ChatInput({
 
   // Start listening when hands-free mode is first activated.
   useEffect(() => {
+    const { handsFreeState, isRecording, sending, startRecording } = listeningSnapshot.current;
     if (handsFreeMode && handsFreeState === 'IDLE' && !isRecording && !sending) {
       startRecording(true);
     }
@@ -422,7 +437,7 @@ export function ChatInput({
       setIsRecording(false);
       isStoppingRef.current = false;
     };
-  }, [handsFreeMode]);
+  }, [handsFreeMode, clearVadState]);
 
   // Hands-free mode UI
   if (handsFreeMode) {
@@ -439,12 +454,17 @@ export function ChatInput({
 
     const statusColor = (() => {
       switch (handsFreeState) {
-        case 'CONNECTING': return colors.warning.light;
-        case 'LISTENING': return colors.success.base;
-        case 'PROCESSING': return colors.warning.light;
-        case 'AI_RESPONDING': return colors.league.diamond;
-        case 'TTS_PLAYING': return colors.league.diamond;
-        default: return colors.text.tertiary;
+        // Three legible bands, not five colours: `yellow` is 1.5:1 and `green`
+        // 2.2:1 as TEXT on a light ground, so the old warning/success pair
+        // stopped being readable the moment the app followed the phone. The
+        // state itself is still carried by `statusText` and by the mic glyph,
+        // which is what makes narrowing the colour safe.
+        case 'CONNECTING': return c.muted;
+        case 'LISTENING': return c.primary;
+        case 'PROCESSING': return c.muted;
+        case 'AI_RESPONDING': return c.onTint;
+        case 'TTS_PLAYING': return c.onTint;
+        default: return c.idle;
       }
     })();
 
@@ -461,7 +481,7 @@ export function ChatInput({
               ? 'volume-high'
               : 'ellipsis-horizontal'
         }
-        micColor={handsFreeState === 'LISTENING' ? colors.success.base : colors.action.primaryFill}
+        micColor={handsFreeState === 'LISTENING' ? c.green : c.primary}
         micAccessibilityLabel={
           handsFreeState === 'TTS_PLAYING' && onInterruptPlayback
             ? 'Tap to interrupt and speak'
@@ -491,7 +511,7 @@ export function ChatInput({
         meterLevel={meterLevel}
         live={isRecording}
         micIcon={isRecording ? 'mic' : 'mic-outline'}
-        micColor={isRecording ? colors.success.base : colors.action.primaryFill}
+        micColor={isRecording ? c.green : c.primary}
         micAccessibilityLabel={isRecording ? 'Release to stop recording' : 'Hold to record'}
         statusText={
           tooShortMessage ??
@@ -499,15 +519,20 @@ export function ChatInput({
         }
         statusColor={
           tooShortMessage
-            ? colors.warning.light
+            ? c.error
             : isRecording
-              ? colors.success.base
-              : colors.text.secondary
+              ? c.primary
+              : c.muted
         }
         busy={sending}
         onMicPressIn={() => startRecording(false)}
         onMicPressOut={stopRecording}
         onKeypad={() => setShowTextFallback(true)}
+        // Passed here and NOT from the hands-free branch above, the same way
+        // `onKeypad` is: LiveComposer renders whatever it is handed, so the
+        // mode gate lives with the code that knows the mode. In the loop a
+        // sheet raising a keyboard mid-turn would race the endpointer.
+        onHelp={onHelp}
         bottomPadding={spacing.md + insets.bottom + 60}
       />
     );
@@ -515,7 +540,7 @@ export function ChatInput({
 
   // Text mode UI (also used as fallback in voice mode)
   return (
-    <View className="flex-row items-end px-4 py-3 border-t border-dark-border bg-dark" style={{ paddingBottom: 12 + insets.bottom + 60 }}>
+    <View className="flex-row items-end px-4 py-3" style={{ paddingBottom: 12 + insets.bottom + 60, borderTopWidth: 1, borderTopColor: c.cardBorder, backgroundColor: c.bg }}>
       {/* Show mic icon to switch back to voice mode if in voice fallback */}
       {voiceMode && showTextFallback && (
         <Pressable
@@ -524,14 +549,33 @@ export function ChatInput({
           accessibilityLabel="Switch to voice mode"
           className="w-11 h-11 items-center justify-center mr-2"
         >
-          <Ionicons name="mic-outline" size={22} color={colors.correctionChip.grammar.text} />
+          <Ionicons name="mic-outline" size={22} color={c.primary} />
+        </Pressable>
+      )}
+
+      {/* "How do I say…" — opens the phrase-help sheet. Same 44pt square as
+          the voice-mode switch beside it; layout classes only, colour from
+          the palette. Disabled while a send is in flight so the draft it
+          would insert into is not mid-submit. */}
+      {onHelp && (
+        <Pressable
+          onPress={onHelp}
+          disabled={sending}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="How do I say…"
+          accessibilityState={{ disabled: sending }}
+          className="w-11 h-11 items-center justify-center mr-2"
+        >
+          <Ionicons name="help-circle-outline" size={22} color={sending ? c.idle : c.primary} />
         </Pressable>
       )}
 
       <TextInput
-        className="flex-1 border-2 border-dark-border bg-dark-card-alt rounded-[14px] px-4 py-3 text-base text-text-primary mr-3 max-h-24 font-sans"
+        className="flex-1 border-2 rounded-[14px] px-4 py-3 text-base mr-3 max-h-24 font-sans"
+        style={{ borderColor: c.cardBorder, backgroundColor: c.surface2, color: c.ink }}
         placeholder="Type your message..."
-        placeholderTextColor={colors.text.quaternary}
+        placeholderTextColor={c.idle}
         value={value}
         onChangeText={onChangeText}
         multiline
@@ -551,16 +595,17 @@ export function ChatInput({
         accessibilityHint="Type a message to send"
       />
       <Pressable
-        className={`w-11 h-11 rounded-[22px] items-center justify-center bg-primary ${value.trim() ? '' : 'opacity-60'}`}
+        className={`w-11 h-11 rounded-[22px] items-center justify-center ${value.trim() ? '' : 'opacity-60'}`}
+        style={{ backgroundColor: c.primary }}
         onPress={() => onSend()}
         disabled={!value.trim() || sending}
         accessibilityRole="button"
         accessibilityLabel="Send message"
       >
         {sending ? (
-          <ActivityIndicator color="white" size="small" />
+          <ActivityIndicator color={c.onPrimary} size="small" />
         ) : (
-          <Ionicons name="send" size={18} color="white" />
+          <Ionicons name="send" size={18} color={c.onPrimary} />
         )}
       </Pressable>
     </View>

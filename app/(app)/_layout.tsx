@@ -5,17 +5,23 @@ import { View } from 'react-native';
 import { FloatingTabBar } from '../../components/navigation/FloatingTabBar';
 import { useOfflineQueueFlush } from '../../hooks/useOfflineQueueFlush';
 import { useLessonSessionSweep } from '../../hooks/useLessonSessionSweep';
+import { useOfflineAutoTopUp } from '../../hooks/useOfflineAutoTopUp';
 import { useOnboardingReconciliation } from '../../hooks/useOnboardingReconciliation';
+import { useEnsurePlacement } from '../../hooks/useEnsurePlacement';
 import { useTimezoneSync } from '../../hooks/useProfile';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 
 export default function AppLayout() {
+  const { c } = useUi2Theme();
   // Replay queued offline writes on mount / reconnect / foreground.
   useOfflineQueueFlush();
   useLessonSessionSweep();
+  useOfflineAutoTopUp();
   // Reconcile the onboarding checklist against what the learner actually did.
   // Lives here rather than in the FAB because the FAB only exists on Home, and
   // someone who finishes a lesson and never opens Home still finished it.
   useOnboardingReconciliation();
+  useEnsurePlacement();
   // Keep the profile's timezone tracking the device. Mounted here rather than
   // on Home: every server-side "today" (quotas, daily challenges, the new-card
   // cap) is derived from that column, and a learner who deep-links into a
@@ -31,8 +37,9 @@ export default function AppLayout() {
   // lock those learners out of the product they are entitled to.
   //
   // What replaced it:
-  //   • the paywall is SHOWN once, right after sign-up and the free avatar
-  //     (app/(app)/avatar-setup.tsx replaces into it), with a visible way out;
+  //   • the paywall is SHOWN once, right after sign-up and the name + avatar
+  //     screen (app/(app)/identity-setup.tsx replaces into it with
+  //     `source=onboarding`), with a visible way out that lands on Home;
   //   • the free tier's AI quotas are all 0 server-side (_shared/plan-limits.ts),
   //     so nothing behind this layout can spend money on a free account;
   //   • paid surfaces upsell in place when tapped, at the moment of want.
@@ -47,7 +54,7 @@ export default function AppLayout() {
 
   return (
     <ErrorBoundary>
-      <View className="flex-1 bg-dark">
+      <View className="flex-1" style={{ backgroundColor: c.bg }}>
         <OfflineBanner />
         <Tabs
           tabBar={(props) => <FloatingTabBar {...props} />}
@@ -67,10 +74,20 @@ export default function AppLayout() {
               title: 'Learn',
             }}
           />
+          {/* Tab ORDER is this declaration order, not the order of
+              VISIBLE_TABS in FloatingTabBar — the bar filters `state.routes`,
+              which the navigator keeps in the order its screens were declared.
+              Tutor sits between Learn and Chat so it takes the centre slot. */}
+          <Tabs.Screen
+            name="tutor"
+            options={{
+              title: 'Tutor',
+            }}
+          />
           <Tabs.Screen
             name="chat"
             options={{
-              title: 'AI Chat',
+              title: 'Situations',
             }}
           />
           <Tabs.Screen
@@ -79,7 +96,7 @@ export default function AppLayout() {
               title: 'Profile',
             }}
           />
-          <Tabs.Screen name="avatar-setup" options={{ href: null }} />
+          <Tabs.Screen name="identity-setup" options={{ href: null }} />
           <Tabs.Screen name="news" options={{ href: null }} />
           <Tabs.Screen name="practice" options={{ href: null }} />
           <Tabs.Screen name="assignments" options={{ href: null }} />

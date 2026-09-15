@@ -1,5 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { fetchDailyNews, fetchNewsReadStatus, markNewsAsRead } from '../lib/supabase-queries';
+import { cachedFetch } from '../lib/read-cache';
+import { newsCacheKey, touchPack } from '../lib/offline-packs';
+import { localToday } from '../lib/dates';
 import type { DailyNewsArticle } from '../types';
 import type { NewsTier } from '../config/app';
 
@@ -28,9 +31,18 @@ export function useDailyNews(userId: string, targetLanguage: string, tier: NewsT
     setReadAt(null);
 
     try {
-      const data = await fetchDailyNews(targetLanguage, tier);
+      // Stale-while-revalidate under the key offline packs warm, so a
+      // downloaded article (or one opened earlier today) shows with no
+      // connection. The read status is best-effort offline.
+      const today = localToday();
+      const { data } = await cachedFetch<DailyNewsArticle | null>(
+        newsCacheKey(targetLanguage, tier, today),
+        () => fetchDailyNews(targetLanguage, tier),
+        { onCached: (cached) => { setArticle(cached); setIsLoading(false); } },
+      );
       setArticle(data);
       if (data) {
+        void touchPack(userId, 'news', data.id);
         const existingRead = await fetchNewsReadStatus(userId, data.id).catch(() => null);
         setReadAt(existingRead);
       }

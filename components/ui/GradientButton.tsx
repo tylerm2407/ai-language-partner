@@ -2,7 +2,8 @@ import { useRef } from 'react';
 import { Pressable, Text, ActivityIndicator, Animated, type ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { haptic } from '../../lib/haptics';
-import { GRADIENT_COLORS, GRADIENT_START, GRADIENT_END } from '../../config/gradients';
+import { GRADIENT_START, GRADIENT_END } from '../../config/gradients';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 
 interface GradientButtonProps {
   label: string;
@@ -13,7 +14,14 @@ interface GradientButtonProps {
   accessibilityHint?: string;
 }
 
+/**
+ * The gradient is the component, so it stays — but the stops are now
+ * `primary → slab` from the scheme-aware palette instead of the Dark Glow
+ * lilac→sky pair, and the violet glow shadow is gone. That glow was tuned for a
+ * near-black ground; on white it is either invisible or a smudge.
+ */
 export function GradientButton({ label, onPress, disabled, loading, style, accessibilityHint }: GradientButtonProps) {
+  const { c, type } = useUi2Theme();
   const scale = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
@@ -42,7 +50,7 @@ export function GradientButton({ label, onPress, disabled, loading, style, acces
         accessibilityState={{ disabled: disabled || loading }}
       >
         <LinearGradient
-          colors={[...GRADIENT_COLORS]}
+          colors={[c.primary, c.slab]}
           start={GRADIENT_START}
           end={GRADIENT_END}
           style={{
@@ -51,17 +59,12 @@ export function GradientButton({ label, onPress, disabled, loading, style, acces
             borderRadius: 14,
             alignItems: 'center' as const,
             opacity: disabled || loading ? 0.6 : 1,
-            shadowColor: '#7878FA',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.3,
-            shadowRadius: 12,
-            elevation: 6,
           }}
         >
           {loading ? (
-            <ActivityIndicator color="white" />
+            <ActivityIndicator color={c.onPrimary} />
           ) : (
-            <Text style={{ color: '#FFFFFF', fontSize: 18, fontFamily: 'Nunito_600SemiBold' }}>{label}</Text>
+            <Text style={{ color: c.onPrimary, fontSize: 18, fontFamily: type.ui }}>{label}</Text>
           )}
         </LinearGradient>
       </Pressable>

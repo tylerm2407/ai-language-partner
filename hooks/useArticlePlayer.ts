@@ -60,11 +60,19 @@ export interface ArticleTrack {
  * twice — so it is guarded here rather than per-mount.
  */
 let playerReady: Promise<void> | null = null;
+/**
+ * True once `setupPlayer` has resolved. Every RNTP call throws "The player is
+ * not initialized" before that — including `reset()` — so teardown paths that
+ * can run without playback ever having started must check this first
+ * (Sentry FLUENCI-1: open an article, leave without pressing play).
+ */
+let playerSetUp = false;
 
 async function ensurePlayer(): Promise<void> {
   if (!playerReady) {
     playerReady = (async () => {
       await TrackPlayer.setupPlayer({ autoHandleInterruptions: true });
+      playerSetUp = true;
       await TrackPlayer.updateOptions({
         android: {
           // Stopping when the app is swiped away is the honest default for a
@@ -200,7 +208,11 @@ export function useArticlePlayer(): ArticlePlayer {
     loadedRef.current = false;
     setStatus('idle');
     try {
-      await TrackPlayer.reset();
+      // Nothing to reset if no article on this launch ever reached `load`;
+      // calling into RNTP before setup rejects, and this runs from an unmount
+      // effect where nothing awaits it, so that rejection went straight to
+      // Sentry as an unhandled promise (FLUENCI-1).
+      if (playerSetUp) await TrackPlayer.reset();
     } finally {
       // Always hand the session back, even if reset threw: an article player
       // still holding it is how the next lesson plays out of the earpiece.

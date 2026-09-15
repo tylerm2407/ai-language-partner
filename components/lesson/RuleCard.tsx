@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { View, Text } from 'react-native';
 import { fetchGrammarRules } from '../../lib/supabase-queries';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import type { GrammarRule } from '../../types';
 
 interface RuleCardProps {
@@ -28,6 +29,7 @@ interface Example {
  * elicitation on missing content).
  */
 export function RuleCard({ ruleName, targetGrammar, language, cefrLevel }: RuleCardProps) {
+  const { c } = useUi2Theme();
   const [rule, setRule] = useState<GrammarRule | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -80,15 +82,19 @@ export function RuleCard({ ruleName, targetGrammar, language, cefrLevel }: RuleC
   const explanation = truncateWords(rule.explanation ?? '', 60);
 
   return (
-    <View className="bg-dark-card rounded-[20px] p-6 mt-3 border border-white/10">
+    <View
+      className="rounded-[20px] p-6 mt-3 border"
+      style={{ backgroundColor: c.card, borderColor: c.cardBorder }}
+    >
       <Text
-        className="text-primary font-sans-bold text-base mb-2"
+        className="font-sans-bold text-base mb-2"
+        style={{ color: c.primary }}
         accessibilityRole="header"
       >
         {rule.title || rule.ruleName}
       </Text>
       {explanation ? (
-        <Text className="text-text-primary text-[15px] leading-6 mb-3">
+        <Text className="text-[15px] leading-6 mb-3" style={{ color: c.ink }}>
           {explanation}
         </Text>
       ) : null}
@@ -96,11 +102,11 @@ export function RuleCard({ ruleName, targetGrammar, language, cefrLevel }: RuleC
         <View className="mt-1">
           {examples.map((ex, i) => (
             <View key={i} className="mb-2">
-              <Text className="text-text-primary text-[14px] font-sans-semibold">
+              <Text className="text-[14px] font-sans-semibold" style={{ color: c.ink }}>
                 {ex.target ?? ex.sentence ?? ''}
               </Text>
               {(ex.native ?? ex.translation) ? (
-                <Text className="text-text-secondary text-[13px] italic">
+                <Text className="text-[13px] italic" style={{ color: c.muted }}>
                   {ex.native ?? ex.translation}
                 </Text>
               ) : null}

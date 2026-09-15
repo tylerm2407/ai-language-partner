@@ -1,152 +1,55 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import {
-  View,
-  Text,
-  Pressable,
-  ScrollView,
-  Alert,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { View, Text, Alert, ActivityIndicator, StyleSheet } from 'react-native';
+import { FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
-import {
-  upsertProfile,
-  markOnboardingComplete,
-  updateOnboardingChecklist,
-  setAvatarKind,
-  incrementXpIdempotent,
-} from '../../lib/supabase-queries';
 import { useAppStore } from '../../stores/useAppStore';
-import { Button } from '../../components/ui/Button';
-import { LessonRunner, type LessonResult } from '../../components/lesson/LessonRunner';
-import {
-  trialExercisesFor,
-  hasTrialLesson,
-  TRIAL_LESSON_ID,
-  TRIAL_LESSON_XP,
-} from '../../components/onboarding/trial-lesson';
-import { GradientBackground } from '../../components/ui/GradientBackground';
-import { Avatar } from '../../components/avatar/Avatar';
-import { presetUrlFromId, type AvatarPreset } from '../../lib/avatar-presets';
+import { Ui2Screen } from '../../components/ui2/Ui2Screen';
+import { SlabButton } from '../../components/ui2/SlabButton';
+import { StepHero, type StepHeroEntrance } from '../../components/ui2/StepHero';
+import type { MascotMood } from '../../components/ui2/MascotSol';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
+import { useMotion } from '../../hooks/useMotion';
+import { cefrBandForProficiencyLevel } from '../../lib/cefr-proficiency';
+import { trialExercisesFor } from '../../components/onboarding/trial-lesson';
+import { hasTopicPack, topicPackFor } from '../../components/onboarding/topic-packs';
+import { FALLBACK_TRIAL_TOPIC, resolveTrialTopic } from '../../components/onboarding/trial-topic';
+import { PlanReveal } from '../../components/onboarding/PlanReveal';
 import { haptic } from '../../lib/haptics';
-import { AvatarPresetPicker } from '../../components/avatar/AvatarPresetPicker';
-import { colors } from '../../config/theme';
-import { SUPPORTED_LANGUAGES, DAILY_GOALS } from '../../config/app';
+import { SUPPORTED_LANGUAGES } from '../../config/app';
 import { authErrorCopy } from '../../lib/auth-errors';
 import { trackEvent } from '../../lib/analytics';
 import { useScreenView } from '../../hooks/useScreenView';
+import { savePendingOnboarding, type PendingOnboardingDraft } from '../../lib/pending-onboarding';
+import { flushDraftToProfile } from '../../components/onboarding/flush-draft';
+import { useOnboardingAnswers } from '../../components/onboarding/useOnboardingAnswers';
+import { useDraftBootstrap } from '../../components/onboarding/useDraftBootstrap';
+import { TrialLessonStep } from '../../components/onboarding/steps/TrialLessonStep';
+import { useMascotMood, type StepFrame } from '../../components/onboarding/steps/bits';
+import { ALL_STEPS, FUNNEL_STEPS, type Step } from '../../components/onboarding/steps/config';
 import {
-  loadPendingOnboarding,
-  savePendingOnboarding,
-  clearPendingOnboarding,
-  isFlushable,
-  type PendingOnboarding,
-  type PendingOnboardingDraft,
-  type TrialLessonResult,
-} from '../../lib/pending-onboarding';
-import type {
-  LanguageCode,
-  ProficiencyLevel,
-} from '../../types';
-
-// Dörnyei L2MSS: the learner's vision of themselves as a competent L2 user
-// is the single strongest predictor of sustained effort (r ≈ 0.61). The
-// language-specific placeholder gives a vivid, concrete anchor instead of
-// an abstract prompt. research.md §11.1.
-const IDEAL_SELF_PLACEHOLDER: Partial<Record<LanguageCode, string>> = {
-  es: 'Ordering coffee in Madrid without switching to English.',
-  fr: 'Reading a whole novel in French by next summer.',
-  de: 'Understanding the in-jokes at my partner\'s family dinners.',
-  it: 'Navigating an Italian road trip with the locals.',
-  pt: 'Chatting with my neighbors in Lisbon about football.',
-  ja: 'Watching anime without subtitles.',
-  ko: 'Singing K-pop and understanding every line.',
-  zh: 'Haggling at a Beijing street market.',
-  ru: 'Reading a Tolstoy short story in the original.',
-  en: 'Giving a confident talk at work in English.',
-};
-
-const LEVELS: { value: ProficiencyLevel; label: string; description: string }[] = [
-  { value: 'beginner', label: 'Beginner', description: 'I know a few words' },
-  { value: 'elementary', label: 'Elementary', description: 'I can form basic sentences' },
-  { value: 'intermediate', label: 'Intermediate', description: 'I can hold simple conversations' },
-  { value: 'upper_intermediate', label: 'Upper Intermediate', description: 'I can discuss many topics' },
-  { value: 'advanced', label: 'Advanced', description: 'I\'m nearly fluent' },
-];
+  CourseStep,
+  GoalStep,
+  LanguageStep,
+  LevelStep,
+  NotificationsStep,
+} from '../../components/onboarding/steps/FormSteps';
+import { IdealSelfStep } from '../../components/onboarding/steps/IdealSelfStep';
+import { SaveStep } from '../../components/onboarding/steps/SaveStep';
 
 /**
- * Two steps have been removed from this flow, both deliberately.
- *
- * `motivation` (2026-08-08) asked why the learner was here and wrote
- * `user_profiles.motivation_reason`. `idealSelf` asks a sharper version of the
- * same question and is the signal the research actually rests on, so the weaker
- * one went. The column and the `MotivationReason` type are left in place.
- *
- * `mode` (2026-08-28) asked the learner to choose between a gamified and an
- * adult presentation. There is only one presentation now — XP, leagues and
- * celebration-as-reward are gone from the product — so the question described a
- * choice that no longer exists. `user_profiles.adult_mode` is dropped in
- * migration 091; unlike `motivation_reason` there is nothing left to restore.
+ * The onboarding flow. Ten steps, the first seven a form, then the bundled
+ * micro lesson, the plan reveal and the sign-up ask. Every answer lives in a
+ * local draft until a session exists; `flushDraftToProfile` then writes it
+ * server-side in one call. The step components live in
+ * `components/onboarding/steps/`; this file owns the state, the draft, the
+ * flush and the routing between steps.
  */
-type Step =
-  | 'language'
-  | 'idealSelf'
-  | 'level'
-  | 'identity'
-  | 'goal'
-  | 'lesson'
-  | 'save';
-
-/**
- * Steps that show the progress header. `lesson` runs full-bleed with the
- * runner's own progress bar — two progress indicators stacked on one screen
- * measure different things and read as a bug — and `save` is the payoff, not
- * another form to fill in.
- */
-const ALL_STEPS: Step[] = [
-  'language',
-  'idealSelf',
-  'level',
-  'identity',
-  'goal',
-];
-
-/**
- * Every step in order, including the two that sit outside `ALL_STEPS`.
- *
- * `ALL_STEPS` drives the progress header and deliberately omits `lesson` and
- * `save`. The funnel needs the whole path, or the last two steps — where the
- * learner is closest to converting and so where a drop-off costs most — would
- * be invisible.
- */
-const FUNNEL_STEPS: Step[] = [
-  'language',
-  'idealSelf',
-  'level',
-  'identity',
-  'goal',
-  'lesson',
-  'save',
-];
-
-const IDEAL_SELF_MAX_CHARS = 300;
-const DISPLAY_NAME_MAX_CHARS = 24;
-
-// Smart defaults (DESIGN.md §UX Psychology Principles #1): every picker opens
-// pre-selected on the most common choice, so the learner's job is "scan and
-// adjust" rather than "fill this out". The CTA always names the current
-// selection, so a default is a visible recommendation and never a silent one.
-const DEFAULT_LANGUAGE: LanguageCode = 'es';
-const DEFAULT_LEVEL: ProficiencyLevel = 'beginner';
-const DEFAULT_DAILY_GOAL = 10;
-
-
 export default function OnboardingScreen() {
   useScreenView('onboarding');
+  const { c, type } = useUi2Theme();
+  const { shouldReduce } = useMotion();
+  const [mood, cheer] = useMascotMood('idle');
   // `authLoading` matters: useAuth resolves the session asynchronously, so
   // `user` is null on the first render even for a signed-in learner. Treating
   // that null as "signed out" would skip the flush below and drop the learner
@@ -155,193 +58,79 @@ export default function OnboardingScreen() {
   const router = useRouter();
   const { loadUserData } = useAppStore();
 
-  // `hydrated` gates the first render until the local draft has been read, so
-  // a resumed flow never flashes the defaults first. `flushing` covers the
-  // post-signup path where this screen exists only to write the profile.
-  const [hydrated, setHydrated] = useState(false);
-  const [flushing, setFlushing] = useState(false);
-  const [startedAt, setStartedAt] = useState<number | undefined>(undefined);
-  // Tracked in state rather than hardcoded in `draft`, so the background
-  // persist effect below can never overwrite the flag that marks the draft
-  // ready to flush.
-  const [completedAt, setCompletedAt] = useState<string | null>(null);
-  // A flush writes the profile and navigates away; it must happen at most
-  // once even if this effect re-runs on a dependency identity change.
-  const flushedRef = useRef(false);
-
   const [step, setStep] = useState<Step>('language');
-  const [targetLanguage, setTargetLanguage] = useState<LanguageCode>(DEFAULT_LANGUAGE);
-  const [idealL2Self, setIdealL2Self] = useState<string>('');
-  const [level, setLevel] = useState<ProficiencyLevel>(DEFAULT_LEVEL);
-  const [trial, setTrial] = useState<TrialLessonResult | null>(null);
-  const [displayName, setDisplayName] = useState<string>('');
-  const [avatarPresetId, setAvatarPresetId] = useState<string | null>(null);
-  const [customizerOpen, setCustomizerOpen] = useState(false);
-  const [dailyGoal, setDailyGoal] = useState<number>(DEFAULT_DAILY_GOAL);
   const [saving, setSaving] = useState(false);
+
+  // Every answer, the draft built from them, and the restore function. Kept
+  // in one hook so a saved field is always a restored field.
+  const {
+    startedAt,
+    setCompletedAt,
+    targetLanguage,
+    setTargetLanguage,
+    idealL2Self,
+    setIdealL2Self,
+    topic,
+    setTopic,
+    level,
+    setLevel,
+    courseChoice,
+    setCourseChoice,
+    placementOptions,
+    notificationPrefs,
+    setNotificationPrefs,
+    trial,
+    recordTrial,
+    dailyGoal,
+    setDailyGoal,
+    draft,
+    applyPending,
+  } = useOnboardingAnswers();
+  const hasCourseStep = placementOptions.length > 0;
 
   const languageName =
     SUPPORTED_LANGUAGES.find((l) => l.code === targetLanguage)?.name ?? 'your language';
 
   /**
-   * Write the collected answers into the real profile. Shared by the
-   * post-signup flush and by the already-authenticated path (an existing
+   * Write the collected answers into the real profile, then leave. Shared by
+   * the post-signup flush and by the already-authenticated path (an existing
    * account whose onboarding never finished).
+   *
+   * ONE navigation, not two. This used to be `replace('/(app)')` followed
+   * immediately by `push('/avatar-setup')`, which is two dispatches in the
+   * same tick where the first one remounts the whole (app) layout — the push
+   * could land on a navigator that was still mounting and be dropped, sending
+   * the learner straight to Home and skipping the avatar entirely. The whole
+   * chain is replaces — avatar-setup replaces into plans, plans replaces into
+   * Home — which is also what keeps a finished setup step off the back stack.
+   *
+   * What follows the flush is name + avatar (`app/(app)/identity-setup.tsx`,
+   * where the photo avatar can actually render now that a session exists),
+   * then the paywall, then Home.
    */
   const writeProfile = useCallback(
     async (userId: string, draft: PendingOnboardingDraft) => {
-      await upsertProfile(userId, {
-        nativeLanguage: 'en' as LanguageCode,
-        targetLanguage: draft.targetLanguage ?? DEFAULT_LANGUAGE,
-        level: draft.level ?? DEFAULT_LEVEL,
-        dailyGoalMinutes: draft.dailyGoalMinutes ?? DEFAULT_DAILY_GOAL,
-        idealL2Self: draft.idealL2Self,
-        ...(draft.displayName ? { displayName: draft.displayName } : {}),
-      });
-
-      if (draft.avatarPresetId) {
-        await setAvatarKind(userId, 'preset', draft.avatarPresetId);
-      }
-
-      await updateOnboardingChecklist(userId, {
-        chooseLanguage: true,
-        // The trial lesson happened before this account existed, so nothing
-        // server-side recorded it. Ticking it here is the honest reading: the
-        // learner HAS finished a lesson, and re-asking them to "complete your
-        // first lesson" would deny work they just did.
-        firstLesson: !!draft.trial,
-        aiConversation: false,
-        dailyReminder: false,
-        skipped: [],
-        dismissed: false,
-        completedAt: null,
-        celebratedAt: null,
-      });
-      await markOnboardingComplete(userId);
-
-      // The XP the learner earned in the pre-auth trial. The sign-up screen
-      // promised it by name, so it has to land — but it must not block the
-      // flush: a failure here costs the learner a number, while a throw would
-      // cost them the whole profile write and strand them back in onboarding.
-      //
-      // Keyed on the trial's completion timestamp, which is stable across
-      // retries of the same draft, so the idempotency guard (migration 046)
-      // makes a re-run of this flush a no-op rather than a second award.
-      if (draft.trial && draft.trial.xpEarned > 0) {
-        await incrementXpIdempotent(
-          draft.trial.xpEarned,
-          `trial-lesson:${draft.trial.completedAt}`,
-        ).catch((err) => console.error('[onboarding] trial XP award failed:', err));
-      }
-
-      await clearPendingOnboarding();
+      await flushDraftToProfile(draft);
       await loadUserData(userId);
-
-      // The teaching moment already happened — the trial lesson runs before
-      // sign-up now, which is what lets the sign-up be sold as saving progress
-      // rather than as a toll gate. What is left after the flush is the one
-      // free photo avatar, and then the paywall.
-      //
-      // ONE navigation, not two. This used to be `replace('/(app)')` followed
-      // immediately by `push('/avatar-setup')`, which is two dispatches in the
-      // same tick where the first one remounts the whole (app) layout — the
-      // push could land on a navigator that was still mounting and be dropped,
-      // sending the learner straight to Home and skipping the avatar entirely.
-      //
-      // The two-step existed so the avatar screen had "something beneath it"
-      // for a `router.back()` skip. That reason is stale: avatar-setup's skip
-      // is `router.replace('/(app)/plans')`, not `back()`, so it needs nothing
-      // underneath. The whole chain is replaces — avatar-setup replaces into
-      // plans, plans replaces into Home — which is also what keeps a finished
-      // setup step off the back stack.
-      router.replace('/(app)/avatar-setup');
+      router.replace('/(app)/identity-setup');
     },
     [loadUserData, router],
   );
 
-  const applyPending = useCallback((pending: PendingOnboarding) => {
-    setStartedAt(pending.startedAt);
-    setCompletedAt(pending.completedAt);
-    if (pending.targetLanguage) setTargetLanguage(pending.targetLanguage);
-    if (pending.idealL2Self) setIdealL2Self(pending.idealL2Self);
-    if (pending.level) setLevel(pending.level);
-    if (pending.trial) setTrial(pending.trial);
-    if (pending.displayName) setDisplayName(pending.displayName);
-    if (pending.avatarPresetId) setAvatarPresetId(pending.avatarPresetId);
-    if (pending.dailyGoalMinutes) setDailyGoal(pending.dailyGoalMinutes);
-    // Explicit typeof check, not truthiness: every other field here is a
-    // nullable object or string where `if (x)` is safe, but for a boolean that
-    // idiom silently discards a deliberate `false` (Gamified) and resurrects
-    // the default. Same value, different meaning — "unanswered" vs "chose it".
-  }, []);
-
   // Mount: read the local draft. If the learner has just signed up and the
   // draft is complete, this screen's only job is to flush it and get out.
-  useEffect(() => {
-    // Until the session has resolved we cannot tell a signed-out learner from
-    // a signed-in one whose session is still loading. Stay on the loader.
-    if (authLoading) return;
-
-    let cancelled = false;
-
-    (async () => {
-      let pending: PendingOnboarding | null = null;
-      try {
-        pending = await loadPendingOnboarding();
-      } catch (err) {
-        console.error('loadPendingOnboarding failed:', err);
-      }
-      if (cancelled) return;
-
-      // isFlushable now also requires the draft to have been claimed by THIS
-      // account at sign-in — a draft left behind by someone else on a shared
-      // device must not be written into this profile.
-      if (user && isFlushable(pending, user.id) && pending && !flushedRef.current) {
-        flushedRef.current = true;
-        setFlushing(true);
-        try {
-          await writeProfile(user.id, pending);
-          return;
-        } catch (err: unknown) {
-          if (cancelled) return;
-          flushedRef.current = false;
-          console.error('flush pending onboarding failed:', err);
-          // Don't strand the learner on a spinner — drop them back into the
-          // flow with their answers intact so they can retry the last step.
-          Alert.alert(
-            'We couldn\'t save your setup',
-            'Your answers are still here. Please try again.',
-          );
-          applyPending(pending);
-          setStep('save');
-          setFlushing(false);
-          setHydrated(true);
-          return;
-        }
-      }
-
-      if (pending) applyPending(pending);
-      setHydrated(true);
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [authLoading, user, writeProfile, applyPending]);
-
-  const draft: PendingOnboardingDraft = useMemo(
-    () => ({
-      targetLanguage,
-      idealL2Self: idealL2Self.trim() ? idealL2Self.trim() : null,
-      level,
-      trial,
-      displayName: displayName.trim() ? displayName.trim() : null,
-      avatarPresetId,
-      dailyGoalMinutes: dailyGoal,
-      completedAt,
-    }),
-    [targetLanguage, idealL2Self, level, trial, displayName, avatarPresetId, dailyGoal, completedAt],
-  );
+  // `hydrated` gates the first render until the draft has been read, so a
+  // resumed flow never flashes the defaults first; `flushing` covers the
+  // post-signup path. A failed flush lands on the save step with the answers
+  // restored, where the button retries the same idempotent RPC.
+  const onFlushFailed = useCallback(() => setStep('save'), []);
+  const { hydrated, flushing } = useDraftBootstrap({
+    authLoading,
+    userId: user?.id ?? null,
+    writeProfile,
+    applyPending,
+    onFlushFailed,
+  });
 
   // Mirror every answer to local storage so a backgrounded or killed app
   // resumes where it left off. Only meaningful pre-auth — and never while the
@@ -359,17 +148,18 @@ export default function OnboardingScreen() {
       if (user) {
         // Already signed in (account existed but onboarding never completed).
         await writeProfile(user.id, draft);
-        // Fired on the successful write rather than on the tap. The Finish
-        // control is a <Button>, so the tap has already ticked; this is the
-        // setup being accepted, and it must not fire on the error path below.
+        // Fired on the successful write rather than on the tap: the funnel's
+        // last step must mean "the profile was written", not "they pressed
+        // the button". Counting taps here would hide exactly the failures
+        // worth knowing about.
         haptic('complete');
-        // Same rule for the event: the funnel's last step must mean "the
-        // profile was written", not "they pressed the button". Counting taps
-        // here would hide exactly the failures worth knowing about.
         trackEvent('onboarding_completed', {
           language: targetLanguage,
           band: level,
           count: Math.round((Date.now() - (startedAt ?? Date.now())) / 1000),
+          source: 'authenticated',
+          outcome: 'profile_persisted',
+          ...(topic ? { topic } : {}),
         });
         return;
       }
@@ -380,14 +170,15 @@ export default function OnboardingScreen() {
       setCompletedAt(stamp);
       await savePendingOnboarding({ ...draft, completedAt: stamp }, startedAt);
       haptic('complete');
-      // The pre-auth path completes onboarding but has no account yet, so the
-      // profile write happens later on the flush. This is still the end of the
-      // onboarding funnel — the sign-up that follows is its own step, and
-      // conflating them would hide learners lost between the two.
-      trackEvent('onboarding_completed', {
+      // This is durable only on the device. The authoritative completion fires
+      // after writeProfile succeeds on the post-signup flush, making the loss
+      // between draft, account creation, and server persistence measurable.
+      trackEvent('onboarding_draft_saved', {
         language: targetLanguage,
         band: level,
         count: Math.round((Date.now() - (startedAt ?? Date.now())) / 1000),
+        outcome: 'local_persisted',
+        ...(topic ? { topic } : {}),
       });
       router.replace('/(public)/auth');
     } catch (err: unknown) {
@@ -402,29 +193,29 @@ export default function OnboardingScreen() {
   };
 
   /**
-   * The trial exercises, resolved once. Recomputing them on every render would
-   * hand LessonRunner a new array identity each time, which re-fires its
-   * prefetch and restore effects mid-lesson.
+   * The pack behind everything downstream of the ideal-self step: the trial's
+   * exercises, the plan the reveal lays out, the sentence the save screen puts
+   * in the headline. Memoised because `topicPackFor` builds a fresh array on
+   * every call, and a new identity hands LessonRunner a "new" lesson mid-run,
+   * re-firing its prefetch and restore effects.
    */
-  const trialExercises = useMemo(() => trialExercisesFor(targetLanguage), [targetLanguage]);
-  const trialAvailable = hasTrialLesson(targetLanguage);
+  const pack = useMemo(
+    () => topicPackFor(targetLanguage, topic ?? FALLBACK_TRIAL_TOPIC),
+    [targetLanguage, topic],
+  );
 
   /**
-   * Record the trial result, then move to the sign-up ask. The result rides
-   * into the account on the pending draft: nothing about this run exists
-   * server-side, because there is no account to attach it to yet.
-   *
-   * XP is taken from the runner rather than from TRIAL_LESSON_XP so the number
-   * on the next screen is the one the celebration just showed.
+   * The trial exercises. The pack is the point — a learner who said "moving
+   * abroad" gets the moving-abroad micro lesson — and `trialExercisesFor` is
+   * the floor beneath it for a language that has no packs at all. An empty
+   * array means neither exists, and the flow skips the lesson entirely rather
+   * than teaching the wrong one.
    */
-  const handleTrialComplete = useCallback(async (result: LessonResult) => {
-    setTrial({
-      xpEarned: result.xpEarned,
-      correctCount: result.correctCount,
-      totalCount: result.totalExercises,
-      completedAt: new Date().toISOString(),
-    });
-  }, []);
+  const trialExercises = useMemo(
+    () => pack?.exercises ?? trialExercisesFor(targetLanguage),
+    [pack, targetLanguage],
+  );
+  const trialAvailable = trialExercises.length > 0;
 
   // One effect rather than instrumenting a dozen setStep call sites: this
   // records every ARRIVAL at a step however it happened, including going back,
@@ -440,412 +231,213 @@ export default function OnboardingScreen() {
       step: FUNNEL_STEPS.indexOf(step) + 1,
       count: FUNNEL_STEPS.length,
       language: targetLanguage,
+      // Omitted rather than defaulted while it is null. `travel` is what the
+      // LESSON falls back to, and sending it as the topic would report a guess
+      // as a choice — the one number this property exists to measure.
+      ...(topic ? { topic } : {}),
     });
-  }, [step, hydrated, targetLanguage]);
+  }, [step, hydrated, targetLanguage, topic]);
 
   const stepIndex = ALL_STEPS.indexOf(step);
-  // Goal gradient (DESIGN.md §UX Psychology Principles #2): the learner is
-  // credited for the step they're on, so this never reads 0%.
-  const progressPct = Math.round(((stepIndex + 1) / ALL_STEPS.length) * 100);
+  const band = cefrBandForProficiencyLevel(level);
+  const idealText = idealL2Self.trim() ? idealL2Self.trim() : null;
 
   if (!hydrated || flushing) {
     return (
-      <GradientBackground>
-        <SafeAreaView className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={colors.action.accent} />
+      <Ui2Screen fixed>
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={c.primary} />
           {flushing && (
-            <Text className="text-base text-text-secondary mt-4">Setting up your course…</Text>
+            <Text style={{ fontFamily: type.uiBold, fontSize: 15, color: c.muted, marginTop: 16 }}>
+              Setting up your course…
+            </Text>
           )}
-        </SafeAreaView>
-      </GradientBackground>
+        </View>
+      </Ui2Screen>
     );
   }
 
-  /**
-   * The trial lesson runs OUTSIDE the form chrome: full-bleed, with the
-   * runner's own progress bar and no onboarding step header. Two progress
-   * indicators on one screen measure different things and read as a bug.
-   *
-   * `userId` is deliberately empty. Every persistence path in LessonRunner —
-   * the resume snapshot, the SRS warm-up, review-item writes — is guarded on
-   * it, so the run touches neither the network nor storage. Nothing here is
-   * lost by not being saved: the result the learner cares about is the XP and
-   * the score, and those ride into the account on the pending draft.
-   */
+  // The micro lesson, full-bleed and outside the form chrome. The result is
+  // recorded into the draft; nothing is written server-side yet.
   if (step === 'lesson') {
     return (
-      <GradientBackground variant="raised">
-        <SafeAreaView className="flex-1">
-          <KeyboardAvoidingView
-            className="flex-1"
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          >
-            <LessonRunner
-              exercises={trialExercises}
-              lessonId={TRIAL_LESSON_ID}
-              lessonTitle={`${languageName} · Lesson 1`}
-              xpReward={TRIAL_LESSON_XP}
-              userId=""
-              targetLanguage={targetLanguage}
-              onComplete={handleTrialComplete}
-              onExit={() => setStep('save')}
-            />
-          </KeyboardAvoidingView>
-        </SafeAreaView>
-      </GradientBackground>
+      <TrialLessonStep
+        exercises={trialExercises}
+        languageName={languageName}
+        targetLanguage={targetLanguage}
+        onComplete={recordTrial}
+        onExit={() => setStep('planReveal')}
+      />
     );
+  }
+
+  // The payoff. What the loader used to mime, shown for real: the learner's
+  // own sentence, the words they now have, and the six lessons that follow.
+  if (step === 'planReveal') {
+    return (
+      <PlanReveal
+        languageName={languageName}
+        pack={pack}
+        idealText={idealText}
+        band={band}
+        dailyGoalMinutes={dailyGoal}
+        trialCompleted={!!trial}
+        onSave={() => setStep('save')}
+        onChangeSetup={() => setStep('goal')}
+      />
+    );
+  }
+
+  const enter: StepFrame['enter'] = (i) =>
+    shouldReduce ? undefined : FadeInDown.delay(80 + i * 40).duration(360);
+
+  if (step === 'save') {
+    return (
+      <SaveStep
+        frame={{ enter }}
+        signedIn={!!user}
+        reduceMotion={shouldReduce}
+        pack={pack}
+        trialCompleted={!!trial}
+        idealText={idealText}
+        languageName={languageName}
+        band={band}
+        placementOptions={placementOptions}
+        courseChoice={courseChoice}
+        dailyGoal={dailyGoal}
+        notificationPrefs={notificationPrefs}
+        saving={saving}
+        onFinish={handleFinish}
+        onChangeSetup={() => setStep('goal')}
+      />
+    );
+  }
+
+  // ─── The six form steps ─────────────────────────────────────────────────
+  const prev: Partial<Record<Step, Step>> = {
+    idealSelf: 'language',
+    level: 'idealSelf',
+    course: 'level',
+    goal: hasCourseStep ? 'course' : 'level',
+    notifications: 'goal',
+  };
+  // The first step backs out to the welcome screen: someone who already has
+  // an account and tapped "Get started" by mistake needs a way to "I already
+  // have an account" without killing the app. Welcome pushes this route, so
+  // back() normally lands there; the replace covers a cold start straight
+  // into onboarding (deep link, resumed draft) where there is no history.
+  const leaveToWelcome = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace('/(public)');
+  };
+  const goBack = prev[step] ? () => setStep(prev[step] as Step) : leaveToWelcome;
+  // The step's header block: back, "Step n of 6", segments, the question, Sol.
+  const hero = (text: string, entrance: StepHeroEntrance, heroMood: MascotMood = mood) => (
+    <StepHero
+      step={stepIndex + 1}
+      total={ALL_STEPS.length}
+      text={text}
+      onBack={goBack}
+      mood={heroMood}
+      entrance={entrance}
+    />
+  );
+  const frame: StepFrame = { hero, enter, cheer };
+
+  // The chips no longer just fill the box — each one names a topic, and the
+  // topic picks the micro lesson two steps later. A learner who types instead
+  // of tapping still gets one, guessed from their words on the way out of the
+  // step; a guess that fails leaves `topic` null, which is honest.
+  const commitTopic = () => setTopic((current) => resolveTrialTopic(idealL2Self, current));
+
+  let footer: React.ReactNode = null;
+  let body: React.ReactNode = null;
+
+  switch (step) {
+    case 'language':
+      footer = <SlabButton label={`Continue with ${languageName}`} onPress={() => setStep('idealSelf')} />;
+      body = <LanguageStep frame={frame} value={targetLanguage} onChange={setTargetLanguage} />;
+      break;
+    case 'idealSelf':
+      footer = (
+        <SlabButton
+          label={idealText ? 'Continue' : 'Skip for now'}
+          arrow={!!idealText}
+          onPress={() => {
+            commitTopic();
+            setStep('level');
+          }}
+        />
+      );
+      body = (
+        <IdealSelfStep
+          frame={frame}
+          targetLanguage={targetLanguage}
+          languageName={languageName}
+          text={idealL2Self}
+          onChangeText={setIdealL2Self}
+          topic={topic}
+          onPickChip={(key, sentence) => {
+            setTopic(key);
+            setIdealL2Self(sentence);
+          }}
+          onCommitTopic={commitTopic}
+          solLine={topic && hasTopicPack(targetLanguage, topic) ? pack?.solLine : null}
+        />
+      );
+      break;
+    case 'level':
+      footer = (
+        <SlabButton label="Continue" onPress={() => setStep(hasCourseStep ? 'course' : 'goal')} />
+      );
+      body = <LevelStep frame={frame} value={level} onChange={setLevel} />;
+      break;
+    case 'course':
+      footer = <SlabButton label="Continue" onPress={() => setStep('goal')} />;
+      body = (
+        <CourseStep frame={frame} options={placementOptions} value={courseChoice} onChange={setCourseChoice} />
+      );
+      break;
+    case 'goal':
+      footer = <SlabButton label="Continue" onPress={() => setStep('notifications')} />;
+      body = <GoalStep frame={frame} value={dailyGoal} onChange={setDailyGoal} />;
+      break;
+    case 'notifications':
+      // The last form step, and the one that hands off to the lesson. A
+      // language with no pack and no bundled fallback skips straight to the
+      // plan rather than teaching the wrong words (components/onboarding/topic-packs).
+      footer = (
+        <SlabButton
+          label={trialAvailable ? 'Start my first lesson' : 'Continue'}
+          onPress={() => setStep(trialAvailable ? 'lesson' : 'planReveal')}
+        />
+      );
+      body = (
+        <NotificationsStep
+          frame={frame}
+          prefs={notificationPrefs}
+          onChange={setNotificationPrefs}
+          dailyGoalMinutes={dailyGoal}
+        />
+      );
+      break;
   }
 
   return (
-    <GradientBackground>
-    <SafeAreaView className="flex-1">
-      <KeyboardAvoidingView
-        className="flex-1"
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-      <ScrollView
-        className="flex-1 px-6 pt-6"
-        contentContainerStyle={{ paddingBottom: 40 }}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* Step indicator — always shows real, non-zero progress */}
-        <View className="mb-8">
-          <View className="flex-row items-center justify-between mb-2">
-            <Text className="text-xs font-semibold text-text-tertiary">
-              Step {stepIndex + 1} of {ALL_STEPS.length}
-            </Text>
-            <Text className="text-xs font-semibold text-primary">{progressPct}% set up</Text>
-          </View>
-          <View className="flex-row gap-2">
-            {ALL_STEPS.map((s) => {
-              const thisIdx = ALL_STEPS.indexOf(s);
-              return (
-                <View
-                  key={s}
-                  className={`flex-1 h-1.5 rounded-full ${thisIdx <= stepIndex ? 'bg-primary' : 'bg-dark-card-alt'}`}
-                />
-              );
-            })}
-          </View>
-        </View>
-
-        {step === 'language' && (
-          <>
-            <Text className="text-[28px] font-bold text-text-primary mb-2" accessibilityRole="header">
-              What language do you want to learn?
-            </Text>
-            <Text className="text-base text-text-secondary mb-6">
-              Spanish is our most popular course — change it any time.
-            </Text>
-
-            {SUPPORTED_LANGUAGES.map((lang) => (
-              <Pressable
-                key={lang.code}
-                className={`p-4 rounded-2xl mb-3 flex-row items-center ${
-                  targetLanguage === lang.code
-                    ? 'bg-primary-tint border-2 border-primary'
-                    : 'bg-dark-card border-2 border-transparent'
-                }`}
-                onPress={() => {
-                  haptic('select');
-                  setTargetLanguage(lang.code as LanguageCode);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={lang.name}
-                accessibilityState={{ selected: targetLanguage === lang.code }}
-              >
-                <Text className="text-2xl mr-3">{lang.flag}</Text>
-                <Text className="text-lg font-semibold text-text-primary">{lang.name}</Text>
-              </Pressable>
-            ))}
-
-            <View className="mt-6">
-              <Button label={`Continue with ${languageName}`} onPress={() => setStep('idealSelf')} />
-            </View>
-          </>
-        )}
-
-        {step === 'idealSelf' && (
-          <>
-            <Text className="text-[28px] font-bold text-text-primary mb-2" accessibilityRole="header">
-              Picture a moment you&apos;d love to have in this language.
-            </Text>
-            <Text className="text-base text-text-secondary mb-6">
-              One sentence is enough. You can skip this if you&apos;d rather not say.
-            </Text>
-
-            <View className="bg-dark-card rounded-2xl p-4 mb-4 border border-transparent focus:border-primary">
-              <TextInput
-                value={idealL2Self}
-                onChangeText={(text) => setIdealL2Self(text.slice(0, IDEAL_SELF_MAX_CHARS))}
-                placeholder={IDEAL_SELF_PLACEHOLDER[targetLanguage] ?? IDEAL_SELF_PLACEHOLDER.en}
-                placeholderTextColor={colors.text.quaternary}
-                multiline
-                numberOfLines={4}
-                maxLength={IDEAL_SELF_MAX_CHARS}
-                className="text-lg text-text-primary min-h-[100px]"
-                style={{ textAlignVertical: 'top' }}
-                accessibilityLabel="Your ideal L2 self — a sentence describing your language vision"
-              />
-              <Text className="text-xs text-text-secondary mt-2 text-right">
-                {idealL2Self.length} / {IDEAL_SELF_MAX_CHARS}
-              </Text>
-            </View>
-
-            <View className="flex-row gap-3 mt-2">
-              <View className="flex-1">
-                <Button label="Back" variant="secondary" onPress={() => setStep('language')} />
-              </View>
-              <View className="flex-1">
-                <Button
-                  label={idealL2Self.trim() ? 'Continue' : 'Skip'}
-                  onPress={() => setStep('level')}
-                />
-              </View>
-            </View>
-          </>
-        )}
-
-        {step === 'level' && (
-          <>
-            <Text className="text-[28px] font-bold text-text-primary mb-2" accessibilityRole="header">
-              What&apos;s your level?
-            </Text>
-            {/* The acronym used to be introduced on the removed mode step, and
-                this is now the first and only place a new user meets it — so it
-                defines itself here or nowhere. */}
-            <Text className="text-base text-text-secondary mb-6">
-              Pick whichever is closest. Nothing here is a test, and you can change it any
-              time. From here on your progress is shown as a CEFR level — the A1 to C2
-              scale — stated as what you can actually do, and backed by the work you&apos;ve
-              done.
-            </Text>
-
-            {LEVELS.map((l) => (
-              <Pressable
-                key={l.value}
-                className={`p-4 rounded-2xl mb-3 ${
-                  level === l.value
-                    ? 'bg-primary-tint border-2 border-primary'
-                    : 'bg-dark-card border-2 border-transparent'
-                }`}
-                onPress={() => {
-                  haptic('select');
-                  setLevel(l.value);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={`${l.label}: ${l.description}`}
-                accessibilityState={{ selected: level === l.value }}
-              >
-                <Text className="text-lg font-semibold text-text-primary">{l.label}</Text>
-                <Text className="text-sm text-text-secondary mt-1">{l.description}</Text>
-              </Pressable>
-            ))}
-
-            <View className="flex-row gap-3 mt-6">
-              <View className="flex-1">
-                <Button label="Back" variant="secondary" onPress={() => setStep('idealSelf')} />
-              </View>
-              <View className="flex-1">
-                <Button label="Continue" onPress={() => setStep('identity')} />
-              </View>
-            </View>
-          </>
-        )}
-
-        {/*
-          IKEA effect (DESIGN.md §UX Psychology Principles #4): the learner
-          builds something of their own before the sign-up gate, so leaving
-          means abandoning it rather than skipping a form.
-        */}
-        {step === 'identity' && (
-          <>
-            <Text className="text-[28px] font-bold text-text-primary mb-2" accessibilityRole="header">
-              Make it yours
-            </Text>
-            <Text className="text-base text-text-secondary mb-6">
-              Pick a name and a look. This is who you&apos;ll be in {languageName}.
-            </Text>
-
-            <View className="items-center mb-6">
-              <Avatar
-                size="large"
-                imageUri={avatarPresetId ? presetUrlFromId(avatarPresetId) : null}
-                displayName={displayName}
-              />
-              <Pressable
-                onPress={() => {
-                  haptic('select');
-                  setCustomizerOpen(true);
-                }}
-                className="mt-4 px-5 py-3 rounded-[14px] bg-dark-card-alt"
-                accessibilityRole="button"
-                accessibilityLabel="Choose your avatar"
-              >
-                <Text className="text-base font-semibold text-primary">
-                  {avatarPresetId ? 'Change avatar' : 'Choose avatar'}
-                </Text>
-              </Pressable>
-            </View>
-
-            <View className="bg-dark-card rounded-2xl p-4 mb-4">
-              <TextInput
-                value={displayName}
-                onChangeText={(text) => setDisplayName(text.slice(0, DISPLAY_NAME_MAX_CHARS))}
-                placeholder="What should we call you?"
-                placeholderTextColor={colors.text.quaternary}
-                maxLength={DISPLAY_NAME_MAX_CHARS}
-                className="text-lg text-text-primary"
-                accessibilityLabel="Your display name"
-              />
-            </View>
-
-            <View className="flex-row gap-3 mt-2">
-              <View className="flex-1">
-                <Button
-                  label="Back"
-                  variant="secondary"
-                  onPress={() => setStep('level')}
-                />
-              </View>
-              <View className="flex-1">
-                <Button label="Continue" onPress={() => setStep('goal')} />
-              </View>
-            </View>
-
-            {/* Pre-auth, deliberately. The preset catalogue is anon-readable
-                (migration 082) precisely so this step keeps its avatar — the
-                IKEA effect above depends on the learner building something
-                before the sign-up gate, not after it. The choice rides in the
-                local draft and is flushed by writeProfile once a session
-                exists; nothing is written server-side here. */}
-            <AvatarPresetPicker
-              visible={customizerOpen}
-              selectedId={avatarPresetId}
-              onClose={() => setCustomizerOpen(false)}
-              onSelect={(preset: AvatarPreset) => {
-                setAvatarPresetId(preset.id);
-                setCustomizerOpen(false);
-              }}
-            />
-          </>
-        )}
-
-        {step === 'goal' && (
-          <>
-            <Text className="text-[28px] font-bold text-text-primary mb-2" accessibilityRole="header">
-              How much time do you have?
-            </Text>
-            <Text className="text-base text-text-secondary mb-6">
-              This sets the length of your daily session. Nothing breaks if you skip a day.
-            </Text>
-
-            {DAILY_GOALS.map((goal) => (
-              <Pressable
-                key={goal}
-                className={`p-4 rounded-2xl mb-3 flex-row flex-wrap items-center justify-between gap-1 ${
-                  dailyGoal === goal
-                    ? 'bg-primary-tint border-2 border-primary'
-                    : 'bg-dark-card border-2 border-transparent'
-                }`}
-                onPress={() => {
-                  haptic('select');
-                  setDailyGoal(goal);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={`${goal} minutes per day`}
-                accessibilityState={{ selected: dailyGoal === goal }}
-              >
-                <Text className="text-lg font-semibold text-text-primary">{goal} minutes</Text>
-                {/* No commitment labels. The scale used to end at "Insane",
-                    which dares the learner into a budget they will miss, and a
-                    missed daily goal is the first step out of the habit. A time
-                    budget is a practical choice, not a measure of seriousness. */}
-              </Pressable>
-            ))}
-
-            <View className="flex-row gap-3 mt-6">
-              <View className="flex-1">
-                <Button label="Back" variant="secondary" onPress={() => setStep('identity')} />
-              </View>
-              <View className="flex-1">
-                {/* No bundled trial for this language yet — skip to the ask
-                    rather than teach the wrong one (components/onboarding/
-                    trial-lesson.ts). */}
-                <Button
-                  label={trialAvailable ? 'Start my first lesson' : 'Continue'}
-                  onPress={() => setStep(trialAvailable ? 'lesson' : 'save')}
-                />
-              </View>
-            </View>
-          </>
-        )}
-
-        {/*
-          Reciprocity (DESIGN.md §UX Psychology Principles #3) and the IKEA
-          effect (#4): the learner has already been taught something and has
-          already earned XP, before an email was ever asked for. The ask is
-          therefore to keep what they have, not to unlock what they might get.
-          The numbers below are the point of the screen — say them plainly.
-        */}
-        {step === 'save' && (
-          <>
-            <Text className="text-[28px] font-bold text-text-primary mb-2" accessibilityRole="header">
-              {trial ? 'Nice work.' : 'Ready when you are.'}
-            </Text>
-            <Text className="text-base text-text-secondary mb-6">
-              {trial
-                ? `That was your first ${languageName} lesson. Create an account to keep it — otherwise it disappears when you close the app.`
-                : `Create an account to save your ${languageName} setup and pick up where you left off.`}
-            </Text>
-
-            {trial && (
-              <View className="bg-dark-card rounded-2xl p-5 mb-4 border-2 border-primary">
-                <View className="flex-row justify-between items-center mb-3">
-                  <Text className="text-base text-text-secondary">XP earned</Text>
-                  <Text className="text-[28px] font-bold text-primary">+{trial.xpEarned}</Text>
-                </View>
-                <View className="flex-row justify-between items-center">
-                  <Text className="text-base text-text-secondary">Correct</Text>
-                  <Text className="text-lg font-semibold text-text-primary">
-                    {trial.correctCount} of {trial.totalCount}
-                  </Text>
-                </View>
-              </View>
-            )}
-
-            <View className="bg-dark-card rounded-2xl p-4 mb-6">
-              <Text className="text-sm font-bold text-success mb-3">SIGNING UP SAVES</Text>
-              <Text className="text-base text-text-primary mb-1">
-                · Your {trial ? `${trial.xpEarned} XP and this lesson` : 'progress'}
-              </Text>
-              <Text className="text-base text-text-primary mb-1">· Your {languageName} course and level</Text>
-              <Text className="text-base text-text-primary">· Your progress, from today</Text>
-            </View>
-
-            <Button
-              label={user ? 'Start learning' : 'Save my progress'}
-              onPress={handleFinish}
-              loading={saving}
-              disabled={saving}
-            />
-            <Pressable
-              onPress={() => {
-                haptic('buttonPress');
-                setStep('goal');
-              }}
-              className="py-3 items-center mt-1"
-              style={{ minHeight: 44, justifyContent: 'center' }}
-              accessibilityRole="button"
-              accessibilityLabel="Go back and change your setup"
-            >
-              <Text className="text-sm text-text-secondary">Change my setup</Text>
-            </Pressable>
-          </>
-        )}
-      </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
-    </GradientBackground>
+    <Ui2Screen footer={footer}>
+      {/* Keyed on the step so the body remounts and every entering animation
+          replays: the hero block's entrance, the segments, the row cascade.
+          The step indicator lives inside the hero and always shows real,
+          non-zero progress (goal gradient, DESIGN.md §UX Psychology
+          Principles #2). */}
+      <View key={step} style={styles.stepBody}>
+        {body}
+      </View>
+    </Ui2Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  stepBody: { gap: 18 },
+});

@@ -4,7 +4,8 @@ import { ExerciseCard } from './ExerciseCard';
 import { HighlightedText } from '../shared/HighlightedText';
 import { gradeAnswer } from '../../lib/grading';
 import { logExerciseCorrection } from '../../lib/supabase-queries';
-import { colors, radii, spacing, typography } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
+import { radii, spacing, typography } from '../../config/theme';
 import type { Exercise, FeedbackErrorType, LanguageCode } from '../../types';
 
 interface MultipleChoiceProps {
@@ -42,6 +43,7 @@ export function MultipleChoice({
   userId,
   language,
 }: MultipleChoiceProps) {
+  const { c } = useUi2Theme();
   const options = exercise.options ?? [];
   const locked = selected !== null || showResult;
 
@@ -74,20 +76,22 @@ export function MultipleChoice({
   };
 
   /**
-   * Answered rows earn a border and a key-tile fill; unanswered-and-not-picked
-   * rows keep surface.cardAlt with a tertiary label. They are never dropped to
-   * the card's own fill — that dissolves the row and drops the label under AA.
+   * Tint blocks: a row is a filled block with no outline. Unanswered rows sit
+   * on the ground tint with a white key tile; once locked, the right answer
+   * becomes a solid green block and a wrong pick a solid error block, each
+   * with its label in the on-tone ink and a white key tile. The verdict is
+   * carried by the word (CORRECT / YOUR PICK), the fill and the tile — never
+   * by colour alone.
    */
   const rowPalette = (option: string) => {
     const isPick = option === selected;
     const right = isCorrectOption(option);
     if (!locked) {
       return {
-        bg: colors.surface.cardAlt,
-        border: colors.border.subtle,
-        keyBg: colors.surface.card,
-        keyText: colors.text.tertiary,
-        label: colors.text.secondary,
+        bg: c.bg,
+        keyBg: c.primaryTint,
+        keyText: c.onTint,
+        label: c.ink,
         weight: '600' as const,
         mark: null as string | null,
         markColor: 'transparent',
@@ -95,34 +99,31 @@ export function MultipleChoice({
     }
     if (right) {
       return {
-        bg: colors.success.tint,
-        border: colors.success.base,
-        keyBg: colors.success.base,
-        keyText: colors.text.onSuccess,
-        label: colors.text.primary,
+        bg: c.green,
+        keyBg: c.onPrimary,
+        keyText: c.green,
+        label: c.onGreen,
         weight: '700' as const,
         mark: 'CORRECT',
-        markColor: colors.success.light,
+        markColor: c.onGreen,
       };
     }
     if (isPick) {
       return {
-        bg: colors.error.tint,
-        border: colors.error.base,
-        keyBg: colors.error.base,
-        keyText: colors.text.onPrimary,
-        label: colors.text.primary,
+        bg: c.error,
+        keyBg: c.onPrimary,
+        keyText: c.error,
+        label: c.onError,
         weight: '700' as const,
         mark: 'YOUR PICK',
-        markColor: colors.error.light,
+        markColor: c.onError,
       };
     }
     return {
-      bg: colors.surface.cardAlt,
-      border: colors.border.subtle,
-      keyBg: colors.surface.card,
-      keyText: colors.text.tertiary,
-      label: colors.text.tertiary,
+      bg: c.bg,
+      keyBg: c.surface2,
+      keyText: c.idle,
+      label: c.idle,
       weight: '600' as const,
       mark: null,
       markColor: 'transparent',
@@ -138,7 +139,8 @@ export function MultipleChoice({
         <HighlightedText
           text={exercise.prompt}
           highlight={highlight}
-          className="text-text-primary text-[22px] font-sans-semibold"
+          className="text-[22px] font-sans-semibold"
+          style={{ color: c.ink }}
         />
       }
     >
@@ -169,8 +171,6 @@ export function MultipleChoice({
                 paddingVertical: spacing.xs + 2,
                 borderRadius: radii.lg,
                 backgroundColor: p.bg,
-                borderWidth: 1,
-                borderColor: p.border,
               }}
             >
               <View

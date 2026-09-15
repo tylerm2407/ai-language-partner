@@ -10,6 +10,15 @@ import {
   translateWithValidation,
 } from './translate-core.ts';
 
+Deno.env.set('OPENAI_KEY', 'sk-test');
+const providerFetchForTest = globalThis.fetch;
+globalThis.fetch = ((input: string | URL | Request, init?: RequestInit) =>
+  String(input) === 'https://api.openai.com/v1/moderations'
+    ? Promise.resolve(new Response(JSON.stringify({
+        results: [{ flagged: false, categories: {} }],
+      }), { status: 200 }))
+    : providerFetchForTest(input, init)) as typeof fetch;
+
 const noopLog = () => {};
 
 Deno.test('clean translation returns on the first attempt', async () => {
@@ -105,6 +114,23 @@ Deno.test('a phrase claiming to be a word is refused, not silently rebilled', ()
   const d = resolveQuotaCounter('la maison est grande', 'word_lookup');
   assert(!d.ok);
   assertEquals(d.code, 'NOT_A_WORD');
+});
+
+Deno.test('a zero-width space does not sneak a phrase past the check', () => {
+  const d = resolveQuotaCounter('la\u200Bmaison\u200Best\u200Bgrande', 'word_lookup');
+  assert(!d.ok);
+  assertEquals(d.code, 'NOT_A_WORD');
+});
+
+Deno.test('an unspaced CJK sentence is refused; a CJK word is billed as a word', () => {
+  const sentence = resolveQuotaCounter('今日は天気がいいので公園に行きます', 'word_lookup');
+  assert(!sentence.ok);
+  assertEquals(sentence.code, 'NOT_A_WORD');
+  for (const word of ['図書館', '一石二鳥', '학교', '食べました']) {
+    const d = resolveQuotaCounter(word, 'word_lookup');
+    assert(d.ok, word);
+    assertEquals(d.counter, 'word_lookups');
+  }
 });
 
 Deno.test('a newline or tab does not sneak a phrase past the check', () => {

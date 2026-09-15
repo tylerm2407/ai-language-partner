@@ -1,9 +1,17 @@
 /**
- * PlanStepCard — one rung of the paywall ladder (design 7c).
+ * PlanStepCard — one rung of the paywall ladder.
  *
- * Three of these stack in app/(app)/plans.tsx. Each shows the tier, what it
- * adds over the rung below, its DAILY price, and a capacity meter labelled in
- * commute terms. Selection is controlled by the parent.
+ * Three of these stack in app/(app)/plans.tsx. Each shows the tier, its DAILY
+ * price with the billed amount beside it, a capacity meter labelled in commute
+ * terms, and what it adds over the rung below. Selection is controlled by the
+ * parent.
+ *
+ * T4 · Pace (canvas Part 2, "Paywall · tint blocks", picked 2026-09-11): the
+ * row is drawn in Home's unit-row language — a coloured badge on the left
+ * carrying the one number Free actually meters, new words a day (20 on Basic,
+ * no ceiling above), the tier's own tint on the badge and its meter, and the
+ * selected rung in the violet tint with a violet edge. The numbers come from
+ * lib/plans.ts, never typed here.
  *
  * Deliberately not a variant of components/subscription/PlanCard.tsx: that one
  * is a self-contained card with its own CTA and feature list, used by the
@@ -11,8 +19,9 @@
  */
 import { View, Text, Pressable } from 'react-native';
 import type { PurchasesPackage } from 'react-native-purchases';
-import { colors, radii, spacing, typography } from '../../config/theme';
-import type { PlanId } from '../../lib/plans';
+import { radii, spacing, typography } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
+import { paceCopy, type PlanId } from '../../lib/plans';
 import { perDayString, billedLine, CAPACITY, METER_BLOCKS, STEP_ADDS } from '../../lib/plan-pricing';
 
 interface PlanStepCardProps {
@@ -25,8 +34,18 @@ interface PlanStepCardProps {
 }
 
 export function PlanStepCard({ pkg, tier, selected, isPopular, onSelect, disabled }: PlanStepCardProps) {
+  const { c } = useUi2Theme();
   const capacity = CAPACITY[tier];
   const name = tier === 'vip' ? 'VIP' : tier.charAt(0).toUpperCase() + tier.slice(1);
+  const pace = paceCopy(tier);
+  // Each rung has its own tint — violet, green, amber — on the badge and the
+  // meter, so the ladder reads as three blocks rather than three greys.
+  const tone =
+    tier === 'basic'
+      ? { bg: c.primaryTint, fg: c.onTint, meter: c.primary }
+      : tier === 'premium'
+        ? { bg: c.greenTint, fg: c.green, meter: c.green }
+        : { bg: c.yellowTint, fg: c.ink, meter: c.yellow };
 
   return (
     <Pressable
@@ -34,25 +53,48 @@ export function PlanStepCard({ pkg, tier, selected, isPopular, onSelect, disable
       disabled={disabled}
       accessibilityRole="radio"
       accessibilityState={{ selected, disabled }}
-      accessibilityLabel={`${name}, ${perDayString(pkg)} per day, ${billedLine(pkg)}. ${STEP_ADDS[tier]}`}
+      accessibilityLabel={`${name}, ${pace.badge === '∞' ? 'no word ceiling' : `${pace.badge} new words a day`}, ${perDayString(pkg)} per day, ${billedLine(pkg)}. ${STEP_ADDS[tier]}`}
       style={{
         padding: spacing.md - 2,
         borderRadius: radii.xl,
         borderWidth: 1.5,
-        backgroundColor: selected ? colors.action.primaryTint : colors.surface.raised,
-        borderColor: selected ? colors.action.primaryBorder : colors.border.subtle,
-        // 44pt minimum target is satisfied by the row's own height (~86pt).
+        backgroundColor: selected ? c.primaryTint : c.card,
+        borderColor: selected ? c.primary : c.cardBorder,
+        gap: spacing.sm - 2,
+        // 44pt minimum target is satisfied by the row's own height (~96pt).
       }}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm - 2 }}>
-        <View style={{ flex: 1 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 2 }}>
+        <View
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: radii.md,
+            backgroundColor: tone.bg,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Text
+            style={{
+              fontFamily: typography.family.extrabold,
+              fontSize: pace.badge === '∞' ? 22 : 15,
+              lineHeight: pace.badge === '∞' ? 26 : 20,
+              color: tone.fg,
+            }}
+          >
+            {pace.badge}
+          </Text>
+        </View>
+
+        <View style={{ flex: 1, minWidth: 0 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
             <Text
               style={{
                 fontFamily: typography.family.extrabold,
-                fontSize: 15,
-                lineHeight: 21,
-                color: colors.text.primary,
+                fontSize: 17,
+                lineHeight: 22,
+                color: c.ink,
               }}
             >
               {name}
@@ -60,12 +102,10 @@ export function PlanStepCard({ pkg, tier, selected, isPopular, onSelect, disable
             {isPopular && (
               <View
                 style={{
-                  paddingHorizontal: spacing.xs,
-                  paddingVertical: 3,
-                  borderRadius: radii.sm - 1,
-                  backgroundColor: colors.action.primaryTint,
-                  borderWidth: 1,
-                  borderColor: colors.action.primaryBorder,
+                  paddingHorizontal: spacing.xs + 1,
+                  paddingVertical: 2,
+                  borderRadius: radii.pill,
+                  backgroundColor: c.primaryTint,
                 }}
               >
                 <Text
@@ -74,7 +114,7 @@ export function PlanStepCard({ pkg, tier, selected, isPopular, onSelect, disable
                     fontSize: 9,
                     lineHeight: 12,
                     letterSpacing: 1,
-                    color: colors.indigo[300],
+                    color: c.onTint,
                   }}
                 >
                   MOST POPULAR
@@ -82,21 +122,21 @@ export function PlanStepCard({ pkg, tier, selected, isPopular, onSelect, disable
               </View>
             )}
           </View>
+          {/* The billed amount sits beside the pace so the derived per-day
+              figure is never the only price on screen (3.1.2). */}
           <Text
             style={{
               fontFamily: typography.family.semibold,
               fontSize: 12,
               lineHeight: 17,
-              color: colors.text.tertiary,
-              marginTop: 4,
+              color: c.muted,
             }}
+            numberOfLines={2}
           >
-            {STEP_ADDS[tier]}
+            {pace.line} · {billedLine(pkg)}
           </Text>
         </View>
 
-        {/* Daily figure leads; the billed amount sits directly beneath it so the
-            derived number is never the only price on screen (3.1.2). */}
         <View style={{ alignItems: 'flex-end' }}>
           <Text
             style={{
@@ -104,7 +144,7 @@ export function PlanStepCard({ pkg, tier, selected, isPopular, onSelect, disable
               fontSize: 20,
               lineHeight: 25,
               letterSpacing: -0.5,
-              color: colors.text.onPrimary,
+              color: c.ink,
             }}
           >
             {perDayString(pkg)}
@@ -115,7 +155,7 @@ export function PlanStepCard({ pkg, tier, selected, isPopular, onSelect, disable
               fontSize: 9,
               lineHeight: 12,
               letterSpacing: 1.2,
-              color: colors.text.quaternary,
+              color: c.muted,
             }}
           >
             PER DAY
@@ -126,7 +166,7 @@ export function PlanStepCard({ pkg, tier, selected, isPopular, onSelect, disable
       {/* Capacity meter. Decorative — the label beside it carries the meaning,
           and the row's accessibilityLabel already reads the numbers. */}
       <View
-        style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 11 }}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
       >
@@ -134,10 +174,10 @@ export function PlanStepCard({ pkg, tier, selected, isPopular, onSelect, disable
           <View
             key={i}
             style={{
-              height: 7,
+              height: 6,
               flex: 1,
-              borderRadius: 2,
-              backgroundColor: i < capacity.fill ? colors.action.accent : colors.surface.track,
+              borderRadius: 3,
+              backgroundColor: i < capacity.fill ? tone.meter : c.trackOnCard,
             }}
           />
         ))}
@@ -147,7 +187,7 @@ export function PlanStepCard({ pkg, tier, selected, isPopular, onSelect, disable
             fontSize: 9,
             lineHeight: 12,
             letterSpacing: 1,
-            color: colors.text.tertiary,
+            color: c.muted,
             marginLeft: 6,
           }}
         >
@@ -157,14 +197,13 @@ export function PlanStepCard({ pkg, tier, selected, isPopular, onSelect, disable
 
       <Text
         style={{
-          fontFamily: typography.family.monoMedium,
-          fontSize: 10,
-          lineHeight: 14,
-          color: colors.text.quaternary,
-          marginTop: 9,
+          fontFamily: typography.family.semibold,
+          fontSize: 12,
+          lineHeight: 17,
+          color: c.muted,
         }}
       >
-        {billedLine(pkg)}
+        {STEP_ADDS[tier]}
       </Text>
     </Pressable>
   );

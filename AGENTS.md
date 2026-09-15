@@ -58,7 +58,7 @@ Edge functions deploy via `npx supabase functions deploy <name>` or the Supabase
 
 ## 5. Database — READ BEFORE TOUCHING
 - **The production Supabase project (`ngqpsuixmumdnqbqxjxv`) is SHARED with other NovaWealth apps** (CostClarity and others). `user_profiles` contains columns from multiple apps. Never run `supabase db reset` or `db push` against it. Never drop/alter tables you don't recognize — they may belong to another app.
-- Prod migration history uses auto-generated timestamps (applied via dashboard/MCP), so the numbered files in `supabase/migrations/` are a *record of intent*, not the applied history. Apply schema changes via the Supabase MCP `apply_migration` tool (or dashboard) **and** mirror the SQL as a new numbered file in `supabase/migrations/`.
+- Hosted history may retain older auto-generated timestamps, but the ordered files in `supabase/migrations/` are the required reproducible source of truth for Fluenci-owned schema. Apply hosted changes via the Supabase migration API/MCP and commit the identical SQL as a new numbered migration. A schema change is incomplete until CI rebuilds an isolated local database from the complete chain. Never make a dashboard-only schema change.
 - RLS is mandatory on every new table. For permission helpers use `SECURITY DEFINER` functions with `SET search_path = public` and a caller guard (`auth.uid()` check) — see migrations 024/025/031 for the pattern.
 
 ## 6. Error Handling & Testing

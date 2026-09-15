@@ -1,15 +1,29 @@
 import { View, Text, ActivityIndicator } from 'react-native';
-import { colors, spacing, typography } from '../../config/theme';
-import { Body } from '../ui/Text';
+import { spacing, typography } from '../../config/theme';
+import { Body } from '../ui2/Ui2Text';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { ACHIEVEMENTS } from '../../lib/achievements';
 import { useAchievements } from '../../hooks/useAchievements';
 import { AchievementBadge } from './AchievementBadge';
 
 const allAchievements = Object.values(ACHIEVEMENTS);
-const TOTAL = allAchievements.length;
+export const ACHIEVEMENT_TOTAL = allAchievements.length;
+const TOTAL = ACHIEVEMENT_TOTAL;
 
+/** The grid with its data fetched here. Screens that also need the count
+ *  elsewhere (the profile's stat tiles) call `useAchievements` once and render
+ *  `AchievementGridView` themselves, so the achievements are read once. */
 export function AchievementGrid() {
-  const { earnedAchievements, loading, isNewInSession } = useAchievements();
+  return <AchievementGridView {...useAchievements()} />;
+}
+
+export type AchievementGridViewProps = Pick<
+  ReturnType<typeof useAchievements>,
+  'earnedAchievements' | 'loading' | 'isNewInSession'
+>;
+
+export function AchievementGridView({ earnedAchievements, loading, isNewInSession }: AchievementGridViewProps) {
+  const { c } = useUi2Theme();
 
   const earnedMap = new Map(
     earnedAchievements.map((e) => [e.type, e.earnedAt])
@@ -28,7 +42,7 @@ export function AchievementGrid() {
           style={{
             fontFamily: typography.family.mono,
             fontSize: typography.scale.tiny.fontSize,
-            color: colors.text.tertiary,
+            color: c.muted,
           }}
         >
           {loading ? '—' : `${earnedCount} / ${TOTAL}`}
@@ -37,7 +51,7 @@ export function AchievementGrid() {
 
       {loading ? (
         <View style={{ paddingVertical: 24, alignItems: 'center' }}>
-          <ActivityIndicator color="#818CF8" />
+          <ActivityIndicator color={c.primary} />
         </View>
       ) : (
         <View

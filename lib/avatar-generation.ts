@@ -1,9 +1,15 @@
 /**
  * Photo-to-avatar generation (client half).
  *
- * The device captures or picks a photo, downscales it here, and hands the
- * bytes to the `generate-avatar` Edge Function, which owns the art-direction
- * prompt, the paid-tier check, the daily quota, and the image-model call.
+ * The device captures (in-app camera, `components/avatar/AvatarCameraView`)
+ * or picks a photo, downscales it here, and hands the bytes to the
+ * `generate-avatar` Edge Function, which owns the art-direction
+ * prompt, the paid-tier check, the monthly quota, and the image-model call.
+ *
+ * The render takes minutes, not seconds — longer than any request a phone can
+ * hold open — so the function answers with a job id the moment entitlement
+ * clears and finishes in the background. `generateAvatar` then polls the
+ * `avatar_jobs` row (migration 112) until it settles.
  *
  * Nothing in this file decides entitlement. The tier gate lives server-side
  * (CLAUDE.md §1.2); `AVATAR_REQUIRES_PLAN` coming back from the function is
@@ -16,6 +22,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { supabase } from './supabase';
+import { getAvatarJob } from './supabase-queries';
 import type { AvatarStyleOption } from '../types';
 
 /**
@@ -137,39 +144,55 @@ async function prepare(uri: string): Promise<PreparedPhoto> {
   return { base64: result.base64, uri: result.uri, mimeType: 'image/jpeg' };
 }
 
+/** A rectangle in image pixels, as `expo-image-manipulator`'s `crop` expects it. */
+export interface CropRect {
+  originX: number;
+  originY: number;
+  width: number;
+  height: number;
+}
+
 /**
- * Take a photo with the camera. Returns null if the user cancels.
- * Throws if permission is denied, so the caller can explain why.
+ * The square of the captured image that sat under a centred guide when the
+ * live preview was drawn with `cover` scaling (expo-camera's default FILL).
+ *
+ * Under `cover` the image is scaled so its smaller side fills the view, so one
+ * view point equals `min(imageW / viewW, imageH / viewH)` image pixels. The
+ * guide is centred, so the crop is too. Clamped to the image bounds so a
+ * swapped width/height from the native side (orientation quirks) can only make
+ * the crop slightly smaller, never invalid.
  */
-export async function capturePhoto(): Promise<PreparedPhoto | null> {
-  const permission = await ImagePicker.requestCameraPermissionsAsync();
-  if (!permission.granted) {
-    throw new AvatarGenerationError(
-      'Fluenci needs camera access to take your avatar photo. You can enable it in Settings.',
-      'PERMISSION_DENIED'
-    );
+export function coverCropRect(
+  image: { width: number; height: number },
+  view: { width: number; height: number },
+  guideSize: number,
+): CropRect {
+  const pxPerPt = Math.min(image.width / view.width, image.height / view.height);
+  const side = Math.floor(Math.min(guideSize * pxPerPt, image.width, image.height));
+  return {
+    originX: Math.max(0, Math.floor((image.width - side) / 2)),
+    originY: Math.max(0, Math.floor((image.height - side) / 2)),
+    width: side,
+    height: side,
+  };
+}
+
+/**
+ * Crop a photo taken by the in-app camera to `rect`, then downscale and
+ * encode it like any other picked photo.
+ */
+export async function prepareCapturedPhoto(uri: string, rect: CropRect): Promise<PreparedPhoto> {
+  const result = await manipulateAsync(
+    uri,
+    [{ crop: rect }, { resize: { width: MAX_UPLOAD_EDGE } }],
+    { compress: UPLOAD_QUALITY, format: SaveFormat.JPEG, base64: true }
+  );
+
+  if (!result.base64) {
+    throw new AvatarGenerationError('Could not read that photo. Please try again.');
   }
 
-  // The iOS Simulator has no camera, and some devices refuse the capture UI.
-  // Both surface here as a throw, which reads to the user as "nothing
-  // happened" unless it is turned into an actionable message.
-  let result;
-  try {
-    result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 1,
-    });
-  } catch {
-    throw new AvatarGenerationError(
-      'The camera is not available on this device. Choose an existing photo instead.',
-      'CAMERA_UNAVAILABLE'
-    );
-  }
-
-  if (result.canceled || !result.assets?.[0]) return null;
-  return prepare(result.assets[0].uri);
+  return { base64: result.base64, uri: result.uri, mimeType: 'image/jpeg' };
 }
 
 /**
@@ -236,13 +259,29 @@ export async function pickFile(): Promise<PreparedPhoto | null> {
   return prepare(asset.uri);
 }
 
+/** How often to ask whether the job has settled. */
+const JOB_POLL_INTERVAL_MS = 3_000;
+
+/**
+ * How long to wait for a job before giving up on the client. The server
+ * abandons the provider call at 300s and settles the row failed, so this only
+ * fires if the function instance died mid-render (wall clock, OOM) and never
+ * wrote back.
+ */
+const JOB_POLL_DEADLINE_MS = 6 * 60 * 1000;
+
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
 /**
  * Generate the avatar. On success the user's profile already points at the new
  * image server-side, so the caller only needs to refresh the profile.
  *
- * Mirrors the error unwrapping in `lib/ai.ts`: supabase-js collapses any non-2xx
- * into a generic message, and the real cause (AVATAR_REQUIRES_PLAN,
- * DAILY_AVATAR_LIMIT_REACHED, IMAGE_REJECTED) is only in `error.context`.
+ * Two phases. The invoke is quick: it either refuses (and the real reason —
+ * AVATAR_REQUIRES_PLAN, MONTHLY_AVATAR_LIMIT_REACHED — is only in
+ * `error.context`, mirroring the unwrapping in `lib/ai.ts`) or hands back a
+ * job id with a 202. The wait is the poll loop below: a settled row carries
+ * either the stored path or the same learner-facing message the synchronous
+ * response used to.
  */
 export async function generateAvatar(
   photo: PreparedPhoto,
@@ -272,9 +311,66 @@ export async function generateAvatar(
     throw new AvatarGenerationError(detail, code, status);
   }
 
-  if (!data?.path) {
+  // A server that still answers synchronously (or a future fast path) returns
+  // the path directly; honour it rather than polling for a job that never was.
+  if (typeof data?.path === 'string' && data.path) {
+    return { path: data.path as string, styleKey: (data.styleKey as string) ?? styleKey };
+  }
+
+  const jobId = typeof data?.jobId === 'string' ? (data.jobId as string) : '';
+  if (!jobId) {
     throw new AvatarGenerationError('Avatar generation did not return an image.');
   }
 
-  return { path: data.path as string, styleKey: data.styleKey as string };
+  return waitForAvatarJob(jobId, styleKey);
+}
+
+/** Poll one job until it settles. Exported for the sheet's resume path and tests. */
+export async function waitForAvatarJob(
+  jobId: string,
+  styleKey: string,
+  { intervalMs = JOB_POLL_INTERVAL_MS, deadlineMs = JOB_POLL_DEADLINE_MS } = {}
+): Promise<GeneratedAvatar> {
+  const startedAt = Date.now();
+  // Tolerate a few consecutive read failures (lie-fi, a token refresh) rather
+  // than abandoning a render we have already paid for.
+  let consecutiveReadFailures = 0;
+
+  while (Date.now() - startedAt < deadlineMs) {
+    await sleep(intervalMs);
+
+    let job;
+    try {
+      job = await getAvatarJob(jobId);
+      consecutiveReadFailures = 0;
+    } catch (err) {
+      consecutiveReadFailures += 1;
+      if (consecutiveReadFailures >= 5) {
+        throw new AvatarGenerationError(
+          'Lost the connection while drawing your avatar. Check your profile in a minute — it may have finished.',
+          'NETWORK'
+        );
+      }
+      console.warn('[avatar] job poll failed, retrying:', err);
+      continue;
+    }
+
+    if (!job) {
+      throw new AvatarGenerationError('Avatar generation did not return an image.', 'JOB_MISSING');
+    }
+    if (job.status === 'done' && job.avatarPath) {
+      return { path: job.avatarPath, styleKey: job.styleKey || styleKey };
+    }
+    if (job.status === 'failed') {
+      throw new AvatarGenerationError(
+        job.errorMessage ?? 'Avatar generation failed. Please try again.',
+        job.errorCode ?? 'GENERATION_FAILED'
+      );
+    }
+  }
+
+  throw new AvatarGenerationError(
+    'Avatar generation is taking longer than expected. Please try again.',
+    'GENERATION_TIMEOUT'
+  );
 }

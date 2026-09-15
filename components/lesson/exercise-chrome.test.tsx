@@ -16,14 +16,14 @@ import { ExerciseTrack } from './ExerciseTrack';
 import { MultipleChoice } from './MultipleChoice';
 import { TranslationExercise } from './TranslationExercise';
 import { SentenceConstructionExercise } from './SentenceConstructionExercise';
-import { colors } from '../../config/theme';
+import { paletteForScheme } from '../../hooks/useUi2Theme';
 import type { Exercise } from '../../types';
 // TranslationExercise now reaches lib/ai (the semantic grader); keep the
 // supabase client out of this render.
 jest.mock('../../lib/ai', () => ({ invokeWithRetry: jest.fn() }));
 
 jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Ionicons' }));
-// TactileButton -> useMotion -> lib/motion-preference reaches for the native
+// SlabButton -> useMotion -> lib/motion-preference reaches for the native
 // AsyncStorage module, which does not exist under jest.
 jest.mock('@react-native-async-storage/async-storage', () => ({
   __esModule: true,
@@ -44,16 +44,32 @@ jest.mock('../../lib/supabase-queries', () => ({
   fetchGrammarRule: jest.fn(() => Promise.resolve(null)),
 }));
 jest.mock('expo-speech', () => ({ speak: jest.fn() }));
+// The hero block mounts Sol, whose clips play through expo-av's native
+// player; under jest he is a box that renders nothing.
+jest.mock('../mascot/Mascot', () => ({ Mascot: () => null }));
 jest.mock('../../hooks/useAudioPlayer', () => ({
   useAudioPlayer: () => ({ playing: false, loading: false, error: null, play: jest.fn() }),
 }));
 
 /** ExerciseChrome reads safe-area insets to clear the floating tab bar, so
  *  every render needs a provider with deterministic metrics. */
+/** The UI 2.0 palette these renders resolve to. jest has no native appearance
+ *  module, so `useColorScheme()` answers null and `useUi2Theme` falls to light. */
+const c = paletteForScheme('light');
+
 const METRICS = {
   frame: { x: 0, y: 0, width: 402, height: 874 },
   insets: { top: 59, left: 0, right: 0, bottom: 34 },
 };
+
+const mountedRenderers = new Set<TestRenderer.ReactTestRenderer>();
+
+afterEach(() => {
+  TestRenderer.act(() => {
+    for (const renderer of mountedRenderers) renderer.unmount();
+    mountedRenderers.clear();
+  });
+});
 
 function render(element: React.ReactElement) {
   let renderer!: TestRenderer.ReactTestRenderer;
@@ -62,6 +78,7 @@ function render(element: React.ReactElement) {
       <SafeAreaProvider initialMetrics={METRICS}>{element}</SafeAreaProvider>,
     );
   });
+  mountedRenderers.add(renderer);
   return renderer;
 }
 
@@ -148,7 +165,7 @@ describe('ExerciseChrome', () => {
     const r = render(
       <ExerciseChrome {...chromeProps} canNext answeredCorrect={false} correctAnswer="water" />,
     );
-    expect(text(r)).toContain('ANSWER: WATER — ');
+    expect(text(r)).toContain('ANSWER: WATER');
   });
 
   it('renders the kicker alone when the exercise has no explanation', () => {
@@ -156,7 +173,7 @@ describe('ExerciseChrome', () => {
       <ExerciseChrome {...chromeProps} note={null} canNext answeredCorrect={false} />,
     );
     // Never an empty row: the kicker still states the answer.
-    expect(text(r)).toContain('ANSWER: WATER — ');
+    expect(text(r)).toContain('ANSWER: WATER');
   });
 
   it('labels the last exercise Finish', () => {
@@ -255,10 +272,10 @@ describe('ExerciseTrack', () => {
   it('colours past, current and future ticks distinctly', () => {
     const r = render(<ExerciseTrack total={4} currentIndex={2} completedCount={2} />);
     expect(ticks(r).map((t) => t.props.style.backgroundColor)).toEqual([
-      colors.success.base,
-      colors.success.base,
-      colors.action.accent,
-      colors.surface.track,
+      c.green,
+      c.green,
+      c.primary,
+      c.track,
     ]);
   });
 

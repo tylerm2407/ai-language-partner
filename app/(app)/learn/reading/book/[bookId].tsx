@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, Pressable, ActivityIndicator, Alert, Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Pressable, ActivityIndicator, Alert, Image, ScrollView } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeBack } from '../../../../../hooks/useSafeBack';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,6 +8,8 @@ import * as Sentry from '@sentry/react-native';
 import { useAuth } from '../../../../../hooks/useAuth';
 import { useProfile } from '../../../../../hooks/useProfile';
 import { useWordLookup } from '../../../../../hooks/useWordLookup';
+import { useActiveTime } from '../../../../../hooks/useActiveTime';
+import { useNarrationActive } from '../../../../../hooks/usePageNarrator';
 import {
   fetchBookMeta,
   fetchBookContent,
@@ -16,22 +18,35 @@ import {
   upsertBookProgress,
   addCardFromAnnotation,
   NewCardsCapReachedError,
-  incrementXpIdempotent,
   fetchSubscription,
+  fetchCourses,
   type AnnotationCardSource,
 } from '../../../../../lib/supabase-queries';
+import { defaultCourseFor } from '../../../../../lib/course-placement';
 import { BookReader } from '../../../../../components/reading/BookReader';
-import { getCached, readCacheKey, setCached } from '../../../../../lib/read-cache';
-import { supabase } from '../../../../../lib/supabase';
+import { cachedFetch, getCached, readCacheKey, setCached } from '../../../../../lib/read-cache';
+import { touchPack } from '../../../../../lib/offline-packs';
+import { OfflineDownloadControl } from '../../../../../components/learn/OfflineDownloadControl';
+import { floatingTabBarSpace } from '../../../../../components/navigation/FloatingTabBar';
 import { loadErrorCopy, saveErrorCopy, type ErrorCopy } from '../../../../../lib/error-copy';
-import { bookXpKey } from '../../../../../lib/offline-queue';
-import { cefrBandColors, cefrCanDo, cefrAccessibilityLabel } from '../../../../../lib/cefr-labels';
+import { cefrCanDo, cefrAccessibilityLabel } from '../../../../../lib/cefr-labels';
+import {
+  estimatedReadMinutes,
+  formatReadDuration,
+  remainingReadMinutes,
+} from '../../../../../lib/reading-speed';
 import type { ReadingBook, BookAnnotation, UserBookProgress, Subscription } from '../../../../../types';
-import { colors } from '../../../../../config/theme';
+// `colors` is deliberately NOT imported: it is the fixed DARK palette, and a
+// screen that reads it stays dark whatever the phone is set to.
+import { useUi2Theme } from '../../../../../hooks/useUi2Theme';
+import { SlabCard } from '../../../../../components/ui2/SlabCard';
+import { Heading, Body, Caption } from '../../../../../components/ui2/Ui2Text';
 import { useScreenView } from '../../../../../hooks/useScreenView';
 
 export default function BookDetailScreen() {
   useScreenView('book');
+  const { c, shape, type } = useUi2Theme();
+  const insets = useSafeAreaInsets();
   const { bookId } = useLocalSearchParams<{ bookId: string }>();
   const router = useRouter();
   const goBack = useSafeBack('/(app)');
@@ -46,9 +61,21 @@ export default function BookDetailScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isReading, setIsReading] = useState(false);
   const [error, setError] = useState<ErrorCopy | null>(null);
-  // Guards against re-awarding XP when the reader re-fires onComplete (paging
-  // back and forth across the last page, narration auto-advance, etc.).
+  // Guards against recording the completion twice when the reader re-fires
+  // onComplete (paging back and forth across the last page, narration
+  // auto-advance, etc.).
   const hasCompletedRef = useRef(false);
+
+  // Only while the reader itself is open — the cover screen is browsing, not
+  // reading. See hooks/useActiveTime.ts.
+  //
+  // Two clocks, never both: reading while the page is silent, listening while
+  // the narrator is speaking. The split on `narrating` is what keeps
+  // `minutes_practiced` from being written twice for the same minute.
+  const narrating = useNarrationActive();
+  const readerOpen = isReading && !!content;
+  useActiveTime({ kind: 'reading', enabled: readerOpen && !narrating });
+  useActiveTime({ kind: 'listening', enabled: readerOpen && narrating });
 
   const isUnlimitedPlan = subscription?.tier === 'vip' && subscription?.isActive;
 
@@ -60,17 +87,22 @@ export default function BookDetailScreen() {
       // Metadata only. `content` is fetched behind the Read button below —
       // it averages 211 kB and reaches 1.8 MB, and making the cover screen
       // wait on the whole book was the slowest thing in the reader.
-      const [bookData, annData, progressData, sub] = await Promise.all([
-        fetchBookMeta(bookId),
-        fetchBookAnnotations(bookId),
-        fetchUserBookProgress(user.id, bookId),
-        fetchSubscription(user.id),
+      // Meta and annotations under the keys an offline pack warms, so a
+      // downloaded book opens with no connection; progress and the plan are
+      // best-effort there (the reader shows the book, the CTA copy may be
+      // conservative until the next online open).
+      const [{ data: bookData }, { data: annData }, progressData, sub] = await Promise.all([
+        cachedFetch<ReadingBook | null>(readCacheKey('book-meta', bookId), () => fetchBookMeta(bookId)),
+        cachedFetch<BookAnnotation[]>(readCacheKey('book-annotations', bookId), () => fetchBookAnnotations(bookId)),
+        fetchUserBookProgress(user.id, bookId).catch(() => [] as UserBookProgress[]),
+        fetchSubscription(user.id).catch(() => null),
       ]);
 
       setBook(bookData);
-      setAnnotations(annData);
+      setAnnotations(annData ?? []);
       setProgress(progressData[0] ?? null);
       setSubscription(sub);
+      if (bookData) void touchPack(user.id, 'book', bookId);
     } catch (e) {
       // Was `setError(e.message)`, which rendered the raw Supabase/Postgres
       // string straight into the UI. See lib/error-copy.ts.
@@ -154,16 +186,17 @@ export default function BookDetailScreen() {
   const handleAddToReview = useCallback(async (source: AnnotationCardSource) => {
     if (!user || !book) return null;
 
-    // Find the user's active course for this language to associate the card
-    const { data: courses } = await supabase
-      .from('courses')
-      .select('id')
-      .eq('target_language', book.language)
-      .eq('is_published', true)
-      .limit(1)
-      .single();
+    // File the card under the learner's current course. Used to take the
+    // first published course the query returned — unordered, and without the
+    // goal_key filter, so a generated goal track could win. When the current
+    // course is in another language (or there is none), fall to the course
+    // the learner's level would open in the book's language.
+    const courseId =
+      profile?.currentCourseId && book.language === profile.targetLanguage
+        ? profile.currentCourseId
+        : defaultCourseFor(await fetchCourses(book.language), profile?.level ?? 'beginner', 'start')?.id ?? null;
 
-    if (!courses) {
+    if (!courseId) {
       // Not a failure — there is genuinely nowhere to file the card yet.
       Alert.alert(
         "Can't save that word",
@@ -183,7 +216,7 @@ export default function BookDetailScreen() {
       return await addCardFromAnnotation(
         user.id,
         source,
-        courses.id,
+        courseId,
         ['reading', 'book'],
         book.cefrLevel,
         book.language,
@@ -200,7 +233,7 @@ export default function BookDetailScreen() {
       Alert.alert(title, message);
       return null;
     }
-  }, [user, book]);
+  }, [user, book, profile]);
 
   /**
    * Persist how many words were looked up this session.
@@ -237,15 +270,6 @@ export default function BookDetailScreen() {
         completedAt: new Date().toISOString(),
       });
 
-      // Award XP: wordCount / 10, capped at 500
-      const xpReward = Math.min(500, Math.round(book.wordCount / 10));
-      // One payout per book, ever. `hasCompletedRef` only guards this session,
-      // so re-opening a finished book in a later session paid again through the
-      // non-idempotent `increment_xp`.
-      await incrementXpIdempotent(xpReward, bookXpKey(bookId));
-
-      // The XP above still accrues, but it is a server-side ledger the learner
-      // never sees — so the congratulation names the thing they actually did.
       Alert.alert(
         'Book finished',
         `You read all ${book.wordCount.toLocaleString()} words of "${book.title}".`,
@@ -260,21 +284,21 @@ export default function BookDetailScreen() {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, backgroundColor: colors.surface.raised, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#818CF8" />
+      <View style={{ flex: 1, backgroundColor: c.bg, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={c.primary} />
       </View>
     );
   }
 
   if (error || !book) {
     return (
-      <View style={{ flex: 1, backgroundColor: colors.surface.raised, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-        <Text style={{ fontSize: 16, fontWeight: '600', color: colors.error.light, textAlign: 'center' }}>
+      <View style={{ flex: 1, backgroundColor: c.bg, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+        <Body weight="semibold" tone="error" style={{ textAlign: 'center' }}>
           {error?.title ?? 'Book not found'}
-        </Text>
-        <Text style={{ fontSize: 15, color: colors.text.tertiary, textAlign: 'center', marginTop: 8 }}>
+        </Body>
+        <Body tone="tertiary" style={{ textAlign: 'center', marginTop: 8 }}>
           {error?.message ?? "We couldn't find this book. It may have been removed."}
-        </Text>
+        </Body>
         {/* A failed load is usually transient, so retry comes before leaving. */}
         {error && (
           <Pressable
@@ -283,11 +307,11 @@ export default function BookDetailScreen() {
             accessibilityRole="button"
             accessibilityLabel="Try loading this book again"
           >
-            <Text style={{ fontSize: 16, fontWeight: '600', color: colors.action.accent }}>Try again</Text>
+            <Body weight="semibold" tone="accent">Try again</Body>
           </Pressable>
         )}
         <Pressable onPress={() => goBack()} style={{ marginTop: 16, minHeight: 44, justifyContent: 'center' }} accessibilityRole="button">
-          <Text style={{ fontSize: 16, color: colors.action.accent }}>Go Back</Text>
+          <Body tone="accent">Go Back</Body>
         </Pressable>
       </View>
     );
@@ -325,19 +349,38 @@ export default function BookDetailScreen() {
   // Book detail view
   const isStarted = progress && progress.percentComplete > 0;
   const isCompleted = progress?.completedAt !== null && progress?.completedAt !== undefined;
-  const estimatedMinutes = Math.round(book.wordCount / 200); // ~200 wpm reading speed
+  // Pace comes from lib/reading-speed.ts; this screen used to carry its own
+  // 200 wpm while Home carried its own 140, so the same book was two lengths
+  // depending on which screen you asked.
+  const totalMinutes = estimatedReadMinutes(book.wordCount);
+  // Once a book is underway, minutes *left* is the number that answers the
+  // question the learner is actually asking at this screen ("can I finish
+  // this tonight?"). Total length stops being the useful figure.
+  const minutesLeft =
+    isStarted && !isCompleted ? remainingReadMinutes(book.wordCount, progress!.percentComplete) : 0;
+  const showsRemaining = minutesLeft > 0;
+  const durationLabel = formatReadDuration(showsRemaining ? minutesLeft : totalMinutes);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface.raised }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }} edges={['top']}>
       {/* Header */}
       <View style={{ paddingHorizontal: 16, paddingTop: 8, flexDirection: 'row', alignItems: 'center' }}>
         <Pressable onPress={() => goBack()} hitSlop={8} style={{ padding: 8 }} accessibilityRole="button" accessibilityLabel="Go back">
-          <Ionicons name="arrow-back" size={24} color="#666" />
+          <Ionicons name="arrow-back" size={24} color={c.idle} />
         </Pressable>
       </View>
 
-      {/* Book Info */}
-      <View style={{ padding: 20, flex: 1 }}>
+      {/* Book Info.
+          Scrolls. It used to be a fixed `flex: 1` View, which silently clipped
+          whatever did not fit — and what does not fit is the bottom of the
+          page, so on a book with a two-line title and a description the
+          progress card and the audiobook row were simply gone. The CTA below
+          is a sibling, not a child, so it stays pinned while this moves. */}
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: 20 }}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Cover Image */}
         {book.imageUrl && (
           <View style={{ alignItems: 'center', marginBottom: 16 }}>
@@ -353,112 +396,157 @@ export default function BookDetailScreen() {
         {/* CEFR Badge. The badge is keyed to the band rather than always indigo,
             so it matches the same book's chip in the library grid. */}
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-          <View style={{ backgroundColor: cefrBandColors(book.cefrLevel).bg, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
-            <Text
-              style={{ fontSize: 14, color: cefrBandColors(book.cefrLevel).text, fontWeight: '600' }}
+          {/* Hand-rolled rather than <Ui2Badge> because this badge carries its
+              own accessibilityLabel — the spelled-out band — and Ui2Badge
+              labels itself from the visible code. */}
+          <View style={{ backgroundColor: c.primaryTint, borderColor: c.primaryTintBorder, borderWidth: shape.border, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
+            <Body
+              size="sm"
+              weight="semibold"
+              tone="accent"
               accessibilityLabel={cefrAccessibilityLabel(book.cefrLevel)}
             >
               {book.cefrLevel}
-            </Text>
+            </Body>
           </View>
-          <View style={{ backgroundColor: colors.surface.cardAlt, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, marginLeft: 8 }}>
-            <Text style={{ fontSize: 13, color: colors.text.tertiary }}>{book.source === 'ai_generated' ? 'AI Story' : book.source === 'gutenberg' ? 'Classic' : 'Wikisource'}</Text>
+          <View style={{ backgroundColor: c.track, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, marginLeft: 8 }}>
+            <Caption tone="secondary">{book.source === 'ai_generated' ? 'AI Story' : book.source === 'gutenberg' ? 'Classic' : 'Wikisource'}</Caption>
           </View>
         </View>
 
         {/* This screen is where a learner decides whether a book is for them, so
             it spells the band out rather than making them decode the chip. */}
         {cefrCanDo(book.cefrLevel) ? (
-          <Text
-            style={{ fontSize: 13, color: colors.text.tertiary, marginBottom: 12 }}
+          <Caption
+            tone="tertiary"
+            style={{ marginBottom: 12 }}
             accessibilityElementsHidden
             importantForAccessibility="no"
           >
             {cefrCanDo(book.cefrLevel)}
-          </Text>
+          </Caption>
         ) : null}
 
         {/* Title & Author */}
-        <Text style={{ fontSize: 28, fontWeight: '700', color: colors.text.primary, marginBottom: 4 }}>{book.title}</Text>
+        <Heading level={2} style={{ marginBottom: 4 }}>{book.title}</Heading>
         {book.author && (
-          <Text style={{ fontSize: 16, color: colors.text.tertiary, marginBottom: 12 }}>by {book.author}</Text>
+          <Body tone="tertiary" style={{ marginBottom: 12 }}>by {book.author}</Body>
         )}
 
         {/* Description */}
         {book.description && (
-          <Text style={{ fontSize: 15, color: colors.text.tertiary, lineHeight: 22, marginBottom: 16 }}>{book.description}</Text>
+          <Body tone="tertiary" style={{ lineHeight: 22, marginBottom: 16 }}>{book.description}</Body>
         )}
 
-        {/* Stats */}
-        <View style={{ backgroundColor: colors.surface.card, borderRadius: 16, padding: 16, marginBottom: 16 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
-            <View style={{ alignItems: 'center' }}>
-              <Ionicons name="document-text-outline" size={20} color="#818CF8" />
-              <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary, marginTop: 4 }}>
-                {book.wordCount.toLocaleString()}
-              </Text>
-              <Text style={{ fontSize: 12, color: colors.text.tertiary }}>words</Text>
-            </View>
-            <View style={{ alignItems: 'center' }}>
-              <Ionicons name="time-outline" size={20} color="#818CF8" />
-              <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary, marginTop: 4 }}>
-                ~{estimatedMinutes} min
-              </Text>
-              <Text style={{ fontSize: 12, color: colors.text.tertiary }}>to read</Text>
-            </View>
-            <View style={{ alignItems: 'center' }}>
-              <Ionicons name="star-outline" size={20} color="#818CF8" />
-              <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary, marginTop: 4 }}>
-                {Math.min(500, Math.round(book.wordCount / 10))} XP
-              </Text>
-              <Text style={{ fontSize: 12, color: colors.text.tertiary }}>reward</Text>
-            </View>
-          </View>
+        {/* Stats. Two tiles, not the three that were here: the third restated
+            the CEFR level that the badge and the can-do line directly above it
+            already give, and a tile that repeats its neighbour spends the most
+            valuable strip on the screen saying nothing. The pair that is left
+            answers the two questions a learner actually has in front of an
+            unopened book — how big is it, and how long will it take me.
+
+            The second tile switches to minutes REMAINING once the book is
+            underway, because at that point total length is no longer the
+            figure being asked about. */}
+        <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
+          {/* Each tile is one accessibility element: read as three separate
+              texts it comes out as "Length", "12,480", "words". */}
+          <SlabCard
+            style={{ flex: 1, padding: 14, gap: 6, minHeight: 96 }}
+            accessible
+            accessibilityLabel={`Length: ${book.wordCount.toLocaleString()} words`}
+          >
+            <Caption
+              size="sm"
+              tone="secondary"
+              style={{ fontFamily: type.uiHeavy, letterSpacing: 0.6, textTransform: 'uppercase' }}
+            >
+              Length
+            </Caption>
+            <Heading level={2} numberOfLines={1}>{book.wordCount.toLocaleString()}</Heading>
+            <Caption size="sm" tone="tertiary">words</Caption>
+          </SlabCard>
+
+          {/* A 0-word row is possible (word_count is NOT NULL but not checked
+              positive), and an invented "~1 min" would be worse than silence. */}
+          {durationLabel ? (
+            <SlabCard
+              style={{ flex: 1, padding: 14, gap: 6, minHeight: 96 }}
+              accessible
+              accessibilityLabel={
+                showsRemaining
+                  ? `Time left: about ${durationLabel}, at a learner's pace`
+                  : `Time to read: about ${durationLabel}, at a learner's pace`
+              }
+            >
+              <Caption
+                size="sm"
+                tone="secondary"
+                style={{ fontFamily: type.uiHeavy, letterSpacing: 0.6, textTransform: 'uppercase' }}
+              >
+                {showsRemaining ? 'Time left' : 'Time to read'}
+              </Caption>
+              <Heading level={2} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+                ~{durationLabel}
+              </Heading>
+              <Caption size="sm" tone="tertiary">at a learner&apos;s pace</Caption>
+            </SlabCard>
+          ) : null}
         </View>
 
         {/* Progress (if started) */}
         {isStarted && !isCompleted && (
-          <View style={{ backgroundColor: colors.surface.card, borderRadius: 16, padding: 16, marginBottom: 16 }}>
-            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text.tertiary, marginBottom: 8 }}>Your Progress</Text>
-            <View style={{ height: 8, backgroundColor: colors.surface.cardAlt, borderRadius: 4 }}>
+          <SlabCard style={{ marginBottom: 16 }}>
+            <Body size="sm" weight="semibold" tone="tertiary" style={{ marginBottom: 8 }}>Your Progress</Body>
+            <View style={{ height: 8, backgroundColor: c.track, borderRadius: 4 }}>
               <View style={{
-                height: 8, backgroundColor: '#4F46E5', borderRadius: 4,
+                height: 8, backgroundColor: c.primary, borderRadius: 4,
                 width: `${Math.round(progress!.percentComplete)}%`,
               }} />
             </View>
-            <Text style={{ fontSize: 13, color: colors.text.tertiary, marginTop: 4 }}>
+            <Caption tone="tertiary" style={{ marginTop: 4 }}>
               {Math.round(progress!.percentComplete)}% complete
-            </Text>
-          </View>
+            </Caption>
+          </SlabCard>
         )}
 
         {isCompleted && (
-          <View style={{ backgroundColor: colors.success.tint, borderRadius: 16, padding: 16, marginBottom: 16, flexDirection: 'row', alignItems: 'center' }}>
-            <Ionicons name="checkmark-circle" size={24} color="#22C55E" />
-            <Text style={{ fontSize: 16, fontWeight: '600', color: colors.success.light, marginLeft: 8 }}>Completed!</Text>
-          </View>
+          <SlabCard tint="green" style={{ marginBottom: 16, flexDirection: 'row', alignItems: 'center' }}>
+            <Ionicons name="checkmark-circle" size={24} color={c.green} />
+            <Body weight="semibold" style={{ marginLeft: 8 }}>Completed!</Body>
+          </SlabCard>
         )}
 
         {/* Audiobook upsell for non-unlimited users */}
         {!isUnlimitedPlan && (
           <Pressable
             onPress={() => router.push('/(app)/profile/subscription')}
-            style={{ backgroundColor: '#EEF2FF', borderRadius: 16, padding: 16, marginBottom: 16, flexDirection: 'row', alignItems: 'center' }}
+            style={{ backgroundColor: c.primaryTint, borderColor: c.primaryTintBorder, borderWidth: shape.border, borderRadius: 16, padding: 16, marginBottom: 16, flexDirection: 'row', alignItems: 'center' }}
             accessibilityRole="button"
             accessibilityLabel="Upgrade to listen to this book"
           >
-            <Ionicons name="headset-outline" size={24} color="#818CF8" />
+            <Ionicons name="headset-outline" size={24} color={c.onTint} />
             <View style={{ flex: 1, marginLeft: 12 }}>
-              <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text.primary }}>Listen to this book</Text>
-              <Text style={{ fontSize: 13, color: colors.text.tertiary, marginTop: 2 }}>Upgrade to VIP for audiobook narration</Text>
+              <Body weight="semibold" tone="accent">Listen to this book</Body>
+              <Caption tone="accent" style={{ marginTop: 2 }}>Upgrade to VIP for audiobook narration</Caption>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#818CF8" />
+            <Ionicons name="chevron-forward" size={18} color={c.onTint} />
           </Pressable>
         )}
-      </View>
+      </ScrollView>
 
       {/* CTA Button */}
-      <View style={{ padding: 20, paddingBottom: 100, borderTopWidth: 1, borderTopColor: colors.border.default }}>
+      {/* The cover keeps the tab bar (only the pages hide it), so the CTA
+          reserves the bar's height instead of a guessed 100. */}
+      <View style={{ padding: 20, paddingBottom: 20 + insets.bottom + floatingTabBarSpace(), borderTopWidth: 1, borderTopColor: c.cardBorder }}>
+        {book && (
+          <View style={{ alignItems: 'flex-start', marginBottom: 12 }}>
+            <OfflineDownloadControl
+              what={book.title}
+              spec={{ kind: 'book', target: { bookId: book.id, title: book.title, language: book.language } }}
+            />
+          </View>
+        )}
         {/* The book's text is fetched here, not with the cover — so this is
             the one button in the app that can legitimately sit spinning for a
             moment on a long novel. */}
@@ -466,7 +554,7 @@ export default function BookDetailScreen() {
           onPress={() => void startReading()}
           disabled={isLoadingContent}
           style={{
-            backgroundColor: colors.action.primaryFill,
+            backgroundColor: c.primary,
             paddingVertical: 16,
             borderRadius: 14,
             alignItems: 'center',
@@ -477,11 +565,11 @@ export default function BookDetailScreen() {
           accessibilityLabel={isStarted ? 'Continue reading' : 'Start reading'}
         >
           {isLoadingContent ? (
-            <ActivityIndicator size="small" color={colors.text.onPrimary} />
+            <ActivityIndicator size="small" color={c.onPrimary} />
           ) : (
-            <Text style={{ color: colors.text.onPrimary, fontSize: 18, fontWeight: '600' }}>
+            <Body size="lg" weight="semibold" tone="onPrimary">
               {isCompleted ? 'Read Again' : isStarted ? 'Continue Reading' : 'Start Reading'}
-            </Text>
+            </Body>
           )}
         </Pressable>
       </View>

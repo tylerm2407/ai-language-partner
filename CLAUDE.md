@@ -3,10 +3,15 @@
 ## 1. Project Overview
 Fluenci is an AI-powered language-learning app: lessons, SM-2 spaced repetition, AI chat/voice tutoring, graded reading and writing, measured CEFR proficiency, and a B2B school system (organizations → classrooms → assignments) targeting university pilots. Pre-launch; App Store submission is the current goal.
 
-Progress is expressed as **measured proficiency, not points**. XP still accrues server-side as an idempotent ledger that offline replay and achievements depend on, but it is not shown to users anywhere. Hearts and streaks were removed outright (§3). What a learner sees is their CEFR level, always paired with a plain-language can-do statement via `lib/cefr-labels.ts` — a bare `B1` must never render on its own.
+Progress is expressed as **measured proficiency, not points**. XP, hearts and streaks were all removed outright (§3). What a learner sees is their CEFR level, always paired with a plain-language can-do statement via `lib/cefr-labels.ts` — a bare `B1` must never render on its own.
 
 The most important constraints:
 1. Every AI interaction passes through the content-safety + CEFR level-check pipeline (`supabase/functions/_shared/validated-generate.ts`).
+
+   **One exception, and only one: the live voice tutor (`supabase/functions/tutor-session`).** It is a speech-to-speech WebRTC session between the learner's device and OpenAI, so the audio never traverses our infrastructure and there is no point at which output can be gated *before* the learner hears it. Safety there is **post-hoc on the output transcript**: the client posts each completed tutor transcript to `tutor-session`, which runs the shared high-confidence multilingual checks plus OpenAI moderation in every supported language. On a flag the server tells the client to cut playback, cancel the response, and log to `tutor_safety_events`. Three cuts end the session.
+
+   This is genuinely weaker than the pre-generation gate: a fraction of a second of flagged audio may be heard before the cut lands. It was accepted because the alternative — proxying the audio through an edge function — reintroduces exactly the round-trip latency that makes a spoken tutor worth building. **Do not treat this as a precedent.** Any new AI surface whose output we can see before the learner does still goes through `generateValidated`, no exceptions. The end-of-session written debrief, which we *do* generate server-side, goes through it like everything else.
+
 2. The client is untrusted — anything with economic or competitive meaning (XP, quotas, subscription tier, proficiency evidence) is written server-side (guarded RPC or service-role edge function), never by direct client table writes.
 3. All AI API keys live in Supabase Edge Function secrets — never in the client.
 
@@ -27,7 +32,7 @@ Edge functions deploy via `npx supabase functions deploy <name>` or the Supabase
 - Mobile UI (safe areas, accessibility, gestures, performance): `.claude/rules/mobile-ui.md`.
 - New DB queries go through `lib/supabase-queries.ts` in the matching domain section; user-growable tables always query with `.limit()` or `.range()`.
 - Edge functions: always authenticate via `_shared/auth.ts`, validate input via `_shared/validation.ts`, generate AI content via `_shared/validated-generate.ts`, cap tokens and input length.
-- Never write server-owned columns (`total_xp`, `xp_level`, `league_tier`, `free_avatar_used_at`) by direct table update — the `fluenci_guard_gamification` trigger on `user_profiles` blocks it. Use the RPCs: `increment_xp_idempotent` (what everything current uses), `increment_xp` (legacy). Any new server-owned metric column must be added to that trigger, or the client can write it.
+- Never write the server-owned column `free_avatar_used_at` by direct table update — the `fluenci_guard_gamification` trigger on `user_profiles` blocks it. Any new server-owned metric column must be added to that trigger, or the client can write it. **XP is gone entirely** (migration 130 dropped `total_xp`, `xp_level`, `league_tier`, `lessons.xp_reward`, `xp_earned` on completions and daily stats, and the `increment_xp*` RPCs). Progress is the measured CEFR level and honest effort metrics in real units (minutes, reviews, days); do not reintroduce a points currency.
 - **Hearts and streaks no longer exist.** Migration 083 dropped `update_streak`, `repair_streak_with_freeze`, `repair_streak_with_shield`, the `streak_events` table and every `streak*` column; migration 084 dropped `spend_heart`, `sync_hearts` and the `hearts`/`max_hearts`/`last_heart_lost_at` columns. Both headers explain why: neither mechanic ever actually did anything, and metering mistakes is backwards in an SRS app. The free tier's real boundary is now `dailyNewCards` (5), enforced by `try_consume_new_card_slot()`. Do not reintroduce either concept.
 
 ## 4. Database — READ BEFORE TOUCHING

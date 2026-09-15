@@ -1,17 +1,24 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { GlassSurface } from '../ui/GlassSurface';
+import { SlabCard, type SlabTint } from '../ui2/SlabCard';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import type { ConversationGrade } from '../../types';
 
 interface RubricDisplayProps {
   grade: ConversationGrade;
 }
 
-function scoreColor(total: number): string {
-  if (total >= 80) return '#22C55E';
-  if (total >= 60) return '#F59E0B';
-  return '#EF4444';
+/**
+ * The band is carried by a TINT behind the number rather than by colouring the
+ * numerals. UI 2.0 runs in light mode too, where `green`/`yellow` as text sit
+ * around 2:1 on a white card — the tint keeps the colour coding and keeps the
+ * score readable, which colouring 48px numerals does not.
+ */
+function scoreTint(total: number): SlabTint {
+  if (total >= 80) return 'green';
+  if (total >= 60) return 'yellow';
+  return 'pink';
 }
 
 interface RubricBarProps {
@@ -21,26 +28,27 @@ interface RubricBarProps {
 }
 
 function RubricBar({ label, score, max }: RubricBarProps) {
+  const { c } = useUi2Theme();
   const pct = Math.min(100, Math.round((score / max) * 100));
-  const color = score >= max * 0.8 ? '#22C55E' : score >= max * 0.6 ? '#F59E0B' : '#EF4444';
+  const color = score >= max * 0.8 ? c.green : score >= max * 0.6 ? c.yellow : c.error;
 
   return (
     <View style={{ marginBottom: 12 }}>
       <View className="flex-row items-center justify-between mb-1">
         <Text
           style={{
-            color: '#94A3B8',
+            color: c.muted,
             fontSize: 13,
-            fontFamily: 'Nunito_500Medium',
+            fontFamily: 'Manrope_500Medium',
           }}
         >
           {label}
         </Text>
         <Text
           style={{
-            color: '#FFFFFF',
+            color: c.ink,
             fontSize: 13,
-            fontFamily: 'Nunito_600SemiBold',
+            fontFamily: 'Manrope_600SemiBold',
           }}
         >
           {score}/{max}
@@ -50,7 +58,7 @@ function RubricBar({ label, score, max }: RubricBarProps) {
         style={{
           height: 8,
           borderRadius: 4,
-          backgroundColor: 'rgba(255, 255, 255, 0.08)',
+          backgroundColor: c.track,
           overflow: 'hidden',
         }}
       >
@@ -68,17 +76,18 @@ function RubricBar({ label, score, max }: RubricBarProps) {
 }
 
 export default function RubricDisplay({ grade }: RubricDisplayProps) {
-  const totalColor = scoreColor(grade.totalScore);
+  const { c } = useUi2Theme();
+  const totalTint = scoreTint(grade.totalScore);
 
   return (
-    <GlassSurface innerStyle={{ padding: 20 }}>
+    <SlabCard style={{ padding: 20 }}>
       {/* Total score */}
-      <View style={{ alignItems: 'center', marginBottom: 20 }}>
+      <SlabCard tint={totalTint} style={{ alignItems: 'center', marginBottom: 20 }}>
         <Text
           style={{
-            color: totalColor,
+            color: c.ink,
             fontSize: 48,
-            fontFamily: 'Nunito_800ExtraBold',
+            fontFamily: 'Manrope_800ExtraBold',
           }}
           accessibilityLabel={`Total score: ${grade.totalScore} out of 100`}
         >
@@ -86,14 +95,14 @@ export default function RubricDisplay({ grade }: RubricDisplayProps) {
         </Text>
         <Text
           style={{
-            color: '#64748B',
+            color: c.muted,
             fontSize: 13,
-            fontFamily: 'Nunito_500Medium',
+            fontFamily: 'Manrope_500Medium',
           }}
         >
           / 100
         </Text>
-      </View>
+      </SlabCard>
 
       {/* Rubric bars */}
       <RubricBar label="Participation" score={grade.participation} max={25} />
@@ -105,9 +114,9 @@ export default function RubricDisplay({ grade }: RubricDisplayProps) {
       {grade.summary ? (
         <Text
           style={{
-            color: '#94A3B8',
+            color: c.muted,
             fontSize: 14,
-            fontFamily: 'Nunito_400Regular',
+            fontFamily: 'Manrope_400Regular',
             marginTop: 16,
             lineHeight: 20,
           }}
@@ -121,9 +130,9 @@ export default function RubricDisplay({ grade }: RubricDisplayProps) {
         <View style={{ marginTop: 16 }}>
           <Text
             style={{
-              color: '#22C55E',
+              color: c.ink,
               fontSize: 13,
-              fontFamily: 'Nunito_600SemiBold',
+              fontFamily: 'Manrope_600SemiBold',
               marginBottom: 6,
             }}
           >
@@ -134,14 +143,14 @@ export default function RubricDisplay({ grade }: RubricDisplayProps) {
               <Ionicons
                 name="ellipse"
                 size={6}
-                color="#22C55E"
+                color={c.green}
                 style={{ marginTop: 6, marginRight: 8 }}
               />
               <Text
                 style={{
-                  color: '#FFFFFF',
+                  color: c.ink,
                   fontSize: 13,
-                  fontFamily: 'Nunito_400Regular',
+                  fontFamily: 'Manrope_400Regular',
                   flex: 1,
                   lineHeight: 18,
                 }}
@@ -158,9 +167,9 @@ export default function RubricDisplay({ grade }: RubricDisplayProps) {
         <View style={{ marginTop: 16 }}>
           <Text
             style={{
-              color: '#F59E0B',
+              color: c.ink,
               fontSize: 13,
-              fontFamily: 'Nunito_600SemiBold',
+              fontFamily: 'Manrope_600SemiBold',
               marginBottom: 6,
             }}
           >
@@ -171,14 +180,14 @@ export default function RubricDisplay({ grade }: RubricDisplayProps) {
               <Ionicons
                 name="ellipse"
                 size={6}
-                color="#F59E0B"
+                color={c.yellow}
                 style={{ marginTop: 6, marginRight: 8 }}
               />
               <Text
                 style={{
-                  color: '#FFFFFF',
+                  color: c.ink,
                   fontSize: 13,
-                  fontFamily: 'Nunito_400Regular',
+                  fontFamily: 'Manrope_400Regular',
                   flex: 1,
                   lineHeight: 18,
                 }}
@@ -189,6 +198,6 @@ export default function RubricDisplay({ grade }: RubricDisplayProps) {
           ))}
         </View>
       )}
-    </GlassSurface>
+    </SlabCard>
   );
 }

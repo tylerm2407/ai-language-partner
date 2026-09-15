@@ -4,15 +4,20 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSafeBack } from '../../../hooks/useSafeBack';
 import { Ionicons } from '@expo/vector-icons';
 import { useProficiencyReport } from '../../../hooks/useProficiencyReport';
-import { ScreenHeader } from '../../../components/ui/ScreenHeader';
-import { GradientBackground } from '../../../components/ui/GradientBackground';
+import { Ui2Header } from '../../../components/ui2/Ui2Header';
+import { CefrExplainerSheet, useCefrExplainer } from '../../../components/ui2/CefrExplainerSheet';
+import { SlabCard } from '../../../components/ui2/SlabCard';
 import { cefrCanDo, cefrAccessibilityLabel } from '../../../lib/cefr-labels';
-import { colors } from '../../../config/theme';
+// `colors` is deliberately NOT imported: it is the fixed DARK palette, and a
+// screen that reads it stays dark whatever the phone is set to.
+import { useUi2Theme } from '../../../hooks/useUi2Theme';
+import { spacing, type Ui2Palette } from '../../../config/theme';
 import type {
   BandBreakdown,
   Confidence,
   SkillAssessment,
 } from '../../../lib/cefr-proficiency';
+import { nextBandProgress, progressToward, type NextBandProgress } from '../../../lib/next-band-progress';
 
 const SKILL_LABELS: Record<SkillAssessment['skill'], string> = {
   vocabulary: 'Vocabulary',
@@ -37,23 +42,34 @@ const CONFIDENCE_LABELS: Record<Confidence, string> = {
   high: 'High confidence',
 };
 
-const CONFIDENCE_COLORS: Record<Confidence, string> = {
-  none: colors.text.quaternary,
-  low: colors.warning.base,
-  medium: colors.action.accent,
-  high: colors.success.base,
-};
+/** The same four confidence steps; the palette is now the scheme-aware one, so
+ *  the dot is legible in light mode as well. */
+function confidenceColor(c: Ui2Palette, confidence: Confidence): string {
+  switch (confidence) {
+    case 'low':
+      return c.yellow;
+    case 'medium':
+      return c.primary;
+    case 'high':
+      return c.green;
+    default:
+      return c.idle;
+  }
+}
 
-function bandStatusColor(status: BandBreakdown['status']): string {
+function bandStatusColor(c: Ui2Palette, status: BandBreakdown['status']): string {
   switch (status) {
     case 'mastered':
-      return colors.success.base;
+      return c.green;
     case 'developing':
-      return colors.action.accent;
+      return c.primary;
     case 'weak':
-      return colors.warning.base;
+      return c.yellow;
+    case 'placed':
+      // Distinct from idle "Not started": this rung was granted, not skipped.
+      return c.muted;
     default:
-      return colors.text.quaternary;
+      return c.idle;
   }
 }
 
@@ -65,9 +81,45 @@ function bandStatusLabel(status: BandBreakdown['status']): string {
       return 'Developing';
     case 'weak':
       return 'Needs work';
+    case 'placed':
+      return 'Assumed from placement';
     default:
       return 'Not started';
   }
+}
+
+/**
+ * How far one strand is toward holding `target`. Drawn from the same
+ * `next-band-progress` numbers as Home's ring, so this bar cannot say a strand
+ * is done while the ring says otherwise.
+ */
+function SkillProgressBar({
+  c,
+  target,
+  fraction,
+  met,
+}: {
+  c: Ui2Palette;
+  target: string;
+  fraction: number;
+  met: boolean;
+}) {
+  const pct = Math.round(Math.min(1, Math.max(0, fraction)) * 100);
+  return (
+    <View
+      className="mt-2"
+      accessibilityRole="progressbar"
+      accessibilityLabel={met ? `${target} held in this skill` : `${pct} percent of the way to ${cefrAccessibilityLabel(target)} in this skill`}
+      accessibilityValue={{ min: 0, max: 100, now: pct }}
+    >
+      <View style={{ height: 4, borderRadius: 2, backgroundColor: c.track, overflow: 'hidden' }}>
+        <View style={{ width: `${pct}%`, height: '100%', backgroundColor: met ? c.green : c.primary }} />
+      </View>
+      <Text className="text-xs mt-1" style={{ color: c.idle }} accessibilityElementsHidden importantForAccessibility="no">
+        {met ? `${target} held` : `${pct}% toward ${target}`}
+      </Text>
+    </View>
+  );
 }
 
 /**
@@ -79,39 +131,64 @@ function bandStatusLabel(status: BandBreakdown['status']): string {
  * steps. Every claim here traces back to something they did.
  */
 export default function ProficiencyScreen() {
-  const goBack = useSafeBack('/(app)');
+  const { c } = useUi2Theme();
+  const goBack = useSafeBack('/(app)/profile');
   const { report, isLoading, error, refresh } = useProficiencyReport();
+  const cefrExplainer = useCefrExplainer();
+  // The same five-strand ring Home draws, so the per-skill bars here and the
+  // ring there are one number, not two. Unmeasured learners prove
+  // `nextLevel` itself (their entry band); measured ones work toward the band
+  // after their level.
+  const ring: NextBandProgress | null = report
+    ? report.overallLevel
+      ? nextBandProgress(report.overallLevel, report)
+      : report.nextLevel
+        ? progressToward(report.nextLevel, report.nextLevel, report)
+        : null
+    : null;
 
   return (
-    <GradientBackground>
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
       <SafeAreaView className="flex-1" edges={['top']}>
-        <ScreenHeader
+        <Ui2Header
           title="Proficiency Report"
           subtitle="Estimated from your practice history"
           onBack={() => goBack()}
+          right={
+            <Pressable
+              onPress={cefrExplainer.open}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="What is a CEFR level?"
+              style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
+            >
+              <Ionicons name="help-circle-outline" size={24} color={c.muted} />
+            </Pressable>
+          }
         />
 
         {isLoading && (
           <View className="flex-1 items-center justify-center">
-            <ActivityIndicator color={colors.action.accent} />
-            <Text className="text-sm text-text-secondary mt-3">Reviewing your history…</Text>
+            <ActivityIndicator color={c.primary} />
+            <Text className="text-sm mt-3" style={{ color: c.muted }}>Reviewing your history…</Text>
           </View>
         )}
 
         {!isLoading && error && (
           <View className="flex-1 items-center justify-center px-6">
-            <Ionicons name="alert-circle-outline" size={40} color={colors.error.base} />
-            <Text className="text-base font-semibold text-text-primary mt-3 text-center">
+            <Ionicons name="alert-circle-outline" size={40} color={c.error} />
+            <Text className="text-base font-semibold mt-3 text-center" style={{ color: c.ink }}>
               Could not build your report
             </Text>
-            <Text className="text-sm text-text-secondary mt-1 mb-4 text-center">{error}</Text>
+            <Text className="text-sm mt-1 mb-4 text-center" style={{ color: c.muted }}>{error}</Text>
             <Pressable
-              className="bg-primary px-6 py-3 rounded-[14px]"
+              className="px-6 py-3 rounded-[14px]"
+              style={{ backgroundColor: c.primary }}
               onPress={refresh}
               accessibilityRole="button"
               accessibilityLabel="Retry loading your proficiency report"
             >
-              <Text className="text-base font-semibold text-white">Try again</Text>
+              <Text className="text-base font-semibold" style={{ color: c.onPrimary }}>Try again</Text>
             </Pressable>
           </View>
         )}
@@ -119,13 +196,20 @@ export default function ProficiencyScreen() {
         {!isLoading && !error && report && (
           <ScrollView className="flex-1 px-5" contentContainerStyle={{ paddingBottom: 32 }}>
             {/* Overall level */}
-            <View className="bg-dark-card rounded-2xl p-6 items-center mt-2 mb-4">
-              <Text className="text-sm font-semibold text-text-secondary uppercase tracking-wide">
+            <SlabCard
+              style={{
+                padding: spacing.lg,
+                alignItems: 'center',
+                marginTop: spacing.xs,
+                marginBottom: spacing.md,
+              }}
+            >
+              <Text className="text-sm font-semibold uppercase tracking-wide" style={{ color: c.muted }}>
                 Overall level
               </Text>
               <Text
-                className="text-text-primary font-bold my-2"
-                style={{ fontSize: 56, lineHeight: 64 }}
+                className="font-bold my-2"
+                style={{ fontSize: 56, lineHeight: 64, color: c.ink }}
                 accessibilityLabel={
                   report.overallLevel
                     ? `Estimated level. ${cefrAccessibilityLabel(report.overallLevel)}`
@@ -138,53 +222,74 @@ export default function ProficiencyScreen() {
                 /* A 56pt "B1" on its own is the single largest thing on this
                    screen and the least informative. This is what it claims. */
                 <Text
-                  className="text-base text-text-secondary text-center mb-1"
+                  className="text-base text-center mb-1"
+                  style={{ color: c.muted }}
                   accessibilityElementsHidden
                   importantForAccessibility="no"
                 >
                   {cefrCanDo(report.overallLevel)}
                 </Text>
               ) : (
-                <Text className="text-base font-semibold text-text-primary mb-1">
-                  Not yet assessed
-                </Text>
+                <>
+                  <Text className="text-base font-semibold mb-1" style={{ color: c.ink }}>
+                    Not yet assessed
+                  </Text>
+                  {/* "Not yet" on its own reads as "nothing counts". A level
+                      needs every strand, so say which ones are still short —
+                      that is the whole difference between a report that
+                      explains itself and one that looks broken. */}
+                  {report.missingSkills.length > 0 ? (
+                    <Text className="text-sm text-center mb-1" style={{ color: c.muted }}>
+                      Waiting on {report.missingSkills.map((k) => SKILL_LABELS[k].toLowerCase()).join(', ')}
+                    </Text>
+                  ) : null}
+                </>
               )}
+              {report.levelBasis ? (
+                /* Which rungs under the level were assumed from the learner's
+                   placement rather than measured. Part of the honesty the card
+                   below promises, so it sits with the level, not in a footnote. */
+                <Text className="text-sm text-center mb-1" style={{ color: c.muted }}>
+                  {report.levelBasis}
+                </Text>
+              ) : null}
               <View className="flex-row items-center">
                 <View
                   style={{
                     width: 8,
                     height: 8,
                     borderRadius: 4,
-                    backgroundColor: CONFIDENCE_COLORS[report.confidence],
+                    backgroundColor: confidenceColor(c, report.confidence),
                     marginRight: 6,
                   }}
                 />
-                <Text className="text-sm text-text-secondary">
+                <Text className="text-sm" style={{ color: c.muted }}>
                   {CONFIDENCE_LABELS[report.confidence]}
                 </Text>
               </View>
-            </View>
+            </SlabCard>
 
             {/* Honesty notice. Do not remove — the report's value depends on it
                 being read as an estimate, not a certificate. */}
-            <View className="bg-dark-card-alt rounded-2xl p-4 mb-6 flex-row">
+            <SlabCard style={{ marginBottom: spacing.lg, flexDirection: 'row' }}>
               <Ionicons
                 name="information-circle-outline"
                 size={18}
-                color={colors.text.tertiary}
+                color={c.idle}
                 style={{ marginTop: 2 }}
               />
-              <Text className="text-sm text-text-tertiary ml-3 flex-1">
+              <Text className="text-sm ml-3 flex-1" style={{ color: c.idle }}>
                 This is an estimate based on what you have practised in Fluenci. It is not an
                 official CEFR certification.
               </Text>
-            </View>
+            </SlabCard>
 
             {/* Next step */}
             {report.nextLevelRequirement && (
-              <View className="bg-primary-tint border border-primary rounded-2xl p-5 mb-6">
+              <SlabCard tint="primary" style={{ marginBottom: spacing.lg }}>
                 <Text
-                  className="text-sm font-semibold text-text-secondary uppercase tracking-wide mb-1"
+                  className="text-sm font-semibold uppercase tracking-wide mb-1"
+                  style={{ color: c.onTint }}
                   accessibilityLabel={
                     report.nextLevel
                       ? `To reach ${cefrAccessibilityLabel(report.nextLevel)}`
@@ -195,41 +300,46 @@ export default function ProficiencyScreen() {
                 </Text>
                 {report.nextLevel ? (
                   <Text
-                    className="text-sm text-text-secondary mb-2"
+                    className="text-sm mb-2"
+                    style={{ color: c.muted }}
                     accessibilityElementsHidden
                     importantForAccessibility="no"
                   >
                     {cefrCanDo(report.nextLevel)}
                   </Text>
                 ) : null}
-                <Text className="text-base font-semibold text-text-primary">
-                  {report.nextLevelRequirement}
-                </Text>
-              </View>
+                {/* One line per strand still short, vocabulary first, then the
+                    confidence gate if that is what is holding the level. */}
+                {report.nextLevelSteps.map((step) => (
+                  <Text key={step} className="text-base font-semibold mb-1" style={{ color: c.ink }}>
+                    {step}
+                  </Text>
+                ))}
+              </SlabCard>
             )}
 
             {/* Per-skill breakdown */}
-            <Text className="text-xl font-bold text-text-primary mb-3">By skill</Text>
+            <Text className="text-xl font-bold mb-3" style={{ color: c.ink }}>By skill</Text>
             {report.skills.map((skill) => (
-              <View
+              <SlabCard
                 key={skill.skill}
-                className="bg-dark-card rounded-2xl p-5 mb-3 flex-row items-start"
+                style={{ marginBottom: spacing.sm, flexDirection: 'row', alignItems: 'flex-start' }}
               >
                 <Ionicons
                   name={SKILL_ICONS[skill.skill]}
                   size={22}
-                  color={colors.premium.base}
+                  color={c.onTint}
                   style={{ marginTop: 2 }}
                 />
                 <View className="ml-4 flex-1">
                   <View className="flex-row items-center justify-between">
-                    <Text className="text-base font-semibold text-text-primary">
+                    <Text className="text-base font-semibold" style={{ color: c.ink }}>
                       {SKILL_LABELS[skill.skill]}
                     </Text>
                     <Text
                       className="text-base font-bold"
                       style={{
-                        color: skill.level ? colors.success.base : colors.text.quaternary,
+                        color: skill.level ? c.green : c.idle,
                       }}
                       accessibilityLabel={
                         skill.level
@@ -246,38 +356,49 @@ export default function ProficiencyScreen() {
                       `detail` below is the evidence for it. */}
                   {skill.level ? (
                     <Text
-                      className="text-sm text-text-secondary mt-1"
+                      className="text-sm mt-1"
+                      style={{ color: c.muted }}
                       accessibilityElementsHidden
                       importantForAccessibility="no"
                     >
                       {cefrCanDo(skill.level)}
                     </Text>
                   ) : null}
-                  <Text className="text-sm text-text-secondary mt-1">{skill.detail}</Text>
+                  <Text className="text-sm mt-1" style={{ color: c.muted }}>{skill.detail}</Text>
+                  {ring && ring.next ? (
+                    <SkillProgressBar
+                      c={c}
+                      target={ring.next}
+                      fraction={ring.strands.find((s) => s.skill === skill.skill)?.fraction ?? 0}
+                      met={ring.strands.find((s) => s.skill === skill.skill)?.met ?? false}
+                    />
+                  ) : null}
                 </View>
-              </View>
+              </SlabCard>
             ))}
 
             {/* Band ladder */}
-            <Text className="text-xl font-bold text-text-primary mt-4 mb-1">
+            <Text className="text-xl font-bold mt-4 mb-1" style={{ color: c.ink }}>
               Vocabulary retention by level
             </Text>
-            <Text className="text-sm text-text-secondary mb-3">
+            <Text className="text-sm mb-3" style={{ color: c.muted }}>
               How much of what you have studied at each level you still remember in long-term
               review.
             </Text>
             {report.bands.map((band) => (
-              <View key={band.band} className="bg-dark-card rounded-2xl p-4 mb-2">
+              <SlabCard key={band.band} style={{ marginBottom: spacing.xs }}>
                 <View className="flex-row items-start justify-between mb-2" style={{ gap: 12 }}>
                   <View className="flex-1">
                     <Text
-                      className="text-base font-bold text-text-primary"
+                      className="text-base font-bold"
+                      style={{ color: c.ink }}
                       accessibilityLabel={cefrAccessibilityLabel(band.band)}
                     >
                       {band.band}
                     </Text>
                     <Text
-                      className="text-sm text-text-tertiary mt-0.5"
+                      className="text-sm mt-0.5"
+                      style={{ color: c.idle }}
                       accessibilityElementsHidden
                       importantForAccessibility="no"
                     >
@@ -287,7 +408,7 @@ export default function ProficiencyScreen() {
                   {/* Status is a word, not just the bar's colour — the bar below
                       repeats it as length and hue, neither of which is a cue on
                       its own. */}
-                  <Text className="text-sm font-semibold" style={{ color: bandStatusColor(band.status) }}>
+                  <Text className="text-sm font-semibold" style={{ color: bandStatusColor(c, band.status) }}>
                     {bandStatusLabel(band.status)}
                   </Text>
                 </View>
@@ -295,7 +416,7 @@ export default function ProficiencyScreen() {
                   style={{
                     height: 6,
                     borderRadius: 3,
-                    backgroundColor: colors.surface.sunken,
+                    backgroundColor: c.track,
                     overflow: 'hidden',
                   }}
                 >
@@ -303,7 +424,7 @@ export default function ProficiencyScreen() {
                     style={{
                       width: `${Math.round(band.retentionRate * 100)}%`,
                       height: '100%',
-                      backgroundColor: bandStatusColor(band.status),
+                      backgroundColor: bandStatusColor(c, band.status),
                     }}
                   />
                 </View>
@@ -313,8 +434,10 @@ export default function ProficiencyScreen() {
                     are still-settling new cards, which are deliberately kept
                     out of the rate so that starting new material cannot make
                     the learner's level appear to drop. */}
-                <Text className="text-sm text-text-tertiary mt-2">
-                  {band.seen === 0
+                <Text className="text-sm mt-2" style={{ color: c.idle }}>
+                  {band.seen === 0 && band.status === 'placed'
+                    ? 'Not studied — below your starting level'
+                    : band.seen === 0
                     ? 'No items studied yet'
                     : band.mature === 0
                       ? `${band.seen} ${band.seen === 1 ? 'item' : 'items'} started — too new to score yet`
@@ -322,15 +445,21 @@ export default function ProficiencyScreen() {
                           band.seen > band.mature ? ` · ${band.seen - band.mature} still settling` : ''
                         }`}
                 </Text>
-              </View>
+              </SlabCard>
             ))}
 
-            <Text className="text-sm text-text-quaternary text-center mt-6">
+            <Text className="text-sm text-center mt-6" style={{ color: c.idle }}>
               Generated {new Date(report.generatedAt).toLocaleDateString()}
             </Text>
           </ScrollView>
         )}
+        {/* No report link: this is the report. */}
+        <CefrExplainerSheet
+          visible={cefrExplainer.visible}
+          onDismiss={cefrExplainer.close}
+          band={report?.overallLevel ?? null}
+        />
       </SafeAreaView>
-    </GradientBackground>
+    </View>
   );
 }

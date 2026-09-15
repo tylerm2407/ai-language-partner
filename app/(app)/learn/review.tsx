@@ -1,28 +1,70 @@
-import { View, Text, Pressable, ScrollView, Alert } from 'react-native';
+import { View, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useSafeBack } from '../../../hooks/useSafeBack';
-import { useEffect, useState, useRef } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { haptic } from '../../../lib/haptics';
-import { useReviewQueue } from '../../../hooks/useReviewQueue';
+import { useReviewQueue, type ReviewQueueMode } from '../../../hooks/useReviewQueue';
 import { useDailyStats } from '../../../hooks/useDailyStats';
-import { ProgressBar } from '../../../components/ui/ProgressBar';
-import { Button } from '../../../components/ui/Button';
-import { LoadingScreen } from '../../../components/ui/LoadingScreen';
-import { EmptyState } from '../../../components/ui/EmptyState';
-import type { ReviewRating } from '../../../types';
-import { GlowLayer } from '../../../components/ui/GlowBackground';
-import { colors } from '../../../config/theme';
+import { useActiveTime } from '../../../hooks/useActiveTime';
+import { Ui2ProgressBar } from '../../../components/ui2/Ui2ProgressBar';
+import { SlabButton } from '../../../components/ui2/SlabButton';
+import { Ui2EmptyState } from '../../../components/ui2/Ui2EmptyState';
+import { Ui2InlineError } from '../../../components/ui2/Ui2InlineError';
+import { Heading, Body } from '../../../components/ui2/Ui2Text';
+import { ReviewChoiceCard } from '../../../components/review/ReviewChoiceCard';
+import {
+  applyChoiceResult,
+  buildChoiceOptions,
+  choiceRating,
+  createChoiceSession,
+  currentId,
+  isComplete as isSessionComplete,
+  isFirstAttempt,
+  sessionIds,
+  type ChoiceSession,
+} from '../../../lib/review-choices';
+import { loadErrorCopy, saveErrorCopy } from '../../../lib/error-copy';
+// `colors` is deliberately NOT imported: it is the fixed DARK palette, and a
+// screen that reads it stays dark whatever the phone is set to. `spacing` is a
+// plain scheme-independent number set.
+import { spacing } from '../../../config/theme';
+import { useUi2Theme } from '../../../hooks/useUi2Theme';
 import { useScreenView } from '../../../hooks/useScreenView';
 import { trackEvent } from '../../../lib/analytics';
 
 export default function ReviewScreen() {
   useScreenView('review');
-  const goBack = useSafeBack('/(app)');
-  const { items, cards, loading, loadQueue, submitReview } = useReviewQueue();
+  const { c, shape } = useUi2Theme();
+  const router = useRouter();
+  // Exit, Done and Back to Learn all land on the Learn tab, whatever opened
+  // the review. This screen lives on the learn stack but is pushed from other
+  // tabs too (Home's due-cards card, the chat debrief, the patterns screen).
+  // A plain back() from those pops the TAB switch and drops the learner on
+  // Home, and a replace() when Learn's index is already underneath leaves two
+  // copies of Learn on the stack. So: pop to the stack root when there is
+  // one, and only when this screen IS the root swap it for Learn.
+  const goBack = () => {
+    if (router.canDismiss()) {
+      router.dismissAll();
+      return;
+    }
+    router.replace('/(app)/learn');
+  };
+  // `?mode=struggling` deals only the words the learner keeps failing (Home's
+  // "Your patterns" card and the patterns screen link here). Anything else
+  // is the ordinary due queue.
+  const params = useLocalSearchParams<{ mode?: string }>();
+  const mode: ReviewQueueMode = params.mode === 'struggling' ? 'struggling' : 'due';
+  const { items, cards, pool, loading, error, loadQueue, submitReview } = useReviewQueue(mode);
   const { addStats } = useDailyStats();
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [showAnswer, setShowAnswer] = useState(false);
+  // Time on the queue, not time on the spinner. See hooks/useActiveTime.ts.
+  useActiveTime({ kind: 'review', enabled: !loading });
+  // The in-session queue (lib/review-choices.ts): a missed card comes back
+  // before the session ends, but only its first showing reaches SM-2.
+  const [session, setSession] = useState<ChoiceSession>(() => createChoiceSession([]));
+  const [selected, setSelected] = useState<string | null>(null);
+  const [pending, setPending] = useState<{ correct: boolean; answer: string; responseTimeMs: number } | null>(null);
   const [reviewed, setReviewed] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const cardStartTime = useRef(Date.now());
@@ -31,12 +73,57 @@ export default function ReviewScreen() {
     loadQueue();
   }, [loadQueue]);
 
-  // Reset timer when card changes
+  // The queue is dealt once, from the loaded items that have a card. Keyed on
+  // the item ids so a stale-while-revalidate refresh that returns the same
+  // queue does not reset a session in progress, while a genuinely different
+  // queue does.
+  //
+  // Reset DURING RENDER, not in an effect. An effect runs after the commit,
+  // so the render in which `items` first lands still saw the empty session:
+  // no current id, index -1, and `items[-1].cardId` threw before the effect
+  // could run. Setting state mid-render on a key change is React's own
+  // pattern for derived state; it re-renders before anything is painted.
+  const dealtIds = sessionIds(items, cards);
+  const queueKey = dealtIds.join('|');
+  const [sessionKey, setSessionKey] = useState(queueKey);
+  if (sessionKey !== queueKey) {
+    setSessionKey(queueKey);
+    setSession(createChoiceSession(dealtIds));
+    setSelected(null);
+    setPending(null);
+  }
+
+  const currentItemId = currentId(session);
+  const currentIndex = currentItemId ? items.findIndex((i) => i.id === currentItemId) : -1;
+
+  const attemptNo = currentItemId ? session.attempts[currentItemId] ?? 0 : 0;
+
+  // Options are dealt once per SHOWING — a re-ask of the same card is a new
+  // showing, hence attemptNo — and redealt only if the pool changes size,
+  // which is a bigger pool landing after the cards. They are not redealt when
+  // a stale-while-revalidate refresh hands back the same queue as new object
+  // references: the rows must not reshuffle while the learner is reading
+  // them. Once picked they are FROZEN, whatever arrives.
+  const frozenOptions = useRef<string[]>([]);
+  const poolSize = pool.length;
+  const options = useMemo(() => {
+    if (selected !== null) return frozenOptions.current;
+    const item = items.find((i) => i.id === currentItemId);
+    const card = item ? cards[item.cardId] : undefined;
+    frozenOptions.current = card ? buildChoiceOptions(card, pool) : [];
+    return frozenOptions.current;
+    // items/cards/pool are read but deliberately not deps — see above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentItemId, attemptNo, poolSize, selected]);
+
+  // The clock starts when the rows the learner will answer are on screen, so
+  // it follows `options`: a redeal (pool landing late) restarts it, a pick
+  // (which returns the frozen array, same reference) does not.
   useEffect(() => {
     cardStartTime.current = Date.now();
-  }, [currentIndex]);
+  }, [options]);
 
-  const isComplete = !loading && items.length > 0 && currentIndex >= items.length;
+  const isComplete = !loading && isSessionComplete(session);
 
   // Finishing the queue is the accomplishment, and until now it was the one
   // silent step in the session: every individual card buzzed on rating, then
@@ -60,51 +147,106 @@ export default function ReviewScreen() {
   useEffect(() => {
     if (loading || items.length === 0 || sessionStartedRef.current) return;
     sessionStartedRef.current = true;
-    trackEvent('review_started', { count: items.length });
-  }, [loading, items.length]);
+    // The struggling entry points fire their own `review_started` with
+    // `source: 'struggling'` before navigating; this one covers the due queue.
+    if (mode === 'due') trackEvent('review_started', { count: items.length });
+  }, [loading, items.length, mode]);
 
   const completedRef = useRef(false);
   useEffect(() => {
     if (!isComplete || completedRef.current) return;
     completedRef.current = true;
-    trackEvent('review_completed', { count: reviewed });
-  }, [isComplete, reviewed]);
+    trackEvent('review_completed', { count: reviewed, source: mode });
+  }, [isComplete, reviewed, mode]);
 
-  const handleRate = async (rating: ReviewRating) => {
-    if (submitting) return; // Prevent double-tap
-    setSubmitting(true);
+  /**
+   * The pick. Graded here so the verdict shows at once; the write waits for
+   * Continue, so a slow network never sits between the tap and the colour.
+   */
+  const handleAnswer = (correct: boolean, answer: string) => {
+    if (selected !== null) return;
+    setSelected(answer);
+    setPending({ correct, answer, responseTimeMs: Date.now() - cardStartTime.current });
+  };
 
+  /**
+   * Continue. A first showing is a real review: SM-2 hears the rating and a
+   * review_log row is written. A re-ask is drill on an answer the learner has
+   * already been shown, so nothing is written — the miss that caused it has
+   * already reset the card to tomorrow, and that is the schedule that stands
+   * until they get it right on a fresh day.
+   */
+  const handleContinue = async () => {
+    if (submitting || !pending || currentIndex < 0) return;
     const item = items[currentIndex];
-    const card = cards[item.cardId];
-    const responseTimeMs = Date.now() - cardStartTime.current;
-
-    haptic(rating >= 3 ? 'correct' : 'incorrect');
-
+    if (!isFirstAttempt(session, item.id)) {
+      setSelected(null);
+      setPending(null);
+      setSession((s) => applyChoiceResult(s, item.id, pending.correct));
+      return;
+    }
+    setSubmitting(true);
     try {
-      await submitReview(item, rating, card?.targetText ?? '', responseTimeMs);
-      await addStats({ cardsReviewed: 1 });
+      const rating = choiceRating(pending.correct, pending.responseTimeMs);
+      await submitReview(item, rating, pending.answer, pending.responseTimeMs);
       setReviewed((r) => r + 1);
-      setShowAnswer(false);
-      setCurrentIndex((prev) => prev + 1);
-    } catch {
-      Alert.alert('Error', 'Failed to save review. Please try again.');
-    } finally {
+      setSelected(null);
+      setPending(null);
+      setSession((s) => applyChoiceResult(s, item.id, pending.correct));
+    } catch (err) {
+      // Nothing advanced: the pick stays on screen and Continue is live again.
+      const copy = saveErrorCopy(err, 'this review');
+      Alert.alert(copy.title, copy.message);
       setSubmitting(false);
+      return;
+    }
+    setSubmitting(false);
+    // The daily counter, AFTER the review is saved and the session has
+    // advanced, in its own catch. It used to sit inside the try above, so a
+    // stats failure alerted "couldn't save" on a review that WAS saved and
+    // left Continue live: the second tap wrote a second review_logs row and
+    // advanced SM-2 twice. A missed tally is cosmetic; a doubled review is
+    // not. `[lessonId].tsx` writes the lesson's count the same way.
+    try {
+      await addStats({ cardsReviewed: 1 });
+    } catch (err) {
+      console.warn('[review] cards_reviewed tally failed (non-fatal):', err);
     }
   };
 
   if (loading) {
-    return <LoadingScreen message="Loading review cards..." />;
+    // Was <LoadingScreen>, which is a Dark Glow component: it paints `bg-dark`
+    // and a fixed indigo spinner, so it would stay black on a light phone.
+    return (
+      <SafeAreaView className="flex-1 items-center justify-center" style={{ backgroundColor: c.bg }}>
+        <ActivityIndicator size="large" color={c.primary} />
+        <Body size="sm" tone="tertiary" style={{ marginTop: spacing.md }}>Loading review cards...</Body>
+      </SafeAreaView>
+    );
   }
 
-  if (items.length === 0) {
+  // A failed load with nothing cached. Checked before the empty state so an
+  // outage never reads as "All caught up!".
+  if (error && items.length === 0) {
     return (
-      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.surface.base }}>
-        <GlowLayer drift={false} />
-        <EmptyState
+      <SafeAreaView className="flex-1 justify-center px-6" style={{ backgroundColor: c.bg }}>
+        <Ui2InlineError copy={loadErrorCopy(error, 'your review')} onRetry={() => { loadQueue(); }} />
+        <SlabButton label="Back to Learn" variant="ghost" arrow={false} onPress={() => goBack()} style={{ marginTop: spacing.md }} />
+      </SafeAreaView>
+    );
+  }
+
+  if (dealtIds.length === 0) {
+    return (
+      <SafeAreaView className="flex-1" style={{ backgroundColor: c.bg }}>
+        <Ui2EmptyState
           icon="checkmark-circle"
-          title="All caught up!"
-          description="No cards due for review. Keep learning to add more cards."
+          title={mode === 'struggling' ? 'Nothing is fighting you' : 'All caught up!'}
+          description={
+            mode === 'struggling'
+              ? 'No words are slipping right now. Keep reviewing and this list stays empty.'
+              : 'No cards due for review. Keep learning to add more cards.'
+          }
           actionLabel="Back to Learn"
           onAction={() => goBack()}
         />
@@ -112,120 +254,76 @@ export default function ReviewScreen() {
     );
   }
 
-  const progress = items.length > 0 ? currentIndex / items.length : 0;
+  const progress = session.total > 0 ? session.resolved / session.total : 0;
 
   if (isComplete) {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center px-8" style={{ backgroundColor: colors.surface.base }}>
-        <GlowLayer drift={false} />
-        <View className="w-[100px] h-[100px] rounded-full bg-success-bg items-center justify-center mb-6">
-          <Text className="text-[32px] font-bold text-success">{reviewed}</Text>
+      <SafeAreaView className="flex-1 items-center justify-center px-8" style={{ backgroundColor: c.bg }}>
+        <View
+          className="w-[100px] h-[100px] rounded-full items-center justify-center mb-6"
+          style={{ backgroundColor: c.greenTint, borderColor: c.greenBorder, borderWidth: shape.border }}
+        >
+          <Heading level={1}>{reviewed}</Heading>
         </View>
-        <Text className="text-[28px] font-bold text-text-primary mb-2" accessibilityRole="header">
-          Review Complete!
-        </Text>
-        <Text className="text-base text-text-secondary mb-8">
-          You reviewed {reviewed} cards.
-        </Text>
-        <Button label="Done" onPress={() => goBack()} />
+        <Heading level={2} style={{ marginBottom: spacing.xs }} accessibilityRole="header">
+          {mode === 'struggling' ? 'Faced them down' : 'Review Complete!'}
+        </Heading>
+        <Body tone="secondary" style={{ marginBottom: spacing.xl }}>
+          {mode === 'struggling'
+            ? `You went back over ${reviewed} ${reviewed === 1 ? 'word that kept slipping' : 'words that kept slipping'}.`
+            : `You reviewed ${reviewed} cards.`}
+        </Body>
+        <SlabButton label="Done" arrow={false} onPress={() => goBack()} style={{ alignSelf: 'stretch' }} />
       </SafeAreaView>
     );
   }
 
-  const item = items[currentIndex];
-  const card = cards[item.cardId];
+  // Both are guaranteed by the render-time reset above (the session only
+  // holds ids that had a card when dealt); the guard is a belt for the
+  // one-render window where a refresh swaps the queue under a live session.
+  const item = currentIndex >= 0 ? items[currentIndex] : undefined;
+  const card = item ? cards[item.cardId] : undefined;
+  if (!item || !card) {
+    return (
+      <SafeAreaView className="flex-1 items-center justify-center" style={{ backgroundColor: c.bg }}>
+        <ActivityIndicator size="large" color={c.primary} />
+      </SafeAreaView>
+    );
+  }
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.surface.base }}>
-      <GlowLayer drift={false} />
+    <SafeAreaView className="flex-1" style={{ backgroundColor: c.bg }}>
       {/* Header */}
       <View className="px-4 pt-2 pb-4">
         <View className="flex-row items-center justify-between mb-3">
-          <Button label="Exit" variant="danger" onPress={() => goBack()} style={{ paddingHorizontal: 16, paddingVertical: 8 }} />
-          <Text className="text-text-secondary text-sm">
-            {currentIndex + 1} / {items.length}
-          </Text>
+          <SlabButton label="Exit" variant="ghost" arrow={false} onPress={() => goBack()} style={{ paddingHorizontal: 16, paddingVertical: 8 }} />
+          <Body size="sm" tone="secondary">
+            {mode === 'struggling' ? 'Struggling words · ' : ''}{session.resolved} / {session.total}
+          </Body>
         </View>
-        <ProgressBar progress={progress} />
+        <Ui2ProgressBar progress={progress} />
       </View>
 
-      {/* Card. Scrolls rather than centres-and-clips: with the answer shown
-          this is five stacked text blocks plus four rating buttons, which does
-          not fit a small phone at the larger Dynamic Type sizes. */}
+      {/* Question. Scrolls rather than centres-and-clips: four option rows
+          plus the example sentence and Continue do not fit a small phone at
+          the larger Dynamic Type sizes. */}
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 }}
+        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingBottom: 24 }}
       >
-        <Text className="text-2xl font-bold text-text-primary text-center mb-8">
-          {card?.targetText ?? 'Loading...'}
-        </Text>
-
-        {showAnswer ? (
-          <>
-            <Text className="text-xl text-primary font-semibold text-center mb-4">
-              {card?.nativeText}
-            </Text>
-            {card?.exampleSentence && (
-              <Text className="text-sm text-text-secondary text-center italic mb-4">
-                {card.exampleSentence}
-              </Text>
-            )}
-            {card?.exampleSentenceTranslation && (
-              <Text className="text-xs text-text-tertiary text-center mb-8">
-                {card.exampleSentenceTranslation}
-              </Text>
-            )}
-
-            {/* Rating buttons — maps to SM-2 ratings */}
-            <View className="flex-row gap-3 w-full">
-              <Pressable
-                className="flex-1 bg-error-bg py-4 rounded-[14px] items-center"
-                onPress={() => handleRate(1)}
-                disabled={submitting}
-                accessibilityRole="button"
-                accessibilityLabel="Again — I didn't know this"
-              >
-                <Text className="text-error-dark text-base font-semibold">Again</Text>
-                <Text className="text-error-dark text-xs mt-1">Forgot</Text>
-              </Pressable>
-              <Pressable
-                className="flex-1 bg-warning-bg py-4 rounded-[14px] items-center"
-                onPress={() => handleRate(3)}
-                disabled={submitting}
-                accessibilityRole="button"
-                accessibilityLabel="Hard — I remembered with effort"
-              >
-                <Text className="text-warning text-base font-semibold">Hard</Text>
-                <Text className="text-warning text-xs mt-1">Struggled</Text>
-              </Pressable>
-              <Pressable
-                className="flex-1 bg-success-bg py-4 rounded-[14px] items-center"
-                onPress={() => handleRate(4)}
-                disabled={submitting}
-                accessibilityRole="button"
-                accessibilityLabel="Good — I remembered"
-              >
-                <Text className="text-success text-base font-semibold">Good</Text>
-                <Text className="text-success text-xs mt-1">Knew it</Text>
-              </Pressable>
-              <Pressable
-                className="flex-1 bg-primary-tint py-4 rounded-[14px] items-center"
-                onPress={() => handleRate(5)}
-                disabled={submitting}
-                accessibilityRole="button"
-                accessibilityLabel="Easy — this was trivial"
-              >
-                <Text className="text-primary text-base font-semibold">Easy</Text>
-                <Text className="text-primary text-xs mt-1">Instant</Text>
-              </Pressable>
-            </View>
-          </>
-        ) : (
-          <Button
-            label="Show Answer"
-            onPress={() => setShowAnswer(true)}
-            accessibilityHint="Reveals the translation"
+        {card ? (
+          <ReviewChoiceCard
+            key={`${item.id}-${session.attempts[item.id] ?? 0}`}
+            card={card}
+            options={options}
+            selected={selected}
+            onAnswer={handleAnswer}
+            onContinue={handleContinue}
+            busy={submitting}
+            reask={!isFirstAttempt(session, item.id)}
           />
+        ) : (
+          <Body tone="secondary" style={{ textAlign: 'center' }}>Loading...</Body>
         )}
       </ScrollView>
     </SafeAreaView>

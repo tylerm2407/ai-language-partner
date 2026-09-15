@@ -27,6 +27,7 @@ import Purchases, {
   LOG_LEVEL,
 } from 'react-native-purchases';
 import type { PlanId } from './plans';
+import { trialStateFromEntitlements, type TrialState } from './trial-reminder';
 
 /**
  * RevenueCat public SDK key prefixes. The keys are issued per platform and are
@@ -142,9 +143,33 @@ export async function resetPurchaser(): Promise<void> {
 }
 
 /** Fetch the current offering's packages (drives the paywall UI). */
+/**
+ * How long the paywall waits for RevenueCat before giving up.
+ *
+ * `Purchases.getOfferings()` has no timeout of its own. When the RevenueCat
+ * edge or StoreKit is slow the promise simply never settles, and the paywall
+ * — the screen every new learner lands on right after sign-up — sat on a
+ * spinner with no way forward. A rejection after this long drops the screen
+ * into its `blocked` state, which shows plain copy and a Continue button.
+ * Cached offerings normally answer in well under a second, so this only
+ * fires when something is actually wrong.
+ */
+export const OFFERINGS_TIMEOUT_MS = 8_000;
+
+/** Reject `promise` if it has not settled within `ms`. Timer is always cleared. */
+export function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timer) clearTimeout(timer);
+  }) as Promise<T>;
+}
+
 export async function getOfferingPackages(): Promise<PurchasesPackage[]> {
   if (!isPurchasesAvailable()) return [];
-  const offerings = await Purchases.getOfferings();
+  const offerings = await withTimeout(Purchases.getOfferings(), OFFERINGS_TIMEOUT_MS, 'getOfferings');
   const current: PurchasesOffering | null = offerings.current;
   return current?.availablePackages ?? [];
 }
@@ -282,6 +307,20 @@ export async function getCurrentTier(): Promise<PlanId> {
   }
 }
 
+type CustomerInfoListenerApi = {
+  addCustomerInfoUpdateListener: (listener: (info: CustomerInfo) => void) => void;
+  removeCustomerInfoUpdateListener: (listener: (info: CustomerInfo) => void) => void;
+};
+
+/** Register and remove the exact same callback, as required by the native SDK. */
+export function subscribeToCustomerInfoUpdates(
+  api: CustomerInfoListenerApi,
+  listener: (info: CustomerInfo) => void,
+): () => void {
+  api.addCustomerInfoUpdateListener(listener);
+  return () => api.removeCustomerInfoUpdateListener(listener);
+}
+
 /**
  * Subscribe to entitlement changes.
  *
@@ -302,15 +341,42 @@ export async function getCurrentTier(): Promise<PlanId> {
 export function addEntitlementListener(onTier: (tier: PlanId) => void): () => void {
   if (!configured || !isPurchasesAvailable()) return () => {};
   try {
-    const remove = Purchases.addCustomerInfoUpdateListener((info) => {
+    const listener = (info: CustomerInfo) => {
       onTier(tierFromCustomerInfo(info));
-    });
+    };
+    const unsubscribe = subscribeToCustomerInfoUpdates(Purchases, listener);
     // Prime with what the SDK already has cached, so a cold start on an
     // entitled device doesn't flash the paywall while waiting for an event.
     getCurrentTier().then(onTier).catch(() => {});
-    return typeof remove === 'function' ? remove : () => {};
+    return unsubscribe;
   } catch (err) {
     console.warn('[purchases] entitlement listener failed:', err);
+    return () => {};
+  }
+}
+
+/** Whether the learner is inside a free trial, and when it ends. */
+export function trialStateFromCustomerInfo(info: CustomerInfo): TrialState {
+  return trialStateFromEntitlements(Object.values(info.entitlements.active));
+}
+
+/**
+ * Subscribe to the learner's trial state — the input to the trial-ending
+ * reminder (`hooks/useNotifications.ts` `syncTrialEndingReminder`).
+ *
+ * Same shape and same caveats as `addEntitlementListener`: fires with the
+ * cached CustomerInfo on registration, then on every store event the SDK
+ * observes; a no-op when IAP is not configured on this build.
+ */
+export function addTrialStateListener(onState: (state: TrialState) => void): () => void {
+  if (!configured || !isPurchasesAvailable()) return () => {};
+  try {
+    const listener = (info: CustomerInfo) => onState(trialStateFromCustomerInfo(info));
+    const unsubscribe = subscribeToCustomerInfoUpdates(Purchases, listener);
+    Purchases.getCustomerInfo().then(listener).catch(() => {});
+    return unsubscribe;
+  } catch (err) {
+    console.warn('[purchases] trial listener failed:', err);
     return () => {};
   }
 }

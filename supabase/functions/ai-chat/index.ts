@@ -16,26 +16,46 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, corsResponse } from '../_shared/cors.ts';
-import { getEffectiveLimits } from '../_shared/plan-limits.ts';
-import { combinedScore, scoreTurn } from '../_shared/turn-accuracy.ts';
+import { resolveEntitlement } from '../_shared/entitlement.ts';
 import { getScenario } from '../_shared/scenarios.ts';
-import { buildSystemPrompt, buildTopicTurn, usesPromptFirstCorrection } from './prompt.ts';
+import { getMission, missionObjectiveIds, type Mission } from '../_shared/missions.ts';
+import { buildFinishTurn, buildSystemPrompt, buildTopicTurn, usesPromptFirstCorrection } from './prompt.ts';
+// The mission attempt's lifecycle — resolve before the turn, record after it,
+// score on Finish — lives in its own module for the same testability reason
+// as parse.ts, and because the finish claim is the one piece of this file
+// that must be provably idempotent (mission-attempt.test.ts).
+import {
+  finishMissionAttempt,
+  recordMissionTurn,
+  resolveMissionAttempt,
+  type MissionAttempt,
+} from './mission-attempt.ts';
 // parseAIResponse/normalizeCorrection/normalizeVocabulary moved to parse.ts so
 // they can be tested: index.ts calls serve() at module scope, so importing it
 // from a test would stand up an HTTP listener.
-import { parseAIResponse, type ParsedAIResponse, type VocabHighlight } from './parse.ts';
+import { parseAIResponse, type ParsedAIResponse } from './parse.ts';
+// The two write-backs a turn leaves behind — the SRS cards and the proficiency
+// evidence — live in _shared for the same reason and one more. The reason:
+// they could not be tested from here. The extra one: `tutor-session` has to
+// perform both with exactly this quota discipline, and a second copy of the
+// charge/refund ordering would drift silently, in the direction of charging a
+// learner for cards that do not exist.
+import { saveChatVocabulary } from '../_shared/chat-vocabulary.ts';
+import { recordConversationEvidence } from '../_shared/conversation-evidence.ts';
 import { actInstruction, selectDialogueAct, type DialogueAct } from './dialogue-act.ts';
 import { chatStreamResponse } from './stream.ts';
 import { floorShareNote, pushNote, selectPushStance } from './turn-policy.ts';
 import { generateValidated } from '../_shared/validated-generate.ts';
 import { validateContentSafety } from '../_shared/content-safety.ts';
-import { proficiencyToCefr } from '../_shared/cefr.ts';
+import { cefrToProficiency, resolveCefrLevel } from '../_shared/cefr.ts';
 import { checkBurstLimit } from '../_shared/burst-limit.ts';
 import { PROVIDER_TIMEOUT_MS, providerFetch } from '../_shared/provider-fetch.ts';
 import { fetchLearnerContext, serializeLearnerContext } from '../_shared/learner-context.ts';
+import { learnerContextIncludeFor } from './learner-context-policy.ts';
 import {
   isValidLanguage,
   isValidProficiencyLevel,
+  isValidUUID,
   sanitizeText,
 } from '../_shared/validation.ts';
 
@@ -76,13 +96,38 @@ const FALLBACK_REPLIES: Record<string, string> = {
   zh: '我们换个话题吧 — 你还想聊点什么？',
 };
 
+// The send-off when a Finish turn lands on a learner who has used their daily
+// text allowance. Finish is never refused — the attempt is scored from the
+// turns already paid for, and the model call it would have made is replaced
+// by this line. Same nine languages as FALLBACK_REPLIES, same
+// `usedFallback: true` semantics (no correction, no cards, no gloss).
+const SENDOFF_REPLIES: Record<string, string> = {
+  en: 'Thanks for the chat — see you next time!',
+  es: '¡Gracias por la charla! ¡Hasta la próxima!',
+  fr: 'Merci pour la conversation — à la prochaine !',
+  de: 'Danke fürs Gespräch — bis zum nächsten Mal!',
+  it: 'Grazie per la chiacchierata — alla prossima!',
+  pt: 'Obrigado pela conversa — até a próxima!',
+  ja: '話せて楽しかったです。また今度！',
+  ko: '이야기 즐거웠어요. 다음에 또 봐요!',
+  zh: '聊得很开心，下次见！',
+};
+
 interface ChatRequest {
   messages: { role: string; content: string }[];
   targetLanguage: string;
   /** Language the correction's explanation should be written in.
    *  Defaults to 'en' if not supplied. */
   nativeLanguage?: string;
+  /** The self-declared onboarding level. Still required, still validated,
+   *  but since `cefrLevel` arrived it is only the fallback band. */
   level: string;
+  /** The band the client resolved from the learner's MEASURED level
+   *  (`lib/conversation-level.ts`: measured > placement > declared). When it
+   *  is a valid band it decides both how hard the tutor pitches and which
+   *  band the turn's evidence is stamped with; otherwise `level` is mapped
+   *  through the ladder as before, so an old client keeps working. */
+  cefrLevel?: string;
   scenarioKey?: string;
   topic?: string;
   assignmentId?: string;
@@ -119,6 +164,14 @@ interface ChatRequest {
    *  to the pre-streaming behaviour, which is what the client falls back to if
    *  streaming ever misbehaves in the field. */
   stream?: boolean;
+  /** Which mission of the scene's ladder this turn belongs to, 1..4. Absent
+   *  means plain chat — free_chat, assignments, and every client that
+   *  predates missions. See _shared/missions.ts. */
+  missionStage?: number;
+  /** The learner tapped Finish. The turn carries no new learner message: the
+   *  model says goodbye in character and the attempt is scored. Never
+   *  streamed, never refused at the daily limit (a canned send-off instead). */
+  finish?: boolean;
 }
 
 /**
@@ -133,6 +186,25 @@ interface ChatRequest {
 function buildCodeSwitchNote(spokenLanguage: string | undefined, targetLanguage: string): string | null {
   if (!spokenLanguage || spokenLanguage === targetLanguage) return null;
   return `The learner just spoke in ${spokenLanguage}, not ${targetLanguage}. They have probably hit a gap in what they can express. Acknowledge briefly in ${spokenLanguage} if that helps them, answer what they actually asked, give them the ${targetLanguage} phrasing they were reaching for, and continue the conversation in ${targetLanguage}. Do not scold them for switching and do not ignore what they said.`;
+}
+
+/**
+ * What this attempt has already achieved, for the model.
+ *
+ * Per-attempt, so it rides UNCACHED (prompt.test.ts pins that). Null until
+ * something has been met: on a fresh attempt the mission block in the cached
+ * prompt already says everything, and a note that fires every turn is just a
+ * longer system prompt. Lists the open ids so the model steers toward them,
+ * and tells it not to re-report the met ones — Haiku will otherwise tick
+ * `greet_table` on every turn after the greeting.
+ */
+function buildMissionProgressNote(mission: Mission, met: readonly string[]): string | null {
+  if (met.length === 0) return null;
+  const open = mission.objectives.map((o) => o.id).filter((id) => !met.includes(id));
+  const openLine = open.length > 0
+    ? `Still open: ${open.join(', ')}.`
+    : 'Every objective is met; let the scene wind down naturally.';
+  return `The student has already achieved: ${met.join(', ')}. ${openLine} Do not report met ids again; steer toward the open ones without announcing them.`;
 }
 
 type CorrectionErrorType =
@@ -219,6 +291,7 @@ serve(async (req: Request) => {
       targetLanguage,
       nativeLanguage: rawNativeLanguage,
       level,
+      cefrLevel: rawCefrLevel,
       topic: rawTopic,
       scenarioKey,
       assignmentId,
@@ -228,8 +301,14 @@ serve(async (req: Request) => {
       recognizerConfidence,
       previousTurnRequestedRepair,
       isClosing,
-      stream: wantsStream,
+      stream: rawStream,
+      missionStage,
+      finish: rawFinish,
     } = (await req.json()) as ChatRequest;
+    const finish = rawFinish === true;
+    // Finish is scored and returned in one JSON envelope; there is nothing to
+    // stream and a stream would leave the client waiting for a result frame.
+    const wantsStream = finish ? false : rawStream;
     const nativeLanguage = rawNativeLanguage || 'en';
 
     // Validate untrusted input before it reaches a paid model call.
@@ -248,6 +327,50 @@ serve(async (req: Request) => {
     if (!isValidProficiencyLevel(level)) {
       return new Response(
         JSON.stringify({ error: 'Unsupported proficiency level' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ── The band this conversation runs at ─────────────────────────────
+    //
+    // Resolved ONCE, here, and used for everything downstream: the system
+    // prompt, the safety pipeline's target level, the push governor's read,
+    // and the band stamped on the turn's evidence. It used to be
+    // `proficiencyToCefr(level)` — the declared level alone — which made the
+    // onboarding answer a ceiling on the measured level. `cefrLevel` degrades
+    // rather than 400s, like nativeLanguage: an unusable value is a client
+    // that predates the field, not a malformed request.
+    //
+    // `effectiveLevel` is the same band read back through the inverse ladder,
+    // for the code that is still keyed on the five-level enum (level guide,
+    // correction policy, scenario prompt). It is derived from the band, never
+    // the other way round, so the two cannot disagree.
+    const cefrLevel = resolveCefrLevel(level, rawCefrLevel);
+    const effectiveLevel = cefrToProficiency(cefrLevel);
+
+    // ── Mission request shape ──────────────────────────────────────────
+    //
+    // `missionStage` absent (or null) is plain chat — free_chat, assignments,
+    // every client that predates missions — and nothing below this comment
+    // changes a byte of that path. Present, it must name a real mission of
+    // the scene AND come with the session id that identifies the attempt;
+    // anything else is a malformed request, not a plain chat with extras.
+    const missionRequested = missionStage !== undefined && missionStage !== null;
+    if (missionRequested) {
+      const requested = scenarioKey ? getMission(scenarioKey, missionStage) : null;
+      if (!requested || typeof chatSessionId !== 'string' || !isValidUUID(chatSessionId)) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid mission request', code: 'INVALID_MISSION' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+    // Finish needs an attempt to finish and at least one learner turn to
+    // score. A finish with neither is not a conversation ending; it is a
+    // client bug, and it should not spend a text message finding that out.
+    if (finish && (!missionRequested || !rawMessages.some((m) => m?.role === 'user'))) {
+      return new Response(
+        JSON.stringify({ error: 'Nothing to finish', code: 'NOTHING_TO_FINISH' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -275,11 +398,30 @@ serve(async (req: Request) => {
 
     let topic = rawTopic ? sanitizeText(rawTopic, MAX_TOPIC_CHARS) : rawTopic;
     if (assignmentId) {
-      const { data: assignment } = await supabase
+      const { data: assignmentRow } = await supabase
         .from('assignments')
-        .select('title, custom_scenario, scenario_key, instructions, vocabulary_focus, grammar_focus')
+        .select('title, custom_scenario, scenario_key, instructions, vocabulary_focus, grammar_focus, classroom_id, teacher_id')
         .eq('id', assignmentId)
         .single();
+
+      // Teacher-authored content is only folded in for the people it was
+      // written for: the assignment's teacher, or a learner currently enrolled
+      // in its classroom. Anyone else holding the UUID gets a plain chat.
+      let assignment = null;
+      if (assignmentRow) {
+        if (assignmentRow.teacher_id === authenticatedUserId) {
+          assignment = assignmentRow;
+        } else {
+          const { data: enrolment } = await supabase
+            .from('classroom_enrollments')
+            .select('id')
+            .eq('classroom_id', assignmentRow.classroom_id)
+            .eq('student_id', authenticatedUserId)
+            .is('dropped_at', null)
+            .maybeSingle();
+          if (enrolment) assignment = assignmentRow;
+        }
+      }
 
       if (assignment) {
         const scenarioDesc =
@@ -314,22 +456,86 @@ serve(async (req: Request) => {
       );
     }
 
-    const limits = await getEffectiveLimits(authenticatedUserId, supabase);
+    // ── The attempt ────────────────────────────────────────────────────
+    //
+    // BEFORE the daily quota, deliberately: a locked stage, a finished
+    // attempt or someone else's session is refused here, and a refusal must
+    // not cost the learner a text message. The row's stage overrides the
+    // request's from this point on — see mission-attempt.ts for why.
+    let missionDef: Mission | null = null;
+    let missionAttempt: MissionAttempt | null = null;
+    if (missionRequested) {
+      const resolved = await resolveMissionAttempt(supabase, {
+        userId: authenticatedUserId,
+        chatSessionId: chatSessionId as string,
+        scenarioKey: scenarioKey as string,
+        targetLanguage,
+        requestedStage: missionStage as number,
+        finishing: finish,
+      });
+      if (!resolved.ok) {
+        const status = resolved.code === 'SESSION_NOT_FOUND' ? 404
+          : resolved.code === 'MISSION_LOCKED' ? 403
+          : 409;
+        const message = resolved.code === 'SESSION_NOT_FOUND' ? 'Chat session not found'
+          : resolved.code === 'MISSION_LOCKED' ? 'Pass the previous mission first'
+          : 'This mission attempt is already finished';
+        return new Response(
+          JSON.stringify({ error: message, code: resolved.code }),
+          { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      missionAttempt = resolved.attempt;
+      // The attempt is bound to the scene it started in. A request that names
+      // a different scene for the same session is inconsistent with itself.
+      missionDef = missionAttempt.scenarioKey === scenarioKey
+        ? getMission(missionAttempt.scenarioKey, missionAttempt.stage)
+        : null;
+      if (!missionDef) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid mission request', code: 'INVALID_MISSION' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // `resolveEntitlement` rather than `getEffectiveLimits` alone: this
+    // function needs the tier string as well as the limits, and resolving it
+    // twice is two definitions of "paid" in one request. `limits` is the same
+    // `get_effective_limits` result it always was — school contract overrides
+    // included — with one difference: the keys the RPC does not return now
+    // fall back to this learner's own plan instead of the free tier's, which
+    // is what the third argument of `getEffectiveLimits` is documented to do.
+    // Of the two keys read here, `dailyTextMessages` is always returned by the
+    // RPC and `dailyChatCards` has been since migration 095; the change is
+    // therefore only visible on the RPC-failed path, where a paying learner
+    // used to be silently cut to the free tier's zero.
+    const { tier, limits } = await resolveEntitlement(supabase, authenticatedUserId);
     const allowed = await consumeDailyQuota(
       supabase,
       authenticatedUserId,
       'text_messages',
       limits.dailyTextMessages
     );
+    // Finish is never a 429. The turns that count were each paid for as they
+    // happened; refusing to score them because the NEXT message is over the
+    // limit would strand a finished conversation behind a paywall. So at the
+    // limit a finish degrades instead: the model is skipped and the send-off
+    // comes from SENDOFF_REPLIES, and the attempt is scored exactly as it
+    // would have been. `sendoffOnly` is that flag.
+    let sendoffOnly = false;
     if (!allowed) {
-      return new Response(
-        JSON.stringify({
-          error:
-            "You've reached your daily text message limit. Upgrade your plan to keep practicing today.",
-          code: 'DAILY_TEXT_LIMIT_REACHED',
-        }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      if (!finish) {
+        return new Response(
+          JSON.stringify({
+            error:
+              "You've reached your daily text message limit. Upgrade your plan to keep practicing today.",
+            code: 'DAILY_TEXT_LIMIT_REACHED',
+          }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      sendoffOnly = true;
     }
 
     // Per-learner context is a paid feature (basic and up). The entitlement is
@@ -342,11 +548,21 @@ serve(async (req: Request) => {
     //
     // fetchLearnerContext never throws and never blocks: on any failure it
     // returns null and this turn generates exactly as it did before.
+    //
+    // The OPT-IN sections are gated more tightly than the base context, on the
+    // tier alone — see `learnerContextIncludeFor`. The base snapshot is what
+    // the learner's text allowance pays for and a school contract can grant;
+    // the onboarding goal (`user_profiles.ideal_l2_self`) is a paid feature and
+    // `starter` does not get it however their turns were funded. An empty
+    // include array is exactly equivalent to passing none: `fetchLearnerContext`
+    // reads `opts.include ?? []`, makes the same two queries, and returns the
+    // same three-key object it always did.
     const learnerContext =
       limits.dailyTextMessages > 0
         ? await fetchLearnerContext(supabase, {
             userId: authenticatedUserId,
             targetLanguage,
+            include: learnerContextIncludeFor(tier),
           })
         : null;
     const learnerBlock = serializeLearnerContext(learnerContext);
@@ -356,7 +572,23 @@ serve(async (req: Request) => {
       ? `${learnerBlock}\nUse this to decide what to correct, what to recast, and which examples to reach for. Never read it back to the learner or mention that you have it.`
       : null;
 
-    const systemPrompt = buildSystemPrompt(targetLanguage, level, scenarioKey, safeNativeLanguage);
+    // The stage comes from the ROW, never the request: `missionAttempt` is
+    // null for plain chat, which makes this call byte-identical to the
+    // pre-mission one and keeps every free-chat cached prefix intact.
+    const systemPrompt = buildSystemPrompt(
+      targetLanguage,
+      effectiveLevel,
+      scenarioKey,
+      safeNativeLanguage,
+      missionAttempt?.stage,
+    );
+    // What this attempt has achieved so far. Per-attempt, so it rides
+    // UNCACHED below, after the governors — never in the cached block.
+    // Null when no mission is running or nothing has been met yet.
+    const missionProgressNote: string | null =
+      missionDef && missionAttempt
+        ? buildMissionProgressNote(missionDef, missionAttempt.objectivesMet)
+        : null;
     // A running scenario supersedes a free-text topic — that is what the old
     // `!scenarioBlock && topic` condition encoded, preserved here.
     const topicTurn = scenarioKey && getScenario(scenarioKey) ? null : buildTopicTurn(topic);
@@ -378,13 +610,9 @@ serve(async (req: Request) => {
       learnerText: learnerTurns[learnerTurns.length - 1] ?? '',
       recentLearnerTurns: learnerTurns.slice(0, -1).reverse(),
       previousTurnRequestedRepair: previousTurnRequestedRepair === true,
-      isClosing: isClosing === true,
+      isClosing: isClosing === true || finish,
     });
     const actNote = actInstruction(dialogueAct, targetLanguage);
-
-    // Needed by the push governor below as well as by the safety pipeline, so
-    // it is resolved before either.
-    const cefrLevel = proficiencyToCefr(level);
 
     // ── Governors ──────────────────────────────────────────────────────
     //
@@ -410,14 +638,23 @@ serve(async (req: Request) => {
     const turnContext: TurnContext = {
       userId: authenticatedUserId,
       chatSessionId,
+      // The evidence column is a typed uuid; an attribution tag that is not
+      // one would fail the insert and lose the data point. Validated here,
+      // at the boundary, so the shared module can write what it is handed.
+      evidenceSessionId:
+        typeof chatSessionId === 'string' && isValidUUID(chatSessionId) ? chatSessionId : undefined,
       targetLanguage,
-      level,
+      level: effectiveLevel,
       cefrLevel,
       dialogueAct,
       modality: modality === 'speaking' ? 'speaking' : 'writing',
       recognizerConfidence,
-      learnerTurn: messages[messages.length - 1]?.content ?? '',
+      // A finish carries no learner message: the last entry in `messages` is
+      // history, and scoring it again would double-count the previous turn.
+      learnerTurn: finish ? '' : messages[messages.length - 1]?.content ?? '',
       chatCardsLimit: limits.dailyChatCards,
+      mission: missionDef && missionAttempt ? { def: missionDef, attempt: missionAttempt } : undefined,
+      finish,
     };
 
     // One request body, read two ways. The streaming path adds exactly one key
@@ -446,6 +683,14 @@ serve(async (req: Request) => {
       // there is. It is now a fenced user turn in `messages` below,
       // which restores a shared prefix AND puts caller text behind a
       // role boundary instead of a fence in our own voice.
+      //
+      // THE RULE, stated once: index 0 is the only block that may carry a
+      // cache breakpoint, and nothing that varies per learner or per turn may
+      // enter it. The learner's onboarding goal is the newest thing to obey
+      // it — it arrives inside the `<LEARNER_PROFILE>` fence, so it rides in
+      // `learnerNote` at index 1 and cannot reach index 0 by any path:
+      // `buildSystemPrompt` is handed only language, level, scenario key and
+      // native language, and cannot see a learner profile at all.
       system: [
         { type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } },
         ...(learnerNote ? [{ type: 'text', text: learnerNote }] : []),
@@ -459,11 +704,15 @@ serve(async (req: Request) => {
         // they change turn to turn and would poison the shared prefix.
         ...(floorNote ? [{ type: 'text', text: floorNote }] : []),
         ...(stretchNote ? [{ type: 'text', text: stretchNote }] : []),
+        ...(missionProgressNote ? [{ type: 'text', text: missionProgressNote }] : []),
         ...(codeSwitchNote ? [{ type: 'text', text: codeSwitchNote }] : []),
       ],
       messages: [
         ...(topicTurn ? [topicTurn] : []),
         ...windowMessages(messages),
+        // After the window, not inside it: the send-off request is about this
+        // turn, and it must be the last thing the model reads.
+        ...(finish ? [buildFinishTurn()] : []),
       ].map((m) => ({
         role: m.role === 'assistant' ? 'assistant' : 'user',
         content: m.content,
@@ -507,54 +756,88 @@ serve(async (req: Request) => {
             text: turnContext.learnerTurn,
             correction: null,
             recognizerConfidence: turnContext.recognizerConfidence,
+            chatSessionId: turnContext.evidenceSessionId,
           });
         },
       });
     }
 
-    const { text: rawText, usedFallback } = await generateValidated({
-      fn: 'ai-chat',
-      targetLevel: cefrLevel,
-      language: targetLanguage,
-      safetyRetries: 2,
-      generate: async () => {
-        const response = await providerFetch(
-          'https://api.anthropic.com/v1/messages',
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-api-key': ANTHROPIC_API_KEY,
-              'anthropic-version': '2023-06-01',
+    let rawText: string;
+    let usedFallback: boolean;
+    if (sendoffOnly) {
+      // Daily limit reached on a finish: no model call, canned send-off, and
+      // the fallback semantics — nothing to parse, nothing to award.
+      rawText = SENDOFF_REPLIES[targetLanguage] ?? SENDOFF_REPLIES.en;
+      usedFallback = true;
+    } else {
+      const generated = await generateValidated({
+        fn: 'ai-chat',
+        targetLevel: cefrLevel,
+        language: targetLanguage,
+        safetyRetries: 2,
+        generate: async () => {
+          const response = await providerFetch(
+            'https://api.anthropic.com/v1/messages',
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': ANTHROPIC_API_KEY,
+                'anthropic-version': '2023-06-01',
+              },
+              body: JSON.stringify(anthropicBody),
             },
-            body: JSON.stringify(anthropicBody),
-          },
-          { provider: 'anthropic', timeoutMs: PROVIDER_TIMEOUT_MS.text },
-        );
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Anthropic API error: ${response.status} - ${errorText}`);
-        }
-        const data = await response.json();
-        const text = data.content?.[0]?.text ?? '';
-        if (!text) throw new Error('Empty response from Claude');
-        return text;
-      },
-      fallback: async () => fallbackReply,
-    });
+            { provider: 'anthropic', timeoutMs: PROVIDER_TIMEOUT_MS.text },
+          );
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Anthropic API error: ${response.status} - ${errorText}`);
+          }
+          const data = await response.json();
+          const text = data.content?.[0]?.text ?? '';
+          if (!text) throw new Error('Empty response from Claude');
+          return text;
+        },
+        fallback: async () => fallbackReply,
+      });
+      rawText = generated.text;
+      usedFallback = generated.usedFallback;
+    }
 
     // When the safety fallback fires, we skip parsing (no [CORRECTION] block)
     // and deliver a clean reply with no correction metadata.
     const parsed: ParsedAIResponse = usedFallback
       // The safety fallback is pre-authored text, not a model completion, so
       // there is no gloss to carry. Null, not omitted: the client reads null
-      // as "translate on demand", which is exactly the old behaviour.
-      ? { reply: rawText, correction: null, vocabularyHighlights: [], gloss: null, askedForRepair: null }
+      // as "translate on demand", which is exactly the old behaviour. And it
+      // awards nothing: objectivesMet is empty by construction.
+      ? { reply: rawText, correction: null, vocabularyHighlights: [], gloss: null, askedForRepair: null, objectivesMet: [] }
       : parseAIResponse(rawText);
 
     // Quota already consumed atomically before the LLM call.
+    const envelope = await finalizeTurn(supabase, turnContext, parsed);
+
+    // ── Finish ─────────────────────────────────────────────────────────
+    //
+    // After finalizeTurn, so the row holds the final union of objective ids
+    // before it is scored. The reply is the send-off; the result rides
+    // beside it. `finishMissionAttempt` is idempotent — a retried finish
+    // gets the stored result back — so a client that times out here can
+    // simply send the same request again.
+    if (finish && turnContext.mission) {
+      envelope.missionResult = await finishMissionAttempt(supabase, {
+        userId: authenticatedUserId,
+        chatSessionId: turnContext.mission.attempt.chatSessionId,
+        scenarioKey: turnContext.mission.attempt.scenarioKey,
+        targetLanguage,
+        mission: turnContext.mission.def,
+        attempt: turnContext.mission.attempt,
+        sendoff: parsed.reply,
+      });
+    }
+
     return new Response(
-      JSON.stringify(await finalizeTurn(supabase, turnContext, parsed)),
+      JSON.stringify(envelope),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
@@ -577,6 +860,9 @@ serve(async (req: Request) => {
 interface TurnContext {
   userId: string;
   chatSessionId?: string;
+  /** `chatSessionId` when it is a well-formed UUID, else undefined. What the
+   *  evidence row is attributed to; see the comment where it is set. */
+  evidenceSessionId?: string;
   targetLanguage: string;
   level: string;
   cefrLevel: string;
@@ -587,6 +873,12 @@ interface TurnContext {
   learnerTurn: string;
   /** `limits.dailyChatCards`, the per-day allowance for vocabulary cards. */
   chatCardsLimit: number;
+  /** The running mission, or undefined for plain chat. The attempt is the
+   *  row as it stood when the request began. */
+  mission?: { def: Mission; attempt: MissionAttempt };
+  /** The learner tapped Finish: no learner turn to log, score or mine for
+   *  cards. */
+  finish: boolean;
 }
 
 /**
@@ -610,7 +902,11 @@ async function finalizeTurn(
   ctx: TurnContext,
   parsed: ParsedAIResponse,
 ): Promise<Record<string, unknown>> {
-  const { reply, correction, vocabularyHighlights, gloss } = parsed;
+  const { reply, vocabularyHighlights, gloss } = parsed;
+  // A finish has no learner turn. Whatever the model put in the correction
+  // slot is about history that was already corrected when it happened, so
+  // it is dropped rather than logged twice.
+  const correction = ctx.finish ? null : parsed.correction;
 
   // Log correction + compute repetition count. Non-fatal: chat reply
   // returns even if logging/counting fails.
@@ -679,23 +975,57 @@ async function finalizeTurn(
         enrichedCorrection !== null &&
         ctx.dialogueAct !== 'follow_repair';
 
-  await recordConversationEvidence(supabase, {
-    userId: ctx.userId,
-    targetLanguage: ctx.targetLanguage,
-    cefrLevel: ctx.cefrLevel,
-    modality: ctx.modality,
-    text: ctx.learnerTurn,
-    correction,
-    recognizerConfidence: ctx.recognizerConfidence,
-  });
+  // Neither runs on a finish. `learnerTurn` is empty there, so the evidence
+  // call would decline anyway — but the send-off's vocabulary must not bank
+  // cards either: the learner is leaving, and a card for a word in a goodbye
+  // is unrequested review for a word they never used.
+  let savedWords: string[] = [];
+  if (!ctx.finish) {
+    await recordConversationEvidence(supabase, {
+      userId: ctx.userId,
+      targetLanguage: ctx.targetLanguage,
+      cefrLevel: ctx.cefrLevel,
+      modality: ctx.modality,
+      text: ctx.learnerTurn,
+      correction,
+      recognizerConfidence: ctx.recognizerConfidence,
+      chatSessionId: ctx.evidenceSessionId,
+    });
 
-  const savedWords = await saveChatVocabulary(supabase, {
-    userId: ctx.userId,
-    targetLanguage: ctx.targetLanguage,
-    cefrLevel: ctx.cefrLevel,
-    words: vocabularyHighlights,
-    limit: ctx.chatCardsLimit,
-  });
+    savedWords = await saveChatVocabulary(supabase, {
+      userId: ctx.userId,
+      targetLanguage: ctx.targetLanguage,
+      cefrLevel: ctx.cefrLevel,
+      words: vocabularyHighlights,
+      limit: ctx.chatCardsLimit,
+    });
+  }
+
+  // ── Mission progress ───────────────────────────────────────────────
+  //
+  // The model's report is WHITELISTED against the mission's own ids before
+  // it is believed — an id it invented, or one from a different stage, is
+  // dropped — then unioned with what the row already held. The union, not
+  // this turn's delta, is what the client shows: its checklist trusts the
+  // server over its own state (lib/ai.ts). Last, after cards, because the
+  // words that just became cards are recorded on the same row.
+  let mission: { stage: number; objectivesMet: string[]; complete: boolean } | null = null;
+  if (ctx.mission) {
+    const ids = missionObjectiveIds(ctx.mission.def);
+    const fresh = parsed.objectivesMet.filter((id) => ids.has(id));
+    const objectivesMet = [...ctx.mission.attempt.objectivesMet];
+    for (const id of fresh) if (!objectivesMet.includes(id)) objectivesMet.push(id);
+    await recordMissionTurn(supabase, {
+      chatSessionId: ctx.mission.attempt.chatSessionId,
+      objectivesMet: fresh,
+      savedWords,
+    });
+    mission = {
+      stage: ctx.mission.attempt.stage,
+      objectivesMet,
+      complete: [...ids].every((id) => objectivesMet.includes(id)),
+    };
+  }
 
   return {
     reply,
@@ -725,6 +1055,9 @@ async function finalizeTurn(
      *  — nothing in the client branches on it. */
     dialogueAct: ctx.dialogueAct,
     audioUrl: null,
+    /** Only when a mission is running. Absent — not null — otherwise, so the
+     *  plain-chat envelope is byte-identical to what shipped before missions. */
+    ...(mission ? { mission } : {}),
   };
 }
 
@@ -763,7 +1096,11 @@ async function stripUnsafeMetadata(
   ].filter((s): s is string => typeof s === 'string' && s.length > 0);
   if (parts.length === 0) return parsed;
 
-  const check = await validateContentSafety(parts.join('\n'), { language, fn: 'ai-chat' });
+  const check = await validateContentSafety(parts.join('\n'), {
+    language,
+    fn: 'ai-chat',
+    moderation: 'required',
+  });
   if (check.safe) return parsed;
 
   // Same event name the non-streaming path logs, plus a scope so the two are
@@ -778,7 +1115,10 @@ async function stripUnsafeMetadata(
     language,
     ts: new Date().toISOString(),
   }));
-  return { reply: parsed.reply, correction: null, vocabularyHighlights: [], gloss: null, askedForRepair: null };
+  // objectivesMet survives: the ids are whitelisted tokens from our own
+  // mission registry, never text the learner reads, so there is nothing in
+  // them for the gate to gate.
+  return { reply: parsed.reply, correction: null, vocabularyHighlights: [], gloss: null, askedForRepair: null, objectivesMet: parsed.objectivesMet };
 }
 
 function windowMessages(
@@ -825,179 +1165,13 @@ function windowMessages(
 
 // ─── What a conversation leaves behind ──────────────────────────────────
 //
-// Both helpers are best-effort by construction. The learner already has their
-// reply by the time either runs, so every failure path here logs and returns
-// rather than throwing — a lost card or a lost data point must never cost
-// someone their conversation.
-
-interface EvidenceInput {
-  userId: string;
-  targetLanguage: string;
-  cefrLevel: string;
-  modality: 'speaking' | 'writing';
-  text: string;
-  correction: CorrectionDetail | null;
-  recognizerConfidence?: number;
-}
-
-/**
- * Record this turn as proficiency evidence, if it is any.
- *
- * `scoreTurn` returns null for turns that should not count — too short to be
- * a language sample, or spoken and not clearly heard. That refusal is the
- * point: a wrong data point in a measured CEFR level is worse than a missing
- * one, because the learner reads the level and acts on it.
- */
-// deno-lint-ignore no-explicit-any
-async function recordConversationEvidence(supabase: any, input: EvidenceInput): Promise<void> {
-  try {
-    const score = scoreTurn({
-      modality: input.modality,
-      text: input.text,
-      correction: input.correction,
-      recognizerConfidence: input.recognizerConfidence ?? null,
-    });
-    if (!score) return;
-
-    await supabase.from('conversation_evidence').insert({
-      user_id: input.userId,
-      target_language: input.targetLanguage,
-      cefr_level: input.cefrLevel,
-      modality: input.modality,
-      intelligibility: score.intelligibility,
-      accuracy: score.accuracy,
-      word_count: score.wordCount,
-    });
-  } catch (err) {
-    console.warn('[ai-chat] conversation_evidence write failed (non-fatal):', err);
-  }
-}
-
-interface VocabSaveInput {
-  userId: string;
-  targetLanguage: string;
-  cefrLevel: string;
-  words: VocabHighlight[];
-  limit: number;
-}
-
-/**
- * Turn the words the tutor just taught into review cards.
- *
- * This closes a loop whose other half already existed: `learner-context.ts`
- * has always pulled struggling cards back into the tutor's prompt, so the
- * moment these words become cards the tutor starts reusing tomorrow what it
- * introduced today, with no further work.
- *
- * Order matters here. Dedupe first because it is free and a repeat word must
- * not cost a slot; charge second, because `consume_daily_quota` is the atomic
- * check-and-increment and charging after the insert would let concurrent
- * turns both pass; refund on any failure after the charge, which is precisely
- * why `chat_cards` was added to the refund whitelist in migration 095.
- *
- * Returns the words that actually became cards, so the UI can tell the
- * learner which ones are coming back.
- */
-// deno-lint-ignore no-explicit-any
-async function saveChatVocabulary(supabase: any, input: VocabSaveInput): Promise<string[]> {
-  const saved: string[] = [];
-  // A tutor turn offering more than this is not teaching vocabulary, it is
-  // listing it — and each entry costs a quota slot and two round trips.
-  const candidates = input.words.filter((w) => w.word && w.translation).slice(0, 3);
-  if (candidates.length === 0 || input.limit <= 0) return saved;
-
-  for (const { word, translation } of candidates) {
-    try {
-      // Already studying it? Nothing to do, and nothing to charge. Without
-      // this a tutor that says "la cuenta" across ten sessions would build
-      // ten cards, each with its own independent SM-2 schedule.
-      const { data: existing } = await supabase
-        .from('cards')
-        .select('id')
-        .eq('user_id', input.userId)
-        .eq('language', input.targetLanguage)
-        .ilike('target_text', word)
-        .limit(1);
-      if (Array.isArray(existing) && existing.length > 0) continue;
-
-      const { data: allowed, error: quotaErr } = await supabase.rpc('consume_daily_quota', {
-        p_user_id: input.userId,
-        p_counter: 'chat_cards',
-        p_limit: input.limit,
-        p_amount: 1,
-      });
-      // Fail closed on a broken counter, and stop trying for this turn — the
-      // next word would hit the same error.
-      if (quotaErr) {
-        console.warn('[ai-chat] chat_cards quota check failed:', quotaErr.message);
-        break;
-      }
-      if (allowed !== true) break; // day's allowance spent
-
-      const { data: card, error: cardErr } = await supabase
-        .from('cards')
-        .insert({
-          user_id: input.userId,
-          course_id: null,
-          unit_id: null,
-          native_text: translation,
-          target_text: word,
-          language: input.targetLanguage,
-          // Tagged with the level the conversation was held at. Without this
-          // the card is invisible to `analyzeBands`, which skips items with a
-          // null cefr_level — the card would exist, be reviewed, and still
-          // never count toward the learner's own measured vocabulary.
-          cefr_level: input.cefrLevel,
-          skill_type: 'vocabulary',
-          source_type: 'manual',
-          tags: ['chat', 'vocabulary'],
-        })
-        .select('id')
-        .single();
-
-      if (cardErr || !card) {
-        await supabase.rpc('refund_daily_quota', {
-          p_user_id: input.userId,
-          p_counter: 'chat_cards',
-          p_amount: 1,
-        });
-        console.warn('[ai-chat] chat card insert failed:', cardErr?.message);
-        continue;
-      }
-
-      const { error: reviewErr } = await supabase.from('review_items').upsert(
-        {
-          user_id: input.userId,
-          card_id: card.id,
-          ease_factor: 2.5,
-          interval: 0,
-          repetitions: 0,
-          next_due: new Date().toISOString(),
-          last_reviewed_at: null,
-          status: 'new',
-        },
-        { onConflict: 'user_id,card_id' },
-      );
-      if (reviewErr) {
-        // The card exists but is not scheduled, so it is not a review card and
-        // should not have been charged for.
-        await supabase.rpc('refund_daily_quota', {
-          p_user_id: input.userId,
-          p_counter: 'chat_cards',
-          p_amount: 1,
-        });
-        console.warn('[ai-chat] chat card review_item failed:', reviewErr.message);
-        continue;
-      }
-
-      saved.push(word);
-    } catch (err) {
-      console.warn('[ai-chat] chat vocabulary save failed (non-fatal):', err);
-    }
-  }
-
-  return saved;
-}
+// `saveChatVocabulary` and `recordConversationEvidence` used to live here.
+// They now live in `_shared/chat-vocabulary.ts` and
+// `_shared/conversation-evidence.ts`, imported at the top of this file,
+// because `tutor-session` must do both with exactly the same quota discipline
+// and the same definition of what counts as a language sample. Both are still
+// best-effort by construction: the learner has their reply before either runs,
+// so every failure path logs and returns rather than throwing.
 
 /**
  * How well the learner has been doing lately at the level they are on.

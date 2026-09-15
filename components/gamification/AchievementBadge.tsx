@@ -1,5 +1,6 @@
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import type { AchievementDefinition } from '../../lib/achievements';
 
 interface AchievementBadgeProps {
@@ -10,6 +11,7 @@ interface AchievementBadgeProps {
 }
 
 export function AchievementBadge({ achievement, earned, earnedAt, isNew }: AchievementBadgeProps) {
+  const { c } = useUi2Theme();
   const formattedDate = earnedAt
     ? new Date(earnedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
     : undefined;
@@ -24,14 +26,14 @@ export function AchievementBadge({ achievement, earned, earnedAt, isNew }: Achie
           borderRadius: 16,
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: earned ? achievement.color + '20' : '#1C2029',
+          backgroundColor: earned ? achievement.color + '20' : c.surface2,
           opacity: earned ? 1 : 0.4,
         }}
       >
         <Ionicons
           name={achievement.icon as any}
           size={32}
-          color={earned ? achievement.color : '#333A48'}
+          color={earned ? achievement.color : c.idle}
         />
 
         {/* Lock overlay for unearned */}
@@ -43,7 +45,7 @@ export function AchievementBadge({ achievement, earned, earnedAt, isNew }: Achie
               right: 4,
             }}
           >
-            <Ionicons name="lock-closed" size={14} color="#333A48" />
+            <Ionicons name="lock-closed" size={14} color={c.idle} />
           </View>
         )}
 
@@ -54,7 +56,7 @@ export function AchievementBadge({ achievement, earned, earnedAt, isNew }: Achie
               position: 'absolute',
               top: -4,
               right: -4,
-              backgroundColor: '#EF4444',
+              backgroundColor: c.error,
               borderRadius: 8,
               paddingHorizontal: 4,
               paddingVertical: 1,
@@ -62,15 +64,15 @@ export function AchievementBadge({ achievement, earned, earnedAt, isNew }: Achie
               alignItems: 'center',
             }}
           >
-            <Text style={{ color: '#FFFFFF', fontSize: 8, fontWeight: '700' }}>NEW</Text>
+            <Text style={{ color: c.onPrimary, fontSize: 8, fontWeight: '700' }}>NEW</Text>
           </View>
         )}
       </View>
 
       {/* Title */}
       <Text
-        className="text-text-secondary text-center mt-1"
-        style={{ fontSize: 10, lineHeight: 14 }}
+        className="text-center mt-1"
+        style={{ fontSize: 10, lineHeight: 14, color: c.muted }}
         numberOfLines={2}
       >
         {achievement.title}
@@ -79,8 +81,7 @@ export function AchievementBadge({ achievement, earned, earnedAt, isNew }: Achie
       {/* Earned date */}
       {earned && formattedDate && (
         <Text
-          className="text-text-secondary"
-          style={{ fontSize: 9, marginTop: 1 }}
+          style={{ fontSize: 9, marginTop: 1, color: c.muted }}
         >
           {formattedDate}
         </Text>

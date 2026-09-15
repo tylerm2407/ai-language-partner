@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { View, Text, TextInput } from 'react-native';
+import { View, Text, TextInput, type ViewStyle } from 'react-native';
 import { haptic } from '../../lib/haptics';
 import { ExerciseCard } from './ExerciseCard';
 import { FeedbackCard } from './FeedbackCard';
-import { Button } from '../ui/Button';
+import { SlabButton } from '../ui2/SlabButton';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { gradeAnswer } from '../../lib/grading';
 import type { GradeResult } from '../../lib/grading';
 import { exerciseHints, isRestored, splitJoinedAnswer } from '../../lib/exercise-restore';
@@ -41,6 +42,7 @@ export function MiniDialogueExercise({
   cefrLevel,
   siblingKeys,
 }: MiniDialogueExerciseProps) {
+  const { c } = useUi2Theme();
   const dialogue = (exercise.metadata?.dialogue as DialogueLine[]) ?? [];
   const blankIndices = (exercise.metadata?.blankIndices as number[]) ?? [];
 
@@ -155,8 +157,10 @@ export function MiniDialogueExercise({
   };
 
 
-  const getBorderClass = (blankIndex: number) => {
-    if (!submitted) return 'border-input-border';
+  /** A palette token rather than the Tailwind border class it used to return,
+   *  so the graded outline follows the phone's light/dark setting. */
+  const getBorderColor = (blankIndex: number) => {
+    if (!submitted) return c.cardBorder;
 
     const i = blankIndices.indexOf(blankIndex);
     const userAnswer = answers[blankIndex] ?? '';
@@ -168,8 +172,15 @@ export function MiniDialogueExercise({
       exerciseHints: exerciseHints(exercise, language as LanguageCode | undefined, siblingKeys),
     });
 
-    return grade.isCorrect ? 'border-success' : 'border-error';
+    return grade.isCorrect ? c.green : c.error;
   };
+
+  /** `bg-primary/15` was an opacity wash over an assumed-dark ground; its UI
+   *  2.0 equivalent is the real `primaryTint` token, which is defined for both
+   *  schemes. */
+  const bubbleStyle = (isEven: boolean): ViewStyle => ({
+    backgroundColor: isEven ? c.surface2 : c.primaryTint,
+  });
 
   return (
     <ExerciseCard type={exercise.type} prompt={exercise.prompt}>
@@ -185,17 +196,19 @@ export function MiniDialogueExercise({
             >
               <View
                 className={`max-w-[80%] p-3 rounded-[14px] ${
-                  isEven ? 'bg-dark-card-alt rounded-tl-sm' : 'bg-primary/15 rounded-tr-sm'
+                  isEven ? 'rounded-tl-sm' : 'rounded-tr-sm'
                 }`}
+                style={bubbleStyle(isEven)}
               >
-                <Text className="text-text-secondary text-xs font-medium mb-1">
+                <Text className="text-xs font-medium mb-1" style={{ color: c.muted }}>
                   {line.speaker}
                 </Text>
                 {isBlank ? (
                   <TextInput
-                    className={`border-2 ${getBorderClass(index)} rounded-[10px] px-3 py-2 text-base text-text-primary min-w-[150px]`}
+                    className="border-2 rounded-[10px] px-3 py-2 text-base min-w-[150px]"
+                    style={{ borderColor: getBorderColor(index), color: c.ink }}
                     placeholder="Type your line..."
-                    placeholderTextColor="#64748B"
+                    placeholderTextColor={c.idle}
                     value={answers[index] ?? ''}
                     onChangeText={(text) => handleChangeAnswer(index, text)}
                     editable={!submitted && !showResult}
@@ -204,7 +217,7 @@ export function MiniDialogueExercise({
                     accessibilityHint="Type the missing dialogue line"
                   />
                 ) : (
-                  <Text className="text-text-primary text-[15px] leading-6">
+                  <Text className="text-[15px] leading-6" style={{ color: c.ink }}>
                     {line.text}
                   </Text>
                 )}
@@ -227,7 +240,7 @@ export function MiniDialogueExercise({
 
       {!submitted && !showResult && (
         <View className="mt-4">
-          <Button
+          <SlabButton
             label="Check"
             onPress={handleSubmit}
             disabled={!allFilled}

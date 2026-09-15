@@ -1,14 +1,6 @@
 // AsyncStorage is reached transitively (read-cache -> word-lookup) but nothing
 // here touches it: the chain takes its cache getters as injected dependencies,
 // which is the whole reason it lives in a pure module.
-jest.mock('@react-native-async-storage/async-storage', () => ({
-  getItem: jest.fn(),
-  setItem: jest.fn(),
-  removeItem: jest.fn(),
-  getAllKeys: jest.fn(),
-  multiRemove: jest.fn(),
-}));
-
 import {
   annotationMap,
   cardSourceFromLookup,
@@ -18,6 +10,14 @@ import {
   type WordLookupDeps,
 } from './word-lookup';
 import type { BookAnnotation, WordLookup } from '../types';
+
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  getItem: jest.fn(),
+  setItem: jest.fn(),
+  removeItem: jest.fn(),
+  getAllKeys: jest.fn(),
+  multiRemove: jest.fn(),
+}));
 
 /** A server rejection as the client sees it — matches lib/ai.ts TranslateError
  *  without importing it, which would drag in the Supabase client. */

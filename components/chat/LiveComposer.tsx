@@ -20,7 +20,8 @@
 
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, radii, spacing, typography } from '../../config/theme';
+import { radii, spacing, typography, ui2Shape } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import type { VoiceGender } from '../../lib/voice-preference';
 
 /** Deck: 20 bars, w3 / h24 / r1.5, gap 3, opacity .35 + (i % 5) * 0.13. */
@@ -57,6 +58,16 @@ interface LiveComposerProps {
   /** Omit to hide the keypad affordance. */
   onKeypad?: () => void;
   keypadAccessibilityLabel?: string;
+  /**
+   * Omit to hide the "How do I say…" square. This component renders whatever
+   * it is handed and does not know which voice branch it is in — the gate is
+   * ChatInput's, exactly as it is for `onKeypad`: passed from hold-to-talk,
+   * withheld from the hands-free loop, where the loop owns the mic and a
+   * sheet raising a keyboard mid-turn would race the endpointer. Toggling
+   * Live off is one tap, so the keyboard path is the way in from there.
+   */
+  onHelp?: () => void;
+  helpAccessibilityLabel?: string;
   /** Error text rendered under the card. */
   errorMessage?: string | null;
   /** Bottom padding — caller adds safe-area inset + tab bar clearance. */
@@ -85,11 +96,14 @@ export function LiveComposer({
   onMicPressOut,
   onKeypad,
   keypadAccessibilityLabel = 'Switch to keyboard',
+  onHelp,
+  helpAccessibilityLabel = 'How do I say…',
   errorMessage,
   bottomPadding,
   voiceGender,
   onVoiceGenderChange,
 }: LiveComposerProps) {
+  const { c } = useUi2Theme();
   const level = live ? meterLevel : 0;
   const interactive = Boolean(onMicPress || onMicPressIn);
 
@@ -122,7 +136,7 @@ export function LiveComposer({
             padding: spacing.xxs,
             marginBottom: spacing.xs,
             borderRadius: radii.pill,
-            backgroundColor: colors.surface.cardAlt,
+            backgroundColor: c.surface2,
           }}
         >
           {VOICE_OPTIONS.map(({ value, label }) => {
@@ -139,12 +153,12 @@ export function LiveComposer({
                   paddingHorizontal: spacing.md,
                   paddingVertical: spacing.xs,
                   borderRadius: radii.pill,
-                  backgroundColor: selected ? colors.action.primaryFill : 'transparent',
+                  backgroundColor: selected ? c.primary : 'transparent',
                 }}
               >
                 <Text
                   style={{
-                    color: selected ? colors.text.onPrimary : colors.text.tertiary,
+                    color: selected ? c.onPrimary : c.idle,
                     fontFamily: typography.family.semibold,
                     fontSize: typography.scale.caption.fontSize,
                     lineHeight: typography.scale.caption.lineHeight,
@@ -165,9 +179,13 @@ export function LiveComposer({
           gap: spacing.sm,
           padding: spacing.sm,
           borderRadius: radii.xxl,
-          backgroundColor: colors.surface.card,
-          borderWidth: 1,
-          borderColor: colors.border.default,
+          backgroundColor: c.card,
+          // Slab treatment: on a light phone `card` and `bg` are both #FFFFFF,
+          // so the 2px outline plus the 5px bottom edge is the only thing that
+          // holds the composer off the screen behind it.
+          borderWidth: ui2Shape.border,
+          borderBottomWidth: ui2Shape.slab,
+          borderColor: c.cardBorder,
         }}
       >
         {onKeypad && (
@@ -180,12 +198,33 @@ export function LiveComposer({
               width: 40,
               height: 40,
               borderRadius: radii.md,
-              backgroundColor: colors.surface.cardAlt,
+              backgroundColor: c.surface2,
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <Ionicons name="keypad-outline" size={18} color={colors.text.secondary} />
+            <Ionicons name="keypad-outline" size={18} color={c.muted} />
+          </Pressable>
+        )}
+
+        {/* Same 40pt square as the keypad, so the two read as one control
+            group. hitSlop lifts the target to the 44pt floor. */}
+        {onHelp && (
+          <Pressable
+            onPress={onHelp}
+            accessibilityRole="button"
+            accessibilityLabel={helpAccessibilityLabel}
+            hitSlop={8}
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: radii.md,
+              backgroundColor: c.surface2,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Ionicons name="help-circle-outline" size={18} color={c.muted} />
           </Pressable>
         )}
 
@@ -209,7 +248,7 @@ export function LiveComposer({
                 width: BAR_WIDTH,
                 height: BAR_MAX_HEIGHT * barScale(i, level),
                 borderRadius: BAR_WIDTH / 2,
-                backgroundColor: colors.success.base,
+                backgroundColor: c.green,
                 opacity: 0.35 + (i % 5) * 0.13,
               }}
             />
@@ -233,9 +272,9 @@ export function LiveComposer({
           }}
         >
           {busy ? (
-            <ActivityIndicator color={colors.text.onPrimary} />
+            <ActivityIndicator color={c.onPrimary} />
           ) : (
-            <Ionicons name={micIcon} size={36} color={colors.text.onPrimary} />
+            <Ionicons name={micIcon} size={36} color={c.onPrimary} />
           )}
         </Pressable>
       </View>
@@ -247,12 +286,17 @@ export function LiveComposer({
             paddingHorizontal: spacing.md,
             paddingVertical: spacing.xs,
             borderRadius: radii.md,
-            backgroundColor: colors.error.tint,
+            // No error TINT token exists in UI 2.0, and inventing one here
+            // would be a palette change. An outline plus error-coloured text
+            // is the same signal Ui2Input uses and it reads in both schemes.
+            backgroundColor: c.card,
+            borderWidth: 1,
+            borderColor: c.error,
           }}
         >
           <Text
             style={{
-              color: colors.error.light,
+              color: c.error,
               fontFamily: typography.family.medium,
               fontSize: typography.scale.tiny.fontSize,
               lineHeight: typography.scale.tiny.lineHeight,

@@ -6,10 +6,12 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, corsResponse } from '../_shared/cors.ts';
+import { checkBurstLimit } from '../_shared/burst-limit.ts';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { isValidUUID } from '../_shared/validation.ts';
 import { logAudit, getClientIp } from '../_shared/audit.ts';
 import { PROVIDER_TIMEOUT_MS, providerFetch } from '../_shared/provider-fetch.ts';
+import { evaluateSubmissionPolicy, validateTeacherScore } from './submission-policy.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -207,6 +209,12 @@ async function joinClassroom(supabase: any, userId: string, email: string, body:
   const { inviteCode } = body as any;
   if (!inviteCode) return errorResponse('Missing inviteCode');
 
+  // Nobody joins ten classrooms in five minutes. An invite code is eight hex
+  // characters; this is what makes guessing them impractical in practice
+  // rather than merely in arithmetic.
+  const joinOk = await checkBurstLimit(supabase, userId, 'school-join', 10, 300);
+  if (!joinOk) return errorResponse('Too many attempts. Try again shortly.', 429);
+
   // Look up classroom by invite code
   const { data: classroom, error: lookupErr } = await supabase
     .from('classrooms')
@@ -388,7 +396,7 @@ async function startAssignment(supabase: any, userId: string, body: SchoolReques
   // Fetch assignment and verify enrollment
   const { data: assignment, error: aErr } = await supabase
     .from('assignments')
-    .select('id, classroom_id, target_language, level, scenario_key, custom_scenario, title')
+    .select('id, classroom_id, target_language, level, scenario_key, custom_scenario, title, status, due_at, late_submission_allowed')
     .eq('id', assignmentId)
     .single();
 
@@ -396,6 +404,17 @@ async function startAssignment(supabase: any, userId: string, body: SchoolReques
 
   const enrolled = await isEnrolledStudent(supabase, userId, assignment.classroom_id);
   if (!enrolled) return errorResponse('Must be enrolled in the classroom', 403);
+
+  const availability = evaluateSubmissionPolicy({
+    status: assignment.status,
+    dueAt: assignment.due_at,
+    lateSubmissionAllowed: assignment.late_submission_allowed,
+  }, Date.now());
+  if (!availability.allowed) {
+    return availability.reason === 'PAST_DUE'
+      ? errorResponse('The assignment deadline has passed', 403)
+      : errorResponse('Assignment is not open for submissions', 403);
+  }
 
   // Check for existing submission
   const { data: existingSub } = await supabase
@@ -476,6 +495,19 @@ async function submitAssignment(supabase: any, userId: string, body: SchoolReque
   if (!assignment) return errorResponse('Assignment not found', 404);
 
   const now = new Date().toISOString();
+  const enrolled = await isEnrolledStudent(supabase, userId, assignment.classroom_id);
+  if (!enrolled) return errorResponse('Must be enrolled in the classroom', 403);
+
+  const availability = evaluateSubmissionPolicy({
+    status: assignment.status,
+    dueAt: assignment.due_at,
+    lateSubmissionAllowed: assignment.late_submission_allowed,
+  }, Date.parse(now));
+  if (!availability.allowed) {
+    return availability.reason === 'PAST_DUE'
+      ? errorResponse('The assignment deadline has passed', 403)
+      : errorResponse('Assignment is not open for submissions', 403);
+  }
 
   // Calculate duration from chat session timestamps
   let conversationDurationMinutes = 0;
@@ -493,11 +525,6 @@ async function submitAssignment(supabase: any, userId: string, body: SchoolReque
     }
   }
 
-  // Check if late
-  const isLate = assignment.due_at
-    ? new Date(now) > new Date(assignment.due_at) && assignment.late_submission_allowed
-    : false;
-
   // Run AI grading
   const aiFeedback = await gradeWithAI(supabase, assignment, submission, conversationDurationMinutes);
 
@@ -507,7 +534,7 @@ async function submitAssignment(supabase: any, userId: string, body: SchoolReque
     .update({
       status: 'submitted',
       submitted_at: now,
-      is_late: isLate,
+      is_late: availability.isLate,
       conversation_duration_minutes: conversationDurationMinutes,
       ai_feedback: aiFeedback,
       auto_score: aiFeedback?.totalScore ?? null,
@@ -535,7 +562,7 @@ async function gradeAssignment(supabase: any, userId: string, body: SchoolReques
   // Fetch submission to get classroom
   const { data: submission, error: subErr } = await supabase
     .from('assignment_submissions')
-    .select('id, assignment_id, assignments!inner(classroom_id)')
+    .select('id, assignment_id, status, assignments!inner(classroom_id, max_points)')
     .eq('id', submissionId)
     .single();
 
@@ -545,12 +572,26 @@ async function gradeAssignment(supabase: any, userId: string, body: SchoolReques
   const isTeacher = await isClassroomTeacher(supabase, userId, classroomId);
   if (!isTeacher) return errorResponse('Must be teacher of this classroom', 403);
 
+  if (!['submitted', 'returned', 'graded'].includes(submission.status)) {
+    return errorResponse('Submission is not ready for grading');
+  }
+
+  const score = validateTeacherScore(
+    teacherScore,
+    (submission.assignments as any).max_points,
+  );
+  if (!score.valid) {
+    return score.reason === 'OUT_OF_RANGE'
+      ? errorResponse('Score must be within the assignment point range')
+      : errorResponse('Score must be a finite number');
+  }
+
   const { data: updated, error } = await supabase
     .from('assignment_submissions')
     .update({
-      teacher_score: teacherScore ?? null,
+      teacher_score: score.score,
       teacher_feedback: teacherFeedback ?? null,
-      final_score: teacherScore ?? null,
+      final_score: score.score,
       status: 'graded',
       graded_at: new Date().toISOString(),
     })

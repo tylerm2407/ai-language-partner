@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Pressable, FlatList } from 'react-native';
+import { View, ScrollView, Pressable, FlatList, ActivityIndicator, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useEffect, useState, useCallback } from 'react';
@@ -13,6 +13,7 @@ import {
   fetchGoalTrack,
   fetchInProgressBooks,
   fetchUserBookProgress,
+  type RankedBook,
 } from '../../../lib/supabase-queries';
 import { useAppStore } from '../../../stores/useAppStore';
 import { useReviewCountSync } from '../../../hooks/useReviewCountSync';
@@ -21,23 +22,31 @@ import { cachedFetch, readCacheKey } from '../../../lib/read-cache';
 import { GoalTrackCard, GoalTrackPrompt } from '../../../components/learn/GoalTrackCard';
 import { materializeGoalLesson, resolveGoalTrack } from '../../../lib/ai';
 import { trackEvent, trackRefusal } from '../../../lib/analytics';
-import { LoadingScreen } from '../../../components/ui/LoadingScreen';
-import { EmptyState } from '../../../components/ui/EmptyState';
-import { GradientBackground } from '../../../components/ui/GradientBackground';
-import { GlassSurface } from '../../../components/ui/GlassSurface';
+import { Ui2EmptyState } from '../../../components/ui2/Ui2EmptyState';
+import { SlabCard } from '../../../components/ui2/SlabCard';
 import { UnitPath } from '../../../components/learn/UnitPath';
 import { CoursePills, TabPills } from '../../../components/learn/SelectorPills';
 import { ReviewShortcut } from '../../../components/learn/ReviewShortcut';
-import { Heading, Body, Caption, Hero } from '../../../components/ui/Text';
-import { InlineError } from '../../../components/ui/InlineError';
+import { Heading, Body, Caption, Hero } from '../../../components/ui2/Ui2Text';
+import { Ui2Badge } from '../../../components/ui2/Ui2Badge';
+import { Ui2InlineError } from '../../../components/ui2/Ui2InlineError';
 import { loadErrorCopy, saveErrorCopy, type ErrorCopy } from '../../../lib/error-copy';
-import { colors, spacing, radii } from '../../../config/theme';
-import type { Course, Unit, Lesson, ReadingPassage, WritingPrompt, ReadingBook, UserBookProgress, GoalTrack } from '../../../types';
+// `colors` is deliberately NOT imported: it is the fixed DARK palette, and a
+// screen that reads it stays dark whatever the phone is set to. `radii` and
+// `spacing` are plain scheme-independent numbers and carry over unchanged.
+import { spacing, radii } from '../../../config/theme';
+import { useUi2Theme } from '../../../hooks/useUi2Theme';
+import { getTargetLanguage } from '../../../lib/language';
+import type { Course, Unit, Lesson, ReadingPassage, WritingPrompt, ReadingBook, UserBookProgress } from '../../../types';
+import type { GoalTrackProgress } from '../../../lib/goal-track-progress';
 import { Ionicons } from '@expo/vector-icons';
 import { BookCard } from '../../../components/reading/BookCard';
 import { ContinueReadingSection } from '../../../components/reading/ContinueReadingSection';
-import { cefrBandColors, cefrCanDo, cefrAccessibilityLabel } from '../../../lib/cefr-labels';
+import { cefrCanDo, cefrAccessibilityLabel } from '../../../lib/cefr-labels';
 import { useScreenView } from '../../../hooks/useScreenView';
+import { useProfile } from '../../../hooks/useProfile';
+import { initialCourseSelection } from '../../../lib/course-placement';
+import * as Sentry from '@sentry/react-native';
 
 
 type CourseTab = 'vocab' | 'reading' | 'writing';
@@ -57,14 +66,30 @@ const TAB_CONFIG: { key: CourseTab; label: string }[] = [
  */
 const FOR_YOU_TAB = 'for-you';
 
+/**
+ * Book id → `common_share` (0..1), for the cards on the 'For you' shelf.
+ *
+ * The ranking RPC has always returned this and the screen has always thrown it
+ * away, so the shelf was ordered by a number the learner could not see. Kept
+ * beside the book list rather than folded into `ReadingBook` because the
+ * per-band shelves have no coverage at all, and a field that is silently 0 on
+ * half the shelves invites a card to render "0% common words".
+ */
+function coverageByBook(ranked: RankedBook[]): Map<string, number> {
+  return new Map(ranked.map((r) => [r.book.id, r.commonShare]));
+}
+
 export default function LearnScreen() {
   useScreenView('learn');
+  const { c } = useUi2Theme();
   const router = useRouter();
   const { reviewCount, profile } = useAppStore();
+  const { updateProfile } = useProfile();
   // The review screen and the lesson warm-up both clear cards without this
   // screen knowing, so re-read the due count whenever it comes back into view.
   useReviewCountSync();
   const [courses, setCourses] = useState<Course[]>([]);
+  const [coursesError, setCoursesError] = useState<ErrorCopy | null>(null);
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
   const [units, setUnits] = useState<Record<string, { unit: Unit; lessons: Lesson[] }[]>>({});
   const [loading, setLoading] = useState(true);
@@ -81,7 +106,7 @@ export default function LearnScreen() {
   const [loadingLibrary, setLoadingLibrary] = useState(false);
   /** True when 'For you' had nothing to rank and fell back to the A1 shelf. */
   const [rankedUnavailable, setRankedUnavailable] = useState(false);
-  const [goalTrack, setGoalTrack] = useState<GoalTrack | null>(null);
+  const [goalTrack, setGoalTrack] = useState<GoalTrackProgress | null>(null);
   const [buildingTrack, setBuildingTrack] = useState(false);
   const [goalTrackError, setGoalTrackError] = useState<string | null>(null);
   const [libraryError, setLibraryError] = useState<ErrorCopy | null>(null);
@@ -91,20 +116,62 @@ export default function LearnScreen() {
   const [generateError, setGenerateError] = useState<ErrorCopy | null>(null);
   const [inProgressBooks, setInProgressBooks] = useState<{ book: ReadingBook; progress: UserBookProgress }[]>([]);
   const [bookProgressMap, setBookProgressMap] = useState<Map<string, UserBookProgress>>(new Map());
+  /** Empty on every shelf except 'For you' — see `coverageByBook`. */
+  const [bookCoverageMap, setBookCoverageMap] = useState<Map<string, number>>(new Map());
 
-  // Load courses on mount
+  // Load courses on mount. The pill that opens is the learner's current course
+  // (migration 125), not `data[0]` — which after the cefr_level sort was the
+  // A1 course for everyone, whatever level they had declared. A deliberate
+  // "no lesson path" (advanced learner, no C1 course yet) opens on nothing and
+  // shows the empty state below; the pills stay so they can opt in.
+  const currentCourseId = profile?.currentCourseId ?? null;
+  const placementBand = profile?.placementBand ?? null;
+  const declaredLevel = profile?.level;
   useEffect(() => {
     const targetLang = profile?.targetLanguage;
+    let cancelled = false;
+    setCoursesError(null);
     fetchCourses(targetLang)
       .then((data) => {
+        if (cancelled) return;
         setCourses(data);
-        if (data.length > 0) {
-          setSelectedCourseId(data[0].id);
-        }
+        setSelectedCourseId(
+          declaredLevel
+            ? initialCourseSelection(data, { currentCourseId, placementBand, level: declaredLevel })
+            : data[0]?.id ?? null,
+        );
         setLoading(false);
       })
-      .catch(() => setLoading(false));
-  }, [profile?.targetLanguage]);
+      .catch((err) => {
+        if (cancelled) return;
+        // An empty course list and an outage look identical to a learner, so
+        // this has to be visible rather than swallowed.
+        setCoursesError(loadErrorCopy(err, 'your courses'));
+        setLoading(false);
+      });
+    return () => { cancelled = true; };
+    // Re-run when the stored pointer changes (Settings moved it, or the
+    // placement hook healed it) so the open pill follows the profile.
+  }, [profile?.targetLanguage, currentCourseId, placementBand, declaredLevel]);
+
+  // A pill tap is remembered on the profile so Home's "Continue learning"
+  // follows what the learner last looked at. Local state switches first; a
+  // failed write is reported, not hidden, and the next mount falls back to the
+  // stored pointer.
+  const handleSelectCourse = useCallback((courseId: string) => {
+    setSelectedCourseId(courseId);
+    if (courseId === currentCourseId) return;
+    const course = courses.find((k) => k.id === courseId);
+    trackEvent('course_placement_set', {
+      screen: 'learn',
+      source: 'pill',
+      band: course?.cefrLevel,
+      language: profile?.targetLanguage,
+    });
+    updateProfile({ currentCourseId: courseId }).catch((err) => {
+      Sentry.captureException(err, { tags: { area: 'course-placement', op: 'pill' } });
+    });
+  }, [courses, currentCourseId, profile?.targetLanguage, updateProfile]);
 
   // Load units + lessons when course is selected
   const loadCourseContent = useCallback(async (courseId: string) => {
@@ -157,15 +224,18 @@ export default function LearnScreen() {
 
   const selectTab = async (tab: CourseTab) => {
     setActiveTab(tab);
-    if (!selectedCourseId) return;
 
-    if (tab === 'reading' && !readingPassages[selectedCourseId]) {
-      await loadPassages(selectedCourseId);
-      // Also load library books and in-progress books
+    if (tab === 'reading') {
+      // The library and in-progress shelves are language-scoped, so a learner
+      // with no course (no lesson path at their band) still gets them; only
+      // the course's passages need a course.
+      if (selectedCourseId && !readingPassages[selectedCourseId]) {
+        await loadPassages(selectedCourseId);
+      }
       loadLibraryBooks(selectedCefrTab);
       loadInProgressBooks();
     }
-    if (tab === 'writing' && !writingPrompts[selectedCourseId]) {
+    if (tab === 'writing' && selectedCourseId && !writingPrompts[selectedCourseId]) {
       await loadPrompts(selectedCourseId);
     }
   };
@@ -189,11 +259,20 @@ export default function LearnScreen() {
       // retained words.
       let books: ReadingBook[];
       if (cefrLevel === FOR_YOU_TAB) {
-        const { data } = await cachedFetch<ReadingBook[]>(
+        // Caches the ranked rows, not just the books, so the coverage figure
+        // survives to the instant cache paint instead of popping in a beat
+        // later when the refresh lands. The payload shape changed with that,
+        // which is what READ_CACHE_SCHEMA_VERSION is for.
+        const { data } = await cachedFetch<RankedBook[]>(
           readCacheKey('books-ranked', userId ?? 'anon', profile.targetLanguage),
-          async () =>
-            (await fetchBooksRankedByCoverage(profile.targetLanguage!)).map((r) => r.book),
-          { onCached: (cached) => { setLibraryBooks(cached); setLoadingLibrary(false); } },
+          () => fetchBooksRankedByCoverage(profile.targetLanguage!),
+          {
+            onCached: (cached) => {
+              setLibraryBooks(cached.map((r) => r.book));
+              setBookCoverageMap(coverageByBook(cached));
+              setLoadingLibrary(false);
+            },
+          },
         );
         // Empty means the language has no vocabulary profiles — Chinese,
         // Japanese and Korean have none by design (whitespace tokenization
@@ -202,11 +281,14 @@ export default function LearnScreen() {
         // library and letting them conclude there are no books.
         books =
           data.length > 0
-            ? data
+            ? data.map((r) => r.book)
             : await fetchBooksByLanguageAndLevel(profile.targetLanguage, 'A1');
+        // The A1 fallback is not a ranked shelf, so it gets no coverage line.
+        setBookCoverageMap(data.length > 0 ? coverageByBook(data) : new Map());
         setRankedUnavailable(data.length === 0);
       } else {
         books = await fetchBooksByLanguageAndLevel(profile.targetLanguage, cefrLevel);
+        setBookCoverageMap(new Map());
         setRankedUnavailable(false);
       }
       setLibraryBooks(books);
@@ -311,48 +393,82 @@ export default function LearnScreen() {
   };
 
   if (loading) {
-    return <LoadingScreen message="Loading courses..." />;
+    // Was <LoadingScreen>, which is a Dark Glow component: it paints `bg-dark`
+    // and a fixed indigo spinner, so it would stay black on a light phone.
+    return (
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
+        <SafeAreaView className="flex-1 items-center justify-center" edges={['top']}>
+          <ActivityIndicator size="large" color={c.primary} />
+          <Body size="sm" tone="tertiary" style={{ marginTop: spacing.md }}>Loading courses...</Body>
+        </SafeAreaView>
+      </View>
+    );
   }
 
   const courseUnits = selectedCourseId ? units[selectedCourseId] : undefined;
+  const selectedCourseCanDo = cefrCanDo(courses.find((k) => k.id === selectedCourseId)?.cefrLevel);
 
   return (
-    <GradientBackground>
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
       <SafeAreaView className="flex-1" edges={['top']}>
         {/* Header — title, course level, content tab. Fixed above the
             scrolling tab content so switching tabs never moves it. */}
-        <View style={{ paddingTop: spacing.xxs }}>
-          <Hero
-            accessibilityRole="header"
-            style={{ marginBottom: spacing.sm, marginHorizontal: spacing.md }}
-          >
-            Learn
-          </Hero>
+        {/* Dense header (canvas "Learn · variations", L2, 2026-09-08): the
+            title and the course pills share one line, the selected course's
+            can-do line sits under the whole row, and the content tabs are
+            the compact pills. Nothing moved out: same title, same courses,
+            same caption, same three tabs. */}
+        <View style={{ paddingTop: spacing.xxs, gap: spacing.xs }}>
+          <View style={styles.headerRow}>
+            <Hero accessibilityRole="header">Learn</Hero>
+            <View style={styles.headerPills}>
+              <CoursePills
+                courses={courses}
+                selectedCourseId={selectedCourseId}
+                onSelect={handleSelectCourse}
+                compact
+              />
+            </View>
+          </View>
 
-          <CoursePills
-            courses={courses}
-            selectedCourseId={selectedCourseId}
-            onSelect={setSelectedCourseId}
-          />
+          {selectedCourseCanDo ? (
+            <Caption size="sm" tone="tertiary" style={styles.headerCaption}>
+              {selectedCourseCanDo}
+            </Caption>
+          ) : null}
 
-          <View style={{ height: spacing.xs }} />
-
-          <TabPills tabs={TAB_CONFIG} activeKey={activeTab} onSelect={selectTab} />
+          <TabPills tabs={TAB_CONFIG} activeKey={activeTab} onSelect={selectTab} compact />
         </View>
 
         {/* Content area */}
-        {courses.length === 0 ? (
-          <EmptyState
+        {coursesError ? (
+          <Ui2InlineError copy={coursesError} onRetry={() => router.replace('/learn' as never)} />
+        ) : courses.length === 0 ? (
+          <Ui2EmptyState
             icon="book-outline"
             title="No courses yet"
             description="There are no courses for this language yet. Check back soon."
           />
+        ) : selectedCourseId === null && activeTab === 'vocab' ? (
+          /* A deliberate no-course placement: the learner's band has no lesson
+             path yet. Written off the placement band, not a hard-coded "C1",
+             so it stays true when C1 arrives and C2 is the gap. */
+          <Ui2EmptyState
+            icon="chatbubbles-outline"
+            title={`No lesson path at ${placementBand ?? 'your level'} yet`}
+            description={`${placementBand ? `${cefrCanDo(placementBand)} ` : ''}Lessons run A1 to B2 today. Keep sharpening with reading, chat and the tutor, or tap a level above to open its lessons.`}
+            actionLabel="Open chat"
+            onAction={() => router.push('/chat' as never)}
+          />
         ) : activeTab === 'vocab' ? (
           /* Vocab tab — unit carousel over the selected unit's lessons */
           loadingUnits ? (
-            <LoadingScreen message="Loading lessons..." />
+            <View className="flex-1 items-center justify-center">
+              <ActivityIndicator size="large" color={c.primary} />
+              <Body size="sm" tone="tertiary" style={{ marginTop: spacing.md }}>Loading lessons...</Body>
+            </View>
           ) : unitsError ? (
-            <InlineError
+            <Ui2InlineError
               copy={unitsError}
               onRetry={() => { if (selectedCourseId) loadCourseContent(selectedCourseId); }}
             />
@@ -360,6 +476,7 @@ export default function LearnScreen() {
             <UnitPath
               units={courseUnits}
               courseId={selectedCourseId}
+              language={getTargetLanguage(profile) ?? 'en'}
               header={
                 <>
                   <ReviewShortcut count={reviewCount} onPress={goToReview} />
@@ -392,7 +509,7 @@ export default function LearnScreen() {
           <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 100 }}>
             <ReviewShortcut count={reviewCount} onPress={goToReview} />
             {passagesError && (
-              <InlineError
+              <Ui2InlineError
                 copy={passagesError}
                 onRetry={() => { if (selectedCourseId) loadPassages(selectedCourseId); }}
               />
@@ -411,9 +528,9 @@ export default function LearnScreen() {
             {/* Passages Section */}
             {selectedCourseId && readingPassages[selectedCourseId]?.length > 0 && (
               <>
-                <Text className="text-lg font-bold text-text-primary mb-2 mt-2">Passages</Text>
+                <Heading level={3} style={{ marginTop: spacing.xs, marginBottom: spacing.xs }}>Passages</Heading>
                 {readingPassages[selectedCourseId].map((passage) => (
-                  <GlassSurface key={passage.id} style={{ marginBottom: 8 }}>
+                  <SlabCard key={passage.id} style={{ marginBottom: 8, padding: 0 }}>
                     <Pressable
                       className="p-4 flex-row items-center"
                       onPress={() => router.push(`/learn/reading/${passage.id}` as any)}
@@ -422,27 +539,17 @@ export default function LearnScreen() {
                       // the level's meaning from the row itself.
                       accessibilityLabel={`${passage.title}. ${passage.wordCount} words. ${cefrAccessibilityLabel(passage.cefrLevel)}`}
                     >
-                      <Ionicons name="reader-outline" size={22} color={colors.league.diamond} />
+                      <Ionicons name="reader-outline" size={22} color={c.primary} />
                       <View className="flex-1 ml-3">
-                        <Text className="text-base font-medium text-text-primary">{passage.title}</Text>
+                        <Body weight="medium">{passage.title}</Body>
                         <View className="flex-row flex-wrap items-center gap-2 mt-1">
-                          <Text className="text-sm text-text-secondary">{passage.wordCount} words</Text>
-                          <View
-                            className="rounded-md px-1.5 py-0.5"
-                            style={{ backgroundColor: cefrBandColors(passage.cefrLevel).bg }}
-                          >
-                            <Text
-                              className="text-xs font-sans-bold"
-                              style={{ color: cefrBandColors(passage.cefrLevel).text }}
-                            >
-                              {passage.cefrLevel}
-                            </Text>
-                          </View>
+                          <Body size="sm" tone="secondary">{passage.wordCount} words</Body>
+                          <Ui2Badge label={passage.cefrLevel} />
                         </View>
                       </View>
-                      <Ionicons name="chevron-forward" size={18} color={colors.correctionChip.grammar.text} />
+                      <Ionicons name="chevron-forward" size={18} color={c.idle} />
                     </Pressable>
-                  </GlassSurface>
+                  </SlabCard>
                 ))}
               </>
             )}
@@ -456,7 +563,12 @@ export default function LearnScreen() {
               <Caption size="sm" tone="tertiary" style={{ marginBottom: spacing.xs }}>
                 {rankedUnavailable
                   ? 'Ranking is not available for this language yet — showing the A1 shelf.'
-                  : 'Ordered by how many of the words you already know.'}
+                  // Not "how many of the words you already know": the RPC sorts
+                  // on known_share first but that is 0.00 until cards graduate
+                  // out of 'learning', so common_share does the ordering for
+                  // very nearly everyone. "Can already read" is true either
+                  // way, and matches the "N% common words" line on the cards.
+                  : 'Ordered by how much of each book you can already read.'}
               </Caption>
             )}
 
@@ -485,14 +597,14 @@ export default function LearnScreen() {
                         paddingVertical: spacing.xs,
                         paddingHorizontal: spacing.md,
                         borderRadius: radii.pill,
-                        backgroundColor: isActive ? colors.action.primaryFill : colors.surface.cardAlt,
+                        backgroundColor: isActive ? c.primary : c.track,
                       }}
                     >
                       <Body
                         size="sm"
                         weight="semibold"
                         style={{
-                          color: isActive ? colors.text.onPrimary : colors.text.tertiary,
+                          color: isActive ? c.onPrimary : c.muted,
                         }}
                       >
                         {isForYou ? 'For you' : level}
@@ -501,7 +613,11 @@ export default function LearnScreen() {
                         <View
                           style={{
                             marginLeft: 6,
-                            backgroundColor: 'rgba(255,255,255,0.25)',
+                            // The slab edge colour: a darker step of `primary`,
+                            // so the count reads as a well inside the pill in
+                            // both schemes without a white wash that vanishes
+                            // on a light background.
+                            backgroundColor: c.slab,
                             borderRadius: 10,
                             minWidth: 20,
                             minHeight: 20,
@@ -532,7 +648,7 @@ export default function LearnScreen() {
               <Body size="sm" tone="tertiary" style={{ paddingVertical: spacing.md }}>Loading library...</Body>
             ) : libraryError ? (
               /* Non-blocking library error — distinct from "no books yet" */
-              <InlineError copy={libraryError} onRetry={retryLibrary} />
+              <Ui2InlineError copy={libraryError} onRetry={retryLibrary} />
             ) : libraryBooks.length === 0 ? (
               <View style={{ paddingVertical: spacing.md, alignItems: 'center' }}>
                 <Body size="sm" tone="tertiary" style={{ marginBottom: spacing.sm }}>
@@ -560,13 +676,13 @@ export default function LearnScreen() {
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
-                    backgroundColor: colors.action.primaryFill,
+                    backgroundColor: c.primary,
                     borderRadius: radii.lg,
                     paddingHorizontal: spacing.md + spacing.xxs,
                     paddingVertical: spacing.sm,
                   }}
                 >
-                  <Ionicons name="sparkles" size={18} color={colors.text.onPrimary} />
+                  <Ionicons name="sparkles" size={18} color={c.onPrimary} />
                   <Body size="sm" tone="onPrimary" weight="semibold" style={{ marginLeft: spacing.xs }}>
                     Generate Stories
                   </Body>
@@ -591,6 +707,7 @@ export default function LearnScreen() {
                   <BookCard
                     book={item}
                     progress={bookProgressMap.get(item.id) ?? null}
+                    commonShare={bookCoverageMap.get(item.id) ?? null}
                     onPress={() => {
                       trackEvent('reading_book_opened', {
                         contentId: item.id,
@@ -609,71 +726,75 @@ export default function LearnScreen() {
           <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 100 }}>
             <ReviewShortcut count={reviewCount} onPress={goToReview} />
             {/* History Link */}
-            <GlassSurface style={{ marginBottom: 12 }}>
+            <SlabCard style={{ marginBottom: 12, padding: 0 }}>
               <Pressable
                 className="p-4 flex-row items-center"
                 onPress={() => router.push('/learn/writing/history' as any)}
                 accessibilityRole="button"
                 accessibilityLabel="View writing history"
               >
-                <Ionicons name="time-outline" size={20} color={colors.action.accent} />
-                <Text className="text-sm font-sans-semibold text-primary ml-2">View Writing History</Text>
+                <Ionicons name="time-outline" size={20} color={c.primary} />
+                <Body size="sm" weight="semibold" tone="accent" style={{ marginLeft: spacing.xs }}>View Writing History</Body>
                 <View className="flex-1" />
-                <Ionicons name="chevron-forward" size={16} color={colors.action.accent} />
+                <Ionicons name="chevron-forward" size={16} color={c.primary} />
               </Pressable>
-            </GlassSurface>
+            </SlabCard>
 
             {!selectedCourseId ? null : promptsError ? (
-              <InlineError
+              <Ui2InlineError
                 copy={promptsError}
                 onRetry={() => loadPrompts(selectedCourseId)}
               />
             ) : !writingPrompts[selectedCourseId] ? (
-              <Text className="text-sm text-text-secondary py-4">Loading prompts...</Text>
+              <Body size="sm" tone="secondary" style={{ paddingVertical: spacing.md }}>Loading prompts...</Body>
             ) : writingPrompts[selectedCourseId].length === 0 ? (
-              <Text className="text-sm text-text-secondary py-4">No writing prompts available yet.</Text>
+              <Body size="sm" tone="secondary" style={{ paddingVertical: spacing.md }}>No writing prompts available yet.</Body>
             ) : (
               writingPrompts[selectedCourseId].map((prompt) => (
-                <GlassSurface key={prompt.id} style={{ marginBottom: 8 }}>
+                <SlabCard key={prompt.id} style={{ marginBottom: 8, padding: 0 }}>
                   <Pressable
                     className="p-4 flex-row items-center"
                     onPress={() => router.push(`/learn/writing/${prompt.id}` as any)}
                     accessibilityRole="button"
                     accessibilityLabel={`${prompt.promptText}. ${cefrAccessibilityLabel(prompt.cefrLevel)}`}
                   >
-                    <Ionicons name="create-outline" size={22} color={colors.premium.base} />
+                    <Ionicons name="create-outline" size={22} color={c.primary} />
                     <View className="flex-1 ml-3">
-                      <Text className="text-base font-medium text-text-primary">
+                      <Body weight="medium">
                         {prompt.promptText}
-                      </Text>
+                      </Body>
                       <View className="flex-row flex-wrap items-center gap-2 mt-1">
-                        <Text className="text-sm text-text-secondary">
+                        <Body size="sm" tone="secondary">
                           {prompt.minWords ?? '?'}-{prompt.maxWords ?? '?'} words
-                        </Text>
-                        <View
-                          className="rounded-md px-1.5 py-0.5"
-                          style={{ backgroundColor: cefrBandColors(prompt.cefrLevel).bg }}
-                        >
-                          <Text
-                            className="text-xs font-sans-bold"
-                            style={{ color: cefrBandColors(prompt.cefrLevel).text }}
-                          >
-                            {prompt.cefrLevel}
-                          </Text>
-                        </View>
-                        <View className="bg-primary-tint rounded-md px-1.5 py-0.5">
-                          <Text className="text-primary text-xs font-sans-bold">{prompt.promptType}</Text>
-                        </View>
+                        </Body>
+                        <Ui2Badge label={prompt.cefrLevel} />
+                        <Ui2Badge label={prompt.promptType} />
                       </View>
                     </View>
-                    <Ionicons name="chevron-forward" size={18} color={colors.correctionChip.grammar.text} />
+                    <Ionicons name="chevron-forward" size={18} color={c.idle} />
                   </Pressable>
-                </GlassSurface>
+                </SlabCard>
               ))
             )}
           </ScrollView>
         ) : null}
       </SafeAreaView>
-    </GradientBackground>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingLeft: spacing.md,
+  },
+  headerPills: {
+    flex: 1,
+    minWidth: 0,
+  },
+  headerCaption: {
+    paddingHorizontal: spacing.md,
+  },
+});

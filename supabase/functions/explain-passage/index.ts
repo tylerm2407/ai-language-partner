@@ -244,7 +244,11 @@ serve(async (req: Request) => {
   });
 
   if (result.usedFallback || !result.text) {
-    await refund();
+    // Refund only when the provider failed to answer. A safety rejection of
+    // the output means the model was called (twice) on a span the learner
+    // chose; refunding it would make every flagged span a free call, and the
+    // span is arbitrary client text. Same rule as translate.
+    if (result.fallbackReason !== 'safety') await refund();
     return json(
       {
         error: 'Explanations are temporarily unavailable. Please try again.',

@@ -7,9 +7,13 @@
 
 import {
   HANDSFREE_MIN_CONFIDENCE,
+  MAX_SCORING_STRIKES,
   NEUTRAL_CONFIDENCE,
+  PRONUNCIATION_LIMIT_CODE,
+  TRANSCRIPTION_UNAVAILABLE,
   evaluateHandsFreeAnswer,
   sttConfidence,
+  transcribeHandsFreeTurn,
   type HandsFreeGradeInput,
 } from './handsfree-grading';
 import { speechScoreToRating } from './grading';
@@ -225,5 +229,108 @@ describe('speechScoreToRating', () => {
       expect(rating).toBeGreaterThanOrEqual(previous);
       previous = rating;
     }
+  });
+});
+
+describe('transcribeHandsFreeTurn', () => {
+  // The invariant: scoring may fail, the session may not. Every branch below
+  // ends with a transcript the reducer can act on.
+  const PLAIN = { text: 'la manzana', noSpeechProb: 0.05, avgLogprob: -0.3 };
+  const quotaError = Object.assign(new Error('spent'), { code: PRONUNCIATION_LIMIT_CODE });
+
+  it('uses the scored transcription and never calls the plain transcriber', async () => {
+    const score = jest.fn().mockResolvedValue({ transcription: 'la manzana', score: 95 });
+    const transcribe = jest.fn().mockResolvedValue(PLAIN);
+    const r = await transcribeHandsFreeTurn({ scoringStrikes: 0, score, transcribe });
+    expect(r.transcript).toEqual({ text: 'la manzana', noSpeechProb: null, avgLogprob: null, scored: true });
+    expect(r.fallbackReason).toBeNull();
+    expect(transcribe).not.toHaveBeenCalled();
+  });
+
+  it('a scored turn resets the strike count', async () => {
+    const r = await transcribeHandsFreeTurn({
+      scoringStrikes: 1,
+      score: async () => ({ transcription: 'sí' }),
+      transcribe: async () => PLAIN,
+    });
+    expect(r.scoringStrikes).toBe(0);
+  });
+
+  it('a scoring failure falls back to the plain transcriber and counts a strike', async () => {
+    const score = jest.fn().mockRejectedValue(new Error('network'));
+    const transcribe = jest.fn().mockResolvedValue(PLAIN);
+    const r = await transcribeHandsFreeTurn({ scoringStrikes: 0, score, transcribe });
+    expect(r.transcript).toEqual({ ...PLAIN, scored: false });
+    expect(r.fallbackReason).toBe('error');
+    expect(r.scoringStrikes).toBe(1);
+    expect(transcribe).toHaveBeenCalledTimes(1);
+  });
+
+  it('a spent daily allowance stops scoring for the session in one go', async () => {
+    // Settled for the day: asking again on the next card would only add a
+    // wasted round trip to every answer.
+    const r = await transcribeHandsFreeTurn({
+      scoringStrikes: 0,
+      score: async () => { throw quotaError; },
+      transcribe: async () => PLAIN,
+    });
+    expect(r.scoringStrikes).toBe(MAX_SCORING_STRIKES);
+    expect(r.transcript.text).toBe('la manzana');
+  });
+
+  it('at the strike cap the scorer is not asked at all', async () => {
+    const score = jest.fn();
+    const transcribe = jest.fn().mockResolvedValue(PLAIN);
+    const r = await transcribeHandsFreeTurn({ scoringStrikes: MAX_SCORING_STRIKES, score, transcribe });
+    expect(score).not.toHaveBeenCalled();
+    expect(r.fallbackReason).toBe('strikes');
+    expect(r.scoringStrikes).toBe(MAX_SCORING_STRIKES);
+    expect(r.transcript.scored).toBe(false);
+  });
+
+  it('one transient failure does not disable scoring; two in a row do', async () => {
+    const failing = async () => { throw new Error('502'); };
+    const first = await transcribeHandsFreeTurn({ scoringStrikes: 0, score: failing, transcribe: async () => PLAIN });
+    expect(first.scoringStrikes).toBeLessThan(MAX_SCORING_STRIKES);
+    const second = await transcribeHandsFreeTurn({ scoringStrikes: first.scoringStrikes, score: failing, transcribe: async () => PLAIN });
+    expect(second.scoringStrikes).toBe(MAX_SCORING_STRIKES);
+  });
+
+  it('a safety-rejected transcript grades as empty rather than being re-transcribed', async () => {
+    // The plain path would hand back the very text the server declined to
+    // echo. Empty grades as low_confidence, and the card is asked again.
+    const transcribe = jest.fn().mockResolvedValue(PLAIN);
+    const r = await transcribeHandsFreeTurn({
+      scoringStrikes: 0,
+      score: async () => ({ transcription: TRANSCRIPTION_UNAVAILABLE }),
+      transcribe,
+    });
+    expect(r.transcript.text).toBe('');
+    expect(r.transcript.scored).toBe(true);
+    expect(transcribe).not.toHaveBeenCalled();
+    expect(evaluateHandsFreeAnswer(input({ transcript: r.transcript.text }))).toEqual({
+      kind: 'low_confidence',
+      reason: 'empty',
+    });
+  });
+
+  it('a scored turn with no confidence signal is graded at neutral confidence', async () => {
+    // score-pronunciation reports no per-segment probabilities, so a scored
+    // turn cannot trip the low-confidence gate on signal alone. That is a
+    // known cost of getting the evidence; the score itself is the stronger
+    // read on whether the card was said correctly.
+    const r = await transcribeHandsFreeTurn({
+      scoringStrikes: 0,
+      score: async () => ({ transcription: 'la manzana' }),
+      transcribe: async () => PLAIN,
+    });
+    const confidence = sttConfidence({
+      noSpeechProb: r.transcript.noSpeechProb,
+      avgLogprob: r.transcript.avgLogprob,
+      transcript: r.transcript.text,
+      speechDurationMs: 800,
+    });
+    expect(confidence).toBe(NEUTRAL_CONFIDENCE);
+    expect(confidence).toBeGreaterThanOrEqual(HANDSFREE_MIN_CONFIDENCE);
   });
 });

@@ -15,8 +15,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { haptic } from '../../lib/haptics';
-import { GLASS_HIGHLIGHT } from '../../config/gradients';
-import { colors } from '../../config/theme';
+import { useUi2Theme, type Ui2Theme } from '../../hooks/useUi2Theme';
 import type { ReactNode } from 'react';
 
 // ---------------------------------------------------------------------------
@@ -28,7 +27,9 @@ type GlassVariant = 'subtle' | 'default' | 'elevated';
 interface VariantConfig {
   fillColor: string;
   borderWidth: number;
+  borderBottomWidth: number;
   borderColor: string;
+  highlightColor: string;
   highlightOpacity: number;
   shadowOpacity: number;
   shadowRadius: number;
@@ -48,42 +49,56 @@ export interface GlassCardProps {
 }
 
 // ---------------------------------------------------------------------------
-// Variant presets — opaque under the Dark Glow theme.
+// Variant presets — UI 2.0 slabs.
 //
 // The three variants used to differ by fill ALPHA (0.25 / 0.35 / 0.45), which
-// only worked over a busy video background. Now they differ by surface step and
-// border weight: subtle sits flush, default is the standard card, elevated
-// borrows border.strong. Sheen and drop shadows are gone — the deck is flat and
-// depth comes from the glow layer. `highlightOpacity` is retained in the API
-// (and used for the press-state flash) so call sites keep compiling.
+// only worked over a busy video background; then, under Dark Glow, by surface
+// step and border weight. Under UI 2.0 they differ by GROUND and EDGE: `subtle`
+// sits flush (border-weight bottom edge, no slab), `default` is the standard
+// slab card, `elevated` takes the second ground step under the same slab.
+//
+// The press flash is a `primaryTint` wash rather than the old white sheen. A
+// white overlay is invisible on a white card, which is exactly the light-mode
+// failure this migration exists to remove; the accent tint reads in both
+// schemes. `highlightOpacity` is retained in the API (and still drives that
+// flash) so call sites keep compiling.
 // ---------------------------------------------------------------------------
 
-const VARIANTS: Record<GlassVariant, VariantConfig> = {
-  subtle: {
-    fillColor: colors.surface.card,
-    borderWidth: 1,
-    borderColor: colors.border.subtle,
-    highlightOpacity: 0,
-    shadowOpacity: 0,
-    shadowRadius: 0,
-  },
-  default: {
-    fillColor: colors.surface.card,
-    borderWidth: 1,
-    borderColor: colors.border.default,
-    highlightOpacity: 0,
-    shadowOpacity: 0,
-    shadowRadius: 0,
-  },
-  elevated: {
-    fillColor: colors.surface.cardAlt,
-    borderWidth: 1,
-    borderColor: colors.border.strong,
-    highlightOpacity: 0,
-    shadowOpacity: 0,
-    shadowRadius: 0,
-  },
-};
+const variantConfig = (
+  c: Ui2Theme['c'],
+  shape: Ui2Theme['shape'],
+): Record<GlassVariant, VariantConfig> => ({
+    subtle: {
+      fillColor: c.card,
+      borderWidth: shape.border,
+      borderBottomWidth: shape.border,
+      borderColor: c.cardBorder,
+      highlightColor: c.primaryTint,
+      highlightOpacity: 0,
+      shadowOpacity: 0,
+      shadowRadius: 0,
+    },
+    default: {
+      fillColor: c.card,
+      borderWidth: shape.border,
+      borderBottomWidth: shape.slab,
+      borderColor: c.cardBorder,
+      highlightColor: c.primaryTint,
+      highlightOpacity: 0,
+      shadowOpacity: 0,
+      shadowRadius: 0,
+    },
+    elevated: {
+      fillColor: c.surface2,
+      borderWidth: shape.border,
+      borderBottomWidth: shape.slab,
+      borderColor: c.primaryTintBorder,
+      highlightColor: c.primaryTint,
+      highlightOpacity: 0,
+      shadowOpacity: 0,
+      shadowRadius: 0,
+    },
+});
 
 // ---------------------------------------------------------------------------
 // Component
@@ -101,7 +116,8 @@ export function GlassCard({
   accessibilityLabel,
   accessibilityRole,
 }: GlassCardProps) {
-  const cfg = VARIANTS[variant];
+  const { c, shape } = useUi2Theme();
+  const cfg = variantConfig(c, shape)[variant];
   const highlight = highlightOpacity ?? cfg.highlightOpacity;
 
   // --- Press animation (Reanimated) ---
@@ -135,7 +151,7 @@ export function GlassCard({
   const shadowStyle: ViewStyle =
     cfg.shadowOpacity > 0
       ? {
-          shadowColor: '#000',
+          shadowColor: cfg.borderColor,
           shadowOffset: { width: 0, height: 4 },
           shadowOpacity: cfg.shadowOpacity,
           shadowRadius: cfg.shadowRadius,
@@ -150,7 +166,7 @@ export function GlassCard({
       accessibilityLabel={accessibilityLabel}
       accessibilityRole={accessibilityRole ?? (pressable ? 'button' : undefined)}
     >
-      {/* Layer 1 — Translucent fill + border */}
+      {/* Layer 1 — fill + border */}
       <View
         style={[
           StyleSheet.absoluteFill,
@@ -158,6 +174,7 @@ export function GlassCard({
             backgroundColor: cfg.fillColor,
             borderRadius,
             borderWidth: cfg.borderWidth,
+            borderBottomWidth: cfg.borderBottomWidth,
             borderColor: cfg.borderColor,
           },
         ]}
@@ -170,7 +187,7 @@ export function GlassCard({
       {pressable && (
         <Animated.View style={[StyleSheet.absoluteFill, animatedHighlight]} pointerEvents="none">
           <LinearGradient
-            colors={[...GLASS_HIGHLIGHT]}
+            colors={[cfg.highlightColor, 'transparent']}
             start={{ x: 0.5, y: 0 }}
             end={{ x: 0.5, y: 0.4 }}
             style={[StyleSheet.absoluteFill, { borderRadius }]}

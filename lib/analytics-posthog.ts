@@ -14,6 +14,7 @@
 import Constants from 'expo-constants';
 import PostHog from 'posthog-react-native';
 import { setAnalyticsProvider, type AnalyticsProvider } from './analytics';
+import { resolvePostHogEnvironment } from './analytics-environment';
 
 let client: PostHog | null = null;
 
@@ -32,16 +33,23 @@ function appVersion(): string {
 export function startAnalytics(): boolean {
   if (client) return true;
 
-  const key = process.env.EXPO_PUBLIC_POSTHOG_KEY;
-  const host = process.env.EXPO_PUBLIC_POSTHOG_HOST ?? 'https://us.i.posthog.com';
-  if (!key) {
-    if (__DEV__) console.log('[analytics] no EXPO_PUBLIC_POSTHOG_KEY — staying a no-op');
+  const environment = resolvePostHogEnvironment({
+    appEnvironment: process.env.EXPO_PUBLIC_APP_ENV,
+    productionKey: process.env.EXPO_PUBLIC_POSTHOG_KEY,
+    nonProductionKey: process.env.EXPO_PUBLIC_POSTHOG_NON_PRODUCTION_KEY,
+    productionHost: process.env.EXPO_PUBLIC_POSTHOG_HOST,
+    nonProductionHost: process.env.EXPO_PUBLIC_POSTHOG_NON_PRODUCTION_HOST,
+  });
+  if (!environment) {
+    if (__DEV__) {
+      console.log('[analytics] no key for this app environment — staying a no-op');
+    }
     return false;
   }
 
   try {
-    client = new PostHog(key, {
-      host,
+    client = new PostHog(environment.key, {
+      host: environment.host,
       // App open/close/update. Cheap, and it is what makes retention curves
       // work without instrumenting anything.
       // No autocapture: on React Native it is weak, it fights expo-router's
@@ -50,14 +58,9 @@ export function startAnalytics(): boolean {
       captureAppLifecycleEvents: true,
     });
 
-    // Stamp every event with whether it came from a development build.
-    //
-    // Dev events are NOT dropped: verifying that instrumentation actually
-    // fires is most of the value of having analytics at all, and you cannot
-    // verify what you refuse to send. Instead they are marked, and the
-    // project's test-account filter excludes them from real numbers — so a
-    // developer opening the app twenty times does not read as an engaged user
-    // and quietly inflate every retention curve.
+    // Stamp every event with its explicitly selected environment. Production
+    // and non-production keys never fall back to each other above, so this is
+    // diagnostic context rather than the only barrier protecting live data.
     //
     // `register` is ASYNC and persists to storage. Fired and forgotten, a
     // rejection here is silent — which is exactly what happened the first time
@@ -65,8 +68,11 @@ export function startAnalytics(): boolean {
     // still used, because super properties are the only way to reach events
     // the SDK captures itself (app lifecycle, $identify) which never pass
     // through the wrapper below.
-    void client.register({ isDevBuild: __DEV__ }).catch((err) => {
-      console.warn('[analytics] register failed — dev events will not be filtered:', err);
+    void client.register({
+      appEnvironment: environment.appEnvironment,
+      isDevBuild: environment.appEnvironment !== 'production',
+    }).catch((err) => {
+      console.warn('[analytics] environment registration failed:', err);
     });
 
     const provider: AnalyticsProvider = {
@@ -81,7 +87,8 @@ export function startAnalytics(): boolean {
         client?.capture(event, {
           ...properties,
           appVersion: appVersion(),
-          isDevBuild: __DEV__,
+          appEnvironment: environment.appEnvironment,
+          isDevBuild: environment.appEnvironment !== 'production',
         } as Record<string, string | number | boolean>);
       },
       identify: (userId, traits) => {

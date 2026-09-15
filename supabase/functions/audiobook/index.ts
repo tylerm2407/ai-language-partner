@@ -26,6 +26,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, corsResponse } from '../_shared/cors.ts';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { checkBurstLimit } from '../_shared/burst-limit.ts';
+import { resolveEntitlement } from '../_shared/entitlement.ts';
 import { isValidUUID } from '../_shared/validation.ts';
 import { synthesizeSpeech } from '../_shared/tts-synth.ts';
 import { segmentBook, segmentText, type Segment } from './segment.ts';
@@ -205,6 +206,35 @@ async function handlePlay(
     return json({ error: 'Too many new tracks at once. Try again shortly.', code: 'RATE_LIMITED' }, 429);
   }
 
+  // ── Daily ceiling on RENDERS ────────────────────────────────────────────
+  // Migration 103 added `audiobook_chapters` / `dailyAudiobookChapters` for
+  // this and the function never called it: the burst limit alone allowed
+  // ~1,700 fresh segments a day from one account, each a paid fish call.
+  // Playing something already rendered stays free — it costs nothing.
+  const { limits } = await resolveEntitlement(supabase, userId);
+  const { data: renderQuotaOk, error: renderQuotaErr } = await supabase.rpc('consume_daily_quota', {
+    p_user_id: userId,
+    p_counter: 'audiobook_chapters',
+    p_limit: limits.dailyAudiobookChapters,
+  });
+  if (renderQuotaErr) {
+    // Fail CLOSED: an outage in the meter is not a reason to render unmetered.
+    console.error('[audiobook] consume_daily_quota failed:', renderQuotaErr.message);
+    return json({ error: 'Narration is unavailable right now.', code: 'QUOTA_UNAVAILABLE' }, 503);
+  }
+  if (renderQuotaOk !== true) {
+    return json(
+      { error: "That's all the new narration for today. Anything already narrated still plays.", code: 'DAILY_AUDIOBOOK_LIMIT_REACHED' },
+      429,
+    );
+  }
+  /** Give the unit back when the provider, not the learner, failed. The text
+   *  is a library book, so an output rejection cannot be learner-driven. */
+  const refundRender = async (): Promise<void> => {
+    const { error } = await supabase.rpc('refund_daily_quota', { p_user_id: userId, p_counter: 'audiobook_chapters' });
+    if (error) console.error('[audiobook] refund_daily_quota failed:', error.message);
+  };
+
   // Claim it, so two listeners reaching the same segment do not both pay.
   const { error: claimError } = await supabase.from('book_audio').upsert(
     {
@@ -219,6 +249,7 @@ async function handlePlay(
   );
   if (claimError) {
     console.error('[audiobook] claim failed:', claimError.message);
+    await refundRender();
     return json({ error: 'Could not start narration.', code: 'RENDER_FAILED' }, 502);
   }
 
@@ -229,6 +260,7 @@ async function handlePlay(
       .update({ status: 'failed' })
       .eq('book_id', bookId)
       .eq('segment_index', index);
+    await refundRender();
     return json({ error: 'Nothing to narrate in this segment.', code: 'EMPTY_SEGMENT' }, 422);
   }
 
@@ -267,6 +299,7 @@ async function handlePlay(
       .eq('book_id', bookId)
       .eq('segment_index', index);
     console.error('[audiobook] synthesis failed:', (err as Error).message);
+    await refundRender();
     return json({ error: 'Narration is unavailable right now.', code: 'RENDER_UNAVAILABLE' }, 503);
   }
 }

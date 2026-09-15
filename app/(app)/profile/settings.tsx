@@ -1,14 +1,23 @@
-import { useState } from 'react';
-import { View, Text, Pressable, ScrollView, TextInput, Alert, Linking, KeyboardAvoidingView, Platform } from 'react-native';
+import { useEffect, useState } from 'react';
+import { View, Text, Pressable, ScrollView, Alert, Linking, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useSafeBack } from '../../../hooks/useSafeBack';
+import { useRouter } from 'expo-router';
+import { useOfflinePacks } from '../../../hooks/useOfflinePacks';
+import { formatBytes } from '../../../lib/offline-packs';
 import { Ionicons } from '@expo/vector-icons';
 import { useProfile } from '../../../hooks/useProfile';
 import { useAuth } from '../../../hooks/useAuth';
-import { Button } from '../../../components/ui/Button';
-import { GradientBackground } from '../../../components/ui/GradientBackground';
-import { colors } from '../../../config/theme';
+import { SlabButton } from '../../../components/ui2/SlabButton';
+import { Ui2Header } from '../../../components/ui2/Ui2Header';
+import { Ui2Input } from '../../../components/ui2/Ui2Input';
+import { Ui2ListRow } from '../../../components/ui2/Ui2ListRow';
+// `colors` is deliberately NOT imported: it is the fixed DARK palette, and a
+// screen that reads it stays dark whatever the phone is set to. `spacing` and
+// `radii` are plain scheme-independent numbers.
+import { useUi2Theme } from '../../../hooks/useUi2Theme';
+import { radii, spacing } from '../../../config/theme';
 import { SUPPORTED_LANGUAGES, DAILY_GOALS } from '../../../config/app';
 import { supabase } from '../../../lib/supabase';
 import { getTargetLanguage } from '../../../lib/language';
@@ -17,7 +26,28 @@ import { getHapticsEnabled, setHapticsEnabled, haptic } from '../../../lib/hapti
 import { revokeAllAiConsent } from '../../../lib/ai-consent';
 import { cefrBandForProficiencyLevel } from '../../../lib/cefr-proficiency';
 import { cefrCanDo } from '../../../lib/cefr-labels';
+import { fetchCourses } from '../../../lib/supabase-queries';
+import {
+  courseForBand,
+  placementAfterSettingsChange,
+  settingsNeedsPlacementConfirm,
+  type SettingsPlacementDecision,
+} from '../../../lib/course-placement';
+import { trackEvent } from '../../../lib/analytics';
 import type { LanguageCode, ProficiencyLevel } from '../../../types';
+import { SentrySmokeTrigger } from '../../../components/debug/SentrySmokeTrigger';
+import { NotificationBuilder } from '../../../components/onboarding/NotificationBuilder';
+import {
+  DEFAULT_NOTIFICATION_PREFS,
+  loadNotificationPrefs,
+  saveNotificationPrefs,
+  type NotificationPrefs,
+} from '../../../lib/notification-prefs';
+import { syncScheduledNotifications } from '../../../hooks/useNotifications';
+import { useAppStore } from '../../../stores/useAppStore';
+
+/** Matches the `ideal_l2_self` column check (migration 028) and onboarding. */
+const IDEAL_SELF_MAX = 300;
 
 const LEVELS: { value: ProficiencyLevel; label: string }[] = [
   { value: 'beginner', label: 'Beginner' },
@@ -35,7 +65,10 @@ function levelCanDo(level: ProficiencyLevel): string {
 }
 
 export default function SettingsScreen() {
-  const goBack = useSafeBack('/(app)');
+  const { c } = useUi2Theme();
+  const goBack = useSafeBack('/(app)/profile');
+  const router = useRouter();
+  const offlinePacks = useOfflinePacks();
   const { profile, updateProfile } = useProfile();
   const { signOut, user } = useAuth();
 
@@ -45,8 +78,33 @@ export default function SettingsScreen() {
   const [targetLanguage, setTargetLanguage] = useState<LanguageCode | null>(getTargetLanguage(profile));
   const [level, setLevel] = useState<ProficiencyLevel>(profile?.level ?? 'beginner');
   const [dailyGoal, setDailyGoal] = useState(profile?.dailyGoalMinutes ?? 10);
+  // The onboarding "picture a moment" answer. Until now it was write-once: the
+  // goal-track error copy on the Learn tab has pointed learners here to
+  // rewrite it for months, at a control that did not exist.
+  const [idealSelf, setIdealSelf] = useState(profile?.idealL2Self ?? '');
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  // The reminder choices from onboarding (components/onboarding/NotificationBuilder).
+  // Device-local, not a profile column: a notification is a per-device thing.
+  // `saved` is the on-disk copy so the dirty check can compare against it.
+  const [notifPrefs, setNotifPrefs] = useState<NotificationPrefs>(DEFAULT_NOTIFICATION_PREFS);
+  const [savedNotifPrefs, setSavedNotifPrefs] = useState<NotificationPrefs>(DEFAULT_NOTIFICATION_PREFS);
+  const dailyStats = useAppStore((s) => s.dailyStats);
+  const reviewCount = useAppStore((s) => s.reviewCount);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadNotificationPrefs()
+      .then((p) => {
+        if (cancelled) return;
+        setNotifPrefs(p);
+        setSavedNotifPrefs(p);
+      })
+      .catch((err) => console.error('[settings] loadNotificationPrefs failed:', err));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Reduce motion is device-local and applies the instant it is tapped — it is
   // not part of the profile save. A user turning motion off is usually doing it
@@ -76,18 +134,98 @@ export default function SettingsScreen() {
     displayName !== (profile?.displayName ?? '') ||
     targetLanguage !== getTargetLanguage(profile) ||
     level !== profile?.level ||
-    dailyGoal !== profile?.dailyGoalMinutes;
+    dailyGoal !== profile?.dailyGoalMinutes ||
+    idealSelf.trim() !== (profile?.idealL2Self ?? '') ||
+    JSON.stringify(notifPrefs) !== JSON.stringify(savedNotifPrefs);
+
+  /**
+   * "Move your lessons too?" — asked only when the level moved and the
+   * language did not. A language change re-places without asking (the old
+   * course is in the wrong language), and a level that did not move has
+   * nothing to ask about. Wraps Alert in a promise so the save reads top to
+   * bottom.
+   */
+  const confirmPlacementMove = (hasCourseAtBand: boolean) =>
+    new Promise<SettingsPlacementDecision>((resolve) => {
+      const band = cefrBandForProficiencyLevel(level);
+      const startsAt = profile?.placementBand ? ` Your lessons currently start at ${profile.placementBand}.` : '';
+      if (!hasCourseAtBand) {
+        Alert.alert(
+          `No ${band} lesson path yet`,
+          `${cefrCanDo(band)}. Lessons run A1 to B2 today.${startsAt}`,
+          [
+            { text: 'Keep my lessons', onPress: () => resolve('keep') },
+            { text: 'Lessons off: reading, chat, tutor', onPress: () => resolve('none') },
+          ],
+          { cancelable: true, onDismiss: () => resolve('keep') },
+        );
+        return;
+      }
+      Alert.alert(
+        `Move your lessons to ${band} too?`,
+        `${cefrCanDo(band)}.${startsAt}`,
+        [
+          { text: 'Just the level', onPress: () => resolve('keep') },
+          { text: 'Move lessons', onPress: () => resolve('move') },
+        ],
+        { cancelable: true, onDismiss: () => resolve('keep') },
+      );
+    });
 
   const handleSave = async () => {
     setSaving(true);
     try {
+      // Lesson path placement (migration 125) travels in the same write as the
+      // level and language, so the guard trigger sees the pointer and the
+      // language together.
+      let placement: ReturnType<typeof placementAfterSettingsChange> = null;
+      const nextLanguage = targetLanguage ?? profile?.targetLanguage ?? null;
+      if (profile && nextLanguage && (level !== profile.level || nextLanguage !== profile.targetLanguage)) {
+        const courses = await fetchCourses(nextLanguage);
+        let decision: SettingsPlacementDecision = 'move';
+        if (settingsNeedsPlacementConfirm(profile.level, level, profile.targetLanguage, nextLanguage)) {
+          const hasCourseAtBand = courseForBand(courses, cefrBandForProficiencyLevel(level)) !== null;
+          decision = await confirmPlacementMove(hasCourseAtBand);
+        }
+        placement = placementAfterSettingsChange({
+          previous: profile,
+          nextLevel: level,
+          nextLanguage,
+          courses,
+          decision,
+        });
+        if (placement) {
+          trackEvent('course_placement_set', {
+            screen: 'settings',
+            source: decision === 'none' ? 'none' : 'start',
+            band: placement.placementBand,
+            language: nextLanguage,
+          });
+        }
+      }
+
       await updateProfile({
         displayName: displayName.trim() || undefined,
         // Only write the language when one is actually selected.
         ...(targetLanguage ? { targetLanguage } : {}),
         level,
         dailyGoalMinutes: dailyGoal,
+        // Empty clears it: a learner is allowed to have no stated goal, and the
+        // reminder and hero copy fall back to their generic lines.
+        idealL2Self: idealSelf.trim() || null,
+        ...(placement ?? {}),
       });
+      // Reminders are re-armed here rather than waiting for the next
+      // foreground, so a changed time takes effect the moment Save lands.
+      await saveNotificationPrefs(notifPrefs);
+      await syncScheduledNotifications({
+        prefs: notifPrefs,
+        minutesToday: dailyStats?.minutesPracticed ?? 0,
+        goalMinutes: dailyGoal,
+        dueCount: reviewCount,
+        idealL2Self: idealSelf.trim() || null,
+        band: cefrBandForProficiencyLevel(level),
+      }).catch((err) => console.error('[settings] syncScheduledNotifications failed:', err));
       goBack();
     } catch {
       Alert.alert('Error', 'Failed to save settings. Please try again.');
@@ -97,15 +235,9 @@ export default function SettingsScreen() {
   };
 
   return (
-    <GradientBackground>
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
     <SafeAreaView className="flex-1">
-      {/* Header */}
-      <View className="flex-row items-center px-4 py-3 border-b border-dark-border">
-        <Pressable onPress={() => goBack()} accessibilityRole="button" accessibilityLabel="Go back">
-          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
-        </Pressable>
-        <Text className="text-lg font-semibold text-text-primary ml-3">Settings</Text>
-      </View>
+      <Ui2Header title="Settings" onBack={() => goBack()} />
 
       <KeyboardAvoidingView
         className="flex-1"
@@ -117,101 +249,152 @@ export default function SettingsScreen() {
         keyboardShouldPersistTaps="handled"
       >
         {/* Display Name */}
-        <Text className="text-sm font-semibold text-text-secondary mb-2 uppercase tracking-wide">Display Name</Text>
-        <TextInput
-          className="bg-dark-card-alt rounded-[14px] px-4 py-4 text-base text-text-primary border border-border-input mb-6"
+        <Text className="text-sm font-semibold mb-2 uppercase tracking-wide" style={{ color: c.muted }}>Display Name</Text>
+        <Ui2Input
+          containerStyle={{ marginBottom: spacing.lg }}
           value={displayName}
           onChangeText={setDisplayName}
           placeholder="Your name"
-          placeholderTextColor={colors.text.quaternary}
           autoCapitalize="words"
           accessibilityLabel="Display name"
         />
 
         {/* Target Language */}
-        <Text className="text-sm font-semibold text-text-secondary mb-2 uppercase tracking-wide">Target Language</Text>
+        <Text className="text-sm font-semibold mb-2 uppercase tracking-wide" style={{ color: c.muted }}>Target Language</Text>
         <View className="mb-6">
           {SUPPORTED_LANGUAGES.map((lang) => (
             <Pressable
               key={lang.code}
-              className={`p-4 rounded-2xl mb-2 flex-row items-center ${
-                targetLanguage === lang.code
-                  ? 'bg-primary-tint border-2 border-primary'
-                  : 'bg-dark-card border-2 border-transparent'
-              }`}
+              className="p-4 rounded-2xl mb-2 flex-row items-center"
+              style={{
+                borderWidth: 2,
+                backgroundColor: targetLanguage === lang.code ? c.primaryTint : c.card,
+                borderColor: targetLanguage === lang.code ? c.primary : c.cardBorder,
+              }}
               onPress={() => setTargetLanguage(lang.code as LanguageCode)}
               accessibilityRole="button"
               accessibilityState={{ selected: targetLanguage === lang.code }}
             >
               <Text className="text-xl mr-3">{lang.flag}</Text>
-              <Text className="text-base font-semibold text-text-primary">{lang.name}</Text>
+              <Text className="text-base font-semibold" style={{ color: c.ink }}>{lang.name}</Text>
               {targetLanguage === lang.code && (
-                <Ionicons name="checkmark-circle" size={20} color={colors.league.diamond} style={{ marginLeft: 'auto' }} />
+                <Ionicons name="checkmark-circle" size={20} color={c.onTint} style={{ marginLeft: 'auto' }} />
               )}
             </Pressable>
           ))}
         </View>
 
         {/* Level */}
-        <Text className="text-sm font-semibold text-text-secondary mb-2 uppercase tracking-wide">Proficiency Level</Text>
+        <Text className="text-sm font-semibold mb-2 uppercase tracking-wide" style={{ color: c.muted }}>Proficiency Level</Text>
         <View className="mb-6">
           {LEVELS.map((l) => (
             <Pressable
               key={l.value}
-              className={`p-4 rounded-2xl mb-2 ${
-                level === l.value
-                  ? 'bg-primary-tint border-2 border-primary'
-                  : 'bg-dark-card border-2 border-transparent'
-              }`}
+              className="p-4 rounded-2xl mb-2"
+              style={{
+                borderWidth: 2,
+                backgroundColor: level === l.value ? c.primaryTint : c.card,
+                borderColor: level === l.value ? c.primary : c.cardBorder,
+              }}
               onPress={() => setLevel(l.value)}
               accessibilityRole="button"
               accessibilityLabel={`${l.label}. ${levelCanDo(l.value)}`}
               accessibilityState={{ selected: level === l.value }}
             >
-              <Text className="text-base font-semibold text-text-primary">{l.label}</Text>
-              <Text className="text-sm text-text-secondary mt-0.5 pr-8">{levelCanDo(l.value)}</Text>
+              <Text className="text-base font-semibold" style={{ color: c.ink }}>{l.label}</Text>
+              <Text className="text-sm mt-0.5 pr-8" style={{ color: c.muted }}>{levelCanDo(l.value)}</Text>
               {level === l.value && (
-                <Ionicons name="checkmark-circle" size={20} color={colors.league.diamond} style={{ position: 'absolute', right: 16, top: 16 }} />
+                <Ionicons name="checkmark-circle" size={20} color={c.onTint} style={{ position: 'absolute', right: 16, top: 16 }} />
               )}
             </Pressable>
           ))}
+          {profile?.placementBand ? (
+            /* What the "move your lessons?" confirm on Save is about. Band
+               paired with its can-do, never bare. */
+            <Text className="text-sm mt-1" style={{ color: c.muted }}>
+              Lessons start at {profile.placementBand} · {cefrCanDo(profile.placementBand)}
+            </Text>
+          ) : null}
         </View>
 
         {/* Daily Goal */}
-        <Text className="text-sm font-semibold text-text-secondary mb-2 uppercase tracking-wide">Daily Goal</Text>
+        <Text className="text-sm font-semibold mb-2 uppercase tracking-wide" style={{ color: c.muted }}>Daily Goal</Text>
         <View className="flex-row gap-2 mb-8">
           {DAILY_GOALS.map((goal) => (
             <Pressable
               key={goal}
-              className={`flex-1 py-3 rounded-[14px] items-center ${
-                dailyGoal === goal
-                  ? 'bg-primary'
-                  : 'bg-dark-card border border-dark-border'
-              }`}
+              className="flex-1 py-3 rounded-[14px] items-center"
+              style={{
+                borderWidth: 1,
+                backgroundColor: dailyGoal === goal ? c.primary : c.card,
+                borderColor: dailyGoal === goal ? c.primary : c.cardBorder,
+              }}
               onPress={() => setDailyGoal(goal)}
               accessibilityRole="button"
               accessibilityState={{ selected: dailyGoal === goal }}
             >
-              <Text className={`text-base font-semibold ${dailyGoal === goal ? 'text-white' : 'text-text-primary'}`}>
+              <Text
+                className="text-base font-semibold"
+                style={{ color: dailyGoal === goal ? c.onPrimary : c.ink }}
+              >
                 {goal}
               </Text>
-              <Text className={`text-xs ${dailyGoal === goal ? 'text-white/70' : 'text-text-tertiary'}`}>
+              <Text
+                className="text-xs"
+                style={{ color: dailyGoal === goal ? c.onPrimaryMuted : c.idle }}
+              >
                 min
               </Text>
             </Pressable>
           ))}
         </View>
 
+        {/* Your goal — the Ideal L2 Self (Dörnyei). Drives the session hero
+            line, the daily reminder and the generated goal track, so editing
+            it is the single most personal control in the app. */}
+        <Text className="text-sm font-semibold mb-2 uppercase tracking-wide" style={{ color: c.muted }}>Your Goal</Text>
+        <Ui2Input
+          containerStyle={{ marginBottom: spacing.lg }}
+          value={idealSelf}
+          onChangeText={(t) => setIdealSelf(t.slice(0, IDEAL_SELF_MAX))}
+          placeholder="Picture a moment you'd love to have in this language…"
+          helper={`${idealSelf.length}/${IDEAL_SELF_MAX} · Shapes your session line, your reminders and your goal lessons.`}
+          multiline
+          numberOfLines={3}
+          maxLength={IDEAL_SELF_MAX}
+          textAlignVertical="top"
+          inputStyle={{ minHeight: 88 }}
+          accessibilityLabel="Your goal"
+          accessibilityHint="A sentence about the moment you are learning for. Used to personalise your practice."
+        />
+
+        {/* Reminders — the same four switches the learner set in onboarding.
+            Saved with the rest of the form; nothing fires without OS permission. */}
+        <Text className="text-sm font-semibold mb-2 uppercase tracking-wide" style={{ color: c.muted }}>
+          Reminders
+        </Text>
+        <View style={{ marginBottom: spacing.lg }}>
+          <NotificationBuilder
+            compact
+            prefs={notifPrefs}
+            onChange={setNotifPrefs}
+            dailyGoalMinutes={dailyGoal}
+          />
+        </View>
+
         {/* Motion — WCAG 2.2 SC 2.2.2 (Level A) asks for a mechanism to stop
             auto-starting motion. The OS Reduce Motion switch is honored too;
             this is the in-app equivalent, and either one suppresses motion. */}
-        <Text className="text-sm font-semibold text-text-secondary mb-2 uppercase tracking-wide">
+        <Text className="text-sm font-semibold mb-2 uppercase tracking-wide" style={{ color: c.muted }}>
           Motion
         </Text>
         <Pressable
-          className={`p-4 rounded-2xl mb-6 flex-row items-center ${
-            reduceMotion ? 'bg-primary-tint border-2 border-primary' : 'bg-dark-card border-2 border-transparent'
-          }`}
+          className="p-4 rounded-2xl mb-6 flex-row items-center"
+          style={{
+            borderWidth: 2,
+            backgroundColor: reduceMotion ? c.primaryTint : c.card,
+            borderColor: reduceMotion ? c.primary : c.cardBorder,
+          }}
           onPress={toggleReduceMotion}
           accessibilityRole="switch"
           accessibilityState={{ checked: reduceMotion }}
@@ -221,13 +404,13 @@ export default function SettingsScreen() {
           <Ionicons
             name={reduceMotion ? 'checkmark-circle' : 'ellipse-outline'}
             size={24}
-            color={reduceMotion ? colors.action.accent : colors.text.tertiary}
+            color={reduceMotion ? c.onTint : c.idle}
           />
           <View className="ml-3 flex-1">
-            <Text className="text-base font-semibold text-text-primary">
+            <Text className="text-base font-semibold" style={{ color: c.ink }}>
               Reduce motion
             </Text>
-            <Text className="text-sm text-text-secondary mt-0.5">
+            <Text className="text-sm mt-0.5" style={{ color: c.muted }}>
               Stops looping and celebratory animation. Applies straight away, and
               follows your device&apos;s Reduce Motion setting as well.
             </Text>
@@ -240,13 +423,16 @@ export default function SettingsScreen() {
             phone resting on a hard desk. There is no OS-wide switch we can
             read for it the way `useMotion` reads Reduce Motion, so this is the
             only mechanism the learner has. */}
-        <Text className="text-sm font-semibold text-text-secondary mb-2 uppercase tracking-wide">
+        <Text className="text-sm font-semibold mb-2 uppercase tracking-wide" style={{ color: c.muted }}>
           Haptics
         </Text>
         <Pressable
-          className={`p-4 rounded-2xl mb-8 flex-row items-center ${
-            hapticsOn ? 'bg-primary-tint border-2 border-primary' : 'bg-dark-card border-2 border-transparent'
-          }`}
+          className="p-4 rounded-2xl mb-8 flex-row items-center"
+          style={{
+            borderWidth: 2,
+            backgroundColor: hapticsOn ? c.primaryTint : c.card,
+            borderColor: hapticsOn ? c.primary : c.cardBorder,
+          }}
           onPress={toggleHaptics}
           accessibilityRole="switch"
           accessibilityState={{ checked: hapticsOn }}
@@ -256,13 +442,13 @@ export default function SettingsScreen() {
           <Ionicons
             name={hapticsOn ? 'checkmark-circle' : 'ellipse-outline'}
             size={24}
-            color={hapticsOn ? colors.action.accent : colors.text.tertiary}
+            color={hapticsOn ? c.onTint : c.idle}
           />
           <View className="ml-3 flex-1">
-            <Text className="text-base font-semibold text-text-primary">
+            <Text className="text-base font-semibold" style={{ color: c.ink }}>
               Vibration
             </Text>
-            <Text className="text-sm text-text-secondary mt-0.5">
+            <Text className="text-sm mt-0.5" style={{ color: c.muted }}>
               Buzzes on answers, button presses and when you finish something.
               Turning this off silences all of them. Applies straight away.
             </Text>
@@ -270,41 +456,58 @@ export default function SettingsScreen() {
         </Pressable>
 
         {/* Save */}
-        <Button
+        <SlabButton
           label="Save Changes"
+          arrow={false}
           onPress={handleSave}
           loading={saving}
           disabled={!hasChanges || saving}
         />
 
+        {/* Offline downloads (Premium) */}
+        <View className="mt-10">
+          <Text className="text-sm font-semibold mb-2 uppercase tracking-wide" style={{ color: c.muted }}>Offline</Text>
+          <Ui2ListRow
+            style={{ marginBottom: spacing.sm }}
+            icon="cloud-download-outline"
+            title="Offline downloads"
+            subtitle={
+              offlinePacks.entitled
+                ? `${formatBytes(offlinePacks.totalBytes)} of ${formatBytes(offlinePacks.maxBytes)} used`
+                : 'Part of Premium — lessons, books and the news, without a connection'
+            }
+            onPress={() => router.push('/profile/downloads' as never)}
+            accessibilityLabel="Offline downloads"
+          />
+        </View>
+
         {/* Legal */}
         <View className="mt-10 mb-6">
-          <Text className="text-sm font-semibold text-text-secondary mb-2 uppercase tracking-wide">Legal</Text>
-          <Pressable
-            className="bg-dark-card rounded-2xl p-5 mb-3 flex-row items-center"
-            onPress={() => Linking.openURL('https://fluenci.com/privacy')}
-            accessibilityRole="link"
+          <Text className="text-sm font-semibold mb-2 uppercase tracking-wide" style={{ color: c.muted }}>Legal</Text>
+          <Ui2ListRow
+            style={{ marginBottom: spacing.sm }}
+            icon="shield-checkmark-outline"
+            title="Privacy Policy"
+            role="link"
+            onPress={() => Linking.openURL('https://fluenciapp.com/privacy')}
             accessibilityLabel="Privacy Policy"
-          >
-            <Ionicons name="shield-checkmark-outline" size={24} color={colors.premium.base} />
-            <Text className="text-base font-semibold text-text-primary ml-4 flex-1">Privacy Policy</Text>
-            <Ionicons name="open-outline" size={18} color={colors.correctionChip.grammar.text} />
-          </Pressable>
-          <Pressable
-            className="bg-dark-card rounded-2xl p-5 mb-3 flex-row items-center"
-            onPress={() => Linking.openURL('https://fluenci.com/terms')}
-            accessibilityRole="link"
+          />
+          <Ui2ListRow
+            style={{ marginBottom: spacing.sm }}
+            icon="document-text-outline"
+            title="Terms of Service"
+            role="link"
+            onPress={() => Linking.openURL('https://fluenciapp.com/terms')}
             accessibilityLabel="Terms of Service"
-          >
-            <Ionicons name="document-text-outline" size={24} color={colors.premium.base} />
-            <Text className="text-base font-semibold text-text-primary ml-4 flex-1">Terms of Service</Text>
-            <Ionicons name="open-outline" size={18} color={colors.correctionChip.grammar.text} />
-          </Pressable>
+          />
 
           {/* Withdrawing consent must be as easy as granting it (Apple 5.1.1(ii)),
               so it lives here rather than behind a support request. */}
-          <Pressable
-            className="bg-dark-card rounded-2xl p-5 mb-3 flex-row items-center"
+          <Ui2ListRow
+            style={{ marginBottom: spacing.sm }}
+            icon="hand-left-outline"
+            title="Withdraw AI consent"
+            subtitle="Stop sending messages and audio to our AI providers"
             onPress={() => {
               Alert.alert(
                 'Withdraw AI consent',
@@ -330,24 +533,21 @@ export default function SettingsScreen() {
                 ],
               );
             }}
-            accessibilityRole="button"
             accessibilityLabel="Withdraw AI consent"
-          >
-            <Ionicons name="hand-left-outline" size={24} color={colors.premium.base} />
-            <View className="ml-4 flex-1">
-              <Text className="text-base font-semibold text-text-primary">Withdraw AI consent</Text>
-              <Text className="text-sm text-text-tertiary mt-0.5">
-                Stop sending messages and audio to our AI providers
-              </Text>
-            </View>
-          </Pressable>
+          />
         </View>
 
         {/* Delete Account */}
         <View className="mb-4">
-          <Text className="text-sm font-semibold text-text-secondary mb-2 uppercase tracking-wide">Danger Zone</Text>
+          <Text className="text-sm font-semibold mb-2 uppercase tracking-wide" style={{ color: c.muted }}>Danger Zone</Text>
           <Pressable
-            className="bg-error-bg py-4 rounded-[14px] items-center"
+            className="py-4 items-center"
+            style={{
+              borderRadius: radii.lg,
+              borderWidth: 2,
+              backgroundColor: c.pinkTint,
+              borderColor: c.error,
+            }}
             disabled={deleting}
             onPress={() => {
               Alert.alert(
@@ -422,14 +622,15 @@ export default function SettingsScreen() {
             accessibilityRole="button"
             accessibilityLabel="Delete account"
           >
-            <Text className="text-error-dark text-base font-semibold">
+            <Text className="text-base font-semibold" style={{ color: c.error }}>
               {deleting ? 'Deleting...' : 'Delete Account'}
             </Text>
           </Pressable>
         </View>
+        <SentrySmokeTrigger />
       </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
-    </GradientBackground>
+    </View>
   );
 }

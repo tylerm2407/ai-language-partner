@@ -10,7 +10,8 @@
  * Two separate consents, because they are different disclosures with different
  * sensitivity:
  *   'text'  — typed messages and writing go to Anthropic
- *   'voice' — the raw recording goes to OpenAI for transcription
+ *   'voice' — microphone audio/live conversation or a selected avatar photo
+ *             goes to OpenAI
  *
  * They are deliberately independent. Declining voice must leave text chat fully
  * working: 5.1.1(ii) forbids making paid functionality depend on granting access
@@ -32,8 +33,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
  * not consent to the new one.
  *
  * v1 — Anthropic (text), OpenAI (audio + photos).
+ * v2 — explicitly names live tutoring, moderation, and retained derivatives.
  */
-export const AI_CONSENT_VERSION = 1;
+export const AI_CONSENT_VERSION = 2;
 
 export type AiConsentKind = 'text' | 'voice';
 
@@ -139,7 +141,7 @@ export const AI_CONSENT_COPY: Record<AiConsentKind, AiConsentCopy> = {
       'Your tutor is an AI. To write replies, what you type is sent to our AI provider.',
     points: [
       'Your messages are sent to Anthropic, which generates the tutor’s replies.',
-      'Anthropic does not use your messages to train their models.',
+      'Fluenci does not use your messages to train models. Anthropic processes them under its commercial API terms.',
       'Your conversation is saved to your account so you can pick up where you left off, and deleting your account deletes it.',
       'Please don’t type anything you wouldn’t want stored — passwords, card numbers, or anyone else’s personal details.',
     ],
@@ -149,14 +151,14 @@ export const AI_CONSENT_COPY: Record<AiConsentKind, AiConsentCopy> = {
       'No problem. Lessons, reviews and reading all work without this — you just won’t be able to use the AI tutor.',
   },
   voice: {
-    title: 'Before you use your microphone',
+    title: 'Before you use voice or photos with AI',
     intro:
-      'To understand what you say, your recording is sent off your device to be turned into text.',
+      'Voice sessions and selected avatar photos are processed by our AI provider only after you agree.',
     points: [
-      'Your recording is sent to OpenAI, which converts your speech to text.',
-      'OpenAI does not use your audio to train their models, and does not retain it.',
+      'Your recording, live voice-session content, or selected photo is sent to OpenAI. Audio is used for transcription or live tutoring; a photo is used only to create the avatar you requested.',
+      'Fluenci does not use this content to train models. OpenAI processes it under its commercial API terms and may also check text for safety.',
       'We do not create voiceprints, and we never use your voice to identify or authenticate you.',
-      'Only the text of what you said is saved to your account — the audio itself is not stored on our servers.',
+      'Fluenci does not store raw microphone audio after processing. A transcript, speaking score, generated avatar, or tutor debrief may be saved with your account.',
       'Recording only ever happens when you tap or hold the mic. Nothing is captured in the background.',
     ],
     agreeLabel: 'I agree — enable microphone',

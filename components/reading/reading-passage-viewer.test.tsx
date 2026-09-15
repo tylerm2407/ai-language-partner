@@ -1,8 +1,17 @@
 import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ReadingPassageViewer } from './ReadingPassageViewer';
 import type { ReadingPassage } from '../../types';
 
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  __esModule: true,
+  default: {
+    setItem: jest.fn(async () => {}),
+    getItem: jest.fn(async () => null),
+    removeItem: jest.fn(async () => {}),
+  },
+}));
 jest.mock('../../lib/haptics', () => ({ haptic: jest.fn() }));
 jest.mock('../audio/AudioPlayButton', () => ({ AudioPlayButton: () => null }));
 
@@ -15,10 +24,17 @@ function passage(overrides: Partial<ReadingPassage> = {}): ReadingPassage {
   };
 }
 
+const METRICS = {
+  frame: { x: 0, y: 0, width: 402, height: 874 },
+  insets: { top: 59, left: 0, right: 0, bottom: 34 },
+};
+
 function render(props: { passage?: ReadingPassage; language?: string | null } = {}) {
   let tree!: TestRenderer.ReactTestRenderer;
   act(() => {
     tree = TestRenderer.create(
+      // The viewer reads safe-area insets since UI 2.0, so it needs a provider.
+      <SafeAreaProvider initialMetrics={METRICS}>
       <ReadingPassageViewer
         passage={props.passage ?? passage()}
         language={props.language}
@@ -32,7 +48,8 @@ function render(props: { passage?: ReadingPassage; language?: string | null } = 
         onAddToReview={jest.fn()}
         onContinue={jest.fn()}
         onExit={jest.fn()}
-      />,
+      />
+      </SafeAreaProvider>,
     );
   });
   return tree;

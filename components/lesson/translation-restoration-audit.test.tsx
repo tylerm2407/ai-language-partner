@@ -4,6 +4,14 @@ import { TextInput } from 'react-native';
 import { TranslationExercise } from './TranslationExercise';
 import type { Exercise } from '../../types';
 
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  __esModule: true,
+  default: {
+    setItem: jest.fn(async () => {}),
+    getItem: jest.fn(async () => null),
+    removeItem: jest.fn(async () => {}),
+  },
+}));
 jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Ionicons' }));
 jest.mock('../../lib/haptics', () => ({ haptic: jest.fn() }));
 // TranslationExercise now reaches lib/ai (the semantic grader); keep the

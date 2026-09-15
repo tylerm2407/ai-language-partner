@@ -7,6 +7,14 @@ import { haptic } from '../../lib/haptics';
 import { ReportContentSheet } from '../ui/ReportContentSheet';
 import type { WritingPrompt, WritingFeedback } from '../../types';
 
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  __esModule: true,
+  default: {
+    setItem: jest.fn(async () => {}),
+    getItem: jest.fn(async () => null),
+    removeItem: jest.fn(async () => {}),
+  },
+}));
 jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Ionicons' }));
 jest.mock('../../lib/haptics', () => ({ haptic: jest.fn() }));
 jest.mock('../ui/ReportContentSheet', () => ({ ReportContentSheet: () => null }));

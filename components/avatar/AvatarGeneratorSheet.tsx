@@ -2,12 +2,13 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Sheet } from '../ui/Sheet';
+import { AvatarCameraView } from './AvatarCameraView';
 import { Body, Caption } from '../ui/Text';
-import { colors, radii, spacing } from '../../config/theme';
+import { radii, spacing, ui2Dark, ui2Light, type Ui2Palette } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import {
   AVATAR_STYLE_OPTIONS,
   AvatarGenerationError,
-  capturePhoto,
   fetchAvatarStyles,
   generateAvatar,
   pickFile,
@@ -23,9 +24,17 @@ interface AvatarGeneratorSheetProps {
   onGenerated: (path: string) => void;
   /** Invoked when the user is on a free plan and taps through to upgrade. */
   onUpgrade?: () => void;
+  /**
+   * DEFERRED mode. When set, the sheet stops after the photo and style are
+   * chosen and hands them back instead of generating, so the CALLER owns the
+   * wait — `app/(app)/identity-setup.tsx` draws full-screen with Sol rather
+   * than inside this sheet. Consent is unchanged: the photo still goes to the
+   * provider, from the caller.
+   */
+  onPhotoReady?: (photo: PreparedPhoto, styleKey: string) => void;
 }
 
-type Step = 'consent' | 'compose' | 'working';
+type Step = 'consent' | 'compose' | 'camera' | 'working';
 
 /**
  * Photo-to-avatar flow.
@@ -34,9 +43,16 @@ type Step = 'consent' | 'compose' | 'working';
  * image model, and Apple requires that be disclosed and agreed to before the
  * data is transmitted, not buried in a policy document. The user cannot reach
  * the camera without passing through it.
+ *
+ * The camera step is in-app (`AvatarCameraView`): the sheet stays on screen
+ * and the live preview renders inside it, so the learner never leaves for the
+ * system camera. Library and Files still use the system pickers, which iOS
+ * already presents in-app.
  */
 export const AvatarGeneratorSheet = React.memo(
-  ({ visible, onClose, onGenerated, onUpgrade }: AvatarGeneratorSheetProps) => {
+  ({ visible, onClose, onGenerated, onUpgrade, onPhotoReady }: AvatarGeneratorSheetProps) => {
+    const { c, scheme } = useUi2Theme();
+    const styles = STYLES[scheme];
     const [step, setStep] = useState<Step>('consent');
     const [styleOptions, setStyleOptions] = useState<AvatarStyleOption[]>(AVATAR_STYLE_OPTIONS);
     const [styleKey, setStyleKey] = useState(AVATAR_STYLE_OPTIONS[0]?.key ?? '');
@@ -46,7 +62,9 @@ export const AvatarGeneratorSheet = React.memo(
     // iOS cannot present the native image picker while a React Native <Modal>
     // is on screen (Sheet renders inside one) — the picker has no view
     // controller to present from and the call fails silently. So the sheet is
-    // unmounted for the duration of the pick and restored afterwards.
+    // unmounted for the duration of the pick and restored afterwards. The
+    // camera does not need this: it is a view inside the sheet, not a
+    // presented controller.
     const [picking, setPicking] = useState(false);
 
     useEffect(() => {
@@ -81,18 +99,14 @@ export const AvatarGeneratorSheet = React.memo(
       };
     }, [visible]);
 
-    const choose = useCallback(async (source: 'camera' | 'library' | 'file') => {
+    const choose = useCallback(async (source: 'library' | 'file') => {
       setError(null);
+      setStep('compose');
       setPicking(true);
       // Let the modal dismissal actually land before the picker is presented.
       await new Promise((resolve) => setTimeout(resolve, 300));
       try {
-        const picked =
-          source === 'camera'
-            ? await capturePhoto()
-            : source === 'file'
-              ? await pickFile()
-              : await pickPhoto();
+        const picked = source === 'file' ? await pickFile() : await pickPhoto();
         if (picked) setPhoto(picked);
       } catch (err) {
         setError(
@@ -107,6 +121,11 @@ export const AvatarGeneratorSheet = React.memo(
 
     const run = useCallback(async () => {
       if (!photo) return;
+      if (onPhotoReady) {
+        onPhotoReady(photo, styleKey);
+        onClose();
+        return;
+      }
       setStep('working');
       setError(null);
       setNeedsUpgrade(false);
@@ -123,7 +142,7 @@ export const AvatarGeneratorSheet = React.memo(
           setError('Avatar generation failed. Please try again.');
         }
       }
-    }, [photo, styleKey, onGenerated, onClose]);
+    }, [photo, styleKey, onGenerated, onClose, onPhotoReady]);
 
     return (
       <Sheet
@@ -208,17 +227,20 @@ export const AvatarGeneratorSheet = React.memo(
                     accessible
                     accessibilityLabel="No photo selected"
                   >
-                    <Ionicons name="person-outline" size={32} color={colors.text.quaternary} />
+                    <Ionicons name="person-outline" size={32} color={c.idle} />
                   </View>
                 )}
                 <View style={styles.photoActions}>
                   <Pressable
                     style={styles.choiceButton}
-                    onPress={() => choose('camera')}
+                    onPress={() => {
+                      setError(null);
+                      setStep('camera');
+                    }}
                     accessibilityRole="button"
                     accessibilityLabel="Take a photo"
                   >
-                    <Ionicons name="camera-outline" size={18} color={colors.text.primary} />
+                    <Ionicons name="camera-outline" size={18} color={c.ink} />
                     <Body style={styles.choiceButtonText}>Take photo</Body>
                   </Pressable>
                   <Pressable
@@ -227,7 +249,7 @@ export const AvatarGeneratorSheet = React.memo(
                     accessibilityRole="button"
                     accessibilityLabel="Choose a photo"
                   >
-                    <Ionicons name="images-outline" size={18} color={colors.text.primary} />
+                    <Ionicons name="images-outline" size={18} color={c.ink} />
                     <Body style={styles.choiceButtonText}>Choose photo</Body>
                   </Pressable>
                   <Pressable
@@ -237,7 +259,7 @@ export const AvatarGeneratorSheet = React.memo(
                     accessibilityLabel="Upload a file"
                     accessibilityHint="Pick an image from Files, iCloud Drive, or another provider"
                   >
-                    <Ionicons name="folder-outline" size={18} color={colors.text.primary} />
+                    <Ionicons name="folder-outline" size={18} color={c.ink} />
                     <Body style={styles.choiceButtonText}>Upload file</Body>
                   </Pressable>
                 </View>
@@ -254,15 +276,22 @@ export const AvatarGeneratorSheet = React.memo(
                 </View>
               )}
 
+              {onPhotoReady && (
+                <Caption style={styles.workingHint}>
+                  Drawing takes a few minutes — we draw it at full quality. Keep the app open.
+                </Caption>
+              )}
               <Pressable
                 style={[styles.primaryButton, !photo && styles.primaryButtonDisabled]}
                 onPress={run}
                 disabled={!photo}
                 accessibilityRole="button"
-                accessibilityLabel="Generate avatar"
+                accessibilityLabel={onPhotoReady ? 'Use this photo' : 'Generate avatar'}
                 accessibilityState={{ disabled: !photo }}
               >
-                <Body style={styles.primaryButtonText}>Generate avatar</Body>
+                <Body style={styles.primaryButtonText}>
+                  {onPhotoReady ? 'Use this photo' : 'Generate avatar'}
+                </Body>
               </Pressable>
               <Pressable style={styles.secondaryButton} onPress={onClose} accessibilityRole="button">
                 <Body style={styles.secondaryButtonText}>Cancel</Body>
@@ -270,11 +299,24 @@ export const AvatarGeneratorSheet = React.memo(
             </>
           )}
 
+          {step === 'camera' && (
+            <AvatarCameraView
+              onCaptured={(picked) => {
+                setPhoto(picked);
+                setStep('compose');
+              }}
+              onCancel={() => setStep('compose')}
+              onChoosePhotoInstead={() => choose('library')}
+            />
+          )}
+
           {step === 'working' && (
             <View style={styles.working}>
-              <ActivityIndicator size="large" color={colors.action.accent} />
+              <ActivityIndicator size="large" color={c.primary} />
               <Body style={styles.workingText}>Drawing your avatar…</Body>
-              <Caption style={styles.workingHint}>This usually takes under a minute.</Caption>
+              <Caption style={styles.workingHint}>
+                This takes a few minutes — we draw it at full quality. Keep the app open.
+              </Caption>
             </View>
           )}
         </ScrollView>
@@ -285,36 +327,44 @@ export const AvatarGeneratorSheet = React.memo(
 
 AvatarGeneratorSheet.displayName = 'AvatarGeneratorSheet';
 
-const styles = StyleSheet.create({
+
+/**
+ * The sheet is built once per SCHEME, at module load, rather than per render.
+ * A `StyleSheet.create` inside the component would re-register the whole sheet
+ * on every render, and wrapping it in `useMemo` would add a hook to a file
+ * where the migration is supposed to add exactly one. Two frozen sheets and an
+ * index by scheme costs nothing and keeps the colour in tokens.
+ */
+const makeStyles = (c: Ui2Palette) => StyleSheet.create({
   container: { padding: spacing.lg, gap: spacing.sm },
-  title: { fontSize: 20, fontWeight: '700', color: colors.text.primary, marginBottom: spacing.xxs },
-  paragraph: { color: colors.text.secondary },
+  title: { fontSize: 20, fontWeight: '700', color: c.ink, marginBottom: spacing.xxs },
+  paragraph: { color: c.muted },
   noticeBox: {
-    backgroundColor: colors.surface.cardAlt,
+    backgroundColor: c.surface2,
     borderRadius: radii.lg,
     padding: spacing.md,
     gap: spacing.xxs,
     marginVertical: spacing.xs,
   },
-  noticeLine: { color: colors.text.secondary },
+  noticeLine: { color: c.muted },
   styleCard: {
-    backgroundColor: colors.surface.card,
+    backgroundColor: c.card,
     borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: colors.border.subtle,
+    borderColor: c.cardBorder,
     padding: spacing.md,
   },
-  styleCardSelected: { borderColor: colors.border.focus, backgroundColor: colors.action.primaryTint },
-  styleLabel: { color: colors.text.primary, fontWeight: '600' },
-  styleDescription: { color: colors.text.tertiary, marginTop: 2 },
+  styleCardSelected: { borderColor: c.primary, backgroundColor: c.primaryTint },
+  styleLabel: { color: c.ink, fontWeight: '600' },
+  styleDescription: { color: c.idle, marginTop: 2 },
   photoRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md, marginTop: spacing.xs },
   preview: { width: 96, height: 96, borderRadius: radii.xl },
   previewEmpty: {
-    backgroundColor: colors.surface.cardAlt,
+    backgroundColor: c.surface2,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: colors.border.subtle,
+    borderColor: c.cardBorder,
   },
   photoActions: { flex: 1, gap: spacing.xs },
   choiceButton: {
@@ -322,24 +372,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xs,
-    backgroundColor: colors.surface.cardAlt,
+    backgroundColor: c.surface2,
     borderRadius: radii.lg,
     paddingVertical: spacing.sm,
     minHeight: 44,
   },
-  choiceButtonText: { color: colors.text.primary, fontWeight: '600' },
+  choiceButtonText: { color: c.ink, fontWeight: '600' },
   errorBox: {
-    backgroundColor: colors.error.tint,
-    borderColor: colors.error.border,
+    backgroundColor: c.card,
+    borderColor: c.error,
     borderWidth: 1,
     borderRadius: radii.lg,
     padding: spacing.sm,
     gap: spacing.xxs,
   },
-  errorText: { color: colors.error.light },
-  errorLink: { color: colors.action.accent, fontWeight: '600' },
+  errorText: { color: c.error },
+  errorLink: { color: c.primary, fontWeight: '600' },
   primaryButton: {
-    backgroundColor: colors.action.primaryFill,
+    backgroundColor: c.primary,
     borderRadius: radii.lg,
     paddingVertical: spacing.sm,
     alignItems: 'center',
@@ -348,10 +398,12 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   primaryButtonDisabled: { opacity: 0.4 },
-  primaryButtonText: { color: colors.text.onPrimary, fontWeight: '700' },
+  primaryButtonText: { color: c.onPrimary, fontWeight: '700' },
   secondaryButton: { alignItems: 'center', paddingVertical: spacing.sm, minHeight: 44, justifyContent: 'center' },
-  secondaryButtonText: { color: colors.text.tertiary },
+  secondaryButtonText: { color: c.idle },
   working: { alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xxl },
-  workingText: { color: colors.text.primary, fontWeight: '600' },
-  workingHint: { color: colors.text.tertiary },
+  workingText: { color: c.ink, fontWeight: '600' },
+  workingHint: { color: c.idle },
 });
+
+const STYLES = { light: makeStyles(ui2Light), dark: makeStyles(ui2Dark) };

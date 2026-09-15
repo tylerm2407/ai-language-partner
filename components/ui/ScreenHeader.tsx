@@ -8,7 +8,8 @@
 import React from 'react';
 import { View, Pressable, type ViewStyle, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing } from '../../config/theme';
+import { spacing } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { Body, Heading } from './Text';
 
 interface ScreenHeaderProps {
@@ -29,6 +30,7 @@ export function ScreenHeader({
   centered = false,
   style,
 }: ScreenHeaderProps) {
+  const { c } = useUi2Theme();
   return (
     <View style={[styles.container, style]}>
       <View style={styles.row}>
@@ -40,7 +42,7 @@ export function ScreenHeader({
             hitSlop={10}
             style={styles.backBtn}
           >
-            <Ionicons name="chevron-back" size={24} color={colors.text.primary} />
+            <Ionicons name="chevron-back" size={24} color={c.ink} />
           </Pressable>
         ) : (
           <View style={styles.backBtn} />

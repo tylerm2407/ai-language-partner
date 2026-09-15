@@ -16,18 +16,18 @@ import {
   enqueue,
   flush,
   isNetworkError,
-  makeXpKey,
-  lessonXpKey,
   offlineQueueKey,
   newClientLogId,
+  newClientResultId,
+  type ExerciseResultPayload,
   type OfflineQueueInput,
   type ReviewLogPayload,
   type ReviewUpsertPayload,
 } from './offline-queue';
 import {
   fetchReviewItemsByCardIds,
-  incrementXpIdempotent,
   insertReviewLogIdempotent,
+  recordExerciseResult,
   upsertLessonCompletion,
   upsertReviewItem,
 } from './supabase-queries';
@@ -58,17 +58,17 @@ jest.mock('@sentry/react-native', () => ({
 
 jest.mock('./supabase-queries', () => ({
   fetchReviewItemsByCardIds: jest.fn(),
-  incrementXpIdempotent: jest.fn(),
   insertReviewLogIdempotent: jest.fn(),
+  recordExerciseResult: jest.fn(),
   upsertLessonCompletion: jest.fn(),
   upsertReviewItem: jest.fn(),
 }));
 
 const mockFetchByCardIds = fetchReviewItemsByCardIds as jest.Mock;
-const mockIncrementXp = incrementXpIdempotent as jest.Mock;
 const mockUpsertCompletion = upsertLessonCompletion as jest.Mock;
 const mockUpsertReview = upsertReviewItem as jest.Mock;
 const mockInsertReviewLog = insertReviewLogIdempotent as jest.Mock;
+const mockRecordExerciseResult = recordExerciseResult as jest.Mock;
 
 const USER = 'user-1';
 const KEY = offlineQueueKey(USER);
@@ -94,12 +94,16 @@ function reviewInput(overrides: Partial<ReviewUpsertPayload> = {}): OfflineQueue
 function completionInput(): OfflineQueueInput {
   return {
     type: 'lesson-completion',
-    payload: { lessonId: 'lesson-1', courseId: 'course-1', score: 0.9, xpEarned: 45, timeSpentMs: 0 },
+    payload: { lessonId: 'lesson-1', courseId: 'course-1', score: 0.9, timeSpentMs: 0 },
   };
 }
 
-function xpInput(key = 'xp:test:abcdef12'): OfflineQueueInput {
-  return { type: 'xp-award', payload: { amount: 20 }, key };
+/** A third, distinct item type for ordering and capacity tests. */
+function resultInput(clientResultId = 'er:test-abcdef12'): OfflineQueueInput {
+  return {
+    type: 'exercise-result',
+    payload: { exerciseId: 'ex-1', correct: true, attempts: 1, responseTimeMs: 1200, clientResultId },
+  };
 }
 
 function networkError(): TypeError {
@@ -121,9 +125,9 @@ beforeEach(async () => {
   errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
   // Default executor behavior: everything succeeds, no server review row.
   mockFetchByCardIds.mockResolvedValue([]);
-  mockIncrementXp.mockResolvedValue(undefined);
   mockUpsertCompletion.mockResolvedValue({});
   mockUpsertReview.mockResolvedValue({});
+  mockRecordExerciseResult.mockResolvedValue({});
 });
 
 afterEach(() => {
@@ -167,60 +171,22 @@ describe('isNetworkError', () => {
   });
 });
 
-describe('makeXpKey', () => {
-  it('produces unique keys within server length bounds (8-128)', () => {
-    const a = makeXpKey('lesson-1');
-    const b = makeXpKey('lesson-1');
-    expect(a).not.toBe(b);
-    expect(a.startsWith('xp:lesson-1:')).toBe(true);
-    expect(a.length).toBeGreaterThanOrEqual(8);
-    expect(a.length).toBeLessThanOrEqual(128);
-  });
-});
-
-describe('lessonXpKey', () => {
-  // The bug this pins: while the lesson award used makeXpKey('earn'), every
-  // replay of a finished lesson minted a fresh random key, so the server's
-  // (user_id, event_key) de-dupe matched nothing and paid full XP again —
-  // and increment_xp_idempotent derives xp_level and league_tier in the same
-  // statement, so the league standings were mintable with it.
-  it('is stable for the same lesson, so a replay cannot pay twice', () => {
-    expect(lessonXpKey('abc')).toBe(lessonXpKey('abc'));
-  });
-
-  it('is distinct per lesson', () => {
-    expect(lessonXpKey('lesson-a')).not.toBe(lessonXpKey('lesson-b'));
-  });
-
-  it('stays inside the server key bounds (8-128) for a uuid', () => {
-    const k = lessonXpKey('123e4567-e89b-12d3-a456-426614174000');
-    expect(k.length).toBeGreaterThanOrEqual(8);
-    expect(k.length).toBeLessThanOrEqual(128);
-  });
-
-  it('never collides with an ad-hoc makeXpKey award', () => {
-    expect(lessonXpKey('x').startsWith('xp:lesson:v1:')).toBe(true);
-    expect(makeXpKey('x').startsWith('xp:lesson:v1:')).toBe(false);
-  });
-});
-
 describe('enqueue + flush FIFO', () => {
   it('replays items sequentially in enqueue order and empties the queue', async () => {
     const order: string[] = [];
     mockUpsertReview.mockImplementation(async () => order.push('review'));
     mockUpsertCompletion.mockImplementation(async () => order.push('completion'));
-    mockIncrementXp.mockImplementation(async () => order.push('xp'));
+    mockRecordExerciseResult.mockImplementation(async () => order.push('result'));
 
     await enqueue(USER, reviewInput());
     await enqueue(USER, completionInput());
-    await enqueue(USER, xpInput('xp:lesson-1:abc12345'));
+    await enqueue(USER, resultInput());
 
     await flush(USER);
 
-    expect(order).toEqual(['review', 'completion', 'xp']);
+    expect(order).toEqual(['review', 'completion', 'result']);
     expect(mockUpsertReview).toHaveBeenCalledWith(reviewPayload());
-    expect(mockUpsertCompletion).toHaveBeenCalledWith(USER, 'lesson-1', 'course-1', 0.9, 45, 0);
-    expect(mockIncrementXp).toHaveBeenCalledWith(20, 'xp:lesson-1:abc12345');
+    expect(mockUpsertCompletion).toHaveBeenCalledWith(USER, 'lesson-1', 'course-1', 0.9, 0);
     expect(await AsyncStorage.getItem(KEY)).toBeNull();
   });
 
@@ -228,13 +194,11 @@ describe('enqueue + flush FIFO', () => {
     await flush(USER);
     expect(mockUpsertReview).not.toHaveBeenCalled();
     expect(mockUpsertCompletion).not.toHaveBeenCalled();
-    expect(mockIncrementXp).not.toHaveBeenCalled();
   });
 
   it('does not leak items across users', async () => {
-    await enqueue(USER, xpInput());
+    await enqueue(USER, resultInput());
     await flush('user-2');
-    expect(mockIncrementXp).not.toHaveBeenCalled();
     expect(await storedItems()).toHaveLength(1);
   });
 });
@@ -245,9 +209,9 @@ describe('single-flight', () => {
     const gate = new Promise<void>((resolve) => {
       release = resolve;
     });
-    mockIncrementXp.mockImplementation(() => gate);
+    mockUpsertCompletion.mockImplementation(() => gate);
 
-    await enqueue(USER, xpInput());
+    await enqueue(USER, completionInput());
 
     const first = flush(USER);
     // Let the first flush reach its executor (now pending on the gate),
@@ -260,7 +224,7 @@ describe('single-flight', () => {
     release();
     await first;
 
-    expect(mockIncrementXp).toHaveBeenCalledTimes(1);
+    expect(mockUpsertCompletion).toHaveBeenCalledTimes(1);
     expect(await AsyncStorage.getItem(KEY)).toBeNull();
   });
 });
@@ -269,38 +233,37 @@ describe('failure handling', () => {
   it('skips a failing item rather than blocking what is behind it', async () => {
     // The flush used to STOP on the first failure. Because completions are
     // queued on 4xx as well as network errors, one permanently-invalid row at
-    // the head froze every later XP award and review write — and `attempts`
+    // the head froze every later review write — and `attempts`
     // increments once per flush TRIGGER, so clearing it took ten
     // mount/reconnect cycles, i.e. days.
-    mockIncrementXp.mockRejectedValue(networkError());
-    await enqueue(USER, xpInput('xp:lesson-9:zzzz9999'));
+    mockUpsertCompletion.mockRejectedValue(networkError());
     await enqueue(USER, completionInput());
+    await enqueue(USER, reviewInput());
 
     await flush(USER);
 
     // The item behind the failure still ran.
-    expect(mockUpsertCompletion).toHaveBeenCalledTimes(1);
+    expect(mockUpsertReview).toHaveBeenCalledTimes(1);
 
-    // The failure is retained for a later trigger, with its key intact so the
-    // retry cannot double-award.
+    // The failed completion is retained for a later trigger.
     const items = await storedItems();
     expect(items).toHaveLength(1);
     expect(items[0].attempts).toBe(1);
-    expect(items[0].key).toBe('xp:lesson-9:zzzz9999');
+    expect(items[0].type).toBe('lesson-completion');
   });
 
   it('dead-letters a non-network failure after two attempts, not ten', async () => {
     // A 4xx does not fix itself. Retrying it to the network budget only delays
     // the point at which the queue behind it drains.
-    mockIncrementXp.mockRejectedValue(new Error('invalid XP amount (1-500)'));
-    await enqueue(USER, xpInput());
+    mockUpsertCompletion.mockRejectedValue(new Error('invalid lesson id'));
+    await enqueue(USER, completionInput());
 
     await flush(USER);
     expect(await storedItems()).toHaveLength(1);
 
     await flush(USER);
 
-    expect(mockIncrementXp).toHaveBeenCalledTimes(OFFLINE_QUEUE_MAX_NON_NETWORK_ATTEMPTS);
+    expect(mockUpsertCompletion).toHaveBeenCalledTimes(OFFLINE_QUEUE_MAX_NON_NETWORK_ATTEMPTS);
     expect(Sentry.captureMessage).toHaveBeenCalledWith(
       expect.stringContaining('dead-letter'),
       'error',
@@ -309,21 +272,21 @@ describe('failure handling', () => {
   });
 
   it('dead-letters an item after OFFLINE_QUEUE_MAX_ATTEMPTS failures and continues', async () => {
-    mockIncrementXp.mockRejectedValue(networkError());
-    await enqueue(USER, xpInput());
+    mockUpsertCompletion.mockRejectedValue(networkError());
     await enqueue(USER, completionInput());
+    await enqueue(USER, reviewInput());
 
     for (let i = 0; i < OFFLINE_QUEUE_MAX_ATTEMPTS; i++) {
       await flush(USER);
     }
 
-    expect(mockIncrementXp).toHaveBeenCalledTimes(OFFLINE_QUEUE_MAX_ATTEMPTS);
+    expect(mockUpsertCompletion).toHaveBeenCalledTimes(OFFLINE_QUEUE_MAX_ATTEMPTS);
     expect(Sentry.captureMessage).toHaveBeenCalledWith(
       expect.stringContaining('dead-letter'),
       'error',
     );
     // The dead-lettered item is gone and the flush moved on to the next one.
-    expect(mockUpsertCompletion).toHaveBeenCalledTimes(1);
+    expect(mockUpsertReview).toHaveBeenCalledTimes(1);
     expect(await AsyncStorage.getItem(KEY)).toBeNull();
   });
 });
@@ -336,17 +299,15 @@ describe('TTL', () => {
       items: [
         {
           id: 'old',
-          type: 'xp-award',
-          payload: { amount: 10 },
-          key: 'xp:old:12345678',
+          type: 'exercise-result',
+          payload: { exerciseId: 'ex-1', correct: true, attempts: 1, responseTimeMs: 0, clientResultId: 'er:old' },
           createdAt: now - OFFLINE_QUEUE_TTL_MS - 60_000,
           attempts: 0,
         },
         {
           id: 'fresh',
-          type: 'xp-award',
-          payload: { amount: 20 },
-          key: 'xp:fresh:12345678',
+          type: 'exercise-result',
+          payload: { exerciseId: 'ex-2', correct: true, attempts: 1, responseTimeMs: 0, clientResultId: 'er:fresh' },
           createdAt: now - 60_000,
           attempts: 0,
         },
@@ -355,9 +316,7 @@ describe('TTL', () => {
     await AsyncStorage.setItem(KEY, JSON.stringify(envelope));
 
     await flush(USER);
-
-    expect(mockIncrementXp).toHaveBeenCalledTimes(1);
-    expect(mockIncrementXp).toHaveBeenCalledWith(20, 'xp:fresh:12345678');
+    expect(await AsyncStorage.getItem(KEY)).toBeNull();
     expect(errorSpy).toHaveBeenCalled();
     // captureMessage, not addBreadcrumb: a breadcrumb only rides along with a
     // later event, so a silent data loss that crashes nothing is never sent.
@@ -406,14 +365,15 @@ describe('staleness guard (review-upsert)', () => {
 describe('capacity cap', () => {
   it('drops the oldest item (with a logged warning) beyond the cap', async () => {
     for (let i = 0; i < OFFLINE_QUEUE_MAX_ITEMS + 1; i++) {
-      await enqueue(USER, xpInput(`xp:cap:${String(i).padStart(8, '0')}`));
+      await enqueue(USER, resultInput(`er:cap:${String(i).padStart(8, '0')}`));
     }
     const items = await storedItems();
     expect(items).toHaveLength(OFFLINE_QUEUE_MAX_ITEMS);
-    expect(items[0].key).toBe('xp:cap:00000001'); // oldest (index 0) was dropped
+    // oldest (index 0) was dropped
+    expect((items[0].payload as { clientResultId: string }).clientResultId).toBe('er:cap:00000001');
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining('queue full'),
-      'xp-award',
+      'exercise-result',
       expect.any(String),
     );
   });
@@ -424,7 +384,6 @@ describe('invalid stored payloads', () => {
     await AsyncStorage.setItem(KEY, 'not-json{');
     await flush(USER);
     expect(await AsyncStorage.getItem(KEY)).toBeNull();
-    expect(mockIncrementXp).not.toHaveBeenCalled();
   });
 
   it('discards a queue from a different schema version', async () => {
@@ -440,11 +399,11 @@ describe('invalid stored payloads', () => {
     const envelope = {
       version: OFFLINE_QUEUE_SCHEMA_VERSION,
       items: [
-        { id: 'bad', type: 'xp-award' }, // no payload/key/createdAt/attempts
+        { id: 'bad', type: 'xp-award', payload: { amount: 20 }, key: 'xp:old:12345678', createdAt: Date.now(), attempts: 0 }, // retired type
         {
           id: 'good',
           type: 'lesson-completion',
-          payload: { lessonId: 'l', courseId: 'c', score: 1, xpEarned: 10, timeSpentMs: 0 },
+          payload: { lessonId: 'l', courseId: 'c', score: 1, timeSpentMs: 0 },
           createdAt: Date.now(),
           attempts: 0,
         },
@@ -493,6 +452,32 @@ describe('review-log replay', () => {
     expect(new Set(ids).size).toBe(1);
   });
 
+  it('resolves an empty reviewItemId from the card at replay time', async () => {
+    // A first-seen card answered offline: the log was queued before its
+    // review_items row existed. The upsert ahead of it in the queue has
+    // replayed by now, so the row is there to be looked up.
+    mockFetchByCardIds.mockResolvedValue([{ id: 'ri-created', cardId: 'card-1' }]);
+    const payload = logPayload({ reviewItemId: '' });
+    await enqueue(USER, { type: 'review-log', payload });
+
+    expect(await flush(USER)).toBe(1);
+    expect(mockFetchByCardIds).toHaveBeenCalledWith(USER, ['card-1']);
+    expect(mockInsertReviewLog).toHaveBeenCalledWith({ ...payload, reviewItemId: 'ri-created' });
+  });
+
+  it('dead-letters an unresolvable empty reviewItemId as a non-network failure', async () => {
+    // No row means the upsert ahead of it was dead-lettered or skipped as
+    // stale; retrying for ten flushes would not create one.
+    mockFetchByCardIds.mockResolvedValue([]);
+    await enqueue(USER, { type: 'review-log', payload: logPayload({ reviewItemId: '' }) });
+
+    for (let i = 0; i < OFFLINE_QUEUE_MAX_NON_NETWORK_ATTEMPTS; i++) await flush(USER);
+
+    expect(mockInsertReviewLog).not.toHaveBeenCalled();
+    expect(await AsyncStorage.getItem(KEY)).toBeNull();
+    expect(Sentry.captureMessage).toHaveBeenCalledWith(expect.stringContaining('dead-letter'), 'error');
+  });
+
   it('rejects a stored review-log with no client id', async () => {
     // Without one it cannot be replayed idempotently, so it must not survive
     // a reload rather than risk double-logging.
@@ -516,9 +501,70 @@ describe('review-log replay', () => {
   });
 });
 
+describe('exercise-result replay', () => {
+  function resultPayload(overrides: Partial<ExerciseResultPayload> = {}): ExerciseResultPayload {
+    return {
+      exerciseId: '123e4567-e89b-12d3-a456-426614174000',
+      correct: true,
+      attempts: 1,
+      responseTimeMs: 1800,
+      clientResultId: newClientResultId(),
+      ...overrides,
+    };
+  }
+
+  it('round-trips through the queue and replays the RPC once', async () => {
+    const payload = resultPayload();
+    await enqueue(USER, { type: 'exercise-result', payload });
+    expect(await flush(USER)).toBe(1);
+    expect(mockRecordExerciseResult).toHaveBeenCalledWith(payload);
+    expect(await AsyncStorage.getItem(KEY)).toBeNull();
+  });
+
+  it('preserves the client id across a retry so the replay is the same result', async () => {
+    const payload = resultPayload();
+    mockRecordExerciseResult.mockRejectedValueOnce(networkError());
+    await enqueue(USER, { type: 'exercise-result', payload });
+    await flush(USER);
+    await flush(USER);
+    const ids = mockRecordExerciseResult.mock.calls.map((c) => c[0].clientResultId);
+    expect(ids).toHaveLength(2);
+    expect(new Set(ids).size).toBe(1);
+  });
+
+  it('rejects a stored exercise-result with no client id', async () => {
+    await AsyncStorage.setItem(
+      KEY,
+      JSON.stringify({
+        version: OFFLINE_QUEUE_SCHEMA_VERSION,
+        items: [
+          {
+            id: 'x',
+            createdAt: Date.now(),
+            attempts: 0,
+            type: 'exercise-result',
+            payload: { exerciseId: 'e', correct: true, attempts: 1, responseTimeMs: 1 },
+          },
+        ],
+      }),
+    );
+    expect(await flush(USER)).toBe(0);
+    expect(mockRecordExerciseResult).not.toHaveBeenCalled();
+  });
+});
+
 describe('newClientLogId', () => {
   it('produces distinct ids', () => {
     const ids = new Set(Array.from({ length: 200 }, () => newClientLogId()));
     expect(ids.size).toBe(200);
+  });
+});
+
+describe('newClientResultId', () => {
+  it('produces distinct ids with a prefix no review-log id shares', () => {
+    const ids = new Set(Array.from({ length: 200 }, () => newClientResultId()));
+    expect(ids.size).toBe(200);
+    expect(newClientResultId().startsWith('er:')).toBe(true);
+    expect(newClientLogId().startsWith('er:')).toBe(false);
   });
 });

@@ -37,6 +37,9 @@ jest.mock('expo-av', () => ({
     Sound: { createAsync: jest.fn(async () => ({ sound: { unloadAsync: jest.fn() } })) },
     Recording: { createAsync: jest.fn() },
   },
+  // The chrome's hero block mounts Sol, whose clips render through Video.
+  Video: () => null,
+  ResizeMode: { CONTAIN: 'contain', COVER: 'cover', STRETCH: 'stretch' },
 }));
 jest.mock('../../hooks/useAudioRecorder', () => ({
   useAudioRecorder: () => ({
@@ -108,6 +111,15 @@ const METRICS = {
   insets: { top: 59, left: 0, right: 0, bottom: 34 },
 };
 
+const mountedRenderers = new Set<TestRenderer.ReactTestRenderer>();
+
+afterEach(() => {
+  TestRenderer.act(() => {
+    for (const renderer of mountedRenderers) renderer.unmount();
+    mountedRenderers.clear();
+  });
+});
+
 const exercise = (id: string): Exercise => ({
   id,
   lessonId: 'l1',
@@ -129,6 +141,7 @@ function render(element: React.ReactElement) {
       <SafeAreaProvider initialMetrics={METRICS}>{element}</SafeAreaProvider>,
     );
   });
+  mountedRenderers.add(renderer);
   return renderer;
 }
 
@@ -162,7 +175,6 @@ function runner(onComplete: (r: LessonResult) => void) {
       exercises={[exercise('ex1')]}
       lessonId="l1"
       lessonTitle="Basics"
-      xpReward={20}
       userId=""
       targetLanguage="es"
       onComplete={onComplete}

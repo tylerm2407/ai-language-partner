@@ -596,10 +596,28 @@ scroll frames and forced an iOS/Android visual fork that never matched.
 - `<FloatingTabBar />` — custom `tabBar` for Expo Router `<Tabs>`
 - Positioned absolute, centered, `bottom: max(safeArea.bottom, 16) + 12`
 - Opaque `surface.card` pill, 1px `border.default` — identical on both platforms
-- 4 icons: Home, Learn, Chat, Profile — no labels. Glyph *switches* on focus
-  (`home-outline` → `home`), it is not just recolored
+- 5 icons: Home, Learn, Tutor, Chat, Profile — no labels. Glyph *switches* on
+  focus (`home-outline` → `home`), it is not just recolored
 - Active icon: 40px gradient circle, `action.primaryFill` → `magazine.accentViolet`
-- Width: 240px, height: 56px, borderRadius: 999, 44pt hit targets
+- Height: 56px, borderRadius: 999, 44pt hit targets
+- **Width is per icon count**, from `tabPillWidth()` — 4 icons → 240px, 5 → 296px
+  (8 × 37, so the 8pt grid holds). `space-evenly` splits the leftover into
+  (count + 1) gaps: 12.8px at 4-in-240, 12.667px at 5-in-296, which is why
+  adding Tutor did not visibly move the other four. Five icons in the old 240
+  would have left 3.33px and put two 40px circles almost in contact. An
+  unmeasured count throws rather than cramping — add a measured entry instead
+- `floatingTabBarSpace()` is **unchanged at 64px**: it is the vertical
+  reservation every bottom-pinned screen makes, and widening the pill does not
+  touch it
+- The bar renders **nothing** while a full-screen nested route is focused
+  (`FULL_SCREEN_ROUTES`, currently `tutor/call`). The root layout is `<Slot/>`,
+  so there is no navigator above `<Tabs>` to push a full-screen route onto, and
+  a child cannot z-index over a sibling tabBar — hiding it is the only lever.
+  Leaving it up during a live call also invites the tab tap that strands the
+  peer connection
+- Tab ORDER comes from `<Tabs.Screen>` declaration order in
+  `app/(app)/_layout.tsx`, not from `VISIBLE_TABS` — the bar filters
+  `state.routes`, which preserves navigator order
 
 ### Home Screen Layout (top to bottom)
 
@@ -630,16 +648,56 @@ of comprehensible input on a string they will read every session.
 · elapsed-time `<Chip variant="primary">` · controls.
 
 The stack is `<Body weight="extrabold">` (the scenario label) over a status row: a
-6px `success.base` dot plus `<Caption size="sm">` reading `Live · A2`. The dot and
-the word "Live" appear only while hands-free is active.
+6px `success.base` dot plus `<Caption size="sm">` reading `Live · ` followed by
+`cefrLabel(band)` — `Live · A2 · Handle short, routine exchanges on familiar
+topics`, one line, tail-truncated. The dot and the word "Live" appear only while
+hands-free is active.
 
-The level is a bare CEFR code, not the deck's "Nivel A2" — "Nivel" is Spanish and
-the target language varies, so localising the noun would mean 12 translations of
-a word the code already conveys.
+The level is never the bare code (`lib/cefr-labels.ts`): "A2" on its own is a
+figure that looks like information and carries none, so it is always paired
+with the can-do line. Nor is it the deck's "Nivel A2" — "Nivel" is Spanish and
+the target language varies, so a localised noun would mean 12 translations of a
+word the code already conveys; the can-do lines are language-neutral for the
+same reason. Where a pill has room only for the code, `cefrAccessibilityLabel`
+carries the meaning — the two-place rule the Situations header pill follows.
 
 The hands-free toggle **collapses to icon-only once live**, because the status row
 already says so. It keeps its "Live Voice" label while off, where it is the only
 affordance advertising the feature.
+
+### Mission chrome (2026-09-13)
+
+A mission attempt is the same chat with a checklist on it. The chrome it adds,
+and only while a mission is running:
+
+- **Finish pill** in the header's controls slot — a primary `Chip`-style pill
+  reading "Finish". It ends the attempt (the server scores it) and routes to
+  the debrief. It is the ONE way to close a mission; the back chevron leaves
+  the attempt open so it can be resumed from the picker.
+- **Live toggle goes icon-only** for the whole attempt, not just once live:
+  the Finish pill needs the width, and the objectives strip below already
+  says what the screen is for.
+- **Objectives strip** above the composer: the mission's objectives as compact
+  rows, ticked as `objectivesMet` arrives with each turn — `checkmark-circle`
+  in `green` beside the text, the untouched ones `ellipse-outline` in `idle`.
+  Never colour alone: the glyph changes, and VoiceOver reads "Done." / "To
+  do." before each line, the same rule as the picker sheet.
+- **Help square**: a 44pt square at the composer's leading edge in text and
+  hold-to-talk modes. It opens the **warm-up sheet** — the mission title, its
+  band through `cefrLabel`, the objectives, and a few things the learner
+  could say — without leaving the chat. It is NOT present in hands-free: the
+  listen/speak loop owns the mic, and a modal sheet over it would either
+  stall the loop or talk over it. Toggling Live off is one tap, and the
+  square is back.
+- **Warm-up sheet** also opens on its own before the first turn of a fresh
+  attempt, so no mission starts with a blank composer and no brief.
+- **Debrief** is its own route, `app/(app)/chat/debrief?sessionId=…`
+  (`chatDebriefHref` in `lib/missions.ts`), reached from Finish and from a
+  finished attempt's history row. It shows pass/retry, the accuracy line
+  ("78% accuracy over 6 turns", or "Not enough said to score"), the
+  objectives with their final ticks, "Habits worth fixing" from the server's
+  grouped corrections, and one footer: next mission, try again, or the
+  ladder-done line.
 
 ### Message bubbles
 
@@ -830,3 +888,367 @@ nothing to sell — no IAP on the build, a failed offerings call, or an empty
 offering. A gate with no door is an App Review 3.1.1 rejection and a dead app
 for anyone who hits it. Covered by `app/(app)/plans.test.tsx`; do not remove it
 to make the gate "harder".
+
+---
+
+## UI 2.0 — "Tactile" (redesign branch `redesign/ui-2.0`)
+
+**Status:** in rollout, one screen at a time. Onboarding and the welcome screen
+are on it (2026-09-06); every other screen still renders Dark Glow from the
+tokens above. Do not mix the two systems on one screen.
+
+Direction chosen from the Home boards on the design canvas ("Fluenci UI 2.0",
+board D3). Tokens live in `config/theme.ts` as `ui2Light`, `ui2Dark`, `ui2Type`,
+`ui2Shape`; read them through `hooks/useUi2Theme.ts`, which follows the OS
+scheme (`app.json` `userInterfaceStyle: "automatic"`).
+
+### Palette
+
+| Token | Light | Dark | Usage |
+|---|---|---|---|
+| `bg` | `#FFFFFF` | `#0C0B14` | Screen ground. Dark is near-black with a violet cast, never pure black |
+| `card` / `cardBorder` | `#F3F1F9` / `#F3F1F9` | `#17152A` / `#17152A` | Tint-block cards. `cardBorder` equals `card` on purpose: any stray hardcoded border melts into the fill |
+| `ink` / `muted` / `idle` | `#23203A` / `#6E6A88` / `#8C88A6` | `#F4F2FF` / `#A6A2C2` / `#6C6890` | Text: primary / helper (AA) / placeholders and inactive icons |
+| `primary` / `slab` | `#6A4CFF` / `#4D33D6` | `#7057FF` / `#5641D9` | CTA fill; white on it clears AA both schemes. `slab` is a retired shim (edge width is 0) |
+| `onTint` | `#4D33D6` | `#C4B5FD` | Text on `primaryTint` (chips, eyebrows). `primary` itself is 4.4:1 there |
+| `primaryTint` / `primaryTintBorder` | `#EFEBFF` / `#D9D1FF` | `#2A2450` / `#3E3670` | Selected rows, level card, chips |
+| `yellow` / `green` / `pink` + `*Tint` | see `config/theme.ts` | deepened | Read / review / unit colour coding. Yellow is AMBER `#F5A524` (dark `#FFB340`) since 2026-09-08 — the old `#FFC857` was Duolingo's `#FFC800` with a touch of warmth |
+| `onGreen` / `onError` | `#0B3D2B` / `#FFFFFF` | `#0B3D2B` / `#1A0E10` | Text on a SOLID green or error block (lesson verdict hero, answered option rows) |
+| `track` / `trackOnCard` | `#EFEBFF` / `#FFFFFF` | `#26224A` / `#26224A` | Unfilled progress on the ground / on a tinted card (`Ui2ProgressBar onCard`) |
+
+`hooks/useUi2Theme.test.ts` pins the contrast floors.
+
+### Paywall — T4 · Pace, universal title (2026-09-11)
+
+From canvas Part 2, "Paywall · tint blocks". The tier rows are drawn in
+Home's unit-row language: a 44pt badge on the left carrying the one number
+Free meters — new words a day (`20` on Basic, `∞` above, from `lib/plans.ts`
+via `paceCopy`) — in the rung's own tint (violet / green / amber), the name
+with the MOST POPULAR chip, `new words a day · $99.99 billed yearly` beneath,
+the per-day price on the right, the commute meter in the rung's colour, and
+what the rung adds. The selected rung is the violet tint with a violet edge.
+The proof card under the ladder is the green tint.
+
+**The headline is universal.** The learner's onboarding sentence no longer
+becomes the title (design board P6 is retired): every learner sees the
+hands-free line and its eyebrow. The sentence still decides what sits under
+the tiers — the three proof rows appear only when there is one, the quote
+card otherwise — because those rows are claims about what a plan does WITH
+the sentence.
+
+### Home — the Tint-blocks standard, with the level ring (2026-09-11)
+
+The Tint-blocks Home (violet-tint level card, green due tile, violet hero,
+amber read row, unit rows with a coloured % badge) is the standard for the
+screen. A day of logo-colour work (the icon's cyan→magenta ramp on the tab
+disc and as progress lines, and a drift/swell motion) was reverted at
+Tyler's ask: it read as vibe-coded and is a competitor's colourway. **Do not
+reintroduce the ramp.** The tab disc is the still `primary` → `slab` gradient.
+
+One improvement was picked from the variations (canvas Part 2, "Home ·
+standard, variations", N3 · Ring):
+
+- **The level card carries a ring** toward the next band. The number is
+  `lib/next-band-progress.ts` over the proficiency report's band breakdown —
+  the same three gates that promote a band (items seen, items matured, items
+  retained), a third each, floored, and capped at 99 while the learner is
+  still in the band because vocabulary leads the assessment but does not
+  finish it. Eyebrow states: `Level` (report not loaded — the ring is empty,
+  no number is invented), `Level · 62% to B1`, `Level · top band` at C2.
+- **The band shown is the measured one** (`report.overallLevel`) once the
+  report can assess; the profile's self-declared level stands in only before
+  that. `hooks/useNextBandProgress.ts` rebuilds both on focus, at most once a
+  minute.
+- **The due tile is a Review button.** Count on top, a green pill below;
+  `Caught up`, disabled, at zero. The count re-reads on every focus
+  (`useReviewCountSync`), so a warm-up review or another device cannot leave
+  it stale.
+
+### Home · Atmosphere, Talk · Wave, Profile · Dashboard (2026-09-14)
+
+Three screens were restyled from the canvas "Fluenci Home, Talk and Profile"
+(Tyler picked one of three / three / five boards). Layout, copy and every
+feature stayed; only the treatment moved. Tokens added to all three palettes:
+
+- **Glass** — `glass`, `glassPrimary`, `glassGreen`, `glassYellow`,
+  `glassPink` are the card tints made translucent (0.62–0.80 alpha), with
+  `glassBorder` as a hairline that reads as a lit edge. `SlabCard glass` uses
+  them plus `useLiftShadow()` — `shadow` (violet in light, black in dark),
+  y 12, radius 18, 0.16 / 0.45 opacity, `elevation: 3`. **Home only**: the
+  glass is meaningful over `components/ui2/home/Atmosphere.tsx`, four radial
+  colour glows (`primary` / `yellow` / `green` at 0.16–0.30) drawn as SVG
+  behind the scroll content. No BlurView — the gradients already fade, and a
+  blur pass on Android buys nothing visible.
+- **Hero mesh** — `heroHighlight` (top-right) and `heroShade` (bottom-left)
+  are radial stops over the hero's `primary`, plus a soft white disc and an
+  amber glow (`HeroMesh` in HomeSections). The Start pill takes the lift.
+- **Talk · Wave** — `components/tutor/WaveBand.tsx`: three waves
+  (`primaryTint`, `primaryTintBorder`, `primary`) drift on the UI thread, the
+  portrait bobs on the crest; both hold still under Reduce Motion. The
+  violet block under it carries the invitation, bio and band; the sheet
+  below holds the correction question, the toggle in its `segmented` look
+  (card trough, chosen option raised in `bg` with `primary` text), the idle
+  analyser, last session, limit and errors. Start is one wide
+  `primary → slab` pill. The call screen is unchanged.
+- **Profile · Dashboard** — `components/ui2/profile/ProfileTiles.tsx`: an
+  identity row with the gear, then four tiles (Level with the same ring as
+  Home; This week with a four-strand segment bar; Achievements; Lessons).
+  Each tile is fed by the section it summarises — `useNextBandProgress`,
+  the strands fetch, `useAchievements` read once and passed to
+  `AchievementGridView`, and the completed-lessons section's `onSummary` —
+  so a tile can never disagree with the card below it. Only Level navigates.
+- Night reading (`ui2Warm`) never shows these screens, so its glass keys are
+  the opaque tints — every warm value must stay a blue-free hex.
+
+### Night reading — the warm palette (2026-09-09)
+
+A third palette, `ui2Warm`, for the reader only. It is not a third scheme.
+
+**Why.** iOS gives an app no access to Night Shift, so the only lever we have
+over blue light is the colour of the pixels we paint. On OLED a `#000000` pixel
+is off and emits nothing; a pixel with a blue byte of `00` emits no blue. So the
+palette is amber on true black with a zero blue channel on every one of its 30
+keys, and `hooks/useUi2Theme.test.ts` asserts that byte per key. A tinted
+overlay was rejected: alpha blending only scales blue down, and it dims
+contrast with it. On an LCD (most Android) the black ground still leaks
+backlight, so the copy says "removes blue light on OLED screens and cuts it
+sharply on others" — never "no blue light".
+
+**Where.** `useUi2Theme()` reads an optional `Ui2VariantProvider` (variant
+`'system' | 'warm'`). The reader mounts `variant="warm"` around itself when the
+learner's Night reading preference is on (`lib/reading-preferences.ts`);
+nothing outside the reader ever renders from `ui2Warm`. Under it the hook
+reports `scheme: 'dark'`, because every `scheme === 'dark'` branch in the app
+(sheet scrim, status bar, splash) is asking whether the ground is dark. Context
+crosses `Modal`, so `Ui2Sheet`, the word tooltip and the audio button re-skin
+without edits.
+
+| Token | Warm | Note |
+|---|---|---|
+| `bg` / `surface2` / `card` | `#000000` / `#0A0700` / `#161100` | True black ground; cards a hair of amber |
+| `ink` / `muted` / `idle` | `#F5AE00` / `#B88000` / `#7A5500` | 10.9:1 / 6.1:1 / 3.1:1 on `bg` |
+| `primary` / `onPrimary` | `#E09A00` / `#1A1000` | Amber fill, dark ink on it (7.9:1). White is one third blue, so it never appears |
+| `primaryTint` / `onTint` | `#2A1E00` / `#FFC000` | 10.0:1 |
+| `green` / `pink` / `error` | `#9CB000` / `#FF7A00` / `#FF4A00` | Olive, orange and red-orange stand in. Safe only because feedback is never colour-only |
+| `yellow` | `#FFCC00` | Already amber |
+
+**Reader faces.** `ui2ReaderType = { sans: Manrope 400, serif: Fraunces 400 }`.
+The serif is a long-form reading option chosen in the reader's display sheet;
+it is still not a UI face.
+
+### Offline downloads (2026-09-09)
+
+One control, `components/learn/OfflineDownloadControl.tsx`, wherever content
+can be put on the device: the selected unit's header on Learn, the book cover
+above Start Reading, and under the article's audio player. It is a tint pill
+(`primaryTint`, `greenTint` when done) with an icon AND a word — "Download",
+"3 of 6", "Offline", or "Offline · Premium" with a lock that opens Plans —
+so the state is never colour-only. Management lives in Settings › Offline
+downloads (`app/(app)/profile/downloads.tsx`): a storage card with a
+`Ui2ProgressBar onCard`, the Wi-Fi auto-download row (same checked-row
+pattern as Motion and Vibration in Settings), and one `Ui2ListRow` per pack
+with a trash icon on the right. Nothing new was added to the token set.
+
+### Shape and type
+
+- **Tint blocks** (2026-09-07, canvas page "Slab-free · A/B/C", variant C).
+  A card is a solid tinted fill on the ground with **no outline and no bottom
+  slab**: neutral `card`, or a semantic tint. Radius 22; hero cards 28. Progress
+  grooves on a card use `trackOnCard`. **Selected** row inverts to solid
+  `primary` with `onPrimary` text and a white check that pops in
+  (`components/ui2/OptionRow.tsx`).
+  The 2px-outline-plus-slab card, the sinking slab button and the pressed-in
+  selected row were the D3 originals; they went because together with Nunito
+  they made the screens read as Duolingo. `ui2Shape.border/slab/buttonSlab`
+  are pinned at 0 rather than removed so nothing in the tree had to change
+  call shape; do not raise them.
+- **Button**: filled pill (`radiusButton: 999`), 56 high; pressing scales to
+  0.97 on a spring, haptic on the way down (`components/ui2/SlabButton.tsx`,
+  name kept for the call sites).
+- **Type**: Manrope for everything, 400–800 (`ui2Type` and the legacy
+  `typography.family` both point at it). Nunito and Plus Jakarta Sans are gone
+  from the binary. Line box 1.366em, same as Nunito's, so `leading.sans` and
+  the type scale did not move. No serif in UI 2.0.
+- **Onboarding composition** (2026-09-08, canvas page "Onboarding ·
+  composition", variant C "Hero block"): each step opens with ONE violet block
+  (`components/ui2/StepHero.tsx`) carrying back, "Step n of 5", a segmented
+  progress strip and the question in white; Sol peeks over its bottom-right
+  edge playing his clips. The old mascot-left / speech-bubble-right / fat
+  progress bar stack was Duolingo's onboarding part for part and is gone
+  (`StepHeader` and `SpeechBubble` deleted). Short-label pickers (language)
+  are a two-column tile grid of `OptionRow`s; long-label pickers stay rows.
+- **Lesson chrome** (2026-09-08, canvas page "Lesson chrome · A/B", variant B
+  "Hero card"): `ExerciseChrome` opens with the SAME `StepHero` block
+  onboarding uses — exit ×, lesson title + counter as the kicker, segmented
+  track, and the exercise type's instruction as the title (the card under it
+  skips its own label via `exercise-chrome-context`). On an answer the block
+  cross-fades to green or error and its title becomes the verdict with the
+  explanation under it; Sol reacts. The pinned footer keeps every state it
+  had — note row (placeholder, second try + Show answer, skipped, correct,
+  recovered, wrong with the answer), SKIP, Previous / Next / Finish — as tint
+  pills with no rules; the row says only what the block does not.
+  Multiple-choice rows are filled blocks: ground tint unanswered, solid green
+  for the answer, solid error for a wrong pick.
+- **Talk tab** (2026-09-08, canvas page "Talk · C variations", C1 "Spectrum"):
+  the live call's stage is the persona disc over a 28-bar mirrored analyser
+  (`components/tutor/Spectrum.tsx`) in the phase's colour, then icon + label +
+  detail. The bars are a talking indicator keyed to the server-reported phase,
+  not a meter — the session exposes no amplitude yet; `level` scales the
+  pattern when one exists. Transcript is captions (speaker label in the
+  speaker's colour, live turn in ink), controls are two round tint buttons
+  (Mute, Type — the composer opens under them) with End call last on its own
+  line. The Talk tab itself is this screen at rest — centred name, compact
+  correction pills (the question stays asked until answered), the stage with
+  "Ready", bio and level as captions, the last-session card, and a round mic
+  as the single control — so starting a call changes the state of the screen
+  the learner is already on.
+- **Learn tab** (2026-09-08, canvas page "Learn · variations", L2 "Dense"):
+  title and course pills on one line with the can-do caption under the row,
+  compact 34pt pills (hitSlop restores the 44pt target), unit strip as 64pt
+  chips (index · title · count, thin bar; selected is solid violet), 52pt
+  lesson rows, no outlines anywhere. Home was offered five variations the
+  same day and Tyler kept it as it is.
+- **Situations** (the chat tab, renamed from "AI Chat" 2026-09-08 — the old
+  title named the technology, not the benefit; canvas page "AI Chat ·
+  picker", G1 "Gallery"):
+  a two-column grid of scene tiles (icon well in a rotating tint, label), Free
+  Chat last and full width; tapping a tile opens `Ui2Sheet` with ONE button
+  that opens the chat as text with the mic ready
+  (`components/chat/ScenarioPicker.tsx`). Header (S1 "Question", canvas
+  "Situations · header"): a 12px violet uppercase eyebrow "Situations" with a
+  "Language · band" pill on its line, then a level-1 heading that asks a
+  question rotating by day. Tiles are 116pt with the label pinned to the
+  bottom — 46pt under the 36pt icon well, two lines of the 14pt label — so
+  nine clear the floating tab bar without scrolling. The old Text Chat / Live
+  Voice pair is gone from the picker: spoken replies and hands-free are
+  toggles inside the chat, and the real-time voice call is the Talk tab.
+  - **Mission dots** (2026-09-13). Every built-in scene is a four-stage
+    ladder (`types/missions.ts`, server-owned progress), and the tile shows
+    where the learner is on it: four 8pt dots to the right of the icon well,
+    4pt apart. Passed = filled `primary`; the one to play = a 2px `primary`
+    ring; locked = a 1px `idle` ring. SHAPE carries the state — a filled disc,
+    a thick ring, a thin ring read in greyscale — colour only agrees. No dots
+    render until the progress read has landed (a tile with four thin rings
+    would claim "nothing passed" before we know). The dots are
+    `accessibilityElementsHidden`; the tile's label carries the stage instead
+    ("Ordering at a Restaurant. Mission 2 of 4." / "All missions passed."),
+    and they fade in over `micro` when they arrive, gated on `useMotion`.
+  - **The sheet** for a mission scene: icon well, scene name, "Mission N of
+    4" caption; the mission title; the mission's band through `cefrLabel`
+    (`A2 · Handle short, routine exchanges on familiar topics` — never the
+    bare code); the objectives as a plain list, `ellipse-outline` in `idle`
+    for one still to do and `checkmark-circle` in `green` for one already
+    met in an open attempt (VoiceOver reads "Done." / "To do." before the
+    text); "Best so far: 82% accuracy" when there is a score; the resume
+    hint under the list when an attempt is open; and ONE `SlabButton` whose
+    label is `missionCtaLabel` — "Start mission 2", "Continue mission 2",
+    "Play mission 4 again", or "See plans" for a free-tier learner. The
+    scene description is not repeated here: the mission title and its
+    objectives say what the scene practises more concretely. Free Chat and
+    teacher-authored scenes keep the older sheet (description, "Language ·
+    CEFR line", resume line, "Continue"), and so does every scene until the
+    progress read has arrived — the button still works then, acting on
+    mission 1. A failed read shows a `Ui2InlineError` with retry above the
+    grid; the tiles stay tappable, because a scene is still playable when its
+    ladder is unknown.
+  - **Order**: the learner's goal-track scenes first, in the order the goal
+    named them, then the rest in their existing order, Free Chat always last
+    (`orderScenarios` in `lib/missions.ts`). A goal track that fails to load
+    never blanks the picker — the order simply stays as it was.
+- **Motion vocabulary** (all gated on `useMotion().shouldReduce`): step change =
+  the hero block arrives with a per-step entrance (slide / rise / pop / meet /
+  drop), the done segments light up 70ms apart, the question fades up, Sol
+  pops in last and bobs 4px on a 3.2s loop; rows cascade 40ms apart
+  (`FadeInDown`); the plan-building loader runs ~2.4s.
+- **Mascot**: `components/ui2/MascotSol.tsx` wraps `components/mascot/Mascot`,
+  which plays Sol's alpha-video clips (`assets/mascot/video`) with a `mood`
+  API (`idle` / `think` / `cheer` / …). A Rive rig would replace the video
+  behind the same props.
+
+- **Your patterns** (2026-09-08): Home gains one section between "Continue
+  learning" and "Your daily three" — `components/ui2/home/HomeInsights.tsx`.
+  A neutral `SlabCard` with a headline, up to 3 recurring-mistake rows
+  (icon tile on `primaryTint`, label, `type · N× in 30 days`), up to 4
+  `error` chips of struggling words plus a `neutral` `+N` chip, an inline
+  primary text action ("Review them now") and an `idle` footnote. It renders
+  NOTHING for a learner with no history and an error-with-retry card when the
+  read failed — an empty card and a failed one must never look alike. The
+  section title's "See all" opens `app/(app)/profile/patterns.tsx` (stat row:
+  `primary` words-learned + `pink`/`green` slipping count; one card per
+  mistake with the original struck through beside a `close-circle` and the
+  correction beside a `checkmark-circle`, never colour alone). Its sibling
+  `app/(app)/profile/memory.tsx` lists the live tutor's notes grouped by kind
+  with a 36pt `pinkTint` forget button per row and a destructive
+  `Ui2ListRow` to forget everything. Both are reached from Profile rows
+  directly under the proficiency report. The session hero's second line is
+  now the learner's own goal (`Toward: …`) when they gave one; the level card
+  keeps the can-do pairing, so a bare band still never stands alone.
+
+### Migrating a Dark Glow screen to UI 2.0
+
+Rollout COMPLETED 2026-09-07: every screen is on UI 2.0, in both schemes, and
+`userInterfaceStyle` is back to `"automatic"` in `app.json` and
+`ios/Fluenci/Info.plist`. It was temporarily `"dark"` during the migration so the
+half-converted app was not visibly inconsistent; that scaffolding is gone.
+
+`tests/ui2-migration.test.ts` now enforces the result: no screen may read the
+fixed dark `colors` palette or hardcode a hex. Comments are stripped before the
+scan, because during this migration three separate checks fired on prose rather
+than code, and a guard that cannot tell the difference teaches people to delete
+the documentation.
+
+**The primitives mirror the Dark Glow ones on purpose.** `Heading` / `Body` /
+`Caption` / `Hero` keep their names, props and `Tone` vocabulary; `Ui2Header`
+mirrors `ScreenHeader`, and so on down the list. A migration is therefore mostly
+an import swap plus deleting inline `colors.*`, not a rewrite of every node. That
+is deliberate: this file forbids mixing the two systems on one screen, so
+converting a whole screen has to be cheap enough that nobody converts half of it.
+
+| Dark Glow | UI 2.0 |
+|---|---|
+| `components/ui/Text` (`Heading`/`Body`/`Caption`/`Hero`) | `components/ui2/Ui2Text` (same names, same props) |
+| `components/ui/ScreenHeader` | `components/ui2/Ui2Header` |
+| `components/ui/Button`, `TactileButton`, `GradientButton` | `components/ui2/SlabButton` |
+| `components/ui/Card`, `GlassCard`, `Surface`, `GradientBorderCard` | `components/ui2/SlabCard` (`tint` picks the semantic fill) |
+| `components/ui/Sheet` | `components/ui2/Ui2Sheet` |
+| `components/ui/ProgressBar` | `components/ui2/Ui2ProgressBar` |
+| `components/ui/Badge` | `components/ui2/Ui2Badge` |
+| `components/ui/EmptyState` | `components/ui2/Ui2EmptyState` |
+| `components/ui/InlineError` | `components/ui2/Ui2InlineError` |
+| `components/ui/Chip` | `components/ui2/Chip` |
+| a raw `TextInput` | `components/ui2/Ui2Input` |
+| a hand-rolled settings row | `components/ui2/Ui2ListRow` |
+| `GlowBackground` / `GradientBackground` | nothing — UI 2.0 grounds on flat `c.bg` |
+
+**The rule that makes a migration checkable:** after converting a screen it must
+contain **no reference to `colors.*`, no hex literal, and no NativeWind colour
+class**. Colour comes only from `useUi2Theme()`.
+
+That third clause is the one people miss, because it hides. `tailwind.config.js`
+mirrors the OLD Dark Glow palette — `dark-card` is `#151921`, `text-primary` is
+`#F1F5F9` — so `className="bg-dark-card"` is a hardcoded near-black that contains
+no `colors.` and no hex and reads perfectly clean to a grep. Two `components/stats`
+files were fully dark-pinned this way while scanning green, and a live pair
+survived in the chat toolbar. Layout utilities are untouched: `border-b` and
+`px-3` name no colour. Only the palette keys in `tailwind.config.js` are banned.
+
+All three clauses are enforced by `tests/ui2-migration.test.ts`, which scans
+`app/` and `components/` entire — a scope it asserts, because an earlier version
+of that test scanned three hand-picked directories and passed while 82 files were
+still on Dark Glow.
+
+Note what that rule does NOT say. Importing from `config/theme` is fine and
+expected — it is still the token home, and it is where `ui2Light`, `ui2Dark`,
+`ui2Type`, `ui2Shape` and the `Ui2Palette` type live. `spacing` and `radii` are
+plain numbers with no scheme in them and may be used as before. The single
+harmful import is **`colors`**, which is a fixed DARK palette: a screen reading
+it is still Dark Glow no matter how it looks on your machine, and the failure is
+invisible until someone opens the app on a phone set to light.
+
+**Both schemes are part of "done".** Check a converted screen in light AND dark
+before calling it finished. The failure mode is not a crash; it is grey-on-grey
+text that nobody notices until a user with a light phone opens the app.
+
+`floatingTabBarSpace()` from `components/navigation/FloatingTabBar.tsx` is still
+the source of truth for bottom clearance on tabbed screens — the tab bar overlays
+content and does not participate in either design system.

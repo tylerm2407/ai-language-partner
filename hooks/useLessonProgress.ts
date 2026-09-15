@@ -77,7 +77,6 @@ export function useLessonProgress(courseId?: string) {
       lessonId: string,
       courseIdForLesson: string,
       score: number,
-      xpEarned: number,
       timeSpentMs: number,
     ) => {
       if (!userId) throw new Error('Cannot record a lesson completion while signed out');
@@ -87,7 +86,7 @@ export function useLessonProgress(courseId?: string) {
         // the row with a uuid parse error that was then swallowed.
         throw new Error(`Lesson ${lessonId} has no course; cannot record completion`);
       }
-      return markComplete(userId, lessonId, courseIdForLesson, score, xpEarned, timeSpentMs);
+      return markComplete(userId, lessonId, courseIdForLesson, score, timeSpentMs);
     },
     [userId, markComplete],
   );

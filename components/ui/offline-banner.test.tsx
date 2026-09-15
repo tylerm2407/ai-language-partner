@@ -11,6 +11,8 @@
 import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
 
+import { OfflineBanner, looksOffline } from './OfflineBanner';
+
 const mockFetch = jest.fn();
 const mockAddEventListener = jest.fn();
 jest.mock('@react-native-community/netinfo', () => ({
@@ -20,8 +22,6 @@ jest.mock('@react-native-community/netinfo', () => ({
     addEventListener: (...a: unknown[]) => mockAddEventListener(...a),
   },
 }));
-
-import { OfflineBanner, looksOffline } from './OfflineBanner';
 
 /** Rendered banner text, or null when the banner is absent. */
 function bannerText(tree: TestRenderer.ReactTestRenderer): string | null {

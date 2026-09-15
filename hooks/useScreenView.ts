@@ -22,6 +22,7 @@ import { trackEvent, type EventProperties } from '../lib/analytics';
  */
 export type ScreenName =
   | 'home'
+  | 'offline_downloads'
   | 'learn'
   | 'lesson'
   | 'review'
@@ -29,12 +30,26 @@ export type ScreenName =
   | 'book'
   | 'passage'
   | 'chat'
+  /** The mission debrief after Finish. Its own screen for the same reason
+   *  `tutor_debrief` is: never reading the result is a drop-off worth seeing. */
+  | 'chat_debrief'
   | 'practice'
   | 'profile'
   | 'paywall'
   | 'onboarding'
   | 'checkpoint'
-  | 'news';
+  | 'news'
+  // The live tutor is three screens, not one: choosing a tutor and a
+  // correction mode, the call itself, and the debrief afterwards. Collapsing
+  // them would hide the two drop-offs that matter — never placing the call,
+  // and never reading what came out of it.
+  | 'tutor'
+  | 'tutor_call'
+  | 'tutor_debrief'
+  // What the tutor knows about the learner, made visible: recurring mistakes
+  // and struggling words, and the tutor's between-session notes.
+  | 'patterns'
+  | 'tutor_memory';
 
 export function useScreenView(screen: ScreenName, props: EventProperties = {}): void {
   // Only the primitive fields are dependencies: depending on the object itself

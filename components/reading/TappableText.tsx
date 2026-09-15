@@ -1,7 +1,8 @@
 import { memo, useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing } from '../../config/theme';
+import { spacing } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { canExplain } from '../../lib/reading-help';
 import { tokenize, type Paragraph } from '../../lib/reading-text';
 
@@ -34,26 +35,47 @@ export interface SelectedRef {
 interface Props {
   paragraphs: Paragraph[];
   fontSize: number;
+  /** Line height as a multiple of fontSize. Defaults to the 1.7 the reader
+   *  has always used; the display sheet offers 1.45 and 1.95 around it. */
+  lineHeightMultiplier?: number;
+  /** Body face. Omitted = the platform default, which is how the reader
+   *  rendered before the display sheet. Never pair this with `fontWeight`:
+   *  Android substitutes a different family when both are set. */
+  fontFamily?: string;
   selectedRef: SelectedRef | null;
   onWordPress: (raw: string, ref: SelectedRef) => void;
   /** Omitted where explanations are not offered (e.g. no entitlement). */
   onExplain?: (paragraph: Paragraph) => void;
 }
 
-function useWordStyles(fontSize: number) {
+/**
+ * Paragraph and selected-word styles for one font size.
+ *
+ * The selected word is NOT marked by colour alone — it takes the tint fill AND
+ * an underline, so it still reads for someone who cannot separate the two hues,
+ * and in either scheme. `c` joins the dependency array because the styles now
+ * carry colour; it is one of two module-level palette constants, so it changes
+ * only when the phone's scheme does and the memo still holds across renders.
+ */
+export const DEFAULT_LINE_HEIGHT_MULTIPLIER = 1.7;
+
+function useWordStyles(fontSize: number, lineHeightMultiplier: number, fontFamily: string | undefined) {
+  const { c } = useUi2Theme();
   return useMemo(
     () => ({
       paragraph: {
         fontSize,
-        lineHeight: fontSize * 1.7,
-        color: colors.text.primary,
+        lineHeight: fontSize * lineHeightMultiplier,
+        color: c.ink,
+        ...(fontFamily ? { fontFamily } : null),
       },
       selected: {
-        backgroundColor: colors.surface.cardAlt,
-        color: colors.text.primary,
+        backgroundColor: c.primaryTint,
+        color: c.onTint,
+        textDecorationLine: 'underline' as const,
       },
     }),
-    [fontSize],
+    [fontSize, lineHeightMultiplier, fontFamily, c],
   );
 }
 
@@ -75,6 +97,7 @@ const ParagraphBlock = memo(function ParagraphBlock({
   onWordPress,
   onExplain,
 }: BlockProps) {
+  const { c } = useUi2Theme();
   const tokens = useMemo(() => tokenize(paragraph.text), [paragraph.text]);
 
   // A paragraph outside the server's bounds cannot be explained — it refuses
@@ -108,8 +131,8 @@ const ParagraphBlock = memo(function ParagraphBlock({
           accessibilityRole="button"
           accessibilityLabel="Explain this paragraph"
         >
-          <Ionicons name="help-circle-outline" size={18} color={colors.text.tertiary} />
-          <Text style={block.explainLabel}>Explain</Text>
+          <Ionicons name="help-circle-outline" size={18} color={c.muted} />
+          <Text style={[block.explainLabel, { color: c.muted }]}>Explain</Text>
         </Pressable>
       )}
     </View>
@@ -131,7 +154,6 @@ const block = StyleSheet.create({
   },
   explainLabel: {
     fontSize: 13,
-    color: colors.text.tertiary,
     marginLeft: spacing.xxs,
   },
 });
@@ -139,11 +161,13 @@ const block = StyleSheet.create({
 export function TappableText({
   paragraphs,
   fontSize,
+  lineHeightMultiplier = DEFAULT_LINE_HEIGHT_MULTIPLIER,
+  fontFamily,
   selectedRef,
   onWordPress,
   onExplain,
 }: Props) {
-  const styles = useWordStyles(fontSize);
+  const styles = useWordStyles(fontSize, lineHeightMultiplier, fontFamily);
 
   return (
     <View>

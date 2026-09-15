@@ -21,6 +21,13 @@ import type {
   LanguageCode,
   ProficiencyLevel,
 } from '../types';
+// Type-only, both of them. This module is the storage boundary for a draft and
+// must stay free of the packs (nine language files plus the audio manifest) and
+// of AsyncStorage-touching pref helpers — an `import type` is erased, so the
+// shape is shared without the dependency.
+import type { NotificationPrefs } from './notification-prefs';
+import type { TopicKey } from '../components/onboarding/topic-packs';
+import type { PlacementChoice } from './course-placement';
 
 export const PENDING_ONBOARDING_KEY = 'pending-onboarding';
 export const PENDING_ONBOARDING_SCHEMA_VERSION = 1;
@@ -31,7 +38,7 @@ export const PENDING_ONBOARDING_TTL_MS = 7 * 24 * 60 * 60 * 1000;
  * How long a draft stays claimable AFTER `completedAt` is stamped.
  *
  * A completed draft is the dangerous one. It is the fully populated one —
- * display name, the free-text `idealL2Self` goal, level, trial XP — and it is
+ * display name, the free-text `idealL2Self` goal, level, trial result — and it is
  * the one `isFlushable` lets the onboarding screen write into whatever account
  * happens to be signed in when it is next read. On a shared device (the
  * university pilots put several learners on one iPad) seven days of that means
@@ -55,17 +62,15 @@ export const PENDING_ONBOARDING_COMPLETED_TTL_MS = 60 * 60 * 1000;
 /**
  * What the learner did in the pre-auth trial lesson.
  *
- * Kept so the sign-up screen can name the actual numbers ("keep your 20 XP")
- * rather than gesture at "your progress", and so the post-signup flush can
+ * Kept so the sign-up screen can name the actual result rather than gesture at
+ * "your progress", and so the post-signup flush can
  * tick the first-lesson checklist item for work that really happened.
  *
  * NOT a substitute for a lesson completion row. The trial lesson is bundled in
  * the app (components/onboarding/trial-lesson.ts) and has no `lessons.id`, so
- * there is nothing to record against — the XP is granted on flush, the
- * completion is not.
+ * there is nothing to record against; the checklist preserves the completion.
  */
 export interface TrialLessonResult {
-  xpEarned: number;
   correctCount: number;
   totalCount: number;
   /** ISO timestamp the trial finished. */
@@ -101,7 +106,47 @@ export interface PendingOnboarding {
    * treated as unclaimed, which is the safe direction.
    */
   claimedByUserId?: string | null;
+  /**
+   * Which of the five onboarding topics the learner's ideal-self answer points
+   * at — the chip they tapped, or the one `topicFromIdealText` guessed from
+   * what they typed. Null means "could not tell", which is a real answer: the
+   * trial falls back to `travel` for the lesson while the draft keeps the null,
+   * so analytics never reports a guess as a choice.
+   */
+  topic?: TopicKey | null;
+  /**
+   * Which reminders the learner switched on, and when, from the notifications
+   * step. Device-local like everything else here; `saveNotificationPrefs` moves
+   * them to their real home on flush.
+   */
+  notificationPrefs?: NotificationPrefs | null;
+  /**
+   * Where the learner asked their lessons to start, from the course step:
+   * their declared band, one below it, or no lesson path. Only the CHOICE is
+   * stored — the curriculum tables are unreadable before sign-in (RLS
+   * `TO authenticated`), so the course id is resolved at flush time in
+   * `writeProfile`. Absent or null reads as `start`.
+   */
+  courseChoice?: PlacementChoice | null;
 }
+
+/**
+ * WHY NONE OF THE NEW FIELDS BUMPS `PENDING_ONBOARDING_SCHEMA_VERSION`.
+ *
+ * `courseChoice` follows the same rule as the two below it: optional and
+ * nullable, so an older draft loads without it and the flush substitutes
+ * `start` — the course the learner's declared level would have opened anyway.
+ *
+ * A bump discards every in-flight draft on upgrade, so it is only worth paying
+ * when the loader would otherwise MISREAD an old blob. Both fields above are
+ * optional and nullable, exactly like `claimedByUserId` before them: an older
+ * draft simply loads without them, `topic` reads as absent (the trial falls
+ * back to `travel`, the same lesson that build would have run), and
+ * `notificationPrefs` reads as absent — the onboarding screen and the flush
+ * both substitute `DEFAULT_NOTIFICATION_PREFS`, and `validateNotificationPrefs`
+ * would repair a partial blob field by field anyway. Nothing is misread, so
+ * nothing needs throwing away.
+ */
 
 export type PendingOnboardingDraft = Omit<PendingOnboarding, 'version' | 'startedAt'>;
 
@@ -116,6 +161,9 @@ export function emptyPendingOnboarding(): PendingOnboardingDraft {
     dailyGoalMinutes: null,
     completedAt: null,
     claimedByUserId: null,
+    topic: null,
+    notificationPrefs: null,
+    courseChoice: null,
   };
 }
 

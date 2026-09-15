@@ -4,7 +4,7 @@
 // No network: calculatePronunciationScore is pure string logic.
 
 import { assert, assertEquals } from 'https://deno.land/std@0.168.0/testing/asserts.ts';
-import { calculatePronunciationScore, levenshteinDistance } from './scoring.ts';
+import { calculatePronunciationScore, levenshteinDistance, normalizeForScoring } from './scoring.ts';
 
 // ─── levenshteinDistance ─────────────────────────────────────────────
 
@@ -16,6 +16,16 @@ Deno.test('levenshteinDistance: identical, empty, and classic cases', () => {
 });
 
 // ─── calculatePronunciationScore ─────────────────────────────────────
+
+Deno.test('punctuation from the transcriber never counts as a mispronunciation', () => {
+  // gpt-4o-mini-transcribe punctuates; whisper-1 mostly did not. Observed in
+  // prod on 2026-09-08: a perfect "hola, buenos días, me llamo Ana." scored 85
+  // with three phoneme "errors" that were all commas and a full stop.
+  const r = calculatePronunciationScore('Hola, buenos días, me llamo Ana.', 'hola buenos días me llamo Ana', []);
+  assertEquals(r.score, 100);
+  assertEquals(r.phonemeErrors, []);
+  assertEquals(normalizeForScoring("¿Qué tal, l'homme?"), "qué tal l'homme");
+});
 
 Deno.test('perfect match on expected text: 100, no matchedVariant, no errors', () => {
   const result = calculatePronunciationScore('hola amigo', 'hola amigo', ['buenos dias']);

@@ -7,6 +7,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { generateValidated } from '../_shared/validated-generate.ts';
 import { checkBurstLimit } from '../_shared/burst-limit.ts';
+import { resolveTier } from '../_shared/entitlement.ts';
 import { getEffectiveLimits } from '../_shared/plan-limits.ts';
 import { isValidExerciseType, isValidLanguage, isValidUUID } from '../_shared/validation.ts';
 import { PROVIDER_TIMEOUT_MS, providerFetch } from '../_shared/provider-fetch.ts';
@@ -81,17 +82,7 @@ serve(async (req: Request) => {
     // `single()` because "no subscription row" is the normal free-tier state,
     // not an error worth logging. Fail soft: an unresolvable tier sends no
     // context, never a free upgrade.
-    let tier = 'starter';
-    const { data: sub, error: subErr } = await supabase
-      .from('subscriptions')
-      .select('tier, is_active')
-      .eq('user_id', authUser.userId)
-      .maybeSingle();
-    if (subErr) {
-      console.warn('[get-hint] tier lookup failed (non-fatal, no context):', subErr.message);
-    } else if (sub?.is_active && typeof sub.tier === 'string') {
-      tier = sub.tier;
-    }
+    const tier: string = await resolveTier(supabase, authUser.userId);
 
     // ── Daily quota (migration 090) ───────────────────────────────────────
     //

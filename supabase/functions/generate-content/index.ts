@@ -6,7 +6,8 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, corsResponse } from '../_shared/cors.ts';
-import { getPlanLimits } from '../_shared/plan-limits.ts';
+import { resolveEntitlement } from '../_shared/entitlement.ts';
+import { checkBurstLimit } from '../_shared/burst-limit.ts';
 import { generateValidated } from '../_shared/validated-generate.ts';
 import { PROVIDER_TIMEOUT_MS, providerFetch } from '../_shared/provider-fetch.ts';
 import {
@@ -205,15 +206,16 @@ serve(async (req: Request) => {
       );
     }
 
-    // ── Rate limit: atomic check-and-consume against text messages ──
-    const { data: sub } = await supabase
-      .from('subscriptions')
-      .select('tier, is_active')
-      .eq('user_id', user.id)
-      .single();
+    // ── Rate limit: burst, then atomic check-and-consume against text messages ──
+    const burstOk = await checkBurstLimit(supabase, user.id, 'generate-content', 10, 60);
+    if (!burstOk) {
+      return new Response(
+        JSON.stringify({ error: 'Too many requests. Please slow down.', code: 'RATE_LIMITED' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
-    const tier = sub?.is_active && sub.tier ? sub.tier : 'starter';
-    const limits = getPlanLimits(tier);
+    const { tier, limits } = await resolveEntitlement(supabase, user.id);
 
     const { data: quotaOk, error: quotaErr } = await supabase.rpc('consume_daily_quota', {
       p_user_id: user.id,

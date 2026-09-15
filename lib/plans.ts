@@ -114,6 +114,27 @@ export interface PlanDefinition {
    * unrequested review one chatty session can add to tomorrow.
    */
   dailyChatCards: number;
+  /**
+   * Minutes of LIVE VOICE TUTOR per day — the speech-to-speech tab, not the
+   * chat's voice mode. Mirrors `dailyTutorMinutes` in
+   * supabase/functions/_shared/plan-limits.ts and the `get_effective_limits`
+   * DB function; all three must agree.
+   *
+   * DISPLAY WARNING: this is NOT the number to put on the pricing page. It is
+   * the weaker of the two ceilings — it stops one bad day. The monthly spend
+   * ceiling is what actually bounds the feature, and it bites first: a basic
+   * learner using 15 minutes a day runs out of MONTH on day two. Show
+   * `tutorMinutesPerMonth(plan)` instead.
+   */
+  dailyTutorMinutes: number;
+  /**
+   * Per-user monthly spend ceiling for the live tutor, in cents.
+   *
+   * Denominated in cents internally and MINUTES externally — never render a
+   * dollar figure for a learner's remaining AI time. Use
+   * `tutorMinutesPerMonth()` below for anything user-facing.
+   */
+  monthlyTutorCents: number;
   audiobookNarration: boolean;
   offlineMode: boolean;
 }
@@ -163,13 +184,19 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     dailyTranslations: 10,
     dailyWordLookups: 60,
     dailyChatCards: 3,
+    dailyTutorMinutes: 0,
+    monthlyTutorCents: 0,
     audiobookNarration: false,
     offlineMode: false,
   },
   basic: {
     name: 'Basic',
     priceMonthlyUsd: 9.99,
-    dailyTextMessages: 25,
+    // 20, not 25: migration 106 cut basic chat on 2026-09-02 and this mirror
+    // was never updated. The server is the authority, so the old 25 here only
+    // ever meant the upgrade prompt fired five messages after the API began
+    // refusing.
+    dailyTextMessages: 20,
     dailyVoiceMinutes: 6,
     dailyWritingGrades: 3,
     dailyPronunciationScores: 3,
@@ -179,6 +206,8 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     dailyTranslations: 30,
     dailyWordLookups: 300,
     dailyChatCards: 15,
+    dailyTutorMinutes: 15,
+    monthlyTutorCents: 300,
     audiobookNarration: false,
     offlineMode: false,
   },
@@ -195,6 +224,8 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     dailyTranslations: 60,
     dailyWordLookups: 600,
     dailyChatCards: 30,
+    dailyTutorMinutes: 30,
+    monthlyTutorCents: 800,
     audiobookNarration: true,
     offlineMode: true,
   },
@@ -211,6 +242,8 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     dailyTranslations: 90,
     dailyWordLookups: UNLIMITED_WORD_LOOKUPS,
     dailyChatCards: 50,
+    dailyTutorMinutes: 45,
+    monthlyTutorCents: 1400,
     audiobookNarration: true,
     offlineMode: true,
   },
@@ -233,28 +266,33 @@ export const PLAN_FEATURES: Record<PlanId, string[]> = {
     'All lessons, reading and daily news',
     'One photo avatar, free',
   ],
+  // Every number below is pinned against PLANS by lib/plans-features.test.ts.
+  // The strings drifted once (basic advertised 25 messages and 10 voice
+  // minutes against real caps of 20 and 6); the test is what stops a second
+  // drift. Use the plan's own name in the string, never a bare adjective.
   basic: [
     '20 new words a day',
     'Unlimited review — always',
-    '25 tutor messages per day',
-    '10 minutes of voice practice per day',
+    'Sol remembers your moment',
+    '20 tutor messages per day',
+    '6 minutes of voice practice per day',
     '3 writing grades per day',
   ],
   premium: [
     'Everything in Basic',
     'Unlimited new words',
     '50 tutor messages per day',
-    '20 minutes of voice practice per day',
+    '12 minutes of voice practice per day',
     '7 writing grades per day',
-    'Offline mode',
+    'Lessons and books offline',
   ],
   vip: [
     'Everything in Premium',
     '75 tutor messages per day',
-    '30 minutes of voice practice per day',
+    '18 minutes of voice practice per day',
     '12 writing grades per day',
+    'Unlimited hints',
     'Audiobook narration',
-    'Priority support',
   ],
 };
 
@@ -271,6 +309,8 @@ export function getPlanLimits(planId: PlanId | string): {
   dailyTranslations: number;
   dailyWordLookups: number;
   dailyChatCards: number;
+  dailyTutorMinutes: number;
+  monthlyTutorCents: number;
 } {
   const plan = PLANS[planId as PlanId] ?? PLANS.starter;
   return {
@@ -283,7 +323,32 @@ export function getPlanLimits(planId: PlanId | string): {
     dailyTranslations: plan.dailyTranslations,
     dailyWordLookups: plan.dailyWordLookups,
     dailyChatCards: plan.dailyChatCards,
+    dailyTutorMinutes: plan.dailyTutorMinutes,
+    monthlyTutorCents: plan.monthlyTutorCents,
   };
+}
+
+/**
+ * The live-tutor number a learner should actually be shown.
+ *
+ * The daily cap reads like the headline figure and is not: at 12 cents a
+ * minute the monthly ceiling binds long before it does, so quoting "15 minutes
+ * a day" would promise 450 minutes and deliver 24. Keep this the only place
+ * the two ceilings get turned into a user-facing quantity.
+ *
+ * Kept in sync by hand with TUTOR_CENTS_PER_MINUTE in
+ * supabase/functions/_shared/tutor-pricing.ts. That constant is expected to
+ * fall once real invoices are reconciled, which will RAISE these minutes at
+ * identical margin — so re-check it here when it moves.
+ */
+export const TUTOR_CENTS_PER_MINUTE = 12;
+export const TUTOR_SESSION_FIXED_CENTS = 1;
+
+export function tutorMinutesPerMonth(planId: PlanId | string): number {
+  const plan = PLANS[planId as PlanId] ?? PLANS.starter;
+  const spendable = plan.monthlyTutorCents - TUTOR_SESSION_FIXED_CENTS;
+  if (spendable <= 0) return 0;
+  return Math.floor(spendable / TUTOR_CENTS_PER_MINUTE);
 }
 
 /** Stripe price keys used in checkout and webhook handling. */
@@ -295,3 +360,13 @@ export const STRIPE_PRICE_KEYS = {
   vip_monthly: 'vip_monthly',
   vip_yearly: 'vip_yearly',
 } as const;
+
+/**
+ * The paywall's tier-row badge and its line (T4 · Pace, 2026-09-11): the one
+ * number Free meters, new words a day — Basic's real cap, "∞" above it.
+ * Lives here so the display copy can never drift from the limit it quotes.
+ */
+export function paceCopy(tier: Exclude<PlanId, 'starter'>): { badge: string; line: string } {
+  const cap = PLANS[tier].dailyNewCards;
+  return isUnlimitedNewCards(cap) ? { badge: '∞', line: 'no word ceiling' } : { badge: String(cap), line: 'new words a day' };
+}

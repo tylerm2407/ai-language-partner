@@ -5,8 +5,9 @@ import { haptic } from '../../lib/haptics';
 import { FeedbackCard } from './FeedbackCard';
 import { ExerciseHint } from './ExerciseHint';
 import { HighlightedText } from '../shared/HighlightedText';
-import { Body, Caption } from '../ui/Text';
-import { colors, spacing, radii } from '../../config/theme';
+import { Body, Caption } from '../ui2/Ui2Text';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
+import { spacing, radii } from '../../config/theme';
 import { gradeAnswer } from '../../lib/grading';
 import type { GradeResult } from '../../lib/grading';
 import { exerciseHints, isRestored, regradePick } from '../../lib/exercise-restore';
@@ -42,6 +43,7 @@ export function ErrorCorrectionExercise({
   cefrLevel,
   siblingKeys,
 }: Props) {
+  const { c } = useUi2Theme();
   // Seeded from the recorded pick so Previous comes back to the answer the
   // learner actually gave, in its graded state — see lib/exercise-restore.ts.
   const [userInput, setUserInput] = useState(selected ?? '');
@@ -88,15 +90,18 @@ export function ErrorCorrectionExercise({
 
       {/* Sentence with error */}
       <View style={{
-        backgroundColor: correctionInstruction ? colors.surface.cardAlt : colors.error.tint, borderRadius: radii.xxl, padding: spacing.lg, marginBottom: spacing.lg + spacing.xxs, minHeight: 100,
+        // A row carrying an authored `correctionInstruction` is a rewrite
+        // task, not an error hunt, so it does not get the error tint.
+        backgroundColor: correctionInstruction ? c.card : c.pinkTint, borderRadius: radii.xxl, padding: spacing.lg, marginBottom: spacing.lg + spacing.xxs, minHeight: 100,
         justifyContent: 'center',
       }}>
         <HighlightedText
           text={errorSentence}
           highlight={highlight}
-          className="text-text-primary text-[18px] leading-7"
+          className="text-[18px] leading-7"
+          style={{ color: c.ink }}
         />
-        <Caption tone={correctionInstruction ? 'secondary' : 'error'} style={{ marginTop: spacing.xs, fontStyle: 'italic' }}>
+        <Caption style={{ color: c.ink, marginTop: spacing.xs, fontStyle: 'italic' }}>
           {correctionInstruction || 'This sentence contains an error. Type the corrected version below.'}
         </Caption>
       </View>
@@ -109,19 +114,19 @@ export function ErrorCorrectionExercise({
           value={userInput}
           onChangeText={setUserInput}
           placeholder={correctionInstruction ? 'Type the rewritten sentence...' : 'Type the corrected sentence...'}
-          placeholderTextColor={colors.text.quaternary}
+          placeholderTextColor={c.idle}
           editable={!isRevealed}
           multiline
           style={{
             borderWidth: 2,
-            borderColor: isRevealed ? (isCorrect ? colors.success.base : colors.error.base) : colors.border.strong,
+            borderColor: isRevealed ? (isCorrect ? c.green : c.error) : c.cardBorder,
             borderRadius: radii.lg,
             paddingHorizontal: spacing.md,
             paddingVertical: 10,
             fontSize: 16,
             minHeight: 80,
             textAlignVertical: 'top',
-            color: colors.text.primary,
+            color: c.ink,
             marginBottom: spacing.md,
           }}
           accessibilityLabel={correctionInstruction ? 'Rewritten sentence' : 'Corrected sentence'}
@@ -131,10 +136,10 @@ export function ErrorCorrectionExercise({
             <Ionicons
               name={isCorrect ? 'checkmark-circle' : 'close-circle'}
               size={20}
-              color={isCorrect ? colors.success.base : colors.error.base}
+              color={isCorrect ? c.green : c.error}
               style={{ marginRight: spacing.xxs }}
             />
-            <Caption style={{ color: isCorrect ? colors.success.base : colors.error.base }}>
+            <Caption style={{ color: c.ink }}>
               {isCorrect ? 'Correct' : 'Incorrect'}
             </Caption>
           </View>
@@ -159,7 +164,8 @@ export function ErrorCorrectionExercise({
           onPress={handleCheck}
           disabled={userInput.trim().length === 0}
           style={{
-            backgroundColor: userInput.trim().length > 0 ? colors.action.primaryFill : colors.indigo[200],
+            backgroundColor: c.primary,
+            opacity: userInput.trim().length > 0 ? 1 : 0.6,
             paddingVertical: spacing.md, borderRadius: radii.lg, alignItems: 'center',
           }}
           accessibilityRole="button"

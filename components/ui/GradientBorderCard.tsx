@@ -1,17 +1,23 @@
 /**
- * GradientBorderCard — 1.5px indigo→lilac gradient rule around an opaque card.
+ * GradientBorderCard — a gradient rule around an opaque card.
  *
  * Used by SectionBanner and LevelBadge. The gradient BORDER is the whole point
- * of the component and stays; the glass inner fill and specular sheen are gone,
- * replaced with surface.card so it matches every other card under the Dark Glow
- * theme. Border runs primary → premium (indigo.600 → #A855F7), the deck's
- * `linear-gradient(135deg, primary, lilac)`.
+ * of the component, so it stays; what changed is where its two stops come from.
+ * They used to be fixed indigo→lilac hexes, which is a dark-ground gradient and
+ * washes out on white. They are now `primary → slab` from `useUi2Theme()`: the
+ * accent and its pressed/shadow step, which is the only ramp UI 2.0 actually
+ * defines, and which reads in both schemes.
+ *
+ * Worth saying plainly: UI 2.0 has no gradient vocabulary. DESIGN.md's
+ * migration table maps this component to `SlabCard`, and that — not a retinted
+ * gradient — is the real destination. Doing it here would change how
+ * SectionBanner and LevelBadge look, which is a call for whoever owns those two
+ * files, so this keeps the component's shape and only fixes the palette.
  */
 
 import { View, type ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BORDER_GRADIENT_COLORS } from '../../config/gradients';
-import { colors } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 
 interface GradientBorderCardProps {
   children: React.ReactNode;
@@ -26,15 +32,16 @@ export function GradientBorderCard({
   children,
   borderWidth = 1.5,
   borderRadius = 18,
-  innerBg = colors.surface.card,
+  innerBg,
   style,
   innerStyle,
 }: GradientBorderCardProps) {
+  const { c } = useUi2Theme();
   const innerRadius = borderRadius - borderWidth;
 
   return (
     <LinearGradient
-      colors={[...BORDER_GRADIENT_COLORS]}
+      colors={[c.primary, c.slab]}
       // 135deg — diagonal, matching the deck. The old horizontal sweep made the
       // rule read as a flat two-tone band on wide cards.
       start={{ x: 0, y: 0 }}
@@ -45,10 +52,10 @@ export function GradientBorderCard({
         style={[
           {
             flex: 1,
-            backgroundColor: innerBg,
+            backgroundColor: innerBg ?? c.card,
             borderRadius: innerRadius,
             borderWidth: 1,
-            borderColor: colors.border.default,
+            borderColor: c.cardBorder,
             overflow: 'hidden',
           },
           innerStyle,

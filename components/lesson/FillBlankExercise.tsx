@@ -6,8 +6,8 @@ import { ExerciseCard } from './ExerciseCard';
 import { FeedbackCard } from './FeedbackCard';
 import { ExerciseHint } from './ExerciseHint';
 import { HighlightedText } from '../shared/HighlightedText';
-import { Button } from '../ui/Button';
-import { colors } from '../../config/theme';
+import { SlabButton } from '../ui2/SlabButton';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { gradeAnswer } from '../../lib/grading';
 import type { GradeResult } from '../../lib/grading';
 import { exerciseHints, isRestored, regradePick } from '../../lib/exercise-restore';
@@ -39,6 +39,7 @@ export function FillBlankExercise({
   cefrLevel,
   siblingKeys,
 }: FillBlankExerciseProps) {
+  const { c } = useUi2Theme();
   // Seeded from the recorded pick so Previous comes back to the answer the
   // learner actually gave, in its graded state — see lib/exercise-restore.ts.
   const [answer, setAnswer] = useState(selected ?? '');
@@ -65,10 +66,10 @@ export function FillBlankExercise({
   };
 
 
-  const getBorderClass = () => {
-    if (!submitted) return 'border-input-border';
-    if (result?.isCorrect) return 'border-success';
-    return 'border-error';
+  const getBorderColor = () => {
+    if (!submitted) return c.cardBorder;
+    if (result?.isCorrect) return c.green;
+    return c.error;
   };
 
   const highlight = exercise.targetWord ?? exercise.targetGrammar;
@@ -77,26 +78,31 @@ export function FillBlankExercise({
     <ExerciseCard type={exercise.type} prompt="Fill in the blank">
       <View className="mb-4">
         {parts.length > 1 ? (
-          <Text className="text-text-primary text-lg leading-7">
+          <Text className="text-lg leading-7" style={{ color: c.ink }}>
             <HighlightedText text={parts[0] ?? ''} highlight={highlight} />
-            <Text className="text-primary font-bold"> _____ </Text>
+            <Text className="font-bold" style={{ color: c.primary }}> _____ </Text>
             <HighlightedText text={parts[1] ?? ''} highlight={highlight} />
           </Text>
         ) : (
           <HighlightedText
             text={exercise.prompt}
             highlight={highlight}
-            className="text-text-primary text-lg leading-7"
+            className="text-lg leading-7"
+            style={{ color: c.ink }}
           />
         )}
       </View>
 
       <ExerciseHint hint={exercise.hintText} revealed={submitted || showResult} />
 
+      {/* Deliberately NOT Ui2Input: this field's outline is graded feedback
+          (neutral / green / red) and Ui2Input only models neutral, focus and
+          error. Swapping it in would silently drop the "you got it" state. */}
       <TextInput
-        className={`border-2 ${getBorderClass()} rounded-[14px] px-4 py-2.5 text-base text-text-primary`}
+        className="border-2 rounded-[14px] px-4 py-2.5 text-base"
+        style={{ borderColor: getBorderColor(), color: c.ink }}
         placeholder="Type the missing word..."
-        placeholderTextColor="#64748B"
+        placeholderTextColor={c.idle}
         value={answer}
         onChangeText={setAnswer}
         editable={!submitted && !showResult}
@@ -109,9 +115,9 @@ export function FillBlankExercise({
           <Ionicons
             name={result.isCorrect ? 'checkmark-circle' : 'close-circle'}
             size={20}
-            color={result.isCorrect ? colors.success.base : colors.error.base}
+            color={result.isCorrect ? c.green : c.error}
           />
-          <Text className={`ml-1 text-sm font-semibold ${result.isCorrect ? 'text-success' : 'text-error'}`}>
+          <Text className="ml-1 text-sm font-semibold" style={{ color: c.ink }}>
             {result.isCorrect ? 'Correct' : 'Incorrect'}
           </Text>
         </View>
@@ -130,7 +136,7 @@ export function FillBlankExercise({
 
       {!submitted && !showResult && (
         <View className="mt-4">
-          <Button
+          <SlabButton
             label="Check"
             onPress={handleSubmit}
             disabled={!answer.trim()}

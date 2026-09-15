@@ -17,7 +17,7 @@
 import React, { useMemo } from 'react';
 import { Image, Pressable, Text, View } from 'react-native';
 import { AVATAR_SIZES } from './constants';
-import { colors } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import type { AvatarSize } from '../../types';
 
 interface AvatarProps {
@@ -48,6 +48,7 @@ export function initialsFor(displayName?: string | null): string {
 
 export const Avatar = React.memo(
   ({ size = 'medium', onPress, imageUri, displayName }: AvatarProps) => {
+    const { c } = useUi2Theme();
     const pixelSize = AVATAR_SIZES[size];
     // Apple HIG: interactive elements need 44pt, but a decorative avatar must
     // not be padded out to 44 or it breaks tight rows.
@@ -66,7 +67,7 @@ export const Avatar = React.memo(
           width: pixelSize,
           height: pixelSize,
           borderRadius: pixelSize / 2,
-          backgroundColor: colors.surface.cardAlt,
+          backgroundColor: c.surface2,
           alignItems: 'center',
           justifyContent: 'center',
         }}
@@ -77,7 +78,7 @@ export const Avatar = React.memo(
             fontSize: Math.round(pixelSize * 0.4),
             lineHeight: Math.round(pixelSize * 0.48),
             fontWeight: '700',
-            color: colors.text.secondary,
+            color: c.muted,
           }}
           // The wrapper already carries an accessible label; the glyph itself
           // would otherwise be read out a second time.

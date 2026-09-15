@@ -165,6 +165,10 @@ export const GENERATED_EXERCISE_TYPES = [
 ] as const;
 export type GeneratedExerciseType = (typeof GENERATED_EXERCISE_TYPES)[number];
 
+/** Longest term accepted on either side. A "term" longer than this is a
+ *  sentence, and a sentence is not a flashcard. */
+export const MAX_TERM_CHARS = 120;
+
 export interface GeneratedExercise {
   type: GeneratedExerciseType;
   prompt: string;
@@ -172,6 +176,20 @@ export interface GeneratedExercise {
   acceptedAnswers: string[];
   options: string[] | null;
   explanation: string | null;
+  /**
+   * The one word or phrase in the target language this exercise teaches, and
+   * its meaning in the learner's language. Null when the model gave none — the
+   * exercise still ships, it just produces no card.
+   *
+   * These exist because `correctAnswer` is not a clean term: for
+   * translate_to_native it is in the WRONG language, for fill_blank it is a
+   * fragment, and for a sentence translation it is a whole sentence. A card
+   * built from any of those is a review item the learner cannot answer.
+   */
+  term: string | null;
+  termNative: string | null;
+  /** A short target-language sentence using the term, for the card's example. */
+  example: string | null;
 }
 
 export function buildExercisePrompt(
@@ -189,7 +207,7 @@ export function buildExercisePrompt(
     `Goal: ${lessonDescription}`,
     ``,
     `Return one JSON object and nothing else:`,
-    `{"exercises": [{"type": ..., "prompt": ..., "correctAnswer": ..., "acceptedAnswers": [...], "options": [...] , "explanation": ...}]}`,
+    `{"exercises": [{"type": ..., "prompt": ..., "correctAnswer": ..., "acceptedAnswers": [...], "options": [...] , "explanation": ..., "term": ..., "termNative": ..., "example": ...}]}`,
     ``,
     `type must be one of: ${GENERATED_EXERCISE_TYPES.join(', ')}`,
     `- multiple_choice: prompt in ${nativeLanguage}, four options in ${language}, exactly one right.`,
@@ -200,6 +218,9 @@ export function buildExercisePrompt(
     `acceptedAnswers lists every reasonable variant of the answer, including the answer itself.`,
     `options is required for multiple_choice and null otherwise.`,
     `explanation is one short sentence in ${nativeLanguage} saying why the answer is right.`,
+    `term is the single ${language} word or short phrase the exercise teaches, in its dictionary form.`,
+    `termNative is that term's meaning in ${nativeLanguage}. example is one short ${language} sentence using the term.`,
+    `Several exercises may share a term; each term becomes a flashcard, so keep terms to real vocabulary.`,
     `Mix the types. Build toward the lesson goal. Keep vocabulary at ${cefrLevel}.`,
     `Every exercise must practice this lesson's named situation, not an unrelated generic topic.`,
     `At higher levels, require the appropriate nuance, grammar and register, not only isolated beginner words.`,
@@ -275,6 +296,13 @@ export function parseExercises(value: unknown): GeneratedExercise[] {
     // The renderer expects one literal marker, not an arbitrary underscore.
     if (e.type === 'fill_blank' && (prompt.match(/_+/g) ?? []).join('|') !== '___') continue;
 
+    // A term is only a term with both halves: `cards.native_text` is NOT NULL,
+    // and a card whose front and back are the same foreign word teaches
+    // nothing. One half missing means no card, not a half card.
+    const term = cleanText(e.term, MAX_TERM_CHARS);
+    const termNative = cleanText(e.termNative, MAX_TERM_CHARS);
+    const hasTerm = term !== null && termNative !== null;
+
     out.push({
       type: e.type as GeneratedExerciseType,
       prompt,
@@ -282,9 +310,57 @@ export function parseExercises(value: unknown): GeneratedExercise[] {
       acceptedAnswers: accepted,
       options,
       explanation: completeText(e.explanation, 400),
+      term: hasTerm ? term : null,
+      termNative: hasTerm ? termNative : null,
+      example: hasTerm ? cleanText(e.example, 300) : null,
     });
   }
   return out;
+}
+
+/** One card the lesson needs, and which exercises point at it. */
+export interface PlannedCard {
+  term: string;
+  termNative: string;
+  example: string | null;
+  /** Indexes into the exercise list handed to `planLessonCards`. */
+  exerciseIndexes: number[];
+}
+
+/** The dedupe key for a term: case- and whitespace-insensitive, so "La cuenta"
+ *  and "la cuenta" are one card. Accent-SENSITIVE on purpose — "si" and "sí"
+ *  are different words. */
+export function termKey(term: string): string {
+  return term.toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Collapse a lesson's exercises onto the distinct terms they teach.
+ *
+ * The model is told several exercises may share a term (recognise it, then
+ * produce it — that is how a lesson is supposed to build), so a naive
+ * one-card-per-exercise would give the learner two SM-2 schedules for one
+ * word. The first spelling seen wins; the first non-null example wins.
+ */
+export function planLessonCards(exercises: readonly GeneratedExercise[]): PlannedCard[] {
+  const byKey = new Map<string, PlannedCard>();
+  exercises.forEach((e, index) => {
+    if (!e.term || !e.termNative) return;
+    const key = termKey(e.term);
+    const existing = byKey.get(key);
+    if (existing) {
+      existing.exerciseIndexes.push(index);
+      if (!existing.example && e.example) existing.example = e.example;
+      return;
+    }
+    byKey.set(key, {
+      term: e.term,
+      termNative: e.termNative,
+      example: e.example,
+      exerciseIndexes: [index],
+    });
+  });
+  return [...byKey.values()];
 }
 
 /** Fewest usable exercises a generated lesson may ship with. Below this the

@@ -34,7 +34,11 @@ async function main(): Promise<void> {
     userMessage: text,
     maxTokens: MAX_TOKENS.translation,
   });
-  const safety = await validateContentSafety(haiku.text, { language: 'en', fn: 'translate' });
+  const safety = await validateContentSafety(haiku.text, {
+    language: 'en',
+    fn: 'translate',
+    moderation: 'required',
+  });
   console.log(`Anthropic  "${text}" (es→en) → ${JSON.stringify(haiku.text)}`);
   console.log(
     `           ${haiku.usage.inputTokens} in / ${haiku.usage.outputTokens} out = ` +

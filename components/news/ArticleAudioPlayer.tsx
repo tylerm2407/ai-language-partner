@@ -1,12 +1,15 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { View, Pressable, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Body, Caption } from '../ui/Text';
+import { Body, Caption } from '../ui2/Ui2Text';
 import { AudioScrubber } from './AudioScrubber';
 import { useArticlePlayer, SKIP_SECONDS } from '../../hooks/useArticlePlayer';
 import { fetchNewsAudio } from '../../lib/supabase-queries';
+import { localNewsAudioUri } from '../../lib/offline-packs';
+import { useAuth } from '../../hooks/useAuth';
 import { loadErrorCopy } from '../../lib/error-copy';
-import { colors, spacing, radii, typography } from '../../config/theme';
+import { spacing, radii, typography } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import type { DailyNewsArticle } from '../../types';
 
 /** mm:ss. Hours are not a case here — the longest article runs about 3 minutes. */
@@ -19,6 +22,12 @@ function timecode(ms: number): string {
 
 interface ArticleAudioPlayerProps {
   article: DailyNewsArticle;
+  /**
+   * Fires on every play/pause edge so the screen can swap its reading clock
+   * for a listening one (`useActiveTime`). The player owns the transport
+   * state; the screen owns the minutes — this is the one wire between them.
+   */
+  onPlayingChange?: (playing: boolean) => void;
 }
 
 /**
@@ -30,17 +39,32 @@ interface ArticleAudioPlayerProps {
  * merely opened the article, and a render loop would have nothing but the
  * server's burst limit to stop it.
  */
-export function ArticleAudioPlayer({ article }: ArticleAudioPlayerProps) {
+export function ArticleAudioPlayer({ article, onPlayingChange }: ArticleAudioPlayerProps) {
+  const { c } = useUi2Theme();
+  const { user } = useAuth();
   const player = useArticlePlayer();
   const [fetching, setFetching] = useState(false);
   const [fetchError, setFetchError] = useState<{ title: string; message: string } | null>(null);
   const [loaded, setLoaded] = useState(false);
 
+  const playing = player.status === 'playing';
+  useEffect(() => {
+    onPlayingChange?.(playing);
+  }, [playing, onPlayingChange]);
+  // Unmount is a stop: the screen's listening clock must not run on after
+  // the player that fed it is gone.
+  useEffect(() => () => onPlayingChange?.(false), [onPlayingChange]);
+
   const start = useCallback(async () => {
     setFetching(true);
     setFetchError(null);
     try {
-      const audio = await fetchNewsAudio(article.id);
+      // A downloaded narration (Settings › Offline downloads, or the Wi-Fi
+      // top-up) plays from the device — no network, no news-audio call.
+      const local = user?.id ? await localNewsAudioUri(user.id, article.id) : null;
+      const audio = local
+        ? { url: local, durationMs: null as number | null }
+        : await fetchNewsAudio(article.id);
       if (!audio) {
         // The narration is still rendering. Not an error — say so plainly
         // rather than showing a failure for something that is simply not ready.
@@ -65,10 +89,9 @@ export function ArticleAudioPlayer({ article }: ArticleAudioPlayerProps) {
     } finally {
       setFetching(false);
     }
-  }, [article, player]);
+  }, [article, player, user?.id]);
 
   const busy = fetching || player.status === 'loading';
-  const playing = player.status === 'playing';
 
   // Before the first tap this is a single invitation, not a transport bar —
   // controls for audio that does not exist yet would be dead affordances.
@@ -93,15 +116,17 @@ export function ArticleAudioPlayer({ article }: ArticleAudioPlayerProps) {
             paddingHorizontal: spacing.md,
             paddingVertical: spacing.sm,
             borderRadius: radii.lg,
-            backgroundColor: colors.surface.card,
+            backgroundColor: c.card,
+            borderWidth: 1,
+            borderColor: c.cardBorder,
           }}
         >
           {busy ? (
-            <ActivityIndicator size="small" color={colors.action.primaryFill} />
+            <ActivityIndicator size="small" color={c.primary} />
           ) : (
-            <Ionicons name="headset" size={20} color={colors.action.primaryFill} />
+            <Ionicons name="headset" size={20} color={c.primary} />
           )}
-          <Body size="sm" style={{ color: colors.text.primary }}>
+          <Body size="sm" style={{ color: c.ink }}>
             {busy ? 'Loading audio…' : 'Listen to this article'}
           </Body>
           {article.audioDurationMs ? (
@@ -109,7 +134,7 @@ export function ArticleAudioPlayer({ article }: ArticleAudioPlayerProps) {
               style={{
                 marginLeft: 'auto',
                 fontFamily: typography.family.mono,
-                color: colors.text.tertiary,
+                color: c.muted,
               }}
             >
               {timecode(article.audioDurationMs)}
@@ -128,23 +153,25 @@ export function ArticleAudioPlayer({ article }: ArticleAudioPlayerProps) {
         marginBottom: spacing.lg,
         padding: spacing.md,
         borderRadius: radii.xl,
-        backgroundColor: colors.surface.card,
+        backgroundColor: c.card,
+        borderWidth: 1,
+        borderColor: c.cardBorder,
         gap: spacing.xs,
       }}
     >
       {problem ? (
         <View accessibilityRole="alert" style={{ gap: spacing.xxs }}>
-          <Body size="sm" style={{ color: colors.error.light }}>
+          <Body size="sm" style={{ color: c.error }}>
             {problem.title}
           </Body>
-          <Caption style={{ color: colors.text.secondary }}>{problem.message}</Caption>
+          <Caption style={{ color: c.muted }}>{problem.message}</Caption>
           <Pressable
             onPress={start}
             accessibilityRole="button"
             accessibilityLabel="Try loading the audio again"
             style={{ minHeight: 44, justifyContent: 'center' }}
           >
-            <Body size="sm" style={{ color: colors.action.primaryFill }}>
+            <Body size="sm" style={{ color: c.primary }}>
               Try again
             </Body>
           </Pressable>
@@ -160,10 +187,10 @@ export function ArticleAudioPlayer({ article }: ArticleAudioPlayerProps) {
           />
 
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-            <Caption style={{ fontFamily: typography.family.mono, color: colors.text.tertiary }}>
+            <Caption style={{ fontFamily: typography.family.mono, color: c.muted }}>
               {timecode(player.positionMs)}
             </Caption>
-            <Caption style={{ fontFamily: typography.family.mono, color: colors.text.tertiary }}>
+            <Caption style={{ fontFamily: typography.family.mono, color: c.muted }}>
               {timecode(player.durationMs)}
             </Caption>
           </View>
@@ -183,7 +210,7 @@ export function ArticleAudioPlayer({ article }: ArticleAudioPlayerProps) {
               accessibilityLabel={`Back ${SKIP_SECONDS} seconds`}
               style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
             >
-              <Ionicons name="play-back" size={22} color={colors.text.secondary} />
+              <Ionicons name="play-back" size={22} color={c.ink} />
             </Pressable>
 
             <Pressable
@@ -197,16 +224,16 @@ export function ArticleAudioPlayer({ article }: ArticleAudioPlayerProps) {
                 borderRadius: radii.pill,
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: colors.action.primaryFill,
+                backgroundColor: c.primary,
               }}
             >
               {player.status === 'loading' ? (
-                <ActivityIndicator size="small" color={colors.text.onPrimary} />
+                <ActivityIndicator size="small" color={c.onPrimary} />
               ) : (
                 <Ionicons
                   name={playing ? 'pause' : 'play'}
                   size={26}
-                  color={colors.text.onPrimary}
+                  color={c.onPrimary}
                 />
               )}
             </Pressable>
@@ -217,7 +244,7 @@ export function ArticleAudioPlayer({ article }: ArticleAudioPlayerProps) {
               accessibilityLabel={`Forward ${SKIP_SECONDS} seconds`}
               style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
             >
-              <Ionicons name="play-forward" size={22} color={colors.text.secondary} />
+              <Ionicons name="play-forward" size={22} color={c.ink} />
             </Pressable>
 
             <Pressable
@@ -233,7 +260,7 @@ export function ArticleAudioPlayer({ article }: ArticleAudioPlayerProps) {
             >
               <Body
                 size="sm"
-                style={{ fontFamily: typography.family.mono, color: colors.text.secondary }}
+                style={{ fontFamily: typography.family.mono, color: c.ink }}
               >
                 {player.rate}×
               </Body>

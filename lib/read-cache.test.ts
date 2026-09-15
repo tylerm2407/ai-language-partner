@@ -91,7 +91,7 @@ describe('getCached / setCached', () => {
     expect(await AsyncStorage.getItem(KEY)).toBeNull();
   });
 
-  it('discards and removes entries past the default 14-day TTL', async () => {
+  it('discards and removes entries past the default 30-day TTL', async () => {
     await writeRawEntry(KEY, {
       v: READ_CACHE_SCHEMA_VERSION,
       at: Date.now() - READ_CACHE_TTL_MS - 60_000,

@@ -18,11 +18,12 @@ import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useLessonProgress } from '../../hooks/useLessonProgress';
-import { Body, Heading } from '../ui/Text';
-import { Button } from '../ui/Button';
+import { Body, Heading } from '../ui2/Ui2Text';
+import { SlabButton } from '../ui2/SlabButton';
 import { Mono } from './Mono';
 import { UnitCarousel } from './UnitCarousel';
 import { LessonRow } from './LessonRow';
+import { OfflineDownloadControl } from './OfflineDownloadControl';
 import {
   buildUnitProgress,
   findFocusUnitIndex,
@@ -30,16 +31,20 @@ import {
   toPercent,
   type UnitWithLessons,
 } from '../../lib/learn-progress';
-import { colors, spacing } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
+import { spacing } from '../../config/theme';
 
 interface UnitPathProps {
   units: UnitWithLessons[];
   courseId: string;
+  /** The course's target language; names the offline pack. */
+  language: string;
   /** Rendered above the unit strip — the review-cards shortcut. */
   header?: React.ReactNode;
 }
 
-export function UnitPath({ units, courseId, header }: UnitPathProps) {
+export function UnitPath({ units, courseId, language, header }: UnitPathProps) {
+  const { c } = useUi2Theme();
   const router = useRouter();
   const { getLessonState, getScore, loading, error, retry, refresh } = useLessonProgress(courseId);
 
@@ -85,7 +90,7 @@ export function UnitPath({ units, courseId, header }: UnitPathProps) {
         <Body size="lg" tone="secondary" style={styles.centeredText}>
           Couldn't load your progress. Check your connection and try again.
         </Body>
-        <Button label="Try Again" variant="primary" onPress={retry} />
+        <SlabButton label="Try Again" variant="primary" onPress={retry} />
       </View>
     );
   }
@@ -93,7 +98,7 @@ export function UnitPath({ units, courseId, header }: UnitPathProps) {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={colors.action.accent} />
+        <ActivityIndicator size="large" color={c.primary} />
         <Body size="sm" tone="tertiary" style={styles.loadingText}>
           Loading your progress…
         </Body>
@@ -124,11 +129,11 @@ export function UnitPath({ units, courseId, header }: UnitPathProps) {
       {header && <View style={styles.header}>{header}</View>}
 
       <View style={styles.eyebrowRow}>
-        <Mono size={12} medium>
+        <Mono size={12} medium color={c.idle}>
           {`${unitProgress.length} UNITS · ${totalLessons} LESSONS`}
         </Mono>
         {unitProgress.length > 1 && (
-          <Mono size={12} color={colors.text.tertiary}>
+          <Mono size={12} color={c.idle}>
             SWIPE →
           </Mono>
         )}
@@ -141,17 +146,28 @@ export function UnitPath({ units, courseId, header }: UnitPathProps) {
       />
 
       <View style={styles.listHeader}>
-        <Heading level={2} style={styles.listTitle}>
+        <Heading level={3} style={styles.listTitle}>
           {`Unit ${selected.index + 1} lessons`}
         </Heading>
-        <Mono
-          size={12}
-          medium
-          color={selected.mastery > 0 ? colors.indigo[300] : colors.text.tertiary}
-          accessibilityLabel={`${toPercent(selected.mastery)} percent of this unit mastered`}
-        >
-          {`${toPercent(selected.mastery)}% MASTERED`}
-        </Mono>
+        <View style={styles.listHeaderRight}>
+          <Mono
+            size={12}
+            medium
+            color={selected.mastery > 0 ? c.primary : c.idle}
+            accessibilityLabel={`${toPercent(selected.mastery)} percent of this unit mastered`}
+          >
+            {`${toPercent(selected.mastery)}% MASTERED`}
+          </Mono>
+          {/* Offline packs (Premium): the whole unit with every exercise. */}
+          <OfflineDownloadControl
+            compact
+            what={`Unit ${selected.index + 1}`}
+            spec={{
+              kind: 'unit',
+              target: { courseId, unitId: selected.unit.id, title: selected.unit.title, language },
+            }}
+          />
+        </View>
       </View>
 
       <View style={styles.list}>
@@ -163,7 +179,6 @@ export function UnitPath({ units, courseId, header }: UnitPathProps) {
             state={selected.lessonStates[i]}
             isMilestone={isMilestoneLesson(i, selected.totalCount)}
             score={selected.lessonScores[i]}
-            xpReward={lesson.xpReward}
             estimatedMinutes={lesson.estimatedMinutes}
             onPress={() => router.push(`/learn/${lesson.id}` as never)}
           />
@@ -200,16 +215,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
     paddingTop: spacing.xs,
-    paddingBottom: spacing.sm,
+    paddingBottom: spacing.xs,
   },
   listHeader: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.sm,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xs,
   },
+  listHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   listTitle: {
     flexShrink: 1,
     paddingRight: spacing.xs,

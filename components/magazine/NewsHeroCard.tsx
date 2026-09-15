@@ -1,7 +1,8 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { MagazineGlassCard } from './MagazineGlassCard';
 import { cefrLabel, cefrAccessibilityLabel } from '../../lib/cefr-labels';
-import { colors, typography } from '../../config/theme';
+import { typography, ui2Dark, ui2Light, type Ui2Palette } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import type { DailyNewsArticle } from '../../types';
 
 interface NewsHeroCardProps {
@@ -22,14 +23,16 @@ interface NewsHeroCardProps {
 const serifFont = typography.family.serif;
 
 export function NewsHeroCard({ article, isLoading, error, hasRead, level, onPress }: NewsHeroCardProps) {
+  const { scheme } = useUi2Theme();
+
   // Loading skeleton
   if (isLoading) {
     return (
-      <MagazineGlassCard style={styles.card}>
-        <Text style={styles.kicker}>TODAY'S READ</Text>
-        <View style={styles.skeletonTitle} />
-        <View style={styles.skeletonLede} />
-        <View style={styles.skeletonMeta} />
+      <MagazineGlassCard style={themed[scheme].card}>
+        <Text style={themed[scheme].kicker}>TODAY'S READ</Text>
+        <View style={themed[scheme].skeletonTitle} />
+        <View style={themed[scheme].skeletonLede} />
+        <View style={themed[scheme].skeletonMeta} />
       </MagazineGlassCard>
     );
   }
@@ -37,13 +40,13 @@ export function NewsHeroCard({ article, isLoading, error, hasRead, level, onPres
   // No article available
   if (!article) {
     return (
-      <MagazineGlassCard style={styles.card}>
-        <Text style={styles.kicker}>TODAY'S READ</Text>
-        <Text style={styles.headline}>No article today</Text>
+      <MagazineGlassCard style={themed[scheme].card}>
+        <Text style={themed[scheme].kicker}>TODAY'S READ</Text>
+        <Text style={themed[scheme].headline}>No article today</Text>
         {error ? (
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={themed[scheme].errorText}>{error}</Text>
         ) : (
-          <Text style={styles.lede}>Check back later for your daily reading</Text>
+          <Text style={themed[scheme].lede}>Check back later for your daily reading</Text>
         )}
       </MagazineGlassCard>
     );
@@ -58,17 +61,17 @@ export function NewsHeroCard({ article, isLoading, error, hasRead, level, onPres
       accessibilityRole="button"
       accessibilityLabel={`Today's News. ${article.title}. ${cefrAccessibilityLabel(level)}`}
     >
-      <MagazineGlassCard style={styles.card}>
-        <Text style={styles.kicker}>TODAY'S READ</Text>
-        <Text style={styles.headline}>{article.title}</Text>
+      <MagazineGlassCard style={themed[scheme].card}>
+        <Text style={themed[scheme].kicker}>TODAY'S READ</Text>
+        <Text style={themed[scheme].headline}>{article.title}</Text>
         {article.summary ? (
-          <Text style={styles.lede} numberOfLines={2}>{article.summary}</Text>
+          <Text style={themed[scheme].lede} numberOfLines={2}>{article.summary}</Text>
         ) : null}
         {/* The level moved out of the kicker. Uppercased at 2pt tracking, "A2"
             was indistinguishable from the section label around it, and it said
             nothing anyway — this states what the article is pitched at. */}
-        <Text style={styles.levelNote}>{cefrLabel(level)}</Text>
-        <Text style={styles.meta}>
+        <Text style={themed[scheme].levelNote}>{cefrLabel(level)}</Text>
+        <Text style={themed[scheme].meta}>
           3 MIN READ {'·'} {hasRead ? 'READ ✓' : 'READ →'}
         </Text>
       </MagazineGlassCard>
@@ -76,7 +79,8 @@ export function NewsHeroCard({ article, isLoading, error, hasRead, level, onPres
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: Ui2Palette) =>
+  StyleSheet.create({
   card: {
     marginBottom: 20,
   },
@@ -84,21 +88,21 @@ const styles = StyleSheet.create({
     fontFamily: serifFont,
     fontSize: 11,
     letterSpacing: 2,
-    color: colors.magazine.accentLilac,
+    color: c.onTint,
     textTransform: 'uppercase',
     marginBottom: 8,
   },
   headline: {
     fontFamily: serifFont,
     fontSize: 26,
-    color: colors.text.primary,
+    color: c.ink,
     lineHeight: 33, // minLineHeight(26, 'display') — headlines carry descenders
     marginBottom: 8,
   },
   lede: {
     fontFamily: typography.family.regular,
     fontSize: 13,
-    color: 'rgba(255,255,255,0.65)',
+    color: c.muted,
     lineHeight: 18,
     marginBottom: 12,
   },
@@ -107,7 +111,7 @@ const styles = StyleSheet.create({
   levelNote: {
     fontFamily: typography.family.regular,
     fontSize: 12,
-    color: colors.text.tertiary,
+    color: c.muted,
     lineHeight: 17,
     marginBottom: 8,
   },
@@ -115,34 +119,37 @@ const styles = StyleSheet.create({
     fontFamily: typography.family.mono,
     fontSize: 11,
     letterSpacing: 1.5,
-    color: colors.text.tertiary,
+    color: c.muted,
     textTransform: 'uppercase',
   },
   errorText: {
     fontFamily: typography.family.regular,
     fontSize: 13,
-    color: colors.error.base,
+    color: c.error,
     marginBottom: 12,
   },
   // Skeleton shapes
   skeletonTitle: {
     height: 28,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: c.track,
     borderRadius: 6,
     marginBottom: 8,
     width: '85%',
   },
   skeletonLede: {
     height: 14,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: c.surface2,
     borderRadius: 4,
     marginBottom: 12,
     width: '65%',
   },
   skeletonMeta: {
     height: 10,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: c.surface2,
     borderRadius: 4,
     width: '40%',
   },
-});
+  });
+
+/** Both schemes built once at module load — see DateLabel for why. */
+const themed = { light: makeStyles(ui2Light), dark: makeStyles(ui2Dark) } as const;

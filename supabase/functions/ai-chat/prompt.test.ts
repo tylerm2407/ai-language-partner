@@ -278,3 +278,61 @@ Deno.test('adding the gloss did not put learner text back into the cached prefix
   // Nothing the learner controls has a route into this string.
   assert(!first.includes('<<<TOPIC'));
 });
+
+// ── Missions ──────────────────────────────────────────────────────────────
+//
+// Mission text is keyed by scenario + stage — our content — so it is allowed
+// inside the cached block. Two things must hold: no mission means a prompt
+// byte-identical to before missions existed (every old client and every
+// free-chat turn keeps its cached prefix), and per-attempt progress never
+// enters this function at all.
+
+import { buildFinishTurn } from './prompt.ts';
+
+Deno.test('no mission stage means a byte-identical prompt', () => {
+  const before = buildSystemPrompt('Spanish', 'beginner', 'restaurant', 'en');
+  assertEquals(buildSystemPrompt('Spanish', 'beginner', 'restaurant', 'en', undefined), before);
+  // Anything that does not resolve to a mission is the same as none.
+  for (const bad of [0, 5, 1.5, NaN]) {
+    assertEquals(buildSystemPrompt('Spanish', 'beginner', 'restaurant', 'en', bad), before);
+  }
+  // free_chat has no ladder.
+  const free = buildSystemPrompt('Spanish', 'beginner', 'free_chat', 'en');
+  assertEquals(buildSystemPrompt('Spanish', 'beginner', 'free_chat', 'en', 1), free);
+  assert(!before.includes('MISSION ('));
+  assert(!before.includes('"objectivesMet"'));
+});
+
+Deno.test('a running mission adds its block inside the scenario and asks for objectivesMet', () => {
+  const p = buildSystemPrompt('Spanish', 'beginner', 'restaurant', 'en', 1);
+  assert(p.includes('MISSION (stage 1 of 4, A1): A table and a drink'));
+  assert(p.includes('"objectivesMet"'), 'RESPONSE FORMAT must ask for the field');
+  // Inside the scenario block, before PERSONALITY.
+  assert(p.indexOf('SCENARIO INSTRUCTIONS') < p.indexOf('MISSION ('));
+  assert(p.indexOf('MISSION (') < p.indexOf('PERSONALITY:'));
+  // Stages differ, so the cache key differs per stage — that is intended.
+  assert(p !== buildSystemPrompt('Spanish', 'beginner', 'restaurant', 'en', 2));
+  // Stable for the same tuple.
+  assertEquals(p, buildSystemPrompt('Spanish', 'beginner', 'restaurant', 'en', 1));
+});
+
+Deno.test('the mission progress note stays out of the cached block', () => {
+  // What the learner has achieved so far varies per attempt; it must ride
+  // uncached like the act and the governors, and never carry a breakpoint.
+  const system = INDEX_SRC.slice(INDEX_SRC.indexOf('system: ['));
+  const block = system.slice(0, system.indexOf('],'));
+  assert(block.includes('missionProgressNote'), 'the progress note should be a system block');
+  const cachedAt = block.indexOf('cache_control');
+  assert(block.indexOf('missionProgressNote') > cachedAt, 'it must come after the cached entry');
+  assertEquals(block.split('cache_control').length - 1, 1, 'still exactly one breakpoint');
+});
+
+Deno.test('finishing is a user turn appended after the window', () => {
+  const turn = buildFinishTurn();
+  assertEquals(turn.role, 'user');
+  assert(turn.content.includes('goodbye'));
+  assert(turn.content.includes('No new question'));
+  const at = INDEX_SRC.indexOf('buildFinishTurn()');
+  assert(at > 0, 'index.ts should append the finish turn');
+  assert(at > INDEX_SRC.indexOf('windowMessages(messages)'), 'after the windowed history, not inside it');
+});

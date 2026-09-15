@@ -16,6 +16,29 @@ ENV['RCT_NEW_ARCH_ENABLED'] ||= '0' if podfile_properties['newArchEnabled'] == '
 ENV['EX_DEV_CLIENT_NETWORK_INSPECTOR'] ||= podfile_properties['EX_DEV_CLIENT_NETWORK_INSPECTOR']
 ENV['RCT_USE_RN_DEP'] ||= '1' if podfile_properties['ios.buildReactNativeFromSource'] != 'true' && podfile_properties['newArchEnabled'] != 'false'
 ENV['RCT_USE_PREBUILT_RNCORE'] ||= '1' if podfile_properties['ios.buildReactNativeFromSource'] != 'true' && podfile_properties['newArchEnabled'] != 'false'
+
+# Prebuilt React Native core from the local cache when the download is broken.
+#
+# React Native decides whether the prebuilt core exists with a `curl -I`
+# against Maven. Since 2026-09-09 that request 301s to repo.reactnative.dev,
+# which answers 404 for the 0.81.5 tarballs, so a plain `pod install` logged
+# "No prebuilt artifacts found, reverting to building from source", rewrote
+# Podfile.lock onto boost/fmt/glog source pods, and the Debug build then died
+# in fmt under Xcode 26. The tarballs a previous install downloaded are still
+# under Pods/, and React Native accepts a local path for each — this points it
+# there whenever the file is present. On a machine without the cache (EAS)
+# nothing is set and behaviour is unchanged. Drop this block once the Maven
+# download works again. NOTE: `expo prebuild` regenerates this file; keep the
+# block if that ever runs.
+if ENV['RCT_USE_PREBUILT_RNCORE'] == '1'
+  rn_version = JSON.parse(File.read(File.join(__dir__, '..', 'node_modules', 'react-native', 'package.json')))['version'] rescue nil
+  if rn_version
+    core_tarball = File.join(__dir__, 'Pods', 'ReactNativeCore-artifacts', "reactnative-core-#{rn_version}-debug.tar.gz")
+    deps_tarball = File.join(__dir__, 'Pods', 'ReactNativeDependencies-artifacts', "reactnative-dependencies-#{rn_version}-debug.tar.gz")
+    ENV['RCT_TESTONLY_RNCORE_TARBALL_PATH'] ||= core_tarball if File.exist?(core_tarball)
+    ENV['RCT_USE_LOCAL_RN_DEP'] ||= deps_tarball if File.exist?(deps_tarball)
+  end
+end
 platform :ios, podfile_properties['ios.deploymentTarget'] || '15.1'
 
 prepare_react_native_project!

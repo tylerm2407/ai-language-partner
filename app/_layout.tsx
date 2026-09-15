@@ -2,34 +2,44 @@ import '../global.css';
 import * as Sentry from '@sentry/react-native';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useAuthDeepLinks } from '../hooks/useAuthDeepLinks';
 import { useAppStore } from '../stores/useAppStore';
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 import { useSchoolStore } from '../stores/useSchoolStore';
 import { SCHOOL_ENABLED } from '../config/app';
-import { useNotifications, scheduleDailyPracticeReminder } from '../hooks/useNotifications';
+import {
+  useNotifications,
+  syncScheduledNotifications,
+  syncTrialEndingReminder,
+} from '../hooks/useNotifications';
+import { readCachedTopMistake } from '../hooks/useLearnerInsights';
+import { DEFAULT_DAILY_GOAL_MINUTES } from '../lib/active-time';
+import { cefrBandForProficiencyLevel } from '../lib/cefr-proficiency';
 import {
   configurePurchases,
   identifyPurchaser,
   resetPurchaser,
   addEntitlementListener,
+  addTrialStateListener,
 } from '../lib/purchases';
 import { identifyUser, resetAnalytics } from '../lib/analytics';
 import { startAnalytics } from '../lib/analytics-posthog';
 import { hydrateMotionPreference } from '../lib/motion-preference';
+import { hydrateReadingPreferences } from '../lib/reading-preferences';
 import { View, ActivityIndicator, AppState, Text, Pressable } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
   useFonts,
-  Nunito_400Regular,
-  Nunito_500Medium,
-  Nunito_600SemiBold,
-  Nunito_700Bold,
-  Nunito_800ExtraBold,
-} from '@expo-google-fonts/nunito';
+  Manrope_400Regular,
+  Manrope_500Medium,
+  Manrope_600SemiBold,
+  Manrope_700Bold,
+  Manrope_800ExtraBold,
+} from '@expo-google-fonts/manrope';
 import {
+  Fraunces_400Regular,
   Fraunces_600SemiBold,
   Fraunces_700Bold,
 } from '@expo-google-fonts/fraunces';
@@ -37,6 +47,16 @@ import {
   JetBrainsMono_400Regular,
   JetBrainsMono_500Medium,
 } from '@expo-google-fonts/jetbrains-mono';
+import { redactTutorSecrets } from '../lib/tutor-api';
+import { useUi2Theme } from '../hooks/useUi2Theme';
+import * as SplashScreen from 'expo-splash-screen';
+import { LaunchSplash } from '../components/splash/LaunchSplash';
+
+// Keep the native launch screen up until LaunchSplash has drawn the same
+// frame over the app (lib/launch-splash.ts); it hides the storyboard itself.
+// The promise only rejects when the storyboard is already gone, in which case
+// there is nothing left to hold.
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN;
 Sentry.init({
@@ -44,16 +64,37 @@ Sentry.init({
   tracesSampleRate: 0.2,
   // Only enable in production builds that actually have a DSN configured.
   enabled: !__DEV__ && !!SENTRY_DSN,
+  // Set per EAS build profile (eas.json → EXPO_PUBLIC_APP_ENV) so preview
+  // builds do not pollute the production issue stream or its alert rules.
+  environment: process.env.EXPO_PUBLIC_APP_ENV ?? 'production',
+  // Strip the live tutor's one-use connection capability out of anything we send.
+  //
+  // `startTutorSession` returns a short-lived `connectionToken` that the device
+  // uses for one server-controlled SDP exchange. It is deliberately
+  // never persisted and never logged, but a crash report is the one path that
+  // serialises arbitrary state without anyone asking it to — an unhandled
+  // rejection carrying the start response, or a breadcrumb from the fetch that
+  // produced it, would put a working capability in a third-party dashboard.
+  //
+  // `redactTutorSecrets` lives in lib/tutor-api.ts, next to the shape it
+  // redacts, so this wiring does not have to know that shape.
+  beforeSend: (event) => redactTutorSecrets(event),
+  beforeBreadcrumb: (breadcrumb) => redactTutorSecrets(breadcrumb),
 });
 
 function RootLayout() {
+  const { c, scheme } = useUi2Theme();
   const { session, loading: authLoading } = useAuth();
-  const { profile, dailyStats, loadUserData, setEntitledTier, error: profileError } = useAppStore();
+  const { profile, dailyStats, reviewCount, loadUserData, setEntitledTier, error: profileError } = useAppStore();
   const { roles, activeRole, loadRoles } = useSchoolStore();
   const segments = useSegments() as string[];
   const router = useRouter();
   const [dataLoaded, setDataLoaded] = useState(false);
   const [rolesLoaded, setRolesLoaded] = useState(false);
+  // Cold start only: the root layout mounts once per JS load. The overlay
+  // waits for fonts (the wordmark is Manrope) and covers whichever state below
+  // is rendering — spinner, retry, or the first screen — until it fades.
+  const [launching, setLaunching] = useState(true);
 
   // Supabase auth deep links: password recovery + email confirmation.
   useAuthDeepLinks();
@@ -63,51 +104,69 @@ function RootLayout() {
   // still propagates.
   useEffect(() => {
     hydrateMotionPreference().catch(() => {});
+    hydrateReadingPreferences().catch(() => {});
   }, []);
 
   const [fontsLoaded] = useFonts({
-    Nunito_400Regular,
-    Nunito_500Medium,
-    Nunito_600SemiBold,
-    Nunito_700Bold,
-    Nunito_800ExtraBold,
+    Manrope_400Regular,
+    Manrope_500Medium,
+    Manrope_600SemiBold,
+    Manrope_700Bold,
+    Manrope_800ExtraBold,
+    Fraunces_400Regular,
     Fraunces_600SemiBold,
     Fraunces_700Bold,
     JetBrainsMono_400Regular,
     JetBrainsMono_500Medium,
   });
+  const launchSplash = fontsLoaded && launching ? (
+    <LaunchSplash onDone={() => setLaunching(false)} />
+  ) : null;
 
   // Mount notification listeners + read current permission status.
   // No system prompt is fired here — that's deferred to the
   // PrePermissionSheet post-first-lesson.
   const { permissionGranted } = useNotifications();
 
-  // Re-arm the daily practice reminder whenever the inputs change
-  // (xp/permission). Silent no-op if permission isn't granted yet
-  // or if XP was already earned today.
-  useEffect(() => {
+  // Re-arm every reminder whenever its inputs change. Cancel-and-reschedule is
+  // idempotent per kind, so running this often converges on one correct set
+  // rather than accumulating duplicates; it is a silent no-op without
+  // permission. Which kinds fire at all is the learner's choice
+  // (`lib/notification-prefs.ts`), and the daily one is now gated on minutes
+  // practised against their goal rather than on XP they are never shown.
+  //
+  // The mistake label comes from the insights READ CACHE and the week totals
+  // from `cacheWeekSummary` — Home loads both; the root layout must not run
+  // those queries just to word a notification.
+  const armReminders = useCallback(() => {
     if (!profile || !permissionGranted) return;
-    scheduleDailyPracticeReminder({
-      xpEarnedToday: dailyStats?.xpEarned ?? 0,
-      preferredHour: 21,
-      idealL2Self: profile.idealL2Self ?? null,
-    }).catch(() => {});
-  }, [profile, dailyStats?.xpEarned, permissionGranted]);
+    readCachedTopMistake(profile.userId, profile.targetLanguage)
+      .catch(() => null)
+      .then((topMistakeLabel) =>
+        syncScheduledNotifications({
+          minutesToday: dailyStats?.minutesPracticed ?? 0,
+          goalMinutes: profile.dailyGoalMinutes ?? DEFAULT_DAILY_GOAL_MINUTES,
+          dueCount: reviewCount,
+          idealL2Self: profile.idealL2Self ?? null,
+          topMistakeLabel,
+          band: cefrBandForProficiencyLevel(profile.level ?? 'beginner'),
+        }),
+      )
+      .catch(() => {});
+  }, [profile, dailyStats?.minutesPracticed, permissionGranted, reviewCount]);
 
-  // Also re-arm on background — covers edge cases where the user
-  // backgrounds before the schedule-on-change useEffect has resolved.
+  useEffect(() => {
+    armReminders();
+  }, [armReminders]);
+
+  // Also re-arm on the way out and back — covers the user backgrounding before
+  // the effect above resolved, and a foreground after a day boundary.
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'background' && profile && permissionGranted) {
-        scheduleDailyPracticeReminder({
-          xpEarnedToday: dailyStats?.xpEarned ?? 0,
-          preferredHour: 21,
-          idealL2Self: profile.idealL2Self ?? null,
-        }).catch(() => {});
-      }
+      if (state === 'background' || state === 'active') armReminders();
     });
     return () => sub.remove();
-  }, [profile, dailyStats?.xpEarned, permissionGranted]);
+  }, [armReminders]);
 
   // Register the analytics provider once, before anything tries to track.
   // No-ops without EXPO_PUBLIC_POSTHOG_KEY, which is the normal state for a
@@ -119,6 +178,10 @@ function RootLayout() {
   // Tie purchases, analytics, and crash reports to the signed-in user.
   // Idempotent; analytics/IAP no-op until a provider/keys are configured.
   useEffect(() => {
+    // The initial null session means "not restored yet", not "signed out".
+    // Resetting here fragments the persisted anonymous identity on every cold
+    // start and briefly detaches RevenueCat/Sentry from a returning learner.
+    if (authLoading) return;
     const userId = session?.user?.id ?? null;
     configurePurchases(userId);
     if (userId) {
@@ -130,7 +193,7 @@ function RootLayout() {
       resetAnalytics();
       Sentry.setUser(null);
     }
-  }, [session?.user?.id]);
+  }, [session?.user?.id, authLoading]);
 
   // Track the device's live RevenueCat entitlement. This is half of the paywall
   // gate (app/(app)/_layout.tsx) — without it, a learner who has just paid is
@@ -147,6 +210,19 @@ function RootLayout() {
     const unsubscribe = addEntitlementListener(setEntitledTier);
     return unsubscribe;
   }, [session?.user?.id, setEntitledTier]);
+
+  // The trial-ending reminder rides the same SDK stream. Gated on permission
+  // so the first registration after the OS prompt (re)arms it, and re-run per
+  // user so one account's trial never schedules on the next account's device.
+  useEffect(() => {
+    const userId = session?.user?.id ?? null;
+    if (!userId || !permissionGranted) return;
+    return addTrialStateListener((state) => {
+      syncTrialEndingReminder(state).catch((err) =>
+        console.warn('[notifications] trial reminder sync failed:', err),
+      );
+    });
+  }, [session?.user?.id, permissionGranted]);
 
   // Load user data when session becomes available
   useEffect(() => {
@@ -211,10 +287,11 @@ function RootLayout() {
   if (authLoading || !fontsLoaded || (session && (!dataLoaded || !rolesLoaded))) {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <View className="flex-1 items-center justify-center bg-dark">
-          <ActivityIndicator size="large" color="#818CF8" />
-          <StatusBar style="light" />
+        <View className="flex-1 items-center justify-center" style={{ backgroundColor: c.bg }}>
+          <ActivityIndicator size="large" color={c.primary} />
+          <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
         </View>
+        {launchSplash}
       </GestureHandlerRootView>
     );
   }
@@ -224,23 +301,25 @@ function RootLayout() {
   if (session && dataLoaded && !profile && profileError) {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <View className="flex-1 items-center justify-center bg-dark px-6">
-          <Text className="text-white text-xl font-semibold text-center mb-2">
+        <View className="flex-1 items-center justify-center px-6" style={{ backgroundColor: c.bg }}>
+          <Text className="text-xl font-semibold text-center mb-2" style={{ color: c.ink }}>
             Couldn&apos;t load your profile
           </Text>
-          <Text className="text-text-secondary text-base text-center mb-6">
+          <Text className="text-base text-center mb-6" style={{ color: c.muted }}>
             Check your connection and try again. Your progress is safe.
           </Text>
           <Pressable
             onPress={() => setDataLoaded(false)}
-            className="bg-primary px-6 py-3 rounded-2xl"
+            className="px-6 py-3 rounded-2xl"
+            style={{ backgroundColor: c.primary }}
             accessibilityRole="button"
             accessibilityLabel="Retry loading your profile"
           >
-            <Text className="text-white text-base font-semibold">Try Again</Text>
+            <Text className="text-base font-semibold" style={{ color: c.onPrimary }}>Try Again</Text>
           </Pressable>
-          <StatusBar style="light" />
+          <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
         </View>
+        {launchSplash}
       </GestureHandlerRootView>
     );
   }
@@ -250,7 +329,8 @@ function RootLayout() {
       <ErrorBoundary>
         <Slot />
       </ErrorBoundary>
-      <StatusBar style="light" />
+      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+      {launchSplash}
     </GestureHandlerRootView>
   );
 }

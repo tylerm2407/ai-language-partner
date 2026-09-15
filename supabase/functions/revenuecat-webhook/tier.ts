@@ -50,13 +50,35 @@ export const ACTIVE_EVENTS = new Set([
   'NON_RENEWING_PURCHASE',
 ]);
 
-/** Events that mean "access has ended". */
-export const INACTIVE_EVENTS = new Set(['EXPIRATION', 'SUBSCRIPTION_PAUSED', 'BILLING_ISSUE']);
+/** Events that prove access has ended. RevenueCat emits EXPIRATION when a
+ * grace period actually ends and when a paused subscription reaches the end
+ * of its paid term. BILLING_ISSUE and SUBSCRIPTION_PAUSED are signals to
+ * reconcile provider state, not authority to revoke immediately. */
+export const INACTIVE_EVENTS = new Set(['EXPIRATION']);
+
+/** Non-terminal lifecycle signals that must not change entitlement by
+ * themselves. A reconciler may persist their status separately. */
+export const NON_TERMINAL_EVENTS = new Set(['BILLING_ISSUE', 'SUBSCRIPTION_PAUSED']);
 
 /** Events acknowledged without touching subscription state at all.
  *  TRANSFER moves entitlements between users; TEST is the dashboard's
  *  "Send test webhook" button. */
 export const IGNORED_EVENTS = new Set(['TRANSFER', 'TEST']);
+
+/**
+ * Reasons that mean the store took the money back or the developer pulled
+ * the entitlement: a refund, a chargeback, a revoke. RevenueCat delivers
+ * these as CANCELLATION and EXPIRATION carrying a `cancel_reason` /
+ * `expiration_reason`, with an `expiration_at_ms` that is EARLIER than the
+ * period end already stored. The ordering guard in index.ts reads "earlier
+ * than stored" as "stale" and would drop them — which is a free year for
+ * anyone who buys annual and refunds inside the store's window.
+ */
+export const REVOCATION_REASONS = new Set(['CUSTOMER_SUPPORT', 'DEVELOPER_INITIATED']);
+
+export function isRevocation(type: string, reason: string | null | undefined): boolean {
+  return (type === 'CANCELLATION' || type === 'EXPIRATION') && REVOCATION_REASONS.has(reason ?? '');
+}
 
 export interface TierDecision {
   tier: Tier;
@@ -75,8 +97,16 @@ export function classifyEvent(
   type: string,
   entitlementIds: string[],
   productId: string | null,
+  reason: string | null = null,
 ): TierDecision | null {
-  if (IGNORED_EVENTS.has(type)) return null;
+  if (IGNORED_EVENTS.has(type) || NON_TERMINAL_EVENTS.has(type)) return null;
+
+  // A revocation is inactive NOW, whatever the event type says about
+  // auto-renew. Checked before the CANCELLATION branch below, which would
+  // otherwise keep a refunded learner entitled until the period end.
+  if (isRevocation(type, reason)) {
+    return { tier: 'starter', isActive: false, cancelAtPeriodEnd: false };
+  }
 
   if (INACTIVE_EVENTS.has(type)) {
     return { tier: 'starter', isActive: false, cancelAtPeriodEnd: false };

@@ -340,13 +340,34 @@ async function handleStart(supabase: Db, userId: string, body: Record<string, un
 
 // ─── submit ────────────────────────────────────────────────────────────────
 
+/** Writing grades per learner per day, every tier. One Haiku call each; a
+ *  placement test needs a handful, and this was the only paid call in the
+ *  app with no daily ceiling at all. */
+const DAILY_CHECKPOINT_GRADES = 30;
+
 async function gradeWriting(
+  supabase: Db,
+  userId: string,
   response: string,
   language: string,
   band: string,
   prompt: string,
 ): Promise<number | null> {
   if (!ANTHROPIC_API_KEY) return null;
+  const { data: allowed, error: quotaErr } = await supabase.rpc('consume_daily_quota', {
+    p_user_id: userId,
+    p_counter: 'checkpoint_grades',
+    p_limit: DAILY_CHECKPOINT_GRADES,
+  });
+  if (quotaErr) {
+    // Fail CLOSED: an outage in the meter is not a reason to grade unmetered.
+    console.error('[checkpoint] consume_daily_quota failed:', quotaErr.message);
+    return null;
+  }
+  if (allowed !== true) {
+    console.warn(`[checkpoint] daily writing-grade cap reached for ${userId}; writing left ungraded`);
+    return null;
+  }
   const result = await generateValidated({
     fn: 'checkpoint-writing',
     targetLevel: band as CEFR,
@@ -499,7 +520,14 @@ async function handleSubmit(supabase: Db, userId: string, body: Record<string, u
     if (item.strand === 'listening' || item.strand === 'reading') {
       scores[item.strand] = isCorrect(answer, item) ? 1 : 0;
     } else if (item.strand === 'writing') {
-      const score = await gradeWriting(answer, attempt.language as string, attempt.band as string, item.prompt);
+      const score = await gradeWriting(
+        supabase,
+        userId,
+        answer,
+        attempt.language as string,
+        attempt.band as string,
+        item.prompt,
+      );
       if (score !== null) scores.writing = score;
     }
   }
@@ -517,11 +545,14 @@ async function handleSubmit(supabase: Db, userId: string, body: Record<string, u
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
-  // `score` is 0..1 — the same scale SPEAKING_PASS_SCORE (0.7) is compared
-  // against in lib/cefr-proficiency.ts — so it needs no rescaling, only
-  // clamping against a malformed row.
+  // `pronunciation_scores.score` is a smallint 0–100 (migration 089; see
+  // `calculatePronunciationScore` in score-pronunciation/scoring.ts), while
+  // `composite` and SPEAKING_PASS_SCORE (0.7) speak 0–1. This used to clamp
+  // the raw column as if it were already 0–1, so every real score above 1
+  // became exactly 1.0 and the speaking strand passed unconditionally. The
+  // clamp stays, for a malformed row.
   if (spoken && typeof spoken.score === 'number') {
-    scores.speaking = Math.min(1, Math.max(0, spoken.score));
+    scores.speaking = Math.min(1, Math.max(0, spoken.score / 100));
   }
 
   const value = composite(scores);

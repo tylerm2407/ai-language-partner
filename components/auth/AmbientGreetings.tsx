@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { View, Text, Animated, Easing, StyleSheet, useWindowDimensions } from 'react-native';
 import { useMotion } from '../../hooks/useMotion';
 import { typography } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 
 /**
  * Ambient greeting words drifting behind the auth screen — the texture layer
@@ -10,7 +11,14 @@ import { typography } from '../../config/theme';
  * Deliberately decorative: `pointerEvents="none"` and
  * `accessibilityElementsHidden` so it never takes a tap or reaches a screen
  * reader. Max alpha is 0.13, which keeps every real text element above it
- * comfortably AA on `surface.base`.
+ * comfortably AA on the screen ground.
+ *
+ * The words carry a TONE and an alpha rather than a colour. They used to be
+ * literal `rgba(241,245,249,0.07)` — a near-white ivory, which is invisible on
+ * a white screen. That is the same failure as a black password field on a light
+ * phone, just quieter: the texture layer does not vanish loudly, it simply
+ * stops existing. Resolving `neutral` to `c.ink` flips it to a near-black wash
+ * in light and keeps the ivory in dark.
  *
  * Apple's Reduced Motion criteria calls out multi-axis motion specifically,
  * which is exactly what this is — so under Reduce Motion the words render
@@ -23,7 +31,13 @@ interface Word {
   x: number;
   y: number;
   size: number;
-  color: string;
+  /** `neutral` is the scheme's ink, `accent` its primary. The deck had two
+   *  accent hues (indigo and purple); at 13% alpha they were indistinguishable,
+   *  so UI 2.0 collapses them into one. */
+  tone: 'neutral' | 'accent';
+  /** Alpha for this word, applied to the glyph itself so the drift animation
+   *  keeps the wrapper opacity it already owns. */
+  alpha: number;
   /** Seconds for one full loop. */
   duration: number;
   /** Fraction of the loop to start at, so no two words ever sync. */
@@ -32,13 +46,13 @@ interface Word {
 }
 
 const WORDS: Word[] = [
-  { text: 'Bonjour', x: -0.04, y: 0.05, size: 40, color: 'rgba(241,245,249,0.07)', duration: 23, offset: 0, path: 'a' },
-  { text: 'Ciao', x: 0.72, y: 0.25, size: 34, color: 'rgba(129,140,248,0.13)', duration: 27, offset: 0.19, path: 'b' },
-  { text: 'こんにちは', x: 0.02, y: 0.34, size: 46, color: 'rgba(241,245,249,0.06)', duration: 21, offset: 0.52, path: 'c' },
-  { text: 'Olá', x: 0.76, y: 0.47, size: 36, color: 'rgba(168,85,247,0.13)', duration: 29, offset: 0.1, path: 'a' },
-  { text: 'Привет', x: -0.03, y: 0.58, size: 38, color: 'rgba(241,245,249,0.065)', duration: 24, offset: 0.62, path: 'b' },
-  { text: 'Hallo', x: 0.7, y: 0.7, size: 42, color: 'rgba(129,140,248,0.11)', duration: 25, offset: 0.28, path: 'c' },
-  { text: 'Hola', x: 0.04, y: 0.83, size: 36, color: 'rgba(241,245,249,0.06)', duration: 20, offset: 0.85, path: 'a' },
+  { text: 'Bonjour', x: -0.04, y: 0.05, size: 40, tone: 'neutral', alpha: 0.07, duration: 23, offset: 0, path: 'a' },
+  { text: 'Ciao', x: 0.72, y: 0.25, size: 34, tone: 'accent', alpha: 0.13, duration: 27, offset: 0.19, path: 'b' },
+  { text: 'こんにちは', x: 0.02, y: 0.34, size: 46, tone: 'neutral', alpha: 0.06, duration: 21, offset: 0.52, path: 'c' },
+  { text: 'Olá', x: 0.76, y: 0.47, size: 36, tone: 'accent', alpha: 0.13, duration: 29, offset: 0.1, path: 'a' },
+  { text: 'Привет', x: -0.03, y: 0.58, size: 38, tone: 'neutral', alpha: 0.065, duration: 24, offset: 0.62, path: 'b' },
+  { text: 'Hallo', x: 0.7, y: 0.7, size: 42, tone: 'accent', alpha: 0.11, duration: 25, offset: 0.28, path: 'c' },
+  { text: 'Hola', x: 0.04, y: 0.83, size: 36, tone: 'neutral', alpha: 0.06, duration: 20, offset: 0.85, path: 'a' },
 ];
 
 /** Keyframe tracks, one per path. `t` is 0-1 through the loop. */
@@ -67,6 +81,7 @@ const PATHS = {
 } as const;
 
 function DriftingWord({ word, frameW, frameH }: { word: Word; frameW: number; frameH: number }) {
+  const { c } = useUi2Theme();
   const { shouldReduce } = useMotion();
   const progress = useRef(new Animated.Value(word.offset)).current;
 
@@ -123,7 +138,14 @@ function DriftingWord({ word, frameW, frameH }: { word: Word; frameW: number; fr
         shouldReduce ? staticStyle : animatedStyle,
       ]}
     >
-      <Text style={{ fontFamily: typography.family.serif, fontSize: word.size, color: word.color }}>
+      <Text
+        style={{
+          fontFamily: typography.family.serif,
+          fontSize: word.size,
+          color: word.tone === 'accent' ? c.primary : c.ink,
+          opacity: word.alpha,
+        }}
+      >
         {word.text}
       </Text>
     </Animated.View>

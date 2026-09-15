@@ -1,0 +1,105 @@
+/** French topic packs. A1, five topics, each sentence built from its words. */
+import type { LanguagePacks } from './spec';
+
+export const FR_PACKS: LanguagePacks = {
+  travel: {
+    words: [
+      { target: 'un café', gloss: 'a coffee' },
+      { target: "s'il vous plaît", gloss: 'please' },
+      { target: "l'addition", gloss: 'the bill' },
+    ],
+    sentence: { target: "Un café, s'il vous plaît.", gloss: 'A coffee, please.' },
+    tiles: ['Un', 'café,', "s'il", 'vous', 'plaît'],
+    tileDistractors: ["l'addition", 'merci'],
+    foil: { target: 'la gare', gloss: 'the station' },
+    plan: [
+      { title: 'Ordering a coffee', words: ['un café', "s'il vous plaît", 'merci'] },
+      { title: 'Asking for the bill', words: ["l'addition", 'payer', 'par carte'] },
+      { title: 'Finding the station', words: ['la gare', 'le train', 'le billet'] },
+      { title: 'Checking into a hotel', words: ["l'hôtel", 'la chambre', 'la clé'] },
+      { title: 'Asking the way', words: ['à droite', 'à gauche', 'tout droit'] },
+      { title: 'Ordering a meal', words: ['la carte', "l'eau", 'une table'] },
+    ],
+    solLine: 'Then we start where you will actually stand: at the counter, ordering.',
+  },
+  family: {
+    words: [
+      { target: 'ma mère', gloss: 'my mother' },
+      { target: 'mon frère', gloss: 'my brother' },
+      { target: 'à la maison', gloss: 'at home' },
+    ],
+    sentence: { target: 'Ma mère est à la maison.', gloss: 'My mother is at home.' },
+    tiles: ['Ma', 'mère', 'est', 'à', 'la', 'maison'],
+    tileDistractors: ['frère', 'sont'],
+    foil: { target: 'ma sœur', gloss: 'my sister' },
+    plan: [
+      { title: 'Naming your people', words: ['ma mère', 'mon père', 'mon frère'] },
+      { title: 'Saying where they are', words: ['à la maison', 'est', 'ici'] },
+      { title: 'How old everyone is', words: ['ans', 'combien', 'il a'] },
+      { title: 'At the family table', words: ['le repas', "s'asseoir", 'goûter'] },
+      { title: 'Talking about your day', words: ["aujourd'hui", "j'ai travaillé", "je me suis reposé"] },
+      { title: 'Making plans together', words: ['dimanche', 'on va', 'ensemble'] },
+    ],
+    solLine: 'Good — we will build the words you need at their table, not in a textbook.',
+  },
+  work: {
+    words: [
+      { target: 'le travail', gloss: 'work' },
+      { target: 'une réunion', gloss: 'a meeting' },
+      { target: 'demain', gloss: 'tomorrow' },
+    ],
+    sentence: { target: "Demain, j'ai une réunion.", gloss: 'Tomorrow I have a meeting.' },
+    tiles: ['Demain,', "j'ai", 'une', 'réunion'],
+    tileDistractors: ['travail', "aujourd'hui"],
+    foil: { target: 'le bureau', gloss: 'the office' },
+    plan: [
+      { title: 'Talking about your job', words: ['le travail', 'je travaille chez', 'je suis'] },
+      { title: 'Arranging a meeting', words: ['une réunion', 'demain', 'à dix heures'] },
+      { title: 'In the office', words: ['le bureau', 'le mail', 'le rapport'] },
+      { title: 'Meeting a client', words: ['le client', 'enchanté', 'je vous présente'] },
+      { title: 'Saying what you think', words: ['je pense que', "je suis d'accord", 'peut-être'] },
+      { title: 'Wrapping up a call', words: ['à bientôt', 'je vous envoie', 'on se dit'] },
+    ],
+    solLine: 'Right — we will aim at the meeting you have to sit through, not small talk.',
+  },
+  media_culture: {
+    words: [
+      { target: 'un film', gloss: 'a film' },
+      { target: 'la musique', gloss: 'music' },
+      { target: "j'aime", gloss: 'I like' },
+    ],
+    sentence: { target: "J'aime beaucoup ce film.", gloss: 'I like this film a lot.' },
+    tiles: ["J'aime", 'beaucoup', 'ce', 'film'],
+    tileDistractors: ['musique', 'la'],
+    foil: { target: 'un livre', gloss: 'a book' },
+    plan: [
+      { title: 'Saying what you like', words: ["j'aime", 'beaucoup', "je n'aime pas"] },
+      { title: 'Talking about films', words: ['un film', "l'acteur", 'la fin'] },
+      { title: 'Talking about music', words: ['la musique', 'la chanson', 'les paroles'] },
+      { title: 'What happened in it', words: ["il s'est passé", 'au début', 'ensuite'] },
+      { title: 'Recommending something', words: ['tu dois voir', 'tu vas aimer', "c'est génial"] },
+      { title: 'Disagreeing politely', words: ['je ne suis pas sûr', 'pour moi', 'je préfère'] },
+    ],
+    solLine: 'Then the subtitles come off sooner than you think. Start with one line.',
+  },
+  housing_admin: {
+    words: [
+      { target: 'un appartement', gloss: 'an apartment' },
+      { target: 'le loyer', gloss: 'the rent' },
+      { target: 'le centre-ville', gloss: 'the city centre' },
+    ],
+    sentence: { target: 'Je cherche un appartement en centre-ville.', gloss: 'I am looking for an apartment in the city centre.' },
+    tiles: ['Je', 'cherche', 'un', 'appartement', 'en', 'centre-ville'],
+    tileDistractors: ['loyer', 'la'],
+    foil: { target: 'la clé', gloss: 'the key' },
+    plan: [
+      { title: 'Looking for a flat', words: ['un appartement', 'je cherche', 'le centre-ville'] },
+      { title: 'Talking about rent', words: ['le loyer', 'par mois', 'la caution'] },
+      { title: 'Viewing the place', words: ['la cuisine', 'la salle de bains', 'la lumière'] },
+      { title: 'At the town hall', words: ['la mairie', 'le rendez-vous', 'le document'] },
+      { title: 'Opening a bank account', words: ['le compte', 'la carte', 'signer'] },
+      { title: 'Calling the doctor', words: ['le médecin', "j'ai mal", 'un rendez-vous'] },
+    ],
+    solLine: 'Moving is mostly paperwork — so we will start with the words that open doors.',
+  },
+};

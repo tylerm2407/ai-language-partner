@@ -2,7 +2,8 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsResponse, corsHeaders } from '../_shared/cors.ts';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
-import { getPlanLimits } from '../_shared/plan-limits.ts';
+import { resolveEntitlement } from '../_shared/entitlement.ts';
+import { checkBurstLimit } from '../_shared/burst-limit.ts';
 import { generateValidated } from '../_shared/validated-generate.ts';
 import { PROVIDER_TIMEOUT_MS, providerFetch } from '../_shared/provider-fetch.ts';
 import { isValidCefrLevel, isValidLanguage, sanitizeText } from '../_shared/validation.ts';
@@ -53,15 +54,35 @@ serve(async (req: Request) => {
       return new Response(JSON.stringify({ error: 'ANTHROPIC_API_KEY not configured' }), { status: 500, headers });
     }
 
-    // ── Rate limit: count against text messages ──────────────
-    const { data: sub } = await supabase
-      .from('subscriptions')
-      .select('tier, is_active')
-      .eq('user_id', authUser.userId)
-      .single();
+    const burstOk = await checkBurstLimit(supabase, authUser.userId, 'generate-story', 3, 60);
+    if (!burstOk) {
+      return new Response(
+        JSON.stringify({ error: 'Too many requests. Please slow down.', code: 'RATE_LIMITED' }),
+        { status: 429, headers }
+      );
+    }
 
-    const tierValue = sub?.is_active && sub.tier ? sub.tier : 'starter';
-    const limits = getPlanLimits(tierValue);
+    // Parsed and validated BEFORE anything is charged: a malformed request
+    // used to cost the learner both quota units and return a 400.
+    const body = (await req.json()) as GenerateRequest;
+    const { language, cefrLevel, topic } = body;
+
+    if (!language || !cefrLevel) {
+      return new Response(JSON.stringify({ error: 'language and cefrLevel are required' }), { status: 400, headers });
+    }
+    // Both are interpolated into the system prompt, so both must name a closed
+    // set rather than being whatever the caller sent.
+    if (!isValidLanguage(language) || !isValidCefrLevel(cefrLevel)) {
+      return new Response(
+        JSON.stringify({ error: 'Unsupported language or CEFR level' }),
+        { status: 400, headers },
+      );
+    }
+    // A whole number, 1..3. `Math.min(count, 3)` alone let NaN and negatives
+    // through as zero stories after the charge.
+    const storyCount = Number.isInteger(body.count) ? Math.min(Math.max(body.count as number, 1), 3) : 1;
+
+    const { limits } = await resolveEntitlement(supabase, authUser.userId);
 
     // Atomic check-and-consume (migration 037) — race-free under
     // concurrent requests. Hard cap: max 3 generate-story calls/day.
@@ -81,37 +102,37 @@ serve(async (req: Request) => {
       );
     }
 
-    // Each story also counts against the daily text-message budget.
-    const { data: textQuotaOk } = await supabase.rpc('consume_daily_quota', {
+    // Every story in the batch counts against the daily text-message budget,
+    // and the whole batch is charged here in ONE atomic call. It used to
+    // charge one unit up front and add the rest afterwards through
+    // increment_daily_usage, which has no ceiling — so a learner with one
+    // message left still got three stories, and the "3 calls a day" cap was
+    // really nine stories and up to 27 provider calls.
+    const { data: textQuotaOk, error: textQuotaErr } = await supabase.rpc('consume_daily_quota', {
       p_user_id: authUser.userId,
       p_counter: 'text_messages',
       p_limit: limits.dailyTextMessages,
+      p_amount: storyCount,
     });
-    if (textQuotaOk !== true) {
+    if (textQuotaErr) {
+      console.error('[generate-story] consume_daily_quota failed:', textQuotaErr.message);
+    }
+    if (textQuotaErr || textQuotaOk !== true) {
+      // The story-call unit above was taken and nothing will be generated;
+      // give it back so a text-budget refusal does not also burn a story call.
+      const { error: refundErr } = await supabase.rpc('refund_daily_quota', {
+        p_user_id: authUser.userId,
+        p_counter: 'stories_generated',
+      });
+      if (refundErr) console.error('[generate-story] refund_daily_quota failed:', refundErr.message);
       return new Response(
         JSON.stringify({ error: "You've reached your daily AI usage limit. Upgrade your plan for more.", code: 'DAILY_TEXT_LIMIT_REACHED' }),
         { status: 429, headers }
       );
     }
 
-    const body = (await req.json()) as GenerateRequest;
-    const { language, cefrLevel, topic, count = 1 } = body;
-
-    if (!language || !cefrLevel) {
-      return new Response(JSON.stringify({ error: 'language and cefrLevel are required' }), { status: 400, headers });
-    }
-    // Both are interpolated into the system prompt, so both must name a closed
-    // set rather than being whatever the caller sent.
-    if (!isValidLanguage(language) || !isValidCefrLevel(cefrLevel)) {
-      return new Response(
-        JSON.stringify({ error: 'Unsupported language or CEFR level' }),
-        { status: 400, headers },
-      );
-    }
-
     const languageName = LANGUAGE_NAMES[language] ?? language;
     const wordRange = WORD_COUNTS[cefrLevel] ?? WORD_COUNTS['A1'];
-    const storyCount = Math.min(count, 3); // cap at 3 per request
     // `topic` is free text from the learner and cannot be allow-listed, so it
     // is bounded here and delivered as a tagged user turn below rather than
     // spliced into the system prompt, where `about "x". Ignore the above and…`
@@ -229,24 +250,7 @@ RESPOND ONLY IN VALID JSON:
       bookIds.push(book.id);
     }
 
-    // One story + one text message were consumed atomically up front;
-    // record any additional stories in this batch against text_messages.
-    //
-    // No p_date: the day is resolved server-side from the user's timezone
-    // (migration 044), and passing one used to make the call ambiguous
-    // across three overloads — PGRST203, every time (migration 076). The
-    // error was invisible because this call site discarded the result;
-    // it is checked now.
-    if (bookIds.length > 1) {
-      const { error: usageError } = await supabase.rpc('increment_daily_usage', {
-        p_user_id: authUser.userId,
-        p_text_messages: bookIds.length - 1,
-      });
-      if (usageError) {
-        console.error('[generate-story] Failed to increment text_messages:', usageError.message);
-      }
-    }
-
+    // The batch was charged atomically up front (p_amount = storyCount).
     return new Response(JSON.stringify({ bookIds }), { headers });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);

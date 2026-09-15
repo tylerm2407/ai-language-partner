@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Animated, StyleSheet } from 'react-native';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 
 interface WrongShakeProps {
   trigger?: boolean;
@@ -7,6 +8,7 @@ interface WrongShakeProps {
 }
 
 export function WrongShake({ trigger = false, children }: WrongShakeProps) {
+  const { c } = useUi2Theme();
   const translateX = useRef(new Animated.Value(0)).current;
   const tintOpacity = useRef(new Animated.Value(0)).current;
 
@@ -32,7 +34,7 @@ export function WrongShake({ trigger = false, children }: WrongShakeProps) {
   return (
     <Animated.View style={{ transform: [{ translateX }] }}>
       <Animated.View
-        style={[StyleSheet.absoluteFill, { backgroundColor: '#EF4444', borderRadius: 20, opacity: tintOpacity }]}
+        style={[StyleSheet.absoluteFill, { backgroundColor: c.error, borderRadius: 20, opacity: tintOpacity }]}
         pointerEvents="none"
       />
       {children}

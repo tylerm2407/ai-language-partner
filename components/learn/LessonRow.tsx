@@ -22,11 +22,12 @@
 
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Body } from '../ui/Text';
+import { Body } from '../ui2/Ui2Text';
 import { Mono } from './Mono';
 import { DashedOutline } from './DashedOutline';
 import { usePressed } from '../../hooks/usePressed';
-import { colors, radii, spacing, typography } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
+import { radii, spacing, typography } from '../../config/theme';
 import type { LessonRowState } from '../../lib/learn-progress';
 
 interface LessonRowProps {
@@ -37,7 +38,6 @@ interface LessonRowProps {
   isMilestone: boolean;
   /** 0-1, from lesson_completions. Null when never completed. */
   score: number | null;
-  xpReward: number;
   estimatedMinutes: number;
   onPress: () => void;
 }
@@ -50,10 +50,10 @@ function LessonRowComponent({
   state,
   isMilestone,
   score,
-  xpReward,
   estimatedMinutes,
   onPress,
 }: LessonRowProps) {
+  const { c } = useUi2Theme();
   const { pressed, pressHandlers } = usePressed();
   const locked = state === 'locked';
   const active = state === 'active';
@@ -63,12 +63,12 @@ function LessonRowComponent({
   const milestoneLocked = locked && isMilestone;
 
   const indexColor = completed
-    ? colors.success.base
+    ? c.green
     : active
-      ? colors.indigo[300]
+      ? c.primary
       : milestoneLocked
-        ? colors.premium.base
-        : colors.text.tertiary;
+        ? c.primary
+        : c.idle;
 
   const accessibilityLabel = buildLabel({
     position,
@@ -76,7 +76,6 @@ function LessonRowComponent({
     state,
     isMilestone,
     score,
-    xpReward,
     estimatedMinutes,
   });
 
@@ -97,8 +96,8 @@ function LessonRowComponent({
       accessibilityState={{ disabled: locked }}
       style={[
         styles.row,
-        completed && styles.rowCompleted,
-        active && styles.rowActive,
+        completed && { backgroundColor: c.card },
+        active && { backgroundColor: c.primaryTint, borderColor: c.primaryTintBorder },
         active && styles.rowActiveTall,
         pressed && !locked && styles.rowPressed,
       ]}
@@ -106,7 +105,7 @@ function LessonRowComponent({
       {locked && (
         <DashedOutline
           radius={ROW_RADIUS}
-          color={milestoneLocked ? colors.premium.border : colors.border.default}
+          color={milestoneLocked ? c.primaryTintBorder : c.cardBorder}
         />
       )}
 
@@ -128,7 +127,7 @@ function LessonRowComponent({
           {title}
         </Body>
         {active && (
-          <Mono size={11} color={colors.text.tertiary} style={styles.activeMeta}>
+          <Mono size={11} color={c.idle} style={styles.activeMeta}>
             {`${estimatedMinutes} MIN`}
           </Mono>
         )}
@@ -138,7 +137,6 @@ function LessonRowComponent({
         state={state}
         milestoneLocked={milestoneLocked}
         score={score}
-        xpReward={xpReward}
       />
     </Pressable>
   );
@@ -155,20 +153,21 @@ function StateGlyph({
   state: LessonRowState;
   milestoneLocked: boolean;
 }) {
+  const { c } = useUi2Theme();
   if (state === 'completed') {
-    return <View style={styles.dot} />;
+    return <View style={[styles.dot, { backgroundColor: c.green }]} />;
   }
   if (state === 'active') {
     // Drawn rather than iconed: a CSS-style border triangle keeps the same
     // optical weight as the 10px dot and rhombus beside it, which Ionicons'
     // `play` glyph does not at this size.
-    return <View style={styles.triangle} />;
+    return <View style={[styles.triangle, { borderLeftColor: c.primary }]} />;
   }
   return (
     <View
       style={[
         styles.rhombus,
-        milestoneLocked && { backgroundColor: colors.premium.base },
+        { backgroundColor: milestoneLocked ? c.primary : c.idle },
       ]}
     />
   );
@@ -180,18 +179,17 @@ function TrailingSlot({
   state,
   milestoneLocked,
   score,
-  xpReward,
 }: {
   state: LessonRowState;
   milestoneLocked: boolean;
   score: number | null;
-  xpReward: number;
 }) {
+  const { c } = useUi2Theme();
   if (state === 'active') {
     // A View, not a nested Pressable: the whole row is the target, and a
     // second touchable here would split it into two accessibility nodes.
     return (
-      <View style={styles.goPill}>
+      <View style={[styles.goPill, { backgroundColor: c.primary }]}>
         <Body size="sm" weight="extrabold" tone="onPrimary" style={styles.goLabel}>
           GO
         </Body>
@@ -201,7 +199,7 @@ function TrailingSlot({
 
   if (state === 'completed') {
     return (
-      <Mono size={11} medium color={colors.success.base}>
+      <Mono size={11} medium color={c.green}>
         {score === null ? 'DONE' : `${Math.round(score * 100)}%`}
       </Mono>
     );
@@ -209,14 +207,14 @@ function TrailingSlot({
 
   if (milestoneLocked) {
     return (
-      <Mono size={11} medium color={colors.premium.base}>
+      <Mono size={11} medium color={c.primary}>
         MILESTONE
       </Mono>
     );
   }
 
-  // Nothing to advertise here any more: XP is a server-side ledger, not a
-  // number the learner is playing for.
+  // Nothing to advertise for an upcoming lesson: there is no reward number,
+  // only the work.
   return null;
 }
 
@@ -228,11 +226,10 @@ function buildLabel({
   state,
   isMilestone,
   score,
-  xpReward,
   estimatedMinutes,
 }: Pick<
   LessonRowProps,
-  'position' | 'title' | 'state' | 'isMilestone' | 'score' | 'xpReward' | 'estimatedMinutes'
+  'position' | 'title' | 'state' | 'isMilestone' | 'score' | 'estimatedMinutes'
 >): string {
   const parts = [`Lesson ${position}`, title];
 
@@ -257,23 +254,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     // 44pt Apple HIG minimum with room to spare; the gutter + glyph + trailing
     // label all sit on one baseline at this height.
-    minHeight: 64,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    // 52, not 64 (canvas "Learn · variations", L2): still 8pt over the HIG
+    // minimum, and six lessons fit above the fold.
+    minHeight: 52,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: spacing.xs,
     marginBottom: spacing.xs,
     borderRadius: ROW_RADIUS,
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  rowCompleted: {
-    backgroundColor: colors.surface.card,
-  },
-  rowActive: {
-    backgroundColor: colors.action.primaryTint,
-    borderColor: colors.action.primaryBorder,
   },
   rowActiveTall: {
-    minHeight: 84,
+    minHeight: 72,
   },
   rowPressed: {
     opacity: 0.72,
@@ -297,7 +287,6 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: colors.success.base,
   },
   triangle: {
     width: 0,
@@ -307,14 +296,12 @@ const styles = StyleSheet.create({
     borderLeftWidth: 10,
     borderTopColor: 'transparent',
     borderBottomColor: 'transparent',
-    borderLeftColor: colors.indigo[300],
     // Optical centering — a triangle's visual mass sits left of its box.
     marginLeft: 2,
   },
   rhombus: {
     width: 10,
     height: 10,
-    backgroundColor: colors.text.quaternary,
     transform: [{ rotate: '45deg' }],
   },
   goPill: {
@@ -324,7 +311,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.sm,
     borderRadius: radii.sm,
-    backgroundColor: colors.action.primaryFill,
   },
   goLabel: {
     letterSpacing: typography.tracking.cta,

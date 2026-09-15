@@ -3,7 +3,8 @@ import { Alert } from 'react-native';
 import * as Linking from 'expo-linking';
 import { useRouter, useRootNavigationState } from 'expo-router';
 import { supabase } from '../lib/supabase';
-import { parseAuthLink } from '../lib/auth-links';
+import { establishBoundAuthSession, isExpectedAuthCallbackUrl, parseAuthLink } from '../lib/auth-links';
+import { clearPendingAuthIntent, readPendingAuthIntent } from '../lib/pending-auth-intent';
 
 type PendingNav = {
   route: '/(public)/reset-password' | '/(public)/auth';
@@ -11,12 +12,11 @@ type PendingNav = {
 };
 
 /**
- * Handles Supabase auth deep links (password recovery + email confirmation),
+ * Handles explicitly requested Supabase auth callbacks,
  * for both warm links (app already running) and cold starts.
  *
  * - Recovery links: establish the session, route to the new-password screen.
- * - Signup / email-change confirmation links: establish the session and let
- *   the root route guard land the user in the app — no extra navigation.
+ * - Signup confirmation links: establish the verified expected session.
  * - Expired/invalid links: route to sign-in with an explanatory alert.
  * - Non-auth URLs are ignored so expo-router's normal linking is untouched.
  *
@@ -37,7 +37,26 @@ export function useAuthDeepLinks() {
     if (link.kind === 'none') return; // normal route — expo-router handles it
     handledUrls.current.add(url);
 
+    const reject = (message = 'That link was not requested on this device or has expired.') => {
+      setPending({
+        route: '/(public)/auth',
+        alert: { title: 'Link not accepted', message },
+      });
+    };
+
+    if (!isExpectedAuthCallbackUrl(url, __DEV__)) {
+      reject();
+      return;
+    }
+
+    const intent = await readPendingAuthIntent().catch(() => null);
+    if (!intent) {
+      reject();
+      return;
+    }
+
     if (link.kind === 'error') {
+      await clearPendingAuthIntent().catch(() => {});
       setPending({
         route: '/(public)/auth',
         alert: {
@@ -48,18 +67,21 @@ export function useAuthDeepLinks() {
       return;
     }
 
+    let acceptedType: 'recovery' | 'signup';
     try {
-      if (link.kind === 'pkce_code') {
-        const { error } = await supabase.auth.exchangeCodeForSession(link.code);
-        if (error) throw error;
-        return; // PKCE links carry no type; the recovery case is covered by
-        //         the PASSWORD_RECOVERY listener below.
+      const result = await establishBoundAuthSession(
+        supabase.auth,
+        url,
+        link,
+        intent,
+        __DEV__,
+      );
+      if (!result) {
+        reject();
+        return;
       }
-      const { error } = await supabase.auth.setSession({
-        access_token: link.accessToken,
-        refresh_token: link.refreshToken,
-      });
-      if (error) throw error;
+      acceptedType = result;
+      await clearPendingAuthIntent();
     } catch (err) {
       console.warn('[auth] failed to create session from deep link:', err);
       setPending({
@@ -72,11 +94,10 @@ export function useAuthDeepLinks() {
       return;
     }
 
-    if (link.type === 'recovery') {
+    if (acceptedType === 'recovery') {
       setPending({ route: '/(public)/reset-password' });
     }
-    // signup / email_change / magiclink / invite: session is now set — the
-    // root route guard in app/_layout.tsx routes into the app automatically.
+    // Signup: session is now set and the root guard routes into the app.
   }, []);
 
   // Cold start + warm links.

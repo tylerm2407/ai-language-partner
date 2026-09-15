@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { View, Text, Pressable, ScrollView } from 'react-native';
+import { View, Pressable, ScrollView } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { usePageNarrator } from '../../hooks/usePageNarrator';
@@ -13,7 +13,16 @@ import {
   splitParagraphs,
   type Paragraph,
 } from '../../lib/reading-text';
-import { colors, radii, spacing } from '../../config/theme';
+import { spacing } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
+import { useReadingPreferences } from '../../hooks/useReadingPreferences';
+import { ReaderDisplaySheet } from './ReaderDisplaySheet';
+import { NarrationBar } from './NarrationBar';
+import { SlabButton } from '../ui2/SlabButton';
+import { Ui2ProgressBar } from '../ui2/Ui2ProgressBar';
+import { Body, Caption } from '../ui2/Ui2Text';
+import { ReaderThemeScope } from './ReaderThemeScope';
+import { DEFAULT_LINE_HEIGHT_MULTIPLIER } from './TappableText';
 import type { ReadingBook, ReviewItem } from '../../types';
 
 interface Props {
@@ -39,10 +48,24 @@ interface Props {
   onExit: () => void;
 }
 
-const FONT_SIZES = [14, 16, 18, 20, 22];
-const CHARS_PER_PAGE_BASE = 1200; // at default font size
+const CHARS_PER_PAGE_BASE = 1200; // at 16pt, normal spacing
+/** ~200 words a minute at ~6 characters a word, spaces included. */
+const CHARS_PER_MINUTE = 1200;
 
-export function BookReader({
+/**
+ * The shell mounts the theme boundary ABOVE the body, because the body reads
+ * `useUi2Theme()` at its own top level and a provider rendered inside it
+ * would arrive one level too late for its own chrome.
+ */
+export function BookReader(props: Props) {
+  return (
+    <ReaderThemeScope>
+      <BookReaderBody {...props} />
+    </ReaderThemeScope>
+  );
+}
+
+function BookReaderBody({
   book,
   content,
   initialPosition,
@@ -60,18 +83,20 @@ export function BookReader({
   onComplete,
   onExit,
 }: Props) {
-  const [fontSizeIndex, setFontSizeIndex] = useState(1); // default 16px
+  const { c } = useUi2Theme();
+  const { fontSize, lineHeightMultiplier, fontFamily } = useReadingPreferences();
   const [currentPage, setCurrentPage] = useState(0);
-  const [showFontControls, setShowFontControls] = useState(false);
-  const [autoAdvance] = useState(true);
+  const [displayOpen, setDisplayOpen] = useState(false);
+  const [autoAdvance, setAutoAdvance] = useState(true);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const narrator = usePageNarrator();
   const insets = useSafeAreaInsets();
 
-  const fontSize = FONT_SIZES[fontSizeIndex];
-
-  // Scale chars per page based on font size
-  const charsPerPage = Math.round(CHARS_PER_PAGE_BASE * (16 / fontSize));
+  // Scale chars per page with the type: bigger or looser text packs fewer
+  // paragraphs per screen.
+  const charsPerPage = Math.round(
+    CHARS_PER_PAGE_BASE * (16 / fontSize) * (DEFAULT_LINE_HEIGHT_MULTIPLIER / lineHeightMultiplier),
+  );
 
   // Paragraphs are computed ONCE for the book and do not depend on font size.
   // That is what gives a paragraph a stable identity, which the shared
@@ -129,7 +154,16 @@ export function BookReader({
     () => currentPageParagraphs.map((p) => p.text).join('\n\n'),
     [currentPageParagraphs],
   );
-  const progressPercent = totalPages > 0 ? ((currentPage + 1) / totalPages) * 100 : 0;
+  const progress = totalPages > 0 ? (currentPage + 1) / totalPages : 0;
+  // Time left at a comfortable 200 words per minute, from the characters
+  // still ahead. Rounded up so the last page never says "0 min".
+  const minutesLeft = useMemo(() => {
+    const remaining = pages.slice(currentPage + 1).reduce(
+      (sum, page) => sum + page.paragraphs.reduce((n, p) => n + p.text.length, 0),
+      0,
+    );
+    return Math.ceil(remaining / CHARS_PER_MINUTE);
+  }, [pages, currentPage]);
 
   // Track whether we should auto-play the next page after navigation
   const shouldAutoPlayRef = useRef(false);
@@ -181,93 +215,57 @@ export function BookReader({
   }, [narrator, onExit]);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface.raised }}>
-      {/* Header */}
-      <View style={{ paddingHorizontal: spacing.md, paddingVertical: spacing.xs, flexDirection: 'row', alignItems: 'center' }}>
-        <Pressable onPress={handleExit} style={{ padding: spacing.xs }} accessibilityRole="button" accessibilityLabel="Exit reading">
-          <Ionicons name="close" size={24} color={colors.text.secondary} />
-        </Pressable>
-        <View style={{ flex: 1, marginLeft: spacing.xs }}>
-          <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary }} numberOfLines={1}>
-            {book.title}
-          </Text>
-          <Text style={{ fontSize: 12, color: colors.text.tertiary }}>
-            Page {currentPage + 1} of {totalPages}
-          </Text>
-        </View>
-        {isUnlimitedPlan && (
-          <>
-            <Pressable
-              onPress={narrator.cycleSpeed}
-              style={{ paddingHorizontal: 6, paddingVertical: spacing.xxs, marginRight: spacing.xxs }}
-              accessibilityRole="button"
-              accessibilityLabel={`Playback speed ${narrator.speed}x`}
-            >
-              <Text style={{ fontSize: 13, fontWeight: '600', color: colors.indigo[400] }}>{narrator.speed}x</Text>
-            </Pressable>
-            <Pressable
-              onPress={handlePlayPause}
-              style={{ padding: spacing.xs }}
-              accessibilityRole="button"
-              accessibilityLabel={narrator.isPlaying && !narrator.isPaused ? 'Pause narration' : 'Play narration'}
-            >
-              <Ionicons
-                name={narrator.isPlaying && !narrator.isPaused ? 'pause-circle' : 'play-circle'}
-                size={28}
-                color={colors.indigo[400]}
-              />
-            </Pressable>
-          </>
-        )}
+    <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
+      {/* Header: close, title and meta, display settings. Narration lives in
+          its own bar above the pager now, where a thumb can reach it. */}
+      <View style={{ paddingHorizontal: spacing.xs, flexDirection: 'row', alignItems: 'center' }}>
         <Pressable
-          onPress={() => setShowFontControls(!showFontControls)}
-          style={{ padding: spacing.xs }}
+          onPress={handleExit}
+          style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}
           accessibilityRole="button"
-          accessibilityLabel="Font size"
+          accessibilityLabel="Exit reading"
         >
-          <Ionicons name="text" size={20} color={colors.indigo[400]} />
+          <Ionicons name="close" size={24} color={c.muted} />
+        </Pressable>
+        <View style={{ flex: 1, marginHorizontal: spacing.xxs }}>
+          <Body weight="semibold" numberOfLines={1}>{book.title}</Body>
+          <Caption
+            tone="secondary"
+            accessibilityLabel={`Page ${currentPage + 1} of ${totalPages}. About ${minutesLeft} minutes left`}
+          >
+            Page {currentPage + 1} of {totalPages}
+            {minutesLeft > 0 ? ` · about ${minutesLeft} min left` : ''}
+          </Caption>
+        </View>
+        <Pressable
+          onPress={() => setDisplayOpen(true)}
+          style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}
+          accessibilityRole="button"
+          accessibilityLabel="Display settings"
+          accessibilityHint="Text size, spacing, font and night reading"
+        >
+          <Ionicons name="text-outline" size={22} color={c.primary} />
         </Pressable>
       </View>
 
-      {/* Progress Bar */}
-      <View style={{ height: 3, backgroundColor: colors.surface.cardAlt, marginHorizontal: spacing.md }}>
-        <View style={{ height: 3, backgroundColor: colors.action.primaryFill, width: `${progressPercent}%` }} />
-      </View>
-
-      {/* Font Size Controls */}
-      {showFontControls && (
-        <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingVertical: spacing.xs, gap: spacing.sm }}>
-          <Pressable
-            onPress={() => setFontSizeIndex(Math.max(0, fontSizeIndex - 1))}
-            disabled={fontSizeIndex === 0}
-            style={{ padding: spacing.xs, opacity: fontSizeIndex === 0 ? 0.3 : 1 }}
-            accessibilityRole="button"
-            accessibilityLabel="Decrease font size"
-          >
-            <Text style={{ fontSize: 14, color: colors.indigo[400], fontWeight: '600' }}>A-</Text>
-          </Pressable>
-          <Text style={{ fontSize: 14, color: colors.text.secondary }}>{fontSize}px</Text>
-          <Pressable
-            onPress={() => setFontSizeIndex(Math.min(FONT_SIZES.length - 1, fontSizeIndex + 1))}
-            disabled={fontSizeIndex === FONT_SIZES.length - 1}
-            style={{ padding: spacing.xs, opacity: fontSizeIndex === FONT_SIZES.length - 1 ? 0.3 : 1 }}
-            accessibilityRole="button"
-            accessibilityLabel="Increase font size"
-          >
-            <Text style={{ fontSize: 18, color: colors.indigo[400], fontWeight: '600' }}>A+</Text>
-          </Pressable>
-        </View>
-      )}
+      <Ui2ProgressBar
+        progress={progress}
+        height={3}
+        accessibilityLabel="Progress through the book"
+        style={{ marginHorizontal: spacing.md }}
+      />
 
       {/* Page Content */}
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ padding: spacing.xl, paddingBottom: spacing.xl }}
+        contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.lg }}
         keyboardShouldPersistTaps="handled"
       >
         <TappableText
           paragraphs={currentPageParagraphs}
           fontSize={fontSize}
+          lineHeightMultiplier={lineHeightMultiplier}
+          fontFamily={fontFamily}
           selectedRef={selectedRef}
           onWordPress={onWordPress}
           onExplain={onExplain}
@@ -283,40 +281,48 @@ export function BookReader({
         />
       </ScrollView>
 
-      {/* Page Navigation — always visible at bottom */}
+      {isUnlimitedPlan && (
+        <NarrationBar
+          isPlaying={narrator.isPlaying}
+          isPaused={narrator.isPaused}
+          speed={narrator.speed}
+          page={currentPage + 1}
+          autoAdvance={autoAdvance}
+          onPlayPause={handlePlayPause}
+          onCycleSpeed={narrator.cycleSpeed}
+          onToggleAutoAdvance={() => setAutoAdvance((v) => !v)}
+        />
+      )}
+
+      {/* Pager — always visible at the bottom. */}
       <View style={{
-        flexDirection: 'row', paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.sm + insets.bottom + 60, gap: spacing.sm,
-        borderTopWidth: 1, borderTopColor: colors.border.default, backgroundColor: colors.surface.raised,
+        flexDirection: 'row',
+        paddingHorizontal: spacing.md,
+        paddingTop: spacing.xs,
+        // The tab bar is hidden while this surface is mounted (immersive flag),
+        // so the pager sits on the home indicator.
+        paddingBottom: spacing.sm + insets.bottom,
+        gap: spacing.sm,
+        backgroundColor: c.bg,
       }}>
-        <Pressable
-          onPress={() => goToPage(currentPage - 1)}
+        <SlabButton
+          label="Previous"
+          variant="tint"
+          arrow={false}
           disabled={currentPage === 0}
-          style={{
-            flex: 1, paddingVertical: 14, borderRadius: radii.lg, alignItems: 'center',
-            backgroundColor: currentPage === 0 ? colors.surface.cardAlt : colors.surface.card,
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Previous page"
-        >
-          <Text style={{ fontSize: 16, fontWeight: '600', color: currentPage === 0 ? colors.text.tertiary : colors.text.primary }}>
-            Previous
-          </Text>
-        </Pressable>
-        <Pressable
+          onPress={() => goToPage(currentPage - 1)}
+          style={{ flex: 1 }}
+        />
+        <SlabButton
+          label={currentPage >= totalPages - 1 ? 'Finish' : 'Next'}
+          variant="primary"
+          arrow={currentPage < totalPages - 1}
           onPress={() => goToPage(currentPage + 1)}
-          disabled={currentPage >= totalPages - 1}
-          style={{
-            flex: 1, paddingVertical: 14, borderRadius: radii.lg, alignItems: 'center',
-            backgroundColor: currentPage >= totalPages - 1 ? colors.indigo[200] : colors.action.primaryFill,
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Next page"
-        >
-          <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.onPrimary }}>
-            {currentPage >= totalPages - 1 ? 'Finish' : 'Next'}
-          </Text>
-        </Pressable>
+          style={{ flex: 1 }}
+        />
       </View>
+
+      <ReaderDisplaySheet visible={displayOpen} onDismiss={() => setDisplayOpen(false)} />
     </SafeAreaView>
   );
 }

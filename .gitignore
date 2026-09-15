@@ -52,3 +52,19 @@ expo-env.d.ts
 
 # Read-only question-audit snapshots and intermediate review packets.
 .question-audit/
+
+# Local Xcode build output (xcodebuild -derivedDataPath ios/build-debug for
+# ad-hoc simulator builds). 3.8 GB untracked here made the EAS project
+# tarball fail to upload.
+ios/build/
+ios/build-debug/
+
+# Design mockups and local prebuilt artefacts — never source
+Fluenci-UI-Mockups-2.0.pptx
+Fluenci-UI-Mockups-2.0.pptx.inspect.ndjson
+Fluenci-UI-Mockups-2.0/
+React-Core-prebuilt/
+
+# Agent scratch — local tool state, never source
+.codex-temp/
+.agents/

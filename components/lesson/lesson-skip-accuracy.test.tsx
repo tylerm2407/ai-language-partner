@@ -41,6 +41,9 @@ jest.mock('expo-av', () => ({
     Sound: { createAsync: jest.fn(async () => ({ sound: { unloadAsync: jest.fn() } })) },
     Recording: { createAsync: jest.fn() },
   },
+  // The chrome's hero block mounts Sol, whose clips render through Video.
+  Video: () => null,
+  ResizeMode: { CONTAIN: 'contain', COVER: 'cover', STRETCH: 'stretch' },
 }));
 jest.mock('../../hooks/useAudioRecorder', () => ({
   useAudioRecorder: () => ({
@@ -156,7 +159,6 @@ function runner(onComplete: (r: LessonResult) => void) {
       exercises={[mc('ex1'), listening('ex2')]}
       lessonId="l1"
       lessonTitle="Basics"
-      xpReward={20}
       userId=""
       targetLanguage="es"
       onComplete={onComplete}
@@ -196,7 +198,10 @@ describe('skipping the last exercise', () => {
     pressLabel(r, 'Skip this question without scoring it');
 
     const result: LessonResult = onComplete.mock.calls[0][0];
-    // accuracy 1 * engagement (1 of 2 attempted) * 20
-    expect(result.xpEarned).toBe(10);
+    // One answered, one skipped: the skip leaves the denominator, and the
+    // result still records that only half the lesson was attempted.
+    expect(result.accuracy).toBe(1);
+    expect(result.scoredCount).toBe(1);
+    expect(result.skippedCount).toBe(1);
   });
 });

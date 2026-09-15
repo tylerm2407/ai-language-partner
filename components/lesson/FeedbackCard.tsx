@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import * as Speech from 'expo-speech';
 import { useAudioPlayer } from '../../hooks/useAudioPlayer';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { RuleCard } from './RuleCard';
 import { logExerciseCorrection } from '../../lib/supabase-queries';
 import type { Exercise, FeedbackErrorType } from '../../types';
@@ -61,6 +62,12 @@ export function FeedbackCard({
   userId,
   revealAnswer,
 }: FeedbackCardProps) {
+  // Text on a semantic tint is `ink`, never the tint's own hue: UI 2.0's green
+  // and yellow are fills chosen to be seen at 20px, not read at 13px — the
+  // reasoning is written out at the top of components/ui2/Ui2Badge.tsx. The
+  // fill and the border carry the hue; the words carry the meaning, so none of
+  // these states is signalled by colour alone either way.
+  const { c } = useUi2Theme();
   const { play } = useAudioPlayer();
   const logged = useRef(false);
   const audioPlayed = useRef(false);
@@ -134,16 +141,19 @@ export function FeedbackCard({
         ? 'Check the grammar — think about the form.'
         : 'Check the word choice — something else fits better.';
     return (
-      <View className="mt-3 p-4 rounded-[14px] bg-warning-bg border border-warning/30">
-        <Text className="text-warning text-sm font-sans-semibold mb-1">
+      <View
+        className="mt-3 p-4 rounded-[14px] border"
+        style={{ backgroundColor: c.yellowTint, borderColor: c.yellowBorder }}
+      >
+        <Text className="text-sm font-sans-semibold mb-1" style={{ color: c.ink }}>
           Not quite
         </Text>
-        <Text className="text-text-primary text-[15px] mb-2">{cue}</Text>
+        <Text className="text-[15px] mb-2" style={{ color: c.ink }}>{cue}</Text>
 
         {revealAnswer ? (
           <View className="mt-1 mb-2">
-            <Text className="text-text-secondary text-xs">Correct answer</Text>
-            <Text className="text-success text-base font-sans-semibold">
+            <Text className="text-xs" style={{ color: c.muted }}>Correct answer</Text>
+            <Text className="text-base font-sans-semibold" style={{ color: c.ink }}>
               {exercise.correctAnswer}
             </Text>
           </View>
@@ -168,20 +178,26 @@ export function FeedbackCard({
     // learner still gets a second attempt at hearing it themselves.
     if (!revealAnswer) {
       return (
-        <View className="mt-3 p-4 rounded-[14px] bg-error-bg border border-error/30">
-          <Text className="text-error text-sm font-sans-semibold mb-1">Not quite</Text>
-          <Text className="text-text-primary text-[15px]">
+        <View
+          className="mt-3 p-4 rounded-[14px] border"
+          style={{ backgroundColor: c.pinkTint, borderColor: c.error }}
+        >
+          <Text className="text-sm font-sans-semibold mb-1" style={{ color: c.ink }}>Not quite</Text>
+          <Text className="text-[15px]" style={{ color: c.ink }}>
             Try saying it once more.
           </Text>
         </View>
       );
     }
     return (
-      <View className="mt-3 p-4 rounded-[14px] bg-error-bg border border-error/30">
-        <Text className="text-error text-sm font-sans-semibold mb-1">
+      <View
+        className="mt-3 p-4 rounded-[14px] border"
+        style={{ backgroundColor: c.pinkTint, borderColor: c.error }}
+      >
+        <Text className="text-sm font-sans-semibold mb-1" style={{ color: c.ink }}>
           Listen to the correct pronunciation.
         </Text>
-        <Text className="text-text-primary text-[15px] mb-3">
+        <Text className="text-[15px] mb-3" style={{ color: c.ink }}>
           {exercise.correctAnswer}
         </Text>
         <View className="flex-row">
@@ -197,11 +213,12 @@ export function FeedbackCard({
                 }
               }
             }}
-            className="flex-1 bg-primary py-3 rounded-[12px] items-center"
+            className="flex-1 py-3 rounded-[12px] items-center"
+            style={{ backgroundColor: c.primary }}
             accessibilityRole="button"
             accessibilityLabel="Repeat audio"
           >
-            <Text className="text-white text-base font-sans-semibold">Repeat</Text>
+            <Text className="text-base font-sans-semibold" style={{ color: c.onPrimary }}>Repeat</Text>
           </Pressable>
         </View>
       </View>
@@ -215,24 +232,30 @@ export function FeedbackCard({
     // it is a typo, without handing over the spelling that fixes it.
     if (!revealAnswer) {
       return (
-        <View className="mt-3 p-4 rounded-[14px] bg-dark-card-alt border border-white/10">
-          <Text className="text-text-secondary text-sm font-sans-medium mb-2">
+        <View
+          className="mt-3 p-4 rounded-[14px] border"
+          style={{ backgroundColor: c.surface2, borderColor: c.cardBorder }}
+        >
+          <Text className="text-sm font-sans-medium mb-2" style={{ color: c.muted }}>
             Close — check your spelling
           </Text>
-          <Text className="text-error text-base line-through">{userText}</Text>
+          <Text className="text-base line-through" style={{ color: c.error }}>{userText}</Text>
         </View>
       );
     }
     return (
-      <View className="mt-3 p-4 rounded-[14px] bg-dark-card-alt border border-white/10">
-        <Text className="text-text-secondary text-sm font-sans-medium mb-2">
+      <View
+        className="mt-3 p-4 rounded-[14px] border"
+        style={{ backgroundColor: c.surface2, borderColor: c.cardBorder }}
+      >
+        <Text className="text-sm font-sans-medium mb-2" style={{ color: c.muted }}>
           Small typo
         </Text>
         <View className="flex-row items-center flex-wrap">
-          <Text className="text-error text-base line-through mr-2">
+          <Text className="text-base line-through mr-2" style={{ color: c.error }}>
             {userText}
           </Text>
-          <Text className="text-success text-base font-sans-semibold">
+          <Text className="text-base font-sans-semibold" style={{ color: c.ink }}>
             {exercise.correctAnswer}
           </Text>
         </View>
@@ -245,8 +268,8 @@ export function FeedbackCard({
   // reveal it is dropped entirely rather than shown — result.feedback from the
   // grader can itself contain the expected answer.
   return (
-    <View className="mt-3 p-3 rounded-[14px] bg-error-bg">
-      <Text className="text-error text-sm font-sans-medium mb-2">
+    <View className="mt-3 p-3 rounded-[14px]" style={{ backgroundColor: c.pinkTint }}>
+      <Text className="text-sm font-sans-medium mb-2" style={{ color: c.ink }}>
         {revealAnswer
           ? result.feedback || `Incorrect. The correct answer is: ${exercise.correctAnswer}`
           : 'Not quite — give it one more try.'}

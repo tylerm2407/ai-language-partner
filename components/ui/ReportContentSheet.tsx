@@ -6,6 +6,8 @@
  * surface (chat, writing feedback, voice transcript, story, hint).
  *
  * Composed from Sheet + existing typography/tokens — no new visual patterns.
+ * UI 2.0: colour comes from `useUi2Theme()`, the type from `Ui2Text`, and the
+ * send button carries the slab bottom edge like every other UI 2.0 CTA.
  */
 
 import React, { useState } from 'react';
@@ -19,8 +21,9 @@ import {
   Platform,
 } from 'react-native';
 import { Sheet } from './Sheet';
-import { Heading, Body, Caption } from './Text';
-import { colors, radii, spacing, typography } from '../../config/theme';
+import { Heading, Body, Caption } from '../ui2/Ui2Text';
+import { radii, spacing } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import {
   reportAiContent,
   type AiReportReason,
@@ -53,6 +56,7 @@ export function ReportContentSheet({
   surface,
   context,
 }: ReportContentSheetProps) {
+  const { c, type, shape } = useUi2Theme();
   const [reason, setReason] = useState<AiReportReason | null>(null);
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -98,7 +102,7 @@ export function ReportContentSheet({
           </Body>
           <Pressable
             onPress={handleDismiss}
-            style={styles.primaryBtn}
+            style={[styles.primaryBtn, { backgroundColor: c.primary, borderBottomColor: c.slab, borderBottomWidth: shape.buttonSlab }]}
             accessibilityRole="button"
             accessibilityLabel="Close"
           >
@@ -134,7 +138,11 @@ export function ReportContentSheet({
                 <Pressable
                   key={r.key}
                   onPress={() => setReason(r.key)}
-                  style={[styles.reason, selected && styles.reasonSelected]}
+                  style={[
+                    styles.reason,
+                    { borderColor: c.cardBorder },
+                    selected && { borderColor: c.primary, backgroundColor: c.primaryTint },
+                  ]}
                   accessibilityRole="radio"
                   accessibilityState={{ selected }}
                   accessibilityLabel={r.label}
@@ -151,8 +159,8 @@ export function ReportContentSheet({
             value={comment}
             onChangeText={setComment}
             placeholder="Add detail (optional)"
-            placeholderTextColor={colors.text.tertiary}
-            style={styles.input}
+            placeholderTextColor={c.idle}
+            style={[styles.input, { borderColor: c.cardBorder, color: c.ink, fontFamily: type.ui }]}
             multiline
             maxLength={1000}
             accessibilityLabel="Additional detail about this report"
@@ -165,13 +173,17 @@ export function ReportContentSheet({
           <Pressable
             onPress={handleSubmit}
             disabled={!reason || submitting}
-            style={[styles.primaryBtn, (!reason || submitting) && styles.primaryBtnDisabled]}
+            style={[
+              styles.primaryBtn,
+              { backgroundColor: c.primary, borderBottomColor: c.slab, borderBottomWidth: shape.buttonSlab },
+              (!reason || submitting) && styles.primaryBtnDisabled,
+            ]}
             accessibilityRole="button"
             accessibilityLabel="Send report"
             accessibilityState={{ disabled: !reason || submitting }}
           >
             {submitting ? (
-              <ActivityIndicator color={colors.text.onPrimary} />
+              <ActivityIndicator color={c.onPrimary} />
             ) : (
               <Body weight="semibold" tone="onPrimary">Send report</Body>
             )}
@@ -202,27 +214,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: colors.border.subtle,
     // 44pt minimum touch target (Apple HIG).
     minHeight: 44,
     justifyContent: 'center',
-  },
-  reasonSelected: {
-    borderColor: colors.border.focus,
-    backgroundColor: colors.surface.cardAlt,
   },
   input: {
     marginTop: spacing.md,
     minHeight: 72,
     borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: colors.border.subtle,
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
     paddingBottom: spacing.sm,
-    color: colors.text.primary,
-    fontFamily: typography.family.regular,
-    fontSize: typography.scale.body.fontSize,
+    fontSize: 16,
     textAlignVertical: 'top',
   },
   error: {
@@ -230,7 +234,6 @@ const styles = StyleSheet.create({
   },
   primaryBtn: {
     marginTop: spacing.md,
-    backgroundColor: colors.action.primaryFill,
     paddingVertical: spacing.md,
     borderRadius: radii.lg,
     alignItems: 'center',

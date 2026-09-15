@@ -18,6 +18,7 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
+      - run: npm run test:build-env
       - run: npm test -- --ci
 
   edge-functions:
@@ -29,3 +30,17 @@ jobs:
         with:
           deno-version: v2.x
       - run: deno test --allow-read --allow-env supabase/functions
+
+  database:
+    name: Rebuild database from migrations
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v2
+        with:
+          version: 2.84.2
+          github-token: ${{ github.token }}
+      # This is an isolated local Docker stack. It never links to or mutates a
+      # hosted project. Startup applies the complete ordered migration chain;
+      # any missing dependency or non-replayable migration fails the PR.
+      - run: supabase db start

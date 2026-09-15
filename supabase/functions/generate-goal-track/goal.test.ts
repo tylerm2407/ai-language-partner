@@ -4,6 +4,7 @@ import { assert, assertEquals } from 'https://deno.land/std@0.168.0/testing/asse
 import {
   GENERATED_EXERCISE_TYPES,
   LESSONS_PER_TRACK,
+  MAX_TERM_CHARS,
   MIN_USABLE_EXERCISES,
   buildExercisePrompt,
   buildMapperPrompt,
@@ -11,6 +12,8 @@ import {
   extractJson,
   parseExercises,
   parseUnitPlan,
+  planLessonCards,
+  termKey,
 } from './goal-core.ts';
 import { GOAL_DOMAINS, GOAL_SCENARIOS } from '../_shared/goal-taxonomy.ts';
 
@@ -215,4 +218,72 @@ Deno.test('junk yields an empty list rather than throwing', () => {
 Deno.test('the usable floor is below a full lesson, so a partial batch can still ship', () => {
   assert(MIN_USABLE_EXERCISES > 0);
   assert(MIN_USABLE_EXERCISES < 10);
+});
+
+// ── terms and cards ────────────────────────────────────────────────────────
+
+Deno.test('the exercise prompt asks for the term each exercise teaches', () => {
+  // Without a clean term there is no card, and without a card the lesson
+  // produces no vocabulary evidence — the state this schema exists to end.
+  const prompt = buildExercisePrompt('French', 'English', 'A2', 'Ordering', 'Order a coffee');
+  assert(prompt.includes('"term"'));
+  assert(prompt.includes('"termNative"'));
+  assert(prompt.includes('"example"'));
+});
+
+Deno.test('a term with both halves is kept, with its example', () => {
+  const out = parseExercises({
+    exercises: [{ ...GOOD_MC, term: "  l'addition ", termNative: 'the bill', example: "L'addition, s'il vous plaît." }],
+  });
+  assertEquals(out[0].term, "l'addition");
+  assertEquals(out[0].termNative, 'the bill');
+  assertEquals(out[0].example, "L'addition, s'il vous plaît.");
+});
+
+Deno.test('a term missing either half is dropped whole, and the exercise survives', () => {
+  // `cards.native_text` is NOT NULL, and a card with the same foreign word on
+  // both sides teaches nothing. Half a term is no term.
+  const out = parseExercises({
+    exercises: [
+      { ...GOOD_MC, term: "l'addition" },
+      { ...GOOD_MC, termNative: 'the bill', example: 'x' },
+      GOOD_MC,
+    ],
+  });
+  assertEquals(out.length, 3);
+  for (const e of out) {
+    assertEquals(e.term, null);
+    assertEquals(e.termNative, null);
+    assertEquals(e.example, null);
+  }
+});
+
+Deno.test('a "term" longer than a phrase is cut to the cap', () => {
+  const out = parseExercises({
+    exercises: [{ ...GOOD_MC, term: 'x'.repeat(500), termNative: 'y' }],
+  });
+  assertEquals(out[0].term?.length, MAX_TERM_CHARS);
+});
+
+Deno.test('planLessonCards collapses exercises onto distinct terms', () => {
+  const [a, b, c] = parseExercises({
+    exercises: [
+      { ...GOOD_MC, term: "l'addition", termNative: 'the bill' },
+      { ...GOOD_MC, term: "L'ADDITION", termNative: 'the check', example: 'Une phrase.' },
+      { ...GOOD_MC, term: 'la carte', termNative: 'the menu' },
+    ],
+  });
+  const cards = planLessonCards([a, b, c]);
+  assertEquals(cards.length, 2);
+  // First spelling and meaning win; the first example seen fills a gap.
+  assertEquals(cards[0].term, "l'addition");
+  assertEquals(cards[0].termNative, 'the bill');
+  assertEquals(cards[0].example, 'Une phrase.');
+  assertEquals(cards[0].exerciseIndexes, [0, 1]);
+  assertEquals(cards[1].exerciseIndexes, [2]);
+});
+
+Deno.test('termKey ignores case and spacing but not accents', () => {
+  assertEquals(termKey(' La  Cuenta '), 'la cuenta');
+  assert(termKey('si') !== termKey('sí'));
 });

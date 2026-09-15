@@ -2,8 +2,10 @@ import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { haptic } from '../../lib/haptics';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing } from '../../config/theme';
-import { Button } from '../ui/Button';
+import { spacing } from '../../config/theme';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
+import { SlabButton } from '../ui2/SlabButton';
+import { Body } from '../ui2/Ui2Text';
 import { ExerciseChrome } from './ExerciseChrome';
 import { MultipleChoice } from './MultipleChoice';
 import { TranslationExercise } from './TranslationExercise';
@@ -24,18 +26,18 @@ import { CelebrationOverlay } from '../ui/CelebrationOverlay';
 import {
   fetchDueReviewItemsWithCards,
   fetchReviewItemsByCardIds,
-  upsertReviewItem,
 } from '../../lib/supabase-queries';
 import { taughtKeys } from '../../lib/exercise-restore';
 import { useTaughtKeys } from '../../hooks/useTaughtKeys';
-import { calculateNextReview } from '../../lib/srs';
-import { enqueue, isNetworkError } from '../../lib/offline-queue';
 import {
   recordLessonSrsResult,
+  recordWarmupSrsResult,
   warmupToExercise,
   WARMUP_MAX_ITEMS,
   WARMUP_FETCH_TIMEOUT_MS,
+  type LessonSrsWriteResult,
 } from '../../lib/lesson-srs';
+import { recordExerciseEvidence, reportLessonWriteFailure } from '../../lib/lesson-evidence';
 import {
   canSkip,
   isLocked,
@@ -67,7 +69,6 @@ interface LessonRunnerProps {
    */
   lessonId?: string;
   lessonTitle: string;
-  xpReward: number;
   userId: string;
   targetLanguage: LanguageCode;
   /** CEFR level for grammar-rule lookups in per-exercise FeedbackCard. */
@@ -93,7 +94,6 @@ export interface LessonResult {
    * completion row disagreed about a learner's score in the first place.
    */
   accuracy: number;
-  xpEarned: number;
   /**
    * One entry per RESOLVED, non-skipped exercise, so this can legitimately be
    * shorter than `totalExercises`. A second-attempt-correct is recorded here
@@ -107,19 +107,27 @@ export interface LessonResult {
    * be hardcoded to 0.
    */
   timeSpentMs: number;
+  /**
+   * Card-linked answers that reached spaced repetition this session — warm-up
+   * and main lesson — i.e. the number of `review_logs` rows the lesson wrote
+   * or queued. The screen adds it to `daily_stats.cards_reviewed` once, at
+   * completion, so a lesson counts the same way a review session does.
+   * Cap-skipped and offline-skipped cards are not in it: nothing was written.
+   */
+  cardsReviewed: number;
 }
 
 export function LessonRunner({
   exercises,
   lessonId,
   lessonTitle,
-  xpReward,
   userId,
   targetLanguage,
   cefrLevel,
   onComplete,
   onExit,
 }: LessonRunnerProps) {
+  const { c } = useUi2Theme();
   const [currentIndex, setCurrentIndex] = useState(0);
   // `showResult` survives only as the sparkle/shake trigger. Whether an
   // exercise has been answered is derived from `picks` — a single boolean
@@ -157,7 +165,7 @@ export function LessonRunner({
   // SRS warm-up state. `warmupResolved` gates the lesson: true once the
   // warm-up either loaded (with items or zero) or the fetch timed out.
   const [warmupResolved, setWarmupResolved] = useState(false);
-  const [warmupEntries, setWarmupEntries] = useState<Array<{ item: ReviewItem; card: Card }>>([]);
+  const [warmupEntries, setWarmupEntries] = useState<{ item: ReviewItem; card: Card }[]>([]);
   const [warmupIndex, setWarmupIndex] = useState(0);
   const [warmupPhase, setWarmupPhase] = useState(false);
   const warmupFetchedRef = useRef(false);
@@ -186,6 +194,12 @@ export function LessonRunner({
   const [newCardCapReached, setNewCardCapReached] = useState(false);
   // Cards already introduced to SRS this session (cap accounting de-dupe).
   const srsIntroducedRef = useRef<Set<string>>(new Set());
+  // SRS writes that actually happened (see LessonResult.cardsReviewed).
+  const cardsReviewedRef = useRef(0);
+  // When the current exercise came on screen, for the response time on its
+  // review_logs / exercise_results rows. Reset per exercise id, not per
+  // attempt: a second attempt is more time on the same question.
+  const shownAtRef = useRef(Date.now());
   // Prefetched review items for this lesson's cards, keyed by cardId, so
   // grading continues real SM-2 state instead of re-baselining cards the
   // user has history with. `null` = prefetch pending/failed → fresh-baseline
@@ -323,6 +337,29 @@ export function LessonRunner({
     ? warmupToExercise(warmupEntries[warmupIndex])
     : null;
   const currentExercise = warmupPhase ? warmupExercise : exercises[currentIndex];
+  const currentExerciseId = currentExercise?.id;
+
+  useEffect(() => {
+    shownAtRef.current = Date.now();
+  }, [currentExerciseId]);
+
+  /**
+   * One place for what an SRS write's outcome means to the runner: a written
+   * review is a reviewed card, a cap skip is something the learner must be
+   * told about, and a failure is reported (Sentry for non-network) but never
+   * blocks grading.
+   */
+  const trackSrsWrite = useCallback((write: Promise<LessonSrsWriteResult>) => {
+    write
+      .then((r) => {
+        if (r.status === 'written') {
+          cardsReviewedRef.current += 1;
+        } else if (r.reason === 'cap-reached') {
+          setNewCardCapReached(true);
+        }
+      })
+      .catch((err) => reportLessonWriteFailure('SRS update', err));
+  }, []);
 
   // Per-exercise answered state. `showResult` used to stand in for this, but a
   // single boolean cannot describe an exercise you have walked back onto.
@@ -390,36 +427,16 @@ export function LessonRunner({
         setLastAnswerCorrect(correct);
         const entry = warmupEntries[warmupIndex];
         if (entry) {
-          // Warm-up items get one attempt (maxAttempts returns 1 for them), so
-          // the outcome here is only ever pass or fail — no `recovered` case.
-          const rating = correct ? 4 : 2;
-          const next = calculateNextReview(entry.item, rating);
-          const payload = {
-            id: entry.item.id,
-            userId: entry.item.userId,
-            cardId: entry.item.cardId,
-            ...next,
-            lastReviewedAt: new Date().toISOString(),
-          };
-          upsertReviewItem(payload)
-            .then((saved) => {
-              // Keep the prefetched map current: if this card also backs a
-              // main-lesson exercise, its SRS result must chain from the
-              // warm-up's advancement, not the stale pre-warm-up state.
-              existingReviewItemsRef.current?.set(entry.item.cardId, saved);
-            })
-            .catch((err) => {
-              console.warn('[warmup] upsertReviewItem failed:', err);
-              if (isNetworkError(err)) {
-                // Network blip: queue the exact failed payload for replay on
-                // reconnect, and chain in-session state from the locally
-                // computed result (same role as `saved` above).
-                enqueue(userId, { type: 'review-upsert', payload }).catch((queueErr) =>
-                  console.warn('[warmup] offline enqueue failed:', queueErr),
-                );
-                existingReviewItemsRef.current?.set(entry.item.cardId, payload);
-              }
-            });
+          // Same helper as the main lesson (lib/lesson-srs.ts): the review
+          // item continues its real SM-2 state and a review_logs row is
+          // written, with the prefetched map kept current so a main-lesson
+          // exercise on the same card chains from the warm-up's advancement.
+          trackSrsWrite(
+            recordWarmupSrsResult(entry.item, correct, existingReviewItemsRef.current, {
+              userAnswer: answer,
+              responseTimeMs: Date.now() - shownAtRef.current,
+            }),
+          );
         }
         return;
       }
@@ -429,6 +446,8 @@ export function LessonRunner({
       // A second attempt is open. Nothing is scored, nothing is written to
       // SRS moves, and — the whole point — nothing is revealed.
       if (status === 'retrying') return;
+
+      const responseTimeMs = Date.now() - shownAtRef.current;
 
       // De-dupe by exerciseId: the second attempt re-invokes this handler for
       // the same exercise, so replace any prior entry instead of appending —
@@ -465,27 +484,34 @@ export function LessonRunner({
       // warm-up above. Exercises without a linked card (e.g. AI free
       // production) are skipped.
       if (currentExercise.cardId) {
-        recordLessonSrsResult(
-          userId,
-          currentExercise.cardId,
-          status === 'correct' ? 'correct' : status === 'recovered' ? 'recovered' : 'wrong',
-          srsIntroducedRef.current,
-          existingReviewItemsRef.current,
-        )
-          .then((r) => {
-            if (r.status === 'skipped' && r.reason === 'cap-reached') {
-              setNewCardCapReached(true);
-            }
-          })
-          .catch((err) => console.warn('[lesson-srs] SRS update failed:', err));
+        trackSrsWrite(
+          recordLessonSrsResult(
+            userId,
+            currentExercise.cardId,
+            status === 'correct' ? 'correct' : status === 'recovered' ? 'recovered' : 'wrong',
+            srsIntroducedRef.current,
+            existingReviewItemsRef.current,
+            { userAnswer: answer, responseTimeMs },
+          ),
+        );
       }
+
+      // Every graded exercise, card or not, is evidence for the proficiency
+      // report (lib/lesson-evidence.ts). `attempts` is what was spent, so a
+      // recovered or wrong-after-retry answer records 2; `correct` is the
+      // first-attempt verdict, same as the score.
+      recordExerciseEvidence(userId, id, {
+        correct: status === 'correct',
+        attempts: attemptsBefore + 1,
+        responseTimeMs,
+      }).catch((err) => reportLessonWriteFailure('exercise evidence', err));
 
       // Being wrong costs nothing. There is no per-exercise currency: free
       // usage is metered by the daily new-card cap, which limits how fast new
       // material is taken on rather than penalising mistakes on material the
       // learner already has.
     },
-    [currentExercise, warmupPhase, warmupEntries, warmupIndex, answers, picks, statuses, currentIndex, lessonId, userId]
+    [currentExercise, warmupPhase, warmupEntries, warmupIndex, answers, picks, statuses, currentIndex, lessonId, userId, trackSrsWrite]
   );
 
   /**
@@ -520,22 +546,29 @@ export function LessonRunner({
       }).catch((err) => console.warn('[lesson-session] save failed:', err));
     }
 
+    const responseTimeMs = Date.now() - shownAtRef.current;
     if (currentExercise.cardId) {
-      recordLessonSrsResult(
-        userId,
-        currentExercise.cardId,
-        'wrong',
-        srsIntroducedRef.current,
-        existingReviewItemsRef.current,
-      )
-        .then((r) => {
-          if (r.status === 'skipped' && r.reason === 'cap-reached') {
-            setNewCardCapReached(true);
-          }
-        })
-        .catch((err) => console.warn('[lesson-srs] SRS update failed:', err));
+      trackSrsWrite(
+        recordLessonSrsResult(
+          userId,
+          currentExercise.cardId,
+          'wrong',
+          srsIntroducedRef.current,
+          existingReviewItemsRef.current,
+          { userAnswer: picks[id] ?? '', responseTimeMs },
+        ),
+      );
     }
-  }, [currentExercise, answers, picks, statuses, lessonId, userId, currentIndex]);
+    // Giving up forfeits the open attempt: from a blank question that is one
+    // spent attempt, after a refused first answer it is two — the same count
+    // a wrong second answer would have recorded. Either way it is
+    // first-attempt wrong.
+    recordExerciseEvidence(userId, id, {
+      correct: false,
+      attempts: (attemptsRef.current[id] ?? 0) + 1,
+      responseTimeMs,
+    }).catch((err) => reportLessonWriteFailure('exercise evidence', err));
+  }, [currentExercise, answers, picks, statuses, lessonId, userId, currentIndex, trackSrsWrite]);
 
   /**
    * Step back one exercise. Deliberately does NOT clear the answered state —
@@ -627,7 +660,7 @@ export function LessonRunner({
       // Lesson complete. One summarizeLesson call — the runner, the overlay
       // and the completion row all read the same numbers.
       const allAnswers = [...answers];
-      const summary = summarizeLesson(effectiveStatuses, exerciseIds, xpReward);
+      const summary = summarizeLesson(effectiveStatuses, exerciseIds);
 
       // Perfect run gets a Heavy "thump" that lands just before the overlay's
       // Success haptic on mount — creates a signature double-thump only when
@@ -643,9 +676,9 @@ export function LessonRunner({
         skippedCount: summary.skippedCount,
         scoredCount: summary.scoredCount,
         accuracy: summary.accuracy,
-        xpEarned: summary.xpEarned,
         answers: allAnswers,
         timeSpentMs: Math.max(0, Date.now() - sessionStartedAtRef.current),
+        cardsReviewed: cardsReviewedRef.current,
       };
 
       // Lesson finished — the resume snapshot is no longer needed, and the
@@ -717,7 +750,7 @@ export function LessonRunner({
   if (!warmupResolved) {
     return (
       <View className="flex-1 items-center justify-center p-6">
-        <Text className="text-text-secondary text-base">Preparing your lesson…</Text>
+        <Text className="text-base" style={{ color: c.muted }}>Preparing your lesson…</Text>
       </View>
     );
   }
@@ -725,10 +758,10 @@ export function LessonRunner({
   if (exercises.length === 0 && !warmupPhase) {
     return (
       <View className="flex-1 items-center justify-center p-6">
-        <Text className="text-text-secondary text-lg text-center mb-4">
+        <Text className="text-lg text-center mb-4" style={{ color: c.muted }}>
           No exercises available for this lesson.
         </Text>
-        <Button label="Go Back" onPress={onExit} variant="secondary" />
+        <SlabButton label="Go Back" onPress={onExit} variant="ghost" />
       </View>
     );
   }
@@ -736,7 +769,7 @@ export function LessonRunner({
   if (completed) {
     // Same summarizeLesson the result payload used — the overlay used to
     // recompute this and could disagree with the score that was recorded.
-    const summary = summarizeLesson(statuses, exerciseIds, xpReward);
+    const summary = summarizeLesson(statuses, exerciseIds);
     const strong = summary.accuracy >= 0.8;
     const title = summary.perfect ? 'Flawless!' : strong ? 'Nailed it!' : 'Lesson complete';
     const mood = strong ? 'lessonComplete' : 'correct';
@@ -770,7 +803,12 @@ export function LessonRunner({
           accessibilityRole="button"
           accessibilityLabel="Dismiss expired lesson notice"
           style={{
-            backgroundColor: colors.surface.card,
+            backgroundColor: c.card,
+            // A hairline, because the chrome below this banner is surface2:
+            // in the light scheme a card-coloured strip on it has almost no
+            // edge of its own, and the notice reads as part of the header.
+            borderBottomWidth: 1,
+            borderBottomColor: c.cardBorder,
             paddingHorizontal: spacing.md,
             paddingVertical: spacing.sm,
             flexDirection: 'row',
@@ -778,14 +816,14 @@ export function LessonRunner({
             gap: spacing.xs,
           }}
         >
-          <Ionicons name="time-outline" size={18} color={colors.text.secondary} />
+          <Ionicons name="time-outline" size={18} color={c.muted} />
           <Text
-            style={{ flex: 1, color: colors.text.secondary, fontSize: 13 }}
+            style={{ flex: 1, color: c.muted, fontSize: 13 }}
             accessibilityLiveRegion="polite"
           >
             This lesson expired, so it's starting over. Unfinished lessons are saved for a day.
           </Text>
-          <Ionicons name="close" size={16} color={colors.text.tertiary} />
+          <Ionicons name="close" size={16} color={c.idle} />
         </Pressable>
       )}
 
@@ -799,7 +837,9 @@ export function LessonRunner({
           accessibilityRole="button"
           accessibilityLabel="Dismiss daily new-word limit notice"
           style={{
-            backgroundColor: colors.surface.card,
+            backgroundColor: c.card,
+            borderBottomWidth: 1,
+            borderBottomColor: c.cardBorder,
             paddingHorizontal: spacing.md,
             paddingVertical: spacing.sm,
             flexDirection: 'row',
@@ -807,15 +847,15 @@ export function LessonRunner({
             gap: spacing.xs,
           }}
         >
-          <Ionicons name="school-outline" size={18} color={colors.text.secondary} />
+          <Ionicons name="school-outline" size={18} color={c.muted} />
           <Text
-            style={{ flex: 1, color: colors.text.secondary, fontSize: 13 }}
+            style={{ flex: 1, color: c.muted, fontSize: 13 }}
             accessibilityLiveRegion="polite"
           >
             That&apos;s today&apos;s new words. Keep going — this lesson still counts, and
             reviewing what you know is always unlimited.
           </Text>
-          <Ionicons name="close" size={16} color={colors.text.tertiary} />
+          <Ionicons name="close" size={16} color={c.idle} />
         </Pressable>
       )}
 
@@ -829,6 +869,7 @@ export function LessonRunner({
             ? `QUICK REVIEW ${warmupIndex + 1} / ${warmupEntries.length}`
             : `QUESTION ${String(currentIndex + 1).padStart(2, '0')}`
         }
+        exerciseType={currentExercise?.type}
         note={currentExercise?.explanation ?? null}
         answeredCorrect={currentCorrect}
         recovered={currentStatus === 'recovered'}
@@ -979,9 +1020,11 @@ function renderExercise(
     default:
       return (
         <View className="p-6">
-          <Text className="text-text-secondary text-center">
+          {/* Ui2Text rather than a styled Text: this branch is inside a plain
+              render helper, which cannot call useUi2Theme itself. */}
+          <Body tone="secondary" style={{ textAlign: 'center' }}>
             Unknown exercise type: {exercise.type}
-          </Text>
+          </Body>
         </View>
       );
   }

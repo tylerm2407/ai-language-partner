@@ -165,3 +165,73 @@ verify_jwt = true
 # the client would then report as "checked offline" on every open answer.
 [functions.grade-response]
 verify_jwt = false
+
+# grade-writing and generate-story: live with the platform gate ON (prod
+# v37 / v22, checked 2026-09-08) and authenticate in-body as well. Recorded
+# so the CLI default stops being the only thing keeping them consistent.
+[functions.grade-writing]
+verify_jwt = true
+
+[functions.generate-story]
+verify_jwt = true
+
+# ─── generate-avatar ──────────────────────────────────────────────────────
+# Deployed verify_jwt = true (matches the CLI default) and authenticates again
+# in the body via getAuthenticatedUser. Since migration 112 it answers 202 with
+# a job id and renders in EdgeRuntime.waitUntil; the client polls avatar_jobs.
+[functions.generate-avatar]
+verify_jwt = true
+
+# ─── tutor-session ────────────────────────────────────────────────────────
+# MUST be false, for the same reason as ai-chat: the function authenticates
+# every request itself with supabase.auth.getUser(token), which works whatever
+# signing algorithm this project is configured for, whereas the platform gate
+# has historically rejected valid tokens here. Without an entry the CLI
+# defaults this to TRUE and every call from the app 401s before reaching a line
+# of our code — which looks like an auth bug in the client and is not.
+#
+# Nothing is left unguarded by turning it off: verifyBearer runs before any
+# dispatch, and each of the three actions re-checks that the caller owns the
+# session it names, because a valid token for user A must not be able to
+# heartbeat, settle or read the debrief of user B's session.
+[functions.tutor-session]
+verify_jwt = false
+
+# ─── tutor-session-reaper ─────────────────────────────────────────────────
+# MUST be false. pg_cron cannot present a Supabase user JWT, so the platform
+# gate would reject every tick. Auth is a bearer comparison against CRON_SECRET
+# read from Vault, the same pattern daily-news-audio-cron uses.
+[functions.tutor-session-reaper]
+verify_jwt = false
+
+# ─── mission-phrases ──────────────────────────────────────────────────────
+# Warm-up phrases for a chat mission, generated once per (scene, stage,
+# language pair) into mission_phrase_cache. Same posture as translate: auth
+# enforced by the function body via getAuthenticatedUser (_shared/auth.ts),
+# tier by resolveEntitlement, so the platform gate stays off. Without an
+# entry the CLI would deploy it verify_jwt = true and every call would 401.
+[functions.mission-phrases]
+verify_jwt = false
+
+# ─── phrase-help ──────────────────────────────────────────────────────────
+# "How do I say…" beside a chat mission, metered on the daily hints budget.
+# Deliberately NOT part of ai-chat, so the tutor never sees the question.
+# Auth enforced by the function body via getAuthenticatedUser
+# (_shared/auth.ts); same reasoning as mission-phrases for keeping the gate
+# off.
+[functions.phrase-help]
+verify_jwt = false
+
+# ─── Functions that authenticate at the platform gate ─────────────────────
+# These three were deployed verify_jwt = true and, until this entry, unrecorded.
+# Each also re-checks the caller in its body via getAuthenticatedUser, so the
+# platform gate is belt-and-braces rather than the only lock. Recorded so a
+# deploy can never silently change it.
+[functions.delete-account]
+verify_jwt = true
+
+[functions.school]
+verify_jwt = true
+
+[functions.school-admin]
+verify_jwt = true

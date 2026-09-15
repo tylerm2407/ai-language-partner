@@ -98,9 +98,20 @@ export async function generateValidated(
       userAge,
       language,
       fn,
+      moderation: 'required',
     });
 
     if (lastSafety.safe) {
+      if (lastSafety.degraded) {
+        // Shipped on the deterministic pass alone: moderation could not run.
+        console.log(JSON.stringify({
+          evt: 'moderation_degraded_pass',
+          fn,
+          attempt,
+          language,
+          ts: new Date().toISOString(),
+        }));
+      }
       if (attempt > 1) {
         console.log(JSON.stringify({
           evt: 'safety_pass',
@@ -132,6 +143,10 @@ export async function generateValidated(
     userAge,
     language,
     fn,
+    // Fallbacks are authored or explicit empty sentinels. They still pass the
+    // deterministic minor-safe gate; a network round trip for canned text
+    // would only add latency to the failure path.
+    moderation: 'skip',
   });
 
   console.log(JSON.stringify({
@@ -141,6 +156,17 @@ export async function generateValidated(
     language,
     ts: new Date().toISOString(),
   }));
+
+  if (!fallbackSafety.safe) {
+    console.error(JSON.stringify({
+      evt: 'unsafe_fallback',
+      fn,
+      reasons: fallbackSafety.reasons,
+      language,
+      ts: new Date().toISOString(),
+    }));
+    return buildResult('', lastFailure, fallbackSafety, fn, language, targetLevel, opts.skipLevelCheck);
+  }
 
   return buildResult(fallbackText, lastFailure, fallbackSafety, fn, language, targetLevel, opts.skipLevelCheck);
 }

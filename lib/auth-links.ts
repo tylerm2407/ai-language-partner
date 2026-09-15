@@ -15,6 +15,14 @@
  *  Must be listed in Supabase Dashboard → Auth → URL Configuration → Redirect URLs. */
 export const RESET_PASSWORD_REDIRECT = 'fluenci://reset-password';
 
+export type PendingAuthIntent = {
+  type: 'recovery' | 'signup';
+  email: string;
+  createdAt: number;
+};
+
+export const AUTH_INTENT_TTL_MS = 24 * 60 * 60 * 1000;
+
 export type AuthLinkTokenType =
   | 'recovery'
   | 'signup'
@@ -30,6 +38,67 @@ export type ParsedAuthLink =
   | { kind: 'tokens'; type: AuthLinkTokenType; accessToken: string; refreshToken: string };
 
 const TOKEN_TYPES: readonly string[] = ['recovery', 'signup', 'magiclink', 'invite', 'email_change'];
+
+/** Only the callback route configured for this app may mutate auth state. */
+export function isExpectedAuthCallbackUrl(url: string, allowExpoDev = false): boolean {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol === 'fluenci:') {
+      return parsed.hostname === 'reset-password' && (parsed.pathname === '' || parsed.pathname === '/');
+    }
+    return allowExpoDev && parsed.protocol === 'exp:' && parsed.pathname.endsWith('/--/reset-password');
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Bind a verified token identity to the flow the learner initiated. Route
+ * validation happens separately so this function stays pure and testable.
+ */
+export function authLinkMatchesIntent(
+  link: ParsedAuthLink,
+  intent: PendingAuthIntent | null,
+  verifiedEmail: string | null | undefined,
+  now = Date.now(),
+): boolean {
+  if (link.kind !== 'tokens' || !intent || !verifiedEmail) return false;
+  if (link.type !== intent.type) return false;
+  if (now - intent.createdAt < 0 || now - intent.createdAt > AUTH_INTENT_TTL_MS) return false;
+  return verifiedEmail.trim().toLowerCase() === intent.email.trim().toLowerCase();
+}
+
+type BoundSessionAuth = {
+  getUser: (accessToken: string) => Promise<{
+    data: { user: { email?: string | null } | null };
+    error: unknown;
+  }>;
+  setSession: (tokens: { access_token: string; refresh_token: string }) => Promise<{
+    error: unknown;
+  }>;
+};
+
+/** Verify identity and intent before performing the session-changing call. */
+export async function establishBoundAuthSession(
+  auth: BoundSessionAuth,
+  url: string,
+  link: ParsedAuthLink,
+  intent: PendingAuthIntent | null,
+  allowExpoDev = false,
+  now = Date.now(),
+): Promise<'recovery' | 'signup' | null> {
+  if (!isExpectedAuthCallbackUrl(url, allowExpoDev) || link.kind !== 'tokens') return null;
+
+  const { data, error } = await auth.getUser(link.accessToken);
+  if (error || !authLinkMatchesIntent(link, intent, data.user?.email, now)) return null;
+
+  const established = await auth.setSession({
+    access_token: link.accessToken,
+    refresh_token: link.refreshToken,
+  });
+  if (established.error) throw established.error;
+  return link.type as 'recovery' | 'signup';
+}
 
 /** Collect params from both the query string and the fragment.
  *  Fragment values win — Supabase implicit flow puts tokens there. */

@@ -5,6 +5,12 @@
 // a single invocation. Idempotent via ON CONFLICT (date, language, tier)
 // DO NOTHING — the second cron fire simply skips already-populated rows.
 //
+// Each article is followed by a second, smaller call for three comprehension
+// questions (`questions.ts`, migration 129) through the same safety gate at
+// the same band. A failed question call stores the article with
+// `questions: null` — the article is the product, the quiz is the evidence
+// hook, and losing the former over the latter would be backwards.
+//
 // Auth: validated inside the function body via bearer = SERVICE_ROLE_KEY.
 // Registered with verify_jwt = false in config.toml because user JWTs
 // are not involved (pg_cron authenticates as the project's service role
@@ -18,6 +24,7 @@ import { corsHeaders, corsResponse } from '../_shared/cors.ts';
 import { generateValidated } from '../_shared/validated-generate.ts';
 import { PROVIDER_TIMEOUT_MS, providerFetch } from '../_shared/provider-fetch.ts';
 import type { CEFR } from '../_shared/level-checker.ts';
+import { generateQuestions, stripCodeFences, type NewsQuestion } from './questions.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -70,11 +77,38 @@ function tierPromptDescriptor(tier: Tier, languageName: string): string {
   return `Write a news article (~250 words) in ${languageName} about a current real-world topic. The article should be appropriate for B2–C1 (upper-intermediate to advanced) language learners: varied sentence structures, idiomatic expressions, lower-frequency vocabulary, nuanced register. Still accessible — avoid highly technical jargon.`;
 }
 
-function stripCodeFences(s: string): string {
-  return s
-    .replace(/^```(?:json)?\s*\n?/i, '')
-    .replace(/\n?```\s*$/i, '')
-    .trim();
+/**
+ * One Anthropic text call, fences stripped. Shared by the article and its
+ * questions so the two cannot drift on model, headers or timeout.
+ */
+async function callAnthropic(system: string, user: string, maxTokens: number): Promise<string> {
+  const response = await providerFetch(
+    'https://api.anthropic.com/v1/messages',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_API_KEY!,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: TEXT_MODEL,
+        max_tokens: maxTokens,
+        system: [
+          { type: 'text', text: system, cache_control: { type: 'ephemeral' } },
+        ],
+        messages: [{ role: 'user', content: user }],
+      }),
+    },
+    { provider: 'anthropic', timeoutMs: PROVIDER_TIMEOUT_MS.textLong },
+  );
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Anthropic ${response.status}: ${errorText.slice(0, 200)}`);
+  }
+  const data = await response.json();
+  const raw: string = data.content?.[0]?.text ?? '';
+  return stripCodeFences(raw);
 }
 
 interface GeneratedArticle {
@@ -97,35 +131,7 @@ async function generateOne(language: { code: string; name: string }, tier: Tier)
     targetLevel: TIER_CEFR[tier] as CEFR,
     language: language.code,
     safetyRetries: 2,
-    generate: async () => {
-      const response = await providerFetch(
-        'https://api.anthropic.com/v1/messages',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': ANTHROPIC_API_KEY!,
-            'anthropic-version': '2023-06-01',
-          },
-          body: JSON.stringify({
-            model: TEXT_MODEL,
-            max_tokens: tier === 'easy' ? 1400 : 1800,
-            system: [
-              { type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } },
-            ],
-            messages: [{ role: 'user', content: userPrompt }],
-          }),
-        },
-        { provider: 'anthropic', timeoutMs: PROVIDER_TIMEOUT_MS.textLong },
-      );
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Anthropic ${response.status}: ${errorText.slice(0, 200)}`);
-      }
-      const data = await response.json();
-      const raw: string = data.content?.[0]?.text ?? '';
-      return stripCodeFences(raw);
-    },
+    generate: () => callAnthropic(systemPrompt, userPrompt, tier === 'easy' ? 1400 : 1800),
     fallback: async () => SAFETY_FALLBACK_SENTINEL,
   });
 
@@ -142,6 +148,28 @@ async function generateOne(language: { code: string; name: string }, tier: Tier)
     throw new Error(`JSON parse failed: ${cleaned.slice(0, 200)}`);
   }
   return article;
+}
+
+/**
+ * The comprehension check for a generated article. Null when the article has
+ * no usable body (nothing to ask about) or when generation failed for any
+ * reason — `generateQuestions` never throws, so the article's insert below is
+ * never at the mercy of this call.
+ */
+async function questionsFor(
+  article: GeneratedArticle,
+  language: { code: string; name: string },
+  tier: Tier,
+): Promise<NewsQuestion[] | null> {
+  const title = article.title ?? '';
+  const content = article.content ?? '';
+  if (!content.trim()) return null;
+  return generateQuestions({
+    article: { title, content },
+    language,
+    band: TIER_CEFR[tier] as CEFR,
+    callModel: (system, user) => callAnthropic(system, user, 900),
+  });
 }
 
 serve(async (req: Request) => {
@@ -207,6 +235,7 @@ serve(async (req: Request) => {
   let generated = 0;
   let skipped = 0;
   let failed = 0;
+  let withoutQuestions = 0;
   const failures: { language: string; tier: Tier; error: string }[] = [];
 
   // Build the pending (language, tier) work list, skipping rows that exist.
@@ -230,6 +259,12 @@ serve(async (req: Request) => {
         return;
       }
 
+      // Second call, same gate, same band. Null on any failure — see
+      // questionsFor. Counted separately in the run summary so a day where
+      // every article shipped without a quiz is visible in the logs.
+      const questions = await questionsFor(article, language, tier);
+      if (questions === null) withoutQuestions += 1;
+
       const row = {
         date: today,
         language: language.code,
@@ -242,6 +277,7 @@ serve(async (req: Request) => {
         content_translation: article.contentTranslation ?? null,
         vocabulary_highlights: article.vocabularyHighlights ?? [],
         source_topic: article.sourceTopic ?? null,
+        questions,
         // Enlist the row in the podcast render queue. Set here, on the
         // insert, rather than as a column DEFAULT — a default would have
         // swept all 2,262 pre-existing rows into the queue too (migration
@@ -295,6 +331,7 @@ serve(async (req: Request) => {
     generated,
     skipped,
     failed,
+    withoutQuestions,
     durationMs,
     failures,
   }));
@@ -304,6 +341,7 @@ serve(async (req: Request) => {
     generated,
     skipped,
     failed,
+    withoutQuestions,
     durationMs,
     failures,
   });

@@ -1,30 +1,32 @@
 import { useState, useEffect, useRef } from 'react';
-import { ActivityIndicator, Text, Pressable } from 'react-native';
+import { ActivityIndicator, View, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import { useSafeBack } from '../../../../hooks/useSafeBack';
 import { useAuth } from '../../../../hooks/useAuth';
+import { useActiveTime } from '../../../../hooks/useActiveTime';
 import { useAppStore, effectiveTier } from '../../../../stores/useAppStore';
-import { GradientBackground } from '../../../../components/ui/GradientBackground';
 import {
   fetchWritingPromptById,
   submitWriting,
   updateWritingFeedback,
   fetchWritingSubmissionsByPrompt,
-  incrementXpIdempotent,
 } from '../../../../lib/supabase-queries';
 import { WritingExercise } from '../../../../components/writing/WritingExercise';
 import { WritingFeedbackView } from '../../../../components/writing/WritingFeedbackView';
 import { supabase } from '../../../../lib/supabase';
 import { getTargetLanguage } from '../../../../lib/language';
-import { writingXpKey } from '../../../../lib/offline-queue';
 import { limitCopy } from '../../../../lib/limit-messaging';
 import type { WritingPrompt, WritingFeedback, WritingSubmission } from '../../../../types';
-import { colors } from '../../../../config/theme';
 import { writingOverallScore } from '../../../../lib/writing-quality';
 import type { WritingLengthCount } from '../../../../lib/writing-length';
+// `colors` is deliberately NOT imported: it is the fixed DARK palette, and a
+// screen that reads it stays dark whatever the phone is set to.
+import { useUi2Theme } from '../../../../hooks/useUi2Theme';
+import { Body } from '../../../../components/ui2/Ui2Text';
 
 export default function WritingPromptScreen() {
+  const { c } = useUi2Theme();
   const { promptId } = useLocalSearchParams<{ promptId: string }>();
   const goBack = useSafeBack('/(app)');
   const { user } = useAuth();
@@ -39,6 +41,14 @@ export default function WritingPromptScreen() {
   const [attemptNumber, setAttemptNumber] = useState(1);
   const [previousScore, setPreviousScore] = useState<number | null>(null);
   const [, setPastSubmissions] = useState<WritingSubmission[]>([]);
+
+  // `daily_stats.writing_minutes` had no writer at all — this screen never
+  // ran the clock, so the writing strand of the four-strand balance read zero
+  // for everyone. Counts while the prompt is on screen (writing, grading, or
+  // reading the feedback); not on the spinner, and not on the "grading is a
+  // paid feature" state, which is the closest thing this screen has to a
+  // paywall. See hooks/useActiveTime.ts.
+  useActiveTime({ kind: 'writing', enabled: !isLoading && !!prompt && !(error && !feedback) });
 
   useEffect(() => {
     if (!promptId || !user) return;
@@ -76,7 +86,7 @@ export default function WritingPromptScreen() {
     // A ref, not the `isGrading` state: two taps dispatched in the same React
     // batch both read the pre-update value, and this handler had no guard at
     // all. Two taps meant two submissions, two paid Claude grading calls, and
-    // two XP awards. Same pattern as `claimInFlight` in useDailyChallenges.
+    // two grading requests and conflicting feedback writes.
     if (submittingRef.current) return;
 
     // Grading must use the user's real target language — if the profile
@@ -117,13 +127,6 @@ export default function WritingPromptScreen() {
       // Provider fallback is not an assessment, failing score, or scored XP.
       if (overallScore === null) return;
 
-      // Award XP based on CEFR level
-      const xpMap: Record<string, number> = { A1: 5, A2: 10, B1: 15, B2: 20, C1: 25, C2: 30 };
-      const baseXp = xpMap[prompt.cefrLevel] ?? 10;
-      const bonusXp = Math.round(overallScore * 15);
-      // Keyed on the submission: a retried grade of the same piece of work must
-      // not pay twice. `addXp` went through the non-idempotent `increment_xp`.
-      await incrementXpIdempotent(baseXp + bonusXp, writingXpKey(submission.id));
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Failed to grade writing';
       // Surface plan limits clearly instead of a raw "429: …[CODE]" string.
@@ -167,24 +170,24 @@ export default function WritingPromptScreen() {
 
   if (isLoading) {
     return (
-      <GradientBackground variant="raised">
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
         <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color={colors.action.accent} />
+          <ActivityIndicator size="large" color={c.primary} />
         </SafeAreaView>
-      </GradientBackground>
+      </View>
     );
   }
 
   if (error && !feedback) {
     return (
-      <GradientBackground variant="raised">
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
         <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-          <Text style={{ fontSize: 16, color: colors.error.base, textAlign: 'center' }}>{error}</Text>
+          <Body tone="error" style={{ textAlign: 'center' }}>{error}</Body>
           <Pressable onPress={() => goBack()} style={{ marginTop: 16 }} accessibilityRole="button">
-            <Text style={{ fontSize: 16, color: colors.action.accent }}>Go Back</Text>
+            <Body tone="accent" weight="semibold">Go Back</Body>
           </Pressable>
         </SafeAreaView>
-      </GradientBackground>
+      </View>
     );
   }
 
@@ -203,11 +206,11 @@ export default function WritingPromptScreen() {
 
   if (!prompt) {
     return (
-      <GradientBackground variant="raised">
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
         <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <Text style={{ fontSize: 16, color: colors.text.tertiary }}>Writing prompt not found.</Text>
+          <Body tone="tertiary">Writing prompt not found.</Body>
         </SafeAreaView>
-      </GradientBackground>
+      </View>
     );
   }
 

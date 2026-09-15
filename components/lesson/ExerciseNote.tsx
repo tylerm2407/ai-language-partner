@@ -1,6 +1,7 @@
 import { View, Pressable } from 'react-native';
-import { Body } from '../ui/Text';
-import { colors, spacing, typography } from '../../config/theme';
+import { Body } from '../ui2/Ui2Text';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
+import { spacing, typography } from '../../config/theme';
 
 /**
  * What the pinned footer says about the current exercise.
@@ -35,11 +36,12 @@ const KICKER_STYLE = {
 const BODY_STYLE = { fontSize: 13, lineHeight: 19 } as const;
 
 export function ExerciseNote({ state }: { state: ExerciseNoteState }) {
+  const { c } = useUi2Theme();
   if (state.kind === 'unanswered') {
-    // text.tertiary, not text.quaternary: this is instruction copy at 13px,
-    // and quaternary (3.9:1) is a large-UI-only step.
+    // `idle`, not `muted`: this is instruction copy at 13px and the placeholder
+    // step is what the design reserves for text nobody has to read yet.
     return (
-      <Body size="sm" style={{ color: colors.text.tertiary, ...BODY_STYLE }}>
+      <Body size="sm" style={{ color: c.idle, ...BODY_STYLE }}>
         Pick an answer to see the note.
       </Body>
     );
@@ -51,9 +53,9 @@ export function ExerciseNote({ state }: { state: ExerciseNoteState }) {
         <Body
           size="sm"
           accessibilityLiveRegion="polite"
-          style={{ color: colors.text.secondary, ...BODY_STYLE }}
+          style={{ color: c.muted, ...BODY_STYLE }}
         >
-          <Body size="sm" style={{ ...KICKER_STYLE, color: colors.warning.light }}>
+          <Body size="sm" style={{ ...KICKER_STYLE, color: c.yellow }}>
             {'NOT QUITE — '}
           </Body>
           One more try. The answer stays hidden until then.
@@ -63,16 +65,20 @@ export function ExerciseNote({ state }: { state: ExerciseNoteState }) {
             empty answer. Going blank has to have an exit. */}
         <Pressable
           onPress={state.onGiveUp}
-          hitSlop={12}
-          style={{ minHeight: 44, justifyContent: 'center' }}
+          hitSlop={8}
+          style={{
+            alignSelf: 'flex-start',
+            minHeight: 36,
+            paddingHorizontal: 14,
+            borderRadius: 999,
+            backgroundColor: c.primaryTint,
+            justifyContent: 'center',
+          }}
           accessibilityRole="button"
           accessibilityLabel="Show the answer and move on"
         >
-          <Body
-            size="sm"
-            style={{ ...KICKER_STYLE, fontSize: 12, color: colors.text.tertiary }}
-          >
-            SHOW ANSWER
+          <Body size="sm" weight="extrabold" style={{ fontSize: 13, color: c.onTint }}>
+            Show answer
           </Body>
         </Pressable>
       </View>
@@ -84,9 +90,9 @@ export function ExerciseNote({ state }: { state: ExerciseNoteState }) {
       <Body
         size="sm"
         accessibilityLiveRegion="polite"
-        style={{ color: colors.text.secondary, ...BODY_STYLE }}
+        style={{ color: c.muted, ...BODY_STYLE }}
       >
-        <Body size="sm" style={{ ...KICKER_STYLE, color: colors.text.tertiary }}>
+        <Body size="sm" style={{ ...KICKER_STYLE, color: c.idle }}>
           {'SKIPPED — '}
         </Body>
         This one won&apos;t count. You&apos;ll see it again in review.
@@ -96,27 +102,30 @@ export function ExerciseNote({ state }: { state: ExerciseNoteState }) {
 
   const { kicker, color } =
     state.kind === 'correct'
-      ? { kicker: 'CORRECT — ', color: colors.success.light }
+      ? { kicker: 'CORRECT', color: c.green }
       : state.kind === 'recovered'
-        ? { kicker: 'SECOND TRY — ', color: colors.warning.light }
-        : { kicker: `ANSWER: ${state.correctAnswer.toUpperCase()} — `, color: colors.error.light };
+        ? { kicker: 'SECOND TRY', color: c.yellow }
+        : { kicker: `ANSWER: ${state.correctAnswer.toUpperCase()}`, color: c.error };
 
   const lead =
     state.kind === 'recovered'
       ? "Correct, but it doesn't count toward your score. "
       : '';
+  const body = `${lead}${state.note ?? ''}`;
+  // The dash joins the kicker to a sentence; with nothing after it, it dangled
+  // ("ANSWER: EL AGUA —") on every exercise without an explanation.
+  const joined = body ? `${kicker} — ` : kicker;
 
   return (
     <Body
       size="sm"
       accessibilityLiveRegion="polite"
-      style={{ color: colors.text.secondary, ...BODY_STYLE }}
+      style={{ color: c.muted, ...BODY_STYLE }}
     >
       <Body size="sm" style={{ ...KICKER_STYLE, color }}>
-        {kicker}
+        {joined}
       </Body>
-      {lead}
-      {state.note ?? ''}
+      {body}
     </Body>
   );
 }

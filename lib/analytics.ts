@@ -33,7 +33,9 @@ type EventName =
   | 'practice_started'
   | 'practice_ended'
   | 'subscription_started'
+  | 'subscription_renewed'
   | 'subscription_cancelled'
+  | 'subscription_expired'
   | 'onboarding_completed'
   | 'language_selected'
   | 'audio_played'
@@ -44,7 +46,11 @@ type EventName =
   // indistinguishable from an abandon.
   | 'paywall_declined'
   | 'free_avatar_generated'
+  | 'purchase_started'
+  | 'purchase_provider_confirmed'
   | 'purchase_completed'
+  | 'purchase_cancelled'
+  | 'purchase_failed'
   | 'purchase_restored'
   | 'plan_term_toggled'
   | 'plan_tier_selected'
@@ -52,8 +58,16 @@ type EventName =
 
   // ── Onboarding funnel: where do they fall out before starting?
   | 'onboarding_step_viewed'
+  | 'onboarding_draft_saved'
   | 'onboarding_abandoned'
   | 'signup_completed'
+  /**
+   * Where the learner's lesson path starts or moves to. `screen` says who set
+   * it ('onboarding' | 'settings' | 'learn'), `source` the choice that set it
+   * ('start' | 'warm_up' | 'none' | 'pill'), `band` the resulting course band
+   * (or the declared band when no course was chosen).
+   */
+  | 'course_placement_set'
 
   // ── Feature reach: which of the Phase 2 features get used at all?
   | 'reading_book_opened'
@@ -65,8 +79,43 @@ type EventName =
   | 'checkpoint_started'
   | 'checkpoint_completed'
   | 'chat_message_sent'
+  /** A mission attempt began. `contentId` = scenario key, `step` = stage,
+   *  `source` = 'new' | 'resume'. Never the objective text. */
+  | 'mission_started'
+  /** The learner tapped Finish. `outcome` = 'passed' | 'failed' | 'refused',
+   *  `score` = accuracy, `count` = objectives met, `ok` = passed. */
+  | 'mission_finished'
+  /** The warm-up sheet was skipped rather than started. */
+  | 'mission_warmup_skipped'
+  /** "How do I say…" was asked. `ok` says whether an answer came back,
+   *  `code` the refusal when not. Never the ask or the phrase. */
+  | 'phrase_help_requested'
   /** A learner saved a word from reading into their SRS deck. */
   | 'card_saved'
+  /** The learner changed a reader display setting. Which one travels in
+   *  `source` ('size' | 'spacing' | 'font' | 'night'), the new step in
+   *  `count` where there is one, and `ok` for the Night reading switch. Night reading is the one to watch: it is the app's only
+   *  blue-light control, and how many people find it decides whether it
+   *  earns a place in Settings too. */
+  | 'reading_display_changed'
+
+  // ── The live voice tutor. Reach and retention for the most expensive thing
+  //    the product does — a session nobody starts twice is a pricing problem.
+  | 'tutor_session_started'
+  /** Ended for ANY reason. The reason travels in `code` (the server's
+   *  `end_reason`) and the duration in `count` (seconds), because
+   *  `EventProperties` is closed and neither deserves a key of its own. */
+  | 'tutor_session_ended'
+  /** The learner changed how they want to be corrected. The mode travels in
+   *  `source`. This is the only setting in the app that is a statement about
+   *  how someone copes with being interrupted, and which way people move is
+   *  worth knowing before the default is chosen for them. */
+  | 'tutor_correction_mode_changed'
+  /** The learner made the tutor forget a note (or all of them — `count` says
+   *  how many). The only privacy control on the tutor's memory; how often it
+   *  is used is the measure of whether the memory feels like attention or
+   *  like surveillance. Never the note's text. */
+  | 'tutor_memory_forgotten'
 
   // ── The wall: every place the product says no. The churn events.
   | 'quota_exhausted'
@@ -139,6 +188,23 @@ export interface EventProperties {
   /** Named step of a multi-step flow, e.g. 'idealSelf'. From a closed set in
    *  the flow itself — readable in a funnel, where a bare index is not. */
   stepName?: string;
+  /** Durable stage of a multi-system operation. */
+  outcome?: string;
+  /** External system that confirmed an operation, e.g. 'revenuecat'. */
+  provider?: string;
+  /** Explicit analytics environment selected at initialization. */
+  appEnvironment?: string;
+  /**
+   * Which onboarding topic the learner's answer pointed at: one of the five
+   * `TopicKey`s (`travel`, `family`, `work`, `media_culture`,
+   * `housing_admin`). A closed key, never the free text it was derived from —
+   * the ideal-self sentence itself is personal and stays on the device.
+   *
+   * Absent means "could not be told", which is a distinct answer from any of
+   * the five; the flow deliberately does not send its `travel` lesson fallback
+   * here, or every unreadable sentence would be counted as a choice.
+   */
+  topic?: string;
 }
 
 /**

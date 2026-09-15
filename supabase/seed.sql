@@ -22,13 +22,13 @@ VALUES ('aabbccdd-1111-0000-0000-000000000000', 'en', 'es', 'Spanish A1', 'Spani
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-1111-1001-0000-000000000000', 'aabbccdd-1111-0000-0000-000000000000', 'Greetings & Basics', 'Learn greetings, introductions, and polite expressions', 0, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-1111-1001-0001-000000000000', 'aabbccdd-1111-1001-0000-000000000000', 'Core Vocabulary', 'Core Vocabulary', 0, 5, 20),
-  ('aabbccdd-1111-1001-0002-000000000000', 'aabbccdd-1111-1001-0000-000000000000', 'Phrases & Sentences', 'Phrases & Sentences', 1, 5, 20),
-  ('aabbccdd-1111-1001-0003-000000000000', 'aabbccdd-1111-1001-0000-000000000000', 'Listening & Recognition', 'Listening & Recognition', 2, 5, 20),
-  ('aabbccdd-1111-1001-0004-000000000000', 'aabbccdd-1111-1001-0000-000000000000', 'Speaking Practice', 'Speaking Practice', 3, 5, 20),
-  ('aabbccdd-1111-1001-0005-000000000000', 'aabbccdd-1111-1001-0000-000000000000', 'Reading Simple Texts', 'Reading Simple Texts', 4, 5, 20),
-  ('aabbccdd-1111-1001-0006-000000000000', 'aabbccdd-1111-1001-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-1111-1001-0001-000000000000', 'aabbccdd-1111-1001-0000-000000000000', 'Core Vocabulary', 'Core Vocabulary', 0, 5),
+  ('aabbccdd-1111-1001-0002-000000000000', 'aabbccdd-1111-1001-0000-000000000000', 'Phrases & Sentences', 'Phrases & Sentences', 1, 5),
+  ('aabbccdd-1111-1001-0003-000000000000', 'aabbccdd-1111-1001-0000-000000000000', 'Listening & Recognition', 'Listening & Recognition', 2, 5),
+  ('aabbccdd-1111-1001-0004-000000000000', 'aabbccdd-1111-1001-0000-000000000000', 'Speaking Practice', 'Speaking Practice', 3, 5),
+  ('aabbccdd-1111-1001-0005-000000000000', 'aabbccdd-1111-1001-0000-000000000000', 'Reading Simple Texts', 'Reading Simple Texts', 4, 5),
+  ('aabbccdd-1111-1001-0006-000000000000', 'aabbccdd-1111-1001-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-1111-1001-0001-e00000000001', 'aabbccdd-1111-1001-0001-000000000000', 'multiple_choice', 'What does "Hola" mean in English?', 'Hello', '{"Hello","Goodbye","Good morning","Good afternoon"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-1111-1001-0001-e00000000002', 'aabbccdd-1111-1001-0001-000000000000', 'translate_to_target', 'Translate to Spanish: Goodbye', 'Adiós', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -98,13 +98,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-1111-1002-0000-000000000000', 'aabbccdd-1111-0000-0000-000000000000', 'Food & Dining', 'Order food and drinks at a restaurant', 1, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-1111-1002-0001-000000000000', 'aabbccdd-1111-1002-0000-000000000000', 'Restaurant Basics', 'Restaurant Basics', 0, 5, 20),
-  ('aabbccdd-1111-1002-0002-000000000000', 'aabbccdd-1111-1002-0000-000000000000', 'Common Foods', 'Common Foods', 1, 5, 20),
-  ('aabbccdd-1111-1002-0003-000000000000', 'aabbccdd-1111-1002-0000-000000000000', 'Drinks & Beverages', 'Drinks & Beverages', 2, 5, 20),
-  ('aabbccdd-1111-1002-0004-000000000000', 'aabbccdd-1111-1002-0000-000000000000', 'Describing Taste', 'Describing Taste', 3, 5, 20),
-  ('aabbccdd-1111-1002-0005-000000000000', 'aabbccdd-1111-1002-0000-000000000000', 'Full Meal Order', 'Full Meal Order', 4, 5, 20),
-  ('aabbccdd-1111-1002-0006-000000000000', 'aabbccdd-1111-1002-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-1111-1002-0001-000000000000', 'aabbccdd-1111-1002-0000-000000000000', 'Restaurant Basics', 'Restaurant Basics', 0, 5),
+  ('aabbccdd-1111-1002-0002-000000000000', 'aabbccdd-1111-1002-0000-000000000000', 'Common Foods', 'Common Foods', 1, 5),
+  ('aabbccdd-1111-1002-0003-000000000000', 'aabbccdd-1111-1002-0000-000000000000', 'Drinks & Beverages', 'Drinks & Beverages', 2, 5),
+  ('aabbccdd-1111-1002-0004-000000000000', 'aabbccdd-1111-1002-0000-000000000000', 'Describing Taste', 'Describing Taste', 3, 5),
+  ('aabbccdd-1111-1002-0005-000000000000', 'aabbccdd-1111-1002-0000-000000000000', 'Full Meal Order', 'Full Meal Order', 4, 5),
+  ('aabbccdd-1111-1002-0006-000000000000', 'aabbccdd-1111-1002-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-1111-1002-0001-e00000000001', 'aabbccdd-1111-1002-0001-000000000000', 'multiple_choice', 'What does "Agua" mean in English?', 'Water', '{"Water","Chicken","Bread","Apple"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-1111-1002-0001-e00000000002', 'aabbccdd-1111-1002-0001-000000000000', 'translate_to_target', 'Translate to Spanish: Chicken', 'Pollo', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -174,13 +174,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-1111-1003-0000-000000000000', 'aabbccdd-1111-0000-0000-000000000000', 'Getting Around', 'Ask for directions and use transportation', 2, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-1111-1003-0001-000000000000', 'aabbccdd-1111-1003-0000-000000000000', 'Asking Directions', 'Asking Directions', 0, 5, 20),
-  ('aabbccdd-1111-1003-0002-000000000000', 'aabbccdd-1111-1003-0000-000000000000', 'Transportation', 'Transportation', 1, 5, 20),
-  ('aabbccdd-1111-1003-0003-000000000000', 'aabbccdd-1111-1003-0000-000000000000', 'Places in Town', 'Places in Town', 2, 5, 20),
-  ('aabbccdd-1111-1003-0004-000000000000', 'aabbccdd-1111-1003-0000-000000000000', 'Buying Tickets', 'Buying Tickets', 3, 5, 20),
-  ('aabbccdd-1111-1003-0005-000000000000', 'aabbccdd-1111-1003-0000-000000000000', 'At the Airport', 'At the Airport', 4, 5, 20),
-  ('aabbccdd-1111-1003-0006-000000000000', 'aabbccdd-1111-1003-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-1111-1003-0001-000000000000', 'aabbccdd-1111-1003-0000-000000000000', 'Asking Directions', 'Asking Directions', 0, 5),
+  ('aabbccdd-1111-1003-0002-000000000000', 'aabbccdd-1111-1003-0000-000000000000', 'Transportation', 'Transportation', 1, 5),
+  ('aabbccdd-1111-1003-0003-000000000000', 'aabbccdd-1111-1003-0000-000000000000', 'Places in Town', 'Places in Town', 2, 5),
+  ('aabbccdd-1111-1003-0004-000000000000', 'aabbccdd-1111-1003-0000-000000000000', 'Buying Tickets', 'Buying Tickets', 3, 5),
+  ('aabbccdd-1111-1003-0005-000000000000', 'aabbccdd-1111-1003-0000-000000000000', 'At the Airport', 'At the Airport', 4, 5),
+  ('aabbccdd-1111-1003-0006-000000000000', 'aabbccdd-1111-1003-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-1111-1003-0001-e00000000001', 'aabbccdd-1111-1003-0001-000000000000', 'multiple_choice', 'What does "Izquierda" mean in English?', 'Left', '{"Left","Right","Straight","Bus"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-1111-1003-0001-e00000000002', 'aabbccdd-1111-1003-0001-000000000000', 'translate_to_target', 'Translate to Spanish: Right', 'Derecha', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -250,13 +250,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-1111-1004-0000-000000000000', 'aabbccdd-1111-0000-0000-000000000000', 'Daily Life & Shopping', 'Talk about routines and go shopping', 3, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-1111-1004-0001-000000000000', 'aabbccdd-1111-1004-0000-000000000000', 'Daily Routine', 'Daily Routine', 0, 5, 20),
-  ('aabbccdd-1111-1004-0002-000000000000', 'aabbccdd-1111-1004-0000-000000000000', 'Shopping Basics', 'Shopping Basics', 1, 5, 20),
-  ('aabbccdd-1111-1004-0003-000000000000', 'aabbccdd-1111-1004-0000-000000000000', 'Clothes & Colors', 'Clothes & Colors', 2, 5, 20),
-  ('aabbccdd-1111-1004-0004-000000000000', 'aabbccdd-1111-1004-0000-000000000000', 'Time & Schedule', 'Time & Schedule', 3, 5, 20),
-  ('aabbccdd-1111-1004-0005-000000000000', 'aabbccdd-1111-1004-0000-000000000000', 'At the Market', 'At the Market', 4, 5, 20),
-  ('aabbccdd-1111-1004-0006-000000000000', 'aabbccdd-1111-1004-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-1111-1004-0001-000000000000', 'aabbccdd-1111-1004-0000-000000000000', 'Daily Routine', 'Daily Routine', 0, 5),
+  ('aabbccdd-1111-1004-0002-000000000000', 'aabbccdd-1111-1004-0000-000000000000', 'Shopping Basics', 'Shopping Basics', 1, 5),
+  ('aabbccdd-1111-1004-0003-000000000000', 'aabbccdd-1111-1004-0000-000000000000', 'Clothes & Colors', 'Clothes & Colors', 2, 5),
+  ('aabbccdd-1111-1004-0004-000000000000', 'aabbccdd-1111-1004-0000-000000000000', 'Time & Schedule', 'Time & Schedule', 3, 5),
+  ('aabbccdd-1111-1004-0005-000000000000', 'aabbccdd-1111-1004-0000-000000000000', 'At the Market', 'At the Market', 4, 5),
+  ('aabbccdd-1111-1004-0006-000000000000', 'aabbccdd-1111-1004-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-1111-1004-0001-e00000000001', 'aabbccdd-1111-1004-0001-000000000000', 'multiple_choice', 'What does "Desayuno" mean in English?', 'Breakfast', '{"Breakfast","Expensive","Cheap","Red"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-1111-1004-0001-e00000000002', 'aabbccdd-1111-1004-0001-000000000000', 'translate_to_target', 'Translate to Spanish: Expensive', 'Caro', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -326,13 +326,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-1111-1005-0000-000000000000', 'aabbccdd-1111-0000-0000-000000000000', 'Work & Social', 'Discuss jobs, hobbies, and make plans', 4, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-1111-1005-0001-000000000000', 'aabbccdd-1111-1005-0000-000000000000', 'Jobs & Professions', 'Jobs & Professions', 0, 5, 20),
-  ('aabbccdd-1111-1005-0002-000000000000', 'aabbccdd-1111-1005-0000-000000000000', 'Making Plans', 'Making Plans', 1, 5, 20),
-  ('aabbccdd-1111-1005-0003-000000000000', 'aabbccdd-1111-1005-0000-000000000000', 'Hobbies & Interests', 'Hobbies & Interests', 2, 5, 20),
-  ('aabbccdd-1111-1005-0004-000000000000', 'aabbccdd-1111-1005-0000-000000000000', 'Weather & Seasons', 'Weather & Seasons', 3, 5, 20),
-  ('aabbccdd-1111-1005-0005-000000000000', 'aabbccdd-1111-1005-0000-000000000000', 'Weekend Activities', 'Weekend Activities', 4, 5, 20),
-  ('aabbccdd-1111-1005-0006-000000000000', 'aabbccdd-1111-1005-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-1111-1005-0001-000000000000', 'aabbccdd-1111-1005-0000-000000000000', 'Jobs & Professions', 'Jobs & Professions', 0, 5),
+  ('aabbccdd-1111-1005-0002-000000000000', 'aabbccdd-1111-1005-0000-000000000000', 'Making Plans', 'Making Plans', 1, 5),
+  ('aabbccdd-1111-1005-0003-000000000000', 'aabbccdd-1111-1005-0000-000000000000', 'Hobbies & Interests', 'Hobbies & Interests', 2, 5),
+  ('aabbccdd-1111-1005-0004-000000000000', 'aabbccdd-1111-1005-0000-000000000000', 'Weather & Seasons', 'Weather & Seasons', 3, 5),
+  ('aabbccdd-1111-1005-0005-000000000000', 'aabbccdd-1111-1005-0000-000000000000', 'Weekend Activities', 'Weekend Activities', 4, 5),
+  ('aabbccdd-1111-1005-0006-000000000000', 'aabbccdd-1111-1005-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-1111-1005-0001-e00000000001', 'aabbccdd-1111-1005-0001-000000000000', 'multiple_choice', 'What does "Profesor" mean in English?', 'Teacher', '{"Teacher","Doctor","Office","To read"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-1111-1005-0001-e00000000002', 'aabbccdd-1111-1005-0001-000000000000', 'translate_to_target', 'Translate to Spanish: Doctor', 'Doctor', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -402,13 +402,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-1111-1006-0000-000000000000', 'aabbccdd-1111-0000-0000-000000000000', 'Family & Friends', 'Talk about family and relationships', 5, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-1111-1006-0001-000000000000', 'aabbccdd-1111-1006-0000-000000000000', 'Family Members', 'Family Members', 0, 5, 20),
-  ('aabbccdd-1111-1006-0002-000000000000', 'aabbccdd-1111-1006-0000-000000000000', 'Describing People', 'Describing People', 1, 5, 20),
-  ('aabbccdd-1111-1006-0003-000000000000', 'aabbccdd-1111-1006-0000-000000000000', 'Ages & Birthdays', 'Ages & Birthdays', 2, 5, 20),
-  ('aabbccdd-1111-1006-0004-000000000000', 'aabbccdd-1111-1006-0000-000000000000', 'Pets & Animals', 'Pets & Animals', 3, 5, 20),
-  ('aabbccdd-1111-1006-0005-000000000000', 'aabbccdd-1111-1006-0000-000000000000', 'Family Activities', 'Family Activities', 4, 5, 20),
-  ('aabbccdd-1111-1006-0006-000000000000', 'aabbccdd-1111-1006-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-1111-1006-0001-000000000000', 'aabbccdd-1111-1006-0000-000000000000', 'Family Members', 'Family Members', 0, 5),
+  ('aabbccdd-1111-1006-0002-000000000000', 'aabbccdd-1111-1006-0000-000000000000', 'Describing People', 'Describing People', 1, 5),
+  ('aabbccdd-1111-1006-0003-000000000000', 'aabbccdd-1111-1006-0000-000000000000', 'Ages & Birthdays', 'Ages & Birthdays', 2, 5),
+  ('aabbccdd-1111-1006-0004-000000000000', 'aabbccdd-1111-1006-0000-000000000000', 'Pets & Animals', 'Pets & Animals', 3, 5),
+  ('aabbccdd-1111-1006-0005-000000000000', 'aabbccdd-1111-1006-0000-000000000000', 'Family Activities', 'Family Activities', 4, 5),
+  ('aabbccdd-1111-1006-0006-000000000000', 'aabbccdd-1111-1006-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-1111-1006-0001-e00000000001', 'aabbccdd-1111-1006-0001-000000000000', 'multiple_choice', 'What does "Madre" mean in English?', 'Mother', '{"Mother","Father","Sister","Brother"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-1111-1006-0001-e00000000002', 'aabbccdd-1111-1006-0001-000000000000', 'translate_to_target', 'Translate to Spanish: Father', 'Padre', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -478,13 +478,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-1111-1007-0000-000000000000', 'aabbccdd-1111-0000-0000-000000000000', 'Home & Rooms', 'Describe your house and furniture', 6, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-1111-1007-0001-000000000000', 'aabbccdd-1111-1007-0000-000000000000', 'Parts of the House', 'Parts of the House', 0, 5, 20),
-  ('aabbccdd-1111-1007-0002-000000000000', 'aabbccdd-1111-1007-0000-000000000000', 'Furniture', 'Furniture', 1, 5, 20),
-  ('aabbccdd-1111-1007-0003-000000000000', 'aabbccdd-1111-1007-0000-000000000000', 'In the Kitchen', 'In the Kitchen', 2, 5, 20),
-  ('aabbccdd-1111-1007-0004-000000000000', 'aabbccdd-1111-1007-0000-000000000000', 'Bathroom & Bedroom', 'Bathroom & Bedroom', 3, 5, 20),
-  ('aabbccdd-1111-1007-0005-000000000000', 'aabbccdd-1111-1007-0000-000000000000', 'Describing Your Home', 'Describing Your Home', 4, 5, 20),
-  ('aabbccdd-1111-1007-0006-000000000000', 'aabbccdd-1111-1007-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-1111-1007-0001-000000000000', 'aabbccdd-1111-1007-0000-000000000000', 'Parts of the House', 'Parts of the House', 0, 5),
+  ('aabbccdd-1111-1007-0002-000000000000', 'aabbccdd-1111-1007-0000-000000000000', 'Furniture', 'Furniture', 1, 5),
+  ('aabbccdd-1111-1007-0003-000000000000', 'aabbccdd-1111-1007-0000-000000000000', 'In the Kitchen', 'In the Kitchen', 2, 5),
+  ('aabbccdd-1111-1007-0004-000000000000', 'aabbccdd-1111-1007-0000-000000000000', 'Bathroom & Bedroom', 'Bathroom & Bedroom', 3, 5),
+  ('aabbccdd-1111-1007-0005-000000000000', 'aabbccdd-1111-1007-0000-000000000000', 'Describing Your Home', 'Describing Your Home', 4, 5),
+  ('aabbccdd-1111-1007-0006-000000000000', 'aabbccdd-1111-1007-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-1111-1007-0001-e00000000001', 'aabbccdd-1111-1007-0001-000000000000', 'multiple_choice', 'What does "Casa" mean in English?', 'House', '{"House","Room","Kitchen","Bathroom"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-1111-1007-0001-e00000000002', 'aabbccdd-1111-1007-0001-000000000000', 'translate_to_target', 'Translate to Spanish: Room', 'Habitación', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -554,13 +554,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-1111-1008-0000-000000000000', 'aabbccdd-1111-0000-0000-000000000000', 'Health & Body', 'Body parts, health, and doctor visits', 7, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-1111-1008-0001-000000000000', 'aabbccdd-1111-1008-0000-000000000000', 'Body Parts', 'Body Parts', 0, 5, 20),
-  ('aabbccdd-1111-1008-0002-000000000000', 'aabbccdd-1111-1008-0000-000000000000', 'Feelings & Symptoms', 'Feelings & Symptoms', 1, 5, 20),
-  ('aabbccdd-1111-1008-0003-000000000000', 'aabbccdd-1111-1008-0000-000000000000', 'At the Doctor', 'At the Doctor', 2, 5, 20),
-  ('aabbccdd-1111-1008-0004-000000000000', 'aabbccdd-1111-1008-0000-000000000000', 'At the Pharmacy', 'At the Pharmacy', 3, 5, 20),
-  ('aabbccdd-1111-1008-0005-000000000000', 'aabbccdd-1111-1008-0000-000000000000', 'Healthy Habits', 'Healthy Habits', 4, 5, 20),
-  ('aabbccdd-1111-1008-0006-000000000000', 'aabbccdd-1111-1008-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-1111-1008-0001-000000000000', 'aabbccdd-1111-1008-0000-000000000000', 'Body Parts', 'Body Parts', 0, 5),
+  ('aabbccdd-1111-1008-0002-000000000000', 'aabbccdd-1111-1008-0000-000000000000', 'Feelings & Symptoms', 'Feelings & Symptoms', 1, 5),
+  ('aabbccdd-1111-1008-0003-000000000000', 'aabbccdd-1111-1008-0000-000000000000', 'At the Doctor', 'At the Doctor', 2, 5),
+  ('aabbccdd-1111-1008-0004-000000000000', 'aabbccdd-1111-1008-0000-000000000000', 'At the Pharmacy', 'At the Pharmacy', 3, 5),
+  ('aabbccdd-1111-1008-0005-000000000000', 'aabbccdd-1111-1008-0000-000000000000', 'Healthy Habits', 'Healthy Habits', 4, 5),
+  ('aabbccdd-1111-1008-0006-000000000000', 'aabbccdd-1111-1008-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-1111-1008-0001-e00000000001', 'aabbccdd-1111-1008-0001-000000000000', 'multiple_choice', 'What does "Cabeza" mean in English?', 'Head', '{"Head","Hand","Eye","Stomach"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-1111-1008-0001-e00000000002', 'aabbccdd-1111-1008-0001-000000000000', 'translate_to_target', 'Translate to Spanish: Hand', 'Mano', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -634,7 +634,7 @@ VALUES ('aabbccdd-1111-0000-0000-a20000000000', 'en', 'es', 'Spanish A2', 'Spani
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-1111-2001-0000-a20000000000', 'aabbccdd-1111-0000-0000-a20000000000', 'Family & Relationships', 'Describe family, relationships, and ages', 0, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-1111-2001-0001-a20000000000', 'aabbccdd-1111-2001-0000-a20000000000', 'Extended Family', 'Extended Family', 0, 7, 25),
   ('aabbccdd-1111-2001-0002-a20000000000', 'aabbccdd-1111-2001-0000-a20000000000', 'Describing Relationships', 'Describing Relationships', 1, 7, 25),
   ('aabbccdd-1111-2001-0003-a20000000000', 'aabbccdd-1111-2001-0000-a20000000000', 'Talking About Ages', 'Talking About Ages', 2, 7, 25),
@@ -711,7 +711,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-1111-2002-0000-a20000000000', 'aabbccdd-1111-0000-0000-a20000000000', 'Health & Wellness', 'Symptoms, doctor visits, pharmacy, feelings', 1, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-1111-2002-0001-a20000000000', 'aabbccdd-1111-2002-0000-a20000000000', 'Common Symptoms', 'Common Symptoms', 0, 7, 25),
   ('aabbccdd-1111-2002-0002-a20000000000', 'aabbccdd-1111-2002-0000-a20000000000', 'At the Doctor Office', 'At the Doctor Office', 1, 7, 25),
   ('aabbccdd-1111-2002-0003-a20000000000', 'aabbccdd-1111-2002-0000-a20000000000', 'At the Pharmacy', 'At the Pharmacy', 2, 7, 25),
@@ -788,7 +788,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-1111-2003-0000-a20000000000', 'aabbccdd-1111-0000-0000-a20000000000', 'At Home', 'Furniture, chores, describing your home', 2, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-1111-2003-0001-a20000000000', 'aabbccdd-1111-2003-0000-a20000000000', 'Rooms & Furniture', 'Rooms & Furniture', 0, 7, 25),
   ('aabbccdd-1111-2003-0002-a20000000000', 'aabbccdd-1111-2003-0000-a20000000000', 'Household Chores', 'Household Chores', 1, 7, 25),
   ('aabbccdd-1111-2003-0003-a20000000000', 'aabbccdd-1111-2003-0000-a20000000000', 'Moving & Housing', 'Moving & Housing', 2, 7, 25),
@@ -865,7 +865,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-1111-2004-0000-a20000000000', 'aabbccdd-1111-0000-0000-a20000000000', 'Emotions & Personality', 'Adjectives for people, moods, character', 3, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-1111-2004-0001-a20000000000', 'aabbccdd-1111-2004-0000-a20000000000', 'Positive Emotions', 'Positive Emotions', 0, 7, 25),
   ('aabbccdd-1111-2004-0002-a20000000000', 'aabbccdd-1111-2004-0000-a20000000000', 'Negative Emotions', 'Negative Emotions', 1, 7, 25),
   ('aabbccdd-1111-2004-0003-a20000000000', 'aabbccdd-1111-2004-0000-a20000000000', 'Personality Traits', 'Personality Traits', 2, 7, 25),
@@ -942,7 +942,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-1111-2005-0000-a20000000000', 'aabbccdd-1111-0000-0000-a20000000000', 'Past Tense Basics', 'Yesterday, last week, simple past actions', 4, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-1111-2005-0001-a20000000000', 'aabbccdd-1111-2005-0000-a20000000000', 'What Happened Yesterday', 'What Happened Yesterday', 0, 7, 25),
   ('aabbccdd-1111-2005-0002-a20000000000', 'aabbccdd-1111-2005-0000-a20000000000', 'Last Weekend', 'Last Weekend', 1, 7, 25),
   ('aabbccdd-1111-2005-0003-a20000000000', 'aabbccdd-1111-2005-0000-a20000000000', 'A Memorable Trip', 'A Memorable Trip', 2, 7, 25),
@@ -1019,7 +1019,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-1111-2006-0000-a20000000000', 'aabbccdd-1111-0000-0000-a20000000000', 'Future Plans', 'Will, going to, plans, intentions', 5, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-1111-2006-0001-a20000000000', 'aabbccdd-1111-2006-0000-a20000000000', 'Plans for Tomorrow', 'Plans for Tomorrow', 0, 7, 25),
   ('aabbccdd-1111-2006-0002-a20000000000', 'aabbccdd-1111-2006-0000-a20000000000', 'Next Vacation', 'Next Vacation', 1, 7, 25),
   ('aabbccdd-1111-2006-0003-a20000000000', 'aabbccdd-1111-2006-0000-a20000000000', 'Life Goals', 'Life Goals', 2, 7, 25),
@@ -1096,7 +1096,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-1111-2007-0000-a20000000000', 'aabbccdd-1111-0000-0000-a20000000000', 'Comparisons', 'Bigger, smaller, better, more expensive', 6, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-1111-2007-0001-a20000000000', 'aabbccdd-1111-2007-0000-a20000000000', 'Comparing Things', 'Comparing Things', 0, 7, 25),
   ('aabbccdd-1111-2007-0002-a20000000000', 'aabbccdd-1111-2007-0000-a20000000000', 'Comparing People', 'Comparing People', 1, 7, 25),
   ('aabbccdd-1111-2007-0003-a20000000000', 'aabbccdd-1111-2007-0000-a20000000000', 'Superlatives', 'Superlatives', 2, 7, 25),
@@ -1173,7 +1173,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-1111-2008-0000-a20000000000', 'aabbccdd-1111-0000-0000-a20000000000', 'Cultural Topics', 'Holidays, traditions, celebrations', 7, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-1111-2008-0001-a20000000000', 'aabbccdd-1111-2008-0000-a20000000000', 'National Holidays', 'National Holidays', 0, 7, 25),
   ('aabbccdd-1111-2008-0002-a20000000000', 'aabbccdd-1111-2008-0000-a20000000000', 'Food Traditions', 'Food Traditions', 1, 7, 25),
   ('aabbccdd-1111-2008-0003-a20000000000', 'aabbccdd-1111-2008-0000-a20000000000', 'Music & Dance', 'Music & Dance', 2, 7, 25),
@@ -1254,7 +1254,7 @@ VALUES ('aabbccdd-1111-0000-0000-b10000000000', 'en', 'es', 'Spanish B1', 'Spani
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-1111-3001-0000-b10000000000', 'aabbccdd-1111-0000-0000-b10000000000', 'Opinions & Current Events', 'Agree/disagree, news, society', 0, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-1111-3001-0001-b10000000000', 'aabbccdd-1111-3001-0000-b10000000000', 'Expressing Opinions', 'Expressing Opinions', 0, 10, 30),
   ('aabbccdd-1111-3001-0002-b10000000000', 'aabbccdd-1111-3001-0000-b10000000000', 'Agreeing & Disagreeing', 'Agreeing & Disagreeing', 1, 10, 30),
   ('aabbccdd-1111-3001-0003-b10000000000', 'aabbccdd-1111-3001-0000-b10000000000', 'Current Events', 'Current Events', 2, 10, 30),
@@ -1343,7 +1343,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-1111-3002-0000-b10000000000', 'aabbccdd-1111-0000-0000-b10000000000', 'Work & Career', 'Interviews, meetings, emails, presentations', 1, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-1111-3002-0001-b10000000000', 'aabbccdd-1111-3002-0000-b10000000000', 'Job Interviews', 'Job Interviews', 0, 10, 30),
   ('aabbccdd-1111-3002-0002-b10000000000', 'aabbccdd-1111-3002-0000-b10000000000', 'Office Communication', 'Office Communication', 1, 10, 30),
   ('aabbccdd-1111-3002-0003-b10000000000', 'aabbccdd-1111-3002-0000-b10000000000', 'Meetings', 'Meetings', 2, 10, 30),
@@ -1432,7 +1432,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-1111-3003-0000-b10000000000', 'aabbccdd-1111-0000-0000-b10000000000', 'Travel & Adventure', 'Booking, airports, hotels, experiences', 2, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-1111-3003-0001-b10000000000', 'aabbccdd-1111-3003-0000-b10000000000', 'Booking Travel', 'Booking Travel', 0, 10, 30),
   ('aabbccdd-1111-3003-0002-b10000000000', 'aabbccdd-1111-3003-0000-b10000000000', 'At the Airport', 'At the Airport', 1, 10, 30),
   ('aabbccdd-1111-3003-0003-b10000000000', 'aabbccdd-1111-3003-0000-b10000000000', 'Hotel Check-in', 'Hotel Check-in', 2, 10, 30),
@@ -1521,7 +1521,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-1111-3004-0000-b10000000000', 'aabbccdd-1111-0000-0000-b10000000000', 'Environment & Nature', 'Climate, animals, conservation', 3, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-1111-3004-0001-b10000000000', 'aabbccdd-1111-3004-0000-b10000000000', 'Climate & Weather', 'Climate & Weather', 0, 10, 30),
   ('aabbccdd-1111-3004-0002-b10000000000', 'aabbccdd-1111-3004-0000-b10000000000', 'Wildlife', 'Wildlife', 1, 10, 30),
   ('aabbccdd-1111-3004-0003-b10000000000', 'aabbccdd-1111-3004-0000-b10000000000', 'Conservation', 'Conservation', 2, 10, 30),
@@ -1610,7 +1610,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-1111-3005-0000-b10000000000', 'aabbccdd-1111-0000-0000-b10000000000', 'Technology & Media', 'Internet, social media, devices', 4, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-1111-3005-0001-b10000000000', 'aabbccdd-1111-3005-0000-b10000000000', 'Internet & Social Media', 'Internet & Social Media', 0, 10, 30),
   ('aabbccdd-1111-3005-0002-b10000000000', 'aabbccdd-1111-3005-0000-b10000000000', 'Smartphones & Apps', 'Smartphones & Apps', 1, 10, 30),
   ('aabbccdd-1111-3005-0003-b10000000000', 'aabbccdd-1111-3005-0000-b10000000000', 'Digital Communication', 'Digital Communication', 2, 10, 30),
@@ -1699,7 +1699,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-1111-3006-0000-b10000000000', 'aabbccdd-1111-0000-0000-b10000000000', 'Storytelling', 'Narrative tenses, sequencing, past continuous', 5, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-1111-3006-0001-b10000000000', 'aabbccdd-1111-3006-0000-b10000000000', 'Telling a Story', 'Telling a Story', 0, 10, 30),
   ('aabbccdd-1111-3006-0002-b10000000000', 'aabbccdd-1111-3006-0000-b10000000000', 'Sequencing Events', 'Sequencing Events', 1, 10, 30),
   ('aabbccdd-1111-3006-0003-b10000000000', 'aabbccdd-1111-3006-0000-b10000000000', 'Past Continuous', 'Past Continuous', 2, 10, 30),
@@ -1788,7 +1788,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-1111-3007-0000-b10000000000', 'aabbccdd-1111-0000-0000-b10000000000', 'Hypothetical Situations', 'Conditionals, would/could/should', 6, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-1111-3007-0001-b10000000000', 'aabbccdd-1111-3007-0000-b10000000000', 'First Conditional', 'First Conditional', 0, 10, 30),
   ('aabbccdd-1111-3007-0002-b10000000000', 'aabbccdd-1111-3007-0000-b10000000000', 'Second Conditional', 'Second Conditional', 1, 10, 30),
   ('aabbccdd-1111-3007-0003-b10000000000', 'aabbccdd-1111-3007-0000-b10000000000', 'Giving Advice', 'Giving Advice', 2, 10, 30),
@@ -1877,7 +1877,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-1111-3008-0000-b10000000000', 'aabbccdd-1111-0000-0000-b10000000000', 'Formal vs. Informal', 'Register, polite requests, slang', 7, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-1111-3008-0001-b10000000000', 'aabbccdd-1111-3008-0000-b10000000000', 'Formal Requests', 'Formal Requests', 0, 10, 30),
   ('aabbccdd-1111-3008-0002-b10000000000', 'aabbccdd-1111-3008-0000-b10000000000', 'Informal Speech', 'Informal Speech', 1, 10, 30),
   ('aabbccdd-1111-3008-0003-b10000000000', 'aabbccdd-1111-3008-0000-b10000000000', 'Writing Emails', 'Writing Emails', 2, 10, 30),
@@ -2027,7 +2027,7 @@ VALUES ('aabbccdd-1111-0000-0000-b20000000000', 'en', 'es', 'Spanish B2', 'Spani
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-1111-4001-0000-b20000000000', 'aabbccdd-1111-0000-0000-b20000000000', 'Abstract Ideas', 'Philosophy, concepts, beliefs', 0, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-1111-4001-0001-b20000000000', 'aabbccdd-1111-4001-0000-b20000000000', 'Philosophy of Life', 'Philosophy of Life', 0, 12, 40),
   ('aabbccdd-1111-4001-0002-b20000000000', 'aabbccdd-1111-4001-0000-b20000000000', 'Beliefs & Values', 'Beliefs & Values', 1, 12, 40),
   ('aabbccdd-1111-4001-0003-b20000000000', 'aabbccdd-1111-4001-0000-b20000000000', 'Abstract Concepts', 'Abstract Concepts', 2, 12, 40),
@@ -2116,7 +2116,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-1111-4002-0000-b20000000000', 'aabbccdd-1111-0000-0000-b20000000000', 'Debate & Argumentation', 'Persuasion, counterarguments, rhetoric', 1, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-1111-4002-0001-b20000000000', 'aabbccdd-1111-4002-0000-b20000000000', 'Building Arguments', 'Building Arguments', 0, 12, 40),
   ('aabbccdd-1111-4002-0002-b20000000000', 'aabbccdd-1111-4002-0000-b20000000000', 'Counterarguments', 'Counterarguments', 1, 12, 40),
   ('aabbccdd-1111-4002-0003-b20000000000', 'aabbccdd-1111-4002-0000-b20000000000', 'Persuasive Language', 'Persuasive Language', 2, 12, 40),
@@ -2205,7 +2205,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-1111-4003-0000-b20000000000', 'aabbccdd-1111-0000-0000-b20000000000', 'Professional Communication', 'Formal writing, presentations, negotiations', 2, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-1111-4003-0001-b20000000000', 'aabbccdd-1111-4003-0000-b20000000000', 'Business Emails', 'Business Emails', 0, 12, 40),
   ('aabbccdd-1111-4003-0002-b20000000000', 'aabbccdd-1111-4003-0000-b20000000000', 'Presentations', 'Presentations', 1, 12, 40),
   ('aabbccdd-1111-4003-0003-b20000000000', 'aabbccdd-1111-4003-0000-b20000000000', 'Negotiations', 'Negotiations', 2, 12, 40),
@@ -2294,7 +2294,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-1111-4004-0000-b20000000000', 'aabbccdd-1111-0000-0000-b20000000000', 'Literature & Arts', 'Describing art, reviews, literary analysis', 3, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-1111-4004-0001-b20000000000', 'aabbccdd-1111-4004-0000-b20000000000', 'Describing Art', 'Describing Art', 0, 12, 40),
   ('aabbccdd-1111-4004-0002-b20000000000', 'aabbccdd-1111-4004-0000-b20000000000', 'Book Reviews', 'Book Reviews', 1, 12, 40),
   ('aabbccdd-1111-4004-0003-b20000000000', 'aabbccdd-1111-4004-0000-b20000000000', 'Film & Theater', 'Film & Theater', 2, 12, 40),
@@ -2383,7 +2383,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-1111-4005-0000-b20000000000', 'aabbccdd-1111-0000-0000-b20000000000', 'Idiomatic Expressions', 'Idioms, proverbs, collocations', 4, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-1111-4005-0001-b20000000000', 'aabbccdd-1111-4005-0000-b20000000000', 'Common Idioms', 'Common Idioms', 0, 12, 40),
   ('aabbccdd-1111-4005-0002-b20000000000', 'aabbccdd-1111-4005-0000-b20000000000', 'Proverbs', 'Proverbs', 1, 12, 40),
   ('aabbccdd-1111-4005-0003-b20000000000', 'aabbccdd-1111-4005-0000-b20000000000', 'Collocations', 'Collocations', 2, 12, 40),
@@ -2472,7 +2472,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-1111-4006-0000-b20000000000', 'aabbccdd-1111-0000-0000-b20000000000', 'Complex Grammar', 'Subjunctive, reported speech, passive voice', 5, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-1111-4006-0001-b20000000000', 'aabbccdd-1111-4006-0000-b20000000000', 'Subjunctive Mood', 'Subjunctive Mood', 0, 12, 40),
   ('aabbccdd-1111-4006-0002-b20000000000', 'aabbccdd-1111-4006-0000-b20000000000', 'Reported Speech', 'Reported Speech', 1, 12, 40),
   ('aabbccdd-1111-4006-0003-b20000000000', 'aabbccdd-1111-4006-0000-b20000000000', 'Passive Voice', 'Passive Voice', 2, 12, 40),
@@ -2619,13 +2619,13 @@ VALUES ('aabbccdd-2222-0000-0000-000000000000', 'en', 'fr', 'French A1', 'French
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-2222-1001-0000-000000000000', 'aabbccdd-2222-0000-0000-000000000000', 'Greetings & Basics', 'Learn greetings, introductions, and polite expressions', 0, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-2222-1001-0001-000000000000', 'aabbccdd-2222-1001-0000-000000000000', 'Core Vocabulary', 'Core Vocabulary', 0, 5, 20),
-  ('aabbccdd-2222-1001-0002-000000000000', 'aabbccdd-2222-1001-0000-000000000000', 'Phrases & Sentences', 'Phrases & Sentences', 1, 5, 20),
-  ('aabbccdd-2222-1001-0003-000000000000', 'aabbccdd-2222-1001-0000-000000000000', 'Listening & Recognition', 'Listening & Recognition', 2, 5, 20),
-  ('aabbccdd-2222-1001-0004-000000000000', 'aabbccdd-2222-1001-0000-000000000000', 'Speaking Practice', 'Speaking Practice', 3, 5, 20),
-  ('aabbccdd-2222-1001-0005-000000000000', 'aabbccdd-2222-1001-0000-000000000000', 'Reading Simple Texts', 'Reading Simple Texts', 4, 5, 20),
-  ('aabbccdd-2222-1001-0006-000000000000', 'aabbccdd-2222-1001-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-2222-1001-0001-000000000000', 'aabbccdd-2222-1001-0000-000000000000', 'Core Vocabulary', 'Core Vocabulary', 0, 5),
+  ('aabbccdd-2222-1001-0002-000000000000', 'aabbccdd-2222-1001-0000-000000000000', 'Phrases & Sentences', 'Phrases & Sentences', 1, 5),
+  ('aabbccdd-2222-1001-0003-000000000000', 'aabbccdd-2222-1001-0000-000000000000', 'Listening & Recognition', 'Listening & Recognition', 2, 5),
+  ('aabbccdd-2222-1001-0004-000000000000', 'aabbccdd-2222-1001-0000-000000000000', 'Speaking Practice', 'Speaking Practice', 3, 5),
+  ('aabbccdd-2222-1001-0005-000000000000', 'aabbccdd-2222-1001-0000-000000000000', 'Reading Simple Texts', 'Reading Simple Texts', 4, 5),
+  ('aabbccdd-2222-1001-0006-000000000000', 'aabbccdd-2222-1001-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-2222-1001-0001-e00000000001', 'aabbccdd-2222-1001-0001-000000000000', 'multiple_choice', 'What does "Salut" mean in English?', 'Hello', '{"Hello","Goodbye","Good morning","Good evening"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-2222-1001-0001-e00000000002', 'aabbccdd-2222-1001-0001-000000000000', 'translate_to_target', 'Translate to French: Goodbye', 'Au revoir', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -2695,13 +2695,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-2222-1002-0000-000000000000', 'aabbccdd-2222-0000-0000-000000000000', 'Food & Dining', 'Order food and drinks at a restaurant', 1, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-2222-1002-0001-000000000000', 'aabbccdd-2222-1002-0000-000000000000', 'Restaurant Basics', 'Restaurant Basics', 0, 5, 20),
-  ('aabbccdd-2222-1002-0002-000000000000', 'aabbccdd-2222-1002-0000-000000000000', 'Common Foods', 'Common Foods', 1, 5, 20),
-  ('aabbccdd-2222-1002-0003-000000000000', 'aabbccdd-2222-1002-0000-000000000000', 'Drinks & Beverages', 'Drinks & Beverages', 2, 5, 20),
-  ('aabbccdd-2222-1002-0004-000000000000', 'aabbccdd-2222-1002-0000-000000000000', 'Describing Taste', 'Describing Taste', 3, 5, 20),
-  ('aabbccdd-2222-1002-0005-000000000000', 'aabbccdd-2222-1002-0000-000000000000', 'Full Meal Order', 'Full Meal Order', 4, 5, 20),
-  ('aabbccdd-2222-1002-0006-000000000000', 'aabbccdd-2222-1002-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-2222-1002-0001-000000000000', 'aabbccdd-2222-1002-0000-000000000000', 'Restaurant Basics', 'Restaurant Basics', 0, 5),
+  ('aabbccdd-2222-1002-0002-000000000000', 'aabbccdd-2222-1002-0000-000000000000', 'Common Foods', 'Common Foods', 1, 5),
+  ('aabbccdd-2222-1002-0003-000000000000', 'aabbccdd-2222-1002-0000-000000000000', 'Drinks & Beverages', 'Drinks & Beverages', 2, 5),
+  ('aabbccdd-2222-1002-0004-000000000000', 'aabbccdd-2222-1002-0000-000000000000', 'Describing Taste', 'Describing Taste', 3, 5),
+  ('aabbccdd-2222-1002-0005-000000000000', 'aabbccdd-2222-1002-0000-000000000000', 'Full Meal Order', 'Full Meal Order', 4, 5),
+  ('aabbccdd-2222-1002-0006-000000000000', 'aabbccdd-2222-1002-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-2222-1002-0001-e00000000001', 'aabbccdd-2222-1002-0001-000000000000', 'multiple_choice', 'What does "Eau" mean in English?', 'Water', '{"Water","Chicken","Bread","Apple"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-2222-1002-0001-e00000000002', 'aabbccdd-2222-1002-0001-000000000000', 'translate_to_target', 'Translate to French: Chicken', 'Poulet', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -2771,13 +2771,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-2222-1003-0000-000000000000', 'aabbccdd-2222-0000-0000-000000000000', 'Getting Around', 'Ask for directions and use transportation', 2, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-2222-1003-0001-000000000000', 'aabbccdd-2222-1003-0000-000000000000', 'Asking Directions', 'Asking Directions', 0, 5, 20),
-  ('aabbccdd-2222-1003-0002-000000000000', 'aabbccdd-2222-1003-0000-000000000000', 'Transportation', 'Transportation', 1, 5, 20),
-  ('aabbccdd-2222-1003-0003-000000000000', 'aabbccdd-2222-1003-0000-000000000000', 'Places in Town', 'Places in Town', 2, 5, 20),
-  ('aabbccdd-2222-1003-0004-000000000000', 'aabbccdd-2222-1003-0000-000000000000', 'Buying Tickets', 'Buying Tickets', 3, 5, 20),
-  ('aabbccdd-2222-1003-0005-000000000000', 'aabbccdd-2222-1003-0000-000000000000', 'At the Airport', 'At the Airport', 4, 5, 20),
-  ('aabbccdd-2222-1003-0006-000000000000', 'aabbccdd-2222-1003-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-2222-1003-0001-000000000000', 'aabbccdd-2222-1003-0000-000000000000', 'Asking Directions', 'Asking Directions', 0, 5),
+  ('aabbccdd-2222-1003-0002-000000000000', 'aabbccdd-2222-1003-0000-000000000000', 'Transportation', 'Transportation', 1, 5),
+  ('aabbccdd-2222-1003-0003-000000000000', 'aabbccdd-2222-1003-0000-000000000000', 'Places in Town', 'Places in Town', 2, 5),
+  ('aabbccdd-2222-1003-0004-000000000000', 'aabbccdd-2222-1003-0000-000000000000', 'Buying Tickets', 'Buying Tickets', 3, 5),
+  ('aabbccdd-2222-1003-0005-000000000000', 'aabbccdd-2222-1003-0000-000000000000', 'At the Airport', 'At the Airport', 4, 5),
+  ('aabbccdd-2222-1003-0006-000000000000', 'aabbccdd-2222-1003-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-2222-1003-0001-e00000000001', 'aabbccdd-2222-1003-0001-000000000000', 'multiple_choice', 'What does "Gauche" mean in English?', 'Left', '{"Left","Right","Straight","Bus"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-2222-1003-0001-e00000000002', 'aabbccdd-2222-1003-0001-000000000000', 'translate_to_target', 'Translate to French: Right', 'Droite', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -2847,13 +2847,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-2222-1004-0000-000000000000', 'aabbccdd-2222-0000-0000-000000000000', 'Daily Life & Shopping', 'Talk about routines and go shopping', 3, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-2222-1004-0001-000000000000', 'aabbccdd-2222-1004-0000-000000000000', 'Daily Routine', 'Daily Routine', 0, 5, 20),
-  ('aabbccdd-2222-1004-0002-000000000000', 'aabbccdd-2222-1004-0000-000000000000', 'Shopping Basics', 'Shopping Basics', 1, 5, 20),
-  ('aabbccdd-2222-1004-0003-000000000000', 'aabbccdd-2222-1004-0000-000000000000', 'Clothes & Colors', 'Clothes & Colors', 2, 5, 20),
-  ('aabbccdd-2222-1004-0004-000000000000', 'aabbccdd-2222-1004-0000-000000000000', 'Time & Schedule', 'Time & Schedule', 3, 5, 20),
-  ('aabbccdd-2222-1004-0005-000000000000', 'aabbccdd-2222-1004-0000-000000000000', 'At the Market', 'At the Market', 4, 5, 20),
-  ('aabbccdd-2222-1004-0006-000000000000', 'aabbccdd-2222-1004-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-2222-1004-0001-000000000000', 'aabbccdd-2222-1004-0000-000000000000', 'Daily Routine', 'Daily Routine', 0, 5),
+  ('aabbccdd-2222-1004-0002-000000000000', 'aabbccdd-2222-1004-0000-000000000000', 'Shopping Basics', 'Shopping Basics', 1, 5),
+  ('aabbccdd-2222-1004-0003-000000000000', 'aabbccdd-2222-1004-0000-000000000000', 'Clothes & Colors', 'Clothes & Colors', 2, 5),
+  ('aabbccdd-2222-1004-0004-000000000000', 'aabbccdd-2222-1004-0000-000000000000', 'Time & Schedule', 'Time & Schedule', 3, 5),
+  ('aabbccdd-2222-1004-0005-000000000000', 'aabbccdd-2222-1004-0000-000000000000', 'At the Market', 'At the Market', 4, 5),
+  ('aabbccdd-2222-1004-0006-000000000000', 'aabbccdd-2222-1004-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-2222-1004-0001-e00000000001', 'aabbccdd-2222-1004-0001-000000000000', 'multiple_choice', 'What does "Petit déjeuner" mean in English?', 'Breakfast', '{"Breakfast","Expensive","Cheap","Red"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-2222-1004-0001-e00000000002', 'aabbccdd-2222-1004-0001-000000000000', 'translate_to_target', 'Translate to French: Expensive', 'Cher', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -2923,13 +2923,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-2222-1005-0000-000000000000', 'aabbccdd-2222-0000-0000-000000000000', 'Work & Social', 'Discuss jobs, hobbies, and make plans', 4, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-2222-1005-0001-000000000000', 'aabbccdd-2222-1005-0000-000000000000', 'Jobs & Professions', 'Jobs & Professions', 0, 5, 20),
-  ('aabbccdd-2222-1005-0002-000000000000', 'aabbccdd-2222-1005-0000-000000000000', 'Making Plans', 'Making Plans', 1, 5, 20),
-  ('aabbccdd-2222-1005-0003-000000000000', 'aabbccdd-2222-1005-0000-000000000000', 'Hobbies & Interests', 'Hobbies & Interests', 2, 5, 20),
-  ('aabbccdd-2222-1005-0004-000000000000', 'aabbccdd-2222-1005-0000-000000000000', 'Weather & Seasons', 'Weather & Seasons', 3, 5, 20),
-  ('aabbccdd-2222-1005-0005-000000000000', 'aabbccdd-2222-1005-0000-000000000000', 'Weekend Activities', 'Weekend Activities', 4, 5, 20),
-  ('aabbccdd-2222-1005-0006-000000000000', 'aabbccdd-2222-1005-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-2222-1005-0001-000000000000', 'aabbccdd-2222-1005-0000-000000000000', 'Jobs & Professions', 'Jobs & Professions', 0, 5),
+  ('aabbccdd-2222-1005-0002-000000000000', 'aabbccdd-2222-1005-0000-000000000000', 'Making Plans', 'Making Plans', 1, 5),
+  ('aabbccdd-2222-1005-0003-000000000000', 'aabbccdd-2222-1005-0000-000000000000', 'Hobbies & Interests', 'Hobbies & Interests', 2, 5),
+  ('aabbccdd-2222-1005-0004-000000000000', 'aabbccdd-2222-1005-0000-000000000000', 'Weather & Seasons', 'Weather & Seasons', 3, 5),
+  ('aabbccdd-2222-1005-0005-000000000000', 'aabbccdd-2222-1005-0000-000000000000', 'Weekend Activities', 'Weekend Activities', 4, 5),
+  ('aabbccdd-2222-1005-0006-000000000000', 'aabbccdd-2222-1005-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-2222-1005-0001-e00000000001', 'aabbccdd-2222-1005-0001-000000000000', 'multiple_choice', 'What does "Professeur" mean in English?', 'Teacher', '{"Teacher","Doctor","Office","To read"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-2222-1005-0001-e00000000002', 'aabbccdd-2222-1005-0001-000000000000', 'translate_to_target', 'Translate to French: Doctor', 'Médecin', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -2999,13 +2999,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-2222-1006-0000-000000000000', 'aabbccdd-2222-0000-0000-000000000000', 'Family & Friends', 'Talk about family and relationships', 5, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-2222-1006-0001-000000000000', 'aabbccdd-2222-1006-0000-000000000000', 'Family Members', 'Family Members', 0, 5, 20),
-  ('aabbccdd-2222-1006-0002-000000000000', 'aabbccdd-2222-1006-0000-000000000000', 'Describing People', 'Describing People', 1, 5, 20),
-  ('aabbccdd-2222-1006-0003-000000000000', 'aabbccdd-2222-1006-0000-000000000000', 'Ages & Birthdays', 'Ages & Birthdays', 2, 5, 20),
-  ('aabbccdd-2222-1006-0004-000000000000', 'aabbccdd-2222-1006-0000-000000000000', 'Pets & Animals', 'Pets & Animals', 3, 5, 20),
-  ('aabbccdd-2222-1006-0005-000000000000', 'aabbccdd-2222-1006-0000-000000000000', 'Family Activities', 'Family Activities', 4, 5, 20),
-  ('aabbccdd-2222-1006-0006-000000000000', 'aabbccdd-2222-1006-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-2222-1006-0001-000000000000', 'aabbccdd-2222-1006-0000-000000000000', 'Family Members', 'Family Members', 0, 5),
+  ('aabbccdd-2222-1006-0002-000000000000', 'aabbccdd-2222-1006-0000-000000000000', 'Describing People', 'Describing People', 1, 5),
+  ('aabbccdd-2222-1006-0003-000000000000', 'aabbccdd-2222-1006-0000-000000000000', 'Ages & Birthdays', 'Ages & Birthdays', 2, 5),
+  ('aabbccdd-2222-1006-0004-000000000000', 'aabbccdd-2222-1006-0000-000000000000', 'Pets & Animals', 'Pets & Animals', 3, 5),
+  ('aabbccdd-2222-1006-0005-000000000000', 'aabbccdd-2222-1006-0000-000000000000', 'Family Activities', 'Family Activities', 4, 5),
+  ('aabbccdd-2222-1006-0006-000000000000', 'aabbccdd-2222-1006-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-2222-1006-0001-e00000000001', 'aabbccdd-2222-1006-0001-000000000000', 'multiple_choice', 'What does "Mère" mean in English?', 'Mother', '{"Mother","Father","Sister","Brother"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-2222-1006-0001-e00000000002', 'aabbccdd-2222-1006-0001-000000000000', 'translate_to_target', 'Translate to French: Father', 'Père', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -3075,13 +3075,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-2222-1007-0000-000000000000', 'aabbccdd-2222-0000-0000-000000000000', 'Home & Rooms', 'Describe your house and furniture', 6, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-2222-1007-0001-000000000000', 'aabbccdd-2222-1007-0000-000000000000', 'Parts of the House', 'Parts of the House', 0, 5, 20),
-  ('aabbccdd-2222-1007-0002-000000000000', 'aabbccdd-2222-1007-0000-000000000000', 'Furniture', 'Furniture', 1, 5, 20),
-  ('aabbccdd-2222-1007-0003-000000000000', 'aabbccdd-2222-1007-0000-000000000000', 'In the Kitchen', 'In the Kitchen', 2, 5, 20),
-  ('aabbccdd-2222-1007-0004-000000000000', 'aabbccdd-2222-1007-0000-000000000000', 'Bathroom & Bedroom', 'Bathroom & Bedroom', 3, 5, 20),
-  ('aabbccdd-2222-1007-0005-000000000000', 'aabbccdd-2222-1007-0000-000000000000', 'Describing Your Home', 'Describing Your Home', 4, 5, 20),
-  ('aabbccdd-2222-1007-0006-000000000000', 'aabbccdd-2222-1007-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-2222-1007-0001-000000000000', 'aabbccdd-2222-1007-0000-000000000000', 'Parts of the House', 'Parts of the House', 0, 5),
+  ('aabbccdd-2222-1007-0002-000000000000', 'aabbccdd-2222-1007-0000-000000000000', 'Furniture', 'Furniture', 1, 5),
+  ('aabbccdd-2222-1007-0003-000000000000', 'aabbccdd-2222-1007-0000-000000000000', 'In the Kitchen', 'In the Kitchen', 2, 5),
+  ('aabbccdd-2222-1007-0004-000000000000', 'aabbccdd-2222-1007-0000-000000000000', 'Bathroom & Bedroom', 'Bathroom & Bedroom', 3, 5),
+  ('aabbccdd-2222-1007-0005-000000000000', 'aabbccdd-2222-1007-0000-000000000000', 'Describing Your Home', 'Describing Your Home', 4, 5),
+  ('aabbccdd-2222-1007-0006-000000000000', 'aabbccdd-2222-1007-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-2222-1007-0001-e00000000001', 'aabbccdd-2222-1007-0001-000000000000', 'multiple_choice', 'What does "Maison" mean in English?', 'House', '{"House","Room","Kitchen","Bathroom"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-2222-1007-0001-e00000000002', 'aabbccdd-2222-1007-0001-000000000000', 'translate_to_target', 'Translate to French: Room', 'Chambre', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -3151,13 +3151,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-2222-1008-0000-000000000000', 'aabbccdd-2222-0000-0000-000000000000', 'Health & Body', 'Body parts, health, and doctor visits', 7, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-2222-1008-0001-000000000000', 'aabbccdd-2222-1008-0000-000000000000', 'Body Parts', 'Body Parts', 0, 5, 20),
-  ('aabbccdd-2222-1008-0002-000000000000', 'aabbccdd-2222-1008-0000-000000000000', 'Feelings & Symptoms', 'Feelings & Symptoms', 1, 5, 20),
-  ('aabbccdd-2222-1008-0003-000000000000', 'aabbccdd-2222-1008-0000-000000000000', 'At the Doctor', 'At the Doctor', 2, 5, 20),
-  ('aabbccdd-2222-1008-0004-000000000000', 'aabbccdd-2222-1008-0000-000000000000', 'At the Pharmacy', 'At the Pharmacy', 3, 5, 20),
-  ('aabbccdd-2222-1008-0005-000000000000', 'aabbccdd-2222-1008-0000-000000000000', 'Healthy Habits', 'Healthy Habits', 4, 5, 20),
-  ('aabbccdd-2222-1008-0006-000000000000', 'aabbccdd-2222-1008-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-2222-1008-0001-000000000000', 'aabbccdd-2222-1008-0000-000000000000', 'Body Parts', 'Body Parts', 0, 5),
+  ('aabbccdd-2222-1008-0002-000000000000', 'aabbccdd-2222-1008-0000-000000000000', 'Feelings & Symptoms', 'Feelings & Symptoms', 1, 5),
+  ('aabbccdd-2222-1008-0003-000000000000', 'aabbccdd-2222-1008-0000-000000000000', 'At the Doctor', 'At the Doctor', 2, 5),
+  ('aabbccdd-2222-1008-0004-000000000000', 'aabbccdd-2222-1008-0000-000000000000', 'At the Pharmacy', 'At the Pharmacy', 3, 5),
+  ('aabbccdd-2222-1008-0005-000000000000', 'aabbccdd-2222-1008-0000-000000000000', 'Healthy Habits', 'Healthy Habits', 4, 5),
+  ('aabbccdd-2222-1008-0006-000000000000', 'aabbccdd-2222-1008-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-2222-1008-0001-e00000000001', 'aabbccdd-2222-1008-0001-000000000000', 'multiple_choice', 'What does "Tête" mean in English?', 'Head', '{"Head","Hand","Eye","Stomach"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-2222-1008-0001-e00000000002', 'aabbccdd-2222-1008-0001-000000000000', 'translate_to_target', 'Translate to French: Hand', 'Main', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -3231,7 +3231,7 @@ VALUES ('aabbccdd-2222-0000-0000-a20000000000', 'en', 'fr', 'French A2', 'French
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-2222-2001-0000-a20000000000', 'aabbccdd-2222-0000-0000-a20000000000', 'Family & Relationships', 'Describe family, relationships, and ages', 0, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-2222-2001-0001-a20000000000', 'aabbccdd-2222-2001-0000-a20000000000', 'Extended Family', 'Extended Family', 0, 7, 25),
   ('aabbccdd-2222-2001-0002-a20000000000', 'aabbccdd-2222-2001-0000-a20000000000', 'Describing Relationships', 'Describing Relationships', 1, 7, 25),
   ('aabbccdd-2222-2001-0003-a20000000000', 'aabbccdd-2222-2001-0000-a20000000000', 'Talking About Ages', 'Talking About Ages', 2, 7, 25),
@@ -3308,7 +3308,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-2222-2002-0000-a20000000000', 'aabbccdd-2222-0000-0000-a20000000000', 'Health & Wellness', 'Symptoms, doctor visits, pharmacy, feelings', 1, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-2222-2002-0001-a20000000000', 'aabbccdd-2222-2002-0000-a20000000000', 'Common Symptoms', 'Common Symptoms', 0, 7, 25),
   ('aabbccdd-2222-2002-0002-a20000000000', 'aabbccdd-2222-2002-0000-a20000000000', 'At the Doctor Office', 'At the Doctor Office', 1, 7, 25),
   ('aabbccdd-2222-2002-0003-a20000000000', 'aabbccdd-2222-2002-0000-a20000000000', 'At the Pharmacy', 'At the Pharmacy', 2, 7, 25),
@@ -3385,7 +3385,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-2222-2003-0000-a20000000000', 'aabbccdd-2222-0000-0000-a20000000000', 'At Home', 'Furniture, chores, describing your home', 2, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-2222-2003-0001-a20000000000', 'aabbccdd-2222-2003-0000-a20000000000', 'Rooms & Furniture', 'Rooms & Furniture', 0, 7, 25),
   ('aabbccdd-2222-2003-0002-a20000000000', 'aabbccdd-2222-2003-0000-a20000000000', 'Household Chores', 'Household Chores', 1, 7, 25),
   ('aabbccdd-2222-2003-0003-a20000000000', 'aabbccdd-2222-2003-0000-a20000000000', 'Moving & Housing', 'Moving & Housing', 2, 7, 25),
@@ -3462,7 +3462,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-2222-2004-0000-a20000000000', 'aabbccdd-2222-0000-0000-a20000000000', 'Emotions & Personality', 'Adjectives for people, moods, character', 3, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-2222-2004-0001-a20000000000', 'aabbccdd-2222-2004-0000-a20000000000', 'Positive Emotions', 'Positive Emotions', 0, 7, 25),
   ('aabbccdd-2222-2004-0002-a20000000000', 'aabbccdd-2222-2004-0000-a20000000000', 'Negative Emotions', 'Negative Emotions', 1, 7, 25),
   ('aabbccdd-2222-2004-0003-a20000000000', 'aabbccdd-2222-2004-0000-a20000000000', 'Personality Traits', 'Personality Traits', 2, 7, 25),
@@ -3539,7 +3539,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-2222-2005-0000-a20000000000', 'aabbccdd-2222-0000-0000-a20000000000', 'Past Tense Basics', 'Yesterday, last week, simple past actions', 4, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-2222-2005-0001-a20000000000', 'aabbccdd-2222-2005-0000-a20000000000', 'What Happened Yesterday', 'What Happened Yesterday', 0, 7, 25),
   ('aabbccdd-2222-2005-0002-a20000000000', 'aabbccdd-2222-2005-0000-a20000000000', 'Last Weekend', 'Last Weekend', 1, 7, 25),
   ('aabbccdd-2222-2005-0003-a20000000000', 'aabbccdd-2222-2005-0000-a20000000000', 'A Memorable Trip', 'A Memorable Trip', 2, 7, 25),
@@ -3616,7 +3616,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-2222-2006-0000-a20000000000', 'aabbccdd-2222-0000-0000-a20000000000', 'Future Plans', 'Will, going to, plans, intentions', 5, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-2222-2006-0001-a20000000000', 'aabbccdd-2222-2006-0000-a20000000000', 'Plans for Tomorrow', 'Plans for Tomorrow', 0, 7, 25),
   ('aabbccdd-2222-2006-0002-a20000000000', 'aabbccdd-2222-2006-0000-a20000000000', 'Next Vacation', 'Next Vacation', 1, 7, 25),
   ('aabbccdd-2222-2006-0003-a20000000000', 'aabbccdd-2222-2006-0000-a20000000000', 'Life Goals', 'Life Goals', 2, 7, 25),
@@ -3693,7 +3693,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-2222-2007-0000-a20000000000', 'aabbccdd-2222-0000-0000-a20000000000', 'Comparisons', 'Bigger, smaller, better, more expensive', 6, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-2222-2007-0001-a20000000000', 'aabbccdd-2222-2007-0000-a20000000000', 'Comparing Things', 'Comparing Things', 0, 7, 25),
   ('aabbccdd-2222-2007-0002-a20000000000', 'aabbccdd-2222-2007-0000-a20000000000', 'Comparing People', 'Comparing People', 1, 7, 25),
   ('aabbccdd-2222-2007-0003-a20000000000', 'aabbccdd-2222-2007-0000-a20000000000', 'Superlatives', 'Superlatives', 2, 7, 25),
@@ -3770,7 +3770,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-2222-2008-0000-a20000000000', 'aabbccdd-2222-0000-0000-a20000000000', 'Cultural Topics', 'Holidays, traditions, celebrations', 7, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-2222-2008-0001-a20000000000', 'aabbccdd-2222-2008-0000-a20000000000', 'National Holidays', 'National Holidays', 0, 7, 25),
   ('aabbccdd-2222-2008-0002-a20000000000', 'aabbccdd-2222-2008-0000-a20000000000', 'Food Traditions', 'Food Traditions', 1, 7, 25),
   ('aabbccdd-2222-2008-0003-a20000000000', 'aabbccdd-2222-2008-0000-a20000000000', 'Music & Dance', 'Music & Dance', 2, 7, 25),
@@ -3851,7 +3851,7 @@ VALUES ('aabbccdd-2222-0000-0000-b10000000000', 'en', 'fr', 'French B1', 'French
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-2222-3001-0000-b10000000000', 'aabbccdd-2222-0000-0000-b10000000000', 'Opinions & Current Events', 'Agree/disagree, news, society', 0, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-2222-3001-0001-b10000000000', 'aabbccdd-2222-3001-0000-b10000000000', 'Expressing Opinions', 'Expressing Opinions', 0, 10, 30),
   ('aabbccdd-2222-3001-0002-b10000000000', 'aabbccdd-2222-3001-0000-b10000000000', 'Agreeing & Disagreeing', 'Agreeing & Disagreeing', 1, 10, 30),
   ('aabbccdd-2222-3001-0003-b10000000000', 'aabbccdd-2222-3001-0000-b10000000000', 'Current Events', 'Current Events', 2, 10, 30),
@@ -3940,7 +3940,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-2222-3002-0000-b10000000000', 'aabbccdd-2222-0000-0000-b10000000000', 'Work & Career', 'Interviews, meetings, emails, presentations', 1, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-2222-3002-0001-b10000000000', 'aabbccdd-2222-3002-0000-b10000000000', 'Job Interviews', 'Job Interviews', 0, 10, 30),
   ('aabbccdd-2222-3002-0002-b10000000000', 'aabbccdd-2222-3002-0000-b10000000000', 'Office Communication', 'Office Communication', 1, 10, 30),
   ('aabbccdd-2222-3002-0003-b10000000000', 'aabbccdd-2222-3002-0000-b10000000000', 'Meetings', 'Meetings', 2, 10, 30),
@@ -4029,7 +4029,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-2222-3003-0000-b10000000000', 'aabbccdd-2222-0000-0000-b10000000000', 'Travel & Adventure', 'Booking, airports, hotels, experiences', 2, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-2222-3003-0001-b10000000000', 'aabbccdd-2222-3003-0000-b10000000000', 'Booking Travel', 'Booking Travel', 0, 10, 30),
   ('aabbccdd-2222-3003-0002-b10000000000', 'aabbccdd-2222-3003-0000-b10000000000', 'At the Airport', 'At the Airport', 1, 10, 30),
   ('aabbccdd-2222-3003-0003-b10000000000', 'aabbccdd-2222-3003-0000-b10000000000', 'Hotel Check-in', 'Hotel Check-in', 2, 10, 30),
@@ -4118,7 +4118,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-2222-3004-0000-b10000000000', 'aabbccdd-2222-0000-0000-b10000000000', 'Environment & Nature', 'Climate, animals, conservation', 3, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-2222-3004-0001-b10000000000', 'aabbccdd-2222-3004-0000-b10000000000', 'Climate & Weather', 'Climate & Weather', 0, 10, 30),
   ('aabbccdd-2222-3004-0002-b10000000000', 'aabbccdd-2222-3004-0000-b10000000000', 'Wildlife', 'Wildlife', 1, 10, 30),
   ('aabbccdd-2222-3004-0003-b10000000000', 'aabbccdd-2222-3004-0000-b10000000000', 'Conservation', 'Conservation', 2, 10, 30),
@@ -4207,7 +4207,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-2222-3005-0000-b10000000000', 'aabbccdd-2222-0000-0000-b10000000000', 'Technology & Media', 'Internet, social media, devices', 4, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-2222-3005-0001-b10000000000', 'aabbccdd-2222-3005-0000-b10000000000', 'Internet & Social Media', 'Internet & Social Media', 0, 10, 30),
   ('aabbccdd-2222-3005-0002-b10000000000', 'aabbccdd-2222-3005-0000-b10000000000', 'Smartphones & Apps', 'Smartphones & Apps', 1, 10, 30),
   ('aabbccdd-2222-3005-0003-b10000000000', 'aabbccdd-2222-3005-0000-b10000000000', 'Digital Communication', 'Digital Communication', 2, 10, 30),
@@ -4296,7 +4296,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-2222-3006-0000-b10000000000', 'aabbccdd-2222-0000-0000-b10000000000', 'Storytelling', 'Narrative tenses, sequencing, past continuous', 5, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-2222-3006-0001-b10000000000', 'aabbccdd-2222-3006-0000-b10000000000', 'Telling a Story', 'Telling a Story', 0, 10, 30),
   ('aabbccdd-2222-3006-0002-b10000000000', 'aabbccdd-2222-3006-0000-b10000000000', 'Sequencing Events', 'Sequencing Events', 1, 10, 30),
   ('aabbccdd-2222-3006-0003-b10000000000', 'aabbccdd-2222-3006-0000-b10000000000', 'Past Continuous', 'Past Continuous', 2, 10, 30),
@@ -4385,7 +4385,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-2222-3007-0000-b10000000000', 'aabbccdd-2222-0000-0000-b10000000000', 'Hypothetical Situations', 'Conditionals, would/could/should', 6, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-2222-3007-0001-b10000000000', 'aabbccdd-2222-3007-0000-b10000000000', 'First Conditional', 'First Conditional', 0, 10, 30),
   ('aabbccdd-2222-3007-0002-b10000000000', 'aabbccdd-2222-3007-0000-b10000000000', 'Second Conditional', 'Second Conditional', 1, 10, 30),
   ('aabbccdd-2222-3007-0003-b10000000000', 'aabbccdd-2222-3007-0000-b10000000000', 'Giving Advice', 'Giving Advice', 2, 10, 30),
@@ -4474,7 +4474,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-2222-3008-0000-b10000000000', 'aabbccdd-2222-0000-0000-b10000000000', 'Formal vs. Informal', 'Register, polite requests, slang', 7, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-2222-3008-0001-b10000000000', 'aabbccdd-2222-3008-0000-b10000000000', 'Formal Requests', 'Formal Requests', 0, 10, 30),
   ('aabbccdd-2222-3008-0002-b10000000000', 'aabbccdd-2222-3008-0000-b10000000000', 'Informal Speech', 'Informal Speech', 1, 10, 30),
   ('aabbccdd-2222-3008-0003-b10000000000', 'aabbccdd-2222-3008-0000-b10000000000', 'Writing Emails', 'Writing Emails', 2, 10, 30),
@@ -4629,7 +4629,7 @@ VALUES ('aabbccdd-2222-0000-0000-b20000000000', 'en', 'fr', 'French B2', 'French
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-2222-4001-0000-b20000000000', 'aabbccdd-2222-0000-0000-b20000000000', 'Abstract Ideas', 'Philosophy, concepts, beliefs', 0, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-2222-4001-0001-b20000000000', 'aabbccdd-2222-4001-0000-b20000000000', 'Philosophy of Life', 'Philosophy of Life', 0, 12, 40),
   ('aabbccdd-2222-4001-0002-b20000000000', 'aabbccdd-2222-4001-0000-b20000000000', 'Beliefs & Values', 'Beliefs & Values', 1, 12, 40),
   ('aabbccdd-2222-4001-0003-b20000000000', 'aabbccdd-2222-4001-0000-b20000000000', 'Abstract Concepts', 'Abstract Concepts', 2, 12, 40),
@@ -4718,7 +4718,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-2222-4002-0000-b20000000000', 'aabbccdd-2222-0000-0000-b20000000000', 'Debate & Argumentation', 'Persuasion, counterarguments, rhetoric', 1, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-2222-4002-0001-b20000000000', 'aabbccdd-2222-4002-0000-b20000000000', 'Building Arguments', 'Building Arguments', 0, 12, 40),
   ('aabbccdd-2222-4002-0002-b20000000000', 'aabbccdd-2222-4002-0000-b20000000000', 'Counterarguments', 'Counterarguments', 1, 12, 40),
   ('aabbccdd-2222-4002-0003-b20000000000', 'aabbccdd-2222-4002-0000-b20000000000', 'Persuasive Language', 'Persuasive Language', 2, 12, 40),
@@ -4807,7 +4807,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-2222-4003-0000-b20000000000', 'aabbccdd-2222-0000-0000-b20000000000', 'Professional Communication', 'Formal writing, presentations, negotiations', 2, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-2222-4003-0001-b20000000000', 'aabbccdd-2222-4003-0000-b20000000000', 'Business Emails', 'Business Emails', 0, 12, 40),
   ('aabbccdd-2222-4003-0002-b20000000000', 'aabbccdd-2222-4003-0000-b20000000000', 'Presentations', 'Presentations', 1, 12, 40),
   ('aabbccdd-2222-4003-0003-b20000000000', 'aabbccdd-2222-4003-0000-b20000000000', 'Negotiations', 'Negotiations', 2, 12, 40),
@@ -4896,7 +4896,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-2222-4004-0000-b20000000000', 'aabbccdd-2222-0000-0000-b20000000000', 'Literature & Arts', 'Describing art, reviews, literary analysis', 3, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-2222-4004-0001-b20000000000', 'aabbccdd-2222-4004-0000-b20000000000', 'Describing Art', 'Describing Art', 0, 12, 40),
   ('aabbccdd-2222-4004-0002-b20000000000', 'aabbccdd-2222-4004-0000-b20000000000', 'Book Reviews', 'Book Reviews', 1, 12, 40),
   ('aabbccdd-2222-4004-0003-b20000000000', 'aabbccdd-2222-4004-0000-b20000000000', 'Film & Theater', 'Film & Theater', 2, 12, 40),
@@ -4985,7 +4985,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-2222-4005-0000-b20000000000', 'aabbccdd-2222-0000-0000-b20000000000', 'Idiomatic Expressions', 'Idioms, proverbs, collocations', 4, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-2222-4005-0001-b20000000000', 'aabbccdd-2222-4005-0000-b20000000000', 'Common Idioms', 'Common Idioms', 0, 12, 40),
   ('aabbccdd-2222-4005-0002-b20000000000', 'aabbccdd-2222-4005-0000-b20000000000', 'Proverbs', 'Proverbs', 1, 12, 40),
   ('aabbccdd-2222-4005-0003-b20000000000', 'aabbccdd-2222-4005-0000-b20000000000', 'Collocations', 'Collocations', 2, 12, 40),
@@ -5074,7 +5074,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-2222-4006-0000-b20000000000', 'aabbccdd-2222-0000-0000-b20000000000', 'Complex Grammar', 'Subjunctive, reported speech, passive voice', 5, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-2222-4006-0001-b20000000000', 'aabbccdd-2222-4006-0000-b20000000000', 'Subjunctive Mood', 'Subjunctive Mood', 0, 12, 40),
   ('aabbccdd-2222-4006-0002-b20000000000', 'aabbccdd-2222-4006-0000-b20000000000', 'Reported Speech', 'Reported Speech', 1, 12, 40),
   ('aabbccdd-2222-4006-0003-b20000000000', 'aabbccdd-2222-4006-0000-b20000000000', 'Passive Voice', 'Passive Voice', 2, 12, 40),
@@ -5241,13 +5241,13 @@ VALUES ('aabbccdd-3333-0000-0000-000000000000', 'en', 'de', 'German A1', 'German
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-3333-1001-0000-000000000000', 'aabbccdd-3333-0000-0000-000000000000', 'Greetings & Basics', 'Learn greetings, introductions, and polite expressions', 0, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-3333-1001-0001-000000000000', 'aabbccdd-3333-1001-0000-000000000000', 'Core Vocabulary', 'Core Vocabulary', 0, 5, 20),
-  ('aabbccdd-3333-1001-0002-000000000000', 'aabbccdd-3333-1001-0000-000000000000', 'Phrases & Sentences', 'Phrases & Sentences', 1, 5, 20),
-  ('aabbccdd-3333-1001-0003-000000000000', 'aabbccdd-3333-1001-0000-000000000000', 'Listening & Recognition', 'Listening & Recognition', 2, 5, 20),
-  ('aabbccdd-3333-1001-0004-000000000000', 'aabbccdd-3333-1001-0000-000000000000', 'Speaking Practice', 'Speaking Practice', 3, 5, 20),
-  ('aabbccdd-3333-1001-0005-000000000000', 'aabbccdd-3333-1001-0000-000000000000', 'Reading Simple Texts', 'Reading Simple Texts', 4, 5, 20),
-  ('aabbccdd-3333-1001-0006-000000000000', 'aabbccdd-3333-1001-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-3333-1001-0001-000000000000', 'aabbccdd-3333-1001-0000-000000000000', 'Core Vocabulary', 'Core Vocabulary', 0, 5),
+  ('aabbccdd-3333-1001-0002-000000000000', 'aabbccdd-3333-1001-0000-000000000000', 'Phrases & Sentences', 'Phrases & Sentences', 1, 5),
+  ('aabbccdd-3333-1001-0003-000000000000', 'aabbccdd-3333-1001-0000-000000000000', 'Listening & Recognition', 'Listening & Recognition', 2, 5),
+  ('aabbccdd-3333-1001-0004-000000000000', 'aabbccdd-3333-1001-0000-000000000000', 'Speaking Practice', 'Speaking Practice', 3, 5),
+  ('aabbccdd-3333-1001-0005-000000000000', 'aabbccdd-3333-1001-0000-000000000000', 'Reading Simple Texts', 'Reading Simple Texts', 4, 5),
+  ('aabbccdd-3333-1001-0006-000000000000', 'aabbccdd-3333-1001-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-3333-1001-0001-e00000000001', 'aabbccdd-3333-1001-0001-000000000000', 'multiple_choice', 'What does "Hallo" mean in English?', 'Hello', '{"Hello","Goodbye","Good morning","Good evening"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-3333-1001-0001-e00000000002', 'aabbccdd-3333-1001-0001-000000000000', 'translate_to_target', 'Translate to German: Goodbye', 'Auf Wiedersehen', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -5317,13 +5317,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-3333-1002-0000-000000000000', 'aabbccdd-3333-0000-0000-000000000000', 'Food & Dining', 'Order food and drinks at a restaurant', 1, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-3333-1002-0001-000000000000', 'aabbccdd-3333-1002-0000-000000000000', 'Restaurant Basics', 'Restaurant Basics', 0, 5, 20),
-  ('aabbccdd-3333-1002-0002-000000000000', 'aabbccdd-3333-1002-0000-000000000000', 'Common Foods', 'Common Foods', 1, 5, 20),
-  ('aabbccdd-3333-1002-0003-000000000000', 'aabbccdd-3333-1002-0000-000000000000', 'Drinks & Beverages', 'Drinks & Beverages', 2, 5, 20),
-  ('aabbccdd-3333-1002-0004-000000000000', 'aabbccdd-3333-1002-0000-000000000000', 'Describing Taste', 'Describing Taste', 3, 5, 20),
-  ('aabbccdd-3333-1002-0005-000000000000', 'aabbccdd-3333-1002-0000-000000000000', 'Full Meal Order', 'Full Meal Order', 4, 5, 20),
-  ('aabbccdd-3333-1002-0006-000000000000', 'aabbccdd-3333-1002-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-3333-1002-0001-000000000000', 'aabbccdd-3333-1002-0000-000000000000', 'Restaurant Basics', 'Restaurant Basics', 0, 5),
+  ('aabbccdd-3333-1002-0002-000000000000', 'aabbccdd-3333-1002-0000-000000000000', 'Common Foods', 'Common Foods', 1, 5),
+  ('aabbccdd-3333-1002-0003-000000000000', 'aabbccdd-3333-1002-0000-000000000000', 'Drinks & Beverages', 'Drinks & Beverages', 2, 5),
+  ('aabbccdd-3333-1002-0004-000000000000', 'aabbccdd-3333-1002-0000-000000000000', 'Describing Taste', 'Describing Taste', 3, 5),
+  ('aabbccdd-3333-1002-0005-000000000000', 'aabbccdd-3333-1002-0000-000000000000', 'Full Meal Order', 'Full Meal Order', 4, 5),
+  ('aabbccdd-3333-1002-0006-000000000000', 'aabbccdd-3333-1002-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-3333-1002-0001-e00000000001', 'aabbccdd-3333-1002-0001-000000000000', 'multiple_choice', 'What does "Wasser" mean in English?', 'Water', '{"Water","Chicken","Bread","Apple"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-3333-1002-0001-e00000000002', 'aabbccdd-3333-1002-0001-000000000000', 'translate_to_target', 'Translate to German: Chicken', 'Hähnchen', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -5393,13 +5393,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-3333-1003-0000-000000000000', 'aabbccdd-3333-0000-0000-000000000000', 'Getting Around', 'Ask for directions and use transportation', 2, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-3333-1003-0001-000000000000', 'aabbccdd-3333-1003-0000-000000000000', 'Asking Directions', 'Asking Directions', 0, 5, 20),
-  ('aabbccdd-3333-1003-0002-000000000000', 'aabbccdd-3333-1003-0000-000000000000', 'Transportation', 'Transportation', 1, 5, 20),
-  ('aabbccdd-3333-1003-0003-000000000000', 'aabbccdd-3333-1003-0000-000000000000', 'Places in Town', 'Places in Town', 2, 5, 20),
-  ('aabbccdd-3333-1003-0004-000000000000', 'aabbccdd-3333-1003-0000-000000000000', 'Buying Tickets', 'Buying Tickets', 3, 5, 20),
-  ('aabbccdd-3333-1003-0005-000000000000', 'aabbccdd-3333-1003-0000-000000000000', 'At the Airport', 'At the Airport', 4, 5, 20),
-  ('aabbccdd-3333-1003-0006-000000000000', 'aabbccdd-3333-1003-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-3333-1003-0001-000000000000', 'aabbccdd-3333-1003-0000-000000000000', 'Asking Directions', 'Asking Directions', 0, 5),
+  ('aabbccdd-3333-1003-0002-000000000000', 'aabbccdd-3333-1003-0000-000000000000', 'Transportation', 'Transportation', 1, 5),
+  ('aabbccdd-3333-1003-0003-000000000000', 'aabbccdd-3333-1003-0000-000000000000', 'Places in Town', 'Places in Town', 2, 5),
+  ('aabbccdd-3333-1003-0004-000000000000', 'aabbccdd-3333-1003-0000-000000000000', 'Buying Tickets', 'Buying Tickets', 3, 5),
+  ('aabbccdd-3333-1003-0005-000000000000', 'aabbccdd-3333-1003-0000-000000000000', 'At the Airport', 'At the Airport', 4, 5),
+  ('aabbccdd-3333-1003-0006-000000000000', 'aabbccdd-3333-1003-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-3333-1003-0001-e00000000001', 'aabbccdd-3333-1003-0001-000000000000', 'multiple_choice', 'What does "Links" mean in English?', 'Left', '{"Left","Right","Straight","Bus"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-3333-1003-0001-e00000000002', 'aabbccdd-3333-1003-0001-000000000000', 'translate_to_target', 'Translate to German: Right', 'Rechts', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -5469,13 +5469,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-3333-1004-0000-000000000000', 'aabbccdd-3333-0000-0000-000000000000', 'Daily Life & Shopping', 'Talk about routines and go shopping', 3, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-3333-1004-0001-000000000000', 'aabbccdd-3333-1004-0000-000000000000', 'Daily Routine', 'Daily Routine', 0, 5, 20),
-  ('aabbccdd-3333-1004-0002-000000000000', 'aabbccdd-3333-1004-0000-000000000000', 'Shopping Basics', 'Shopping Basics', 1, 5, 20),
-  ('aabbccdd-3333-1004-0003-000000000000', 'aabbccdd-3333-1004-0000-000000000000', 'Clothes & Colors', 'Clothes & Colors', 2, 5, 20),
-  ('aabbccdd-3333-1004-0004-000000000000', 'aabbccdd-3333-1004-0000-000000000000', 'Time & Schedule', 'Time & Schedule', 3, 5, 20),
-  ('aabbccdd-3333-1004-0005-000000000000', 'aabbccdd-3333-1004-0000-000000000000', 'At the Market', 'At the Market', 4, 5, 20),
-  ('aabbccdd-3333-1004-0006-000000000000', 'aabbccdd-3333-1004-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-3333-1004-0001-000000000000', 'aabbccdd-3333-1004-0000-000000000000', 'Daily Routine', 'Daily Routine', 0, 5),
+  ('aabbccdd-3333-1004-0002-000000000000', 'aabbccdd-3333-1004-0000-000000000000', 'Shopping Basics', 'Shopping Basics', 1, 5),
+  ('aabbccdd-3333-1004-0003-000000000000', 'aabbccdd-3333-1004-0000-000000000000', 'Clothes & Colors', 'Clothes & Colors', 2, 5),
+  ('aabbccdd-3333-1004-0004-000000000000', 'aabbccdd-3333-1004-0000-000000000000', 'Time & Schedule', 'Time & Schedule', 3, 5),
+  ('aabbccdd-3333-1004-0005-000000000000', 'aabbccdd-3333-1004-0000-000000000000', 'At the Market', 'At the Market', 4, 5),
+  ('aabbccdd-3333-1004-0006-000000000000', 'aabbccdd-3333-1004-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-3333-1004-0001-e00000000001', 'aabbccdd-3333-1004-0001-000000000000', 'multiple_choice', 'What does "Frühstück" mean in English?', 'Breakfast', '{"Breakfast","Expensive","Cheap","Red"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-3333-1004-0001-e00000000002', 'aabbccdd-3333-1004-0001-000000000000', 'translate_to_target', 'Translate to German: Expensive', 'Teuer', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -5545,13 +5545,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-3333-1005-0000-000000000000', 'aabbccdd-3333-0000-0000-000000000000', 'Work & Social', 'Discuss jobs, hobbies, and make plans', 4, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-3333-1005-0001-000000000000', 'aabbccdd-3333-1005-0000-000000000000', 'Jobs & Professions', 'Jobs & Professions', 0, 5, 20),
-  ('aabbccdd-3333-1005-0002-000000000000', 'aabbccdd-3333-1005-0000-000000000000', 'Making Plans', 'Making Plans', 1, 5, 20),
-  ('aabbccdd-3333-1005-0003-000000000000', 'aabbccdd-3333-1005-0000-000000000000', 'Hobbies & Interests', 'Hobbies & Interests', 2, 5, 20),
-  ('aabbccdd-3333-1005-0004-000000000000', 'aabbccdd-3333-1005-0000-000000000000', 'Weather & Seasons', 'Weather & Seasons', 3, 5, 20),
-  ('aabbccdd-3333-1005-0005-000000000000', 'aabbccdd-3333-1005-0000-000000000000', 'Weekend Activities', 'Weekend Activities', 4, 5, 20),
-  ('aabbccdd-3333-1005-0006-000000000000', 'aabbccdd-3333-1005-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-3333-1005-0001-000000000000', 'aabbccdd-3333-1005-0000-000000000000', 'Jobs & Professions', 'Jobs & Professions', 0, 5),
+  ('aabbccdd-3333-1005-0002-000000000000', 'aabbccdd-3333-1005-0000-000000000000', 'Making Plans', 'Making Plans', 1, 5),
+  ('aabbccdd-3333-1005-0003-000000000000', 'aabbccdd-3333-1005-0000-000000000000', 'Hobbies & Interests', 'Hobbies & Interests', 2, 5),
+  ('aabbccdd-3333-1005-0004-000000000000', 'aabbccdd-3333-1005-0000-000000000000', 'Weather & Seasons', 'Weather & Seasons', 3, 5),
+  ('aabbccdd-3333-1005-0005-000000000000', 'aabbccdd-3333-1005-0000-000000000000', 'Weekend Activities', 'Weekend Activities', 4, 5),
+  ('aabbccdd-3333-1005-0006-000000000000', 'aabbccdd-3333-1005-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-3333-1005-0001-e00000000001', 'aabbccdd-3333-1005-0001-000000000000', 'multiple_choice', 'What does "Lehrer" mean in English?', 'Teacher', '{"Teacher","Doctor","Office","To read"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-3333-1005-0001-e00000000002', 'aabbccdd-3333-1005-0001-000000000000', 'translate_to_target', 'Translate to German: Doctor', 'Arzt', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -5621,13 +5621,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-3333-1006-0000-000000000000', 'aabbccdd-3333-0000-0000-000000000000', 'Family & Friends', 'Talk about family and relationships', 5, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-3333-1006-0001-000000000000', 'aabbccdd-3333-1006-0000-000000000000', 'Family Members', 'Family Members', 0, 5, 20),
-  ('aabbccdd-3333-1006-0002-000000000000', 'aabbccdd-3333-1006-0000-000000000000', 'Describing People', 'Describing People', 1, 5, 20),
-  ('aabbccdd-3333-1006-0003-000000000000', 'aabbccdd-3333-1006-0000-000000000000', 'Ages & Birthdays', 'Ages & Birthdays', 2, 5, 20),
-  ('aabbccdd-3333-1006-0004-000000000000', 'aabbccdd-3333-1006-0000-000000000000', 'Pets & Animals', 'Pets & Animals', 3, 5, 20),
-  ('aabbccdd-3333-1006-0005-000000000000', 'aabbccdd-3333-1006-0000-000000000000', 'Family Activities', 'Family Activities', 4, 5, 20),
-  ('aabbccdd-3333-1006-0006-000000000000', 'aabbccdd-3333-1006-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-3333-1006-0001-000000000000', 'aabbccdd-3333-1006-0000-000000000000', 'Family Members', 'Family Members', 0, 5),
+  ('aabbccdd-3333-1006-0002-000000000000', 'aabbccdd-3333-1006-0000-000000000000', 'Describing People', 'Describing People', 1, 5),
+  ('aabbccdd-3333-1006-0003-000000000000', 'aabbccdd-3333-1006-0000-000000000000', 'Ages & Birthdays', 'Ages & Birthdays', 2, 5),
+  ('aabbccdd-3333-1006-0004-000000000000', 'aabbccdd-3333-1006-0000-000000000000', 'Pets & Animals', 'Pets & Animals', 3, 5),
+  ('aabbccdd-3333-1006-0005-000000000000', 'aabbccdd-3333-1006-0000-000000000000', 'Family Activities', 'Family Activities', 4, 5),
+  ('aabbccdd-3333-1006-0006-000000000000', 'aabbccdd-3333-1006-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-3333-1006-0001-e00000000001', 'aabbccdd-3333-1006-0001-000000000000', 'multiple_choice', 'What does "Mutter" mean in English?', 'Mother', '{"Mother","Father","Sister","Brother"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-3333-1006-0001-e00000000002', 'aabbccdd-3333-1006-0001-000000000000', 'translate_to_target', 'Translate to German: Father', 'Vater', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -5697,13 +5697,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-3333-1007-0000-000000000000', 'aabbccdd-3333-0000-0000-000000000000', 'Home & Rooms', 'Describe your house and furniture', 6, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-3333-1007-0001-000000000000', 'aabbccdd-3333-1007-0000-000000000000', 'Parts of the House', 'Parts of the House', 0, 5, 20),
-  ('aabbccdd-3333-1007-0002-000000000000', 'aabbccdd-3333-1007-0000-000000000000', 'Furniture', 'Furniture', 1, 5, 20),
-  ('aabbccdd-3333-1007-0003-000000000000', 'aabbccdd-3333-1007-0000-000000000000', 'In the Kitchen', 'In the Kitchen', 2, 5, 20),
-  ('aabbccdd-3333-1007-0004-000000000000', 'aabbccdd-3333-1007-0000-000000000000', 'Bathroom & Bedroom', 'Bathroom & Bedroom', 3, 5, 20),
-  ('aabbccdd-3333-1007-0005-000000000000', 'aabbccdd-3333-1007-0000-000000000000', 'Describing Your Home', 'Describing Your Home', 4, 5, 20),
-  ('aabbccdd-3333-1007-0006-000000000000', 'aabbccdd-3333-1007-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-3333-1007-0001-000000000000', 'aabbccdd-3333-1007-0000-000000000000', 'Parts of the House', 'Parts of the House', 0, 5),
+  ('aabbccdd-3333-1007-0002-000000000000', 'aabbccdd-3333-1007-0000-000000000000', 'Furniture', 'Furniture', 1, 5),
+  ('aabbccdd-3333-1007-0003-000000000000', 'aabbccdd-3333-1007-0000-000000000000', 'In the Kitchen', 'In the Kitchen', 2, 5),
+  ('aabbccdd-3333-1007-0004-000000000000', 'aabbccdd-3333-1007-0000-000000000000', 'Bathroom & Bedroom', 'Bathroom & Bedroom', 3, 5),
+  ('aabbccdd-3333-1007-0005-000000000000', 'aabbccdd-3333-1007-0000-000000000000', 'Describing Your Home', 'Describing Your Home', 4, 5),
+  ('aabbccdd-3333-1007-0006-000000000000', 'aabbccdd-3333-1007-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-3333-1007-0001-e00000000001', 'aabbccdd-3333-1007-0001-000000000000', 'multiple_choice', 'What does "Haus" mean in English?', 'House', '{"House","Room","Kitchen","Bathroom"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-3333-1007-0001-e00000000002', 'aabbccdd-3333-1007-0001-000000000000', 'translate_to_target', 'Translate to German: Room', 'Zimmer', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -5773,13 +5773,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-3333-1008-0000-000000000000', 'aabbccdd-3333-0000-0000-000000000000', 'Health & Body', 'Body parts, health, and doctor visits', 7, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-3333-1008-0001-000000000000', 'aabbccdd-3333-1008-0000-000000000000', 'Body Parts', 'Body Parts', 0, 5, 20),
-  ('aabbccdd-3333-1008-0002-000000000000', 'aabbccdd-3333-1008-0000-000000000000', 'Feelings & Symptoms', 'Feelings & Symptoms', 1, 5, 20),
-  ('aabbccdd-3333-1008-0003-000000000000', 'aabbccdd-3333-1008-0000-000000000000', 'At the Doctor', 'At the Doctor', 2, 5, 20),
-  ('aabbccdd-3333-1008-0004-000000000000', 'aabbccdd-3333-1008-0000-000000000000', 'At the Pharmacy', 'At the Pharmacy', 3, 5, 20),
-  ('aabbccdd-3333-1008-0005-000000000000', 'aabbccdd-3333-1008-0000-000000000000', 'Healthy Habits', 'Healthy Habits', 4, 5, 20),
-  ('aabbccdd-3333-1008-0006-000000000000', 'aabbccdd-3333-1008-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-3333-1008-0001-000000000000', 'aabbccdd-3333-1008-0000-000000000000', 'Body Parts', 'Body Parts', 0, 5),
+  ('aabbccdd-3333-1008-0002-000000000000', 'aabbccdd-3333-1008-0000-000000000000', 'Feelings & Symptoms', 'Feelings & Symptoms', 1, 5),
+  ('aabbccdd-3333-1008-0003-000000000000', 'aabbccdd-3333-1008-0000-000000000000', 'At the Doctor', 'At the Doctor', 2, 5),
+  ('aabbccdd-3333-1008-0004-000000000000', 'aabbccdd-3333-1008-0000-000000000000', 'At the Pharmacy', 'At the Pharmacy', 3, 5),
+  ('aabbccdd-3333-1008-0005-000000000000', 'aabbccdd-3333-1008-0000-000000000000', 'Healthy Habits', 'Healthy Habits', 4, 5),
+  ('aabbccdd-3333-1008-0006-000000000000', 'aabbccdd-3333-1008-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-3333-1008-0001-e00000000001', 'aabbccdd-3333-1008-0001-000000000000', 'multiple_choice', 'What does "Kopf" mean in English?', 'Head', '{"Head","Hand","Eye","Stomach"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-3333-1008-0001-e00000000002', 'aabbccdd-3333-1008-0001-000000000000', 'translate_to_target', 'Translate to German: Hand', 'Hand', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -5853,7 +5853,7 @@ VALUES ('aabbccdd-3333-0000-0000-a20000000000', 'en', 'de', 'German A2', 'German
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-3333-2001-0000-a20000000000', 'aabbccdd-3333-0000-0000-a20000000000', 'Family & Relationships', 'Describe family, relationships, and ages', 0, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-3333-2001-0001-a20000000000', 'aabbccdd-3333-2001-0000-a20000000000', 'Extended Family', 'Extended Family', 0, 7, 25),
   ('aabbccdd-3333-2001-0002-a20000000000', 'aabbccdd-3333-2001-0000-a20000000000', 'Describing Relationships', 'Describing Relationships', 1, 7, 25),
   ('aabbccdd-3333-2001-0003-a20000000000', 'aabbccdd-3333-2001-0000-a20000000000', 'Talking About Ages', 'Talking About Ages', 2, 7, 25),
@@ -5930,7 +5930,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-3333-2002-0000-a20000000000', 'aabbccdd-3333-0000-0000-a20000000000', 'Health & Wellness', 'Symptoms, doctor visits, pharmacy, feelings', 1, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-3333-2002-0001-a20000000000', 'aabbccdd-3333-2002-0000-a20000000000', 'Common Symptoms', 'Common Symptoms', 0, 7, 25),
   ('aabbccdd-3333-2002-0002-a20000000000', 'aabbccdd-3333-2002-0000-a20000000000', 'At the Doctor Office', 'At the Doctor Office', 1, 7, 25),
   ('aabbccdd-3333-2002-0003-a20000000000', 'aabbccdd-3333-2002-0000-a20000000000', 'At the Pharmacy', 'At the Pharmacy', 2, 7, 25),
@@ -6007,7 +6007,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-3333-2003-0000-a20000000000', 'aabbccdd-3333-0000-0000-a20000000000', 'At Home', 'Furniture, chores, describing your home', 2, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-3333-2003-0001-a20000000000', 'aabbccdd-3333-2003-0000-a20000000000', 'Rooms & Furniture', 'Rooms & Furniture', 0, 7, 25),
   ('aabbccdd-3333-2003-0002-a20000000000', 'aabbccdd-3333-2003-0000-a20000000000', 'Household Chores', 'Household Chores', 1, 7, 25),
   ('aabbccdd-3333-2003-0003-a20000000000', 'aabbccdd-3333-2003-0000-a20000000000', 'Moving & Housing', 'Moving & Housing', 2, 7, 25),
@@ -6084,7 +6084,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-3333-2004-0000-a20000000000', 'aabbccdd-3333-0000-0000-a20000000000', 'Emotions & Personality', 'Adjectives for people, moods, character', 3, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-3333-2004-0001-a20000000000', 'aabbccdd-3333-2004-0000-a20000000000', 'Positive Emotions', 'Positive Emotions', 0, 7, 25),
   ('aabbccdd-3333-2004-0002-a20000000000', 'aabbccdd-3333-2004-0000-a20000000000', 'Negative Emotions', 'Negative Emotions', 1, 7, 25),
   ('aabbccdd-3333-2004-0003-a20000000000', 'aabbccdd-3333-2004-0000-a20000000000', 'Personality Traits', 'Personality Traits', 2, 7, 25),
@@ -6161,7 +6161,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-3333-2005-0000-a20000000000', 'aabbccdd-3333-0000-0000-a20000000000', 'Past Tense Basics', 'Yesterday, last week, simple past actions', 4, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-3333-2005-0001-a20000000000', 'aabbccdd-3333-2005-0000-a20000000000', 'What Happened Yesterday', 'What Happened Yesterday', 0, 7, 25),
   ('aabbccdd-3333-2005-0002-a20000000000', 'aabbccdd-3333-2005-0000-a20000000000', 'Last Weekend', 'Last Weekend', 1, 7, 25),
   ('aabbccdd-3333-2005-0003-a20000000000', 'aabbccdd-3333-2005-0000-a20000000000', 'A Memorable Trip', 'A Memorable Trip', 2, 7, 25),
@@ -6238,7 +6238,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-3333-2006-0000-a20000000000', 'aabbccdd-3333-0000-0000-a20000000000', 'Future Plans', 'Will, going to, plans, intentions', 5, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-3333-2006-0001-a20000000000', 'aabbccdd-3333-2006-0000-a20000000000', 'Plans for Tomorrow', 'Plans for Tomorrow', 0, 7, 25),
   ('aabbccdd-3333-2006-0002-a20000000000', 'aabbccdd-3333-2006-0000-a20000000000', 'Next Vacation', 'Next Vacation', 1, 7, 25),
   ('aabbccdd-3333-2006-0003-a20000000000', 'aabbccdd-3333-2006-0000-a20000000000', 'Life Goals', 'Life Goals', 2, 7, 25),
@@ -6315,7 +6315,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-3333-2007-0000-a20000000000', 'aabbccdd-3333-0000-0000-a20000000000', 'Comparisons', 'Bigger, smaller, better, more expensive', 6, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-3333-2007-0001-a20000000000', 'aabbccdd-3333-2007-0000-a20000000000', 'Comparing Things', 'Comparing Things', 0, 7, 25),
   ('aabbccdd-3333-2007-0002-a20000000000', 'aabbccdd-3333-2007-0000-a20000000000', 'Comparing People', 'Comparing People', 1, 7, 25),
   ('aabbccdd-3333-2007-0003-a20000000000', 'aabbccdd-3333-2007-0000-a20000000000', 'Superlatives', 'Superlatives', 2, 7, 25),
@@ -6392,7 +6392,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-3333-2008-0000-a20000000000', 'aabbccdd-3333-0000-0000-a20000000000', 'Cultural Topics', 'Holidays, traditions, celebrations', 7, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-3333-2008-0001-a20000000000', 'aabbccdd-3333-2008-0000-a20000000000', 'National Holidays', 'National Holidays', 0, 7, 25),
   ('aabbccdd-3333-2008-0002-a20000000000', 'aabbccdd-3333-2008-0000-a20000000000', 'Food Traditions', 'Food Traditions', 1, 7, 25),
   ('aabbccdd-3333-2008-0003-a20000000000', 'aabbccdd-3333-2008-0000-a20000000000', 'Music & Dance', 'Music & Dance', 2, 7, 25),
@@ -6473,7 +6473,7 @@ VALUES ('aabbccdd-3333-0000-0000-b10000000000', 'en', 'de', 'German B1', 'German
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-3333-3001-0000-b10000000000', 'aabbccdd-3333-0000-0000-b10000000000', 'Opinions & Current Events', 'Agree/disagree, news, society', 0, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-3333-3001-0001-b10000000000', 'aabbccdd-3333-3001-0000-b10000000000', 'Expressing Opinions', 'Expressing Opinions', 0, 10, 30),
   ('aabbccdd-3333-3001-0002-b10000000000', 'aabbccdd-3333-3001-0000-b10000000000', 'Agreeing & Disagreeing', 'Agreeing & Disagreeing', 1, 10, 30),
   ('aabbccdd-3333-3001-0003-b10000000000', 'aabbccdd-3333-3001-0000-b10000000000', 'Current Events', 'Current Events', 2, 10, 30),
@@ -6562,7 +6562,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-3333-3002-0000-b10000000000', 'aabbccdd-3333-0000-0000-b10000000000', 'Work & Career', 'Interviews, meetings, emails, presentations', 1, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-3333-3002-0001-b10000000000', 'aabbccdd-3333-3002-0000-b10000000000', 'Job Interviews', 'Job Interviews', 0, 10, 30),
   ('aabbccdd-3333-3002-0002-b10000000000', 'aabbccdd-3333-3002-0000-b10000000000', 'Office Communication', 'Office Communication', 1, 10, 30),
   ('aabbccdd-3333-3002-0003-b10000000000', 'aabbccdd-3333-3002-0000-b10000000000', 'Meetings', 'Meetings', 2, 10, 30),
@@ -6651,7 +6651,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-3333-3003-0000-b10000000000', 'aabbccdd-3333-0000-0000-b10000000000', 'Travel & Adventure', 'Booking, airports, hotels, experiences', 2, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-3333-3003-0001-b10000000000', 'aabbccdd-3333-3003-0000-b10000000000', 'Booking Travel', 'Booking Travel', 0, 10, 30),
   ('aabbccdd-3333-3003-0002-b10000000000', 'aabbccdd-3333-3003-0000-b10000000000', 'At the Airport', 'At the Airport', 1, 10, 30),
   ('aabbccdd-3333-3003-0003-b10000000000', 'aabbccdd-3333-3003-0000-b10000000000', 'Hotel Check-in', 'Hotel Check-in', 2, 10, 30),
@@ -6740,7 +6740,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-3333-3004-0000-b10000000000', 'aabbccdd-3333-0000-0000-b10000000000', 'Environment & Nature', 'Climate, animals, conservation', 3, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-3333-3004-0001-b10000000000', 'aabbccdd-3333-3004-0000-b10000000000', 'Climate & Weather', 'Climate & Weather', 0, 10, 30),
   ('aabbccdd-3333-3004-0002-b10000000000', 'aabbccdd-3333-3004-0000-b10000000000', 'Wildlife', 'Wildlife', 1, 10, 30),
   ('aabbccdd-3333-3004-0003-b10000000000', 'aabbccdd-3333-3004-0000-b10000000000', 'Conservation', 'Conservation', 2, 10, 30),
@@ -6829,7 +6829,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-3333-3005-0000-b10000000000', 'aabbccdd-3333-0000-0000-b10000000000', 'Technology & Media', 'Internet, social media, devices', 4, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-3333-3005-0001-b10000000000', 'aabbccdd-3333-3005-0000-b10000000000', 'Internet & Social Media', 'Internet & Social Media', 0, 10, 30),
   ('aabbccdd-3333-3005-0002-b10000000000', 'aabbccdd-3333-3005-0000-b10000000000', 'Smartphones & Apps', 'Smartphones & Apps', 1, 10, 30),
   ('aabbccdd-3333-3005-0003-b10000000000', 'aabbccdd-3333-3005-0000-b10000000000', 'Digital Communication', 'Digital Communication', 2, 10, 30),
@@ -6918,7 +6918,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-3333-3006-0000-b10000000000', 'aabbccdd-3333-0000-0000-b10000000000', 'Storytelling', 'Narrative tenses, sequencing, past continuous', 5, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-3333-3006-0001-b10000000000', 'aabbccdd-3333-3006-0000-b10000000000', 'Telling a Story', 'Telling a Story', 0, 10, 30),
   ('aabbccdd-3333-3006-0002-b10000000000', 'aabbccdd-3333-3006-0000-b10000000000', 'Sequencing Events', 'Sequencing Events', 1, 10, 30),
   ('aabbccdd-3333-3006-0003-b10000000000', 'aabbccdd-3333-3006-0000-b10000000000', 'Past Continuous', 'Past Continuous', 2, 10, 30),
@@ -7007,7 +7007,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-3333-3007-0000-b10000000000', 'aabbccdd-3333-0000-0000-b10000000000', 'Hypothetical Situations', 'Conditionals, would/could/should', 6, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-3333-3007-0001-b10000000000', 'aabbccdd-3333-3007-0000-b10000000000', 'First Conditional', 'First Conditional', 0, 10, 30),
   ('aabbccdd-3333-3007-0002-b10000000000', 'aabbccdd-3333-3007-0000-b10000000000', 'Second Conditional', 'Second Conditional', 1, 10, 30),
   ('aabbccdd-3333-3007-0003-b10000000000', 'aabbccdd-3333-3007-0000-b10000000000', 'Giving Advice', 'Giving Advice', 2, 10, 30),
@@ -7096,7 +7096,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-3333-3008-0000-b10000000000', 'aabbccdd-3333-0000-0000-b10000000000', 'Formal vs. Informal', 'Register, polite requests, slang', 7, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-3333-3008-0001-b10000000000', 'aabbccdd-3333-3008-0000-b10000000000', 'Formal Requests', 'Formal Requests', 0, 10, 30),
   ('aabbccdd-3333-3008-0002-b10000000000', 'aabbccdd-3333-3008-0000-b10000000000', 'Informal Speech', 'Informal Speech', 1, 10, 30),
   ('aabbccdd-3333-3008-0003-b10000000000', 'aabbccdd-3333-3008-0000-b10000000000', 'Writing Emails', 'Writing Emails', 2, 10, 30),
@@ -7255,7 +7255,7 @@ VALUES ('aabbccdd-3333-0000-0000-b20000000000', 'en', 'de', 'German B2', 'German
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-3333-4001-0000-b20000000000', 'aabbccdd-3333-0000-0000-b20000000000', 'Abstract Ideas', 'Philosophy, concepts, beliefs', 0, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-3333-4001-0001-b20000000000', 'aabbccdd-3333-4001-0000-b20000000000', 'Philosophy of Life', 'Philosophy of Life', 0, 12, 40),
   ('aabbccdd-3333-4001-0002-b20000000000', 'aabbccdd-3333-4001-0000-b20000000000', 'Beliefs & Values', 'Beliefs & Values', 1, 12, 40),
   ('aabbccdd-3333-4001-0003-b20000000000', 'aabbccdd-3333-4001-0000-b20000000000', 'Abstract Concepts', 'Abstract Concepts', 2, 12, 40),
@@ -7344,7 +7344,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-3333-4002-0000-b20000000000', 'aabbccdd-3333-0000-0000-b20000000000', 'Debate & Argumentation', 'Persuasion, counterarguments, rhetoric', 1, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-3333-4002-0001-b20000000000', 'aabbccdd-3333-4002-0000-b20000000000', 'Building Arguments', 'Building Arguments', 0, 12, 40),
   ('aabbccdd-3333-4002-0002-b20000000000', 'aabbccdd-3333-4002-0000-b20000000000', 'Counterarguments', 'Counterarguments', 1, 12, 40),
   ('aabbccdd-3333-4002-0003-b20000000000', 'aabbccdd-3333-4002-0000-b20000000000', 'Persuasive Language', 'Persuasive Language', 2, 12, 40),
@@ -7433,7 +7433,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-3333-4003-0000-b20000000000', 'aabbccdd-3333-0000-0000-b20000000000', 'Professional Communication', 'Formal writing, presentations, negotiations', 2, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-3333-4003-0001-b20000000000', 'aabbccdd-3333-4003-0000-b20000000000', 'Business Emails', 'Business Emails', 0, 12, 40),
   ('aabbccdd-3333-4003-0002-b20000000000', 'aabbccdd-3333-4003-0000-b20000000000', 'Presentations', 'Presentations', 1, 12, 40),
   ('aabbccdd-3333-4003-0003-b20000000000', 'aabbccdd-3333-4003-0000-b20000000000', 'Negotiations', 'Negotiations', 2, 12, 40),
@@ -7522,7 +7522,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-3333-4004-0000-b20000000000', 'aabbccdd-3333-0000-0000-b20000000000', 'Literature & Arts', 'Describing art, reviews, literary analysis', 3, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-3333-4004-0001-b20000000000', 'aabbccdd-3333-4004-0000-b20000000000', 'Describing Art', 'Describing Art', 0, 12, 40),
   ('aabbccdd-3333-4004-0002-b20000000000', 'aabbccdd-3333-4004-0000-b20000000000', 'Book Reviews', 'Book Reviews', 1, 12, 40),
   ('aabbccdd-3333-4004-0003-b20000000000', 'aabbccdd-3333-4004-0000-b20000000000', 'Film & Theater', 'Film & Theater', 2, 12, 40),
@@ -7611,7 +7611,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-3333-4005-0000-b20000000000', 'aabbccdd-3333-0000-0000-b20000000000', 'Idiomatic Expressions', 'Idioms, proverbs, collocations', 4, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-3333-4005-0001-b20000000000', 'aabbccdd-3333-4005-0000-b20000000000', 'Common Idioms', 'Common Idioms', 0, 12, 40),
   ('aabbccdd-3333-4005-0002-b20000000000', 'aabbccdd-3333-4005-0000-b20000000000', 'Proverbs', 'Proverbs', 1, 12, 40),
   ('aabbccdd-3333-4005-0003-b20000000000', 'aabbccdd-3333-4005-0000-b20000000000', 'Collocations', 'Collocations', 2, 12, 40),
@@ -7700,7 +7700,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-3333-4006-0000-b20000000000', 'aabbccdd-3333-0000-0000-b20000000000', 'Complex Grammar', 'Subjunctive, reported speech, passive voice', 5, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-3333-4006-0001-b20000000000', 'aabbccdd-3333-4006-0000-b20000000000', 'Subjunctive Mood', 'Subjunctive Mood', 0, 12, 40),
   ('aabbccdd-3333-4006-0002-b20000000000', 'aabbccdd-3333-4006-0000-b20000000000', 'Reported Speech', 'Reported Speech', 1, 12, 40),
   ('aabbccdd-3333-4006-0003-b20000000000', 'aabbccdd-3333-4006-0000-b20000000000', 'Passive Voice', 'Passive Voice', 2, 12, 40),
@@ -7873,13 +7873,13 @@ VALUES ('aabbccdd-4444-0000-0000-000000000000', 'en', 'it', 'Italian A1', 'Itali
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-4444-1001-0000-000000000000', 'aabbccdd-4444-0000-0000-000000000000', 'Greetings & Basics', 'Learn greetings, introductions, and polite expressions', 0, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-4444-1001-0001-000000000000', 'aabbccdd-4444-1001-0000-000000000000', 'Core Vocabulary', 'Core Vocabulary', 0, 5, 20),
-  ('aabbccdd-4444-1001-0002-000000000000', 'aabbccdd-4444-1001-0000-000000000000', 'Phrases & Sentences', 'Phrases & Sentences', 1, 5, 20),
-  ('aabbccdd-4444-1001-0003-000000000000', 'aabbccdd-4444-1001-0000-000000000000', 'Listening & Recognition', 'Listening & Recognition', 2, 5, 20),
-  ('aabbccdd-4444-1001-0004-000000000000', 'aabbccdd-4444-1001-0000-000000000000', 'Speaking Practice', 'Speaking Practice', 3, 5, 20),
-  ('aabbccdd-4444-1001-0005-000000000000', 'aabbccdd-4444-1001-0000-000000000000', 'Reading Simple Texts', 'Reading Simple Texts', 4, 5, 20),
-  ('aabbccdd-4444-1001-0006-000000000000', 'aabbccdd-4444-1001-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-4444-1001-0001-000000000000', 'aabbccdd-4444-1001-0000-000000000000', 'Core Vocabulary', 'Core Vocabulary', 0, 5),
+  ('aabbccdd-4444-1001-0002-000000000000', 'aabbccdd-4444-1001-0000-000000000000', 'Phrases & Sentences', 'Phrases & Sentences', 1, 5),
+  ('aabbccdd-4444-1001-0003-000000000000', 'aabbccdd-4444-1001-0000-000000000000', 'Listening & Recognition', 'Listening & Recognition', 2, 5),
+  ('aabbccdd-4444-1001-0004-000000000000', 'aabbccdd-4444-1001-0000-000000000000', 'Speaking Practice', 'Speaking Practice', 3, 5),
+  ('aabbccdd-4444-1001-0005-000000000000', 'aabbccdd-4444-1001-0000-000000000000', 'Reading Simple Texts', 'Reading Simple Texts', 4, 5),
+  ('aabbccdd-4444-1001-0006-000000000000', 'aabbccdd-4444-1001-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-4444-1001-0001-e00000000001', 'aabbccdd-4444-1001-0001-000000000000', 'multiple_choice', 'What does "Ciao" mean in English?', 'Hello', '{"Hello","Goodbye","Good morning","Good evening"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-4444-1001-0001-e00000000002', 'aabbccdd-4444-1001-0001-000000000000', 'translate_to_target', 'Translate to Italian: Goodbye', 'Arrivederci', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -7949,13 +7949,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-4444-1002-0000-000000000000', 'aabbccdd-4444-0000-0000-000000000000', 'Food & Dining', 'Order food and drinks at a restaurant', 1, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-4444-1002-0001-000000000000', 'aabbccdd-4444-1002-0000-000000000000', 'Restaurant Basics', 'Restaurant Basics', 0, 5, 20),
-  ('aabbccdd-4444-1002-0002-000000000000', 'aabbccdd-4444-1002-0000-000000000000', 'Common Foods', 'Common Foods', 1, 5, 20),
-  ('aabbccdd-4444-1002-0003-000000000000', 'aabbccdd-4444-1002-0000-000000000000', 'Drinks & Beverages', 'Drinks & Beverages', 2, 5, 20),
-  ('aabbccdd-4444-1002-0004-000000000000', 'aabbccdd-4444-1002-0000-000000000000', 'Describing Taste', 'Describing Taste', 3, 5, 20),
-  ('aabbccdd-4444-1002-0005-000000000000', 'aabbccdd-4444-1002-0000-000000000000', 'Full Meal Order', 'Full Meal Order', 4, 5, 20),
-  ('aabbccdd-4444-1002-0006-000000000000', 'aabbccdd-4444-1002-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-4444-1002-0001-000000000000', 'aabbccdd-4444-1002-0000-000000000000', 'Restaurant Basics', 'Restaurant Basics', 0, 5),
+  ('aabbccdd-4444-1002-0002-000000000000', 'aabbccdd-4444-1002-0000-000000000000', 'Common Foods', 'Common Foods', 1, 5),
+  ('aabbccdd-4444-1002-0003-000000000000', 'aabbccdd-4444-1002-0000-000000000000', 'Drinks & Beverages', 'Drinks & Beverages', 2, 5),
+  ('aabbccdd-4444-1002-0004-000000000000', 'aabbccdd-4444-1002-0000-000000000000', 'Describing Taste', 'Describing Taste', 3, 5),
+  ('aabbccdd-4444-1002-0005-000000000000', 'aabbccdd-4444-1002-0000-000000000000', 'Full Meal Order', 'Full Meal Order', 4, 5),
+  ('aabbccdd-4444-1002-0006-000000000000', 'aabbccdd-4444-1002-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-4444-1002-0001-e00000000001', 'aabbccdd-4444-1002-0001-000000000000', 'multiple_choice', 'What does "Acqua" mean in English?', 'Water', '{"Water","Chicken","Bread","Apple"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-4444-1002-0001-e00000000002', 'aabbccdd-4444-1002-0001-000000000000', 'translate_to_target', 'Translate to Italian: Chicken', 'Pollo', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -8025,13 +8025,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-4444-1003-0000-000000000000', 'aabbccdd-4444-0000-0000-000000000000', 'Getting Around', 'Ask for directions and use transportation', 2, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-4444-1003-0001-000000000000', 'aabbccdd-4444-1003-0000-000000000000', 'Asking Directions', 'Asking Directions', 0, 5, 20),
-  ('aabbccdd-4444-1003-0002-000000000000', 'aabbccdd-4444-1003-0000-000000000000', 'Transportation', 'Transportation', 1, 5, 20),
-  ('aabbccdd-4444-1003-0003-000000000000', 'aabbccdd-4444-1003-0000-000000000000', 'Places in Town', 'Places in Town', 2, 5, 20),
-  ('aabbccdd-4444-1003-0004-000000000000', 'aabbccdd-4444-1003-0000-000000000000', 'Buying Tickets', 'Buying Tickets', 3, 5, 20),
-  ('aabbccdd-4444-1003-0005-000000000000', 'aabbccdd-4444-1003-0000-000000000000', 'At the Airport', 'At the Airport', 4, 5, 20),
-  ('aabbccdd-4444-1003-0006-000000000000', 'aabbccdd-4444-1003-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-4444-1003-0001-000000000000', 'aabbccdd-4444-1003-0000-000000000000', 'Asking Directions', 'Asking Directions', 0, 5),
+  ('aabbccdd-4444-1003-0002-000000000000', 'aabbccdd-4444-1003-0000-000000000000', 'Transportation', 'Transportation', 1, 5),
+  ('aabbccdd-4444-1003-0003-000000000000', 'aabbccdd-4444-1003-0000-000000000000', 'Places in Town', 'Places in Town', 2, 5),
+  ('aabbccdd-4444-1003-0004-000000000000', 'aabbccdd-4444-1003-0000-000000000000', 'Buying Tickets', 'Buying Tickets', 3, 5),
+  ('aabbccdd-4444-1003-0005-000000000000', 'aabbccdd-4444-1003-0000-000000000000', 'At the Airport', 'At the Airport', 4, 5),
+  ('aabbccdd-4444-1003-0006-000000000000', 'aabbccdd-4444-1003-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-4444-1003-0001-e00000000001', 'aabbccdd-4444-1003-0001-000000000000', 'multiple_choice', 'What does "Sinistra" mean in English?', 'Left', '{"Left","Right","Straight","Bus"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-4444-1003-0001-e00000000002', 'aabbccdd-4444-1003-0001-000000000000', 'translate_to_target', 'Translate to Italian: Right', 'Destra', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -8101,13 +8101,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-4444-1004-0000-000000000000', 'aabbccdd-4444-0000-0000-000000000000', 'Daily Life & Shopping', 'Talk about routines and go shopping', 3, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-4444-1004-0001-000000000000', 'aabbccdd-4444-1004-0000-000000000000', 'Daily Routine', 'Daily Routine', 0, 5, 20),
-  ('aabbccdd-4444-1004-0002-000000000000', 'aabbccdd-4444-1004-0000-000000000000', 'Shopping Basics', 'Shopping Basics', 1, 5, 20),
-  ('aabbccdd-4444-1004-0003-000000000000', 'aabbccdd-4444-1004-0000-000000000000', 'Clothes & Colors', 'Clothes & Colors', 2, 5, 20),
-  ('aabbccdd-4444-1004-0004-000000000000', 'aabbccdd-4444-1004-0000-000000000000', 'Time & Schedule', 'Time & Schedule', 3, 5, 20),
-  ('aabbccdd-4444-1004-0005-000000000000', 'aabbccdd-4444-1004-0000-000000000000', 'At the Market', 'At the Market', 4, 5, 20),
-  ('aabbccdd-4444-1004-0006-000000000000', 'aabbccdd-4444-1004-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-4444-1004-0001-000000000000', 'aabbccdd-4444-1004-0000-000000000000', 'Daily Routine', 'Daily Routine', 0, 5),
+  ('aabbccdd-4444-1004-0002-000000000000', 'aabbccdd-4444-1004-0000-000000000000', 'Shopping Basics', 'Shopping Basics', 1, 5),
+  ('aabbccdd-4444-1004-0003-000000000000', 'aabbccdd-4444-1004-0000-000000000000', 'Clothes & Colors', 'Clothes & Colors', 2, 5),
+  ('aabbccdd-4444-1004-0004-000000000000', 'aabbccdd-4444-1004-0000-000000000000', 'Time & Schedule', 'Time & Schedule', 3, 5),
+  ('aabbccdd-4444-1004-0005-000000000000', 'aabbccdd-4444-1004-0000-000000000000', 'At the Market', 'At the Market', 4, 5),
+  ('aabbccdd-4444-1004-0006-000000000000', 'aabbccdd-4444-1004-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-4444-1004-0001-e00000000001', 'aabbccdd-4444-1004-0001-000000000000', 'multiple_choice', 'What does "Colazione" mean in English?', 'Breakfast', '{"Breakfast","Expensive","Cheap","Red"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-4444-1004-0001-e00000000002', 'aabbccdd-4444-1004-0001-000000000000', 'translate_to_target', 'Translate to Italian: Expensive', 'Costoso', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -8177,13 +8177,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-4444-1005-0000-000000000000', 'aabbccdd-4444-0000-0000-000000000000', 'Work & Social', 'Discuss jobs, hobbies, and make plans', 4, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-4444-1005-0001-000000000000', 'aabbccdd-4444-1005-0000-000000000000', 'Jobs & Professions', 'Jobs & Professions', 0, 5, 20),
-  ('aabbccdd-4444-1005-0002-000000000000', 'aabbccdd-4444-1005-0000-000000000000', 'Making Plans', 'Making Plans', 1, 5, 20),
-  ('aabbccdd-4444-1005-0003-000000000000', 'aabbccdd-4444-1005-0000-000000000000', 'Hobbies & Interests', 'Hobbies & Interests', 2, 5, 20),
-  ('aabbccdd-4444-1005-0004-000000000000', 'aabbccdd-4444-1005-0000-000000000000', 'Weather & Seasons', 'Weather & Seasons', 3, 5, 20),
-  ('aabbccdd-4444-1005-0005-000000000000', 'aabbccdd-4444-1005-0000-000000000000', 'Weekend Activities', 'Weekend Activities', 4, 5, 20),
-  ('aabbccdd-4444-1005-0006-000000000000', 'aabbccdd-4444-1005-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-4444-1005-0001-000000000000', 'aabbccdd-4444-1005-0000-000000000000', 'Jobs & Professions', 'Jobs & Professions', 0, 5),
+  ('aabbccdd-4444-1005-0002-000000000000', 'aabbccdd-4444-1005-0000-000000000000', 'Making Plans', 'Making Plans', 1, 5),
+  ('aabbccdd-4444-1005-0003-000000000000', 'aabbccdd-4444-1005-0000-000000000000', 'Hobbies & Interests', 'Hobbies & Interests', 2, 5),
+  ('aabbccdd-4444-1005-0004-000000000000', 'aabbccdd-4444-1005-0000-000000000000', 'Weather & Seasons', 'Weather & Seasons', 3, 5),
+  ('aabbccdd-4444-1005-0005-000000000000', 'aabbccdd-4444-1005-0000-000000000000', 'Weekend Activities', 'Weekend Activities', 4, 5),
+  ('aabbccdd-4444-1005-0006-000000000000', 'aabbccdd-4444-1005-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-4444-1005-0001-e00000000001', 'aabbccdd-4444-1005-0001-000000000000', 'multiple_choice', 'What does "Insegnante" mean in English?', 'Teacher', '{"Teacher","Doctor","Office","To read"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-4444-1005-0001-e00000000002', 'aabbccdd-4444-1005-0001-000000000000', 'translate_to_target', 'Translate to Italian: Doctor', 'Dottore', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -8253,13 +8253,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-4444-1006-0000-000000000000', 'aabbccdd-4444-0000-0000-000000000000', 'Family & Friends', 'Talk about family and relationships', 5, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-4444-1006-0001-000000000000', 'aabbccdd-4444-1006-0000-000000000000', 'Family Members', 'Family Members', 0, 5, 20),
-  ('aabbccdd-4444-1006-0002-000000000000', 'aabbccdd-4444-1006-0000-000000000000', 'Describing People', 'Describing People', 1, 5, 20),
-  ('aabbccdd-4444-1006-0003-000000000000', 'aabbccdd-4444-1006-0000-000000000000', 'Ages & Birthdays', 'Ages & Birthdays', 2, 5, 20),
-  ('aabbccdd-4444-1006-0004-000000000000', 'aabbccdd-4444-1006-0000-000000000000', 'Pets & Animals', 'Pets & Animals', 3, 5, 20),
-  ('aabbccdd-4444-1006-0005-000000000000', 'aabbccdd-4444-1006-0000-000000000000', 'Family Activities', 'Family Activities', 4, 5, 20),
-  ('aabbccdd-4444-1006-0006-000000000000', 'aabbccdd-4444-1006-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-4444-1006-0001-000000000000', 'aabbccdd-4444-1006-0000-000000000000', 'Family Members', 'Family Members', 0, 5),
+  ('aabbccdd-4444-1006-0002-000000000000', 'aabbccdd-4444-1006-0000-000000000000', 'Describing People', 'Describing People', 1, 5),
+  ('aabbccdd-4444-1006-0003-000000000000', 'aabbccdd-4444-1006-0000-000000000000', 'Ages & Birthdays', 'Ages & Birthdays', 2, 5),
+  ('aabbccdd-4444-1006-0004-000000000000', 'aabbccdd-4444-1006-0000-000000000000', 'Pets & Animals', 'Pets & Animals', 3, 5),
+  ('aabbccdd-4444-1006-0005-000000000000', 'aabbccdd-4444-1006-0000-000000000000', 'Family Activities', 'Family Activities', 4, 5),
+  ('aabbccdd-4444-1006-0006-000000000000', 'aabbccdd-4444-1006-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-4444-1006-0001-e00000000001', 'aabbccdd-4444-1006-0001-000000000000', 'multiple_choice', 'What does "Madre" mean in English?', 'Mother', '{"Mother","Father","Sister","Brother"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-4444-1006-0001-e00000000002', 'aabbccdd-4444-1006-0001-000000000000', 'translate_to_target', 'Translate to Italian: Father', 'Padre', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -8329,13 +8329,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-4444-1007-0000-000000000000', 'aabbccdd-4444-0000-0000-000000000000', 'Home & Rooms', 'Describe your house and furniture', 6, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-4444-1007-0001-000000000000', 'aabbccdd-4444-1007-0000-000000000000', 'Parts of the House', 'Parts of the House', 0, 5, 20),
-  ('aabbccdd-4444-1007-0002-000000000000', 'aabbccdd-4444-1007-0000-000000000000', 'Furniture', 'Furniture', 1, 5, 20),
-  ('aabbccdd-4444-1007-0003-000000000000', 'aabbccdd-4444-1007-0000-000000000000', 'In the Kitchen', 'In the Kitchen', 2, 5, 20),
-  ('aabbccdd-4444-1007-0004-000000000000', 'aabbccdd-4444-1007-0000-000000000000', 'Bathroom & Bedroom', 'Bathroom & Bedroom', 3, 5, 20),
-  ('aabbccdd-4444-1007-0005-000000000000', 'aabbccdd-4444-1007-0000-000000000000', 'Describing Your Home', 'Describing Your Home', 4, 5, 20),
-  ('aabbccdd-4444-1007-0006-000000000000', 'aabbccdd-4444-1007-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-4444-1007-0001-000000000000', 'aabbccdd-4444-1007-0000-000000000000', 'Parts of the House', 'Parts of the House', 0, 5),
+  ('aabbccdd-4444-1007-0002-000000000000', 'aabbccdd-4444-1007-0000-000000000000', 'Furniture', 'Furniture', 1, 5),
+  ('aabbccdd-4444-1007-0003-000000000000', 'aabbccdd-4444-1007-0000-000000000000', 'In the Kitchen', 'In the Kitchen', 2, 5),
+  ('aabbccdd-4444-1007-0004-000000000000', 'aabbccdd-4444-1007-0000-000000000000', 'Bathroom & Bedroom', 'Bathroom & Bedroom', 3, 5),
+  ('aabbccdd-4444-1007-0005-000000000000', 'aabbccdd-4444-1007-0000-000000000000', 'Describing Your Home', 'Describing Your Home', 4, 5),
+  ('aabbccdd-4444-1007-0006-000000000000', 'aabbccdd-4444-1007-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-4444-1007-0001-e00000000001', 'aabbccdd-4444-1007-0001-000000000000', 'multiple_choice', 'What does "Casa" mean in English?', 'House', '{"House","Room","Kitchen","Bathroom"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-4444-1007-0001-e00000000002', 'aabbccdd-4444-1007-0001-000000000000', 'translate_to_target', 'Translate to Italian: Room', 'Stanza', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -8405,13 +8405,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-4444-1008-0000-000000000000', 'aabbccdd-4444-0000-0000-000000000000', 'Health & Body', 'Body parts, health, and doctor visits', 7, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-4444-1008-0001-000000000000', 'aabbccdd-4444-1008-0000-000000000000', 'Body Parts', 'Body Parts', 0, 5, 20),
-  ('aabbccdd-4444-1008-0002-000000000000', 'aabbccdd-4444-1008-0000-000000000000', 'Feelings & Symptoms', 'Feelings & Symptoms', 1, 5, 20),
-  ('aabbccdd-4444-1008-0003-000000000000', 'aabbccdd-4444-1008-0000-000000000000', 'At the Doctor', 'At the Doctor', 2, 5, 20),
-  ('aabbccdd-4444-1008-0004-000000000000', 'aabbccdd-4444-1008-0000-000000000000', 'At the Pharmacy', 'At the Pharmacy', 3, 5, 20),
-  ('aabbccdd-4444-1008-0005-000000000000', 'aabbccdd-4444-1008-0000-000000000000', 'Healthy Habits', 'Healthy Habits', 4, 5, 20),
-  ('aabbccdd-4444-1008-0006-000000000000', 'aabbccdd-4444-1008-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-4444-1008-0001-000000000000', 'aabbccdd-4444-1008-0000-000000000000', 'Body Parts', 'Body Parts', 0, 5),
+  ('aabbccdd-4444-1008-0002-000000000000', 'aabbccdd-4444-1008-0000-000000000000', 'Feelings & Symptoms', 'Feelings & Symptoms', 1, 5),
+  ('aabbccdd-4444-1008-0003-000000000000', 'aabbccdd-4444-1008-0000-000000000000', 'At the Doctor', 'At the Doctor', 2, 5),
+  ('aabbccdd-4444-1008-0004-000000000000', 'aabbccdd-4444-1008-0000-000000000000', 'At the Pharmacy', 'At the Pharmacy', 3, 5),
+  ('aabbccdd-4444-1008-0005-000000000000', 'aabbccdd-4444-1008-0000-000000000000', 'Healthy Habits', 'Healthy Habits', 4, 5),
+  ('aabbccdd-4444-1008-0006-000000000000', 'aabbccdd-4444-1008-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-4444-1008-0001-e00000000001', 'aabbccdd-4444-1008-0001-000000000000', 'multiple_choice', 'What does "Testa" mean in English?', 'Head', '{"Head","Hand","Eye","Stomach"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-4444-1008-0001-e00000000002', 'aabbccdd-4444-1008-0001-000000000000', 'translate_to_target', 'Translate to Italian: Hand', 'Mano', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -8485,7 +8485,7 @@ VALUES ('aabbccdd-4444-0000-0000-a20000000000', 'en', 'it', 'Italian A2', 'Itali
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-4444-2001-0000-a20000000000', 'aabbccdd-4444-0000-0000-a20000000000', 'Family & Relationships', 'Describe family, relationships, and ages', 0, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-4444-2001-0001-a20000000000', 'aabbccdd-4444-2001-0000-a20000000000', 'Extended Family', 'Extended Family', 0, 7, 25),
   ('aabbccdd-4444-2001-0002-a20000000000', 'aabbccdd-4444-2001-0000-a20000000000', 'Describing Relationships', 'Describing Relationships', 1, 7, 25),
   ('aabbccdd-4444-2001-0003-a20000000000', 'aabbccdd-4444-2001-0000-a20000000000', 'Talking About Ages', 'Talking About Ages', 2, 7, 25),
@@ -8562,7 +8562,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-4444-2002-0000-a20000000000', 'aabbccdd-4444-0000-0000-a20000000000', 'Health & Wellness', 'Symptoms, doctor visits, pharmacy, feelings', 1, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-4444-2002-0001-a20000000000', 'aabbccdd-4444-2002-0000-a20000000000', 'Common Symptoms', 'Common Symptoms', 0, 7, 25),
   ('aabbccdd-4444-2002-0002-a20000000000', 'aabbccdd-4444-2002-0000-a20000000000', 'At the Doctor Office', 'At the Doctor Office', 1, 7, 25),
   ('aabbccdd-4444-2002-0003-a20000000000', 'aabbccdd-4444-2002-0000-a20000000000', 'At the Pharmacy', 'At the Pharmacy', 2, 7, 25),
@@ -8639,7 +8639,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-4444-2003-0000-a20000000000', 'aabbccdd-4444-0000-0000-a20000000000', 'At Home', 'Furniture, chores, describing your home', 2, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-4444-2003-0001-a20000000000', 'aabbccdd-4444-2003-0000-a20000000000', 'Rooms & Furniture', 'Rooms & Furniture', 0, 7, 25),
   ('aabbccdd-4444-2003-0002-a20000000000', 'aabbccdd-4444-2003-0000-a20000000000', 'Household Chores', 'Household Chores', 1, 7, 25),
   ('aabbccdd-4444-2003-0003-a20000000000', 'aabbccdd-4444-2003-0000-a20000000000', 'Moving & Housing', 'Moving & Housing', 2, 7, 25),
@@ -8716,7 +8716,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-4444-2004-0000-a20000000000', 'aabbccdd-4444-0000-0000-a20000000000', 'Emotions & Personality', 'Adjectives for people, moods, character', 3, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-4444-2004-0001-a20000000000', 'aabbccdd-4444-2004-0000-a20000000000', 'Positive Emotions', 'Positive Emotions', 0, 7, 25),
   ('aabbccdd-4444-2004-0002-a20000000000', 'aabbccdd-4444-2004-0000-a20000000000', 'Negative Emotions', 'Negative Emotions', 1, 7, 25),
   ('aabbccdd-4444-2004-0003-a20000000000', 'aabbccdd-4444-2004-0000-a20000000000', 'Personality Traits', 'Personality Traits', 2, 7, 25),
@@ -8793,7 +8793,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-4444-2005-0000-a20000000000', 'aabbccdd-4444-0000-0000-a20000000000', 'Past Tense Basics', 'Yesterday, last week, simple past actions', 4, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-4444-2005-0001-a20000000000', 'aabbccdd-4444-2005-0000-a20000000000', 'What Happened Yesterday', 'What Happened Yesterday', 0, 7, 25),
   ('aabbccdd-4444-2005-0002-a20000000000', 'aabbccdd-4444-2005-0000-a20000000000', 'Last Weekend', 'Last Weekend', 1, 7, 25),
   ('aabbccdd-4444-2005-0003-a20000000000', 'aabbccdd-4444-2005-0000-a20000000000', 'A Memorable Trip', 'A Memorable Trip', 2, 7, 25),
@@ -8870,7 +8870,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-4444-2006-0000-a20000000000', 'aabbccdd-4444-0000-0000-a20000000000', 'Future Plans', 'Will, going to, plans, intentions', 5, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-4444-2006-0001-a20000000000', 'aabbccdd-4444-2006-0000-a20000000000', 'Plans for Tomorrow', 'Plans for Tomorrow', 0, 7, 25),
   ('aabbccdd-4444-2006-0002-a20000000000', 'aabbccdd-4444-2006-0000-a20000000000', 'Next Vacation', 'Next Vacation', 1, 7, 25),
   ('aabbccdd-4444-2006-0003-a20000000000', 'aabbccdd-4444-2006-0000-a20000000000', 'Life Goals', 'Life Goals', 2, 7, 25),
@@ -8947,7 +8947,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-4444-2007-0000-a20000000000', 'aabbccdd-4444-0000-0000-a20000000000', 'Comparisons', 'Bigger, smaller, better, more expensive', 6, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-4444-2007-0001-a20000000000', 'aabbccdd-4444-2007-0000-a20000000000', 'Comparing Things', 'Comparing Things', 0, 7, 25),
   ('aabbccdd-4444-2007-0002-a20000000000', 'aabbccdd-4444-2007-0000-a20000000000', 'Comparing People', 'Comparing People', 1, 7, 25),
   ('aabbccdd-4444-2007-0003-a20000000000', 'aabbccdd-4444-2007-0000-a20000000000', 'Superlatives', 'Superlatives', 2, 7, 25),
@@ -9024,7 +9024,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-4444-2008-0000-a20000000000', 'aabbccdd-4444-0000-0000-a20000000000', 'Cultural Topics', 'Holidays, traditions, celebrations', 7, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-4444-2008-0001-a20000000000', 'aabbccdd-4444-2008-0000-a20000000000', 'National Holidays', 'National Holidays', 0, 7, 25),
   ('aabbccdd-4444-2008-0002-a20000000000', 'aabbccdd-4444-2008-0000-a20000000000', 'Food Traditions', 'Food Traditions', 1, 7, 25),
   ('aabbccdd-4444-2008-0003-a20000000000', 'aabbccdd-4444-2008-0000-a20000000000', 'Music & Dance', 'Music & Dance', 2, 7, 25),
@@ -9105,7 +9105,7 @@ VALUES ('aabbccdd-4444-0000-0000-b10000000000', 'en', 'it', 'Italian B1', 'Itali
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-4444-3001-0000-b10000000000', 'aabbccdd-4444-0000-0000-b10000000000', 'Opinions & Current Events', 'Agree/disagree, news, society', 0, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-4444-3001-0001-b10000000000', 'aabbccdd-4444-3001-0000-b10000000000', 'Expressing Opinions', 'Expressing Opinions', 0, 10, 30),
   ('aabbccdd-4444-3001-0002-b10000000000', 'aabbccdd-4444-3001-0000-b10000000000', 'Agreeing & Disagreeing', 'Agreeing & Disagreeing', 1, 10, 30),
   ('aabbccdd-4444-3001-0003-b10000000000', 'aabbccdd-4444-3001-0000-b10000000000', 'Current Events', 'Current Events', 2, 10, 30),
@@ -9194,7 +9194,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-4444-3002-0000-b10000000000', 'aabbccdd-4444-0000-0000-b10000000000', 'Work & Career', 'Interviews, meetings, emails, presentations', 1, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-4444-3002-0001-b10000000000', 'aabbccdd-4444-3002-0000-b10000000000', 'Job Interviews', 'Job Interviews', 0, 10, 30),
   ('aabbccdd-4444-3002-0002-b10000000000', 'aabbccdd-4444-3002-0000-b10000000000', 'Office Communication', 'Office Communication', 1, 10, 30),
   ('aabbccdd-4444-3002-0003-b10000000000', 'aabbccdd-4444-3002-0000-b10000000000', 'Meetings', 'Meetings', 2, 10, 30),
@@ -9283,7 +9283,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-4444-3003-0000-b10000000000', 'aabbccdd-4444-0000-0000-b10000000000', 'Travel & Adventure', 'Booking, airports, hotels, experiences', 2, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-4444-3003-0001-b10000000000', 'aabbccdd-4444-3003-0000-b10000000000', 'Booking Travel', 'Booking Travel', 0, 10, 30),
   ('aabbccdd-4444-3003-0002-b10000000000', 'aabbccdd-4444-3003-0000-b10000000000', 'At the Airport', 'At the Airport', 1, 10, 30),
   ('aabbccdd-4444-3003-0003-b10000000000', 'aabbccdd-4444-3003-0000-b10000000000', 'Hotel Check-in', 'Hotel Check-in', 2, 10, 30),
@@ -9372,7 +9372,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-4444-3004-0000-b10000000000', 'aabbccdd-4444-0000-0000-b10000000000', 'Environment & Nature', 'Climate, animals, conservation', 3, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-4444-3004-0001-b10000000000', 'aabbccdd-4444-3004-0000-b10000000000', 'Climate & Weather', 'Climate & Weather', 0, 10, 30),
   ('aabbccdd-4444-3004-0002-b10000000000', 'aabbccdd-4444-3004-0000-b10000000000', 'Wildlife', 'Wildlife', 1, 10, 30),
   ('aabbccdd-4444-3004-0003-b10000000000', 'aabbccdd-4444-3004-0000-b10000000000', 'Conservation', 'Conservation', 2, 10, 30),
@@ -9461,7 +9461,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-4444-3005-0000-b10000000000', 'aabbccdd-4444-0000-0000-b10000000000', 'Technology & Media', 'Internet, social media, devices', 4, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-4444-3005-0001-b10000000000', 'aabbccdd-4444-3005-0000-b10000000000', 'Internet & Social Media', 'Internet & Social Media', 0, 10, 30),
   ('aabbccdd-4444-3005-0002-b10000000000', 'aabbccdd-4444-3005-0000-b10000000000', 'Smartphones & Apps', 'Smartphones & Apps', 1, 10, 30),
   ('aabbccdd-4444-3005-0003-b10000000000', 'aabbccdd-4444-3005-0000-b10000000000', 'Digital Communication', 'Digital Communication', 2, 10, 30),
@@ -9550,7 +9550,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-4444-3006-0000-b10000000000', 'aabbccdd-4444-0000-0000-b10000000000', 'Storytelling', 'Narrative tenses, sequencing, past continuous', 5, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-4444-3006-0001-b10000000000', 'aabbccdd-4444-3006-0000-b10000000000', 'Telling a Story', 'Telling a Story', 0, 10, 30),
   ('aabbccdd-4444-3006-0002-b10000000000', 'aabbccdd-4444-3006-0000-b10000000000', 'Sequencing Events', 'Sequencing Events', 1, 10, 30),
   ('aabbccdd-4444-3006-0003-b10000000000', 'aabbccdd-4444-3006-0000-b10000000000', 'Past Continuous', 'Past Continuous', 2, 10, 30),
@@ -9639,7 +9639,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-4444-3007-0000-b10000000000', 'aabbccdd-4444-0000-0000-b10000000000', 'Hypothetical Situations', 'Conditionals, would/could/should', 6, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-4444-3007-0001-b10000000000', 'aabbccdd-4444-3007-0000-b10000000000', 'First Conditional', 'First Conditional', 0, 10, 30),
   ('aabbccdd-4444-3007-0002-b10000000000', 'aabbccdd-4444-3007-0000-b10000000000', 'Second Conditional', 'Second Conditional', 1, 10, 30),
   ('aabbccdd-4444-3007-0003-b10000000000', 'aabbccdd-4444-3007-0000-b10000000000', 'Giving Advice', 'Giving Advice', 2, 10, 30),
@@ -9728,7 +9728,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-4444-3008-0000-b10000000000', 'aabbccdd-4444-0000-0000-b10000000000', 'Formal vs. Informal', 'Register, polite requests, slang', 7, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-4444-3008-0001-b10000000000', 'aabbccdd-4444-3008-0000-b10000000000', 'Formal Requests', 'Formal Requests', 0, 10, 30),
   ('aabbccdd-4444-3008-0002-b10000000000', 'aabbccdd-4444-3008-0000-b10000000000', 'Informal Speech', 'Informal Speech', 1, 10, 30),
   ('aabbccdd-4444-3008-0003-b10000000000', 'aabbccdd-4444-3008-0000-b10000000000', 'Writing Emails', 'Writing Emails', 2, 10, 30),
@@ -9881,7 +9881,7 @@ VALUES ('aabbccdd-4444-0000-0000-b20000000000', 'en', 'it', 'Italian B2', 'Itali
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-4444-4001-0000-b20000000000', 'aabbccdd-4444-0000-0000-b20000000000', 'Abstract Ideas', 'Philosophy, concepts, beliefs', 0, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-4444-4001-0001-b20000000000', 'aabbccdd-4444-4001-0000-b20000000000', 'Philosophy of Life', 'Philosophy of Life', 0, 12, 40),
   ('aabbccdd-4444-4001-0002-b20000000000', 'aabbccdd-4444-4001-0000-b20000000000', 'Beliefs & Values', 'Beliefs & Values', 1, 12, 40),
   ('aabbccdd-4444-4001-0003-b20000000000', 'aabbccdd-4444-4001-0000-b20000000000', 'Abstract Concepts', 'Abstract Concepts', 2, 12, 40),
@@ -9970,7 +9970,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-4444-4002-0000-b20000000000', 'aabbccdd-4444-0000-0000-b20000000000', 'Debate & Argumentation', 'Persuasion, counterarguments, rhetoric', 1, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-4444-4002-0001-b20000000000', 'aabbccdd-4444-4002-0000-b20000000000', 'Building Arguments', 'Building Arguments', 0, 12, 40),
   ('aabbccdd-4444-4002-0002-b20000000000', 'aabbccdd-4444-4002-0000-b20000000000', 'Counterarguments', 'Counterarguments', 1, 12, 40),
   ('aabbccdd-4444-4002-0003-b20000000000', 'aabbccdd-4444-4002-0000-b20000000000', 'Persuasive Language', 'Persuasive Language', 2, 12, 40),
@@ -10059,7 +10059,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-4444-4003-0000-b20000000000', 'aabbccdd-4444-0000-0000-b20000000000', 'Professional Communication', 'Formal writing, presentations, negotiations', 2, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-4444-4003-0001-b20000000000', 'aabbccdd-4444-4003-0000-b20000000000', 'Business Emails', 'Business Emails', 0, 12, 40),
   ('aabbccdd-4444-4003-0002-b20000000000', 'aabbccdd-4444-4003-0000-b20000000000', 'Presentations', 'Presentations', 1, 12, 40),
   ('aabbccdd-4444-4003-0003-b20000000000', 'aabbccdd-4444-4003-0000-b20000000000', 'Negotiations', 'Negotiations', 2, 12, 40),
@@ -10148,7 +10148,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-4444-4004-0000-b20000000000', 'aabbccdd-4444-0000-0000-b20000000000', 'Literature & Arts', 'Describing art, reviews, literary analysis', 3, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-4444-4004-0001-b20000000000', 'aabbccdd-4444-4004-0000-b20000000000', 'Describing Art', 'Describing Art', 0, 12, 40),
   ('aabbccdd-4444-4004-0002-b20000000000', 'aabbccdd-4444-4004-0000-b20000000000', 'Book Reviews', 'Book Reviews', 1, 12, 40),
   ('aabbccdd-4444-4004-0003-b20000000000', 'aabbccdd-4444-4004-0000-b20000000000', 'Film & Theater', 'Film & Theater', 2, 12, 40),
@@ -10237,7 +10237,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-4444-4005-0000-b20000000000', 'aabbccdd-4444-0000-0000-b20000000000', 'Idiomatic Expressions', 'Idioms, proverbs, collocations', 4, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-4444-4005-0001-b20000000000', 'aabbccdd-4444-4005-0000-b20000000000', 'Common Idioms', 'Common Idioms', 0, 12, 40),
   ('aabbccdd-4444-4005-0002-b20000000000', 'aabbccdd-4444-4005-0000-b20000000000', 'Proverbs', 'Proverbs', 1, 12, 40),
   ('aabbccdd-4444-4005-0003-b20000000000', 'aabbccdd-4444-4005-0000-b20000000000', 'Collocations', 'Collocations', 2, 12, 40),
@@ -10326,7 +10326,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-4444-4006-0000-b20000000000', 'aabbccdd-4444-0000-0000-b20000000000', 'Complex Grammar', 'Subjunctive, reported speech, passive voice', 5, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-4444-4006-0001-b20000000000', 'aabbccdd-4444-4006-0000-b20000000000', 'Subjunctive Mood', 'Subjunctive Mood', 0, 12, 40),
   ('aabbccdd-4444-4006-0002-b20000000000', 'aabbccdd-4444-4006-0000-b20000000000', 'Reported Speech', 'Reported Speech', 1, 12, 40),
   ('aabbccdd-4444-4006-0003-b20000000000', 'aabbccdd-4444-4006-0000-b20000000000', 'Passive Voice', 'Passive Voice', 2, 12, 40),
@@ -10503,13 +10503,13 @@ VALUES ('aabbccdd-5555-0000-0000-000000000000', 'en', 'pt', 'Portuguese A1', 'Po
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-5555-1001-0000-000000000000', 'aabbccdd-5555-0000-0000-000000000000', 'Greetings & Basics', 'Learn greetings, introductions, and polite expressions', 0, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-5555-1001-0001-000000000000', 'aabbccdd-5555-1001-0000-000000000000', 'Core Vocabulary', 'Core Vocabulary', 0, 5, 20),
-  ('aabbccdd-5555-1001-0002-000000000000', 'aabbccdd-5555-1001-0000-000000000000', 'Phrases & Sentences', 'Phrases & Sentences', 1, 5, 20),
-  ('aabbccdd-5555-1001-0003-000000000000', 'aabbccdd-5555-1001-0000-000000000000', 'Listening & Recognition', 'Listening & Recognition', 2, 5, 20),
-  ('aabbccdd-5555-1001-0004-000000000000', 'aabbccdd-5555-1001-0000-000000000000', 'Speaking Practice', 'Speaking Practice', 3, 5, 20),
-  ('aabbccdd-5555-1001-0005-000000000000', 'aabbccdd-5555-1001-0000-000000000000', 'Reading Simple Texts', 'Reading Simple Texts', 4, 5, 20),
-  ('aabbccdd-5555-1001-0006-000000000000', 'aabbccdd-5555-1001-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-5555-1001-0001-000000000000', 'aabbccdd-5555-1001-0000-000000000000', 'Core Vocabulary', 'Core Vocabulary', 0, 5),
+  ('aabbccdd-5555-1001-0002-000000000000', 'aabbccdd-5555-1001-0000-000000000000', 'Phrases & Sentences', 'Phrases & Sentences', 1, 5),
+  ('aabbccdd-5555-1001-0003-000000000000', 'aabbccdd-5555-1001-0000-000000000000', 'Listening & Recognition', 'Listening & Recognition', 2, 5),
+  ('aabbccdd-5555-1001-0004-000000000000', 'aabbccdd-5555-1001-0000-000000000000', 'Speaking Practice', 'Speaking Practice', 3, 5),
+  ('aabbccdd-5555-1001-0005-000000000000', 'aabbccdd-5555-1001-0000-000000000000', 'Reading Simple Texts', 'Reading Simple Texts', 4, 5),
+  ('aabbccdd-5555-1001-0006-000000000000', 'aabbccdd-5555-1001-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-5555-1001-0001-e00000000001', 'aabbccdd-5555-1001-0001-000000000000', 'multiple_choice', 'What does "Olá" mean in English?', 'Hello', '{"Hello","Goodbye","Good morning","Good afternoon"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-5555-1001-0001-e00000000002', 'aabbccdd-5555-1001-0001-000000000000', 'translate_to_target', 'Translate to Portuguese: Goodbye', 'Adeus', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -10579,13 +10579,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-5555-1002-0000-000000000000', 'aabbccdd-5555-0000-0000-000000000000', 'Food & Dining', 'Order food and drinks at a restaurant', 1, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-5555-1002-0001-000000000000', 'aabbccdd-5555-1002-0000-000000000000', 'Restaurant Basics', 'Restaurant Basics', 0, 5, 20),
-  ('aabbccdd-5555-1002-0002-000000000000', 'aabbccdd-5555-1002-0000-000000000000', 'Common Foods', 'Common Foods', 1, 5, 20),
-  ('aabbccdd-5555-1002-0003-000000000000', 'aabbccdd-5555-1002-0000-000000000000', 'Drinks & Beverages', 'Drinks & Beverages', 2, 5, 20),
-  ('aabbccdd-5555-1002-0004-000000000000', 'aabbccdd-5555-1002-0000-000000000000', 'Describing Taste', 'Describing Taste', 3, 5, 20),
-  ('aabbccdd-5555-1002-0005-000000000000', 'aabbccdd-5555-1002-0000-000000000000', 'Full Meal Order', 'Full Meal Order', 4, 5, 20),
-  ('aabbccdd-5555-1002-0006-000000000000', 'aabbccdd-5555-1002-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-5555-1002-0001-000000000000', 'aabbccdd-5555-1002-0000-000000000000', 'Restaurant Basics', 'Restaurant Basics', 0, 5),
+  ('aabbccdd-5555-1002-0002-000000000000', 'aabbccdd-5555-1002-0000-000000000000', 'Common Foods', 'Common Foods', 1, 5),
+  ('aabbccdd-5555-1002-0003-000000000000', 'aabbccdd-5555-1002-0000-000000000000', 'Drinks & Beverages', 'Drinks & Beverages', 2, 5),
+  ('aabbccdd-5555-1002-0004-000000000000', 'aabbccdd-5555-1002-0000-000000000000', 'Describing Taste', 'Describing Taste', 3, 5),
+  ('aabbccdd-5555-1002-0005-000000000000', 'aabbccdd-5555-1002-0000-000000000000', 'Full Meal Order', 'Full Meal Order', 4, 5),
+  ('aabbccdd-5555-1002-0006-000000000000', 'aabbccdd-5555-1002-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-5555-1002-0001-e00000000001', 'aabbccdd-5555-1002-0001-000000000000', 'multiple_choice', 'What does "Água" mean in English?', 'Water', '{"Water","Chicken","Bread","Apple"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-5555-1002-0001-e00000000002', 'aabbccdd-5555-1002-0001-000000000000', 'translate_to_target', 'Translate to Portuguese: Chicken', 'Frango', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -10655,13 +10655,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-5555-1003-0000-000000000000', 'aabbccdd-5555-0000-0000-000000000000', 'Getting Around', 'Ask for directions and use transportation', 2, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-5555-1003-0001-000000000000', 'aabbccdd-5555-1003-0000-000000000000', 'Asking Directions', 'Asking Directions', 0, 5, 20),
-  ('aabbccdd-5555-1003-0002-000000000000', 'aabbccdd-5555-1003-0000-000000000000', 'Transportation', 'Transportation', 1, 5, 20),
-  ('aabbccdd-5555-1003-0003-000000000000', 'aabbccdd-5555-1003-0000-000000000000', 'Places in Town', 'Places in Town', 2, 5, 20),
-  ('aabbccdd-5555-1003-0004-000000000000', 'aabbccdd-5555-1003-0000-000000000000', 'Buying Tickets', 'Buying Tickets', 3, 5, 20),
-  ('aabbccdd-5555-1003-0005-000000000000', 'aabbccdd-5555-1003-0000-000000000000', 'At the Airport', 'At the Airport', 4, 5, 20),
-  ('aabbccdd-5555-1003-0006-000000000000', 'aabbccdd-5555-1003-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-5555-1003-0001-000000000000', 'aabbccdd-5555-1003-0000-000000000000', 'Asking Directions', 'Asking Directions', 0, 5),
+  ('aabbccdd-5555-1003-0002-000000000000', 'aabbccdd-5555-1003-0000-000000000000', 'Transportation', 'Transportation', 1, 5),
+  ('aabbccdd-5555-1003-0003-000000000000', 'aabbccdd-5555-1003-0000-000000000000', 'Places in Town', 'Places in Town', 2, 5),
+  ('aabbccdd-5555-1003-0004-000000000000', 'aabbccdd-5555-1003-0000-000000000000', 'Buying Tickets', 'Buying Tickets', 3, 5),
+  ('aabbccdd-5555-1003-0005-000000000000', 'aabbccdd-5555-1003-0000-000000000000', 'At the Airport', 'At the Airport', 4, 5),
+  ('aabbccdd-5555-1003-0006-000000000000', 'aabbccdd-5555-1003-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-5555-1003-0001-e00000000001', 'aabbccdd-5555-1003-0001-000000000000', 'multiple_choice', 'What does "Esquerda" mean in English?', 'Left', '{"Left","Right","Straight","Bus"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-5555-1003-0001-e00000000002', 'aabbccdd-5555-1003-0001-000000000000', 'translate_to_target', 'Translate to Portuguese: Right', 'Direita', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -10731,13 +10731,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-5555-1004-0000-000000000000', 'aabbccdd-5555-0000-0000-000000000000', 'Daily Life & Shopping', 'Talk about routines and go shopping', 3, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-5555-1004-0001-000000000000', 'aabbccdd-5555-1004-0000-000000000000', 'Daily Routine', 'Daily Routine', 0, 5, 20),
-  ('aabbccdd-5555-1004-0002-000000000000', 'aabbccdd-5555-1004-0000-000000000000', 'Shopping Basics', 'Shopping Basics', 1, 5, 20),
-  ('aabbccdd-5555-1004-0003-000000000000', 'aabbccdd-5555-1004-0000-000000000000', 'Clothes & Colors', 'Clothes & Colors', 2, 5, 20),
-  ('aabbccdd-5555-1004-0004-000000000000', 'aabbccdd-5555-1004-0000-000000000000', 'Time & Schedule', 'Time & Schedule', 3, 5, 20),
-  ('aabbccdd-5555-1004-0005-000000000000', 'aabbccdd-5555-1004-0000-000000000000', 'At the Market', 'At the Market', 4, 5, 20),
-  ('aabbccdd-5555-1004-0006-000000000000', 'aabbccdd-5555-1004-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-5555-1004-0001-000000000000', 'aabbccdd-5555-1004-0000-000000000000', 'Daily Routine', 'Daily Routine', 0, 5),
+  ('aabbccdd-5555-1004-0002-000000000000', 'aabbccdd-5555-1004-0000-000000000000', 'Shopping Basics', 'Shopping Basics', 1, 5),
+  ('aabbccdd-5555-1004-0003-000000000000', 'aabbccdd-5555-1004-0000-000000000000', 'Clothes & Colors', 'Clothes & Colors', 2, 5),
+  ('aabbccdd-5555-1004-0004-000000000000', 'aabbccdd-5555-1004-0000-000000000000', 'Time & Schedule', 'Time & Schedule', 3, 5),
+  ('aabbccdd-5555-1004-0005-000000000000', 'aabbccdd-5555-1004-0000-000000000000', 'At the Market', 'At the Market', 4, 5),
+  ('aabbccdd-5555-1004-0006-000000000000', 'aabbccdd-5555-1004-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-5555-1004-0001-e00000000001', 'aabbccdd-5555-1004-0001-000000000000', 'multiple_choice', 'What does "Café da manhã" mean in English?', 'Breakfast', '{"Breakfast","Expensive","Cheap","Red"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-5555-1004-0001-e00000000002', 'aabbccdd-5555-1004-0001-000000000000', 'translate_to_target', 'Translate to Portuguese: Expensive', 'Caro', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -10807,13 +10807,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-5555-1005-0000-000000000000', 'aabbccdd-5555-0000-0000-000000000000', 'Work & Social', 'Discuss jobs, hobbies, and make plans', 4, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-5555-1005-0001-000000000000', 'aabbccdd-5555-1005-0000-000000000000', 'Jobs & Professions', 'Jobs & Professions', 0, 5, 20),
-  ('aabbccdd-5555-1005-0002-000000000000', 'aabbccdd-5555-1005-0000-000000000000', 'Making Plans', 'Making Plans', 1, 5, 20),
-  ('aabbccdd-5555-1005-0003-000000000000', 'aabbccdd-5555-1005-0000-000000000000', 'Hobbies & Interests', 'Hobbies & Interests', 2, 5, 20),
-  ('aabbccdd-5555-1005-0004-000000000000', 'aabbccdd-5555-1005-0000-000000000000', 'Weather & Seasons', 'Weather & Seasons', 3, 5, 20),
-  ('aabbccdd-5555-1005-0005-000000000000', 'aabbccdd-5555-1005-0000-000000000000', 'Weekend Activities', 'Weekend Activities', 4, 5, 20),
-  ('aabbccdd-5555-1005-0006-000000000000', 'aabbccdd-5555-1005-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-5555-1005-0001-000000000000', 'aabbccdd-5555-1005-0000-000000000000', 'Jobs & Professions', 'Jobs & Professions', 0, 5),
+  ('aabbccdd-5555-1005-0002-000000000000', 'aabbccdd-5555-1005-0000-000000000000', 'Making Plans', 'Making Plans', 1, 5),
+  ('aabbccdd-5555-1005-0003-000000000000', 'aabbccdd-5555-1005-0000-000000000000', 'Hobbies & Interests', 'Hobbies & Interests', 2, 5),
+  ('aabbccdd-5555-1005-0004-000000000000', 'aabbccdd-5555-1005-0000-000000000000', 'Weather & Seasons', 'Weather & Seasons', 3, 5),
+  ('aabbccdd-5555-1005-0005-000000000000', 'aabbccdd-5555-1005-0000-000000000000', 'Weekend Activities', 'Weekend Activities', 4, 5),
+  ('aabbccdd-5555-1005-0006-000000000000', 'aabbccdd-5555-1005-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-5555-1005-0001-e00000000001', 'aabbccdd-5555-1005-0001-000000000000', 'multiple_choice', 'What does "Professor" mean in English?', 'Teacher', '{"Teacher","Doctor","Office","To read"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-5555-1005-0001-e00000000002', 'aabbccdd-5555-1005-0001-000000000000', 'translate_to_target', 'Translate to Portuguese: Doctor', 'Médico', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -10883,13 +10883,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-5555-1006-0000-000000000000', 'aabbccdd-5555-0000-0000-000000000000', 'Family & Friends', 'Talk about family and relationships', 5, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-5555-1006-0001-000000000000', 'aabbccdd-5555-1006-0000-000000000000', 'Family Members', 'Family Members', 0, 5, 20),
-  ('aabbccdd-5555-1006-0002-000000000000', 'aabbccdd-5555-1006-0000-000000000000', 'Describing People', 'Describing People', 1, 5, 20),
-  ('aabbccdd-5555-1006-0003-000000000000', 'aabbccdd-5555-1006-0000-000000000000', 'Ages & Birthdays', 'Ages & Birthdays', 2, 5, 20),
-  ('aabbccdd-5555-1006-0004-000000000000', 'aabbccdd-5555-1006-0000-000000000000', 'Pets & Animals', 'Pets & Animals', 3, 5, 20),
-  ('aabbccdd-5555-1006-0005-000000000000', 'aabbccdd-5555-1006-0000-000000000000', 'Family Activities', 'Family Activities', 4, 5, 20),
-  ('aabbccdd-5555-1006-0006-000000000000', 'aabbccdd-5555-1006-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-5555-1006-0001-000000000000', 'aabbccdd-5555-1006-0000-000000000000', 'Family Members', 'Family Members', 0, 5),
+  ('aabbccdd-5555-1006-0002-000000000000', 'aabbccdd-5555-1006-0000-000000000000', 'Describing People', 'Describing People', 1, 5),
+  ('aabbccdd-5555-1006-0003-000000000000', 'aabbccdd-5555-1006-0000-000000000000', 'Ages & Birthdays', 'Ages & Birthdays', 2, 5),
+  ('aabbccdd-5555-1006-0004-000000000000', 'aabbccdd-5555-1006-0000-000000000000', 'Pets & Animals', 'Pets & Animals', 3, 5),
+  ('aabbccdd-5555-1006-0005-000000000000', 'aabbccdd-5555-1006-0000-000000000000', 'Family Activities', 'Family Activities', 4, 5),
+  ('aabbccdd-5555-1006-0006-000000000000', 'aabbccdd-5555-1006-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-5555-1006-0001-e00000000001', 'aabbccdd-5555-1006-0001-000000000000', 'multiple_choice', 'What does "Mãe" mean in English?', 'Mother', '{"Mother","Father","Sister","Brother"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-5555-1006-0001-e00000000002', 'aabbccdd-5555-1006-0001-000000000000', 'translate_to_target', 'Translate to Portuguese: Father', 'Pai', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -10959,13 +10959,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-5555-1007-0000-000000000000', 'aabbccdd-5555-0000-0000-000000000000', 'Home & Rooms', 'Describe your house and furniture', 6, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-5555-1007-0001-000000000000', 'aabbccdd-5555-1007-0000-000000000000', 'Parts of the House', 'Parts of the House', 0, 5, 20),
-  ('aabbccdd-5555-1007-0002-000000000000', 'aabbccdd-5555-1007-0000-000000000000', 'Furniture', 'Furniture', 1, 5, 20),
-  ('aabbccdd-5555-1007-0003-000000000000', 'aabbccdd-5555-1007-0000-000000000000', 'In the Kitchen', 'In the Kitchen', 2, 5, 20),
-  ('aabbccdd-5555-1007-0004-000000000000', 'aabbccdd-5555-1007-0000-000000000000', 'Bathroom & Bedroom', 'Bathroom & Bedroom', 3, 5, 20),
-  ('aabbccdd-5555-1007-0005-000000000000', 'aabbccdd-5555-1007-0000-000000000000', 'Describing Your Home', 'Describing Your Home', 4, 5, 20),
-  ('aabbccdd-5555-1007-0006-000000000000', 'aabbccdd-5555-1007-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-5555-1007-0001-000000000000', 'aabbccdd-5555-1007-0000-000000000000', 'Parts of the House', 'Parts of the House', 0, 5),
+  ('aabbccdd-5555-1007-0002-000000000000', 'aabbccdd-5555-1007-0000-000000000000', 'Furniture', 'Furniture', 1, 5),
+  ('aabbccdd-5555-1007-0003-000000000000', 'aabbccdd-5555-1007-0000-000000000000', 'In the Kitchen', 'In the Kitchen', 2, 5),
+  ('aabbccdd-5555-1007-0004-000000000000', 'aabbccdd-5555-1007-0000-000000000000', 'Bathroom & Bedroom', 'Bathroom & Bedroom', 3, 5),
+  ('aabbccdd-5555-1007-0005-000000000000', 'aabbccdd-5555-1007-0000-000000000000', 'Describing Your Home', 'Describing Your Home', 4, 5),
+  ('aabbccdd-5555-1007-0006-000000000000', 'aabbccdd-5555-1007-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-5555-1007-0001-e00000000001', 'aabbccdd-5555-1007-0001-000000000000', 'multiple_choice', 'What does "Casa" mean in English?', 'House', '{"House","Room","Kitchen","Bathroom"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-5555-1007-0001-e00000000002', 'aabbccdd-5555-1007-0001-000000000000', 'translate_to_target', 'Translate to Portuguese: Room', 'Sala', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -11035,13 +11035,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-5555-1008-0000-000000000000', 'aabbccdd-5555-0000-0000-000000000000', 'Health & Body', 'Body parts, health, and doctor visits', 7, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-5555-1008-0001-000000000000', 'aabbccdd-5555-1008-0000-000000000000', 'Body Parts', 'Body Parts', 0, 5, 20),
-  ('aabbccdd-5555-1008-0002-000000000000', 'aabbccdd-5555-1008-0000-000000000000', 'Feelings & Symptoms', 'Feelings & Symptoms', 1, 5, 20),
-  ('aabbccdd-5555-1008-0003-000000000000', 'aabbccdd-5555-1008-0000-000000000000', 'At the Doctor', 'At the Doctor', 2, 5, 20),
-  ('aabbccdd-5555-1008-0004-000000000000', 'aabbccdd-5555-1008-0000-000000000000', 'At the Pharmacy', 'At the Pharmacy', 3, 5, 20),
-  ('aabbccdd-5555-1008-0005-000000000000', 'aabbccdd-5555-1008-0000-000000000000', 'Healthy Habits', 'Healthy Habits', 4, 5, 20),
-  ('aabbccdd-5555-1008-0006-000000000000', 'aabbccdd-5555-1008-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-5555-1008-0001-000000000000', 'aabbccdd-5555-1008-0000-000000000000', 'Body Parts', 'Body Parts', 0, 5),
+  ('aabbccdd-5555-1008-0002-000000000000', 'aabbccdd-5555-1008-0000-000000000000', 'Feelings & Symptoms', 'Feelings & Symptoms', 1, 5),
+  ('aabbccdd-5555-1008-0003-000000000000', 'aabbccdd-5555-1008-0000-000000000000', 'At the Doctor', 'At the Doctor', 2, 5),
+  ('aabbccdd-5555-1008-0004-000000000000', 'aabbccdd-5555-1008-0000-000000000000', 'At the Pharmacy', 'At the Pharmacy', 3, 5),
+  ('aabbccdd-5555-1008-0005-000000000000', 'aabbccdd-5555-1008-0000-000000000000', 'Healthy Habits', 'Healthy Habits', 4, 5),
+  ('aabbccdd-5555-1008-0006-000000000000', 'aabbccdd-5555-1008-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-5555-1008-0001-e00000000001', 'aabbccdd-5555-1008-0001-000000000000', 'multiple_choice', 'What does "Cabeça" mean in English?', 'Head', '{"Head","Hand","Eye","Stomach"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-5555-1008-0001-e00000000002', 'aabbccdd-5555-1008-0001-000000000000', 'translate_to_target', 'Translate to Portuguese: Hand', 'Mão', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -11115,7 +11115,7 @@ VALUES ('aabbccdd-5555-0000-0000-a20000000000', 'en', 'pt', 'Portuguese A2', 'Po
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-5555-2001-0000-a20000000000', 'aabbccdd-5555-0000-0000-a20000000000', 'Family & Relationships', 'Describe family, relationships, and ages', 0, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-5555-2001-0001-a20000000000', 'aabbccdd-5555-2001-0000-a20000000000', 'Extended Family', 'Extended Family', 0, 7, 25),
   ('aabbccdd-5555-2001-0002-a20000000000', 'aabbccdd-5555-2001-0000-a20000000000', 'Describing Relationships', 'Describing Relationships', 1, 7, 25),
   ('aabbccdd-5555-2001-0003-a20000000000', 'aabbccdd-5555-2001-0000-a20000000000', 'Talking About Ages', 'Talking About Ages', 2, 7, 25),
@@ -11192,7 +11192,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-5555-2002-0000-a20000000000', 'aabbccdd-5555-0000-0000-a20000000000', 'Health & Wellness', 'Symptoms, doctor visits, pharmacy, feelings', 1, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-5555-2002-0001-a20000000000', 'aabbccdd-5555-2002-0000-a20000000000', 'Common Symptoms', 'Common Symptoms', 0, 7, 25),
   ('aabbccdd-5555-2002-0002-a20000000000', 'aabbccdd-5555-2002-0000-a20000000000', 'At the Doctor Office', 'At the Doctor Office', 1, 7, 25),
   ('aabbccdd-5555-2002-0003-a20000000000', 'aabbccdd-5555-2002-0000-a20000000000', 'At the Pharmacy', 'At the Pharmacy', 2, 7, 25),
@@ -11269,7 +11269,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-5555-2003-0000-a20000000000', 'aabbccdd-5555-0000-0000-a20000000000', 'At Home', 'Furniture, chores, describing your home', 2, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-5555-2003-0001-a20000000000', 'aabbccdd-5555-2003-0000-a20000000000', 'Rooms & Furniture', 'Rooms & Furniture', 0, 7, 25),
   ('aabbccdd-5555-2003-0002-a20000000000', 'aabbccdd-5555-2003-0000-a20000000000', 'Household Chores', 'Household Chores', 1, 7, 25),
   ('aabbccdd-5555-2003-0003-a20000000000', 'aabbccdd-5555-2003-0000-a20000000000', 'Moving & Housing', 'Moving & Housing', 2, 7, 25),
@@ -11346,7 +11346,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-5555-2004-0000-a20000000000', 'aabbccdd-5555-0000-0000-a20000000000', 'Emotions & Personality', 'Adjectives for people, moods, character', 3, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-5555-2004-0001-a20000000000', 'aabbccdd-5555-2004-0000-a20000000000', 'Positive Emotions', 'Positive Emotions', 0, 7, 25),
   ('aabbccdd-5555-2004-0002-a20000000000', 'aabbccdd-5555-2004-0000-a20000000000', 'Negative Emotions', 'Negative Emotions', 1, 7, 25),
   ('aabbccdd-5555-2004-0003-a20000000000', 'aabbccdd-5555-2004-0000-a20000000000', 'Personality Traits', 'Personality Traits', 2, 7, 25),
@@ -11423,7 +11423,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-5555-2005-0000-a20000000000', 'aabbccdd-5555-0000-0000-a20000000000', 'Past Tense Basics', 'Yesterday, last week, simple past actions', 4, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-5555-2005-0001-a20000000000', 'aabbccdd-5555-2005-0000-a20000000000', 'What Happened Yesterday', 'What Happened Yesterday', 0, 7, 25),
   ('aabbccdd-5555-2005-0002-a20000000000', 'aabbccdd-5555-2005-0000-a20000000000', 'Last Weekend', 'Last Weekend', 1, 7, 25),
   ('aabbccdd-5555-2005-0003-a20000000000', 'aabbccdd-5555-2005-0000-a20000000000', 'A Memorable Trip', 'A Memorable Trip', 2, 7, 25),
@@ -11500,7 +11500,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-5555-2006-0000-a20000000000', 'aabbccdd-5555-0000-0000-a20000000000', 'Future Plans', 'Will, going to, plans, intentions', 5, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-5555-2006-0001-a20000000000', 'aabbccdd-5555-2006-0000-a20000000000', 'Plans for Tomorrow', 'Plans for Tomorrow', 0, 7, 25),
   ('aabbccdd-5555-2006-0002-a20000000000', 'aabbccdd-5555-2006-0000-a20000000000', 'Next Vacation', 'Next Vacation', 1, 7, 25),
   ('aabbccdd-5555-2006-0003-a20000000000', 'aabbccdd-5555-2006-0000-a20000000000', 'Life Goals', 'Life Goals', 2, 7, 25),
@@ -11577,7 +11577,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-5555-2007-0000-a20000000000', 'aabbccdd-5555-0000-0000-a20000000000', 'Comparisons', 'Bigger, smaller, better, more expensive', 6, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-5555-2007-0001-a20000000000', 'aabbccdd-5555-2007-0000-a20000000000', 'Comparing Things', 'Comparing Things', 0, 7, 25),
   ('aabbccdd-5555-2007-0002-a20000000000', 'aabbccdd-5555-2007-0000-a20000000000', 'Comparing People', 'Comparing People', 1, 7, 25),
   ('aabbccdd-5555-2007-0003-a20000000000', 'aabbccdd-5555-2007-0000-a20000000000', 'Superlatives', 'Superlatives', 2, 7, 25),
@@ -11654,7 +11654,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-5555-2008-0000-a20000000000', 'aabbccdd-5555-0000-0000-a20000000000', 'Cultural Topics', 'Holidays, traditions, celebrations', 7, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-5555-2008-0001-a20000000000', 'aabbccdd-5555-2008-0000-a20000000000', 'National Holidays', 'National Holidays', 0, 7, 25),
   ('aabbccdd-5555-2008-0002-a20000000000', 'aabbccdd-5555-2008-0000-a20000000000', 'Food Traditions', 'Food Traditions', 1, 7, 25),
   ('aabbccdd-5555-2008-0003-a20000000000', 'aabbccdd-5555-2008-0000-a20000000000', 'Music & Dance', 'Music & Dance', 2, 7, 25),
@@ -11735,7 +11735,7 @@ VALUES ('aabbccdd-5555-0000-0000-b10000000000', 'en', 'pt', 'Portuguese B1', 'Po
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-5555-3001-0000-b10000000000', 'aabbccdd-5555-0000-0000-b10000000000', 'Opinions & Current Events', 'Agree/disagree, news, society', 0, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-5555-3001-0001-b10000000000', 'aabbccdd-5555-3001-0000-b10000000000', 'Expressing Opinions', 'Expressing Opinions', 0, 10, 30),
   ('aabbccdd-5555-3001-0002-b10000000000', 'aabbccdd-5555-3001-0000-b10000000000', 'Agreeing & Disagreeing', 'Agreeing & Disagreeing', 1, 10, 30),
   ('aabbccdd-5555-3001-0003-b10000000000', 'aabbccdd-5555-3001-0000-b10000000000', 'Current Events', 'Current Events', 2, 10, 30),
@@ -11824,7 +11824,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-5555-3002-0000-b10000000000', 'aabbccdd-5555-0000-0000-b10000000000', 'Work & Career', 'Interviews, meetings, emails, presentations', 1, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-5555-3002-0001-b10000000000', 'aabbccdd-5555-3002-0000-b10000000000', 'Job Interviews', 'Job Interviews', 0, 10, 30),
   ('aabbccdd-5555-3002-0002-b10000000000', 'aabbccdd-5555-3002-0000-b10000000000', 'Office Communication', 'Office Communication', 1, 10, 30),
   ('aabbccdd-5555-3002-0003-b10000000000', 'aabbccdd-5555-3002-0000-b10000000000', 'Meetings', 'Meetings', 2, 10, 30),
@@ -11913,7 +11913,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-5555-3003-0000-b10000000000', 'aabbccdd-5555-0000-0000-b10000000000', 'Travel & Adventure', 'Booking, airports, hotels, experiences', 2, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-5555-3003-0001-b10000000000', 'aabbccdd-5555-3003-0000-b10000000000', 'Booking Travel', 'Booking Travel', 0, 10, 30),
   ('aabbccdd-5555-3003-0002-b10000000000', 'aabbccdd-5555-3003-0000-b10000000000', 'At the Airport', 'At the Airport', 1, 10, 30),
   ('aabbccdd-5555-3003-0003-b10000000000', 'aabbccdd-5555-3003-0000-b10000000000', 'Hotel Check-in', 'Hotel Check-in', 2, 10, 30),
@@ -12002,7 +12002,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-5555-3004-0000-b10000000000', 'aabbccdd-5555-0000-0000-b10000000000', 'Environment & Nature', 'Climate, animals, conservation', 3, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-5555-3004-0001-b10000000000', 'aabbccdd-5555-3004-0000-b10000000000', 'Climate & Weather', 'Climate & Weather', 0, 10, 30),
   ('aabbccdd-5555-3004-0002-b10000000000', 'aabbccdd-5555-3004-0000-b10000000000', 'Wildlife', 'Wildlife', 1, 10, 30),
   ('aabbccdd-5555-3004-0003-b10000000000', 'aabbccdd-5555-3004-0000-b10000000000', 'Conservation', 'Conservation', 2, 10, 30),
@@ -12091,7 +12091,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-5555-3005-0000-b10000000000', 'aabbccdd-5555-0000-0000-b10000000000', 'Technology & Media', 'Internet, social media, devices', 4, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-5555-3005-0001-b10000000000', 'aabbccdd-5555-3005-0000-b10000000000', 'Internet & Social Media', 'Internet & Social Media', 0, 10, 30),
   ('aabbccdd-5555-3005-0002-b10000000000', 'aabbccdd-5555-3005-0000-b10000000000', 'Smartphones & Apps', 'Smartphones & Apps', 1, 10, 30),
   ('aabbccdd-5555-3005-0003-b10000000000', 'aabbccdd-5555-3005-0000-b10000000000', 'Digital Communication', 'Digital Communication', 2, 10, 30),
@@ -12180,7 +12180,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-5555-3006-0000-b10000000000', 'aabbccdd-5555-0000-0000-b10000000000', 'Storytelling', 'Narrative tenses, sequencing, past continuous', 5, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-5555-3006-0001-b10000000000', 'aabbccdd-5555-3006-0000-b10000000000', 'Telling a Story', 'Telling a Story', 0, 10, 30),
   ('aabbccdd-5555-3006-0002-b10000000000', 'aabbccdd-5555-3006-0000-b10000000000', 'Sequencing Events', 'Sequencing Events', 1, 10, 30),
   ('aabbccdd-5555-3006-0003-b10000000000', 'aabbccdd-5555-3006-0000-b10000000000', 'Past Continuous', 'Past Continuous', 2, 10, 30),
@@ -12269,7 +12269,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-5555-3007-0000-b10000000000', 'aabbccdd-5555-0000-0000-b10000000000', 'Hypothetical Situations', 'Conditionals, would/could/should', 6, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-5555-3007-0001-b10000000000', 'aabbccdd-5555-3007-0000-b10000000000', 'First Conditional', 'First Conditional', 0, 10, 30),
   ('aabbccdd-5555-3007-0002-b10000000000', 'aabbccdd-5555-3007-0000-b10000000000', 'Second Conditional', 'Second Conditional', 1, 10, 30),
   ('aabbccdd-5555-3007-0003-b10000000000', 'aabbccdd-5555-3007-0000-b10000000000', 'Giving Advice', 'Giving Advice', 2, 10, 30),
@@ -12358,7 +12358,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-5555-3008-0000-b10000000000', 'aabbccdd-5555-0000-0000-b10000000000', 'Formal vs. Informal', 'Register, polite requests, slang', 7, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-5555-3008-0001-b10000000000', 'aabbccdd-5555-3008-0000-b10000000000', 'Formal Requests', 'Formal Requests', 0, 10, 30),
   ('aabbccdd-5555-3008-0002-b10000000000', 'aabbccdd-5555-3008-0000-b10000000000', 'Informal Speech', 'Informal Speech', 1, 10, 30),
   ('aabbccdd-5555-3008-0003-b10000000000', 'aabbccdd-5555-3008-0000-b10000000000', 'Writing Emails', 'Writing Emails', 2, 10, 30),
@@ -12513,7 +12513,7 @@ VALUES ('aabbccdd-5555-0000-0000-b20000000000', 'en', 'pt', 'Portuguese B2', 'Po
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-5555-4001-0000-b20000000000', 'aabbccdd-5555-0000-0000-b20000000000', 'Abstract Ideas', 'Philosophy, concepts, beliefs', 0, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-5555-4001-0001-b20000000000', 'aabbccdd-5555-4001-0000-b20000000000', 'Philosophy of Life', 'Philosophy of Life', 0, 12, 40),
   ('aabbccdd-5555-4001-0002-b20000000000', 'aabbccdd-5555-4001-0000-b20000000000', 'Beliefs & Values', 'Beliefs & Values', 1, 12, 40),
   ('aabbccdd-5555-4001-0003-b20000000000', 'aabbccdd-5555-4001-0000-b20000000000', 'Abstract Concepts', 'Abstract Concepts', 2, 12, 40),
@@ -12602,7 +12602,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-5555-4002-0000-b20000000000', 'aabbccdd-5555-0000-0000-b20000000000', 'Debate & Argumentation', 'Persuasion, counterarguments, rhetoric', 1, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-5555-4002-0001-b20000000000', 'aabbccdd-5555-4002-0000-b20000000000', 'Building Arguments', 'Building Arguments', 0, 12, 40),
   ('aabbccdd-5555-4002-0002-b20000000000', 'aabbccdd-5555-4002-0000-b20000000000', 'Counterarguments', 'Counterarguments', 1, 12, 40),
   ('aabbccdd-5555-4002-0003-b20000000000', 'aabbccdd-5555-4002-0000-b20000000000', 'Persuasive Language', 'Persuasive Language', 2, 12, 40),
@@ -12691,7 +12691,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-5555-4003-0000-b20000000000', 'aabbccdd-5555-0000-0000-b20000000000', 'Professional Communication', 'Formal writing, presentations, negotiations', 2, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-5555-4003-0001-b20000000000', 'aabbccdd-5555-4003-0000-b20000000000', 'Business Emails', 'Business Emails', 0, 12, 40),
   ('aabbccdd-5555-4003-0002-b20000000000', 'aabbccdd-5555-4003-0000-b20000000000', 'Presentations', 'Presentations', 1, 12, 40),
   ('aabbccdd-5555-4003-0003-b20000000000', 'aabbccdd-5555-4003-0000-b20000000000', 'Negotiations', 'Negotiations', 2, 12, 40),
@@ -12780,7 +12780,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-5555-4004-0000-b20000000000', 'aabbccdd-5555-0000-0000-b20000000000', 'Literature & Arts', 'Describing art, reviews, literary analysis', 3, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-5555-4004-0001-b20000000000', 'aabbccdd-5555-4004-0000-b20000000000', 'Describing Art', 'Describing Art', 0, 12, 40),
   ('aabbccdd-5555-4004-0002-b20000000000', 'aabbccdd-5555-4004-0000-b20000000000', 'Book Reviews', 'Book Reviews', 1, 12, 40),
   ('aabbccdd-5555-4004-0003-b20000000000', 'aabbccdd-5555-4004-0000-b20000000000', 'Film & Theater', 'Film & Theater', 2, 12, 40),
@@ -12869,7 +12869,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-5555-4005-0000-b20000000000', 'aabbccdd-5555-0000-0000-b20000000000', 'Idiomatic Expressions', 'Idioms, proverbs, collocations', 4, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-5555-4005-0001-b20000000000', 'aabbccdd-5555-4005-0000-b20000000000', 'Common Idioms', 'Common Idioms', 0, 12, 40),
   ('aabbccdd-5555-4005-0002-b20000000000', 'aabbccdd-5555-4005-0000-b20000000000', 'Proverbs', 'Proverbs', 1, 12, 40),
   ('aabbccdd-5555-4005-0003-b20000000000', 'aabbccdd-5555-4005-0000-b20000000000', 'Collocations', 'Collocations', 2, 12, 40),
@@ -12958,7 +12958,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-5555-4006-0000-b20000000000', 'aabbccdd-5555-0000-0000-b20000000000', 'Complex Grammar', 'Subjunctive, reported speech, passive voice', 5, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-5555-4006-0001-b20000000000', 'aabbccdd-5555-4006-0000-b20000000000', 'Subjunctive Mood', 'Subjunctive Mood', 0, 12, 40),
   ('aabbccdd-5555-4006-0002-b20000000000', 'aabbccdd-5555-4006-0000-b20000000000', 'Reported Speech', 'Reported Speech', 1, 12, 40),
   ('aabbccdd-5555-4006-0003-b20000000000', 'aabbccdd-5555-4006-0000-b20000000000', 'Passive Voice', 'Passive Voice', 2, 12, 40),
@@ -13139,13 +13139,13 @@ VALUES ('aabbccdd-6666-0000-0000-000000000000', 'en', 'ja', 'Japanese A1', 'Japa
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-6666-1001-0000-000000000000', 'aabbccdd-6666-0000-0000-000000000000', 'Greetings & Basics', 'Learn greetings, introductions, and polite expressions', 0, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-6666-1001-0001-000000000000', 'aabbccdd-6666-1001-0000-000000000000', 'Core Vocabulary', 'Core Vocabulary', 0, 5, 20),
-  ('aabbccdd-6666-1001-0002-000000000000', 'aabbccdd-6666-1001-0000-000000000000', 'Phrases & Sentences', 'Phrases & Sentences', 1, 5, 20),
-  ('aabbccdd-6666-1001-0003-000000000000', 'aabbccdd-6666-1001-0000-000000000000', 'Listening & Recognition', 'Listening & Recognition', 2, 5, 20),
-  ('aabbccdd-6666-1001-0004-000000000000', 'aabbccdd-6666-1001-0000-000000000000', 'Speaking Practice', 'Speaking Practice', 3, 5, 20),
-  ('aabbccdd-6666-1001-0005-000000000000', 'aabbccdd-6666-1001-0000-000000000000', 'Reading Simple Texts', 'Reading Simple Texts', 4, 5, 20),
-  ('aabbccdd-6666-1001-0006-000000000000', 'aabbccdd-6666-1001-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-6666-1001-0001-000000000000', 'aabbccdd-6666-1001-0000-000000000000', 'Core Vocabulary', 'Core Vocabulary', 0, 5),
+  ('aabbccdd-6666-1001-0002-000000000000', 'aabbccdd-6666-1001-0000-000000000000', 'Phrases & Sentences', 'Phrases & Sentences', 1, 5),
+  ('aabbccdd-6666-1001-0003-000000000000', 'aabbccdd-6666-1001-0000-000000000000', 'Listening & Recognition', 'Listening & Recognition', 2, 5),
+  ('aabbccdd-6666-1001-0004-000000000000', 'aabbccdd-6666-1001-0000-000000000000', 'Speaking Practice', 'Speaking Practice', 3, 5),
+  ('aabbccdd-6666-1001-0005-000000000000', 'aabbccdd-6666-1001-0000-000000000000', 'Reading Simple Texts', 'Reading Simple Texts', 4, 5),
+  ('aabbccdd-6666-1001-0006-000000000000', 'aabbccdd-6666-1001-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-6666-1001-0001-e00000000001', 'aabbccdd-6666-1001-0001-000000000000', 'multiple_choice', 'What does "こんにちは" mean in English?', 'Hello', '{"Hello","Goodbye","Good morning","Good evening"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-6666-1001-0001-e00000000002', 'aabbccdd-6666-1001-0001-000000000000', 'translate_to_target', 'Translate to Japanese: Goodbye', 'さようなら', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -13215,13 +13215,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-6666-1002-0000-000000000000', 'aabbccdd-6666-0000-0000-000000000000', 'Food & Dining', 'Order food and drinks at a restaurant', 1, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-6666-1002-0001-000000000000', 'aabbccdd-6666-1002-0000-000000000000', 'Restaurant Basics', 'Restaurant Basics', 0, 5, 20),
-  ('aabbccdd-6666-1002-0002-000000000000', 'aabbccdd-6666-1002-0000-000000000000', 'Common Foods', 'Common Foods', 1, 5, 20),
-  ('aabbccdd-6666-1002-0003-000000000000', 'aabbccdd-6666-1002-0000-000000000000', 'Drinks & Beverages', 'Drinks & Beverages', 2, 5, 20),
-  ('aabbccdd-6666-1002-0004-000000000000', 'aabbccdd-6666-1002-0000-000000000000', 'Describing Taste', 'Describing Taste', 3, 5, 20),
-  ('aabbccdd-6666-1002-0005-000000000000', 'aabbccdd-6666-1002-0000-000000000000', 'Full Meal Order', 'Full Meal Order', 4, 5, 20),
-  ('aabbccdd-6666-1002-0006-000000000000', 'aabbccdd-6666-1002-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-6666-1002-0001-000000000000', 'aabbccdd-6666-1002-0000-000000000000', 'Restaurant Basics', 'Restaurant Basics', 0, 5),
+  ('aabbccdd-6666-1002-0002-000000000000', 'aabbccdd-6666-1002-0000-000000000000', 'Common Foods', 'Common Foods', 1, 5),
+  ('aabbccdd-6666-1002-0003-000000000000', 'aabbccdd-6666-1002-0000-000000000000', 'Drinks & Beverages', 'Drinks & Beverages', 2, 5),
+  ('aabbccdd-6666-1002-0004-000000000000', 'aabbccdd-6666-1002-0000-000000000000', 'Describing Taste', 'Describing Taste', 3, 5),
+  ('aabbccdd-6666-1002-0005-000000000000', 'aabbccdd-6666-1002-0000-000000000000', 'Full Meal Order', 'Full Meal Order', 4, 5),
+  ('aabbccdd-6666-1002-0006-000000000000', 'aabbccdd-6666-1002-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-6666-1002-0001-e00000000001', 'aabbccdd-6666-1002-0001-000000000000', 'multiple_choice', 'What does "水" mean in English?', 'Water', '{"Water","Chicken","Bread","Apple"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-6666-1002-0001-e00000000002', 'aabbccdd-6666-1002-0001-000000000000', 'translate_to_target', 'Translate to Japanese: Chicken', '鶏肉', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -13291,13 +13291,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-6666-1003-0000-000000000000', 'aabbccdd-6666-0000-0000-000000000000', 'Getting Around', 'Ask for directions and use transportation', 2, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-6666-1003-0001-000000000000', 'aabbccdd-6666-1003-0000-000000000000', 'Asking Directions', 'Asking Directions', 0, 5, 20),
-  ('aabbccdd-6666-1003-0002-000000000000', 'aabbccdd-6666-1003-0000-000000000000', 'Transportation', 'Transportation', 1, 5, 20),
-  ('aabbccdd-6666-1003-0003-000000000000', 'aabbccdd-6666-1003-0000-000000000000', 'Places in Town', 'Places in Town', 2, 5, 20),
-  ('aabbccdd-6666-1003-0004-000000000000', 'aabbccdd-6666-1003-0000-000000000000', 'Buying Tickets', 'Buying Tickets', 3, 5, 20),
-  ('aabbccdd-6666-1003-0005-000000000000', 'aabbccdd-6666-1003-0000-000000000000', 'At the Airport', 'At the Airport', 4, 5, 20),
-  ('aabbccdd-6666-1003-0006-000000000000', 'aabbccdd-6666-1003-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-6666-1003-0001-000000000000', 'aabbccdd-6666-1003-0000-000000000000', 'Asking Directions', 'Asking Directions', 0, 5),
+  ('aabbccdd-6666-1003-0002-000000000000', 'aabbccdd-6666-1003-0000-000000000000', 'Transportation', 'Transportation', 1, 5),
+  ('aabbccdd-6666-1003-0003-000000000000', 'aabbccdd-6666-1003-0000-000000000000', 'Places in Town', 'Places in Town', 2, 5),
+  ('aabbccdd-6666-1003-0004-000000000000', 'aabbccdd-6666-1003-0000-000000000000', 'Buying Tickets', 'Buying Tickets', 3, 5),
+  ('aabbccdd-6666-1003-0005-000000000000', 'aabbccdd-6666-1003-0000-000000000000', 'At the Airport', 'At the Airport', 4, 5),
+  ('aabbccdd-6666-1003-0006-000000000000', 'aabbccdd-6666-1003-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-6666-1003-0001-e00000000001', 'aabbccdd-6666-1003-0001-000000000000', 'multiple_choice', 'What does "左" mean in English?', 'Left', '{"Left","Right","Straight","Bus"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-6666-1003-0001-e00000000002', 'aabbccdd-6666-1003-0001-000000000000', 'translate_to_target', 'Translate to Japanese: Right', '右', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -13367,13 +13367,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-6666-1004-0000-000000000000', 'aabbccdd-6666-0000-0000-000000000000', 'Daily Life & Shopping', 'Talk about routines and go shopping', 3, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-6666-1004-0001-000000000000', 'aabbccdd-6666-1004-0000-000000000000', 'Daily Routine', 'Daily Routine', 0, 5, 20),
-  ('aabbccdd-6666-1004-0002-000000000000', 'aabbccdd-6666-1004-0000-000000000000', 'Shopping Basics', 'Shopping Basics', 1, 5, 20),
-  ('aabbccdd-6666-1004-0003-000000000000', 'aabbccdd-6666-1004-0000-000000000000', 'Clothes & Colors', 'Clothes & Colors', 2, 5, 20),
-  ('aabbccdd-6666-1004-0004-000000000000', 'aabbccdd-6666-1004-0000-000000000000', 'Time & Schedule', 'Time & Schedule', 3, 5, 20),
-  ('aabbccdd-6666-1004-0005-000000000000', 'aabbccdd-6666-1004-0000-000000000000', 'At the Market', 'At the Market', 4, 5, 20),
-  ('aabbccdd-6666-1004-0006-000000000000', 'aabbccdd-6666-1004-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-6666-1004-0001-000000000000', 'aabbccdd-6666-1004-0000-000000000000', 'Daily Routine', 'Daily Routine', 0, 5),
+  ('aabbccdd-6666-1004-0002-000000000000', 'aabbccdd-6666-1004-0000-000000000000', 'Shopping Basics', 'Shopping Basics', 1, 5),
+  ('aabbccdd-6666-1004-0003-000000000000', 'aabbccdd-6666-1004-0000-000000000000', 'Clothes & Colors', 'Clothes & Colors', 2, 5),
+  ('aabbccdd-6666-1004-0004-000000000000', 'aabbccdd-6666-1004-0000-000000000000', 'Time & Schedule', 'Time & Schedule', 3, 5),
+  ('aabbccdd-6666-1004-0005-000000000000', 'aabbccdd-6666-1004-0000-000000000000', 'At the Market', 'At the Market', 4, 5),
+  ('aabbccdd-6666-1004-0006-000000000000', 'aabbccdd-6666-1004-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-6666-1004-0001-e00000000001', 'aabbccdd-6666-1004-0001-000000000000', 'multiple_choice', 'What does "朝ご飯" mean in English?', 'Breakfast', '{"Breakfast","Expensive","Cheap","Red"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-6666-1004-0001-e00000000002', 'aabbccdd-6666-1004-0001-000000000000', 'translate_to_target', 'Translate to Japanese: Expensive', '高い', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -13443,13 +13443,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-6666-1005-0000-000000000000', 'aabbccdd-6666-0000-0000-000000000000', 'Work & Social', 'Discuss jobs, hobbies, and make plans', 4, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-6666-1005-0001-000000000000', 'aabbccdd-6666-1005-0000-000000000000', 'Jobs & Professions', 'Jobs & Professions', 0, 5, 20),
-  ('aabbccdd-6666-1005-0002-000000000000', 'aabbccdd-6666-1005-0000-000000000000', 'Making Plans', 'Making Plans', 1, 5, 20),
-  ('aabbccdd-6666-1005-0003-000000000000', 'aabbccdd-6666-1005-0000-000000000000', 'Hobbies & Interests', 'Hobbies & Interests', 2, 5, 20),
-  ('aabbccdd-6666-1005-0004-000000000000', 'aabbccdd-6666-1005-0000-000000000000', 'Weather & Seasons', 'Weather & Seasons', 3, 5, 20),
-  ('aabbccdd-6666-1005-0005-000000000000', 'aabbccdd-6666-1005-0000-000000000000', 'Weekend Activities', 'Weekend Activities', 4, 5, 20),
-  ('aabbccdd-6666-1005-0006-000000000000', 'aabbccdd-6666-1005-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-6666-1005-0001-000000000000', 'aabbccdd-6666-1005-0000-000000000000', 'Jobs & Professions', 'Jobs & Professions', 0, 5),
+  ('aabbccdd-6666-1005-0002-000000000000', 'aabbccdd-6666-1005-0000-000000000000', 'Making Plans', 'Making Plans', 1, 5),
+  ('aabbccdd-6666-1005-0003-000000000000', 'aabbccdd-6666-1005-0000-000000000000', 'Hobbies & Interests', 'Hobbies & Interests', 2, 5),
+  ('aabbccdd-6666-1005-0004-000000000000', 'aabbccdd-6666-1005-0000-000000000000', 'Weather & Seasons', 'Weather & Seasons', 3, 5),
+  ('aabbccdd-6666-1005-0005-000000000000', 'aabbccdd-6666-1005-0000-000000000000', 'Weekend Activities', 'Weekend Activities', 4, 5),
+  ('aabbccdd-6666-1005-0006-000000000000', 'aabbccdd-6666-1005-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-6666-1005-0001-e00000000001', 'aabbccdd-6666-1005-0001-000000000000', 'multiple_choice', 'What does "先生" mean in English?', 'Teacher', '{"Teacher","Doctor","Office","To read"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-6666-1005-0001-e00000000002', 'aabbccdd-6666-1005-0001-000000000000', 'translate_to_target', 'Translate to Japanese: Doctor', '医者', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -13519,13 +13519,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-6666-1006-0000-000000000000', 'aabbccdd-6666-0000-0000-000000000000', 'Family & Friends', 'Talk about family and relationships', 5, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-6666-1006-0001-000000000000', 'aabbccdd-6666-1006-0000-000000000000', 'Family Members', 'Family Members', 0, 5, 20),
-  ('aabbccdd-6666-1006-0002-000000000000', 'aabbccdd-6666-1006-0000-000000000000', 'Describing People', 'Describing People', 1, 5, 20),
-  ('aabbccdd-6666-1006-0003-000000000000', 'aabbccdd-6666-1006-0000-000000000000', 'Ages & Birthdays', 'Ages & Birthdays', 2, 5, 20),
-  ('aabbccdd-6666-1006-0004-000000000000', 'aabbccdd-6666-1006-0000-000000000000', 'Pets & Animals', 'Pets & Animals', 3, 5, 20),
-  ('aabbccdd-6666-1006-0005-000000000000', 'aabbccdd-6666-1006-0000-000000000000', 'Family Activities', 'Family Activities', 4, 5, 20),
-  ('aabbccdd-6666-1006-0006-000000000000', 'aabbccdd-6666-1006-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-6666-1006-0001-000000000000', 'aabbccdd-6666-1006-0000-000000000000', 'Family Members', 'Family Members', 0, 5),
+  ('aabbccdd-6666-1006-0002-000000000000', 'aabbccdd-6666-1006-0000-000000000000', 'Describing People', 'Describing People', 1, 5),
+  ('aabbccdd-6666-1006-0003-000000000000', 'aabbccdd-6666-1006-0000-000000000000', 'Ages & Birthdays', 'Ages & Birthdays', 2, 5),
+  ('aabbccdd-6666-1006-0004-000000000000', 'aabbccdd-6666-1006-0000-000000000000', 'Pets & Animals', 'Pets & Animals', 3, 5),
+  ('aabbccdd-6666-1006-0005-000000000000', 'aabbccdd-6666-1006-0000-000000000000', 'Family Activities', 'Family Activities', 4, 5),
+  ('aabbccdd-6666-1006-0006-000000000000', 'aabbccdd-6666-1006-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-6666-1006-0001-e00000000001', 'aabbccdd-6666-1006-0001-000000000000', 'multiple_choice', 'What does "母" mean in English?', 'Mother', '{"Mother","Father","Sister","Brother"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-6666-1006-0001-e00000000002', 'aabbccdd-6666-1006-0001-000000000000', 'translate_to_target', 'Translate to Japanese: Father', '父', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -13595,13 +13595,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-6666-1007-0000-000000000000', 'aabbccdd-6666-0000-0000-000000000000', 'Home & Rooms', 'Describe your house and furniture', 6, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-6666-1007-0001-000000000000', 'aabbccdd-6666-1007-0000-000000000000', 'Parts of the House', 'Parts of the House', 0, 5, 20),
-  ('aabbccdd-6666-1007-0002-000000000000', 'aabbccdd-6666-1007-0000-000000000000', 'Furniture', 'Furniture', 1, 5, 20),
-  ('aabbccdd-6666-1007-0003-000000000000', 'aabbccdd-6666-1007-0000-000000000000', 'In the Kitchen', 'In the Kitchen', 2, 5, 20),
-  ('aabbccdd-6666-1007-0004-000000000000', 'aabbccdd-6666-1007-0000-000000000000', 'Bathroom & Bedroom', 'Bathroom & Bedroom', 3, 5, 20),
-  ('aabbccdd-6666-1007-0005-000000000000', 'aabbccdd-6666-1007-0000-000000000000', 'Describing Your Home', 'Describing Your Home', 4, 5, 20),
-  ('aabbccdd-6666-1007-0006-000000000000', 'aabbccdd-6666-1007-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-6666-1007-0001-000000000000', 'aabbccdd-6666-1007-0000-000000000000', 'Parts of the House', 'Parts of the House', 0, 5),
+  ('aabbccdd-6666-1007-0002-000000000000', 'aabbccdd-6666-1007-0000-000000000000', 'Furniture', 'Furniture', 1, 5),
+  ('aabbccdd-6666-1007-0003-000000000000', 'aabbccdd-6666-1007-0000-000000000000', 'In the Kitchen', 'In the Kitchen', 2, 5),
+  ('aabbccdd-6666-1007-0004-000000000000', 'aabbccdd-6666-1007-0000-000000000000', 'Bathroom & Bedroom', 'Bathroom & Bedroom', 3, 5),
+  ('aabbccdd-6666-1007-0005-000000000000', 'aabbccdd-6666-1007-0000-000000000000', 'Describing Your Home', 'Describing Your Home', 4, 5),
+  ('aabbccdd-6666-1007-0006-000000000000', 'aabbccdd-6666-1007-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-6666-1007-0001-e00000000001', 'aabbccdd-6666-1007-0001-000000000000', 'multiple_choice', 'What does "家" mean in English?', 'House', '{"House","Room","Kitchen","Bath"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-6666-1007-0001-e00000000002', 'aabbccdd-6666-1007-0001-000000000000', 'translate_to_target', 'Translate to Japanese: Room', '部屋', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -13671,13 +13671,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-6666-1008-0000-000000000000', 'aabbccdd-6666-0000-0000-000000000000', 'Health & Body', 'Body parts, health, and doctor visits', 7, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-6666-1008-0001-000000000000', 'aabbccdd-6666-1008-0000-000000000000', 'Body Parts', 'Body Parts', 0, 5, 20),
-  ('aabbccdd-6666-1008-0002-000000000000', 'aabbccdd-6666-1008-0000-000000000000', 'Feelings & Symptoms', 'Feelings & Symptoms', 1, 5, 20),
-  ('aabbccdd-6666-1008-0003-000000000000', 'aabbccdd-6666-1008-0000-000000000000', 'At the Doctor', 'At the Doctor', 2, 5, 20),
-  ('aabbccdd-6666-1008-0004-000000000000', 'aabbccdd-6666-1008-0000-000000000000', 'At the Pharmacy', 'At the Pharmacy', 3, 5, 20),
-  ('aabbccdd-6666-1008-0005-000000000000', 'aabbccdd-6666-1008-0000-000000000000', 'Healthy Habits', 'Healthy Habits', 4, 5, 20),
-  ('aabbccdd-6666-1008-0006-000000000000', 'aabbccdd-6666-1008-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-6666-1008-0001-000000000000', 'aabbccdd-6666-1008-0000-000000000000', 'Body Parts', 'Body Parts', 0, 5),
+  ('aabbccdd-6666-1008-0002-000000000000', 'aabbccdd-6666-1008-0000-000000000000', 'Feelings & Symptoms', 'Feelings & Symptoms', 1, 5),
+  ('aabbccdd-6666-1008-0003-000000000000', 'aabbccdd-6666-1008-0000-000000000000', 'At the Doctor', 'At the Doctor', 2, 5),
+  ('aabbccdd-6666-1008-0004-000000000000', 'aabbccdd-6666-1008-0000-000000000000', 'At the Pharmacy', 'At the Pharmacy', 3, 5),
+  ('aabbccdd-6666-1008-0005-000000000000', 'aabbccdd-6666-1008-0000-000000000000', 'Healthy Habits', 'Healthy Habits', 4, 5),
+  ('aabbccdd-6666-1008-0006-000000000000', 'aabbccdd-6666-1008-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-6666-1008-0001-e00000000001', 'aabbccdd-6666-1008-0001-000000000000', 'multiple_choice', 'What does "頭" mean in English?', 'Head', '{"Head","Hand","Eye","Stomach"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-6666-1008-0001-e00000000002', 'aabbccdd-6666-1008-0001-000000000000', 'translate_to_target', 'Translate to Japanese: Hand', '手', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -13751,7 +13751,7 @@ VALUES ('aabbccdd-6666-0000-0000-a20000000000', 'en', 'ja', 'Japanese A2', 'Japa
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-6666-2001-0000-a20000000000', 'aabbccdd-6666-0000-0000-a20000000000', 'Family & Relationships', 'Describe family, relationships, and ages', 0, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-6666-2001-0001-a20000000000', 'aabbccdd-6666-2001-0000-a20000000000', 'Extended Family', 'Extended Family', 0, 7, 25),
   ('aabbccdd-6666-2001-0002-a20000000000', 'aabbccdd-6666-2001-0000-a20000000000', 'Describing Relationships', 'Describing Relationships', 1, 7, 25),
   ('aabbccdd-6666-2001-0003-a20000000000', 'aabbccdd-6666-2001-0000-a20000000000', 'Talking About Ages', 'Talking About Ages', 2, 7, 25),
@@ -13828,7 +13828,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-6666-2002-0000-a20000000000', 'aabbccdd-6666-0000-0000-a20000000000', 'Health & Wellness', 'Symptoms, doctor visits, pharmacy, feelings', 1, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-6666-2002-0001-a20000000000', 'aabbccdd-6666-2002-0000-a20000000000', 'Common Symptoms', 'Common Symptoms', 0, 7, 25),
   ('aabbccdd-6666-2002-0002-a20000000000', 'aabbccdd-6666-2002-0000-a20000000000', 'At the Doctor Office', 'At the Doctor Office', 1, 7, 25),
   ('aabbccdd-6666-2002-0003-a20000000000', 'aabbccdd-6666-2002-0000-a20000000000', 'At the Pharmacy', 'At the Pharmacy', 2, 7, 25),
@@ -13905,7 +13905,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-6666-2003-0000-a20000000000', 'aabbccdd-6666-0000-0000-a20000000000', 'At Home', 'Furniture, chores, describing your home', 2, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-6666-2003-0001-a20000000000', 'aabbccdd-6666-2003-0000-a20000000000', 'Rooms & Furniture', 'Rooms & Furniture', 0, 7, 25),
   ('aabbccdd-6666-2003-0002-a20000000000', 'aabbccdd-6666-2003-0000-a20000000000', 'Household Chores', 'Household Chores', 1, 7, 25),
   ('aabbccdd-6666-2003-0003-a20000000000', 'aabbccdd-6666-2003-0000-a20000000000', 'Moving & Housing', 'Moving & Housing', 2, 7, 25),
@@ -13982,7 +13982,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-6666-2004-0000-a20000000000', 'aabbccdd-6666-0000-0000-a20000000000', 'Emotions & Personality', 'Adjectives for people, moods, character', 3, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-6666-2004-0001-a20000000000', 'aabbccdd-6666-2004-0000-a20000000000', 'Positive Emotions', 'Positive Emotions', 0, 7, 25),
   ('aabbccdd-6666-2004-0002-a20000000000', 'aabbccdd-6666-2004-0000-a20000000000', 'Negative Emotions', 'Negative Emotions', 1, 7, 25),
   ('aabbccdd-6666-2004-0003-a20000000000', 'aabbccdd-6666-2004-0000-a20000000000', 'Personality Traits', 'Personality Traits', 2, 7, 25),
@@ -14059,7 +14059,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-6666-2005-0000-a20000000000', 'aabbccdd-6666-0000-0000-a20000000000', 'Past Tense Basics', 'Yesterday, last week, simple past actions', 4, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-6666-2005-0001-a20000000000', 'aabbccdd-6666-2005-0000-a20000000000', 'What Happened Yesterday', 'What Happened Yesterday', 0, 7, 25),
   ('aabbccdd-6666-2005-0002-a20000000000', 'aabbccdd-6666-2005-0000-a20000000000', 'Last Weekend', 'Last Weekend', 1, 7, 25),
   ('aabbccdd-6666-2005-0003-a20000000000', 'aabbccdd-6666-2005-0000-a20000000000', 'A Memorable Trip', 'A Memorable Trip', 2, 7, 25),
@@ -14136,7 +14136,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-6666-2006-0000-a20000000000', 'aabbccdd-6666-0000-0000-a20000000000', 'Future Plans', 'Will, going to, plans, intentions', 5, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-6666-2006-0001-a20000000000', 'aabbccdd-6666-2006-0000-a20000000000', 'Plans for Tomorrow', 'Plans for Tomorrow', 0, 7, 25),
   ('aabbccdd-6666-2006-0002-a20000000000', 'aabbccdd-6666-2006-0000-a20000000000', 'Next Vacation', 'Next Vacation', 1, 7, 25),
   ('aabbccdd-6666-2006-0003-a20000000000', 'aabbccdd-6666-2006-0000-a20000000000', 'Life Goals', 'Life Goals', 2, 7, 25),
@@ -14213,7 +14213,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-6666-2007-0000-a20000000000', 'aabbccdd-6666-0000-0000-a20000000000', 'Comparisons', 'Bigger, smaller, better, more expensive', 6, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-6666-2007-0001-a20000000000', 'aabbccdd-6666-2007-0000-a20000000000', 'Comparing Things', 'Comparing Things', 0, 7, 25),
   ('aabbccdd-6666-2007-0002-a20000000000', 'aabbccdd-6666-2007-0000-a20000000000', 'Comparing People', 'Comparing People', 1, 7, 25),
   ('aabbccdd-6666-2007-0003-a20000000000', 'aabbccdd-6666-2007-0000-a20000000000', 'Superlatives', 'Superlatives', 2, 7, 25),
@@ -14290,7 +14290,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-6666-2008-0000-a20000000000', 'aabbccdd-6666-0000-0000-a20000000000', 'Cultural Topics', 'Holidays, traditions, celebrations', 7, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-6666-2008-0001-a20000000000', 'aabbccdd-6666-2008-0000-a20000000000', 'National Holidays', 'National Holidays', 0, 7, 25),
   ('aabbccdd-6666-2008-0002-a20000000000', 'aabbccdd-6666-2008-0000-a20000000000', 'Food Traditions', 'Food Traditions', 1, 7, 25),
   ('aabbccdd-6666-2008-0003-a20000000000', 'aabbccdd-6666-2008-0000-a20000000000', 'Music & Dance', 'Music & Dance', 2, 7, 25),
@@ -14371,7 +14371,7 @@ VALUES ('aabbccdd-6666-0000-0000-b10000000000', 'en', 'ja', 'Japanese B1', 'Japa
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-6666-3001-0000-b10000000000', 'aabbccdd-6666-0000-0000-b10000000000', 'Opinions & Current Events', 'Agree/disagree, news, society', 0, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-6666-3001-0001-b10000000000', 'aabbccdd-6666-3001-0000-b10000000000', 'Expressing Opinions', 'Expressing Opinions', 0, 10, 30),
   ('aabbccdd-6666-3001-0002-b10000000000', 'aabbccdd-6666-3001-0000-b10000000000', 'Agreeing & Disagreeing', 'Agreeing & Disagreeing', 1, 10, 30),
   ('aabbccdd-6666-3001-0003-b10000000000', 'aabbccdd-6666-3001-0000-b10000000000', 'Current Events', 'Current Events', 2, 10, 30),
@@ -14460,7 +14460,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-6666-3002-0000-b10000000000', 'aabbccdd-6666-0000-0000-b10000000000', 'Work & Career', 'Interviews, meetings, emails, presentations', 1, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-6666-3002-0001-b10000000000', 'aabbccdd-6666-3002-0000-b10000000000', 'Job Interviews', 'Job Interviews', 0, 10, 30),
   ('aabbccdd-6666-3002-0002-b10000000000', 'aabbccdd-6666-3002-0000-b10000000000', 'Office Communication', 'Office Communication', 1, 10, 30),
   ('aabbccdd-6666-3002-0003-b10000000000', 'aabbccdd-6666-3002-0000-b10000000000', 'Meetings', 'Meetings', 2, 10, 30),
@@ -14549,7 +14549,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-6666-3003-0000-b10000000000', 'aabbccdd-6666-0000-0000-b10000000000', 'Travel & Adventure', 'Booking, airports, hotels, experiences', 2, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-6666-3003-0001-b10000000000', 'aabbccdd-6666-3003-0000-b10000000000', 'Booking Travel', 'Booking Travel', 0, 10, 30),
   ('aabbccdd-6666-3003-0002-b10000000000', 'aabbccdd-6666-3003-0000-b10000000000', 'At the Airport', 'At the Airport', 1, 10, 30),
   ('aabbccdd-6666-3003-0003-b10000000000', 'aabbccdd-6666-3003-0000-b10000000000', 'Hotel Check-in', 'Hotel Check-in', 2, 10, 30),
@@ -14638,7 +14638,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-6666-3004-0000-b10000000000', 'aabbccdd-6666-0000-0000-b10000000000', 'Environment & Nature', 'Climate, animals, conservation', 3, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-6666-3004-0001-b10000000000', 'aabbccdd-6666-3004-0000-b10000000000', 'Climate & Weather', 'Climate & Weather', 0, 10, 30),
   ('aabbccdd-6666-3004-0002-b10000000000', 'aabbccdd-6666-3004-0000-b10000000000', 'Wildlife', 'Wildlife', 1, 10, 30),
   ('aabbccdd-6666-3004-0003-b10000000000', 'aabbccdd-6666-3004-0000-b10000000000', 'Conservation', 'Conservation', 2, 10, 30),
@@ -14727,7 +14727,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-6666-3005-0000-b10000000000', 'aabbccdd-6666-0000-0000-b10000000000', 'Technology & Media', 'Internet, social media, devices', 4, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-6666-3005-0001-b10000000000', 'aabbccdd-6666-3005-0000-b10000000000', 'Internet & Social Media', 'Internet & Social Media', 0, 10, 30),
   ('aabbccdd-6666-3005-0002-b10000000000', 'aabbccdd-6666-3005-0000-b10000000000', 'Smartphones & Apps', 'Smartphones & Apps', 1, 10, 30),
   ('aabbccdd-6666-3005-0003-b10000000000', 'aabbccdd-6666-3005-0000-b10000000000', 'Digital Communication', 'Digital Communication', 2, 10, 30),
@@ -14816,7 +14816,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-6666-3006-0000-b10000000000', 'aabbccdd-6666-0000-0000-b10000000000', 'Storytelling', 'Narrative tenses, sequencing, past continuous', 5, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-6666-3006-0001-b10000000000', 'aabbccdd-6666-3006-0000-b10000000000', 'Telling a Story', 'Telling a Story', 0, 10, 30),
   ('aabbccdd-6666-3006-0002-b10000000000', 'aabbccdd-6666-3006-0000-b10000000000', 'Sequencing Events', 'Sequencing Events', 1, 10, 30),
   ('aabbccdd-6666-3006-0003-b10000000000', 'aabbccdd-6666-3006-0000-b10000000000', 'Past Continuous', 'Past Continuous', 2, 10, 30),
@@ -14905,7 +14905,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-6666-3007-0000-b10000000000', 'aabbccdd-6666-0000-0000-b10000000000', 'Hypothetical Situations', 'Conditionals, would/could/should', 6, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-6666-3007-0001-b10000000000', 'aabbccdd-6666-3007-0000-b10000000000', 'First Conditional', 'First Conditional', 0, 10, 30),
   ('aabbccdd-6666-3007-0002-b10000000000', 'aabbccdd-6666-3007-0000-b10000000000', 'Second Conditional', 'Second Conditional', 1, 10, 30),
   ('aabbccdd-6666-3007-0003-b10000000000', 'aabbccdd-6666-3007-0000-b10000000000', 'Giving Advice', 'Giving Advice', 2, 10, 30),
@@ -14994,7 +14994,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-6666-3008-0000-b10000000000', 'aabbccdd-6666-0000-0000-b10000000000', 'Formal vs. Informal', 'Register, polite requests, slang', 7, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-6666-3008-0001-b10000000000', 'aabbccdd-6666-3008-0000-b10000000000', 'Formal Requests', 'Formal Requests', 0, 10, 30),
   ('aabbccdd-6666-3008-0002-b10000000000', 'aabbccdd-6666-3008-0000-b10000000000', 'Informal Speech', 'Informal Speech', 1, 10, 30),
   ('aabbccdd-6666-3008-0003-b10000000000', 'aabbccdd-6666-3008-0000-b10000000000', 'Writing Emails', 'Writing Emails', 2, 10, 30),
@@ -15201,7 +15201,7 @@ VALUES ('aabbccdd-6666-0000-0000-b20000000000', 'en', 'ja', 'Japanese B2', 'Japa
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-6666-4001-0000-b20000000000', 'aabbccdd-6666-0000-0000-b20000000000', 'Abstract Ideas', 'Philosophy, concepts, beliefs', 0, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-6666-4001-0001-b20000000000', 'aabbccdd-6666-4001-0000-b20000000000', 'Philosophy of Life', 'Philosophy of Life', 0, 12, 40),
   ('aabbccdd-6666-4001-0002-b20000000000', 'aabbccdd-6666-4001-0000-b20000000000', 'Beliefs & Values', 'Beliefs & Values', 1, 12, 40),
   ('aabbccdd-6666-4001-0003-b20000000000', 'aabbccdd-6666-4001-0000-b20000000000', 'Abstract Concepts', 'Abstract Concepts', 2, 12, 40),
@@ -15290,7 +15290,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-6666-4002-0000-b20000000000', 'aabbccdd-6666-0000-0000-b20000000000', 'Debate & Argumentation', 'Persuasion, counterarguments, rhetoric', 1, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-6666-4002-0001-b20000000000', 'aabbccdd-6666-4002-0000-b20000000000', 'Building Arguments', 'Building Arguments', 0, 12, 40),
   ('aabbccdd-6666-4002-0002-b20000000000', 'aabbccdd-6666-4002-0000-b20000000000', 'Counterarguments', 'Counterarguments', 1, 12, 40),
   ('aabbccdd-6666-4002-0003-b20000000000', 'aabbccdd-6666-4002-0000-b20000000000', 'Persuasive Language', 'Persuasive Language', 2, 12, 40),
@@ -15379,7 +15379,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-6666-4003-0000-b20000000000', 'aabbccdd-6666-0000-0000-b20000000000', 'Professional Communication', 'Formal writing, presentations, negotiations', 2, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-6666-4003-0001-b20000000000', 'aabbccdd-6666-4003-0000-b20000000000', 'Business Emails', 'Business Emails', 0, 12, 40),
   ('aabbccdd-6666-4003-0002-b20000000000', 'aabbccdd-6666-4003-0000-b20000000000', 'Presentations', 'Presentations', 1, 12, 40),
   ('aabbccdd-6666-4003-0003-b20000000000', 'aabbccdd-6666-4003-0000-b20000000000', 'Negotiations', 'Negotiations', 2, 12, 40),
@@ -15468,7 +15468,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-6666-4004-0000-b20000000000', 'aabbccdd-6666-0000-0000-b20000000000', 'Literature & Arts', 'Describing art, reviews, literary analysis', 3, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-6666-4004-0001-b20000000000', 'aabbccdd-6666-4004-0000-b20000000000', 'Describing Art', 'Describing Art', 0, 12, 40),
   ('aabbccdd-6666-4004-0002-b20000000000', 'aabbccdd-6666-4004-0000-b20000000000', 'Book Reviews', 'Book Reviews', 1, 12, 40),
   ('aabbccdd-6666-4004-0003-b20000000000', 'aabbccdd-6666-4004-0000-b20000000000', 'Film & Theater', 'Film & Theater', 2, 12, 40),
@@ -15557,7 +15557,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-6666-4005-0000-b20000000000', 'aabbccdd-6666-0000-0000-b20000000000', 'Idiomatic Expressions', 'Idioms, proverbs, collocations', 4, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-6666-4005-0001-b20000000000', 'aabbccdd-6666-4005-0000-b20000000000', 'Common Idioms', 'Common Idioms', 0, 12, 40),
   ('aabbccdd-6666-4005-0002-b20000000000', 'aabbccdd-6666-4005-0000-b20000000000', 'Proverbs', 'Proverbs', 1, 12, 40),
   ('aabbccdd-6666-4005-0003-b20000000000', 'aabbccdd-6666-4005-0000-b20000000000', 'Collocations', 'Collocations', 2, 12, 40),
@@ -15646,7 +15646,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-6666-4006-0000-b20000000000', 'aabbccdd-6666-0000-0000-b20000000000', 'Complex Grammar', 'Subjunctive, reported speech, passive voice', 5, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-6666-4006-0001-b20000000000', 'aabbccdd-6666-4006-0000-b20000000000', 'Subjunctive Mood', 'Subjunctive Mood', 0, 12, 40),
   ('aabbccdd-6666-4006-0002-b20000000000', 'aabbccdd-6666-4006-0000-b20000000000', 'Reported Speech', 'Reported Speech', 1, 12, 40),
   ('aabbccdd-6666-4006-0003-b20000000000', 'aabbccdd-6666-4006-0000-b20000000000', 'Passive Voice', 'Passive Voice', 2, 12, 40),
@@ -15845,13 +15845,13 @@ VALUES ('aabbccdd-7777-0000-0000-000000000000', 'en', 'ko', 'Korean A1', 'Korean
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-7777-1001-0000-000000000000', 'aabbccdd-7777-0000-0000-000000000000', 'Greetings & Basics', 'Learn greetings, introductions, and polite expressions', 0, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-7777-1001-0001-000000000000', 'aabbccdd-7777-1001-0000-000000000000', 'Core Vocabulary', 'Core Vocabulary', 0, 5, 20),
-  ('aabbccdd-7777-1001-0002-000000000000', 'aabbccdd-7777-1001-0000-000000000000', 'Phrases & Sentences', 'Phrases & Sentences', 1, 5, 20),
-  ('aabbccdd-7777-1001-0003-000000000000', 'aabbccdd-7777-1001-0000-000000000000', 'Listening & Recognition', 'Listening & Recognition', 2, 5, 20),
-  ('aabbccdd-7777-1001-0004-000000000000', 'aabbccdd-7777-1001-0000-000000000000', 'Speaking Practice', 'Speaking Practice', 3, 5, 20),
-  ('aabbccdd-7777-1001-0005-000000000000', 'aabbccdd-7777-1001-0000-000000000000', 'Reading Simple Texts', 'Reading Simple Texts', 4, 5, 20),
-  ('aabbccdd-7777-1001-0006-000000000000', 'aabbccdd-7777-1001-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-7777-1001-0001-000000000000', 'aabbccdd-7777-1001-0000-000000000000', 'Core Vocabulary', 'Core Vocabulary', 0, 5),
+  ('aabbccdd-7777-1001-0002-000000000000', 'aabbccdd-7777-1001-0000-000000000000', 'Phrases & Sentences', 'Phrases & Sentences', 1, 5),
+  ('aabbccdd-7777-1001-0003-000000000000', 'aabbccdd-7777-1001-0000-000000000000', 'Listening & Recognition', 'Listening & Recognition', 2, 5),
+  ('aabbccdd-7777-1001-0004-000000000000', 'aabbccdd-7777-1001-0000-000000000000', 'Speaking Practice', 'Speaking Practice', 3, 5),
+  ('aabbccdd-7777-1001-0005-000000000000', 'aabbccdd-7777-1001-0000-000000000000', 'Reading Simple Texts', 'Reading Simple Texts', 4, 5),
+  ('aabbccdd-7777-1001-0006-000000000000', 'aabbccdd-7777-1001-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-7777-1001-0001-e00000000001', 'aabbccdd-7777-1001-0001-000000000000', 'multiple_choice', 'What does "안녕하세요" mean in English?', 'Hello', '{"Hello","Goodbye","Good morning","Good evening"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-7777-1001-0001-e00000000002', 'aabbccdd-7777-1001-0001-000000000000', 'translate_to_target', 'Translate to Korean: Goodbye', '안녕히 가세요', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -15921,13 +15921,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-7777-1002-0000-000000000000', 'aabbccdd-7777-0000-0000-000000000000', 'Food & Dining', 'Order food and drinks at a restaurant', 1, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-7777-1002-0001-000000000000', 'aabbccdd-7777-1002-0000-000000000000', 'Restaurant Basics', 'Restaurant Basics', 0, 5, 20),
-  ('aabbccdd-7777-1002-0002-000000000000', 'aabbccdd-7777-1002-0000-000000000000', 'Common Foods', 'Common Foods', 1, 5, 20),
-  ('aabbccdd-7777-1002-0003-000000000000', 'aabbccdd-7777-1002-0000-000000000000', 'Drinks & Beverages', 'Drinks & Beverages', 2, 5, 20),
-  ('aabbccdd-7777-1002-0004-000000000000', 'aabbccdd-7777-1002-0000-000000000000', 'Describing Taste', 'Describing Taste', 3, 5, 20),
-  ('aabbccdd-7777-1002-0005-000000000000', 'aabbccdd-7777-1002-0000-000000000000', 'Full Meal Order', 'Full Meal Order', 4, 5, 20),
-  ('aabbccdd-7777-1002-0006-000000000000', 'aabbccdd-7777-1002-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-7777-1002-0001-000000000000', 'aabbccdd-7777-1002-0000-000000000000', 'Restaurant Basics', 'Restaurant Basics', 0, 5),
+  ('aabbccdd-7777-1002-0002-000000000000', 'aabbccdd-7777-1002-0000-000000000000', 'Common Foods', 'Common Foods', 1, 5),
+  ('aabbccdd-7777-1002-0003-000000000000', 'aabbccdd-7777-1002-0000-000000000000', 'Drinks & Beverages', 'Drinks & Beverages', 2, 5),
+  ('aabbccdd-7777-1002-0004-000000000000', 'aabbccdd-7777-1002-0000-000000000000', 'Describing Taste', 'Describing Taste', 3, 5),
+  ('aabbccdd-7777-1002-0005-000000000000', 'aabbccdd-7777-1002-0000-000000000000', 'Full Meal Order', 'Full Meal Order', 4, 5),
+  ('aabbccdd-7777-1002-0006-000000000000', 'aabbccdd-7777-1002-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-7777-1002-0001-e00000000001', 'aabbccdd-7777-1002-0001-000000000000', 'multiple_choice', 'What does "물" mean in English?', 'Water', '{"Water","Chicken","Bread","Apple"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-7777-1002-0001-e00000000002', 'aabbccdd-7777-1002-0001-000000000000', 'translate_to_target', 'Translate to Korean: Chicken', '닭고기', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -15997,13 +15997,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-7777-1003-0000-000000000000', 'aabbccdd-7777-0000-0000-000000000000', 'Getting Around', 'Ask for directions and use transportation', 2, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-7777-1003-0001-000000000000', 'aabbccdd-7777-1003-0000-000000000000', 'Asking Directions', 'Asking Directions', 0, 5, 20),
-  ('aabbccdd-7777-1003-0002-000000000000', 'aabbccdd-7777-1003-0000-000000000000', 'Transportation', 'Transportation', 1, 5, 20),
-  ('aabbccdd-7777-1003-0003-000000000000', 'aabbccdd-7777-1003-0000-000000000000', 'Places in Town', 'Places in Town', 2, 5, 20),
-  ('aabbccdd-7777-1003-0004-000000000000', 'aabbccdd-7777-1003-0000-000000000000', 'Buying Tickets', 'Buying Tickets', 3, 5, 20),
-  ('aabbccdd-7777-1003-0005-000000000000', 'aabbccdd-7777-1003-0000-000000000000', 'At the Airport', 'At the Airport', 4, 5, 20),
-  ('aabbccdd-7777-1003-0006-000000000000', 'aabbccdd-7777-1003-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-7777-1003-0001-000000000000', 'aabbccdd-7777-1003-0000-000000000000', 'Asking Directions', 'Asking Directions', 0, 5),
+  ('aabbccdd-7777-1003-0002-000000000000', 'aabbccdd-7777-1003-0000-000000000000', 'Transportation', 'Transportation', 1, 5),
+  ('aabbccdd-7777-1003-0003-000000000000', 'aabbccdd-7777-1003-0000-000000000000', 'Places in Town', 'Places in Town', 2, 5),
+  ('aabbccdd-7777-1003-0004-000000000000', 'aabbccdd-7777-1003-0000-000000000000', 'Buying Tickets', 'Buying Tickets', 3, 5),
+  ('aabbccdd-7777-1003-0005-000000000000', 'aabbccdd-7777-1003-0000-000000000000', 'At the Airport', 'At the Airport', 4, 5),
+  ('aabbccdd-7777-1003-0006-000000000000', 'aabbccdd-7777-1003-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-7777-1003-0001-e00000000001', 'aabbccdd-7777-1003-0001-000000000000', 'multiple_choice', 'What does "왼쪽" mean in English?', 'Left', '{"Left","Right","Straight","Bus"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-7777-1003-0001-e00000000002', 'aabbccdd-7777-1003-0001-000000000000', 'translate_to_target', 'Translate to Korean: Right', '오른쪽', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -16073,13 +16073,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-7777-1004-0000-000000000000', 'aabbccdd-7777-0000-0000-000000000000', 'Daily Life & Shopping', 'Talk about routines and go shopping', 3, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-7777-1004-0001-000000000000', 'aabbccdd-7777-1004-0000-000000000000', 'Daily Routine', 'Daily Routine', 0, 5, 20),
-  ('aabbccdd-7777-1004-0002-000000000000', 'aabbccdd-7777-1004-0000-000000000000', 'Shopping Basics', 'Shopping Basics', 1, 5, 20),
-  ('aabbccdd-7777-1004-0003-000000000000', 'aabbccdd-7777-1004-0000-000000000000', 'Clothes & Colors', 'Clothes & Colors', 2, 5, 20),
-  ('aabbccdd-7777-1004-0004-000000000000', 'aabbccdd-7777-1004-0000-000000000000', 'Time & Schedule', 'Time & Schedule', 3, 5, 20),
-  ('aabbccdd-7777-1004-0005-000000000000', 'aabbccdd-7777-1004-0000-000000000000', 'At the Market', 'At the Market', 4, 5, 20),
-  ('aabbccdd-7777-1004-0006-000000000000', 'aabbccdd-7777-1004-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-7777-1004-0001-000000000000', 'aabbccdd-7777-1004-0000-000000000000', 'Daily Routine', 'Daily Routine', 0, 5),
+  ('aabbccdd-7777-1004-0002-000000000000', 'aabbccdd-7777-1004-0000-000000000000', 'Shopping Basics', 'Shopping Basics', 1, 5),
+  ('aabbccdd-7777-1004-0003-000000000000', 'aabbccdd-7777-1004-0000-000000000000', 'Clothes & Colors', 'Clothes & Colors', 2, 5),
+  ('aabbccdd-7777-1004-0004-000000000000', 'aabbccdd-7777-1004-0000-000000000000', 'Time & Schedule', 'Time & Schedule', 3, 5),
+  ('aabbccdd-7777-1004-0005-000000000000', 'aabbccdd-7777-1004-0000-000000000000', 'At the Market', 'At the Market', 4, 5),
+  ('aabbccdd-7777-1004-0006-000000000000', 'aabbccdd-7777-1004-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-7777-1004-0001-e00000000001', 'aabbccdd-7777-1004-0001-000000000000', 'multiple_choice', 'What does "아침 식사" mean in English?', 'Breakfast', '{"Breakfast","Expensive","Cheap","Red"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-7777-1004-0001-e00000000002', 'aabbccdd-7777-1004-0001-000000000000', 'translate_to_target', 'Translate to Korean: Expensive', '비싼', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -16149,13 +16149,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-7777-1005-0000-000000000000', 'aabbccdd-7777-0000-0000-000000000000', 'Work & Social', 'Discuss jobs, hobbies, and make plans', 4, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-7777-1005-0001-000000000000', 'aabbccdd-7777-1005-0000-000000000000', 'Jobs & Professions', 'Jobs & Professions', 0, 5, 20),
-  ('aabbccdd-7777-1005-0002-000000000000', 'aabbccdd-7777-1005-0000-000000000000', 'Making Plans', 'Making Plans', 1, 5, 20),
-  ('aabbccdd-7777-1005-0003-000000000000', 'aabbccdd-7777-1005-0000-000000000000', 'Hobbies & Interests', 'Hobbies & Interests', 2, 5, 20),
-  ('aabbccdd-7777-1005-0004-000000000000', 'aabbccdd-7777-1005-0000-000000000000', 'Weather & Seasons', 'Weather & Seasons', 3, 5, 20),
-  ('aabbccdd-7777-1005-0005-000000000000', 'aabbccdd-7777-1005-0000-000000000000', 'Weekend Activities', 'Weekend Activities', 4, 5, 20),
-  ('aabbccdd-7777-1005-0006-000000000000', 'aabbccdd-7777-1005-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-7777-1005-0001-000000000000', 'aabbccdd-7777-1005-0000-000000000000', 'Jobs & Professions', 'Jobs & Professions', 0, 5),
+  ('aabbccdd-7777-1005-0002-000000000000', 'aabbccdd-7777-1005-0000-000000000000', 'Making Plans', 'Making Plans', 1, 5),
+  ('aabbccdd-7777-1005-0003-000000000000', 'aabbccdd-7777-1005-0000-000000000000', 'Hobbies & Interests', 'Hobbies & Interests', 2, 5),
+  ('aabbccdd-7777-1005-0004-000000000000', 'aabbccdd-7777-1005-0000-000000000000', 'Weather & Seasons', 'Weather & Seasons', 3, 5),
+  ('aabbccdd-7777-1005-0005-000000000000', 'aabbccdd-7777-1005-0000-000000000000', 'Weekend Activities', 'Weekend Activities', 4, 5),
+  ('aabbccdd-7777-1005-0006-000000000000', 'aabbccdd-7777-1005-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-7777-1005-0001-e00000000001', 'aabbccdd-7777-1005-0001-000000000000', 'multiple_choice', 'What does "선생님" mean in English?', 'Teacher', '{"Teacher","Doctor","Office","To read"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-7777-1005-0001-e00000000002', 'aabbccdd-7777-1005-0001-000000000000', 'translate_to_target', 'Translate to Korean: Doctor', '의사', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -16225,13 +16225,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-7777-1006-0000-000000000000', 'aabbccdd-7777-0000-0000-000000000000', 'Family & Friends', 'Talk about family and relationships', 5, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-7777-1006-0001-000000000000', 'aabbccdd-7777-1006-0000-000000000000', 'Family Members', 'Family Members', 0, 5, 20),
-  ('aabbccdd-7777-1006-0002-000000000000', 'aabbccdd-7777-1006-0000-000000000000', 'Describing People', 'Describing People', 1, 5, 20),
-  ('aabbccdd-7777-1006-0003-000000000000', 'aabbccdd-7777-1006-0000-000000000000', 'Ages & Birthdays', 'Ages & Birthdays', 2, 5, 20),
-  ('aabbccdd-7777-1006-0004-000000000000', 'aabbccdd-7777-1006-0000-000000000000', 'Pets & Animals', 'Pets & Animals', 3, 5, 20),
-  ('aabbccdd-7777-1006-0005-000000000000', 'aabbccdd-7777-1006-0000-000000000000', 'Family Activities', 'Family Activities', 4, 5, 20),
-  ('aabbccdd-7777-1006-0006-000000000000', 'aabbccdd-7777-1006-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-7777-1006-0001-000000000000', 'aabbccdd-7777-1006-0000-000000000000', 'Family Members', 'Family Members', 0, 5),
+  ('aabbccdd-7777-1006-0002-000000000000', 'aabbccdd-7777-1006-0000-000000000000', 'Describing People', 'Describing People', 1, 5),
+  ('aabbccdd-7777-1006-0003-000000000000', 'aabbccdd-7777-1006-0000-000000000000', 'Ages & Birthdays', 'Ages & Birthdays', 2, 5),
+  ('aabbccdd-7777-1006-0004-000000000000', 'aabbccdd-7777-1006-0000-000000000000', 'Pets & Animals', 'Pets & Animals', 3, 5),
+  ('aabbccdd-7777-1006-0005-000000000000', 'aabbccdd-7777-1006-0000-000000000000', 'Family Activities', 'Family Activities', 4, 5),
+  ('aabbccdd-7777-1006-0006-000000000000', 'aabbccdd-7777-1006-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-7777-1006-0001-e00000000001', 'aabbccdd-7777-1006-0001-000000000000', 'multiple_choice', 'What does "어머니" mean in English?', 'Mother', '{"Mother","Father","Sister","Brother"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-7777-1006-0001-e00000000002', 'aabbccdd-7777-1006-0001-000000000000', 'translate_to_target', 'Translate to Korean: Father', '아버지', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -16301,13 +16301,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-7777-1007-0000-000000000000', 'aabbccdd-7777-0000-0000-000000000000', 'Home & Rooms', 'Describe your house and furniture', 6, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-7777-1007-0001-000000000000', 'aabbccdd-7777-1007-0000-000000000000', 'Parts of the House', 'Parts of the House', 0, 5, 20),
-  ('aabbccdd-7777-1007-0002-000000000000', 'aabbccdd-7777-1007-0000-000000000000', 'Furniture', 'Furniture', 1, 5, 20),
-  ('aabbccdd-7777-1007-0003-000000000000', 'aabbccdd-7777-1007-0000-000000000000', 'In the Kitchen', 'In the Kitchen', 2, 5, 20),
-  ('aabbccdd-7777-1007-0004-000000000000', 'aabbccdd-7777-1007-0000-000000000000', 'Bathroom & Bedroom', 'Bathroom & Bedroom', 3, 5, 20),
-  ('aabbccdd-7777-1007-0005-000000000000', 'aabbccdd-7777-1007-0000-000000000000', 'Describing Your Home', 'Describing Your Home', 4, 5, 20),
-  ('aabbccdd-7777-1007-0006-000000000000', 'aabbccdd-7777-1007-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-7777-1007-0001-000000000000', 'aabbccdd-7777-1007-0000-000000000000', 'Parts of the House', 'Parts of the House', 0, 5),
+  ('aabbccdd-7777-1007-0002-000000000000', 'aabbccdd-7777-1007-0000-000000000000', 'Furniture', 'Furniture', 1, 5),
+  ('aabbccdd-7777-1007-0003-000000000000', 'aabbccdd-7777-1007-0000-000000000000', 'In the Kitchen', 'In the Kitchen', 2, 5),
+  ('aabbccdd-7777-1007-0004-000000000000', 'aabbccdd-7777-1007-0000-000000000000', 'Bathroom & Bedroom', 'Bathroom & Bedroom', 3, 5),
+  ('aabbccdd-7777-1007-0005-000000000000', 'aabbccdd-7777-1007-0000-000000000000', 'Describing Your Home', 'Describing Your Home', 4, 5),
+  ('aabbccdd-7777-1007-0006-000000000000', 'aabbccdd-7777-1007-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-7777-1007-0001-e00000000001', 'aabbccdd-7777-1007-0001-000000000000', 'multiple_choice', 'What does "집" mean in English?', 'House', '{"House","Room","Kitchen","Bathroom"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-7777-1007-0001-e00000000002', 'aabbccdd-7777-1007-0001-000000000000', 'translate_to_target', 'Translate to Korean: Room', '방', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -16377,13 +16377,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-7777-1008-0000-000000000000', 'aabbccdd-7777-0000-0000-000000000000', 'Health & Body', 'Body parts, health, and doctor visits', 7, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-7777-1008-0001-000000000000', 'aabbccdd-7777-1008-0000-000000000000', 'Body Parts', 'Body Parts', 0, 5, 20),
-  ('aabbccdd-7777-1008-0002-000000000000', 'aabbccdd-7777-1008-0000-000000000000', 'Feelings & Symptoms', 'Feelings & Symptoms', 1, 5, 20),
-  ('aabbccdd-7777-1008-0003-000000000000', 'aabbccdd-7777-1008-0000-000000000000', 'At the Doctor', 'At the Doctor', 2, 5, 20),
-  ('aabbccdd-7777-1008-0004-000000000000', 'aabbccdd-7777-1008-0000-000000000000', 'At the Pharmacy', 'At the Pharmacy', 3, 5, 20),
-  ('aabbccdd-7777-1008-0005-000000000000', 'aabbccdd-7777-1008-0000-000000000000', 'Healthy Habits', 'Healthy Habits', 4, 5, 20),
-  ('aabbccdd-7777-1008-0006-000000000000', 'aabbccdd-7777-1008-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-7777-1008-0001-000000000000', 'aabbccdd-7777-1008-0000-000000000000', 'Body Parts', 'Body Parts', 0, 5),
+  ('aabbccdd-7777-1008-0002-000000000000', 'aabbccdd-7777-1008-0000-000000000000', 'Feelings & Symptoms', 'Feelings & Symptoms', 1, 5),
+  ('aabbccdd-7777-1008-0003-000000000000', 'aabbccdd-7777-1008-0000-000000000000', 'At the Doctor', 'At the Doctor', 2, 5),
+  ('aabbccdd-7777-1008-0004-000000000000', 'aabbccdd-7777-1008-0000-000000000000', 'At the Pharmacy', 'At the Pharmacy', 3, 5),
+  ('aabbccdd-7777-1008-0005-000000000000', 'aabbccdd-7777-1008-0000-000000000000', 'Healthy Habits', 'Healthy Habits', 4, 5),
+  ('aabbccdd-7777-1008-0006-000000000000', 'aabbccdd-7777-1008-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-7777-1008-0001-e00000000001', 'aabbccdd-7777-1008-0001-000000000000', 'multiple_choice', 'What does "머리" mean in English?', 'Head', '{"Head","Hand","Eye","Stomach"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-7777-1008-0001-e00000000002', 'aabbccdd-7777-1008-0001-000000000000', 'translate_to_target', 'Translate to Korean: Hand', '손', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -16457,7 +16457,7 @@ VALUES ('aabbccdd-7777-0000-0000-a20000000000', 'en', 'ko', 'Korean A2', 'Korean
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-7777-2001-0000-a20000000000', 'aabbccdd-7777-0000-0000-a20000000000', 'Family & Relationships', 'Describe family, relationships, and ages', 0, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-7777-2001-0001-a20000000000', 'aabbccdd-7777-2001-0000-a20000000000', 'Extended Family', 'Extended Family', 0, 7, 25),
   ('aabbccdd-7777-2001-0002-a20000000000', 'aabbccdd-7777-2001-0000-a20000000000', 'Describing Relationships', 'Describing Relationships', 1, 7, 25),
   ('aabbccdd-7777-2001-0003-a20000000000', 'aabbccdd-7777-2001-0000-a20000000000', 'Talking About Ages', 'Talking About Ages', 2, 7, 25),
@@ -16534,7 +16534,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-7777-2002-0000-a20000000000', 'aabbccdd-7777-0000-0000-a20000000000', 'Health & Wellness', 'Symptoms, doctor visits, pharmacy, feelings', 1, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-7777-2002-0001-a20000000000', 'aabbccdd-7777-2002-0000-a20000000000', 'Common Symptoms', 'Common Symptoms', 0, 7, 25),
   ('aabbccdd-7777-2002-0002-a20000000000', 'aabbccdd-7777-2002-0000-a20000000000', 'At the Doctor Office', 'At the Doctor Office', 1, 7, 25),
   ('aabbccdd-7777-2002-0003-a20000000000', 'aabbccdd-7777-2002-0000-a20000000000', 'At the Pharmacy', 'At the Pharmacy', 2, 7, 25),
@@ -16611,7 +16611,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-7777-2003-0000-a20000000000', 'aabbccdd-7777-0000-0000-a20000000000', 'At Home', 'Furniture, chores, describing your home', 2, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-7777-2003-0001-a20000000000', 'aabbccdd-7777-2003-0000-a20000000000', 'Rooms & Furniture', 'Rooms & Furniture', 0, 7, 25),
   ('aabbccdd-7777-2003-0002-a20000000000', 'aabbccdd-7777-2003-0000-a20000000000', 'Household Chores', 'Household Chores', 1, 7, 25),
   ('aabbccdd-7777-2003-0003-a20000000000', 'aabbccdd-7777-2003-0000-a20000000000', 'Moving & Housing', 'Moving & Housing', 2, 7, 25),
@@ -16688,7 +16688,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-7777-2004-0000-a20000000000', 'aabbccdd-7777-0000-0000-a20000000000', 'Emotions & Personality', 'Adjectives for people, moods, character', 3, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-7777-2004-0001-a20000000000', 'aabbccdd-7777-2004-0000-a20000000000', 'Positive Emotions', 'Positive Emotions', 0, 7, 25),
   ('aabbccdd-7777-2004-0002-a20000000000', 'aabbccdd-7777-2004-0000-a20000000000', 'Negative Emotions', 'Negative Emotions', 1, 7, 25),
   ('aabbccdd-7777-2004-0003-a20000000000', 'aabbccdd-7777-2004-0000-a20000000000', 'Personality Traits', 'Personality Traits', 2, 7, 25),
@@ -16765,7 +16765,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-7777-2005-0000-a20000000000', 'aabbccdd-7777-0000-0000-a20000000000', 'Past Tense Basics', 'Yesterday, last week, simple past actions', 4, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-7777-2005-0001-a20000000000', 'aabbccdd-7777-2005-0000-a20000000000', 'What Happened Yesterday', 'What Happened Yesterday', 0, 7, 25),
   ('aabbccdd-7777-2005-0002-a20000000000', 'aabbccdd-7777-2005-0000-a20000000000', 'Last Weekend', 'Last Weekend', 1, 7, 25),
   ('aabbccdd-7777-2005-0003-a20000000000', 'aabbccdd-7777-2005-0000-a20000000000', 'A Memorable Trip', 'A Memorable Trip', 2, 7, 25),
@@ -16842,7 +16842,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-7777-2006-0000-a20000000000', 'aabbccdd-7777-0000-0000-a20000000000', 'Future Plans', 'Will, going to, plans, intentions', 5, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-7777-2006-0001-a20000000000', 'aabbccdd-7777-2006-0000-a20000000000', 'Plans for Tomorrow', 'Plans for Tomorrow', 0, 7, 25),
   ('aabbccdd-7777-2006-0002-a20000000000', 'aabbccdd-7777-2006-0000-a20000000000', 'Next Vacation', 'Next Vacation', 1, 7, 25),
   ('aabbccdd-7777-2006-0003-a20000000000', 'aabbccdd-7777-2006-0000-a20000000000', 'Life Goals', 'Life Goals', 2, 7, 25),
@@ -16919,7 +16919,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-7777-2007-0000-a20000000000', 'aabbccdd-7777-0000-0000-a20000000000', 'Comparisons', 'Bigger, smaller, better, more expensive', 6, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-7777-2007-0001-a20000000000', 'aabbccdd-7777-2007-0000-a20000000000', 'Comparing Things', 'Comparing Things', 0, 7, 25),
   ('aabbccdd-7777-2007-0002-a20000000000', 'aabbccdd-7777-2007-0000-a20000000000', 'Comparing People', 'Comparing People', 1, 7, 25),
   ('aabbccdd-7777-2007-0003-a20000000000', 'aabbccdd-7777-2007-0000-a20000000000', 'Superlatives', 'Superlatives', 2, 7, 25),
@@ -16996,7 +16996,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-7777-2008-0000-a20000000000', 'aabbccdd-7777-0000-0000-a20000000000', 'Cultural Topics', 'Holidays, traditions, celebrations', 7, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-7777-2008-0001-a20000000000', 'aabbccdd-7777-2008-0000-a20000000000', 'National Holidays', 'National Holidays', 0, 7, 25),
   ('aabbccdd-7777-2008-0002-a20000000000', 'aabbccdd-7777-2008-0000-a20000000000', 'Food Traditions', 'Food Traditions', 1, 7, 25),
   ('aabbccdd-7777-2008-0003-a20000000000', 'aabbccdd-7777-2008-0000-a20000000000', 'Music & Dance', 'Music & Dance', 2, 7, 25),
@@ -17077,7 +17077,7 @@ VALUES ('aabbccdd-7777-0000-0000-b10000000000', 'en', 'ko', 'Korean B1', 'Korean
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-7777-3001-0000-b10000000000', 'aabbccdd-7777-0000-0000-b10000000000', 'Opinions & Current Events', 'Agree/disagree, news, society', 0, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-7777-3001-0001-b10000000000', 'aabbccdd-7777-3001-0000-b10000000000', 'Expressing Opinions', 'Expressing Opinions', 0, 10, 30),
   ('aabbccdd-7777-3001-0002-b10000000000', 'aabbccdd-7777-3001-0000-b10000000000', 'Agreeing & Disagreeing', 'Agreeing & Disagreeing', 1, 10, 30),
   ('aabbccdd-7777-3001-0003-b10000000000', 'aabbccdd-7777-3001-0000-b10000000000', 'Current Events', 'Current Events', 2, 10, 30),
@@ -17166,7 +17166,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-7777-3002-0000-b10000000000', 'aabbccdd-7777-0000-0000-b10000000000', 'Work & Career', 'Interviews, meetings, emails, presentations', 1, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-7777-3002-0001-b10000000000', 'aabbccdd-7777-3002-0000-b10000000000', 'Job Interviews', 'Job Interviews', 0, 10, 30),
   ('aabbccdd-7777-3002-0002-b10000000000', 'aabbccdd-7777-3002-0000-b10000000000', 'Office Communication', 'Office Communication', 1, 10, 30),
   ('aabbccdd-7777-3002-0003-b10000000000', 'aabbccdd-7777-3002-0000-b10000000000', 'Meetings', 'Meetings', 2, 10, 30),
@@ -17255,7 +17255,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-7777-3003-0000-b10000000000', 'aabbccdd-7777-0000-0000-b10000000000', 'Travel & Adventure', 'Booking, airports, hotels, experiences', 2, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-7777-3003-0001-b10000000000', 'aabbccdd-7777-3003-0000-b10000000000', 'Booking Travel', 'Booking Travel', 0, 10, 30),
   ('aabbccdd-7777-3003-0002-b10000000000', 'aabbccdd-7777-3003-0000-b10000000000', 'At the Airport', 'At the Airport', 1, 10, 30),
   ('aabbccdd-7777-3003-0003-b10000000000', 'aabbccdd-7777-3003-0000-b10000000000', 'Hotel Check-in', 'Hotel Check-in', 2, 10, 30),
@@ -17344,7 +17344,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-7777-3004-0000-b10000000000', 'aabbccdd-7777-0000-0000-b10000000000', 'Environment & Nature', 'Climate, animals, conservation', 3, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-7777-3004-0001-b10000000000', 'aabbccdd-7777-3004-0000-b10000000000', 'Climate & Weather', 'Climate & Weather', 0, 10, 30),
   ('aabbccdd-7777-3004-0002-b10000000000', 'aabbccdd-7777-3004-0000-b10000000000', 'Wildlife', 'Wildlife', 1, 10, 30),
   ('aabbccdd-7777-3004-0003-b10000000000', 'aabbccdd-7777-3004-0000-b10000000000', 'Conservation', 'Conservation', 2, 10, 30),
@@ -17433,7 +17433,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-7777-3005-0000-b10000000000', 'aabbccdd-7777-0000-0000-b10000000000', 'Technology & Media', 'Internet, social media, devices', 4, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-7777-3005-0001-b10000000000', 'aabbccdd-7777-3005-0000-b10000000000', 'Internet & Social Media', 'Internet & Social Media', 0, 10, 30),
   ('aabbccdd-7777-3005-0002-b10000000000', 'aabbccdd-7777-3005-0000-b10000000000', 'Smartphones & Apps', 'Smartphones & Apps', 1, 10, 30),
   ('aabbccdd-7777-3005-0003-b10000000000', 'aabbccdd-7777-3005-0000-b10000000000', 'Digital Communication', 'Digital Communication', 2, 10, 30),
@@ -17522,7 +17522,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-7777-3006-0000-b10000000000', 'aabbccdd-7777-0000-0000-b10000000000', 'Storytelling', 'Narrative tenses, sequencing, past continuous', 5, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-7777-3006-0001-b10000000000', 'aabbccdd-7777-3006-0000-b10000000000', 'Telling a Story', 'Telling a Story', 0, 10, 30),
   ('aabbccdd-7777-3006-0002-b10000000000', 'aabbccdd-7777-3006-0000-b10000000000', 'Sequencing Events', 'Sequencing Events', 1, 10, 30),
   ('aabbccdd-7777-3006-0003-b10000000000', 'aabbccdd-7777-3006-0000-b10000000000', 'Past Continuous', 'Past Continuous', 2, 10, 30),
@@ -17611,7 +17611,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-7777-3007-0000-b10000000000', 'aabbccdd-7777-0000-0000-b10000000000', 'Hypothetical Situations', 'Conditionals, would/could/should', 6, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-7777-3007-0001-b10000000000', 'aabbccdd-7777-3007-0000-b10000000000', 'First Conditional', 'First Conditional', 0, 10, 30),
   ('aabbccdd-7777-3007-0002-b10000000000', 'aabbccdd-7777-3007-0000-b10000000000', 'Second Conditional', 'Second Conditional', 1, 10, 30),
   ('aabbccdd-7777-3007-0003-b10000000000', 'aabbccdd-7777-3007-0000-b10000000000', 'Giving Advice', 'Giving Advice', 2, 10, 30),
@@ -17700,7 +17700,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-7777-3008-0000-b10000000000', 'aabbccdd-7777-0000-0000-b10000000000', 'Formal vs. Informal', 'Register, polite requests, slang', 7, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-7777-3008-0001-b10000000000', 'aabbccdd-7777-3008-0000-b10000000000', 'Formal Requests', 'Formal Requests', 0, 10, 30),
   ('aabbccdd-7777-3008-0002-b10000000000', 'aabbccdd-7777-3008-0000-b10000000000', 'Informal Speech', 'Informal Speech', 1, 10, 30),
   ('aabbccdd-7777-3008-0003-b10000000000', 'aabbccdd-7777-3008-0000-b10000000000', 'Writing Emails', 'Writing Emails', 2, 10, 30),
@@ -17853,7 +17853,7 @@ VALUES ('aabbccdd-7777-0000-0000-b20000000000', 'en', 'ko', 'Korean B2', 'Korean
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-7777-4001-0000-b20000000000', 'aabbccdd-7777-0000-0000-b20000000000', 'Abstract Ideas', 'Philosophy, concepts, beliefs', 0, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-7777-4001-0001-b20000000000', 'aabbccdd-7777-4001-0000-b20000000000', 'Philosophy of Life', 'Philosophy of Life', 0, 12, 40),
   ('aabbccdd-7777-4001-0002-b20000000000', 'aabbccdd-7777-4001-0000-b20000000000', 'Beliefs & Values', 'Beliefs & Values', 1, 12, 40),
   ('aabbccdd-7777-4001-0003-b20000000000', 'aabbccdd-7777-4001-0000-b20000000000', 'Abstract Concepts', 'Abstract Concepts', 2, 12, 40),
@@ -17942,7 +17942,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-7777-4002-0000-b20000000000', 'aabbccdd-7777-0000-0000-b20000000000', 'Debate & Argumentation', 'Persuasion, counterarguments, rhetoric', 1, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-7777-4002-0001-b20000000000', 'aabbccdd-7777-4002-0000-b20000000000', 'Building Arguments', 'Building Arguments', 0, 12, 40),
   ('aabbccdd-7777-4002-0002-b20000000000', 'aabbccdd-7777-4002-0000-b20000000000', 'Counterarguments', 'Counterarguments', 1, 12, 40),
   ('aabbccdd-7777-4002-0003-b20000000000', 'aabbccdd-7777-4002-0000-b20000000000', 'Persuasive Language', 'Persuasive Language', 2, 12, 40),
@@ -18031,7 +18031,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-7777-4003-0000-b20000000000', 'aabbccdd-7777-0000-0000-b20000000000', 'Professional Communication', 'Formal writing, presentations, negotiations', 2, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-7777-4003-0001-b20000000000', 'aabbccdd-7777-4003-0000-b20000000000', 'Business Emails', 'Business Emails', 0, 12, 40),
   ('aabbccdd-7777-4003-0002-b20000000000', 'aabbccdd-7777-4003-0000-b20000000000', 'Presentations', 'Presentations', 1, 12, 40),
   ('aabbccdd-7777-4003-0003-b20000000000', 'aabbccdd-7777-4003-0000-b20000000000', 'Negotiations', 'Negotiations', 2, 12, 40),
@@ -18120,7 +18120,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-7777-4004-0000-b20000000000', 'aabbccdd-7777-0000-0000-b20000000000', 'Literature & Arts', 'Describing art, reviews, literary analysis', 3, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-7777-4004-0001-b20000000000', 'aabbccdd-7777-4004-0000-b20000000000', 'Describing Art', 'Describing Art', 0, 12, 40),
   ('aabbccdd-7777-4004-0002-b20000000000', 'aabbccdd-7777-4004-0000-b20000000000', 'Book Reviews', 'Book Reviews', 1, 12, 40),
   ('aabbccdd-7777-4004-0003-b20000000000', 'aabbccdd-7777-4004-0000-b20000000000', 'Film & Theater', 'Film & Theater', 2, 12, 40),
@@ -18209,7 +18209,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-7777-4005-0000-b20000000000', 'aabbccdd-7777-0000-0000-b20000000000', 'Idiomatic Expressions', 'Idioms, proverbs, collocations', 4, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-7777-4005-0001-b20000000000', 'aabbccdd-7777-4005-0000-b20000000000', 'Common Idioms', 'Common Idioms', 0, 12, 40),
   ('aabbccdd-7777-4005-0002-b20000000000', 'aabbccdd-7777-4005-0000-b20000000000', 'Proverbs', 'Proverbs', 1, 12, 40),
   ('aabbccdd-7777-4005-0003-b20000000000', 'aabbccdd-7777-4005-0000-b20000000000', 'Collocations', 'Collocations', 2, 12, 40),
@@ -18298,7 +18298,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-7777-4006-0000-b20000000000', 'aabbccdd-7777-0000-0000-b20000000000', 'Complex Grammar', 'Subjunctive, reported speech, passive voice', 5, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-7777-4006-0001-b20000000000', 'aabbccdd-7777-4006-0000-b20000000000', 'Subjunctive Mood', 'Subjunctive Mood', 0, 12, 40),
   ('aabbccdd-7777-4006-0002-b20000000000', 'aabbccdd-7777-4006-0000-b20000000000', 'Reported Speech', 'Reported Speech', 1, 12, 40),
   ('aabbccdd-7777-4006-0003-b20000000000', 'aabbccdd-7777-4006-0000-b20000000000', 'Passive Voice', 'Passive Voice', 2, 12, 40),
@@ -18469,13 +18469,13 @@ VALUES ('aabbccdd-8888-0000-0000-000000000000', 'en', 'zh', 'Chinese A1', 'Chine
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-8888-1001-0000-000000000000', 'aabbccdd-8888-0000-0000-000000000000', 'Greetings & Basics', 'Learn greetings, introductions, and polite expressions', 0, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-8888-1001-0001-000000000000', 'aabbccdd-8888-1001-0000-000000000000', 'Core Vocabulary', 'Core Vocabulary', 0, 5, 20),
-  ('aabbccdd-8888-1001-0002-000000000000', 'aabbccdd-8888-1001-0000-000000000000', 'Phrases & Sentences', 'Phrases & Sentences', 1, 5, 20),
-  ('aabbccdd-8888-1001-0003-000000000000', 'aabbccdd-8888-1001-0000-000000000000', 'Listening & Recognition', 'Listening & Recognition', 2, 5, 20),
-  ('aabbccdd-8888-1001-0004-000000000000', 'aabbccdd-8888-1001-0000-000000000000', 'Speaking Practice', 'Speaking Practice', 3, 5, 20),
-  ('aabbccdd-8888-1001-0005-000000000000', 'aabbccdd-8888-1001-0000-000000000000', 'Reading Simple Texts', 'Reading Simple Texts', 4, 5, 20),
-  ('aabbccdd-8888-1001-0006-000000000000', 'aabbccdd-8888-1001-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-8888-1001-0001-000000000000', 'aabbccdd-8888-1001-0000-000000000000', 'Core Vocabulary', 'Core Vocabulary', 0, 5),
+  ('aabbccdd-8888-1001-0002-000000000000', 'aabbccdd-8888-1001-0000-000000000000', 'Phrases & Sentences', 'Phrases & Sentences', 1, 5),
+  ('aabbccdd-8888-1001-0003-000000000000', 'aabbccdd-8888-1001-0000-000000000000', 'Listening & Recognition', 'Listening & Recognition', 2, 5),
+  ('aabbccdd-8888-1001-0004-000000000000', 'aabbccdd-8888-1001-0000-000000000000', 'Speaking Practice', 'Speaking Practice', 3, 5),
+  ('aabbccdd-8888-1001-0005-000000000000', 'aabbccdd-8888-1001-0000-000000000000', 'Reading Simple Texts', 'Reading Simple Texts', 4, 5),
+  ('aabbccdd-8888-1001-0006-000000000000', 'aabbccdd-8888-1001-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-8888-1001-0001-e00000000001', 'aabbccdd-8888-1001-0001-000000000000', 'multiple_choice', 'What does "你好" mean in English?', 'Hello', '{"Hello","Goodbye","Good morning","Good evening"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-8888-1001-0001-e00000000002', 'aabbccdd-8888-1001-0001-000000000000', 'translate_to_target', 'Translate to Chinese: Goodbye', '再见', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -18545,13 +18545,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-8888-1002-0000-000000000000', 'aabbccdd-8888-0000-0000-000000000000', 'Food & Dining', 'Order food and drinks at a restaurant', 1, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-8888-1002-0001-000000000000', 'aabbccdd-8888-1002-0000-000000000000', 'Restaurant Basics', 'Restaurant Basics', 0, 5, 20),
-  ('aabbccdd-8888-1002-0002-000000000000', 'aabbccdd-8888-1002-0000-000000000000', 'Common Foods', 'Common Foods', 1, 5, 20),
-  ('aabbccdd-8888-1002-0003-000000000000', 'aabbccdd-8888-1002-0000-000000000000', 'Drinks & Beverages', 'Drinks & Beverages', 2, 5, 20),
-  ('aabbccdd-8888-1002-0004-000000000000', 'aabbccdd-8888-1002-0000-000000000000', 'Describing Taste', 'Describing Taste', 3, 5, 20),
-  ('aabbccdd-8888-1002-0005-000000000000', 'aabbccdd-8888-1002-0000-000000000000', 'Full Meal Order', 'Full Meal Order', 4, 5, 20),
-  ('aabbccdd-8888-1002-0006-000000000000', 'aabbccdd-8888-1002-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-8888-1002-0001-000000000000', 'aabbccdd-8888-1002-0000-000000000000', 'Restaurant Basics', 'Restaurant Basics', 0, 5),
+  ('aabbccdd-8888-1002-0002-000000000000', 'aabbccdd-8888-1002-0000-000000000000', 'Common Foods', 'Common Foods', 1, 5),
+  ('aabbccdd-8888-1002-0003-000000000000', 'aabbccdd-8888-1002-0000-000000000000', 'Drinks & Beverages', 'Drinks & Beverages', 2, 5),
+  ('aabbccdd-8888-1002-0004-000000000000', 'aabbccdd-8888-1002-0000-000000000000', 'Describing Taste', 'Describing Taste', 3, 5),
+  ('aabbccdd-8888-1002-0005-000000000000', 'aabbccdd-8888-1002-0000-000000000000', 'Full Meal Order', 'Full Meal Order', 4, 5),
+  ('aabbccdd-8888-1002-0006-000000000000', 'aabbccdd-8888-1002-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-8888-1002-0001-e00000000001', 'aabbccdd-8888-1002-0001-000000000000', 'multiple_choice', 'What does "水" mean in English?', 'Water', '{"Water","Chicken","Bread","Apple"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-8888-1002-0001-e00000000002', 'aabbccdd-8888-1002-0001-000000000000', 'translate_to_target', 'Translate to Chinese: Chicken', '鸡肉', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -18621,13 +18621,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-8888-1003-0000-000000000000', 'aabbccdd-8888-0000-0000-000000000000', 'Getting Around', 'Ask for directions and use transportation', 2, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-8888-1003-0001-000000000000', 'aabbccdd-8888-1003-0000-000000000000', 'Asking Directions', 'Asking Directions', 0, 5, 20),
-  ('aabbccdd-8888-1003-0002-000000000000', 'aabbccdd-8888-1003-0000-000000000000', 'Transportation', 'Transportation', 1, 5, 20),
-  ('aabbccdd-8888-1003-0003-000000000000', 'aabbccdd-8888-1003-0000-000000000000', 'Places in Town', 'Places in Town', 2, 5, 20),
-  ('aabbccdd-8888-1003-0004-000000000000', 'aabbccdd-8888-1003-0000-000000000000', 'Buying Tickets', 'Buying Tickets', 3, 5, 20),
-  ('aabbccdd-8888-1003-0005-000000000000', 'aabbccdd-8888-1003-0000-000000000000', 'At the Airport', 'At the Airport', 4, 5, 20),
-  ('aabbccdd-8888-1003-0006-000000000000', 'aabbccdd-8888-1003-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-8888-1003-0001-000000000000', 'aabbccdd-8888-1003-0000-000000000000', 'Asking Directions', 'Asking Directions', 0, 5),
+  ('aabbccdd-8888-1003-0002-000000000000', 'aabbccdd-8888-1003-0000-000000000000', 'Transportation', 'Transportation', 1, 5),
+  ('aabbccdd-8888-1003-0003-000000000000', 'aabbccdd-8888-1003-0000-000000000000', 'Places in Town', 'Places in Town', 2, 5),
+  ('aabbccdd-8888-1003-0004-000000000000', 'aabbccdd-8888-1003-0000-000000000000', 'Buying Tickets', 'Buying Tickets', 3, 5),
+  ('aabbccdd-8888-1003-0005-000000000000', 'aabbccdd-8888-1003-0000-000000000000', 'At the Airport', 'At the Airport', 4, 5),
+  ('aabbccdd-8888-1003-0006-000000000000', 'aabbccdd-8888-1003-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-8888-1003-0001-e00000000001', 'aabbccdd-8888-1003-0001-000000000000', 'multiple_choice', 'What does "左" mean in English?', 'Left', '{"Left","Right","Straight","Bus"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-8888-1003-0001-e00000000002', 'aabbccdd-8888-1003-0001-000000000000', 'translate_to_target', 'Translate to Chinese: Right', '右', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -18697,13 +18697,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-8888-1004-0000-000000000000', 'aabbccdd-8888-0000-0000-000000000000', 'Daily Life & Shopping', 'Talk about routines and go shopping', 3, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-8888-1004-0001-000000000000', 'aabbccdd-8888-1004-0000-000000000000', 'Daily Routine', 'Daily Routine', 0, 5, 20),
-  ('aabbccdd-8888-1004-0002-000000000000', 'aabbccdd-8888-1004-0000-000000000000', 'Shopping Basics', 'Shopping Basics', 1, 5, 20),
-  ('aabbccdd-8888-1004-0003-000000000000', 'aabbccdd-8888-1004-0000-000000000000', 'Clothes & Colors', 'Clothes & Colors', 2, 5, 20),
-  ('aabbccdd-8888-1004-0004-000000000000', 'aabbccdd-8888-1004-0000-000000000000', 'Time & Schedule', 'Time & Schedule', 3, 5, 20),
-  ('aabbccdd-8888-1004-0005-000000000000', 'aabbccdd-8888-1004-0000-000000000000', 'At the Market', 'At the Market', 4, 5, 20),
-  ('aabbccdd-8888-1004-0006-000000000000', 'aabbccdd-8888-1004-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-8888-1004-0001-000000000000', 'aabbccdd-8888-1004-0000-000000000000', 'Daily Routine', 'Daily Routine', 0, 5),
+  ('aabbccdd-8888-1004-0002-000000000000', 'aabbccdd-8888-1004-0000-000000000000', 'Shopping Basics', 'Shopping Basics', 1, 5),
+  ('aabbccdd-8888-1004-0003-000000000000', 'aabbccdd-8888-1004-0000-000000000000', 'Clothes & Colors', 'Clothes & Colors', 2, 5),
+  ('aabbccdd-8888-1004-0004-000000000000', 'aabbccdd-8888-1004-0000-000000000000', 'Time & Schedule', 'Time & Schedule', 3, 5),
+  ('aabbccdd-8888-1004-0005-000000000000', 'aabbccdd-8888-1004-0000-000000000000', 'At the Market', 'At the Market', 4, 5),
+  ('aabbccdd-8888-1004-0006-000000000000', 'aabbccdd-8888-1004-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-8888-1004-0001-e00000000001', 'aabbccdd-8888-1004-0001-000000000000', 'multiple_choice', 'What does "早餐" mean in English?', 'Breakfast', '{"Breakfast","Expensive","Cheap","Red"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-8888-1004-0001-e00000000002', 'aabbccdd-8888-1004-0001-000000000000', 'translate_to_target', 'Translate to Chinese: Expensive', '贵', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -18773,13 +18773,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-8888-1005-0000-000000000000', 'aabbccdd-8888-0000-0000-000000000000', 'Work & Social', 'Discuss jobs, hobbies, and make plans', 4, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-8888-1005-0001-000000000000', 'aabbccdd-8888-1005-0000-000000000000', 'Jobs & Professions', 'Jobs & Professions', 0, 5, 20),
-  ('aabbccdd-8888-1005-0002-000000000000', 'aabbccdd-8888-1005-0000-000000000000', 'Making Plans', 'Making Plans', 1, 5, 20),
-  ('aabbccdd-8888-1005-0003-000000000000', 'aabbccdd-8888-1005-0000-000000000000', 'Hobbies & Interests', 'Hobbies & Interests', 2, 5, 20),
-  ('aabbccdd-8888-1005-0004-000000000000', 'aabbccdd-8888-1005-0000-000000000000', 'Weather & Seasons', 'Weather & Seasons', 3, 5, 20),
-  ('aabbccdd-8888-1005-0005-000000000000', 'aabbccdd-8888-1005-0000-000000000000', 'Weekend Activities', 'Weekend Activities', 4, 5, 20),
-  ('aabbccdd-8888-1005-0006-000000000000', 'aabbccdd-8888-1005-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-8888-1005-0001-000000000000', 'aabbccdd-8888-1005-0000-000000000000', 'Jobs & Professions', 'Jobs & Professions', 0, 5),
+  ('aabbccdd-8888-1005-0002-000000000000', 'aabbccdd-8888-1005-0000-000000000000', 'Making Plans', 'Making Plans', 1, 5),
+  ('aabbccdd-8888-1005-0003-000000000000', 'aabbccdd-8888-1005-0000-000000000000', 'Hobbies & Interests', 'Hobbies & Interests', 2, 5),
+  ('aabbccdd-8888-1005-0004-000000000000', 'aabbccdd-8888-1005-0000-000000000000', 'Weather & Seasons', 'Weather & Seasons', 3, 5),
+  ('aabbccdd-8888-1005-0005-000000000000', 'aabbccdd-8888-1005-0000-000000000000', 'Weekend Activities', 'Weekend Activities', 4, 5),
+  ('aabbccdd-8888-1005-0006-000000000000', 'aabbccdd-8888-1005-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-8888-1005-0001-e00000000001', 'aabbccdd-8888-1005-0001-000000000000', 'multiple_choice', 'What does "老师" mean in English?', 'Teacher', '{"Teacher","Doctor","Office","To read"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-8888-1005-0001-e00000000002', 'aabbccdd-8888-1005-0001-000000000000', 'translate_to_target', 'Translate to Chinese: Doctor', '医生', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -18849,13 +18849,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-8888-1006-0000-000000000000', 'aabbccdd-8888-0000-0000-000000000000', 'Family & Friends', 'Talk about family and relationships', 5, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-8888-1006-0001-000000000000', 'aabbccdd-8888-1006-0000-000000000000', 'Family Members', 'Family Members', 0, 5, 20),
-  ('aabbccdd-8888-1006-0002-000000000000', 'aabbccdd-8888-1006-0000-000000000000', 'Describing People', 'Describing People', 1, 5, 20),
-  ('aabbccdd-8888-1006-0003-000000000000', 'aabbccdd-8888-1006-0000-000000000000', 'Ages & Birthdays', 'Ages & Birthdays', 2, 5, 20),
-  ('aabbccdd-8888-1006-0004-000000000000', 'aabbccdd-8888-1006-0000-000000000000', 'Pets & Animals', 'Pets & Animals', 3, 5, 20),
-  ('aabbccdd-8888-1006-0005-000000000000', 'aabbccdd-8888-1006-0000-000000000000', 'Family Activities', 'Family Activities', 4, 5, 20),
-  ('aabbccdd-8888-1006-0006-000000000000', 'aabbccdd-8888-1006-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-8888-1006-0001-000000000000', 'aabbccdd-8888-1006-0000-000000000000', 'Family Members', 'Family Members', 0, 5),
+  ('aabbccdd-8888-1006-0002-000000000000', 'aabbccdd-8888-1006-0000-000000000000', 'Describing People', 'Describing People', 1, 5),
+  ('aabbccdd-8888-1006-0003-000000000000', 'aabbccdd-8888-1006-0000-000000000000', 'Ages & Birthdays', 'Ages & Birthdays', 2, 5),
+  ('aabbccdd-8888-1006-0004-000000000000', 'aabbccdd-8888-1006-0000-000000000000', 'Pets & Animals', 'Pets & Animals', 3, 5),
+  ('aabbccdd-8888-1006-0005-000000000000', 'aabbccdd-8888-1006-0000-000000000000', 'Family Activities', 'Family Activities', 4, 5),
+  ('aabbccdd-8888-1006-0006-000000000000', 'aabbccdd-8888-1006-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-8888-1006-0001-e00000000001', 'aabbccdd-8888-1006-0001-000000000000', 'multiple_choice', 'What does "妈妈" mean in English?', 'Mother', '{"Mother","Father","Sister","Brother"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-8888-1006-0001-e00000000002', 'aabbccdd-8888-1006-0001-000000000000', 'translate_to_target', 'Translate to Chinese: Father', '爸爸', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -18925,13 +18925,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-8888-1007-0000-000000000000', 'aabbccdd-8888-0000-0000-000000000000', 'Home & Rooms', 'Describe your house and furniture', 6, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-8888-1007-0001-000000000000', 'aabbccdd-8888-1007-0000-000000000000', 'Parts of the House', 'Parts of the House', 0, 5, 20),
-  ('aabbccdd-8888-1007-0002-000000000000', 'aabbccdd-8888-1007-0000-000000000000', 'Furniture', 'Furniture', 1, 5, 20),
-  ('aabbccdd-8888-1007-0003-000000000000', 'aabbccdd-8888-1007-0000-000000000000', 'In the Kitchen', 'In the Kitchen', 2, 5, 20),
-  ('aabbccdd-8888-1007-0004-000000000000', 'aabbccdd-8888-1007-0000-000000000000', 'Bathroom & Bedroom', 'Bathroom & Bedroom', 3, 5, 20),
-  ('aabbccdd-8888-1007-0005-000000000000', 'aabbccdd-8888-1007-0000-000000000000', 'Describing Your Home', 'Describing Your Home', 4, 5, 20),
-  ('aabbccdd-8888-1007-0006-000000000000', 'aabbccdd-8888-1007-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-8888-1007-0001-000000000000', 'aabbccdd-8888-1007-0000-000000000000', 'Parts of the House', 'Parts of the House', 0, 5),
+  ('aabbccdd-8888-1007-0002-000000000000', 'aabbccdd-8888-1007-0000-000000000000', 'Furniture', 'Furniture', 1, 5),
+  ('aabbccdd-8888-1007-0003-000000000000', 'aabbccdd-8888-1007-0000-000000000000', 'In the Kitchen', 'In the Kitchen', 2, 5),
+  ('aabbccdd-8888-1007-0004-000000000000', 'aabbccdd-8888-1007-0000-000000000000', 'Bathroom & Bedroom', 'Bathroom & Bedroom', 3, 5),
+  ('aabbccdd-8888-1007-0005-000000000000', 'aabbccdd-8888-1007-0000-000000000000', 'Describing Your Home', 'Describing Your Home', 4, 5),
+  ('aabbccdd-8888-1007-0006-000000000000', 'aabbccdd-8888-1007-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-8888-1007-0001-e00000000001', 'aabbccdd-8888-1007-0001-000000000000', 'multiple_choice', 'What does "房子" mean in English?', 'House', '{"House","Room","Kitchen","Bathroom"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-8888-1007-0001-e00000000002', 'aabbccdd-8888-1007-0001-000000000000', 'translate_to_target', 'Translate to Chinese: Room', '房间', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -19001,13 +19001,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-8888-1008-0000-000000000000', 'aabbccdd-8888-0000-0000-000000000000', 'Health & Body', 'Body parts, health, and doctor visits', 7, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-8888-1008-0001-000000000000', 'aabbccdd-8888-1008-0000-000000000000', 'Body Parts', 'Body Parts', 0, 5, 20),
-  ('aabbccdd-8888-1008-0002-000000000000', 'aabbccdd-8888-1008-0000-000000000000', 'Feelings & Symptoms', 'Feelings & Symptoms', 1, 5, 20),
-  ('aabbccdd-8888-1008-0003-000000000000', 'aabbccdd-8888-1008-0000-000000000000', 'At the Doctor', 'At the Doctor', 2, 5, 20),
-  ('aabbccdd-8888-1008-0004-000000000000', 'aabbccdd-8888-1008-0000-000000000000', 'At the Pharmacy', 'At the Pharmacy', 3, 5, 20),
-  ('aabbccdd-8888-1008-0005-000000000000', 'aabbccdd-8888-1008-0000-000000000000', 'Healthy Habits', 'Healthy Habits', 4, 5, 20),
-  ('aabbccdd-8888-1008-0006-000000000000', 'aabbccdd-8888-1008-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-8888-1008-0001-000000000000', 'aabbccdd-8888-1008-0000-000000000000', 'Body Parts', 'Body Parts', 0, 5),
+  ('aabbccdd-8888-1008-0002-000000000000', 'aabbccdd-8888-1008-0000-000000000000', 'Feelings & Symptoms', 'Feelings & Symptoms', 1, 5),
+  ('aabbccdd-8888-1008-0003-000000000000', 'aabbccdd-8888-1008-0000-000000000000', 'At the Doctor', 'At the Doctor', 2, 5),
+  ('aabbccdd-8888-1008-0004-000000000000', 'aabbccdd-8888-1008-0000-000000000000', 'At the Pharmacy', 'At the Pharmacy', 3, 5),
+  ('aabbccdd-8888-1008-0005-000000000000', 'aabbccdd-8888-1008-0000-000000000000', 'Healthy Habits', 'Healthy Habits', 4, 5),
+  ('aabbccdd-8888-1008-0006-000000000000', 'aabbccdd-8888-1008-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-8888-1008-0001-e00000000001', 'aabbccdd-8888-1008-0001-000000000000', 'multiple_choice', 'What does "头" mean in English?', 'Head', '{"Head","Hand","Eye","Stomach"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-8888-1008-0001-e00000000002', 'aabbccdd-8888-1008-0001-000000000000', 'translate_to_target', 'Translate to Chinese: Hand', '手', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -19081,7 +19081,7 @@ VALUES ('aabbccdd-8888-0000-0000-a20000000000', 'en', 'zh', 'Chinese A2', 'Chine
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-8888-2001-0000-a20000000000', 'aabbccdd-8888-0000-0000-a20000000000', 'Family & Relationships', 'Describe family, relationships, and ages', 0, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-8888-2001-0001-a20000000000', 'aabbccdd-8888-2001-0000-a20000000000', 'Extended Family', 'Extended Family', 0, 7, 25),
   ('aabbccdd-8888-2001-0002-a20000000000', 'aabbccdd-8888-2001-0000-a20000000000', 'Describing Relationships', 'Describing Relationships', 1, 7, 25),
   ('aabbccdd-8888-2001-0003-a20000000000', 'aabbccdd-8888-2001-0000-a20000000000', 'Talking About Ages', 'Talking About Ages', 2, 7, 25),
@@ -19158,7 +19158,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-8888-2002-0000-a20000000000', 'aabbccdd-8888-0000-0000-a20000000000', 'Health & Wellness', 'Symptoms, doctor visits, pharmacy, feelings', 1, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-8888-2002-0001-a20000000000', 'aabbccdd-8888-2002-0000-a20000000000', 'Common Symptoms', 'Common Symptoms', 0, 7, 25),
   ('aabbccdd-8888-2002-0002-a20000000000', 'aabbccdd-8888-2002-0000-a20000000000', 'At the Doctor Office', 'At the Doctor Office', 1, 7, 25),
   ('aabbccdd-8888-2002-0003-a20000000000', 'aabbccdd-8888-2002-0000-a20000000000', 'At the Pharmacy', 'At the Pharmacy', 2, 7, 25),
@@ -19235,7 +19235,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-8888-2003-0000-a20000000000', 'aabbccdd-8888-0000-0000-a20000000000', 'At Home', 'Furniture, chores, describing your home', 2, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-8888-2003-0001-a20000000000', 'aabbccdd-8888-2003-0000-a20000000000', 'Rooms & Furniture', 'Rooms & Furniture', 0, 7, 25),
   ('aabbccdd-8888-2003-0002-a20000000000', 'aabbccdd-8888-2003-0000-a20000000000', 'Household Chores', 'Household Chores', 1, 7, 25),
   ('aabbccdd-8888-2003-0003-a20000000000', 'aabbccdd-8888-2003-0000-a20000000000', 'Moving & Housing', 'Moving & Housing', 2, 7, 25),
@@ -19312,7 +19312,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-8888-2004-0000-a20000000000', 'aabbccdd-8888-0000-0000-a20000000000', 'Emotions & Personality', 'Adjectives for people, moods, character', 3, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-8888-2004-0001-a20000000000', 'aabbccdd-8888-2004-0000-a20000000000', 'Positive Emotions', 'Positive Emotions', 0, 7, 25),
   ('aabbccdd-8888-2004-0002-a20000000000', 'aabbccdd-8888-2004-0000-a20000000000', 'Negative Emotions', 'Negative Emotions', 1, 7, 25),
   ('aabbccdd-8888-2004-0003-a20000000000', 'aabbccdd-8888-2004-0000-a20000000000', 'Personality Traits', 'Personality Traits', 2, 7, 25),
@@ -19389,7 +19389,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-8888-2005-0000-a20000000000', 'aabbccdd-8888-0000-0000-a20000000000', 'Past Tense Basics', 'Yesterday, last week, simple past actions', 4, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-8888-2005-0001-a20000000000', 'aabbccdd-8888-2005-0000-a20000000000', 'What Happened Yesterday', 'What Happened Yesterday', 0, 7, 25),
   ('aabbccdd-8888-2005-0002-a20000000000', 'aabbccdd-8888-2005-0000-a20000000000', 'Last Weekend', 'Last Weekend', 1, 7, 25),
   ('aabbccdd-8888-2005-0003-a20000000000', 'aabbccdd-8888-2005-0000-a20000000000', 'A Memorable Trip', 'A Memorable Trip', 2, 7, 25),
@@ -19466,7 +19466,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-8888-2006-0000-a20000000000', 'aabbccdd-8888-0000-0000-a20000000000', 'Future Plans', 'Will, going to, plans, intentions', 5, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-8888-2006-0001-a20000000000', 'aabbccdd-8888-2006-0000-a20000000000', 'Plans for Tomorrow', 'Plans for Tomorrow', 0, 7, 25),
   ('aabbccdd-8888-2006-0002-a20000000000', 'aabbccdd-8888-2006-0000-a20000000000', 'Next Vacation', 'Next Vacation', 1, 7, 25),
   ('aabbccdd-8888-2006-0003-a20000000000', 'aabbccdd-8888-2006-0000-a20000000000', 'Life Goals', 'Life Goals', 2, 7, 25),
@@ -19543,7 +19543,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-8888-2007-0000-a20000000000', 'aabbccdd-8888-0000-0000-a20000000000', 'Comparisons', 'Bigger, smaller, better, more expensive', 6, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-8888-2007-0001-a20000000000', 'aabbccdd-8888-2007-0000-a20000000000', 'Comparing Things', 'Comparing Things', 0, 7, 25),
   ('aabbccdd-8888-2007-0002-a20000000000', 'aabbccdd-8888-2007-0000-a20000000000', 'Comparing People', 'Comparing People', 1, 7, 25),
   ('aabbccdd-8888-2007-0003-a20000000000', 'aabbccdd-8888-2007-0000-a20000000000', 'Superlatives', 'Superlatives', 2, 7, 25),
@@ -19620,7 +19620,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-8888-2008-0000-a20000000000', 'aabbccdd-8888-0000-0000-a20000000000', 'Cultural Topics', 'Holidays, traditions, celebrations', 7, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-8888-2008-0001-a20000000000', 'aabbccdd-8888-2008-0000-a20000000000', 'National Holidays', 'National Holidays', 0, 7, 25),
   ('aabbccdd-8888-2008-0002-a20000000000', 'aabbccdd-8888-2008-0000-a20000000000', 'Food Traditions', 'Food Traditions', 1, 7, 25),
   ('aabbccdd-8888-2008-0003-a20000000000', 'aabbccdd-8888-2008-0000-a20000000000', 'Music & Dance', 'Music & Dance', 2, 7, 25),
@@ -19701,7 +19701,7 @@ VALUES ('aabbccdd-8888-0000-0000-b10000000000', 'en', 'zh', 'Chinese B1', 'Chine
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-8888-3001-0000-b10000000000', 'aabbccdd-8888-0000-0000-b10000000000', 'Opinions & Current Events', 'Agree/disagree, news, society', 0, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-8888-3001-0001-b10000000000', 'aabbccdd-8888-3001-0000-b10000000000', 'Expressing Opinions', 'Expressing Opinions', 0, 10, 30),
   ('aabbccdd-8888-3001-0002-b10000000000', 'aabbccdd-8888-3001-0000-b10000000000', 'Agreeing & Disagreeing', 'Agreeing & Disagreeing', 1, 10, 30),
   ('aabbccdd-8888-3001-0003-b10000000000', 'aabbccdd-8888-3001-0000-b10000000000', 'Current Events', 'Current Events', 2, 10, 30),
@@ -19790,7 +19790,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-8888-3002-0000-b10000000000', 'aabbccdd-8888-0000-0000-b10000000000', 'Work & Career', 'Interviews, meetings, emails, presentations', 1, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-8888-3002-0001-b10000000000', 'aabbccdd-8888-3002-0000-b10000000000', 'Job Interviews', 'Job Interviews', 0, 10, 30),
   ('aabbccdd-8888-3002-0002-b10000000000', 'aabbccdd-8888-3002-0000-b10000000000', 'Office Communication', 'Office Communication', 1, 10, 30),
   ('aabbccdd-8888-3002-0003-b10000000000', 'aabbccdd-8888-3002-0000-b10000000000', 'Meetings', 'Meetings', 2, 10, 30),
@@ -19879,7 +19879,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-8888-3003-0000-b10000000000', 'aabbccdd-8888-0000-0000-b10000000000', 'Travel & Adventure', 'Booking, airports, hotels, experiences', 2, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-8888-3003-0001-b10000000000', 'aabbccdd-8888-3003-0000-b10000000000', 'Booking Travel', 'Booking Travel', 0, 10, 30),
   ('aabbccdd-8888-3003-0002-b10000000000', 'aabbccdd-8888-3003-0000-b10000000000', 'At the Airport', 'At the Airport', 1, 10, 30),
   ('aabbccdd-8888-3003-0003-b10000000000', 'aabbccdd-8888-3003-0000-b10000000000', 'Hotel Check-in', 'Hotel Check-in', 2, 10, 30),
@@ -19968,7 +19968,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-8888-3004-0000-b10000000000', 'aabbccdd-8888-0000-0000-b10000000000', 'Environment & Nature', 'Climate, animals, conservation', 3, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-8888-3004-0001-b10000000000', 'aabbccdd-8888-3004-0000-b10000000000', 'Climate & Weather', 'Climate & Weather', 0, 10, 30),
   ('aabbccdd-8888-3004-0002-b10000000000', 'aabbccdd-8888-3004-0000-b10000000000', 'Wildlife', 'Wildlife', 1, 10, 30),
   ('aabbccdd-8888-3004-0003-b10000000000', 'aabbccdd-8888-3004-0000-b10000000000', 'Conservation', 'Conservation', 2, 10, 30),
@@ -20057,7 +20057,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-8888-3005-0000-b10000000000', 'aabbccdd-8888-0000-0000-b10000000000', 'Technology & Media', 'Internet, social media, devices', 4, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-8888-3005-0001-b10000000000', 'aabbccdd-8888-3005-0000-b10000000000', 'Internet & Social Media', 'Internet & Social Media', 0, 10, 30),
   ('aabbccdd-8888-3005-0002-b10000000000', 'aabbccdd-8888-3005-0000-b10000000000', 'Smartphones & Apps', 'Smartphones & Apps', 1, 10, 30),
   ('aabbccdd-8888-3005-0003-b10000000000', 'aabbccdd-8888-3005-0000-b10000000000', 'Digital Communication', 'Digital Communication', 2, 10, 30),
@@ -20146,7 +20146,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-8888-3006-0000-b10000000000', 'aabbccdd-8888-0000-0000-b10000000000', 'Storytelling', 'Narrative tenses, sequencing, past continuous', 5, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-8888-3006-0001-b10000000000', 'aabbccdd-8888-3006-0000-b10000000000', 'Telling a Story', 'Telling a Story', 0, 10, 30),
   ('aabbccdd-8888-3006-0002-b10000000000', 'aabbccdd-8888-3006-0000-b10000000000', 'Sequencing Events', 'Sequencing Events', 1, 10, 30),
   ('aabbccdd-8888-3006-0003-b10000000000', 'aabbccdd-8888-3006-0000-b10000000000', 'Past Continuous', 'Past Continuous', 2, 10, 30),
@@ -20235,7 +20235,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-8888-3007-0000-b10000000000', 'aabbccdd-8888-0000-0000-b10000000000', 'Hypothetical Situations', 'Conditionals, would/could/should', 6, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-8888-3007-0001-b10000000000', 'aabbccdd-8888-3007-0000-b10000000000', 'First Conditional', 'First Conditional', 0, 10, 30),
   ('aabbccdd-8888-3007-0002-b10000000000', 'aabbccdd-8888-3007-0000-b10000000000', 'Second Conditional', 'Second Conditional', 1, 10, 30),
   ('aabbccdd-8888-3007-0003-b10000000000', 'aabbccdd-8888-3007-0000-b10000000000', 'Giving Advice', 'Giving Advice', 2, 10, 30),
@@ -20324,7 +20324,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-8888-3008-0000-b10000000000', 'aabbccdd-8888-0000-0000-b10000000000', 'Formal vs. Informal', 'Register, polite requests, slang', 7, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-8888-3008-0001-b10000000000', 'aabbccdd-8888-3008-0000-b10000000000', 'Formal Requests', 'Formal Requests', 0, 10, 30),
   ('aabbccdd-8888-3008-0002-b10000000000', 'aabbccdd-8888-3008-0000-b10000000000', 'Informal Speech', 'Informal Speech', 1, 10, 30),
   ('aabbccdd-8888-3008-0003-b10000000000', 'aabbccdd-8888-3008-0000-b10000000000', 'Writing Emails', 'Writing Emails', 2, 10, 30),
@@ -20483,7 +20483,7 @@ VALUES ('aabbccdd-8888-0000-0000-b20000000000', 'en', 'zh', 'Chinese B2', 'Chine
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-8888-4001-0000-b20000000000', 'aabbccdd-8888-0000-0000-b20000000000', 'Abstract Ideas', 'Philosophy, concepts, beliefs', 0, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-8888-4001-0001-b20000000000', 'aabbccdd-8888-4001-0000-b20000000000', 'Philosophy of Life', 'Philosophy of Life', 0, 12, 40),
   ('aabbccdd-8888-4001-0002-b20000000000', 'aabbccdd-8888-4001-0000-b20000000000', 'Beliefs & Values', 'Beliefs & Values', 1, 12, 40),
   ('aabbccdd-8888-4001-0003-b20000000000', 'aabbccdd-8888-4001-0000-b20000000000', 'Abstract Concepts', 'Abstract Concepts', 2, 12, 40),
@@ -20572,7 +20572,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-8888-4002-0000-b20000000000', 'aabbccdd-8888-0000-0000-b20000000000', 'Debate & Argumentation', 'Persuasion, counterarguments, rhetoric', 1, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-8888-4002-0001-b20000000000', 'aabbccdd-8888-4002-0000-b20000000000', 'Building Arguments', 'Building Arguments', 0, 12, 40),
   ('aabbccdd-8888-4002-0002-b20000000000', 'aabbccdd-8888-4002-0000-b20000000000', 'Counterarguments', 'Counterarguments', 1, 12, 40),
   ('aabbccdd-8888-4002-0003-b20000000000', 'aabbccdd-8888-4002-0000-b20000000000', 'Persuasive Language', 'Persuasive Language', 2, 12, 40),
@@ -20661,7 +20661,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-8888-4003-0000-b20000000000', 'aabbccdd-8888-0000-0000-b20000000000', 'Professional Communication', 'Formal writing, presentations, negotiations', 2, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-8888-4003-0001-b20000000000', 'aabbccdd-8888-4003-0000-b20000000000', 'Business Emails', 'Business Emails', 0, 12, 40),
   ('aabbccdd-8888-4003-0002-b20000000000', 'aabbccdd-8888-4003-0000-b20000000000', 'Presentations', 'Presentations', 1, 12, 40),
   ('aabbccdd-8888-4003-0003-b20000000000', 'aabbccdd-8888-4003-0000-b20000000000', 'Negotiations', 'Negotiations', 2, 12, 40),
@@ -20750,7 +20750,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-8888-4004-0000-b20000000000', 'aabbccdd-8888-0000-0000-b20000000000', 'Literature & Arts', 'Describing art, reviews, literary analysis', 3, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-8888-4004-0001-b20000000000', 'aabbccdd-8888-4004-0000-b20000000000', 'Describing Art', 'Describing Art', 0, 12, 40),
   ('aabbccdd-8888-4004-0002-b20000000000', 'aabbccdd-8888-4004-0000-b20000000000', 'Book Reviews', 'Book Reviews', 1, 12, 40),
   ('aabbccdd-8888-4004-0003-b20000000000', 'aabbccdd-8888-4004-0000-b20000000000', 'Film & Theater', 'Film & Theater', 2, 12, 40),
@@ -20839,7 +20839,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-8888-4005-0000-b20000000000', 'aabbccdd-8888-0000-0000-b20000000000', 'Idiomatic Expressions', 'Idioms, proverbs, collocations', 4, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-8888-4005-0001-b20000000000', 'aabbccdd-8888-4005-0000-b20000000000', 'Common Idioms', 'Common Idioms', 0, 12, 40),
   ('aabbccdd-8888-4005-0002-b20000000000', 'aabbccdd-8888-4005-0000-b20000000000', 'Proverbs', 'Proverbs', 1, 12, 40),
   ('aabbccdd-8888-4005-0003-b20000000000', 'aabbccdd-8888-4005-0000-b20000000000', 'Collocations', 'Collocations', 2, 12, 40),
@@ -20928,7 +20928,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-8888-4006-0000-b20000000000', 'aabbccdd-8888-0000-0000-b20000000000', 'Complex Grammar', 'Subjunctive, reported speech, passive voice', 5, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-8888-4006-0001-b20000000000', 'aabbccdd-8888-4006-0000-b20000000000', 'Subjunctive Mood', 'Subjunctive Mood', 0, 12, 40),
   ('aabbccdd-8888-4006-0002-b20000000000', 'aabbccdd-8888-4006-0000-b20000000000', 'Reported Speech', 'Reported Speech', 1, 12, 40),
   ('aabbccdd-8888-4006-0003-b20000000000', 'aabbccdd-8888-4006-0000-b20000000000', 'Passive Voice', 'Passive Voice', 2, 12, 40),
@@ -21103,13 +21103,13 @@ VALUES ('aabbccdd-9999-0000-0000-000000000000', 'en', 'ru', 'Russian A1', 'Russi
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-9999-1001-0000-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'Greetings & Basics', 'Learn greetings, introductions, and polite expressions', 0, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-9999-1001-0001-000000000000', 'aabbccdd-9999-1001-0000-000000000000', 'Core Vocabulary', 'Core Vocabulary', 0, 5, 20),
-  ('aabbccdd-9999-1001-0002-000000000000', 'aabbccdd-9999-1001-0000-000000000000', 'Phrases & Sentences', 'Phrases & Sentences', 1, 5, 20),
-  ('aabbccdd-9999-1001-0003-000000000000', 'aabbccdd-9999-1001-0000-000000000000', 'Listening & Recognition', 'Listening & Recognition', 2, 5, 20),
-  ('aabbccdd-9999-1001-0004-000000000000', 'aabbccdd-9999-1001-0000-000000000000', 'Speaking Practice', 'Speaking Practice', 3, 5, 20),
-  ('aabbccdd-9999-1001-0005-000000000000', 'aabbccdd-9999-1001-0000-000000000000', 'Reading Simple Texts', 'Reading Simple Texts', 4, 5, 20),
-  ('aabbccdd-9999-1001-0006-000000000000', 'aabbccdd-9999-1001-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-9999-1001-0001-000000000000', 'aabbccdd-9999-1001-0000-000000000000', 'Core Vocabulary', 'Core Vocabulary', 0, 5),
+  ('aabbccdd-9999-1001-0002-000000000000', 'aabbccdd-9999-1001-0000-000000000000', 'Phrases & Sentences', 'Phrases & Sentences', 1, 5),
+  ('aabbccdd-9999-1001-0003-000000000000', 'aabbccdd-9999-1001-0000-000000000000', 'Listening & Recognition', 'Listening & Recognition', 2, 5),
+  ('aabbccdd-9999-1001-0004-000000000000', 'aabbccdd-9999-1001-0000-000000000000', 'Speaking Practice', 'Speaking Practice', 3, 5),
+  ('aabbccdd-9999-1001-0005-000000000000', 'aabbccdd-9999-1001-0000-000000000000', 'Reading Simple Texts', 'Reading Simple Texts', 4, 5),
+  ('aabbccdd-9999-1001-0006-000000000000', 'aabbccdd-9999-1001-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-9999-1001-0001-e00000000001', 'aabbccdd-9999-1001-0001-000000000000', 'multiple_choice', 'What does "Привет" mean in English?', 'Hello', '{"Hello","Goodbye","Good morning","Good evening"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-9999-1001-0001-e00000000002', 'aabbccdd-9999-1001-0001-000000000000', 'translate_to_target', 'Translate to Russian: Goodbye', 'До свидания', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -21179,13 +21179,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-9999-1002-0000-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'Food & Dining', 'Order food and drinks at a restaurant', 1, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-9999-1002-0001-000000000000', 'aabbccdd-9999-1002-0000-000000000000', 'Restaurant Basics', 'Restaurant Basics', 0, 5, 20),
-  ('aabbccdd-9999-1002-0002-000000000000', 'aabbccdd-9999-1002-0000-000000000000', 'Common Foods', 'Common Foods', 1, 5, 20),
-  ('aabbccdd-9999-1002-0003-000000000000', 'aabbccdd-9999-1002-0000-000000000000', 'Drinks & Beverages', 'Drinks & Beverages', 2, 5, 20),
-  ('aabbccdd-9999-1002-0004-000000000000', 'aabbccdd-9999-1002-0000-000000000000', 'Describing Taste', 'Describing Taste', 3, 5, 20),
-  ('aabbccdd-9999-1002-0005-000000000000', 'aabbccdd-9999-1002-0000-000000000000', 'Full Meal Order', 'Full Meal Order', 4, 5, 20),
-  ('aabbccdd-9999-1002-0006-000000000000', 'aabbccdd-9999-1002-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-9999-1002-0001-000000000000', 'aabbccdd-9999-1002-0000-000000000000', 'Restaurant Basics', 'Restaurant Basics', 0, 5),
+  ('aabbccdd-9999-1002-0002-000000000000', 'aabbccdd-9999-1002-0000-000000000000', 'Common Foods', 'Common Foods', 1, 5),
+  ('aabbccdd-9999-1002-0003-000000000000', 'aabbccdd-9999-1002-0000-000000000000', 'Drinks & Beverages', 'Drinks & Beverages', 2, 5),
+  ('aabbccdd-9999-1002-0004-000000000000', 'aabbccdd-9999-1002-0000-000000000000', 'Describing Taste', 'Describing Taste', 3, 5),
+  ('aabbccdd-9999-1002-0005-000000000000', 'aabbccdd-9999-1002-0000-000000000000', 'Full Meal Order', 'Full Meal Order', 4, 5),
+  ('aabbccdd-9999-1002-0006-000000000000', 'aabbccdd-9999-1002-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-9999-1002-0001-e00000000001', 'aabbccdd-9999-1002-0001-000000000000', 'multiple_choice', 'What does "Вода" mean in English?', 'Water', '{"Water","Chicken","Bread","Apple"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-9999-1002-0001-e00000000002', 'aabbccdd-9999-1002-0001-000000000000', 'translate_to_target', 'Translate to Russian: Chicken', 'Курица', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -21255,13 +21255,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-9999-1003-0000-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'Getting Around', 'Ask for directions and use transportation', 2, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-9999-1003-0001-000000000000', 'aabbccdd-9999-1003-0000-000000000000', 'Asking Directions', 'Asking Directions', 0, 5, 20),
-  ('aabbccdd-9999-1003-0002-000000000000', 'aabbccdd-9999-1003-0000-000000000000', 'Transportation', 'Transportation', 1, 5, 20),
-  ('aabbccdd-9999-1003-0003-000000000000', 'aabbccdd-9999-1003-0000-000000000000', 'Places in Town', 'Places in Town', 2, 5, 20),
-  ('aabbccdd-9999-1003-0004-000000000000', 'aabbccdd-9999-1003-0000-000000000000', 'Buying Tickets', 'Buying Tickets', 3, 5, 20),
-  ('aabbccdd-9999-1003-0005-000000000000', 'aabbccdd-9999-1003-0000-000000000000', 'At the Airport', 'At the Airport', 4, 5, 20),
-  ('aabbccdd-9999-1003-0006-000000000000', 'aabbccdd-9999-1003-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-9999-1003-0001-000000000000', 'aabbccdd-9999-1003-0000-000000000000', 'Asking Directions', 'Asking Directions', 0, 5),
+  ('aabbccdd-9999-1003-0002-000000000000', 'aabbccdd-9999-1003-0000-000000000000', 'Transportation', 'Transportation', 1, 5),
+  ('aabbccdd-9999-1003-0003-000000000000', 'aabbccdd-9999-1003-0000-000000000000', 'Places in Town', 'Places in Town', 2, 5),
+  ('aabbccdd-9999-1003-0004-000000000000', 'aabbccdd-9999-1003-0000-000000000000', 'Buying Tickets', 'Buying Tickets', 3, 5),
+  ('aabbccdd-9999-1003-0005-000000000000', 'aabbccdd-9999-1003-0000-000000000000', 'At the Airport', 'At the Airport', 4, 5),
+  ('aabbccdd-9999-1003-0006-000000000000', 'aabbccdd-9999-1003-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-9999-1003-0001-e00000000001', 'aabbccdd-9999-1003-0001-000000000000', 'multiple_choice', 'What does "Налево" mean in English?', 'Left', '{"Left","Right","Straight","Bus"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-9999-1003-0001-e00000000002', 'aabbccdd-9999-1003-0001-000000000000', 'translate_to_target', 'Translate to Russian: Right', 'Направо', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -21331,13 +21331,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-9999-1004-0000-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'Daily Life & Shopping', 'Talk about routines and go shopping', 3, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-9999-1004-0001-000000000000', 'aabbccdd-9999-1004-0000-000000000000', 'Daily Routine', 'Daily Routine', 0, 5, 20),
-  ('aabbccdd-9999-1004-0002-000000000000', 'aabbccdd-9999-1004-0000-000000000000', 'Shopping Basics', 'Shopping Basics', 1, 5, 20),
-  ('aabbccdd-9999-1004-0003-000000000000', 'aabbccdd-9999-1004-0000-000000000000', 'Clothes & Colors', 'Clothes & Colors', 2, 5, 20),
-  ('aabbccdd-9999-1004-0004-000000000000', 'aabbccdd-9999-1004-0000-000000000000', 'Time & Schedule', 'Time & Schedule', 3, 5, 20),
-  ('aabbccdd-9999-1004-0005-000000000000', 'aabbccdd-9999-1004-0000-000000000000', 'At the Market', 'At the Market', 4, 5, 20),
-  ('aabbccdd-9999-1004-0006-000000000000', 'aabbccdd-9999-1004-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-9999-1004-0001-000000000000', 'aabbccdd-9999-1004-0000-000000000000', 'Daily Routine', 'Daily Routine', 0, 5),
+  ('aabbccdd-9999-1004-0002-000000000000', 'aabbccdd-9999-1004-0000-000000000000', 'Shopping Basics', 'Shopping Basics', 1, 5),
+  ('aabbccdd-9999-1004-0003-000000000000', 'aabbccdd-9999-1004-0000-000000000000', 'Clothes & Colors', 'Clothes & Colors', 2, 5),
+  ('aabbccdd-9999-1004-0004-000000000000', 'aabbccdd-9999-1004-0000-000000000000', 'Time & Schedule', 'Time & Schedule', 3, 5),
+  ('aabbccdd-9999-1004-0005-000000000000', 'aabbccdd-9999-1004-0000-000000000000', 'At the Market', 'At the Market', 4, 5),
+  ('aabbccdd-9999-1004-0006-000000000000', 'aabbccdd-9999-1004-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-9999-1004-0001-e00000000001', 'aabbccdd-9999-1004-0001-000000000000', 'multiple_choice', 'What does "Завтрак" mean in English?', 'Breakfast', '{"Breakfast","Expensive","Cheap","Red"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-9999-1004-0001-e00000000002', 'aabbccdd-9999-1004-0001-000000000000', 'translate_to_target', 'Translate to Russian: Expensive', 'Дорогой', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -21407,13 +21407,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-9999-1005-0000-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'Work & Social', 'Discuss jobs, hobbies, and make plans', 4, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-9999-1005-0001-000000000000', 'aabbccdd-9999-1005-0000-000000000000', 'Jobs & Professions', 'Jobs & Professions', 0, 5, 20),
-  ('aabbccdd-9999-1005-0002-000000000000', 'aabbccdd-9999-1005-0000-000000000000', 'Making Plans', 'Making Plans', 1, 5, 20),
-  ('aabbccdd-9999-1005-0003-000000000000', 'aabbccdd-9999-1005-0000-000000000000', 'Hobbies & Interests', 'Hobbies & Interests', 2, 5, 20),
-  ('aabbccdd-9999-1005-0004-000000000000', 'aabbccdd-9999-1005-0000-000000000000', 'Weather & Seasons', 'Weather & Seasons', 3, 5, 20),
-  ('aabbccdd-9999-1005-0005-000000000000', 'aabbccdd-9999-1005-0000-000000000000', 'Weekend Activities', 'Weekend Activities', 4, 5, 20),
-  ('aabbccdd-9999-1005-0006-000000000000', 'aabbccdd-9999-1005-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-9999-1005-0001-000000000000', 'aabbccdd-9999-1005-0000-000000000000', 'Jobs & Professions', 'Jobs & Professions', 0, 5),
+  ('aabbccdd-9999-1005-0002-000000000000', 'aabbccdd-9999-1005-0000-000000000000', 'Making Plans', 'Making Plans', 1, 5),
+  ('aabbccdd-9999-1005-0003-000000000000', 'aabbccdd-9999-1005-0000-000000000000', 'Hobbies & Interests', 'Hobbies & Interests', 2, 5),
+  ('aabbccdd-9999-1005-0004-000000000000', 'aabbccdd-9999-1005-0000-000000000000', 'Weather & Seasons', 'Weather & Seasons', 3, 5),
+  ('aabbccdd-9999-1005-0005-000000000000', 'aabbccdd-9999-1005-0000-000000000000', 'Weekend Activities', 'Weekend Activities', 4, 5),
+  ('aabbccdd-9999-1005-0006-000000000000', 'aabbccdd-9999-1005-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-9999-1005-0001-e00000000001', 'aabbccdd-9999-1005-0001-000000000000', 'multiple_choice', 'What does "Учитель" mean in English?', 'Teacher', '{"Teacher","Doctor","Office","To read"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-9999-1005-0001-e00000000002', 'aabbccdd-9999-1005-0001-000000000000', 'translate_to_target', 'Translate to Russian: Doctor', 'Врач', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -21483,13 +21483,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-9999-1006-0000-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'Family & Friends', 'Talk about family and relationships', 5, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-9999-1006-0001-000000000000', 'aabbccdd-9999-1006-0000-000000000000', 'Family Members', 'Family Members', 0, 5, 20),
-  ('aabbccdd-9999-1006-0002-000000000000', 'aabbccdd-9999-1006-0000-000000000000', 'Describing People', 'Describing People', 1, 5, 20),
-  ('aabbccdd-9999-1006-0003-000000000000', 'aabbccdd-9999-1006-0000-000000000000', 'Ages & Birthdays', 'Ages & Birthdays', 2, 5, 20),
-  ('aabbccdd-9999-1006-0004-000000000000', 'aabbccdd-9999-1006-0000-000000000000', 'Pets & Animals', 'Pets & Animals', 3, 5, 20),
-  ('aabbccdd-9999-1006-0005-000000000000', 'aabbccdd-9999-1006-0000-000000000000', 'Family Activities', 'Family Activities', 4, 5, 20),
-  ('aabbccdd-9999-1006-0006-000000000000', 'aabbccdd-9999-1006-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-9999-1006-0001-000000000000', 'aabbccdd-9999-1006-0000-000000000000', 'Family Members', 'Family Members', 0, 5),
+  ('aabbccdd-9999-1006-0002-000000000000', 'aabbccdd-9999-1006-0000-000000000000', 'Describing People', 'Describing People', 1, 5),
+  ('aabbccdd-9999-1006-0003-000000000000', 'aabbccdd-9999-1006-0000-000000000000', 'Ages & Birthdays', 'Ages & Birthdays', 2, 5),
+  ('aabbccdd-9999-1006-0004-000000000000', 'aabbccdd-9999-1006-0000-000000000000', 'Pets & Animals', 'Pets & Animals', 3, 5),
+  ('aabbccdd-9999-1006-0005-000000000000', 'aabbccdd-9999-1006-0000-000000000000', 'Family Activities', 'Family Activities', 4, 5),
+  ('aabbccdd-9999-1006-0006-000000000000', 'aabbccdd-9999-1006-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-9999-1006-0001-e00000000001', 'aabbccdd-9999-1006-0001-000000000000', 'multiple_choice', 'What does "Мать" mean in English?', 'Mother', '{"Mother","Father","Sister","Brother"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-9999-1006-0001-e00000000002', 'aabbccdd-9999-1006-0001-000000000000', 'translate_to_target', 'Translate to Russian: Father', 'Отец', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -21559,13 +21559,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-9999-1007-0000-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'Home & Rooms', 'Describe your house and furniture', 6, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-9999-1007-0001-000000000000', 'aabbccdd-9999-1007-0000-000000000000', 'Parts of the House', 'Parts of the House', 0, 5, 20),
-  ('aabbccdd-9999-1007-0002-000000000000', 'aabbccdd-9999-1007-0000-000000000000', 'Furniture', 'Furniture', 1, 5, 20),
-  ('aabbccdd-9999-1007-0003-000000000000', 'aabbccdd-9999-1007-0000-000000000000', 'In the Kitchen', 'In the Kitchen', 2, 5, 20),
-  ('aabbccdd-9999-1007-0004-000000000000', 'aabbccdd-9999-1007-0000-000000000000', 'Bathroom & Bedroom', 'Bathroom & Bedroom', 3, 5, 20),
-  ('aabbccdd-9999-1007-0005-000000000000', 'aabbccdd-9999-1007-0000-000000000000', 'Describing Your Home', 'Describing Your Home', 4, 5, 20),
-  ('aabbccdd-9999-1007-0006-000000000000', 'aabbccdd-9999-1007-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-9999-1007-0001-000000000000', 'aabbccdd-9999-1007-0000-000000000000', 'Parts of the House', 'Parts of the House', 0, 5),
+  ('aabbccdd-9999-1007-0002-000000000000', 'aabbccdd-9999-1007-0000-000000000000', 'Furniture', 'Furniture', 1, 5),
+  ('aabbccdd-9999-1007-0003-000000000000', 'aabbccdd-9999-1007-0000-000000000000', 'In the Kitchen', 'In the Kitchen', 2, 5),
+  ('aabbccdd-9999-1007-0004-000000000000', 'aabbccdd-9999-1007-0000-000000000000', 'Bathroom & Bedroom', 'Bathroom & Bedroom', 3, 5),
+  ('aabbccdd-9999-1007-0005-000000000000', 'aabbccdd-9999-1007-0000-000000000000', 'Describing Your Home', 'Describing Your Home', 4, 5),
+  ('aabbccdd-9999-1007-0006-000000000000', 'aabbccdd-9999-1007-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-9999-1007-0001-e00000000001', 'aabbccdd-9999-1007-0001-000000000000', 'multiple_choice', 'What does "Дом" mean in English?', 'House', '{"House","Room","Kitchen","Bathroom"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-9999-1007-0001-e00000000002', 'aabbccdd-9999-1007-0001-000000000000', 'translate_to_target', 'Translate to Russian: Room', 'Комната', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -21635,13 +21635,13 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-9999-1008-0000-000000000000', 'aabbccdd-9999-0000-0000-000000000000', 'Health & Body', 'Body parts, health, and doctor visits', 7, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
-  ('aabbccdd-9999-1008-0001-000000000000', 'aabbccdd-9999-1008-0000-000000000000', 'Body Parts', 'Body Parts', 0, 5, 20),
-  ('aabbccdd-9999-1008-0002-000000000000', 'aabbccdd-9999-1008-0000-000000000000', 'Feelings & Symptoms', 'Feelings & Symptoms', 1, 5, 20),
-  ('aabbccdd-9999-1008-0003-000000000000', 'aabbccdd-9999-1008-0000-000000000000', 'At the Doctor', 'At the Doctor', 2, 5, 20),
-  ('aabbccdd-9999-1008-0004-000000000000', 'aabbccdd-9999-1008-0000-000000000000', 'At the Pharmacy', 'At the Pharmacy', 3, 5, 20),
-  ('aabbccdd-9999-1008-0005-000000000000', 'aabbccdd-9999-1008-0000-000000000000', 'Healthy Habits', 'Healthy Habits', 4, 5, 20),
-  ('aabbccdd-9999-1008-0006-000000000000', 'aabbccdd-9999-1008-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5, 20);
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
+  ('aabbccdd-9999-1008-0001-000000000000', 'aabbccdd-9999-1008-0000-000000000000', 'Body Parts', 'Body Parts', 0, 5),
+  ('aabbccdd-9999-1008-0002-000000000000', 'aabbccdd-9999-1008-0000-000000000000', 'Feelings & Symptoms', 'Feelings & Symptoms', 1, 5),
+  ('aabbccdd-9999-1008-0003-000000000000', 'aabbccdd-9999-1008-0000-000000000000', 'At the Doctor', 'At the Doctor', 2, 5),
+  ('aabbccdd-9999-1008-0004-000000000000', 'aabbccdd-9999-1008-0000-000000000000', 'At the Pharmacy', 'At the Pharmacy', 3, 5),
+  ('aabbccdd-9999-1008-0005-000000000000', 'aabbccdd-9999-1008-0000-000000000000', 'Healthy Habits', 'Healthy Habits', 4, 5),
+  ('aabbccdd-9999-1008-0006-000000000000', 'aabbccdd-9999-1008-0000-000000000000', 'Review & Test', 'Review & Test', 5, 5);
 INSERT INTO exercises (id, lesson_id, type, prompt, correct_answer, options, accepted_answers, order_index, metadata, skill_type, subskill, response_mode, source_type) VALUES
   ('aabbccdd-9999-1008-0001-e00000000001', 'aabbccdd-9999-1008-0001-000000000000', 'multiple_choice', 'What does "Голова" mean in English?', 'Head', '{"Head","Hand","Eye","Stomach"}', '{}', 0, '{}', 'vocabulary', 'meaning_in_context', 'tap', 'seed'),
   ('aabbccdd-9999-1008-0001-e00000000002', 'aabbccdd-9999-1008-0001-000000000000', 'translate_to_target', 'Translate to Russian: Hand', 'Рука', NULL, '{}', 1, '{}', 'vocabulary', 'translation', 'type', 'seed'),
@@ -21715,7 +21715,7 @@ VALUES ('aabbccdd-9999-0000-0000-a20000000000', 'en', 'ru', 'Russian A2', 'Russi
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-9999-2001-0000-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'Family & Relationships', 'Describe family, relationships, and ages', 0, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-9999-2001-0001-a20000000000', 'aabbccdd-9999-2001-0000-a20000000000', 'Extended Family', 'Extended Family', 0, 7, 25),
   ('aabbccdd-9999-2001-0002-a20000000000', 'aabbccdd-9999-2001-0000-a20000000000', 'Describing Relationships', 'Describing Relationships', 1, 7, 25),
   ('aabbccdd-9999-2001-0003-a20000000000', 'aabbccdd-9999-2001-0000-a20000000000', 'Talking About Ages', 'Talking About Ages', 2, 7, 25),
@@ -21792,7 +21792,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-9999-2002-0000-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'Health & Wellness', 'Symptoms, doctor visits, pharmacy, feelings', 1, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-9999-2002-0001-a20000000000', 'aabbccdd-9999-2002-0000-a20000000000', 'Common Symptoms', 'Common Symptoms', 0, 7, 25),
   ('aabbccdd-9999-2002-0002-a20000000000', 'aabbccdd-9999-2002-0000-a20000000000', 'At the Doctor Office', 'At the Doctor Office', 1, 7, 25),
   ('aabbccdd-9999-2002-0003-a20000000000', 'aabbccdd-9999-2002-0000-a20000000000', 'At the Pharmacy', 'At the Pharmacy', 2, 7, 25),
@@ -21869,7 +21869,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-9999-2003-0000-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'At Home', 'Furniture, chores, describing your home', 2, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-9999-2003-0001-a20000000000', 'aabbccdd-9999-2003-0000-a20000000000', 'Rooms & Furniture', 'Rooms & Furniture', 0, 7, 25),
   ('aabbccdd-9999-2003-0002-a20000000000', 'aabbccdd-9999-2003-0000-a20000000000', 'Household Chores', 'Household Chores', 1, 7, 25),
   ('aabbccdd-9999-2003-0003-a20000000000', 'aabbccdd-9999-2003-0000-a20000000000', 'Moving & Housing', 'Moving & Housing', 2, 7, 25),
@@ -21946,7 +21946,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-9999-2004-0000-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'Emotions & Personality', 'Adjectives for people, moods, character', 3, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-9999-2004-0001-a20000000000', 'aabbccdd-9999-2004-0000-a20000000000', 'Positive Emotions', 'Positive Emotions', 0, 7, 25),
   ('aabbccdd-9999-2004-0002-a20000000000', 'aabbccdd-9999-2004-0000-a20000000000', 'Negative Emotions', 'Negative Emotions', 1, 7, 25),
   ('aabbccdd-9999-2004-0003-a20000000000', 'aabbccdd-9999-2004-0000-a20000000000', 'Personality Traits', 'Personality Traits', 2, 7, 25),
@@ -22023,7 +22023,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-9999-2005-0000-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'Past Tense Basics', 'Yesterday, last week, simple past actions', 4, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-9999-2005-0001-a20000000000', 'aabbccdd-9999-2005-0000-a20000000000', 'What Happened Yesterday', 'What Happened Yesterday', 0, 7, 25),
   ('aabbccdd-9999-2005-0002-a20000000000', 'aabbccdd-9999-2005-0000-a20000000000', 'Last Weekend', 'Last Weekend', 1, 7, 25),
   ('aabbccdd-9999-2005-0003-a20000000000', 'aabbccdd-9999-2005-0000-a20000000000', 'A Memorable Trip', 'A Memorable Trip', 2, 7, 25),
@@ -22100,7 +22100,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-9999-2006-0000-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'Future Plans', 'Will, going to, plans, intentions', 5, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-9999-2006-0001-a20000000000', 'aabbccdd-9999-2006-0000-a20000000000', 'Plans for Tomorrow', 'Plans for Tomorrow', 0, 7, 25),
   ('aabbccdd-9999-2006-0002-a20000000000', 'aabbccdd-9999-2006-0000-a20000000000', 'Next Vacation', 'Next Vacation', 1, 7, 25),
   ('aabbccdd-9999-2006-0003-a20000000000', 'aabbccdd-9999-2006-0000-a20000000000', 'Life Goals', 'Life Goals', 2, 7, 25),
@@ -22177,7 +22177,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-9999-2007-0000-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'Comparisons', 'Bigger, smaller, better, more expensive', 6, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-9999-2007-0001-a20000000000', 'aabbccdd-9999-2007-0000-a20000000000', 'Comparing Things', 'Comparing Things', 0, 7, 25),
   ('aabbccdd-9999-2007-0002-a20000000000', 'aabbccdd-9999-2007-0000-a20000000000', 'Comparing People', 'Comparing People', 1, 7, 25),
   ('aabbccdd-9999-2007-0003-a20000000000', 'aabbccdd-9999-2007-0000-a20000000000', 'Superlatives', 'Superlatives', 2, 7, 25),
@@ -22254,7 +22254,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-9999-2008-0000-a20000000000', 'aabbccdd-9999-0000-0000-a20000000000', 'Cultural Topics', 'Holidays, traditions, celebrations', 7, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-9999-2008-0001-a20000000000', 'aabbccdd-9999-2008-0000-a20000000000', 'National Holidays', 'National Holidays', 0, 7, 25),
   ('aabbccdd-9999-2008-0002-a20000000000', 'aabbccdd-9999-2008-0000-a20000000000', 'Food Traditions', 'Food Traditions', 1, 7, 25),
   ('aabbccdd-9999-2008-0003-a20000000000', 'aabbccdd-9999-2008-0000-a20000000000', 'Music & Dance', 'Music & Dance', 2, 7, 25),
@@ -22335,7 +22335,7 @@ VALUES ('aabbccdd-9999-0000-0000-b10000000000', 'en', 'ru', 'Russian B1', 'Russi
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-9999-3001-0000-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'Opinions & Current Events', 'Agree/disagree, news, society', 0, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-9999-3001-0001-b10000000000', 'aabbccdd-9999-3001-0000-b10000000000', 'Expressing Opinions', 'Expressing Opinions', 0, 10, 30),
   ('aabbccdd-9999-3001-0002-b10000000000', 'aabbccdd-9999-3001-0000-b10000000000', 'Agreeing & Disagreeing', 'Agreeing & Disagreeing', 1, 10, 30),
   ('aabbccdd-9999-3001-0003-b10000000000', 'aabbccdd-9999-3001-0000-b10000000000', 'Current Events', 'Current Events', 2, 10, 30),
@@ -22424,7 +22424,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-9999-3002-0000-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'Work & Career', 'Interviews, meetings, emails, presentations', 1, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-9999-3002-0001-b10000000000', 'aabbccdd-9999-3002-0000-b10000000000', 'Job Interviews', 'Job Interviews', 0, 10, 30),
   ('aabbccdd-9999-3002-0002-b10000000000', 'aabbccdd-9999-3002-0000-b10000000000', 'Office Communication', 'Office Communication', 1, 10, 30),
   ('aabbccdd-9999-3002-0003-b10000000000', 'aabbccdd-9999-3002-0000-b10000000000', 'Meetings', 'Meetings', 2, 10, 30),
@@ -22513,7 +22513,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-9999-3003-0000-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'Travel & Adventure', 'Booking, airports, hotels, experiences', 2, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-9999-3003-0001-b10000000000', 'aabbccdd-9999-3003-0000-b10000000000', 'Booking Travel', 'Booking Travel', 0, 10, 30),
   ('aabbccdd-9999-3003-0002-b10000000000', 'aabbccdd-9999-3003-0000-b10000000000', 'At the Airport', 'At the Airport', 1, 10, 30),
   ('aabbccdd-9999-3003-0003-b10000000000', 'aabbccdd-9999-3003-0000-b10000000000', 'Hotel Check-in', 'Hotel Check-in', 2, 10, 30),
@@ -22602,7 +22602,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-9999-3004-0000-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'Environment & Nature', 'Climate, animals, conservation', 3, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-9999-3004-0001-b10000000000', 'aabbccdd-9999-3004-0000-b10000000000', 'Climate & Weather', 'Climate & Weather', 0, 10, 30),
   ('aabbccdd-9999-3004-0002-b10000000000', 'aabbccdd-9999-3004-0000-b10000000000', 'Wildlife', 'Wildlife', 1, 10, 30),
   ('aabbccdd-9999-3004-0003-b10000000000', 'aabbccdd-9999-3004-0000-b10000000000', 'Conservation', 'Conservation', 2, 10, 30),
@@ -22691,7 +22691,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-9999-3005-0000-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'Technology & Media', 'Internet, social media, devices', 4, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-9999-3005-0001-b10000000000', 'aabbccdd-9999-3005-0000-b10000000000', 'Internet & Social Media', 'Internet & Social Media', 0, 10, 30),
   ('aabbccdd-9999-3005-0002-b10000000000', 'aabbccdd-9999-3005-0000-b10000000000', 'Smartphones & Apps', 'Smartphones & Apps', 1, 10, 30),
   ('aabbccdd-9999-3005-0003-b10000000000', 'aabbccdd-9999-3005-0000-b10000000000', 'Digital Communication', 'Digital Communication', 2, 10, 30),
@@ -22780,7 +22780,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-9999-3006-0000-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'Storytelling', 'Narrative tenses, sequencing, past continuous', 5, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-9999-3006-0001-b10000000000', 'aabbccdd-9999-3006-0000-b10000000000', 'Telling a Story', 'Telling a Story', 0, 10, 30),
   ('aabbccdd-9999-3006-0002-b10000000000', 'aabbccdd-9999-3006-0000-b10000000000', 'Sequencing Events', 'Sequencing Events', 1, 10, 30),
   ('aabbccdd-9999-3006-0003-b10000000000', 'aabbccdd-9999-3006-0000-b10000000000', 'Past Continuous', 'Past Continuous', 2, 10, 30),
@@ -22869,7 +22869,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-9999-3007-0000-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'Hypothetical Situations', 'Conditionals, would/could/should', 6, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-9999-3007-0001-b10000000000', 'aabbccdd-9999-3007-0000-b10000000000', 'First Conditional', 'First Conditional', 0, 10, 30),
   ('aabbccdd-9999-3007-0002-b10000000000', 'aabbccdd-9999-3007-0000-b10000000000', 'Second Conditional', 'Second Conditional', 1, 10, 30),
   ('aabbccdd-9999-3007-0003-b10000000000', 'aabbccdd-9999-3007-0000-b10000000000', 'Giving Advice', 'Giving Advice', 2, 10, 30),
@@ -22958,7 +22958,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-9999-3008-0000-b10000000000', 'aabbccdd-9999-0000-0000-b10000000000', 'Formal vs. Informal', 'Register, polite requests, slang', 7, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-9999-3008-0001-b10000000000', 'aabbccdd-9999-3008-0000-b10000000000', 'Formal Requests', 'Formal Requests', 0, 10, 30),
   ('aabbccdd-9999-3008-0002-b10000000000', 'aabbccdd-9999-3008-0000-b10000000000', 'Informal Speech', 'Informal Speech', 1, 10, 30),
   ('aabbccdd-9999-3008-0003-b10000000000', 'aabbccdd-9999-3008-0000-b10000000000', 'Writing Emails', 'Writing Emails', 2, 10, 30),
@@ -23121,7 +23121,7 @@ VALUES ('aabbccdd-9999-0000-0000-b20000000000', 'en', 'ru', 'Russian B2', 'Russi
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-9999-4001-0000-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'Abstract Ideas', 'Philosophy, concepts, beliefs', 0, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-9999-4001-0001-b20000000000', 'aabbccdd-9999-4001-0000-b20000000000', 'Philosophy of Life', 'Philosophy of Life', 0, 12, 40),
   ('aabbccdd-9999-4001-0002-b20000000000', 'aabbccdd-9999-4001-0000-b20000000000', 'Beliefs & Values', 'Beliefs & Values', 1, 12, 40),
   ('aabbccdd-9999-4001-0003-b20000000000', 'aabbccdd-9999-4001-0000-b20000000000', 'Abstract Concepts', 'Abstract Concepts', 2, 12, 40),
@@ -23210,7 +23210,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-9999-4002-0000-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'Debate & Argumentation', 'Persuasion, counterarguments, rhetoric', 1, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-9999-4002-0001-b20000000000', 'aabbccdd-9999-4002-0000-b20000000000', 'Building Arguments', 'Building Arguments', 0, 12, 40),
   ('aabbccdd-9999-4002-0002-b20000000000', 'aabbccdd-9999-4002-0000-b20000000000', 'Counterarguments', 'Counterarguments', 1, 12, 40),
   ('aabbccdd-9999-4002-0003-b20000000000', 'aabbccdd-9999-4002-0000-b20000000000', 'Persuasive Language', 'Persuasive Language', 2, 12, 40),
@@ -23299,7 +23299,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-9999-4003-0000-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'Professional Communication', 'Formal writing, presentations, negotiations', 2, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-9999-4003-0001-b20000000000', 'aabbccdd-9999-4003-0000-b20000000000', 'Business Emails', 'Business Emails', 0, 12, 40),
   ('aabbccdd-9999-4003-0002-b20000000000', 'aabbccdd-9999-4003-0000-b20000000000', 'Presentations', 'Presentations', 1, 12, 40),
   ('aabbccdd-9999-4003-0003-b20000000000', 'aabbccdd-9999-4003-0000-b20000000000', 'Negotiations', 'Negotiations', 2, 12, 40),
@@ -23388,7 +23388,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-9999-4004-0000-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'Literature & Arts', 'Describing art, reviews, literary analysis', 3, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-9999-4004-0001-b20000000000', 'aabbccdd-9999-4004-0000-b20000000000', 'Describing Art', 'Describing Art', 0, 12, 40),
   ('aabbccdd-9999-4004-0002-b20000000000', 'aabbccdd-9999-4004-0000-b20000000000', 'Book Reviews', 'Book Reviews', 1, 12, 40),
   ('aabbccdd-9999-4004-0003-b20000000000', 'aabbccdd-9999-4004-0000-b20000000000', 'Film & Theater', 'Film & Theater', 2, 12, 40),
@@ -23477,7 +23477,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-9999-4005-0000-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'Idiomatic Expressions', 'Idioms, proverbs, collocations', 4, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-9999-4005-0001-b20000000000', 'aabbccdd-9999-4005-0000-b20000000000', 'Common Idioms', 'Common Idioms', 0, 12, 40),
   ('aabbccdd-9999-4005-0002-b20000000000', 'aabbccdd-9999-4005-0000-b20000000000', 'Proverbs', 'Proverbs', 1, 12, 40),
   ('aabbccdd-9999-4005-0003-b20000000000', 'aabbccdd-9999-4005-0000-b20000000000', 'Collocations', 'Collocations', 2, 12, 40),
@@ -23566,7 +23566,7 @@ INSERT INTO cards (id, course_id, unit_id, native_text, target_text, part_of_spe
 
 INSERT INTO units (id, course_id, title, description, order_index, total_lessons)
 VALUES ('aabbccdd-9999-4006-0000-b20000000000', 'aabbccdd-9999-0000-0000-b20000000000', 'Complex Grammar', 'Subjunctive, reported speech, passive voice', 5, 6);
-INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes, xp_reward) VALUES
+INSERT INTO lessons (id, unit_id, title, description, order_index, estimated_minutes) VALUES
   ('aabbccdd-9999-4006-0001-b20000000000', 'aabbccdd-9999-4006-0000-b20000000000', 'Subjunctive Mood', 'Subjunctive Mood', 0, 12, 40),
   ('aabbccdd-9999-4006-0002-b20000000000', 'aabbccdd-9999-4006-0000-b20000000000', 'Reported Speech', 'Reported Speech', 1, 12, 40),
   ('aabbccdd-9999-4006-0003-b20000000000', 'aabbccdd-9999-4006-0000-b20000000000', 'Passive Voice', 'Passive Voice', 2, 12, 40),

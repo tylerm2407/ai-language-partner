@@ -23,8 +23,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, corsResponse } from '../_shared/cors.ts';
 import { getAuthenticatedUser } from '../_shared/auth.ts';
 import { checkBurstLimit } from '../_shared/burst-limit.ts';
+import { resolveTier } from '../_shared/entitlement.ts';
 import { getEffectiveLimits } from '../_shared/plan-limits.ts';
-import { getUserToday } from '../_shared/user-day.ts';
 import { PROVIDER_TIMEOUT_MS, providerFetch } from '../_shared/provider-fetch.ts';
 import { estimateDurationMs, parseMp3DurationMs } from '../_shared/mp3-duration.ts';
 import {
@@ -430,40 +430,18 @@ function bufferToBase64(buffer: ArrayBuffer): string {
 
 // deno-lint-ignore no-explicit-any
 async function getUserTier(supabase: any, userId: string): Promise<string> {
-  const { data } = await supabase
-    .from('subscriptions')
-    .select('tier, is_active')
-    .eq('user_id', userId)
-    .single();
-
-  if (data?.is_active && data.tier) return data.tier;
-  return 'starter';
+  // One definition of "paid" for the whole codebase — see _shared/entitlement.ts.
+  return await resolveTier(supabase, userId);
 }
 
-/** `date` is the user's local day from getUserToday — must match the day
- *  key increment_daily_usage writes (migration 044). */
-// deno-lint-ignore no-explicit-any
-async function getVoiceMinutesUsed(supabase: any, userId: string, date: string): Promise<number> {
-  const { data } = await supabase
-    .from('daily_usage')
-    .select('voice_minutes')
-    .eq('user_id', userId)
-    .eq('date', date)
-    .single();
-
-  // `daily_usage.voice_minutes` is NUMERIC, and PostgREST serialises NUMERIC
-  // as a JSON *string* to preserve arbitrary precision. Comparing that string
-  // against a number works by coercion today, but only by luck: `'10' >= 6`
-  // is true while `'10' + 0.2` is `'100.2'`. Parse it once, here, so no
-  // caller has to know. `transcribe` already does this.
-  return parseFloat(data?.voice_minutes as string) || 0;
-}
 
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return corsResponse();
   }
 
+  /** Set while a voice reservation is outstanding; cleared once settled. */
+  let refundVoiceReservation: (() => Promise<void>) | null = null;
   try {
     // Verify authentication
     const authUser = await getAuthenticatedUser(req);
@@ -616,6 +594,19 @@ serve(async (req: Request) => {
     const tier = await getUserTier(supabase, authenticatedUserId);
     const limits = await getEffectiveLimits(authenticatedUserId, supabase, tier);
 
+    /** Voice-path reservation, settled once the clip is measured. */
+    let reservedVoiceSeconds = 0;
+    const settleVoice = async (actualSeconds: number): Promise<void> => {
+      if (reservedVoiceSeconds <= 0) return;
+      const delta = actualSeconds - reservedVoiceSeconds;
+      if (delta === 0) return;
+      const { error } = await supabase.rpc('adjust_voice_seconds', {
+        p_user_id: authenticatedUserId,
+        p_delta_seconds: delta,
+      });
+      if (error) console.error('[tts] adjust_voice_seconds failed:', error.message);
+    };
+
     if (isLessonAudio) {
       // Lesson audio draws on `lesson_tts_plays`, not voice minutes, so the
       // free tier can hear its listening exercises without being handed chat
@@ -680,9 +671,24 @@ serve(async (req: Request) => {
       // `voice_minutes`. Worst-case overage is bounded by the number of
       // in-flight requests times one reply, which is not worth a second
       // metering primitive.
-      const userDay = await getUserToday(supabase, authenticatedUserId);
-      const used = await getVoiceMinutesUsed(supabase, authenticatedUserId, userDay);
-      if (used >= limits.dailyVoiceMinutes) {
+      // Reserved atomically BEFORE synthesis (consume_voice_seconds, migration
+      // 113) from the character estimate, then settled to the measured MP3
+      // below. This replaced a read-then-check that thirty concurrent
+      // requests could all pass at once.
+      reservedVoiceSeconds = Math.max(1, Math.ceil(estimateDurationMs(cleanText) / 1000));
+      const { data: reserved, error: reserveErr } = await supabase.rpc('consume_voice_seconds', {
+        p_user_id: authenticatedUserId,
+        p_limit_minutes: limits.dailyVoiceMinutes,
+        p_seconds: reservedVoiceSeconds,
+      });
+      if (reserveErr) {
+        console.error('[tts] consume_voice_seconds failed:', reserveErr.message);
+        return new Response(
+          JSON.stringify({ error: 'Could not verify your daily limit. Try again shortly.' }),
+          { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      if (reserved !== true) {
         return new Response(
           JSON.stringify({
             error: "You've reached your daily voice limit. Upgrade your plan for more.",
@@ -691,6 +697,8 @@ serve(async (req: Request) => {
           { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+      // A synthesis that throws below must give the reservation back.
+      refundVoiceReservation = () => settleVoice(0);
     }
 
     let audioBuffer: ArrayBuffer;
@@ -763,13 +771,8 @@ serve(async (req: Request) => {
     // talking, and the daily cap still converges.
     if (!isLessonAudio) {
       const durationMs = parseMp3DurationMs(audioBuffer) ?? estimateDurationMs(cleanText);
-      await supabase.rpc('increment_daily_usage', {
-        p_user_id: authenticatedUserId,
-        p_text_messages: 0,
-        p_voice_minutes: durationMs / 60_000,
-      }).then(({ error }) => {
-        if (error) console.error('[tts] Failed to increment voice_minutes:', error.message);
-      });
+      await settleVoice(durationMs / 1000);
+      refundVoiceReservation = null;
     }
 
     // Freshly synthesised. The upload above just put it in the bucket, so a
@@ -791,6 +794,7 @@ serve(async (req: Request) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error: unknown) {
+    if (refundVoiceReservation) await refundVoiceReservation().catch(() => {});
     const message = error instanceof Error ? error.message : String(error);
     console.error('[tts] unhandled error:', message);
     return new Response(

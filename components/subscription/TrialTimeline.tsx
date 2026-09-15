@@ -4,7 +4,8 @@
  */
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../config/theme';
+import { SlabCard } from '../ui2/SlabCard';
+import { useUi2Theme } from '../../hooks/useUi2Theme';
 import { trialTimelineSteps } from '../../lib/trial-timeline';
 
 interface TrialTimelineProps {
@@ -15,18 +16,18 @@ interface TrialTimelineProps {
 }
 
 export function TrialTimeline({ trialDays, priceString }: TrialTimelineProps) {
+  const { c } = useUi2Theme();
   const steps = trialTimelineSteps(trialDays, priceString);
 
   return (
-    <View
-      className="rounded-2xl p-5 mb-6"
-      style={{ backgroundColor: colors.surface.card, borderWidth: 1, borderColor: colors.border.default }}
+    <SlabCard
+      style={{ padding: 20, marginBottom: 24 }}
       accessibilityRole="summary"
       accessibilityLabel={`How your ${trialDays}-day free trial works. ${steps
         .map((s) => `${s.title}: ${s.detail}`)
         .join(' ')}`}
     >
-      <Text className="text-base font-semibold text-text-primary mb-4">
+      <Text className="text-base font-semibold mb-4" style={{ color: c.ink }}>
         How your {trialDays}-day free trial works
       </Text>
 
@@ -45,32 +46,35 @@ export function TrialTimeline({ trialDays, priceString }: TrialTimelineProps) {
                   borderRadius: 16,
                   alignItems: 'center',
                   justifyContent: 'center',
-                  backgroundColor: isLast ? colors.premium.tint : colors.action.primaryTint,
+                  backgroundColor: isLast ? c.yellowTint : c.primaryTint,
                 }}
               >
+                {/* `ink` on the yellow tint rather than `yellow` on it: the
+                    renewal step has to stay visible in light mode, where the
+                    two land near 1.7:1. The tint carries the distinction. */}
                 <Ionicons
                   name={step.icon as never}
                   size={16}
-                  color={isLast ? colors.premium.base : colors.action.accent}
+                  color={isLast ? c.ink : c.onTint}
                 />
               </View>
               {/* Connector between steps, omitted after the last one. */}
               {!isLast && (
-                <View style={{ width: 2, flex: 1, minHeight: 16, backgroundColor: colors.border.default }} />
+                <View style={{ width: 2, flex: 1, minHeight: 16, backgroundColor: c.cardBorder }} />
               )}
             </View>
             <View className={isLast ? 'flex-1' : 'flex-1 pb-4'}>
-              <Text className="text-sm font-semibold text-text-primary">{step.title}</Text>
-              <Text className="text-sm text-text-secondary mt-0.5">{step.detail}</Text>
+              <Text className="text-sm font-semibold" style={{ color: c.ink }}>{step.title}</Text>
+              <Text className="text-sm mt-0.5" style={{ color: c.muted }}>{step.detail}</Text>
             </View>
           </View>
         );
       })}
 
-      <Text className="text-sm text-text-secondary mt-2">
+      <Text className="text-sm mt-2" style={{ color: c.muted }}>
         Cancel in Settings → Subscription, or in your App Store account. Two taps,
         no email required.
       </Text>
-    </View>
+    </SlabCard>
   );
 }

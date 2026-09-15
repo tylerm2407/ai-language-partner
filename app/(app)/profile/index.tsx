@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { View, Text, Pressable, ScrollView, Alert, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -6,28 +6,47 @@ import { useAuth } from '../../../hooks/useAuth';
 import { useAppStore } from '../../../stores/useAppStore';
 import { useSchoolStore } from '../../../stores/useSchoolStore';
 import { SCHOOL_ENABLED, SUPPORTED_LANGUAGES } from '../../../config/app';
-import { useLevel } from '../../../hooks/useLevel';
-import { Ionicons } from '@expo/vector-icons';
-import { GradientBackground } from '../../../components/ui/GradientBackground';
-import { colors, radii, spacing, typography } from '../../../config/theme';
-import { Heading } from '../../../components/ui/Text';
-import { Chip } from '../../../components/ui/Chip';
-import { LevelBadge } from '../../../components/stats/LevelBadge';
-import { AchievementGrid } from '../../../components/gamification/AchievementGrid';
+// `colors` is deliberately NOT imported: it is the fixed DARK palette, and a
+// screen that reads it stays dark whatever the phone is set to. `radii` and
+// `spacing` are plain scheme-independent numbers and carry over unchanged.
+import { useUi2Theme } from '../../../hooks/useUi2Theme';
+import { spacing } from '../../../config/theme';
+import { SlabCard } from '../../../components/ui2/SlabCard';
+import { Ui2ListRow } from '../../../components/ui2/Ui2ListRow';
+import { AchievementGridView, ACHIEVEMENT_TOTAL } from '../../../components/gamification/AchievementGrid';
+import { useAchievements } from '../../../hooks/useAchievements';
+import { IdentityRow, StatTiles } from '../../../components/ui2/profile/ProfileTiles';
+import { useNextBandProgress } from '../../../hooks/useNextBandProgress';
+import { cefrBandForProficiencyLevel, normalizeBand } from '../../../lib/cefr-proficiency';
 import { Avatar } from '../../../components/avatar/Avatar';
 import { AvatarPresetPicker } from '../../../components/avatar/AvatarPresetPicker';
 import { AvatarGeneratorSheet } from '../../../components/avatar/AvatarGeneratorSheet';
 import { useAvatarImage, invalidateAvatarImage } from '../../../hooks/useAvatarImage';
 import { FourStrandsCard } from '../../../components/stats/FourStrandsCard';
-import { useDailyStats } from '../../../hooks/useDailyStats';
 import { strandMinutesFromDailyStats } from '../../../lib/four-strands';
-import { CompletedLessonsSection } from '../../../components/profile/CompletedLessonsSection';
-import { setAvatarKind, joinClassroom } from '../../../lib/supabase-queries';
+import { localDayKey } from '../../../lib/dates';
+import { CompletedLessonsSection, type CompletedLessonsSummary } from '../../../components/profile/CompletedLessonsSection';
+import {
+  setAvatarKind,
+  setGeneratedAvatar,
+  listGeneratedAvatars,
+  deleteGeneratedAvatar,
+  clearGeneratedAvatar,
+  joinClassroom,
+  fetchStatsRange,
+} from '../../../lib/supabase-queries';
+import type { DailyStats } from '../../../types';
 import { presetUrlFromId, type AvatarPreset } from '../../../lib/avatar-presets';
 import JoinClassModal from '../../../components/school/JoinClassModal';
 import RoleSwitcher from '../../../components/school/RoleSwitcher';
 import { BecomeTeacherSheet } from '../../../components/school/BecomeTeacherSheet';
 import { useScreenView } from '../../../hooks/useScreenView';
+
+/** Reproduces the `capitalize` text transform the subscription row used to
+ *  carry as a class, so "premium" still reads "Premium". */
+function capitalize(word: string): string {
+  return word.charAt(0).toUpperCase() + word.slice(1);
+}
 
 const LEVEL_LABELS: Record<string, string> = {
   beginner: 'Beginner',
@@ -38,24 +57,67 @@ const LEVEL_LABELS: Record<string, string> = {
 };
 
 export default function ProfileScreen() {
+  const { c } = useUi2Theme();
   useScreenView('profile');
   const { user, signOut } = useAuth();
   const { profile, subscription, setProfile } = useAppStore();
   const { enrolledClasses, loadStudentSchoolData, roles, activeRole, setActiveRole } = useSchoolStore();
-  // Called for its side effect only — it mirrors level-ups into the store, and
-  // the ledger keeps accruing whether or not anything renders it. Nothing on
-  // this screen shows the number any more.
-  useLevel();
-  const { dailyStats } = useDailyStats();
-  const strandTotals = strandMinutesFromDailyStats({
-    listeningMinutes: dailyStats?.listeningMinutes,
-    readingMinutes: dailyStats?.readingMinutes,
-    speakingMinutes: dailyStats?.speakingMinutes,
-    writingMinutes: dailyStats?.writingMinutes,
-  });
+  // Four Strands reads the current week, not just today — matching the
+  // card's own "This week's balance" heading, and Home's week-strip fetch
+  // pattern (`app/(app)/index.tsx`'s loadWeeklyStats). `dailyStats` from the
+  // store is only ever today's row, which is why this used to always show
+  // a mostly-empty bar chart labelled "week".
+  const [weekStats, setWeekStats] = useState<DailyStats[] | null>(null);
+  const [weekStatsError, setWeekStatsError] = useState(false);
+  const loadWeekStats = useCallback(async (userId: string) => {
+    const today = new Date();
+    const mondayOffset = today.getDay() === 0 ? 6 : today.getDay() - 1;
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - mondayOffset);
+    setWeekStatsError(false);
+    try {
+      setWeekStats(await fetchStatsRange(userId, localDayKey(monday), localDayKey(today)));
+    } catch (err) {
+      console.error('[profile] week stats load failed:', err);
+      setWeekStatsError(true);
+    }
+  }, []);
+  useEffect(() => {
+    if (user?.id) loadWeekStats(user.id);
+  }, [user?.id, loadWeekStats]);
+  const strandTotals = strandMinutesFromDailyStats(weekStats ?? []);
   const router = useRouter();
+
+  // ── Dashboard tiles (2026-09-14) ─────────────────────────────────────
+  // Same band + ring as Home's level card: measured once the report can
+  // assess one, the placement (or declared level) until then.
+  const level = useNextBandProgress(
+    normalizeBand(profile?.placementBand) ?? cefrBandForProficiencyLevel(profile?.level ?? 'beginner'),
+  );
+  // Read once here and handed to the grid below, so the tile and the grid
+  // never disagree and the achievements are fetched a single time.
+  const achievements = useAchievements();
+  const [lessonsSummary, setLessonsSummary] = useState<CompletedLessonsSummary | null>(null);
   const [customizerVisible, setCustomizerVisible] = useState(false);
   const [generatorVisible, setGeneratorVisible] = useState(false);
+  // Every portrait the learner has generated and still owns. Loaded when the
+  // picker opens so a portrait is never lost by choosing something else — it
+  // just moves to the top row of the picker.
+  const [generated, setGenerated] = useState<string[] | null>(null);
+  const [generatedError, setGeneratedError] = useState(false);
+  const loadGenerated = useCallback(async () => {
+    if (!user?.id) return;
+    setGeneratedError(false);
+    try {
+      setGenerated(await listGeneratedAvatars(user.id));
+    } catch (err) {
+      console.error('[profile] generated avatars list failed:', err);
+      setGeneratedError(true);
+    }
+  }, [user?.id]);
+  useEffect(() => {
+    if (customizerVisible) loadGenerated();
+  }, [customizerVisible, loadGenerated]);
   // A generated avatar is private and needs a signed URL; a preset is public
   // artwork whose URL is derived from its id, so only the first costs a round
   // trip. Anything else (including legacy 'procedural' rows) falls through to
@@ -94,7 +156,59 @@ export default function ProfileScreen() {
     // mirrors that into the store rather than issuing a second write.
     invalidateAvatarImage(path);
     setProfile({ ...profile, avatarKind: 'generated', avatarImagePath: path });
+    // The new portrait joins the gallery immediately; the list is re-read on
+    // the next picker open anyway.
+    setGenerated((g) => [path, ...(g ?? []).filter((p) => p !== path)]);
     setGeneratorVisible(false);
+  };
+
+  const handleDeleteGenerated = (path: string) => {
+    if (!user || !profile) return;
+    const isCurrent = profile.avatarKind === 'generated' && profile.avatarImagePath === path;
+    Alert.alert(
+      'Delete this avatar?',
+      isCurrent
+        ? 'This is your current avatar. It will be removed for good and you will show your initials until you choose another.'
+        : 'It will be removed for good. Generating it again would use another avatar from your plan.',
+      [
+        { text: 'Keep', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            const previousGallery = generated;
+            const previousProfile = profile;
+            // Optimistic: the tile leaves the row at once; a failure puts it back.
+            setGenerated((g) => (g ?? []).filter((p) => p !== path));
+            if (isCurrent) setProfile({ ...profile, avatarKind: 'procedural', avatarImagePath: null });
+            try {
+              await deleteGeneratedAvatar(user.id, path);
+              if (isCurrent) await clearGeneratedAvatar(user.id);
+              invalidateAvatarImage(path);
+            } catch (err) {
+              console.error('Failed to delete avatar:', err);
+              setGenerated(previousGallery);
+              setProfile(previousProfile);
+              Alert.alert('Could not delete avatar', 'Nothing was removed. Please try again.');
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const handleSelectGenerated = async (path: string) => {
+    if (!user || !profile) return;
+    const previous = profile;
+    setProfile({ ...profile, avatarKind: 'generated', avatarImagePath: path });
+    setCustomizerVisible(false);
+    try {
+      await setGeneratedAvatar(user.id, path);
+    } catch (err) {
+      console.error('Failed to restore avatar:', err);
+      setProfile(previous);
+      Alert.alert('Could not save avatar', 'Your avatar was not changed. Please try again.');
+    }
   };
 
   const handleSelectPreset = async (preset: AvatarPreset) => {
@@ -127,129 +241,134 @@ export default function ProfileScreen() {
   };
 
   return (
-    <GradientBackground>
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
     <SafeAreaView className="flex-1" edges={['top']}>
       <ScrollView className="flex-1 px-4 pt-2" contentContainerStyle={{ paddingBottom: 100 }}>
-        {/* Header — title + settings. Settings also has a row further down; the
-            header affordance is the primary one. */}
-        <View style={styles.headerRow}>
-          <Heading level={2}>Profile</Heading>
-          <Pressable
-            onPress={() => router.push('/profile/settings' as any)}
-            accessibilityRole="button"
-            accessibilityLabel="Settings"
-            style={styles.iconButton}
-            hitSlop={8}
-          >
-            <Ionicons name="settings-outline" size={18} color={colors.text.secondary} />
-          </Pressable>
-        </View>
-
-        {/* Identity — avatar in a primary ring, name, mono meta, language chip */}
-        <View style={styles.identityRow}>
-          <Pressable
-            onPress={() => setCustomizerVisible(true)}
-            accessibilityLabel="Change avatar"
-            accessibilityRole="button"
-            style={styles.avatarRing}
-          >
-            <Avatar size="medium" imageUri={avatarUri} displayName={profile?.displayName} />
-          </Pressable>
-          <View style={styles.identityText}>
-            <Heading level={3} numberOfLines={1}>
-              {profile?.displayName ?? user?.email ?? 'Learner'}
-            </Heading>
-            <Text style={styles.identityMeta} numberOfLines={1}>
-              {profile?.displayName ? user?.email ?? '' : ''}
-            </Text>
-            <View style={styles.identityChips}>
-              {languageLabel ? <Chip variant="premium" label={languageLabel.toUpperCase()} /> : null}
-            </View>
-          </View>
-        </View>
-
-        {/* Level ladder */}
+        {/* Identity row with the settings affordance, then the four stat
+            tiles. Each tile summarises a section further down the page (level
+            → the report, week → the strands card, achievements → the grid,
+            lessons → the completed-lessons row); see ProfileTiles.tsx. */}
         <View style={styles.blockSpacing}>
-          <LevelBadge level={profile?.level ?? 'beginner'} />
+          <IdentityRow
+            name={profile?.displayName ?? user?.email ?? 'Learner'}
+            email={profile?.displayName ? user?.email ?? null : null}
+            languageLabel={languageLabel}
+            avatar={<Avatar size="medium" imageUri={avatarUri} displayName={profile?.displayName} />}
+            onAvatar={() => setCustomizerVisible(true)}
+            onSettings={() => router.push('/profile/settings' as any)}
+          />
         </View>
 
-        {/* The Total XP / numeric Level tiles used to sit here, behind an adult
-            mode check. They are gone for everyone: both are point totals that
-            describe how much the app was used, not what the learner can do, and
-            the proficiency report below answers the question they only implied.
-            Both values still accrue server-side — achievements and offline
-            replay depend on the XP ledger. */}
+        <View style={styles.blockSpacing}>
+          <StatTiles
+            band={level.band}
+            nextBand={level.progress?.next ?? null}
+            progressPercent={level.progress?.percent ?? null}
+            measured={level.measured}
+            levelLabel={levelLabel}
+            onLevel={() => router.push('/profile/proficiency' as any)}
+            strands={weekStats ? strandTotals : null}
+            achievements={achievements.loading ? null : { earned: achievements.earnedAchievements.length, total: ACHIEVEMENT_TOTAL }}
+            lessons={lessonsSummary}
+          />
+        </View>
+
+        {/* The Total XP / numeric Level tiles used to sit here. They are gone
+            for everyone, and so is the ledger behind them (migration 130):
+            both were point totals that describe how much the app was used,
+            not what the learner can do, and the proficiency report below
+            answers the question they only implied. */}
 
         {/* Proficiency report — the evidence-backed answer to "what level am I
             actually at?", which is the question a point total never answers.
             It sits directly under the level ladder, above achievements and
             completed lessons, because it is the most credible artifact on this
             screen and it used to be the last thing a learner would ever find. */}
-        <Pressable
-          className="rounded-2xl p-5 mb-4 flex-row items-center"
-          style={{
-            backgroundColor: colors.premium.tint,
-            borderWidth: 1,
-            borderColor: colors.premium.base,
-          }}
+        <Ui2ListRow
+          style={{ marginBottom: spacing.md }}
+          icon="ribbon-outline"
+          title="Proficiency Report"
+          subtitle="Your estimated CEFR level and the evidence behind it"
           onPress={() => router.push('/profile/proficiency' as any)}
-          accessibilityRole="button"
           accessibilityLabel="View your proficiency report"
           accessibilityHint="Shows your estimated level per skill, what it means, and the evidence behind it"
-        >
-          <Ionicons name="ribbon-outline" size={24} color={colors.premium.base} />
-          <View className="ml-4 flex-1">
-            <Text className="text-base font-semibold text-text-primary">Proficiency Report</Text>
-            <Text className="text-sm text-text-secondary">
-              Your estimated CEFR level and the evidence behind it
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.premium.base} />
-        </Pressable>
+        />
 
-        {/* Four Strands balance (Nation, research.md §14.3) */}
+        {/* What the tutor already knows, made visible. Both lists have been
+            computed on every paid tutor turn since migration 026/108 and shown
+            to nobody; a memory the learner cannot see and delete is
+            surveillance, so the second row is also the privacy control. */}
+        <Ui2ListRow
+          style={{ marginBottom: spacing.sm }}
+          icon="analytics-outline"
+          title="Your patterns"
+          subtitle="Mistakes that keep coming back, words that keep slipping"
+          onPress={() => router.push('/profile/patterns' as any)}
+          accessibilityLabel="Your patterns"
+          accessibilityHint="Shows the mistakes you repeat and the words you keep failing, with a review of just those"
+        />
+        <Ui2ListRow
+          style={{ marginBottom: spacing.md }}
+          icon="sparkles-outline"
+          title="What Sol remembers"
+          subtitle="Notes from your live tutor sessions — see and delete them"
+          onPress={() => router.push('/profile/memory' as any)}
+          accessibilityLabel="What Sol remembers"
+          accessibilityHint="Lists what the live tutor remembers about you between sessions, and lets you delete any of it"
+        />
+
+        {/* Four Strands — this week's listening/reading/speaking/writing balance */}
         <View className="mb-4">
           <FourStrandsCard totals={strandTotals} />
+          {weekStatsError && (
+            <Pressable
+              onPress={() => user?.id && loadWeekStats(user.id)}
+              accessibilityRole="button"
+              accessibilityLabel="Try loading this week's balance again"
+              style={styles.weekRetry}
+            >
+              <Text style={{ color: c.error, fontSize: 13 }}>
+                Couldn&apos;t load this week&apos;s balance.{' '}
+                <Text style={{ color: c.primary, fontWeight: '700' }}>Try again</Text>
+              </Text>
+            </Pressable>
+          )}
         </View>
 
         {/* Achievements */}
-        <AchievementGrid />
+        <AchievementGridView {...achievements} />
 
         {/* Completed Lessons */}
-        <CompletedLessonsSection userId={user?.id} />
+        <CompletedLessonsSection userId={user?.id} onSummary={setLessonsSummary} />
 
         {/* My Classes — hidden when school features are disabled */}
         {SCHOOL_ENABLED && (
           <>
-            <Text className="text-xl font-bold text-text-primary mb-3">My Classes</Text>
+            <Text className="text-xl font-bold mb-3" style={{ color: c.ink }}>My Classes</Text>
 
             {enrolledClasses.length > 0 ? (
               enrolledClasses.map((enrollment) => (
-                <View key={enrollment.id} className="bg-dark-card rounded-2xl p-5 mb-3 flex-row items-center">
-                  <Ionicons name="school-outline" size={24} color={colors.premium.base} />
-                  <View className="ml-4 flex-1">
-                    <Text className="text-base font-semibold text-text-primary">{enrollment.classroom?.name ?? 'Class'}</Text>
-                    <Text className="text-sm text-text-secondary">
-                      {enrollment.classroom?.targetLanguage?.toUpperCase() ?? ''} · {enrollment.classroom?.level ?? ''}
-                    </Text>
-                  </View>
-                </View>
+                <Ui2ListRow
+                  key={enrollment.id}
+                  style={{ marginBottom: spacing.sm }}
+                  icon="school-outline"
+                  title={enrollment.classroom?.name ?? 'Class'}
+                  subtitle={`${enrollment.classroom?.targetLanguage?.toUpperCase() ?? ''} · ${enrollment.classroom?.level ?? ''}`}
+                />
               ))
             ) : (
-              <View className="bg-dark-card rounded-2xl p-5 mb-3 items-center">
-                <Text className="text-text-secondary text-sm">Not enrolled in any classes</Text>
-              </View>
+              <SlabCard style={{ marginBottom: spacing.sm, alignItems: 'center' }}>
+                <Text className="text-sm" style={{ color: c.muted }}>Not enrolled in any classes</Text>
+              </SlabCard>
             )}
 
-            <Pressable
-              className="bg-dark-card rounded-2xl p-5 mb-6 flex-row items-center justify-center"
+            <Ui2ListRow
+              style={{ marginBottom: spacing.lg }}
+              icon="add-circle-outline"
+              title="Join a Class"
               onPress={() => setJoinModalVisible(true)}
-              accessibilityRole="button"
               accessibilityLabel="Join a class"
-            >
-              <Ionicons name="add-circle-outline" size={24} color={colors.premium.base} />
-              <Text className="text-base font-semibold text-primary ml-3">Join a Class</Text>
-            </Pressable>
+            />
 
             {/* Role Switcher — only show if user has teacher role */}
             {roles.includes('teacher') ? (
@@ -265,94 +384,83 @@ export default function ProfileScreen() {
                 />
               </View>
             ) : (
-              <Pressable
-                className="bg-dark-card rounded-2xl p-5 mb-6 flex-row items-center"
+              <Ui2ListRow
+                style={{ marginBottom: spacing.lg }}
+                icon="school-outline"
+                title="I teach a class"
+                subtitle="Create classes, assign work, grade submissions"
                 onPress={() => setBecomeTeacherVisible(true)}
-                accessibilityRole="button"
                 accessibilityLabel="I teach a class"
-              >
-                <Ionicons name="school-outline" size={24} color={colors.premium.base} />
-                <View className="ml-4 flex-1">
-                  <Text className="text-base font-semibold text-text-primary">I teach a class</Text>
-                  <Text className="text-sm text-text-secondary">Create classes, assign work, grade submissions</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={colors.correctionChip.grammar.text} />
-              </Pressable>
+              />
             )}
           </>
         )}
 
         {/* Settings */}
-        <Text className="text-xl font-bold text-text-primary mb-3">Settings</Text>
+        <Text className="text-xl font-bold mb-3" style={{ color: c.ink }}>Settings</Text>
 
-        <Pressable
-          className="bg-dark-card rounded-2xl p-5 mb-3 flex-row items-center"
+        <Ui2ListRow
+          style={{ marginBottom: spacing.sm }}
+          icon="card"
+          title="Subscription"
+          // Was a `capitalize` class on the old row; the tier strings are
+          // lowercase in the store, so the same casing is applied here.
+          subtitle={capitalize(subscription?.tier ?? 'Starter')}
           onPress={() => router.push('/profile/subscription' as any)}
-          accessibilityRole="button"
           accessibilityLabel="Subscription"
-        >
-          <Ionicons name="card" size={24} color={colors.premium.base} />
-          <View className="ml-4 flex-1">
-            <Text className="text-base font-semibold text-text-primary">Subscription</Text>
-            <Text className="text-sm text-text-secondary capitalize">{subscription?.tier ?? 'Starter'}</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.correctionChip.grammar.text} />
-        </Pressable>
+        />
 
-        <Pressable
-          className="bg-dark-card rounded-2xl p-5 mb-3 flex-row items-center"
+        <Ui2ListRow
+          style={{ marginBottom: spacing.sm }}
+          icon="settings"
+          title="Edit Settings"
+          subtitle="Language, level, daily goal, name"
           onPress={() => router.push('/profile/settings' as any)}
-          accessibilityRole="button"
           accessibilityLabel="Edit settings"
-        >
-          <Ionicons name="settings" size={24} color={colors.premium.base} />
-          <View className="ml-4 flex-1">
-            <Text className="text-base font-semibold text-text-primary">Edit Settings</Text>
-            <Text className="text-sm text-text-secondary">Language, level, daily goal, name</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.correctionChip.grammar.text} />
-        </Pressable>
+        />
 
-        <View className="bg-dark-card rounded-2xl p-5 mb-3 flex-row items-center">
-          <Ionicons name="language" size={24} color={colors.premium.base} />
-          <View className="ml-4 flex-1">
-            <Text className="text-base font-semibold text-text-primary">Target Language</Text>
-            <Text className="text-sm text-text-secondary">{languageLabel}</Text>
-          </View>
-        </View>
+        <Ui2ListRow
+          style={{ marginBottom: spacing.sm }}
+          icon="language"
+          title="Target Language"
+          subtitle={languageLabel}
+        />
 
-        <View className="bg-dark-card rounded-2xl p-5 mb-3 flex-row items-center">
-          <Ionicons name="trending-up" size={24} color={colors.premium.base} />
-          <View className="ml-4 flex-1">
-            <Text className="text-base font-semibold text-text-primary">Level</Text>
-            <Text className="text-sm text-text-secondary">{levelLabel}</Text>
-          </View>
-        </View>
+        <Ui2ListRow
+          style={{ marginBottom: spacing.sm }}
+          icon="trending-up"
+          title="Level"
+          subtitle={levelLabel}
+        />
 
-        <View className="bg-dark-card rounded-2xl p-5 mb-6 flex-row items-center">
-          <Ionicons name="time" size={24} color={colors.premium.base} />
-          <View className="ml-4 flex-1">
-            <Text className="text-base font-semibold text-text-primary">Daily Goal</Text>
-            <Text className="text-sm text-text-secondary">{profile?.dailyGoalMinutes ?? 10} minutes</Text>
-          </View>
-        </View>
+        <Ui2ListRow
+          style={{ marginBottom: spacing.lg }}
+          icon="time"
+          title="Daily Goal"
+          subtitle={`${profile?.dailyGoalMinutes ?? 10} minutes`}
+        />
 
         {/* Sign Out */}
-        <Pressable
-          className="bg-error-bg py-4 rounded-[14px] items-center"
+        <Ui2ListRow
+          icon="log-out-outline"
+          title="Sign Out"
+          destructive
           onPress={handleSignOut}
-          accessibilityRole="button"
           accessibilityLabel="Sign out"
-        >
-          <Text className="text-error-dark text-lg font-semibold">Sign Out</Text>
-        </Pressable>
+        />
       </ScrollView>
     </SafeAreaView>
     <AvatarPresetPicker
       visible={customizerVisible}
       onClose={() => setCustomizerVisible(false)}
-      selectedId={profile?.avatarPresetId}
+      selectedId={profile?.avatarKind === 'preset' ? profile.avatarPresetId : null}
       onSelect={handleSelectPreset}
+      generated={generated}
+      generatedError={generatedError}
+      onRetryGenerated={loadGenerated}
+      selectedGeneratedPath={profile?.avatarKind === 'generated' ? profile.avatarImagePath : null}
+      onSelectGenerated={handleSelectGenerated}
+      onDeleteGenerated={handleDeleteGenerated}
       onUsePhoto={() => {
         setCustomizerVisible(false);
         setGeneratorVisible(true);
@@ -387,59 +495,14 @@ export default function ProfileScreen() {
         )}
       </>
     )}
-    </GradientBackground>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.md,
-  },
-  iconButton: {
-    width: 44, // Apple HIG minimum touch target
-    height: 44,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.border.default,
-    alignItems: 'center',
+  weekRetry: {
+    minHeight: 44,
     justifyContent: 'center',
-  },
-  identityRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  avatarRing: {
-    width: 64,
-    height: 64,
-    borderRadius: radii.xxl,
-    backgroundColor: colors.action.primaryTint,
-    borderWidth: 2,
-    borderColor: colors.action.primaryFill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  identityText: {
-    flex: 1,
-    minWidth: 0,
-  },
-  identityMeta: {
-    fontFamily: typography.family.mono,
-    fontSize: typography.scale.tiny.fontSize,
-    lineHeight: typography.scale.tiny.lineHeight,
-    color: colors.text.tertiary,
-    marginTop: 2,
-  },
-  identityChips: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: spacing.xxs,
     marginTop: spacing.xs,
   },
   blockSpacing: {
