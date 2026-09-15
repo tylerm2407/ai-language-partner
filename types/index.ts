@@ -215,6 +215,19 @@ export interface Exercise {
   sourceType?: ContentSourceType;
 }
 
+/**
+ * The little of an exercise the grader needs in order to know that a string is
+ * some OTHER question's answer — see `taughtKeys` in lib/exercise-restore.ts.
+ * `Exercise` satisfies it; so does the keys-only row the unit query returns,
+ * which is deliberately three columns rather than a second copy of the
+ * lesson's exercises.
+ */
+export interface TaughtRow {
+  type: ExerciseType;
+  prompt: string;
+  correctAnswer: string;
+}
+
 // ─── Cards & SRS ────────────────────────────────────────────────
 
 export interface Card {

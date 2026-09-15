@@ -3,12 +3,13 @@ import { View, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { haptic } from '../../lib/haptics';
 import { FeedbackCard } from './FeedbackCard';
+import { ExerciseHint } from './ExerciseHint';
 import { HighlightedText } from '../shared/HighlightedText';
 import { Body, Caption } from '../ui/Text';
 import { colors, spacing, radii } from '../../config/theme';
 import { gradeAnswer } from '../../lib/grading';
 import type { GradeResult } from '../../lib/grading';
-import { isRestored, regradePick, restorePlacedTiles } from '../../lib/exercise-restore';
+import { exerciseHints, isRestored, regradePick, restorePlacedTiles } from '../../lib/exercise-restore';
 import { sentenceTileJoiner } from '../../lib/sentence-tiles';
 import type { Exercise, LanguageCode } from '../../types';
 
@@ -26,6 +27,11 @@ interface Props {
   userId?: string;
   language?: string;
   cefrLevel?: string;
+  /**
+   * Every other key this lesson and unit teach. A candidate that is one of
+   * them is another question's answer, never a typo of this one.
+   */
+  siblingKeys?: readonly string[];
 }
 
 export function SentenceConstructionExercise({
@@ -36,6 +42,7 @@ export function SentenceConstructionExercise({
   userId,
   language,
   cefrLevel,
+  siblingKeys,
 }: Props) {
   const tiles = useMemo(() => {
     const correctTiles = (exercise.metadata?.tiles as string[]) ?? exercise.correctAnswer.split(' ');
@@ -59,7 +66,7 @@ export function SentenceConstructionExercise({
    */
   const isRevealed = localRevealed || showResult;
   const [result, setResult] = useState<GradeResult | null>(() =>
-    regradePick(exercise, selected, language as LanguageCode | undefined),
+    regradePick(exercise, selected, language as LanguageCode | undefined, siblingKeys),
   );
 
   const assembledSentence = placed.map((i) => tiles[i]).join(joiner);
@@ -82,13 +89,7 @@ export function SentenceConstructionExercise({
       exercise.correctAnswer,
       exercise.acceptedAnswers,
       {
-        exerciseHints: {
-          exerciseType: exercise.type,
-          skillType: exercise.skillType,
-          targetGrammar: exercise.targetGrammar,
-          targetWord: exercise.targetWord,
-          language: language as LanguageCode | undefined,
-        },
+        exerciseHints: exerciseHints(exercise, language as LanguageCode | undefined, siblingKeys),
       },
     );
     setResult(grade);
@@ -111,6 +112,8 @@ export function SentenceConstructionExercise({
         highlight={highlight}
         className="text-text-primary text-[18px] font-sans-semibold mb-5 leading-7"
       />
+
+      <ExerciseHint hint={exercise.hintText} revealed={isRevealed} />
 
       {/* Answer area */}
       <View style={{

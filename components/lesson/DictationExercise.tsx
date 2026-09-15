@@ -8,7 +8,7 @@ import { Body, Caption } from '../ui/Text';
 import { colors, spacing, radii } from '../../config/theme';
 import { gradeAnswer } from '../../lib/grading';
 import type { GradeResult } from '../../lib/grading';
-import { isRestored, regradePick } from '../../lib/exercise-restore';
+import { exerciseHints, isRestored, regradePick } from '../../lib/exercise-restore';
 import { usePhonemeDrill } from '../../hooks/usePhonemeDrill';
 import type { Exercise, LanguageCode } from '../../types';
 
@@ -29,6 +29,11 @@ interface Props {
   /** Used by FeedbackCard to look up grammar rules. Defaults to targetLanguage. */
   language?: string;
   cefrLevel?: string;
+  /**
+   * Every other key this lesson and unit teach. A candidate that is one of
+   * them is another question's answer, never a typo of this one.
+   */
+  siblingKeys?: readonly string[];
 }
 
 export function DictationExercise({
@@ -40,6 +45,7 @@ export function DictationExercise({
   userId,
   language,
   cefrLevel,
+  siblingKeys,
 }: Props) {
   const effectiveLanguage = language ?? targetLanguage;
   // Seeded from the recorded pick so Previous comes back to the answer the
@@ -53,7 +59,7 @@ export function DictationExercise({
    */
   const isRevealed = localRevealed || showResult;
   const [result, setResult] = useState<GradeResult | null>(() =>
-    regradePick(exercise, selected, effectiveLanguage as LanguageCode | undefined),
+    regradePick(exercise, selected, effectiveLanguage as LanguageCode | undefined, siblingKeys),
   );
   const [playCount, setPlayCount] = useState(0);
 
@@ -68,13 +74,7 @@ export function DictationExercise({
     if (!userInput.trim() || isRevealed) return;
 
     const grade = gradeAnswer(userInput, exercise.correctAnswer, exercise.acceptedAnswers, {
-      exerciseHints: {
-        exerciseType: exercise.type,
-        skillType: exercise.skillType,
-        targetGrammar: exercise.targetGrammar,
-        targetWord: exercise.targetWord,
-        language: effectiveLanguage as LanguageCode | undefined,
-      },
+      exerciseHints: exerciseHints(exercise, effectiveLanguage as LanguageCode | undefined, siblingKeys),
     });
     setResult(grade);
     setLocalRevealed(true);

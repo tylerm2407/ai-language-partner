@@ -4,7 +4,8 @@
  */
 
 import type { FeedbackErrorType, ExerciseType, SkillType, ReviewRating, LanguageCode } from '../types';
-import { isConfusablePair } from './confusable-pairs';
+import { accentOnlyPartner, isConfusablePair } from './confusable-pairs';
+import { simplifyChinese } from './zh-simplify';
 
 export interface GradeResult {
   isCorrect: boolean;
@@ -40,6 +41,44 @@ export interface ExerciseHints {
    * it the confusable check is skipped rather than guessed at.
    */
   language?: LanguageCode;
+  /**
+   * The text welded to the blank on a `fill_blank` row, so the grader can see
+   * the WORD the row teaches rather than the fragment the row stores.
+   *
+   * A fill-blank row stores only the missing piece: the "Awesome" row prompts
+   * `す_____` and its `correct_answer` is `ごい`. Everything the grader knows
+   * about words — the confusable-pair list, the sibling-key rule — is written
+   * in words, so on 1,995 rows it was comparing against fragments and matching
+   * nothing. Korean tolerance operated on `간색` where the taught word is
+   * `빨간색`.
+   *
+   * `prefix` is the run of non-space characters immediately before the blank
+   * and `suffix` the run immediately after, both taken from the prompt. See
+   * `blankContext` in lib/exercise-restore.ts, which derives them.
+   */
+  blankContext?: { prefix: string; suffix: string };
+  /**
+   * The other keys taught alongside this row — the lesson's, and the unit's
+   * when the caller has them.
+   *
+   * A string that is the stored answer to a DIFFERENT question the learner is
+   * being taught is not a typo of this one, however close the two look. The
+   * curriculum audit counted 868 of these key-to-key collisions across the
+   * frozen curriculum, in all nine languages: Spanish "Más bajo" accepting
+   * "Más caro", "Paciente" accepting "Valiente", Korean "더 좋은" accepting
+   * "더 작은", "더 비싼" accepting "더 싼".
+   *
+   * This is the general rule the pair list cannot be: it is derived from the
+   * curriculum the learner is sitting in, so it covers every row authored from
+   * now on. `lib/confusable-pairs.ts` keeps the cases it already handles —
+   * words taught in different units, and words that are never anyone's stored
+   * key — which no sibling list can reach.
+   *
+   * Keys only. A sibling's accepted ALTERNATIVES are not included: an
+   * alternative is one row's judgement about a synonym, and refusing it
+   * everywhere else would turn a generosity into a trap.
+   */
+  siblingKeys?: readonly string[];
 }
 
 /**
@@ -82,8 +121,8 @@ export function classifyError(
   correctAnswer: string,
   hints: ExerciseHints = {}
 ): FeedbackErrorType | null {
-  const normalizedUser = normalize(userAnswer);
-  const normalizedCorrect = normalize(correctAnswer);
+  const normalizedUser = normalize(userAnswer, hints.language);
+  const normalizedCorrect = normalize(correctAnswer, hints.language);
 
   // Phonological errors only come from speaking exercises (whose output is
   // the transcription from STT graded via gradeSpeechTranscription).
@@ -185,13 +224,100 @@ export function gradeAnswer(
   acceptedAnswers: string[] = [],
   options?: { strict?: boolean; exerciseHints?: ExerciseHints }
 ): GradeResult {
-  const normalized = normalize(userAnswer);
-  const normalizedCorrect = normalize(correctAnswer);
-  const allAccepted = [normalizedCorrect, ...acceptedAnswers.map(normalize)];
   const hints = options?.exerciseHints;
+  const normalized = normalize(userAnswer, hints?.language);
+  const normalizedCorrect = normalize(correctAnswer, hints?.language);
+
+  /**
+   * Fill-blank rows are judged as the completed word.
+   *
+   * The row stores the blank's filler, not the word: `す_____` / `ごい`. Two
+   * consequences, both measured by the curriculum audit across 1,995 rows.
+   * First, a learner who types the whole word — `すごい`, which is what the
+   * lesson taught — was marked wrong, because the stored key is two of its
+   * three characters. Second, every rule the grader has about *words* (the
+   * confusable-pair list, the sibling-key rule below) was being handed a
+   * fragment and matching nothing at all.
+   *
+   * `completeWord` welds the prompt's own characters back on, so both of those
+   * work on `すごい` and `빨간색` instead of `ごい` and `간색`.
+   *
+   * Deliberately NOT welded: the edit distance and the typo budget. They stay
+   * on the piece the learner actually typed, so completing the word can only
+   * change WHICH strings are judged equal, never how much of the learner's own
+   * typing is allowed to be wrong, and never the partial credit a near miss
+   * earns. A welded prefix would otherwise hand a long Japanese clause a budget
+   * of 2 where the three-character filler earns 0.
+   */
+  const completeWord = (text: string): string => {
+    const blank = hints?.blankContext;
+    if (!blank || (!blank.prefix && !blank.suffix)) return normalize(text, hints?.language);
+    return normalize(`${blank.prefix}${text}${blank.suffix}`, hints?.language);
+  };
+  const withoutSpaces = (text: string) => text.replace(/\s+/g, '');
+  const completedAccepted = [correctAnswer, ...acceptedAnswers].map(completeWord);
+
+  /**
+   * The learner typed the whole word rather than the missing piece.
+   *
+   * Matched without spaces because a welded prompt (`Buenas_____`) renders with
+   * a space the learner will type: "buenas tardes" has to reach
+   * "buenastardes".
+   */
+  const typedWholeWord =
+    hints?.blankContext !== undefined &&
+    completedAccepted.some((accepted) => withoutSpaces(accepted) === withoutSpaces(normalized));
+
+  const allAccepted = [
+    normalizedCorrect,
+    ...acceptedAnswers.map((accepted) => normalize(accepted, hints?.language)),
+  ];
+
+  /**
+   * Another taught key is never a typo of this one.
+   *
+   * Anything this row itself accepts is filtered out first, so a unit that
+   * teaches the same string twice, or a row that already accepts its
+   * neighbour's answer, is unaffected. What is left is a string the learner is
+   * being taught as the answer to a different question — and the fact that it
+   * sits one edit away from this key is exactly the contrast the lesson is
+   * drawing, not a slip of the finger.
+   */
+  const keyFolded = new Set([
+    stripDiacritics(normalizedCorrect),
+    stripDiacritics(completeWord(correctAnswer)),
+  ]);
+  const siblingKeys = new Set(
+    (hints?.siblingKeys ?? [])
+      .map((key) => normalize(key, hints?.language))
+      .filter(
+        (key) =>
+          key !== '' &&
+          !allAccepted.includes(key) &&
+          !completedAccepted.includes(key) &&
+          // A sibling that folds onto this row's KEY is the same word written
+          // with or without its accents — "Menu" against "Menú", "Niece"
+          // against "Nièce", both taught because one is the gloss of the
+          // other. That is a question about accents, settled by the accent
+          // branch and the pair list, not a lexical collision. Measured on
+          // the frozen curriculum: 29 rows, all of them cognate pairs.
+          //
+          // Folding onto an ACCEPTED ALTERNATIVE is not excused the same way.
+          // "Groß_____ (Generous)" keys on zügig and also accepts mütig, and
+          // the unit teaches Mutig (brave) as its own answer — so the
+          // alternative's unaccented form is another word outright. An
+          // alternative is a generosity; it must not swallow a taught key.
+          !keyFolded.has(stripDiacritics(key)),
+      ),
+  );
+  const isTaughtElsewhere = (candidate: string): boolean =>
+    siblingKeys.has(candidate) ||
+    // On a fill-blank row the sibling keys arrive as whole words, so the
+    // fragment the learner typed has to be welded before it can match.
+    (hints?.blankContext !== undefined && siblingKeys.has(completeWord(candidate)));
 
   // Exact match (after normalization)
-  if (allAccepted.includes(normalized)) {
+  if (allAccepted.includes(normalized) || typedWholeWord) {
     return {
       isCorrect: true,
       accuracy: 1,
@@ -239,9 +365,65 @@ export function gradeAnswer(
    * fuzzy branch, which refuses it again and returns a wrong answer.
    */
   const stripped = stripDiacritics(normalized);
+
+  /**
+   * A bare stem that could be either of two taught words is neither.
+   *
+   * Portuguese teaches avô (grandfather) and avó (grandmother); the accent is
+   * the entire difference between them. Typing `avo` passed for BOTH, so the
+   * contrast was untestable by typing — the accent branch read it as a
+   * forgivable slip on whichever row the learner happened to be on, and said
+   * "Correct! (Watch the accents)". The same shape covers Spanish papa/papá,
+   * el/él, tu/tú, si/sí and their kin.
+   *
+   * The pair list is the authority on which words these are, and it is asked
+   * with the diacritics folded, which is the one question
+   * `isConfusablePair` cannot answer: it skips a pair whose members fold
+   * together so that folding cannot make a pair match itself.
+   *
+   * Deliberately NOT extended to sibling keys that fold together. Those are
+   * overwhelmingly a target word and its own English gloss — "Niece" beside
+   * "Nièce", 29 rows in the frozen curriculum — where the bare form is a
+   * missing accent and nothing more. Two words worth separating are a
+   * judgement, and the pair list is where that judgement is recorded.
+   *
+   * This is a real behaviour change for learners on keyboards without easy
+   * accents, so the refusal says what the accent is doing rather than a bare
+   * "incorrect".
+   */
+  const accentTwin =
+    hints?.language !== undefined && stripDiacritics(normalizedCorrect) === stripped
+      ? accentOnlyPartner(normalizedCorrect, hints.language, stripDiacritics) ??
+        accentOnlyPartner(normalizedCorrect, 'en', stripDiacritics)
+      : null;
+  if (accentTwin !== null) {
+    const distance = levenshtein(normalized, normalizedCorrect);
+    const maxLen = Math.max(normalized.length, normalizedCorrect.length);
+    // The list is stored lowercase; show the twin the way the row shows its
+    // own answer, or the sentence reads as two different kinds of word.
+    const first = correctAnswer.trim().charAt(0);
+    const twin =
+      first !== '' && first === first.toUpperCase() && first !== first.toLowerCase()
+        ? accentTwin.charAt(0).toUpperCase() + accentTwin.slice(1)
+        : accentTwin;
+    return {
+      isCorrect: false,
+      accuracy: maxLen === 0 ? 0 : 1 - distance / maxLen,
+      feedback:
+        `Not quite — the accent is the whole difference between "${correctAnswer}" and ` +
+        `"${twin}". The correct answer is: ${correctAnswer}`,
+      normalizedUserAnswer: normalized,
+      normalizedCorrectAnswer: normalizedCorrect,
+      errorType: hints ? classifyError(userAnswer, correctAnswer, hints) : null,
+    };
+  }
+
   const accentMatch = allAccepted.find(
     (accepted) =>
       stripDiacritics(accepted) === stripped &&
+      // A string the curriculum teaches as another answer is that answer, not
+      // a missing accent on this one.
+      !isTaughtElsewhere(normalized) &&
       !(
         hints?.language !== undefined &&
         (isConfusablePair(normalized, accepted, hints.language) ||
@@ -386,7 +568,42 @@ export function gradeAnswer(
     stripDiacritics(expectedForTolerance).length,
     stripDiacritics(normalizedCorrect).length,
   );
-  const maxAllowedDistance = Math.min(2, Math.floor(toleranceBasis * TYPO_TOLERANCE_RATIO));
+  /**
+   * Chinese, and Japanese above the kana line, get no typo tolerance at all.
+   *
+   * Edit distance works in Latin script because a letter is a fraction of a
+   * morpheme: one edit in "receive" rarely lands on another real word, and the
+   * 0.3 ratio encodes exactly that. A Han character IS a morpheme. One edit is
+   * not a fraction of a word, it is a whole unit of meaning replaced — 我同意
+   * and 我不同意 are one edit apart and are opposites, and in the A2 Japanese
+   * comparative block every one of the six taught adjectives is exactly one
+   * edit from every other, so a budget of one guarantees that any of the six
+   * scores correct for any of the others.
+   *
+   * And there is no keystroke path to the neighbour. These scripts are typed
+   * through an IME by reading, then converted: もっと良い is typed `motto yoi`
+   * and もっと悪い is `motto warui`, sharing no input sequence. A slip that
+   * lands on another valid word is not a slip the input method can produce, so
+   * the tolerance buys nothing it was designed to buy. Mean key length makes it
+   * worse — 2.28 characters in Chinese and 3.29 in Japanese against 8.30 in
+   * Spanish — so one edit is a third of the answer and all of the meaning.
+   *
+   * Japanese keeps tolerance for kana, which genuinely can be mistyped: the
+   * gate is per-answer, not per-language, and lifts as soon as either side
+   * carries a Han character.
+   *
+   * Korean is deliberately NOT included. A Hangul syllable is a phonological
+   * block, not a morpheme, and a single jamo really is a fraction of a word —
+   * which is the level the grader already measures at. Korean's problem was
+   * the opposite one, and was fixed by measuring the budget in jamo too.
+   */
+  const han = /[㐀-䶿一-鿿豈-﫿]/;
+  const scriptTakesTypoTolerance =
+    hints?.language !== 'zh' &&
+    (hints?.language !== 'ja' || !(han.test(normalized) || han.test(expectedForTolerance)));
+  const maxAllowedDistance = scriptTakesTypoTolerance
+    ? Math.min(2, Math.floor(toleranceBasis * TYPO_TOLERANCE_RATIO))
+    : 0;
 
   /**
    * Length alone cannot separate a typo from a different word of the same
@@ -474,11 +691,97 @@ export function gradeAnswer(
   const negationMismatch = hints?.language !== undefined
     && differsOnlyByNegation(normalized, expectedForTolerance, hints.language);
 
+  /**
+   * A different Korean ending is a different form, not a typo.
+   *
+   * Korean is deliberately outside the Han-script gate above — a jamo really is
+   * a fraction of a word, and the grader measures distance in jamo, so ordinary
+   * slips like 간후사 for 간호사 should stay forgiven. But the same measurement
+   * hands a key of any length a budget of two jamo, and Korean inflectional
+   * endings are one or two jamo apart. Round-2 triage caught the consequence on
+   * `ko-E1032` (`더 키_____ (Taller)`, key `가 크다`), where `가 큰` now returns
+   * "Correct! (Minor typo)" — a form the row did not ask for, accepted because
+   * of a length coincidence rather than anything pedagogical. Left alone, the
+   * grader decides part of the speech-level question by tolerance constant.
+   *
+   * So the rule is the one already used for negation: when two strings are the
+   * same up to the point where their endings begin, and BOTH remainders are
+   * recognised inflectional endings, they are two forms of one stem. 크다 and
+   * 큰, 갔어요 and 가겠어요 (past against future), 먹었어요 and 먹였어요 (plain
+   * past against causative) are all differences of form, and a form the learner
+   * did not produce is not a form they mistyped.
+   *
+   * Narrow on purpose:
+   *  - Both remainders must be in the list. 씨다 / 씻다 differ by ㅅ다, which is
+   *    no ending, so that stays an ordinary typo question for the pair list.
+   *  - The shared stem must be at least two jamo, so two unrelated words that
+   *    happen to share one letter are untouched.
+   *  - Neither remainder may be empty: dropping a whole ending is as likely to
+   *    be a slip as a choice, and the budget already judges it.
+   *  - A bare final consonant on BOTH sides is not enough. ㄴ, ㄹ and ㅁ end
+   *    plenty of ordinary nouns, so 신념 against 신년 looks exactly like an
+   *    inflection and is nothing of the kind. At least one side must carry a
+   *    full ending — 크다 against 큰 qualifies, 산 against 살 does not.
+   *  - 에요 is left out, so the 이에요 / 이어요 copula spellings — 12 pairs in
+   *    the Korean corpus, the same word either way — keep their tolerance.
+   *
+   * An exact match returns long before this, so an ending a row has authored as
+   * an accepted answer is unaffected.
+   */
+  const KOREAN_ENDINGS: readonly string[] = [
+    // Plain and dictionary forms.
+    '다', '\u11ab다', '는다',
+    // Adnominal: the bare jongseong forms are how ㄴ and ㄹ attach to a stem.
+    '\u11ab', '\u11af', '은', '는', '을', '던', '\u11ab\u1103\u1161',
+    // Polite. 어요 / 아요 / 여요 and the honorific imperative.
+    '요', '어요', '아요', '여요', '세요', '으세요', '셔요',
+    // Deferential. ㅂ니다 attaches as a jongseong; 습니다 stands alone.
+    '\u11b8니다', '습니다', '\u11b8니까', '습니까', '십시오',
+    // Tense. ㅆ attaches to the stem: 갔다 is 가 + ㅆ + 다.
+    '\u11bb다', '\u11bb어요', '\u11bb습니다', '았다', '었다', '였다',
+    '았어요', '었어요', '였어요', '았습니다', '었습니다', '였습니다',
+    '겠다', '겠어요', '겠습니다',
+    // Connectives and nominalisers.
+    '고', '서', '지', '며', '면', '니까', '는데', '\u11ab데', '은데',
+    '기', '음', '\u11b7', '자', '라', '어라', '아라',
+  ].map((ending) => ending.normalize('NFD'));
+
+  const differsOnlyByKoreanEnding = (a: string, b: string): boolean => {
+    const [first, second] = [a.normalize('NFD'), b.normalize('NFD')];
+    let common = 0;
+    while (common < first.length && common < second.length && first[common] === second[common]) common++;
+    // Walk the split point back from the longest shared run rather than taking
+    // it as given: 먹었어요 and 먹였어요 share ㅁㅓㄱ AND the ㅇ that opens the
+    // next syllable, so the maximal prefix cuts both endings in half and
+    // neither remainder is recognisable.
+    for (let shared = common; shared >= 2; shared--) {
+      const [restA, restB] = [first.slice(shared), second.slice(shared)];
+      if (restA === '' || restB === '' || restA === restB) continue;
+      if (restA.length === 1 && restB.length === 1) continue;
+      if (KOREAN_ENDINGS.includes(restA) && KOREAN_ENDINGS.includes(restB)) return true;
+    }
+    return false;
+  };
+  const inflectionMismatch = hints?.language === 'ko'
+    && differsOnlyByKoreanEnding(normalized, expectedForTolerance);
+
   const confusableIn = (language: LanguageCode) =>
     isConfusablePair(normalized, expectedForTolerance, language) ||
-    isConfusablePair(normalized, expectedForTolerance, language, stripDiacritics);
+    isConfusablePair(normalized, expectedForTolerance, language, stripDiacritics) ||
+    // The pair list is written in words, so on a fill-blank row it has to be
+    // asked about the completed word — `빨간색`, not the stored `간색`.
+    (hints?.blankContext !== undefined &&
+      (isConfusablePair(completeWord(normalized), completeWord(expectedForTolerance), language) ||
+        isConfusablePair(
+          completeWord(normalized),
+          completeWord(expectedForTolerance),
+          language,
+          stripDiacritics,
+        )));
   const confusable =
     negationMismatch
+    || inflectionMismatch
+    || isTaughtElsewhere(normalized)
     || (hints?.language !== undefined
       && (confusableIn(hints.language) || confusableIn('en')));
 
@@ -520,9 +823,20 @@ export function gradeAnswer(
  * normalize quotes, strip trailing punctuation. Accent folding is handled
  * separately by `stripDiacritics` in the comparison path, so accented and
  * unaccented forms can be told apart for feedback.
+ *
+ * With `language` set to `zh`, traditional characters fold to simplified
+ * first. A learner writing 學校 for the stored 学校 is not making a typing
+ * error — they are writing the same word in the other script — and there was
+ * no policy at all before: the same substitution hard-failed on a
+ * two-character key and passed on a seven-character one as "Correct! (Minor
+ * typo)", telling a learner their correct answer was a mistake. The fold
+ * belongs HERE rather than in the tolerance path because 221 of the 692
+ * affected rows are strict-graded and never reach tolerance. See
+ * lib/zh-simplify.ts for the table and its provenance.
  */
-export function normalize(text: string): string {
-  return text
+export function normalize(text: string, language?: LanguageCode): string {
+  const scripted = language === 'zh' ? simplifyChinese(text) : text;
+  return scripted
     .normalize('NFC')
     .trim()
     .toLowerCase()
@@ -598,7 +912,12 @@ export function gradeSpeechTranscription(
 ): SpeechGradeResult {
   const normalizedTranscription = normalize(transcription);
   const normalizedExpected = normalize(expectedText);
-  const allVariants = [normalizedExpected, ...acceptedVariants.map(normalize)];
+  // Wrapped rather than passed by reference: `normalize` takes an optional
+  // language second argument, and `map` would hand it the array index.
+  // Speech has no language hint to give it — the transcription arrives from
+  // STT already in the target script — so traditional input is not folded on
+  // this path.
+  const allVariants = [normalizedExpected, ...acceptedVariants.map((v) => normalize(v))];
 
   // Find the best similarity across expected text and all accepted variants
   let bestSimilarity = 0;

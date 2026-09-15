@@ -4,12 +4,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { haptic } from '../../lib/haptics';
 import { ExerciseCard } from './ExerciseCard';
 import { FeedbackCard } from './FeedbackCard';
+import { ExerciseHint } from './ExerciseHint';
 import { HighlightedText } from '../shared/HighlightedText';
 import { Button } from '../ui/Button';
 import { colors } from '../../config/theme';
 import { gradeAnswer } from '../../lib/grading';
 import type { GradeResult } from '../../lib/grading';
-import { isRestored, regradePick } from '../../lib/exercise-restore';
+import { exerciseHints, isRestored, regradePick } from '../../lib/exercise-restore';
 import type { Exercise, LanguageCode } from '../../types';
 
 interface FillBlankExerciseProps {
@@ -21,6 +22,11 @@ interface FillBlankExerciseProps {
   userId?: string;
   language?: string;
   cefrLevel?: string;
+  /**
+   * Every other key this lesson and unit teach. A candidate that is one of
+   * them is another question's answer, never a typo of this one.
+   */
+  siblingKeys?: readonly string[];
 }
 
 export function FillBlankExercise({
@@ -31,13 +37,14 @@ export function FillBlankExercise({
   userId,
   language,
   cefrLevel,
+  siblingKeys,
 }: FillBlankExerciseProps) {
   // Seeded from the recorded pick so Previous comes back to the answer the
   // learner actually gave, in its graded state — see lib/exercise-restore.ts.
   const [answer, setAnswer] = useState(selected ?? '');
   const [submitted, setSubmitted] = useState(() => isRestored(selected));
   const [result, setResult] = useState<GradeResult | null>(() =>
-    regradePick(exercise, selected, language as LanguageCode | undefined),
+    regradePick(exercise, selected, language as LanguageCode | undefined, siblingKeys),
   );
 
   // Split prompt on "___" to show sentence with blank
@@ -47,13 +54,7 @@ export function FillBlankExercise({
     if (!answer.trim() || submitted) return;
 
     const grade = gradeAnswer(answer, exercise.correctAnswer, exercise.acceptedAnswers, {
-      exerciseHints: {
-        exerciseType: exercise.type,
-        skillType: exercise.skillType,
-        targetGrammar: exercise.targetGrammar,
-        targetWord: exercise.targetWord,
-        language: language as LanguageCode | undefined,
-      },
+      exerciseHints: exerciseHints(exercise, language as LanguageCode | undefined, siblingKeys),
     });
     setResult(grade);
     setSubmitted(true);
@@ -89,6 +90,8 @@ export function FillBlankExercise({
           />
         )}
       </View>
+
+      <ExerciseHint hint={exercise.hintText} revealed={submitted || showResult} />
 
       <TextInput
         className={`border-2 ${getBorderClass()} rounded-[14px] px-4 py-2.5 text-base text-text-primary`}

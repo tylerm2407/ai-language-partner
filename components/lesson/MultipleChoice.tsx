@@ -25,6 +25,11 @@ interface MultipleChoiceProps {
   userId?: string;
   language?: string;
   cefrLevel?: string;
+  /**
+   * Every other key this lesson and unit teach. A candidate that is one of
+   * them is another question's answer, never a typo of this one.
+   */
+  siblingKeys?: readonly string[];
 }
 
 const KEYS = ['A', 'B', 'C', 'D', 'E', 'F'];

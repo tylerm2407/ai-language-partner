@@ -3,12 +3,13 @@ import { View, TextInput, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { haptic } from '../../lib/haptics';
 import { FeedbackCard } from './FeedbackCard';
+import { ExerciseHint } from './ExerciseHint';
 import { HighlightedText } from '../shared/HighlightedText';
 import { Body, Caption } from '../ui/Text';
 import { colors, spacing, radii } from '../../config/theme';
 import { gradeAnswer } from '../../lib/grading';
 import type { GradeResult } from '../../lib/grading';
-import { isRestored, regradePick } from '../../lib/exercise-restore';
+import { exerciseHints, isRestored, regradePick } from '../../lib/exercise-restore';
 import type { Exercise, LanguageCode } from '../../types';
 
 interface Props {
@@ -24,6 +25,11 @@ interface Props {
   userId?: string;
   language?: string;
   cefrLevel?: string;
+  /**
+   * Every other key this lesson and unit teach. A candidate that is one of
+   * them is another question's answer, never a typo of this one.
+   */
+  siblingKeys?: readonly string[];
 }
 
 export function ClozeExercise({
@@ -34,6 +40,7 @@ export function ClozeExercise({
   userId,
   language,
   cefrLevel,
+  siblingKeys,
 }: Props) {
   // Seeded from the recorded pick so Previous comes back to the answer the
   // learner actually gave, in its graded state — see lib/exercise-restore.ts.
@@ -46,7 +53,7 @@ export function ClozeExercise({
    */
   const isRevealed = localRevealed || showResult;
   const [result, setResult] = useState<GradeResult | null>(() =>
-    regradePick(exercise, selected, language as LanguageCode | undefined),
+    regradePick(exercise, selected, language as LanguageCode | undefined, siblingKeys),
   );
 
   // The prompt contains the sentence with "___" as the blank
@@ -60,13 +67,7 @@ export function ClozeExercise({
     if (!userInput.trim() || isRevealed) return;
 
     const grade = gradeAnswer(userInput, exercise.correctAnswer, exercise.acceptedAnswers, {
-      exerciseHints: {
-        exerciseType: exercise.type,
-        skillType: exercise.skillType,
-        targetGrammar: exercise.targetGrammar,
-        targetWord: exercise.targetWord,
-        language: language as LanguageCode | undefined,
-      },
+      exerciseHints: exerciseHints(exercise, language as LanguageCode | undefined, siblingKeys),
     });
     setResult(grade);
     setLocalRevealed(true);
@@ -145,12 +146,8 @@ export function ClozeExercise({
         />
       )}
 
-      {/* Hint */}
-      {exercise.hintText && !isRevealed && (
-        <Caption tone="tertiary" style={{ fontStyle: 'italic', marginBottom: spacing.md }}>
-          Hint: {exercise.hintText}
-        </Caption>
-      )}
+      {/* Hint — shared with every other typed row that carries one. */}
+      <ExerciseHint hint={exercise.hintText} revealed={isRevealed} />
 
       {/* Differentiated feedback */}
       {result && isRevealed && language ? (

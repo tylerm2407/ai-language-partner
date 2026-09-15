@@ -18,6 +18,11 @@ interface CollocationMatchProps {
   userId?: string;
   language?: string;
   cefrLevel?: string;
+  /**
+   * Every other key this lesson and unit teach. A candidate that is one of
+   * them is another question's answer, never a typo of this one.
+   */
+  siblingKeys?: readonly string[];
 }
 
 export function CollocationMatch({
@@ -28,6 +33,7 @@ export function CollocationMatch({
   userId,
   language,
   cefrLevel,
+  siblingKeys,
 }: CollocationMatchProps) {
   const collocations: string[] = (exercise.metadata?.collocations as string[]) ?? [];
   const distractors: string[] = exercise.distractors ?? [];

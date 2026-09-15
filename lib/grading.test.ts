@@ -416,3 +416,308 @@ describe('confusable pairs are not typos', () => {
     expect(gradeAnswer('hambre', 'hombre', []).isCorrect).toBe(true);
   });
 });
+
+describe('fill_blank is graded as the completed word', () => {
+  // す_____ (Awesome), correct_answer "ごい", accepted "ばらしい".
+  const awesome = { exerciseType: 'fill_blank' as const, language: 'ja' as const,
+    blankContext: { prefix: 'す', suffix: '' } };
+
+  it('still accepts the missing piece on its own', () => {
+    // The learner types into a blank; the piece is what the row asks for.
+    expect(gradeAnswer('ごい', 'ごい', ['ばらしい'], { exerciseHints: awesome }).isCorrect).toBe(true);
+  });
+
+  it('accepts the whole word the lesson actually taught', () => {
+    // すごい IS the word. Before this it was marked wrong, because the stored
+    // key is two of its three characters.
+    expect(gradeAnswer('すごい', 'ごい', ['ばらしい'], { exerciseHints: awesome }).isCorrect).toBe(true);
+    expect(gradeAnswer('すばらしい', 'ごい', ['ばらしい'], { exerciseHints: awesome }).isCorrect).toBe(true);
+  });
+
+  it('accepts a whole word typed with the space the prompt welds shut', () => {
+    // "Buenas_____ (Good afternoon)" renders with a space, so the learner may
+    // well type both words.
+    const hints = { exerciseType: 'fill_blank' as const, language: 'es' as const,
+      blankContext: { prefix: 'Buenas', suffix: '' } };
+    expect(gradeAnswer('buenas tardes', 'tardes', [], { exerciseHints: hints }).isCorrect).toBe(true);
+  });
+
+  it('does not accept a different word welded onto the same stem', () => {
+    const hints = { exerciseType: 'fill_blank' as const, language: 'es' as const,
+      blankContext: { prefix: 'Buenas', suffix: '' } };
+    expect(gradeAnswer('noches', 'tardes', [], { exerciseHints: hints }).isCorrect).toBe(false);
+  });
+
+  it('consults the confusable list on the completed word, not the fragment', () => {
+    // "Sob_____ (Nephew)" keys on the fragment "rino". The pair list is
+    // written in words, so it knows sobrino/sobrina and has never heard of
+    // rino/rina — and one edit is well inside a four-letter budget, so the
+    // niece row's key was scored "Correct! (Minor typo)" on the nephew row.
+    const hints = { exerciseType: 'fill_blank' as const, language: 'es' as const,
+      blankContext: { prefix: 'Sob', suffix: '' } };
+    expect(gradeAnswer('rina', 'rino', [], { exerciseHints: hints }).isCorrect).toBe(false);
+    // Without the welded context the grader sees fragments and accepts it,
+    // which is the defect this closes.
+    expect(
+      gradeAnswer('rina', 'rino', [], { exerciseHints: { ...hints, blankContext: undefined } }).isCorrect,
+    ).toBe(true);
+  });
+
+  it('does not widen the typo budget by welding a stem on', () => {
+    // A three-character filler earns a budget of 0. Welding a long Japanese
+    // clause on must not turn that into 2.
+    const hints = { exerciseType: 'fill_blank' as const, language: 'ja' as const,
+      blankContext: { prefix: '部長はもうお帰り', suffix: 'ました' } };
+    expect(gradeAnswer('にした', 'になり', [], { exerciseHints: hints }).isCorrect).toBe(false);
+  });
+
+  it('reports what the learner typed, not the welded form', () => {
+    // normalizedUserAnswer is logged to correction_log and struck through in
+    // the feedback card next to the stored key; both must stay comparable.
+    const result = gradeAnswer('ごい', 'ごい', [], { exerciseHints: awesome });
+    expect(result.normalizedUserAnswer).toBe('ごい');
+    expect(result.normalizedCorrectAnswer).toBe('ごい');
+  });
+});
+
+describe('another taught key is not a typo', () => {
+  it('refuses a sibling key that sits inside the typo budget', () => {
+    // Spanish A2 comparatives teach "Más bajo" and "Más caro" in one unit.
+    // Two edits in an eight-character key is inside the budget, so the shorter
+    // row marked the taller row's answer correct — and SM-2 then showed the
+    // card less often.
+    const hints = { language: 'es' as const, siblingKeys: ['Más caro'] };
+    expect(gradeAnswer('Más caro', 'Más bajo', [], { exerciseHints: hints }).isCorrect).toBe(false);
+    // Without the sibling list it is accepted, which is the defect.
+    expect(
+      gradeAnswer('Más caro', 'Más bajo', [], { exerciseHints: { language: 'es' } }).isCorrect,
+    ).toBe(true);
+  });
+
+  it('refuses a Korean sibling key the pair list never named', () => {
+    const hints = { language: 'ko' as const, siblingKeys: ['더 싼'] };
+    expect(gradeAnswer('더 싼', '더 비싼', [], { exerciseHints: hints }).isCorrect).toBe(false);
+  });
+
+  it('still accepts a sibling key this row explicitly accepts', () => {
+    // A unit that teaches the same string twice, or a row that deliberately
+    // accepts its neighbour's answer, must be unaffected.
+    const hints = { language: 'es' as const, siblingKeys: ['Más caro'] };
+    expect(
+      gradeAnswer('Más caro', 'Más bajo', ['Más caro'], { exerciseHints: hints }).isCorrect,
+    ).toBe(true);
+  });
+
+  it('still forgives an ordinary typo that is nobody else’s answer', () => {
+    const hints = { language: 'es' as const, siblingKeys: ['Más caro', 'Paciente'] };
+    expect(gradeAnswer('Más bjao', 'Más bajo', [], { exerciseHints: hints }).isCorrect).toBe(true);
+  });
+
+  it('matches a fill-blank sibling on the completed word', () => {
+    // Sibling keys arrive as words, because a fragment is nobody's answer:
+    // "Sob_____ (Niece)" contributes Sobrina, not rina.
+    const hints = { exerciseType: 'fill_blank' as const, language: 'es' as const,
+      blankContext: { prefix: 'Sob', suffix: '' }, siblingKeys: ['Sobrina'] };
+    expect(gradeAnswer('rina', 'rino', [], { exerciseHints: hints }).isCorrect).toBe(false);
+  });
+
+  it('does nothing at all when the caller passes no sibling keys', () => {
+    expect(gradeAnswer('Más caro', 'Más bajo', [], {}).isCorrect).toBe(true);
+  });
+});
+
+describe('a sibling key that is the same word unaccented is still an accent slip', () => {
+  it('accepts the unaccented form when the sibling folds onto this row’s key', () => {
+    // French teaches "Nièce" and glosses it "Niece" on the paired row, so both
+    // are stored keys in the unit. Typing "Niece" on the French row is a
+    // missing accent, not another question's answer.
+    const result = gradeAnswer('Niece', 'Nièce', [], {
+      exerciseHints: { language: 'fr', siblingKeys: ['Niece'] },
+    });
+    expect(result.isCorrect).toBe(true);
+  });
+
+  it('does not extend that excuse to an accepted alternative', () => {
+    // "Groß_____ (Generous)" keys on zügig and also accepts mütig, while the
+    // unit teaches Mutig (brave) in its own right. The alternative's
+    // unaccented form is a different word, and a generosity must not swallow
+    // a taught key.
+    const result = gradeAnswer('Mutig', 'zügig', ['mütig'], {
+      exerciseHints: { language: 'de', siblingKeys: ['Mutig'] },
+    });
+    expect(result.isCorrect).toBe(false);
+  });
+});
+
+describe('edit distance is not a model for Han script', () => {
+  it('refuses a one-character Chinese neighbour', () => {
+    // One edit, and the drink changes: 茶 tea, 水 water. Neither string is in
+    // the pair list, and no pair list can hold every sentence a lesson
+    // teaches — which is the point of gating the script rather than
+    // enumerating the words.
+    expect(gradeAnswer('我喜欢喝水', '我喜欢喝茶', [], { exerciseHints: { language: 'zh' } }).isCorrect)
+      .toBe(false);
+  });
+
+  it('still accepts the exact Chinese answer', () => {
+    expect(gradeAnswer('我喜欢喝茶', '我喜欢喝茶', [], { exerciseHints: { language: 'zh' } }).isCorrect)
+      .toBe(true);
+  });
+
+  it('refuses a one-character Japanese neighbour once kanji are involved', () => {
+    // 書きます (write) and 行きます (go) are one edit apart and unrelated. The
+    // past forms are in the pair list; the present forms are not, and an IME
+    // cannot produce one from the other in any case.
+    const hints = { exerciseHints: { language: 'ja' as const } };
+    expect(gradeAnswer('行きます', '書きます', [], hints).isCorrect).toBe(false);
+    expect(gradeAnswer('書きます', '行きます', [], hints).isCorrect).toBe(false);
+  });
+
+  it('keeps tolerance for kana, which can genuinely be mistyped', () => {
+    // No kanji on either side: ありがとう with one kana wrong is a typing slip,
+    // and the IME can produce it.
+    expect(gradeAnswer('ありがとお', 'ありがとう', [], { exerciseHints: { language: 'ja' } }).isCorrect)
+      .toBe(true);
+  });
+
+  it('leaves Korean tolerance alone', () => {
+    // A jamo is a fraction of a word, so distance is meaningful in Hangul —
+    // 간후사 for 간호사 is an ordinary adjacent-key slip.
+    expect(gradeAnswer('간후사', '간호사', [], { exerciseHints: { language: 'ko' } }).isCorrect)
+      .toBe(true);
+  });
+});
+
+describe('traditional Chinese input is the same answer, not a typo', () => {
+  it('accepts a traditional spelling of a short key', () => {
+    // 學校 for the stored 学校. Two characters, so the typo budget is zero and
+    // this was a hard fail — while the identical substitution on a longer key
+    // passed as "Correct! (Minor typo)", telling the learner their correct
+    // answer was a mistake.
+    const result = gradeAnswer('學校', '学校', [], { exerciseHints: { language: 'zh' } });
+    expect(result.isCorrect).toBe(true);
+    expect(result.feedback).toBe('Correct!');
+  });
+
+  it('accepts it on a strict-graded row too', () => {
+    // 221 of the affected rows are grammar rows, which return before the
+    // tolerance path is ever reached — which is why the fold sits in
+    // normalize() rather than beside the typo budget.
+    const result = gradeAnswer('我們在學習中文', '我们在学习中文', [], {
+      exerciseHints: { language: 'zh', targetGrammar: 'progressive_zai' },
+    });
+    expect(result.isCorrect).toBe(true);
+  });
+
+  it('still refuses a different Chinese word', () => {
+    expect(gradeAnswer('学生', '学校', [], { exerciseHints: { language: 'zh' } }).isCorrect)
+      .toBe(false);
+  });
+
+  it('leaves Japanese kanji alone', () => {
+    // Japanese uses its own forms; folding them would compare two scripts the
+    // course never asked for. 發音 is not the Japanese spelling of 発音.
+    expect(gradeAnswer('發音', '発音', [], { exerciseHints: { language: 'ja' } }).isCorrect)
+      .toBe(false);
+  });
+
+  it('folds nothing when the caller names no language', () => {
+    expect(gradeAnswer('學校', '学校', []).isCorrect).toBe(false);
+  });
+});
+
+describe('a bare unaccented stem that could be either word is neither', () => {
+  it('refuses "avo" on both of the Portuguese rows it used to pass', () => {
+    const grandfather = gradeAnswer('avo', 'Avô', [], { exerciseHints: { language: 'pt' } });
+    const grandmother = gradeAnswer('avo', 'Avó', [], { exerciseHints: { language: 'pt' } });
+    expect(grandfather.isCorrect).toBe(false);
+    expect(grandmother.isCorrect).toBe(false);
+  });
+
+  it('says the accent is what separates the two words', () => {
+    // A generic "incorrect" would leave a learner without easy accents with no
+    // idea what they got wrong.
+    const result = gradeAnswer('avo', 'Avô', [], { exerciseHints: { language: 'pt' } });
+    expect(result.feedback).toContain('Avô');
+    expect(result.feedback).toContain('Avó');
+    expect(result.feedback).toContain('accent');
+  });
+
+  it('refuses the other accented form too, not just the bare stem', () => {
+    expect(gradeAnswer('avó', 'Avô', [], { exerciseHints: { language: 'pt' } }).isCorrect).toBe(false);
+  });
+
+  it('refuses the Spanish stems the list names', () => {
+    expect(gradeAnswer('papa', 'papá', [], { exerciseHints: { language: 'es' } }).isCorrect).toBe(false);
+    expect(gradeAnswer('el', 'él', [], { exerciseHints: { language: 'es' } }).isCorrect).toBe(false);
+    expect(gradeAnswer('tu', 'tú', [], { exerciseHints: { language: 'es' } }).isCorrect).toBe(false);
+  });
+
+  it('still forgives an accent on a word with no twin', () => {
+    // café has no listed word it could be confused with, so a missing accent
+    // is a missing accent.
+    const result = gradeAnswer('cafe', 'café', [], { exerciseHints: { language: 'es' } });
+    expect(result.isCorrect).toBe(true);
+    expect(result.feedback).toContain('Watch the accents');
+  });
+
+  it('is scored as a near miss, not a blank wrong answer', () => {
+    // accuracy above 0.5 so gradeToRating gives 2 ("close") rather than 1.
+    const result = gradeAnswer('avo', 'Avô', [], { exerciseHints: { language: 'pt' } });
+    expect(result.accuracy > 0.5).toBe(true);
+  });
+});
+
+describe('a different Korean ending is a different form, not a typo', () => {
+  const ko = { exerciseHints: { language: 'ko' as const } };
+
+  it('refuses the adnominal form of the key', () => {
+    // ko-E1032: `더 키_____ (Taller)`, key `가 크다`. Measuring the budget in
+    // jamo — right in itself — hands a key this length two jamo of tolerance,
+    // and Korean endings are one or two jamo apart, so `가 큰` started passing
+    // as a minor typo. The form is not what the row asked for.
+    expect(gradeAnswer('가 큰', '가 크다', [], ko).isCorrect).toBe(false);
+    expect(gradeAnswer('가 크다', '가 큰', [], ko).isCorrect).toBe(false);
+  });
+
+  it('refuses a tense the row did not ask for', () => {
+    expect(gradeAnswer('가겠어요', '갔어요', [], ko).isCorrect).toBe(false);
+    expect(gradeAnswer('먹겠어요', '먹었어요', [], ko).isCorrect).toBe(false);
+  });
+
+  it('refuses a causative for a plain past, where the split is mid-syllable', () => {
+    // 먹었어요 and 먹였어요 share ㅁㅓㄱ and the ㅇ that opens the next syllable,
+    // so the longest shared run cuts both endings in half. The rule walks the
+    // split point back until both remainders are whole endings.
+    expect(gradeAnswer('먹였어요', '먹었어요', [], ko).isCorrect).toBe(false);
+  });
+
+  it('still forgives an ordinary Korean typing slip', () => {
+    // A jamo is a fraction of a word and ㅎ/ㅜ are adjacent: this is the case
+    // the decomposed budget exists to forgive, and it stays forgiven.
+    expect(gradeAnswer('간후사', '간호사', [], ko).isCorrect).toBe(true);
+    expect(gradeAnswer('경재', '경제', [], ko).isCorrect).toBe(true);
+  });
+
+  it('leaves the copula spellings alone', () => {
+    // 이에요 / 이어요 are the same word either way — 12 pairs in the Korean
+    // corpus — so 에요 is deliberately not in the ending list.
+    expect(gradeAnswer('이어요', '이에요', [], ko).isCorrect).toBe(true);
+  });
+
+  it('does not fire when the difference is not an ending', () => {
+    // 씻다 / 씨다 differ by ㅅ다, which is no ending, so this stays an ordinary
+    // typo question for the budget and the pair list to settle.
+    expect(gradeAnswer('씻다', '씨다', [], ko).isCorrect).toBe(true);
+  });
+
+  it('accepts an ending the row authored as an alternative', () => {
+    expect(gradeAnswer('갔습니다', '갔어요', ['갔습니다'], ko).isCorrect).toBe(true);
+  });
+
+  it('applies to Korean only', () => {
+    // Japanese kana keeps its tolerance; the Han gate is what handles Japanese.
+    expect(gradeAnswer('ありがとお', 'ありがとう', [], { exerciseHints: { language: 'ja' } }).isCorrect)
+      .toBe(true);
+  });
+});
