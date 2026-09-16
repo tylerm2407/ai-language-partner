@@ -26,6 +26,8 @@ import { useDailyChallenges } from '../../hooks/useDailyChallenges';
 import { HomeHeader, LevelDueRow, SessionHero, ReadRow } from '../../components/ui2/home/HomeSections';
 import { Atmosphere } from '../../components/ui2/home/Atmosphere';
 import { CefrExplainerSheet, useCefrExplainer } from '../../components/ui2/CefrExplainerSheet';
+import { LanguageSwitcherSheet } from '../../components/ui2/LanguageSwitcherSheet';
+import { useLanguageEnrollments } from '../../hooks/useLanguageEnrollments';
 import { PatternsCard } from '../../components/ui2/home/HomeInsights';
 import { useLearnerInsights } from '../../hooks/useLearnerInsights';
 import { heroSubtitle } from '../../lib/insights';
@@ -94,6 +96,11 @@ export default function HomeScreen() {
   );
   const { markItem: markChecklistItem, skipItem: skipChecklistItem } = useOnboardingChecklist();
   const greeting = targetLanguageGreeting(getTargetLanguage(profile));
+  // The switcher's handle. Only rendered once there is somewhere to switch TO:
+  // one language is not a choice, and a chip that opens a list of one is noise.
+  const [languageSwitcher, setLanguageSwitcher] = useState(false);
+  const { enrollments } = useLanguageEnrollments();
+  const activeLanguage = getTargetLanguage(profile);
   const [showPrePermission, setShowPrePermission] = useState(false);
   const { c, scheme } = useUi2Theme();
   const { challenges, error: challengesError, retry: retryChallenges } = useDailyChallenges();
@@ -234,7 +241,12 @@ export default function HomeScreen() {
             scroll view so they move with the content, behind it in z-order. */}
         <Atmosphere />
         <SafeAreaView edges={['top']} style={styles.stack}>
-          <HomeHeader greeting={greeting} name={profile?.displayName} />
+          <HomeHeader
+            greeting={greeting}
+            name={profile?.displayName}
+            languageChip={enrollments.length > 1 && activeLanguage ? activeLanguage.toUpperCase() : null}
+            onSwitchLanguage={() => setLanguageSwitcher(true)}
+          />
 
           <LevelDueRow
             band={band}
@@ -344,6 +356,10 @@ export default function HomeScreen() {
         onDismiss={cefrExplainer.close}
         band={band}
         onSeeReport={() => router.push('/profile/proficiency' as any)}
+      />
+      <LanguageSwitcherSheet
+        visible={languageSwitcher}
+        onDismiss={() => setLanguageSwitcher(false)}
       />
       <PrePermissionSheet
         visible={showPrePermission}

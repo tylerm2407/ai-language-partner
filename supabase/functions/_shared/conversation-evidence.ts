@@ -59,6 +59,17 @@ export interface ConversationEvidenceInput {
    * would fail the insert and silently lose the evidence.
    */
   chatSessionId?: string;
+  /**
+   * The `tutor_sessions` row this turn came from (migration 131), the live
+   * voice tutor's counterpart to `chatSessionId`. Exactly one of the two is
+   * ever set — a turn happened in the text chat or in a call, never both.
+   *
+   * Not optional in the way it looks: the interaction strand groups turns into
+   * conversations by session id and drops anything ungroupable, so a caller
+   * that omits both ids writes evidence that can never reach a learner's
+   * measured level. Left optional only because pre-131 rows have neither.
+   */
+  tutorSessionId?: string;
   /** Log prefix, so a failure is attributable to the surface that caused it.
    *  Defaults to the historical `ai-chat` value. */
   fn?: string;
@@ -101,6 +112,7 @@ export async function recordConversationEvidence(
       // Only when supplied: an absent key leaves the column at its default,
       // which keeps every existing caller's insert byte-identical.
       ...(input.chatSessionId ? { chat_session_id: input.chatSessionId } : {}),
+      ...(input.tutorSessionId ? { tutor_session_id: input.tutorSessionId } : {}),
     });
     // PostgREST reports a rejected insert as a returned `error`, not a throw,
     // so the original `await` here swallowed every write failure in complete

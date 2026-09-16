@@ -44,8 +44,8 @@ export interface NextBandState {
    */
   basis: string | null;
   assumedBands: CefrBand[];
-  /** Scored strands with no level yet; what "not yet measured" is waiting on. */
-  missingSkills: SkillKey[];
+  /** Strands with no evidence at the target band — where the work pays most. */
+  unevidencedSkills: SkillKey[];
   /** One line per piece of work still between the learner and `progress.next`. */
   steps: string[];
   /** null until the first report has loaded. */
@@ -88,7 +88,7 @@ export function useNextBandProgress(fallbackBand: CefrBand): NextBandState {
     measured,
     basis: report?.levelBasis ?? null,
     assumedBands: report?.assumedBands ?? [],
-    missingSkills: report?.missingSkills ?? [],
+    unevidencedSkills: report?.unevidencedSkills ?? [],
     steps: report?.nextLevelSteps ?? [],
     progress,
     loading: isLoading,

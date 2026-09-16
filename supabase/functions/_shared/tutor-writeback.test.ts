@@ -184,8 +184,17 @@ function analysis(overrides: Partial<TutorAnalysis> = {}): TutorAnalysis {
     memoryNotes: [{ kind: 'goal', content: 'Moving to Madrid in March' }],
     debrief: DEBRIEF,
     ...overrides,
+    // After the spread, so an override that omits it still yields the required
+    // array rather than `undefined`.
+    listeningCheck: overrides.listeningCheck ?? [],
   };
 }
+
+const LISTENING_ITEMS = [
+  { question: 'Which day did the tutor suggest?', options: ['Thu', 'Fri', 'Sat', 'Sun'], answerIndex: 0 },
+  { question: 'What did the tutor offer?', options: ['A room', 'A car', 'A meal', 'A map'], answerIndex: 2 },
+  { question: 'Where was the tutor going?', options: ['Home', 'Work', 'Madrid', 'Lisbon'], answerIndex: 3 },
+];
 
 function input(over: Partial<TutorWritebackInput> = {}): TutorWritebackInput {
   return {
@@ -241,6 +250,41 @@ Deno.test('claims the session before writing anything', async () => {
 
 // ─── A turn with nothing to correct ───────────────────────────────────────
 
+Deno.test('the listening answer key is stored but never reaches the debrief', async () => {
+  const fake = fakeClient();
+  const result = await writeBackTutorSession(
+    fake.client,
+    input({ analysis: analysis({ listeningCheck: LISTENING_ITEMS }) }),
+  );
+
+  // The questions go to the learner...
+  assertEquals(result.debrief.listeningCheck?.length, 3);
+  // ...and the key does not. `tutor_sessions` is client-readable, so an
+  // answerIndex on the debrief is an answerIndex in the client's hands, and the
+  // score it produces would be self-assigned rather than measured.
+  assertEquals(JSON.stringify(result.debrief).includes('answerIndex'), false);
+
+  // The key goes to the service-role-only table instead, with the band the
+  // session ran at — re-deriving that later from the learner's CURRENT level
+  // would attribute old work to a new band.
+  const stored = fake.rowsIn('tutor_listening_checks');
+  assertEquals(stored.length, 1);
+  const row = stored[0] as Record<string, unknown>;
+  assertEquals(row.tutor_session_id, 'session-1');
+  assertEquals((row.items as unknown[]).length, 3);
+  assertEquals(row.cefr_level, input().cefrLevel);
+});
+
+Deno.test('a session with no listening items writes no check row', async () => {
+  // An empty check would be a screen the learner can open and answer zero
+  // questions in, and `answered_at` would then record a 0/0 the proficiency
+  // report has to special-case.
+  const fake = fakeClient();
+  const result = await writeBackTutorSession(fake.client, input());
+  assertEquals(fake.rowsIn('tutor_listening_checks').length, 0);
+  assertEquals(result.debrief.listeningCheck?.length ?? 0, 0);
+});
+
 Deno.test('a clean turn writes evidence but no correction row', async () => {
   const fake = fakeClient();
   const result = await writeBackTutorSession(
@@ -258,6 +302,15 @@ Deno.test('a clean turn writes evidence but no correction row', async () => {
   // A turn that went right is evidence of accuracy. Skipping it would mean the
   // only spoken turns feeding a measured level were the ones that went wrong.
   assertEquals(result.evidenceRows, 1);
+
+  // The session id is what makes the turn groupable. The interaction strand
+  // counts CONVERSATIONS, not turns, and drops any row it cannot attribute to
+  // a session — so without this the voice tutor would write evidence that
+  // never reaches a learner's measured level, which is the exact failure the
+  // strand was built to fix.
+  const row = fake.rowsIn('conversation_evidence')[0] as Record<string, unknown>;
+  assertEquals(row.tutor_session_id, 'session-1');
+  assertEquals(row.chat_session_id, undefined);
 });
 
 Deno.test('correction rows carry a null chat_session_id', async () => {

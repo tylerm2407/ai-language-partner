@@ -46,6 +46,14 @@ import {
   type CorrectionDetail,
 } from '../ai-chat/parse.ts';
 import { normalizeMemoryNote, type TutorMemoryKind } from './tutor-memory.ts';
+import {
+  MAX_LISTENING_ITEMS,
+  MIN_TUTOR_TURNS_FOR_CHECK,
+  OPTIONS_PER_ITEM,
+  normalizeListeningCheck,
+  type TutorListeningItem,
+  type TutorListeningPrompt,
+} from './tutor-listening.ts';
 import type { VocabularyCandidate } from './chat-vocabulary.ts';
 import { generateValidated } from './validated-generate.ts';
 import { PROVIDER_TIMEOUT_MS, providerFetch } from './provider-fetch.ts';
@@ -116,6 +124,19 @@ export interface TutorDebriefPhrase {
 
 export interface TutorDebrief {
   highlight: string;
+  /**
+   * Comprehension questions about what the tutor said, WITHOUT the answer key.
+   *
+   * The key never appears here. This object is stored in
+   * `tutor_sessions.debrief`, which the learner can read under "Users read own
+   * tutor sessions" — so a key on the debrief is a key in the client's hands,
+   * and the score it produces would be self-assigned. It stays in
+   * `tutor_listening_checks`, and `tutor-session`'s `listening-answer` action
+   * does the grading. See `_shared/tutor-listening.ts`.
+   *
+   * Empty whenever the session was too short to ask about, which is normal.
+   */
+  listeningCheck?: TutorListeningPrompt[];
   patterns: TutorDebriefPattern[];
   reachFor: TutorDebriefPhrase[];
   nextTime: string;
@@ -138,6 +159,20 @@ export interface TutorAnalysis {
   vocabulary: VocabularyCandidate[];
   memoryNotes: { kind: TutorMemoryKind; content: string }[];
   debrief: TutorDebrief;
+  /**
+   * Comprehension questions about what the TUTOR said, WITH the answer key.
+   *
+   * Carried on the analysis rather than on the debrief because the debrief is
+   * stored in `tutor_sessions.debrief`, which the learner can read. The
+   * write-back splits the two: the key goes to `tutor_listening_checks`
+   * (service-role only) and the questions go to the debrief. See
+   * `_shared/tutor-listening.ts`.
+   *
+   * Empty is the normal result for a short session — there is nothing worth
+   * asking about four sentences, and no evidence is better than invented
+   * evidence.
+   */
+  listeningCheck: TutorListeningItem[];
 }
 
 /**
@@ -239,7 +274,7 @@ function emptyDebrief(): TutorDebrief {
 }
 
 function emptyAnalysis(): TutorAnalysis {
-  return { turns: [], vocabulary: [], memoryNotes: [], debrief: emptyDebrief() };
+  return { turns: [], vocabulary: [], memoryNotes: [], debrief: emptyDebrief(), listeningCheck: [] };
 }
 
 /**
@@ -261,6 +296,7 @@ export const EMPTY_ANALYSIS: TutorAnalysis = (() => {
   Object.freeze(empty.turns);
   Object.freeze(empty.vocabulary);
   Object.freeze(empty.memoryNotes);
+  Object.freeze(empty.listeningCheck);
   Object.freeze(empty.debrief.patterns);
   Object.freeze(empty.debrief.reachFor);
   Object.freeze(empty.debrief);
@@ -428,7 +464,16 @@ export function normalizeTutorAnalysis(raw: unknown): TutorAnalysis {
     }
   }
 
-  return { turns, vocabulary, memoryNotes, debrief: normalizeDebrief(obj.debrief) };
+  return {
+    turns,
+    vocabulary,
+    memoryNotes,
+    debrief: normalizeDebrief(obj.debrief),
+    // Every malformed item is discarded rather than repaired — see
+    // `normalizeListeningCheck`. A question nobody wrote is about to be scored
+    // against a learner's measured level.
+    listeningCheck: normalizeListeningCheck(obj.listeningCheck),
+  };
 }
 
 // ─── Transcript windowing ─────────────────────────────────────────────────
@@ -623,6 +668,13 @@ RESPOND WITH VALID JSON ONLY, in exactly this structure and this key order:
   ],
   "turns": [
     { "index": 0, "correction": { "shortLabel": "...", "explanation": "...", "original": "...", "corrected": "...", "errorType": "...", "severity": "..." } }
+  ],
+  "listeningCheck": [
+    {
+      "question": "A question in ${nativeLanguage} about something the TUTOR said.",
+      "options": ["Four answers in ${nativeLanguage}", "...", "...", "..."],
+      "answerIndex": 0
+    }
   ]
 }
 
@@ -645,6 +697,15 @@ TURN RULES:
 - severity: minor = a slip that does not obscure meaning, moderate = a noticeable error, critical = meaning-breaking.
 - errorType: one of grammar | vocabulary | spelling | word_order | tense | gender | other.
 - Do not correct pronunciation or transcription artefacts. The transcript came from a speech recogniser, so a word that looks misheard probably was — correcting the recogniser's mistake as if it were the learner's is worse than saying nothing.
+
+LISTENING CHECK RULES — this is scored, so it is the strictest section here:
+- Exactly ${MAX_LISTENING_ITEMS} items, or an EMPTY ARRAY. Never one or two.
+- Ask about what the TUTOR said, never about what the learner said. This measures whether the learner FOLLOWED the conversation; a question about their own words measures nothing.
+- Every question must be answerable from the transcript alone, and the answer must be something the tutor actually said — not an inference, not general knowledge about the topic. A learner who understood every word must be able to get it right.
+- Exactly ${OPTIONS_PER_ITEM} options, all plausible, all distinct, all about the same length. A wrong option that is obviously filler turns a four-way question into a two-way guess. Do not make the correct answer consistently the longest or the most detailed.
+- Vary "answerIndex" across the items. Do not put the answer first every time.
+- Ask about MEANING, not wording. "Which day did the tutor suggest?" is a comprehension question; "which exact word did the tutor use for Thursday?" is a memory test.
+- Return an EMPTY ARRAY if the tutor said fewer than ${MIN_TUTOR_TURNS_FOR_CHECK} things, or if the conversation contains nothing worth three distinct questions. Three questions about one sentence is not a listening check, and this score moves the learner's measured level — no evidence is far better than invented evidence.
 
 VOCABULARY RULES:
 - At most ${MAX_VOCABULARY} words, and only words that came up in THIS conversation and are worth a review card.
@@ -879,7 +940,11 @@ export async function analyzeTutorSession(input: AnalysisInput): Promise<TutorAn
     // loses a debrief, which is recoverable; they do not gain a false level,
     // which is not.
     if (!analysed) {
-      return { turns: [], vocabulary: [], memoryNotes: [], debrief: normalized.debrief };
+      // The listening check goes with the turns, for the same reason. It is
+      // scored, and scoring a learner on questions we could not verify came
+      // from a real analysis is the same wrong data point in a different
+      // strand.
+      return { turns: [], vocabulary: [], memoryNotes: [], debrief: normalized.debrief, listeningCheck: [] };
     }
 
     return {
@@ -887,6 +952,12 @@ export async function analyzeTutorSession(input: AnalysisInput): Promise<TutorAn
       vocabulary: normalized.vocabulary,
       memoryNotes: normalized.memoryNotes,
       debrief: normalized.debrief,
+      // All three or none: the prompt asks for exactly MAX_LISTENING_ITEMS or
+      // an empty array, and a model that returned one or two has not followed
+      // it. Grading a partial set would quietly change what a "3/3" on the
+      // learner's record means.
+      listeningCheck:
+        normalized.listeningCheck.length === MAX_LISTENING_ITEMS ? normalized.listeningCheck : [],
     };
   } catch (err) {
     // Fail soft, deliberately and finally. This runs after the learner has hung

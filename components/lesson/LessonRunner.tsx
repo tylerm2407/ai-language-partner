@@ -316,7 +316,7 @@ export function LessonRunner({
       timedOut = true;
       setWarmupResolved(true);
     }, WARMUP_FETCH_TIMEOUT_MS);
-    fetchDueReviewItemsWithCards(userId, WARMUP_MAX_ITEMS)
+    fetchDueReviewItemsWithCards(userId, WARMUP_MAX_ITEMS, targetLanguage)
       .then((entries) => {
         if (timedOut) return;
         clearTimeout(timeout);
@@ -331,7 +331,7 @@ export function LessonRunner({
         setWarmupResolved(true);
       });
     return () => clearTimeout(timeout);
-  }, [userId, restoreChecked]);
+  }, [userId, restoreChecked, targetLanguage]);
 
   const warmupExercise = warmupEntries[warmupIndex]
     ? warmupToExercise(warmupEntries[warmupIndex])
@@ -772,7 +772,12 @@ export function LessonRunner({
     const summary = summarizeLesson(statuses, exerciseIds);
     const strong = summary.accuracy >= 0.8;
     const title = summary.perfect ? 'Flawless!' : strong ? 'Nailed it!' : 'Lesson complete';
-    const mood = strong ? 'lessonComplete' : 'correct';
+    // Sol breathes fire for every finish, not just a strong one. Finishing is
+    // the thing being celebrated; how it went is what the title and the score
+    // line say, and they still say it plainly at 40% as at 100%. A learner who
+    // struggled through a lesson is the one who least needs the mascot to
+    // withhold applause.
+    const mood = 'lessonComplete';
     const skippedSuffix = summary.skippedCount > 0 ? ` · ${summary.skippedCount} skipped` : '';
     const scoreLine = `${summary.correctCount}/${summary.scoredCount} correct${skippedSuffix}`;
 

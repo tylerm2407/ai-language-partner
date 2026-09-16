@@ -66,8 +66,24 @@ it('re-reads the due count when the screen regains focus', async () => {
   expect(mockFocusCallback).not.toBeNull();
   await act(async () => { mockFocusCallback!(); });
 
-  expect(queries.fetchReviewItemCount).toHaveBeenCalledWith('u1');
+  // No profile loaded in this harness, so the language is null — "every
+  // language", which is what an account with nothing loaded should be counted
+  // as rather than silently filtering to nothing.
+  expect(queries.fetchReviewItemCount).toHaveBeenCalledWith('u1', null);
   expect(useAppStore.getState().reviewCount).toBe(0);
+});
+
+it('counts only the active language', async () => {
+  useAppStore.setState({
+    profile: { targetLanguage: 'ru' } as unknown as NonNullable<ReturnType<typeof useAppStore.getState>['profile']>,
+  });
+  jest.mocked(queries.fetchReviewItemCount).mockResolvedValue(3);
+
+  mount();
+  await act(async () => { mockFocusCallback!(); });
+
+  expect(queries.fetchReviewItemCount).toHaveBeenCalledWith('u1', 'ru');
+  expect(useAppStore.getState().reviewCount).toBe(3);
 });
 
 it('does not query before there is a signed-in user', async () => {

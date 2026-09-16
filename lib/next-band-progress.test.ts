@@ -7,6 +7,11 @@ import {
   MIN_READING_ITEMS,
   MIN_SPEAKING_ITEMS,
   MIN_WRITING_ITEMS,
+  BAND_THRESHOLD,
+  STRAND_WEIGHTS,
+  MIN_INTERACTION_UNITS,
+  MIN_INTERACTION_DAYS,
+  INTERACTION_PASS_SCORE,
   SCORED_SKILLS,
   SPEAKING_PASS_SCORE,
   WRITING_PASS_SCORE,
@@ -60,26 +65,84 @@ describe('nextBandProgress', () => {
       next: null,
       fraction: 1,
       percent: 100,
+      score: 1,
       strands: [],
     });
   });
 
-  it('gives each of the five strands a fifth', () => {
-    // Every vocabulary gate met, nothing else: one fifth of the ring.
+  it('gives each strand its weight, not an equal share', () => {
+    // Every vocabulary gate met, nothing else. Vocabulary is 0.12 of the band
+    // score and the ring is scaled by BAND_THRESHOLD, so this is 0.12/0.70 —
+    // not the fifth it would have been under the equal-weight ring.
     const mature = MIN_MATURE_ITEMS_PER_BAND;
     const vocabOnly = nextBandProgress(
       'A2',
       evidence({ bands: [band({ band: 'B1', seen: MIN_ITEMS_PER_BAND, mature, retained: Math.ceil(mature * MASTERY_RATE) })] }),
     );
-    expect(vocabOnly.percent).toBe(20);
-    expect(vocabOnly.strands.find((s) => s.skill === 'vocabulary')?.fraction).toBe(1);
+    const vocab = vocabOnly.strands.find((s) => s.skill === 'vocabulary')!;
+    expect(vocab.fraction).toBe(1);
+    expect(vocab.weight).toBe(STRAND_WEIGHTS.vocabulary);
+    expect(vocab.contribution).toBeCloseTo(STRAND_WEIGHTS.vocabulary, 10);
+    expect(vocabOnly.score).toBeCloseTo(STRAND_WEIGHTS.vocabulary, 10);
+    expect(vocabOnly.percent).toBe(
+      Math.floor((STRAND_WEIGHTS.vocabulary / BAND_THRESHOLD) * 100),
+    );
+  });
+
+  it('moves most for conversation, which is most of the score', () => {
+    // The point of the reweighting, asserted directly: a full interaction
+    // strand fills far more of the ring than a full vocabulary one.
+    const talk = nextBandProgress(
+      'A2',
+      evidence({
+        strands: [
+          strand('interaction', {
+            band: 'B1',
+            total: MIN_INTERACTION_UNITS,
+            passed: MIN_INTERACTION_UNITS,
+            mean: INTERACTION_PASS_SCORE,
+            days: MIN_INTERACTION_DAYS,
+          }),
+        ],
+      }),
+    );
+    expect(talk.strands.find((s) => s.skill === 'interaction')?.fraction).toBe(1);
+    expect(talk.score).toBeCloseTo(STRAND_WEIGHTS.interaction, 10);
+    // Still short of the band on its own — the threshold sits above the weight.
+    expect(talk.percent).toBeLessThan(100);
+    expect(talk.score).toBeLessThan(BAND_THRESHOLD);
+  });
+
+  it('holds the interaction volume gate to the worse of sessions and days', () => {
+    // Twelve conversations crammed into one day is not twelve days of
+    // practice; taking the mean of the two would say it was three-quarters of
+    // the way there.
+    const crammed = nextBandProgress(
+      'A2',
+      evidence({
+        strands: [
+          strand('interaction', {
+            band: 'B1',
+            total: MIN_INTERACTION_UNITS,
+            passed: MIN_INTERACTION_UNITS,
+            mean: INTERACTION_PASS_SCORE,
+            days: 1,
+          }),
+        ],
+      }),
+    );
+    const at = crammed.strands.find((s) => s.skill === 'interaction')!;
+    // Volume is 1/MIN_INTERACTION_DAYS, quality is full: half of each.
+    expect(at.fraction).toBeCloseTo(0.5 * (1 / MIN_INTERACTION_DAYS) + 0.5, 10);
   });
 
   it('gives each vocabulary gate a third of the strand and caps each at full', () => {
-    // Seen gate met twice over, nothing mature: a third of a fifth.
+    // Seen gate met twice over, nothing mature: a third of vocabulary's 0.12.
     const seenOnly = nextBandProgress('A2', evidence({ bands: [band({ band: 'B1', seen: MIN_ITEMS_PER_BAND * 2 })] }));
-    expect(seenOnly.strands[0].fraction).toBeCloseTo(1 / 3);
-    expect(seenOnly.percent).toBe(6);
+    expect(seenOnly.strands.find((s) => s.skill === 'vocabulary')?.fraction).toBeCloseTo(1 / 3);
+    expect(seenOnly.percent).toBe(
+      Math.floor(((STRAND_WEIGHTS.vocabulary / 3) / BAND_THRESHOLD) * 100),
+    );
   });
 
   it('measures vocabulary retention against the mature set, as the band rule does', () => {
@@ -89,7 +152,7 @@ describe('nextBandProgress', () => {
       'A2',
       evidence({ bands: [band({ band: 'B1', seen: MIN_ITEMS_PER_BAND, mature, retained: needed })] }),
     );
-    expect(p.strands[0].fraction).toBe(1);
+    expect(p.strands.find((s) => s.skill === 'vocabulary')?.fraction).toBe(1);
   });
 
   it('counts reading by pieces understood, not pieces attempted', () => {
@@ -123,10 +186,12 @@ describe('nextBandProgress', () => {
       evidence({ skills: [assessed('reading', 'B2'), assessed('speaking', 'B1')] }),
     );
     const by = Object.fromEntries(p.strands.map((s) => [s.skill, s]));
-    expect(by.reading).toEqual({ skill: 'reading', fraction: 1, met: true });
+    expect(by.reading).toMatchObject({ skill: 'reading', fraction: 1, met: true });
     expect(by.speaking.met).toBe(true);
     expect(by.vocabulary.met).toBe(false);
-    expect(p.percent).toBe(40);
+    expect(p.percent).toBe(
+      Math.floor(((STRAND_WEIGHTS.reading + STRAND_WEIGHTS.speaking) / BAND_THRESHOLD) * 100),
+    );
   });
 
   it('never reaches 100 while a next band exists, whatever the counts say', () => {
@@ -139,9 +204,9 @@ describe('nextBandProgress', () => {
   });
 
   it('floors rather than rounds up', () => {
-    // 19 of 20 seen, nothing else: 0.95 / 3 / 5 = 0.0633… → 6, not 7.
+    // 19 of 20 seen, nothing else: (0.95/3) × 0.12 ÷ 0.70 = 0.0542… → 5, not 6.
     const p = nextBandProgress('A1', evidence({ bands: [band({ band: 'A2', seen: MIN_ITEMS_PER_BAND - 1 })] }));
-    expect(p.percent).toBe(6);
+    expect(p.percent).toBe(5);
   });
 
   it('ignores evidence for other bands', () => {
@@ -161,6 +226,6 @@ describe('progressToward', () => {
     // An unmeasured, placed-A2 learner proves A2 itself.
     const p = progressToward('A2', 'A2', evidence({ bands: [band({ band: 'A2', seen: MIN_ITEMS_PER_BAND })] }));
     expect(p.next).toBe('A2');
-    expect(p.strands[0].fraction).toBeCloseTo(1 / 3);
+    expect(p.strands.find((s) => s.skill === 'vocabulary')?.fraction).toBeCloseTo(1 / 3);
   });
 });

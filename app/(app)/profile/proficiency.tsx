@@ -1,6 +1,7 @@
 import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useRouter } from 'expo-router';
 import { useSafeBack } from '../../../hooks/useSafeBack';
 import { Ionicons } from '@expo/vector-icons';
 import { useProficiencyReport } from '../../../hooks/useProficiencyReport';
@@ -20,6 +21,7 @@ import type {
 import { nextBandProgress, progressToward, type NextBandProgress } from '../../../lib/next-band-progress';
 
 const SKILL_LABELS: Record<SkillAssessment['skill'], string> = {
+  interaction: 'Conversation',
   vocabulary: 'Vocabulary',
   reading: 'Reading',
   writing: 'Writing',
@@ -28,6 +30,7 @@ const SKILL_LABELS: Record<SkillAssessment['skill'], string> = {
 };
 
 const SKILL_ICONS: Record<SkillAssessment['skill'], keyof typeof Ionicons.glyphMap> = {
+  interaction: 'chatbubbles-outline',
   vocabulary: 'albums-outline',
   reading: 'book-outline',
   writing: 'create-outline',
@@ -133,6 +136,7 @@ function SkillProgressBar({
 export default function ProficiencyScreen() {
   const { c } = useUi2Theme();
   const goBack = useSafeBack('/(app)/profile');
+  const router = useRouter();
   const { report, isLoading, error, refresh } = useProficiencyReport();
   const cefrExplainer = useCefrExplainer();
   // The same five-strand ring Home draws, so the per-skill bars here and the
@@ -234,13 +238,14 @@ export default function ProficiencyScreen() {
                   <Text className="text-base font-semibold mb-1" style={{ color: c.ink }}>
                     Not yet assessed
                   </Text>
-                  {/* "Not yet" on its own reads as "nothing counts". A level
-                      needs every strand, so say which ones are still short —
-                      that is the whole difference between a report that
-                      explains itself and one that looks broken. */}
-                  {report.missingSkills.length > 0 ? (
+                  {/* "Not yet" on its own reads as "nothing counts". Nothing
+                      withholds a level now that the band is a weighted score —
+                      so rather than "waiting on" these strands, name them as
+                      the untouched ones, which is where the work pays most. */}
+                  {report.unevidencedSkills.length > 0 ? (
                     <Text className="text-sm text-center mb-1" style={{ color: c.muted }}>
-                      Waiting on {report.missingSkills.map((k) => SKILL_LABELS[k].toLowerCase()).join(', ')}
+                      Nothing logged yet for{' '}
+                      {report.unevidencedSkills.map((k) => SKILL_LABELS[k].toLowerCase()).join(', ')}
                     </Text>
                   ) : null}
                 </>
@@ -283,6 +288,34 @@ export default function ProficiencyScreen() {
                 official CEFR certification.
               </Text>
             </SlabCard>
+
+            {/* The second opinion, offered right under the honesty notice,
+                because that notice is exactly where a learner starts wondering
+                how much the number is worth. A check-in is fresh items graded
+                by us rather than a score accumulated from work already done —
+                different evidence, deliberately not authoritative over this
+                report. It does NOT set the level; see the checkpoint screen's
+                header for why that decision is still open. */}
+            <Pressable
+              onPress={() => router.push('/(app)/profile/checkpoint')}
+              accessibilityRole="button"
+              accessibilityLabel="Check in on your level"
+              accessibilityHint="A five minute test of listening, reading, writing and speaking"
+              style={{ marginBottom: spacing.lg }}
+            >
+              <SlabCard style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Ionicons name="clipboard-outline" size={18} color={c.onTint} />
+                <View style={{ flex: 1, marginLeft: spacing.sm }}>
+                  <Text className="text-sm font-semibold" style={{ color: c.ink }}>
+                    Check in on your level
+                  </Text>
+                  <Text className="text-xs mt-0.5" style={{ color: c.muted }}>
+                    Five minutes of fresh questions. Compare it against this report.
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={c.muted} />
+              </SlabCard>
+            </Pressable>
 
             {/* Next step */}
             {report.nextLevelRequirement && (

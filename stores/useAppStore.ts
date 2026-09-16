@@ -4,7 +4,8 @@ import type { CefrBand } from '../lib/cefr-proficiency';
 import { fetchProfile, fetchTodayStats, fetchSubscription, fetchReviewItemCount, fetchUserRoles, fetchHasCompletedLesson, fetchHasAiConversation } from '../lib/supabase-queries';
 
 /**
- * In-flight review-count refreshes, keyed by user. Module scope rather than
+ * In-flight review-count refreshes, keyed by user AND active language. Module
+ * scope rather than
  * store state on purpose: it is plumbing, not something any screen renders,
  * and putting it in the store would re-render every subscriber twice per call.
  */
@@ -134,7 +135,9 @@ export const useAppStore = create<AppState>((set, get) => ({
         // a paying learner to the free tier for the whole session. See the set()
         // below, which preserves the last known row instead.
         fetchSubscription(userId).catch(() => undefined),
-        fetchReviewItemCount(userId).catch(() => 0),
+        // Scoped to the language the profile is pointed at: the badge has to
+        // match the queue the Review screen will actually deal (migration 133).
+        fetchReviewItemCount(userId, profile?.targetLanguage ?? null).catch(() => 0),
         fetchUserRoles(userId).catch(() => [] as string[]),
         // `null` on failure so the onboarding reconciler can tell "no lesson"
         // from "we don't know" and leave the checklist alone. The paywall gate
@@ -198,23 +201,28 @@ export const useAppStore = create<AppState>((set, get) => ({
     // learn page as well as after each review submit, so tab-flicking would
     // otherwise fire a burst of identical count queries whose replies can also
     // land out of order — the older one winning and re-showing a cleared badge.
-    const inFlight = reviewCountInFlight.get(userId);
+    // Keyed on the language too: a refresh already in flight for the language
+    // the learner just switched away from answers a question nobody is asking
+    // any more, and sharing it would paint the old deck's badge.
+    const language = get().profile?.targetLanguage ?? null;
+    const key = `${userId}:${language ?? 'all'}`;
+    const inFlight = reviewCountInFlight.get(key);
     if (inFlight) return inFlight;
 
     const pending = (async () => {
       try {
-        const reviewCount = await fetchReviewItemCount(userId);
+        const reviewCount = await fetchReviewItemCount(userId, language);
         set({ reviewCount });
       } catch (err) {
         // Keep the previous count: a stale badge beats one that claims "all
         // caught up" because the network blipped.
         console.error('refreshReviewCount error:', err);
       } finally {
-        reviewCountInFlight.delete(userId);
+        reviewCountInFlight.delete(key);
       }
     })();
 
-    reviewCountInFlight.set(userId, pending);
+    reviewCountInFlight.set(key, pending);
     return pending;
   },
 

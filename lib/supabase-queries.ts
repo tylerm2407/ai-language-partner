@@ -20,6 +20,7 @@ import type {
   WritingEvidenceItem,
   SpeakingEvidenceItem,
   ListeningEvidenceItem,
+  InteractionTurnItem,
 } from './cefr-proficiency';
 import { ONBOARDING_STEP_KEYS } from './onboarding-checklist';
 import type {
@@ -74,6 +75,7 @@ import type {
   ConversationGrade,
   SchoolContractConfig,
   LanguageCode,
+  LanguageEnrollment,
   ProficiencyLevel,
   SubmissionStatus,
   TutorDebrief,
@@ -83,7 +85,7 @@ import type {
   TutorMemoryKind,
 } from '../types';
 
-import type { NewsTier } from '../config/app';
+import { SUPPORTED_LANGUAGES, type NewsTier } from '../config/app';
 
 // ─── User Profile ───────────────────────────────────────────────
 
@@ -187,6 +189,65 @@ export async function applyOnboardingDraft(input: OnboardingDraftWrite): Promise
   });
   if (error) throw error;
   if (!data) throw new Error('apply_onboarding_draft returned no row');
+  return mapProfile(data as Record<string, unknown>);
+}
+
+// ─── Language Enrollments (multi-language) ──────────────────────
+
+function mapLanguageEnrollment(row: Record<string, unknown>): LanguageEnrollment {
+  return {
+    language: row.language as LanguageCode,
+    level: row.level as ProficiencyLevel,
+    placementBand: (row.placement_band as string | null) ?? null,
+    currentCourseId: (row.current_course_id as string | null) ?? null,
+    startedAt: row.started_at as string,
+    lastActiveAt: row.last_active_at as string,
+  };
+}
+
+/**
+ * Every language this learner is studying, most recently practised first
+ * (migration 133). The active one is `profile.targetLanguage`; this is the
+ * list the switcher offers and what "Add a language" appends to.
+ */
+export async function fetchLanguageEnrollments(): Promise<LanguageEnrollment[]> {
+  const { data, error } = await supabase
+    .from('user_language_enrollments')
+    .select('*')
+    .order('last_active_at', { ascending: false })
+    // A learner cannot study more languages than the product teaches, so this
+    // is the whole table for one account, not a page of it.
+    .limit(SUPPORTED_LANGUAGES.length);
+
+  if (error) throw error;
+  return (data ?? []).map(mapLanguageEnrollment);
+}
+
+/**
+ * Make `language` the active one and return the profile that results.
+ *
+ * Server-side (`switch_target_language`) because the switch snapshots the
+ * language being left before restoring the one being entered, and a half-
+ * applied swap would lose a learner's course. The RPC also rejects a course
+ * that does not belong to the language, so the client cannot cross the two.
+ *
+ * `placement` is required only the first time a language is started: the
+ * caller resolves it with `lib/course-placement.ts` (the one source of truth
+ * for level → course) and hands the answer in. Passing it for a language
+ * already enrolled re-places it, which is what a level change in Settings is.
+ */
+export async function switchTargetLanguage(
+  language: LanguageCode,
+  placement?: { level: ProficiencyLevel; currentCourseId: string | null; placementBand: string | null },
+): Promise<UserProfile> {
+  const { data, error } = await supabase.rpc('switch_target_language', {
+    p_language: language,
+    p_level: placement?.level ?? null,
+    p_current_course_id: placement?.currentCourseId ?? null,
+    p_placement_band: placement?.placementBand ?? null,
+  });
+  if (error) throw error;
+  if (!data) throw new Error('switch_target_language returned no row');
   return mapProfile(data as Record<string, unknown>);
 }
 
@@ -491,17 +552,41 @@ export async function fetchCardsBySkillType(
 
 // ─── Review Items (SRS) ─────────────────────────────────────────
 
-export async function fetchDueReviewItems(userId: string, limit = 50): Promise<ReviewItem[]> {
-  const { data, error } = await supabase
+/**
+ * Why every read here takes a language (migration 133).
+ *
+ * `review_items` is keyed on (user, card) alone — it has never known which
+ * language a row belongs to, because until multi-language there was only one.
+ * A learner studying Russian was still dealt their Spanish deck, and the
+ * multiple-choice distractors came from it too, which makes the question
+ * unanswerable rather than hard.
+ *
+ * The language lives on `cards.language`, so each read joins `cards!inner` and
+ * filters on it. Rows in the other languages keep their SM-2 schedule
+ * untouched and come back the moment the learner switches back — nothing is
+ * lost, it is just not dealt today. `null` means "every language", which only
+ * account-wide maintenance should ask for.
+ */
+export async function fetchDueReviewItems(
+  userId: string,
+  limit = 50,
+  language?: LanguageCode | null,
+): Promise<ReviewItem[]> {
+  // The join is unconditional so the row type stays one shape; `!inner` on a
+  // NOT NULL foreign key drops nothing when no language filter is applied.
+  let query = supabase
     .from('review_items')
-    .select('*')
+    .select('*, cards!inner(language)')
     .eq('user_id', userId)
-    .lte('next_due', new Date().toISOString())
+    .lte('next_due', new Date().toISOString());
+  if (language) query = query.in('cards.language', languageVariants(language));
+
+  const { data, error } = await query
     .order('next_due', { ascending: true })
     .limit(limit);
 
   if (error) throw error;
-  return (data ?? []).map(mapReviewItem);
+  return ((data ?? []) as Record<string, unknown>[]).map(mapReviewItem);
 }
 
 /**
@@ -513,12 +598,16 @@ export async function fetchDueReviewItems(userId: string, limit = 50): Promise<R
 export async function fetchDueReviewItemsWithCardsStrict(
   userId: string,
   limit: number,
+  language?: LanguageCode | null,
 ): Promise<{ item: ReviewItem; card: Card }[]> {
-  const { data, error } = await supabase
+  let query = supabase
     .from('review_items')
     .select('*, cards!inner(*)')
     .eq('user_id', userId)
-    .lte('next_due', new Date().toISOString())
+    .lte('next_due', new Date().toISOString());
+  if (language) query = query.in('cards.language', languageVariants(language));
+
+  const { data, error } = await query
     .order('next_due', { ascending: true })
     .limit(limit);
   if (error) throw error;
@@ -540,9 +629,10 @@ export async function fetchDueReviewItemsWithCardsStrict(
 export async function fetchDueReviewItemsWithCards(
   userId: string,
   limit = 5,
+  language?: LanguageCode | null,
 ): Promise<{ item: ReviewItem; card: Card }[]> {
   try {
-    return await fetchDueReviewItemsWithCardsStrict(userId, limit);
+    return await fetchDueReviewItemsWithCardsStrict(userId, limit, language);
   } catch (err) {
     console.warn('[warmup] fetchDueReviewItemsWithCards failed (non-fatal):', err);
     return [];
@@ -558,11 +648,20 @@ export async function fetchDueReviewItemsWithCards(
  * session needs a couple of hundred candidates at most. review_items is
  * unique on (user_id, card_id), so no card repeats.
  */
-export async function fetchReviewDeckCards(userId: string, limit = 200): Promise<Card[]> {
-  const { data, error } = await supabase
+export async function fetchReviewDeckCards(
+  userId: string,
+  limit = 200,
+  language?: LanguageCode | null,
+): Promise<Card[]> {
+  let query = supabase
     .from('review_items')
     .select('cards!inner(*)')
-    .eq('user_id', userId)
+    .eq('user_id', userId);
+  // A distractor has to be a word the learner might actually confuse with the
+  // answer, which a word from another language never is.
+  if (language) query = query.in('cards.language', languageVariants(language));
+
+  const { data, error } = await query
     .order('last_reviewed_at', { ascending: false, nullsFirst: false })
     .limit(limit);
 
@@ -573,23 +672,35 @@ export async function fetchReviewDeckCards(userId: string, limit = 200): Promise
     .map(mapCard);
 }
 
-export async function fetchReviewItemCount(userId: string): Promise<number> {
-  const { count, error } = await supabase
+export async function fetchReviewItemCount(
+  userId: string,
+  language?: LanguageCode | null,
+): Promise<number> {
+  let query = supabase
     .from('review_items')
-    .select('*', { count: 'exact', head: true })
+    .select('*, cards!inner(language)', { count: 'exact', head: true })
     .eq('user_id', userId)
     .lte('next_due', new Date().toISOString());
+  if (language) query = query.in('cards.language', languageVariants(language));
+
+  const { count, error } = await query;
 
   if (error) throw error;
   return count ?? 0;
 }
 
-export async function fetchNewCardCount(userId: string): Promise<number> {
-  const { count, error } = await supabase
+export async function fetchNewCardCount(
+  userId: string,
+  language?: LanguageCode | null,
+): Promise<number> {
+  let query = supabase
     .from('review_items')
-    .select('*', { count: 'exact', head: true })
+    .select('*, cards!inner(language)', { count: 'exact', head: true })
     .eq('user_id', userId)
     .eq('status', 'new');
+  if (language) query = query.in('cards.language', languageVariants(language));
+
+  const { count, error } = await query;
 
   if (error) throw error;
   return count ?? 0;
@@ -948,6 +1059,13 @@ const PROFICIENCY_SPEAKING_LIMIT = 500;
 /** Graded listening exercises considered — the same order as speaking, one row per answer. */
 const PROFICIENCY_LISTENING_LIMIT = 500;
 /**
+ * Answered tutor listening checks considered. One row per SESSION rather than
+ * per question, and a session yields at most `MAX_LISTENING_ITEMS` (3), so this
+ * is a far smaller cap than the per-answer ones above and still well beyond
+ * any real learner's history.
+ */
+const PROFICIENCY_LISTENING_CHECK_LIMIT = 400;
+/**
  * Exercise types answered from audio alone. Mirrors the CHECK in migration
  * 128's `record_exercise_result`; the report reads only these for listening.
  */
@@ -1020,6 +1138,7 @@ export async function fetchProficiencyEvidence(
     writingRes,
     speakingRes,
     listeningRes,
+    listeningCheckRes,
     statsRes,
     reviewCountRes,
     conversationRes,
@@ -1081,6 +1200,18 @@ export async function fetchProficiencyEvidence(
         .order('created_at', { ascending: false })
         .limit(PROFICIENCY_LISTENING_LIMIT),
 
+      // Answered post-session listening checks (migration 132). This is the
+      // only way a conversation can evidence listening: lesson exercises are
+      // the other source, and a learner who only ever talks does none.
+      supabase
+        .from('tutor_listening_checks')
+        .select('cefr_level, correct_count, total_count')
+        .eq('user_id', userId)
+        .eq('target_language', targetLanguage)
+        .not('answered_at', 'is', null)
+        .order('answered_at', { ascending: false })
+        .limit(PROFICIENCY_LISTENING_CHECK_LIMIT),
+
       supabase
         .from('daily_stats')
         .select('date, listening_minutes, speaking_minutes')
@@ -1102,7 +1233,9 @@ export async function fetchProficiencyEvidence(
       // weighting stays re-tunable; `combineConversationScore` folds them.
       supabase
         .from('conversation_evidence')
-        .select('modality, cefr_level, accuracy, intelligibility, word_count')
+        .select(
+          'modality, cefr_level, accuracy, intelligibility, word_count, chat_session_id, tutor_session_id, created_at',
+        )
         .eq('user_id', userId)
         .eq('target_language', targetLanguage)
         .order('created_at', { ascending: false })
@@ -1115,6 +1248,7 @@ export async function fetchProficiencyEvidence(
   if (writingRes.error) throw writingRes.error;
   if (speakingRes.error) throw speakingRes.error;
   if (listeningRes.error) throw listeningRes.error;
+  if (listeningCheckRes.error) throw listeningCheckRes.error;
   if (statsRes.error) throw statsRes.error;
   if (reviewCountRes.error) throw reviewCountRes.error;
   if (conversationRes.error) throw conversationRes.error;
@@ -1167,30 +1301,55 @@ export async function fetchProficiencyEvidence(
     })
   );
 
-  // Conversation turns join the skill they are evidence for. A spoken turn is
-  // speaking evidence; a typed one is written-production evidence and joins
-  // the writing pool. They are kept apart because composing a sentence with a
-  // keyboard and time to think is a materially easier task than saying it out
-  // loud — pooling them would let a learner type their way to a speaking level.
+  // A tutor listening check is stored as a tally — correct out of total — so it
+  // expands back into one evidence item per question. The listening strand
+  // counts items and their first-try correctness, and a session that scored 2
+  // of 3 is exactly the same evidence as three lesson exercises of which two
+  // were right; collapsing it into a single weighted item would let one check
+  // count as much as one question.
+  //
+  // `correct_count` is capped at `total_count` by a CHECK constraint, but it is
+  // clamped again here: this loop turns a bad number into extra passing items
+  // in a measured level, and the table is not the only thing that could ever
+  // write it.
+  for (const row of (listeningCheckRes.data ?? []) as Record<string, unknown>[]) {
+    const total = Math.max(0, Number(row.total_count ?? 0));
+    const correct = Math.min(total, Math.max(0, Number(row.correct_count ?? 0)));
+    const cefrLevel = (row.cefr_level as string | null) ?? null;
+    for (let i = 0; i < total; i++) {
+      listening.push({ cefrLevel, correct: i < correct });
+    }
+  }
+
+  // Conversation turns are their own strand now — `interaction` — rather than
+  // being split by modality into the speaking and writing pools.
+  //
+  // What that split cost. A typed turn used to be written-production evidence,
+  // which meant three chat messages satisfied the same band gate as three
+  // graded essays (`MIN_WRITING_ITEMS`); and a spoken turn pooled 1:1 with
+  // scored read-alouds, so a run of pronunciation attempts could stand in for
+  // ever having held a conversation. Both are the same mistake: spoken
+  // interaction is a different CEFR claim from spoken production and from
+  // written production, and pooling let one substitute for another.
+  //
+  // `speaking` is therefore pronunciation attempts alone, `writing` is graded
+  // submissions alone, and every conversation turn — chat or live tutor, typed
+  // or spoken — becomes interaction evidence. The session id is what lets the
+  // strand group turns into conversations; a row without one cannot be grouped
+  // and `interactionStrand` drops it.
   const conversationRows = (conversationRes.data ?? []) as Record<string, unknown>[];
-  for (const row of conversationRows) {
-    const score = combineConversationScore(
+  const interaction: InteractionTurnItem[] = conversationRows.map((row) => ({
+    cefrLevel: (row.cefr_level as string | null) ?? null,
+    sessionId:
+      (row.chat_session_id as string | null) ?? (row.tutor_session_id as string | null) ?? null,
+    day: localDayOf(row.created_at),
+    score: combineConversationScore(
       Number(row.accuracy ?? 0),
       row.intelligibility === null || row.intelligibility === undefined
         ? null
         : Number(row.intelligibility),
-    );
-    const cefrLevel = (row.cefr_level as string | null) ?? null;
-    if (row.modality === 'speaking') {
-      speaking.push({ cefrLevel, score });
-    } else {
-      writing.push({
-        cefrLevel,
-        overallScore: score,
-        wordCount: Number(row.word_count ?? 0),
-      });
-    }
-  }
+    ),
+  }));
 
   const statRows = (statsRes.data ?? []) as Record<string, unknown>[];
   const listeningMinutes = statRows.reduce(
@@ -1203,6 +1362,7 @@ export async function fetchProficiencyEvidence(
   );
 
   return {
+    interaction,
     vocabulary,
     reading,
     writing,
@@ -1212,8 +1372,32 @@ export async function fetchProficiencyEvidence(
     speakingMinutes,
     // One daily_stats row per active day, so the row count is the day count.
     activeDays: statRows.length,
-    totalReviews: reviewCountRes.count ?? 0,
+    // Conversation turns count as reviews for the confidence tier.
+    //
+    // Without this the whole weighting is inert for the learner it was built
+    // for: `assessConfidence` read `review_logs` alone, which is flashcard
+    // reviews, so someone who conversed daily and reviewed nothing sat at
+    // `confidence: 'none'` and `buildProficiencyReport` withheld their level
+    // entirely — no matter how high their band score climbed. Confidence is
+    // meant to measure how much evidence exists, and a scored conversation
+    // turn is evidence by exactly the same standard a card review is.
+    totalReviews: (reviewCountRes.count ?? 0) + interaction.length,
   };
+}
+
+/**
+ * The local calendar day of a timestamp, `YYYY-MM-DD`.
+ *
+ * Local rather than UTC on purpose: the interaction strand's day spread is a
+ * claim about how many days the learner practised on, and a learner west of
+ * UTC doing their evening session would otherwise have it counted as tomorrow,
+ * silently merging two days of practice into one.
+ */
+function localDayOf(value: unknown): string {
+  const date = typeof value === 'string' || value instanceof Date ? new Date(value) : new Date(NaN);
+  if (Number.isNaN(date.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
 // ─── Practice Sessions ──────────────────────────────────────────
@@ -2492,13 +2676,22 @@ export async function fetchCohortLeaderboard(): Promise<LeaderboardRow[]> {
  * track's lessons are shared while its completions are the learner's own, so
  * they would not belong in the same embed anyway.
  */
-export async function fetchGoalTrack(userId: string): Promise<GoalTrackProgress | null> {
-  const { data, error } = await supabase
+export async function fetchGoalTrack(
+  userId: string,
+  language?: LanguageCode | null,
+): Promise<GoalTrackProgress | null> {
+  let query = supabase
     .from('user_goal_tracks')
     .select(
-      'goal_key, scenarios, course_id, courses!inner(id, title, description, units(id, order_index, lessons(id, title, description, order_index, generation_state)))'
+      'goal_key, scenarios, course_id, courses!inner(id, target_language, title, description, units(id, order_index, lessons(id, title, description, order_index, generation_state)))'
     )
-    .eq('user_id', userId)
+    .eq('user_id', userId);
+  // A track generated from a Spanish goal is a Spanish course; showing it on
+  // the Learn tab while the learner is in Russian offers lessons they cannot
+  // read (migration 133). The learner keeps one track per language.
+  if (language) query = query.eq('courses.target_language', language);
+
+  const { data, error } = await query
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -4514,31 +4707,38 @@ export async function fetchRecentCorrections(
 export async function fetchStrugglingReviewItems(
   userId: string,
   limit = 40,
+  language?: LanguageCode | null,
 ): Promise<{ item: ReviewItem; card: Card }[]> {
   const columns = '*, cards!inner(*)';
+  // The three builders differ in type, and all of them accept `.in` — the cast
+  // keeps one filter definition instead of three copies of the same line.
+  const inLanguage = <T>(q: T): T =>
+    language
+      ? (q as unknown as { in: (col: string, values: string[]) => T }).in('cards.language', languageVariants(language))
+      : q;
   const [lowEase, stalled, leeches] = await Promise.all([
-    supabase
+    inLanguage(supabase
       .from('review_items')
       .select(columns)
       .eq('user_id', userId)
       .lt('ease_factor', 2.2)
-      .not('last_reviewed_at', 'is', null)
+      .not('last_reviewed_at', 'is', null))
       .order('ease_factor', { ascending: true })
       .limit(limit),
-    supabase
+    inLanguage(supabase
       .from('review_items')
       .select(columns)
       .eq('user_id', userId)
       .eq('status', 'learning')
       .eq('repetitions', 0)
-      .not('last_reviewed_at', 'is', null)
+      .not('last_reviewed_at', 'is', null))
       .order('last_reviewed_at', { ascending: false })
       .limit(limit),
-    supabase
+    inLanguage(supabase
       .from('review_items')
       .select(columns)
       .eq('user_id', userId)
-      .eq('status', 'leech')
+      .eq('status', 'leech'))
       .limit(limit),
   ]);
 
@@ -4564,12 +4764,19 @@ export async function fetchStrugglingReviewItems(
  * (`review` or `graduated`). A count, not a score: it is the "you know 412
  * words" number, and it only ever goes up.
  */
-export async function fetchLearnedCardCount(userId: string): Promise<number> {
-  const { count, error } = await supabase
+export async function fetchLearnedCardCount(
+  userId: string,
+  language?: LanguageCode | null,
+): Promise<number> {
+  let query = supabase
     .from('review_items')
-    .select('*', { count: 'exact', head: true })
+    .select('*, cards!inner(language)', { count: 'exact', head: true })
     .eq('user_id', userId)
     .in('status', ['review', 'graduated']);
+  // "You know 240 words" has to mean 240 words of the language on screen.
+  if (language) query = query.in('cards.language', languageVariants(language));
+
+  const { count, error } = await query;
 
   if (error) throw error;
   return count ?? 0;

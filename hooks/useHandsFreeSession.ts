@@ -515,7 +515,11 @@ export function useHandsFreeSession(
       );
       // Strict: a network failure here must not present as "all caught up"
       // and waste the learner's commute.
-      const due = await fetchDueReviewItemsWithCardsStrict(user.id, Math.ceil(budget));
+      const due = await fetchDueReviewItemsWithCardsStrict(
+        user.id,
+        Math.ceil(budget),
+        useAppStore.getState().profile?.targetLanguage ?? null,
+      );
 
       const ordered = sortReviewQueue(due.map((d) => d.item));
       const byId = new Map(due.map((d) => [d.item.id, d.card]));

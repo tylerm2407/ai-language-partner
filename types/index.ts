@@ -117,6 +117,30 @@ export type LanguageCode = 'en' | 'es' | 'fr' | 'de' | 'it' | 'pt' | 'ja' | 'ko'
 export type ProficiencyLevel = 'beginner' | 'elementary' | 'intermediate' | 'upper_intermediate' | 'advanced';
 
 /**
+ * One language this learner is studying (migration 133).
+ *
+ * The account may hold several. `user_profiles.target_language` names which of
+ * them is active right now, and the profile's `level`, `placementBand` and
+ * `currentCourseId` are a copy of that enrollment's — so screens keep reading
+ * the profile, and only the switcher reads this.
+ *
+ * Durable: switching away snapshots the active row here rather than
+ * overwriting it, so Spanish is exactly where it was left when the learner
+ * comes back from Japanese.
+ */
+export interface LanguageEnrollment {
+  language: LanguageCode;
+  /** Declared level for THIS language — beginner in Japanese, B1 in Spanish. */
+  level: ProficiencyLevel;
+  /** Band this language's lessons start at; null means no lesson path. */
+  placementBand: string | null;
+  currentCourseId: string | null;
+  startedAt: string;
+  /** Orders the switcher, most recent first. */
+  lastActiveAt: string;
+}
+
+/**
  * Motivation — why the learner is here. Persisted on
  * `user_profiles.motivation_reason` (migration 028).
  *
@@ -1113,6 +1137,21 @@ export interface TutorDebriefPhrase {
   when: string;
 }
 
+/**
+ * One post-session listening question, as the learner sees it.
+ *
+ * No answer key. The key stays in `tutor_listening_checks`, which is
+ * service-role only, and `tutor-session`'s `listening-answer` action grades the
+ * submission — because this score feeds the measured CEFR listening strand, and
+ * a key the client holds makes that score self-assigned.
+ */
+export interface TutorListeningPrompt {
+  /** Native language: what the tutor said, asked about. */
+  question: string;
+  /** Native language: four options, exactly one right. */
+  options: string[];
+}
+
 export interface TutorDebrief {
   /** Something the learner actually said that worked, quoted back to them. */
   highlight: string;
@@ -1127,6 +1166,18 @@ export interface TutorDebrief {
   reachFor: TutorDebriefPhrase[];
   /** One concrete thing to try next time. */
   nextTime: string;
+  /**
+   * Comprehension questions about what the TUTOR said, or absent when the
+   * session was too short to ask about — which is normal and not an error.
+   *
+   * This is the only route by which a conversation can evidence LISTENING. The
+   * strand otherwise reads graded lesson exercises alone, so a learner who
+   * spends every session talking to the tutor — and who plainly understood the
+   * tutor in order to reply — had nothing in it at all. Minutes of audio are
+   * exposure and never a level: we record how long audio played, never whether
+   * any of it landed. This asks.
+   */
+  listeningCheck?: TutorListeningPrompt[];
   /**
    * Always the SERVER's measurement, never the model's — it has no clock, and
    * this is the one number in the debrief a learner will actually check.
