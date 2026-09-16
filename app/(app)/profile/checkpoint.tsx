@@ -58,7 +58,6 @@ import {
   checkpointProgress,
   checkpointScoreLines,
   checkpointSubmission,
-  isCheckpointAnswered,
   orderCheckpointItems,
   skippedCheckpointStrands,
 } from '../../../lib/checkpoint-flow';
